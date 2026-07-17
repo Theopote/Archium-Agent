@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from sqlalchemy.orm import Session
+
 from archium.agents._helpers import brief_from_draft, slides_from_plan, storyline_from_draft
 from archium.infrastructure.llm.presentation_schemas import (
     BriefDraft,
@@ -15,7 +17,7 @@ from archium.infrastructure.renderers.marp_renderer import MarpPresentationRende
 from tests.fixtures.mock_presentation_responses import BRIEF_JSON, SLIDE_PLAN_JSON, STORYLINE_JSON
 
 
-def test_marp_renderer_writes_markdown_file(test_settings: object) -> None:
+def test_marp_renderer_writes_markdown_file(test_settings: object, db_session: Session) -> None:
     presentation_id = uuid4()
     project_id = uuid4()
     brief = brief_from_draft(
@@ -30,6 +32,7 @@ def test_marp_renderer_writes_markdown_file(test_settings: object) -> None:
     slides = slides_from_plan(
         SlidePlanDraft.model_validate_json(SLIDE_PLAN_JSON),
         presentation_id=presentation_id,
+        session=db_session,
     )
 
     renderer = MarpPresentationRenderer(test_settings)  # type: ignore[arg-type]

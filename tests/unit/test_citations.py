@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from archium.agents.citations import citation_from_draft, enrich_slide_citations
 from archium.application.chunk_models import ProjectContextBundle
@@ -11,7 +11,11 @@ from archium.domain.enums import DocumentType, ProcessingStatus, ProjectType, Sl
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec
-from archium.infrastructure.database.repositories import DocumentRepository, PresentationRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    DocumentRepository,
+    PresentationRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.embeddings.mock import MockEmbeddingProvider
 from archium.infrastructure.llm.presentation_schemas import CitationDraft
 from archium.infrastructure.vector.chroma_store import ChromaVectorStore
