@@ -18,6 +18,28 @@ class SpecImagePlacement(DomainModel):
     h: float = 4.0
 
 
+class SpecColumn(DomainModel):
+    """One column in a comparison layout."""
+
+    label: str = Field(min_length=1)
+    message: str | None = None
+    bullets: list[str] = Field(default_factory=list)
+
+
+class SpecTimelineItem(DomainModel):
+    """One milestone on a timeline layout."""
+
+    label: str = Field(min_length=1)
+    text: str = Field(min_length=1)
+
+
+class SpecMetric(DomainModel):
+    """One metric cell on a data layout."""
+
+    label: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+
+
 class SpecSlide(DomainModel):
     """One slide in a PresentationSpec."""
 
@@ -29,6 +51,9 @@ class SpecSlide(DomainModel):
     bullets: list[str] = Field(default_factory=list)
     speaker_notes: str | None = None
     images: list[SpecImagePlacement] = Field(default_factory=list)
+    columns: list[SpecColumn] = Field(default_factory=list)
+    timeline_items: list[SpecTimelineItem] = Field(default_factory=list)
+    metrics: list[SpecMetric] = Field(default_factory=list)
 
 
 class PresentationSpec(DomainModel):

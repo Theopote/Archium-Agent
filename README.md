@@ -161,6 +161,8 @@ cp .env.example .env
 | `MARP_COMMAND` | Marp CLI 命令，默认 `marp` | 否 |
 | `MARP_PREVIEW_IMAGES_ENABLED` | 导出 Marp Markdown 时是否生成 PNG 预览图，默认 `true` | 否 |
 | `MARP_PREVIEW_IMAGE_FORMAT` | 预览图格式（`png` 或 `jpeg`），默认 `png` | 否 |
+| `PPTXGEN_NODE_COMMAND` | Node.js 可执行文件，默认 `node` | 否 |
+| `PPTXGEN_SCRIPT_PATH` | PptxGenJS 渲染脚本路径，默认 bundled `render.mjs` | 否 |
 | `DISCORD_BOT_TOKEN` | Discord Bot Token（遗留模块） | 否 |
 | `DISCORD_USER_ID` | Discord 用户 ID（遗留模块） | 否 |
 
@@ -239,7 +241,7 @@ marp --version
 - 项目事实账本（Fact Ledger）支持标准键提取、冲突检测与人工确认；已确认事实优先注入生成上下文
 - 素材看板（Asset Board）支持视觉需求扁平化视图、素材匹配、人工指定与确认
 - 四层质量审核：内容层、证据层、建筑专业层、版面层；严重问题可阻断导出
-- PresentationSpec → PptxGenJS 可导出原生可编辑 PPTX（7 种布局模板）；Marp 仍作为预览/降级路径
+- PresentationSpec → PptxGenJS 可导出原生可编辑 PPTX（11 种布局模板）；Marp 仍作为预览/降级路径
 - 驳回后可一键重新生成 Brief、Storyline 或 Slide 计划
 - PPTX / PDF 导出依赖 Marp CLI；可编辑 PPTX 需 Node.js 并在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`
 - Discord 与文件整理为实验性遗留功能

@@ -273,6 +273,242 @@ function addImageContentSlide(pres, slide) {
   addNotes(page, slide.speaker_notes);
 }
 
+function addComparisonSlide(pres, slide) {
+  const page = pres.addSlide({ masterName: "ARCHIUM_MASTER" });
+  addContentHeader(page, slide.title);
+  if (slide.message) {
+    page.addText(slide.message, {
+      x: 0.7,
+      y: 1.35,
+      w: 8.6,
+      h: 0.55,
+      fontSize: 15,
+      color: COLORS.muted,
+      fontFace: "Microsoft YaHei",
+    });
+  }
+  const columns = slide.columns ?? [];
+  const columnWidth = 4.1;
+  const startY = slide.message ? 2.05 : 1.55;
+  columns.slice(0, 2).forEach((column, index) => {
+    const x = 0.7 + index * (columnWidth + 0.4);
+    page.addShape("rect", {
+      x,
+      y: startY,
+      w: columnWidth,
+      h: 3.15,
+      fill: { color: COLORS.light },
+      line: { color: index === 0 ? COLORS.muted : COLORS.accent, width: 1 },
+    });
+    page.addText(column.label ?? `方案 ${index + 1}`, {
+      x: x + 0.15,
+      y: startY + 0.12,
+      w: columnWidth - 0.3,
+      h: 0.45,
+      fontSize: 16,
+      bold: true,
+      color: COLORS.primary,
+      fontFace: "Microsoft YaHei",
+    });
+    if (column.message) {
+      page.addText(column.message, {
+        x: x + 0.15,
+        y: startY + 0.55,
+        w: columnWidth - 0.3,
+        h: 0.55,
+        fontSize: 13,
+        color: COLORS.text,
+        fontFace: "Microsoft YaHei",
+      });
+    }
+    const bullets = column.bullets ?? [];
+    if (bullets.length > 0) {
+      page.addText(
+        bullets.map((item) => ({ text: item, options: { bullet: true, breakLine: true } })),
+        {
+          x: x + 0.2,
+          y: startY + (column.message ? 1.05 : 0.65),
+          w: columnWidth - 0.35,
+          h: 1.85,
+          fontSize: 14,
+          color: COLORS.text,
+          fontFace: "Microsoft YaHei",
+        },
+      );
+    }
+  });
+  addNotes(page, slide.speaker_notes);
+}
+
+function addTimelineSlide(pres, slide) {
+  const page = pres.addSlide({ masterName: "ARCHIUM_MASTER" });
+  addContentHeader(page, slide.title);
+  const items = slide.timeline_items ?? [];
+  if (slide.message) {
+    page.addText(slide.message, {
+      x: 0.7,
+      y: 1.35,
+      w: 8.6,
+      h: 0.55,
+      fontSize: 15,
+      color: COLORS.muted,
+      fontFace: "Microsoft YaHei",
+    });
+  }
+  if (items.length === 0) {
+    addNotes(page, slide.speaker_notes);
+    return;
+  }
+
+  const axisY = slide.message ? 3.05 : 2.75;
+  page.addShape("line", {
+    x: 0.9,
+    y: axisY,
+    w: 8.2,
+    h: 0,
+    line: { color: COLORS.accent, width: 2 },
+  });
+
+  const slotWidth = 8.2 / items.length;
+  items.forEach((item, index) => {
+    const centerX = 0.9 + slotWidth * index + slotWidth / 2;
+    page.addShape("ellipse", {
+      x: centerX - 0.12,
+      y: axisY - 0.12,
+      w: 0.24,
+      h: 0.24,
+      fill: { color: COLORS.accent },
+      line: { color: COLORS.accent },
+    });
+    page.addText(item.label, {
+      x: centerX - slotWidth / 2 + 0.05,
+      y: axisY - 0.95,
+      w: slotWidth - 0.1,
+      h: 0.65,
+      fontSize: 12,
+      bold: true,
+      color: COLORS.primary,
+      fontFace: "Microsoft YaHei",
+      align: "center",
+    });
+    page.addText(item.text, {
+      x: centerX - slotWidth / 2 + 0.05,
+      y: axisY + 0.25,
+      w: slotWidth - 0.1,
+      h: 1.35,
+      fontSize: 12,
+      color: COLORS.text,
+      fontFace: "Microsoft YaHei",
+      align: "center",
+      valign: "top",
+    });
+  });
+  addNotes(page, slide.speaker_notes);
+}
+
+function addDataSlide(pres, slide) {
+  const page = pres.addSlide({ masterName: "ARCHIUM_MASTER" });
+  addContentHeader(page, slide.title);
+  if (slide.message) {
+    page.addText(slide.message, {
+      x: 0.7,
+      y: 1.35,
+      w: 8.6,
+      h: 0.55,
+      fontSize: 15,
+      color: COLORS.muted,
+      fontFace: "Microsoft YaHei",
+    });
+  }
+  const metrics = slide.metrics ?? [];
+  const columns = metrics.length <= 2 ? metrics.length || 1 : 3;
+  const cardWidth = 8.6 / columns - 0.15;
+  const startY = slide.message ? 2.05 : 1.55;
+  metrics.forEach((metric, index) => {
+    const col = index % columns;
+    const row = Math.floor(index / columns);
+    const x = 0.7 + col * (cardWidth + 0.2);
+    const y = startY + row * 1.55;
+    page.addShape("rect", {
+      x,
+      y,
+      w: cardWidth,
+      h: 1.35,
+      fill: { color: COLORS.light },
+      line: { color: COLORS.light },
+    });
+    page.addText(metric.label, {
+      x: x + 0.12,
+      y: y + 0.12,
+      w: cardWidth - 0.24,
+      h: 0.45,
+      fontSize: 12,
+      color: COLORS.muted,
+      fontFace: "Microsoft YaHei",
+    });
+    page.addText(metric.value, {
+      x: x + 0.12,
+      y: y + 0.55,
+      w: cardWidth - 0.24,
+      h: 0.65,
+      fontSize: 22,
+      bold: true,
+      color: COLORS.primary,
+      fontFace: "Microsoft YaHei",
+    });
+  });
+  addNotes(page, slide.speaker_notes);
+}
+
+function addImageFullSlide(pres, slide) {
+  const page = pres.addSlide({ masterName: "ARCHIUM_MASTER" });
+  addContentHeader(page, slide.title);
+  const image = (slide.images ?? [])[0];
+  if (image) {
+    if (image.asset_path) {
+      page.addImage({
+        path: image.asset_path,
+        x: image.x ?? 0.7,
+        y: image.y ?? 1.45,
+        w: image.w ?? 8.6,
+        h: image.h ?? 3.85,
+      });
+    } else {
+      page.addShape("rect", {
+        x: image.x ?? 0.7,
+        y: image.y ?? 1.45,
+        w: image.w ?? 8.6,
+        h: image.h ?? 3.85,
+        fill: { color: COLORS.light },
+        line: { color: COLORS.accent, width: 1 },
+      });
+      page.addText(image.description, {
+        x: (image.x ?? 0.7) + 0.3,
+        y: (image.y ?? 1.45) + 1.6,
+        w: (image.w ?? 8.6) - 0.6,
+        h: 0.8,
+        fontSize: 14,
+        color: COLORS.muted,
+        fontFace: "Microsoft YaHei",
+        align: "center",
+      });
+    }
+  }
+  if (slide.message) {
+    page.addText(slide.message, {
+      x: 0.7,
+      y: 5.05,
+      w: 8.6,
+      h: 0.45,
+      fontSize: 13,
+      color: COLORS.muted,
+      fontFace: "Microsoft YaHei",
+      align: "center",
+    });
+  }
+  addNotes(page, slide.speaker_notes);
+}
+
 function addClosingSlide(pres, slide) {
   const page = pres.addSlide({ masterName: "ARCHIUM_MASTER" });
   page.background = { color: COLORS.primary };
@@ -327,6 +563,18 @@ function renderSlide(pres, slide) {
       break;
     case "image_content":
       addImageContentSlide(pres, slide);
+      break;
+    case "image_full":
+      addImageFullSlide(pres, slide);
+      break;
+    case "comparison":
+      addComparisonSlide(pres, slide);
+      break;
+    case "timeline":
+      addTimelineSlide(pres, slide);
+      break;
+    case "data":
+      addDataSlide(pres, slide);
       break;
     case "closing":
       addClosingSlide(pres, slide);
