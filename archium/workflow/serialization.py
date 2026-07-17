@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
@@ -69,7 +68,11 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "presentation_id": state.get("presentation_id"),
         "workflow_run_id": state.get("workflow_run_id"),
         "export_json": state.get("export_json", True),
+        "export_marp": state.get("export_marp", False),
+        "export_pptx": state.get("export_pptx", False),
         "json_path": state.get("json_path"),
+        "marp_md_path": state.get("marp_md_path"),
+        "marp_pptx_path": state.get("marp_pptx_path"),
         "errors": list(state.get("errors", [])),
         "slide_count": len(slides),
     }
@@ -84,12 +87,6 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
     if slides:
         payload["slides"] = [slide.model_dump(mode="json") for slide in slides]
     return payload
-
-
-def _optional_uuid(value: str | UUID | None) -> UUID | None:
-    if value is None:
-        return None
-    return UUID(str(value))
 
 
 def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:

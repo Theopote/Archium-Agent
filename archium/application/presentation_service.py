@@ -17,6 +17,7 @@ from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
+from archium.infrastructure.renderers.marp_renderer import MarpPresentationRenderer
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="presentation")
@@ -32,6 +33,7 @@ class PresentationService:
         *,
         settings: Settings | None = None,
         renderer: JsonPresentationRenderer | None = None,
+        marp_renderer: MarpPresentationRenderer | None = None,
     ) -> None:
         self._session = session
         self._llm = llm
@@ -42,6 +44,7 @@ class PresentationService:
         self._narrative = NarrativeArchitect(session, llm)
         self._slide_planner = SlidePlanner(session, llm)
         self._renderer = renderer or JsonPresentationRenderer(self._settings)
+        self._marp_renderer = marp_renderer or MarpPresentationRenderer(self._settings)
 
     def create_presentation(
         self,
@@ -85,6 +88,8 @@ class PresentationService:
         *,
         presentation_id: UUID | None = None,
         export_json: bool = True,
+        export_marp: bool = False,
+        export_pptx: bool = False,
     ) -> PipelineResult:
         result = PipelineResult(
             presentation=Presentation(project_id=project_id, title=request.title),
@@ -112,6 +117,18 @@ class PresentationService:
                     slides=result.slides,
                     version=version,
                 )
+
+            if export_marp and result.brief and result.storyline:
+                version = result.brief.version
+                result.marp_md_path = self._marp_renderer.render(
+                    presentation_id=pres_id,
+                    brief=result.brief,
+                    storyline=result.storyline,
+                    slides=result.slides,
+                    version=version,
+                )
+                if export_pptx and result.marp_md_path is not None:
+                    result.marp_pptx_path = self._marp_renderer.export_pptx(result.marp_md_path)
 
             result.presentation.status = PresentationStatus.REVIEW
             result.presentation.current_brief_id = result.brief.id if result.brief else None

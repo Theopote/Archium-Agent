@@ -11,6 +11,7 @@ from archium.config.settings import Settings, get_settings
 from archium.infrastructure.database.repositories import WorkflowRunRepository
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
+from archium.infrastructure.renderers.marp_renderer import MarpPresentationRenderer
 
 
 @dataclass
@@ -22,7 +23,8 @@ class PresentationWorkflowRuntime:
     settings: Settings
     presentation_service: PresentationService
     workflow_runs: WorkflowRunRepository
-    renderer: JsonPresentationRenderer
+    json_renderer: JsonPresentationRenderer
+    marp_renderer: MarpPresentationRenderer
 
     @classmethod
     def create(
@@ -32,14 +34,22 @@ class PresentationWorkflowRuntime:
         *,
         settings: Settings | None = None,
         renderer: JsonPresentationRenderer | None = None,
+        marp_renderer: MarpPresentationRenderer | None = None,
     ) -> PresentationWorkflowRuntime:
         resolved_settings = settings or get_settings()
-        presentation_service = PresentationService(session, llm, settings=resolved_settings)
+        presentation_service = PresentationService(
+            session,
+            llm,
+            settings=resolved_settings,
+            renderer=renderer,
+            marp_renderer=marp_renderer,
+        )
         return cls(
             session=session,
             llm=llm,
             settings=resolved_settings,
             presentation_service=presentation_service,
             workflow_runs=WorkflowRunRepository(session),
-            renderer=renderer or JsonPresentationRenderer(resolved_settings),
+            json_renderer=renderer or JsonPresentationRenderer(resolved_settings),
+            marp_renderer=marp_renderer or MarpPresentationRenderer(resolved_settings),
         )

@@ -46,6 +46,12 @@ class PresentationWorkflowNodes:
         json_path = state.get("json_path")
         if json_path and json_path not in output_files:
             output_files.append(json_path)
+        marp_md_path = state.get("marp_md_path")
+        if marp_md_path and marp_md_path not in output_files:
+            output_files.append(marp_md_path)
+        marp_pptx_path = state.get("marp_pptx_path")
+        if marp_pptx_path and marp_pptx_path not in output_files:
+            output_files.append(marp_pptx_path)
         run.output_files = output_files
         if status is not None:
             run.status = status
@@ -168,7 +174,7 @@ class PresentationWorkflowNodes:
 
         try:
             presentation_id = UUID(state["presentation_id"])
-            json_path = self._runtime.renderer.render(
+            json_path = self._runtime.json_renderer.render(
                 presentation_id=presentation_id,
                 brief=brief,
                 storyline=storyline,
@@ -188,6 +194,50 @@ class PresentationWorkflowNodes:
             return {
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.EXPORT.value,
+            }
+
+    def export_marp(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.MARP.value}
+        if not state.get("export_marp", False):
+            return {"current_step": WorkflowStep.MARP.value}
+
+        brief = state.get("brief")
+        storyline = state.get("storyline")
+        slides = state.get("slides", [])
+        if brief is None or storyline is None:
+            return {
+                "errors": ["Cannot export Marp without brief and storyline"],
+                "current_step": WorkflowStep.MARP.value,
+            }
+
+        try:
+            presentation_id = UUID(state["presentation_id"])
+            marp_md_path = self._runtime.marp_renderer.render(
+                presentation_id=presentation_id,
+                brief=brief,
+                storyline=storyline,
+                slides=slides,
+                version=brief.version,
+            )
+            next_state: PresentationWorkflowState = {
+                "marp_md_path": str(marp_md_path),
+                "current_step": WorkflowStep.MARP.value,
+            }
+            if state.get("export_pptx", False):
+                marp_pptx_path = self._runtime.marp_renderer.export_pptx(marp_md_path)
+                next_state["marp_pptx_path"] = str(marp_pptx_path)
+
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Exported Marp presentation to %s", marp_md_path)
+            return next_state
+        except Exception as exc:
+            logger.exception("Marp export failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.MARP.value,
             }
 
     def finalize(self, state: PresentationWorkflowState) -> PresentationWorkflowState:

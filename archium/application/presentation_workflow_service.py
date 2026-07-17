@@ -54,6 +54,8 @@ class PresentationWorkflowService:
         request: PresentationRequest,
         *,
         export_json: bool = True,
+        export_marp: bool = False,
+        export_pptx: bool = False,
     ) -> WorkflowRunResult:
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
         workflow_run = self._workflow_runs.create(
@@ -64,6 +66,9 @@ class PresentationWorkflowService:
                 state={
                     "current_step": WorkflowStep.INIT.value,
                     "request": request_to_dict(request),
+                    "export_json": export_json,
+                    "export_marp": export_marp,
+                    "export_pptx": export_pptx,
                 },
             )
         )
@@ -75,6 +80,8 @@ class PresentationWorkflowService:
             request=request,
             presentation=presentation,
             export_json=export_json,
+            export_marp=export_marp,
+            export_pptx=export_pptx,
         )
 
         try:
@@ -120,6 +127,8 @@ class PresentationWorkflowService:
             request=request,
             presentation=presentation,
             export_json=bool(run.state.get("export_json", True)),
+            export_marp=bool(run.state.get("export_marp", False)),
+            export_pptx=bool(run.state.get("export_pptx", False)),
         )
         initial_state = cast(
             PresentationWorkflowState,
@@ -165,6 +174,12 @@ class PresentationWorkflowService:
 
         json_path_value = workflow_run.state.get("json_path") or final_state.get("json_path")
         json_path = Path(str(json_path_value)) if json_path_value else None
+        marp_md_value = workflow_run.state.get("marp_md_path") or final_state.get("marp_md_path")
+        marp_md_path = Path(str(marp_md_value)) if marp_md_value else None
+        marp_pptx_value = workflow_run.state.get("marp_pptx_path") or final_state.get(
+            "marp_pptx_path"
+        )
+        marp_pptx_path = Path(str(marp_pptx_value)) if marp_pptx_value else None
 
         return WorkflowRunResult(
             workflow_run=workflow_run,
@@ -173,5 +188,7 @@ class PresentationWorkflowService:
             storyline=restored.get("storyline"),
             slides=list(restored.get("slides", [])),
             json_path=json_path,
+            marp_md_path=marp_md_path,
+            marp_pptx_path=marp_pptx_path,
             errors=list(workflow_run.errors),
         )

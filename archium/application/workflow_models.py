@@ -20,6 +20,8 @@ class WorkflowRunResult:
     storyline: Storyline | None = None
     slides: list[SlideSpec] = field(default_factory=list)
     json_path: Path | None = None
+    marp_md_path: Path | None = None
+    marp_pptx_path: Path | None = None
     errors: list[str] = field(default_factory=list)
 
     @property

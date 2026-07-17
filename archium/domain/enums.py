@@ -171,5 +171,6 @@ class WorkflowStep(StrEnum):
     STORYLINE = "storyline"
     SLIDES = "slides"
     EXPORT = "export"
+    MARP = "marp"
     FINALIZE = "finalize"
     FAILED = "failed"

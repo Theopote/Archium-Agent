@@ -1,0 +1,48 @@
+"""Unit tests for Marp CLI runner."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from archium.exceptions import RenderingError
+from archium.infrastructure.renderers.marp_cli import MarpCliRunner
+
+
+def test_marp_cli_convert_requires_installed_binary(
+    test_settings: object,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("archium.infrastructure.renderers.marp_cli.shutil.which", lambda _: None)
+    runner = MarpCliRunner(test_settings)  # type: ignore[arg-type]
+    markdown_path = tmp_path / "slides.md"
+    markdown_path.write_text("---\nmarp: true\n---\n\n# Title", encoding="utf-8")
+
+    with pytest.raises(RenderingError, match="Marp CLI"):
+        runner.convert(markdown_path, tmp_path / "output.pptx")
+
+
+def test_marp_cli_convert_invokes_subprocess(
+    test_settings: object,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    markdown_path = tmp_path / "slides.md"
+    output_path = tmp_path / "output.pptx"
+    markdown_path.write_text("---\nmarp: true\n---\n\n# Title", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr("archium.infrastructure.renderers.marp_cli.shutil.which", lambda _: "marp")
+
+    def fake_run(cmd: list[str], **kwargs: object) -> object:
+        calls.append(cmd)
+        return type("Result", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setattr("archium.infrastructure.renderers.marp_cli.subprocess.run", fake_run)
+
+    runner = MarpCliRunner(test_settings)  # type: ignore[arg-type]
+    result = runner.convert(markdown_path, output_path)
+
+    assert result == output_path
+    assert calls == [["marp", str(markdown_path), "-o", str(output_path)]]

@@ -145,6 +145,24 @@ def test_workflow_run_exports_json(
     assert len(payload["slides"]) == 4
 
 
+def test_workflow_run_exports_marp(
+    workflow_service: PresentationWorkflowService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+) -> None:
+    result = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        export_marp=True,
+    )
+
+    assert result.succeeded
+    assert result.marp_md_path is not None
+    assert result.marp_md_path.exists()
+    assert result.workflow_run.state["current_step"] == WorkflowStep.FINALIZE.value
+    assert any(path.endswith("presentation.md") for path in result.workflow_run.output_files)
+
+
 def test_workflow_resume_completed_run_is_idempotent(
     workflow_service: PresentationWorkflowService,
     project_with_context: Project,

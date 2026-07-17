@@ -23,7 +23,11 @@ class PresentationWorkflowState(TypedDict, total=False):
     storyline: Storyline | None
     slides: list[SlideSpec]
     json_path: str | None
+    marp_md_path: str | None
+    marp_pptx_path: str | None
     export_json: bool
+    export_marp: bool
+    export_pptx: bool
     current_step: str
     errors: Annotated[list[str], operator.add]
 
@@ -36,6 +40,8 @@ def initial_workflow_state(
     request: PresentationRequest,
     presentation: Presentation,
     export_json: bool,
+    export_marp: bool = False,
+    export_pptx: bool = False,
 ) -> PresentationWorkflowState:
     """Build the initial graph state for a new workflow run."""
     return {
@@ -48,7 +54,11 @@ def initial_workflow_state(
         "storyline": None,
         "slides": [],
         "json_path": None,
+        "marp_md_path": None,
+        "marp_pptx_path": None,
         "export_json": export_json,
+        "export_marp": export_marp,
+        "export_pptx": export_pptx,
         "current_step": WorkflowStep.INIT.value,
         "errors": [],
     }

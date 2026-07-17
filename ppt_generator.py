@@ -1,8 +1,8 @@
-import shutil
 import subprocess
 from pathlib import Path
 
 from archium.infrastructure.llm import LLMRequest, get_llm_provider
+from archium.infrastructure.renderers.marp_cli import MarpCliRunner
 from archium.prompts.identity import ARCHIUM_IDENTITY
 
 SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
@@ -35,26 +35,6 @@ def _generate_markdown(topic: str) -> str:
     )
 
 
-def _run_marp(markdown_path: Path, output_path: Path) -> None:
-    if shutil.which("marp") is None:
-        raise RuntimeError(
-            "未检测到 Marp CLI。请先安装 Node.js，然后运行：\n"
-            "  npm install -g @marp-team/marp-cli\n"
-            "安装完成后执行 `marp --version` 验证。"
-        )
-
-    result = subprocess.run(
-        ["marp", str(markdown_path), "-o", str(output_path)],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    if result.returncode != 0:
-        detail = (result.stderr or result.stdout or "").strip()
-        raise RuntimeError(f"Marp 转换失败：{detail or '未知错误'}")
-
-
 def generate_presentation(topic: str, output_path: str) -> Path:
     """围绕 topic 生成 Marp 幻灯片并导出为 PDF 或 PPTX。"""
     if not topic.strip():
@@ -71,5 +51,5 @@ def generate_presentation(topic: str, output_path: str) -> Path:
     markdown = _generate_markdown(topic)
     temp_md.write_text(markdown, encoding="utf-8")
 
-    _run_marp(temp_md, out)
+    MarpCliRunner().convert(temp_md, out)
     return out

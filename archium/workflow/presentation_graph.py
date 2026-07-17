@@ -36,6 +36,7 @@ class PresentationWorkflowGraph:
         builder.add_node("generate_storyline", self._nodes.generate_storyline)
         builder.add_node("generate_slides", self._nodes.generate_slides)
         builder.add_node("export_json", self._nodes.export_json)
+        builder.add_node("export_marp", self._nodes.export_marp)
         builder.add_node("finalize", self._nodes.finalize)
 
         builder.add_edge(START, "generate_brief")
@@ -56,6 +57,11 @@ class PresentationWorkflowGraph:
         )
         builder.add_conditional_edges(
             "export_json",
+            _route_on_errors,
+            {"continue": "export_marp", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "export_marp",
             _route_on_errors,
             {"continue": "finalize", "finalize": "finalize"},
         )

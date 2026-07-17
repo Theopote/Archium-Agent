@@ -187,3 +187,22 @@ def test_pipeline_step_methods(
     assert brief.core_message
     assert len(storyline.chapters) == 2
     assert len(slides) == 4
+
+
+def test_run_pipeline_exports_marp(
+    presentation_service: PresentationService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+) -> None:
+    result = presentation_service.run_pipeline(
+        project_with_context.id,
+        request_payload,
+        export_marp=True,
+    )
+
+    assert not result.errors
+    assert result.marp_md_path is not None
+    assert result.marp_md_path.exists()
+    content = result.marp_md_path.read_text(encoding="utf-8")
+    assert "marp: true" in content
+    assert "老院区更新概念汇报" in content
