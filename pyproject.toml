@@ -11,30 +11,37 @@ requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "Archium Team" }]
 dependencies = [
-    "openai>=1.0.0",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0",
-    "streamlit>=1.32.0",
+]
+
+[project.optional-dependencies]
+ui = ["streamlit>=1.32.0"]
+documents = [
     "pymupdf>=1.24",
     "python-docx>=1.1",
     "python-pptx>=1.0",
     "openpyxl>=3.1",
     "Pillow>=10.0",
+]
+workflow = [
     "langgraph>=0.2",
     "langgraph-checkpoint-sqlite>=2.0",
-    "chromadb>=0.5",
 ]
-
-[project.optional-dependencies]
-ui = ["streamlit>=1.32.0"]
+vector = ["chromadb>=0.5"]
+llm = ["openai>=1.0.0"]
+full = [
+    "archium-agent[ui,documents,workflow,vector,llm]",
+]
 legacy = [
     "discord.py>=2.3.0",
     "plyer>=2.1.0",
     "watchdog>=4.0.0",
 ]
 dev = [
+    "archium-agent[full,legacy]",
     "alembic>=1.13",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

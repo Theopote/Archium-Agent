@@ -57,6 +57,39 @@ PROFESSIONAL_REVIEW_JSON = """\
   ]
 }"""
 
+FACT_EXTRACTION_JSON = """\
+{
+  "facts": [
+    {
+      "key": "site_area",
+      "label": "用地面积",
+      "value": "12.5 公顷",
+      "unit": "公顷",
+      "category": "site",
+      "confidence": 0.9,
+      "chunk_id": null,
+      "quote": "项目用地面积约 12.5 公顷"
+    },
+    {
+      "key": "bed_count",
+      "label": "床位数",
+      "value": "500",
+      "unit": "张",
+      "category": "program",
+      "confidence": 0.85,
+      "chunk_id": null,
+      "quote": "规划床位 500 张"
+    }
+  ]
+}"""
+
+SLIDE_REPAIR_JSON = """\
+{
+  "title": "交通现状",
+  "message": "现有交通组织无法满足医院日常运营需求。",
+  "key_points": ["人车混行", "高峰期通行效率低"]
+}"""
+
 SLIDE_PLAN_JSON = """\
 {
   "slides": [

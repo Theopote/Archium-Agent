@@ -15,6 +15,7 @@ from archium.application.slide_diff import (
 from archium.domain.enums import SlideChangeSource
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideDiffResult, SlideRevision
+from archium.exceptions import SlideRevisionNotFoundError
 from archium.infrastructure.database.repositories import SlideRevisionRepository
 
 
@@ -106,7 +107,7 @@ class SlideHistoryService:
     def _require_revision(self, revision_id: UUID) -> SlideRevision:
         revision = self._revisions.get_by_id(revision_id)
         if revision is None:
-            raise ValueError(f"Slide revision {revision_id} not found")
+            raise SlideRevisionNotFoundError(revision_id)
         return revision
 
     @staticmethod

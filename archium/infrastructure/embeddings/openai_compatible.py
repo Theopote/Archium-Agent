@@ -25,11 +25,12 @@ class OpenAICompatibleEmbeddingProvider:
         if self._client is None:
             if not self._settings.embedding_configured:
                 raise ConfigurationError(
-                    "未配置 Embedding API Key。请在 .env 中设置 GEMINI_API_KEY 或 LLM_API_KEY。"
+                    "未配置 Embedding。请设置 EMBEDDING_API_KEY / EMBEDDING_MODEL，"
+                    "或同时配置 LLM_API_KEY 与 EMBEDDING_MODEL。"
                 )
             self._client = OpenAI(
-                api_key=self._settings.llm_api_key,
-                base_url=self._settings.llm_base_url,
+                api_key=self._settings.effective_embedding_api_key,
+                base_url=self._settings.effective_embedding_base_url,
                 timeout=self._settings.llm_timeout_seconds,
                 max_retries=0,
             )
@@ -37,7 +38,9 @@ class OpenAICompatibleEmbeddingProvider:
 
     @property
     def model(self) -> str:
-        return self._settings.embedding_model or "text-embedding-3-small"
+        if not self._settings.embedding_model:
+            raise ConfigurationError("未配置 EMBEDDING_MODEL。")
+        return self._settings.embedding_model
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:

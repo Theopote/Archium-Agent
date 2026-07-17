@@ -80,3 +80,24 @@ class ReviewIssueDraft(BaseModel):
 
 class ProfessionalReviewDraft(BaseModel):
     issues: list[ReviewIssueDraft] = Field(default_factory=list)
+
+
+class FactDraft(BaseModel):
+    key: str
+    label: str
+    value: str
+    unit: str | None = None
+    category: str = "general"
+    confidence: float = Field(default=0.8, ge=0.0, le=1.0)
+    chunk_id: str | None = None
+    quote: str | None = None
+
+
+class FactExtractionDraft(BaseModel):
+    facts: list[FactDraft] = Field(default_factory=list)
+
+
+class SlideRepairDraft(BaseModel):
+    title: str
+    message: str
+    key_points: list[str] = Field(default_factory=list, max_length=5)

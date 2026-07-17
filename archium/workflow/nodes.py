@@ -14,7 +14,10 @@ from archium.application.automated_review_service import (
     AutomatedReviewService,
     critical_export_block_messages,
 )
+from archium.application.fact_extraction_service import FactExtractionService
+from archium.application.fact_validation_service import FactValidationService
 from archium.application.review_service import slides_are_approved
+from archium.application.slide_repair_service import SlideRepairService
 from archium.domain.enums import (
     ApprovalStatus,
     PresentationStatus,
@@ -187,6 +190,69 @@ class PresentationWorkflowNodes:
             return {
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.RETRIEVE_CONTEXT.value,
+            }
+
+    def extract_facts(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.EXTRACT_FACTS.value}
+
+        if state.get("project_facts"):
+            return {"current_step": WorkflowStep.EXTRACT_FACTS.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            extractor = FactExtractionService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            )
+            facts, created = extractor.extract_from_context(project_id, state.get("context_bundle"))
+            next_state: PresentationWorkflowState = {
+                "project_facts": facts,
+                "extracted_fact_count": created,
+                "current_step": WorkflowStep.EXTRACT_FACTS.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Fact extraction complete for project %s (%d new)", project_id, created)
+            return next_state
+        except Exception as exc:
+            logger.exception("Fact extraction failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.EXTRACT_FACTS.value,
+            }
+
+    def validate_facts(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.VALIDATE_FACTS.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            result = FactValidationService(self._runtime.session).validate(project_id)
+            next_state: PresentationWorkflowState = {
+                "project_facts": result.facts,
+                "fact_validation_issues": result.issues,
+                "current_step": WorkflowStep.VALIDATE_FACTS.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            if result.issues:
+                logger.warning(
+                    "Fact validation for project %s recorded %d issue(s)",
+                    project_id,
+                    len(result.issues),
+                )
+            else:
+                logger.info("Fact validation passed for project %s", project_id)
+            return next_state
+        except Exception as exc:
+            logger.exception("Fact validation failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.VALIDATE_FACTS.value,
             }
 
     def generate_brief(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
@@ -421,11 +487,9 @@ class PresentationWorkflowNodes:
                 slides,
                 context_bundle=state.get("context_bundle"),
             )
-            existing = list(state.get("review_issues", []))
-            all_issues = existing + content_issues
             next_state: PresentationWorkflowState = {
-                "review_issues": all_issues,
-                "slide_review_issues": reviewer.summarize_for_slides(all_issues),
+                "review_issues": content_issues,
+                "slide_review_issues": reviewer.summarize_for_slides(content_issues),
                 "current_step": WorkflowStep.CONTENT_REVIEW.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
@@ -461,11 +525,9 @@ class PresentationWorkflowNodes:
                 brief=state.get("brief"),
                 storyline=state.get("storyline"),
             )
-            existing = list(state.get("review_issues", []))
-            all_issues = existing + professional_issues
             next_state: PresentationWorkflowState = {
-                "review_issues": all_issues,
-                "slide_review_issues": reviewer.summarize_for_slides(all_issues),
+                "review_issues": professional_issues,
+                "slide_review_issues": reviewer.summarize_for_slides(professional_issues),
                 "current_step": WorkflowStep.PROFESSIONAL_REVIEW.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
@@ -477,6 +539,44 @@ class PresentationWorkflowNodes:
             return {
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.PROFESSIONAL_REVIEW.value,
+            }
+
+    def repair_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.REPAIR_SLIDES.value}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {"current_step": WorkflowStep.REPAIR_SLIDES.value}
+
+        try:
+            presentation_id = UUID(state["presentation_id"])
+            repairer = SlideRepairService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            )
+            repaired_slides, repair_count = repairer.repair_slides(
+                presentation_id,
+                slides,
+                list(state.get("review_issues", [])),
+                brief=state.get("brief"),
+            )
+            next_state: PresentationWorkflowState = {
+                "slides": repaired_slides,
+                "repaired_slide_count": repair_count,
+                "current_step": WorkflowStep.REPAIR_SLIDES.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Slide repair updated %d slide(s)", repair_count)
+            return next_state
+        except Exception as exc:
+            logger.exception("Slide repair failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.REPAIR_SLIDES.value,
             }
 
     def review_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
@@ -736,12 +836,25 @@ class PresentationWorkflowNodes:
         errors = list(state.get("errors", []))
 
         if presentation is not None and not errors:
-            presentation.status = PresentationStatus.REVIEW
             presentation.current_brief_id = brief.id if brief else None
             presentation.current_storyline_id = storyline.id if storyline else None
+            awaiting_review = self._pending_human_review(state)
+            has_exports = bool(state.get("json_path") or state.get("marp_md_path"))
+
+            if awaiting_review:
+                presentation.status = PresentationStatus.IN_PROGRESS
+                status = WorkflowStatus.AWAITING_REVIEW
+                step = WorkflowStep.FINALIZE.value
+            elif has_exports:
+                presentation.status = PresentationStatus.EXPORTED
+                status = WorkflowStatus.COMPLETED
+                step = WorkflowStep.FINALIZE.value
+            else:
+                presentation.status = PresentationStatus.REVIEW
+                status = WorkflowStatus.COMPLETED
+                step = WorkflowStep.FINALIZE.value
+
             presentation = self._presentations.update_presentation(presentation)
-            status = WorkflowStatus.COMPLETED
-            step = WorkflowStep.FINALIZE.value
         else:
             status = WorkflowStatus.FAILED
             step = WorkflowStep.FAILED.value
@@ -757,3 +870,25 @@ class PresentationWorkflowNodes:
         else:
             logger.info("Workflow completed for presentation %s", state.get("presentation_id"))
         return next_state
+
+    def _pending_human_review(self, state: PresentationWorkflowState) -> bool:
+        if state.get("require_brief_review"):
+            brief = state.get("brief")
+            if brief is not None:
+                refreshed = self._presentations.get_brief(brief.id)
+                if refreshed is not None and refreshed.approval_status != ApprovalStatus.APPROVED:
+                    return True
+
+        if state.get("require_storyline_review"):
+            storyline = state.get("storyline")
+            if storyline is not None:
+                refreshed = self._presentations.get_storyline(storyline.id)
+                if refreshed is not None and refreshed.approval_status != ApprovalStatus.APPROVED:
+                    return True
+
+        if state.get("require_slides_review"):
+            slides = self._load_slides_for_export(state)
+            if slides and not slides_are_approved(slides):
+                return True
+
+        return False

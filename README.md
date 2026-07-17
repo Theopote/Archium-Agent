@@ -72,7 +72,7 @@ Archium-Agent/
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -e ".[dev,legacy]"
+pip install -e ".[full,dev,legacy]"
 copy .env.example .env
 # 编辑 .env，填入 GEMINI_API_KEY（可选，无 Key 也可启动）
 ```
@@ -82,7 +82,7 @@ copy .env.example .env
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,legacy]"
+pip install -e ".[full,dev,legacy]"
 cp .env.example .env
 ```
 
@@ -90,12 +90,20 @@ cp .env.example .env
 
 | 变量 | 说明 | 必填 |
 |------|------|------|
+| `DATABASE_PATH` | SQLite 数据库文件路径（相对项目根目录），默认 `data/database/archium.db` | 否 |
+| `DATABASE_URL` | SQLAlchemy 连接 URL 覆盖项（未设置时使用 `DATABASE_PATH`） | 否 |
 | `GEMINI_API_KEY` / `LLM_API_KEY` | OpenAI 兼容 API Key（如 Gemini） | 否（调用 LLM 时需要） |
 | `LLM_BASE_URL` | API Base URL | 否 |
 | `LLM_MODEL` | 模型名称，默认 `gemini-2.5-flash` | 否 |
+| `EMBEDDING_API_KEY` | Embedding 专用 API Key（未设置时回退到 LLM Key） | 否 |
+| `EMBEDDING_BASE_URL` | Embedding API Base URL（未设置时回退到 LLM Base URL） | 否 |
+| `EMBEDDING_MODEL` | Embedding 模型名称 | 否（启用向量检索时需要） |
+| `RETRIEVAL_ENABLED` | 是否启用向量检索，默认 `false` | 否 |
 | `WORKFLOW_CHECKPOINT_PATH` | LangGraph SqliteSaver checkpoint 路径 | 否 |
 | `BLOCK_EXPORT_ON_CRITICAL_REVIEW` | 为 `true` 时，未处理的严重审核问题将阻断 JSON/Marp 导出 | 否 |
 | `LLM_PROFESSIONAL_REVIEW_ENABLED` | 为 `true` 且已配置 LLM 时，额外运行 LLM 专业审核 | 否 |
+| `FACT_EXTRACTION_ENABLED` | 为 `true` 且 LLM 可用时，在检索上下文后提取 ProjectFact | 否 |
+| `SLIDE_REPAIR_ENABLED` | 为 `true` 且 LLM 可用时，自动修复页面级严重/高优先级审核问题 | 否 |
 | `MARP_COMMAND` | Marp CLI 命令，默认 `marp` | 否 |
 | `DISCORD_BOT_TOKEN` | Discord Bot Token（遗留模块） | 否 |
 | `DISCORD_USER_ID` | Discord 用户 ID（遗留模块） | 否 |

@@ -29,8 +29,10 @@ def create_engine_from_settings(settings: Settings | None = None) -> Engine:
     """Create a SQLAlchemy engine from application settings."""
     settings = settings or get_settings()
     engine = create_engine(
-        settings.database_url,
-        connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
+        settings.resolved_database_url,
+        connect_args={"check_same_thread": False}
+        if settings.resolved_database_url.startswith("sqlite")
+        else {},
         pool_pre_ping=True,
     )
     _configure_sqlite(engine)

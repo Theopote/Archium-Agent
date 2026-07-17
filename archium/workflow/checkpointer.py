@@ -28,6 +28,7 @@ _CHECKPOINT_MODULES: list[tuple[str, str]] = [
     ("archium.domain.enums", "SlideType"),
     ("archium.domain.enums", "VerificationStatus"),
     ("archium.domain.enums", "VisualType"),
+    ("archium.domain.fact", "ProjectFact"),
     ("archium.domain.presentation", "Chapter"),
     ("archium.domain.presentation", "Presentation"),
     ("archium.domain.presentation", "PresentationBrief"),

@@ -6,6 +6,7 @@ from typing import Any
 
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
+from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
@@ -78,12 +79,16 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "source_document_count": state.get("source_document_count", 0),
         "source_chunk_count": state.get("source_chunk_count", 0),
         "source_validation_issues": list(state.get("source_validation_issues", [])),
+        "extracted_fact_count": state.get("extracted_fact_count", 0),
+        "fact_validation_issues": list(state.get("fact_validation_issues", [])),
+        "fact_count": len(state.get("project_facts", [])),
         "json_path": state.get("json_path"),
         "marp_md_path": state.get("marp_md_path"),
         "marp_pptx_path": state.get("marp_pptx_path"),
         "errors": list(state.get("errors", [])),
         "slide_review_issues": list(state.get("slide_review_issues", [])),
         "matched_asset_count": state.get("matched_asset_count", 0),
+        "repaired_slide_count": state.get("repaired_slide_count", 0),
         "review_issue_count": len(state.get("review_issues", [])),
         "slide_count": len(slides),
     }
@@ -100,6 +105,12 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         payload["storyline"] = storyline.model_dump(mode="json")
     if slides:
         payload["slides"] = [slide.model_dump(mode="json") for slide in slides]
+    project_facts = state.get("project_facts", [])
+    if project_facts:
+        payload["project_facts"] = [
+            fact.model_dump(mode="json") if isinstance(fact, ProjectFact) else fact
+            for fact in project_facts
+        ]
     review_issues = state.get("review_issues", [])
     if review_issues:
         payload["review_issues"] = [
@@ -152,4 +163,12 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
             restored["review_issues"] = list(issues)
         else:
             restored["review_issues"] = [ReviewIssue.model_validate(item) for item in issues]
+    if "project_facts" in state_data:
+        facts = state_data["project_facts"]
+        if not facts:
+            restored["project_facts"] = []
+        elif isinstance(facts[0], ProjectFact):
+            restored["project_facts"] = list(facts)
+        else:
+            restored["project_facts"] = [ProjectFact.model_validate(item) for item in facts]
     return restored

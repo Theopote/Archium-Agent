@@ -111,7 +111,7 @@ class PresentationWorkflowService:
         if refreshed is None:
             raise WorkflowError(f"Workflow run {workflow_run.id} disappeared after execution")
 
-        return self._to_result(refreshed, final_state)
+        return self._ensure_success(self._to_result(refreshed, final_state))
 
     def continue_after_review(self, workflow_run_id: UUID) -> WorkflowRunResult:
         """Resume a workflow paused at a LangGraph interrupt for human review."""
@@ -139,7 +139,7 @@ class PresentationWorkflowService:
         refreshed = self._workflow_runs.get_by_id(run.id)
         if refreshed is None:
             raise WorkflowError(f"Workflow run {run.id} disappeared after continuation")
-        return self._to_result(refreshed, final_state)
+        return self._ensure_success(self._to_result(refreshed, final_state))
 
     def resume(self, workflow_run_id: UUID) -> WorkflowRunResult:
         """Re-run or continue a workflow from its LangGraph checkpoint."""
@@ -197,7 +197,7 @@ class PresentationWorkflowService:
         refreshed = self._workflow_runs.get_by_id(run.id)
         if refreshed is None:
             raise WorkflowError(f"Workflow run {run.id} disappeared after resume")
-        return self._to_result(refreshed, final_state)
+        return self._ensure_success(self._to_result(refreshed, final_state))
 
     def get_run(self, workflow_run_id: UUID) -> WorkflowRun | None:
         return self._workflow_runs.get_by_id(workflow_run_id)
@@ -237,3 +237,10 @@ class PresentationWorkflowService:
             marp_pptx_path=marp_pptx_path,
             errors=list(workflow_run.errors),
         )
+
+    @staticmethod
+    def _ensure_success(result: WorkflowRunResult) -> WorkflowRunResult:
+        if result.errors:
+            message = "; ".join(result.errors)
+            raise WorkflowError(f"Presentation workflow failed: {message}")
+        return result

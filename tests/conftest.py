@@ -32,7 +32,7 @@ def test_settings(tmp_path: Path) -> Settings:
     (base / "database").mkdir(parents=True)
     return Settings(
         _env_file=None,
-        database_url=f"sqlite:///{base / 'database' / 'test.db'}",
+        database_path=base / "database" / "test.db",
         workflow_checkpoint_path=base / "database" / "workflow_checkpoints.db",
         project_storage_path=base / "projects",
         output_path=base / "outputs",

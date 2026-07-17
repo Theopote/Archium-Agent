@@ -8,6 +8,7 @@ from typing import Annotated, TypedDict
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
+from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
@@ -22,15 +23,19 @@ class PresentationWorkflowState(TypedDict, total=False):
     project_name: str | None
     source_document_count: int
     source_chunk_count: int
-    source_validation_issues: list[str]
+    source_validation_issues: Annotated[list[str], operator.add]
     request: PresentationRequest
     presentation: Presentation | None
     context_bundle: ProjectContextBundle | None
+    project_facts: list[ProjectFact]
+    extracted_fact_count: int
+    fact_validation_issues: Annotated[list[str], operator.add]
     brief: PresentationBrief | None
     storyline: Storyline | None
     slides: list[SlideSpec]
-    review_issues: list[ReviewIssue]
+    review_issues: Annotated[list[ReviewIssue], operator.add]
     matched_asset_count: int
+    repaired_slide_count: int
     json_path: str | None
     marp_md_path: str | None
     marp_pptx_path: str | None
@@ -41,7 +46,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     require_storyline_review: bool
     require_slides_review: bool
     review_gate: str | None
-    slide_review_issues: list[str]
+    slide_review_issues: Annotated[list[str], operator.add]
     current_step: str
     errors: Annotated[list[str], operator.add]
 
@@ -72,11 +77,15 @@ def initial_workflow_state(
         "request": request,
         "presentation": presentation,
         "context_bundle": None,
+        "project_facts": [],
+        "extracted_fact_count": 0,
+        "fact_validation_issues": [],
         "brief": None,
         "storyline": None,
         "slides": [],
         "review_issues": [],
         "matched_asset_count": 0,
+        "repaired_slide_count": 0,
         "json_path": None,
         "marp_md_path": None,
         "marp_pptx_path": None,

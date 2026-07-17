@@ -101,6 +101,8 @@ class PresentationWorkflowGraph:
         builder.add_node("load_project", self._nodes.load_project)
         builder.add_node("validate_sources", self._nodes.validate_sources)
         builder.add_node("retrieve_context", self._nodes.retrieve_context)
+        builder.add_node("extract_facts", self._nodes.extract_facts)
+        builder.add_node("validate_facts", self._nodes.validate_facts)
         builder.add_node("generate_brief", self._nodes.generate_brief)
         builder.add_node("generate_storyline", self._nodes.generate_storyline)
         builder.add_node("generate_slides", self._nodes.generate_slides)
@@ -108,6 +110,7 @@ class PresentationWorkflowGraph:
         builder.add_node("match_assets", self._nodes.match_assets)
         builder.add_node("run_content_review", self._nodes.run_content_review)
         builder.add_node("run_professional_review", self._nodes.run_professional_review)
+        builder.add_node("repair_slides", self._nodes.repair_slides)
         builder.add_node("review_slides", self._nodes.review_slides)
         builder.add_node("export_json", self._nodes.export_json)
         builder.add_node("export_marp", self._nodes.export_marp)
@@ -128,6 +131,16 @@ class PresentationWorkflowGraph:
         builder.add_conditional_edges(
             "retrieve_context",
             _route_on_errors,
+            {"continue": "extract_facts", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "extract_facts",
+            _route_on_errors,
+            {"continue": "validate_facts", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "validate_facts",
+            _route_on_errors,
             {"continue": "generate_brief", "finalize": "finalize"},
         )
         builder.add_conditional_edges(
@@ -144,7 +157,8 @@ class PresentationWorkflowGraph:
         builder.add_edge("resolve_citations", "match_assets")
         builder.add_edge("match_assets", "run_content_review")
         builder.add_edge("run_content_review", "run_professional_review")
-        builder.add_edge("run_professional_review", "review_slides")
+        builder.add_edge("run_professional_review", "repair_slides")
+        builder.add_edge("repair_slides", "review_slides")
         builder.add_conditional_edges(
             "review_slides",
             _route_after_slides,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -10,11 +11,15 @@ from archium.agents.brief_builder import BriefBuilder
 from archium.agents.narrative_architect import NarrativeArchitect
 from archium.agents.slide_planner import SlidePlanner
 from archium.application.presentation_models import PipelineResult, PresentationRequest
+from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import PresentationStatus
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
-from archium.exceptions import WorkflowError
+from archium.exceptions import (
+    PresentationNotFoundError,
+    ProjectNotFoundError,
+    WorkflowError,
+)
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
@@ -25,7 +30,7 @@ logger = get_logger(__name__, operation="presentation")
 
 
 class PresentationService:
-    """Orchestrate brief → storyline → slide plan → JSON export."""
+    """Atomic presentation generation capabilities used by the LangGraph workflow."""
 
     def __init__(
         self,
@@ -54,7 +59,7 @@ class PresentationService:
     ) -> Presentation:
         project = self._projects.get_by_id(project_id)
         if project is None:
-            raise ValueError(f"Project {project_id} not found")
+            raise ProjectNotFoundError(project_id)
         return self._presentations.create_presentation(
             Presentation(project_id=project_id, title=request.title)
         )
@@ -92,58 +97,51 @@ class PresentationService:
         export_marp: bool = False,
         export_pptx: bool = False,
     ) -> PipelineResult:
-        result = PipelineResult(
-            presentation=Presentation(project_id=project_id, title=request.title),
+        """Deprecated: delegate to :class:`PresentationWorkflowService`."""
+        warnings.warn(
+            "PresentationService.run_pipeline() is deprecated; "
+            "use PresentationWorkflowService.run() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from archium.application.presentation_workflow_service import PresentationWorkflowService
+
+        if presentation_id is not None:
+            existing = self._presentations.get_presentation(presentation_id)
+            if existing is None:
+                raise PresentationNotFoundError(presentation_id)
+            logger.warning(
+                "run_pipeline(presentation_id=...) is ignored; "
+                "workflow runs always create a new presentation record."
+            )
+
+        workflow = PresentationWorkflowService(
+            self._session,
+            self._llm,
+            settings=self._settings,
+            renderer=self._renderer,
         )
         try:
-            if presentation_id is None:
-                result.presentation = self.create_presentation(project_id, request)
-            else:
-                existing = self._presentations.get_presentation(presentation_id)
-                if existing is None:
-                    raise ValueError(f"Presentation {presentation_id} not found")
-                result.presentation = existing
-
-            pres_id = result.presentation.id
-            result.brief = self.generate_brief(project_id, pres_id, request)
-            result.storyline = self.generate_storyline(project_id, result.brief)
-            result.slides = self.generate_slide_plan(project_id, result.brief, result.storyline)
-
-            if export_json and result.brief and result.storyline:
-                version = result.brief.version
-                result.json_path = self._renderer.render(
-                    presentation_id=pres_id,
-                    brief=result.brief,
-                    storyline=result.storyline,
-                    slides=result.slides,
-                    version=version,
-                )
-
-            if export_marp and result.brief and result.storyline:
-                version = result.brief.version
-                result.marp_md_path = self._marp_renderer.render(
-                    presentation_id=pres_id,
-                    brief=result.brief,
-                    storyline=result.storyline,
-                    slides=result.slides,
-                    version=version,
-                )
-                if export_pptx and result.marp_md_path is not None:
-                    result.marp_pptx_path = self._marp_renderer.export_pptx(result.marp_md_path)
-
-            result.presentation.status = PresentationStatus.REVIEW
-            result.presentation.current_brief_id = result.brief.id if result.brief else None
-            result.presentation.current_storyline_id = (
-                result.storyline.id if result.storyline else None
+            workflow_result = workflow.run(
+                project_id,
+                request,
+                export_json=export_json,
+                export_marp=export_marp,
+                export_pptx=export_pptx,
             )
-            result.presentation = self._presentations.update_presentation(result.presentation)
+        except WorkflowError:
+            raise WorkflowError("Presentation pipeline failed") from None
+        return _workflow_result_to_pipeline(workflow_result)
 
-            logger.info(
-                "Pipeline completed for presentation %s with %d slides",
-                pres_id,
-                len(result.slides),
-            )
-        except Exception as exc:
-            logger.exception("Pipeline failed")
-            raise WorkflowError("Presentation pipeline failed") from exc
-        return result
+
+def _workflow_result_to_pipeline(result: WorkflowRunResult) -> PipelineResult:
+    return PipelineResult(
+        presentation=result.presentation,
+        brief=result.brief,
+        storyline=result.storyline,
+        slides=list(result.slides),
+        json_path=result.json_path,
+        marp_md_path=result.marp_md_path,
+        marp_pptx_path=result.marp_pptx_path,
+        errors=list(result.errors),
+    )
