@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from archium.application.slide_repair_policy import contains_protected_signal
+from archium.domain.slide_split import citation_key
 from archium.domain.presentation import Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan
@@ -38,13 +39,15 @@ def validate_split_plan(
     if original is not None:
         moved_points = _moved_points(original, source, continuations)
         if original.source_citations and moved_points:
-            source_has_citations = bool(source.source_citations)
-            moved_has_evidence = contains_protected_signal(" ".join(moved_points))
-            continuation_has_citations = any(
-                slide.source_citations for slide in continuations
+            issues.extend(
+                _citation_separation_issues(
+                    original,
+                    source,
+                    continuations,
+                    plan.citation_mapping,
+                    moved_points,
+                )
             )
-            if moved_has_evidence and source_has_citations and not continuation_has_citations:
-                issues.append("证据性要点已移至续页，但引用仍留在原页")
 
         if original.visual_requirements and plan.asset_mapping:
             unmapped = [
@@ -90,6 +93,47 @@ def validate_split_plan(
 def _content_needs_citations(slide: SlideSpec) -> bool:
     combined = " ".join([slide.message, *slide.key_points])
     return contains_protected_signal(combined)
+
+
+def _citation_separation_issues(
+    original: SlideSpec,
+    source: SlideSpec,
+    continuations: list[SlideSpec],
+    citation_mapping: dict[str, UUID],
+    moved_points: list[str],
+) -> list[str]:
+    """Flag when a citation's evidence moved but the citation stayed on the source page."""
+    issues: list[str] = []
+    continuation_ids = {slide.id for slide in continuations}
+    moved_text = " ".join(moved_points)
+
+    for index, citation in enumerate(original.source_citations):
+        quote = citation.quote or ""
+        if not quote:
+            continue
+        evidence_moved = quote in moved_text or any(quote in point for point in moved_points)
+        if not evidence_moved:
+            continue
+
+        key = citation_key(citation.document_id, citation.chunk_id, index)
+        target_id = citation_mapping.get(key)
+        on_continuation = target_id in continuation_ids if target_id is not None else any(
+            _citation_on_slide(citation, slide) for slide in continuations
+        )
+        if not on_continuation:
+            issues.append("证据性要点已移至续页，但引用仍留在原页")
+            break
+
+    return issues
+
+
+def _citation_on_slide(citation, slide: SlideSpec) -> bool:
+    for item in slide.source_citations:
+        if citation.chunk_id is not None and item.chunk_id == citation.chunk_id:
+            return True
+        if item.document_id == citation.document_id and item.quote == citation.quote:
+            return True
+    return False
 
 
 def _moved_points(

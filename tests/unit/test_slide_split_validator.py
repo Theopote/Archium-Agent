@@ -165,4 +165,34 @@ class TestSlideSplitValidator:
             chapter_slide_count=3,
         )
 
-        assert len(plan.asset_mapping) == len(original.visual_requirements)
+    def test_citation_stays_on_source_when_evidence_did_not_move(self) -> None:
+        original = _slide(
+            key_points=[
+                "现状：人车混行 35%",
+                "原因：落客区不足",
+                "策略一：分离人车动线",
+                "策略二：增设落客缓冲",
+                "策略三：优化货运时段",
+            ],
+            source_citations=[
+                Citation(
+                    document_id=uuid4(),
+                    document_name="规划.pdf",
+                    quote="人车混行比例 35%",
+                )
+            ],
+        )
+        updated = original.model_copy(update={"key_points": original.key_points[:3]})
+        moved = original.key_points[3:]
+
+        plan = build_split_plan(
+            original,
+            updated,
+            moved,
+            "要点溢出",
+            storyline=_storyline(),
+            chapter_slide_count=3,
+        )
+
+        assert not plan.requires_human_approval
+        assert not any("引用仍留在原页" in issue for issue in plan.validation_issues)

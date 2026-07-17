@@ -10,8 +10,8 @@ from archium.application.slide_repair_policy import loses_protected_content
 from archium.application.slide_split_planner import (
     _allocate_citations,
     _allocate_visuals,
-    citation_key,
 )
+from archium.domain.slide_split import citation_key
 from archium.application.slide_split_validator import validate_split_plan
 from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
@@ -131,6 +131,7 @@ def plan_from_llm_draft(
         citation_mapping=citation_mapping,
         asset_mapping=asset_mapping,
         planning_source="llm",
+        narrative_reason=draft.narrative_reason,
     )
     return validate_split_plan(
         plan,

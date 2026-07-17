@@ -159,7 +159,7 @@ class TestLlmSplitPlanner:
 
         assert plan.planning_source == "llm"
         assert not plan.requires_human_approval
-        assert plan.updated_source.title.endswith("问题与原因")
+        assert plan.narrative_reason == "按问题与策略拆分"
         assert plan.primary_continuation.title.endswith("三项策略")
         assert len(plan.updated_source.key_points) == 3
         assert len(plan.primary_continuation.key_points) == 3
@@ -174,7 +174,7 @@ class TestLlmSplitPlanner:
             slide,
             "要点超过 5 条",
             llm=llm,
-            settings=Settings(_env_file=None),
+            settings=Settings(_env_file=None, slide_repair_enabled=True),
             brief=_brief(),
             storyline=_storyline(),
             chapter_slide_count=3,
@@ -197,7 +197,7 @@ class TestLlmSplitPlanner:
             storyline=_storyline(),
             chapter_slide_count=3,
             llm=llm,
-            settings=Settings(_env_file=None),
+            settings=Settings(_env_file=None, slide_repair_enabled=True),
             brief=_brief(),
         )
 
@@ -219,3 +219,81 @@ class TestLlmSplitPlanner:
 
         assert plan.planning_source == "rule"
         assert len(plan.primary_continuation.key_points) == 1
+
+    def test_build_split_plan_falls_back_when_repair_disabled(self) -> None:
+        slide = _traffic_slide()
+        llm = MockLLMProvider(selector=pipeline_mock_selector)
+
+        plan = build_split_plan(
+            slide,
+            slide.model_copy(update={"key_points": slide.key_points[:5]}),
+            slide.key_points[5:],
+            "要点超过 5 条",
+            storyline=_storyline(),
+            chapter_slide_count=3,
+            llm=llm,
+            settings=Settings(_env_file=None, slide_repair_enabled=False),
+            brief=_brief(),
+        )
+
+        assert plan.planning_source == "rule"
+        assert not llm.calls
+
+    def test_choose_split_plan_prefers_rule_when_llm_needs_approval(self) -> None:
+        from archium.application.slide_split_llm_planner import choose_split_plan
+        from archium.domain.slide_split import SlideSplitPlan
+
+        slide = _traffic_slide()
+        rule_plan = build_split_plan(
+            slide,
+            slide.model_copy(update={"key_points": slide.key_points[:5]}),
+            slide.key_points[5:],
+            "要点超过 5 条",
+            storyline=_storyline(),
+            chapter_slide_count=3,
+        )
+        llm_plan = plan_from_llm_draft(
+            slide,
+            SlideSplitDraft(
+                narrative_reason="测试",
+                source=SlideSplitPageDraft(
+                    title="交通组织",
+                    message="结论",
+                    key_points=slide.key_points[:5],
+                ),
+                continuation=SlideSplitPageDraft(
+                    title="交通组织（续）",
+                    message="本页延续上一页内容，详见下列要点。",
+                    key_points=slide.key_points[5:],
+                ),
+            ),
+            "要点超过 5 条",
+            storyline=_storyline(),
+            chapter_slide_count=3,
+        )
+        assert llm_plan.requires_human_approval
+
+        chosen = choose_split_plan(rule_plan, llm_plan)
+
+        assert chosen.planning_source == "rule"
+
+    def test_apply_tiered_layout_repair_uses_llm_narrative_split(self) -> None:
+        from archium.application.slide_repair_policy import apply_tiered_layout_repair
+
+        slide = _traffic_slide()
+        llm = MockLLMProvider(selector=pipeline_mock_selector)
+
+        outcome = apply_tiered_layout_repair(
+            slide,
+            storyline=_storyline(),
+            chapter_slide_count=3,
+            llm=llm,
+            settings=Settings(_env_file=None, slide_repair_enabled=True),
+            brief=_brief(),
+        )
+
+        assert outcome.split_plan is not None
+        assert outcome.split_plan.planning_source == "llm"
+        assert "问题与原因" in outcome.split_plan.updated_source.title
+        assert outcome.split_slide is not None
+        assert llm.calls

@@ -12,6 +12,12 @@ from archium.domain.slide import SlideSpec
 GENERIC_CONTINUATION_MESSAGE = "本页延续上一页内容，详见下列要点。"
 
 
+def citation_key(document_id: UUID, chunk_id: UUID | None, index: int) -> str:
+    if chunk_id is not None:
+        return str(chunk_id)
+    return f"{document_id}:{index}"
+
+
 class SlideSplitPlan(DomainModel):
     """Plan to split one slide into multiple narrative-coherent pages.
 
@@ -26,6 +32,7 @@ class SlideSplitPlan(DomainModel):
     requires_human_approval: bool = False
     validation_issues: list[str] = Field(default_factory=list)
     planning_source: str = Field(default="rule")
+    narrative_reason: str | None = None
 
     @field_validator("new_slides")
     @classmethod

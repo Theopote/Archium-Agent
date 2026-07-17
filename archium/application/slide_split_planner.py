@@ -11,16 +11,10 @@ from archium.application.slide_split_validator import validate_split_plan
 from archium.config.settings import Settings
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
-from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan
+from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan, citation_key
 from archium.infrastructure.llm.base import LLMProvider
 _STRATEGY_RE = re.compile(r"(?:策略|方案|措施|步骤|举措|路径)")
 _PROBLEM_RE = re.compile(r"(?:问题|原因|现状|挑战|痛点|制约)")
-
-
-def citation_key(document_id: UUID, chunk_id: UUID | None, index: int) -> str:
-    if chunk_id is not None:
-        return str(chunk_id)
-    return f"{document_id}:{index}"
 
 
 def derive_continuation_title(original_title: str, moved_points: list[str]) -> str:
@@ -142,7 +136,8 @@ def build_split_plan(
         storyline=storyline,
         chapter_slide_count=chapter_slide_count,
     )
-    if llm is None:
+    runtime_settings = settings or get_settings()
+    if llm is None or not runtime_settings.slide_repair_enabled:
         return rule_plan
 
     from archium.application.slide_split_llm_planner import (
