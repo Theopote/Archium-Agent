@@ -72,7 +72,10 @@ pythonpath = ["."]
 addopts = "-ra"
 filterwarnings = ["ignore::DeprecationWarning"]
 markers = [
-    "smoke: End-to-end smoke tests (PptxGenJS, real parsers)",
+    "smoke: End-to-end smoke tests (PptxGenJS, Marp CLI, migrations, Streamlit)",
+    "marp_smoke: Marp CLI export smoke tests",
+    "migration_smoke: Alembic migration smoke tests",
+    "streamlit_smoke: Streamlit startup smoke tests",
 ]
 
 [tool.ruff]

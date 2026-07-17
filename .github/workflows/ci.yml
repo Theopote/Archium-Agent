@@ -1,62 +1,135 @@
-name: CI
-
-on:
-  push:
-  pull_request:
-
-jobs:
-  test:
-    name: test (${{ matrix.python-version }})
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12"]
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -e ".[full,legacy,dev]"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install PptxGenJS dependencies
-        working-directory: archium/infrastructure/renderers/pptxgen
-        run: npm ci
-
-      - name: Ruff
-        run: ruff check archium tests
-
-      - name: Mypy
-        run: mypy archium
-
-      - name: Pytest
-        run: pytest -m "not smoke" --cov=archium --cov-report=term-missing
-
-      - name: PptxGen smoke test
-        run: pytest -m smoke -v
-
-      - name: Upload golden case artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: golden-artifacts-py${{ matrix.python-version }}
-          path: tests/golden/artifacts/
-          if-no-files-found: ignore
-
-      - name: Upload PptxGen smoke artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pptxgen-smoke-py${{ matrix.python-version }}
-          path: tests/smoke/artifacts/
-          if-no-files-found: ignore
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.python-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[full,legacy,dev]"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install PptxGenJS dependencies
+        working-directory: archium/infrastructure/renderers/pptxgen
+        run: npm ci
+
+      - name: Ruff
+        run: ruff check archium tests
+
+      - name: Mypy
+        run: mypy archium
+
+      - name: Pytest
+        run: pytest -m "not smoke" --cov=archium --cov-report=term-missing --cov-fail-under=65
+
+      - name: PptxGen smoke test
+        run: pytest tests/smoke/test_pptxgen_render.py -v
+
+      - name: Upload golden case artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-artifacts-py${{ matrix.python-version }}
+          path: tests/golden/artifacts/
+          if-no-files-found: ignore
+
+      - name: Upload PptxGen smoke artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pptxgen-smoke-py${{ matrix.python-version }}
+          path: tests/smoke/artifacts/
+          if-no-files-found: ignore
+
+  marp-export:
+    name: marp export smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[full,dev]"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Marp CLI
+        run: npm install -g @marp-team/marp-cli
+
+      - name: Verify Marp CLI
+        run: marp --version
+
+      - name: Marp export smoke test
+        run: pytest tests/smoke/test_marp_export.py -v
+
+      - name: Upload Marp smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: marp-smoke
+          path: tests/smoke/artifacts/
+          if-no-files-found: ignore
+
+  migration-smoke:
+    name: alembic migration smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Alembic migration smoke test
+        run: pytest tests/smoke/test_alembic_migration.py -v
+
+  streamlit-smoke:
+    name: streamlit startup smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[ui,dev]"
+
+      - name: Streamlit startup smoke test
+        run: pytest tests/smoke/test_streamlit_startup.py -v
+
