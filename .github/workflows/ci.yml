@@ -23,7 +23,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[full,legacy,dev]"
 
       - name: Ruff
         run: ruff check archium tests

@@ -33,7 +33,16 @@ workflow = [
 vector = ["chromadb>=0.5"]
 llm = ["openai>=1.0.0"]
 full = [
-    "archium-agent[ui,documents,workflow,vector,llm]",
+    "streamlit>=1.32.0",
+    "pymupdf>=1.24",
+    "python-docx>=1.1",
+    "python-pptx>=1.0",
+    "openpyxl>=3.1",
+    "Pillow>=10.0",
+    "langgraph>=0.2",
+    "langgraph-checkpoint-sqlite>=2.0",
+    "chromadb>=0.5",
+    "openai>=1.0.0",
 ]
 legacy = [
     "discord.py>=2.3.0",
@@ -41,7 +50,6 @@ legacy = [
     "watchdog>=4.0.0",
 ]
 dev = [
-    "archium-agent[full,legacy]",
     "alembic>=1.13",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

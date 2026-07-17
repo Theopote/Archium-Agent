@@ -187,14 +187,14 @@ archium/infrastructure/renderers/pptxgen/
 
 ## 安装
 
-> **依赖说明：** `dev` extra 已包含 `full` 与 `legacy`。开发者只需 `pip install -e ".[dev]"`；普通用户安装 `pip install -e ".[full]"` 即可。
+> **依赖说明：** optional extras 互不嵌套自引用。开发者安装 `pip install -e ".[full,legacy,dev]"`；普通用户安装 `pip install -e ".[full]"` 即可。模块化 extras（`ui`、`documents` 等）仍可按需单独组合。
 
 ### Windows（开发者）
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
+pip install -e ".[full,legacy,dev]"
 copy .env.example .env
 # 编辑 .env，填入 GEMINI_API_KEY（可选，无 Key 也可启动）
 ```
@@ -204,7 +204,7 @@ copy .env.example .env
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[full,legacy,dev]"
 cp .env.example .env
 ```
 
@@ -295,7 +295,7 @@ alembic upgrade head
 本地等价命令：
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[full,legacy,dev]"
 ruff check archium tests
 mypy archium
 pytest --cov=archium --cov-report=term-missing
