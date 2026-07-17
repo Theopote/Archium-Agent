@@ -38,9 +38,9 @@ with st.sidebar:
 
 navigation = st.navigation(
     [
-        st.Page(home.render, title="首页", icon="🏛️", default=True),
-        st.Page(workspace.render, title="项目工作台", icon="📁"),
-        st.Page(command_center.render, title="指令中心", icon="💬"),
+        st.Page(home.render, title="首页", icon="🏛️", url_path="home", default=True),
+        st.Page(workspace.render, title="项目工作台", icon="📁", url_path="workspace"),
+        st.Page(command_center.render, title="指令中心", icon="💬", url_path="command-center"),
     ]
 )
 navigation.run()
