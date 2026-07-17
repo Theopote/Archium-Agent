@@ -31,13 +31,18 @@ def test_marp_smoke_exports_pptx_pdf_and_png(tmp_path: Path) -> None:
     markdown_path = _MARKDOWN_PATH.resolve()
     assert markdown_path.exists()
 
-    pptx_path = (tmp_path / "smoke-presentation.pptx").resolve()
-    pdf_path = (tmp_path / "smoke-presentation.pdf").resolve()
-    preview_dir = (tmp_path / "previews").resolve()
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    local_markdown = work_dir / markdown_path.name
+    local_markdown.write_text(markdown_path.read_text(encoding="utf-8"), encoding="utf-8")
 
-    runner.convert(markdown_path, pptx_path)
-    runner.convert(markdown_path, pdf_path)
-    images = runner.export_images(markdown_path, output_dir=preview_dir, image_format="png")
+    pptx_path = (work_dir / "smoke-presentation.pptx").resolve()
+    pdf_path = (work_dir / "smoke-presentation.pdf").resolve()
+    preview_dir = (work_dir / "previews").resolve()
+
+    runner.convert(local_markdown, pptx_path)
+    runner.convert(local_markdown, pdf_path)
+    images = runner.export_images(local_markdown, output_dir=preview_dir, image_format="png")
 
     assert pptx_path.exists()
     assert pptx_path.stat().st_size > 500

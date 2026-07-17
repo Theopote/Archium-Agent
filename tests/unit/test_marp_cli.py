@@ -37,9 +37,9 @@ def test_marp_cli_export_images_invokes_subprocess(
 
     def fake_run(cmd: list[str], **kwargs: object) -> object:
         calls.append(cmd)
-        previews_dir.mkdir(parents=True, exist_ok=True)
-        (previews_dir / "presentation.001.png").write_bytes(b"png")
-        (previews_dir / "presentation.002.png").write_bytes(b"png")
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        (markdown_path.parent / "presentation.001.png").write_bytes(b"png")
+        (markdown_path.parent / "presentation.002.png").write_bytes(b"png")
         return type("Result", (), {"returncode": 0, "stdout": "", "stderr": ""})()
 
     monkeypatch.setattr("archium.infrastructure.renderers.marp_cli.subprocess.run", fake_run)
@@ -55,8 +55,6 @@ def test_marp_cli_export_images_invokes_subprocess(
             "marp",
             str(markdown_path),
             "--images=png",
-            "-o",
-            str(previews_dir) + "/",
         ]
     ]
 
