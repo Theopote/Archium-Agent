@@ -283,6 +283,10 @@ class PresentationRepository:
         orm = self._session.get(StorylineORM, storyline_id)
         return mappers.storyline_to_domain(orm) if orm else None
 
+    def get_slide(self, slide_id: UUID) -> SlideSpec | None:
+        orm = self._session.get(SlideORM, slide_id)
+        return mappers.slide_to_domain(orm) if orm else None
+
     def save_slide(self, slide: SlideSpec) -> SlideSpec:
         try:
             orm = self._session.get(SlideORM, slide.id)

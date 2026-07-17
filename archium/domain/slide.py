@@ -54,3 +54,12 @@ class SlideSpec(IdentifiedModel, VersionedModel):
         if len(value) > 5:
             raise ValueError("key_points must not exceed 5 items per slide")
         return value
+
+    def mark_planned(self) -> None:
+        self.status = SlideStatus.PLANNED
+
+    def approve(self) -> None:
+        self.status = SlideStatus.APPROVED
+
+    def mark_needs_revision(self) -> None:
+        self.status = SlideStatus.NEEDS_REVISION

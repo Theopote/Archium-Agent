@@ -1,4 +1,4 @@
-"""Human review and editing for Brief and Storyline artifacts."""
+"""Human review and editing for Brief, Storyline, and SlideSpec artifacts."""
 
 from __future__ import annotations
 
@@ -10,15 +10,23 @@ from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
     PresentationReviewContext,
+    SlideUpdate,
     StorylineUpdate,
 )
-from archium.domain.enums import ApprovalStatus, WorkflowStatus
+from archium.domain.enums import ApprovalStatus, SlideStatus, WorkflowStatus
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
+from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
     WorkflowRunRepository,
 )
+
+
+def slides_are_approved(slides: list[SlideSpec]) -> bool:
+    if not slides:
+        return False
+    return all(slide.status == SlideStatus.APPROVED for slide in slides)
 
 
 class PresentationReviewService:
@@ -53,6 +61,8 @@ class PresentationReviewService:
             storylines = self._presentations.list_storylines(presentation_id)
             storyline = storylines[0] if storylines else None
 
+        slides = self._presentations.list_slides(presentation_id)
+
         workflow_run = None
         if workflow_run_id is not None:
             workflow_run = self._workflow_runs.get_by_id(workflow_run_id)
@@ -67,8 +77,15 @@ class PresentationReviewService:
             presentation=presentation,
             brief=brief,
             storyline=storyline,
+            slides=slides,
             workflow_run=workflow_run,
         )
+
+    def list_slides(self, presentation_id: UUID) -> list[SlideSpec]:
+        return self._presentations.list_slides(presentation_id)
+
+    def get_slide(self, slide_id: UUID) -> SlideSpec | None:
+        return self._presentations.get_slide(slide_id)
 
     def update_brief(self, brief_id: UUID, update: BriefUpdate) -> PresentationBrief:
         brief = self._require_brief(brief_id)
@@ -117,6 +134,37 @@ class PresentationReviewService:
         storyline.reject()
         return self._presentations.save_storyline(storyline)
 
+    def update_slide(self, slide_id: UUID, update: SlideUpdate) -> SlideSpec:
+        slide = self._require_slide(slide_id)
+        slide.chapter_id = update.chapter_id.strip()
+        slide.order = update.order
+        slide.title = update.title.strip()
+        slide.message = update.message.strip()
+        slide.slide_type = _parse_slide_type(update.slide_type)
+        slide.layout_id = update.layout_id.strip() or "default"
+        slide.key_points = list(update.key_points)
+        slide.speaker_notes = update.speaker_notes.strip() if update.speaker_notes else None
+        slide.status = SlideStatus.DRAFT
+        return self._presentations.save_slide(slide)
+
+    def approve_slide(self, slide_id: UUID) -> SlideSpec:
+        slide = self._require_slide(slide_id)
+        slide.approve()
+        return self._presentations.save_slide(slide)
+
+    def reject_slide(self, slide_id: UUID) -> SlideSpec:
+        slide = self._require_slide(slide_id)
+        slide.mark_needs_revision()
+        return self._presentations.save_slide(slide)
+
+    def approve_all_slides(self, presentation_id: UUID) -> list[SlideSpec]:
+        slides = self._presentations.list_slides(presentation_id)
+        approved: list[SlideSpec] = []
+        for slide in slides:
+            slide.approve()
+            approved.append(self._presentations.save_slide(slide))
+        return approved
+
     def ensure_can_continue(self, workflow_run_id: UUID) -> PresentationReviewContext:
         run = self._workflow_runs.get_by_id(workflow_run_id)
         if run is None:
@@ -139,6 +187,11 @@ class PresentationReviewService:
                 raise WorkflowError("Storyline is missing for review continuation")
             if context.storyline.approval_status != ApprovalStatus.APPROVED:
                 raise WorkflowError("Storyline must be approved before continuing")
+        elif gate == "slides":
+            if not context.slides:
+                raise WorkflowError("Slide plan is missing for review continuation")
+            if not slides_are_approved(context.slides):
+                raise WorkflowError("All slides must be approved before continuing")
         else:
             raise WorkflowError(f"Unknown review gate: {gate}")
 
@@ -156,6 +209,12 @@ class PresentationReviewService:
             raise WorkflowError(f"Storyline {storyline_id} not found")
         return storyline
 
+    def _require_slide(self, slide_id: UUID) -> SlideSpec:
+        slide = self._presentations.get_slide(slide_id)
+        if slide is None:
+            raise WorkflowError(f"Slide {slide_id} not found")
+        return slide
+
 
 def _chapter_from_update(update: ChapterUpdate) -> Chapter:
     return Chapter(
@@ -166,3 +225,13 @@ def _chapter_from_update(update: ChapterUpdate) -> Chapter:
         order=update.order,
         estimated_slide_count=update.estimated_slide_count,
     )
+
+
+from archium.domain.enums import SlideType
+
+
+def _parse_slide_type(value: str) -> SlideType:
+    try:
+        return SlideType(value.strip())
+    except ValueError as exc:
+        raise WorkflowError(f"Invalid slide_type: {value}") from exc

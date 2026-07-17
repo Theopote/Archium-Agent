@@ -59,6 +59,7 @@ class PresentationWorkflowService:
         export_pptx: bool = False,
         require_brief_review: bool = False,
         require_storyline_review: bool = False,
+        require_slides_review: bool = False,
     ) -> WorkflowRunResult:
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
         workflow_run = self._workflow_runs.create(
@@ -74,6 +75,7 @@ class PresentationWorkflowService:
                     "export_pptx": export_pptx,
                     "require_brief_review": require_brief_review,
                     "require_storyline_review": require_storyline_review,
+                    "require_slides_review": require_slides_review,
                 },
             )
         )
@@ -89,6 +91,7 @@ class PresentationWorkflowService:
             export_pptx=export_pptx,
             require_brief_review=require_brief_review,
             require_storyline_review=require_storyline_review,
+            require_slides_review=require_slides_review,
         )
 
         try:
@@ -126,6 +129,8 @@ class PresentationWorkflowService:
             restored["brief"] = context.brief
         if context.storyline is not None:
             restored["storyline"] = context.storyline
+        if context.slides:
+            restored["slides"] = context.slides
 
         run.status = WorkflowStatus.RUNNING
         run.errors = []
@@ -143,6 +148,7 @@ class PresentationWorkflowService:
             export_pptx=bool(run.state.get("export_pptx", False)),
             require_brief_review=bool(run.state.get("require_brief_review", False)),
             require_storyline_review=bool(run.state.get("require_storyline_review", False)),
+            require_slides_review=bool(run.state.get("require_slides_review", False)),
         )
         initial_state = cast(
             PresentationWorkflowState,
@@ -199,6 +205,7 @@ class PresentationWorkflowService:
             export_pptx=bool(run.state.get("export_pptx", False)),
             require_brief_review=bool(run.state.get("require_brief_review", False)),
             require_storyline_review=bool(run.state.get("require_storyline_review", False)),
+            require_slides_review=bool(run.state.get("require_slides_review", False)),
         )
         initial_state = cast(
             PresentationWorkflowState,

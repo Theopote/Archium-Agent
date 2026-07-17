@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
+from archium.application.review_service import slides_are_approved
 from archium.domain.enums import ApprovalStatus, PresentationStatus, WorkflowStatus, WorkflowStep
+from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.logging import ArchiumLogAdapter, get_logger
 from archium.workflow.runtime import PresentationWorkflowRuntime
@@ -146,6 +148,13 @@ class PresentationWorkflowNodes:
         if state.get("errors"):
             return {"current_step": WorkflowStep.SLIDES.value}
 
+        presentation_id = UUID(state["presentation_id"])
+        existing = state.get("slides") or []
+        if existing:
+            slides = self._presentations.list_slides(presentation_id)
+            if slides:
+                return {"slides": slides, "current_step": WorkflowStep.SLIDES.value}
+
         brief = state.get("brief")
         storyline = state.get("storyline")
         if brief is None or storyline is None:
@@ -161,8 +170,16 @@ class PresentationWorkflowNodes:
                 brief,
                 storyline,
             )
+            reviewed_slides: list[SlideSpec] = []
+            for slide in slides:
+                if state.get("require_slides_review"):
+                    slide.mark_planned()
+                else:
+                    slide.approve()
+                reviewed_slides.append(self._presentations.save_slide(slide))
+
             next_state: PresentationWorkflowState = {
-                "slides": slides,
+                "slides": reviewed_slides,
                 "current_step": WorkflowStep.SLIDES.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
@@ -170,7 +187,7 @@ class PresentationWorkflowNodes:
             logger.info(
                 "Slide plan generated for presentation %s (%d slides)",
                 state["presentation_id"],
-                len(slides),
+                len(reviewed_slides),
             )
             return next_state
         except Exception as exc:
@@ -179,6 +196,10 @@ class PresentationWorkflowNodes:
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.SLIDES.value,
             }
+
+    def _load_slides_for_export(self, state: PresentationWorkflowState) -> list[SlideSpec]:
+        presentation_id = UUID(state["presentation_id"])
+        return self._presentations.list_slides(presentation_id)
 
     def export_json(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
@@ -189,7 +210,7 @@ class PresentationWorkflowNodes:
 
         brief = state.get("brief")
         storyline = state.get("storyline")
-        slides = state.get("slides", [])
+        slides = self._load_slides_for_export(state)
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot export JSON without brief and storyline"],
@@ -229,7 +250,7 @@ class PresentationWorkflowNodes:
 
         brief = state.get("brief")
         storyline = state.get("storyline")
-        slides = state.get("slides", [])
+        slides = self._load_slides_for_export(state)
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot export Marp without brief and storyline"],
@@ -268,6 +289,7 @@ class PresentationWorkflowNodes:
         logger = self._logger(state)
         brief = state.get("brief")
         storyline = state.get("storyline")
+        slides = self._load_slides_for_export(state)
 
         if brief is not None and brief.approval_status != ApprovalStatus.APPROVED:
             gate = "brief"
@@ -275,6 +297,9 @@ class PresentationWorkflowNodes:
         elif storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:
             gate = "storyline"
             step = WorkflowStep.REVIEW_STORYLINE.value
+        elif slides and state.get("require_slides_review") and not slides_are_approved(slides):
+            gate = "slides"
+            step = WorkflowStep.REVIEW_SLIDES.value
         else:
             return {"current_step": WorkflowStep.FINALIZE.value}
 

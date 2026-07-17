@@ -7,6 +7,7 @@ from typing import cast
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from archium.application.review_service import slides_are_approved
 from archium.domain.enums import ApprovalStatus
 from archium.workflow.nodes import PresentationWorkflowNodes
 from archium.workflow.runtime import PresentationWorkflowRuntime
@@ -35,6 +36,16 @@ def _route_after_storyline(state: PresentationWorkflowState) -> str:
     if state.get("require_storyline_review"):
         storyline = state.get("storyline")
         if storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:
+            return "pause_for_review"
+    return "continue"
+
+
+def _route_after_slides(state: PresentationWorkflowState) -> str:
+    if state.get("errors"):
+        return "finalize"
+    if state.get("require_slides_review"):
+        slides = state.get("slides", [])
+        if slides and not slides_are_approved(slides):
             return "pause_for_review"
     return "continue"
 
@@ -74,8 +85,8 @@ class PresentationWorkflowGraph:
         )
         builder.add_conditional_edges(
             "generate_slides",
-            _route_on_errors,
-            {"continue": "export_json", "finalize": "finalize"},
+            _route_after_slides,
+            {"continue": "export_json", "pause_for_review": "pause_for_review", "finalize": "finalize"},
         )
         builder.add_conditional_edges(
             "export_json",

@@ -72,6 +72,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "export_pptx": state.get("export_pptx", False),
         "require_brief_review": state.get("require_brief_review", False),
         "require_storyline_review": state.get("require_storyline_review", False),
+        "require_slides_review": state.get("require_slides_review", False),
         "review_gate": state.get("review_gate"),
         "json_path": state.get("json_path"),
         "marp_md_path": state.get("marp_md_path"),

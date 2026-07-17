@@ -172,6 +172,7 @@ class WorkflowStep(StrEnum):
     REVIEW_BRIEF = "review_brief"
     STORYLINE = "storyline"
     REVIEW_STORYLINE = "review_storyline"
+    REVIEW_SLIDES = "review_slides"
     SLIDES = "slides"
     EXPORT = "export"
     MARP = "marp"
