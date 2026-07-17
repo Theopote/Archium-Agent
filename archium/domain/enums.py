@@ -160,6 +160,7 @@ class ReviewStatus(StrEnum):
 
 class WorkflowStatus(StrEnum):
     RUNNING = "running"
+    AWAITING_REVIEW = "awaiting_review"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -168,7 +169,9 @@ class WorkflowStatus(StrEnum):
 class WorkflowStep(StrEnum):
     INIT = "init"
     BRIEF = "brief"
+    REVIEW_BRIEF = "review_brief"
     STORYLINE = "storyline"
+    REVIEW_STORYLINE = "review_storyline"
     SLIDES = "slides"
     EXPORT = "export"
     MARP = "marp"

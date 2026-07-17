@@ -89,5 +89,9 @@ class Storyline(IdentifiedModel, VersionedModel, TimestampedModel):
         self.approval_status = ApprovalStatus.APPROVED
         self.touch()
 
+    def reject(self) -> None:
+        self.approval_status = ApprovalStatus.REJECTED
+        self.touch()
+
     def touch(self) -> None:
         TimestampedModel.touch(self)

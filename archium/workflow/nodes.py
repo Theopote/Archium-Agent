@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from archium.domain.enums import PresentationStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, PresentationStatus, WorkflowStatus, WorkflowStep
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.logging import ArchiumLogAdapter, get_logger
 from archium.workflow.runtime import PresentationWorkflowRuntime
@@ -63,6 +63,12 @@ class PresentationWorkflowNodes:
         if state.get("errors"):
             return {"current_step": WorkflowStep.BRIEF.value}
 
+        existing = state.get("brief")
+        if existing is not None:
+            refreshed = self._presentations.get_brief(existing.id)
+            if refreshed is not None:
+                return {"brief": refreshed, "current_step": WorkflowStep.BRIEF.value}
+
         try:
             project_id = UUID(state["project_id"])
             presentation_id = UUID(state["presentation_id"])
@@ -72,6 +78,12 @@ class PresentationWorkflowNodes:
                 presentation_id,
                 request,
             )
+            if state.get("require_brief_review"):
+                brief.approval_status = ApprovalStatus.PENDING
+            else:
+                brief.approve()
+            brief = self._presentations.save_brief(brief)
+
             next_state: PresentationWorkflowState = {
                 "brief": brief,
                 "current_step": WorkflowStep.BRIEF.value,
@@ -92,6 +104,12 @@ class PresentationWorkflowNodes:
         if state.get("errors"):
             return {"current_step": WorkflowStep.STORYLINE.value}
 
+        existing = state.get("storyline")
+        if existing is not None:
+            refreshed = self._presentations.get_storyline(existing.id)
+            if refreshed is not None:
+                return {"storyline": refreshed, "current_step": WorkflowStep.STORYLINE.value}
+
         brief = state.get("brief")
         if brief is None:
             return {
@@ -102,6 +120,12 @@ class PresentationWorkflowNodes:
         try:
             project_id = UUID(state["project_id"])
             storyline = self._runtime.presentation_service.generate_storyline(project_id, brief)
+            if state.get("require_storyline_review"):
+                storyline.approval_status = ApprovalStatus.PENDING
+            else:
+                storyline.approve()
+            storyline = self._presentations.save_storyline(storyline)
+
             next_state: PresentationWorkflowState = {
                 "storyline": storyline,
                 "current_step": WorkflowStep.STORYLINE.value,
@@ -239,6 +263,29 @@ class PresentationWorkflowNodes:
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.MARP.value,
             }
+
+    def pause_for_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        brief = state.get("brief")
+        storyline = state.get("storyline")
+
+        if brief is not None and brief.approval_status != ApprovalStatus.APPROVED:
+            gate = "brief"
+            step = WorkflowStep.REVIEW_BRIEF.value
+        elif storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:
+            gate = "storyline"
+            step = WorkflowStep.REVIEW_STORYLINE.value
+        else:
+            return {"current_step": WorkflowStep.FINALIZE.value}
+
+        next_state: PresentationWorkflowState = {
+            "current_step": step,
+            "review_gate": gate,
+        }
+        merged = cast(PresentationWorkflowState, {**state, **next_state})
+        self._persist_checkpoint(merged, status=WorkflowStatus.AWAITING_REVIEW)
+        logger.info("Workflow paused for %s review on presentation %s", gate, state.get("presentation_id"))
+        return next_state
 
     def finalize(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
