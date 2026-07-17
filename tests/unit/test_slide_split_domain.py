@@ -25,7 +25,7 @@ from archium.domain.enums import (
     SlideType,
     VisualType,
 )
-from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
+from archium.domain.presentation import Chapter, Presentation, Storyline
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
@@ -37,6 +37,7 @@ from archium.infrastructure.database.repositories import (
     ProjectRepository,
     ReviewRepository,
 )
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
@@ -183,26 +184,48 @@ def _layout_issue(presentation_id: UUID, slide_id: UUID) -> ReviewIssue:
     )
 
 
+def _list_slides_raw(db_session: Session, presentation_id: UUID) -> list[SlideSpec]:
+    stmt = (
+        select(SlideORM)
+        .where(SlideORM.presentation_id == presentation_id)
+        .order_by(SlideORM.order)
+    )
+    return [_load_slide_raw(db_session, row.id) for row in db_session.scalars(stmt)]
+
+
+def _restore_slide_raw(
+    db_session: Session,
+    slide_id: UUID,
+    *,
+    message: str,
+    key_points: list[str],
+) -> None:
+    orm = db_session.get(SlideORM, slide_id)
+    assert orm is not None
+    orm.message = message
+    orm.key_points_json = list(key_points)
+    db_session.flush()
+
+
 def _undo_slide_split(
     db_session: Session,
     repair_record: SlideRepairRecord,
 ) -> list[SlideSpec]:
     """Revert a split using the repair audit record and standard repository operations."""
     pres_repo = PresentationRepository(db_session)
-    original = pres_repo.get_slide(repair_record.slide_id)
+    original = _load_slide_raw(db_session, repair_record.slide_id)
     assert original is not None
 
-    restored = original.model_copy(
-        update={
-            "message": repair_record.before_message,
-            "key_points": list(repair_record.before_key_points),
-        }
+    _restore_slide_raw(
+        db_session,
+        repair_record.slide_id,
+        message=repair_record.before_message,
+        key_points=list(repair_record.before_key_points),
     )
-    pres_repo.save_slide(restored)
 
     split_id = repair_record.split_slide_id
     if split_id is None:
-        return pres_repo.list_slides(repair_record.presentation_id)
+        return _list_slides_raw(db_session, repair_record.presentation_id)
 
     split_slide = pres_repo.get_slide(split_id)
     assert split_slide is not None
@@ -210,7 +233,7 @@ def _undo_slide_split(
     db_session.delete(db_session.get(SlideORM, split_id))
     db_session.flush()
 
-    for slide in pres_repo.list_slides(repair_record.presentation_id):
+    for slide in _list_slides_raw(db_session, repair_record.presentation_id):
         if slide.order > split_order:
             pres_repo.save_slide(
                 slide.model_copy(
@@ -224,7 +247,7 @@ def _undo_slide_split(
                 )
             )
 
-    return pres_repo.list_slides(repair_record.presentation_id)
+    return _list_slides_raw(db_session, repair_record.presentation_id)
 
 
 class TestSplitSlidePolicy:
@@ -302,7 +325,6 @@ class TestSplitSlideService:
         presentation_id, seeded_slides, _ = split_presentation
         target = seeded_slides[1]
         original_lineage = target.lineage_id
-        original_point_count = len(target.key_points)
         issue = ReviewRepository(db_session).create(
             _layout_issue(presentation_id, target.id)
         )
@@ -417,7 +439,11 @@ class TestSplitSlideService:
         )
 
         assert len(original_revisions) >= 2
-        baseline = original_revisions[0]
+        baseline = next(
+            revision
+            for revision in reversed(original_revisions)
+            if revision.change_source == SlideChangeSource.GENERATED
+        )
         repair_revision = next(
             revision
             for revision in original_revisions

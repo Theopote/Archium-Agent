@@ -6,13 +6,13 @@ import os
 import subprocess
 from pathlib import Path
 
+import archium.infrastructure.database.models  # noqa: F401
 import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from archium.config.settings import Settings, reset_settings
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.session import create_engine_from_settings
-import archium.infrastructure.database.models  # noqa: F401
 from sqlalchemy import inspect, text
 
 pytestmark = [pytest.mark.smoke, pytest.mark.migration_smoke]

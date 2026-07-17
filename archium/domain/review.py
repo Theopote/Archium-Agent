@@ -5,15 +5,14 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Callable
-from uuid import UUID
-
 from typing import Any
+from uuid import UUID
 
 from pydantic import Field, model_validator
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
 from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, ReviewStatus
-from archium.domain.review_rules import ReviewRuleCode, TITLE_TO_RULE_CODE
+from archium.domain.review_rules import TITLE_TO_RULE_CODE, ReviewRuleCode
 
 _WHITESPACE_RE = re.compile(r"\s+")
 
