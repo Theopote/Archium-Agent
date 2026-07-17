@@ -138,6 +138,13 @@ class Settings(BaseSettings):
         le=5,
         description="Maximum automated repair → four-layer re-review cycles per workflow run.",
     )
+    visual_qa_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true and Pillow is available, run explainable image QA on matched slide assets "
+            "(dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type)."
+        ),
+    )
 
     discord_bot_token: str | None = Field(
         default=None,

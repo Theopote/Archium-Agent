@@ -8,7 +8,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.chunk_models import ProjectContextBundle
+from archium.application.visual_qa_service import VisualQAService
 from archium.config.settings import Settings, get_settings
+from archium.domain.asset import Asset
 from archium.domain.enums import (
     PresentationType,
     ReviewCategory,
@@ -400,6 +402,8 @@ class AutomatedReviewService:
 
             for requirement in slide.visual_requirements:
                 if requirement.type == VisualType.SITE_PLAN:
+                    if requirement.primary_asset_id is not None and self._settings.visual_qa_enabled:
+                        continue
                     context = " ".join(
                         (
                             slide.title,
@@ -448,6 +452,8 @@ class AutomatedReviewService:
                             )
                         )
                 if requirement.type in {VisualType.SITE_PLAN, VisualType.DIAGRAM, VisualType.MAP}:
+                    if requirement.primary_asset_id is not None and self._settings.visual_qa_enabled:
+                        continue
                     context = " ".join(
                         (
                             slide.title,
@@ -651,6 +657,9 @@ class AutomatedReviewService:
                 )
             )
 
+        if project_id is not None and self._settings.visual_qa_enabled:
+            issues.extend(self._run_visual_qa_review(presentation_id, slides, assets_by_id))
+
         return self._persist(presentation_id, issues)
 
     def run_professional_review(
@@ -698,6 +707,25 @@ class AutomatedReviewService:
             and self._settings.llm_configured
             and self._llm is not None
         )
+
+    def _run_visual_qa_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        assets_by_id: dict[UUID, Asset],
+    ) -> list[ReviewIssue]:
+        try:
+            return VisualQAService(self._session).review_slides(
+                presentation_id,
+                slides,
+                assets_by_id,
+            )
+        except RuntimeError as exc:
+            logger.warning("Visual QA disabled: %s", exc)
+            return []
+        except Exception as exc:
+            logger.warning("Visual QA failed: %s", exc)
+            return []
 
     def _check_brief_alignment(
         self,
