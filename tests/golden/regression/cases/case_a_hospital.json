@@ -44,6 +44,11 @@
     "workflow_status": "completed",
     "review_layers": ["evidence", "architectural", "layout"],
     "fact_conflict_keys": ["site_area", "land_area"],
-    "issue_title_contains_any": ["缺少引用来源", "数值结论缺少依据", "交通流线图", "缺少匹配素材"]
+    "issue_title_contains_any": ["缺少引用来源", "数值结论缺少依据", "交通流线图", "缺少匹配素材"],
+    "issue_rule_code_groups": [
+      ["EVIDENCE.MISSING_CITATION", "EVIDENCE.NUMERIC_CLAIM_UNCITED"],
+      ["ARCH.FLOW_DIAGRAM_MISSING_LEGEND"],
+      ["LAYOUT.MISSING_ASSET"]
+    ]
   }
 }

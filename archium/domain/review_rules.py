@@ -72,3 +72,8 @@ TITLE_TO_RULE_CODE: dict[str, str] = {
     "素材宽高比极端": ReviewRuleCode.LAYOUT_EXTREME_ASPECT_RATIO,
     "需人工确认版面调整": ReviewRuleCode.LAYOUT_MANUAL_LAYOUT_CONFIRMATION,
 }
+
+
+def resolve_rule_code_from_title(title: str) -> str:
+    """Map a legacy display title to a stable rule code when possible."""
+    return TITLE_TO_RULE_CODE.get(title.strip(), ReviewRuleCode.LEGACY_UNSPECIFIED)

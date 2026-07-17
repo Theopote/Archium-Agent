@@ -44,6 +44,12 @@ def assert_workflow_expectations(
         titles = " ".join(issue.title for issue in issues)
         assert any(fragment in titles for fragment in title_fragments)
 
+    expected_rule_code_groups = expectations.get("issue_rule_code_groups", [])
+    if expected_rule_code_groups:
+        rule_codes = {issue.rule_code for issue in issues}
+        for group in expected_rule_code_groups:
+            assert any(rule_code in rule_codes for rule_code in group)
+
     section_keywords = expectations.get("required_section_keywords", [])
     if section_keywords:
         combined = " ".join(

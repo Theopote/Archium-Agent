@@ -6,6 +6,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.domain.document import DocumentChunk
 from archium.domain.enums import ProjectType, ReviewLayer, WorkflowStatus
+from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import (
@@ -98,6 +99,13 @@ def test_workflow_persists_multi_layer_review_issues(
     assert any("缺少引用来源" in title or "数值结论缺少依据" in title for title in titles)
     assert any("交通流线图缺少颜色图例提示" in title for title in titles)
     assert any("缺少匹配素材" in title for title in titles)
+
+    rule_codes = {issue.rule_code for issue in issues}
+    assert ReviewRuleCode.EVIDENCE_MISSING_CITATION in rule_codes or (
+        ReviewRuleCode.EVIDENCE_NUMERIC_CLAIM_UNCITED in rule_codes
+    )
+    assert ReviewRuleCode.ARCH_FLOW_DIAGRAM_MISSING_LEGEND in rule_codes
+    assert ReviewRuleCode.LAYOUT_MISSING_ASSET in rule_codes
 
     presentations = PresentationRepository(db_session).list_by_project(project.id)
     assert presentations

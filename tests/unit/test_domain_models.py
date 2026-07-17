@@ -386,6 +386,18 @@ class TestReviewIssue:
         issue.resolve()
         assert issue.status.value == "resolved"
 
+    def test_legacy_payload_infers_rule_code_from_title(self) -> None:
+        issue = ReviewIssue.model_validate(
+            {
+                "presentation_id": str(PRESENTATION_ID),
+                "category": ReviewCategory.CITATION.value,
+                "severity": ReviewSeverity.HIGH.value,
+                "title": "缺少引用来源",
+                "description": "未关联项目资料。",
+            }
+        )
+        assert issue.rule_code == ReviewRuleCode.EVIDENCE_MISSING_CITATION
+
 
 class TestUserPreference:
     def test_create_preference(self) -> None:

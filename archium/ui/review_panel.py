@@ -576,6 +576,7 @@ def _render_review_issues_panel(
             "page": _issue_slide_label(issue, slides_by_id),
             "severity": SEVERITY_LABELS.get(issue.severity, issue.severity.value),
             "category": CATEGORY_LABELS.get(issue.category, issue.category.value),
+            "rule_code": issue.rule_code,
             "title": issue.title,
             "description": issue.description,
             "suggestion": issue.suggestion or "",

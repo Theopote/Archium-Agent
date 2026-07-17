@@ -7,10 +7,13 @@ import re
 from collections.abc import Callable
 from uuid import UUID
 
-from pydantic import Field
+from typing import Any
+
+from pydantic import Field, model_validator
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
 from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, ReviewStatus
+from archium.domain.review_rules import ReviewRuleCode, TITLE_TO_RULE_CODE
 
 _WHITESPACE_RE = re.compile(r"\s+")
 
@@ -83,6 +86,18 @@ class ReviewIssue(IdentifiedModel, TimestampedModel):
     suggestion: str | None = None
     auto_fixable: bool = False
     status: ReviewStatus = ReviewStatus.OPEN
+
+    @model_validator(mode="before")
+    @classmethod
+    def _infer_rule_code(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        rule_code = data.get("rule_code")
+        if rule_code:
+            return data
+        title = str(data.get("title") or "").strip()
+        data["rule_code"] = TITLE_TO_RULE_CODE.get(title, ReviewRuleCode.LEGACY_UNSPECIFIED)
+        return data
 
     def resolve(self) -> None:
         self.status = ReviewStatus.RESOLVED
