@@ -12,7 +12,8 @@ from archium.agents._helpers import (
     slides_from_plan,
     to_json,
 )
-from archium.config.settings import Settings, get_settings
+from archium.application.slide_history_service import SlideHistoryService
+from archium.domain.enums import SlideChangeSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -77,6 +78,8 @@ class SlidePlanner:
             version=version,
         )
         saved: list[SlideSpec] = []
+        history = SlideHistoryService(self._session)
         for slide in slides:
             saved.append(self._presentations.save_slide(slide))
+            history.record_snapshot(saved[-1], SlideChangeSource.GENERATED)
         return saved

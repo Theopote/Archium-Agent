@@ -13,7 +13,8 @@ from archium.application.review_models import (
     SlideUpdate,
     StorylineUpdate,
 )
-from archium.domain.enums import ApprovalStatus, SlideStatus, SlideType, WorkflowStatus
+from archium.application.slide_history_service import SlideHistoryService
+from archium.domain.enums import ApprovalStatus, SlideChangeSource, SlideStatus, SlideType, WorkflowStatus
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
@@ -36,6 +37,7 @@ class PresentationReviewService:
         self._session = session
         self._presentations = PresentationRepository(session)
         self._workflow_runs = WorkflowRunRepository(session)
+        self._history = SlideHistoryService(session)
 
     def get_review_context(
         self,
@@ -136,6 +138,7 @@ class PresentationReviewService:
 
     def update_slide(self, slide_id: UUID, update: SlideUpdate) -> SlideSpec:
         slide = self._require_slide(slide_id)
+        self._history.record_snapshot(slide, SlideChangeSource.MANUAL_EDIT)
         slide.chapter_id = update.chapter_id.strip()
         slide.order = update.order
         slide.title = update.title.strip()
@@ -145,6 +148,7 @@ class PresentationReviewService:
         slide.key_points = list(update.key_points)
         slide.speaker_notes = update.speaker_notes.strip() if update.speaker_notes else None
         slide.status = SlideStatus.DRAFT
+        slide.version += 1
         return self._presentations.save_slide(slide)
 
     def approve_slide(self, slide_id: UUID) -> SlideSpec:

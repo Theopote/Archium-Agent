@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
-from archium.application.review_service import PresentationReviewService
+from archium.application.slide_history_service import SlideHistoryService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -40,6 +40,7 @@ class RegenerationService:
         self._workflow_runs = WorkflowRunRepository(session)
         self._pipeline = PresentationService(session, llm, settings=self._settings)
         self._review = PresentationReviewService(session)
+        self._history = SlideHistoryService(session)
 
     def regenerate_brief(
         self,
