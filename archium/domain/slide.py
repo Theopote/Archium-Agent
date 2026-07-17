@@ -22,8 +22,17 @@ class VisualRequirement(DomainModel):
     type: VisualType
     description: str = Field(min_length=1)
     preferred_asset_ids: list[UUID] = Field(default_factory=list)
+    candidate_asset_ids: list[UUID] = Field(default_factory=list)
+    match_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    confirmed: bool = False
+    needs_crop: bool = False
+    needs_highlight: bool = False
     processing_instructions: list[str] = Field(default_factory=list)
     required: bool = True
+
+    @property
+    def primary_asset_id(self) -> UUID | None:
+        return self.preferred_asset_ids[0] if self.preferred_asset_ids else None
 
 
 class SlideSpec(IdentifiedModel, VersionedModel):

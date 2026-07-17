@@ -32,6 +32,7 @@ from archium.ui.artifact_history_panel import (
     render_brief_history_panel,
     render_storyline_history_panel,
 )
+from archium.ui.asset_board_panel import render_asset_board_panel
 from archium.ui.error_handlers import format_user_error
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workspace_service import (
@@ -608,8 +609,8 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         or (context.slides_pending_review and context.review_gate == "slides"),
     )
 
-    tab_brief, tab_storyline, tab_slides, tab_quality = st.tabs(
-        ["Brief", "Storyline", "SlideSpec", "质量审核"]
+    tab_brief, tab_storyline, tab_slides, tab_assets, tab_quality = st.tabs(
+        ["Brief", "Storyline", "SlideSpec", "Asset Board", "质量审核"]
     )
     with tab_brief:
         _render_brief_editor(presentation_id, workflow_run_id)
@@ -617,6 +618,11 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         _render_storyline_editor(presentation_id, workflow_run_id)
     with tab_slides:
         _render_slides_editor(presentation_id, workflow_run_id)
+    with tab_assets:
+        render_asset_board_panel(
+            project_id=context.presentation.project_id,
+            presentation_id=presentation_id,
+        )
     with tab_quality:
         _render_review_issues_panel(
             presentation_id,

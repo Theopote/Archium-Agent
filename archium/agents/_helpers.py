@@ -13,6 +13,8 @@ from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings
 from archium.domain.citation import Citation
 from archium.domain.document import DocumentChunk
+from archium.domain.enums import VerificationStatus
+from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import DocumentRepository, FactRepository
@@ -125,10 +127,15 @@ def build_project_context_bundle(
             lines.append(
                 f"- [chunk_id={chunk.id}] [doc={doc_name}] ({prefix}){title} {snippet}"
             )
-    if facts:
-        lines.append("【项目事实】")
-        for fact in facts:
-            lines.append(f"- {fact.label}: {fact.value} ({fact.verification_status.value})")
+    active_facts = [
+        fact for fact in facts if fact.verification_status != VerificationStatus.REJECTED
+    ]
+    confirmed_facts = [fact for fact in active_facts if fact.is_confirmed]
+    pending_facts = [fact for fact in active_facts if not fact.is_confirmed]
+    if confirmed_facts or pending_facts:
+        lines.append("【项目事实账本 · 已确认优先】")
+        for fact in confirmed_facts + pending_facts:
+            lines.append(_format_fact_line(fact))
     if not lines:
         return ProjectContextBundle(text="暂无项目资料，请基于用户需求保守生成。")
 
@@ -137,6 +144,26 @@ def build_project_context_bundle(
         chunks=chunks,
         document_names=document_names,
     )
+
+
+def _format_fact_line(fact: ProjectFact) -> str:
+    unit_suffix = f" {fact.unit}" if fact.unit else ""
+    status = "已确认" if fact.is_confirmed else fact.verification_status.value
+    source = _fact_source_hint(fact)
+    conflict = f" · 冲突组={fact.conflict_group}" if fact.conflict_group else ""
+    return (
+        f"- [{status}] {fact.label}: {fact.value}{unit_suffix}{source}{conflict} "
+        f"(confidence={fact.confidence:.2f})"
+    )
+
+
+def _fact_source_hint(fact: ProjectFact) -> str:
+    if not fact.source_citations:
+        return ""
+    citation = fact.source_citations[0]
+    page = f" p.{citation.page_number}" if citation.page_number else ""
+    document_name = citation.document_name or "资料"
+    return f" · 来源={document_name}{page}"
 
 
 def build_request_context(request: PresentationRequest) -> str:

@@ -197,6 +197,7 @@ def project_fact_to_domain(orm: ProjectFactORM) -> ProjectFact:
         category=orm.category,
         confidence=orm.confidence,
         verification_status=VerificationStatus(orm.verification_status),
+        conflict_group=orm.conflict_group,
         source_citations=citations_from_json(orm.source_citations_json),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -213,6 +214,7 @@ def project_fact_to_orm(domain: ProjectFact, orm: ProjectFactORM | None = None) 
     target.category = domain.category
     target.confidence = domain.confidence
     target.verification_status = domain.verification_status.value
+    target.conflict_group = domain.conflict_group
     target.source_citations_json = citations_to_json(domain.source_citations)
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
@@ -462,6 +464,7 @@ def review_issue_to_domain(orm: ReviewIssueORM) -> ReviewIssue:
         id=orm.id,
         presentation_id=orm.presentation_id,
         slide_id=orm.slide_id,
+        reviewer_layer=ReviewLayer(getattr(orm, "reviewer_layer", ReviewLayer.CONTENT.value)),
         category=ReviewCategory(orm.category),
         severity=ReviewSeverity(orm.severity),
         title=orm.title,

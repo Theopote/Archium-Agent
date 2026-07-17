@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.asset_visual_utils import infer_visual_processing_flags
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType, VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
@@ -35,7 +36,8 @@ def _tokenize(text: str) -> set[str]:
     return {part for part in normalized.replace("，", " ").replace("。", " ").split() if len(part) > 1}
 
 
-def _score_asset(requirement: VisualRequirement, asset: Asset) -> float:
+def score_asset_for_requirement(requirement: VisualRequirement, asset: Asset) -> float:
+    """Score how well an asset satisfies a visual requirement."""
     if requirement.type == VisualType.TEXT_ONLY:
         return 0.0
 
@@ -63,6 +65,55 @@ def _score_asset(requirement: VisualRequirement, asset: Asset) -> float:
     return max(score, 0.0)
 
 
+def rank_assets_for_requirement(
+    requirement: VisualRequirement,
+    assets: list[Asset],
+    *,
+    min_score: float = 0.35,
+    top_k: int = 3,
+) -> list[tuple[Asset, float]]:
+    ranked = sorted(
+        ((asset, score_asset_for_requirement(requirement, asset)) for asset in assets),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    return [(asset, score) for asset, score in ranked if score >= min_score][:top_k]
+
+
+def apply_asset_match(
+    requirement: VisualRequirement,
+    ranked: list[tuple[Asset, float]],
+    *,
+    overwrite: bool = False,
+) -> bool:
+    """Apply ranked matches to a requirement. Returns True if changed."""
+    infer_visual_processing_flags(requirement)
+    requirement.candidate_asset_ids = [asset.id for asset, _score in ranked]
+
+    if requirement.confirmed and not overwrite:
+        if requirement.preferred_asset_ids:
+            return bool(requirement.candidate_asset_ids)
+        return False
+
+    if requirement.type == VisualType.TEXT_ONLY:
+        return False
+
+    if not ranked:
+        if overwrite and not requirement.confirmed:
+            requirement.preferred_asset_ids = []
+            requirement.match_score = None
+            return True
+        return bool(requirement.candidate_asset_ids)
+
+    best_asset, best_score = ranked[0]
+    if requirement.preferred_asset_ids and not overwrite:
+        return bool(requirement.candidate_asset_ids)
+
+    requirement.preferred_asset_ids = [best_asset.id]
+    requirement.match_score = best_score
+    return True
+
+
 class AssetMatchingService:
     """Link slide visual requirements to project assets."""
 
@@ -77,6 +128,7 @@ class AssetMatchingService:
         presentation_id: UUID,
         *,
         min_score: float = 0.35,
+        rematch: bool = False,
     ) -> tuple[list[SlideSpec], int]:
         """Populate preferred_asset_ids and return updated slides plus match count."""
         assets = self._assets.list_by_project(project_id)
@@ -93,24 +145,26 @@ class AssetMatchingService:
 
             changed = False
             for requirement in slide.visual_requirements:
-                if requirement.preferred_asset_ids:
+                if requirement.preferred_asset_ids and not rematch:
                     match_count += len(requirement.preferred_asset_ids)
+                    infer_visual_processing_flags(requirement)
+                    continue
+                if requirement.confirmed and not rematch:
+                    if requirement.preferred_asset_ids:
+                        match_count += 1
                     continue
                 if requirement.type == VisualType.TEXT_ONLY:
                     continue
 
-                ranked = sorted(
-                    ((asset, _score_asset(requirement, asset)) for asset in assets),
-                    key=lambda item: item[1],
-                    reverse=True,
+                ranked = rank_assets_for_requirement(
+                    requirement,
+                    assets,
+                    min_score=min_score,
                 )
-                best = next(((asset, score) for asset, score in ranked if score >= min_score), None)
-                if best is None:
-                    continue
-                asset, _score = best
-                requirement.preferred_asset_ids = [asset.id]
-                match_count += 1
-                changed = True
+                if apply_asset_match(requirement, ranked, overwrite=rematch):
+                    changed = True
+                if requirement.preferred_asset_ids:
+                    match_count += 1
 
             updated.append(self._presentations.save_slide(slide) if changed else slide)
 

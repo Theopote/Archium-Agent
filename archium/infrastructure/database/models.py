@@ -94,6 +94,7 @@ class ProjectFactORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     category: Mapped[str] = mapped_column(String(100), nullable=False, default="general")
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     verification_status: Mapped[str] = mapped_column(String(30), nullable=False, default="extracted")
+    conflict_group: Mapped[str | None] = mapped_column(String(100))
     source_citations_json: Mapped[list[dict[str, object]]] = mapped_column(
         "source_citations", JSON, default=list
     )
@@ -286,6 +287,7 @@ class ReviewIssueORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
     )
     slide_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    reviewer_layer: Mapped[str] = mapped_column(String(30), nullable=False, default="content")
     category: Mapped[str] = mapped_column(String(50), nullable=False)
     severity: Mapped[str] = mapped_column(String(30), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)

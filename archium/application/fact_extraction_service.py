@@ -10,6 +10,7 @@ from archium.agents.citations import citation_from_draft
 from archium.application.chunk_models import ProjectContextBundle
 from archium.config.settings import Settings, get_settings
 from archium.domain.fact import ProjectFact
+from archium.domain.fact_ledger import STANDARD_FACT_KEY_MAP
 from archium.infrastructure.database.repositories import FactRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import CitationDraft, FactExtractionDraft
@@ -96,6 +97,9 @@ class FactExtractionService:
                 unit=item.unit.strip() if item.unit else None,
                 category=item.category.strip() or "general",
                 confidence=item.confidence,
+                conflict_group=STANDARD_FACT_KEY_MAP[key].conflict_group
+                if key in STANDARD_FACT_KEY_MAP
+                else None,
                 source_citations=citations,
             )
             stored = self._facts.create(fact)

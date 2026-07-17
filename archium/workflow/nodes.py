@@ -28,6 +28,7 @@ from archium.domain.enums import (
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
+    FactRepository,
     PresentationRepository,
     ProjectRepository,
 )
@@ -204,17 +205,24 @@ class PresentationWorkflowNodes:
         if state.get("errors"):
             return {"current_step": WorkflowStep.EXTRACT_FACTS.value}
 
-        if state.get("project_facts"):
-            return {"current_step": WorkflowStep.EXTRACT_FACTS.value}
-
         try:
             project_id = UUID(state["project_id"])
+            facts_repo = FactRepository(self._runtime.session)
+            existing_db = facts_repo.list_by_project(project_id)
+            if existing_db:
+                return {
+                    "project_facts": existing_db,
+                    "extracted_fact_count": 0,
+                    "current_step": WorkflowStep.EXTRACT_FACTS.value,
+                }
+
             extractor = FactExtractionService(
                 self._runtime.session,
                 llm=self._runtime.llm,
                 settings=self._runtime.settings,
             )
-            facts, created = extractor.extract_from_context(project_id, state.get("context_bundle"))
+            _, created = extractor.extract_from_context(project_id, state.get("context_bundle"))
+            facts = facts_repo.list_by_project(project_id)
             next_state: PresentationWorkflowState = {
                 "project_facts": facts,
                 "extracted_fact_count": created,

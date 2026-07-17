@@ -25,6 +25,7 @@ class ProjectFact(IdentifiedModel, TimestampedModel):
     category: str = Field(default="general", min_length=1)
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     verification_status: VerificationStatus = VerificationStatus.EXTRACTED
+    conflict_group: str | None = Field(default=None, max_length=100)
     source_citations: list[Citation] = Field(default_factory=list)
 
     @field_validator("key")

@@ -1,0 +1,100 @@
+"""Unit tests for FactLedgerService."""
+
+from __future__ import annotations
+
+from archium.application.fact_ledger_service import FactLedgerService
+from archium.application.fact_validation_service import FactValidationService
+from archium.domain.enums import VerificationStatus
+from archium.domain.fact import ProjectFact
+from archium.domain.project import Project
+from archium.infrastructure.database.repositories import FactRepository, ProjectRepository
+from sqlalchemy.orm import Session
+
+
+def _seed_project(db_session: Session) -> Project:
+    return ProjectRepository(db_session).create(Project(name="Fact Ledger 测试"))
+
+
+def test_ledger_lists_standard_keys_and_missing(db_session: Session) -> None:
+    project = _seed_project(db_session)
+    FactRepository(db_session).create(
+        ProjectFact(
+            project_id=project.id,
+            key="bed_count",
+            label="床位数",
+            value="800",
+            unit="床",
+        )
+    )
+
+    ledger = FactLedgerService(db_session).get_ledger(project.id)
+
+    assert ledger.confirmed_count == 0
+    assert ledger.pending_count == 1
+    assert "bed_count" not in ledger.missing_standard_keys
+    assert "project_name" in ledger.missing_standard_keys
+
+
+def test_confirm_fact_clears_conflict_group(db_session: Session) -> None:
+    project = _seed_project(db_session)
+    fact = FactRepository(db_session).create(
+        ProjectFact(
+            project_id=project.id,
+            key="site_area",
+            label="用地面积",
+            value="12.5",
+            unit="公顷",
+            conflict_group="area",
+        )
+    )
+    fact.mark_conflicted()
+
+    confirmed = FactLedgerService(db_session).confirm_fact(fact.id)
+
+    assert confirmed.is_confirmed
+    assert confirmed.conflict_group is None
+
+
+def test_semantic_alias_conflict_detection(db_session: Session) -> None:
+    project = _seed_project(db_session)
+    repo = FactRepository(db_session)
+    repo.create(
+        ProjectFact(
+            project_id=project.id,
+            key="plot_ratio",
+            label="容积率",
+            value="2.5",
+        )
+    )
+    repo.create(
+        ProjectFact(
+            project_id=project.id,
+            key="far",
+            label="FAR",
+            value="3.0",
+        )
+    )
+
+    result = FactValidationService(db_session).validate(project.id)
+
+    assert any("语义冲突" in issue for issue in result.issues)
+    conflicted = [fact for fact in result.facts if fact.verification_status == VerificationStatus.CONFLICTED]
+    assert len(conflicted) == 2
+    assert all(fact.conflict_group == "alias:plot_ratio" for fact in conflicted)
+
+
+def test_update_fact_persists_value(db_session: Session) -> None:
+    project = _seed_project(db_session)
+    fact = FactRepository(db_session).create(
+        ProjectFact(
+            project_id=project.id,
+            key="floors",
+            label="层数",
+            value="12",
+        )
+    )
+
+    updated = FactLedgerService(db_session).update_fact(fact.id, value="15", unit="层")
+
+    assert str(updated.value) == "15"
+    assert updated.unit == "层"
