@@ -6,10 +6,12 @@ import re
 from copy import deepcopy
 from dataclasses import dataclass, field
 
+from archium.config.settings import Settings
 from archium.domain.enums import SlideRepairTier
-from archium.domain.presentation import Storyline
+from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_split import SlideSplitPlan
+from archium.infrastructure.llm.base import LLMProvider
 
 _MAX_KEY_POINTS = 5
 _MAX_MESSAGE_LENGTH = 120
@@ -153,6 +155,9 @@ def apply_tiered_layout_repair(
     *,
     storyline: Storyline | None = None,
     chapter_slide_count: int | None = None,
+    llm: LLMProvider | None = None,
+    settings: Settings | None = None,
+    brief: PresentationBrief | None = None,
 ) -> LayoutRepairOutcome:
     """Apply tier 1→3 layout repair; defer to tier 4 when facts would be lost."""
     working = deepcopy(slide)
@@ -248,6 +253,9 @@ def apply_tiered_layout_repair(
             split_reason,
             storyline=storyline,
             chapter_slide_count=chapter_slide_count,
+            llm=llm,
+            settings=settings,
+            brief=brief,
         )
         if plan.requires_human_approval:
             outcome.requires_manual_confirmation = True

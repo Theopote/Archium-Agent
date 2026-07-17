@@ -680,6 +680,7 @@ class PresentationWorkflowNodes:
                 slides,
                 list(state.get("review_issues", [])),
                 brief=state.get("brief"),
+                storyline=state.get("storyline"),
             )
             prior_records = list(state.get("slide_repair_records", []))
             next_state: PresentationWorkflowState = {

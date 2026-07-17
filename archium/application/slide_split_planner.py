@@ -8,10 +8,11 @@ from uuid import UUID, uuid4
 
 from archium.application.slide_repair_policy import contains_protected_signal
 from archium.application.slide_split_validator import validate_split_plan
-from archium.domain.presentation import Storyline
+from archium.config.settings import Settings
+from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan
-
+from archium.infrastructure.llm.base import LLMProvider
 _STRATEGY_RE = re.compile(r"(?:策略|方案|措施|步骤|举措|路径)")
 _PROBLEM_RE = re.compile(r"(?:问题|原因|现状|挑战|痛点|制约)")
 
@@ -128,8 +129,49 @@ def build_split_plan(
     *,
     storyline: Storyline | None = None,
     chapter_slide_count: int | None = None,
+    llm: LLMProvider | None = None,
+    settings: Settings | None = None,
+    brief: PresentationBrief | None = None,
 ) -> SlideSplitPlan:
-    """Build a split plan with citation and asset remapping."""
+    """Build a split plan; use LLM narrative planning when available."""
+    rule_plan = _build_rule_split_plan(
+        original,
+        updated_source,
+        moved_points,
+        reason,
+        storyline=storyline,
+        chapter_slide_count=chapter_slide_count,
+    )
+    if llm is None:
+        return rule_plan
+
+    from archium.application.slide_split_llm_planner import (
+        choose_split_plan,
+        try_build_llm_split_plan,
+    )
+
+    llm_plan = try_build_llm_split_plan(
+        original,
+        reason,
+        llm=llm,
+        settings=settings,
+        brief=brief,
+        storyline=storyline,
+        chapter_slide_count=chapter_slide_count,
+    )
+    return choose_split_plan(rule_plan, llm_plan)
+
+
+def _build_rule_split_plan(
+    original: SlideSpec,
+    updated_source: SlideSpec,
+    moved_points: list[str],
+    reason: str,
+    *,
+    storyline: Storyline | None = None,
+    chapter_slide_count: int | None = None,
+) -> SlideSplitPlan:
+    """Build a deterministic split plan with citation and asset remapping."""
     source = deepcopy(updated_source)
     order = source.order + 1
     continuation = SlideSpec(
@@ -181,6 +223,7 @@ def build_split_plan(
         new_slides=[source, continuation],
         citation_mapping=citation_mapping,
         asset_mapping=asset_mapping,
+        planning_source="rule",
     )
     return validate_split_plan(
         plan,

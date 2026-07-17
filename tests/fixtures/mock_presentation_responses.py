@@ -140,6 +140,31 @@ SLIDE_REPAIR_JSON = """\
   "key_points": ["人车混行", "高峰期通行效率低"]
 }"""
 
+SLIDE_SPLIT_JSON = """\
+{
+  "narrative_reason": "问题成因与改造策略属于不同叙事块，应分两页呈现",
+  "source": {
+    "title": "交通组织 — 问题与原因",
+    "message": "人车混行与落客不足是当前主要交通矛盾。",
+    "key_points": [
+      "现状：人车混行 35%",
+      "原因：落客区不足",
+      "原因：货运与就医流线冲突",
+      "策略一：分离人车动线",
+      "策略二：增设落客缓冲"
+    ],
+    "citation_indices": [0],
+    "visual_indices": []
+  },
+  "continuation": {
+    "title": "交通组织 — 补充策略",
+    "message": "通过分时货运优化剩余流线冲突。",
+    "key_points": ["策略三：优化货运时段"],
+    "citation_indices": [],
+    "visual_indices": [0]
+  }
+}"""
+
 SLIDE_PLAN_JSON = """\
 {
   "slides": [

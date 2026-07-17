@@ -25,6 +25,7 @@ class SlideSplitPlan(DomainModel):
     asset_mapping: dict[int, UUID] = Field(default_factory=dict)
     requires_human_approval: bool = False
     validation_issues: list[str] = Field(default_factory=list)
+    planning_source: str = Field(default="rule")
 
     @field_validator("new_slides")
     @classmethod

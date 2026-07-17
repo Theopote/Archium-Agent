@@ -18,6 +18,7 @@ from tests.fixtures.mock_presentation_responses import (
     PROFESSIONAL_REVIEW_JSON,
     SLIDE_PLAN_JSON,
     SLIDE_REPAIR_JSON,
+    SLIDE_SPLIT_JSON,
     STORYLINE_JSON,
 )
 
@@ -50,6 +51,8 @@ def pipeline_mock_selector(request: LLMRequest) -> str | None:
         return PROFESSIONAL_REVIEW_JSON
     if "修订以下页面 JSON" in user_prompt:
         return SLIDE_REPAIR_JSON
+    if "叙事合理的两页拆分方案" in user_prompt:
+        return SLIDE_SPLIT_JSON
     return None
 
 

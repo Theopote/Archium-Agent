@@ -112,6 +112,7 @@ class SlideRepairService:
             slides_by_id,
             issues,
             storyline=storyline,
+            brief=brief,
         )
         updated_slides = rule_slides
         slides_by_id = {slide.id: slide for slide in updated_slides}
@@ -147,6 +148,7 @@ class SlideRepairService:
         issues: list[ReviewIssue],
         *,
         storyline: Storyline | None = None,
+        brief: PresentationBrief | None = None,
     ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord], list[ReviewIssue]]:
         """Deterministic graduated layout fixes for issues marked auto_fixable."""
         issues_by_slide: dict[UUID, list[ReviewIssue]] = {}
@@ -178,6 +180,9 @@ class SlideRepairService:
                 slide,
                 storyline=storyline,
                 chapter_slide_count=chapter_slide_count,
+                llm=self._llm,
+                settings=self._settings,
+                brief=brief,
             )
 
             if outcome.requires_manual_confirmation:

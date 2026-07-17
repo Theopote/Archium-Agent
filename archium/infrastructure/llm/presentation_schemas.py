@@ -110,3 +110,21 @@ class SlideRepairDraft(BaseModel):
     title: str
     message: str
     key_points: list[str] = Field(default_factory=list, max_length=5)
+
+
+class SlideSplitPageDraft(BaseModel):
+    """One page in an LLM-proposed slide split."""
+
+    title: str
+    message: str
+    key_points: list[str] = Field(default_factory=list, max_length=5)
+    citation_indices: list[int] = Field(default_factory=list)
+    visual_indices: list[int] = Field(default_factory=list)
+
+
+class SlideSplitDraft(BaseModel):
+    """LLM proposal for splitting one overcrowded slide into two narrative pages."""
+
+    narrative_reason: str = Field(min_length=1)
+    source: SlideSplitPageDraft
+    continuation: SlideSplitPageDraft
