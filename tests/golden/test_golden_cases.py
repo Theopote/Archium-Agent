@@ -12,6 +12,7 @@ from archium.infrastructure.database.repositories import ReviewRepository
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
 from tests.fixtures.mock_llm import pipeline_mock_selector
+from tests.golden.artifacts import save_case_artifacts
 from tests.golden.loader import (
     conflicting_fact_keys,
     list_golden_case_paths,
@@ -84,6 +85,8 @@ def test_golden_case_workflow(
         expected_layouts = set(expectations.get("spec_layouts_any", []))
         if expected_layouts:
             assert layouts & expected_layouts
+
+    save_case_artifacts(case.id, result)
 
 
 def test_golden_manifests_load() -> None:

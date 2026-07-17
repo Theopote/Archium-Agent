@@ -32,3 +32,11 @@ jobs:
 
       - name: Pytest
         run: pytest --cov=archium --cov-report=term-missing
+
+      - name: Upload golden case artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-artifacts-py${{ matrix.python-version }}
+          path: tests/golden/artifacts/
+          if-no-files-found: ignore

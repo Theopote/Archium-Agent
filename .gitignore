@@ -13,6 +13,11 @@ build/
 .mypy_cache/
 .ruff_cache/
 
+# Golden case runtime artifacts (manifests saved during pytest)
+tests/golden/artifacts/*
+!tests/golden/artifacts/README.md
+!tests/golden/artifacts/.gitkeep
+
 # Data (runtime)
 data/database/*.db
 data/projects/
