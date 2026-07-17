@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -38,7 +39,10 @@ class MarpCliRunner:
         if suffix not in self.SUPPORTED_SUFFIXES:
             raise RenderingError("Marp output must use .pdf or .pptx extension")
 
-        self._run([self.command, str(markdown_path), "-o", str(output_path)], output_path.parent)
+        self._run(
+            [self.command, str(markdown_path), "-o", str(output_path), "--no-stdin"],
+            output_path.parent,
+        )
         return output_path
 
     def export_images(
@@ -66,6 +70,7 @@ class MarpCliRunner:
                 self.command,
                 str(markdown_path),
                 f"--images={normalized_format}",
+                "--no-stdin",
             ],
             markdown_path.parent,
         )
@@ -102,9 +107,11 @@ class MarpCliRunner:
             )
 
         output_parent.mkdir(parents=True, exist_ok=True)
+        resolved_command = [_resolve_marp_executable(command[0]), *command[1:]]
         result = subprocess.run(
-            command,
+            resolved_command,
             capture_output=True,
+            stdin=subprocess.DEVNULL,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -113,6 +120,20 @@ class MarpCliRunner:
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "").strip()
             raise RenderingError(f"Marp 转换失败：{detail or '未知错误'}")
+
+
+def _resolve_marp_executable(command_name: str) -> str:
+    """Resolve npm global shims to an executable path (notably ``marp.cmd`` on Windows)."""
+    if os.path.isabs(command_name) or Path(command_name).suffix:
+        return command_name
+    resolved = shutil.which(command_name)
+    if resolved is None:
+        return command_name
+    if os.name == "nt" and not Path(resolved).suffix:
+        cmd_shim = f"{resolved}.cmd"
+        if os.path.isfile(cmd_shim):
+            return cmd_shim
+    return resolved
 
 
 def _collect_marp_images(directory: Path, source_stem: str, image_format: str) -> list[Path]:

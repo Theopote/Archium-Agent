@@ -55,6 +55,7 @@ def test_marp_cli_export_images_invokes_subprocess(
             "marp",
             str(markdown_path),
             "--images=png",
+            "--no-stdin",
         ]
     ]
 
@@ -81,4 +82,6 @@ def test_marp_cli_convert_invokes_subprocess(
     result = runner.convert(markdown_path, output_path)
 
     assert result == output_path
-    assert calls == [["marp", str(markdown_path), "-o", str(output_path)]]
+    assert calls == [
+        ["marp", str(markdown_path), "-o", str(output_path), "--no-stdin"]
+    ]
