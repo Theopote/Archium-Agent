@@ -1,0 +1,154 @@
+"""UI-facing service helpers for the Streamlit workspace."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from archium.application.ingestion_service import ImportItemResult, IngestionService
+from archium.application.presentation_models import PresentationRequest
+from archium.application.presentation_workflow_service import PresentationWorkflowService
+from archium.application.workflow_models import WorkflowRunResult
+from archium.config.settings import Settings, get_settings
+from archium.domain.document import SourceDocument
+from archium.domain.enums import PresentationType, ProjectType
+from archium.domain.presentation import Presentation
+from archium.domain.project import Project
+from archium.infrastructure.database.repositories import (
+    DocumentRepository,
+    PresentationRepository,
+    ProjectRepository,
+)
+from archium.infrastructure.llm.factory import create_llm_provider
+
+
+@dataclass(frozen=True)
+class ProjectOverview:
+    """Summary counts for a project workspace view."""
+
+    project: Project
+    document_count: int
+    chunk_count: int
+    presentation_count: int
+
+
+def list_projects(session: Session) -> list[Project]:
+    return ProjectRepository(session).list_all()
+
+
+def create_project(
+    session: Session,
+    *,
+    name: str,
+    project_type: ProjectType,
+    description: str = "",
+) -> Project:
+    project = Project(
+        name=name.strip(),
+        project_type=project_type,
+        description=description.strip() or None,
+    )
+    return ProjectRepository(session).create(project)
+
+
+def get_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:
+    project = ProjectRepository(session).get_by_id(project_id)
+    if project is None:
+        return None
+    documents = DocumentRepository(session).list_by_project(project_id)
+    chunks = DocumentRepository(session).list_chunks_by_project(project_id)
+    presentations = PresentationRepository(session).list_by_project(project_id)
+    return ProjectOverview(
+        project=project,
+        document_count=len(documents),
+        chunk_count=len(chunks),
+        presentation_count=len(presentations),
+    )
+
+
+def _parse_required_sections(required_sections_text: str) -> list[str]:
+    text = required_sections_text.strip()
+    if not text:
+        return []
+    lines = [part.strip() for part in text.splitlines() if part.strip()]
+    if len(lines) > 1:
+        return lines
+    single = lines[0] if lines else text
+    for separator in ("、", "，", ","):
+        if separator in single:
+            return [part.strip() for part in single.split(separator) if part.strip()]
+    return [single]
+
+
+def list_project_documents(session: Session, project_id: UUID) -> list[SourceDocument]:
+    return DocumentRepository(session).list_by_project(project_id)
+
+
+def list_project_presentations(session: Session, project_id: UUID) -> list[Presentation]:
+    return PresentationRepository(session).list_by_project(project_id)
+
+
+def import_uploaded_file(
+    session: Session,
+    project_id: UUID,
+    *,
+    filename: str,
+    data: bytes,
+    settings: Settings | None = None,
+) -> ImportItemResult:
+    suffix = Path(filename).suffix
+    with NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+        temp_file.write(data)
+        temp_path = Path(temp_file.name)
+    try:
+        return IngestionService(session, settings=settings).import_file(project_id, temp_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def build_presentation_request(
+    *,
+    title: str,
+    audience: str,
+    purpose: str,
+    core_message: str,
+    target_slide_count: int,
+    required_sections_text: str,
+    presentation_type: PresentationType = PresentationType.CLIENT_REVIEW,
+) -> PresentationRequest:
+    sections = _parse_required_sections(required_sections_text)
+    return PresentationRequest(
+        title=title.strip(),
+        audience=audience.strip(),
+        purpose=purpose.strip(),
+        core_message=core_message.strip(),
+        target_slide_count=target_slide_count,
+        required_sections=sections,
+        presentation_type=presentation_type,
+    )
+
+
+def run_presentation_workflow(
+    session: Session,
+    project_id: UUID,
+    request: PresentationRequest,
+    *,
+    export_json: bool = True,
+    export_marp: bool = True,
+    export_pptx: bool = False,
+    settings: Settings | None = None,
+) -> WorkflowRunResult:
+    resolved_settings = settings or get_settings()
+    llm = create_llm_provider(resolved_settings)
+    service = PresentationWorkflowService(session, llm, settings=resolved_settings)
+    return service.run(
+        project_id,
+        request,
+        export_json=export_json,
+        export_marp=export_marp,
+        export_pptx=export_pptx,
+    )
