@@ -7,10 +7,13 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.agents.citations import citation_from_draft, enrich_slide_citations
+from archium.application.chunk_models import ProjectContextBundle
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings
 from archium.domain.citation import Citation
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
+from archium.domain.document import DocumentChunk
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import DocumentRepository, FactRepository
 from archium.infrastructure.llm.presentation_schemas import (
@@ -69,6 +72,24 @@ def build_project_context(
     settings: Settings | None = None,
 ) -> str:
     """Build compact text context from retrieved chunks and project facts."""
+    return build_project_context_bundle(
+        session,
+        project_id,
+        query=query,
+        max_chunks=max_chunks,
+        settings=settings,
+    ).text
+
+
+def build_project_context_bundle(
+    session: Session,
+    project_id: UUID,
+    *,
+    query: str | None = None,
+    max_chunks: int = 24,
+    settings: Settings | None = None,
+) -> ProjectContextBundle:
+    """Build prompt context plus chunk metadata for citation linking."""
     from archium.application.retrieval_service import create_retrieval_service
     from archium.config.settings import get_settings
 
@@ -82,6 +103,14 @@ def build_project_context(
     else:
         chunks = documents.list_chunks_by_project(project_id)[:max_chunks]
 
+    document_names: dict[UUID, str] = {}
+    for chunk in chunks:
+        if chunk.document_id in document_names:
+            continue
+        document = documents.get_document(chunk.document_id)
+        if document is not None:
+            document_names[chunk.document_id] = document.filename
+
     facts = facts_repo.list_by_project(project_id)[:30]
     max_chars = resolved_settings.chunk_context_max_chars
 
@@ -91,15 +120,23 @@ def build_project_context(
         for chunk in chunks:
             prefix = f"p.{chunk.page_number}" if chunk.page_number else "p.?"
             title = f" [{chunk.section_title}]" if chunk.section_title else ""
+            doc_name = document_names.get(chunk.document_id, "未知文档")
             snippet = chunk.content[:max_chars]
-            lines.append(f"- ({prefix}){title} {snippet}")
+            lines.append(
+                f"- [chunk_id={chunk.id}] [doc={doc_name}] ({prefix}){title} {snippet}"
+            )
     if facts:
         lines.append("【项目事实】")
         for fact in facts:
             lines.append(f"- {fact.label}: {fact.value} ({fact.verification_status.value})")
     if not lines:
-        return "暂无项目资料，请基于用户需求保守生成。"
-    return "\n".join(lines)
+        return ProjectContextBundle(text="暂无项目资料，请基于用户需求保守生成。")
+
+    return ProjectContextBundle(
+        text="\n".join(lines),
+        chunks=chunks,
+        document_names=document_names,
+    )
 
 
 def build_request_context(request: PresentationRequest) -> str:
@@ -192,15 +229,18 @@ def storyline_from_draft(draft: StorylineDraft, *, presentation_id: UUID, versio
     )
 
 
-def _citation_from_draft(item: CitationDraft) -> Citation:
-    from uuid import uuid4
-
-    return Citation(
-        document_id=uuid4(),
-        document_name=item.document_name,
-        page_number=item.page_number,
-        quote=item.quote,
-        confidence=item.confidence,
+def _citation_from_draft(
+    item: CitationDraft,
+    session: Session,
+    *,
+    document_names: dict[UUID, str] | None = None,
+    context_chunks: list[DocumentChunk] | None = None,
+) -> Citation:
+    return citation_from_draft(
+        item,
+        session,
+        document_names=document_names,
+        context_chunks=context_chunks,
     )
 
 
@@ -212,7 +252,15 @@ def _visual_from_draft(item: VisualRequirementDraft) -> VisualRequirement:
     )
 
 
-def slide_from_draft(draft: SlideDraft, *, presentation_id: UUID, version: int = 1) -> SlideSpec:
+def slide_from_draft(
+    draft: SlideDraft,
+    *,
+    presentation_id: UUID,
+    session: Session,
+    document_names: dict[UUID, str] | None = None,
+    context_chunks: list[DocumentChunk] | None = None,
+    version: int = 1,
+) -> SlideSpec:
     return SlideSpec(
         presentation_id=presentation_id,
         chapter_id=draft.chapter_id,
@@ -223,11 +271,50 @@ def slide_from_draft(draft: SlideDraft, *, presentation_id: UUID, version: int =
         layout_id=draft.layout_id,
         key_points=list(draft.key_points[:5]),
         visual_requirements=[_visual_from_draft(v) for v in draft.visual_requirements],
-        source_citations=[_citation_from_draft(c) for c in draft.source_citations],
+        source_citations=[
+            _citation_from_draft(
+                citation,
+                session,
+                document_names=document_names,
+                context_chunks=context_chunks,
+            )
+            for citation in draft.source_citations
+        ],
         speaker_notes=draft.speaker_notes,
         version=version,
     )
 
 
-def slides_from_plan(plan: SlidePlanDraft, *, presentation_id: UUID, version: int = 1) -> list[SlideSpec]:
-    return [slide_from_draft(slide, presentation_id=presentation_id, version=version) for slide in plan.slides]
+def slides_from_plan(
+    plan: SlidePlanDraft,
+    *,
+    presentation_id: UUID,
+    session: Session,
+    context_bundle: ProjectContextBundle | None = None,
+    project_id: UUID | None = None,
+    settings: Settings | None = None,
+    version: int = 1,
+) -> list[SlideSpec]:
+    names = context_bundle.document_names if context_bundle is not None else None
+    chunks = context_bundle.chunks if context_bundle is not None else None
+    slides = [
+        slide_from_draft(
+            slide,
+            presentation_id=presentation_id,
+            session=session,
+            document_names=names,
+            context_chunks=chunks,
+            version=version,
+        )
+        for slide in plan.slides
+    ]
+    if context_bundle is not None and project_id is not None:
+        for slide in slides:
+            enrich_slide_citations(
+                slide,
+                session=session,
+                project_id=project_id,
+                context_bundle=context_bundle,
+                settings=settings,
+            )
+    return slides

@@ -41,6 +41,7 @@ class StorylineDraft(BaseModel):
 class CitationDraft(BaseModel):
     document_name: str
     page_number: int | None = None
+    chunk_id: str | None = None
     quote: str | None = None
     confidence: float = Field(default=0.8, ge=0.0, le=1.0)
 

@@ -9,7 +9,7 @@ SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - 每一页只能有一个核心观点（message 字段）。
 - message 必须是该页要证明或传达的结论，不是主题标题。
 - 控制每页 key_points 不超过 5 条。
-- 重要事实尽可能在 source_citations 中给出 document_name 与 quote。
+- 项目资料中的 `[chunk_id=...]` 可直接复制到 source_citations.chunk_id。
 - 为每页分配合适的 slide_type 与 visual_requirements。
 
 禁止事项：
@@ -29,7 +29,7 @@ SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
       "layout_id": "default",
       "key_points": ["要点1", "要点2"],
       "visual_requirements": [{"type": "site_plan", "description": "总平面图", "required": true}],
-      "source_citations": [{"document_name": "任务书.pdf", "page_number": 2, "quote": "...", "confidence": 0.9}],
+      "source_citations": [{"document_name": "任务书.pdf", "chunk_id": "uuid", "page_number": 2, "quote": "...", "confidence": 0.9}],
       "speaker_notes": "演讲备注"
     }
   ]

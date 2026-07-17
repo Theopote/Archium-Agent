@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from sqlalchemy.orm import Session
 from archium.agents._helpers import (
     brief_from_draft,
     sanitize_slide_message,
@@ -75,7 +76,7 @@ def test_storyline_from_draft_maps_chapters() -> None:
     assert storyline.chapters[0].id == "ch1"
 
 
-def test_slides_from_plan_sanitizes_messages() -> None:
+def test_slides_from_plan_sanitizes_messages(db_session: Session) -> None:
     presentation_id = uuid4()
     plan = SlidePlanDraft(
         slides=[
@@ -88,6 +89,6 @@ def test_slides_from_plan_sanitizes_messages() -> None:
             )
         ]
     )
-    slides = slides_from_plan(plan, presentation_id=presentation_id)
+    slides = slides_from_plan(plan, presentation_id=presentation_id, session=db_session)  # type: ignore[arg-type]
     assert len(slides) == 1
     assert slides[0].message == "结论一。"

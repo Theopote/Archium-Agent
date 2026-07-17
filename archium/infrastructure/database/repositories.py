@@ -190,6 +190,24 @@ class DocumentRepository:
         }
         return [by_id[chunk_id] for chunk_id in chunk_ids if chunk_id in by_id]
 
+    def get_chunk(self, chunk_id: UUID) -> DocumentChunk | None:
+        orm = self._session.get(DocumentChunkORM, chunk_id)
+        return mappers.document_chunk_to_domain(orm) if orm else None
+
+    def update_chunk(self, chunk: DocumentChunk) -> DocumentChunk:
+        try:
+            orm = self._session.get(DocumentChunkORM, chunk.id)
+            if orm is None:
+                raise RepositoryError(f"Chunk {chunk.id} not found")
+            mappers.document_chunk_to_orm(chunk, orm)
+            self._session.flush()
+            return mappers.document_chunk_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update chunk", exc)
+            raise
+
     def delete_chunks_for_document(self, document_id: UUID) -> int:
         try:
             stmt = select(DocumentChunkORM).where(DocumentChunkORM.document_id == document_id)

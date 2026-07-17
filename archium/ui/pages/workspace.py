@@ -10,6 +10,7 @@ import streamlit as st
 from archium.config import get_settings
 from archium.domain.enums import ProjectType
 from archium.infrastructure.database.session import get_session
+from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.review_panel import render_review_panel
 from archium.ui.workspace_service import (
@@ -308,6 +309,8 @@ def render() -> None:
     _render_overview(project_id)
     st.divider()
     _render_documents(project_id)
+    st.divider()
+    render_chunk_panel(project_id)
     st.divider()
     _render_generation_form(project_id)
     _render_review_section(project_id)

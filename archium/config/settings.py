@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     retrieval_top_k: int = Field(default=12, ge=1, le=50)
     chunk_context_max_chars: int = Field(default=600, ge=100, le=2000)
 
+    embedding_chunking_enabled: bool = True
+    embedding_chunk_min_segment_chars: int = Field(default=1200, ge=400, le=8000)
+    embedding_breakpoint_threshold: float = Field(default=0.65, ge=0.0, le=1.0)
+
     semantic_chunking_enabled: bool = True
     chunk_max_chars: int = Field(default=800, ge=100, le=4000)
     chunk_min_chars: int = Field(default=80, ge=1, le=500)

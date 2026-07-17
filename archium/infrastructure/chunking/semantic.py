@@ -5,24 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from archium.config.settings import Settings
+from archium.infrastructure.chunking.embedding_breakpoints import split_by_embedding_breakpoints
+from archium.infrastructure.chunking.text_splitter import split_text
 from archium.infrastructure.document_parsers._utils import normalize_whitespace
 from archium.infrastructure.document_parsers.base import ParsedPage
-
-_BREAK_SEPARATORS = (
-    "\n\n",
-    "\n",
-    "。",
-    "！",
-    "？",
-    ".",
-    "!",
-    "?",
-    "；",
-    ";",
-    "，",
-    ",",
-    " ",
-)
+from archium.infrastructure.embeddings.base import EmbeddingProvider
 
 
 @dataclass(frozen=True)
@@ -47,8 +34,14 @@ class _PageSegment:
 class SemanticChunker:
     """Split parsed pages into retrieval-friendly semantic chunks."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        embedder: EmbeddingProvider | None = None,
+    ) -> None:
         self._settings = settings
+        self._embedder = embedder
 
     def chunk_pages(
         self,
@@ -64,11 +57,8 @@ class SemanticChunker:
         parts: list[SemanticChunkPart] = []
 
         for segment_index, segment in enumerate(segments):
-            split_texts = split_text(
-                segment.text,
-                chunk_size=self._settings.chunk_max_chars,
-                chunk_overlap=self._settings.chunk_overlap_chars,
-            )
+            split_texts = self._split_segment(segment.text)
+            strategy = self._segment_strategy(segment.text)
             for part_index, content in enumerate(split_texts):
                 parts.append(
                     SemanticChunkPart(
@@ -78,13 +68,39 @@ class SemanticChunker:
                         content_type=segment.content_type,
                         metadata={
                             **base_metadata,
-                            "chunk_strategy": "semantic",
+                            "chunk_strategy": strategy,
                             "segment_index": segment_index,
                             "part_index": part_index,
                         },
                     )
                 )
         return parts
+
+    def _segment_strategy(self, text: str) -> str:
+        if (
+            self._settings.embedding_chunking_enabled
+            and self._embedder is not None
+            and len(text) >= self._settings.embedding_chunk_min_segment_chars
+        ):
+            return "embedding_semantic"
+        return "semantic"
+
+    def _split_segment(self, text: str) -> list[str]:
+        chunk_size = self._settings.chunk_max_chars
+        chunk_overlap = self._settings.chunk_overlap_chars
+        if (
+            self._settings.embedding_chunking_enabled
+            and self._embedder is not None
+            and len(text) >= self._settings.embedding_chunk_min_segment_chars
+        ):
+            return split_by_embedding_breakpoints(
+                text,
+                self._embedder,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                threshold=self._settings.embedding_breakpoint_threshold,
+            )
+        return split_text(text, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
     def _merge_pages(self, pages: list[ParsedPage]) -> list[_PageSegment]:
         merged: list[_PageSegment] = []
@@ -133,47 +149,3 @@ class SemanticChunker:
         if current is not None:
             merged.append(current)
         return merged
-
-
-def split_text(text: str, *, chunk_size: int, chunk_overlap: int) -> list[str]:
-    """Split text on semantic boundaries with optional overlap."""
-    normalized = normalize_whitespace(text)
-    if not normalized:
-        return []
-    if chunk_overlap >= chunk_size:
-        raise ValueError("chunk_overlap must be smaller than chunk_size")
-    if len(normalized) <= chunk_size:
-        return [normalized]
-
-    chunks: list[str] = []
-    start = 0
-    text_len = len(normalized)
-
-    while start < text_len:
-        end = min(start + chunk_size, text_len)
-        if end < text_len:
-            break_at = _find_break_point(normalized, start, end)
-            if break_at <= start:
-                break_at = end
-        else:
-            break_at = end
-
-        piece = normalized[start:break_at].strip()
-        if piece:
-            chunks.append(piece)
-        if break_at >= text_len:
-            break
-        start = max(break_at - chunk_overlap, start + 1)
-
-    return chunks
-
-
-def _find_break_point(text: str, start: int, end: int) -> int:
-    window = text[start:end]
-    min_pos = max(int(len(window) * 0.5), 1)
-
-    for separator in _BREAK_SEPARATORS:
-        index = window.rfind(separator)
-        if index >= min_pos:
-            return start + index + len(separator)
-    return end

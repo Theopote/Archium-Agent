@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.chunk_service import ChunkService
 from archium.application.ingestion_service import ImportItemResult, IngestionService
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
@@ -88,6 +89,24 @@ def _parse_required_sections(required_sections_text: str) -> list[str]:
 
 def list_project_documents(session: Session, project_id: UUID) -> list[SourceDocument]:
     return DocumentRepository(session).list_by_project(project_id)
+
+
+def list_document_chunks(session: Session, document_id: UUID):
+    return ChunkService(session).list_document_chunks(document_id)
+
+
+def update_document_chunk(
+    session: Session,
+    chunk_id: UUID,
+    *,
+    content: str,
+    section_title: str | None = None,
+):
+    return ChunkService(session).update_chunk(
+        chunk_id,
+        content=content,
+        section_title=section_title,
+    )
 
 
 def list_project_presentations(session: Session, project_id: UUID) -> list[Presentation]:

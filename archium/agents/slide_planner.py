@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents._helpers import (
-    build_project_context,
+    build_project_context_bundle,
     build_retrieval_query_from_storyline,
     slides_from_plan,
     to_json,
@@ -48,7 +48,7 @@ class SlidePlanner:
         if replace_existing:
             self._presentations.delete_slides_for_presentation(brief.presentation_id)
 
-        project_context = build_project_context(
+        context_bundle = build_project_context_bundle(
             self._session,
             project_id,
             query=build_retrieval_query_from_storyline(brief, storyline),
@@ -58,7 +58,7 @@ class SlidePlanner:
             LLMRequest(
                 system_prompt=SLIDE_PLAN_SYSTEM_PROMPT,
                 user_prompt=build_slide_plan_user_prompt(
-                    project_context=project_context,
+                    project_context=context_bundle.text,
                     brief_json=to_json(brief),
                     storyline_json=to_json(storyline),
                     target_slide_count=brief.target_slide_count,
@@ -67,7 +67,15 @@ class SlidePlanner:
             ),
             SlidePlanDraft,
         )
-        slides = slides_from_plan(draft, presentation_id=brief.presentation_id, version=version)
+        slides = slides_from_plan(
+            draft,
+            presentation_id=brief.presentation_id,
+            session=self._session,
+            context_bundle=context_bundle,
+            project_id=project_id,
+            settings=self._settings,
+            version=version,
+        )
         saved: list[SlideSpec] = []
         for slide in slides:
             saved.append(self._presentations.save_slide(slide))

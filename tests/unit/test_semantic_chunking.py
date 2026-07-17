@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from archium.config.settings import Settings
-from archium.infrastructure.chunking.semantic import SemanticChunker, split_text
+from archium.infrastructure.chunking.semantic import SemanticChunker
+from archium.infrastructure.chunking.text_splitter import split_text
 from archium.infrastructure.document_parsers.base import ParsedPage
 
 

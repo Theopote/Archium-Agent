@@ -15,12 +15,14 @@ from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProcessingStatus
 from archium.exceptions import DocumentParseError
 from archium.infrastructure.chunking.semantic import SemanticChunker
+from archium.infrastructure.embeddings.factory import create_embedding_provider
 from archium.infrastructure.database.repositories import AssetRepository, DocumentRepository
 from archium.infrastructure.document_parsers import (
     DocumentParser,
     default_parsers,
     get_parser_for_path,
 )
+from archium.infrastructure.embeddings.factory import create_embedding_provider
 from archium.infrastructure.document_parsers._utils import infer_document_type
 from archium.infrastructure.document_parsers.base import ParsedDocument
 from archium.infrastructure.storage.local_storage import LocalProjectStorage, compute_file_hash
@@ -205,7 +207,10 @@ class IngestionService:
         document_id: UUID,
         parsed: ParsedDocument,
     ) -> list[DocumentChunk]:
-        parts = SemanticChunker(self._settings).chunk_pages(
+        parts = SemanticChunker(
+            self._settings,
+            embedder=create_embedding_provider(self._settings),
+        ).chunk_pages(
             parsed.pages,
             extra_metadata={"needs_ocr": parsed.needs_ocr},
         )
