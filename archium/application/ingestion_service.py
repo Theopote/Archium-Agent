@@ -14,6 +14,7 @@ from archium.domain.asset import Asset
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProcessingStatus
 from archium.exceptions import DocumentParseError
+from archium.infrastructure.chunking.semantic import SemanticChunker
 from archium.infrastructure.database.repositories import AssetRepository, DocumentRepository
 from archium.infrastructure.document_parsers import (
     DocumentParser,
@@ -189,6 +190,41 @@ class IngestionService:
         return parser.parse(file_path)
 
     def _build_chunks(
+        self,
+        project_id: UUID,
+        document_id: UUID,
+        parsed: ParsedDocument,
+    ) -> list[DocumentChunk]:
+        if self._settings.semantic_chunking_enabled:
+            return self._build_semantic_chunks(project_id, document_id, parsed)
+        return self._build_page_chunks(project_id, document_id, parsed)
+
+    def _build_semantic_chunks(
+        self,
+        project_id: UUID,
+        document_id: UUID,
+        parsed: ParsedDocument,
+    ) -> list[DocumentChunk]:
+        parts = SemanticChunker(self._settings).chunk_pages(
+            parsed.pages,
+            extra_metadata={"needs_ocr": parsed.needs_ocr},
+        )
+        return [
+            DocumentChunk(
+                project_id=project_id,
+                document_id=document_id,
+                content=part.content,
+                page_number=part.page_number,
+                section_title=part.section_title,
+                content_type=part.content_type,
+                chunk_index=index,
+                metadata=part.metadata,
+            )
+            for index, part in enumerate(parts)
+            if part.content.strip()
+        ]
+
+    def _build_page_chunks(
         self,
         project_id: UUID,
         document_id: UUID,

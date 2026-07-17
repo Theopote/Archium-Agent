@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from docx import Document
 from archium.application.ingestion_service import IngestionService
 from archium.domain.enums import ProcessingStatus, ProjectType
 from archium.domain.project import Project
@@ -59,6 +60,30 @@ def test_import_docx_persists_chunks(
     chunks = repo.list_chunks(result.document.id)
     assert len(chunks) == len(result.chunks)
     assert any("项目背景" in chunk.content for chunk in chunks)
+
+
+def test_import_long_pdf_uses_semantic_chunks(
+    db_session: Session,
+    test_settings: object,
+    project: Project,
+    tmp_path: Path,
+) -> None:
+    settings = test_settings.model_copy(update={"chunk_max_chars": 180, "chunk_overlap_chars": 30})  # type: ignore[attr-defined]
+    ingestion_service = IngestionService(db_session, settings=settings)  # type: ignore[arg-type]
+    docx_path = tmp_path / "长文档.docx"
+    document = Document()
+    for index in range(1, 21):
+        document.add_paragraph(
+            f"第{index}段详细描述老院区交通组织、停车系统与流线优化需求。"
+        )
+    document.save(docx_path)
+    result = ingestion_service.import_file(project.id, docx_path)
+
+    assert result.error is None
+    assert result.document is not None
+    assert len(result.chunks) > 1
+    assert all(chunk.metadata.get("chunk_strategy") == "semantic" for chunk in result.chunks)
+    assert all(len(chunk.content) <= 180 for chunk in result.chunks)
 
 
 def test_duplicate_import_is_skipped(

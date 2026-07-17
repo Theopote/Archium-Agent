@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     retrieval_top_k: int = Field(default=12, ge=1, le=50)
     chunk_context_max_chars: int = Field(default=600, ge=100, le=2000)
 
+    semantic_chunking_enabled: bool = True
+    chunk_max_chars: int = Field(default=800, ge=100, le=4000)
+    chunk_min_chars: int = Field(default=80, ge=1, le=500)
+    chunk_overlap_chars: int = Field(default=120, ge=0, le=500)
+
     marp_command: str = "marp"
 
     discord_bot_token: str | None = Field(
@@ -67,6 +72,14 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DISCORD_USER_ID"),
     )
+
+    @model_validator(mode="after")
+    def _validate_chunk_settings(self) -> Settings:
+        if self.chunk_overlap_chars >= self.chunk_max_chars:
+            raise ValueError("chunk_overlap_chars must be smaller than chunk_max_chars")
+        if self.chunk_min_chars > self.chunk_max_chars:
+            raise ValueError("chunk_min_chars must not exceed chunk_max_chars")
+        return self
 
     @field_validator(
         "project_storage_path",
