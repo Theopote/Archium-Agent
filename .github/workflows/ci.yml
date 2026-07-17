@@ -31,7 +31,7 @@ jobs:
 
       - name: Install PptxGenJS dependencies
         working-directory: archium/infrastructure/renderers/pptxgen
-        run: npm install
+        run: npm ci
 
       - name: Ruff
         run: ruff check archium tests
@@ -40,10 +40,10 @@ jobs:
         run: mypy archium
 
       - name: Pytest
-        run: pytest --cov=archium --cov-report=term-missing
+        run: pytest -m "not smoke" --cov=archium --cov-report=term-missing
 
       - name: PptxGen smoke test
-        run: pytest tests/smoke/test_pptxgen_render.py -v
+        run: pytest -m smoke -v
 
       - name: Upload golden case artifacts
         if: always()
