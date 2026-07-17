@@ -37,6 +37,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     matched_asset_count: int
     repaired_slide_count: int
     repair_round: int
+    slide_repair_records: list[object]
     json_path: str | None
     spec_path: str | None
     editable_pptx_path: str | None
@@ -101,6 +102,7 @@ def initial_workflow_state(
         "matched_asset_count": 0,
         "repaired_slide_count": 0,
         "repair_round": 0,
+        "slide_repair_records": [],
         "json_path": None,
         "spec_path": None,
         "editable_pptx_path": None,

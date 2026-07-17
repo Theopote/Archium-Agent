@@ -675,16 +675,18 @@ class PresentationWorkflowNodes:
                 llm=self._runtime.llm,
                 settings=self._runtime.settings,
             )
-            repaired_slides, repair_count = repairer.repair_slides(
+            repaired_slides, repair_count, repair_records = repairer.repair_slides(
                 presentation_id,
                 slides,
                 list(state.get("review_issues", [])),
                 brief=state.get("brief"),
             )
+            prior_records = list(state.get("slide_repair_records", []))
             next_state: PresentationWorkflowState = {
                 "slides": repaired_slides,
                 "repaired_slide_count": repair_count,
                 "repair_round": state.get("repair_round", 0) + 1,
+                "slide_repair_records": [*prior_records, *repair_records],
                 "review_issues": [],
                 "slide_review_issues": [],
                 "current_step": WorkflowStep.REPAIR_SLIDES.value,

@@ -113,5 +113,6 @@ def change_source_label(source: SlideChangeSource) -> str:
         SlideChangeSource.GENERATED: "首次生成",
         SlideChangeSource.MANUAL_EDIT: "人工编辑",
         SlideChangeSource.REGENERATION: "重新生成前归档",
+        SlideChangeSource.AUTO_REPAIR: "自动修复",
     }
     return labels.get(source, source.value)

@@ -110,6 +110,16 @@ class SlideChangeSource(StrEnum):
     GENERATED = "generated"
     MANUAL_EDIT = "manual_edit"
     REGENERATION = "regeneration"
+    AUTO_REPAIR = "auto_repair"
+
+
+class SlideRepairTier(StrEnum):
+    """Graduated auto-repair strategy (least to most invasive)."""
+
+    SHORTEN_REPETITION = "shorten_repetition"
+    REWRITE = "rewrite"
+    SPLIT = "split"
+    USER_CONFIRMATION = "user_confirmation"
 
 
 class RevisionEntityType(StrEnum):

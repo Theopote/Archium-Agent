@@ -7,11 +7,28 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents._helpers import sanitize_slide_message
+from archium.application.slide_diff import slide_to_snapshot
+from archium.application.slide_history_service import SlideHistoryService
+from archium.application.slide_repair_policy import (
+    apply_tiered_layout_repair,
+    insert_split_slide,
+    slide_involves_citation,
+    slide_involves_numbers,
+    validate_llm_repair,
+)
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import ReviewCategory, ReviewSeverity, ReviewStatus
+from archium.domain.enums import (
+    ReviewCategory,
+    ReviewLayer,
+    ReviewSeverity,
+    ReviewStatus,
+    SlideChangeSource,
+    SlideRepairTier,
+)
 from archium.domain.presentation import PresentationBrief
 from archium.domain.review import ReviewIssue
-from archium.domain.slide import SlideSpec
+from archium.domain.slide import SlideSpec, build_slide_logical_key
+from archium.domain.slide_repair import SlideRepairRecord
 from archium.infrastructure.database.repositories import PresentationRepository, ReviewRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import SlideRepairDraft
@@ -24,9 +41,6 @@ from archium.prompts.slide_repair import (
 logger = get_logger(__name__, operation="slide_repair")
 
 _MAX_KEY_POINTS = 5
-_MAX_MESSAGE_LENGTH = 120
-_MAX_BULLET_LENGTH = 40
-_TEXT_DENSITY_THRESHOLD = 280
 
 _REPAIRABLE_CATEGORIES = {
     ReviewCategory.CONTENT,
@@ -71,6 +85,7 @@ class SlideRepairService:
         self._session = session
         self._presentations = PresentationRepository(session)
         self._reviews = ReviewRepository(session)
+        self._history = SlideHistoryService(session)
         self._llm = llm
         self._settings = settings or get_settings()
 
@@ -81,44 +96,53 @@ class SlideRepairService:
         issues: list[ReviewIssue],
         *,
         brief: PresentationBrief | None = None,
-    ) -> tuple[list[SlideSpec], int]:
-        """Repair slide-level issues and return updated slides plus repair count."""
+    ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord]]:
+        """Repair slide-level issues and return updated slides, count, and audit records."""
         slides_by_id = {slide.id: slide for slide in slides}
         updated_slides = list(slides)
         repaired = 0
+        records: list[SlideRepairRecord] = []
 
-        rule_fixed, rule_count = self._apply_rule_repairs(
+        rule_slides, rule_count, rule_records, pending_issues = self._apply_rule_repairs(
             presentation_id,
+            updated_slides,
             slides_by_id,
             issues,
         )
-        if rule_count:
-            updated_slides = [slides_by_id.get(item.id, item) for item in updated_slides]
-            repaired += rule_count
+        updated_slides = rule_slides
+        slides_by_id = {slide.id: slide for slide in updated_slides}
+        repaired += rule_count
+        records.extend(rule_records)
+        for pending in pending_issues:
+            self._reviews.create(pending)
 
         if not self._settings.slide_repair_enabled or self._llm is None:
-            return updated_slides, repaired
+            return updated_slides, repaired, records
 
         open_issues = [issue for issue in issues if issue.status == ReviewStatus.OPEN]
-        llm_fixed, llm_count = self._apply_llm_repairs(
+        llm_slides, llm_count, llm_records, llm_pending = self._apply_llm_repairs(
             presentation_id,
+            updated_slides,
             slides_by_id,
             open_issues,
             brief=brief,
         )
-        if llm_count:
-            updated_slides = [slides_by_id.get(item.id, item) for item in updated_slides]
-            repaired += llm_count
+        updated_slides = llm_slides
+        repaired += llm_count
+        records.extend(llm_records)
+        for pending in llm_pending:
+            self._reviews.create(pending)
 
-        return updated_slides, repaired
+        return updated_slides, repaired, records
 
     def _apply_rule_repairs(
         self,
         presentation_id: UUID,
+        slides: list[SlideSpec],
         slides_by_id: dict[UUID, SlideSpec],
         issues: list[ReviewIssue],
-    ) -> tuple[dict[UUID, SlideSpec], int]:
-        """Deterministic layout fixes for issues marked auto_fixable."""
+    ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord], list[ReviewIssue]]:
+        """Deterministic graduated layout fixes for issues marked auto_fixable."""
         issues_by_slide: dict[UUID, list[ReviewIssue]] = {}
         for issue in issues:
             if issue.status != ReviewStatus.OPEN:
@@ -128,40 +152,132 @@ class SlideRepairService:
             issues_by_slide.setdefault(issue.slide_id, []).append(issue)
 
         if not issues_by_slide:
-            return slides_by_id, 0
+            return slides, 0, [], []
 
         repaired = 0
+        records: list[SlideRepairRecord] = []
+        pending_issues: list[ReviewIssue] = []
+        current_slides = list(slides)
+
         for slide_id, slide_issues in issues_by_slide.items():
             slide = slides_by_id.get(slide_id)
             if slide is None:
                 continue
 
-            changed = _apply_layout_rules(slide)
-            if not changed:
+            before_snapshot = slide_to_snapshot(slide)
+            outcome = apply_tiered_layout_repair(slide)
+
+            if outcome.requires_manual_confirmation:
+                record = self._build_record(
+                    presentation_id=presentation_id,
+                    slide_id=slide_id,
+                    tier=SlideRepairTier.USER_CONFIRMATION,
+                    before=before_snapshot,
+                    after=before_snapshot,
+                    removed_items=[],
+                    reason=outcome.reason or "需人工确认版面调整",
+                    involves_citation=outcome.involves_citation,
+                    involves_numbers=outcome.involves_numbers,
+                    requires_manual_confirmation=True,
+                    issue_ids=[issue.id for issue in slide_issues],
+                )
+                records.append(record)
+                pending_issues.append(
+                    self._manual_confirmation_issue(
+                        presentation_id,
+                        slide,
+                        outcome.reason or "自动修复会丢失关键信息，需人工确认",
+                    )
+                )
+                logger.info(
+                    "Deferred rule repair for slide %s — manual confirmation required",
+                    slide_id,
+                )
                 continue
 
-            saved = self._presentations.save_slide(slide)
+            if not outcome.changed:
+                continue
+
+            saved = self._presentations.save_slide(outcome.slide)
             slides_by_id[slide_id] = saved
+            current_slides = [
+                saved if item.id == slide_id else slides_by_id.get(item.id, item)
+                for item in current_slides
+            ]
+
+            if outcome.split_slide is not None:
+                for item in current_slides:
+                    if item.id != slide_id and item.order >= outcome.split_slide.order:
+                        bumped = item.model_copy(
+                            update={
+                                "order": item.order + 1,
+                                "logical_key": build_slide_logical_key(
+                                    item.chapter_id,
+                                    item.order + 1,
+                                ),
+                            }
+                        )
+                        slides_by_id[bumped.id] = self._presentations.save_slide(bumped)
+                split_saved = self._presentations.save_slide(outcome.split_slide)
+                slides_by_id[split_saved.id] = split_saved
+                current_slides = insert_split_slide(current_slides, split_saved)
+                current_slides = [
+                    slides_by_id.get(item.id, item) for item in current_slides
+                ]
+
+            after_snapshot = slide_to_snapshot(slides_by_id[slide_id])
+            record = self._build_record(
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                tier=outcome.tier or SlideRepairTier.SHORTEN_REPETITION,
+                before=before_snapshot,
+                after=after_snapshot,
+                removed_items=outcome.removed_items,
+                reason=outcome.reason,
+                involves_citation=outcome.involves_citation,
+                involves_numbers=outcome.involves_numbers,
+                requires_manual_confirmation=False,
+                split_slide_id=(
+                    outcome.split_slide.id if outcome.split_slide is not None else None
+                ),
+                issue_ids=[issue.id for issue in slide_issues],
+            )
+            records.append(record)
+
+            self._history.record_snapshot(
+                slides_by_id[slide_id],
+                SlideChangeSource.AUTO_REPAIR,
+                note=record.reason,
+            )
+            if outcome.split_slide is not None and outcome.split_slide.id in slides_by_id:
+                self._history.record_snapshot(
+                    slides_by_id[outcome.split_slide.id],
+                    SlideChangeSource.AUTO_REPAIR,
+                    note="由版面拆分自动创建",
+                )
+
             for issue in slide_issues:
                 issue.resolve()
                 self._reviews.update(issue)
             repaired += 1
             logger.info(
-                "Rule-repaired slide %s for presentation %s",
+                "Rule-repaired slide %s for presentation %s (tier=%s)",
                 slide_id,
                 presentation_id,
+                outcome.tier.value if outcome.tier else "unknown",
             )
 
-        return slides_by_id, repaired
+        return current_slides, repaired, records, pending_issues
 
     def _apply_llm_repairs(
         self,
         presentation_id: UUID,
+        slides: list[SlideSpec],
         slides_by_id: dict[UUID, SlideSpec],
         issues: list[ReviewIssue],
         *,
         brief: PresentationBrief | None,
-    ) -> tuple[dict[UUID, SlideSpec], int]:
+    ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord], list[ReviewIssue]]:
         issues_by_slide: dict[UUID, list[ReviewIssue]] = {}
         for issue in issues:
             if issue.slide_id is None:
@@ -173,7 +289,7 @@ class SlideRepairService:
             issues_by_slide.setdefault(issue.slide_id, []).append(issue)
 
         if not issues_by_slide:
-            return slides_by_id, 0
+            return slides, 0, [], []
 
         brief_summary = (
             f"标题: {brief.title}\n核心信息: {brief.core_message}"
@@ -181,15 +297,20 @@ class SlideRepairService:
             else "无 Brief"
         )
         repaired = 0
+        records: list[SlideRepairRecord] = []
+        pending_issues: list[ReviewIssue] = []
+        current_slides = list(slides)
 
         llm = self._llm
         if llm is None:
-            return slides_by_id, 0
+            return slides, 0, [], []
 
         for slide_id, slide_issues in issues_by_slide.items():
             slide = slides_by_id.get(slide_id)
             if slide is None:
                 continue
+
+            before_snapshot = slide_to_snapshot(slide)
             try:
                 draft = llm.generate_structured(
                     LLMRequest(
@@ -209,11 +330,70 @@ class SlideRepairService:
                 logger.warning("Slide repair failed for slide %s: %s", slide_id, exc)
                 continue
 
+            candidate_message = sanitize_slide_message(draft.message)
+            candidate_points = list(draft.key_points[:_MAX_KEY_POINTS])
+            valid, reject_reason = validate_llm_repair(
+                slide,
+                message=candidate_message,
+                key_points=candidate_points,
+            )
+            if not valid:
+                records.append(
+                    self._build_record(
+                        presentation_id=presentation_id,
+                        slide_id=slide_id,
+                        tier=SlideRepairTier.USER_CONFIRMATION,
+                        before=before_snapshot,
+                        after=before_snapshot,
+                        removed_items=[],
+                        reason=reject_reason,
+                        involves_citation=slide_involves_citation(slide),
+                        involves_numbers=slide_involves_numbers(slide),
+                        requires_manual_confirmation=True,
+                        issue_ids=[issue.id for issue in slide_issues],
+                    )
+                )
+                pending_issues.append(
+                    self._manual_confirmation_issue(presentation_id, slide, reject_reason)
+                )
+                continue
+
             slide.title = draft.title.strip() or slide.title
-            slide.message = sanitize_slide_message(draft.message)
-            slide.key_points = list(draft.key_points[:_MAX_KEY_POINTS])
+            slide.message = candidate_message
+            slide.key_points = candidate_points
             saved = self._presentations.save_slide(slide)
             slides_by_id[slide_id] = saved
+            current_slides = [
+                saved if item.id == slide_id else slides_by_id.get(item.id, item)
+                for item in current_slides
+            ]
+
+            after_snapshot = slide_to_snapshot(saved)
+            removed = [
+                f"要点: {point}"
+                for point in before_snapshot.get("key_points", [])
+                if isinstance(before_snapshot.get("key_points"), list)
+                and point not in candidate_points
+            ]
+            record = self._build_record(
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                tier=SlideRepairTier.REWRITE,
+                before=before_snapshot,
+                after=after_snapshot,
+                removed_items=removed,
+                reason="LLM 改写以响应审核反馈",
+                involves_citation=bool(saved.source_citations),
+                involves_numbers=slide_involves_numbers(saved),
+                requires_manual_confirmation=False,
+                issue_ids=[issue.id for issue in slide_issues],
+            )
+            records.append(record)
+            self._history.record_snapshot(
+                saved,
+                SlideChangeSource.AUTO_REPAIR,
+                note=record.reason,
+            )
 
             for issue in slide_issues:
                 issue.resolve()
@@ -221,7 +401,65 @@ class SlideRepairService:
             repaired += 1
 
         logger.info("LLM-repaired %d slide(s) for presentation %s", repaired, presentation_id)
-        return slides_by_id, repaired
+        return current_slides, repaired, records, pending_issues
+
+    def _build_record(
+        self,
+        *,
+        presentation_id: UUID,
+        slide_id: UUID,
+        tier: SlideRepairTier,
+        before: dict[str, object],
+        after: dict[str, object],
+        removed_items: list[str],
+        reason: str,
+        involves_citation: bool,
+        involves_numbers: bool,
+        requires_manual_confirmation: bool,
+        issue_ids: list[UUID],
+        split_slide_id: UUID | None = None,
+    ) -> SlideRepairRecord:
+        return SlideRepairRecord(
+            presentation_id=presentation_id,
+            slide_id=slide_id,
+            tier=tier,
+            before_message=str(before.get("message", "")),
+            after_message=str(after.get("message", "")),
+            before_key_points=list(before.get("key_points", []))  # type: ignore[arg-type]
+            if isinstance(before.get("key_points"), list)
+            else [],
+            after_key_points=list(after.get("key_points", []))  # type: ignore[arg-type]
+            if isinstance(after.get("key_points"), list)
+            else [],
+            removed_items=removed_items,
+            reason=reason,
+            involves_citation=involves_citation,
+            involves_numbers=involves_numbers,
+            requires_manual_confirmation=requires_manual_confirmation,
+            split_slide_id=split_slide_id,
+            issue_ids=issue_ids,
+        )
+
+    def _manual_confirmation_issue(
+        self,
+        presentation_id: UUID,
+        slide: SlideSpec,
+        reason: str,
+    ) -> ReviewIssue:
+        return ReviewIssue(
+            presentation_id=presentation_id,
+            slide_id=slide.id,
+            reviewer_layer=ReviewLayer.LAYOUT,
+            category=ReviewCategory.LENGTH,
+            severity=ReviewSeverity.HIGH,
+            title="需人工确认版面调整",
+            description=(
+                f"第 {slide.order + 1} 页「{slide.title}」无法在不丢失关键信息的前提下自动压缩。"
+                f"原因：{reason}"
+            ),
+            suggestion="请人工拆分页面、改写表述或确认可删除的内容。",
+            auto_fixable=False,
+        )
 
 
 def _slide_summary(slide: SlideSpec) -> str:
@@ -240,41 +478,3 @@ def _issue_summary(issues: list[ReviewIssue]) -> str:
         + (f"（建议：{issue.suggestion}）" if issue.suggestion else "")
         for issue in issues
     )
-
-
-def _truncate_text(text: str, limit: int) -> str:
-    stripped = text.strip()
-    if len(stripped) <= limit:
-        return stripped
-    return stripped[: limit - 1].rstrip() + "…"
-
-
-def _estimate_text_load(slide: SlideSpec) -> int:
-    load = len(slide.message.strip())
-    load += sum(len(point.strip()) for point in slide.key_points)
-    load += len(slide.title.strip()) // 2
-    return load
-
-
-def _apply_layout_rules(slide: SlideSpec) -> bool:
-    """Apply deterministic layout trims; return True if slide content changed."""
-    original_message = slide.message
-    original_points = list(slide.key_points)
-
-    if len(slide.key_points) > _MAX_KEY_POINTS:
-        slide.key_points = slide.key_points[:_MAX_KEY_POINTS]
-
-    slide.key_points = [
-        _truncate_text(point, _MAX_BULLET_LENGTH) for point in slide.key_points
-    ]
-
-    if len(slide.message.strip()) > _MAX_MESSAGE_LENGTH:
-        slide.message = _truncate_text(slide.message, _MAX_MESSAGE_LENGTH)
-
-    while (
-        _estimate_text_load(slide) > _TEXT_DENSITY_THRESHOLD
-        and len(slide.key_points) > 1
-    ):
-        slide.key_points = slide.key_points[:-1]
-
-    return slide.message != original_message or slide.key_points != original_points
