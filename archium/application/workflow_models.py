@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 from archium.domain.workflow import WorkflowRun
 
@@ -19,10 +20,28 @@ class WorkflowRunResult:
     brief: PresentationBrief | None = None
     storyline: Storyline | None = None
     slides: list[SlideSpec] = field(default_factory=list)
-    json_path: Path | None = None
-    marp_md_path: Path | None = None
-    marp_pptx_path: Path | None = None
+    render: RenderResult = field(default_factory=RenderResult)
     errors: list[str] = field(default_factory=list)
+
+    @property
+    def json_path(self) -> Path | None:
+        return self.render.json_path
+
+    @property
+    def marp_md_path(self) -> Path | None:
+        return self.render.markdown_path
+
+    @property
+    def marp_pptx_path(self) -> Path | None:
+        return self.render.pptx_path
+
+    @property
+    def pdf_path(self) -> Path | None:
+        return self.render.pdf_path
+
+    @property
+    def render_warnings(self) -> list[str]:
+        return self.render.warnings
 
     @property
     def succeeded(self) -> bool:

@@ -39,9 +39,12 @@ class PresentationWorkflowState(TypedDict, total=False):
     json_path: str | None
     marp_md_path: str | None
     marp_pptx_path: str | None
+    pdf_path: str | None
     export_json: bool
     export_marp: bool
     export_pptx: bool
+    export_pdf: bool
+    render_warnings: Annotated[list[str], operator.add]
     require_brief_review: bool
     require_storyline_review: bool
     require_slides_review: bool
@@ -61,6 +64,7 @@ def initial_workflow_state(
     export_json: bool,
     export_marp: bool = False,
     export_pptx: bool = False,
+    export_pdf: bool = False,
     require_brief_review: bool = False,
     require_storyline_review: bool = False,
     require_slides_review: bool = False,
@@ -89,9 +93,12 @@ def initial_workflow_state(
         "json_path": None,
         "marp_md_path": None,
         "marp_pptx_path": None,
+        "pdf_path": None,
         "export_json": export_json,
         "export_marp": export_marp,
         "export_pptx": export_pptx,
+        "export_pdf": export_pdf,
+        "render_warnings": [],
         "require_brief_review": require_brief_review,
         "require_storyline_review": require_storyline_review,
         "require_slides_review": require_slides_review,

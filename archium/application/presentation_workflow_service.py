@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
@@ -13,6 +12,7 @@ from archium.application.review_service import PresentationReviewService
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import WorkflowStatus, WorkflowStep
+from archium.domain.render import RenderResult
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import WorkflowRunRepository
@@ -59,6 +59,7 @@ class PresentationWorkflowService:
         export_json: bool = True,
         export_marp: bool = False,
         export_pptx: bool = False,
+        export_pdf: bool = False,
         require_brief_review: bool = False,
         require_storyline_review: bool = False,
         require_slides_review: bool = False,
@@ -75,6 +76,7 @@ class PresentationWorkflowService:
                     "export_json": export_json,
                     "export_marp": export_marp,
                     "export_pptx": export_pptx,
+                    "export_pdf": export_pdf,
                     "require_brief_review": require_brief_review,
                     "require_storyline_review": require_storyline_review,
                     "require_slides_review": require_slides_review,
@@ -91,6 +93,7 @@ class PresentationWorkflowService:
             export_json=export_json,
             export_marp=export_marp,
             export_pptx=export_pptx,
+            export_pdf=export_pdf,
             require_brief_review=require_brief_review,
             require_storyline_review=require_storyline_review,
             require_slides_review=require_slides_review,
@@ -171,6 +174,7 @@ class PresentationWorkflowService:
             export_json=bool(run.state.get("export_json", True)),
             export_marp=bool(run.state.get("export_marp", False)),
             export_pptx=bool(run.state.get("export_pptx", False)),
+            export_pdf=bool(run.state.get("export_pdf", False)),
             require_brief_review=bool(run.state.get("require_brief_review", False)),
             require_storyline_review=bool(run.state.get("require_storyline_review", False)),
             require_slides_review=bool(run.state.get("require_slides_review", False)),
@@ -218,13 +222,20 @@ class PresentationWorkflowService:
             )
 
         json_path_value = workflow_run.state.get("json_path") or final_state.get("json_path")
-        json_path = Path(str(json_path_value)) if json_path_value else None
         marp_md_value = workflow_run.state.get("marp_md_path") or final_state.get("marp_md_path")
-        marp_md_path = Path(str(marp_md_value)) if marp_md_value else None
         marp_pptx_value = workflow_run.state.get("marp_pptx_path") or final_state.get(
             "marp_pptx_path"
         )
-        marp_pptx_path = Path(str(marp_pptx_value)) if marp_pptx_value else None
+        pdf_value = workflow_run.state.get("pdf_path") or final_state.get("pdf_path")
+        warnings = list(workflow_run.state.get("render_warnings") or final_state.get("render_warnings") or [])
+
+        render = RenderResult.from_state_paths(
+            json_path=json_path_value,
+            marp_md_path=marp_md_value,
+            marp_pptx_path=marp_pptx_value,
+            pdf_path=pdf_value,
+            warnings=warnings,
+        )
 
         return WorkflowRunResult(
             workflow_run=workflow_run,
@@ -232,9 +243,7 @@ class PresentationWorkflowService:
             brief=restored.get("brief"),
             storyline=restored.get("storyline"),
             slides=list(restored.get("slides", [])),
-            json_path=json_path,
-            marp_md_path=marp_md_path,
-            marp_pptx_path=marp_pptx_path,
+            render=render,
             errors=list(workflow_run.errors),
         )
 

@@ -198,6 +198,7 @@ class RegenerationService:
             "export_json": run.state.get("export_json", True),
             "export_marp": run.state.get("export_marp", False),
             "export_pptx": run.state.get("export_pptx", False),
+            "export_pdf": run.state.get("export_pdf", False),
             "require_brief_review": run.state.get("require_brief_review", False),
             "require_storyline_review": run.state.get("require_storyline_review", False),
             "require_slides_review": run.state.get("require_slides_review", False),

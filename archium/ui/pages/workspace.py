@@ -176,10 +176,11 @@ def _render_generation_form(project_id: UUID) -> None:
             "必要章节（每行一项，或用顿号分隔）",
             placeholder="现状分析\n改造策略\n实施计划",
         )
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         export_json = col1.checkbox("导出 JSON", value=True)
         export_marp = col2.checkbox("导出 Marp Markdown", value=True)
         export_pptx = col3.checkbox("导出 PPTX（需 Marp CLI）", value=False)
+        export_pdf = col4.checkbox("导出 PDF（需 Marp CLI）", value=False)
         review_col1, review_col2, review_col3 = st.columns(3)
         require_brief_review = review_col1.checkbox("Brief 生成后暂停审核", value=True)
         require_storyline_review = review_col2.checkbox("Storyline 生成后暂停审核", value=True)
@@ -212,6 +213,7 @@ def _render_generation_form(project_id: UUID) -> None:
                     export_json=export_json,
                     export_marp=export_marp,
                     export_pptx=export_pptx,
+                    export_pdf=export_pdf,
                     require_brief_review=require_brief_review,
                     require_storyline_review=require_storyline_review,
                     require_slides_review=require_slides_review,
@@ -307,13 +309,10 @@ def _render_last_result() -> None:
             except Exception as exc:
                 st.error(format_user_error(exc))
 
-    download_paths: list[Path] = []
-    if result.json_path:
-        download_paths.append(result.json_path)
-    if result.marp_md_path:
-        download_paths.append(result.marp_md_path)
-    if result.marp_pptx_path:
-        download_paths.append(result.marp_pptx_path)
+    download_paths: list[Path] = list(result.render.output_paths())
+    if result.render.warnings:
+        for warning in result.render.warnings:
+            st.warning(warning)
     if download_paths:
         render_file_downloads(download_paths, key_prefix="workflow_result")
 

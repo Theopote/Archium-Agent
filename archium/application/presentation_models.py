@@ -7,6 +7,7 @@ from pathlib import Path
 
 from archium.domain.enums import PresentationType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 
 
@@ -38,7 +39,21 @@ class PipelineResult:
     brief: PresentationBrief | None = None
     storyline: Storyline | None = None
     slides: list[SlideSpec] = field(default_factory=list)
-    json_path: Path | None = None
-    marp_md_path: Path | None = None
-    marp_pptx_path: Path | None = None
+    render: RenderResult = field(default_factory=RenderResult)
     errors: list[str] = field(default_factory=list)
+
+    @property
+    def json_path(self) -> Path | None:
+        return self.render.json_path
+
+    @property
+    def marp_md_path(self) -> Path | None:
+        return self.render.markdown_path
+
+    @property
+    def marp_pptx_path(self) -> Path | None:
+        return self.render.pptx_path
+
+    @property
+    def pdf_path(self) -> Path | None:
+        return self.render.pdf_path

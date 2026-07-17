@@ -1,0 +1,64 @@
+"""Unit tests for RenderResult and optional Marp binary exports."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from unittest.mock import MagicMock
+
+from archium.application.render_export import export_marp_binaries
+from archium.domain.render import RenderResult
+from archium.exceptions import RenderingError
+
+
+def test_render_result_from_state_paths_supports_legacy_names() -> None:
+    result = RenderResult.from_state_paths(
+        json_path="/tmp/out.json",
+        marp_md_path="/tmp/out/presentation.md",
+        marp_pptx_path="/tmp/out/presentation.pptx",
+        pdf_path="/tmp/out/presentation.pdf",
+        warnings=["PPTX 导出失败：missing cli"],
+    )
+
+    assert result.json_path == Path("/tmp/out.json")
+    assert result.markdown_path == Path("/tmp/out/presentation.md")
+    assert result.marp_md_path == result.markdown_path
+    assert result.pptx_path == Path("/tmp/out/presentation.pptx")
+    assert result.pdf_path == Path("/tmp/out/presentation.pdf")
+    assert result.warnings == ["PPTX 导出失败：missing cli"]
+    assert len(result.output_paths()) == 4
+
+
+def test_export_marp_binaries_collects_warnings_without_raising() -> None:
+    marp = MagicMock()
+    markdown_path = Path("/tmp/presentation.md")
+    marp.export_pptx.side_effect = RenderingError("no marp")
+    marp.export_pdf.return_value = Path("/tmp/presentation.pdf")
+
+    pptx_path, pdf_path, warnings = export_marp_binaries(
+        marp,
+        markdown_path,
+        export_pptx=True,
+        export_pdf=True,
+    )
+
+    assert pptx_path is None
+    assert pdf_path == Path("/tmp/presentation.pdf")
+    assert len(warnings) == 1
+    assert "PPTX" in warnings[0]
+    marp.export_pptx.assert_called_once_with(markdown_path)
+    marp.export_pdf.assert_called_once_with(markdown_path)
+
+
+def test_export_marp_binaries_skips_when_not_requested() -> None:
+    marp = MagicMock()
+    pptx_path, pdf_path, warnings = export_marp_binaries(
+        marp,
+        Path("/tmp/presentation.md"),
+        export_pptx=False,
+        export_pdf=False,
+    )
+    assert pptx_path is None
+    assert pdf_path is None
+    assert warnings == []
+    marp.export_pptx.assert_not_called()
+    marp.export_pdf.assert_not_called()

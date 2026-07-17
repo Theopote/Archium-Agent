@@ -2,24 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.render_export import export_marp_binaries
 from archium.config.settings import Settings, get_settings
+from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
 from archium.infrastructure.renderers.marp_renderer import MarpPresentationRenderer
-
-
-@dataclass
-class ExportPaths:
-    json_path: Path | None = None
-    marp_md_path: Path | None = None
-    marp_pptx_path: Path | None = None
 
 
 class PresentationExportService:
@@ -39,7 +32,8 @@ class PresentationExportService:
         export_json: bool = True,
         export_marp: bool = True,
         export_pptx: bool = False,
-    ) -> ExportPaths:
+        export_pdf: bool = False,
+    ) -> RenderResult:
         presentation = self._presentations.get_presentation(presentation_id)
         if presentation is None:
             raise WorkflowError(f"Presentation {presentation_id} not found")
@@ -65,9 +59,9 @@ class PresentationExportService:
             raise WorkflowError("At least one slide is required before export")
 
         version = brief.version
-        paths = ExportPaths()
+        result = RenderResult()
         if export_json:
-            paths.json_path = self._json.render(
+            result.json_path = self._json.render(
                 presentation_id=presentation_id,
                 brief=brief,
                 storyline=storyline,
@@ -75,13 +69,21 @@ class PresentationExportService:
                 version=version,
             )
         if export_marp:
-            paths.marp_md_path = self._marp.render(
+            result.markdown_path = self._marp.render(
                 presentation_id=presentation_id,
                 brief=brief,
                 storyline=storyline,
                 slides=slides,
                 version=version,
             )
-            if export_pptx and paths.marp_md_path is not None:
-                paths.marp_pptx_path = self._marp.export_pptx(paths.marp_md_path)
-        return paths
+            if result.markdown_path is not None and (export_pptx or export_pdf):
+                pptx_path, pdf_path, warnings = export_marp_binaries(
+                    self._marp,
+                    result.markdown_path,
+                    export_pptx=export_pptx,
+                    export_pdf=export_pdf,
+                )
+                result.pptx_path = pptx_path
+                result.pdf_path = pdf_path
+                result.warnings.extend(warnings)
+        return result

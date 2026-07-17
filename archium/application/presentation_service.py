@@ -96,6 +96,7 @@ class PresentationService:
         export_json: bool = True,
         export_marp: bool = False,
         export_pptx: bool = False,
+        export_pdf: bool = False,
     ) -> PipelineResult:
         """Deprecated: delegate to :class:`PresentationWorkflowService`."""
         warnings.warn(
@@ -128,6 +129,7 @@ class PresentationService:
                 export_json=export_json,
                 export_marp=export_marp,
                 export_pptx=export_pptx,
+                export_pdf=export_pdf,
             )
         except WorkflowError:
             raise WorkflowError("Presentation pipeline failed") from None
@@ -140,8 +142,6 @@ def _workflow_result_to_pipeline(result: WorkflowRunResult) -> PipelineResult:
         brief=result.brief,
         storyline=result.storyline,
         slides=list(result.slides),
-        json_path=result.json_path,
-        marp_md_path=result.marp_md_path,
-        marp_pptx_path=result.marp_pptx_path,
+        render=result.render,
         errors=list(result.errors),
     )

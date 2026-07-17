@@ -6,7 +6,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.artifact_history_service import BriefHistoryService, StorylineHistoryService
+from archium.application.artifact_history_service import (
+    BriefHistoryService,
+    StorylineHistoryService,
+)
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,

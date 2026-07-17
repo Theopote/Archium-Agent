@@ -16,6 +16,7 @@ from archium.application.automated_review_service import (
 )
 from archium.application.fact_extraction_service import FactExtractionService
 from archium.application.fact_validation_service import FactValidationService
+from archium.application.render_export import export_marp_binaries
 from archium.application.review_service import slides_are_approved
 from archium.application.slide_repair_service import SlideRepairService
 from archium.domain.enums import (
@@ -75,6 +76,9 @@ class PresentationWorkflowNodes:
         marp_pptx_path = state.get("marp_pptx_path")
         if marp_pptx_path and marp_pptx_path not in output_files:
             output_files.append(marp_pptx_path)
+        pdf_path = state.get("pdf_path")
+        if pdf_path and pdf_path not in output_files:
+            output_files.append(pdf_path)
         run.output_files = output_files
         if status is not None:
             run.status = status
@@ -698,9 +702,19 @@ class PresentationWorkflowNodes:
                 "marp_md_path": str(marp_md_path),
                 "current_step": WorkflowStep.MARP.value,
             }
-            if state.get("export_pptx", False):
-                marp_pptx_path = self._runtime.marp_renderer.export_pptx(marp_md_path)
-                next_state["marp_pptx_path"] = str(marp_pptx_path)
+            if state.get("export_pptx", False) or state.get("export_pdf", False):
+                pptx_path, pdf_path, warnings = export_marp_binaries(
+                    self._runtime.marp_renderer,
+                    marp_md_path,
+                    export_pptx=bool(state.get("export_pptx", False)),
+                    export_pdf=bool(state.get("export_pdf", False)),
+                )
+                if pptx_path is not None:
+                    next_state["marp_pptx_path"] = str(pptx_path)
+                if pdf_path is not None:
+                    next_state["pdf_path"] = str(pdf_path)
+                if warnings:
+                    next_state["render_warnings"] = warnings
 
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
