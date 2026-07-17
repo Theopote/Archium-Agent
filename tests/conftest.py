@@ -37,6 +37,8 @@ def test_settings(tmp_path: Path) -> Settings:
         output_path=base / "outputs",
         chroma_path=base / "chroma",
         llm_api_key=None,
+        embedding_provider="mock",
+        retrieval_enabled=True,
     )
 
 

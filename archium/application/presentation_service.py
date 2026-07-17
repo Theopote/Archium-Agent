@@ -40,9 +40,9 @@ class PresentationService:
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
         self._projects = ProjectRepository(session)
-        self._brief_builder = BriefBuilder(session, llm)
-        self._narrative = NarrativeArchitect(session, llm)
-        self._slide_planner = SlidePlanner(session, llm)
+        self._brief_builder = BriefBuilder(session, llm, settings=self._settings)
+        self._narrative = NarrativeArchitect(session, llm, settings=self._settings)
+        self._slide_planner = SlidePlanner(session, llm, settings=self._settings)
         self._renderer = renderer or JsonPresentationRenderer(self._settings)
         self._marp_renderer = marp_renderer or MarpPresentationRenderer(self._settings)
 

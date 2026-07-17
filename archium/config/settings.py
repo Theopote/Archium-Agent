@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     embedding_provider: str = "openai_compatible"
     embedding_model: str | None = None
 
+    retrieval_enabled: bool = True
+    retrieval_top_k: int = Field(default=12, ge=1, le=50)
+    chunk_context_max_chars: int = Field(default=600, ge=100, le=2000)
+
     marp_command: str = "marp"
 
     discord_bot_token: str | None = Field(
@@ -89,6 +93,11 @@ class Settings(BaseSettings):
     @property
     def llm_configured(self) -> bool:
         """Return True when an LLM API key is available."""
+        return bool(self.llm_api_key)
+
+    @property
+    def embedding_configured(self) -> bool:
+        """Return True when embeddings can call a remote API."""
         return bool(self.llm_api_key)
 
 

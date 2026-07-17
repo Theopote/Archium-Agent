@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.retrieval_service import RetrievalService, create_retrieval_service
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.document import DocumentChunk, SourceDocument
@@ -51,6 +52,7 @@ class IngestionService:
         *,
         settings: Settings | None = None,
         parsers: list[DocumentParser] | None = None,
+        retrieval: RetrievalService | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._session = session
@@ -58,6 +60,7 @@ class IngestionService:
         self._assets = AssetRepository(session)
         self._storage = LocalProjectStorage(self._settings)
         self._parsers = parsers if parsers is not None else default_parsers()
+        self._retrieval = retrieval
 
     def import_file(self, project_id: UUID, source_path: Path) -> ImportItemResult:
         """Import one file into a project."""
@@ -95,14 +98,17 @@ class IngestionService:
             chunks = self._build_chunks(project_id, document.id, parsed)
             assets = self._persist_assets(project_id, document.id, parsed)
 
+            saved_chunks: list[DocumentChunk] = []
             for chunk in chunks:
-                self._documents.create_chunk(chunk)
+                saved_chunks.append(self._documents.create_chunk(chunk))
+
+            self._index_chunks(project_id, document, saved_chunks)
 
             document.metadata = {
                 **document.metadata,
                 **parsed.metadata,
                 "needs_ocr": parsed.needs_ocr,
-                "chunk_count": len(chunks),
+                "chunk_count": len(saved_chunks),
                 "asset_count": len(assets),
             }
             page_count = len(parsed.pages) if parsed.pages else None
@@ -114,7 +120,7 @@ class IngestionService:
                 document = self._documents.update_document(document)
 
             result.document = document
-            result.chunks = chunks
+            result.chunks = saved_chunks
             result.assets = assets
             return result
         except Exception as exc:
@@ -143,20 +149,24 @@ class IngestionService:
         try:
             document.mark_processing()
             self._documents.update_document(document)
+            self._retrieval_service().remove_document(document.project_id, document.id)
             self._documents.delete_chunks_for_document(document.id)
 
             parsed = self._parse_file(stored_path)
             chunks = self._build_chunks(document.project_id, document.id, parsed)
             assets = self._persist_assets(document.project_id, document.id, parsed)
 
+            saved_chunks: list[DocumentChunk] = []
             for chunk in chunks:
-                self._documents.create_chunk(chunk)
+                saved_chunks.append(self._documents.create_chunk(chunk))
+
+            self._index_chunks(document.project_id, document, saved_chunks)
 
             document.metadata = {
                 **document.metadata,
                 **parsed.metadata,
                 "needs_ocr": parsed.needs_ocr,
-                "chunk_count": len(chunks),
+                "chunk_count": len(saved_chunks),
                 "asset_count": len(assets),
             }
             page_count = len(parsed.pages) if parsed.pages else None
@@ -165,7 +175,7 @@ class IngestionService:
             else:
                 document.mark_completed(page_count=page_count)
             result.document = self._documents.update_document(document)
-            result.chunks = chunks
+            result.chunks = saved_chunks
             result.assets = assets
             return result
         except Exception as exc:
@@ -233,3 +243,25 @@ class IngestionService:
             except Exception as exc:
                 logger.warning("Failed to save asset %s: %s", extracted.filename, exc)
         return saved
+
+    def _retrieval_service(self) -> RetrievalService:
+        if self._retrieval is None:
+            self._retrieval = create_retrieval_service(self._session, self._settings)
+        return self._retrieval
+
+    def _index_chunks(
+        self,
+        project_id: UUID,
+        document: SourceDocument,
+        chunks: list[DocumentChunk],
+    ) -> None:
+        if not chunks:
+            return
+        try:
+            self._retrieval_service().index_chunks(
+                project_id,
+                chunks,
+                document_name=document.filename,
+            )
+        except Exception as exc:
+            logger.warning("Vector indexing failed for %s: %s", document.filename, exc)

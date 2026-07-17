@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.presentation_models import PresentationRequest
+from archium.config.settings import Settings, get_settings
 from archium.domain.citation import Citation
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, VisualRequirement
@@ -22,13 +23,67 @@ from archium.infrastructure.llm.presentation_schemas import (
 )
 
 
-def build_project_context(session: Session, project_id: UUID, *, max_chunks: int = 24) -> str:
-    """Build a compact text context from project chunks and facts."""
+def build_retrieval_query_from_request(request: PresentationRequest) -> str:
+    """Build a semantic search query from presentation intent."""
+    parts = [
+        request.title,
+        request.audience,
+        request.purpose,
+        request.core_message or "",
+        request.user_notes or "",
+        *request.required_sections,
+        *request.audience_concerns,
+    ]
+    return " ".join(part.strip() for part in parts if part and part.strip())
+
+
+def build_retrieval_query_from_brief(brief: PresentationBrief) -> str:
+    """Build a semantic search query from an approved brief."""
+    parts = [
+        brief.title,
+        brief.audience,
+        brief.purpose,
+        brief.core_message,
+        *brief.required_sections,
+        *brief.audience_concerns,
+    ]
+    return " ".join(part.strip() for part in parts if part and part.strip())
+
+
+def build_retrieval_query_from_storyline(brief: PresentationBrief, storyline: Storyline) -> str:
+    """Build a semantic search query for slide planning."""
+    chapter_messages = " ".join(chapter.key_message for chapter in storyline.chapters)
+    return " ".join(
+        part.strip()
+        for part in (build_retrieval_query_from_brief(brief), storyline.thesis, chapter_messages)
+        if part.strip()
+    )
+
+
+def build_project_context(
+    session: Session,
+    project_id: UUID,
+    *,
+    query: str | None = None,
+    max_chunks: int = 24,
+    settings: Settings | None = None,
+) -> str:
+    """Build compact text context from retrieved chunks and project facts."""
+    from archium.application.retrieval_service import create_retrieval_service
+    from archium.config.settings import get_settings
+
+    resolved_settings = settings or get_settings()
     documents = DocumentRepository(session)
     facts_repo = FactRepository(session)
 
-    chunks = documents.list_chunks_by_project(project_id)[:max_chunks]
+    if resolved_settings.retrieval_enabled and query and query.strip():
+        retrieval = create_retrieval_service(session, resolved_settings)
+        chunks = retrieval.retrieve(project_id, query, top_k=max_chunks)
+    else:
+        chunks = documents.list_chunks_by_project(project_id)[:max_chunks]
+
     facts = facts_repo.list_by_project(project_id)[:30]
+    max_chars = resolved_settings.chunk_context_max_chars
 
     lines: list[str] = []
     if chunks:
@@ -36,7 +91,8 @@ def build_project_context(session: Session, project_id: UUID, *, max_chunks: int
         for chunk in chunks:
             prefix = f"p.{chunk.page_number}" if chunk.page_number else "p.?"
             title = f" [{chunk.section_title}]" if chunk.section_title else ""
-            lines.append(f"- ({prefix}){title} {chunk.content[:300]}")
+            snippet = chunk.content[:max_chars]
+            lines.append(f"- ({prefix}){title} {snippet}")
     if facts:
         lines.append("【项目事实】")
         for fact in facts:

@@ -10,8 +10,10 @@ from archium.agents._helpers import (
     brief_from_draft,
     build_project_context,
     build_request_context,
+    build_retrieval_query_from_request,
 )
 from archium.application.presentation_models import PresentationRequest
+from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -22,9 +24,16 @@ from archium.prompts.presentation_brief import BRIEF_SYSTEM_PROMPT, build_brief_
 class BriefBuilder:
     """Build and persist PresentationBrief artifacts."""
 
-    def __init__(self, session: Session, llm: LLMProvider) -> None:
+    def __init__(
+        self,
+        session: Session,
+        llm: LLMProvider,
+        *,
+        settings: Settings | None = None,
+    ) -> None:
         self._session = session
         self._llm = llm
+        self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
 
     def generate(
@@ -38,7 +47,12 @@ class BriefBuilder:
         if version is None:
             version = self._next_brief_version(presentation_id)
 
-        project_context = build_project_context(self._session, project_id)
+        project_context = build_project_context(
+            self._session,
+            project_id,
+            query=build_retrieval_query_from_request(request),
+            settings=self._settings,
+        )
         request_context = build_request_context(request)
         draft = self._llm.generate_structured(
             LLMRequest(

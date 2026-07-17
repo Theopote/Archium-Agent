@@ -16,7 +16,8 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings, get_settings
 from archium.domain.document import SourceDocument
 from archium.domain.enums import PresentationType, ProjectType
-from archium.domain.presentation import Presentation
+from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.slide import SlideSpec
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
@@ -143,6 +144,7 @@ def run_presentation_workflow(
     export_pptx: bool = False,
     require_brief_review: bool = False,
     require_storyline_review: bool = False,
+    require_slides_review: bool = False,
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
     resolved_settings = settings or get_settings()
@@ -156,6 +158,7 @@ def run_presentation_workflow(
         export_pptx=export_pptx,
         require_brief_review=require_brief_review,
         require_storyline_review=require_storyline_review,
+        require_slides_review=require_slides_review,
     )
 
 
@@ -169,3 +172,54 @@ def continue_workflow_after_review(
     with get_session() as session:
         service = PresentationWorkflowService(session, llm, settings=resolved_settings)
         return service.continue_after_review(workflow_run_id)
+
+
+def regenerate_brief(
+    presentation_id: UUID,
+    *,
+    workflow_run_id: UUID | None = None,
+    settings: Settings | None = None,
+) -> PresentationBrief:
+    from archium.application.regeneration_service import RegenerationService
+
+    resolved_settings = settings or get_settings()
+    llm = create_llm_provider(resolved_settings)
+    with get_session() as session:
+        return RegenerationService(session, llm, settings=resolved_settings).regenerate_brief(
+            presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+
+
+def regenerate_storyline(
+    presentation_id: UUID,
+    *,
+    workflow_run_id: UUID | None = None,
+    settings: Settings | None = None,
+) -> Storyline:
+    from archium.application.regeneration_service import RegenerationService
+
+    resolved_settings = settings or get_settings()
+    llm = create_llm_provider(resolved_settings)
+    with get_session() as session:
+        return RegenerationService(session, llm, settings=resolved_settings).regenerate_storyline(
+            presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+
+
+def regenerate_slide_plan(
+    presentation_id: UUID,
+    *,
+    workflow_run_id: UUID | None = None,
+    settings: Settings | None = None,
+) -> list[SlideSpec]:
+    from archium.application.regeneration_service import RegenerationService
+
+    resolved_settings = settings or get_settings()
+    llm = create_llm_provider(resolved_settings)
+    with get_session() as session:
+        return RegenerationService(session, llm, settings=resolved_settings).regenerate_slide_plan(
+            presentation_id,
+            workflow_run_id=workflow_run_id,
+        )

@@ -6,7 +6,13 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents._helpers import build_project_context, storyline_from_draft, to_json
+from archium.agents._helpers import (
+    build_project_context,
+    build_retrieval_query_from_brief,
+    storyline_from_draft,
+    to_json,
+)
+from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -17,9 +23,16 @@ from archium.prompts.storyline import STORYLINE_SYSTEM_PROMPT, build_storyline_u
 class NarrativeArchitect:
     """Generate chapter-based storylines."""
 
-    def __init__(self, session: Session, llm: LLMProvider) -> None:
+    def __init__(
+        self,
+        session: Session,
+        llm: LLMProvider,
+        *,
+        settings: Settings | None = None,
+    ) -> None:
         self._session = session
         self._llm = llm
+        self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
 
     def generate(
@@ -32,7 +45,12 @@ class NarrativeArchitect:
         if version is None:
             version = self._next_storyline_version(brief.presentation_id)
 
-        project_context = build_project_context(self._session, project_id)
+        project_context = build_project_context(
+            self._session,
+            project_id,
+            query=build_retrieval_query_from_brief(brief),
+            settings=self._settings,
+        )
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=STORYLINE_SYSTEM_PROMPT,

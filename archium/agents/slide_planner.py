@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 
 from archium.agents._helpers import (
     build_project_context,
+    build_retrieval_query_from_storyline,
     slides_from_plan,
     to_json,
 )
+from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -22,9 +24,16 @@ from archium.prompts.slide_planning import SLIDE_PLAN_SYSTEM_PROMPT, build_slide
 class SlidePlanner:
     """Generate SlideSpec lists."""
 
-    def __init__(self, session: Session, llm: LLMProvider) -> None:
+    def __init__(
+        self,
+        session: Session,
+        llm: LLMProvider,
+        *,
+        settings: Settings | None = None,
+    ) -> None:
         self._session = session
         self._llm = llm
+        self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
 
     def generate(
@@ -39,7 +48,12 @@ class SlidePlanner:
         if replace_existing:
             self._presentations.delete_slides_for_presentation(brief.presentation_id)
 
-        project_context = build_project_context(self._session, project_id)
+        project_context = build_project_context(
+            self._session,
+            project_id,
+            query=build_retrieval_query_from_storyline(brief, storyline),
+            settings=self._settings,
+        )
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=SLIDE_PLAN_SYSTEM_PROMPT,

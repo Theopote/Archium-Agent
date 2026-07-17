@@ -177,9 +177,10 @@ def _render_generation_form(project_id: UUID) -> None:
         export_json = col1.checkbox("导出 JSON", value=True)
         export_marp = col2.checkbox("导出 Marp Markdown", value=True)
         export_pptx = col3.checkbox("导出 PPTX（需 Marp CLI）", value=False)
-        review_col1, review_col2 = st.columns(2)
+        review_col1, review_col2, review_col3 = st.columns(3)
         require_brief_review = review_col1.checkbox("Brief 生成后暂停审核", value=True)
         require_storyline_review = review_col2.checkbox("Storyline 生成后暂停审核", value=True)
+        require_slides_review = review_col3.checkbox("SlideSpec 生成后暂停审核", value=False)
         submitted = st.form_submit_button("运行汇报管线", use_container_width=True)
 
     if not submitted:
@@ -210,6 +211,7 @@ def _render_generation_form(project_id: UUID) -> None:
                     export_pptx=export_pptx,
                     require_brief_review=require_brief_review,
                     require_storyline_review=require_storyline_review,
+                    require_slides_review=require_slides_review,
                 )
             st.session_state.last_workflow_result = result
         except Exception as exc:

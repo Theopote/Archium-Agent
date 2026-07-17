@@ -7,7 +7,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.review_service import PresentationReviewService
 from archium.domain.document import DocumentChunk
-from archium.domain.enums import ApprovalStatus, ProjectType, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, ProjectType, SlideStatus, WorkflowStatus, WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import (
@@ -143,3 +143,71 @@ def test_workflow_pauses_for_storyline_review(
     second = workflow_service.continue_after_review(first.workflow_run.id)
     assert len(second.slides) == 4
     assert second.workflow_run.status == WorkflowStatus.COMPLETED
+
+
+def test_workflow_pauses_for_slides_review(
+    workflow_service: PresentationWorkflowService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+    db_session: Session,
+) -> None:
+    first = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        require_brief_review=False,
+        require_storyline_review=False,
+        require_slides_review=True,
+        export_marp=False,
+    )
+
+    assert first.awaiting_review
+    assert first.brief is not None
+    assert first.brief.approval_status == ApprovalStatus.APPROVED
+    assert first.storyline is not None
+    assert first.storyline.approval_status == ApprovalStatus.APPROVED
+    assert len(first.slides) == 4
+    assert all(slide.status == SlideStatus.PLANNED for slide in first.slides)
+    assert first.workflow_run.state["review_gate"] == "slides"
+
+    review_service = PresentationReviewService(db_session)
+    review_service.approve_all_slides(first.presentation.id)
+    db_session.commit()
+
+    second = workflow_service.continue_after_review(first.workflow_run.id)
+    assert second.workflow_run.status == WorkflowStatus.COMPLETED
+    assert second.json_path is not None
+
+
+def test_regenerate_slide_plan_after_revision(
+    workflow_service: PresentationWorkflowService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+    db_session: Session,
+    test_settings: object,
+) -> None:
+    from archium.application.regeneration_service import RegenerationService
+
+    first = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        require_brief_review=False,
+        require_storyline_review=False,
+        require_slides_review=True,
+        export_marp=False,
+    )
+
+    review_service = PresentationReviewService(db_session)
+    review_service.reject_slide(first.slides[0].id)
+    db_session.commit()
+
+    mock_llm = MockLLMProvider(selector=pipeline_mock_selector)
+    regen = RegenerationService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
+    new_slides = regen.regenerate_slide_plan(
+        first.presentation.id,
+        workflow_run_id=first.workflow_run.id,
+    )
+
+    assert len(new_slides) == 4
+    assert all(slide.status == SlideStatus.PLANNED for slide in new_slides)
+    assert first.workflow_run.status == WorkflowStatus.AWAITING_REVIEW
+    assert first.workflow_run.state["review_gate"] == "slides"

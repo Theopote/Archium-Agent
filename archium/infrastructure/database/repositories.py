@@ -181,6 +181,15 @@ class DocumentRepository:
         )
         return [mappers.document_chunk_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def get_chunks_by_ids(self, chunk_ids: list[UUID]) -> list[DocumentChunk]:
+        if not chunk_ids:
+            return []
+        stmt = select(DocumentChunkORM).where(DocumentChunkORM.id.in_(chunk_ids))
+        by_id = {
+            row.id: mappers.document_chunk_to_domain(row) for row in self._session.scalars(stmt)
+        }
+        return [by_id[chunk_id] for chunk_id in chunk_ids if chunk_id in by_id]
+
     def delete_chunks_for_document(self, document_id: UUID) -> int:
         try:
             stmt = select(DocumentChunkORM).where(DocumentChunkORM.document_id == document_id)

@@ -1,4 +1,4 @@
-"""Streamlit UI for Brief and Storyline human review."""
+"""Streamlit UI for Brief, Storyline, and SlideSpec human review."""
 
 from __future__ import annotations
 
@@ -10,13 +10,19 @@ import streamlit as st
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
+    SlideUpdate,
     StorylineUpdate,
     parse_multiline_items,
 )
 from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import ApprovalStatus
+from archium.domain.enums import ApprovalStatus, SlideStatus, SlideType
 from archium.infrastructure.database.session import get_session
-from archium.ui.workspace_service import continue_workflow_after_review
+from archium.ui.workspace_service import (
+    continue_workflow_after_review,
+    regenerate_brief,
+    regenerate_slide_plan,
+    regenerate_storyline,
+)
 
 APPROVAL_LABELS = {
     ApprovalStatus.DRAFT: "草稿",
@@ -25,9 +31,69 @@ APPROVAL_LABELS = {
     ApprovalStatus.REJECTED: "已驳回",
 }
 
+SLIDE_STATUS_LABELS = {
+    SlideStatus.DRAFT: "草稿",
+    SlideStatus.PLANNED: "待审核",
+    SlideStatus.APPROVED: "已通过",
+    SlideStatus.RENDERED: "已渲染",
+    SlideStatus.NEEDS_REVISION: "需修改",
+}
+
+SLIDE_TYPE_OPTIONS = [item.value for item in SlideType]
+
 
 def _approval_badge(status: ApprovalStatus) -> str:
     return APPROVAL_LABELS.get(status, status.value)
+
+
+def _slide_status_badge(status: SlideStatus) -> str:
+    return SLIDE_STATUS_LABELS.get(status, status.value)
+
+
+def _render_regenerate_actions(
+    *,
+    presentation_id: UUID,
+    workflow_run_id: UUID | None,
+    brief_status: ApprovalStatus | None,
+    storyline_status: ApprovalStatus | None,
+    slides_need_revision: bool,
+) -> None:
+    cols = st.columns(3)
+    if brief_status == ApprovalStatus.REJECTED and cols[0].button(
+        "重新生成 Brief",
+        key=f"regen_brief_{presentation_id}",
+        use_container_width=True,
+    ):
+        try:
+            regenerate_brief(presentation_id, workflow_run_id=workflow_run_id)
+            st.success("Brief 已重新生成，请审核后继续。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"重新生成 Brief 失败：{exc}")
+
+    if storyline_status == ApprovalStatus.REJECTED and cols[1].button(
+        "重新生成 Storyline",
+        key=f"regen_storyline_{presentation_id}",
+        use_container_width=True,
+    ):
+        try:
+            regenerate_storyline(presentation_id, workflow_run_id=workflow_run_id)
+            st.success("Storyline 已重新生成，请审核后继续。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"重新生成 Storyline 失败：{exc}")
+
+    if slides_need_revision and cols[2].button(
+        "重新生成 Slide 计划",
+        key=f"regen_slides_{presentation_id}",
+        use_container_width=True,
+    ):
+        try:
+            regenerate_slide_plan(presentation_id, workflow_run_id=workflow_run_id)
+            st.success("Slide 计划已重新生成，请审核后继续。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"重新生成 Slide 计划失败：{exc}")
 
 
 def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
@@ -177,6 +243,95 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
         st.rerun()
 
 
+def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
+    with get_session() as session:
+        review_service = PresentationReviewService(session)
+        context = review_service.get_review_context(
+            context_presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+    if context is None or not context.slides:
+        st.caption("当前没有可编辑的 SlideSpec。")
+        return
+
+    approved_count = sum(1 for slide in context.slides if slide.status == SlideStatus.APPROVED)
+    st.markdown(f"**SlideSpec 审核** · 已通过 {approved_count}/{len(context.slides)} 页")
+
+    slide_rows = [
+        {
+            "id": str(slide.id),
+            "order": slide.order,
+            "chapter_id": slide.chapter_id,
+            "title": slide.title,
+            "message": slide.message,
+            "slide_type": slide.slide_type.value,
+            "key_points": "\n".join(slide.key_points),
+            "status": _slide_status_badge(slide.status),
+        }
+        for slide in sorted(context.slides, key=lambda item: item.order)
+    ]
+    edited = st.data_editor(
+        pd.DataFrame(slide_rows),
+        column_config={
+            "id": st.column_config.TextColumn("ID", disabled=True),
+            "status": st.column_config.TextColumn("状态", disabled=True),
+            "slide_type": st.column_config.SelectboxColumn("类型", options=SLIDE_TYPE_OPTIONS),
+        },
+        num_rows="dynamic",
+        use_container_width=True,
+        key=f"slides_editor_{context_presentation_id}",
+    )
+
+    col1, col2, col3 = st.columns(3)
+    save_clicked = col1.button("保存全部页面", key=f"save_slides_{context_presentation_id}", use_container_width=True)
+    approve_all_clicked = col2.button(
+        "批准全部页面",
+        key=f"approve_slides_{context_presentation_id}",
+        use_container_width=True,
+    )
+    regen_clicked = col3.button(
+        "重新生成 Slide 计划",
+        key=f"regen_slides_inline_{context_presentation_id}",
+        use_container_width=True,
+    )
+
+    if save_clicked:
+        with get_session() as session:
+            review_service = PresentationReviewService(session)
+            for row in edited.to_dict(orient="records"):
+                slide_id = row.get("id")
+                if not slide_id:
+                    continue
+                review_service.update_slide(
+                    UUID(str(slide_id)),
+                    SlideUpdate(
+                        chapter_id=str(row["chapter_id"]),
+                        order=int(row["order"]),
+                        title=str(row["title"]),
+                        message=str(row["message"]),
+                        slide_type=str(row["slide_type"]),
+                        key_points=parse_multiline_items(str(row.get("key_points", ""))),
+                    ),
+                )
+        st.success("SlideSpec 已保存。")
+        st.rerun()
+
+    if approve_all_clicked:
+        with get_session() as session:
+            review_service = PresentationReviewService(session)
+            review_service.approve_all_slides(context_presentation_id)
+        st.success("全部页面已批准。")
+        st.rerun()
+
+    if regen_clicked:
+        try:
+            regenerate_slide_plan(context_presentation_id, workflow_run_id=workflow_run_id)
+            st.success("Slide 计划已重新生成。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"重新生成失败：{exc}")
+
+
 def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID | None) -> None:
     if presentation_id is None:
         return
@@ -196,11 +351,25 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         gate = context.review_gate or "unknown"
         st.info(f"工作流已暂停，等待 **{gate}** 人工审核。请编辑并批准后继续。")
 
-    tab_brief, tab_storyline = st.tabs(["Brief", "Storyline"])
+    slides_need_revision = any(
+        slide.status in {SlideStatus.NEEDS_REVISION, SlideStatus.DRAFT} for slide in context.slides
+    )
+    _render_regenerate_actions(
+        presentation_id=presentation_id,
+        workflow_run_id=workflow_run_id,
+        brief_status=context.brief.approval_status if context.brief else None,
+        storyline_status=context.storyline.approval_status if context.storyline else None,
+        slides_need_revision=slides_need_revision
+        or (context.slides_pending_review and context.review_gate == "slides"),
+    )
+
+    tab_brief, tab_storyline, tab_slides = st.tabs(["Brief", "Storyline", "SlideSpec"])
     with tab_brief:
         _render_brief_editor(presentation_id, workflow_run_id)
     with tab_storyline:
         _render_storyline_editor(presentation_id, workflow_run_id)
+    with tab_slides:
+        _render_slides_editor(presentation_id, workflow_run_id)
 
     if context.awaiting_review and workflow_run_id is not None and st.button(
         "继续运行工作流",

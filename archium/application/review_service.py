@@ -13,7 +13,7 @@ from archium.application.review_models import (
     SlideUpdate,
     StorylineUpdate,
 )
-from archium.domain.enums import ApprovalStatus, SlideStatus, WorkflowStatus
+from archium.domain.enums import ApprovalStatus, SlideStatus, SlideType, WorkflowStatus
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
@@ -225,9 +225,6 @@ def _chapter_from_update(update: ChapterUpdate) -> Chapter:
         order=update.order,
         estimated_slide_count=update.estimated_slide_count,
     )
-
-
-from archium.domain.enums import SlideType
 
 
 def _parse_slide_type(value: str) -> SlideType:
