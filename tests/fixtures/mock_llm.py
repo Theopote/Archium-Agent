@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from archium.infrastructure.llm import LLMRequest
 
+from tests.fixtures.mock_full_deck_responses import (
+    FULL_DECK_BRIEF_JSON,
+    FULL_DECK_SLIDE_PLAN_JSON,
+    FULL_DECK_STORYLINE_JSON,
+)
 from tests.fixtures.mock_presentation_responses import (
     BRIEF_ALIGNMENT_MISMATCH_JSON,
     BRIEF_ALIGNMENT_OK_JSON,
@@ -17,14 +22,24 @@ from tests.fixtures.mock_presentation_responses import (
 )
 
 
+def _wants_full_deck(request: LLMRequest) -> bool:
+    haystack = request.user_prompt
+    return (
+        '"target_slide_count": 20' in haystack
+        or "目标页数: 20" in haystack
+        or "请生成约 20 页" in haystack
+    )
+
+
 def pipeline_mock_selector(request: LLMRequest) -> str | None:
     user_prompt = request.user_prompt
+    full_deck = _wants_full_deck(request)
     if "生成 PresentationBrief JSON" in user_prompt:
-        return BRIEF_JSON
+        return FULL_DECK_BRIEF_JSON if full_deck else BRIEF_JSON
     if "生成 Storyline JSON" in user_prompt:
-        return STORYLINE_JSON
+        return FULL_DECK_STORYLINE_JSON if full_deck else STORYLINE_JSON
     if "SlidePlan JSON" in user_prompt:
-        return SLIDE_PLAN_JSON
+        return FULL_DECK_SLIDE_PLAN_JSON if full_deck else SLIDE_PLAN_JSON
     if "FactExtraction" in user_prompt or "ProjectFact JSON" in user_prompt:
         return FACT_EXTRACTION_JSON
     if "BriefAlignment JSON" in user_prompt:

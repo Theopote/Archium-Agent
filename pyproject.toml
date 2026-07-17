@@ -73,6 +73,9 @@ src = ["archium", "tests", "config.py"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["B008", "E501"]
 
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E402"]
+
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true

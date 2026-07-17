@@ -11,7 +11,6 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.domain.enums import ReviewLayer, WorkflowStatus
 from archium.domain.review import ReviewIssue
 from sqlalchemy.orm import Session
-
 from tests.golden.regression.loader import conflicting_fact_keys
 
 

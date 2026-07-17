@@ -58,6 +58,11 @@ def test_regression_case_workflow(
 
 def test_regression_manifests_load() -> None:
     paths = list_regression_case_paths()
-    assert len(paths) == 3
+    assert len(paths) == 4
     ids = {load_regression_case(path).id for path in paths}
-    assert ids == {"case_a_hospital", "case_b_campus", "case_c_competition"}
+    assert ids == {
+        "case_a_hospital",
+        "case_b_campus",
+        "case_c_competition",
+        "case_d_full_deck",
+    }

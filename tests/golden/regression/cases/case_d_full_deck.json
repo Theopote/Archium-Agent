@@ -1,0 +1,61 @@
+{
+  "id": "case_d_full_deck",
+  "name": "医院老院区 20 页完整汇报",
+  "project": {
+    "name": "某医院老院区完整更新",
+    "project_type": "healthcare"
+  },
+  "documents": [
+    {
+      "filename": "任务书.pdf",
+      "content": "老院区交通组织混乱，人车混行严重。需优化车行流线并保留急诊通道。",
+      "section_title": "现状"
+    },
+    {
+      "filename": "调研报告.docx",
+      "content": "门诊高峰时段入口广场拥堵，落客区不足，停车周转率低。",
+      "section_title": "调研"
+    },
+    {
+      "filename": "分期方案说明.pdf",
+      "content": "建议分三期实施：一期交通重组，二期门诊楼改造，三期住院区更新。",
+      "section_title": "分期"
+    }
+  ],
+  "facts": [
+    {
+      "key": "site_area",
+      "label": "用地面积",
+      "value": "12.5 公顷"
+    },
+    {
+      "key": "bed_count",
+      "label": "床位数",
+      "value": "500 张"
+    }
+  ],
+  "request": {
+    "title": "老院区更新完整汇报",
+    "audience": "医院管理层与科室代表",
+    "purpose": "确认总体改造方向、分期策略与关键决策项",
+    "duration_minutes": 45,
+    "target_slide_count": 20,
+    "core_message": "通过交通重组、功能再分配与分期实施，系统性提升老院区运营品质",
+    "required_sections": [
+      "院区现状",
+      "问题诊断",
+      "改造策略",
+      "分期实施",
+      "总结决策"
+    ],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 20,
+    "workflow_status": "completed",
+    "export_presentation_spec": true,
+    "spec_layouts_any": ["title", "content_bullets", "content_message"],
+    "review_layers": ["content", "evidence"],
+    "required_section_keywords": ["院区现状", "改造策略", "分期实施"]
+  }
+}
