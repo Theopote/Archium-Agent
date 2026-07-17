@@ -62,3 +62,18 @@ def assert_workflow_expectations(
         expected_layouts = set(expectations.get("spec_layouts_any", []))
         if expected_layouts:
             assert layouts & expected_layouts
+
+
+def assert_fixture_import_expectations(
+    *,
+    expectations: dict[str, Any],
+    imported_paths: list[Path],
+) -> None:
+    if expectations.get("require_unicode_paths"):
+        assert any(any(ord(char) > 127 for char in str(path)) for path in imported_paths), (
+            "Expected at least one imported path with non-ASCII characters"
+        )
+    if expectations.get("require_spaced_paths"):
+        assert any(" " in path.name or " " in str(path.parent) for path in imported_paths), (
+            "Expected at least one imported path containing spaces"
+        )

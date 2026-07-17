@@ -103,17 +103,66 @@ def materialize_inline_xlsx(path: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
+def materialize_inline_pdf(path: Path, payload: dict[str, Any]) -> Path:
+    """Create a minimal PDF with real parser coverage when bundled files are absent."""
+    import fitz
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), str(payload.get("text", "测试 PDF 内容")))
+    document.save(path)
+    document.close()
+    return path
+
+
+def materialize_inline_pptx(path: Path, payload: dict[str, Any]) -> Path:
+    """Create a minimal PPTX when bundled files are absent."""
+    from pptx import Presentation
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    layout = presentation.slide_layouts[1]
+    slide = presentation.slides.add_slide(layout)
+    slide.shapes.title.text = str(payload.get("title", "测试汇报"))
+    body = slide.placeholders[1]
+    body.text = str(payload.get("body", "由 fixture 生成的测试内容"))
+    presentation.save(path)
+    return path
+
+
+def materialize_inline_image(path: Path, payload: dict[str, Any]) -> Path:
+    """Create a low-resolution image for parser smoke coverage."""
+    from PIL import Image
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    width = int(payload.get("width", 48))
+    height = int(payload.get("height", 36))
+    image = Image.new("RGB", (width, height), color=tuple(payload.get("color", [180, 170, 160])))
+    image.save(path)
+    return path
+
+
+def resolve_fixture_scratch_dir(payload: dict[str, Any], scratch_dir: Path) -> Path:
+    """Support Chinese and spaced path prefixes for cross-platform parser tests."""
+    prefix = str(payload.get("path_prefix", "")).strip()
+    if not prefix:
+        return scratch_dir
+    return scratch_dir / Path(prefix)
+
+
 def materialize_inline_fallbacks(
     payload: dict[str, Any],
     scratch_dir: Path,
 ) -> list[Path]:
-    """Build parser-ready files from inline_docx / inline_xlsx when no real files exist."""
+    """Build parser-ready files from inline_* blocks when no real files exist."""
+    base_dir = resolve_fixture_scratch_dir(payload, scratch_dir)
     paths: list[Path] = []
     inline_docx = payload.get("inline_docx")
     if inline_docx is not None:
         paths.append(
             materialize_inline_docx(
-                scratch_dir / str(inline_docx.get("filename", "inline.docx")),
+                base_dir / str(inline_docx.get("filename", "inline.docx")),
                 inline_docx,
             )
         )
@@ -121,8 +170,32 @@ def materialize_inline_fallbacks(
     if inline_xlsx is not None:
         paths.append(
             materialize_inline_xlsx(
-                scratch_dir / str(inline_xlsx.get("filename", "inline.xlsx")),
+                base_dir / str(inline_xlsx.get("filename", "inline.xlsx")),
                 inline_xlsx,
+            )
+        )
+    inline_pdf = payload.get("inline_pdf")
+    if inline_pdf is not None:
+        paths.append(
+            materialize_inline_pdf(
+                base_dir / str(inline_pdf.get("filename", "inline.pdf")),
+                inline_pdf,
+            )
+        )
+    inline_pptx = payload.get("inline_pptx")
+    if inline_pptx is not None:
+        paths.append(
+            materialize_inline_pptx(
+                base_dir / str(inline_pptx.get("filename", "inline.pptx")),
+                inline_pptx,
+            )
+        )
+    inline_image = payload.get("inline_image")
+    if inline_image is not None:
+        paths.append(
+            materialize_inline_image(
+                base_dir / str(inline_image.get("filename", "inline.png")),
+                inline_image,
             )
         )
     return paths

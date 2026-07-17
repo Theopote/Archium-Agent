@@ -25,6 +25,14 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[full,legacy,dev]"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install PptxGenJS dependencies
+        working-directory: archium/infrastructure/renderers/pptxgen
+        run: npm install
+
       - name: Ruff
         run: ruff check archium tests
 
@@ -34,10 +42,21 @@ jobs:
       - name: Pytest
         run: pytest --cov=archium --cov-report=term-missing
 
+      - name: PptxGen smoke test
+        run: pytest tests/smoke/test_pptxgen_render.py -v
+
       - name: Upload golden case artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: golden-artifacts-py${{ matrix.python-version }}
           path: tests/golden/artifacts/
+          if-no-files-found: ignore
+
+      - name: Upload PptxGen smoke artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pptxgen-smoke-py${{ matrix.python-version }}
+          path: tests/smoke/artifacts/
           if-no-files-found: ignore

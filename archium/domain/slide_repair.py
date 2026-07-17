@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import DomainModel
-from archium.domain.enums import SlideRepairTier
+from archium.domain.enums import SlideRepairSource, SlideRepairTier
 
 
 class SlideRepairRecord(DomainModel):
@@ -15,6 +15,7 @@ class SlideRepairRecord(DomainModel):
 
     presentation_id: UUID
     slide_id: UUID
+    repair_source: SlideRepairSource
     tier: SlideRepairTier
     before_message: str
     after_message: str

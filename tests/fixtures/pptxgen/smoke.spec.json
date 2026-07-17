@@ -1,0 +1,38 @@
+{
+  "presentation_id": "00000000-0000-4000-8000-000000000001",
+  "version": 1,
+  "title": "Archium PptxGen Smoke",
+  "theme": "minimal-light",
+  "language": "zh-CN",
+  "slides": [
+    {
+      "order": 0,
+      "layout": "title",
+      "title": "Archium PptxGen Smoke",
+      "subtitle": "原生元素 PPTX 验证",
+      "message": "验证 Node.js 渲染链路",
+      "bullets": [],
+      "speaker_notes": "Smoke test speaker note — 中文备注",
+      "images": [],
+      "columns": [],
+      "timeline_items": [],
+      "metrics": []
+    },
+    {
+      "order": 1,
+      "layout": "content_bullets",
+      "title": "要点页",
+      "subtitle": null,
+      "message": "检查页数、标题与 speaker notes",
+      "bullets": [
+        "要点一：中文渲染",
+        "要点二：字体降级可接受"
+      ],
+      "speaker_notes": "第二页备注：Windows 中文路径兼容",
+      "images": [],
+      "columns": [],
+      "timeline_items": [],
+      "metrics": []
+    }
+  ]
+}

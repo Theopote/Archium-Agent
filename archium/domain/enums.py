@@ -122,6 +122,13 @@ class SlideRepairTier(StrEnum):
     USER_CONFIRMATION = "user_confirmation"
 
 
+class SlideRepairSource(StrEnum):
+    """Origin of an automated slide repair action."""
+
+    RULE = "rule"
+    LLM = "llm"
+
+
 class RevisionEntityType(StrEnum):
     BRIEF = "brief"
     STORYLINE = "storyline"

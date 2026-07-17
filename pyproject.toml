@@ -71,6 +71,9 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra"
 filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "smoke: End-to-end smoke tests (PptxGenJS, real parsers)",
+]
 
 [tool.ruff]
 target-version = "py311"
@@ -85,7 +88,7 @@ ignore = ["B008", "E501"]
 "scripts/*" = ["E402"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true

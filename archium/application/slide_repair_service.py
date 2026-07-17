@@ -23,6 +23,7 @@ from archium.domain.enums import (
     ReviewSeverity,
     ReviewStatus,
     SlideChangeSource,
+    SlideRepairSource,
     SlideRepairTier,
 )
 from archium.domain.presentation import PresentationBrief
@@ -171,6 +172,7 @@ class SlideRepairService:
                 record = self._build_record(
                     presentation_id=presentation_id,
                     slide_id=slide_id,
+                    repair_source=SlideRepairSource.RULE,
                     tier=SlideRepairTier.USER_CONFIRMATION,
                     before=before_snapshot,
                     after=before_snapshot,
@@ -229,6 +231,7 @@ class SlideRepairService:
             record = self._build_record(
                 presentation_id=presentation_id,
                 slide_id=slide_id,
+                repair_source=SlideRepairSource.RULE,
                 tier=outcome.tier or SlideRepairTier.SHORTEN_REPETITION,
                 before=before_snapshot,
                 after=after_snapshot,
@@ -342,6 +345,7 @@ class SlideRepairService:
                     self._build_record(
                         presentation_id=presentation_id,
                         slide_id=slide_id,
+                        repair_source=SlideRepairSource.LLM,
                         tier=SlideRepairTier.USER_CONFIRMATION,
                         before=before_snapshot,
                         after=before_snapshot,
@@ -378,6 +382,7 @@ class SlideRepairService:
             record = self._build_record(
                 presentation_id=presentation_id,
                 slide_id=slide_id,
+                repair_source=SlideRepairSource.LLM,
                 tier=SlideRepairTier.REWRITE,
                 before=before_snapshot,
                 after=after_snapshot,
@@ -408,6 +413,7 @@ class SlideRepairService:
         *,
         presentation_id: UUID,
         slide_id: UUID,
+        repair_source: SlideRepairSource,
         tier: SlideRepairTier,
         before: dict[str, object],
         after: dict[str, object],
@@ -422,6 +428,7 @@ class SlideRepairService:
         return SlideRepairRecord(
             presentation_id=presentation_id,
             slide_id=slide_id,
+            repair_source=repair_source,
             tier=tier,
             before_message=str(before.get("message", "")),
             after_message=str(after.get("message", "")),

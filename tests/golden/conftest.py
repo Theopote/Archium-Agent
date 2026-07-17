@@ -7,6 +7,7 @@ import pytest
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "regression: Layer 1 deterministic workflow regression (CI)")
+    config.addinivalue_line("markers", "smoke: End-to-end smoke tests (PptxGenJS, real parsers)")
     config.addinivalue_line(
         "markers",
         "fixture_acceptance: Layer 2 real parser + cached/mock LLM (CI when fixtures present)",

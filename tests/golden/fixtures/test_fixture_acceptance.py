@@ -10,7 +10,7 @@ from archium.infrastructure.database.repositories import DocumentRepository, Rev
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
 from tests.golden.artifacts import save_case_artifacts
-from tests.golden.assertions import assert_workflow_expectations
+from tests.golden.assertions import assert_fixture_import_expectations, assert_workflow_expectations
 from tests.golden.fixtures.llm_cache import load_cached_llm_selector
 from tests.golden.fixtures.loader import (
     list_fixture_manifest_paths,
@@ -57,6 +57,10 @@ def test_fixture_acceptance_workflow(
     chunks = DocumentRepository(db_session).list_chunks_by_project(project.id)
     min_chunks = int(case.expectations.get("min_imported_chunks", 1))
     assert len(chunks) >= min_chunks, f"Expected parsed chunks from {imported_paths}"
+    assert_fixture_import_expectations(
+        expectations=case.expectations,
+        imported_paths=imported_paths,
+    )
 
     issues = ReviewRepository(db_session).list_by_presentation(result.presentation.id)
     assert_workflow_expectations(
@@ -71,11 +75,12 @@ def test_fixture_acceptance_workflow(
 
 def test_fixture_manifests_cover_all_regression_cases() -> None:
     paths = list_fixture_manifest_paths()
-    assert len(paths) == 4
+    assert len(paths) == 5
     ids = {load_fixture_case(path).id for path in paths}
     assert ids == {
         "case_a_hospital",
         "case_b_campus",
         "case_c_competition",
         "case_d_full_deck",
+        "case_e_real_paths",
     }

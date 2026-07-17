@@ -1,0 +1,76 @@
+{
+  "id": "case_e_real_paths",
+  "layer": "fixture_acceptance",
+  "name": "中文/空格路径 + 多格式真实解析",
+  "path_prefix": "中文路径/项目 资料",
+  "project": {
+    "name": "某医院综合更新（路径压力测试）",
+    "project_type": "healthcare"
+  },
+  "inline_docx": {
+    "filename": "任务书 摘要.docx",
+    "paragraphs": [
+      "老院区交通组织混乱，需优化车行流线并保留急诊通道。",
+      "现场低清照片显示入口广场人车交织，缺少明确人行导向。"
+    ]
+  },
+  "inline_pdf": {
+    "filename": "调研 摘要.pdf",
+    "text": "规划床位500张，需确认分期实施策略与急诊通道保留要求。"
+  },
+  "inline_pptx": {
+    "filename": "现状 汇报.pptx",
+    "title": "院区现状",
+    "body": "入口广场拥堵，落客区不足，停车周转率低。"
+  },
+  "inline_image": {
+    "filename": "现场 低清.jpg",
+    "width": 48,
+    "height": 36,
+    "color": [150, 140, 130]
+  },
+  "files": [
+    {
+      "relative_path": "case_e_real_paths/任务书.pdf",
+      "required": false,
+      "note": "Optional sanitized PDF; inline fallbacks cover CI"
+    }
+  ],
+  "facts": [
+    {
+      "key": "site_area",
+      "label": "用地面积",
+      "value": "12.5 公顷"
+    },
+    {
+      "key": "land_area",
+      "label": "占地面积",
+      "value": "12.8 公顷"
+    },
+    {
+      "key": "bed_count",
+      "label": "床位数",
+      "value": "500 张"
+    }
+  ],
+  "request": {
+    "title": "老院区更新路径验证汇报",
+    "audience": "医院管理层",
+    "purpose": "验证真实资料解析与冲突数据检测",
+    "duration_minutes": 20,
+    "target_slide_count": 4,
+    "core_message": "通过交通重组与分期实施提升老院区运营品质",
+    "required_sections": ["院区现状", "交通组织", "改造策略"],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 4,
+    "workflow_status": "completed",
+    "min_imported_chunks": 3,
+    "review_layers": ["evidence"],
+    "fact_conflict_keys": ["site_area", "land_area"],
+    "require_unicode_paths": true,
+    "require_spaced_paths": true,
+    "export_presentation_spec": false
+  }
+}
