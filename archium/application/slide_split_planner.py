@@ -59,6 +59,7 @@ def _allocate_citations(
         return list(source.source_citations), list(continuation.source_citations), {}
 
     moved_text = " ".join(moved_points)
+    source_evidence = " ".join(source.key_points)
     source_text = " ".join([source.message, *source.key_points])
     mapping: dict[str, UUID] = {}
     source_citations = []
@@ -67,23 +68,18 @@ def _allocate_citations(
     for index, citation in enumerate(original.source_citations):
         key = citation_key(citation.document_id, citation.chunk_id, index)
         quote = citation.quote or ""
-        moved_needs = (
-            contains_protected_signal(moved_text)
-            or (quote and quote in moved_text)
-            or (quote and contains_protected_signal(quote) and not contains_protected_signal(source_text))
-        )
-        source_needs = contains_protected_signal(source_text) or (quote and quote in source_text)
+        quote_in_moved = bool(quote and quote in moved_text)
+        quote_in_source = bool(quote and quote in source_text)
+        moved_has_protected = contains_protected_signal(moved_text)
+        source_has_protected = contains_protected_signal(source_evidence)
 
-        if moved_needs and not source_needs:
+        if quote_in_moved or (moved_has_protected and not source_has_protected and not quote_in_source):
             continuation_citations.append(citation)
             mapping[key] = continuation.id
-        elif source_needs and not moved_needs:
+        elif quote_in_source or source_has_protected:
             source_citations.append(citation)
             mapping[key] = source.id
-        elif moved_needs and source_needs:
-            source_citations.append(citation)
-            mapping[key] = source.id
-        elif contains_protected_signal(moved_text):
+        elif moved_has_protected:
             continuation_citations.append(citation)
             mapping[key] = continuation.id
         else:

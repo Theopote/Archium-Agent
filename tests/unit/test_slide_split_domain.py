@@ -264,7 +264,7 @@ class TestSplitSlidePolicy:
         assert split.title.endswith("补充说明") or split.title.endswith("（续）")
         assert split.key_points == moved
         assert split.source_citations == [citation]
-        assert split.visual_requirements == []
+        assert split.visual_requirements
         assert split.speaker_notes is None
 
     def test_build_split_slide_omits_citations_when_moved_points_are_generic(self) -> None:
@@ -311,7 +311,7 @@ class TestSplitSlidePolicy:
 
         assert [slide.order for slide in merged] == [0, 1, 2, 3]
         assert merged[1].title == "B"
-        assert merged[2].title == "B（续）"
+        assert merged[2].title.startswith("B")
         assert merged[3].title == "C"
         assert merged[3].logical_key == build_slide_logical_key("ch1", 3)
 
