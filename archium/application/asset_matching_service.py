@@ -139,33 +139,114 @@ class AssetMatchingService:
         match_count = 0
         updated: list[SlideSpec] = []
         for slide in slides:
-            if not slide.visual_requirements:
-                updated.append(slide)
-                continue
-
-            changed = False
-            for requirement in slide.visual_requirements:
-                if requirement.preferred_asset_ids and not rematch:
-                    match_count += len(requirement.preferred_asset_ids)
-                    infer_visual_processing_flags(requirement)
-                    continue
-                if requirement.confirmed and not rematch:
-                    if requirement.preferred_asset_ids:
-                        match_count += 1
-                    continue
-                if requirement.type == VisualType.TEXT_ONLY:
-                    continue
-
-                ranked = rank_assets_for_requirement(
-                    requirement,
-                    assets,
-                    min_score=min_score,
-                )
-                if apply_asset_match(requirement, ranked, overwrite=rematch):
-                    changed = True
-                if requirement.preferred_asset_ids:
-                    match_count += 1
-
-            updated.append(self._presentations.save_slide(slide) if changed else slide)
+            matched_slide, slide_matches, changed = self._match_slide(
+                slide,
+                assets,
+                min_score=min_score,
+                rematch=rematch,
+                only_unmatched=False,
+            )
+            match_count += slide_matches
+            updated.append(self._presentations.save_slide(matched_slide) if changed else matched_slide)
 
         return updated, match_count
+
+    def match_slides(
+        self,
+        project_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        slide_ids: set[UUID] | None = None,
+        min_score: float = 0.35,
+        rematch: bool = False,
+        only_unmatched: bool = False,
+    ) -> tuple[list[SlideSpec], int]:
+        """Match visual requirements for specific slides and persist changes."""
+        if not slides:
+            return [], 0
+
+        assets = self._assets.list_by_project(project_id)
+        match_count = 0
+        updated_by_id: dict[UUID, SlideSpec] = {}
+
+        for slide in slides:
+            if slide_ids is not None and slide.id not in slide_ids:
+                continue
+            matched_slide, slide_matches, changed = self._match_slide(
+                slide,
+                assets,
+                min_score=min_score,
+                rematch=rematch,
+                only_unmatched=only_unmatched,
+            )
+            match_count += slide_matches
+            if changed:
+                updated_by_id[slide.id] = self._presentations.save_slide(matched_slide)
+
+        if not updated_by_id:
+            return slides, match_count
+
+        return [
+            updated_by_id.get(slide.id, slide)
+            for slide in slides
+        ], match_count
+
+    def rematch_slides_after_split(
+        self,
+        project_id: UUID,
+        slides: list[SlideSpec],
+        affected_slide_ids: set[UUID],
+    ) -> tuple[list[SlideSpec], int]:
+        """Re-run asset matching for slides created or changed by page splits."""
+        if not affected_slide_ids:
+            return slides, 0
+        return self.match_slides(
+            project_id,
+            slides,
+            slide_ids=affected_slide_ids,
+            rematch=True,
+            only_unmatched=True,
+        )
+
+    def _match_slide(
+        self,
+        slide: SlideSpec,
+        assets: list[Asset],
+        *,
+        min_score: float,
+        rematch: bool,
+        only_unmatched: bool,
+    ) -> tuple[SlideSpec, int, bool]:
+        if not slide.visual_requirements:
+            return slide, 0, False
+
+        changed = False
+        match_count = 0
+        for requirement in slide.visual_requirements:
+            if requirement.confirmed:
+                if requirement.preferred_asset_ids:
+                    match_count += 1
+                infer_visual_processing_flags(requirement)
+                continue
+            if only_unmatched and requirement.preferred_asset_ids:
+                match_count += len(requirement.preferred_asset_ids)
+                infer_visual_processing_flags(requirement)
+                continue
+            if requirement.preferred_asset_ids and not rematch:
+                match_count += len(requirement.preferred_asset_ids)
+                infer_visual_processing_flags(requirement)
+                continue
+            if requirement.type == VisualType.TEXT_ONLY:
+                continue
+
+            ranked = rank_assets_for_requirement(
+                requirement,
+                assets,
+                min_score=min_score,
+            )
+            if apply_asset_match(requirement, ranked, overwrite=rematch):
+                changed = True
+            if requirement.preferred_asset_ids:
+                match_count += 1
+
+        return slide, match_count, changed

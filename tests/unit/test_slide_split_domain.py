@@ -15,10 +15,12 @@ from archium.application.slide_repair_policy import (
 from archium.application.slide_repair_service import SlideRepairService
 from archium.config.settings import Settings
 from archium.domain.citation import Citation
+from archium.domain.asset import Asset
 from archium.domain.enums import (
     ReviewCategory,
     ReviewLayer,
     ReviewSeverity,
+    AssetType,
     SlideChangeSource,
     SlideRepairTier,
     SlideStatus,
@@ -33,6 +35,7 @@ from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logic
 from archium.domain.slide_repair import SlideRepairRecord
 from archium.infrastructure.database.models import SlideORM
 from archium.infrastructure.database.repositories import (
+    AssetRepository,
     PresentationRepository,
     ProjectRepository,
     ReviewRepository,
@@ -385,6 +388,49 @@ class TestSplitSlideService:
             assert {
                 citation.document_id for citation in split_slide.source_citations
             }.issubset({citation.document_id for citation in target.source_citations})
+
+    def test_split_rematch_assets_for_continuation_slide(
+        self,
+        db_session: Session,
+        split_presentation: tuple[UUID, list[SlideSpec], Storyline],
+    ) -> None:
+        presentation_id, seeded_slides, storyline = split_presentation
+        project_id = ProjectRepository(db_session).list_all()[0].id
+        diagram_asset = AssetRepository(db_session).create(
+            Asset(
+                project_id=project_id,
+                filename="traffic_flow.png",
+                path="/tmp/traffic_flow.png",
+                asset_type=AssetType.DIAGRAM,
+                description="交通流线示意",
+                tags=["diagram", "traffic"],
+                quality_score=0.9,
+            )
+        )
+        target = seeded_slides[1]
+        issue = ReviewRepository(db_session).create(
+            _layout_issue(presentation_id, target.id)
+        )
+
+        SlideRepairService(
+            db_session,
+            llm=None,
+            settings=Settings(_env_file=None, slide_repair_enabled=False),
+        ).repair_slides(
+            presentation_id,
+            seeded_slides,
+            [issue],
+            storyline=storyline,
+            project_id=project_id,
+        )
+
+        persisted = PresentationRepository(db_session).list_slides(presentation_id)
+        split_slide = next(
+            slide for slide in persisted if slide.id != target.id and slide.order == target.order + 1
+        )
+
+        assert split_slide.visual_requirements
+        assert split_slide.visual_requirements[0].preferred_asset_ids == [diagram_asset.id]
 
     def test_split_renumbers_subsequent_slides_and_updates_chapter_slide_count(
         self,

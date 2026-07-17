@@ -18,7 +18,7 @@ from archium.application.fact_extraction_service import FactExtractionService
 from archium.application.fact_validation_service import FactValidationService
 from archium.application.render_export import export_marp_extras, export_pptxgen_extras
 from archium.application.review_service import slides_are_approved
-from archium.application.slide_repair_service import SlideRepairService
+from archium.application.slide_repair_service import SlideRepairService, split_affected_slide_ids
 from archium.domain.enums import (
     ApprovalStatus,
     PresentationStatus,
@@ -681,13 +681,24 @@ class PresentationWorkflowNodes:
                 list(state.get("review_issues", [])),
                 brief=state.get("brief"),
                 storyline=state.get("storyline"),
+                project_id=UUID(state["project_id"]),
             )
+            split_slide_ids = split_affected_slide_ids(repair_records)
+            matched_asset_count = state.get("matched_asset_count", 0)
+            if split_slide_ids:
+                matched_asset_count = sum(
+                    1
+                    for slide in repaired_slides
+                    for requirement in slide.visual_requirements
+                    if requirement.preferred_asset_ids
+                )
             prior_records = list(state.get("slide_repair_records", []))
             next_state: PresentationWorkflowState = {
                 "slides": repaired_slides,
                 "repaired_slide_count": repair_count,
                 "repair_round": state.get("repair_round", 0) + 1,
                 "slide_repair_records": [*prior_records, *repair_records],
+                "matched_asset_count": matched_asset_count,
                 "review_issues": [],
                 "slide_review_issues": [],
                 "current_step": WorkflowStep.REPAIR_SLIDES.value,

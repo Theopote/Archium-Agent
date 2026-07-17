@@ -101,3 +101,88 @@ def test_match_assets_skips_existing_ids(db_session: Session, project_id: object
     _, count = matcher.match_presentation_slides(project_id, presentation.id)  # type: ignore[arg-type]
 
     assert count == 1
+
+
+def test_rematch_slides_after_split_only_fills_unmatched_requirements(
+    db_session: Session,
+    project_id: object,
+) -> None:
+    asset_repo = AssetRepository(db_session)
+    diagram_asset = asset_repo.create(
+        Asset(
+            project_id=project_id,  # type: ignore[arg-type]
+            filename="traffic_flow.png",
+            path="/tmp/traffic_flow.png",
+            asset_type=AssetType.DIAGRAM,
+            description="交通流线示意",
+            tags=["diagram", "traffic"],
+            quality_score=0.9,
+        )
+    )
+    asset_repo.create(
+        Asset(
+            project_id=project_id,  # type: ignore[arg-type]
+            filename="site_plan.png",
+            path="/tmp/site_plan.png",
+            asset_type=AssetType.DRAWING,
+            description="总平面图",
+            tags=["site_plan"],
+            quality_score=0.85,
+        )
+    )
+
+    pres_repo = PresentationRepository(db_session)
+    presentation = pres_repo.create_presentation(
+        Presentation(project_id=project_id, title="Split Rematch")  # type: ignore[arg-type]
+    )
+    source_id = uuid4()
+    continuation_id = uuid4()
+    existing_match = uuid4()
+    slides = [
+        SlideSpec(
+            id=source_id,
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="交通组织",
+            message="现状问题",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.DIAGRAM,
+                    description="交通流线示意",
+                    preferred_asset_ids=[existing_match],
+                )
+            ],
+        ),
+        SlideSpec(
+            id=continuation_id,
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=1,
+            title="交通组织 — 策略",
+            message="三项策略",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.DIAGRAM,
+                    description="交通流线示意",
+                    required=True,
+                )
+            ],
+        ),
+    ]
+    for slide in slides:
+        pres_repo.save_slide(slide)
+
+    matcher = AssetMatchingService(db_session)
+    updated, count = matcher.rematch_slides_after_split(
+        project_id,  # type: ignore[arg-type]
+        slides,
+        {source_id, continuation_id},
+    )
+
+    source = next(slide for slide in updated if slide.id == source_id)
+    continuation = next(slide for slide in updated if slide.id == continuation_id)
+
+    assert count >= 1
+    assert source.visual_requirements[0].preferred_asset_ids == [existing_match]
+    assert continuation.visual_requirements[0].preferred_asset_ids == [diagram_asset.id]

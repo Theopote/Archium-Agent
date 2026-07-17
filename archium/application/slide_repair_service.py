@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from archium.agents._helpers import sanitize_slide_message
 from archium.application.slide_diff import slide_to_snapshot
+from archium.application.asset_matching_service import AssetMatchingService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_repair_policy import (
     apply_tiered_layout_repair,
@@ -74,6 +75,17 @@ def has_repairable_open_issues(
     return False
 
 
+def split_affected_slide_ids(records: list[SlideRepairRecord]) -> set[UUID]:
+    """Collect slide IDs that should be re-matched after page splits."""
+    affected: set[UUID] = set()
+    for record in records:
+        if record.split_slide_id is None:
+            continue
+        affected.add(record.slide_id)
+        affected.add(record.split_slide_id)
+    return affected
+
+
 class SlideRepairService:
     """LLM-assisted per-slide fixes for open review issues."""
 
@@ -99,6 +111,7 @@ class SlideRepairService:
         *,
         brief: PresentationBrief | None = None,
         storyline: Storyline | None = None,
+        project_id: UUID | None = None,
     ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord]]:
         """Repair slide-level issues and return updated slides, count, and audit records."""
         slides_by_id = {slide.id: slide for slide in slides}
@@ -138,7 +151,37 @@ class SlideRepairService:
         for pending in llm_pending:
             self._reviews.create(pending)
 
+        updated_slides = self._rematch_assets_after_splits(
+            updated_slides,
+            records,
+            project_id=project_id,
+        )
+
         return updated_slides, repaired, records
+
+    def _rematch_assets_after_splits(
+        self,
+        slides: list[SlideSpec],
+        records: list[SlideRepairRecord],
+        *,
+        project_id: UUID | None,
+    ) -> list[SlideSpec]:
+        affected = split_affected_slide_ids(records)
+        if not affected or project_id is None:
+            return slides
+
+        rematched, match_count = AssetMatchingService(self._session).rematch_slides_after_split(
+            project_id,
+            slides,
+            affected,
+        )
+        if match_count:
+            logger.info(
+                "Re-matched %d visual asset(s) on %d slide(s) after page split",
+                match_count,
+                len(affected),
+            )
+        return rematched
 
     def _apply_rule_repairs(
         self,
