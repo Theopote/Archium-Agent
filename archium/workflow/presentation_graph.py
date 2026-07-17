@@ -115,6 +115,7 @@ class PresentationWorkflowGraph:
         builder.add_node("repair_slides", self._nodes.repair_slides)
         builder.add_node("review_slides", self._nodes.review_slides)
         builder.add_node("export_json", self._nodes.export_json)
+        builder.add_node("export_presentation_spec", self._nodes.export_presentation_spec)
         builder.add_node("export_marp", self._nodes.export_marp)
         builder.add_node("pause_for_review", self._nodes.pause_for_review)
         builder.add_node("finalize", self._nodes.finalize)
@@ -170,6 +171,11 @@ class PresentationWorkflowGraph:
         )
         builder.add_conditional_edges(
             "export_json",
+            _route_on_errors,
+            {"continue": "export_presentation_spec", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "export_presentation_spec",
             _route_on_errors,
             {"continue": "export_marp", "finalize": "finalize"},
         )

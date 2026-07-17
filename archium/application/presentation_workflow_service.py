@@ -58,6 +58,8 @@ class PresentationWorkflowService:
         request: PresentationRequest,
         *,
         export_json: bool = True,
+        export_presentation_spec: bool = False,
+        export_editable_pptx: bool = False,
         export_marp: bool = False,
         export_pptx: bool = False,
         export_pdf: bool = False,
@@ -81,6 +83,8 @@ class PresentationWorkflowService:
                     "current_step": WorkflowStep.INIT.value,
                     "request": request_to_dict(request),
                     "export_json": export_json,
+                    "export_presentation_spec": export_presentation_spec or export_editable_pptx,
+                    "export_editable_pptx": export_editable_pptx,
                     "export_marp": export_marp,
                     "export_pptx": export_pptx,
                     "export_pdf": export_pdf,
@@ -99,6 +103,8 @@ class PresentationWorkflowService:
             request=request,
             presentation=presentation,
             export_json=export_json,
+            export_presentation_spec=export_presentation_spec,
+            export_editable_pptx=export_editable_pptx,
             export_marp=export_marp,
             export_pptx=export_pptx,
             export_pdf=export_pdf,
@@ -181,6 +187,8 @@ class PresentationWorkflowService:
             request=request,
             presentation=presentation,
             export_json=bool(run.state.get("export_json", True)),
+            export_presentation_spec=bool(run.state.get("export_presentation_spec", False)),
+            export_editable_pptx=bool(run.state.get("export_editable_pptx", False)),
             export_marp=bool(run.state.get("export_marp", False)),
             export_pptx=bool(run.state.get("export_pptx", False)),
             export_pdf=bool(run.state.get("export_pdf", False)),
@@ -232,6 +240,10 @@ class PresentationWorkflowService:
             )
 
         json_path_value = workflow_run.state.get("json_path") or final_state.get("json_path")
+        spec_path_value = workflow_run.state.get("spec_path") or final_state.get("spec_path")
+        editable_pptx_value = workflow_run.state.get("editable_pptx_path") or final_state.get(
+            "editable_pptx_path"
+        )
         marp_md_value = workflow_run.state.get("marp_md_path") or final_state.get("marp_md_path")
         marp_pptx_value = workflow_run.state.get("marp_pptx_path") or final_state.get(
             "marp_pptx_path"
@@ -246,6 +258,8 @@ class PresentationWorkflowService:
 
         render = RenderResult.from_state_paths(
             json_path=json_path_value,
+            spec_path=spec_path_value,
+            editable_pptx_path=editable_pptx_value,
             marp_md_path=marp_md_value,
             marp_pptx_path=marp_pptx_value,
             pdf_path=pdf_value,

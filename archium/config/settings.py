@@ -102,6 +102,17 @@ class Settings(BaseSettings):
         description="Image format for Marp --images export (png or jpeg).",
     )
 
+    pptxgen_node_command: str = Field(
+        default="node",
+        validation_alias=AliasChoices("PPTXGEN_NODE_COMMAND"),
+        description="Node.js executable used for PptxGenJS editable PPTX export.",
+    )
+    pptxgen_script_path: Path | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PPTXGEN_SCRIPT_PATH"),
+        description="Path to render.mjs. Defaults to bundled archium/infrastructure/renderers/pptxgen/render.mjs.",
+    )
+
     block_export_on_critical_review: bool = Field(
         default=False,
         description="When true, open CRITICAL ReviewIssue records block JSON/Marp export.",
@@ -206,6 +217,22 @@ class Settings(BaseSettings):
         if provider == "local":
             return bool(self.embedding_model)
         return bool(self.effective_embedding_api_key and self.embedding_model)
+
+    @property
+    def resolved_pptxgen_script_path(self) -> Path:
+        """Return the Node render script path for editable PPTX export."""
+        if self.pptxgen_script_path is not None:
+            path = self.pptxgen_script_path
+            if path.is_absolute():
+                return path
+            return (_PROJECT_ROOT / path).resolve()
+        return (
+            Path(__file__).resolve().parents[1]
+            / "infrastructure"
+            / "renderers"
+            / "pptxgen"
+            / "render.mjs"
+        ).resolve()
 
 
 @lru_cache

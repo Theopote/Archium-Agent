@@ -6,17 +6,18 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.render_export import export_marp_extras
+from archium.application.render_export import export_marp_extras, export_pptxgen_extras
 from archium.config.settings import Settings, get_settings
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
 from archium.infrastructure.renderers.marp_renderer import MarpPresentationRenderer
+from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 
 
 class PresentationExportService:
-    """Export JSON / Marp artifacts from persisted presentation data."""
+    """Export JSON / Marp / PresentationSpec artifacts from persisted presentation data."""
 
     def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
         self._session = session
@@ -24,6 +25,7 @@ class PresentationExportService:
         self._presentations = PresentationRepository(session)
         self._json = JsonPresentationRenderer(self._settings)
         self._marp = MarpPresentationRenderer(self._settings)
+        self._pptxgen = PptxGenPresentationRenderer(self._settings, session=session)
 
     def reexport(
         self,
@@ -31,6 +33,8 @@ class PresentationExportService:
         *,
         export_json: bool = True,
         export_marp: bool = True,
+        export_presentation_spec: bool = False,
+        export_editable_pptx: bool = False,
         export_pptx: bool = False,
         export_pdf: bool = False,
     ) -> RenderResult:
@@ -68,6 +72,23 @@ class PresentationExportService:
                 slides=slides,
                 version=version,
             )
+        if export_presentation_spec or export_editable_pptx:
+            result.spec_path = self._pptxgen.render(
+                presentation_id=presentation_id,
+                project_id=presentation.project_id,
+                brief=brief,
+                storyline=storyline,
+                slides=slides,
+                version=version,
+            )
+            if export_editable_pptx and result.spec_path is not None:
+                extras = export_pptxgen_extras(
+                    self._pptxgen,
+                    result.spec_path,
+                    export_editable_pptx=True,
+                )
+                result.editable_pptx_path = extras.editable_pptx_path
+                result.warnings.extend(extras.warnings)
         if export_marp:
             result.markdown_path = self._marp.render(
                 presentation_id=presentation_id,

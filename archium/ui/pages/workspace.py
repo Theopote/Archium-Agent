@@ -180,8 +180,19 @@ def _render_generation_form(project_id: UUID) -> None:
         col1, col2, col3, col4 = st.columns(4)
         export_json = col1.checkbox("导出 JSON", value=True)
         export_marp = col2.checkbox("导出 Marp Markdown", value=True)
-        export_pptx = col3.checkbox("导出 PPTX（需 Marp CLI）", value=False)
-        export_pdf = col4.checkbox("导出 PDF（需 Marp CLI）", value=False)
+        export_pptx = col3.checkbox("导出 PPTX（Marp CLI）", value=False)
+        export_pdf = col4.checkbox("导出 PDF（Marp CLI）", value=False)
+        spec_col1, spec_col2 = st.columns(2)
+        export_presentation_spec = spec_col1.checkbox(
+            "导出 PresentationSpec JSON",
+            value=False,
+            help="生成 presentation.spec.json，供 PptxGenJS 或其它渲染器使用。",
+        )
+        export_editable_pptx = spec_col2.checkbox(
+            "导出可编辑 PPTX（PptxGenJS）",
+            value=False,
+            help="需 Node.js，并在 archium/infrastructure/renderers/pptxgen 目录运行 npm install。",
+        )
         export_preview_images = st.checkbox(
             "生成幻灯片预览图 PNG（需 Marp CLI）",
             value=export_marp,
@@ -218,6 +229,8 @@ def _render_generation_form(project_id: UUID) -> None:
                     request,
                     export_json=export_json,
                     export_marp=export_marp,
+                    export_presentation_spec=export_presentation_spec or export_editable_pptx,
+                    export_editable_pptx=export_editable_pptx,
                     export_pptx=export_pptx,
                     export_pdf=export_pdf,
                     export_preview_images=export_preview_images and export_marp,

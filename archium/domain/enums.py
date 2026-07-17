@@ -210,6 +210,7 @@ class WorkflowStep(StrEnum):
     REPAIR_SLIDES = "repair_slides"
     SLIDE_VALIDATION = "slide_validation"
     EXPORT = "export"
+    PRESENTATION_SPEC = "presentation_spec"
     MARP = "marp"
     FINALIZE = "finalize"
     FAILED = "failed"

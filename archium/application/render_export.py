@@ -1,4 +1,4 @@
-"""Shared helpers for optional Marp binary exports."""
+"""Shared helpers for optional Marp and PptxGenJS binary exports."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from archium.infrastructure.renderers.marp_renderer import MarpPresentationRenderer
+from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 
 
 @dataclass
@@ -13,6 +14,12 @@ class MarpExportExtras:
     pptx_path: Path | None = None
     pdf_path: Path | None = None
     preview_images: list[Path] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class PptxGenExportExtras:
+    editable_pptx_path: Path | None = None
     warnings: list[str] = field(default_factory=list)
 
 
@@ -64,3 +71,20 @@ def export_marp_binaries(
         export_preview_images=False,
     )
     return extras.pptx_path, extras.pdf_path, extras.warnings
+
+
+def export_pptxgen_extras(
+    renderer: PptxGenPresentationRenderer,
+    spec_path: Path,
+    *,
+    export_editable_pptx: bool = False,
+) -> PptxGenExportExtras:
+    """Export editable PPTX from PresentationSpec; collect failures as warnings."""
+    extras = PptxGenExportExtras()
+    if not export_editable_pptx:
+        return extras
+    try:
+        extras.editable_pptx_path = renderer.export_pptx(spec_path)
+    except Exception as exc:
+        extras.warnings.append(f"可编辑 PPTX 导出失败：{exc}")
+    return extras

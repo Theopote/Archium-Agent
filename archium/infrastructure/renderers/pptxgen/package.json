@@ -1,0 +1,13 @@
+{
+  "name": "archium-pptxgen",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PptxGenJS renderer for Archium PresentationSpec exports",
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}

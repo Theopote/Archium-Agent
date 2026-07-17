@@ -16,7 +16,7 @@ from archium.application.automated_review_service import (
 )
 from archium.application.fact_extraction_service import FactExtractionService
 from archium.application.fact_validation_service import FactValidationService
-from archium.application.render_export import export_marp_extras
+from archium.application.render_export import export_marp_extras, export_pptxgen_extras
 from archium.application.review_service import slides_are_approved
 from archium.application.slide_repair_service import SlideRepairService
 from archium.domain.enums import (
@@ -761,6 +761,59 @@ class PresentationWorkflowNodes:
             return {
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.EXPORT.value,
+            }
+
+    def export_presentation_spec(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.PRESENTATION_SPEC.value}
+        if not state.get("export_presentation_spec", False):
+            return {"current_step": WorkflowStep.PRESENTATION_SPEC.value}
+
+        brief = state.get("brief")
+        storyline = state.get("storyline")
+        slides = self._load_slides_for_export(state)
+        if brief is None or storyline is None:
+            return {
+                "errors": ["Cannot export PresentationSpec without brief and storyline"],
+                "current_step": WorkflowStep.PRESENTATION_SPEC.value,
+            }
+
+        try:
+            presentation_id = UUID(state["presentation_id"])
+            project_id = UUID(state["project_id"])
+            spec_path = self._runtime.pptxgen_renderer.render(
+                presentation_id=presentation_id,
+                project_id=project_id,
+                brief=brief,
+                storyline=storyline,
+                slides=slides,
+                version=brief.version,
+            )
+            next_state: PresentationWorkflowState = {
+                "spec_path": str(spec_path),
+                "current_step": WorkflowStep.PRESENTATION_SPEC.value,
+            }
+            if state.get("export_editable_pptx", False):
+                extras = export_pptxgen_extras(
+                    self._runtime.pptxgen_renderer,
+                    spec_path,
+                    export_editable_pptx=True,
+                )
+                if extras.editable_pptx_path is not None:
+                    next_state["editable_pptx_path"] = str(extras.editable_pptx_path)
+                if extras.warnings:
+                    next_state["render_warnings"] = extras.warnings
+
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Exported PresentationSpec to %s", spec_path)
+            return next_state
+        except Exception as exc:
+            logger.exception("PresentationSpec export failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.PRESENTATION_SPEC.value,
             }
 
     def export_marp(self, state: PresentationWorkflowState) -> PresentationWorkflowState:

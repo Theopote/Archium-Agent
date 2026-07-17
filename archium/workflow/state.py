@@ -37,11 +37,15 @@ class PresentationWorkflowState(TypedDict, total=False):
     matched_asset_count: int
     repaired_slide_count: int
     json_path: str | None
+    spec_path: str | None
+    editable_pptx_path: str | None
     marp_md_path: str | None
     marp_pptx_path: str | None
     pdf_path: str | None
     preview_image_paths: list[str]
     export_json: bool
+    export_presentation_spec: bool
+    export_editable_pptx: bool
     export_marp: bool
     export_pptx: bool
     export_pdf: bool
@@ -64,6 +68,8 @@ def initial_workflow_state(
     request: PresentationRequest,
     presentation: Presentation,
     export_json: bool,
+    export_presentation_spec: bool = False,
+    export_editable_pptx: bool = False,
     export_marp: bool = False,
     export_pptx: bool = False,
     export_pdf: bool = False,
@@ -94,11 +100,15 @@ def initial_workflow_state(
         "matched_asset_count": 0,
         "repaired_slide_count": 0,
         "json_path": None,
+        "spec_path": None,
+        "editable_pptx_path": None,
         "marp_md_path": None,
         "marp_pptx_path": None,
         "pdf_path": None,
         "preview_image_paths": [],
         "export_json": export_json,
+        "export_presentation_spec": export_presentation_spec or export_editable_pptx,
+        "export_editable_pptx": export_editable_pptx,
         "export_marp": export_marp,
         "export_pptx": export_pptx,
         "export_pdf": export_pdf,
