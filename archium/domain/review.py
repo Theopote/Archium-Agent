@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
-from archium.domain.enums import ReviewCategory, ReviewSeverity, ReviewStatus
+from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, ReviewStatus
 
 
 class ReviewIssue(IdentifiedModel, TimestampedModel):
@@ -15,6 +15,7 @@ class ReviewIssue(IdentifiedModel, TimestampedModel):
 
     presentation_id: UUID
     slide_id: UUID | None = None
+    reviewer_layer: ReviewLayer = ReviewLayer.CONTENT
     category: ReviewCategory
     severity: ReviewSeverity
     title: str = Field(min_length=1, max_length=500)

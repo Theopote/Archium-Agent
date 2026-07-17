@@ -1,7 +1,8 @@
-"""Automated content and professional review for presentation slides."""
+"""Automated four-layer presentation review (content / evidence / architectural / layout)."""
 
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from archium.application.chunk_models import ProjectContextBundle
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import (
     ReviewCategory,
+    ReviewLayer,
     ReviewSeverity,
     ReviewStatus,
     SlideType,
@@ -18,7 +20,7 @@ from archium.domain.enums import (
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
-from archium.infrastructure.database.repositories import ReviewRepository
+from archium.infrastructure.database.repositories import AssetRepository, ReviewRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import ProfessionalReviewDraft
 from archium.logging import get_logger
@@ -28,6 +30,16 @@ from archium.prompts.professional_review import (
 )
 
 logger = get_logger(__name__, operation="automated_review")
+
+_NUMBER_PATTERN = re.compile(r"\d+(?:\.\d+)?")
+_SKIPPABLE_SLIDE_TYPES = {SlideType.TITLE, SlideType.SECTION, SlideType.CLOSING}
+_NORTH_ARROW_HINTS = ("指北针", "北向", "north", "compass")
+_FLOOR_LABEL_HINTS = ("层", "floor", "f1", "f2", "f3", "首层", "地下")
+_AREA_UNIT_PATTERNS = (
+    ("sqm_symbol", re.compile(r"㎡")),
+    ("sqm_ascii", re.compile(r"\bm2\b", re.IGNORECASE)),
+    ("sqm_cn", re.compile(r"平方米")),
+)
 
 
 def critical_export_block_messages(
@@ -57,6 +69,7 @@ class AutomatedReviewService:
     ) -> None:
         self._session = session
         self._reviews = ReviewRepository(session)
+        self._assets = AssetRepository(session)
         self._llm = llm
         self._settings = settings or get_settings()
 
@@ -65,41 +78,120 @@ class AutomatedReviewService:
         presentation_id: UUID,
         slides: list[SlideSpec],
         *,
-        context_bundle: ProjectContextBundle | None = None,
+        brief: PresentationBrief | None = None,
     ) -> list[ReviewIssue]:
-        """Check slide copy, citations, and length."""
-        has_sources = context_bundle is not None and bool(context_bundle.chunks)
-        skippable = {SlideType.TITLE, SlideType.SECTION, SlideType.CLOSING}
+        """Check slide copy clarity, repetition, and Brief alignment."""
         issues: list[ReviewIssue] = []
+        title_counts: dict[str, int] = {}
 
         for slide in slides:
-            if not slide.title.strip():
+            title_key = slide.title.strip()
+            if title_key:
+                title_counts[title_key] = title_counts.get(title_key, 0) + 1
+
+            if not title_key:
                 issues.append(
                     self._issue(
                         presentation_id,
                         slide,
+                        layer=ReviewLayer.CONTENT,
                         category=ReviewCategory.CONTENT,
                         severity=ReviewSeverity.HIGH,
                         title="缺少标题",
                         description=f"第 {slide.order + 1} 页缺少标题。",
                     )
                 )
-            if not slide.message.strip() and slide.slide_type not in skippable:
+            if not slide.message.strip() and slide.slide_type not in _SKIPPABLE_SLIDE_TYPES:
                 issues.append(
                     self._issue(
                         presentation_id,
                         slide,
+                        layer=ReviewLayer.CONTENT,
                         category=ReviewCategory.CONTENT,
                         severity=ReviewSeverity.CRITICAL,
                         title="缺少核心信息",
                         description=f"第 {slide.order + 1} 页「{slide.title}」缺少核心结论。",
                     )
                 )
-            if has_sources and slide.slide_type not in skippable and not slide.source_citations:
+            if (
+                slide.message.strip()
+                and slide.slide_type not in _SKIPPABLE_SLIDE_TYPES
+                and len(slide.message.strip()) < 8
+            ):
                 issues.append(
                     self._issue(
                         presentation_id,
                         slide,
+                        layer=ReviewLayer.CONTENT,
+                        category=ReviewCategory.CONTENT,
+                        severity=ReviewSeverity.MEDIUM,
+                        title="结论表述过于简略",
+                        description=(
+                            f"第 {slide.order + 1} 页「{slide.title}」核心结论过短，"
+                            "建议补充可决策的完整表述。"
+                        ),
+                    )
+                )
+
+        for title, count in title_counts.items():
+            if count > 1:
+                issues.append(
+                    ReviewIssue(
+                        presentation_id=presentation_id,
+                        reviewer_layer=ReviewLayer.CONTENT,
+                        category=ReviewCategory.CONSISTENCY,
+                        severity=ReviewSeverity.MEDIUM,
+                        title="标题重复",
+                        description=f"标题「{title}」在 {count} 页中重复出现，建议区分章节重点。",
+                    )
+                )
+
+        if brief is not None and brief.core_message.strip() and slides:
+            tokens = [
+                token
+                for token in re.split(r"[\s，,、；;。.]+", brief.core_message.strip())
+                if len(token) >= 2
+            ]
+            combined = " ".join(slide.message for slide in slides)
+            if tokens and not any(token in combined for token in tokens[:5]):
+                issues.append(
+                    ReviewIssue(
+                        presentation_id=presentation_id,
+                        reviewer_layer=ReviewLayer.CONTENT,
+                        category=ReviewCategory.COVERAGE,
+                        severity=ReviewSeverity.MEDIUM,
+                        title="Brief 核心信息未体现",
+                        description=(
+                            f"Brief 核心信息「{brief.core_message}」"
+                            "未在 Slide 结论中找到明显呼应。"
+                        ),
+                        suggestion="调整各页结论，确保与 Brief 核心信息一致。",
+                    )
+                )
+
+        return self._persist(presentation_id, issues)
+
+    def run_evidence_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        context_bundle: ProjectContextBundle | None = None,
+    ) -> list[ReviewIssue]:
+        """Check citations, numeric claims, and claim-to-evidence alignment."""
+        has_sources = context_bundle is not None and bool(context_bundle.chunks)
+        issues: list[ReviewIssue] = []
+
+        for slide in slides:
+            if slide.slide_type in _SKIPPABLE_SLIDE_TYPES:
+                continue
+
+            if has_sources and not slide.source_citations:
+                issues.append(
+                    self._issue(
+                        presentation_id,
+                        slide,
+                        layer=ReviewLayer.EVIDENCE,
                         category=ReviewCategory.CITATION,
                         severity=ReviewSeverity.MEDIUM,
                         title="缺少引用来源",
@@ -107,21 +199,46 @@ class AutomatedReviewService:
                         suggestion="补充 chunk 引用或上传对应图纸/照片。",
                     )
                 )
-            if len(slide.key_points) > 5:
+
+            if _NUMBER_PATTERN.search(slide.message) and not slide.source_citations:
                 issues.append(
                     self._issue(
                         presentation_id,
                         slide,
-                        category=ReviewCategory.LENGTH,
-                        severity=ReviewSeverity.SUGGESTION,
-                        title="要点过多",
-                        description=f"第 {slide.order + 1} 页要点超过 5 条，建议精简。",
+                        layer=ReviewLayer.EVIDENCE,
+                        category=ReviewCategory.CITATION,
+                        severity=ReviewSeverity.HIGH,
+                        title="数值结论缺少依据",
+                        description=(
+                            f"第 {slide.order + 1} 页「{slide.title}」包含数值表述但未标注来源。"
+                        ),
+                        suggestion="补充数据出处或标注为示意/估算。",
                     )
                 )
 
+            for requirement in slide.visual_requirements:
+                if requirement.type == VisualType.TEXT_ONLY or not requirement.required:
+                    continue
+                if requirement.preferred_asset_ids and not requirement.confirmed:
+                    issues.append(
+                        self._issue(
+                            presentation_id,
+                            slide,
+                            layer=ReviewLayer.EVIDENCE,
+                            category=ReviewCategory.VISUAL,
+                            severity=ReviewSeverity.MEDIUM,
+                            title="视觉证据未确认",
+                            description=(
+                                f"第 {slide.order + 1} 页已匹配 {requirement.type.value} 素材，"
+                                "但尚未人工确认是否支持该页结论。"
+                            ),
+                            suggestion="在 Asset Board 中确认素材与结论的对应关系。",
+                        )
+                    )
+
         return self._persist(presentation_id, issues)
 
-    def run_professional_review(
+    def run_architectural_review(
         self,
         presentation_id: UUID,
         slides: list[SlideSpec],
@@ -129,7 +246,7 @@ class AutomatedReviewService:
         brief: PresentationBrief | None = None,
         storyline: Storyline | None = None,
     ) -> list[ReviewIssue]:
-        """Check structure, coverage, and visual readiness."""
+        """Check structure, coverage, and architectural drawing conventions."""
         issues: list[ReviewIssue] = []
 
         if brief is not None and slides:
@@ -139,6 +256,7 @@ class AutomatedReviewService:
                 issues.append(
                     ReviewIssue(
                         presentation_id=presentation_id,
+                        reviewer_layer=ReviewLayer.ARCHITECTURAL,
                         category=ReviewCategory.STRUCTURE,
                         severity=ReviewSeverity.MEDIUM,
                         title="页数偏离目标",
@@ -156,6 +274,7 @@ class AutomatedReviewService:
                         issues.append(
                             ReviewIssue(
                                 presentation_id=presentation_id,
+                                reviewer_layer=ReviewLayer.ARCHITECTURAL,
                                 category=ReviewCategory.COVERAGE,
                                 severity=ReviewSeverity.CRITICAL,
                                 title="必要章节未覆盖",
@@ -171,6 +290,7 @@ class AutomatedReviewService:
                 issues.append(
                     ReviewIssue(
                         presentation_id=presentation_id,
+                        reviewer_layer=ReviewLayer.ARCHITECTURAL,
                         category=ReviewCategory.STRUCTURE,
                         severity=ReviewSeverity.MEDIUM,
                         title="章节缺少对应页面",
@@ -178,25 +298,68 @@ class AutomatedReviewService:
                     )
                 )
 
+        unit_styles = _detect_area_unit_styles(slides)
+        if len(unit_styles) > 1:
+            issues.append(
+                ReviewIssue(
+                    presentation_id=presentation_id,
+                    reviewer_layer=ReviewLayer.ARCHITECTURAL,
+                    category=ReviewCategory.CONSISTENCY,
+                    severity=ReviewSeverity.MEDIUM,
+                    title="面积单位表述不一致",
+                    description=f"汇报中混用了多种面积单位：{', '.join(sorted(unit_styles))}。",
+                    suggestion="统一使用 ㎡ 或 平方米 等单一单位体系。",
+                )
+            )
+
         for slide in slides:
             for requirement in slide.visual_requirements:
-                if requirement.type == VisualType.TEXT_ONLY:
-                    continue
-                if requirement.required and not requirement.preferred_asset_ids:
-                    issues.append(
-                        self._issue(
-                            presentation_id,
-                            slide,
-                            category=ReviewCategory.VISUAL,
-                            severity=ReviewSeverity.MEDIUM,
-                            title="缺少匹配素材",
-                            description=(
-                                f"第 {slide.order + 1} 页需要 {requirement.type.value} 类视觉，"
-                                "但未匹配到项目素材。"
-                            ),
-                            suggestion="上传图纸/照片或在审核阶段手动指定素材。",
+                if requirement.type == VisualType.SITE_PLAN:
+                    context = " ".join(
+                        (
+                            slide.title,
+                            slide.message,
+                            requirement.description,
                         )
-                    )
+                    ).lower()
+                    if not any(hint in context for hint in _NORTH_ARROW_HINTS):
+                        issues.append(
+                            self._issue(
+                                presentation_id,
+                                slide,
+                                layer=ReviewLayer.ARCHITECTURAL,
+                                category=ReviewCategory.VISUAL,
+                                severity=ReviewSeverity.SUGGESTION,
+                                title="总平面图缺少方位标注提示",
+                                description=(
+                                    f"第 {slide.order + 1} 页使用总平面图，"
+                                    "建议在说明或素材中标注指北针/北向。"
+                                ),
+                            )
+                        )
+                if requirement.type == VisualType.FLOOR_PLAN:
+                    context = " ".join(
+                        (
+                            slide.title,
+                            slide.message,
+                            requirement.description,
+                        )
+                    ).lower()
+                    if not any(hint in context for hint in _FLOOR_LABEL_HINTS):
+                        issues.append(
+                            self._issue(
+                                presentation_id,
+                                slide,
+                                layer=ReviewLayer.ARCHITECTURAL,
+                                category=ReviewCategory.VISUAL,
+                                severity=ReviewSeverity.SUGGESTION,
+                                title="平面图缺少楼层标注提示",
+                                description=(
+                                    f"第 {slide.order + 1} 页使用平面图，"
+                                    "建议标注楼层或标高信息。"
+                                ),
+                            )
+                        )
 
         if self._settings.llm_professional_review_enabled and self._settings.llm_configured:
             if self._llm is not None:
@@ -212,6 +375,127 @@ class AutomatedReviewService:
                 logger.warning("LLM professional review enabled but no provider was injected")
 
         return self._persist(presentation_id, issues)
+
+    def run_layout_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        project_id: UUID | None = None,
+    ) -> list[ReviewIssue]:
+        """Check text density, visual readiness, and asset resolution."""
+        assets_by_id = {}
+        if project_id is not None:
+            assets_by_id = {
+                asset.id: asset for asset in self._assets.list_by_project(project_id)
+            }
+
+        issues: list[ReviewIssue] = []
+
+        for slide in slides:
+            if len(slide.key_points) > 5:
+                issues.append(
+                    self._issue(
+                        presentation_id,
+                        slide,
+                        layer=ReviewLayer.LAYOUT,
+                        category=ReviewCategory.LENGTH,
+                        severity=ReviewSeverity.SUGGESTION,
+                        title="要点过多",
+                        description=f"第 {slide.order + 1} 页要点超过 5 条，建议精简。",
+                    )
+                )
+            if (
+                slide.message.strip()
+                and slide.slide_type not in _SKIPPABLE_SLIDE_TYPES
+                and len(slide.message.strip()) > 120
+            ):
+                issues.append(
+                    self._issue(
+                        presentation_id,
+                        slide,
+                        layer=ReviewLayer.LAYOUT,
+                        category=ReviewCategory.LENGTH,
+                        severity=ReviewSeverity.MEDIUM,
+                        title="核心结论过长",
+                        description=(
+                            f"第 {slide.order + 1} 页核心结论超过 120 字，"
+                            "可能导致版面拥挤或溢出。"
+                        ),
+                        suggestion="拆分为要点列表或精简表述。",
+                    )
+                )
+
+            for requirement in slide.visual_requirements:
+                if requirement.type == VisualType.TEXT_ONLY:
+                    continue
+                if requirement.required and not requirement.preferred_asset_ids:
+                    issues.append(
+                        self._issue(
+                            presentation_id,
+                            slide,
+                            layer=ReviewLayer.LAYOUT,
+                            category=ReviewCategory.VISUAL,
+                            severity=ReviewSeverity.MEDIUM,
+                            title="缺少匹配素材",
+                            description=(
+                                f"第 {slide.order + 1} 页需要 {requirement.type.value} 类视觉，"
+                                "但未匹配到项目素材。"
+                            ),
+                            suggestion="上传图纸/照片或在 Asset Board 中手动指定素材。",
+                        )
+                    )
+                asset_id = requirement.primary_asset_id
+                if asset_id is not None:
+                    asset = assets_by_id.get(asset_id)
+                    if asset is not None and asset.is_low_resolution:
+                        issues.append(
+                            self._issue(
+                                presentation_id,
+                                slide,
+                                layer=ReviewLayer.LAYOUT,
+                                category=ReviewCategory.VISUAL,
+                                severity=ReviewSeverity.MEDIUM,
+                                title="素材分辨率偏低",
+                                description=(
+                                    f"第 {slide.order + 1} 页素材「{asset.filename}」"
+                                    f"分辨率为 {asset.width}×{asset.height}，"
+                                    "投影或打印时可能模糊。"
+                                ),
+                                suggestion="替换更高分辨率素材或裁剪重点区域。",
+                            )
+                        )
+
+        return self._persist(presentation_id, issues)
+
+    def run_professional_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        brief: PresentationBrief | None = None,
+        storyline: Storyline | None = None,
+        context_bundle: ProjectContextBundle | None = None,
+        project_id: UUID | None = None,
+    ) -> list[ReviewIssue]:
+        """Run all four review layers (backward-compatible aggregate entry point)."""
+        issues: list[ReviewIssue] = []
+        issues.extend(self.run_content_review(presentation_id, slides, brief=brief))
+        issues.extend(
+            self.run_evidence_review(presentation_id, slides, context_bundle=context_bundle)
+        )
+        issues.extend(
+            self.run_architectural_review(
+                presentation_id,
+                slides,
+                brief=brief,
+                storyline=storyline,
+            )
+        )
+        issues.extend(
+            self.run_layout_review(presentation_id, slides, project_id=project_id)
+        )
+        return issues
 
     def summarize_for_slides(self, issues: list[ReviewIssue]) -> list[str]:
         return [f"{issue.title}: {issue.description}" for issue in issues if issue.slide_id]
@@ -266,6 +550,7 @@ class AutomatedReviewService:
                 ReviewIssue(
                     presentation_id=presentation_id,
                     slide_id=slide.id if slide is not None else None,
+                    reviewer_layer=ReviewLayer.ARCHITECTURAL,
                     category=_parse_review_category(item.category),
                     severity=_parse_review_severity(item.severity),
                     title=item.title.strip(),
@@ -286,6 +571,7 @@ class AutomatedReviewService:
         presentation_id: UUID,
         slide: SlideSpec,
         *,
+        layer: ReviewLayer,
         category: ReviewCategory,
         severity: ReviewSeverity,
         title: str,
@@ -295,12 +581,24 @@ class AutomatedReviewService:
         return ReviewIssue(
             presentation_id=presentation_id,
             slide_id=slide.id,
+            reviewer_layer=layer,
             category=category,
             severity=severity,
             title=title,
             description=description,
             suggestion=suggestion,
         )
+
+
+def _detect_area_unit_styles(slides: list[SlideSpec]) -> set[str]:
+    styles: set[str] = set()
+    combined = " ".join(
+        slide.message + " " + " ".join(slide.key_points) for slide in slides
+    )
+    for style_name, pattern in _AREA_UNIT_PATTERNS:
+        if pattern.search(combined):
+            styles.add(style_name)
+    return styles
 
 
 def _parse_review_category(value: str) -> ReviewCategory:

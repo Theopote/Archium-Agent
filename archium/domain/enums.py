@@ -147,6 +147,13 @@ class AssetType(StrEnum):
     OTHER = "other"
 
 
+class ReviewLayer(StrEnum):
+    CONTENT = "content"
+    EVIDENCE = "evidence"
+    ARCHITECTURAL = "architectural"
+    LAYOUT = "layout"
+
+
 class ReviewCategory(StrEnum):
     CITATION = "citation"
     CONTENT = "content"
@@ -196,6 +203,9 @@ class WorkflowStep(StrEnum):
     RESOLVE_CITATIONS = "resolve_citations"
     MATCH_ASSETS = "match_assets"
     CONTENT_REVIEW = "content_review"
+    EVIDENCE_REVIEW = "evidence_review"
+    ARCHITECTURAL_REVIEW = "architectural_review"
+    LAYOUT_REVIEW = "layout_review"
     PROFESSIONAL_REVIEW = "professional_review"
     REPAIR_SLIDES = "repair_slides"
     SLIDE_VALIDATION = "slide_validation"

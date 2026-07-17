@@ -1,4 +1,4 @@
-"""Unit tests for automated presentation review."""
+"""Unit tests for automated four-layer presentation review."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from archium.domain.enums import (
     PresentationType,
     ProjectType,
     ReviewCategory,
+    ReviewLayer,
     ReviewSeverity,
     VisualType,
 )
@@ -37,7 +38,7 @@ def presentation_id(db_session: Session) -> object:
     ).id
 
 
-def test_content_review_flags_missing_citation(
+def test_evidence_review_flags_missing_citation(
     db_session: Session,
     presentation_id: object,
 ) -> None:
@@ -56,7 +57,7 @@ def test_content_review_flags_missing_citation(
     )
     bundle = ProjectContextBundle(text="ctx", chunks=[chunk])
 
-    issues = AutomatedReviewService(db_session).run_content_review(
+    issues = AutomatedReviewService(db_session).run_evidence_review(
         presentation_id,  # type: ignore[arg-type]
         [slide],
         context_bundle=bundle,
@@ -64,10 +65,56 @@ def test_content_review_flags_missing_citation(
 
     assert len(issues) == 1
     assert issues[0].category == ReviewCategory.CITATION
+    assert issues[0].reviewer_layer == ReviewLayer.EVIDENCE
     assert ReviewRepository(db_session).list_by_presentation(presentation_id)  # type: ignore[arg-type]
 
 
-def test_professional_review_flags_missing_visual_asset(
+def test_evidence_review_flags_numeric_claim_without_source(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    slide = SlideSpec(
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        chapter_id="ch1",
+        order=0,
+        title="规模",
+        message="总建筑面积 12000 平方米",
+    )
+
+    issues = AutomatedReviewService(db_session).run_evidence_review(
+        presentation_id,  # type: ignore[arg-type]
+        [slide],
+    )
+
+    assert any(issue.title == "数值结论缺少依据" for issue in issues)
+    assert all(issue.reviewer_layer == ReviewLayer.EVIDENCE for issue in issues)
+
+
+def test_content_review_flags_duplicate_titles(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    slides = [
+        SlideSpec(
+            presentation_id=presentation_id,  # type: ignore[arg-type]
+            chapter_id="ch1",
+            order=i,
+            title="改造策略",
+            message=f"结论 {i}",
+        )
+        for i in range(2)
+    ]
+
+    issues = AutomatedReviewService(db_session).run_content_review(
+        presentation_id,  # type: ignore[arg-type]
+        slides,
+    )
+
+    assert any(issue.title == "标题重复" for issue in issues)
+    assert all(issue.reviewer_layer == ReviewLayer.CONTENT for issue in issues)
+
+
+def test_layout_review_flags_missing_visual_asset(
     db_session: Session,
     presentation_id: object,
 ) -> None:
@@ -82,13 +129,14 @@ def test_professional_review_flags_missing_visual_asset(
         ],
     )
 
-    issues = AutomatedReviewService(db_session).run_professional_review(
+    issues = AutomatedReviewService(db_session).run_layout_review(
         presentation_id,  # type: ignore[arg-type]
         [slide],
     )
 
     assert len(issues) == 1
     assert issues[0].category == ReviewCategory.VISUAL
+    assert issues[0].reviewer_layer == ReviewLayer.LAYOUT
 
 
 def test_critical_export_block_messages() -> None:
@@ -117,7 +165,7 @@ def test_critical_export_block_messages() -> None:
     assert "缺少核心信息" in messages[0]
 
 
-def test_professional_review_flags_slide_count_drift(
+def test_architectural_review_flags_slide_count_drift(
     db_session: Session,
     presentation_id: object,
 ) -> None:
@@ -143,7 +191,7 @@ def test_professional_review_flags_slide_count_drift(
         for i in range(4)
     ]
 
-    issues = AutomatedReviewService(db_session).run_professional_review(
+    issues = AutomatedReviewService(db_session).run_architectural_review(
         presentation_id,  # type: ignore[arg-type]
         slides,
         brief=brief,
@@ -151,9 +199,10 @@ def test_professional_review_flags_slide_count_drift(
 
     assert any(issue.category == ReviewCategory.STRUCTURE for issue in issues)
     assert any(issue.severity == ReviewSeverity.MEDIUM for issue in issues)
+    assert all(issue.reviewer_layer == ReviewLayer.ARCHITECTURAL for issue in issues)
 
 
-def test_llm_professional_review_when_enabled(
+def test_architectural_review_llm_when_enabled(
     db_session: Session,
     presentation_id: object,
 ) -> None:
@@ -188,7 +237,8 @@ def test_llm_professional_review_when_enabled(
         db_session,
         llm=llm,
         settings=settings,
-    ).run_professional_review(presentation_id, slides)  # type: ignore[arg-type]
+    ).run_architectural_review(presentation_id, slides)  # type: ignore[arg-type]
 
     assert len(llm.calls) == 1
     assert any(issue.category == ReviewCategory.CONSISTENCY for issue in issues)
+    assert all(issue.reviewer_layer == ReviewLayer.ARCHITECTURAL for issue in issues)

@@ -18,6 +18,7 @@ from archium.domain.enums import (
     ProjectStatus,
     ProjectType,
     ReviewCategory,
+    ReviewLayer,
     ReviewSeverity,
     ReviewStatus,
     RevisionEntityType,
@@ -481,6 +482,7 @@ def review_issue_to_orm(domain: ReviewIssue, orm: ReviewIssueORM | None = None) 
     target = orm or ReviewIssueORM(id=domain.id)
     target.presentation_id = domain.presentation_id
     target.slide_id = domain.slide_id
+    target.reviewer_layer = domain.reviewer_layer.value
     target.category = domain.category.value
     target.severity = domain.severity.value
     target.title = domain.title

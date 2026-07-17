@@ -19,6 +19,7 @@ from archium.config import get_settings
 from archium.domain.enums import (
     ApprovalStatus,
     ReviewCategory,
+    ReviewLayer,
     ReviewSeverity,
     ReviewStatus,
     SlideStatus,
@@ -78,6 +79,13 @@ CATEGORY_LABELS = {
     ReviewCategory.COVERAGE: "覆盖度",
     ReviewCategory.LENGTH: "篇幅",
     ReviewCategory.OTHER: "其他",
+}
+
+LAYER_LABELS = {
+    ReviewLayer.CONTENT: "内容层",
+    ReviewLayer.EVIDENCE: "证据层",
+    ReviewLayer.ARCHITECTURAL: "建筑专业层",
+    ReviewLayer.LAYOUT: "版面层",
 }
 
 STATUS_LABELS = {
@@ -503,8 +511,18 @@ def _render_review_issues_panel(
         issues = review_service.list_review_issues(presentation_id)
 
     if not issues:
-        st.caption("暂无自动审核问题。运行完整工作流后将在此显示内容/专业审核结果。")
+        st.caption("暂无自动审核问题。运行完整工作流后将在此显示四层审核结果。")
         return
+
+    layer_counts: dict[ReviewLayer, int] = {}
+    for issue in issues:
+        layer_counts[issue.reviewer_layer] = layer_counts.get(issue.reviewer_layer, 0) + 1
+    if layer_counts:
+        summary = " · ".join(
+            f"{LAYER_LABELS.get(layer, layer.value)} {count}"
+            for layer, count in sorted(layer_counts.items(), key=lambda item: item[0].value)
+        )
+        st.caption(f"审核分层统计：{summary}")
 
     open_critical = [
         issue
@@ -532,6 +550,7 @@ def _render_review_issues_panel(
     rows = [
         {
             "id": str(issue.id),
+            "layer": LAYER_LABELS.get(issue.reviewer_layer, issue.reviewer_layer.value),
             "page": _issue_slide_label(issue, slides_by_id),
             "severity": SEVERITY_LABELS.get(issue.severity, issue.severity.value),
             "category": CATEGORY_LABELS.get(issue.category, issue.category.value),
@@ -558,6 +577,7 @@ def _render_review_issues_panel(
         cols = st.columns([4, 1, 1, 1])
         page_hint = f"（{_issue_slide_label(issue, slides_by_id)}）"
         cols[0].markdown(
+            f"**{LAYER_LABELS.get(issue.reviewer_layer, issue.reviewer_layer.value)}** · "
             f"**{SEVERITY_LABELS.get(issue.severity, issue.severity.value)}** · "
             f"{issue.title}{page_hint} — {issue.description}"
         )

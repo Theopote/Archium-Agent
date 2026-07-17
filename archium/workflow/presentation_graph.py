@@ -109,7 +109,9 @@ class PresentationWorkflowGraph:
         builder.add_node("resolve_citations", self._nodes.resolve_citations)
         builder.add_node("match_assets", self._nodes.match_assets)
         builder.add_node("run_content_review", self._nodes.run_content_review)
-        builder.add_node("run_professional_review", self._nodes.run_professional_review)
+        builder.add_node("run_evidence_review", self._nodes.run_evidence_review)
+        builder.add_node("run_architectural_review", self._nodes.run_architectural_review)
+        builder.add_node("run_layout_review", self._nodes.run_layout_review)
         builder.add_node("repair_slides", self._nodes.repair_slides)
         builder.add_node("review_slides", self._nodes.review_slides)
         builder.add_node("export_json", self._nodes.export_json)
@@ -156,8 +158,10 @@ class PresentationWorkflowGraph:
         builder.add_edge("generate_slides", "resolve_citations")
         builder.add_edge("resolve_citations", "match_assets")
         builder.add_edge("match_assets", "run_content_review")
-        builder.add_edge("run_content_review", "run_professional_review")
-        builder.add_edge("run_professional_review", "repair_slides")
+        builder.add_edge("run_content_review", "run_evidence_review")
+        builder.add_edge("run_evidence_review", "run_architectural_review")
+        builder.add_edge("run_architectural_review", "run_layout_review")
+        builder.add_edge("run_layout_review", "repair_slides")
         builder.add_edge("repair_slides", "review_slides")
         builder.add_conditional_edges(
             "review_slides",

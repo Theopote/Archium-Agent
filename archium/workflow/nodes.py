@@ -500,7 +500,7 @@ class PresentationWorkflowNodes:
             content_issues = reviewer.run_content_review(
                 presentation_id,
                 slides,
-                context_bundle=state.get("context_bundle"),
+                brief=state.get("brief"),
             )
             next_state: PresentationWorkflowState = {
                 "review_issues": content_issues,
@@ -518,14 +518,14 @@ class PresentationWorkflowNodes:
                 "current_step": WorkflowStep.CONTENT_REVIEW.value,
             }
 
-    def run_professional_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+    def run_evidence_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.PROFESSIONAL_REVIEW.value}
+            return {"current_step": WorkflowStep.EVIDENCE_REVIEW.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
-            return {"current_step": WorkflowStep.PROFESSIONAL_REVIEW.value}
+            return {"current_step": WorkflowStep.EVIDENCE_REVIEW.value}
 
         try:
             presentation_id = UUID(state["presentation_id"])
@@ -534,27 +534,106 @@ class PresentationWorkflowNodes:
                 llm=self._runtime.llm,
                 settings=self._runtime.settings,
             )
-            professional_issues = reviewer.run_professional_review(
+            evidence_issues = reviewer.run_evidence_review(
+                presentation_id,
+                slides,
+                context_bundle=state.get("context_bundle"),
+            )
+            next_state: PresentationWorkflowState = {
+                "review_issues": evidence_issues,
+                "slide_review_issues": reviewer.summarize_for_slides(evidence_issues),
+                "current_step": WorkflowStep.EVIDENCE_REVIEW.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Evidence review recorded %d issue(s)", len(evidence_issues))
+            return next_state
+        except Exception as exc:
+            logger.exception("Evidence review failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.EVIDENCE_REVIEW.value,
+            }
+
+    def run_architectural_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {"current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value}
+
+        try:
+            presentation_id = UUID(state["presentation_id"])
+            reviewer = AutomatedReviewService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            )
+            architectural_issues = reviewer.run_architectural_review(
                 presentation_id,
                 slides,
                 brief=state.get("brief"),
                 storyline=state.get("storyline"),
             )
             next_state: PresentationWorkflowState = {
-                "review_issues": professional_issues,
-                "slide_review_issues": reviewer.summarize_for_slides(professional_issues),
-                "current_step": WorkflowStep.PROFESSIONAL_REVIEW.value,
+                "review_issues": architectural_issues,
+                "slide_review_issues": reviewer.summarize_for_slides(architectural_issues),
+                "current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
-            logger.info("Professional review recorded %d issue(s)", len(professional_issues))
+            logger.info("Architectural review recorded %d issue(s)", len(architectural_issues))
             return next_state
         except Exception as exc:
-            logger.exception("Professional review failed: %s", exc)
+            logger.exception("Architectural review failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.PROFESSIONAL_REVIEW.value,
+                "current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value,
             }
+
+    def run_layout_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.LAYOUT_REVIEW.value}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {"current_step": WorkflowStep.LAYOUT_REVIEW.value}
+
+        try:
+            presentation_id = UUID(state["presentation_id"])
+            project_id = UUID(state["project_id"]) if state.get("project_id") else None
+            reviewer = AutomatedReviewService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            )
+            layout_issues = reviewer.run_layout_review(
+                presentation_id,
+                slides,
+                project_id=project_id,
+            )
+            next_state: PresentationWorkflowState = {
+                "review_issues": layout_issues,
+                "slide_review_issues": reviewer.summarize_for_slides(layout_issues),
+                "current_step": WorkflowStep.LAYOUT_REVIEW.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Layout review recorded %d issue(s)", len(layout_issues))
+            return next_state
+        except Exception as exc:
+            logger.exception("Layout review failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.LAYOUT_REVIEW.value,
+            }
+
+    def run_professional_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        """Backward-compatible alias: runs architectural review only."""
+        return self.run_architectural_review(state)
 
     def repair_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
