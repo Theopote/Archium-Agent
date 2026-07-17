@@ -79,6 +79,54 @@ def test_repair_disabled_is_noop(
 
     assert repaired == 0
     assert len(mock_llm.calls) == 0
+    assert slides[0].title == "旧标题"
+
+
+def test_rule_repair_trims_layout_issues_without_llm(
+    db_session: Session,
+) -> None:
+    project = ProjectRepository(db_session).create(Project(name="规则修复项目"))
+    presentation = PresentationRepository(db_session).create_presentation(
+        Presentation(project_id=project.id, title="规则修复")
+    )
+    slide = PresentationRepository(db_session).save_slide(
+        SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="综合结论",
+            message="这是一段较长的核心结论用于测试版面密度" * 12,
+            slide_type=SlideType.CONTENT,
+            key_points=[f"要点描述内容 {index}" * 4 for index in range(5)],
+            status=SlideStatus.PLANNED,
+        )
+    )
+    issue = ReviewRepository(db_session).create(
+        ReviewIssue(
+            presentation_id=presentation.id,
+            slide_id=slide.id,
+            category=ReviewCategory.LENGTH,
+            severity=ReviewSeverity.MEDIUM,
+            title="页面信息密度过高",
+            description="文本量过高",
+            auto_fixable=True,
+        )
+    )
+
+    slides, repaired = SlideRepairService(
+        db_session,
+        llm=None,
+        settings=Settings(_env_file=None, slide_repair_enabled=False),
+    ).repair_slides(presentation.id, [slide], [issue])
+
+    assert repaired == 1
+    assert len(slides[0].key_points) <= 5
+    assert all(len(point) <= 40 for point in slides[0].key_points)
+    assert len(slides[0].message) <= 120
+
+    refreshed_issue = ReviewRepository(db_session).get_by_id(issue.id)
+    assert refreshed_issue is not None
+    assert refreshed_issue.status == ReviewStatus.RESOLVED
 
 
 def test_repair_updates_slide_and_resolves_issue(

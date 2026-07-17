@@ -59,7 +59,7 @@ def test_workflow_completes_with_retrieval_disabled(
 
     assert result.succeeded
     assert result.workflow_run.status == WorkflowStatus.COMPLETED
-    assert len(result.slides) == 2
+    assert len(result.slides) == 4
 
 
 def test_database_path_consistent_across_working_directories(
