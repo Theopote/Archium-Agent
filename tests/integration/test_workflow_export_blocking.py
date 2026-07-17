@@ -9,10 +9,13 @@ from archium.domain.document import DocumentChunk
 from archium.domain.enums import ProjectType, WorkflowStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
     FactRepository,
+    PresentationRepository,
     ProjectRepository,
+    WorkflowRunRepository,
 )
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
@@ -93,15 +96,20 @@ def test_workflow_blocks_export_on_critical_review(
     mock_llm = MockLLMProvider(selector=pipeline_mock_selector)
     service = PresentationWorkflowService(db_session, mock_llm, settings=blocking_settings)  # type: ignore[arg-type]
 
-    result = service.run(
-        project_with_context.id,
-        request_payload,
-        require_brief_review=False,
-        require_storyline_review=False,
-        require_slides_review=False,
-        export_marp=False,
-    )
+    with pytest.raises(WorkflowError, match="必要章节未覆盖|现状分析"):
+        service.run(
+            project_with_context.id,
+            request_payload,
+            require_brief_review=False,
+            require_storyline_review=False,
+            require_slides_review=False,
+            export_marp=False,
+        )
 
-    assert result.workflow_run.status == WorkflowStatus.FAILED
-    assert result.json_path is None
-    assert any("必要章节未覆盖" in error or "现状分析" in error for error in result.errors)
+    presentations = PresentationRepository(db_session).list_by_project(project_with_context.id)
+    assert presentations
+    runs = WorkflowRunRepository(db_session).list_by_presentation(presentations[0].id)
+    assert runs
+    assert runs[0].status == WorkflowStatus.FAILED
+    assert runs[0].state.get("json_path") is None
+    assert any("必要章节未覆盖" in error or "现状分析" in error for error in runs[0].errors)

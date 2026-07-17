@@ -882,8 +882,11 @@ class PresentationWorkflowNodes:
         if state.get("require_storyline_review"):
             storyline = state.get("storyline")
             if storyline is not None:
-                refreshed = self._presentations.get_storyline(storyline.id)
-                if refreshed is not None and refreshed.approval_status != ApprovalStatus.APPROVED:
+                refreshed_storyline = self._presentations.get_storyline(storyline.id)
+                if (
+                    refreshed_storyline is not None
+                    and refreshed_storyline.approval_status != ApprovalStatus.APPROVED
+                ):
                     return True
 
         if state.get("require_slides_review"):

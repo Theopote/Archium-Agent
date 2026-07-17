@@ -12,22 +12,14 @@ from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.session import create_engine_from_settings, get_session
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
-from sqlalchemy.orm import Session
-
-from tests.fixtures.mock_presentation_responses import BRIEF_JSON
 
 
 def _failing_after_brief_selector(request: LLMRequest) -> str | None:
+    from tests.fixtures.mock_presentation_responses import BRIEF_JSON
+
     if "生成 PresentationBrief JSON" in request.user_prompt:
         return BRIEF_JSON
     raise LLMProviderError("Simulated storyline failure")
-
-
-@pytest.fixture
-def project(db_session: Session) -> Project:
-    return ProjectRepository(db_session).create(
-        Project(name="Rollback Test Project", project_type=ProjectType.HEALTHCARE)
-    )
 
 
 @pytest.fixture
@@ -44,7 +36,6 @@ def request_payload() -> PresentationRequest:
 
 def test_run_pipeline_rolls_back_on_failure(
     test_settings: object,
-    project: Project,
     request_payload: PresentationRequest,
 ) -> None:
     engine = create_engine_from_settings(test_settings)  # type: ignore[arg-type]
@@ -55,6 +46,9 @@ def test_run_pipeline_rolls_back_on_failure(
         pytest.raises(WorkflowError, match="Presentation pipeline failed"),
         get_session(engine) as session,
     ):
+        project = ProjectRepository(session).create(
+            Project(name="Rollback Test Project", project_type=ProjectType.HEALTHCARE)
+        )
         service = PresentationService(session, failing_llm, settings=test_settings)  # type: ignore[arg-type]
         service.run_pipeline(project.id, request_payload)
 
