@@ -9,7 +9,6 @@ from archium.application.slide_repair_service import SlideRepairService
 from archium.config.settings import Settings
 from archium.domain.enums import (
     ReviewCategory,
-    ReviewLayer,
     ReviewSeverity,
     ReviewStatus,
     SlideRepairTier,

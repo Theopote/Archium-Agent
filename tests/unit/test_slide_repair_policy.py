@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-import pytest
 from archium.application.slide_repair_policy import (
     _MAX_MESSAGE_LENGTH,
     apply_tiered_layout_repair,

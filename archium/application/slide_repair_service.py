@@ -373,11 +373,9 @@ class SlideRepairService:
             ]
 
             after_snapshot = slide_to_snapshot(saved)
+            before_points = _snapshot_key_points(before_snapshot)
             removed = [
-                f"要点: {point}"
-                for point in before_snapshot.get("key_points", [])
-                if isinstance(before_snapshot.get("key_points"), list)
-                and point not in candidate_points
+                f"要点: {point}" for point in before_points if point not in candidate_points
             ]
             record = self._build_record(
                 presentation_id=presentation_id,
@@ -432,12 +430,8 @@ class SlideRepairService:
             tier=tier,
             before_message=str(before.get("message", "")),
             after_message=str(after.get("message", "")),
-            before_key_points=list(before.get("key_points", []))  # type: ignore[arg-type]
-            if isinstance(before.get("key_points"), list)
-            else [],
-            after_key_points=list(after.get("key_points", []))  # type: ignore[arg-type]
-            if isinstance(after.get("key_points"), list)
-            else [],
+            before_key_points=_snapshot_key_points(before),
+            after_key_points=_snapshot_key_points(after),
             removed_items=removed_items,
             reason=reason,
             involves_citation=involves_citation,
@@ -467,6 +461,13 @@ class SlideRepairService:
             suggestion="请人工拆分页面、改写表述或确认可删除的内容。",
             auto_fixable=False,
         )
+
+
+def _snapshot_key_points(snapshot: dict[str, object]) -> list[str]:
+    raw = snapshot.get("key_points")
+    if isinstance(raw, list):
+        return [str(item) for item in raw]
+    return []
 
 
 def _slide_summary(slide: SlideSpec) -> str:
