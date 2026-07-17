@@ -11,11 +11,13 @@ import streamlit as st
 from dotenv import load_dotenv, set_key
 
 from archium.config import get_settings
+from archium.infrastructure.database.session import init_database
 from archium.logging import setup_logging
 from main import ExecutionReport, StepResult, run_instruction
 
 load_dotenv()
 setup_logging(get_settings())
+init_database()
 
 ENV_PATH = Path(__file__).resolve().parent / ".env"
 PROJECT_ROOT = Path(__file__).resolve().parent

@@ -15,6 +15,7 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "python-dotenv>=1.0.0",
+    "sqlalchemy>=2.0",
     "streamlit>=1.32.0",
 ]
 
@@ -26,6 +27,7 @@ legacy = [
     "watchdog>=4.0.0",
 ]
 dev = [
+    "alembic>=1.13",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.4",
