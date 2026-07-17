@@ -1,4 +1,4 @@
-"""Golden-case regression tests for fixed architectural presentation scenarios."""
+"""Layer 1: deterministic workflow regression tests (Mock LLM, inline chunks)."""
 
 from __future__ import annotations
 
@@ -13,21 +13,23 @@ from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
 from tests.fixtures.mock_llm import pipeline_mock_selector
 from tests.golden.artifacts import save_case_artifacts
-from tests.golden.loader import (
+from tests.golden.regression.loader import (
     conflicting_fact_keys,
-    list_golden_case_paths,
-    load_golden_case,
-    seed_golden_case,
+    list_regression_case_paths,
+    load_regression_case,
+    seed_regression_case,
 )
 
+pytestmark = pytest.mark.regression
 
-@pytest.mark.parametrize("case_path", list_golden_case_paths(), ids=lambda p: p.stem)
-def test_golden_case_workflow(
+
+@pytest.mark.parametrize("case_path", list_regression_case_paths(), ids=lambda p: p.stem)
+def test_regression_case_workflow(
     db_session: Session,
     test_settings: object,
     case_path: Path,
 ) -> None:
-    case, project = seed_golden_case(db_session, case_path)
+    case, project = seed_regression_case(db_session, case_path)
     mock_llm = MockLLMProvider(selector=pipeline_mock_selector)
     service = PresentationWorkflowService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
 
@@ -86,11 +88,11 @@ def test_golden_case_workflow(
         if expected_layouts:
             assert layouts & expected_layouts
 
-    save_case_artifacts(case.id, result)
+    save_case_artifacts(f"regression_{case.id}", result)
 
 
-def test_golden_manifests_load() -> None:
-    paths = list_golden_case_paths()
+def test_regression_manifests_load() -> None:
+    paths = list_regression_case_paths()
     assert len(paths) == 3
-    ids = {load_golden_case(path).id for path in paths}
+    ids = {load_regression_case(path).id for path in paths}
     assert ids == {"case_a_hospital", "case_b_campus", "case_c_competition"}

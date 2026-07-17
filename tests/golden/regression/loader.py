@@ -1,4 +1,4 @@
-"""Load golden case manifests and seed database fixtures."""
+"""Layer 1: deterministic workflow regression case loader."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def _document_hash(case_id: str, index: int) -> str:
 
 
 @dataclass(frozen=True)
-class GoldenCase:
+class RegressionCase:
     id: str
     name: str
     project_name: str
@@ -39,11 +39,11 @@ class GoldenCase:
     export_presentation_spec: bool
 
 
-def list_golden_case_paths() -> list[Path]:
+def list_regression_case_paths() -> list[Path]:
     return sorted(_CASES_DIR.glob("case_*.json"))
 
 
-def load_golden_case(path: Path) -> GoldenCase:
+def load_regression_case(path: Path) -> RegressionCase:
     payload = json.loads(path.read_text(encoding="utf-8"))
     project = payload["project"]
     request_data = payload["request"]
@@ -62,7 +62,7 @@ def load_golden_case(path: Path) -> GoldenCase:
     )
     expectations = dict(payload.get("expectations", {}))
     export_spec = bool(expectations.pop("export_presentation_spec", False))
-    return GoldenCase(
+    return RegressionCase(
         id=str(payload["id"]),
         name=str(payload["name"]),
         project_name=str(project["name"]),
@@ -73,9 +73,10 @@ def load_golden_case(path: Path) -> GoldenCase:
     )
 
 
-def seed_golden_case(session: Session, path: Path) -> tuple[GoldenCase, Project]:
+def seed_regression_case(session: Session, path: Path) -> tuple[RegressionCase, Project]:
+    """Seed DB with inline text chunks (no real file parsing)."""
     payload = json.loads(path.read_text(encoding="utf-8"))
-    case = load_golden_case(path)
+    case = load_regression_case(path)
     project = ProjectRepository(session).create(
         Project(name=case.project_name, project_type=case.project_type)
     )
@@ -133,3 +134,10 @@ def conflicting_fact_keys(session: Session, project_id: UUID) -> set[str]:
         by_key.setdefault(fact.key, set()).add(fact.value.strip())
     keys.update(key for key, values in by_key.items() if len(values) > 1)
     return keys
+
+
+# Backward-compatible aliases for shared helpers
+GoldenCase = RegressionCase
+list_golden_case_paths = list_regression_case_paths
+load_golden_case = load_regression_case
+seed_golden_case = seed_regression_case

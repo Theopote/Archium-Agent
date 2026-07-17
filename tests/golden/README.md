@@ -1,45 +1,51 @@
-# Golden Case Regression Suite
-
-Part of the **[v0.2 Alpha Validation Sprint](../../docs/v0.2-alpha-validation-sprint.md)**.
-
-Each case ships fixed source material and deterministic mock-LLM expectations. Tests assert workflow outcomes and save export artifacts under `artifacts/` for manual review.
-
-## Case A — 医院老院区更新 (`case_a_hospital`)
-
-Validates:
-
-- Multi-source fact conflicts (`site_area` / `land_area` semantic alias)
-- Traffic / circulation narrative for healthcare campus
-- Site photo and plan evidence hooks
-- Client decision-oriented briefing
-
-## Case B — 校园建筑改造 (`case_b_campus`)
-
-Validates:
-
-- Existing-condition problem framing
-- Phased implementation storyline
-- Functional reallocation slides
-- Before/after comparison layouts
-- Area metrics on data slides
-
-## Case C — 概念方案投标 (`case_c_competition`)
-
-Validates:
-
-- Fast document import path
-- Narrative-first storyline
-- Full-bleed hero image layouts
-- Highlight thesis slides
-- Native-element PPTX export path (PresentationSpec)
-
-## Running
-
-```bash
-pytest tests/golden -v
-```
-
-Artifacts are written to `tests/golden/artifacts/<case_id>/` (manifest + JSON/Spec; PPTX/PDF/previews when Marp/Node available).
-
-Do not start new feature Stages until the Validation Sprint checklist is complete and CI stays green.
-
+# Three-Layer Acceptance Model
+
+Part of the **[v0.2 Alpha Validation Sprint](../../docs/v0.2-alpha-validation-sprint.md)**.
+
+| Layer | Name | LLM | Parsers | CI | Purpose |
+|-------|------|-----|---------|-----|---------|
+| **1** | Deterministic workflow regression | `MockLLMProvider` | Inline DB chunks | ✅ Always | 工作流 / DB / 导出结构 |
+| **2** | Real fixture acceptance | Cached or mock LLM | Real `IngestionService` | ✅ When manifests present | 真实 PDF/DOCX/PPTX/图片解析 |
+| **3** | Live model evaluation | Real API | Real | ❌ Manual only | 输出质量与模型波动 |
+
+> Layer 1 是 **deterministic workflow regression cases**，不是完整的 **real architectural project acceptance**。Layer 2–3 才逐步逼近真实项目验收。
+
+## Layer 1 — Regression (`regression/`)
+
+Mock LLM + 预置文本块。验证主链逻辑：
+
+- Workflow 状态 / 页数 / 四层 Review
+- Fact conflict 检测
+- PresentationSpec 布局
+- 产物 manifest
+
+```bash
+pytest tests/golden/regression -v -m regression
+```
+
+## Layer 2 — Fixture Acceptance (`fixtures/`)
+
+脱敏真实资料 → 真实 parser → 缓存或 mock LLM → 完整导出。
+
+```bash
+pytest tests/golden/fixtures -v -m fixture_acceptance
+```
+
+详见 [fixtures/README.md](fixtures/README.md)。
+
+## Layer 3 — Live Model Evaluation (`live/`)
+
+真实 LLM，手动或定期运行，**不进入默认 CI**：
+
+```bash
+set ARCHIUM_LIVE_LLM=1
+pytest tests/golden/live -v -m live_llm
+```
+
+## 全部 Golden 测试
+
+```bash
+pytest tests/golden -v
+```
+
+产物：`tests/golden/artifacts/`（CI 上传为 workflow artifact）

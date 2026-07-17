@@ -18,6 +18,10 @@ tests/golden/artifacts/*
 !tests/golden/artifacts/README.md
 !tests/golden/artifacts/.gitkeep
 
+# Layer 2 sanitized real project files (keep directory structure only)
+tests/golden/fixtures/files/**
+!tests/golden/fixtures/files/.gitkeep
+
 # Data (runtime)
 data/database/*.db
 data/projects/
