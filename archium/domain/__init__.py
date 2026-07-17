@@ -20,6 +20,8 @@ from archium.domain.enums import (
     SlideType,
     VerificationStatus,
     VisualType,
+    WorkflowStatus,
+    WorkflowStep,
 )
 from archium.domain.fact import ProjectFact
 from archium.domain.memory import UserPreference
@@ -27,6 +29,7 @@ from archium.domain.presentation import Chapter, Presentation, PresentationBrief
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec, VisualRequirement
+from archium.domain.workflow import WorkflowRun
 
 __all__ = [
     "ApprovalStatus",
@@ -59,4 +62,7 @@ __all__ = [
     "VerificationStatus",
     "VisualRequirement",
     "VisualType",
+    "WorkflowRun",
+    "WorkflowStatus",
+    "WorkflowStep",
 ]

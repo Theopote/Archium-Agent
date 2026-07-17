@@ -16,6 +16,7 @@ from archium.domain.presentation import Presentation, PresentationBrief, Storyli
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
+from archium.domain.workflow import WorkflowRun
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
@@ -29,6 +30,7 @@ from archium.infrastructure.database.models import (
     SlideORM,
     SourceDocumentORM,
     StorylineORM,
+    WorkflowRunORM,
 )
 
 
@@ -454,4 +456,47 @@ class ReviewRepository:
             raise
         except SQLAlchemyError as exc:
             _handle_error("update review issue", exc)
+            raise
+
+
+class WorkflowRunRepository:
+    """CRUD operations for workflow runs."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, run: WorkflowRun) -> WorkflowRun:
+        try:
+            orm = mappers.workflow_run_to_orm(run)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.workflow_run_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create workflow run", exc)
+            raise
+
+    def get_by_id(self, run_id: UUID) -> WorkflowRun | None:
+        orm = self._session.get(WorkflowRunORM, run_id)
+        return mappers.workflow_run_to_domain(orm) if orm else None
+
+    def list_by_presentation(self, presentation_id: UUID) -> list[WorkflowRun]:
+        stmt = (
+            select(WorkflowRunORM)
+            .where(WorkflowRunORM.presentation_id == presentation_id)
+            .order_by(WorkflowRunORM.created_at.desc())
+        )
+        return [mappers.workflow_run_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def update(self, run: WorkflowRun) -> WorkflowRun:
+        try:
+            orm = self._session.get(WorkflowRunORM, run.id)
+            if orm is None:
+                raise RepositoryError(f"Workflow run {run.id} not found")
+            mappers.workflow_run_to_orm(run, orm)
+            self._session.flush()
+            return mappers.workflow_run_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update workflow run", exc)
             raise

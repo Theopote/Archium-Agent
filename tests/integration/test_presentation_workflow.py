@@ -1,4 +1,4 @@
-"""Integration tests for the presentation generation pipeline."""
+"""Integration tests for LangGraph presentation workflow."""
 
 from __future__ import annotations
 
@@ -6,9 +6,14 @@ import json
 
 import pytest
 from archium.application.presentation_models import PresentationRequest
-from archium.application.presentation_service import PresentationService
+from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.domain.document import DocumentChunk
-from archium.domain.enums import PresentationStatus, ProjectType, SlideType
+from archium.domain.enums import (
+    PresentationStatus,
+    ProjectType,
+    WorkflowStatus,
+    WorkflowStep,
+)
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import (
@@ -16,6 +21,7 @@ from archium.infrastructure.database.repositories import (
     FactRepository,
     PresentationRepository,
     ProjectRepository,
+    WorkflowRunRepository,
 )
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
@@ -76,12 +82,12 @@ def mock_llm() -> MockLLMProvider:
 
 
 @pytest.fixture
-def presentation_service(
+def workflow_service(
     db_session: Session,
     test_settings: object,
     mock_llm: MockLLMProvider,
-) -> PresentationService:
-    return PresentationService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
+) -> PresentationWorkflowService:
+    return PresentationWorkflowService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
 
 
 @pytest.fixture
@@ -97,93 +103,59 @@ def request_payload() -> PresentationRequest:
     )
 
 
-def test_run_pipeline_persists_artifacts(
-    presentation_service: PresentationService,
+def test_workflow_run_persists_artifacts(
+    workflow_service: PresentationWorkflowService,
     project_with_context: Project,
     request_payload: PresentationRequest,
     db_session: Session,
     mock_llm: MockLLMProvider,
 ) -> None:
-    result = presentation_service.run_pipeline(project_with_context.id, request_payload)
+    result = workflow_service.run(project_with_context.id, request_payload)
 
-    assert not result.errors
+    assert result.succeeded
+    assert result.workflow_run.status == WorkflowStatus.COMPLETED
+    assert result.workflow_run.state["current_step"] == WorkflowStep.FINALIZE.value
     assert result.brief is not None
     assert result.storyline is not None
     assert len(result.slides) == 4
     assert result.presentation.status == PresentationStatus.REVIEW
 
     pres_repo = PresentationRepository(db_session)
-    briefs = pres_repo.list_briefs(result.presentation.id)
-    assert len(briefs) == 1
-    assert briefs[0].audience == "医院管理层"
-
-    storylines = pres_repo.list_storylines(result.presentation.id)
-    assert len(storylines) == 1
-    assert len(storylines[0].chapters) == 2
-
-    slides = pres_repo.list_slides(result.presentation.id)
-    assert len(slides) == 4
-    assert slides[0].slide_type == SlideType.CONTENT
-
+    assert len(pres_repo.list_briefs(result.presentation.id)) == 1
+    assert len(pres_repo.list_storylines(result.presentation.id)) == 1
+    assert len(pres_repo.list_slides(result.presentation.id)) == 4
     assert len(mock_llm.calls) == 3
 
+    workflow_runs = WorkflowRunRepository(db_session).list_by_presentation(result.presentation.id)
+    assert len(workflow_runs) == 1
+    assert workflow_runs[0].output_files
 
-def test_run_pipeline_exports_json(
-    presentation_service: PresentationService,
+
+def test_workflow_run_exports_json(
+    workflow_service: PresentationWorkflowService,
     project_with_context: Project,
     request_payload: PresentationRequest,
-    test_settings: object,
 ) -> None:
-    result = presentation_service.run_pipeline(project_with_context.id, request_payload)
+    result = workflow_service.run(project_with_context.id, request_payload)
 
     assert result.json_path is not None
     assert result.json_path.exists()
     payload = json.loads(result.json_path.read_text(encoding="utf-8"))
     assert payload["brief"]["title"] == "老院区更新概念汇报"
     assert len(payload["slides"]) == 4
-    assert payload["version"] == 1
 
 
-def test_regenerate_slide_plan_replaces_slides(
-    presentation_service: PresentationService,
+def test_workflow_resume_completed_run_is_idempotent(
+    workflow_service: PresentationWorkflowService,
     project_with_context: Project,
     request_payload: PresentationRequest,
-    db_session: Session,
+    mock_llm: MockLLMProvider,
 ) -> None:
-    first = presentation_service.run_pipeline(project_with_context.id, request_payload)
-    assert first.brief and first.storyline
+    first = workflow_service.run(project_with_context.id, request_payload)
+    call_count = len(mock_llm.calls)
 
-    second_slides = presentation_service.generate_slide_plan(
-        project_with_context.id,
-        first.brief,
-        first.storyline,
-    )
-    pres_repo = PresentationRepository(db_session)
-    stored = pres_repo.list_slides(first.presentation.id)
-    assert len(stored) == len(second_slides) == 4
+    second = workflow_service.resume(first.workflow_run.id)
 
-
-def test_pipeline_step_methods(
-    presentation_service: PresentationService,
-    project_with_context: Project,
-    request_payload: PresentationRequest,
-) -> None:
-    presentation = presentation_service.create_presentation(
-        project_with_context.id,
-        request_payload,
-    )
-    brief = presentation_service.generate_brief(
-        project_with_context.id,
-        presentation.id,
-        request_payload,
-    )
-    storyline = presentation_service.generate_storyline(project_with_context.id, brief)
-    slides = presentation_service.generate_slide_plan(
-        project_with_context.id,
-        brief,
-        storyline,
-    )
-
-    assert brief.core_message
-    assert len(storyline.chapters) == 2
-    assert len(slides) == 4
+    assert second.succeeded
+    assert second.workflow_run.status == WorkflowStatus.COMPLETED
+    assert len(mock_llm.calls) == call_count

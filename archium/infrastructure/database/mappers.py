@@ -23,6 +23,7 @@ from archium.domain.enums import (
     SlideStatus,
     SlideType,
     VerificationStatus,
+    WorkflowStatus,
 )
 from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.memory import UserPreference
@@ -30,6 +31,7 @@ from archium.domain.presentation import Chapter, Presentation, PresentationBrief
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec, VisualRequirement
+from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
     AssetORM,
     ChapterORM,
@@ -43,6 +45,7 @@ from archium.infrastructure.database.models import (
     SourceDocumentORM,
     StorylineORM,
     UserPreferenceORM,
+    WorkflowRunORM,
 )
 
 
@@ -481,6 +484,36 @@ def user_preference_to_orm(
     target.value_json = domain.value
     target.project_id = domain.project_id
     target.description = domain.description
+    target.created_at = domain.created_at
+    target.updated_at = domain.updated_at
+    return target
+
+
+# ── WorkflowRun ────────────────────────────────────────────────
+
+
+def workflow_run_to_domain(orm: WorkflowRunORM) -> WorkflowRun:
+    return WorkflowRun(
+        id=orm.id,
+        project_id=orm.project_id,
+        presentation_id=orm.presentation_id,
+        status=WorkflowStatus(orm.status),
+        state=dict(orm.state_json),
+        errors=list(orm.errors_json),
+        output_files=list(orm.output_files_json),
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def workflow_run_to_orm(domain: WorkflowRun, orm: WorkflowRunORM | None = None) -> WorkflowRunORM:
+    target = orm or WorkflowRunORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.presentation_id = domain.presentation_id
+    target.status = domain.status.value
+    target.state_json = dict(domain.state)
+    target.errors_json = list(domain.errors)
+    target.output_files_json = list(domain.output_files)
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

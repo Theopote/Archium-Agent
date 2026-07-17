@@ -156,3 +156,20 @@ class ReviewStatus(StrEnum):
     ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
     DISMISSED = "dismissed"
+
+
+class WorkflowStatus(StrEnum):
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class WorkflowStep(StrEnum):
+    INIT = "init"
+    BRIEF = "brief"
+    STORYLINE = "storyline"
+    SLIDES = "slides"
+    EXPORT = "export"
+    FINALIZE = "finalize"
+    FAILED = "failed"
