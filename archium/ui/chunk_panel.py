@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-import pandas as pd
 import streamlit as st
 
 from archium.application.chunk_service import ChunkService

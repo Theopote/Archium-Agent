@@ -7,7 +7,13 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.review_service import PresentationReviewService
 from archium.domain.document import DocumentChunk
-from archium.domain.enums import ApprovalStatus, ProjectType, SlideStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import (
+    ApprovalStatus,
+    ProjectType,
+    SlideStatus,
+    WorkflowStatus,
+    WorkflowStep,
+)
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import (

@@ -9,7 +9,7 @@ import streamlit as st
 from archium.application.slide_diff import change_source_label
 from archium.application.slide_history_service import SlideHistoryService
 from archium.domain.slide import SlideSpec
-from archium.domain.slide_history import SlideRevision
+from archium.domain.slide_history import SlideFieldChange, SlideRevision
 from archium.infrastructure.database.session import get_session
 
 
@@ -22,7 +22,13 @@ def _revision_option_label(revision: SlideRevision) -> str:
     )
 
 
-def _render_diff_result(diff_id: str, *, before_label: str, after_label: str, changes) -> None:
+def _render_diff_result(
+    diff_id: str,
+    *,
+    before_label: str,
+    after_label: str,
+    changes: list[SlideFieldChange],
+) -> None:
     if not changes:
         st.caption("两次修订之间没有字段差异。")
         return

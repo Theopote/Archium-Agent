@@ -5,7 +5,7 @@ from __future__ import annotations
 import difflib
 from uuid import UUID
 
-from archium.domain.enums import SlideChangeSource, SlideStatus, SlideType
+from archium.domain.enums import SlideChangeSource
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideDiffResult, SlideFieldChange
 

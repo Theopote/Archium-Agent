@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     database_url: str = "sqlite:///data/database/archium.db"
+    workflow_checkpoint_path: Path = Path("data/database/workflow_checkpoints.db")
     project_storage_path: Path = Path("data/projects")
     output_path: Path = Path("data/outputs")
     chroma_path: Path = Path("data/chroma")
@@ -89,6 +90,7 @@ class Settings(BaseSettings):
         "project_storage_path",
         "output_path",
         "chroma_path",
+        "workflow_checkpoint_path",
         mode="after",
     )
     @classmethod
@@ -103,6 +105,7 @@ class Settings(BaseSettings):
             self.project_storage_path,
             self.output_path,
             self.chroma_path,
+            self.workflow_checkpoint_path.parent,
             _PROJECT_ROOT / "data" / "database",
         ):
             path.mkdir(parents=True, exist_ok=True)

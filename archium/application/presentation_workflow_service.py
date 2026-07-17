@@ -19,6 +19,7 @@ from archium.infrastructure.database.repositories import WorkflowRunRepository
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
 from archium.logging import get_logger
+from archium.workflow.checkpointer import create_workflow_checkpointer
 from archium.workflow.presentation_graph import PresentationWorkflowGraph
 from archium.workflow.runtime import PresentationWorkflowRuntime
 from archium.workflow.serialization import request_to_dict, restore_domain_artifacts, snapshot_state
@@ -47,7 +48,8 @@ class PresentationWorkflowService:
             renderer=renderer,
         )
         self._workflow_runs = WorkflowRunRepository(session)
-        self._graph = PresentationWorkflowGraph(self._runtime)
+        checkpointer = create_workflow_checkpointer(self._settings.workflow_checkpoint_path)
+        self._graph = PresentationWorkflowGraph(self._runtime, checkpointer=checkpointer)
 
     def run(
         self,
@@ -95,7 +97,7 @@ class PresentationWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state)
+            final_state = self._graph.invoke(initial_state, thread_id=str(workflow_run.id))
         except Exception as exc:
             logger.exception("Workflow graph execution failed: %s", exc)
             workflow_run.errors = [str(exc)]
@@ -161,7 +163,7 @@ class PresentationWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state)
+            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
         except Exception as exc:
             logger.exception("Workflow continue-after-review failed: %s", exc)
             run.errors = [str(exc)]
@@ -217,7 +219,7 @@ class PresentationWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state)
+            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
         except Exception as exc:
             logger.exception("Workflow resume failed: %s", exc)
             run.errors = [str(exc)]

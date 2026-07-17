@@ -78,8 +78,12 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "marp_md_path": state.get("marp_md_path"),
         "marp_pptx_path": state.get("marp_pptx_path"),
         "errors": list(state.get("errors", [])),
+        "slide_review_issues": list(state.get("slide_review_issues", [])),
         "slide_count": len(slides),
     }
+    context_bundle = state.get("context_bundle")
+    if context_bundle is not None:
+        payload["context_chunk_count"] = len(context_bundle.chunks)
     if request is not None:
         payload["request"] = request_to_dict(request)
     if presentation is not None:

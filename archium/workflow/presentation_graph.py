@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import cast
 
+from langchain_core.runnables.config import RunnableConfig
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -51,28 +53,48 @@ def _route_after_slides(state: PresentationWorkflowState) -> str:
 
 
 class PresentationWorkflowGraph:
-    """Compiled LangGraph for brief → storyline → slides → export."""
+    """Compiled LangGraph for context → brief → storyline → slides → export."""
 
-    def __init__(self, runtime: PresentationWorkflowRuntime) -> None:
+    def __init__(
+        self,
+        runtime: PresentationWorkflowRuntime,
+        *,
+        checkpointer: BaseCheckpointSaver | None = None,
+    ) -> None:
         self._runtime = runtime
         self._nodes = PresentationWorkflowNodes(runtime)
+        self._checkpointer = checkpointer
         self._graph = self._build()
 
-    def invoke(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
-        return cast(PresentationWorkflowState, self._graph.invoke(state))
+    def invoke(
+        self,
+        state: PresentationWorkflowState,
+        *,
+        thread_id: str,
+    ) -> PresentationWorkflowState:
+        config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+        return cast(PresentationWorkflowState, self._graph.invoke(state, config))
 
     def _build(self) -> CompiledStateGraph:
         builder: StateGraph = StateGraph(PresentationWorkflowState)
 
+        builder.add_node("retrieve_context", self._nodes.retrieve_context)
         builder.add_node("generate_brief", self._nodes.generate_brief)
         builder.add_node("generate_storyline", self._nodes.generate_storyline)
         builder.add_node("generate_slides", self._nodes.generate_slides)
+        builder.add_node("resolve_citations", self._nodes.resolve_citations)
+        builder.add_node("review_slides", self._nodes.review_slides)
         builder.add_node("export_json", self._nodes.export_json)
         builder.add_node("export_marp", self._nodes.export_marp)
         builder.add_node("pause_for_review", self._nodes.pause_for_review)
         builder.add_node("finalize", self._nodes.finalize)
 
-        builder.add_edge(START, "generate_brief")
+        builder.add_edge(START, "retrieve_context")
+        builder.add_conditional_edges(
+            "retrieve_context",
+            _route_on_errors,
+            {"continue": "generate_brief", "finalize": "finalize"},
+        )
         builder.add_conditional_edges(
             "generate_brief",
             _route_after_brief,
@@ -83,8 +105,10 @@ class PresentationWorkflowGraph:
             _route_after_storyline,
             {"continue": "generate_slides", "pause_for_review": "pause_for_review", "finalize": "finalize"},
         )
+        builder.add_edge("generate_slides", "resolve_citations")
+        builder.add_edge("resolve_citations", "review_slides")
         builder.add_conditional_edges(
-            "generate_slides",
+            "review_slides",
             _route_after_slides,
             {"continue": "export_json", "pause_for_review": "pause_for_review", "finalize": "finalize"},
         )
@@ -101,4 +125,4 @@ class PresentationWorkflowGraph:
         builder.add_edge("pause_for_review", END)
         builder.add_edge("finalize", END)
 
-        return builder.compile()
+        return builder.compile(checkpointer=self._checkpointer)

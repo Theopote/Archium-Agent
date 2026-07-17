@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
-
 from archium.agents._helpers import brief_from_draft, slides_from_plan, storyline_from_draft
 from archium.infrastructure.llm.presentation_schemas import (
     BriefDraft,
@@ -13,6 +11,7 @@ from archium.infrastructure.llm.presentation_schemas import (
     StorylineDraft,
 )
 from archium.infrastructure.renderers.marp_renderer import MarpPresentationRenderer
+from sqlalchemy.orm import Session
 
 from tests.fixtures.mock_presentation_responses import BRIEF_JSON, SLIDE_PLAN_JSON, STORYLINE_JSON
 

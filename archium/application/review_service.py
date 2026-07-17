@@ -14,7 +14,13 @@ from archium.application.review_models import (
     StorylineUpdate,
 )
 from archium.application.slide_history_service import SlideHistoryService
-from archium.domain.enums import ApprovalStatus, SlideChangeSource, SlideStatus, SlideType, WorkflowStatus
+from archium.domain.enums import (
+    ApprovalStatus,
+    SlideChangeSource,
+    SlideStatus,
+    SlideType,
+    WorkflowStatus,
+)
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError

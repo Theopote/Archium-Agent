@@ -5,11 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from docx import Document
 from archium.application.ingestion_service import IngestionService
 from archium.domain.enums import ProcessingStatus, ProjectType
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import DocumentRepository, ProjectRepository
+from docx import Document
 from sqlalchemy.orm import Session
 
 from tests.fixtures.sample_files import create_sample_docx, create_sample_pdf

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence, cast
+from typing import Any, cast
 from uuid import UUID
 
 import chromadb
@@ -101,7 +101,7 @@ class ChromaVectorStore:
             return []
 
         result = collection.query(
-            query_embeddings=cast(Sequence[Sequence[float]], [query_embedding]),
+            query_embeddings=cast(Any, [query_embedding]),
             n_results=min(top_k, collection.count()),
             include=["documents", "metadatas", "distances"],
         )

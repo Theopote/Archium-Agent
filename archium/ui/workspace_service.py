@@ -15,11 +15,11 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings, get_settings
-from archium.domain.document import SourceDocument
+from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import PresentationType, ProjectType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
-from archium.domain.slide import SlideSpec
 from archium.domain.project import Project
+from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
     PresentationRepository,
@@ -91,7 +91,7 @@ def list_project_documents(session: Session, project_id: UUID) -> list[SourceDoc
     return DocumentRepository(session).list_by_project(project_id)
 
 
-def list_document_chunks(session: Session, document_id: UUID):
+def list_document_chunks(session: Session, document_id: UUID) -> list[DocumentChunk]:
     return ChunkService(session).list_document_chunks(document_id)
 
 
@@ -101,7 +101,7 @@ def update_document_chunk(
     *,
     content: str,
     section_title: str | None = None,
-):
+) -> DocumentChunk:
     return ChunkService(session).update_chunk(
         chunk_id,
         content=content,

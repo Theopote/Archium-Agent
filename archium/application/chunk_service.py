@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -60,12 +61,10 @@ class ChunkService:
 
         document = self._documents.get_document(updated.document_id)
         document_name = document.filename if document is not None else ""
-        try:
+        with contextlib.suppress(Exception):
             self._retrieval.index_chunks(
                 updated.project_id,
                 [updated],
                 document_name=document_name,
             )
-        except Exception:
-            pass
         return updated

@@ -12,8 +12,8 @@ from archium.application.chunk_models import ProjectContextBundle
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings
 from archium.domain.citation import Citation
-from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.document import DocumentChunk
+from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import DocumentRepository, FactRepository
 from archium.infrastructure.llm.presentation_schemas import (

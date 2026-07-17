@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
 from archium.agents._helpers import (
     brief_from_draft,
     sanitize_slide_message,
@@ -18,6 +17,7 @@ from archium.infrastructure.llm.presentation_schemas import (
     SlidePlanDraft,
     StorylineDraft,
 )
+from sqlalchemy.orm import Session
 
 
 def test_sanitize_slide_message_truncates_multi_sentence() -> None:

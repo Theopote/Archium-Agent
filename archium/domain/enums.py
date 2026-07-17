@@ -174,12 +174,15 @@ class WorkflowStatus(StrEnum):
 
 class WorkflowStep(StrEnum):
     INIT = "init"
+    RETRIEVE_CONTEXT = "retrieve_context"
     BRIEF = "brief"
     REVIEW_BRIEF = "review_brief"
     STORYLINE = "storyline"
     REVIEW_STORYLINE = "review_storyline"
     REVIEW_SLIDES = "review_slides"
     SLIDES = "slides"
+    RESOLVE_CITATIONS = "resolve_citations"
+    SLIDE_VALIDATION = "slide_validation"
     EXPORT = "export"
     MARP = "marp"
     FINALIZE = "finalize"

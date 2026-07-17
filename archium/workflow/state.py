@@ -5,6 +5,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, TypedDict
 
+from archium.application.chunk_models import ProjectContextBundle
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -19,6 +20,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     workflow_run_id: str
     request: PresentationRequest
     presentation: Presentation | None
+    context_bundle: ProjectContextBundle | None
     brief: PresentationBrief | None
     storyline: Storyline | None
     slides: list[SlideSpec]
@@ -32,6 +34,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     require_storyline_review: bool
     require_slides_review: bool
     review_gate: str | None
+    slide_review_issues: list[str]
     current_step: str
     errors: Annotated[list[str], operator.add]
 
@@ -57,6 +60,7 @@ def initial_workflow_state(
         "workflow_run_id": workflow_run_id,
         "request": request,
         "presentation": presentation,
+        "context_bundle": None,
         "brief": None,
         "storyline": None,
         "slides": [],
@@ -70,6 +74,7 @@ def initial_workflow_state(
         "require_storyline_review": require_storyline_review,
         "require_slides_review": require_slides_review,
         "review_gate": None,
+        "slide_review_issues": [],
         "current_step": WorkflowStep.INIT.value,
         "errors": [],
     }

@@ -5,8 +5,16 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
+from archium.agents._helpers import build_project_context_bundle, build_retrieval_query_from_request
+from archium.agents.citations import enrich_slide_citations
 from archium.application.review_service import slides_are_approved
-from archium.domain.enums import ApprovalStatus, PresentationStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import (
+    ApprovalStatus,
+    PresentationStatus,
+    SlideType,
+    WorkflowStatus,
+    WorkflowStep,
+)
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.logging import ArchiumLogAdapter, get_logger
@@ -59,6 +67,44 @@ class PresentationWorkflowNodes:
             run.status = status
         run.touch()
         self._runtime.workflow_runs.update(run)
+
+    def retrieve_context(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.RETRIEVE_CONTEXT.value}
+
+        existing = state.get("context_bundle")
+        if existing is not None and existing.chunks:
+            return {"context_bundle": existing, "current_step": WorkflowStep.RETRIEVE_CONTEXT.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            request = state["request"]
+            query = build_retrieval_query_from_request(request)
+            bundle = build_project_context_bundle(
+                self._runtime.session,
+                project_id,
+                query=query,
+                settings=self._runtime.settings,
+            )
+            next_state: PresentationWorkflowState = {
+                "context_bundle": bundle,
+                "current_step": WorkflowStep.RETRIEVE_CONTEXT.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info(
+                "Retrieved project context for presentation %s (%d chunks)",
+                state["presentation_id"],
+                len(bundle.chunks),
+            )
+            return next_state
+        except Exception as exc:
+            logger.exception("Context retrieval failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.RETRIEVE_CONTEXT.value,
+            }
 
     def generate_brief(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
@@ -196,6 +242,99 @@ class PresentationWorkflowNodes:
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.SLIDES.value,
             }
+
+    def resolve_citations(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.RESOLVE_CITATIONS.value}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {"current_step": WorkflowStep.RESOLVE_CITATIONS.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            bundle = state.get("context_bundle")
+            if bundle is None:
+                request = state["request"]
+                query = build_retrieval_query_from_request(request)
+                bundle = build_project_context_bundle(
+                    self._runtime.session,
+                    project_id,
+                    query=query,
+                    settings=self._runtime.settings,
+                )
+
+            resolved: list[SlideSpec] = []
+            for slide in slides:
+                enrich_slide_citations(
+                    slide,
+                    session=self._runtime.session,
+                    project_id=project_id,
+                    context_bundle=bundle,
+                    settings=self._runtime.settings,
+                )
+                resolved.append(self._presentations.save_slide(slide))
+
+            next_state: PresentationWorkflowState = {
+                "slides": resolved,
+                "current_step": WorkflowStep.RESOLVE_CITATIONS.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Resolved citations for %d slides", len(resolved))
+            return next_state
+        except Exception as exc:
+            logger.exception("Citation resolution failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.RESOLVE_CITATIONS.value,
+            }
+
+    def review_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        """Automated slide content validation before export or human review."""
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.SLIDE_VALIDATION.value}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {
+                "errors": ["Cannot review slides without a slide plan"],
+                "current_step": WorkflowStep.SLIDE_VALIDATION.value,
+            }
+
+        issues: list[str] = []
+        skippable_types = {SlideType.TITLE, SlideType.SECTION, SlideType.CLOSING}
+        for slide in slides:
+            if not slide.title.strip():
+                issues.append(f"Slide {slide.order}: missing title")
+            if (
+                not slide.message.strip()
+                and slide.slide_type not in skippable_types
+            ):
+                issues.append(f"Slide {slide.order}: missing core message")
+
+        context_bundle = state.get("context_bundle")
+        has_sources = context_bundle is not None and bool(context_bundle.chunks)
+        if has_sources:
+            for slide in slides:
+                if slide.slide_type in skippable_types:
+                    continue
+                if not slide.source_citations:
+                    issues.append(f"Slide {slide.order}: missing source citations")
+
+        next_state: PresentationWorkflowState = {
+            "slide_review_issues": issues,
+            "current_step": WorkflowStep.SLIDE_VALIDATION.value,
+        }
+        merged = cast(PresentationWorkflowState, {**state, **next_state})
+        self._persist_checkpoint(merged)
+        if issues:
+            logger.warning("Slide validation found %d issue(s)", len(issues))
+        else:
+            logger.info("Slide validation passed for %d slides", len(slides))
+        return next_state
 
     def _load_slides_for_export(self, state: PresentationWorkflowState) -> list[SlideSpec]:
         presentation_id = UUID(state["presentation_id"])

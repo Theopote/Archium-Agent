@@ -14,6 +14,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.enums import PresentationStatus
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
@@ -143,6 +144,6 @@ class PresentationService:
                 len(result.slides),
             )
         except Exception as exc:
-            logger.exception("Pipeline failed: %s", exc)
-            result.errors.append(str(exc))
+            logger.exception("Pipeline failed")
+            raise WorkflowError("Presentation pipeline failed") from exc
         return result
