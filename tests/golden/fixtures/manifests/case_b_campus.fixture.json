@@ -1,0 +1,67 @@
+{
+  "id": "case_b_campus",
+  "layer": "fixture_acceptance",
+  "name": "校园建筑改造（真实解析路径）",
+  "project": {
+    "name": "某大学旧教学楼改造",
+    "project_type": "education"
+  },
+  "inline_docx": {
+    "filename": "现状调研.docx",
+    "paragraphs": [
+      "教学楼走廊狭窄，实验室通风不足，需分期实施改造。",
+      "现状功能混杂，教学区与实验区交叉干扰明显。"
+    ]
+  },
+  "inline_xlsx": {
+    "filename": "面积表.xlsx",
+    "sheet_name": "面积指标",
+    "rows": [
+      ["指标", "改造前", "改造后"],
+      ["教学用房", "8200 平方米", "9600 平方米"],
+      ["实验用房", "2100 平方米", "2800 平方米"]
+    ]
+  },
+  "files": [
+    {
+      "relative_path": "case_b_campus/现状调研.pdf",
+      "required": false,
+      "note": "Drop sanitized real PDF here to replace inline_docx"
+    },
+    {
+      "relative_path": "case_b_campus/面积表.xlsx",
+      "required": false,
+      "note": "Drop sanitized real XLSX here to replace inline_xlsx"
+    }
+  ],
+  "facts": [
+    {
+      "key": "gfa_before",
+      "label": "改造前建筑面积",
+      "value": "8200 平方米"
+    },
+    {
+      "key": "gfa_after",
+      "label": "改造后建筑面积",
+      "value": "9600 平方米"
+    }
+  ],
+  "request": {
+    "title": "旧教学楼改造方案汇报",
+    "audience": "校方基建处",
+    "purpose": "汇报分期实施路径与功能调整方案",
+    "duration_minutes": 25,
+    "target_slide_count": 4,
+    "core_message": "分期改造释放教学空间并改善实验条件",
+    "required_sections": ["现状问题", "分期实施", "功能调整", "面积对比"],
+    "presentation_type": "internal"
+  },
+  "expectations": {
+    "min_slides": 4,
+    "workflow_status": "completed",
+    "min_imported_chunks": 2,
+    "review_layers": ["content", "evidence"],
+    "required_section_keywords": ["现状", "改造"],
+    "export_presentation_spec": false
+  }
+}

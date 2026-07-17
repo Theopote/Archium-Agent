@@ -76,19 +76,56 @@ def load_fixture_case(path: Path) -> FixtureCase:
     )
 
 
-def materialize_inline_docx(path: Path, payload: dict[str, Any]) -> Path | None:
+def materialize_inline_docx(path: Path, payload: dict[str, Any]) -> Path:
     """Create a DOCX from manifest inline paragraphs when bundled files are absent."""
-    inline = payload.get("inline_docx")
-    if inline is None:
-        return None
     from docx import Document
 
     path.parent.mkdir(parents=True, exist_ok=True)
     document = Document()
-    for paragraph in inline.get("paragraphs", []):
+    for paragraph in payload.get("paragraphs", []):
         document.add_paragraph(str(paragraph))
     document.save(path)
     return path
+
+
+def materialize_inline_xlsx(path: Path, payload: dict[str, Any]) -> Path:
+    """Create an XLSX from manifest inline rows when bundled files are absent."""
+    from openpyxl import Workbook
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = str(payload.get("sheet_name", "数据"))
+    for row_index, row in enumerate(payload.get("rows", []), start=1):
+        for col_index, value in enumerate(row, start=1):
+            sheet.cell(row=row_index, column=col_index, value=value)
+    workbook.save(path)
+    return path
+
+
+def materialize_inline_fallbacks(
+    payload: dict[str, Any],
+    scratch_dir: Path,
+) -> list[Path]:
+    """Build parser-ready files from inline_docx / inline_xlsx when no real files exist."""
+    paths: list[Path] = []
+    inline_docx = payload.get("inline_docx")
+    if inline_docx is not None:
+        paths.append(
+            materialize_inline_docx(
+                scratch_dir / str(inline_docx.get("filename", "inline.docx")),
+                inline_docx,
+            )
+        )
+    inline_xlsx = payload.get("inline_xlsx")
+    if inline_xlsx is not None:
+        paths.append(
+            materialize_inline_xlsx(
+                scratch_dir / str(inline_xlsx.get("filename", "inline.xlsx")),
+                inline_xlsx,
+            )
+        )
+    return paths
 
 
 def seed_fixture_case(
@@ -106,15 +143,11 @@ def seed_fixture_case(
 
     imported_paths: list[Path] = list(case.source_files)
     if not imported_paths:
-        inline = payload.get("inline_docx")
-        if inline is not None:
-            generated = scratch_dir / str(inline.get("filename", "inline.docx"))
-            materialize_inline_docx(generated, payload)
-            imported_paths = [generated]
+        imported_paths = materialize_inline_fallbacks(payload, scratch_dir)
 
     if not imported_paths:
         raise FileNotFoundError(
-            f"Fixture {case.id} has no source files and no inline_docx fallback"
+            f"Fixture {case.id} has no source files and no inline_docx/inline_xlsx fallback"
         )
 
     ingestion = IngestionService(session)
