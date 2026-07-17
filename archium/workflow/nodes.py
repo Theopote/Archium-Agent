@@ -16,7 +16,7 @@ from archium.application.automated_review_service import (
 )
 from archium.application.fact_extraction_service import FactExtractionService
 from archium.application.fact_validation_service import FactValidationService
-from archium.application.render_export import export_marp_binaries
+from archium.application.render_export import export_marp_extras
 from archium.application.review_service import slides_are_approved
 from archium.application.slide_repair_service import SlideRepairService
 from archium.domain.enums import (
@@ -79,6 +79,9 @@ class PresentationWorkflowNodes:
         pdf_path = state.get("pdf_path")
         if pdf_path and pdf_path not in output_files:
             output_files.append(pdf_path)
+        for preview_path in state.get("preview_image_paths", []):
+            if preview_path and preview_path not in output_files:
+                output_files.append(preview_path)
         run.output_files = output_files
         if status is not None:
             run.status = status
@@ -702,19 +705,27 @@ class PresentationWorkflowNodes:
                 "marp_md_path": str(marp_md_path),
                 "current_step": WorkflowStep.MARP.value,
             }
-            if state.get("export_pptx", False) or state.get("export_pdf", False):
-                pptx_path, pdf_path, warnings = export_marp_binaries(
+            export_pptx = bool(state.get("export_pptx", False))
+            export_pdf = bool(state.get("export_pdf", False))
+            export_preview_images = bool(state.get("export_preview_images", False))
+            if export_pptx or export_pdf or export_preview_images:
+                extras = export_marp_extras(
                     self._runtime.marp_renderer,
                     marp_md_path,
-                    export_pptx=bool(state.get("export_pptx", False)),
-                    export_pdf=bool(state.get("export_pdf", False)),
+                    export_pptx=export_pptx,
+                    export_pdf=export_pdf,
+                    export_preview_images=export_preview_images,
                 )
-                if pptx_path is not None:
-                    next_state["marp_pptx_path"] = str(pptx_path)
-                if pdf_path is not None:
-                    next_state["pdf_path"] = str(pdf_path)
-                if warnings:
-                    next_state["render_warnings"] = warnings
+                if extras.pptx_path is not None:
+                    next_state["marp_pptx_path"] = str(extras.pptx_path)
+                if extras.pdf_path is not None:
+                    next_state["pdf_path"] = str(extras.pdf_path)
+                if extras.preview_images:
+                    next_state["preview_image_paths"] = [
+                        str(path) for path in extras.preview_images
+                    ]
+                if extras.warnings:
+                    next_state["render_warnings"] = extras.warnings
 
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)

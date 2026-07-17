@@ -93,6 +93,14 @@ class Settings(BaseSettings):
     chunk_overlap_chars: int = Field(default=120, ge=0, le=500)
 
     marp_command: str = "marp"
+    marp_preview_images_enabled: bool = Field(
+        default=True,
+        description="When true and Marp Markdown is exported, generate PNG slide previews via Marp CLI.",
+    )
+    marp_preview_image_format: str = Field(
+        default="png",
+        description="Image format for Marp --images export (png or jpeg).",
+    )
 
     block_export_on_critical_review: bool = Field(
         default=False,

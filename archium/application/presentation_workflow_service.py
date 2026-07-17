@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
@@ -60,11 +61,17 @@ class PresentationWorkflowService:
         export_marp: bool = False,
         export_pptx: bool = False,
         export_pdf: bool = False,
+        export_preview_images: bool | None = None,
         require_brief_review: bool = False,
         require_storyline_review: bool = False,
         require_slides_review: bool = False,
     ) -> WorkflowRunResult:
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
+        resolved_preview_images = (
+            export_preview_images
+            if export_preview_images is not None
+            else export_marp and self._settings.marp_preview_images_enabled
+        )
         workflow_run = self._workflow_runs.create(
             WorkflowRun(
                 project_id=project_id,
@@ -77,6 +84,7 @@ class PresentationWorkflowService:
                     "export_marp": export_marp,
                     "export_pptx": export_pptx,
                     "export_pdf": export_pdf,
+                    "export_preview_images": resolved_preview_images,
                     "require_brief_review": require_brief_review,
                     "require_storyline_review": require_storyline_review,
                     "require_slides_review": require_slides_review,
@@ -94,6 +102,7 @@ class PresentationWorkflowService:
             export_marp=export_marp,
             export_pptx=export_pptx,
             export_pdf=export_pdf,
+            export_preview_images=resolved_preview_images,
             require_brief_review=require_brief_review,
             require_storyline_review=require_storyline_review,
             require_slides_review=require_slides_review,
@@ -175,6 +184,7 @@ class PresentationWorkflowService:
             export_marp=bool(run.state.get("export_marp", False)),
             export_pptx=bool(run.state.get("export_pptx", False)),
             export_pdf=bool(run.state.get("export_pdf", False)),
+            export_preview_images=bool(run.state.get("export_preview_images", False)),
             require_brief_review=bool(run.state.get("require_brief_review", False)),
             require_storyline_review=bool(run.state.get("require_storyline_review", False)),
             require_slides_review=bool(run.state.get("require_slides_review", False)),
@@ -227,13 +237,19 @@ class PresentationWorkflowService:
             "marp_pptx_path"
         )
         pdf_value = workflow_run.state.get("pdf_path") or final_state.get("pdf_path")
-        warnings = list(workflow_run.state.get("render_warnings") or final_state.get("render_warnings") or [])
+        preview_values = workflow_run.state.get("preview_image_paths") or final_state.get(
+            "preview_image_paths"
+        ) or []
+        warnings = list(
+            workflow_run.state.get("render_warnings") or final_state.get("render_warnings") or []
+        )
 
         render = RenderResult.from_state_paths(
             json_path=json_path_value,
             marp_md_path=marp_md_value,
             marp_pptx_path=marp_pptx_value,
             pdf_path=pdf_value,
+            preview_images=[Path(str(item)) for item in preview_values],
             warnings=warnings,
         )
 

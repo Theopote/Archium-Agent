@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.render_export import export_marp_binaries
+from archium.application.render_export import export_marp_extras
 from archium.config.settings import Settings, get_settings
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
@@ -76,14 +76,16 @@ class PresentationExportService:
                 slides=slides,
                 version=version,
             )
-            if result.markdown_path is not None and (export_pptx or export_pdf):
-                pptx_path, pdf_path, warnings = export_marp_binaries(
+            if result.markdown_path is not None:
+                extras = export_marp_extras(
                     self._marp,
                     result.markdown_path,
                     export_pptx=export_pptx,
                     export_pdf=export_pdf,
+                    export_preview_images=self._settings.marp_preview_images_enabled,
                 )
-                result.pptx_path = pptx_path
-                result.pdf_path = pdf_path
-                result.warnings.extend(warnings)
+                result.pptx_path = extras.pptx_path
+                result.pdf_path = extras.pdf_path
+                result.preview_images = list(extras.preview_images)
+                result.warnings.extend(extras.warnings)
         return result

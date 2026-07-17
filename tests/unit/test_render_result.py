@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from archium.application.render_export import export_marp_binaries
+from archium.application.render_export import export_marp_binaries, export_marp_extras
 from archium.domain.render import RenderResult
 from archium.exceptions import RenderingError
 
@@ -47,6 +47,40 @@ def test_export_marp_binaries_collects_warnings_without_raising() -> None:
     assert "PPTX" in warnings[0]
     marp.export_pptx.assert_called_once_with(markdown_path)
     marp.export_pdf.assert_called_once_with(markdown_path)
+
+
+def test_export_marp_extras_generates_preview_images() -> None:
+    marp = MagicMock()
+    markdown_path = Path("/tmp/presentation.md")
+    marp.export_preview_images.return_value = [
+        Path("/tmp/previews/presentation.001.png"),
+        Path("/tmp/previews/presentation.002.png"),
+    ]
+
+    extras = export_marp_extras(
+        marp,
+        markdown_path,
+        export_preview_images=True,
+    )
+
+    assert len(extras.preview_images) == 2
+    assert extras.warnings == []
+    marp.export_preview_images.assert_called_once_with(markdown_path)
+
+
+def test_export_marp_extras_preview_failure_becomes_warning() -> None:
+    marp = MagicMock()
+    marp.export_preview_images.side_effect = RenderingError("no marp")
+
+    extras = export_marp_extras(
+        marp,
+        Path("/tmp/presentation.md"),
+        export_preview_images=True,
+    )
+
+    assert extras.preview_images == []
+    assert len(extras.warnings) == 1
+    assert "预览图" in extras.warnings[0]
 
 
 def test_export_marp_binaries_skips_when_not_requested() -> None:

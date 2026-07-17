@@ -78,6 +78,21 @@ class MarpPresentationRenderer:
         target = output_path or markdown_path.with_suffix(".pdf")
         return self._cli.convert(markdown_path, target)
 
+    def export_preview_images(
+        self,
+        markdown_path: Path,
+        *,
+        output_dir: Path | None = None,
+        image_format: str | None = None,
+    ) -> list[Path]:
+        """Export numbered slide preview images (PNG by default)."""
+        resolved_format = image_format or self._settings.marp_preview_image_format
+        return self._cli.export_images(
+            markdown_path,
+            output_dir=output_dir,
+            image_format=resolved_format,
+        )
+
     def render_and_export_pptx(
         self,
         *,

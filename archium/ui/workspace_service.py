@@ -162,6 +162,7 @@ def run_presentation_workflow(
     export_marp: bool = True,
     export_pptx: bool = False,
     export_pdf: bool = False,
+    export_preview_images: bool | None = None,
     require_brief_review: bool = False,
     require_storyline_review: bool = False,
     require_slides_review: bool = False,
@@ -170,6 +171,11 @@ def run_presentation_workflow(
     resolved_settings = settings or get_settings()
     llm = create_llm_provider(resolved_settings)
     service = PresentationWorkflowService(session, llm, settings=resolved_settings)
+    resolved_preview_images = (
+        export_preview_images
+        if export_preview_images is not None
+        else export_marp and resolved_settings.marp_preview_images_enabled
+    )
     return service.run(
         project_id,
         request,
@@ -177,6 +183,7 @@ def run_presentation_workflow(
         export_marp=export_marp,
         export_pptx=export_pptx,
         export_pdf=export_pdf,
+        export_preview_images=resolved_preview_images,
         require_brief_review=require_brief_review,
         require_storyline_review=require_storyline_review,
         require_slides_review=require_slides_review,

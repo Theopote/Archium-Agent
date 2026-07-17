@@ -181,6 +181,11 @@ def _render_generation_form(project_id: UUID) -> None:
         export_marp = col2.checkbox("导出 Marp Markdown", value=True)
         export_pptx = col3.checkbox("导出 PPTX（需 Marp CLI）", value=False)
         export_pdf = col4.checkbox("导出 PDF（需 Marp CLI）", value=False)
+        export_preview_images = st.checkbox(
+            "生成幻灯片预览图 PNG（需 Marp CLI）",
+            value=export_marp,
+            help="导出 Marp Markdown 后，通过 marp --images 生成逐页 PNG 预览。",
+        )
         review_col1, review_col2, review_col3 = st.columns(3)
         require_brief_review = review_col1.checkbox("Brief 生成后暂停审核", value=True)
         require_storyline_review = review_col2.checkbox("Storyline 生成后暂停审核", value=True)
@@ -214,6 +219,7 @@ def _render_generation_form(project_id: UUID) -> None:
                     export_marp=export_marp,
                     export_pptx=export_pptx,
                     export_pdf=export_pdf,
+                    export_preview_images=export_preview_images and export_marp,
                     require_brief_review=require_brief_review,
                     require_storyline_review=require_storyline_review,
                     require_slides_review=require_slides_review,
@@ -313,6 +319,12 @@ def _render_last_result() -> None:
     if result.render.warnings:
         for warning in result.render.warnings:
             st.warning(warning)
+    if result.render.preview_images:
+        st.markdown("**幻灯片预览**")
+        preview_cols = st.columns(min(3, len(result.render.preview_images)))
+        for index, image_path in enumerate(result.render.preview_images):
+            with preview_cols[index % len(preview_cols)]:
+                st.image(str(image_path), caption=f"第 {index + 1} 页", use_container_width=True)
     if download_paths:
         render_file_downloads(download_paths, key_prefix="workflow_result")
 
