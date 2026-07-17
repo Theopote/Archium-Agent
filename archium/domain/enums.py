@@ -106,6 +106,12 @@ class SlideStatus(StrEnum):
     NEEDS_REVISION = "needs_revision"
 
 
+class SlideChangeSource(StrEnum):
+    GENERATED = "generated"
+    MANUAL_EDIT = "manual_edit"
+    REGENERATION = "regeneration"
+
+
 class VisualType(StrEnum):
     SITE_PLAN = "site_plan"
     FLOOR_PLAN = "floor_plan"

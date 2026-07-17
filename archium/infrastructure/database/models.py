@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 
 from sqlalchemy import (
     JSON,
     Boolean,
+    DateTime,
     Float,
     ForeignKey,
     Integer,
@@ -17,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from archium.infrastructure.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from archium.infrastructure.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, utc_now
 
 
 class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -203,6 +205,26 @@ class SlideORM(UUIDPrimaryKeyMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="slides")
+
+
+class SlideRevisionORM(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "slide_revisions"
+
+    slide_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("slides.id", ondelete="SET NULL")
+    )
+    presentation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
+    )
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    change_source: Mapped[str] = mapped_column(String(40), nullable=False)
+    snapshot_json: Mapped[dict[str, object]] = mapped_column("snapshot", JSON, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
 
 
 class AssetORM(UUIDPrimaryKeyMixin, Base):

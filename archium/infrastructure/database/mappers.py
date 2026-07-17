@@ -21,6 +21,7 @@ from archium.domain.enums import (
     ReviewSeverity,
     ReviewStatus,
     SlideStatus,
+    SlideChangeSource,
     SlideType,
     VerificationStatus,
     WorkflowStatus,
@@ -31,6 +32,7 @@ from archium.domain.presentation import Chapter, Presentation, PresentationBrief
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec, VisualRequirement
+from archium.domain.slide_history import SlideRevision
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
     AssetORM,
@@ -42,6 +44,7 @@ from archium.infrastructure.database.models import (
     ProjectORM,
     ReviewIssueORM,
     SlideORM,
+    SlideRevisionORM,
     SourceDocumentORM,
     StorylineORM,
     UserPreferenceORM,
@@ -516,4 +519,33 @@ def workflow_run_to_orm(domain: WorkflowRun, orm: WorkflowRunORM | None = None) 
     target.output_files_json = list(domain.output_files)
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
+    return target
+
+
+def slide_revision_to_domain(orm: SlideRevisionORM) -> SlideRevision:
+    return SlideRevision(
+        id=orm.id,
+        slide_id=orm.slide_id,
+        presentation_id=orm.presentation_id,
+        revision_number=orm.revision_number,
+        change_source=SlideChangeSource(orm.change_source),
+        snapshot=dict(orm.snapshot_json),
+        note=orm.note,
+        created_at=orm.created_at,
+    )
+
+
+def slide_revision_to_orm(
+    domain: SlideRevision,
+    orm: SlideRevisionORM | None = None,
+) -> SlideRevisionORM:
+    target = orm or SlideRevisionORM(id=domain.id)
+    target.slide_id = domain.slide_id
+    target.presentation_id = domain.presentation_id
+    target.revision_number = domain.revision_number
+    target.change_source = domain.change_source.value
+    target.snapshot_json = dict(domain.snapshot)
+    target.note = domain.note
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
     return target
