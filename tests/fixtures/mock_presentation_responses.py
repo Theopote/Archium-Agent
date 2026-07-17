@@ -47,6 +47,7 @@ PROFESSIONAL_REVIEW_JSON = """\
 {
   "issues": [
     {
+      "reviewer_layer": "architectural",
       "slide_order": 1,
       "category": "consistency",
       "severity": "medium",
@@ -55,6 +56,55 @@ PROFESSIONAL_REVIEW_JSON = """\
       "suggestion": "对齐章节 key_message 与 slide message。"
     }
   ]
+}"""
+
+LAYER_REVIEW_JSON = """\
+{
+  "issues": [
+    {
+      "reviewer_layer": "content",
+      "slide_order": 0,
+      "category": "content",
+      "severity": "medium",
+      "title": "结论表述不够聚焦",
+      "description": "第 1 页核心结论可进一步提炼为单一决策点。",
+      "suggestion": "压缩为一句可决策表述。"
+    },
+    {
+      "reviewer_layer": "evidence",
+      "slide_order": 1,
+      "category": "citation",
+      "severity": "high",
+      "title": "缺少资料引用",
+      "description": "第 2 页论断未关联项目资料片段。",
+      "suggestion": "补充 chunk 引用。"
+    },
+    {
+      "reviewer_layer": "layout",
+      "slide_order": 0,
+      "category": "length",
+      "severity": "suggestion",
+      "title": "要点略多",
+      "description": "第 1 页要点超过建议数量。",
+      "suggestion": "合并相近要点。"
+    }
+  ]
+}"""
+
+BRIEF_ALIGNMENT_MISMATCH_JSON = """\
+{
+  "aligned": false,
+  "confidence": 0.88,
+  "gap_summary": "Slide 结论聚焦交通问题，但未回应 Brief 中公共空间提升与分期决策诉求。",
+  "suggestion": "增加一页总结公共空间策略，并在末页明确分期决策选项。"
+}"""
+
+BRIEF_ALIGNMENT_OK_JSON = """\
+{
+  "aligned": true,
+  "confidence": 0.92,
+  "gap_summary": "",
+  "suggestion": null
 }"""
 
 FACT_EXTRACTION_JSON = """\

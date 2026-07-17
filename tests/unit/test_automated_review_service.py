@@ -237,11 +237,101 @@ def test_architectural_review_llm_when_enabled(
         db_session,
         llm=llm,
         settings=settings,
-    ).run_architectural_review(presentation_id, slides)  # type: ignore[arg-type]
+    ).run_layout_review(presentation_id, slides)  # type: ignore[arg-type]
 
     assert len(llm.calls) == 1
-    assert any(issue.category == ReviewCategory.CONSISTENCY for issue in issues)
-    assert all(issue.reviewer_layer == ReviewLayer.ARCHITECTURAL for issue in issues)
+    layers = {issue.reviewer_layer for issue in issues}
+    assert ReviewLayer.CONTENT in layers
+    assert ReviewLayer.EVIDENCE in layers
+    assert ReviewLayer.LAYOUT in layers
+    assert len(layers) >= 3
+
+
+def test_brief_alignment_llm_flags_semantic_gap(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    from archium.config.settings import Settings
+    from archium.infrastructure.llm import MockLLMProvider
+
+    from tests.fixtures.mock_llm import pipeline_mock_selector
+
+    brief = PresentationBrief(
+        project_id=uuid4(),
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        title="概念汇报",
+        audience="管理层",
+        purpose="确认方向",
+        core_message="通过交通重组与公共空间提升改善体验",
+        required_sections=["现状分析", "改造策略"],
+        decisions_required=["确认分期策略"],
+    )
+    slides = [
+        SlideSpec(
+            presentation_id=presentation_id,  # type: ignore[arg-type]
+            chapter_id="ch1",
+            order=0,
+            title="交通问题",
+            message="人车混行导致效率低",
+        )
+    ]
+    settings = Settings(
+        _env_file=None,
+        llm_api_key="test-key",
+        llm_professional_review_enabled=True,
+    )
+    llm = MockLLMProvider(selector=pipeline_mock_selector)
+    issues = AutomatedReviewService(
+        db_session,
+        llm=llm,
+        settings=settings,
+    ).run_content_review(presentation_id, slides, brief=brief)  # type: ignore[arg-type]
+
+    assert len(llm.calls) == 1
+    assert any(issue.title == "Brief 语义对齐不足" for issue in issues)
+    assert all(issue.reviewer_layer == ReviewLayer.CONTENT for issue in issues if "Brief" in issue.title)
+
+
+def test_brief_alignment_llm_passes_when_aligned(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    from archium.config.settings import Settings
+    from archium.infrastructure.llm import MockLLMProvider
+
+    from tests.fixtures.mock_llm import brief_alignment_ok_selector
+
+    brief = PresentationBrief(
+        project_id=uuid4(),
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        title="概念汇报",
+        audience="管理层",
+        purpose="确认方向",
+        core_message="通过交通重组改善体验",
+    )
+    slides = [
+        SlideSpec(
+            presentation_id=presentation_id,  # type: ignore[arg-type]
+            chapter_id="ch1",
+            order=0,
+            title="交通重组",
+            message="通过交通重组改善院区体验",
+        )
+    ]
+    settings = Settings(
+        _env_file=None,
+        llm_api_key="test-key",
+        llm_professional_review_enabled=True,
+    )
+    llm = MockLLMProvider(selector=brief_alignment_ok_selector)
+    issues = AutomatedReviewService(
+        db_session,
+        llm=llm,
+        settings=settings,
+    ).run_content_review(presentation_id, slides, brief=brief)  # type: ignore[arg-type]
+
+    assert len(llm.calls) == 1
+    assert not any("Brief" in issue.title for issue in issues)
 
 
 def test_evidence_review_flags_missing_visual_evidence(

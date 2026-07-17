@@ -23,11 +23,18 @@ from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import AssetRepository, ReviewRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
-from archium.infrastructure.llm.presentation_schemas import ProfessionalReviewDraft
+from archium.infrastructure.llm.presentation_schemas import (
+    BriefAlignmentDraft,
+    ProfessionalReviewDraft,
+)
 from archium.logging import get_logger
-from archium.prompts.professional_review import (
-    PROFESSIONAL_REVIEW_SYSTEM_PROMPT,
-    build_professional_review_user_prompt,
+from archium.prompts.brief_alignment import (
+    BRIEF_ALIGNMENT_SYSTEM_PROMPT,
+    build_brief_alignment_user_prompt,
+)
+from archium.prompts.layer_review import (
+    LAYER_REVIEW_SYSTEM_PROMPT,
+    build_layer_review_user_prompt,
 )
 
 logger = get_logger(__name__, operation="automated_review")
@@ -171,27 +178,9 @@ class AutomatedReviewService:
                 )
 
         if brief is not None and brief.core_message.strip() and slides:
-            tokens = [
-                token
-                for token in re.split(r"[\s，,、；;。.]+", brief.core_message.strip())
-                if len(token) >= 2
-            ]
-            combined = " ".join(slide.message for slide in slides)
-            if tokens and not any(token in combined for token in tokens[:5]):
-                issues.append(
-                    ReviewIssue(
-                        presentation_id=presentation_id,
-                        reviewer_layer=ReviewLayer.CONTENT,
-                        category=ReviewCategory.COVERAGE,
-                        severity=ReviewSeverity.MEDIUM,
-                        title="Brief 核心信息未体现",
-                        description=(
-                            f"Brief 核心信息「{brief.core_message}」"
-                            "未在 Slide 结论中找到明显呼应。"
-                        ),
-                        suggestion="调整各页结论，确保与 Brief 核心信息一致。",
-                    )
-                )
+            alignment_issue = self._check_brief_alignment(presentation_id, slides, brief)
+            if alignment_issue is not None:
+                issues.append(alignment_issue)
 
         return self._persist(presentation_id, issues)
 
@@ -466,19 +455,6 @@ class AutomatedReviewService:
                             )
                         )
 
-        if self._settings.llm_professional_review_enabled and self._settings.llm_configured:
-            if self._llm is not None:
-                issues.extend(
-                    self._run_llm_professional_review(
-                        presentation_id,
-                        slides,
-                        brief=brief,
-                        storyline=storyline,
-                    )
-                )
-            else:
-                logger.warning("LLM professional review enabled but no provider was injected")
-
         return self._persist(presentation_id, issues)
 
     def run_layout_review(
@@ -487,6 +463,9 @@ class AutomatedReviewService:
         slides: list[SlideSpec],
         *,
         project_id: UUID | None = None,
+        brief: PresentationBrief | None = None,
+        storyline: Storyline | None = None,
+        context_bundle: ProjectContextBundle | None = None,
     ) -> list[ReviewIssue]:
         """Check text density, visual readiness, and asset resolution."""
         assets_by_id = {}
@@ -633,6 +612,17 @@ class AutomatedReviewService:
                                 )
                             )
 
+        if self._llm_review_enabled():
+            issues.extend(
+                self._run_llm_multi_layer_review(
+                    presentation_id,
+                    slides,
+                    brief=brief,
+                    storyline=storyline,
+                    context_bundle=context_bundle,
+                )
+            )
+
         return self._persist(presentation_id, issues)
 
     def run_professional_review(
@@ -660,44 +650,138 @@ class AutomatedReviewService:
             )
         )
         issues.extend(
-            self.run_layout_review(presentation_id, slides, project_id=project_id)
+            self.run_layout_review(
+                presentation_id,
+                slides,
+                project_id=project_id,
+                brief=brief,
+                storyline=storyline,
+                context_bundle=context_bundle,
+            )
         )
         return issues
 
     def summarize_for_slides(self, issues: list[ReviewIssue]) -> list[str]:
         return [f"{issue.title}: {issue.description}" for issue in issues if issue.slide_id]
 
-    def _run_llm_professional_review(
+    def _llm_review_enabled(self) -> bool:
+        return (
+            self._settings.llm_professional_review_enabled
+            and self._settings.llm_configured
+            and self._llm is not None
+        )
+
+    def _check_brief_alignment(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        brief: PresentationBrief,
+    ) -> ReviewIssue | None:
+        if self._llm_review_enabled():
+            llm_issue, llm_succeeded = self._run_llm_brief_alignment(
+                presentation_id, brief, slides
+            )
+            if llm_succeeded:
+                return llm_issue
+        return self._rule_based_brief_alignment(presentation_id, brief, slides)
+
+    def _rule_based_brief_alignment(
+        self,
+        presentation_id: UUID,
+        brief: PresentationBrief,
+        slides: list[SlideSpec],
+    ) -> ReviewIssue | None:
+        tokens = [
+            token
+            for token in re.split(r"[\s，,、；;。.]+", brief.core_message.strip())
+            if len(token) >= 2
+        ]
+        combined = " ".join(slide.message for slide in slides)
+        if tokens and not any(token in combined for token in tokens[:5]):
+            return ReviewIssue(
+                presentation_id=presentation_id,
+                reviewer_layer=ReviewLayer.CONTENT,
+                category=ReviewCategory.COVERAGE,
+                severity=ReviewSeverity.MEDIUM,
+                title="Brief 核心信息未体现",
+                description=(
+                    f"Brief 核心信息「{brief.core_message}」"
+                    "未在 Slide 结论中找到明显呼应。"
+                ),
+                suggestion="调整各页结论，确保与 Brief 核心信息一致。",
+            )
+        return None
+
+    def _run_llm_brief_alignment(
+        self,
+        presentation_id: UUID,
+        brief: PresentationBrief,
+        slides: list[SlideSpec],
+    ) -> tuple[ReviewIssue | None, bool]:
+        assert self._llm is not None
+        brief_summary = _format_brief_summary(brief)
+        slides_summary = _format_slides_summary(slides)
+        request = LLMRequest(
+            system_prompt=BRIEF_ALIGNMENT_SYSTEM_PROMPT,
+            user_prompt=build_brief_alignment_user_prompt(
+                brief_summary=brief_summary,
+                slides_summary=slides_summary,
+            ),
+            model=self._settings.llm_model,
+            temperature=0.1,
+            json_mode=True,
+        )
+        try:
+            draft = self._llm.generate_structured(request, BriefAlignmentDraft)
+        except Exception as exc:
+            logger.warning("LLM Brief alignment check failed: %s", exc)
+            return None, False
+
+        if draft.aligned:
+            return None, True
+
+        gap = draft.gap_summary.strip() or "Slide 结论与 Brief 核心诉求存在语义偏差。"
+        severity = (
+            ReviewSeverity.HIGH
+            if draft.confidence >= 0.75
+            else ReviewSeverity.MEDIUM
+        )
+        return (
+            ReviewIssue(
+                presentation_id=presentation_id,
+                reviewer_layer=ReviewLayer.CONTENT,
+                category=ReviewCategory.COVERAGE,
+                severity=severity,
+                title="Brief 语义对齐不足",
+                description=gap,
+                suggestion=draft.suggestion or "调整各页结论，确保与 Brief 核心信息一致。",
+            ),
+            True,
+        )
+
+    def _run_llm_multi_layer_review(
         self,
         presentation_id: UUID,
         slides: list[SlideSpec],
         *,
         brief: PresentationBrief | None,
         storyline: Storyline | None,
+        context_bundle: ProjectContextBundle | None = None,
     ) -> list[ReviewIssue]:
         assert self._llm is not None
-        brief_summary = (
-            f"标题: {brief.title}\n核心信息: {brief.core_message}\n"
-            f"必要章节: {', '.join(brief.required_sections)}"
-            if brief is not None
-            else "无 Brief"
-        )
+        brief_summary = _format_brief_summary(brief) if brief is not None else "无 Brief"
         storyline_summary = (
-            f"论点: {storyline.thesis}\n章节: "
-            + ", ".join(chapter.title for chapter in storyline.chapters)
-            if storyline is not None
-            else "无 Storyline"
+            _format_storyline_summary(storyline) if storyline is not None else "无 Storyline"
         )
-        slides_summary = "\n".join(
-            f"p{slide.order + 1} [{slide.slide_type.value}] {slide.title}: {slide.message}"
-            for slide in sorted(slides, key=lambda item: item.order)
-        )
+        context_summary = _format_context_summary(context_bundle)
+        slides_summary = _format_slides_summary(slides, include_key_points=True)
         request = LLMRequest(
-            system_prompt=PROFESSIONAL_REVIEW_SYSTEM_PROMPT,
-            user_prompt=build_professional_review_user_prompt(
+            system_prompt=LAYER_REVIEW_SYSTEM_PROMPT,
+            user_prompt=build_layer_review_user_prompt(
                 brief_summary=brief_summary,
                 storyline_summary=storyline_summary,
                 slides_summary=slides_summary,
+                context_summary=context_summary,
             ),
             model=self._settings.llm_model,
             temperature=0.2,
@@ -706,7 +790,7 @@ class AutomatedReviewService:
         try:
             draft = self._llm.generate_structured(request, ProfessionalReviewDraft)
         except Exception as exc:
-            logger.warning("LLM professional review failed: %s", exc)
+            logger.warning("LLM multi-layer review failed: %s", exc)
             return []
 
         slides_by_order = {slide.order: slide for slide in slides}
@@ -717,7 +801,7 @@ class AutomatedReviewService:
                 ReviewIssue(
                     presentation_id=presentation_id,
                     slide_id=slide.id if slide is not None else None,
-                    reviewer_layer=ReviewLayer.ARCHITECTURAL,
+                    reviewer_layer=_parse_review_layer(item.reviewer_layer),
                     category=_parse_review_category(item.category),
                     severity=_parse_review_severity(item.severity),
                     title=item.title.strip(),
@@ -793,6 +877,13 @@ def _estimate_text_load(slide: SlideSpec) -> int:
     return load
 
 
+def _parse_review_layer(value: str) -> ReviewLayer:
+    try:
+        return ReviewLayer(value.strip().lower())
+    except ValueError:
+        return ReviewLayer.ARCHITECTURAL
+
+
 def _parse_review_category(value: str) -> ReviewCategory:
     try:
         return ReviewCategory(value.strip().lower())
@@ -805,3 +896,50 @@ def _parse_review_severity(value: str) -> ReviewSeverity:
         return ReviewSeverity(value.strip().lower())
     except ValueError:
         return ReviewSeverity.SUGGESTION
+
+
+def _format_brief_summary(brief: PresentationBrief) -> str:
+    sections = ", ".join(brief.required_sections) or "无"
+    decisions = ", ".join(brief.decisions_required) or "无"
+    return (
+        f"标题: {brief.title}\n"
+        f"核心信息: {brief.core_message}\n"
+        f"必要章节: {sections}\n"
+        f"需决策事项: {decisions}\n"
+        f"受众: {brief.audience}\n"
+        f"目的: {brief.purpose}"
+    )
+
+
+def _format_storyline_summary(storyline: Storyline) -> str:
+    chapters = ", ".join(
+        f"{chapter.id}:{chapter.title}({chapter.key_message})"
+        for chapter in storyline.chapters
+    )
+    return f"论点: {storyline.thesis}\n章节: {chapters}"
+
+
+def _format_context_summary(context_bundle: ProjectContextBundle | None) -> str:
+    if context_bundle is None or not context_bundle.chunks:
+        return "无项目资料片段"
+    lines = []
+    for chunk in context_bundle.chunks[:8]:
+        label = chunk.section_title or f"chunk-{chunk.chunk_index}"
+        preview = chunk.content.strip().replace("\n", " ")[:120]
+        lines.append(f"- [{label}] {preview}")
+    return "\n".join(lines)
+
+
+def _format_slides_summary(slides: list[SlideSpec], *, include_key_points: bool = False) -> str:
+    lines: list[str] = []
+    for slide in sorted(slides, key=lambda item: item.order):
+        line = f"p{slide.order + 1} [{slide.slide_type.value}] {slide.title}: {slide.message}"
+        if include_key_points and slide.key_points:
+            line += " | 要点: " + "; ".join(slide.key_points[:5])
+        if slide.source_citations:
+            line += f" | 引用: {len(slide.source_citations)}"
+        if slide.visual_requirements:
+            visuals = ", ".join(req.type.value for req in slide.visual_requirements)
+            line += f" | 视觉: {visuals}"
+        lines.append(line)
+    return "\n".join(lines)

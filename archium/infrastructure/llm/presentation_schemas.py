@@ -70,6 +70,7 @@ class SlidePlanDraft(BaseModel):
 
 
 class ReviewIssueDraft(BaseModel):
+    reviewer_layer: str = "architectural"
     slide_order: int | None = Field(default=None, ge=0)
     category: str
     severity: str
@@ -80,6 +81,13 @@ class ReviewIssueDraft(BaseModel):
 
 class ProfessionalReviewDraft(BaseModel):
     issues: list[ReviewIssueDraft] = Field(default_factory=list)
+
+
+class BriefAlignmentDraft(BaseModel):
+    aligned: bool
+    confidence: float = Field(default=0.8, ge=0.0, le=1.0)
+    gap_summary: str = ""
+    suggestion: str | None = None
 
 
 class FactDraft(BaseModel):

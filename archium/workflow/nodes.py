@@ -614,6 +614,9 @@ class PresentationWorkflowNodes:
                 presentation_id,
                 slides,
                 project_id=project_id,
+                brief=state.get("brief"),
+                storyline=state.get("storyline"),
+                context_bundle=state.get("context_bundle"),
             )
             next_state: PresentationWorkflowState = {
                 "review_issues": layout_issues,

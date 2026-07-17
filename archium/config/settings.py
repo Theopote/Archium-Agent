@@ -119,7 +119,10 @@ class Settings(BaseSettings):
     )
     llm_professional_review_enabled: bool = Field(
         default=False,
-        description="When true and LLM is configured, run an additional LLM professional review pass.",
+        description=(
+            "When true and LLM is configured, run LLM-assisted review across all four "
+            "layers (content/evidence/architectural/layout) and Brief semantic alignment."
+        ),
     )
     fact_extraction_enabled: bool = Field(
         default=True,
