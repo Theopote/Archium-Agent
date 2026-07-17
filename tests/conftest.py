@@ -6,12 +6,11 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.config.settings import Settings, reset_settings
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.session import create_engine_from_settings, reset_engine_cache
 from archium.infrastructure.llm.factory import reset_llm_provider_cache
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture(autouse=True)

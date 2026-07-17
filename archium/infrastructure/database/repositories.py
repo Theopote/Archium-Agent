@@ -303,6 +303,26 @@ class PresentationRepository:
         )
         return [mappers.slide_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def list_storylines(self, presentation_id: UUID) -> list[Storyline]:
+        stmt = (
+            select(StorylineORM)
+            .where(StorylineORM.presentation_id == presentation_id)
+            .order_by(StorylineORM.version.desc())
+        )
+        return [mappers.storyline_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def delete_slides_for_presentation(self, presentation_id: UUID) -> int:
+        try:
+            stmt = select(SlideORM).where(SlideORM.presentation_id == presentation_id)
+            rows = list(self._session.scalars(stmt))
+            for row in rows:
+                self._session.delete(row)
+            self._session.flush()
+            return len(rows)
+        except SQLAlchemyError as exc:
+            _handle_error("delete slides", exc)
+            raise
+
 
 class FactRepository:
     """CRUD operations for project facts."""
