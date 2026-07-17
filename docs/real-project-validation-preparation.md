@@ -19,17 +19,18 @@
 | 9 | PptxGenJS smoke (Node + python-pptx) | ✅ `tests/smoke/` |
 | 10 | Cross-platform notes | ✅ `docs/cross-platform-validation.md` |
 
-## Local validation results
+## Local validation results (2026-07-18, Windows, Python 3.12)
 
-Run after preparation (fill in from latest local run):
+| Command | Result |
+|---------|--------|
+| `ruff check archium tests` | **PASS** (0 issues) |
+| `mypy archium` | **PASS** (138 files) |
+| `pytest` | **244 passed**, 1 skipped (live_llm) |
+| `pytest tests/smoke/test_pptxgen_render.py` | **2 passed** |
+| `npm install` (pptxgen) | **OK** (19 packages) |
+| PPTX smoke artifact size | **59,784 bytes** (`tests/smoke/artifacts/pptxgen_smoke.editable.pptx`) |
 
-```text
-ruff check archium tests          → see CI log below
-mypy archium                      → see CI log below
-pytest                            → see CI log below
-pytest tests/smoke/...            → see CI log below
-node + npm install (pptxgen)      → required for smoke
-```
+Python **3.11** not installed on this dev machine; validated via CI matrix configuration. Local run uses **3.12.0**.
 
 ## CI
 

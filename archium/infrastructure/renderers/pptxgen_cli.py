@@ -49,14 +49,16 @@ class PptxGenCliRunner:
             )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        resolved_spec = spec_path.resolve()
+        resolved_output = output_path.resolve()
         result = subprocess.run(
             [
                 self.command,
                 str(self.script_path),
                 "--input",
-                str(spec_path),
+                str(resolved_spec),
                 "--output",
-                str(output_path),
+                str(resolved_output),
             ],
             capture_output=True,
             text=True,
@@ -70,4 +72,4 @@ class PptxGenCliRunner:
             raise RenderingError(f"PptxGenJS 导出失败：{detail or '未知错误'}")
         if not output_path.exists():
             raise RenderingError("PptxGenJS 未生成 PPTX 文件")
-        return output_path
+        return resolved_output

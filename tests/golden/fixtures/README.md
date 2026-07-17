@@ -2,7 +2,7 @@
 
 **真实资料 → 真实 parser → 缓存/Mock LLM → 完整导出**
 
-## 四个场景
+## 五个场景
 
 | Manifest | 场景 | Inline 回退 | 真实文件目录 |
 |----------|------|-------------|--------------|
@@ -10,6 +10,7 @@
 | `case_b_campus.fixture.json` | 校园改造 | DOCX + XLSX | `files/case_b_campus/` |
 | `case_c_competition.fixture.json` | 概念投标 | DOCX + Spec 导出 | `files/case_c_competition/` |
 | `case_d_full_deck.fixture.json` | 20 页完整汇报 | DOCX | `files/case_d_full_deck/` |
+| `case_e_real_paths.fixture.json` | 中文/空格路径 + 多格式 | DOCX+PDF+PPTX+JPG | `files/case_e_real_paths/` |
 
 ## 添加脱敏真实资料
 

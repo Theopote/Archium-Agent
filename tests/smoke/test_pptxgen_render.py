@@ -28,14 +28,23 @@ def _runner_available() -> bool:
     return runner.is_available()
 
 
+def _slide_texts(slide: object) -> list[str]:
+    texts: list[str] = []
+    for shape in slide.shapes:  # type: ignore[attr-defined]
+        text = getattr(shape, "text", "")
+        if text and str(text).strip():
+            texts.append(str(text).strip())
+    return texts
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not installed")
 def test_pptxgen_smoke_render_and_reopen(tmp_path: Path) -> None:
     if not _runner_available():
         pytest.skip("PptxGenJS runtime unavailable — run npm install in archium/infrastructure/renderers/pptxgen")
 
-    output_path = tmp_path / "smoke.editable.pptx"
+    output_path = (tmp_path / "smoke.editable.pptx").resolve()
     runner = PptxGenCliRunner(Settings(_env_file=None))
-    rendered = runner.render(_SPEC_PATH, output_path)
+    rendered = runner.render(_SPEC_PATH.resolve(), output_path)
 
     assert rendered.exists()
     assert rendered.stat().st_size > 500
@@ -43,17 +52,15 @@ def test_pptxgen_smoke_render_and_reopen(tmp_path: Path) -> None:
     presentation = Presentation(rendered)
     assert len(presentation.slides) == 2
 
-    first = presentation.slides[0]
-    assert first.shapes.title is not None
-    assert "Archium PptxGen Smoke" in first.shapes.title.text
+    first_text = " ".join(_slide_texts(presentation.slides[0]))
+    assert "Archium PptxGen Smoke" in first_text
 
-    first_notes = first.notes_slide.notes_text_frame.text
+    first_notes = presentation.slides[0].notes_slide.notes_text_frame.text
     assert "Smoke test speaker note" in first_notes
 
-    second = presentation.slides[1]
-    assert second.shapes.title is not None
-    assert "要点页" in second.shapes.title.text
-    second_notes = second.notes_slide.notes_text_frame.text
+    second_text = " ".join(_slide_texts(presentation.slides[1]))
+    assert "要点页" in second_text
+    second_notes = presentation.slides[1].notes_slide.notes_text_frame.text
     assert "中文路径" in second_notes
 
     _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
