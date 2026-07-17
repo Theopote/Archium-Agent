@@ -43,6 +43,20 @@ STORYLINE_JSON = """\
   ]
 }"""
 
+PROFESSIONAL_REVIEW_JSON = """\
+{
+  "issues": [
+    {
+      "slide_order": 1,
+      "category": "consistency",
+      "severity": "medium",
+      "title": "论点与页面信息不一致",
+      "description": "第 2 页核心信息与 Storyline 章节重点不完全一致。",
+      "suggestion": "对齐章节 key_message 与 slide message。"
+    }
+  ]
+}"""
+
 SLIDE_PLAN_JSON = """\
 {
   "slides": [

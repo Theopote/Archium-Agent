@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from archium.application.review_models import BriefUpdate, ChapterUpdate, StorylineUpdate
 from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import ApprovalStatus, ProjectType
+from archium.domain.enums import ApprovalStatus, ProjectType, ReviewCategory, ReviewSeverity
 from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
+from archium.domain.review import ReviewIssue
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from sqlalchemy.orm import Session
 
@@ -95,3 +96,33 @@ def test_update_storyline_chapters(db_session: Session) -> None:
     assert updated.thesis == "修订论点"
     assert updated.chapters[0].title == "现状分析"
     assert updated.approval_status == ApprovalStatus.DRAFT
+
+
+def test_resolve_and_dismiss_review_issue(db_session: Session) -> None:
+    brief = _seed_brief(db_session)
+    issue = ReviewIssue(
+        presentation_id=brief.presentation_id,
+        category=ReviewCategory.CONTENT,
+        severity=ReviewSeverity.CRITICAL,
+        title="测试问题",
+        description="描述",
+    )
+    from archium.infrastructure.database.repositories import ReviewRepository
+
+    stored = ReviewRepository(db_session).create(issue)
+    service = PresentationReviewService(db_session)
+
+    resolved = service.resolve_review_issue(stored.id)
+    assert resolved.status.value == "resolved"
+
+    issue2 = ReviewRepository(db_session).create(
+        ReviewIssue(
+            presentation_id=brief.presentation_id,
+            category=ReviewCategory.VISUAL,
+            severity=ReviewSeverity.MEDIUM,
+            title="视觉问题",
+            description="描述",
+        )
+    )
+    dismissed = service.dismiss_review_issue(issue2.id)
+    assert dismissed.status.value == "dismissed"

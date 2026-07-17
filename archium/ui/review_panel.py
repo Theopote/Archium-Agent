@@ -15,7 +15,15 @@ from archium.application.review_models import (
     parse_multiline_items,
 )
 from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import ApprovalStatus, SlideStatus, SlideType
+from archium.config import get_settings
+from archium.domain.enums import (
+    ApprovalStatus,
+    ReviewCategory,
+    ReviewSeverity,
+    ReviewStatus,
+    SlideStatus,
+    SlideType,
+)
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -43,6 +51,31 @@ SLIDE_STATUS_LABELS = {
 }
 
 SLIDE_TYPE_OPTIONS = [item.value for item in SlideType]
+
+SEVERITY_LABELS = {
+    ReviewSeverity.CRITICAL: "严重",
+    ReviewSeverity.HIGH: "高",
+    ReviewSeverity.MEDIUM: "中",
+    ReviewSeverity.SUGGESTION: "建议",
+}
+
+CATEGORY_LABELS = {
+    ReviewCategory.CITATION: "引用",
+    ReviewCategory.CONTENT: "内容",
+    ReviewCategory.STRUCTURE: "结构",
+    ReviewCategory.VISUAL: "视觉",
+    ReviewCategory.CONSISTENCY: "一致性",
+    ReviewCategory.COVERAGE: "覆盖度",
+    ReviewCategory.LENGTH: "篇幅",
+    ReviewCategory.OTHER: "其他",
+}
+
+STATUS_LABELS = {
+    ReviewStatus.OPEN: "待处理",
+    ReviewStatus.ACKNOWLEDGED: "已知悉",
+    ReviewStatus.RESOLVED: "已解决",
+    ReviewStatus.DISMISSED: "已忽略",
+}
 
 
 def _approval_badge(status: ApprovalStatus) -> str:
@@ -337,6 +370,69 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
     render_slide_history_panel(presentation_id=context_presentation_id, slides=context.slides)
 
 
+def _render_review_issues_panel(presentation_id: UUID) -> None:
+    settings = get_settings()
+    with get_session() as session:
+        review_service = PresentationReviewService(session)
+        issues = review_service.list_review_issues(presentation_id)
+
+    if not issues:
+        st.caption("暂无自动审核问题。运行完整工作流后将在此显示内容/专业审核结果。")
+        return
+
+    open_critical = [
+        issue
+        for issue in issues
+        if issue.severity == ReviewSeverity.CRITICAL and issue.status == ReviewStatus.OPEN
+    ]
+    if open_critical and settings.block_export_on_critical_review:
+        st.error(
+            f"存在 {len(open_critical)} 个未处理的严重问题，已阻断 JSON/Marp 导出。"
+            "请处理后重新运行或继续工作流。"
+        )
+    elif open_critical:
+        st.warning(f"存在 {len(open_critical)} 个严重问题（当前未启用导出阻断）。")
+
+    rows = [
+        {
+            "id": str(issue.id),
+            "severity": SEVERITY_LABELS.get(issue.severity, issue.severity.value),
+            "category": CATEGORY_LABELS.get(issue.category, issue.category.value),
+            "title": issue.title,
+            "description": issue.description,
+            "suggestion": issue.suggestion or "",
+            "status": STATUS_LABELS.get(issue.status, issue.status.value),
+        }
+        for issue in issues
+    ]
+    st.dataframe(
+        pd.DataFrame(rows),
+        column_config={"id": st.column_config.TextColumn("ID", disabled=True)},
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    open_issues = [issue for issue in issues if issue.status == ReviewStatus.OPEN]
+    if not open_issues:
+        return
+
+    st.caption("处理待办问题")
+    for issue in open_issues[:12]:
+        cols = st.columns([4, 1, 1])
+        cols[0].markdown(
+            f"**{SEVERITY_LABELS.get(issue.severity, issue.severity.value)}** · "
+            f"{issue.title} — {issue.description}"
+        )
+        if cols[1].button("标记已解决", key=f"resolve_issue_{issue.id}"):
+            with get_session() as session:
+                PresentationReviewService(session).resolve_review_issue(issue.id)
+            st.rerun()
+        if cols[2].button("忽略", key=f"dismiss_issue_{issue.id}"):
+            with get_session() as session:
+                PresentationReviewService(session).dismiss_review_issue(issue.id)
+            st.rerun()
+
+
 def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID | None) -> None:
     if presentation_id is None:
         return
@@ -368,13 +464,17 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         or (context.slides_pending_review and context.review_gate == "slides"),
     )
 
-    tab_brief, tab_storyline, tab_slides = st.tabs(["Brief", "Storyline", "SlideSpec"])
+    tab_brief, tab_storyline, tab_slides, tab_quality = st.tabs(
+        ["Brief", "Storyline", "SlideSpec", "质量审核"]
+    )
     with tab_brief:
         _render_brief_editor(presentation_id, workflow_run_id)
     with tab_storyline:
         _render_storyline_editor(presentation_id, workflow_run_id)
     with tab_slides:
         _render_slides_editor(presentation_id, workflow_run_id)
+    with tab_quality:
+        _render_review_issues_panel(presentation_id)
 
     if context.awaiting_review and workflow_run_id is not None and st.button(
         "继续运行工作流",

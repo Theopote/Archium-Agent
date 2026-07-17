@@ -6,6 +6,7 @@ from archium.infrastructure.llm import LLMRequest
 
 from tests.fixtures.mock_presentation_responses import (
     BRIEF_JSON,
+    PROFESSIONAL_REVIEW_JSON,
     SLIDE_PLAN_JSON,
     STORYLINE_JSON,
 )
@@ -19,4 +20,6 @@ def pipeline_mock_selector(request: LLMRequest) -> str | None:
         return STORYLINE_JSON
     if "SlidePlan JSON" in user_prompt:
         return SLIDE_PLAN_JSON
+    if "ProfessionalReview" in user_prompt:
+        return PROFESSIONAL_REVIEW_JSON
     return None

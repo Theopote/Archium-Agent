@@ -7,9 +7,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.chunk_models import ProjectContextBundle
+from archium.config.settings import Settings, get_settings
 from archium.domain.enums import (
     ReviewCategory,
     ReviewSeverity,
+    ReviewStatus,
     SlideType,
     VisualType,
 )
@@ -17,14 +19,46 @@ from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import ReviewRepository
+from archium.infrastructure.llm.base import LLMProvider, LLMRequest
+from archium.infrastructure.llm.presentation_schemas import ProfessionalReviewDraft
+from archium.logging import get_logger
+from archium.prompts.professional_review import (
+    PROFESSIONAL_REVIEW_SYSTEM_PROMPT,
+    build_professional_review_user_prompt,
+)
+
+logger = get_logger(__name__, operation="automated_review")
+
+
+def critical_export_block_messages(
+    issues: list[ReviewIssue],
+    *,
+    block_enabled: bool,
+) -> list[str]:
+    """Return workflow error messages when critical open issues should block export."""
+    if not block_enabled:
+        return []
+    return [
+        f"[{issue.category.value}] {issue.title}: {issue.description}"
+        for issue in issues
+        if issue.severity == ReviewSeverity.CRITICAL and issue.status == ReviewStatus.OPEN
+    ]
 
 
 class AutomatedReviewService:
-    """Run rule-based content and professional QA checks."""
+    """Run rule-based and optional LLM-assisted presentation QA checks."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        llm: LLMProvider | None = None,
+        settings: Settings | None = None,
+    ) -> None:
         self._session = session
         self._reviews = ReviewRepository(session)
+        self._llm = llm
+        self._settings = settings or get_settings()
 
     def run_content_review(
         self,
@@ -56,7 +90,7 @@ class AutomatedReviewService:
                         presentation_id,
                         slide,
                         category=ReviewCategory.CONTENT,
-                        severity=ReviewSeverity.HIGH,
+                        severity=ReviewSeverity.CRITICAL,
                         title="缺少核心信息",
                         description=f"第 {slide.order + 1} 页「{slide.title}」缺少核心结论。",
                     )
@@ -123,7 +157,7 @@ class AutomatedReviewService:
                             ReviewIssue(
                                 presentation_id=presentation_id,
                                 category=ReviewCategory.COVERAGE,
-                                severity=ReviewSeverity.HIGH,
+                                severity=ReviewSeverity.CRITICAL,
                                 title="必要章节未覆盖",
                                 description=f"Brief 要求包含「{section}」，当前 Slide 标题中未找到。",
                             )
@@ -164,10 +198,82 @@ class AutomatedReviewService:
                         )
                     )
 
+        if self._settings.llm_professional_review_enabled and self._settings.llm_configured:
+            if self._llm is not None:
+                issues.extend(
+                    self._run_llm_professional_review(
+                        presentation_id,
+                        slides,
+                        brief=brief,
+                        storyline=storyline,
+                    )
+                )
+            else:
+                logger.warning("LLM professional review enabled but no provider was injected")
+
         return self._persist(presentation_id, issues)
 
     def summarize_for_slides(self, issues: list[ReviewIssue]) -> list[str]:
         return [f"{issue.title}: {issue.description}" for issue in issues if issue.slide_id]
+
+    def _run_llm_professional_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        brief: PresentationBrief | None,
+        storyline: Storyline | None,
+    ) -> list[ReviewIssue]:
+        assert self._llm is not None
+        brief_summary = (
+            f"标题: {brief.title}\n核心信息: {brief.core_message}\n"
+            f"必要章节: {', '.join(brief.required_sections)}"
+            if brief is not None
+            else "无 Brief"
+        )
+        storyline_summary = (
+            f"论点: {storyline.thesis}\n章节: "
+            + ", ".join(chapter.title for chapter in storyline.chapters)
+            if storyline is not None
+            else "无 Storyline"
+        )
+        slides_summary = "\n".join(
+            f"p{slide.order + 1} [{slide.slide_type.value}] {slide.title}: {slide.message}"
+            for slide in sorted(slides, key=lambda item: item.order)
+        )
+        request = LLMRequest(
+            system_prompt=PROFESSIONAL_REVIEW_SYSTEM_PROMPT,
+            user_prompt=build_professional_review_user_prompt(
+                brief_summary=brief_summary,
+                storyline_summary=storyline_summary,
+                slides_summary=slides_summary,
+            ),
+            model=self._settings.llm_model,
+            temperature=0.2,
+            json_mode=True,
+        )
+        try:
+            draft = self._llm.generate_structured(request, ProfessionalReviewDraft)
+        except Exception as exc:
+            logger.warning("LLM professional review failed: %s", exc)
+            return []
+
+        slides_by_order = {slide.order: slide for slide in slides}
+        issues: list[ReviewIssue] = []
+        for item in draft.issues:
+            slide = slides_by_order.get(item.slide_order) if item.slide_order is not None else None
+            issues.append(
+                ReviewIssue(
+                    presentation_id=presentation_id,
+                    slide_id=slide.id if slide is not None else None,
+                    category=_parse_review_category(item.category),
+                    severity=_parse_review_severity(item.severity),
+                    title=item.title.strip(),
+                    description=item.description.strip(),
+                    suggestion=item.suggestion.strip() if item.suggestion else None,
+                )
+            )
+        return issues
 
     def _persist(self, presentation_id: UUID, issues: list[ReviewIssue]) -> list[ReviewIssue]:
         stored: list[ReviewIssue] = []
@@ -195,3 +301,17 @@ class AutomatedReviewService:
             description=description,
             suggestion=suggestion,
         )
+
+
+def _parse_review_category(value: str) -> ReviewCategory:
+    try:
+        return ReviewCategory(value.strip().lower())
+    except ValueError:
+        return ReviewCategory.OTHER
+
+
+def _parse_review_severity(value: str) -> ReviewSeverity:
+    try:
+        return ReviewSeverity(value.strip().lower())
+    except ValueError:
+        return ReviewSeverity.SUGGESTION

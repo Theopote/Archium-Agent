@@ -469,6 +469,10 @@ class ReviewRepository:
             _handle_error("create review issue", exc)
             raise
 
+    def get_by_id(self, issue_id: UUID) -> ReviewIssue | None:
+        orm = self._session.get(ReviewIssueORM, issue_id)
+        return mappers.review_issue_to_domain(orm) if orm else None
+
     def list_by_presentation(self, presentation_id: UUID) -> list[ReviewIssue]:
         stmt = (
             select(ReviewIssueORM)

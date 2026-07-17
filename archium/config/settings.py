@@ -69,6 +69,15 @@ class Settings(BaseSettings):
 
     marp_command: str = "marp"
 
+    block_export_on_critical_review: bool = Field(
+        default=False,
+        description="When true, open CRITICAL ReviewIssue records block JSON/Marp export.",
+    )
+    llm_professional_review_enabled: bool = Field(
+        default=False,
+        description="When true and LLM is configured, run an additional LLM professional review pass.",
+    )
+
     discord_bot_token: str | None = Field(
         default=None,
         validation_alias=AliasChoices("DISCORD_BOT_TOKEN"),

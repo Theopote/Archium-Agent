@@ -22,10 +22,12 @@ from archium.domain.enums import (
     WorkflowStatus,
 )
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
+from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
+    ReviewRepository,
     WorkflowRunRepository,
 )
 
@@ -43,6 +45,7 @@ class PresentationReviewService:
         self._session = session
         self._presentations = PresentationRepository(session)
         self._workflow_runs = WorkflowRunRepository(session)
+        self._reviews = ReviewRepository(session)
         self._history = SlideHistoryService(session)
 
     def get_review_context(
@@ -71,6 +74,8 @@ class PresentationReviewService:
 
         slides = self._presentations.list_slides(presentation_id)
 
+        review_issues = self._reviews.list_by_presentation(presentation_id)
+
         workflow_run = None
         if workflow_run_id is not None:
             workflow_run = self._workflow_runs.get_by_id(workflow_run_id)
@@ -86,8 +91,22 @@ class PresentationReviewService:
             brief=brief,
             storyline=storyline,
             slides=slides,
+            review_issues=review_issues,
             workflow_run=workflow_run,
         )
+
+    def list_review_issues(self, presentation_id: UUID) -> list[ReviewIssue]:
+        return self._reviews.list_by_presentation(presentation_id)
+
+    def resolve_review_issue(self, issue_id: UUID) -> ReviewIssue:
+        issue = self._require_review_issue(issue_id)
+        issue.resolve()
+        return self._reviews.update(issue)
+
+    def dismiss_review_issue(self, issue_id: UUID) -> ReviewIssue:
+        issue = self._require_review_issue(issue_id)
+        issue.dismiss()
+        return self._reviews.update(issue)
 
     def list_slides(self, presentation_id: UUID) -> list[SlideSpec]:
         return self._presentations.list_slides(presentation_id)
@@ -224,6 +243,12 @@ class PresentationReviewService:
         if slide is None:
             raise WorkflowError(f"Slide {slide_id} not found")
         return slide
+
+    def _require_review_issue(self, issue_id: UUID) -> ReviewIssue:
+        issue = self._reviews.get_by_id(issue_id)
+        if issue is None:
+            raise WorkflowError(f"Review issue {issue_id} not found")
+        return issue
 
 
 def _chapter_from_update(update: ChapterUpdate) -> Chapter:

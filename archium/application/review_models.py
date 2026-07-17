@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.domain.workflow import WorkflowRun
 
@@ -60,6 +61,7 @@ class PresentationReviewContext:
     brief: PresentationBrief | None
     storyline: Storyline | None
     slides: list[SlideSpec] = field(default_factory=list)
+    review_issues: list[ReviewIssue] = field(default_factory=list)
     workflow_run: WorkflowRun | None = None
 
     @property
@@ -83,6 +85,16 @@ class PresentationReviewContext:
         if not self.slides:
             return False
         return any(slide.status != SlideStatus.APPROVED for slide in self.slides)
+
+    @property
+    def open_critical_issues(self) -> list[ReviewIssue]:
+        from archium.domain.enums import ReviewSeverity, ReviewStatus
+
+        return [
+            issue
+            for issue in self.review_issues
+            if issue.severity == ReviewSeverity.CRITICAL and issue.status == ReviewStatus.OPEN
+        ]
 
 
 def parse_multiline_items(text: str) -> list[str]:

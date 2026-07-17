@@ -269,6 +269,25 @@ def _render_last_result() -> None:
     if result.storyline:
         st.caption(f"Storyline 论点：{result.storyline.thesis}")
 
+    if result.presentation is not None:
+        with get_session() as session:
+            from archium.application.review_service import PresentationReviewService
+            from archium.domain.enums import ReviewSeverity, ReviewStatus
+
+            issues = PresentationReviewService(session).list_review_issues(result.presentation.id)
+        if issues:
+            open_count = sum(1 for issue in issues if issue.status == ReviewStatus.OPEN)
+            critical_count = sum(
+                1
+                for issue in issues
+                if issue.severity == ReviewSeverity.CRITICAL and issue.status == ReviewStatus.OPEN
+            )
+            st.caption(
+                f"质量审核：{len(issues)} 条记录，{open_count} 条待处理"
+                + (f"，{critical_count} 条严重" if critical_count else "")
+                + "。详见「质量审核」标签页。"
+            )
+
     download_paths: list[Path] = []
     if result.json_path:
         download_paths.append(result.json_path)

@@ -10,7 +10,10 @@ from langgraph.types import interrupt
 from archium.agents._helpers import build_project_context_bundle, build_retrieval_query_from_request
 from archium.agents.citations import enrich_slide_citations
 from archium.application.asset_matching_service import AssetMatchingService
-from archium.application.automated_review_service import AutomatedReviewService
+from archium.application.automated_review_service import (
+    AutomatedReviewService,
+    critical_export_block_messages,
+)
 from archium.application.review_service import slides_are_approved
 from archium.domain.enums import (
     ApprovalStatus,
@@ -408,7 +411,11 @@ class PresentationWorkflowNodes:
 
         try:
             presentation_id = UUID(state["presentation_id"])
-            reviewer = AutomatedReviewService(self._runtime.session)
+            reviewer = AutomatedReviewService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            )
             content_issues = reviewer.run_content_review(
                 presentation_id,
                 slides,
@@ -443,7 +450,11 @@ class PresentationWorkflowNodes:
 
         try:
             presentation_id = UUID(state["presentation_id"])
-            reviewer = AutomatedReviewService(self._runtime.session)
+            reviewer = AutomatedReviewService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            )
             professional_issues = reviewer.run_professional_review(
                 presentation_id,
                 slides,
@@ -484,9 +495,23 @@ class PresentationWorkflowNodes:
         review_issues = list(state.get("review_issues", []))
         slide_review_issues = list(state.get("slide_review_issues", []))
         if not slide_review_issues and review_issues:
-            slide_review_issues = AutomatedReviewService(self._runtime.session).summarize_for_slides(
-                review_issues
-            )
+            slide_review_issues = AutomatedReviewService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            ).summarize_for_slides(review_issues)
+
+        block_errors = critical_export_block_messages(
+            review_issues,
+            block_enabled=self._runtime.settings.block_export_on_critical_review,
+        )
+        if block_errors:
+            logger.error("Export blocked by %d critical review issue(s)", len(block_errors))
+            return {
+                "errors": block_errors,
+                "slide_review_issues": slide_review_issues,
+                "current_step": WorkflowStep.SLIDE_VALIDATION.value,
+            }
 
         next_state: PresentationWorkflowState = {
             "slide_review_issues": slide_review_issues,

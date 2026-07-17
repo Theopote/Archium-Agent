@@ -67,3 +67,16 @@ class SlideDraft(BaseModel):
 
 class SlidePlanDraft(BaseModel):
     slides: list[SlideDraft] = Field(default_factory=list)
+
+
+class ReviewIssueDraft(BaseModel):
+    slide_order: int | None = Field(default=None, ge=0)
+    category: str
+    severity: str
+    title: str
+    description: str
+    suggestion: str | None = None
+
+
+class ProfessionalReviewDraft(BaseModel):
+    issues: list[ReviewIssueDraft] = Field(default_factory=list)
