@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 from archium.agents._helpers import build_project_context, build_retrieval_query_from_request
 from archium.application.presentation_models import PresentationRequest
 from archium.application.retrieval_service import RetrievalService
-from archium.domain.document import DocumentChunk
-from archium.domain.enums import ProjectType
+from archium.domain.document import DocumentChunk, SourceDocument
+from archium.domain.enums import DocumentType, ProcessingStatus, ProjectType
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import DocumentRepository, ProjectRepository
 from archium.infrastructure.embeddings.mock import MockEmbeddingProvider
@@ -23,13 +21,24 @@ def test_build_project_context_uses_retrieval_query(
     project = ProjectRepository(db_session).create(
         Project(name="上下文测试", project_type=ProjectType.HEALTHCARE)
     )
-    document_id = uuid4()
     repo = DocumentRepository(db_session)
+    document = repo.create_document(
+        SourceDocument(
+            project_id=project.id,
+            filename="资料.pdf",
+            original_path="/tmp/资料.pdf",
+            stored_path="/tmp/资料.pdf",
+            file_type=DocumentType.PDF,
+            file_hash="c" * 64,
+            size_bytes=1024,
+            processing_status=ProcessingStatus.COMPLETED,
+        )
+    )
     chunks = [
         repo.create_chunk(
             DocumentChunk(
                 project_id=project.id,
-                document_id=document_id,
+                document_id=document.id,
                 content="停车系统不足，高峰期排队严重。",
                 page_number=1,
                 chunk_index=0,
@@ -38,7 +47,7 @@ def test_build_project_context_uses_retrieval_query(
         repo.create_chunk(
             DocumentChunk(
                 project_id=project.id,
-                document_id=document_id,
+                document_id=document.id,
                 content="门诊大厅自然采光良好，空间通透。",
                 page_number=2,
                 chunk_index=1,

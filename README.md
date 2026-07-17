@@ -147,7 +147,7 @@ marp --version
 | `data/database/` | SQLite 数据库（Stage 3+） |
 | `data/projects/` | 项目资料与资产 |
 | `data/outputs/` | 生成的汇报文件 |
-| `data/chroma/` | 向量索引（Stage 5+） |
+| `data/chroma/` | Chroma 向量索引（Stage 10） |
 
 ## 隐私说明
 

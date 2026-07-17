@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Sequence, cast
 from uuid import UUID
 
 import chromadb
@@ -100,7 +101,7 @@ class ChromaVectorStore:
             return []
 
         result = collection.query(
-            query_embeddings=[query_embedding],
+            query_embeddings=cast(Sequence[Sequence[float]], [query_embedding]),
             n_results=min(top_k, collection.count()),
             include=["documents", "metadatas", "distances"],
         )
@@ -120,21 +121,26 @@ class ChromaVectorStore:
         ):
             if metadata is None:
                 continue
-            page_number = metadata.get("page_number")
+            page_value = metadata.get("page_number")
+            page_number = int(page_value) if isinstance(page_value, (int, float)) else None
+            section_value = metadata.get("section_title")
+            section_title = str(section_value) if section_value else None
+            chunk_index_value = metadata.get("chunk_index", 0)
+            chunk_index = int(chunk_index_value) if isinstance(chunk_index_value, (int, float)) else 0
             hits.append(
                 VectorSearchHit(
                     chunk_id=UUID(str(metadata.get("chunk_id", chunk_id))),
                     document_id=UUID(str(metadata["document_id"])),
                     content=content or "",
                     score=max(0.0, 1.0 - float(distance)),
-                    page_number=int(page_number) if page_number else None,
-                    section_title=str(metadata.get("section_title") or "") or None,
-                    chunk_index=int(metadata.get("chunk_index", 0)),
+                    page_number=page_number if page_number else None,
+                    section_title=section_title or None,
+                    chunk_index=chunk_index,
                 )
             )
         return hits
 
-    def _get_or_create_collection(self, project_id: UUID):
+    def _get_or_create_collection(self, project_id: UUID) -> Any:
         return self._client.get_or_create_collection(
             name=self._collection_name(project_id),
             metadata={"hnsw:space": "cosine"},

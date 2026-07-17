@@ -10,14 +10,15 @@ _TOKEN_PATTERN = re.compile(r"[\w\u4e00-\u9fff]+")
 
 
 def _tokenize(text: str) -> list[str]:
-    tokens = _TOKEN_PATTERN.findall(text.lower())
-    if not tokens:
-        return [text.lower()] if text else []
-    if len(tokens) == 1 and len(tokens[0]) > 2:
-        word = tokens[0]
-        bigrams = [word[index : index + 2] for index in range(len(word) - 1)]
-        return bigrams + tokens
-    return tokens
+    normalized = text.lower().strip()
+    tokens = _TOKEN_PATTERN.findall(normalized)
+    cjk_chars = [char for char in normalized if "\u4e00" <= char <= "\u9fff"]
+    bigrams = [
+        normalized[index : index + 2]
+        for index in range(len(normalized) - 1)
+        if normalized[index : index + 2].strip()
+    ]
+    return tokens + cjk_chars + bigrams
 
 
 def _embed_text(text: str) -> list[float]:

@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.presentation_models import PresentationRequest
-from archium.config.settings import Settings, get_settings
+from archium.config.settings import Settings
 from archium.domain.citation import Citation
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, VisualRequirement

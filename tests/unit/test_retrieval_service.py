@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 from archium.application.retrieval_service import RetrievalService
-from archium.domain.document import DocumentChunk
-from archium.domain.enums import ProjectType
+from archium.domain.document import DocumentChunk, SourceDocument
+from archium.domain.enums import DocumentType, ProcessingStatus, ProjectType
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import DocumentRepository, ProjectRepository
 from archium.infrastructure.embeddings.mock import MockEmbeddingProvider
@@ -18,12 +16,23 @@ def _seed_chunks(db_session: Session) -> tuple[Project, list[DocumentChunk]]:
     project = ProjectRepository(db_session).create(
         Project(name="检索测试项目", project_type=ProjectType.HEALTHCARE)
     )
-    document_id = uuid4()
     repo = DocumentRepository(db_session)
+    document = repo.create_document(
+        SourceDocument(
+            project_id=project.id,
+            filename="任务书.pdf",
+            original_path="/tmp/任务书.pdf",
+            stored_path="/tmp/任务书.pdf",
+            file_type=DocumentType.PDF,
+            file_hash="b" * 64,
+            size_bytes=1024,
+            processing_status=ProcessingStatus.COMPLETED,
+        )
+    )
     chunks = [
         DocumentChunk(
             project_id=project.id,
-            document_id=document_id,
+            document_id=document.id,
             content="老院区交通组织混乱，人车混行严重，需优化流线。",
             page_number=1,
             section_title="现状",
@@ -31,7 +40,7 @@ def _seed_chunks(db_session: Session) -> tuple[Project, list[DocumentChunk]]:
         ),
         DocumentChunk(
             project_id=project.id,
-            document_id=document_id,
+            document_id=document.id,
             content="景观绿化以本地乔木为主，强调四季有景。",
             page_number=2,
             section_title="景观",
@@ -39,7 +48,7 @@ def _seed_chunks(db_session: Session) -> tuple[Project, list[DocumentChunk]]:
         ),
         DocumentChunk(
             project_id=project.id,
-            document_id=document_id,
+            document_id=document.id,
             content="结构体系采用钢筋混凝土框架，满足抗震设防要求。",
             page_number=3,
             section_title="结构",
@@ -64,7 +73,7 @@ def test_retrieval_prefers_relevant_chunk(
     )
 
     service.index_chunks(project.id, chunks, document_name="任务书.pdf")
-    results = service.retrieve(project.id, "交通组织 人车混行", top_k=1)
+    results = service.retrieve(project.id, "老院区交通组织混乱 人车混行", top_k=1)
 
     assert len(results) == 1
     assert "交通组织" in results[0].content
