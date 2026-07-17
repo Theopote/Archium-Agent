@@ -1,6 +1,6 @@
 # Archium Agent
 
-![CI](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml)
 
 Archium（阿基姆）是一款面向建筑师、规划师、设计院和建筑事务所的**智能汇报生产工具**。
 
@@ -269,15 +269,28 @@ alembic upgrade head
 
 ### CI 与分支保护
 
-仓库已启用 GitHub Actions（`.github/workflows/ci.yml`），在 `push` / `pull_request` 时运行 matrix 任务：
+[![CI](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml)
 
-- `CI / test (3.11)`
-- `CI / test (3.12)`
+仓库在 `push` / `pull_request` 时运行 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)（Python 3.11 / 3.12 matrix）：
 
-建议在 GitHub **Settings → Branches → Branch protection rules** 中为 `master` 启用：
+| Status check（合并前必须通过） | 内容 |
+|-------------------------------|------|
+| `test (3.11)` | ruff、mypy、pytest |
+| `test (3.12)` | ruff、mypy、pytest |
 
-- Require status checks to pass before merging
-- 勾选上述两个 CI job
+> 在 GitHub **Branch protection** 界面中，status check 可能显示为 `CI / test (3.11)` 形式（工作流名 + job 名）。勾选与 Python 版本对应的两个 job 即可。
+
+**为 `master` 启用分支保护（仓库 Admin 一次性操作）：**
+
+1. 打开 [Actions](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml) 确认至少有一次 **CI 已在 `master` 上跑绿**（否则 Settings 里还选不到 status check）。
+2. GitHub → **Settings** → **Branches** → **Add branch protection rule**
+3. **Branch name pattern:** `master`
+4. 勾选 **Require status checks to pass before merging**
+5. 勾选 **Require branches to be up to date before merging**（推荐）
+6. 在 status checks 搜索并勾选 **`test (3.11)`** 与 **`test (3.12)`**（或带 `CI /` 前缀的同名项）
+7. （推荐）勾选 **Require a pull request before merging**，**Do not allow bypassing the above settings**
+
+完整说明与 `gh` CLI 脚本见 [`docs/branch-protection.md`](docs/branch-protection.md)。
 
 本地等价命令：
 
