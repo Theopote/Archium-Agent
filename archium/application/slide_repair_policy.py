@@ -251,6 +251,19 @@ def apply_tiered_layout_repair(slide: SlideSpec) -> LayoutRepairOutcome:
     return outcome
 
 
+def _citations_for_split_page(
+    original_citations: list,
+    moved_points: list[str],
+) -> list:
+    """Assign citations to the continuation page when moved content needs evidence."""
+    if not original_citations:
+        return []
+    moved_text = " ".join(moved_points)
+    if contains_protected_signal(moved_text):
+        return list(original_citations)
+    return []
+
+
 def _build_split_slide(original: SlideSpec, moved_points: list[str]) -> SlideSpec:
     message = moved_points[0] if len(moved_points) == 1 else "本页延续上一页内容，详见下列要点。"
     order = original.order + 1
@@ -266,8 +279,8 @@ def _build_split_slide(original: SlideSpec, moved_points: list[str]) -> SlideSpe
         layout_id=original.layout_id,
         key_points=list(moved_points),
         visual_requirements=[],
-        source_citations=list(original.source_citations),
-        speaker_notes=original.speaker_notes,
+        source_citations=_citations_for_split_page(original.source_citations, moved_points),
+        speaker_notes=None,
         status=original.status,
     )
 
