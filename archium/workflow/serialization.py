@@ -7,6 +7,7 @@ from typing import Any
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.workflow.state import PresentationWorkflowState
 
@@ -82,6 +83,8 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "marp_pptx_path": state.get("marp_pptx_path"),
         "errors": list(state.get("errors", [])),
         "slide_review_issues": list(state.get("slide_review_issues", [])),
+        "matched_asset_count": state.get("matched_asset_count", 0),
+        "review_issue_count": len(state.get("review_issues", [])),
         "slide_count": len(slides),
     }
     context_bundle = state.get("context_bundle")
@@ -97,6 +100,12 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         payload["storyline"] = storyline.model_dump(mode="json")
     if slides:
         payload["slides"] = [slide.model_dump(mode="json") for slide in slides]
+    review_issues = state.get("review_issues", [])
+    if review_issues:
+        payload["review_issues"] = [
+            issue.model_dump(mode="json") if isinstance(issue, ReviewIssue) else issue
+            for issue in review_issues
+        ]
     return payload
 
 
@@ -135,4 +144,12 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
             restored["slides"] = list(slides)
         else:
             restored["slides"] = [SlideSpec.model_validate(item) for item in slides]
+    if "review_issues" in state_data:
+        issues = state_data["review_issues"]
+        if not issues:
+            restored["review_issues"] = []
+        elif isinstance(issues[0], ReviewIssue):
+            restored["review_issues"] = list(issues)
+        else:
+            restored["review_issues"] = [ReviewIssue.model_validate(item) for item in issues]
     return restored

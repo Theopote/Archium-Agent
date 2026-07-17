@@ -9,6 +9,7 @@ from archium.application.chunk_models import ProjectContextBundle
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 
 
@@ -28,6 +29,8 @@ class PresentationWorkflowState(TypedDict, total=False):
     brief: PresentationBrief | None
     storyline: Storyline | None
     slides: list[SlideSpec]
+    review_issues: list[ReviewIssue]
+    matched_asset_count: int
     json_path: str | None
     marp_md_path: str | None
     marp_pptx_path: str | None
@@ -72,6 +75,8 @@ def initial_workflow_state(
         "brief": None,
         "storyline": None,
         "slides": [],
+        "review_issues": [],
+        "matched_asset_count": 0,
         "json_path": None,
         "marp_md_path": None,
         "marp_pptx_path": None,

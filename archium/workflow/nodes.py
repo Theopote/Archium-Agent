@@ -9,11 +9,12 @@ from langgraph.types import interrupt
 
 from archium.agents._helpers import build_project_context_bundle, build_retrieval_query_from_request
 from archium.agents.citations import enrich_slide_citations
+from archium.application.asset_matching_service import AssetMatchingService
+from archium.application.automated_review_service import AutomatedReviewService
 from archium.application.review_service import slides_are_approved
 from archium.domain.enums import (
     ApprovalStatus,
     PresentationStatus,
-    SlideType,
     WorkflowStatus,
     WorkflowStep,
 )
@@ -370,8 +371,105 @@ class PresentationWorkflowNodes:
                 "current_step": WorkflowStep.RESOLVE_CITATIONS.value,
             }
 
+    def match_assets(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.MATCH_ASSETS.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            presentation_id = UUID(state["presentation_id"])
+            matcher = AssetMatchingService(self._runtime.session)
+            slides, match_count = matcher.match_presentation_slides(project_id, presentation_id)
+            next_state: PresentationWorkflowState = {
+                "slides": slides,
+                "matched_asset_count": match_count,
+                "current_step": WorkflowStep.MATCH_ASSETS.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Matched %d visual assets for presentation %s", match_count, presentation_id)
+            return next_state
+        except Exception as exc:
+            logger.exception("Asset matching failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.MATCH_ASSETS.value,
+            }
+
+    def run_content_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.CONTENT_REVIEW.value}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {"current_step": WorkflowStep.CONTENT_REVIEW.value}
+
+        try:
+            presentation_id = UUID(state["presentation_id"])
+            reviewer = AutomatedReviewService(self._runtime.session)
+            content_issues = reviewer.run_content_review(
+                presentation_id,
+                slides,
+                context_bundle=state.get("context_bundle"),
+            )
+            existing = list(state.get("review_issues", []))
+            all_issues = existing + content_issues
+            next_state: PresentationWorkflowState = {
+                "review_issues": all_issues,
+                "slide_review_issues": reviewer.summarize_for_slides(all_issues),
+                "current_step": WorkflowStep.CONTENT_REVIEW.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Content review recorded %d issue(s)", len(content_issues))
+            return next_state
+        except Exception as exc:
+            logger.exception("Content review failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.CONTENT_REVIEW.value,
+            }
+
+    def run_professional_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.PROFESSIONAL_REVIEW.value}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {"current_step": WorkflowStep.PROFESSIONAL_REVIEW.value}
+
+        try:
+            presentation_id = UUID(state["presentation_id"])
+            reviewer = AutomatedReviewService(self._runtime.session)
+            professional_issues = reviewer.run_professional_review(
+                presentation_id,
+                slides,
+                brief=state.get("brief"),
+                storyline=state.get("storyline"),
+            )
+            existing = list(state.get("review_issues", []))
+            all_issues = existing + professional_issues
+            next_state: PresentationWorkflowState = {
+                "review_issues": all_issues,
+                "slide_review_issues": reviewer.summarize_for_slides(all_issues),
+                "current_step": WorkflowStep.PROFESSIONAL_REVIEW.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Professional review recorded %d issue(s)", len(professional_issues))
+            return next_state
+        except Exception as exc:
+            logger.exception("Professional review failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.PROFESSIONAL_REVIEW.value,
+            }
+
     def review_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
-        """Automated slide content validation before export or human review."""
+        """Summarize automated review findings before export or human review."""
         logger = self._logger(state)
         if state.get("errors"):
             return {"current_step": WorkflowStep.SLIDE_VALIDATION.value}
@@ -383,34 +481,21 @@ class PresentationWorkflowNodes:
                 "current_step": WorkflowStep.SLIDE_VALIDATION.value,
             }
 
-        issues: list[str] = []
-        skippable_types = {SlideType.TITLE, SlideType.SECTION, SlideType.CLOSING}
-        for slide in slides:
-            if not slide.title.strip():
-                issues.append(f"Slide {slide.order}: missing title")
-            if (
-                not slide.message.strip()
-                and slide.slide_type not in skippable_types
-            ):
-                issues.append(f"Slide {slide.order}: missing core message")
-
-        context_bundle = state.get("context_bundle")
-        has_sources = context_bundle is not None and bool(context_bundle.chunks)
-        if has_sources:
-            for slide in slides:
-                if slide.slide_type in skippable_types:
-                    continue
-                if not slide.source_citations:
-                    issues.append(f"Slide {slide.order}: missing source citations")
+        review_issues = list(state.get("review_issues", []))
+        slide_review_issues = list(state.get("slide_review_issues", []))
+        if not slide_review_issues and review_issues:
+            slide_review_issues = AutomatedReviewService(self._runtime.session).summarize_for_slides(
+                review_issues
+            )
 
         next_state: PresentationWorkflowState = {
-            "slide_review_issues": issues,
+            "slide_review_issues": slide_review_issues,
             "current_step": WorkflowStep.SLIDE_VALIDATION.value,
         }
         merged = cast(PresentationWorkflowState, {**state, **next_state})
         self._persist_checkpoint(merged)
-        if issues:
-            logger.warning("Slide validation found %d issue(s)", len(issues))
+        if slide_review_issues:
+            logger.warning("Slide validation summary: %d issue(s)", len(slide_review_issues))
         else:
             logger.info("Slide validation passed for %d slides", len(slides))
         return next_state
