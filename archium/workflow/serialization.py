@@ -107,16 +107,18 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
         )
     if "brief" in state_data:
         brief = state_data["brief"]
-        restored["brief"] = (
-            brief if isinstance(brief, PresentationBrief) else PresentationBrief.model_validate(brief)
-        )
+        if brief is not None:
+            restored["brief"] = (
+                brief if isinstance(brief, PresentationBrief) else PresentationBrief.model_validate(brief)
+            )
     if "storyline" in state_data:
         storyline = state_data["storyline"]
-        restored["storyline"] = (
-            storyline
-            if isinstance(storyline, Storyline)
-            else Storyline.model_validate(storyline)
-        )
+        if storyline is not None:
+            restored["storyline"] = (
+                storyline
+                if isinstance(storyline, Storyline)
+                else Storyline.model_validate(storyline)
+            )
     if "slides" in state_data:
         slides = state_data["slides"]
         if not slides:

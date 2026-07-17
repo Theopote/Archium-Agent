@@ -1,0 +1,221 @@
+"""Streamlit UI for Brief and Storyline human review."""
+
+from __future__ import annotations
+
+from uuid import UUID
+
+import pandas as pd
+import streamlit as st
+
+from archium.application.review_models import (
+    BriefUpdate,
+    ChapterUpdate,
+    StorylineUpdate,
+    parse_multiline_items,
+)
+from archium.application.review_service import PresentationReviewService
+from archium.domain.enums import ApprovalStatus
+from archium.infrastructure.database.session import get_session
+from archium.ui.workspace_service import continue_workflow_after_review
+
+APPROVAL_LABELS = {
+    ApprovalStatus.DRAFT: "草稿",
+    ApprovalStatus.PENDING: "待审核",
+    ApprovalStatus.APPROVED: "已通过",
+    ApprovalStatus.REJECTED: "已驳回",
+}
+
+
+def _approval_badge(status: ApprovalStatus) -> str:
+    return APPROVAL_LABELS.get(status, status.value)
+
+
+def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
+    with get_session() as session:
+        review_service = PresentationReviewService(session)
+        context = review_service.get_review_context(
+            context_presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+    if context is None or context.brief is None:
+        st.caption("当前没有可编辑的 Brief。")
+        return
+
+    brief = context.brief
+    st.markdown(f"**Brief 审核** · 状态：{_approval_badge(brief.approval_status)}")
+
+    with st.form(f"brief_review_{brief.id}"):
+        title = st.text_input("标题", value=brief.title)
+        audience = st.text_input("汇报对象", value=brief.audience)
+        purpose = st.text_input("汇报目的", value=brief.purpose)
+        core_message = st.text_area("核心信息", value=brief.core_message)
+        duration_minutes = st.number_input("时长（分钟）", min_value=1, max_value=480, value=brief.duration_minutes)
+        target_slide_count = st.number_input(
+            "目标页数",
+            min_value=1,
+            max_value=200,
+            value=brief.target_slide_count,
+        )
+        tone = st.text_input("语气风格", value=brief.tone)
+        required_sections = st.text_area(
+            "必要章节（每行一项）",
+            value="\n".join(brief.required_sections),
+        )
+        decisions_required = st.text_area(
+            "待决策事项（每行一项）",
+            value="\n".join(brief.decisions_required),
+        )
+        audience_concerns = st.text_area(
+            "对象顾虑（每行一项）",
+            value="\n".join(brief.audience_concerns),
+        )
+        excluded_topics = st.text_area(
+            "排除主题（每行一项）",
+            value="\n".join(brief.excluded_topics),
+        )
+
+        col1, col2, col3 = st.columns(3)
+        save_clicked = col1.form_submit_button("保存修改", use_container_width=True)
+        approve_clicked = col2.form_submit_button("批准 Brief", use_container_width=True)
+        reject_clicked = col3.form_submit_button("驳回 Brief", use_container_width=True)
+
+    update = BriefUpdate(
+        title=title,
+        audience=audience,
+        purpose=purpose,
+        core_message=core_message,
+        duration_minutes=int(duration_minutes),
+        target_slide_count=int(target_slide_count),
+        tone=tone,
+        language=brief.language,
+        required_sections=parse_multiline_items(required_sections),
+        decisions_required=parse_multiline_items(decisions_required),
+        audience_concerns=parse_multiline_items(audience_concerns),
+        excluded_topics=parse_multiline_items(excluded_topics),
+    )
+
+    if save_clicked or approve_clicked or reject_clicked:
+        with get_session() as session:
+            review_service = PresentationReviewService(session)
+            review_service.update_brief(brief.id, update)
+            if approve_clicked:
+                review_service.approve_brief(brief.id)
+            elif reject_clicked:
+                review_service.reject_brief(brief.id)
+        st.success("Brief 已更新。")
+        st.rerun()
+
+
+def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
+    with get_session() as session:
+        review_service = PresentationReviewService(session)
+        context = review_service.get_review_context(
+            context_presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+    if context is None or context.storyline is None:
+        st.caption("当前没有可编辑的 Storyline。")
+        return
+
+    storyline = context.storyline
+    st.markdown(f"**Storyline 审核** · 状态：{_approval_badge(storyline.approval_status)}")
+
+    with st.form(f"storyline_meta_{storyline.id}"):
+        thesis = st.text_area("总体论点", value=storyline.thesis)
+        narrative_pattern = st.text_input("叙事模式", value=storyline.narrative_pattern)
+        meta_submit = st.form_submit_button("保存论点", use_container_width=True)
+
+    chapter_rows = [
+        {
+            "id": chapter.id,
+            "title": chapter.title,
+            "purpose": chapter.purpose,
+            "key_message": chapter.key_message,
+            "order": chapter.order,
+            "estimated_slide_count": chapter.estimated_slide_count,
+        }
+        for chapter in sorted(storyline.chapters, key=lambda item: item.order)
+    ]
+    edited = st.data_editor(
+        pd.DataFrame(chapter_rows),
+        num_rows="dynamic",
+        use_container_width=True,
+        key=f"storyline_chapters_{storyline.id}",
+    )
+
+    col1, col2, col3 = st.columns(3)
+    save_clicked = col1.button("保存 Storyline", key=f"save_storyline_{storyline.id}", use_container_width=True)
+    approve_clicked = col2.button("批准 Storyline", key=f"approve_storyline_{storyline.id}", use_container_width=True)
+    reject_clicked = col3.button("驳回 Storyline", key=f"reject_storyline_{storyline.id}", use_container_width=True)
+
+    if meta_submit or save_clicked or approve_clicked or reject_clicked:
+        chapters = [
+            ChapterUpdate(
+                id=str(row["id"]),
+                title=str(row["title"]),
+                purpose=str(row["purpose"]),
+                key_message=str(row["key_message"]),
+                order=int(row["order"]),
+                estimated_slide_count=int(row["estimated_slide_count"]),
+            )
+            for row in edited.to_dict(orient="records")
+            if str(row.get("id", "")).strip()
+        ]
+        update = StorylineUpdate(
+            thesis=thesis,
+            narrative_pattern=narrative_pattern,
+            chapters=chapters,
+        )
+        with get_session() as session:
+            review_service = PresentationReviewService(session)
+            review_service.update_storyline(storyline.id, update)
+            if approve_clicked:
+                review_service.approve_storyline(storyline.id)
+            elif reject_clicked:
+                review_service.reject_storyline(storyline.id)
+        st.success("Storyline 已更新。")
+        st.rerun()
+
+
+def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID | None) -> None:
+    if presentation_id is None:
+        return
+
+    with get_session() as session:
+        review_service = PresentationReviewService(session)
+        context = review_service.get_review_context(
+            presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+
+    if context is None:
+        st.warning("无法加载审核上下文。")
+        return
+
+    if context.awaiting_review:
+        gate = context.review_gate or "unknown"
+        st.info(f"工作流已暂停，等待 **{gate}** 人工审核。请编辑并批准后继续。")
+
+    tab_brief, tab_storyline = st.tabs(["Brief", "Storyline"])
+    with tab_brief:
+        _render_brief_editor(presentation_id, workflow_run_id)
+    with tab_storyline:
+        _render_storyline_editor(presentation_id, workflow_run_id)
+
+    if context.awaiting_review and workflow_run_id is not None and st.button(
+        "继续运行工作流",
+        type="primary",
+        use_container_width=True,
+    ):
+        try:
+            result = continue_workflow_after_review(workflow_run_id)
+            st.session_state.last_workflow_result = result
+            if result.awaiting_review:
+                st.warning("工作流已进入下一审核节点，请继续审核。")
+            elif result.succeeded:
+                st.success(f"工作流已完成，共 {len(result.slides)} 页。")
+            else:
+                st.error("工作流继续执行时出现错误。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"无法继续工作流：{exc}")

@@ -11,6 +11,7 @@ from archium.config import get_settings
 from archium.domain.enums import ProjectType
 from archium.infrastructure.database.session import get_session
 from archium.ui.components import render_file_downloads
+from archium.ui.review_panel import render_review_panel
 from archium.ui.workspace_service import (
     build_presentation_request,
     create_project,
@@ -176,6 +177,9 @@ def _render_generation_form(project_id: UUID) -> None:
         export_json = col1.checkbox("导出 JSON", value=True)
         export_marp = col2.checkbox("导出 Marp Markdown", value=True)
         export_pptx = col3.checkbox("导出 PPTX（需 Marp CLI）", value=False)
+        review_col1, review_col2 = st.columns(2)
+        require_brief_review = review_col1.checkbox("Brief 生成后暂停审核", value=True)
+        require_storyline_review = review_col2.checkbox("Storyline 生成后暂停审核", value=True)
         submitted = st.form_submit_button("运行汇报管线", use_container_width=True)
 
     if not submitted:
@@ -204,18 +208,42 @@ def _render_generation_form(project_id: UUID) -> None:
                     export_json=export_json,
                     export_marp=export_marp,
                     export_pptx=export_pptx,
+                    require_brief_review=require_brief_review,
+                    require_storyline_review=require_storyline_review,
                 )
             st.session_state.last_workflow_result = result
         except Exception as exc:
             st.error(f"工作流执行失败：{exc}")
             return
 
-    if result.succeeded:
+    if result.awaiting_review:
+        st.warning("工作流已暂停，请在下方审核 Brief / Storyline 后继续。")
+    elif result.succeeded:
         st.success(f"汇报已生成，共 {len(result.slides)} 页。")
     else:
         st.error("工作流完成但存在错误。")
         for error in result.errors:
             st.write(f"- {error}")
+
+
+def _render_review_section(project_id: UUID) -> None:
+    st.markdown("#### Brief / Storyline 审核")
+    result = st.session_state.get("last_workflow_result")
+    presentation_id = result.presentation.id if result is not None else None
+    workflow_run_id = result.workflow_run.id if result is not None else None
+
+    if presentation_id is None:
+        with get_session() as session:
+            presentations = list_project_presentations(session, project_id)
+        if not presentations:
+            st.caption("生成汇报后，可在此编辑 Brief 与 Storyline。")
+            return
+        presentation_id = presentations[0].id
+
+    render_review_panel(
+        presentation_id=presentation_id,
+        workflow_run_id=workflow_run_id,
+    )
 
 
 def _render_last_result() -> None:
@@ -280,6 +308,7 @@ def render() -> None:
     _render_documents(project_id)
     st.divider()
     _render_generation_form(project_id)
+    _render_review_section(project_id)
     _render_last_result()
     st.divider()
     _render_history(project_id)

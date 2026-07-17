@@ -157,7 +157,8 @@ marp --version
 ## 当前限制
 
 - 指令中心聊天记录仍保存在浏览器 Session 中，关闭页面后会丢失
-- 项目工作台已支持项目持久化、资料导入与汇报生成，但尚无 Brief / Storyline 的人工审核编辑界面
+- 项目工作台已支持项目持久化、资料导入、汇报生成与 Brief / Storyline 审核编辑
+- 尚无 SlideSpec 页面级人工编辑界面；驳回后需重新生成对应阶段
 - PPTX 导出依赖 Marp CLI；未安装时仍可导出 JSON 与 Marp Markdown
 - Discord 与文件整理为实验性遗留功能
 

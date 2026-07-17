@@ -23,6 +23,7 @@ from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
 )
+from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.factory import create_llm_provider
 
 
@@ -140,6 +141,8 @@ def run_presentation_workflow(
     export_json: bool = True,
     export_marp: bool = True,
     export_pptx: bool = False,
+    require_brief_review: bool = False,
+    require_storyline_review: bool = False,
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
     resolved_settings = settings or get_settings()
@@ -151,4 +154,18 @@ def run_presentation_workflow(
         export_json=export_json,
         export_marp=export_marp,
         export_pptx=export_pptx,
+        require_brief_review=require_brief_review,
+        require_storyline_review=require_storyline_review,
     )
+
+
+def continue_workflow_after_review(
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> WorkflowRunResult:
+    resolved_settings = settings or get_settings()
+    llm = create_llm_provider(resolved_settings)
+    with get_session() as session:
+        service = PresentationWorkflowService(session, llm, settings=resolved_settings)
+        return service.continue_after_review(workflow_run_id)

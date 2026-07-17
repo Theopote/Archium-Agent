@@ -27,3 +27,9 @@ class WorkflowRunResult:
     @property
     def succeeded(self) -> bool:
         return not self.errors
+
+    @property
+    def awaiting_review(self) -> bool:
+        from archium.domain.enums import WorkflowStatus
+
+        return self.workflow_run.status == WorkflowStatus.AWAITING_REVIEW

@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.presentation_models import PresentationRequest
+from archium.application.review_service import PresentationReviewService
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import WorkflowStatus, WorkflowStep
@@ -56,6 +57,8 @@ class PresentationWorkflowService:
         export_json: bool = True,
         export_marp: bool = False,
         export_pptx: bool = False,
+        require_brief_review: bool = False,
+        require_storyline_review: bool = False,
     ) -> WorkflowRunResult:
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
         workflow_run = self._workflow_runs.create(
@@ -69,6 +72,8 @@ class PresentationWorkflowService:
                     "export_json": export_json,
                     "export_marp": export_marp,
                     "export_pptx": export_pptx,
+                    "require_brief_review": require_brief_review,
+                    "require_storyline_review": require_storyline_review,
                 },
             )
         )
@@ -82,6 +87,8 @@ class PresentationWorkflowService:
             export_json=export_json,
             export_marp=export_marp,
             export_pptx=export_pptx,
+            require_brief_review=require_brief_review,
+            require_storyline_review=require_storyline_review,
         )
 
         try:
@@ -99,6 +106,67 @@ class PresentationWorkflowService:
         if refreshed is None:
             raise WorkflowError(f"Workflow run {workflow_run.id} disappeared after execution")
 
+        return self._to_result(refreshed, final_state)
+
+    def continue_after_review(self, workflow_run_id: UUID) -> WorkflowRunResult:
+        """Resume a workflow that paused for Brief or Storyline approval."""
+        review_service = PresentationReviewService(self._session)
+        context = review_service.ensure_can_continue(workflow_run_id)
+        run = context.workflow_run
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} not found")
+
+        restored = restore_domain_artifacts(run.state)
+        request = restored.get("request")
+        presentation = restored.get("presentation")
+        if request is None or presentation is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} is missing resumable state")
+
+        if context.brief is not None:
+            restored["brief"] = context.brief
+        if context.storyline is not None:
+            restored["storyline"] = context.storyline
+
+        run.status = WorkflowStatus.RUNNING
+        run.errors = []
+        run.touch()
+        self._workflow_runs.update(run)
+
+        initial_state = initial_workflow_state(
+            project_id=str(run.project_id),
+            presentation_id=str(run.presentation_id),
+            workflow_run_id=str(run.id),
+            request=request,
+            presentation=presentation,
+            export_json=bool(run.state.get("export_json", True)),
+            export_marp=bool(run.state.get("export_marp", False)),
+            export_pptx=bool(run.state.get("export_pptx", False)),
+            require_brief_review=bool(run.state.get("require_brief_review", False)),
+            require_storyline_review=bool(run.state.get("require_storyline_review", False)),
+        )
+        initial_state = cast(
+            PresentationWorkflowState,
+            {
+                **initial_state,
+                **restored,
+                "errors": [],
+                "review_gate": None,
+            },
+        )
+
+        try:
+            final_state = self._graph.invoke(initial_state)
+        except Exception as exc:
+            logger.exception("Workflow continue-after-review failed: %s", exc)
+            run.errors = [str(exc)]
+            run.status = WorkflowStatus.FAILED
+            run.touch()
+            self._workflow_runs.update(run)
+            raise WorkflowError(str(exc)) from exc
+
+        refreshed = self._workflow_runs.get_by_id(run.id)
+        if refreshed is None:
+            raise WorkflowError(f"Workflow run {run.id} disappeared after continuation")
         return self._to_result(refreshed, final_state)
 
     def resume(self, workflow_run_id: UUID) -> WorkflowRunResult:
@@ -129,6 +197,8 @@ class PresentationWorkflowService:
             export_json=bool(run.state.get("export_json", True)),
             export_marp=bool(run.state.get("export_marp", False)),
             export_pptx=bool(run.state.get("export_pptx", False)),
+            require_brief_review=bool(run.state.get("require_brief_review", False)),
+            require_storyline_review=bool(run.state.get("require_storyline_review", False)),
         )
         initial_state = cast(
             PresentationWorkflowState,

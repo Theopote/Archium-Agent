@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from uuid import UUID
 
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.slide import SlideSpec
 from archium.domain.workflow import WorkflowRun
 
 
@@ -43,10 +43,23 @@ class StorylineUpdate:
 
 
 @dataclass(frozen=True)
+class SlideUpdate:
+    chapter_id: str
+    order: int
+    title: str
+    message: str
+    slide_type: str
+    layout_id: str = "default"
+    key_points: list[str] = field(default_factory=list)
+    speaker_notes: str | None = None
+
+
+@dataclass(frozen=True)
 class PresentationReviewContext:
     presentation: Presentation
     brief: PresentationBrief | None
     storyline: Storyline | None
+    slides: list[SlideSpec] = field(default_factory=list)
     workflow_run: WorkflowRun | None = None
 
     @property
@@ -62,6 +75,14 @@ class PresentationReviewContext:
         from archium.domain.enums import WorkflowStatus
 
         return self.workflow_run.status == WorkflowStatus.AWAITING_REVIEW
+
+    @property
+    def slides_pending_review(self) -> bool:
+        from archium.domain.enums import SlideStatus
+
+        if not self.slides:
+            return False
+        return any(slide.status != SlideStatus.APPROVED for slide in self.slides)
 
 
 def parse_multiline_items(text: str) -> list[str]:
