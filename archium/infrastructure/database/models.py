@@ -290,6 +290,7 @@ class ReviewIssueORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     reviewer_layer: Mapped[str] = mapped_column(String(30), nullable=False, default="content")
     category: Mapped[str] = mapped_column(String(50), nullable=False)
     severity: Mapped[str] = mapped_column(String(30), nullable=False)
+    rule_code: Mapped[str] = mapped_column(String(100), nullable=False, default="LEGACY.UNSPECIFIED")
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     suggestion: Mapped[str | None] = mapped_column(Text)

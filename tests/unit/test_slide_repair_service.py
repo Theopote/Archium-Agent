@@ -18,6 +18,7 @@ from archium.domain.enums import (
 from archium.domain.presentation import Presentation, PresentationBrief
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
+from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
@@ -59,6 +60,7 @@ def presentation_context(db_session: Session) -> tuple[UUID, SlideSpec, ReviewIs
             slide_id=saved_slide.id,
             category=ReviewCategory.CONTENT,
             severity=ReviewSeverity.CRITICAL,
+            rule_code=ReviewRuleCode.CONTENT_MISSING_MESSAGE,
             title="缺少核心信息",
             description="第 1 页缺少核心结论。",
         )
@@ -110,6 +112,7 @@ def test_rule_repair_trims_layout_issues_without_llm(
             slide_id=slide.id,
             category=ReviewCategory.LENGTH,
             severity=ReviewSeverity.MEDIUM,
+            rule_code=ReviewRuleCode.LAYOUT_HIGH_TEXT_DENSITY,
             title="页面信息密度过高",
             description="文本量过高",
             auto_fixable=True,
@@ -162,6 +165,7 @@ def test_rule_repair_defers_when_protected_numbers_cannot_be_trimmed(
             slide_id=slide.id,
             category=ReviewCategory.LENGTH,
             severity=ReviewSeverity.MEDIUM,
+            rule_code=ReviewRuleCode.LAYOUT_HIGH_TEXT_DENSITY,
             title="页面信息密度过高",
             description="文本量过高",
             auto_fixable=True,

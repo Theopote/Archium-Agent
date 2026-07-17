@@ -20,16 +20,20 @@ def normalize_review_description(description: str) -> str:
     return _WHITESPACE_RE.sub(" ", description.strip()).casefold()
 
 
+def normalize_rule_code(rule_code: str) -> str:
+    """Normalize a machine rule identifier for stable fingerprinting."""
+    return rule_code.strip().casefold()
+
+
 def review_issue_fingerprint(issue: ReviewIssue) -> str:
     """Stable dedupe key for review findings within a workflow pass."""
     slide_key = str(issue.slide_id) if issue.slide_id is not None else ""
-    rule_code = issue.title.strip().casefold()
     payload = "|".join(
         (
             issue.reviewer_layer.value,
             issue.category.value,
             slide_key,
-            rule_code,
+            normalize_rule_code(issue.rule_code),
             normalize_review_description(issue.description),
         )
     )
@@ -73,6 +77,7 @@ class ReviewIssue(IdentifiedModel, TimestampedModel):
     reviewer_layer: ReviewLayer = ReviewLayer.CONTENT
     category: ReviewCategory
     severity: ReviewSeverity
+    rule_code: str = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=500)
     description: str = Field(min_length=1)
     suggestion: str | None = None

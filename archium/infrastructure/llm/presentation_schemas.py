@@ -74,6 +74,7 @@ class ReviewIssueDraft(BaseModel):
     slide_order: int | None = Field(default=None, ge=0)
     category: str
     severity: str
+    rule_code: str | None = None
     title: str
     description: str
     suggestion: str | None = None

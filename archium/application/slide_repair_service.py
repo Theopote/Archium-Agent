@@ -28,6 +28,7 @@ from archium.domain.enums import (
 )
 from archium.domain.presentation import PresentationBrief
 from archium.domain.review import ReviewIssue
+from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_repair import SlideRepairRecord
 from archium.infrastructure.database.repositories import PresentationRepository, ReviewRepository
@@ -453,6 +454,7 @@ class SlideRepairService:
             reviewer_layer=ReviewLayer.LAYOUT,
             category=ReviewCategory.LENGTH,
             severity=ReviewSeverity.HIGH,
+            rule_code=ReviewRuleCode.LAYOUT_MANUAL_LAYOUT_CONFIRMATION,
             title="需人工确认版面调整",
             description=(
                 f"第 {slide.order + 1} 页「{slide.title}」无法在不丢失关键信息的前提下自动压缩。"

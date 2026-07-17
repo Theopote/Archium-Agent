@@ -8,6 +8,7 @@ from archium.domain.enums import ApprovalStatus, ProjectType, ReviewCategory, Re
 from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
+from archium.domain.review_rules import ReviewRuleCode
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from sqlalchemy.orm import Session
 
@@ -104,6 +105,7 @@ def test_resolve_and_dismiss_review_issue(db_session: Session) -> None:
         presentation_id=brief.presentation_id,
         category=ReviewCategory.CONTENT,
         severity=ReviewSeverity.CRITICAL,
+        rule_code=ReviewRuleCode.LEGACY_UNSPECIFIED,
         title="测试问题",
         description="描述",
     )
@@ -120,6 +122,7 @@ def test_resolve_and_dismiss_review_issue(db_session: Session) -> None:
             presentation_id=brief.presentation_id,
             category=ReviewCategory.VISUAL,
             severity=ReviewSeverity.MEDIUM,
+            rule_code=ReviewRuleCode.LEGACY_UNSPECIFIED,
             title="视觉问题",
             description="描述",
         )

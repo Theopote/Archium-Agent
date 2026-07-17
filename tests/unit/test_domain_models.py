@@ -37,6 +37,7 @@ from archium.domain import (
     VisualType,
 )
 from archium.domain._base import model_to_dict
+from archium.domain.review_rules import ReviewRuleCode
 from pydantic import ValidationError
 
 SHA256 = "a" * 64
@@ -367,6 +368,7 @@ class TestReviewIssue:
             presentation_id=PRESENTATION_ID,
             category=ReviewCategory.CITATION,
             severity=ReviewSeverity.HIGH,
+            rule_code=ReviewRuleCode.EVIDENCE_MISSING_CITATION,
             title="缺少来源引用",
             description="用地面积数据未关联文档来源",
         )
@@ -377,6 +379,7 @@ class TestReviewIssue:
             presentation_id=PRESENTATION_ID,
             category=ReviewCategory.CONTENT,
             severity=ReviewSeverity.MEDIUM,
+            rule_code=ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS,
             title="文字过多",
             description="该页超过 5 条要点",
         )

@@ -17,6 +17,8 @@ LAYER_REVIEW_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - category：citation / content / structure / visual / consistency / coverage / length / other
 - slide_order 为 0-based 页码；全局问题可省略 slide_order
 - 每条 issue 必须指定 reviewer_layer
+- rule_code 为稳定机器标识，格式如 CONTENT.MISSING_MESSAGE / EVIDENCE.MISSING_CITATION / ARCH.PLAN_MISSING_NORTH_ARROW / LAYOUT.TEXT_OVERFLOW
+- title 为人类可读展示文案，可与 rule_code 不同
 - 不要输出 Markdown 代码块
 """
 

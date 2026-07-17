@@ -16,6 +16,7 @@ from archium.domain.enums import (
 from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
+from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
@@ -166,6 +167,7 @@ def test_review_repository(db_session: Session, pres_repo: PresentationRepositor
             presentation_id=pres.id,
             category=ReviewCategory.CITATION,
             severity=ReviewSeverity.HIGH,
+            rule_code=ReviewRuleCode.EVIDENCE_MISSING_CITATION,
             title="缺少来源引用",
             description="用地面积数据未关联文档来源",
         )

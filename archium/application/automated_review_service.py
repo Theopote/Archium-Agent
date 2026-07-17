@@ -20,12 +20,14 @@ from archium.domain.enums import (
 )
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
+from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import AssetRepository, ReviewRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import (
     BriefAlignmentDraft,
     ProfessionalReviewDraft,
+    ReviewIssueDraft,
 )
 from archium.logging import get_logger
 from archium.prompts.brief_alignment import (
@@ -128,6 +130,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.CONTENT,
                         category=ReviewCategory.CONTENT,
                         severity=ReviewSeverity.HIGH,
+                        rule_code=ReviewRuleCode.CONTENT_MISSING_TITLE,
                         title="缺少标题",
                         description=f"第 {slide.order + 1} 页缺少标题。",
                     )
@@ -140,6 +143,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.CONTENT,
                         category=ReviewCategory.CONTENT,
                         severity=ReviewSeverity.CRITICAL,
+                        rule_code=ReviewRuleCode.CONTENT_MISSING_MESSAGE,
                         title="缺少核心信息",
                         description=f"第 {slide.order + 1} 页「{slide.title}」缺少核心结论。",
                     )
@@ -156,6 +160,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.CONTENT,
                         category=ReviewCategory.CONTENT,
                         severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.CONTENT_MESSAGE_TOO_SHORT,
                         title="结论表述过于简略",
                         description=(
                             f"第 {slide.order + 1} 页「{slide.title}」核心结论过短，"
@@ -172,6 +177,7 @@ class AutomatedReviewService:
                         reviewer_layer=ReviewLayer.CONTENT,
                         category=ReviewCategory.CONSISTENCY,
                         severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.CONTENT_DUPLICATE_TITLE,
                         title="标题重复",
                         description=f"标题「{title}」在 {count} 页中重复出现，建议区分章节重点。",
                     )
@@ -207,6 +213,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.EVIDENCE,
                         category=ReviewCategory.CITATION,
                         severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.EVIDENCE_MISSING_CITATION,
                         title="缺少引用来源",
                         description=f"第 {slide.order + 1} 页「{slide.title}」未关联项目资料。",
                         suggestion="补充 chunk 引用或上传对应图纸/照片。",
@@ -221,6 +228,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.EVIDENCE,
                         category=ReviewCategory.CITATION,
                         severity=ReviewSeverity.HIGH,
+                        rule_code=ReviewRuleCode.EVIDENCE_NUMERIC_CLAIM_UNCITED,
                         title="数值结论缺少依据",
                         description=(
                             f"第 {slide.order + 1} 页「{slide.title}」包含数值表述但未标注来源。"
@@ -240,6 +248,7 @@ class AutomatedReviewService:
                             layer=ReviewLayer.EVIDENCE,
                             category=ReviewCategory.VISUAL,
                             severity=ReviewSeverity.MEDIUM,
+                            rule_code=ReviewRuleCode.EVIDENCE_VISUAL_EVIDENCE_UNCONFIRMED,
                             title="视觉证据未确认",
                             description=(
                                 f"第 {slide.order + 1} 页已匹配 {requirement.type.value} 素材，"
@@ -256,6 +265,7 @@ class AutomatedReviewService:
                             layer=ReviewLayer.EVIDENCE,
                             category=ReviewCategory.VISUAL,
                             severity=ReviewSeverity.HIGH,
+                            rule_code=ReviewRuleCode.EVIDENCE_MISSING_VISUAL_EVIDENCE,
                             title="结论缺少视觉证据",
                             description=(
                                 f"第 {slide.order + 1} 页「{slide.title}」需要 {requirement.type.value} "
@@ -275,6 +285,7 @@ class AutomatedReviewService:
                             layer=ReviewLayer.EVIDENCE,
                             category=ReviewCategory.CONSISTENCY,
                             severity=ReviewSeverity.MEDIUM,
+                            rule_code=ReviewRuleCode.EVIDENCE_WEAK_VISUAL_ALIGNMENT,
                             title="视觉素材与结论关联性弱",
                             description=(
                                 f"第 {slide.order + 1} 页结论与 {requirement.type.value} "
@@ -307,6 +318,7 @@ class AutomatedReviewService:
                         reviewer_layer=ReviewLayer.ARCHITECTURAL,
                         category=ReviewCategory.STRUCTURE,
                         severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.ARCH_SLIDE_COUNT_DEVIATION,
                         title="页数偏离目标",
                         description=(
                             f"当前 {actual} 页，Brief 目标 {target} 页，偏差超过 25%。"
@@ -325,6 +337,7 @@ class AutomatedReviewService:
                                 reviewer_layer=ReviewLayer.ARCHITECTURAL,
                                 category=ReviewCategory.COVERAGE,
                                 severity=ReviewSeverity.CRITICAL,
+                                rule_code=ReviewRuleCode.ARCH_REQUIRED_SECTION_MISSING,
                                 title="必要章节未覆盖",
                                 description=f"Brief 要求包含「{section}」，当前 Slide 标题中未找到。",
                             )
@@ -341,6 +354,7 @@ class AutomatedReviewService:
                         reviewer_layer=ReviewLayer.ARCHITECTURAL,
                         category=ReviewCategory.STRUCTURE,
                         severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.ARCH_CHAPTER_WITHOUT_SLIDES,
                         title="章节缺少对应页面",
                         description=f"Storyline 章节 {chapter_id} 未分配任何 Slide。",
                     )
@@ -354,6 +368,7 @@ class AutomatedReviewService:
                     reviewer_layer=ReviewLayer.ARCHITECTURAL,
                     category=ReviewCategory.CONSISTENCY,
                     severity=ReviewSeverity.MEDIUM,
+                    rule_code=ReviewRuleCode.ARCH_INCONSISTENT_AREA_UNITS,
                     title="面积单位表述不一致",
                     description=f"汇报中混用了多种面积单位：{', '.join(sorted(unit_styles))}。",
                     suggestion="统一使用 ㎡ 或 平方米 等单一单位体系。",
@@ -372,6 +387,7 @@ class AutomatedReviewService:
                                 layer=ReviewLayer.ARCHITECTURAL,
                                 category=ReviewCategory.CONSISTENCY,
                                 severity=ReviewSeverity.MEDIUM,
+                                rule_code=ReviewRuleCode.ARCH_CONCEPT_HAS_CONSTRUCTION_DETAIL,
                                 title="概念汇报包含施工图级细节",
                                 description=(
                                     f"第 {slide.order + 1} 页出现「{keyword}」，"
@@ -399,6 +415,7 @@ class AutomatedReviewService:
                                 layer=ReviewLayer.ARCHITECTURAL,
                                 category=ReviewCategory.VISUAL,
                                 severity=ReviewSeverity.SUGGESTION,
+                                rule_code=ReviewRuleCode.ARCH_PLAN_MISSING_NORTH_ARROW,
                                 title="总平面图缺少方位标注提示",
                                 description=(
                                     f"第 {slide.order + 1} 页使用总平面图，"
@@ -422,6 +439,7 @@ class AutomatedReviewService:
                                 layer=ReviewLayer.ARCHITECTURAL,
                                 category=ReviewCategory.VISUAL,
                                 severity=ReviewSeverity.SUGGESTION,
+                                rule_code=ReviewRuleCode.ARCH_PLAN_MISSING_FLOOR_LABEL,
                                 title="平面图缺少楼层标注提示",
                                 description=(
                                     f"第 {slide.order + 1} 页使用平面图，"
@@ -447,6 +465,7 @@ class AutomatedReviewService:
                                 layer=ReviewLayer.ARCHITECTURAL,
                                 category=ReviewCategory.VISUAL,
                                 severity=ReviewSeverity.SUGGESTION,
+                                rule_code=ReviewRuleCode.ARCH_FLOW_DIAGRAM_MISSING_LEGEND,
                                 title="交通流线图缺少颜色图例提示",
                                 description=(
                                     f"第 {slide.order + 1} 页涉及交通/流线表述，"
@@ -489,6 +508,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.LAYOUT,
                         category=ReviewCategory.LENGTH,
                         severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.LAYOUT_HIGH_TEXT_DENSITY,
                         title="页面信息密度过高",
                         description=(
                             f"第 {slide.order + 1} 页文本量估算为 {text_load} 字当量，"
@@ -507,6 +527,7 @@ class AutomatedReviewService:
                             layer=ReviewLayer.LAYOUT,
                             category=ReviewCategory.LENGTH,
                             severity=ReviewSeverity.SUGGESTION,
+                            rule_code=ReviewRuleCode.LAYOUT_BULLET_TOO_LONG,
                             title="单条要点过长",
                             description=(
                                 f"第 {slide.order + 1} 页存在超过 {_LONG_BULLET_THRESHOLD} 字的要点，"
@@ -526,6 +547,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.LAYOUT,
                         category=ReviewCategory.LENGTH,
                         severity=ReviewSeverity.SUGGESTION,
+                        rule_code=ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS,
                         title="要点过多",
                         description=f"第 {slide.order + 1} 页要点超过 5 条，建议精简。",
                         auto_fixable=True,
@@ -543,6 +565,7 @@ class AutomatedReviewService:
                         layer=ReviewLayer.LAYOUT,
                         category=ReviewCategory.LENGTH,
                         severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.LAYOUT_MESSAGE_TOO_LONG,
                         title="核心结论过长",
                         description=(
                             f"第 {slide.order + 1} 页核心结论超过 120 字，"
@@ -564,6 +587,7 @@ class AutomatedReviewService:
                             layer=ReviewLayer.LAYOUT,
                             category=ReviewCategory.VISUAL,
                             severity=ReviewSeverity.MEDIUM,
+                            rule_code=ReviewRuleCode.LAYOUT_MISSING_ASSET,
                             title="缺少匹配素材",
                             description=(
                                 f"第 {slide.order + 1} 页需要 {requirement.type.value} 类视觉，"
@@ -583,6 +607,7 @@ class AutomatedReviewService:
                                 layer=ReviewLayer.LAYOUT,
                                 category=ReviewCategory.VISUAL,
                                 severity=ReviewSeverity.MEDIUM,
+                                rule_code=ReviewRuleCode.LAYOUT_LOW_RESOLUTION_ASSET,
                                 title="素材分辨率偏低",
                                 description=(
                                     f"第 {slide.order + 1} 页素材「{asset.filename}」"
@@ -604,6 +629,7 @@ class AutomatedReviewService:
                                     layer=ReviewLayer.LAYOUT,
                                     category=ReviewCategory.VISUAL,
                                     severity=ReviewSeverity.SUGGESTION,
+                                    rule_code=ReviewRuleCode.LAYOUT_EXTREME_ASPECT_RATIO,
                                     title="素材宽高比极端",
                                     description=(
                                         f"第 {slide.order + 1} 页素材「{asset.filename}」"
@@ -705,6 +731,7 @@ class AutomatedReviewService:
                 reviewer_layer=ReviewLayer.CONTENT,
                 category=ReviewCategory.COVERAGE,
                 severity=ReviewSeverity.MEDIUM,
+                rule_code=ReviewRuleCode.CONTENT_BRIEF_CORE_NOT_REFLECTED,
                 title="Brief 核心信息未体现",
                 description=(
                     f"Brief 核心信息「{brief.core_message}」"
@@ -754,6 +781,7 @@ class AutomatedReviewService:
                 reviewer_layer=ReviewLayer.CONTENT,
                 category=ReviewCategory.COVERAGE,
                 severity=severity,
+                rule_code=ReviewRuleCode.CONTENT_BRIEF_ALIGNMENT_GAP,
                 title="Brief 语义对齐不足",
                 description=gap,
                 suggestion=draft.suggestion or "调整各页结论，确保与 Brief 核心信息一致。",
@@ -806,6 +834,7 @@ class AutomatedReviewService:
                     reviewer_layer=_parse_review_layer(item.reviewer_layer),
                     category=_parse_review_category(item.category),
                     severity=_parse_review_severity(item.severity),
+                    rule_code=_llm_rule_code(item),
                     title=item.title.strip(),
                     description=item.description.strip(),
                     suggestion=item.suggestion.strip() if item.suggestion else None,
@@ -827,6 +856,7 @@ class AutomatedReviewService:
         layer: ReviewLayer,
         category: ReviewCategory,
         severity: ReviewSeverity,
+        rule_code: str,
         title: str,
         description: str,
         suggestion: str | None = None,
@@ -838,11 +868,21 @@ class AutomatedReviewService:
             reviewer_layer=layer,
             category=category,
             severity=severity,
+            rule_code=rule_code,
             title=title,
             description=description,
             suggestion=suggestion,
             auto_fixable=auto_fixable,
         )
+
+
+def _llm_rule_code(item: ReviewIssueDraft) -> str:
+    raw = (item.rule_code or "").strip()
+    if raw:
+        return raw.upper()
+    layer = item.reviewer_layer.strip().upper() or "UNKNOWN"
+    category = item.category.strip().upper() or "OTHER"
+    return f"LLM.{layer}.{category}"
 
 
 def _detect_area_unit_styles(slides: list[SlideSpec]) -> set[str]:

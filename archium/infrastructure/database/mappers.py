@@ -468,6 +468,7 @@ def review_issue_to_domain(orm: ReviewIssueORM) -> ReviewIssue:
         reviewer_layer=ReviewLayer(getattr(orm, "reviewer_layer", ReviewLayer.CONTENT.value)),
         category=ReviewCategory(orm.category),
         severity=ReviewSeverity(orm.severity),
+        rule_code=getattr(orm, "rule_code", "LEGACY.UNSPECIFIED"),
         title=orm.title,
         description=orm.description,
         suggestion=orm.suggestion,
@@ -485,6 +486,7 @@ def review_issue_to_orm(domain: ReviewIssue, orm: ReviewIssueORM | None = None) 
     target.reviewer_layer = domain.reviewer_layer.value
     target.category = domain.category.value
     target.severity = domain.severity.value
+    target.rule_code = domain.rule_code
     target.title = domain.title
     target.description = domain.description
     target.suggestion = domain.suggestion

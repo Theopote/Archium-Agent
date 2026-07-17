@@ -19,6 +19,7 @@ from archium.domain.enums import (
 from archium.domain.presentation import Presentation, PresentationBrief
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
+from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
@@ -66,6 +67,7 @@ def test_evidence_review_flags_missing_citation(
     assert len(issues) == 1
     assert issues[0].category == ReviewCategory.CITATION
     assert issues[0].reviewer_layer == ReviewLayer.EVIDENCE
+    assert issues[0].rule_code == ReviewRuleCode.EVIDENCE_MISSING_CITATION
     assert ReviewRepository(db_session).list_by_presentation(presentation_id)  # type: ignore[arg-type]
 
 
@@ -86,7 +88,7 @@ def test_evidence_review_flags_numeric_claim_without_source(
         [slide],
     )
 
-    assert any(issue.title == "数值结论缺少依据" for issue in issues)
+    assert any(issue.rule_code == ReviewRuleCode.EVIDENCE_NUMERIC_CLAIM_UNCITED for issue in issues)
     assert all(issue.reviewer_layer == ReviewLayer.EVIDENCE for issue in issues)
 
 
@@ -110,7 +112,7 @@ def test_content_review_flags_duplicate_titles(
         slides,
     )
 
-    assert any(issue.title == "标题重复" for issue in issues)
+    assert any(issue.rule_code == ReviewRuleCode.CONTENT_DUPLICATE_TITLE for issue in issues)
     assert all(issue.reviewer_layer == ReviewLayer.CONTENT for issue in issues)
 
 
@@ -147,6 +149,7 @@ def test_critical_export_block_messages() -> None:
         presentation_id=presentation_id,
         category=ReviewCategory.CONTENT,
         severity=ReviewSeverity.CRITICAL,
+        rule_code=ReviewRuleCode.CONTENT_MISSING_MESSAGE,
         title="缺少核心信息",
         description="第 2 页缺少核心结论。",
     )
@@ -154,6 +157,7 @@ def test_critical_export_block_messages() -> None:
         presentation_id=presentation_id,
         category=ReviewCategory.COVERAGE,
         severity=ReviewSeverity.CRITICAL,
+        rule_code=ReviewRuleCode.ARCH_REQUIRED_SECTION_MISSING,
         title="必要章节未覆盖",
         description="Brief 要求包含「改造策略」。",
     )
