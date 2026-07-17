@@ -288,6 +288,25 @@ def _render_last_result() -> None:
                 + "。详见「质量审核」标签页。"
             )
 
+    if result.errors:
+        st.error("工作流未完成：" + "；".join(result.errors))
+        workflow_run_id = result.workflow_run.id
+        if st.button("重试工作流导出", key=f"retry_export_{workflow_run_id}"):
+            from archium.ui.workspace_service import resume_workflow
+
+            try:
+                retried = resume_workflow(workflow_run_id)
+                st.session_state.last_workflow_result = retried
+                if retried.succeeded:
+                    st.success("导出已完成。")
+                else:
+                    st.warning("仍有错误，请检查质量审核或继续编辑内容。")
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(format_user_error(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
     download_paths: list[Path] = []
     if result.json_path:
         download_paths.append(result.json_path)

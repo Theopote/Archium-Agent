@@ -193,6 +193,19 @@ def continue_workflow_after_review(
         return service.continue_after_review(workflow_run_id)
 
 
+def resume_workflow(
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> WorkflowRunResult:
+    """Resume or retry a workflow from its LangGraph checkpoint."""
+    resolved_settings = settings or get_settings()
+    llm = create_llm_provider(resolved_settings)
+    with get_session() as session:
+        service = PresentationWorkflowService(session, llm, settings=resolved_settings)
+        return service.resume(workflow_run_id)
+
+
 def regenerate_brief(
     presentation_id: UUID,
     *,

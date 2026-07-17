@@ -24,6 +24,8 @@ from archium.domain.enums import (
     SlideStatus,
     SlideType,
 )
+from archium.domain.review import ReviewIssue
+from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -33,7 +35,10 @@ from archium.ui.workspace_service import (
     regenerate_brief,
     regenerate_slide_plan,
     regenerate_storyline,
+    resume_workflow,
 )
+
+FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
 
 APPROVAL_LABELS = {
     ApprovalStatus.DRAFT: "草稿",
@@ -84,6 +89,100 @@ def _approval_badge(status: ApprovalStatus) -> str:
 
 def _slide_status_badge(status: SlideStatus) -> str:
     return SLIDE_STATUS_LABELS.get(status, status.value)
+
+
+def _slide_lookup(slides: list[SlideSpec]) -> dict[UUID, SlideSpec]:
+    return {slide.id: slide for slide in slides}
+
+
+def _slide_label(slide: SlideSpec | None) -> str:
+    if slide is None:
+        return "—"
+    return f"p{slide.order + 1} · {slide.title}"
+
+
+def _issue_slide_label(issue: ReviewIssue, slides_by_id: dict[UUID, SlideSpec]) -> str:
+    if issue.slide_id is None:
+        return "全局"
+    return _slide_label(slides_by_id.get(issue.slide_id))
+
+
+def _focus_slide(slide_id: UUID) -> None:
+    st.session_state[FOCUS_SLIDE_SESSION_KEY] = str(slide_id)
+
+
+def _render_critical_recovery_actions(
+    *,
+    presentation_id: UUID,
+    workflow_run_id: UUID | None,
+    open_critical: list[ReviewIssue],
+) -> None:
+    if not open_critical:
+        return
+
+    st.markdown("**严重问题修复**")
+    has_coverage = any(issue.category == ReviewCategory.COVERAGE for issue in open_critical)
+    has_structure = any(issue.category == ReviewCategory.STRUCTURE for issue in open_critical)
+    has_slide_issues = any(issue.slide_id is not None for issue in open_critical)
+
+    col1, col2, col3 = st.columns(3)
+    if col1.button(
+        "重新生成 Slide 计划",
+        key=f"recover_regen_slides_{presentation_id}",
+        use_container_width=True,
+    ):
+        try:
+            regenerate_slide_plan(presentation_id, workflow_run_id=workflow_run_id)
+            st.success("Slide 计划已重新生成，请重新审核质量结果。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"重新生成失败：{exc}")
+
+    if has_structure and col2.button(
+        "重新生成 Storyline",
+        key=f"recover_regen_storyline_{presentation_id}",
+        use_container_width=True,
+    ):
+        try:
+            regenerate_storyline(presentation_id, workflow_run_id=workflow_run_id)
+            st.success("Storyline 已重新生成。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"重新生成失败：{exc}")
+
+    if has_coverage and col3.button(
+        "重新生成 Brief",
+        key=f"recover_regen_brief_{presentation_id}",
+        use_container_width=True,
+    ):
+        try:
+            regenerate_brief(presentation_id, workflow_run_id=workflow_run_id)
+            st.success("Brief 已重新生成。")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"重新生成失败：{exc}")
+
+    if workflow_run_id is not None and st.button(
+        "重试工作流导出",
+        key=f"recover_retry_export_{presentation_id}",
+        use_container_width=True,
+        help="在解决或忽略严重问题后，从 checkpoint 重试导出。",
+    ):
+        try:
+            result = resume_workflow(workflow_run_id)
+            st.session_state.last_workflow_result = result
+            if result.succeeded:
+                st.success("导出已完成。")
+            else:
+                st.error("工作流仍有错误，请继续处理质量审核问题。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(format_user_error(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+    if has_slide_issues:
+        st.caption("页面级问题可使用下方「定位页面」跳转到 SlideSpec 标签页编辑。")
 
 
 def _render_regenerate_actions(
@@ -293,6 +392,18 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
     approved_count = sum(1 for slide in context.slides if slide.status == SlideStatus.APPROVED)
     st.markdown(f"**SlideSpec 审核** · 已通过 {approved_count}/{len(context.slides)} 页")
 
+    focus_id = st.session_state.get(FOCUS_SLIDE_SESSION_KEY)
+    if focus_id:
+        focused = next((slide for slide in context.slides if str(slide.id) == focus_id), None)
+        if focused is not None:
+            focus_cols = st.columns([5, 1])
+            focus_cols[0].info(
+                f"定位页面：第 {focused.order + 1} 页 · **{focused.title}**\n\n{focused.message}"
+            )
+            if focus_cols[1].button("清除", key=f"clear_focus_{context_presentation_id}"):
+                del st.session_state[FOCUS_SLIDE_SESSION_KEY]
+                st.rerun()
+
     slide_rows = [
         {
             "id": str(slide.id),
@@ -370,8 +481,14 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
     render_slide_history_panel(presentation_id=context_presentation_id, slides=context.slides)
 
 
-def _render_review_issues_panel(presentation_id: UUID) -> None:
+def _render_review_issues_panel(
+    presentation_id: UUID,
+    *,
+    slides: list[SlideSpec],
+    workflow_run_id: UUID | None,
+) -> None:
     settings = get_settings()
+    slides_by_id = _slide_lookup(slides)
     with get_session() as session:
         review_service = PresentationReviewService(session)
         issues = review_service.list_review_issues(presentation_id)
@@ -390,12 +507,23 @@ def _render_review_issues_panel(presentation_id: UUID) -> None:
             f"存在 {len(open_critical)} 个未处理的严重问题，已阻断 JSON/Marp 导出。"
             "请处理后重新运行或继续工作流。"
         )
+        _render_critical_recovery_actions(
+            presentation_id=presentation_id,
+            workflow_run_id=workflow_run_id,
+            open_critical=open_critical,
+        )
     elif open_critical:
         st.warning(f"存在 {len(open_critical)} 个严重问题（当前未启用导出阻断）。")
+        _render_critical_recovery_actions(
+            presentation_id=presentation_id,
+            workflow_run_id=workflow_run_id,
+            open_critical=open_critical,
+        )
 
     rows = [
         {
             "id": str(issue.id),
+            "page": _issue_slide_label(issue, slides_by_id),
             "severity": SEVERITY_LABELS.get(issue.severity, issue.severity.value),
             "category": CATEGORY_LABELS.get(issue.category, issue.category.value),
             "title": issue.title,
@@ -418,16 +546,24 @@ def _render_review_issues_panel(presentation_id: UUID) -> None:
 
     st.caption("处理待办问题")
     for issue in open_issues[:12]:
-        cols = st.columns([4, 1, 1])
+        cols = st.columns([4, 1, 1, 1])
+        page_hint = f"（{_issue_slide_label(issue, slides_by_id)}）"
         cols[0].markdown(
             f"**{SEVERITY_LABELS.get(issue.severity, issue.severity.value)}** · "
-            f"{issue.title} — {issue.description}"
+            f"{issue.title}{page_hint} — {issue.description}"
         )
-        if cols[1].button("标记已解决", key=f"resolve_issue_{issue.id}"):
+        if issue.slide_id is not None and cols[1].button(
+            "定位页面",
+            key=f"focus_issue_{issue.id}",
+        ):
+            _focus_slide(issue.slide_id)
+            st.toast(f"已定位到 {_issue_slide_label(issue, slides_by_id)}，请切换到 SlideSpec 标签页。")
+            st.rerun()
+        if cols[2].button("标记已解决", key=f"resolve_issue_{issue.id}"):
             with get_session() as session:
                 PresentationReviewService(session).resolve_review_issue(issue.id)
             st.rerun()
-        if cols[2].button("忽略", key=f"dismiss_issue_{issue.id}"):
+        if cols[3].button("忽略", key=f"dismiss_issue_{issue.id}"):
             with get_session() as session:
                 PresentationReviewService(session).dismiss_review_issue(issue.id)
             st.rerun()
@@ -474,7 +610,11 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
     with tab_slides:
         _render_slides_editor(presentation_id, workflow_run_id)
     with tab_quality:
-        _render_review_issues_panel(presentation_id)
+        _render_review_issues_panel(
+            presentation_id,
+            slides=context.slides,
+            workflow_run_id=workflow_run_id,
+        )
 
     if context.awaiting_review and workflow_run_id is not None and st.button(
         "继续运行工作流",

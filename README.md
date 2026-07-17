@@ -93,6 +93,9 @@ cp .env.example .env
 | `GEMINI_API_KEY` / `LLM_API_KEY` | OpenAI 兼容 API Key（如 Gemini） | 否（调用 LLM 时需要） |
 | `LLM_BASE_URL` | API Base URL | 否 |
 | `LLM_MODEL` | 模型名称，默认 `gemini-2.5-flash` | 否 |
+| `WORKFLOW_CHECKPOINT_PATH` | LangGraph SqliteSaver checkpoint 路径 | 否 |
+| `BLOCK_EXPORT_ON_CRITICAL_REVIEW` | 为 `true` 时，未处理的严重审核问题将阻断 JSON/Marp 导出 | 否 |
+| `LLM_PROFESSIONAL_REVIEW_ENABLED` | 为 `true` 且已配置 LLM 时，额外运行 LLM 专业审核 | 否 |
 | `MARP_COMMAND` | Marp CLI 命令，默认 `marp` | 否 |
 | `DISCORD_BOT_TOKEN` | Discord Bot Token（遗留模块） | 否 |
 | `DISCORD_USER_ID` | Discord 用户 ID（遗留模块） | 否 |
