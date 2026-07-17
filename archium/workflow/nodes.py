@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
+from langgraph.types import interrupt
+
 from archium.agents._helpers import build_project_context_bundle, build_retrieval_query_from_request
 from archium.agents.citations import enrich_slide_citations
 from archium.application.review_service import slides_are_approved
@@ -16,7 +18,11 @@ from archium.domain.enums import (
     WorkflowStep,
 )
 from archium.domain.slide import SlideSpec
-from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.database.repositories import (
+    DocumentRepository,
+    PresentationRepository,
+    ProjectRepository,
+)
 from archium.logging import ArchiumLogAdapter, get_logger
 from archium.workflow.runtime import PresentationWorkflowRuntime
 from archium.workflow.serialization import snapshot_state
@@ -67,6 +73,79 @@ class PresentationWorkflowNodes:
             run.status = status
         run.touch()
         self._runtime.workflow_runs.update(run)
+
+    def load_project(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.LOAD_PROJECT.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            project = ProjectRepository(self._runtime.session).get_by_id(project_id)
+            if project is None:
+                return {
+                    "errors": [f"Project {project_id} not found"],
+                    "current_step": WorkflowStep.LOAD_PROJECT.value,
+                }
+
+            next_state: PresentationWorkflowState = {
+                "project_name": project.name,
+                "current_step": WorkflowStep.LOAD_PROJECT.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Loaded project %s (%s)", project_id, project.name)
+            return next_state
+        except Exception as exc:
+            logger.exception("Project load failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.LOAD_PROJECT.value,
+            }
+
+    def validate_sources(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.VALIDATE_SOURCES.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            documents = DocumentRepository(self._runtime.session).list_by_project(project_id)
+            chunks = DocumentRepository(self._runtime.session).list_chunks_by_project(project_id)
+            issues: list[str] = []
+            if not documents:
+                issues.append("项目尚未上传任何资料文档")
+            elif not chunks:
+                issues.append("项目文档尚未完成分块处理")
+
+            next_state: PresentationWorkflowState = {
+                "source_document_count": len(documents),
+                "source_chunk_count": len(chunks),
+                "source_validation_issues": issues,
+                "current_step": WorkflowStep.VALIDATE_SOURCES.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            if issues:
+                logger.warning(
+                    "Source validation for project %s: %s",
+                    project_id,
+                    "; ".join(issues),
+                )
+            else:
+                logger.info(
+                    "Validated sources for project %s (%d docs, %d chunks)",
+                    project_id,
+                    len(documents),
+                    len(chunks),
+                )
+            return next_state
+        except Exception as exc:
+            logger.exception("Source validation failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.VALIDATE_SOURCES.value,
+            }
 
     def retrieve_context(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
@@ -424,8 +503,85 @@ class PresentationWorkflowNodes:
                 "current_step": WorkflowStep.MARP.value,
             }
 
+    def _refresh_review_artifacts(
+        self,
+        state: PresentationWorkflowState,
+        gate: str,
+    ) -> PresentationWorkflowState:
+        presentation_id = UUID(state["presentation_id"])
+        updates: PresentationWorkflowState = {}
+
+        brief = state.get("brief")
+        if brief is not None:
+            refreshed_brief = self._presentations.get_brief(brief.id)
+            if refreshed_brief is not None:
+                updates["brief"] = refreshed_brief
+
+        if gate in {"storyline", "slides"}:
+            storyline = state.get("storyline")
+            if storyline is not None:
+                refreshed_storyline = self._presentations.get_storyline(storyline.id)
+                if refreshed_storyline is not None:
+                    updates["storyline"] = refreshed_storyline
+
+        if gate == "slides":
+            updates["slides"] = self._presentations.list_slides(presentation_id)
+
+        return updates
+
+    def _gate_ready_to_continue(self, state: PresentationWorkflowState, gate: str) -> bool:
+        if gate == "brief":
+            brief = state.get("brief")
+            if brief is None:
+                return False
+            refreshed = self._presentations.get_brief(brief.id)
+            return refreshed is not None and refreshed.approval_status == ApprovalStatus.APPROVED
+        if gate == "storyline":
+            storyline = state.get("storyline")
+            if storyline is None:
+                return False
+            refreshed_storyline = self._presentations.get_storyline(storyline.id)
+            return (
+                refreshed_storyline is not None
+                and refreshed_storyline.approval_status == ApprovalStatus.APPROVED
+            )
+        if gate == "slides":
+            slides = self._presentations.list_slides(UUID(state["presentation_id"]))
+            return bool(slides) and slides_are_approved(slides)
+        return False
+
     def pause_for_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
+        review_steps = {
+            WorkflowStep.REVIEW_BRIEF.value,
+            WorkflowStep.REVIEW_STORYLINE.value,
+            WorkflowStep.REVIEW_SLIDES.value,
+        }
+
+        workflow_run_id = state.get("workflow_run_id")
+        if workflow_run_id is not None:
+            run = self._runtime.workflow_runs.get_by_id(UUID(workflow_run_id))
+            if run is not None:
+                existing_gate = run.state.get("review_gate")
+                existing_step = run.state.get("current_step")
+                if (
+                    isinstance(existing_gate, str)
+                    and existing_gate in {"brief", "storyline", "slides"}
+                    and isinstance(existing_step, str)
+                    and existing_step in review_steps
+                    and self._gate_ready_to_continue(state, existing_gate)
+                ):
+                    refreshed = self._refresh_review_artifacts(state, existing_gate)
+                    resume_state: PresentationWorkflowState = {
+                        "review_gate": existing_gate,
+                        "current_step": existing_step,
+                        **refreshed,
+                    }
+                    resume_merged = cast(PresentationWorkflowState, {**state, **resume_state})
+                    self._persist_checkpoint(resume_merged, status=WorkflowStatus.RUNNING)
+                    logger.info("Workflow resumed after %s review", existing_gate)
+                    return resume_state
+
         brief = state.get("brief")
         storyline = state.get("storyline")
         slides = self._load_slides_for_export(state)
@@ -449,7 +605,18 @@ class PresentationWorkflowNodes:
         merged = cast(PresentationWorkflowState, {**state, **next_state})
         self._persist_checkpoint(merged, status=WorkflowStatus.AWAITING_REVIEW)
         logger.info("Workflow paused for %s review on presentation %s", gate, state.get("presentation_id"))
-        return next_state
+
+        interrupt({"gate": gate, "step": step})
+
+        refreshed = self._refresh_review_artifacts(merged, gate)
+        resume_state = {
+            **next_state,
+            **refreshed,
+        }
+        resume_merged = cast(PresentationWorkflowState, {**merged, **resume_state})
+        self._persist_checkpoint(resume_merged, status=WorkflowStatus.RUNNING)
+        logger.info("Workflow resumed after %s review", gate)
+        return resume_state
 
     def finalize(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)

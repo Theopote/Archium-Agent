@@ -114,56 +114,20 @@ class PresentationWorkflowService:
         return self._to_result(refreshed, final_state)
 
     def continue_after_review(self, workflow_run_id: UUID) -> WorkflowRunResult:
-        """Resume a workflow that paused for Brief or Storyline approval."""
+        """Resume a workflow paused at a LangGraph interrupt for human review."""
         review_service = PresentationReviewService(self._session)
         context = review_service.ensure_can_continue(workflow_run_id)
         run = context.workflow_run
         if run is None:
             raise WorkflowError(f"Workflow run {workflow_run_id} not found")
 
-        restored = restore_domain_artifacts(run.state)
-        request = restored.get("request")
-        presentation = restored.get("presentation")
-        if request is None or presentation is None:
-            raise WorkflowError(f"Workflow run {workflow_run_id} is missing resumable state")
-
-        if context.brief is not None:
-            restored["brief"] = context.brief
-        if context.storyline is not None:
-            restored["storyline"] = context.storyline
-        if context.slides:
-            restored["slides"] = context.slides
-
         run.status = WorkflowStatus.RUNNING
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
 
-        initial_state = initial_workflow_state(
-            project_id=str(run.project_id),
-            presentation_id=str(run.presentation_id),
-            workflow_run_id=str(run.id),
-            request=request,
-            presentation=presentation,
-            export_json=bool(run.state.get("export_json", True)),
-            export_marp=bool(run.state.get("export_marp", False)),
-            export_pptx=bool(run.state.get("export_pptx", False)),
-            require_brief_review=bool(run.state.get("require_brief_review", False)),
-            require_storyline_review=bool(run.state.get("require_storyline_review", False)),
-            require_slides_review=bool(run.state.get("require_slides_review", False)),
-        )
-        initial_state = cast(
-            PresentationWorkflowState,
-            {
-                **initial_state,
-                **restored,
-                "errors": [],
-                "review_gate": None,
-            },
-        )
-
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
+            final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
             logger.exception("Workflow continue-after-review failed: %s", exc)
             run.errors = [str(exc)]
@@ -178,12 +142,14 @@ class PresentationWorkflowService:
         return self._to_result(refreshed, final_state)
 
     def resume(self, workflow_run_id: UUID) -> WorkflowRunResult:
-        """Re-run a workflow from its last persisted checkpoint."""
+        """Re-run or continue a workflow from its LangGraph checkpoint."""
         run = self._workflow_runs.get_by_id(workflow_run_id)
         if run is None:
             raise WorkflowError(f"Workflow run {workflow_run_id} not found")
         if run.status == WorkflowStatus.COMPLETED:
             return self._to_result(run, run.state)
+        if run.status == WorkflowStatus.AWAITING_REVIEW:
+            return self.continue_after_review(workflow_run_id)
 
         restored = restore_domain_artifacts(run.state)
         request = restored.get("request")

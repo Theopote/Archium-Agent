@@ -18,6 +18,10 @@ class PresentationWorkflowState(TypedDict, total=False):
     project_id: str
     presentation_id: str
     workflow_run_id: str
+    project_name: str | None
+    source_document_count: int
+    source_chunk_count: int
+    source_validation_issues: list[str]
     request: PresentationRequest
     presentation: Presentation | None
     context_bundle: ProjectContextBundle | None
@@ -58,6 +62,10 @@ def initial_workflow_state(
         "project_id": project_id,
         "presentation_id": presentation_id,
         "workflow_run_id": workflow_run_id,
+        "project_name": None,
+        "source_document_count": 0,
+        "source_chunk_count": 0,
+        "source_validation_issues": [],
         "request": request,
         "presentation": presentation,
         "context_bundle": None,

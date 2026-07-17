@@ -9,9 +9,11 @@ import streamlit as st
 
 from archium.config import get_settings
 from archium.domain.enums import ProjectType
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
+from archium.ui.error_handlers import format_user_error
 from archium.ui.review_panel import render_review_panel
 from archium.ui.workspace_service import (
     build_presentation_request,
@@ -215,8 +217,11 @@ def _render_generation_form(project_id: UUID) -> None:
                     require_slides_review=require_slides_review,
                 )
             st.session_state.last_workflow_result = result
+        except WorkflowError as exc:
+            st.error(format_user_error(exc))
+            return
         except Exception as exc:
-            st.error(f"工作流执行失败：{exc}")
+            st.error(format_user_error(exc))
             return
 
     if result.awaiting_review:

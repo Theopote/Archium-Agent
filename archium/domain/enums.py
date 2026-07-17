@@ -174,6 +174,8 @@ class WorkflowStatus(StrEnum):
 
 class WorkflowStep(StrEnum):
     INIT = "init"
+    LOAD_PROJECT = "load_project"
+    VALIDATE_SOURCES = "validate_sources"
     RETRIEVE_CONTEXT = "retrieve_context"
     BRIEF = "brief"
     REVIEW_BRIEF = "review_brief"
