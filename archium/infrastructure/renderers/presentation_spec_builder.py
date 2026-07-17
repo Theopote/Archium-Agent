@@ -40,7 +40,7 @@ def build_presentation_spec(
     storyline: Storyline,
     slides: list[SlideSpec],
     version: int = 1,
-    theme: str = "archium-default",
+    theme: str = "architecture-board",
     asset_paths: dict[UUID, Path] | None = None,
 ) -> PresentationSpec:
     """Convert Brief / Storyline / SlideSpec into a renderer-agnostic spec."""

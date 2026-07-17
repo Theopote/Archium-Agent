@@ -63,3 +63,7 @@ class SlideRevisionNotFoundError(ArchiumError):
     def __init__(self, revision_id: UUID) -> None:
         super().__init__(f"Slide revision {revision_id} not found")
         self.revision_id = revision_id
+
+
+class UnsupportedOperationError(ArchiumError):
+    """Raised when a deprecated or removed API surface is invoked incorrectly."""

@@ -1,0 +1,39 @@
+{
+  "id": "case_c_competition",
+  "name": "概念方案投标",
+  "project": {
+    "name": "某文化地标概念投标",
+    "project_type": "culture"
+  },
+  "documents": [
+    {
+      "filename": "任务书摘要.pdf",
+      "content": "强调城市门户形象、开放公共空间与快速可实施的概念表达。",
+      "section_title": "投标要求"
+    }
+  ],
+  "facts": [
+    {
+      "key": "plot_ratio",
+      "label": "容积率",
+      "value": "2.5"
+    }
+  ],
+  "request": {
+    "title": "城市文化地标概念投标",
+    "audience": "评标委员会",
+    "purpose": "概念方案投标",
+    "duration_minutes": 15,
+    "target_slide_count": 4,
+    "core_message": "以开放姿态重塑城市门户",
+    "required_sections": ["城市语境", "方案亮点", "空间叙事"],
+    "presentation_type": "competition"
+  },
+  "expectations": {
+    "min_slides": 4,
+    "workflow_status": "completed",
+    "export_presentation_spec": true,
+    "spec_layouts_any": ["title", "thesis", "content_bullets", "content_message"],
+    "review_layers": ["content"]
+  }
+}

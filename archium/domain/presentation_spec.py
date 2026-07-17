@@ -62,6 +62,6 @@ class PresentationSpec(DomainModel):
     presentation_id: str
     version: int = Field(ge=1)
     title: str = Field(min_length=1)
-    theme: str = "archium-default"
+    theme: str = "architecture-board"
     language: str = "zh-CN"
     slides: list[SpecSlide] = Field(default_factory=list)

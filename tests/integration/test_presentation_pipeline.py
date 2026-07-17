@@ -206,3 +206,25 @@ def test_run_pipeline_exports_marp(
     content = result.marp_md_path.read_text(encoding="utf-8")
     assert "marp: true" in content
     assert "老院区更新概念汇报" in content
+
+
+def test_run_pipeline_rejects_existing_presentation_id(
+    presentation_service: PresentationService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+) -> None:
+    from archium.exceptions import UnsupportedOperationError
+
+    presentation = presentation_service.create_presentation(
+        project_with_context.id,
+        request_payload,
+    )
+    with pytest.raises(
+        UnsupportedOperationError,
+        match="Updating existing presentations through run_pipeline is no longer supported",
+    ):
+        presentation_service.run_pipeline(
+            project_with_context.id,
+            request_payload,
+            presentation_id=presentation.id,
+        )

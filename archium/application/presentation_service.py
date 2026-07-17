@@ -18,6 +18,7 @@ from archium.domain.slide import SlideSpec
 from archium.exceptions import (
     PresentationNotFoundError,
     ProjectNotFoundError,
+    UnsupportedOperationError,
     WorkflowError,
 )
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
@@ -98,9 +99,12 @@ class PresentationService:
         export_pptx: bool = False,
         export_pdf: bool = False,
     ) -> PipelineResult:
-        """Deprecated: delegate to :class:`PresentationWorkflowService`."""
+        """Deprecated: delegate to :class:`PresentationWorkflowService`.
+
+        Will be removed in v0.3. Passing ``presentation_id`` is no longer supported.
+        """
         warnings.warn(
-            "PresentationService.run_pipeline() is deprecated; "
+            "PresentationService.run_pipeline() is deprecated and will be removed in v0.3; "
             "use PresentationWorkflowService.run() instead.",
             DeprecationWarning,
             stacklevel=2,
@@ -111,9 +115,8 @@ class PresentationService:
             existing = self._presentations.get_presentation(presentation_id)
             if existing is None:
                 raise PresentationNotFoundError(presentation_id)
-            logger.warning(
-                "run_pipeline(presentation_id=...) is ignored; "
-                "workflow runs always create a new presentation record."
+            raise UnsupportedOperationError(
+                "Updating existing presentations through run_pipeline is no longer supported"
             )
 
         workflow = PresentationWorkflowService(

@@ -1,0 +1,49 @@
+{
+  "id": "case_a_hospital",
+  "name": "医院老院区更新",
+  "project": {
+    "name": "某医院老院区更新",
+    "project_type": "healthcare"
+  },
+  "documents": [
+    {
+      "filename": "任务书.pdf",
+      "content": "老院区交通组织混乱，人车混行严重。需优化车行流线并保留急诊通道。",
+      "section_title": "现状"
+    },
+    {
+      "filename": "现场照片说明.docx",
+      "content": "入口广场人车交织，缺少明确人行导向与落客区。",
+      "section_title": "现场"
+    }
+  ],
+    "facts": [
+    {
+      "key": "site_area",
+      "label": "用地面积",
+      "value": "12.5 公顷"
+    },
+    {
+      "key": "land_area",
+      "label": "占地面积",
+      "value": "12.8 公顷"
+    }
+  ],
+  "request": {
+    "title": "老院区更新概念汇报",
+    "audience": "医院管理层",
+    "purpose": "确认总体改造方向与交通组织策略",
+    "duration_minutes": 20,
+    "target_slide_count": 4,
+    "core_message": "通过交通重组与功能再分配改善就医体验",
+    "required_sections": ["院区现状", "交通组织", "改造策略"],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 4,
+    "workflow_status": "completed",
+    "review_layers": ["evidence", "architectural", "layout"],
+    "fact_conflict_keys": ["site_area", "land_area"],
+    "issue_title_contains_any": ["缺少引用来源", "数值结论缺少依据", "交通流线图", "缺少匹配素材"]
+  }
+}

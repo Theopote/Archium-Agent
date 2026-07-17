@@ -24,7 +24,7 @@ class PptxGenPresentationRenderer:
         settings: Settings | None = None,
         *,
         session: Session | None = None,
-        theme: str = "archium-default",
+        theme: str = "architecture-board",
     ) -> None:
         self._settings = settings or get_settings()
         self._session = session
