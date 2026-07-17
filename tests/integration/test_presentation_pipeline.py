@@ -110,7 +110,7 @@ def test_run_pipeline_persists_artifacts(
     assert result.brief is not None
     assert result.storyline is not None
     assert len(result.slides) == 4
-    assert result.presentation.status == PresentationStatus.REVIEW
+    assert result.presentation.status == PresentationStatus.EXPORTED
 
     pres_repo = PresentationRepository(db_session)
     briefs = pres_repo.list_briefs(result.presentation.id)
