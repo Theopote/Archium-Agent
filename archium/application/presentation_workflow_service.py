@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
@@ -20,7 +21,7 @@ from archium.infrastructure.database.repositories import WorkflowRunRepository
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
 from archium.logging import get_logger
-from archium.workflow.checkpointer import create_workflow_checkpointer
+from archium.workflow.checkpointer import WorkflowCheckpointerManager
 from archium.workflow.presentation_graph import PresentationWorkflowGraph
 from archium.workflow.runtime import PresentationWorkflowRuntime
 from archium.workflow.serialization import request_to_dict, restore_domain_artifacts, snapshot_state
@@ -39,6 +40,7 @@ class PresentationWorkflowService:
         *,
         settings: Settings | None = None,
         renderer: JsonPresentationRenderer | None = None,
+        checkpointer_manager: WorkflowCheckpointerManager | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
@@ -49,8 +51,23 @@ class PresentationWorkflowService:
             renderer=renderer,
         )
         self._workflow_runs = WorkflowRunRepository(session)
-        checkpointer = create_workflow_checkpointer(self._settings.workflow_checkpoint_path)
-        self._graph = PresentationWorkflowGraph(self._runtime, checkpointer=checkpointer)
+        self._owns_checkpointer = checkpointer_manager is None
+        self._checkpointer_manager = checkpointer_manager or WorkflowCheckpointerManager(
+            self._settings.workflow_checkpoint_path
+        )
+        self._graph = PresentationWorkflowGraph(
+            self._runtime,
+            checkpointer=self._checkpointer_manager.saver,
+        )
+
+    def close(self) -> None:
+        """Close the LangGraph SQLite checkpointer connection."""
+        self._checkpointer_manager.close()
+
+    def __del__(self) -> None:
+        if getattr(self, "_owns_checkpointer", False):
+            with suppress(Exception):
+                self.close()
 
     def run(
         self,

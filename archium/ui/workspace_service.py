@@ -27,6 +27,20 @@ from archium.infrastructure.database.repositories import (
 )
 from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.factory import create_llm_provider
+from archium.ui.workflow_resources import get_workflow_checkpointer_manager
+
+
+def _create_workflow_service(
+    session: Session,
+    llm: object,
+    settings: Settings,
+) -> PresentationWorkflowService:
+    return PresentationWorkflowService(
+        session,
+        llm,  # type: ignore[arg-type]
+        settings=settings,
+        checkpointer_manager=get_workflow_checkpointer_manager(settings),
+    )
 
 
 @dataclass(frozen=True)
@@ -172,7 +186,7 @@ def run_presentation_workflow(
 ) -> WorkflowRunResult:
     resolved_settings = settings or get_settings()
     llm = create_llm_provider(resolved_settings)
-    service = PresentationWorkflowService(session, llm, settings=resolved_settings)
+    service = _create_workflow_service(session, llm, resolved_settings)
     resolved_preview_images = (
         export_preview_images
         if export_preview_images is not None
@@ -202,7 +216,7 @@ def continue_workflow_after_review(
     resolved_settings = settings or get_settings()
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
-        service = PresentationWorkflowService(session, llm, settings=resolved_settings)
+        service = _create_workflow_service(session, llm, resolved_settings)
         return service.continue_after_review(workflow_run_id)
 
 
@@ -215,7 +229,7 @@ def resume_workflow(
     resolved_settings = settings or get_settings()
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
-        service = PresentationWorkflowService(session, llm, settings=resolved_settings)
+        service = _create_workflow_service(session, llm, resolved_settings)
         return service.resume(workflow_run_id)
 
 

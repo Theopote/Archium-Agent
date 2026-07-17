@@ -33,9 +33,10 @@ class PresentationWorkflowState(TypedDict, total=False):
     brief: PresentationBrief | None
     storyline: Storyline | None
     slides: list[SlideSpec]
-    review_issues: Annotated[list[ReviewIssue], operator.add]
+    review_issues: list[ReviewIssue]
     matched_asset_count: int
     repaired_slide_count: int
+    repair_round: int
     json_path: str | None
     spec_path: str | None
     editable_pptx_path: str | None
@@ -55,7 +56,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     require_storyline_review: bool
     require_slides_review: bool
     review_gate: str | None
-    slide_review_issues: Annotated[list[str], operator.add]
+    slide_review_issues: list[str]
     current_step: str
     errors: Annotated[list[str], operator.add]
 
@@ -99,6 +100,7 @@ def initial_workflow_state(
         "review_issues": [],
         "matched_asset_count": 0,
         "repaired_slide_count": 0,
+        "repair_round": 0,
         "json_path": None,
         "spec_path": None,
         "editable_pptx_path": None,

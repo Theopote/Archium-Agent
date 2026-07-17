@@ -594,7 +594,9 @@ class AutomatedReviewService:
                         )
                     if asset is not None:
                         ratio = asset.aspect_ratio
-                        if ratio < _EXTREME_ASPECT_RATIO_LOW or ratio > _EXTREME_ASPECT_RATIO_HIGH:
+                        if ratio is not None and (
+                            ratio < _EXTREME_ASPECT_RATIO_LOW or ratio > _EXTREME_ASPECT_RATIO_HIGH
+                        ):
                             issues.append(
                                 self._issue(
                                     presentation_id,

@@ -132,6 +132,12 @@ class Settings(BaseSettings):
         default=False,
         description="When true and LLM is available, auto-repair slide-level CRITICAL/HIGH review issues.",
     )
+    slide_repair_max_rounds: int = Field(
+        default=2,
+        ge=0,
+        le=5,
+        description="Maximum automated repair → four-layer re-review cycles per workflow run.",
+    )
 
     discord_bot_token: str | None = Field(
         default=None,

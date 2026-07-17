@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -71,7 +70,6 @@ def test_database_path_consistent_across_working_directories(
     reset_settings()
     reset_engine_cache()
 
-    project_root = Path(__file__).resolve().parents[2]
     db_file = tmp_path / "isolated" / "archium.db"
     db_file.parent.mkdir(parents=True)
 

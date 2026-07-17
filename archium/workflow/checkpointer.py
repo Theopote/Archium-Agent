@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from types import TracebackType
 
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -39,9 +40,45 @@ _CHECKPOINT_MODULES: list[tuple[str, str]] = [
 ]
 
 
+class WorkflowCheckpointerManager:
+    """Owns the SQLite connection backing a LangGraph SqliteSaver."""
+
+    def __init__(self, db_path: Path) -> None:
+        self._db_path = db_path
+        self._conn: sqlite3.Connection | None = None
+        self._saver: SqliteSaver | None = None
+
+    @property
+    def db_path(self) -> Path:
+        return self._db_path
+
+    @property
+    def saver(self) -> SqliteSaver:
+        if self._saver is None:
+            self._db_path.parent.mkdir(parents=True, exist_ok=True)
+            self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
+            serde = JsonPlusSerializer(allowed_msgpack_modules=_CHECKPOINT_MODULES)
+            self._saver = SqliteSaver(self._conn, serde=serde)
+        return self._saver
+
+    def close(self) -> None:
+        if self._conn is not None:
+            self._conn.close()
+        self._conn = None
+        self._saver = None
+
+    def __enter__(self) -> WorkflowCheckpointerManager:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.close()
+
+
 def create_workflow_checkpointer(db_path: Path) -> SqliteSaver:
     """Create a SQLite-backed LangGraph checkpointer with domain serde allowlist."""
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path), check_same_thread=False)
-    serde = JsonPlusSerializer(allowed_msgpack_modules=_CHECKPOINT_MODULES)
-    return SqliteSaver(conn, serde=serde)
+    return WorkflowCheckpointerManager(db_path).saver

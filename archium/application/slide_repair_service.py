@@ -37,6 +37,27 @@ _REPAIRABLE_CATEGORIES = {
 _REPAIRABLE_SEVERITIES = {ReviewSeverity.CRITICAL, ReviewSeverity.HIGH}
 
 
+def has_repairable_open_issues(
+    issues: list[ReviewIssue],
+    settings: Settings,
+) -> bool:
+    """Return True when automated slide repair should run for open review issues."""
+    if not settings.slide_repair_enabled:
+        return False
+    for issue in issues:
+        if issue.status != ReviewStatus.OPEN:
+            continue
+        if issue.auto_fixable and issue.slide_id is not None:
+            return True
+        if (
+            issue.slide_id is not None
+            and issue.category in _REPAIRABLE_CATEGORIES
+            and issue.severity in _REPAIRABLE_SEVERITIES
+        ):
+            return True
+    return False
+
+
 class SlideRepairService:
     """LLM-assisted per-slide fixes for open review issues."""
 
@@ -161,12 +182,16 @@ class SlideRepairService:
         )
         repaired = 0
 
+        llm = self._llm
+        if llm is None:
+            return slides_by_id, 0
+
         for slide_id, slide_issues in issues_by_slide.items():
             slide = slides_by_id.get(slide_id)
             if slide is None:
                 continue
             try:
-                draft = self._llm.generate_structured(
+                draft = llm.generate_structured(
                     LLMRequest(
                         system_prompt=SLIDE_REPAIR_SYSTEM_PROMPT,
                         user_prompt=build_slide_repair_user_prompt(

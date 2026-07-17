@@ -11,6 +11,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 
 from archium.application.review_service import slides_are_approved
+from archium.application.slide_repair_service import has_repairable_open_issues
 from archium.domain.enums import ApprovalStatus
 from archium.workflow.nodes import PresentationWorkflowNodes
 from archium.workflow.runtime import PresentationWorkflowRuntime
@@ -162,8 +163,12 @@ class PresentationWorkflowGraph:
         builder.add_edge("run_content_review", "run_evidence_review")
         builder.add_edge("run_evidence_review", "run_architectural_review")
         builder.add_edge("run_architectural_review", "run_layout_review")
-        builder.add_edge("run_layout_review", "repair_slides")
-        builder.add_edge("repair_slides", "review_slides")
+        builder.add_conditional_edges(
+            "run_layout_review",
+            self._route_after_layout_review,
+            {"repair": "repair_slides", "validate": "review_slides", "finalize": "finalize"},
+        )
+        builder.add_edge("repair_slides", "run_content_review")
         builder.add_conditional_edges(
             "review_slides",
             _route_after_slides,
@@ -197,3 +202,15 @@ class PresentationWorkflowGraph:
         builder.add_edge("finalize", END)
 
         return builder.compile(checkpointer=self._checkpointer)
+
+    def _route_after_layout_review(self, state: PresentationWorkflowState) -> str:
+        if state.get("errors"):
+            return "finalize"
+        settings = self._runtime.settings
+        repair_round = state.get("repair_round", 0)
+        if (
+            repair_round < settings.slide_repair_max_rounds
+            and has_repairable_open_issues(list(state.get("review_issues", [])), settings)
+        ):
+            return "repair"
+        return "validate"

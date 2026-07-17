@@ -98,6 +98,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "slide_review_issues": list(state.get("slide_review_issues", [])),
         "matched_asset_count": state.get("matched_asset_count", 0),
         "repaired_slide_count": state.get("repaired_slide_count", 0),
+        "repair_round": state.get("repair_round", 0),
         "review_issue_count": len(state.get("review_issues", [])),
         "slide_count": len(slides),
     }

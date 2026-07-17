@@ -25,6 +25,7 @@ from archium.domain.enums import (
     WorkflowStatus,
     WorkflowStep,
 )
+from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
@@ -52,6 +53,19 @@ class PresentationWorkflowNodes:
             operation="presentation_workflow",
             workflow_run_id=workflow_run_id,
         )
+
+    @staticmethod
+    def _merge_review_findings(
+        state: PresentationWorkflowState,
+        new_issues: list[ReviewIssue],
+        reviewer: AutomatedReviewService,
+    ) -> dict[str, object]:
+        """Append layer findings without duplicating issues already in graph state."""
+        combined = list(state.get("review_issues", [])) + new_issues
+        return {
+            "review_issues": combined,
+            "slide_review_issues": reviewer.summarize_for_slides(combined),
+        }
 
     def _persist_checkpoint(
         self,
@@ -502,11 +516,13 @@ class PresentationWorkflowNodes:
                 slides,
                 brief=state.get("brief"),
             )
-            next_state: PresentationWorkflowState = {
-                "review_issues": content_issues,
-                "slide_review_issues": reviewer.summarize_for_slides(content_issues),
-                "current_step": WorkflowStep.CONTENT_REVIEW.value,
-            }
+            next_state = cast(
+                PresentationWorkflowState,
+                {
+                    **self._merge_review_findings(state, content_issues, reviewer),
+                    "current_step": WorkflowStep.CONTENT_REVIEW.value,
+                },
+            )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
             logger.info("Content review recorded %d issue(s)", len(content_issues))
@@ -539,11 +555,13 @@ class PresentationWorkflowNodes:
                 slides,
                 context_bundle=state.get("context_bundle"),
             )
-            next_state: PresentationWorkflowState = {
-                "review_issues": evidence_issues,
-                "slide_review_issues": reviewer.summarize_for_slides(evidence_issues),
-                "current_step": WorkflowStep.EVIDENCE_REVIEW.value,
-            }
+            next_state = cast(
+                PresentationWorkflowState,
+                {
+                    **self._merge_review_findings(state, evidence_issues, reviewer),
+                    "current_step": WorkflowStep.EVIDENCE_REVIEW.value,
+                },
+            )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
             logger.info("Evidence review recorded %d issue(s)", len(evidence_issues))
@@ -577,11 +595,13 @@ class PresentationWorkflowNodes:
                 brief=state.get("brief"),
                 storyline=state.get("storyline"),
             )
-            next_state: PresentationWorkflowState = {
-                "review_issues": architectural_issues,
-                "slide_review_issues": reviewer.summarize_for_slides(architectural_issues),
-                "current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value,
-            }
+            next_state = cast(
+                PresentationWorkflowState,
+                {
+                    **self._merge_review_findings(state, architectural_issues, reviewer),
+                    "current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value,
+                },
+            )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
             logger.info("Architectural review recorded %d issue(s)", len(architectural_issues))
@@ -618,11 +638,13 @@ class PresentationWorkflowNodes:
                 storyline=state.get("storyline"),
                 context_bundle=state.get("context_bundle"),
             )
-            next_state: PresentationWorkflowState = {
-                "review_issues": layout_issues,
-                "slide_review_issues": reviewer.summarize_for_slides(layout_issues),
-                "current_step": WorkflowStep.LAYOUT_REVIEW.value,
-            }
+            next_state = cast(
+                PresentationWorkflowState,
+                {
+                    **self._merge_review_findings(state, layout_issues, reviewer),
+                    "current_step": WorkflowStep.LAYOUT_REVIEW.value,
+                },
+            )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
             logger.info("Layout review recorded %d issue(s)", len(layout_issues))
@@ -663,6 +685,9 @@ class PresentationWorkflowNodes:
             next_state: PresentationWorkflowState = {
                 "slides": repaired_slides,
                 "repaired_slide_count": repair_count,
+                "repair_round": state.get("repair_round", 0) + 1,
+                "review_issues": [],
+                "slide_review_issues": [],
                 "current_step": WorkflowStep.REPAIR_SLIDES.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})

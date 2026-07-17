@@ -1,5 +1,7 @@
 # Archium Agent
 
+![CI](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml/badge.svg)
+
 Archium（阿基姆）是一款面向建筑师、规划师、设计院和建筑事务所的**智能汇报生产工具**。
 
 它的目标不是简单地「让 AI 写一个 PPT」，而是：
@@ -158,6 +160,7 @@ cp .env.example .env
 | `LLM_PROFESSIONAL_REVIEW_ENABLED` | 为 `true` 且已配置 LLM 时，额外运行 LLM 专业审核 | 否 |
 | `FACT_EXTRACTION_ENABLED` | 为 `true` 且 LLM 可用时，在检索上下文后提取 ProjectFact | 否 |
 | `SLIDE_REPAIR_ENABLED` | 为 `true` 且 LLM 可用时，自动修复页面级严重/高优先级审核问题 | 否 |
+| `SLIDE_REPAIR_MAX_ROUNDS` | 单次工作流内自动修复→四层复审的最大轮次，默认 `2` | 否 |
 | `MARP_COMMAND` | Marp CLI 命令，默认 `marp` | 否 |
 | `MARP_PREVIEW_IMAGES_ENABLED` | 导出 Marp Markdown 时是否生成 PNG 预览图，默认 `true` | 否 |
 | `MARP_PREVIEW_IMAGE_FORMAT` | 预览图格式（`png` 或 `jpeg`），默认 `png` | 否 |
@@ -190,6 +193,27 @@ alembic upgrade head
 ```
 
 测试不依赖真实 API Key，使用临时目录，不会污染 `data/` 目录。
+
+### CI 与分支保护
+
+仓库已启用 GitHub Actions（`.github/workflows/ci.yml`），在 `push` / `pull_request` 时运行 matrix 任务：
+
+- `CI / test (3.11)`
+- `CI / test (3.12)`
+
+建议在 GitHub **Settings → Branches → Branch protection rules** 中为 `master` 启用：
+
+- Require status checks to pass before merging
+- 勾选上述两个 CI job
+
+本地等价命令：
+
+```bash
+pip install -e ".[dev]"
+ruff check archium tests
+mypy archium
+pytest --cov=archium --cov-report=term-missing
+```
 
 ## Marp 安装
 
