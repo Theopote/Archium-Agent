@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
+from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
@@ -57,7 +58,7 @@ class RegenerationService:
         presentation.current_brief_id = brief.id
         presentation.current_storyline_id = None
         self._presentations.update_presentation(presentation)
-        self._presentations.delete_slides_for_presentation(presentation_id)
+        self._archive_and_delete_slides(presentation_id)
         self._pause_for_review(
             presentation_id,
             workflow_run_id=workflow_run_id,
@@ -88,7 +89,7 @@ class RegenerationService:
         presentation = context.presentation
         presentation.current_storyline_id = storyline.id
         self._presentations.update_presentation(presentation)
-        self._presentations.delete_slides_for_presentation(presentation_id)
+        self._archive_and_delete_slides(presentation_id)
         self._pause_for_review(
             presentation_id,
             workflow_run_id=workflow_run_id,
@@ -115,7 +116,7 @@ class RegenerationService:
         if context.storyline.approval_status != ApprovalStatus.APPROVED:
             raise WorkflowError("Storyline must be approved before regenerating slides")
 
-        self._presentations.delete_slides_for_presentation(presentation_id)
+        self._archive_and_delete_slides(presentation_id, slides=context.slides)
         slides = self._pipeline.generate_slide_plan(
             context.presentation.project_id,
             context.brief,
@@ -210,6 +211,17 @@ class RegenerationService:
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
+
+    def _archive_and_delete_slides(
+        self,
+        presentation_id: UUID,
+        *,
+        slides: list[SlideSpec] | None = None,
+    ) -> None:
+        existing = slides if slides is not None else self._presentations.list_slides(presentation_id)
+        if existing:
+            self._history.archive_slides_before_regeneration(existing)
+        self._presentations.delete_slides_for_presentation(presentation_id)
 
     def _resolve_workflow_run(
         self,

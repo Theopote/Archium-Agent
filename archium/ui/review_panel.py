@@ -17,6 +17,7 @@ from archium.application.review_models import (
 from archium.application.review_service import PresentationReviewService
 from archium.domain.enums import ApprovalStatus, SlideStatus, SlideType
 from archium.infrastructure.database.session import get_session
+from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workspace_service import (
     continue_workflow_after_review,
     regenerate_brief,
@@ -330,6 +331,8 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
             st.rerun()
         except Exception as exc:
             st.error(f"重新生成失败：{exc}")
+
+    render_slide_history_panel(presentation_id=context_presentation_id, slides=context.slides)
 
 
 def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID | None) -> None:

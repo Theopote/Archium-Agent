@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from archium.domain._base import DomainModel, IdentifiedModel
+from archium.domain._base import DomainModel, IdentifiedModel, utc_now
 from archium.domain.enums import SlideChangeSource
 
 
@@ -20,7 +20,7 @@ class SlideRevision(IdentifiedModel):
     change_source: SlideChangeSource
     snapshot: dict[str, object] = Field(default_factory=dict)
     note: str | None = None
-    created_at: datetime
+    created_at: datetime = Field(default_factory=utc_now)
 
 
 class SlideFieldChange(DomainModel):
