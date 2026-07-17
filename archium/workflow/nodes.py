@@ -25,7 +25,7 @@ from archium.domain.enums import (
     WorkflowStatus,
     WorkflowStep,
 )
-from archium.domain.review import ReviewIssue
+from archium.domain.review import ReviewIssue, merge_review_findings
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
@@ -60,12 +60,11 @@ class PresentationWorkflowNodes:
         new_issues: list[ReviewIssue],
         reviewer: AutomatedReviewService,
     ) -> dict[str, object]:
-        """Append layer findings without duplicating issues already in graph state."""
-        combined = list(state.get("review_issues", [])) + new_issues
-        return {
-            "review_issues": combined,
-            "slide_review_issues": reviewer.summarize_for_slides(combined),
-        }
+        return merge_review_findings(
+            list(state.get("review_issues", [])),
+            new_issues,
+            reviewer.summarize_for_slides,
+        )
 
     def _persist_checkpoint(
         self,
