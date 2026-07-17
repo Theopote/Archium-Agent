@@ -1,0 +1,100 @@
+"""Structural validation for slide split plans before execution."""
+
+from __future__ import annotations
+
+from archium.application.slide_repair_policy import contains_protected_signal
+from archium.domain.presentation import Storyline
+from archium.domain.slide import SlideSpec
+from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan
+
+
+def validate_split_plan(
+    plan: SlideSplitPlan,
+    *,
+    original: SlideSpec | None = None,
+    storyline: Storyline | None = None,
+    chapter_slide_count: int | None = None,
+) -> SlideSplitPlan:
+    """Validate narrative structure; set ``requires_human_approval`` when checks fail."""
+    issues: list[str] = []
+    source = plan.updated_source
+    continuations = plan.continuation_slides
+
+    if source.id != plan.source_slide_id:
+        issues.append("拆分计划的首页 ID 与 source_slide_id 不一致")
+
+    for continuation in continuations:
+        if not continuation.message.strip():
+            issues.append(f"续页「{continuation.title}」缺少独立核心信息")
+        elif (
+            len(continuation.key_points) > 1
+            and continuation.message == GENERIC_CONTINUATION_MESSAGE
+        ):
+            issues.append("续页使用占位核心信息，无法独立传达结论")
+
+        if continuation.source_citations and not _content_needs_citations(continuation):
+            issues.append("续页绑定了引用但内容无需证据支撑，可能导致结论与证据分离")
+
+    if original is not None:
+        moved_points = _moved_points(original, source, continuations)
+        if original.source_citations and moved_points:
+            source_has_citations = bool(source.source_citations)
+            moved_has_evidence = contains_protected_signal(" ".join(moved_points))
+            continuation_has_citations = any(
+                slide.source_citations for slide in continuations
+            )
+            if moved_has_evidence and source_has_citations and not continuation_has_citations:
+                issues.append("证据性要点已移至续页，但引用仍留在原页")
+
+        if original.visual_requirements and plan.asset_mapping:
+            unmapped = [
+                index
+                for index in range(len(original.visual_requirements))
+                if index not in plan.asset_mapping
+            ]
+            if unmapped:
+                issues.append("部分视觉素材未完成拆页映射，仍绑定旧页面")
+
+        combined_points = source.key_points + [
+            point for slide in continuations for point in slide.key_points
+        ]
+        if len(combined_points) != len(original.key_points):
+            issues.append("拆页后要点总数与原文不一致，可能丢失或重复内容")
+
+    if storyline is not None and original is not None:
+        chapter = next(
+            (item for item in storyline.chapters if item.id == original.chapter_id),
+            None,
+        )
+        if chapter is not None and chapter_slide_count is not None:
+            projected = chapter_slide_count + len(continuations)
+            if projected > chapter.estimated_slide_count:
+                issues.append(
+                    f"拆页后章节「{chapter.title}」页数 ({projected}) "
+                    f"超出 Storyline 预算 ({chapter.estimated_slide_count})"
+                )
+
+    for continuation in continuations:
+        if continuation.title.endswith("（续）") and len(continuation.key_points) >= 3:
+            issues.append(f"续页「{continuation.title}」标题缺少独立上下文")
+
+    requires_human_approval = len(issues) > 0
+    return plan.model_copy(
+        update={
+            "requires_human_approval": requires_human_approval,
+            "validation_issues": issues,
+        }
+    )
+
+
+def _content_needs_citations(slide: SlideSpec) -> bool:
+    combined = " ".join([slide.message, *slide.key_points])
+    return contains_protected_signal(combined)
+
+
+def _moved_points(
+    _original: SlideSpec,
+    _source: SlideSpec,
+    continuations: list[SlideSpec],
+) -> list[str]:
+    return [point for slide in continuations for point in slide.key_points]

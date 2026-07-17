@@ -5,10 +5,11 @@ from __future__ import annotations
 import re
 from copy import deepcopy
 from dataclasses import dataclass, field
-from uuid import uuid4
 
 from archium.domain.enums import SlideRepairTier
+from archium.domain.presentation import Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
+from archium.domain.slide_split import SlideSplitPlan
 
 _MAX_KEY_POINTS = 5
 _MAX_MESSAGE_LENGTH = 120
@@ -36,6 +37,7 @@ class LayoutRepairOutcome:
     removed_items: list[str] = field(default_factory=list)
     reason: str = ""
     split_slide: SlideSpec | None = None
+    split_plan: SlideSplitPlan | None = None
     requires_manual_confirmation: bool = False
     involves_citation: bool = False
     involves_numbers: bool = False
@@ -146,7 +148,12 @@ def _removable_key_point_indices(points: list[str]) -> list[int]:
     return [index for index, point in enumerate(points) if not contains_protected_signal(point)]
 
 
-def apply_tiered_layout_repair(slide: SlideSpec) -> LayoutRepairOutcome:
+def apply_tiered_layout_repair(
+    slide: SlideSpec,
+    *,
+    storyline: Storyline | None = None,
+    chapter_slide_count: int | None = None,
+) -> LayoutRepairOutcome:
     """Apply tier 1→3 layout repair; defer to tier 4 when facts would be lost."""
     working = deepcopy(slide)
     before_message = working.message
@@ -231,7 +238,27 @@ def apply_tiered_layout_repair(slide: SlideSpec) -> LayoutRepairOutcome:
             tier_used = SlideRepairTier.SPLIT
         if "要点超过 5 条" not in " ".join(reasons):
             reasons.append("溢出要点拆分到新页")
-        outcome.split_slide = _build_split_slide(working, overflow_points)
+        split_reason = "；".join(reasons) if reasons else "版面拆分"
+        from archium.application.slide_split_planner import build_split_plan
+
+        plan = build_split_plan(
+            slide,
+            working,
+            overflow_points,
+            split_reason,
+            storyline=storyline,
+            chapter_slide_count=chapter_slide_count,
+        )
+        if plan.requires_human_approval:
+            outcome.requires_manual_confirmation = True
+            outcome.reason = "；".join(plan.validation_issues) or "拆页方案需人工确认"
+            outcome.split_plan = plan
+            outcome.tier = SlideRepairTier.USER_CONFIRMATION
+            outcome.slide = slide
+            return outcome
+        outcome.split_plan = plan
+        outcome.slide = plan.updated_source
+        outcome.split_slide = plan.primary_continuation
 
     if before_message != working.message and not any(
         item.startswith("核心信息改写") for item in outcome.removed_items
@@ -241,7 +268,7 @@ def apply_tiered_layout_repair(slide: SlideSpec) -> LayoutRepairOutcome:
     outcome.changed = (
         working.message != before_message
         or working.key_points != before_points
-        or outcome.split_slide is not None
+        or outcome.split_plan is not None
     )
     if outcome.changed and tier_used is not None:
         outcome.tier = tier_used
@@ -251,38 +278,11 @@ def apply_tiered_layout_repair(slide: SlideSpec) -> LayoutRepairOutcome:
     return outcome
 
 
-def _citations_for_split_page(
-    original_citations: list,
-    moved_points: list[str],
-) -> list:
-    """Assign citations to the continuation page when moved content needs evidence."""
-    if not original_citations:
-        return []
-    moved_text = " ".join(moved_points)
-    if contains_protected_signal(moved_text):
-        return list(original_citations)
-    return []
-
-
 def _build_split_slide(original: SlideSpec, moved_points: list[str]) -> SlideSpec:
-    message = moved_points[0] if len(moved_points) == 1 else "本页延续上一页内容，详见下列要点。"
-    order = original.order + 1
-    return SlideSpec(
-        id=uuid4(),
-        presentation_id=original.presentation_id,
-        chapter_id=original.chapter_id,
-        order=order,
-        logical_key=build_slide_logical_key(original.chapter_id, order),
-        title=f"{original.title}（续）",
-        message=message,
-        slide_type=original.slide_type,
-        layout_id=original.layout_id,
-        key_points=list(moved_points),
-        visual_requirements=[],
-        source_citations=_citations_for_split_page(original.source_citations, moved_points),
-        speaker_notes=None,
-        status=original.status,
-    )
+    """Backward-compatible wrapper; prefer ``build_split_plan`` for full planning."""
+    from archium.application.slide_split_planner import build_split_slide
+
+    return build_split_slide(original, moved_points)
 
 
 def insert_split_slide(slides: list[SlideSpec], split_slide: SlideSpec) -> list[SlideSpec]:

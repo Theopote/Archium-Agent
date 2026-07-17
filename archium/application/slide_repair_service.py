@@ -26,7 +26,7 @@ from archium.domain.enums import (
     SlideRepairSource,
     SlideRepairTier,
 )
-from archium.domain.presentation import PresentationBrief
+from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, build_slide_logical_key
@@ -98,6 +98,7 @@ class SlideRepairService:
         issues: list[ReviewIssue],
         *,
         brief: PresentationBrief | None = None,
+        storyline: Storyline | None = None,
     ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord]]:
         """Repair slide-level issues and return updated slides, count, and audit records."""
         slides_by_id = {slide.id: slide for slide in slides}
@@ -110,6 +111,7 @@ class SlideRepairService:
             updated_slides,
             slides_by_id,
             issues,
+            storyline=storyline,
         )
         updated_slides = rule_slides
         slides_by_id = {slide.id: slide for slide in updated_slides}
@@ -143,6 +145,8 @@ class SlideRepairService:
         slides: list[SlideSpec],
         slides_by_id: dict[UUID, SlideSpec],
         issues: list[ReviewIssue],
+        *,
+        storyline: Storyline | None = None,
     ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord], list[ReviewIssue]]:
         """Deterministic graduated layout fixes for issues marked auto_fixable."""
         issues_by_slide: dict[UUID, list[ReviewIssue]] = {}
@@ -167,7 +171,14 @@ class SlideRepairService:
                 continue
 
             before_snapshot = slide_to_snapshot(slide)
-            outcome = apply_tiered_layout_repair(slide)
+            chapter_slide_count = sum(
+                1 for item in current_slides if item.chapter_id == slide.chapter_id
+            )
+            outcome = apply_tiered_layout_repair(
+                slide,
+                storyline=storyline,
+                chapter_slide_count=chapter_slide_count,
+            )
 
             if outcome.requires_manual_confirmation:
                 record = self._build_record(
@@ -208,9 +219,10 @@ class SlideRepairService:
                 for item in current_slides
             ]
 
-            if outcome.split_slide is not None:
+            split_slide = outcome.split_slide
+            if split_slide is not None:
                 for item in current_slides:
-                    if item.id != slide_id and item.order >= outcome.split_slide.order:
+                    if item.id != slide_id and item.order >= split_slide.order:
                         bumped = item.model_copy(
                             update={
                                 "order": item.order + 1,
@@ -221,7 +233,7 @@ class SlideRepairService:
                             }
                         )
                         slides_by_id[bumped.id] = self._presentations.save_slide(bumped)
-                split_saved = self._presentations.save_slide(outcome.split_slide)
+                split_saved = self._presentations.save_slide(split_slide)
                 slides_by_id[split_saved.id] = split_saved
                 current_slides = insert_split_slide(current_slides, split_saved)
                 current_slides = [
@@ -242,7 +254,7 @@ class SlideRepairService:
                 involves_numbers=outcome.involves_numbers,
                 requires_manual_confirmation=False,
                 split_slide_id=(
-                    outcome.split_slide.id if outcome.split_slide is not None else None
+                    split_slide.id if split_slide is not None else None
                 ),
                 issue_ids=[issue.id for issue in slide_issues],
             )
@@ -253,9 +265,9 @@ class SlideRepairService:
                 SlideChangeSource.AUTO_REPAIR,
                 note=record.reason,
             )
-            if outcome.split_slide is not None and outcome.split_slide.id in slides_by_id:
+            if split_slide is not None and split_slide.id in slides_by_id:
                 self._history.record_snapshot(
-                    slides_by_id[outcome.split_slide.id],
+                    slides_by_id[split_slide.id],
                     SlideChangeSource.AUTO_REPAIR,
                     note="由版面拆分自动创建",
                 )

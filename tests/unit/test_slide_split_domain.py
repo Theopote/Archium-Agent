@@ -143,7 +143,7 @@ def split_presentation(db_session: Session) -> tuple[UUID, list[SlideSpec], Stor
                 purpose="说明现状问题",
                 key_message="人车冲突严重",
                 order=0,
-                estimated_slide_count=2,
+                estimated_slide_count=4,
             )
         ],
     )
@@ -261,7 +261,7 @@ class TestSplitSlidePolicy:
         assert split.chapter_id == slide.chapter_id
         assert split.order == slide.order + 1
         assert split.logical_key == build_slide_logical_key(slide.chapter_id, split.order)
-        assert split.title.endswith("（续）")
+        assert split.title.endswith("补充说明") or split.title.endswith("（续）")
         assert split.key_points == moved
         assert split.source_citations == [citation]
         assert split.visual_requirements == []
@@ -322,7 +322,7 @@ class TestSplitSlideService:
         db_session: Session,
         split_presentation: tuple[UUID, list[SlideSpec], Storyline],
     ) -> None:
-        presentation_id, seeded_slides, _ = split_presentation
+        presentation_id, seeded_slides, storyline = split_presentation
         target = seeded_slides[1]
         original_lineage = target.lineage_id
         issue = ReviewRepository(db_session).create(
@@ -333,7 +333,7 @@ class TestSplitSlideService:
             db_session,
             llm=None,
             settings=Settings(_env_file=None, slide_repair_enabled=False),
-        ).repair_slides(presentation_id, seeded_slides, [issue])
+        ).repair_slides(presentation_id, seeded_slides, [issue], storyline=storyline)
 
         assert repaired == 1
         assert len(records) == 1
@@ -356,7 +356,7 @@ class TestSplitSlideService:
         db_session: Session,
         split_presentation: tuple[UUID, list[SlideSpec], Storyline],
     ) -> None:
-        presentation_id, seeded_slides, _ = split_presentation
+        presentation_id, seeded_slides, storyline = split_presentation
         target = seeded_slides[1]
         issue = ReviewRepository(db_session).create(
             _layout_issue(presentation_id, target.id)
@@ -366,11 +366,13 @@ class TestSplitSlideService:
             db_session,
             llm=None,
             settings=Settings(_env_file=None, slide_repair_enabled=False),
-        ).repair_slides(presentation_id, seeded_slides, [issue])
+        ).repair_slides(presentation_id, seeded_slides, [issue], storyline=storyline)
 
         persisted = PresentationRepository(db_session).list_slides(presentation_id)
         original = next(slide for slide in persisted if slide.id == target.id)
-        split_slide = next(slide for slide in persisted if slide.title.endswith("（续）"))
+        split_slide = next(
+            slide for slide in persisted if slide.id != target.id and slide.order == target.order + 1
+        )
 
         assert original.source_citations
         assert original.speaker_notes == target.speaker_notes
@@ -400,7 +402,7 @@ class TestSplitSlideService:
             db_session,
             llm=None,
             settings=Settings(_env_file=None, slide_repair_enabled=False),
-        ).repair_slides(presentation_id, seeded_slides, [issue])
+        ).repair_slides(presentation_id, seeded_slides, [issue], storyline=storyline)
 
         persisted = PresentationRepository(db_session).list_slides(presentation_id)
         assert [slide.order for slide in persisted] == [0, 1, 2, 3]
@@ -411,14 +413,14 @@ class TestSplitSlideService:
 
         chapter_slides = [slide for slide in persisted if slide.chapter_id == "ch-traffic"]
         assert len(chapter_slides) == 4
-        assert storyline.chapters[0].estimated_slide_count == 2
+        assert storyline.chapters[0].estimated_slide_count == 4
 
     def test_split_records_before_and_after_history(
         self,
         db_session: Session,
         split_presentation: tuple[UUID, list[SlideSpec], Storyline],
     ) -> None:
-        presentation_id, seeded_slides, _ = split_presentation
+        presentation_id, seeded_slides, storyline = split_presentation
         target = seeded_slides[1]
         history = SlideHistoryService(db_session)
         issue = ReviewRepository(db_session).create(
@@ -429,7 +431,7 @@ class TestSplitSlideService:
             db_session,
             llm=None,
             settings=Settings(_env_file=None, slide_repair_enabled=False),
-        ).repair_slides(presentation_id, seeded_slides, [issue])
+        ).repair_slides(presentation_id, seeded_slides, [issue], storyline=storyline)
         record = records[0]
         assert record.split_slide_id is not None
 
@@ -466,7 +468,7 @@ class TestSplitSlideService:
         db_session: Session,
         split_presentation: tuple[UUID, list[SlideSpec], Storyline],
     ) -> None:
-        presentation_id, seeded_slides, _ = split_presentation
+        presentation_id, seeded_slides, storyline = split_presentation
         target = seeded_slides[1]
         trailing = seeded_slides[2]
         issue = ReviewRepository(db_session).create(
@@ -477,7 +479,7 @@ class TestSplitSlideService:
             db_session,
             llm=None,
             settings=Settings(_env_file=None, slide_repair_enabled=False),
-        ).repair_slides(presentation_id, seeded_slides, [issue])
+        ).repair_slides(presentation_id, seeded_slides, [issue], storyline=storyline)
         record = records[0]
         assert record.split_slide_id is not None
         assert len(slides) == 4
