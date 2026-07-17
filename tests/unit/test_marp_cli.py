@@ -56,7 +56,7 @@ def test_marp_cli_export_images_invokes_subprocess(
             str(markdown_path),
             "--images=png",
             "-o",
-            str(previews_dir / "presentation"),
+            str(previews_dir) + "/",
         ]
     ]
 

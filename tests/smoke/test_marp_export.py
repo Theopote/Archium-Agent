@@ -13,7 +13,7 @@ from pptx import Presentation
 
 pytestmark = [pytest.mark.smoke, pytest.mark.marp_smoke]
 
-_MARKDOWN_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "marp" / "smoke.presentation.md"
+_MARKDOWN_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "marp" / "smoke-presentation.md"
 _ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
 _EXPECTED_SLIDES = 2
 
@@ -31,8 +31,8 @@ def test_marp_smoke_exports_pptx_pdf_and_png(tmp_path: Path) -> None:
     markdown_path = _MARKDOWN_PATH.resolve()
     assert markdown_path.exists()
 
-    pptx_path = (tmp_path / "smoke.presentation.pptx").resolve()
-    pdf_path = (tmp_path / "smoke.presentation.pdf").resolve()
+    pptx_path = (tmp_path / "smoke-presentation.pptx").resolve()
+    pdf_path = (tmp_path / "smoke-presentation.pdf").resolve()
     preview_dir = (tmp_path / "previews").resolve()
 
     runner.convert(markdown_path, pptx_path)

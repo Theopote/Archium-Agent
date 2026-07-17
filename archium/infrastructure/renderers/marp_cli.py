@@ -58,7 +58,9 @@ class MarpCliRunner:
 
         target_dir = output_dir or (markdown_path.parent / "previews")
         target_dir.mkdir(parents=True, exist_ok=True)
-        output_prefix = target_dir / markdown_path.stem
+        dir_output = str(target_dir)
+        if not dir_output.endswith(("/", "\\")):
+            dir_output += "/"
 
         self._run(
             [
@@ -66,14 +68,15 @@ class MarpCliRunner:
                 str(markdown_path),
                 f"--images={normalized_format}",
                 "-o",
-                str(output_prefix),
+                dir_output,
             ],
             target_dir,
         )
 
-        images = sorted(
-            target_dir.glob(f"{markdown_path.stem}.*.{normalized_format}"),
-            key=_image_page_sort_key,
+        images = _collect_marp_images(
+            target_dir,
+            markdown_path.stem,
+            normalized_format,
         )
         if not images:
             raise RenderingError("Marp 未生成任何预览图文件")
@@ -99,6 +102,18 @@ class MarpCliRunner:
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "").strip()
             raise RenderingError(f"Marp 转换失败：{detail or '未知错误'}")
+
+
+def _collect_marp_images(directory: Path, source_stem: str, image_format: str) -> list[Path]:
+    suffix = f".{image_format.lower().lstrip('.')}"
+    images = [
+        path
+        for path in directory.iterdir()
+        if path.is_file()
+        and path.suffix.lower() == suffix
+        and (path.stem == source_stem or path.stem.startswith(f"{source_stem}."))
+    ]
+    return sorted(images, key=_image_page_sort_key)
 
 
 def _image_page_sort_key(path: Path) -> int:
