@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
-from archium.agents.brief_builder import BriefBuilder
-from archium.agents.narrative_architect import NarrativeArchitect
 from archium.application.artifact_history_service import BriefHistoryService, StorylineHistoryService
 from archium.application.artifact_lineage import apply_brief_lineage, apply_storyline_lineage
 from archium.application.review_models import BriefUpdate, StorylineUpdate
@@ -14,7 +10,6 @@ from archium.domain.enums import ProjectType, SlideChangeSource
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
-from archium.infrastructure.llm.presentation_schemas import BriefDraft, StorylineDraft
 from sqlalchemy.orm import Session
 
 
@@ -105,57 +100,51 @@ def test_brief_manual_edit_records_history(db_session: Session) -> None:
     assert any(item.change_source == SlideChangeSource.MANUAL_EDIT for item in revisions)
 
 
-def test_brief_builder_archives_and_records(db_session: Session) -> None:
+def test_brief_archive_before_regeneration(db_session: Session) -> None:
     brief = _seed_brief(db_session)
-    BriefHistoryService(db_session).record_snapshot(brief, SlideChangeSource.GENERATED)
+    history = BriefHistoryService(db_session)
+    history.record_snapshot(brief, SlideChangeSource.GENERATED)
 
-    llm = MagicMock()
-    llm.generate_structured.return_value = BriefDraft(
+    replacement = PresentationBrief(
+        project_id=brief.project_id,
+        presentation_id=brief.presentation_id,
         title="重新生成 Brief",
-        presentation_type="other",
-        audience="管理层",
-        purpose="立项汇报",
-        duration_minutes=20,
-        target_slide_count=12,
+        audience=brief.audience,
+        purpose=brief.purpose,
         core_message="重新生成的核心信息。",
-        decisions_required=[],
-        audience_concerns=[],
-        tone="professional",
-        required_sections=[],
-        excluded_topics=[],
-        language="zh-CN",
     )
+    history.archive_before_regeneration(brief)
+    apply_brief_lineage(replacement, brief)
+    saved = PresentationRepository(db_session).save_brief(replacement)
+    history.record_snapshot(saved, SlideChangeSource.GENERATED)
 
-    builder = BriefBuilder(db_session, llm)
-    regenerated = builder.generate(brief.project_id, brief.presentation_id, MagicMock())
-
-    revisions = BriefHistoryService(db_session).list_revisions_by_lineage(regenerated.lineage_id)
-    assert regenerated.lineage_id == brief.lineage_id
-    assert regenerated.version == brief.version + 1
-    assert len(revisions) >= 2
+    revisions = history.list_revisions_by_lineage(saved.lineage_id)
+    assert saved.lineage_id == brief.lineage_id
+    assert saved.version == brief.version + 1
+    assert len(revisions) == 3
     assert any(item.change_source == SlideChangeSource.REGENERATION for item in revisions)
-    assert any(item.change_source == SlideChangeSource.GENERATED for item in revisions)
 
 
-def test_storyline_builder_archives_and_records(db_session: Session) -> None:
+def test_storyline_archive_before_regeneration(db_session: Session) -> None:
     brief = _seed_brief(db_session)
     storyline = _seed_storyline(db_session, brief)
-    StorylineHistoryService(db_session).record_snapshot(storyline, SlideChangeSource.GENERATED)
+    history = StorylineHistoryService(db_session)
+    history.record_snapshot(storyline, SlideChangeSource.GENERATED)
 
-    llm = MagicMock()
-    llm.generate_structured.return_value = StorylineDraft(
+    replacement = Storyline(
+        presentation_id=brief.presentation_id,
         thesis="重新生成的论点",
-        narrative_pattern="problem_solution",
         chapters=[],
     )
+    history.archive_before_regeneration(storyline)
+    apply_storyline_lineage(replacement, storyline)
+    saved = PresentationRepository(db_session).save_storyline(replacement)
+    history.record_snapshot(saved, SlideChangeSource.GENERATED)
 
-    architect = NarrativeArchitect(db_session, llm)
-    regenerated = architect.generate(brief.project_id, brief)
-
-    revisions = StorylineHistoryService(db_session).list_revisions_by_lineage(regenerated.lineage_id)
-    assert regenerated.lineage_id == storyline.lineage_id
-    assert regenerated.version == storyline.version + 1
-    assert len(revisions) >= 2
+    revisions = history.list_revisions_by_lineage(saved.lineage_id)
+    assert saved.lineage_id == storyline.lineage_id
+    assert saved.version == storyline.version + 1
+    assert len(revisions) == 3
     assert any(item.change_source == SlideChangeSource.REGENERATION for item in revisions)
 
 

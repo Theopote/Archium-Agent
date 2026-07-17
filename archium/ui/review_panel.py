@@ -310,7 +310,7 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
         st.success("Brief 已更新。")
         st.rerun()
 
-    render_brief_history_panel(presentation_id=context_presentation_id, brief_id=brief.id)
+    render_brief_history_panel(brief_id=brief.id)
 
 
 def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
@@ -383,10 +383,7 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
         st.success("Storyline 已更新。")
         st.rerun()
 
-    render_storyline_history_panel(
-        presentation_id=context_presentation_id,
-        storyline_id=storyline.id,
-    )
+    render_storyline_history_panel(storyline_id=storyline.id)
 
 
 def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:

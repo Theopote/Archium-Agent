@@ -6,7 +6,10 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.artifact_history_service import BriefHistoryService, StorylineHistoryService
+from archium.application.artifact_history_service import (
+    BriefHistoryService,
+    StorylineHistoryService,
+)
 from archium.application.slide_diff import change_source_label
 from archium.infrastructure.database.session import get_session
 
@@ -30,7 +33,7 @@ def _render_revision_table(revisions: list, *, label_fn) -> None:
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
-def render_brief_history_panel(*, presentation_id: UUID, brief_id: UUID) -> None:
+def render_brief_history_panel(*, brief_id: UUID) -> None:
     with st.expander("Brief 修订历史", expanded=False):
         with get_session() as session:
             history = BriefHistoryService(session)
@@ -41,7 +44,7 @@ def render_brief_history_panel(*, presentation_id: UUID, brief_id: UUID) -> None
         )
 
 
-def render_storyline_history_panel(*, presentation_id: UUID, storyline_id: UUID) -> None:
+def render_storyline_history_panel(*, storyline_id: UUID) -> None:
     with st.expander("Storyline 修订历史", expanded=False):
         with get_session() as session:
             history = StorylineHistoryService(session)
