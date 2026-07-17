@@ -77,8 +77,3 @@ class WorkflowCheckpointerManager:
         tb: TracebackType | None,
     ) -> None:
         self.close()
-
-
-def create_workflow_checkpointer(db_path: Path) -> SqliteSaver:
-    """Create a SQLite-backed LangGraph checkpointer with domain serde allowlist."""
-    return WorkflowCheckpointerManager(db_path).saver
