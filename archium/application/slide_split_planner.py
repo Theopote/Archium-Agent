@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 from archium.application.slide_repair_policy import contains_protected_signal
 from archium.application.slide_split_validator import validate_split_plan
-from archium.config.settings import Settings
+from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan, citation_key

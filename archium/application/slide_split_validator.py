@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import re
+
 from archium.application.slide_repair_policy import contains_protected_signal
-from archium.domain.slide_split import citation_key
 from archium.domain.presentation import Storyline
 from archium.domain.slide import SlideSpec
-from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan
+from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan, citation_key
+
+_NUMERIC_EVIDENCE_RE = re.compile(
+    r"\d+(?:\.\d+)?\s*(?:%|张|床|层|期|万|亿|吨|人次|辆|公顷|平方米|m²|㎡)"
+    r"|\d{2,}(?:\.\d+)?"
+)
 
 
 def validate_split_plan(
@@ -102,7 +108,10 @@ def _citation_separation_issues(
     citation_mapping: dict[str, UUID],
     moved_points: list[str],
 ) -> list[str]:
-    """Flag when a citation's evidence moved but the citation stayed on the source page."""
+    """Flag when citations and their supporting content land on different pages."""
+    if not original.source_citations:
+        return []
+
     issues: list[str] = []
     continuation_ids = {slide.id for slide in continuations}
     moved_text = " ".join(moved_points)
@@ -122,9 +131,37 @@ def _citation_separation_issues(
         )
         if not on_continuation:
             issues.append("证据性要点已移至续页，但引用仍留在原页")
-            break
+            return issues
+
+    continuation_has_citations = any(slide.source_citations for slide in continuations)
+    for point in moved_points:
+        if not _point_has_numeric_evidence(point):
+            continue
+        if _point_supported_by_citations(
+            point,
+            [citation for slide in continuations for citation in slide.source_citations],
+        ):
+            continue
+        if _point_supported_by_citations(point, source.source_citations):
+            issues.append("证据性要点已移至续页，但引用仍留在原页")
+            return issues
+        if original.source_citations and not continuation_has_citations:
+            issues.append("续页含证据性要点但未分配引用")
+            return issues
 
     return issues
+
+
+def _point_has_numeric_evidence(point: str) -> bool:
+    return bool(_NUMERIC_EVIDENCE_RE.search(point))
+
+
+def _point_supported_by_citations(point: str, citations: list) -> bool:
+    for citation in citations:
+        quote = citation.quote or ""
+        if quote and (quote in point or point in quote):
+            return True
+    return False
 
 
 def _citation_on_slide(citation, slide: SlideSpec) -> bool:

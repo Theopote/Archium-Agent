@@ -259,12 +259,12 @@ class TestLlmSplitPlanner:
                 source=SlideSplitPageDraft(
                     title="交通组织",
                     message="结论",
-                    key_points=slide.key_points[:5],
+                    key_points=slide.key_points[:4],
                 ),
                 continuation=SlideSplitPageDraft(
                     title="交通组织（续）",
                     message="本页延续上一页内容，详见下列要点。",
-                    key_points=slide.key_points[5:],
+                    key_points=slide.key_points[4:],
                 ),
             ),
             "要点超过 5 条",

@@ -126,7 +126,10 @@ class TestSlideSplitValidator:
         validated = validate_split_plan(plan, original=original)
 
         assert validated.requires_human_approval
-        assert any("引用仍留在原页" in issue for issue in validated.validation_issues)
+        assert any(
+            "引用仍留在原页" in issue or "未分配引用" in issue
+            for issue in validated.validation_issues
+        )
 
     def test_storyline_budget_exceeded_requires_approval(self) -> None:
         original = _slide(key_points=[f"要点 {index}" for index in range(6)])
