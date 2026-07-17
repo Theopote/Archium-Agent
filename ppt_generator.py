@@ -3,10 +3,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from config import GEMINI_MODEL, client
+from config import ARCHIUM_IDENTITY, GEMINI_MODEL, client
 
-SYSTEM_PROMPT = """\
-你是一位专业的演示文稿设计师。请根据用户给出的主题，撰写一份完整的 Marp Markdown 幻灯片。
+SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
+当前任务：以建筑师汇报的专业标准，根据用户给出的主题，撰写一份完整的 Marp Markdown 幻灯片。
 
 输出要求：
 1. 必须以 Marp front matter 开头，包含 theme 与 paginate 设置，例如：

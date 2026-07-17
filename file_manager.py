@@ -6,12 +6,11 @@ import stat
 from dataclasses import dataclass
 from pathlib import Path
 
-from config import GEMINI_MODEL, client
+from config import ARCHIUM_IDENTITY, GEMINI_MODEL, client
 
-CLASSIFY_SYSTEM_PROMPT = """\
-你是一位严谨的文件归档助手，擅长根据文件名和后缀推断文件应归属的目录。
-
-任务：根据提供的文件列表，为每个文件指定一个合适的目标文件夹路径。
+CLASSIFY_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
+当前任务：以知识管理的严谨标准，根据提供的文件列表，为每个文件指定合适的目标文件夹路径。
+你擅长从文件名与后缀推断建筑项目中的文件类型（如图纸、报告、模型、合同等），并给出清晰、可执行的归档方案。
 
 分类原则：
 1. 按文件类型与用途归类（如 CAD 图纸、报告文档、图片、表格、PDF、压缩包等）。
