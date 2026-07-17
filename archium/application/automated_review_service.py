@@ -609,26 +609,25 @@ class AutomatedReviewService:
                                 suggestion="替换更高分辨率素材或裁剪重点区域。",
                             )
                         )
-                    ratio = asset.aspect_ratio if asset is not None else None
-                    if ratio is not None and (
-                        ratio < _EXTREME_ASPECT_RATIO_LOW or ratio > _EXTREME_ASPECT_RATIO_HIGH
-                    ):
-                        issues.append(
-                            self._issue(
-                                presentation_id,
-                                slide,
-                                layer=ReviewLayer.LAYOUT,
-                                category=ReviewCategory.VISUAL,
-                                severity=ReviewSeverity.SUGGESTION,
-                                title="素材宽高比极端",
-                                description=(
-                                    f"第 {slide.order + 1} 页素材「{asset.filename}」"
-                                    f"宽高比为 {ratio:.2f}，"
-                                    "直接填充版式时可能出现拉伸或留白。"
-                                ),
-                                suggestion="裁剪为标准比例或使用 Asset Board 标记需裁剪。",
+                    if asset is not None:
+                        ratio = asset.aspect_ratio
+                        if ratio < _EXTREME_ASPECT_RATIO_LOW or ratio > _EXTREME_ASPECT_RATIO_HIGH:
+                            issues.append(
+                                self._issue(
+                                    presentation_id,
+                                    slide,
+                                    layer=ReviewLayer.LAYOUT,
+                                    category=ReviewCategory.VISUAL,
+                                    severity=ReviewSeverity.SUGGESTION,
+                                    title="素材宽高比极端",
+                                    description=(
+                                        f"第 {slide.order + 1} 页素材「{asset.filename}」"
+                                        f"宽高比为 {ratio:.2f}，"
+                                        "直接填充版式时可能出现拉伸或留白。"
+                                    ),
+                                    suggestion="裁剪为标准比例或使用 Asset Board 标记需裁剪。",
+                                )
                             )
-                        )
 
         return self._persist(presentation_id, issues)
 

@@ -98,15 +98,15 @@ class PresentationExportService:
                 version=version,
             )
             if result.markdown_path is not None:
-                extras = export_marp_extras(
+                marp_extras = export_marp_extras(
                     self._marp,
                     result.markdown_path,
                     export_pptx=export_pptx,
                     export_pdf=export_pdf,
                     export_preview_images=self._settings.marp_preview_images_enabled,
                 )
-                result.pptx_path = extras.pptx_path
-                result.pdf_path = extras.pdf_path
-                result.preview_images = list(extras.preview_images)
-                result.warnings.extend(extras.warnings)
+                result.pptx_path = marp_extras.pptx_path
+                result.pdf_path = marp_extras.pdf_path
+                result.preview_images = list(marp_extras.preview_images)
+                result.warnings.extend(marp_extras.warnings)
         return result

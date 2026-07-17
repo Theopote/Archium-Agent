@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from archium.application.artifact_history_service import BriefHistoryService, StorylineHistoryService
+from archium.application.artifact_history_service import (
+    BriefHistoryService,
+    StorylineHistoryService,
+)
 from archium.application.artifact_lineage import apply_brief_lineage, apply_storyline_lineage
 from archium.application.review_models import BriefUpdate, StorylineUpdate
 from archium.application.review_service import PresentationReviewService

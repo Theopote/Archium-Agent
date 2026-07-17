@@ -31,7 +31,6 @@ def test_workflow_persists_multi_layer_review_issues(
     doc_repo = DocumentRepository(db_session)
     from archium.domain.document import SourceDocument
     from archium.domain.enums import DocumentType, ProcessingStatus
-    from archium.infrastructure.database.repositories import FactRepository
 
     document = doc_repo.create_document(
         SourceDocument(

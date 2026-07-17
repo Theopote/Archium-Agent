@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from uuid import UUID
 
 import streamlit as st
@@ -11,10 +12,15 @@ from archium.application.artifact_history_service import (
     StorylineHistoryService,
 )
 from archium.application.slide_diff import change_source_label
+from archium.domain.revision import EntityRevision
 from archium.infrastructure.database.session import get_session
 
 
-def _render_revision_table(revisions: list, *, label_fn) -> None:
+def _render_revision_table(
+    revisions: list[EntityRevision],
+    *,
+    label_fn: Callable[[EntityRevision], str],
+) -> None:
     if not revisions:
         st.caption("保存或重新生成后，可在此查看修订历史。")
         return

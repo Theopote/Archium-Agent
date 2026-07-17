@@ -12,8 +12,8 @@ from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_spec import PresentationSpec
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import AssetRepository
-from archium.infrastructure.renderers.presentation_spec_builder import build_presentation_spec
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
+from archium.infrastructure.renderers.presentation_spec_builder import build_presentation_spec
 
 
 class PptxGenPresentationRenderer:
