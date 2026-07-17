@@ -46,6 +46,9 @@ class Settings(BaseSettings):
         default="gemini-2.5-flash",
         validation_alias=AliasChoices("LLM_MODEL", "GEMINI_MODEL"),
     )
+    llm_max_retries: int = Field(default=2, ge=0, le=5)
+    llm_repair_attempts: int = Field(default=2, ge=0, le=5)
+    llm_timeout_seconds: float = Field(default=60.0, gt=0)
 
     embedding_provider: str = "openai_compatible"
     embedding_model: str | None = None

@@ -56,10 +56,8 @@ DISCORD_USER_ID=123456789012345678
 """
 
 import asyncio
-import json
 import logging
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -67,7 +65,9 @@ import discord
 from dotenv import load_dotenv
 from plyer import notification
 
-from config import ARCHIUM_IDENTITY, GEMINI_MODEL, client
+from archium.infrastructure.llm import LLMRequest, get_llm_provider
+from archium.infrastructure.llm.schemas import DiscordClassification
+from archium.prompts.identity import ARCHIUM_IDENTITY
 
 load_dotenv()
 
@@ -103,48 +103,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _strip_code_fence(text: str) -> str:
-    text = text.strip()
-    match = re.match(r"^```(?:json)?\s*\n(.*)\n```\s*$", text, re.DOTALL)
-    return match.group(1).strip() if match else text
-
-
-def _parse_classification(raw: str) -> tuple[bool, str]:
-    cleaned = _strip_code_fence(raw)
-    try:
-        data = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Gemini 返回的不是合法 JSON：{exc}") from exc
-
-    if not isinstance(data, dict):
-        raise ValueError("分类结果必须是 JSON 对象")
-
-    important = data.get("important")
-    summary = data.get("summary", "")
-
-    if not isinstance(important, bool):
-        raise ValueError("字段 important 必须是布尔值 true/false")
-    if not isinstance(summary, str):
-        raise ValueError("字段 summary 必须是字符串")
-
-    return important, summary.strip()
-
-
 def _classify_message_sync(content: str, author: str, channel: str) -> tuple[bool, str]:
     user_prompt = (
         f"频道：{channel}\n"
         f"发送者：{author}\n"
         f"消息内容：\n{content}"
     )
-    response = client.chat.completions.create(
-        model=GEMINI_MODEL,
-        messages=[
-            {"role": "system", "content": CLASSIFY_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
+    provider = get_llm_provider()
+    result = provider.generate_structured(
+        LLMRequest(
+            system_prompt=CLASSIFY_SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+            temperature=0.1,
+        ),
+        DiscordClassification,
     )
-    raw = response.choices[0].message.content or ""
-    return _parse_classification(raw)
+    return result.important, result.summary
 
 
 async def classify_message(content: str, author: str, channel: str) -> tuple[bool, str]:

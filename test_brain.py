@@ -1,12 +1,9 @@
-from config import GEMINI_MODEL, client
+from archium.infrastructure.llm import LLMRequest, get_llm_provider
 
 
 def main() -> None:
-    response = client.chat.completions.create(
-        model=GEMINI_MODEL,
-        messages=[{"role": "user", "content": "你好"}],
-    )
-    print(response.choices[0].message.content)
+    provider = get_llm_provider()
+    response = provider.generate_text(LLMRequest(system_prompt="", user_prompt="你好"))
 
 
 if __name__ == "__main__":

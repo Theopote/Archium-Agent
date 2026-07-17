@@ -5,14 +5,15 @@ Archium Agent — 主入口 CLI
 
 from __future__ import annotations
 
-import json
-import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from config import ARCHIUM_IDENTITY, GEMINI_MODEL, client
+from archium.infrastructure.llm import LLMRequest, get_llm_provider
+from archium.infrastructure.llm.schemas import RouterPlan, RouterStep
+from archium.prompts.identity import ARCHIUM_IDENTITY
 from file_manager import classify_files_with_ai, move_files, scan_folder
 from ppt_generator import generate_presentation
 
@@ -53,14 +54,20 @@ ROUTER_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 """
 
 
-def _strip_code_fence(text: str) -> str:
-    text = text.strip()
-    match = re.match(r"^```(?:json)?\s*\n(.*)\n```\s*$", text, re.DOTALL)
-    return match.group(1).strip() if match else text
-
-
 def _expand_path(value: str) -> str:
     return str(Path(value).expanduser().resolve())
+
+
+def _route_instruction(instruction: str) -> RouterPlan:
+    provider = get_llm_provider()
+    return provider.generate_structured(
+        LLMRequest(
+            system_prompt=ROUTER_SYSTEM_PROMPT,
+            user_prompt=instruction,
+            temperature=0.2,
+        ),
+        RouterPlan,
+    )
 
 
 def _print_banner() -> None:
@@ -74,48 +81,6 @@ def _print_banner() -> None:
 
 def _print_step(label: str, message: str) -> None:
     print(f"\n{label}  {message}")
-
-
-def _route_instruction(instruction: str) -> dict[str, Any]:
-    response = client.chat.completions.create(
-        model=GEMINI_MODEL,
-        messages=[
-            {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
-            {"role": "user", "content": instruction},
-        ],
-    )
-    raw = response.choices[0].message.content or ""
-    cleaned = _strip_code_fence(raw)
-    try:
-        plan = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"路由解析失败，Gemini 返回的不是合法 JSON：{exc}\n原始内容：{raw}") from exc
-
-    if not isinstance(plan, dict):
-        raise ValueError("路由结果必须是 JSON 对象")
-
-    if "summary" not in plan or "steps" not in plan:
-        raise ValueError("路由结果缺少 summary 或 steps 字段")
-
-    if not isinstance(plan["steps"], list):
-        raise ValueError("steps 必须是数组")
-
-    return plan
-
-
-def _validate_step(step: Any, index: int) -> dict[str, Any]:
-    if not isinstance(step, dict):
-        raise ValueError(f"第 {index + 1} 步格式无效：必须是对象")
-
-    tool = step.get("tool")
-    if tool not in {"file_manager", "ppt_generator", "discord_watcher"}:
-        raise ValueError(f"第 {index + 1} 步包含未知工具：{tool!r}")
-
-    params = step.get("params", {})
-    if not isinstance(params, dict):
-        raise ValueError(f"第 {index + 1} 步 params 必须是对象")
-
-    return {"tool": tool, "params": params}
 
 
 def _run_file_manager(params: dict[str, Any]) -> StepResult:
@@ -238,7 +203,7 @@ DiscordRunner = Callable[[], None]
 
 
 def execute_plan(
-    steps: list[dict[str, Any]],
+    steps: list[RouterStep],
     *,
     discord_runner: DiscordRunner | None = None,
 ) -> tuple[list[StepResult], bool]:
@@ -248,10 +213,9 @@ def execute_plan(
     results: list[StepResult] = []
     total = len(steps)
 
-    for index, raw_step in enumerate(steps):
-        step = _validate_step(raw_step, index)
-        tool = step["tool"]
-        params = step["params"]
+    for index, step in enumerate(steps):
+        tool = step.tool
+        params = step.params
         label = TOOL_LABELS[tool]
 
         _print_step("▶️ ", f"步骤 {index + 1}/{total}：{label}")
@@ -281,7 +245,7 @@ def execute_plan(
     return results, True
 
 
-def _execute_plan(steps: list[dict[str, Any]]) -> bool:
+def _execute_plan(steps: list[RouterStep]) -> bool:
     _, success = execute_plan(steps)
     return success
 
@@ -292,15 +256,13 @@ def run_instruction(
     discord_runner: DiscordRunner | None = None,
 ) -> ExecutionReport:
     plan = _route_instruction(instruction)
-    summary = str(plan.get("summary", ""))
-    steps = plan.get("steps", [])
 
-    if not steps:
-        return ExecutionReport(summary, [], [], True)
+    if not plan.steps:
+        return ExecutionReport(plan.summary, [], [], True)
 
-    plan_labels = [TOOL_LABELS.get(s.get("tool", ""), s.get("tool", "?")) for s in steps]
-    step_results, success = execute_plan(steps, discord_runner=discord_runner)
-    return ExecutionReport(summary, plan_labels, step_results, success)
+    plan_labels = [TOOL_LABELS.get(step.tool, step.tool) for step in plan.steps]
+    step_results, success = execute_plan(plan.steps, discord_runner=discord_runner)
+    return ExecutionReport(plan.summary, plan_labels, step_results, success)
 
 
 def _handle_instruction(instruction: str) -> None:

@@ -1,9 +1,9 @@
-import re
 import shutil
 import subprocess
 from pathlib import Path
 
-from config import ARCHIUM_IDENTITY, GEMINI_MODEL, client
+from archium.infrastructure.llm import LLMRequest, get_llm_provider
+from archium.prompts.identity import ARCHIUM_IDENTITY
 
 SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 当前任务：以建筑师汇报的专业标准，根据用户给出的主题，撰写一份完整的 Marp Markdown 幻灯片。
@@ -24,21 +24,15 @@ SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 """
 
 
-def _strip_code_fence(text: str) -> str:
-    text = text.strip()
-    match = re.match(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", text, re.DOTALL)
-    return match.group(1).strip() if match else text
-
-
 def _generate_markdown(topic: str) -> str:
-    response = client.chat.completions.create(
-        model=GEMINI_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"请为主题「{topic}」制作一份 8–12 页的演示文稿。"},
-        ],
+    provider = get_llm_provider()
+    return provider.generate_text(
+        LLMRequest(
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=f"请为主题「{topic}」制作一份 8–12 页的演示文稿。",
+            temperature=0.7,
+        )
     )
-    return _strip_code_fence(response.choices[0].message.content or "")
 
 
 def _run_marp(markdown_path: Path, output_path: Path) -> None:

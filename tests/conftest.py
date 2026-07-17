@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from archium.config.settings import Settings, reset_settings
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.session import create_engine_from_settings, reset_engine_cache
+from archium.infrastructure.llm.factory import reset_llm_provider_cache
 
 
 @pytest.fixture(autouse=True)
@@ -18,9 +19,11 @@ def _reset_settings_cache() -> None:
     """Ensure each test gets fresh settings."""
     reset_settings()
     reset_engine_cache()
+    reset_llm_provider_cache()
     yield
     reset_settings()
     reset_engine_cache()
+    reset_llm_provider_cache()
 
 
 @pytest.fixture

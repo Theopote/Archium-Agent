@@ -1,12 +1,12 @@
-import json
 import os
-import re
 import shutil
 import stat
 from dataclasses import dataclass
 from pathlib import Path
 
-from config import ARCHIUM_IDENTITY, GEMINI_MODEL, client
+from archium.infrastructure.llm import LLMRequest, get_llm_provider
+from archium.infrastructure.llm.schemas import FileClassificationPlan
+from archium.prompts.identity import ARCHIUM_IDENTITY
 
 CLASSIFY_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 当前任务：以知识管理的严谨标准，根据提供的文件列表，为每个文件指定合适的目标文件夹路径。
@@ -55,41 +55,25 @@ def _is_hidden(path: Path) -> bool:
     return False
 
 
-def _strip_code_fence(text: str) -> str:
-    text = text.strip()
-    match = re.match(r"^```(?:json)?\s*\n(.*)\n```\s*$", text, re.DOTALL)
-    return match.group(1).strip() if match else text
+def classify_files_with_ai(file_list: list[FileInfo]) -> dict[str, str]:
+    """将文件名发送给 LLM，返回 {文件名: 目标文件夹} 的分类方案。"""
+    if not file_list:
+        raise ValueError("file_list 不能为空")
 
+    expected_names = {item.name for item in file_list}
+    lines = [f"- {item.name}（后缀：{item.suffix or '无'}）" for item in file_list]
+    user_prompt = "请为以下文件制定分类方案：\n" + "\n".join(lines)
 
-def _parse_classification_json(raw: str, expected_names: set[str]) -> dict[str, str]:
-    cleaned = _strip_code_fence(raw)
-    try:
-        data = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Gemini 返回的内容不是合法 JSON：{exc}") from exc
-
-    if not isinstance(data, dict):
-        raise ValueError("分类结果必须是 JSON 对象")
-
-    result: dict[str, str] = {}
-    for name, dest in data.items():
-        if not isinstance(name, str) or not isinstance(dest, str):
-            raise ValueError(f"分类项格式无效：{name!r} -> {dest!r}")
-        name = name.strip()
-        dest = dest.strip()
-        if not name or not dest:
-            raise ValueError(f"分类项不能为空：{name!r} -> {dest!r}")
-        result[name] = dest
-
-    missing = expected_names - set(result)
-    if missing:
-        raise ValueError(f"分类结果缺少以下文件：{', '.join(sorted(missing))}")
-
-    extra = set(result) - expected_names
-    if extra:
-        raise ValueError(f"分类结果包含未知文件：{', '.join(sorted(extra))}")
-
-    return result
+    provider = get_llm_provider()
+    plan = provider.generate_structured(
+        LLMRequest(
+            system_prompt=CLASSIFY_SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+            temperature=0.2,
+        ),
+        FileClassificationPlan,
+    )
+    return plan.validate_expected_files(expected_names)
 
 
 def _resolve_source_path(key: str, source_folder: Path | None) -> Path:
@@ -162,27 +146,6 @@ def scan_folder(folder_path: str | Path) -> list[FileInfo]:
             )
         )
     return files
-
-
-def classify_files_with_ai(file_list: list[FileInfo]) -> dict[str, str]:
-    """将文件名发送给 Gemini，返回 {文件名: 目标文件夹} 的分类方案。"""
-    if not file_list:
-        raise ValueError("file_list 不能为空")
-
-    expected_names = {item.name for item in file_list}
-    lines = [f"- {item.name}（后缀：{item.suffix or '无'}）" for item in file_list]
-    user_prompt = "请为以下文件制定分类方案：\n" + "\n".join(lines)
-
-    response = client.chat.completions.create(
-        model=GEMINI_MODEL,
-        messages=[
-            {"role": "system", "content": CLASSIFY_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-
-    raw = response.choices[0].message.content or ""
-    return _parse_classification_json(raw, expected_names)
 
 
 def move_files(
