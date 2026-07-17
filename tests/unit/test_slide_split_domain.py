@@ -395,7 +395,9 @@ class TestSplitSlideService:
         split_presentation: tuple[UUID, list[SlideSpec], Storyline],
     ) -> None:
         presentation_id, seeded_slides, storyline = split_presentation
-        project_id = ProjectRepository(db_session).list_all()[0].id
+        presentation = PresentationRepository(db_session).get_presentation(presentation_id)
+        assert presentation is not None
+        project_id = presentation.project_id
         diagram_asset = AssetRepository(db_session).create(
             Asset(
                 project_id=project_id,
@@ -408,6 +410,14 @@ class TestSplitSlideService:
             )
         )
         target = seeded_slides[1]
+        overflow_points = [f"现状要点 {index}" for index in range(5)] + ["床位规模 500 张"]
+        _restore_slide_raw(
+            db_session,
+            target.id,
+            message=target.message,
+            key_points=overflow_points,
+        )
+        rematch_slides = _list_slides_raw(db_session, presentation_id)
         issue = ReviewRepository(db_session).create(
             _layout_issue(presentation_id, target.id)
         )
@@ -418,7 +428,7 @@ class TestSplitSlideService:
             settings=Settings(_env_file=None, slide_repair_enabled=False),
         ).repair_slides(
             presentation_id,
-            seeded_slides,
+            rematch_slides,
             [issue],
             storyline=storyline,
             project_id=project_id,
@@ -426,7 +436,9 @@ class TestSplitSlideService:
 
         persisted = PresentationRepository(db_session).list_slides(presentation_id)
         split_slide = next(
-            slide for slide in persisted if slide.id != target.id and slide.order == target.order + 1
+            slide
+            for slide in persisted
+            if slide.id != target.id and slide.order == target.order + 1
         )
 
         assert split_slide.visual_requirements

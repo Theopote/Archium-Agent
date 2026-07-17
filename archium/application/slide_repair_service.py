@@ -134,22 +134,20 @@ class SlideRepairService:
         for pending in pending_issues:
             self._reviews.create(pending)
 
-        if not self._settings.slide_repair_enabled or self._llm is None:
-            return updated_slides, repaired, records
-
-        open_issues = [issue for issue in issues if issue.status == ReviewStatus.OPEN]
-        llm_slides, llm_count, llm_records, llm_pending = self._apply_llm_repairs(
-            presentation_id,
-            updated_slides,
-            slides_by_id,
-            open_issues,
-            brief=brief,
-        )
-        updated_slides = llm_slides
-        repaired += llm_count
-        records.extend(llm_records)
-        for pending in llm_pending:
-            self._reviews.create(pending)
+        if self._settings.slide_repair_enabled and self._llm is not None:
+            open_issues = [issue for issue in issues if issue.status == ReviewStatus.OPEN]
+            llm_slides, llm_count, llm_records, llm_pending = self._apply_llm_repairs(
+                presentation_id,
+                updated_slides,
+                slides_by_id,
+                open_issues,
+                brief=brief,
+            )
+            updated_slides = llm_slides
+            repaired += llm_count
+            records.extend(llm_records)
+            for pending in llm_pending:
+                self._reviews.create(pending)
 
         updated_slides = self._rematch_assets_after_splits(
             updated_slides,
