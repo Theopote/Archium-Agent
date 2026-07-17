@@ -179,6 +179,18 @@ class DocumentRepository:
         )
         return [mappers.document_chunk_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def delete_chunks_for_document(self, document_id: UUID) -> int:
+        try:
+            stmt = select(DocumentChunkORM).where(DocumentChunkORM.document_id == document_id)
+            rows = list(self._session.scalars(stmt))
+            for row in rows:
+                self._session.delete(row)
+            self._session.flush()
+            return len(rows)
+        except SQLAlchemyError as exc:
+            _handle_error("delete chunks", exc)
+            raise
+
 
 class PresentationRepository:
     """CRUD operations for presentations and related artifacts."""
