@@ -1,1 +1,30 @@
-/.env
+# Environment
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Data (runtime)
+data/database/*.db
+data/projects/
+data/chroma/
+data/outputs/
+output/
+
+# Logs
+*.log
+alerts.log
+
+# IDE
+.idea/
+.vscode/
+*.swp

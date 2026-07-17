@@ -10,9 +10,12 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv, set_key
 
+from archium.config import get_settings
+from archium.logging import setup_logging
 from main import ExecutionReport, StepResult, run_instruction
 
 load_dotenv()
+setup_logging(get_settings())
 
 ENV_PATH = Path(__file__).resolve().parent / ".env"
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -118,19 +121,19 @@ div[data-testid="stChatInput"] textarea {
 
 # ── 状态检测 ──────────────────────────────────────────────
 def _module_status_ppt() -> tuple[str, str]:
-    from config import GEMINI_API_KEY
+    settings = get_settings()
 
-    if not GEMINI_API_KEY:
+    if not settings.llm_configured:
         return "red", "缺少 API Key"
-    if not shutil.which("marp"):
+    if not shutil.which(settings.marp_command):
         return "yellow", "待安装 Marp CLI"
     return "green", "就绪"
 
 
 def _module_status_file_manager() -> tuple[str, str]:
-    from config import GEMINI_API_KEY
+    settings = get_settings()
 
-    if not GEMINI_API_KEY:
+    if not settings.llm_configured:
         return "red", "缺少 API Key"
     return "green", "就绪"
 
@@ -312,7 +315,7 @@ with st.sidebar:
 
     st.markdown(
         '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
-        "Archium v0.1<br>建筑 · 归档 · 智能"
+        "Archium v0.2<br>建筑 · 归档 · 智能"
         "</div>",
         unsafe_allow_html=True,
     )

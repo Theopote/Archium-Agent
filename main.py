@@ -3,6 +3,8 @@ Archium Agent — 主入口 CLI
 通过 Gemini 路由用户自然语言指令，顺序调用各功能模块。
 """
 
+from __future__ import annotations
+
 import json
 import re
 import sys
