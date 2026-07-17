@@ -8,6 +8,7 @@ import streamlit as st
 
 from archium.application.slide_diff import change_source_label
 from archium.application.slide_history_service import SlideHistoryService
+from archium.domain.revision import SlideLineageOption
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideFieldChange, SlideRevision
 from archium.infrastructure.database.session import get_session
@@ -23,7 +24,6 @@ def _revision_option_label(revision: SlideRevision) -> str:
 
 
 def _render_diff_result(
-    diff_id: str,
     *,
     before_label: str,
     after_label: str,
@@ -55,6 +55,7 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
     with get_session() as session:
         history = SlideHistoryService(session)
         revisions = history.list_presentation_revisions(presentation_id)
+        lineage_options = history.list_lineage_options(presentation_id, slides)
 
     if not revisions:
         st.caption("保存或重新生成 SlideSpec 后，可在此查看页面修订历史。")
@@ -64,6 +65,7 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
     preview_rows = [
         {
             "修订号": revision.revision_number,
+            "版本链": str(revision.lineage_id)[:8],
             "页面顺序": revision.snapshot.get("order", "-"),
             "标题": revision.snapshot.get("title", ""),
             "来源": change_source_label(revision.change_source),
@@ -74,35 +76,35 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
     ]
     st.dataframe(preview_rows, use_container_width=True, hide_index=True)
 
-    slide_options = {
-        str(slide.id): f"p{slide.order} · {slide.title}"
-        for slide in sorted(slides, key=lambda item: item.order)
-    }
-    if not slide_options:
-        slide_options = {
-            str(revision.slide_id): f"历史页面 · {revision.snapshot.get('title', '')}"
-            for revision in revisions
-            if revision.slide_id is not None
-        }
-
-    if not slide_options:
+    if not lineage_options:
         return
 
-    selected_slide_id = st.selectbox(
-        "选择页面",
-        options=list(slide_options.keys()),
-        format_func=lambda value: slide_options[value],
-        key=f"history_slide_{presentation_id}",
+    option_map = {str(option.lineage_id): option for option in lineage_options}
+    selected_lineage_id = st.selectbox(
+        "选择页面版本链",
+        options=list(option_map.keys()),
+        format_func=lambda value: option_map[value].label,
+        key=f"history_lineage_{presentation_id}",
     )
-    slide_id = UUID(selected_slide_id)
+    selected_option: SlideLineageOption = option_map[selected_lineage_id]
+    lineage_id = UUID(selected_lineage_id)
 
     with get_session() as session:
         history = SlideHistoryService(session)
-        slide_revisions = history.list_revisions(slide_id)
-        current_slide = next((slide for slide in slides if slide.id == slide_id), None)
+        slide_revisions = history.list_revisions_by_lineage(lineage_id)
+        current_slide = next(
+            (slide for slide in slides if slide.lineage_id == lineage_id),
+            None,
+        )
+
+    if selected_option.status != "current":
+        st.info(
+            f"该版本链状态：**{selected_option.label.split(' · ', 1)[0]}**。"
+            " 可查看重新生成前后的完整修订记录。"
+        )
 
     if len(slide_revisions) < 1:
-        st.caption("该页面尚无修订记录。")
+        st.caption("该版本链尚无修订记录。")
         return
 
     revision_labels = {
@@ -126,7 +128,6 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
                 st.caption("无法找到上一版修订。")
                 return
             _render_diff_result(
-                f"prev_{presentation_id}",
                 before_label=diff.before_label,
                 after_label=diff.after_label,
                 changes=diff.changes,
@@ -135,7 +136,7 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
 
         if compare_mode == "与当前版本对比":
             if current_slide is None:
-                st.caption("当前页面已不存在，请选择两个历史版本对比。")
+                st.caption("当前实体已删除；请在下方选择两个历史版本对比。")
                 return
             selected_revision_id = st.selectbox(
                 "选择历史版本",
@@ -145,7 +146,6 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
             )
             diff = history.diff_revision_to_current(UUID(selected_revision_id), current_slide)
             _render_diff_result(
-                f"current_{presentation_id}",
                 before_label=diff.before_label,
                 after_label=diff.after_label,
                 changes=diff.changes,
@@ -170,7 +170,6 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
         )
         diff = history.diff_revisions(UUID(left_id), UUID(right_id))
         _render_diff_result(
-            f"custom_{presentation_id}",
             before_label=diff.before_label,
             after_label=diff.after_label,
             changes=diff.changes,

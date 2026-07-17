@@ -10,13 +10,13 @@ from sqlalchemy.orm import Session
 
 from archium.domain.asset import Asset
 from archium.domain.document import DocumentChunk, SourceDocument
-from archium.domain.enums import ProjectStatus
+from archium.domain.enums import ProjectStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
+from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec
-from archium.domain.slide_history import SlideRevision
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import mappers
@@ -539,61 +539,72 @@ class WorkflowRunRepository:
             raise
 
 
-class SlideRevisionRepository:
-    """CRUD operations for slide revision history."""
+class EntityRevisionRepository:
+    """CRUD operations for unified entity revision history."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def create(self, revision: SlideRevision) -> SlideRevision:
+    def create(self, revision: EntityRevision) -> EntityRevision:
         try:
-            orm = mappers.slide_revision_to_orm(revision)
+            orm = mappers.entity_revision_to_orm(revision)
             self._session.add(orm)
             self._session.flush()
-            return mappers.slide_revision_to_domain(orm)
+            return mappers.entity_revision_to_domain(orm)
         except SQLAlchemyError as exc:
-            _handle_error("create slide revision", exc)
+            _handle_error("create entity revision", exc)
             raise
 
-    def get_by_id(self, revision_id: UUID) -> SlideRevision | None:
+    def get_by_id(self, revision_id: UUID) -> EntityRevision | None:
         orm = self._session.get(SlideRevisionORM, revision_id)
-        return mappers.slide_revision_to_domain(orm) if orm else None
+        return mappers.entity_revision_to_domain(orm) if orm else None
 
-    def list_by_slide(self, slide_id: UUID) -> list[SlideRevision]:
+    def list_by_lineage(self, lineage_id: UUID) -> list[EntityRevision]:
         stmt = (
             select(SlideRevisionORM)
-            .where(SlideRevisionORM.slide_id == slide_id)
+            .where(SlideRevisionORM.lineage_id == lineage_id)
             .order_by(SlideRevisionORM.revision_number.desc())
         )
-        return [mappers.slide_revision_to_domain(row) for row in self._session.scalars(stmt)]
+        return [mappers.entity_revision_to_domain(row) for row in self._session.scalars(stmt)]
 
-    def list_by_presentation(self, presentation_id: UUID) -> list[SlideRevision]:
-        stmt = (
-            select(SlideRevisionORM)
-            .where(SlideRevisionORM.presentation_id == presentation_id)
-            .order_by(SlideRevisionORM.created_at.desc())
-        )
-        return [mappers.slide_revision_to_domain(row) for row in self._session.scalars(stmt)]
+    def list_by_presentation(
+        self,
+        presentation_id: UUID,
+        *,
+        entity_type: RevisionEntityType | None = None,
+    ) -> list[EntityRevision]:
+        stmt = select(SlideRevisionORM).where(SlideRevisionORM.presentation_id == presentation_id)
+        if entity_type is not None:
+            stmt = stmt.where(SlideRevisionORM.entity_type == entity_type.value)
+        stmt = stmt.order_by(SlideRevisionORM.created_at.desc())
+        return [mappers.entity_revision_to_domain(row) for row in self._session.scalars(stmt)]
 
-    def next_revision_number(self, slide_id: UUID) -> int:
+    def next_revision_number(self, lineage_id: UUID) -> int:
         stmt = (
             select(SlideRevisionORM.revision_number)
-            .where(SlideRevisionORM.slide_id == slide_id)
+            .where(SlideRevisionORM.lineage_id == lineage_id)
             .order_by(SlideRevisionORM.revision_number.desc())
             .limit(1)
         )
         current = self._session.scalar(stmt)
         return 1 if current is None else int(current) + 1
 
-    def get_previous_revision(self, slide_id: UUID, revision_number: int) -> SlideRevision | None:
+    def get_previous_revision(
+        self,
+        lineage_id: UUID,
+        revision_number: int,
+    ) -> EntityRevision | None:
         stmt = (
             select(SlideRevisionORM)
             .where(
-                SlideRevisionORM.slide_id == slide_id,
+                SlideRevisionORM.lineage_id == lineage_id,
                 SlideRevisionORM.revision_number < revision_number,
             )
             .order_by(SlideRevisionORM.revision_number.desc())
             .limit(1)
         )
         orm = self._session.scalar(stmt)
-        return mappers.slide_revision_to_domain(orm) if orm else None
+        return mappers.entity_revision_to_domain(orm) if orm else None
+
+
+SlideRevisionRepository = EntityRevisionRepository

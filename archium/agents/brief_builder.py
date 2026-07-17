@@ -12,8 +12,11 @@ from archium.agents._helpers import (
     build_request_context,
     build_retrieval_query_from_request,
 )
+from archium.application.artifact_history_service import BriefHistoryService
+from archium.application.artifact_lineage import apply_brief_lineage
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
+from archium.domain.enums import SlideChangeSource
 from archium.domain.presentation import PresentationBrief
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -35,6 +38,7 @@ class BriefBuilder:
         self._llm = llm
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
+        self._history = BriefHistoryService(session)
 
     def generate(
         self,
@@ -44,8 +48,13 @@ class BriefBuilder:
         *,
         version: int | None = None,
     ) -> PresentationBrief:
+        previous_briefs = self._presentations.list_briefs(presentation_id)
+        previous = previous_briefs[0] if previous_briefs else None
+        if previous is not None:
+            self._history.archive_before_regeneration(previous)
+
         if version is None:
-            version = self._next_brief_version(presentation_id)
+            version = (previous.version + 1) if previous is not None else 1
 
         project_context = build_project_context(
             self._session,
@@ -71,7 +80,9 @@ class BriefBuilder:
             presentation_id=presentation_id,
             version=version,
         )
+        apply_brief_lineage(brief, previous)
         saved = self._presentations.save_brief(brief)
+        self._history.record_snapshot(saved, SlideChangeSource.GENERATED)
 
         from archium.domain.enums import PresentationStatus
 
@@ -83,9 +94,3 @@ class BriefBuilder:
             self._presentations.update_presentation(presentation)
 
         return saved
-
-    def _next_brief_version(self, presentation_id: UUID) -> int:
-        briefs = self._presentations.list_briefs(presentation_id)
-        if not briefs:
-            return 1
-        return max(item.version for item in briefs) + 1

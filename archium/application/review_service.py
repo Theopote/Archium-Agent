@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_history_service import BriefHistoryService, StorylineHistoryService
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
@@ -47,6 +48,8 @@ class PresentationReviewService:
         self._workflow_runs = WorkflowRunRepository(session)
         self._reviews = ReviewRepository(session)
         self._history = SlideHistoryService(session)
+        self._brief_history = BriefHistoryService(session)
+        self._storyline_history = StorylineHistoryService(session)
 
     def get_review_context(
         self,
@@ -116,6 +119,7 @@ class PresentationReviewService:
 
     def update_brief(self, brief_id: UUID, update: BriefUpdate) -> PresentationBrief:
         brief = self._require_brief(brief_id)
+        self._brief_history.record_snapshot(brief, SlideChangeSource.MANUAL_EDIT)
         brief.title = update.title.strip()
         brief.audience = update.audience.strip()
         brief.purpose = update.purpose.strip()
@@ -144,6 +148,7 @@ class PresentationReviewService:
 
     def update_storyline(self, storyline_id: UUID, update: StorylineUpdate) -> Storyline:
         storyline = self._require_storyline(storyline_id)
+        self._storyline_history.record_snapshot(storyline, SlideChangeSource.MANUAL_EDIT)
         storyline.thesis = update.thesis.strip()
         storyline.narrative_pattern = update.narrative_pattern.strip() or "problem_solution"
         storyline.chapters = [_chapter_from_update(item) for item in update.chapters]

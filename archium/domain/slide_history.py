@@ -2,25 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import Field
 
-from archium.domain._base import DomainModel, IdentifiedModel, utc_now
-from archium.domain.enums import SlideChangeSource
+from archium.domain._base import DomainModel
+from archium.domain.revision import EntityRevision, SlideLineageOption
 
+# Backward-compatible alias; slide history uses the unified revision model.
+SlideRevision = EntityRevision
 
-class SlideRevision(IdentifiedModel):
-    """Point-in-time snapshot of a slide specification."""
-
-    slide_id: UUID | None
-    presentation_id: UUID
-    revision_number: int = Field(ge=1)
-    change_source: SlideChangeSource
-    snapshot: dict[str, object] = Field(default_factory=dict)
-    note: str | None = None
-    created_at: datetime = Field(default_factory=utc_now)
+__all__ = [
+    "SlideDiffResult",
+    "SlideFieldChange",
+    "SlideLineageOption",
+    "SlideRevision",
+]
 
 
 class SlideFieldChange(DomainModel):

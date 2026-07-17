@@ -1,14 +1,15 @@
-"""Unit tests for slide revision history."""
+"""Unit tests for slide revision history and lineage."""
 
 from __future__ import annotations
 
 from archium.application.review_models import SlideUpdate
 from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
+from archium.application.slide_lineage import apply_slide_lineage
 from archium.domain.enums import ProjectType, SlideChangeSource, SlideType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
-from archium.domain.slide import SlideSpec
+from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from sqlalchemy.orm import Session
 
@@ -31,7 +32,7 @@ def _seed_slide(db_session: Session) -> SlideSpec:
     return PresentationRepository(db_session).save_slide(slide)
 
 
-def test_record_snapshot_increments_revision_number(db_session: Session) -> None:
+def test_record_snapshot_increments_revision_number_by_lineage(db_session: Session) -> None:
     slide = _seed_slide(db_session)
     history = SlideHistoryService(db_session)
 
@@ -40,6 +41,8 @@ def test_record_snapshot_increments_revision_number(db_session: Session) -> None
 
     assert first.revision_number == 1
     assert second.revision_number == 2
+    assert first.lineage_id == slide.lineage_id
+    assert second.lineage_id == slide.lineage_id
     assert first.snapshot["title"] == "初始标题"
 
 
@@ -79,5 +82,54 @@ def test_archive_before_regeneration(db_session: Session) -> None:
     assert len(archived) == 1
     assert archived[0].change_source == SlideChangeSource.REGENERATION
 
-    revisions = history.list_revisions(slide.id)
+    revisions = history.list_revisions_by_lineage(slide.lineage_id)
     assert len(revisions) == 2
+
+
+def test_regeneration_preserves_lineage_id(db_session: Session) -> None:
+    slide = _seed_slide(db_session)
+    old_lineage = slide.lineage_id
+    old_key = build_slide_logical_key(slide.chapter_id, slide.order)
+
+    new_slide = SlideSpec(
+        presentation_id=slide.presentation_id,
+        chapter_id=slide.chapter_id,
+        order=slide.order,
+        title="重新生成标题",
+        message="重新生成观点。",
+        slide_type=SlideType.CONTENT,
+    )
+    apply_slide_lineage([new_slide], [slide])
+
+    assert new_slide.lineage_id == old_lineage
+    assert new_slide.logical_key == old_key
+    assert new_slide.version == slide.version + 1
+    assert new_slide.id != slide.id
+
+
+def test_list_lineage_options_includes_deleted_slide_history(
+    db_session: Session,
+) -> None:
+    slide = _seed_slide(db_session)
+    history = SlideHistoryService(db_session)
+    history.record_snapshot(slide, SlideChangeSource.GENERATED)
+    history.archive_slides_before_regeneration([slide])
+
+    new_slide = SlideSpec(
+        presentation_id=slide.presentation_id,
+        chapter_id=slide.chapter_id,
+        order=slide.order,
+        title="新实体",
+        message="新观点。",
+        slide_type=SlideType.CONTENT,
+    )
+    apply_slide_lineage([new_slide], [slide])
+    saved = PresentationRepository(db_session).save_slide(new_slide)
+    history.record_snapshot(saved, SlideChangeSource.GENERATED)
+
+    options = history.list_lineage_options(slide.presentation_id, [saved])
+    assert len(options) == 1
+    assert options[0].lineage_id == slide.lineage_id
+    assert options[0].current_slide_id == saved.id
+    revisions = history.list_revisions_by_lineage(slide.lineage_id)
+    assert len(revisions) >= 3

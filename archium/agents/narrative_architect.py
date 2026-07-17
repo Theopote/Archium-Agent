@@ -12,7 +12,10 @@ from archium.agents._helpers import (
     storyline_from_draft,
     to_json,
 )
+from archium.application.artifact_history_service import StorylineHistoryService
+from archium.application.artifact_lineage import apply_storyline_lineage
 from archium.config.settings import Settings, get_settings
+from archium.domain.enums import SlideChangeSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -34,6 +37,7 @@ class NarrativeArchitect:
         self._llm = llm
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
+        self._history = StorylineHistoryService(session)
 
     def generate(
         self,
@@ -42,8 +46,13 @@ class NarrativeArchitect:
         *,
         version: int | None = None,
     ) -> Storyline:
+        previous_storylines = self._presentations.list_storylines(brief.presentation_id)
+        previous = previous_storylines[0] if previous_storylines else None
+        if previous is not None:
+            self._history.archive_before_regeneration(previous)
+
         if version is None:
-            version = self._next_storyline_version(brief.presentation_id)
+            version = (previous.version + 1) if previous is not None else 1
 
         project_context = build_project_context(
             self._session,
@@ -67,7 +76,9 @@ class NarrativeArchitect:
             presentation_id=brief.presentation_id,
             version=version,
         )
+        apply_storyline_lineage(storyline, previous)
         saved = self._presentations.save_storyline(storyline)
+        self._history.record_snapshot(saved, SlideChangeSource.GENERATED)
 
         presentation = self._presentations.get_presentation(brief.presentation_id)
         if presentation is not None:
@@ -75,9 +86,3 @@ class NarrativeArchitect:
             self._presentations.update_presentation(presentation)
 
         return saved
-
-    def _next_storyline_version(self, presentation_id: UUID) -> int:
-        storylines = self._presentations.list_storylines(presentation_id)
-        if not storylines:
-            return 1
-        return max(item.version for item in storylines) + 1

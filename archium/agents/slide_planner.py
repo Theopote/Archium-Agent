@@ -13,6 +13,7 @@ from archium.agents._helpers import (
     to_json,
 )
 from archium.application.slide_history_service import SlideHistoryService
+from archium.application.slide_lineage import apply_slide_lineage
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import SlideChangeSource
 from archium.domain.presentation import PresentationBrief, Storyline
@@ -52,6 +53,8 @@ class SlidePlanner:
             if existing:
                 SlideHistoryService(self._session).archive_slides_before_regeneration(existing)
             self._presentations.delete_slides_for_presentation(brief.presentation_id)
+        else:
+            existing = self._presentations.list_slides(brief.presentation_id)
 
         context_bundle = build_project_context_bundle(
             self._session,
@@ -81,6 +84,8 @@ class SlidePlanner:
             settings=self._settings,
             version=version,
         )
+        if existing:
+            apply_slide_lineage(slides, existing)
         saved: list[SlideSpec] = []
         history = SlideHistoryService(self._session)
         for slide in slides:

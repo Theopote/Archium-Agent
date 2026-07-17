@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.enums import ApprovalStatus, PresentationStatus, PresentationType
+
+BRIEF_LOGICAL_KEY = "presentation-brief"
+STORYLINE_LOGICAL_KEY = "presentation-storyline"
 
 
 class Presentation(IdentifiedModel, TimestampedModel):
@@ -29,6 +32,8 @@ class PresentationBrief(IdentifiedModel, VersionedModel, TimestampedModel):
 
     project_id: UUID
     presentation_id: UUID
+    lineage_id: UUID = Field(default_factory=uuid4)
+    logical_key: str = Field(default=BRIEF_LOGICAL_KEY, max_length=200)
     title: str = Field(min_length=1, max_length=500)
     presentation_type: PresentationType = PresentationType.OTHER
     audience: str = Field(min_length=1)
@@ -71,6 +76,8 @@ class Storyline(IdentifiedModel, VersionedModel, TimestampedModel):
     """Narrative structure for a presentation."""
 
     presentation_id: UUID
+    lineage_id: UUID = Field(default_factory=uuid4)
+    logical_key: str = Field(default=STORYLINE_LOGICAL_KEY, max_length=200)
     thesis: str = Field(min_length=1)
     narrative_pattern: str = Field(default="problem_solution", min_length=1)
     chapters: list[Chapter] = Field(default_factory=list)

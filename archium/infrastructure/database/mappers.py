@@ -20,6 +20,7 @@ from archium.domain.enums import (
     ReviewCategory,
     ReviewSeverity,
     ReviewStatus,
+    RevisionEntityType,
     SlideChangeSource,
     SlideStatus,
     SlideType,
@@ -28,11 +29,18 @@ from archium.domain.enums import (
 )
 from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.memory import UserPreference
-from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
+from archium.domain.presentation import (
+    BRIEF_LOGICAL_KEY,
+    STORYLINE_LOGICAL_KEY,
+    Chapter,
+    Presentation,
+    PresentationBrief,
+    Storyline,
+)
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
-from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.domain.slide_history import SlideRevision
+from archium.domain.revision import EntityRevision
+from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logical_key
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
     AssetORM,
@@ -247,10 +255,14 @@ def presentation_to_orm(
 
 
 def presentation_brief_to_domain(orm: PresentationBriefORM) -> PresentationBrief:
+    lineage_id = orm.lineage_id or orm.id
+    logical_key = orm.logical_key or BRIEF_LOGICAL_KEY
     return PresentationBrief(
         id=orm.id,
         project_id=orm.project_id,
         presentation_id=orm.presentation_id,
+        lineage_id=lineage_id,
+        logical_key=logical_key,
         title=orm.title,
         presentation_type=PresentationType(orm.presentation_type),
         audience=orm.audience,
@@ -292,6 +304,8 @@ def presentation_brief_to_orm(
     target.language = domain.language
     target.version = domain.version
     target.approval_status = domain.approval_status.value
+    target.lineage_id = domain.lineage_id
+    target.logical_key = domain.logical_key
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target
@@ -324,9 +338,13 @@ def chapter_to_orm(domain: Chapter, storyline_id: UUID, orm: ChapterORM | None =
 
 
 def storyline_to_domain(orm: StorylineORM) -> Storyline:
+    lineage_id = orm.lineage_id or orm.id
+    logical_key = orm.logical_key or STORYLINE_LOGICAL_KEY
     return Storyline(
         id=orm.id,
         presentation_id=orm.presentation_id,
+        lineage_id=lineage_id,
+        logical_key=logical_key,
         thesis=orm.thesis,
         narrative_pattern=orm.narrative_pattern,
         chapters=[chapter_to_domain(ch) for ch in orm.chapters],
@@ -344,6 +362,8 @@ def storyline_to_orm(domain: Storyline, orm: StorylineORM | None = None) -> Stor
     target.narrative_pattern = domain.narrative_pattern
     target.version = domain.version
     target.approval_status = domain.approval_status.value
+    target.lineage_id = domain.lineage_id
+    target.logical_key = domain.logical_key
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     target.chapters = [chapter_to_orm(ch, domain.id) for ch in domain.chapters]
@@ -354,9 +374,13 @@ def storyline_to_orm(domain: Storyline, orm: StorylineORM | None = None) -> Stor
 
 
 def slide_to_domain(orm: SlideORM) -> SlideSpec:
+    lineage_id = orm.lineage_id or orm.id
+    logical_key = orm.logical_key or build_slide_logical_key(orm.chapter_id, orm.order)
     return SlideSpec(
         id=orm.id,
         presentation_id=orm.presentation_id,
+        lineage_id=lineage_id,
+        logical_key=logical_key,
         chapter_id=orm.chapter_id,
         order=orm.order,
         title=orm.title,
@@ -387,6 +411,8 @@ def slide_to_orm(domain: SlideSpec, orm: SlideORM | None = None) -> SlideORM:
     target.speaker_notes = domain.speaker_notes
     target.status = domain.status.value
     target.version = domain.version
+    target.lineage_id = domain.lineage_id
+    target.logical_key = domain.logical_key or build_slide_logical_key(domain.chapter_id, domain.order)
     return target
 
 
@@ -522,30 +548,40 @@ def workflow_run_to_orm(domain: WorkflowRun, orm: WorkflowRunORM | None = None) 
     return target
 
 
-def slide_revision_to_domain(orm: SlideRevisionORM) -> SlideRevision:
-    return SlideRevision(
+def entity_revision_to_domain(orm: SlideRevisionORM) -> EntityRevision:
+    return EntityRevision(
         id=orm.id,
-        slide_id=orm.slide_id,
+        entity_type=RevisionEntityType(orm.entity_type),
+        entity_id=orm.entity_id,
+        lineage_id=orm.lineage_id,
         presentation_id=orm.presentation_id,
         revision_number=orm.revision_number,
         change_source=SlideChangeSource(orm.change_source),
         snapshot=dict(orm.snapshot_json),
         note=orm.note,
+        actor=orm.actor,
         created_at=orm.created_at,
     )
 
 
-def slide_revision_to_orm(
-    domain: SlideRevision,
+def entity_revision_to_orm(
+    domain: EntityRevision,
     orm: SlideRevisionORM | None = None,
 ) -> SlideRevisionORM:
     target = orm or SlideRevisionORM(id=domain.id)
-    target.slide_id = domain.slide_id
+    target.entity_type = domain.entity_type.value
+    target.entity_id = domain.entity_id
+    target.lineage_id = domain.lineage_id
     target.presentation_id = domain.presentation_id
     target.revision_number = domain.revision_number
     target.change_source = domain.change_source.value
     target.snapshot_json = dict(domain.snapshot)
     target.note = domain.note
+    target.actor = domain.actor
     if domain.created_at is not None:
         target.created_at = domain.created_at
     return target
+
+
+slide_revision_to_domain = entity_revision_to_domain
+slide_revision_to_orm = entity_revision_to_orm

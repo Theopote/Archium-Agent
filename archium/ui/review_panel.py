@@ -28,6 +28,10 @@ from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.ui.artifact_history_panel import (
+    render_brief_history_panel,
+    render_storyline_history_panel,
+)
 from archium.ui.error_handlers import format_user_error
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workspace_service import (
@@ -306,6 +310,8 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
         st.success("Brief 已更新。")
         st.rerun()
 
+    render_brief_history_panel(presentation_id=context_presentation_id, brief_id=brief.id)
+
 
 def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
     with get_session() as session:
@@ -376,6 +382,11 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
                 review_service.reject_storyline(storyline.id)
         st.success("Storyline 已更新。")
         st.rerun()
+
+    render_storyline_history_panel(
+        presentation_id=context_presentation_id,
+        storyline_id=storyline.id,
+    )
 
 
 def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:

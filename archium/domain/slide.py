@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, VersionedModel
 from archium.domain.citation import Citation
 from archium.domain.enums import SlideStatus, SlideType, VisualType
+
+
+def build_slide_logical_key(chapter_id: str, order: int) -> str:
+    """Build a stable logical key for a slide within a presentation."""
+    return f"{chapter_id.strip()}-p{order}"
 
 
 class VisualRequirement(DomainModel):
@@ -25,6 +30,8 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     """Specification for a single presentation slide."""
 
     presentation_id: UUID
+    lineage_id: UUID = Field(default_factory=uuid4)
+    logical_key: str = Field(default="", max_length=200)
     chapter_id: str = Field(min_length=1)
     order: int = Field(ge=0)
     title: str = Field(min_length=1, max_length=500)
@@ -36,6 +43,12 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     source_citations: list[Citation] = Field(default_factory=list)
     speaker_notes: str | None = None
     status: SlideStatus = SlideStatus.PLANNED
+
+    @model_validator(mode="after")
+    def _ensure_lineage_defaults(self) -> SlideSpec:
+        if not self.logical_key:
+            self.logical_key = build_slide_logical_key(self.chapter_id, self.order)
+        return self
 
     @field_validator("message")
     @classmethod

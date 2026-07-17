@@ -26,6 +26,8 @@ def slide_to_snapshot(slide: SlideSpec) -> dict[str, object]:
     """Serialize a slide into a JSON-safe snapshot dict."""
     return {
         "id": str(slide.id),
+        "lineage_id": str(slide.lineage_id),
+        "logical_key": slide.logical_key,
         "presentation_id": str(slide.presentation_id),
         "chapter_id": slide.chapter_id,
         "order": slide.order,

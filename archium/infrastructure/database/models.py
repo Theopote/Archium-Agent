@@ -144,6 +144,8 @@ class PresentationBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     language: Mapped[str] = mapped_column(String(20), nullable=False, default="zh-CN")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="presentation-brief")
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="briefs")
 
@@ -158,6 +160,8 @@ class StorylineORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     narrative_pattern: Mapped[str] = mapped_column(String(100), nullable=False, default="problem_solution")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="presentation-storyline")
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="storylines")
     chapters: Mapped[list[ChapterORM]] = relationship(
@@ -203,28 +207,36 @@ class SlideORM(UUIDPrimaryKeyMixin, Base):
     speaker_notes: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="planned")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="")
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="slides")
 
 
 class SlideRevisionORM(UUIDPrimaryKeyMixin, Base):
-    __tablename__ = "slide_revisions"
+    __tablename__ = "entity_revisions"
 
-    slide_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("slides.id", ondelete="SET NULL")
-    )
-    presentation_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
+    entity_type: Mapped[str] = mapped_column(String(40), nullable=False, default="slide")
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    presentation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("presentations.id", ondelete="CASCADE"),
+        nullable=True,
     )
     revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
     change_source: Mapped[str] = mapped_column(String(40), nullable=False)
     snapshot_json: Mapped[dict[str, object]] = mapped_column("snapshot", JSON, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
+    actor: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
         nullable=False,
     )
+
+
+EntityRevisionORM = SlideRevisionORM
 
 
 class AssetORM(UUIDPrimaryKeyMixin, Base):

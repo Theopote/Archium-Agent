@@ -112,6 +112,14 @@ class SlideChangeSource(StrEnum):
     REGENERATION = "regeneration"
 
 
+class RevisionEntityType(StrEnum):
+    BRIEF = "brief"
+    STORYLINE = "storyline"
+    SLIDE = "slide"
+    ASSET_ASSIGNMENT = "asset_assignment"
+    PRESENTATION_THEME = "presentation_theme"
+
+
 class VisualType(StrEnum):
     SITE_PLAN = "site_plan"
     FLOOR_PLAN = "floor_plan"
