@@ -74,7 +74,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["B008", "E501"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
@@ -85,3 +85,8 @@ packages = ["archium"]
 [[tool.mypy.overrides]]
 module = ["main", "app", "config", "ppt_generator", "file_manager", "discord_watcher"]
 ignore_errors = true
+
+# chromadb → numpy ships 3.12-only stub syntax; skip third-party follow-imports.
+[[tool.mypy.overrides]]
+module = ["chromadb", "chromadb.*", "numpy", "numpy.*"]
+follow_imports = "skip"
