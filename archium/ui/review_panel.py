@@ -524,6 +524,28 @@ def _render_review_issues_panel(
         )
         st.caption(f"审核分层统计：{summary}")
 
+    layer_options = ["全部"] + [
+        LAYER_LABELS[layer]
+        for layer in (
+            ReviewLayer.CONTENT,
+            ReviewLayer.EVIDENCE,
+            ReviewLayer.ARCHITECTURAL,
+            ReviewLayer.LAYOUT,
+        )
+    ]
+    selected_layer_label = st.selectbox(
+        "按审核层级筛选",
+        options=layer_options,
+        key=f"review_layer_filter_{presentation_id}",
+    )
+    if selected_layer_label != "全部":
+        selected_layer = next(
+            layer
+            for layer, label in LAYER_LABELS.items()
+            if label == selected_layer_label
+        )
+        issues = [issue for issue in issues if issue.reviewer_layer == selected_layer]
+
     open_critical = [
         issue
         for issue in issues

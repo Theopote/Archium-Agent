@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from archium.application.chunk_models import ProjectContextBundle
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import (
+    PresentationType,
     ReviewCategory,
     ReviewLayer,
     ReviewSeverity,
@@ -40,6 +41,29 @@ _AREA_UNIT_PATTERNS = (
     ("sqm_ascii", re.compile(r"\bm2\b", re.IGNORECASE)),
     ("sqm_cn", re.compile(r"平方米")),
 )
+_FLOW_TRAFFIC_KEYWORDS = ("流线", "交通", "circulation", "traffic", "车行", "人行")
+_FLOW_COLOR_HINTS = ("色", "颜色", "图例", "legend", "红线", "蓝线", "绿线", "color")
+_CONSTRUCTION_DETAIL_KEYWORDS = (
+    "配筋",
+    "构造大样",
+    "施工图",
+    "结构柱",
+    "梁配筋",
+    "节点详图",
+    "大样图",
+    "幕墙节点",
+)
+_CONCEPT_PRESENTATION_TYPES = {
+    PresentationType.CONCEPT,
+    PresentationType.CLIENT_REVIEW,
+    PresentationType.SCHEMATIC,
+    PresentationType.COMPETITION,
+    PresentationType.INTERNAL,
+}
+_TEXT_DENSITY_THRESHOLD = 280
+_LONG_BULLET_THRESHOLD = 40
+_EXTREME_ASPECT_RATIO_LOW = 0.4
+_EXTREME_ASPECT_RATIO_HIGH = 2.5
 
 
 def critical_export_block_messages(
@@ -235,6 +259,41 @@ class AutomatedReviewService:
                             suggestion="在 Asset Board 中确认素材与结论的对应关系。",
                         )
                     )
+                elif requirement.required and not requirement.preferred_asset_ids:
+                    issues.append(
+                        self._issue(
+                            presentation_id,
+                            slide,
+                            layer=ReviewLayer.EVIDENCE,
+                            category=ReviewCategory.VISUAL,
+                            severity=ReviewSeverity.HIGH,
+                            title="结论缺少视觉证据",
+                            description=(
+                                f"第 {slide.order + 1} 页「{slide.title}」需要 {requirement.type.value} "
+                                "类视觉支撑，但未匹配到项目素材。"
+                            ),
+                            suggestion="上传对应图纸/照片，或在 Asset Board 中指定素材。",
+                        )
+                    )
+                elif requirement.required and not _visual_supports_message(
+                    slide.message,
+                    requirement.description,
+                ):
+                    issues.append(
+                        self._issue(
+                            presentation_id,
+                            slide,
+                            layer=ReviewLayer.EVIDENCE,
+                            category=ReviewCategory.CONSISTENCY,
+                            severity=ReviewSeverity.MEDIUM,
+                            title="视觉素材与结论关联性弱",
+                            description=(
+                                f"第 {slide.order + 1} 页结论与 {requirement.type.value} "
+                                f"素材说明「{requirement.description}」缺少明显关键词呼应。"
+                            ),
+                            suggestion="调整素材说明或结论表述，确保图文相互支撑。",
+                        )
+                    )
 
         return self._persist(presentation_id, issues)
 
@@ -313,6 +372,27 @@ class AutomatedReviewService:
             )
 
         for slide in slides:
+            if brief is not None and brief.presentation_type in _CONCEPT_PRESENTATION_TYPES:
+                combined = " ".join([slide.title, slide.message, *slide.key_points])
+                for keyword in _CONSTRUCTION_DETAIL_KEYWORDS:
+                    if keyword in combined:
+                        issues.append(
+                            self._issue(
+                                presentation_id,
+                                slide,
+                                layer=ReviewLayer.ARCHITECTURAL,
+                                category=ReviewCategory.CONSISTENCY,
+                                severity=ReviewSeverity.MEDIUM,
+                                title="概念汇报包含施工图级细节",
+                                description=(
+                                    f"第 {slide.order + 1} 页出现「{keyword}」，"
+                                    f"与 {brief.presentation_type.value} 阶段精度可能不匹配。"
+                                ),
+                                suggestion="概念/方案汇报中建议聚焦策略与空间逻辑，施工图细节移至专篇。",
+                            )
+                        )
+                        break
+
             for requirement in slide.visual_requirements:
                 if requirement.type == VisualType.SITE_PLAN:
                     context = " ".join(
@@ -360,6 +440,31 @@ class AutomatedReviewService:
                                 ),
                             )
                         )
+                if requirement.type in {VisualType.SITE_PLAN, VisualType.DIAGRAM, VisualType.MAP}:
+                    context = " ".join(
+                        (
+                            slide.title,
+                            slide.message,
+                            requirement.description,
+                        )
+                    ).lower()
+                    if any(keyword in context for keyword in _FLOW_TRAFFIC_KEYWORDS) and not any(
+                        hint in context for hint in _FLOW_COLOR_HINTS
+                    ):
+                        issues.append(
+                            self._issue(
+                                presentation_id,
+                                slide,
+                                layer=ReviewLayer.ARCHITECTURAL,
+                                category=ReviewCategory.VISUAL,
+                                severity=ReviewSeverity.SUGGESTION,
+                                title="交通流线图缺少颜色图例提示",
+                                description=(
+                                    f"第 {slide.order + 1} 页涉及交通/流线表述，"
+                                    "建议在图面或说明中标注流线颜色图例。"
+                                ),
+                            )
+                        )
 
         if self._settings.llm_professional_review_enabled and self._settings.llm_configured:
             if self._llm is not None:
@@ -393,6 +498,45 @@ class AutomatedReviewService:
         issues: list[ReviewIssue] = []
 
         for slide in slides:
+            text_load = _estimate_text_load(slide)
+            if (
+                slide.slide_type not in _SKIPPABLE_SLIDE_TYPES
+                and text_load > _TEXT_DENSITY_THRESHOLD
+            ):
+                issues.append(
+                    self._issue(
+                        presentation_id,
+                        slide,
+                        layer=ReviewLayer.LAYOUT,
+                        category=ReviewCategory.LENGTH,
+                        severity=ReviewSeverity.MEDIUM,
+                        title="页面信息密度过高",
+                        description=(
+                            f"第 {slide.order + 1} 页文本量估算为 {text_load} 字当量，"
+                            "超过建议上限，可能导致版面溢出。"
+                        ),
+                        suggestion="减少要点数量或缩短每条表述。",
+                    )
+                )
+            for point in slide.key_points:
+                if len(point.strip()) > _LONG_BULLET_THRESHOLD:
+                    issues.append(
+                        self._issue(
+                            presentation_id,
+                            slide,
+                            layer=ReviewLayer.LAYOUT,
+                            category=ReviewCategory.LENGTH,
+                            severity=ReviewSeverity.SUGGESTION,
+                            title="单条要点过长",
+                            description=(
+                                f"第 {slide.order + 1} 页存在超过 {_LONG_BULLET_THRESHOLD} 字的要点，"
+                                "换行后可能超出文本框。"
+                            ),
+                            suggestion="拆分为两条要点或使用更短表述。",
+                        )
+                    )
+                    break
+
             if len(slide.key_points) > 5:
                 issues.append(
                     self._issue(
@@ -463,6 +607,26 @@ class AutomatedReviewService:
                                     "投影或打印时可能模糊。"
                                 ),
                                 suggestion="替换更高分辨率素材或裁剪重点区域。",
+                            )
+                        )
+                    ratio = asset.aspect_ratio if asset is not None else None
+                    if ratio is not None and (
+                        ratio < _EXTREME_ASPECT_RATIO_LOW or ratio > _EXTREME_ASPECT_RATIO_HIGH
+                    ):
+                        issues.append(
+                            self._issue(
+                                presentation_id,
+                                slide,
+                                layer=ReviewLayer.LAYOUT,
+                                category=ReviewCategory.VISUAL,
+                                severity=ReviewSeverity.SUGGESTION,
+                                title="素材宽高比极端",
+                                description=(
+                                    f"第 {slide.order + 1} 页素材「{asset.filename}」"
+                                    f"宽高比为 {ratio:.2f}，"
+                                    "直接填充版式时可能出现拉伸或留白。"
+                                ),
+                                suggestion="裁剪为标准比例或使用 Asset Board 标记需裁剪。",
                             )
                         )
 
@@ -599,6 +763,29 @@ def _detect_area_unit_styles(slides: list[SlideSpec]) -> set[str]:
         if pattern.search(combined):
             styles.add(style_name)
     return styles
+
+
+def _tokenize_text(text: str) -> set[str]:
+    return {
+        token.strip().lower()
+        for token in re.split(r"[\s，,、；;。.]+", text)
+        if len(token.strip()) >= 2
+    }
+
+
+def _visual_supports_message(message: str, description: str) -> bool:
+    message_tokens = _tokenize_text(message)
+    description_tokens = _tokenize_text(description)
+    if not message_tokens or not description_tokens:
+        return True
+    return bool(message_tokens & description_tokens)
+
+
+def _estimate_text_load(slide: SlideSpec) -> int:
+    load = len(slide.message.strip())
+    load += sum(len(point.strip()) for point in slide.key_points)
+    load += len(slide.title.strip()) // 2
+    return load
 
 
 def _parse_review_category(value: str) -> ReviewCategory:

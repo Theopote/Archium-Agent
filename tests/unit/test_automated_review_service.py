@@ -242,3 +242,162 @@ def test_architectural_review_llm_when_enabled(
     assert len(llm.calls) == 1
     assert any(issue.category == ReviewCategory.CONSISTENCY for issue in issues)
     assert all(issue.reviewer_layer == ReviewLayer.ARCHITECTURAL for issue in issues)
+
+
+def test_evidence_review_flags_missing_visual_evidence(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    slide = SlideSpec(
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        chapter_id="ch1",
+        order=0,
+        title="效果展示",
+        message="主入口形象显著提升",
+        visual_requirements=[
+            VisualRequirement(type=VisualType.RENDERING, description="鸟瞰效果图", required=True)
+        ],
+    )
+
+    issues = AutomatedReviewService(db_session).run_evidence_review(
+        presentation_id,  # type: ignore[arg-type]
+        [slide],
+    )
+
+    assert any(issue.title == "结论缺少视觉证据" for issue in issues)
+
+
+def test_evidence_review_flags_weak_visual_message_link(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    slide = SlideSpec(
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        chapter_id="ch1",
+        order=0,
+        title="住院规模",
+        message="住院部床位紧张需扩容",
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.SITE_PLAN,
+                description="总平面图标注交通流线",
+                required=True,
+                preferred_asset_ids=[uuid4()],
+                confirmed=True,
+            )
+        ],
+    )
+
+    issues = AutomatedReviewService(db_session).run_evidence_review(
+        presentation_id,  # type: ignore[arg-type]
+        [slide],
+    )
+
+    assert any(issue.title == "视觉素材与结论关联性弱" for issue in issues)
+
+
+def test_architectural_review_flags_flow_color_legend(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    slide = SlideSpec(
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        chapter_id="ch1",
+        order=0,
+        title="交通组织",
+        message="优化院区车行与人行流线",
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.SITE_PLAN,
+                description="总平面图标注交通流线",
+                required=True,
+            )
+        ],
+    )
+
+    issues = AutomatedReviewService(db_session).run_architectural_review(
+        presentation_id,  # type: ignore[arg-type]
+        [slide],
+    )
+
+    assert any(issue.title == "交通流线图缺少颜色图例提示" for issue in issues)
+
+
+def test_architectural_review_flags_construction_detail_in_concept_brief(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    brief = PresentationBrief(
+        project_id=uuid4(),
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        title="Brief",
+        presentation_type=PresentationType.CONCEPT,
+        audience="管理层",
+        purpose="决策",
+        duration_minutes=20,
+        target_slide_count=8,
+        core_message="核心",
+    )
+    slide = SlideSpec(
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        chapter_id="ch1",
+        order=0,
+        title="结构策略",
+        message="柱配筋采用标准做法",
+    )
+
+    issues = AutomatedReviewService(db_session).run_architectural_review(
+        presentation_id,  # type: ignore[arg-type]
+        [slide],
+        brief=brief,
+    )
+
+    assert any(issue.title == "概念汇报包含施工图级细节" for issue in issues)
+
+
+def test_layout_review_flags_text_density_and_extreme_aspect_ratio(
+    db_session: Session,
+    presentation_id: object,
+) -> None:
+    from archium.domain.asset import Asset
+    from archium.domain.enums import AssetType
+    from archium.infrastructure.database.repositories import AssetRepository
+
+    project = ProjectRepository(db_session).create(
+        Project(name="Layout Review", project_type=ProjectType.HEALTHCARE)
+    )
+    asset = AssetRepository(db_session).create(
+        Asset(
+            project_id=project.id,
+            filename="panorama.jpg",
+            path="/tmp/panorama.jpg",
+            asset_type=AssetType.PHOTO,
+            width=3000,
+            height=500,
+        )
+    )
+    slide = SlideSpec(
+        presentation_id=presentation_id,  # type: ignore[arg-type]
+        chapter_id="ch1",
+        order=0,
+        title="综合结论",
+        message="这是一段较长的核心结论用于测试版面密度" * 12,
+        key_points=[f"要点描述内容 {index}" * 4 for index in range(5)],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="全景照片",
+                required=True,
+                preferred_asset_ids=[asset.id],
+            )
+        ],
+    )
+
+    issues = AutomatedReviewService(db_session).run_layout_review(
+        presentation_id,  # type: ignore[arg-type]
+        [slide],
+        project_id=project.id,
+    )
+
+    assert any(issue.title == "页面信息密度过高" for issue in issues)
+    assert any(issue.title == "素材宽高比极端" for issue in issues)
