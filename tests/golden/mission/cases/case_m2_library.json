@@ -1,0 +1,28 @@
+{
+  "id": "case_m2_library",
+  "name": "大学图书馆改造",
+  "project": {
+    "name": "某大学图书馆改造",
+    "project_type": "education",
+    "description": "不停业改造"
+  },
+  "documents": [
+    {
+      "filename": "使用说明.pdf",
+      "content": "图书馆需在改造期间维持基本开放，关注座位、数字学习空间与藏书布局。",
+      "section_title": "需求"
+    }
+  ],
+  "facts": [],
+  "task_description": "大学图书馆需要改造，不停业施工，功能与空间运营都要兼顾，希望形成改造汇报与分期路线图，并做用户需求与现状诊断、案例研究。",
+  "expectations": {
+    "task_natures_any": ["renovation", "adaptive_reuse"],
+    "clarifying_question_contains_any": ["不停业", "开放", "功能"],
+    "max_clarifying_questions": 5,
+    "workstream_title_contains_any": ["需求", "诊断", "案例", "分期"],
+    "workstream_type_any": ["user_research", "case_study", "programming"],
+    "deliverable_type_any": ["presentation", "implementation_roadmap"],
+    "presentation_deliverable_required": true,
+    "out_of_scope_contains_any": ["施工图"]
+  }
+}

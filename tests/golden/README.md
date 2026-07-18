@@ -23,6 +23,23 @@ Mock LLM + 预置文本块。验证主链逻辑：
 pytest tests/golden/regression -v -m regression
 ```
 
+## Layer 1b — Mission Golden (`mission/`)
+
+Mission-first 规划链确定性场景（M1–M6）：自由任务描述 → Mission → Workstreams → Deliverables → PresentationRequest。
+
+```bash
+pytest tests/golden/mission -v -m regression
+```
+
+| Case | 场景 |
+|------|------|
+| M1 | 清凉寺重建（面积未知、历史研究） |
+| M2 | 大学图书馆改造（不停业、分期） |
+| M3 | 医院环境提升（非新建） |
+| M4 | 村庄更新（多主体、反模板） |
+| M5 | 消防站新建（指标保留） |
+| M6 | 园区绿色低碳专项（非方案 PPT） |
+
 ## Layer 2 — Fixture Acceptance (`fixtures/`)
 
 脱敏真实资料 → 真实 parser → 缓存或 mock LLM → 完整导出。

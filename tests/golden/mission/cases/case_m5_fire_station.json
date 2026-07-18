@@ -1,0 +1,51 @@
+{
+  "id": "case_m5_fire_station",
+  "name": "消防站新建",
+  "project": {
+    "name": "某区消防站新建",
+    "project_type": "other",
+    "description": "指标明确的消防站新建"
+  },
+  "documents": [
+    {
+      "filename": "建设指标.pdf",
+      "content": "新建消防站，用地面积8000㎡，建筑面积4500㎡，建筑高度24m，需功能策划与规范研究。",
+      "section_title": "指标"
+    }
+  ],
+  "facts": [
+    {
+      "key": "site_area",
+      "label": "用地面积",
+      "value": "8000",
+      "unit": "㎡",
+      "confirmed": true
+    },
+    {
+      "key": "building_area",
+      "label": "建筑面积",
+      "value": "4500",
+      "unit": "㎡",
+      "confirmed": true
+    },
+    {
+      "key": "height",
+      "label": "建筑高度",
+      "value": "24",
+      "unit": "m",
+      "confirmed": true
+    }
+  ],
+  "task_description": "消防站新建，已有明确用地8000㎡、建筑面积4500㎡、高度24m，需开展功能策划和规范研究，关注车辆流线、训练与生活功能。",
+  "expectations": {
+    "task_natures_any": ["new_build"],
+    "preserve_fact_substrings": ["8000", "4500", "24"],
+    "no_area_gap_when_confirmed_facts": true,
+    "knowledge_gap_categories_none": ["area"],
+    "forbidden_text_anywhere": ["面积待确认"],
+    "workstream_title_contains_any": ["功能", "规范"],
+    "workstream_type_any": ["programming", "regulation_review"],
+    "deliverable_type_any": ["design_brief", "checklist"],
+    "not_recommended_title_contains_any": ["面积待确认"]
+  }
+}

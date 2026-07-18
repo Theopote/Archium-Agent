@@ -1,0 +1,29 @@
+{
+  "id": "case_m6_green_campus",
+  "name": "园区绿色低碳专项建议",
+  "project": {
+    "name": "某产业园区绿色低碳专项",
+    "project_type": "commercial",
+    "description": "专项咨询，非完整建筑设计"
+  },
+  "documents": [
+    {
+      "filename": "委托说明.pdf",
+      "content": "园区需要绿色低碳专项建议，不要施工图、设备选型或正式碳认证，也不是完整建筑设计。",
+      "section_title": "委托"
+    }
+  ],
+  "facts": [],
+  "task_description": "园区希望做绿色低碳专项建议，重点是目标体系、技术筛选与实施路线。这不是完整建筑设计，明确不包含施工图、设备选型与正式碳认证。",
+  "expectations": {
+    "task_natures_any": ["consulting", "technical_study"],
+    "task_natures_none": ["new_build"],
+    "out_of_scope_contains_any": ["施工图", "设备选型", "正式碳认证", "完整建筑设计"],
+    "workstream_title_contains_any": ["目标", "技术", "实施"],
+    "workstream_type_any": ["technical_study", "sustainability", "implementation"],
+    "deliverable_type_any": ["report", "technical_proposal", "implementation_roadmap"],
+    "prefer_report_not_default_scheme_ppt": true,
+    "presentation_deliverable_required": false,
+    "not_recommended_title_contains_any": ["完整建筑设计方案汇报"]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "case_m3_hospital_env",
+  "name": "医院环境提升",
+  "project": {
+    "name": "某医院环境体验提升",
+    "project_type": "healthcare",
+    "description": "既有医院环境提升，非新建"
+  },
+  "documents": [
+    {
+      "filename": "现场问题.pdf",
+      "content": "候诊拥挤、流线交叉、导视不清，希望快速措施与中长期措施并重。",
+      "section_title": "现状"
+    }
+  ],
+  "facts": [],
+  "task_description": "医院希望提升既有环境与患者体验，重点是候诊、流线与导视。这不是新建医院，需要患者旅程分析，并形成决策汇报，区分快速措施与中长期措施。",
+  "expectations": {
+    "task_natures_any": ["assessment", "strategy", "consulting"],
+    "task_natures_none": ["new_build"],
+    "out_of_scope_contains_any": ["新建医院", "施工图"],
+    "workstream_title_contains_any": ["患者旅程", "策略", "决策"],
+    "workstream_type_any": ["user_research", "design_strategy", "presentation"],
+    "deliverable_type_any": ["presentation", "report"],
+    "presentation_deliverable_required": true,
+    "deliverable_title_contains_none": ["新建医院方案"],
+    "not_recommended_title_contains_any": ["新建医院"]
+  }
+}

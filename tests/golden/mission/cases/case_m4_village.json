@@ -1,0 +1,28 @@
+{
+  "id": "case_m4_village",
+  "name": "村庄更新",
+  "project": {
+    "name": "某村庄更新",
+    "project_type": "urban_renewal",
+    "description": "多主体村庄更新"
+  },
+  "documents": [
+    {
+      "filename": "村情摘要.pdf",
+      "content": "人口外流、产业脆弱、公共空间不足，居民与政府诉求不一致。",
+      "section_title": "概况"
+    }
+  ],
+  "facts": [],
+  "task_description": "推进村庄更新，需综合考虑人口、产业、空间、居民与运营。利益相关方复杂，需要居民参与。请做资源盘点、居民需求与实施机制，不要套用固定美丽乡村模板。",
+  "expectations": {
+    "task_natures_any": ["urban_renewal", "planning"],
+    "intervention_scales_any": ["village"],
+    "clarifying_question_contains_any": ["居民参与", "访谈", "工作坊"],
+    "stakeholder_min_count": 3,
+    "workstream_title_contains_any": ["资源", "居民", "实施"],
+    "deliverable_type_any": ["report", "memo"],
+    "not_recommended_title_contains_any": ["美丽乡村模板", "模板"],
+    "out_of_scope_contains_any": ["模板", "施工图"]
+  }
+}

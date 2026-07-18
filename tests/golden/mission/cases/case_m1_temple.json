@@ -1,0 +1,35 @@
+{
+  "id": "case_m1_temple",
+  "name": "清凉寺重建",
+  "project": {
+    "name": "三原县清凉寺",
+    "project_type": "culture",
+    "description": "历史寺庙重建前期"
+  },
+  "documents": [
+    {
+      "filename": "地方志摘录.pdf",
+      "content": "清凉寺历史上多次毁建，现仅存部分记载与现场照片。",
+      "section_title": "沿革"
+    }
+  ],
+  "facts": [],
+  "task_description": "三原县清凉寺历史上多次被毁，现在希望重新建设。目前只有部分地方志和现场照片，甲方还没有明确建筑面积。希望先形成前期策划、案例研究和概念设计汇报。",
+  "expectations": {
+    "task_natures_any": ["reconstruction", "research"],
+    "task_natures_none": [],
+    "forbidden_fabricated_substrings": ["12000"],
+    "knowledge_gap_categories_any": ["history", "area"],
+    "knowledge_gap_question_contains_any": ["历史", "形制", "规模"],
+    "clarifying_question_contains_any": ["重建", "宗教", "用地"],
+    "max_clarifying_questions": 5,
+    "out_of_scope_contains_any": ["施工图"],
+    "workstream_title_contains_any": ["历史", "案例", "策略"],
+    "workstream_type_any": ["historical_research", "case_study", "design_strategy"],
+    "deliverable_type_any": ["task_brief", "presentation", "case_study"],
+    "presentation_deliverable_required": true,
+    "no_area_gap_when_confirmed_facts": false,
+    "preserve_fact_substrings": [],
+    "prefer_report_not_default_scheme_ppt": false
+  }
+}
