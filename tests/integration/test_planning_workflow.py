@@ -119,12 +119,21 @@ def test_planning_workflow_completes_after_plan_approval(
     assert not third.awaiting_review
     assert third.workflow_run.status == WorkflowStatus.COMPLETED
     assert third.presentation_request_draft is not None
+    assert third.presentation_request is not None
+    assert third.presentation_request.purpose == third.mission.task_statement
+    assert third.presentation_request.title == "概念设计汇报"
+    assert "施工图" in " ".join(third.presentation_request.excluded_topics)
     assert third.presentation_request_draft.get("mission_id") == str(third.mission.id)
+    assert third.presentation.title == "概念设计汇报"
     assert third.deliverable_plan is not None
     assert third.deliverable_plan.approval_status == ApprovalStatus.APPROVED
     assert (
         third.workflow_run.state["current_step"] == WorkflowStep.PLANNING_FINALIZE.value
     )
+
+    bridge = planning_service.get_presentation_bridge(third.workflow_run.id)
+    assert bridge.request.title == third.presentation_request.title
+    assert bridge.deliverable_id == "del-concept-ppt"
 
 
 def test_planning_workflow_can_skip_gates(
@@ -145,3 +154,5 @@ def test_planning_workflow_can_skip_gates(
     assert result.deliverable_plan is not None
     assert result.deliverable_plan.approval_status == ApprovalStatus.APPROVED
     assert result.presentation_request_draft is not None
+    assert result.presentation_request is not None
+    assert result.presentation_request.purpose

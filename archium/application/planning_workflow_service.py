@@ -11,6 +11,13 @@ from sqlalchemy.orm import Session
 
 from archium.application.deliverable_planning_service import DeliverablePlanningService
 from archium.application.mission_clarification_service import MissionClarificationService
+from archium.application.mission_to_presentation_request import (
+    MissionPresentationBridge,
+    PresentationOverrides,
+    bridge_from_draft,
+    build_presentation_bridge,
+)
+from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
 from archium.domain.enums import WorkflowStatus, WorkflowStep
@@ -25,6 +32,7 @@ from archium.domain.project_mission import ProjectMission
 from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
+from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
     WorkflowRunRepository,
@@ -56,6 +64,7 @@ class PlanningWorkflowResult:
     design_questions: list[DesignQuestion] = field(default_factory=list)
     workstreams: list[Workstream] = field(default_factory=list)
     deliverable_plan: DeliverablePlan | None = None
+    presentation_request: PresentationRequest | None = None
     presentation_request_draft: dict[str, Any] | None = None
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -295,6 +304,60 @@ class PlanningWorkflowService:
     def get_run(self, workflow_run_id: UUID) -> WorkflowRun | None:
         return self._workflow_runs.get_by_id(workflow_run_id)
 
+    def get_presentation_bridge(
+        self,
+        workflow_run_id: UUID,
+        *,
+        user_overrides: PresentationOverrides | None = None,
+    ) -> MissionPresentationBridge:
+        """Return PresentationRequest mapped from a completed planning run."""
+        run = self._require_planning_run(workflow_run_id)
+        draft = run.state.get("presentation_request_draft")
+        if isinstance(draft, dict) and draft.get("mission_id") and user_overrides is None:
+            return bridge_from_draft(draft)
+
+        mission_id = self._mission_id_from_run(run)
+        missions = MissionRepository(self._session)
+        mission = missions.get_mission(mission_id)
+        if mission is None:
+            raise WorkflowError(f"Mission {mission_id} not found")
+        plan = None
+        plan_data = run.state.get("deliverable_plan")
+        if isinstance(plan_data, dict) and plan_data.get("id"):
+            plan = missions.get_deliverable_plan(UUID(str(plan_data["id"])))
+        workstreams = missions.list_workstreams(mission_id)
+        return build_presentation_bridge(
+            mission,
+            plan=plan,
+            workstreams=workstreams,
+            user_overrides=user_overrides,
+        )
+
+    def build_presentation_request_for_mission(
+        self,
+        mission_id: UUID,
+        *,
+        deliverable_id: str | None = None,
+        user_overrides: PresentationOverrides | None = None,
+    ) -> MissionPresentationBridge:
+        """Map an approved mission (+ plan) to PresentationRequest without a workflow run."""
+        missions = MissionRepository(self._session)
+        mission = missions.get_mission(mission_id)
+        if mission is None:
+            raise WorkflowError(f"Mission {mission_id} not found")
+        plan = missions.get_approved_deliverable_plan(mission_id)
+        if plan is None:
+            plans = missions.list_deliverable_plans(mission_id)
+            plan = plans[0] if plans else None
+        workstreams = missions.list_workstreams(mission_id)
+        return build_presentation_bridge(
+            mission,
+            plan=plan,
+            deliverable_id=deliverable_id,
+            workstreams=workstreams,
+            user_overrides=user_overrides,
+        )
+
     def _require_planning_run(self, workflow_run_id: UUID) -> WorkflowRun:
         run = self._workflow_runs.get_by_id(workflow_run_id)
         if run is None:
@@ -336,6 +399,13 @@ class PlanningWorkflowService:
         if isinstance(final_state, dict):
             warnings.extend(list(final_state.get("warnings") or []))
 
+        presentation_request = None
+        if isinstance(draft, dict) and draft.get("mission_id"):
+            try:
+                presentation_request = bridge_from_draft(draft).request
+            except WorkflowError:
+                presentation_request = None
+
         return PlanningWorkflowResult(
             workflow_run=workflow_run,
             presentation=presentation,
@@ -346,6 +416,7 @@ class PlanningWorkflowService:
             design_questions=list(restored.get("design_questions", [])),
             workstreams=list(restored.get("workstreams", [])),
             deliverable_plan=restored.get("deliverable_plan"),
+            presentation_request=presentation_request,
             presentation_request_draft=draft if isinstance(draft, dict) else None,
             errors=list(workflow_run.errors),
             warnings=warnings,

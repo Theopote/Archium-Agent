@@ -1,0 +1,211 @@
+"""Tests for mission → PresentationRequest adapter."""
+
+from __future__ import annotations
+
+from uuid import uuid4
+
+import pytest
+from archium.application.mission_to_presentation_request import (
+    PresentationOverrides,
+    bridge_from_draft,
+    build_presentation_bridge,
+    build_presentation_request,
+    infer_presentation_type,
+    select_presentation_deliverable,
+)
+from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
+from archium.domain.enums import (
+    DeliverableType,
+    PresentationType,
+    ServiceDepth,
+    TaskNature,
+    WorkstreamType,
+)
+from archium.domain.project_mission import ProjectMission, Stakeholder
+from archium.domain.workstream import Workstream
+from archium.exceptions import WorkflowError
+
+
+def _temple_mission() -> ProjectMission:
+    return ProjectMission(
+        project_id=uuid4(),
+        title="清凉寺重建前期策划",
+        task_statement="形成宗教建筑重建的前期策划、案例研究与概念设计汇报",
+        task_natures=[TaskNature.RECONSTRUCTION, TaskNature.RESEARCH],
+        requested_service_depths=[
+            ServiceDepth.PRELIMINARY_RESEARCH,
+            ServiceDepth.CONCEPT_PLANNING,
+            ServiceDepth.PRESENTATION_PRODUCTION,
+        ],
+        desired_changes=["形成前期策划", "完成案例研究"],
+        in_scope=["前期策划", "案例研究", "概念设计汇报"],
+        out_of_scope=["施工图设计", "施工招标"],
+        stakeholders=[
+            Stakeholder(name="甲方", role="业主", concerns=["宗教功能", "文化定位"]),
+        ],
+        decisions_required=["重建策略取向", "主要宗教与公共功能"],
+        design_questions=["如何在历史资料有限条件下形成可接受的重建策略？"],
+        research_questions=["历史形制有哪些可信依据？"],
+        key_unknowns=["建设规模"],
+        decision_context="需确定重建策略与概念方向",
+    )
+
+
+def _presentation_deliverable() -> PlannedDeliverable:
+    return PlannedDeliverable(
+        id="del-concept-ppt",
+        title="概念设计汇报",
+        deliverable_type=DeliverableType.PRESENTATION,
+        purpose="向甲方汇报重建策略与概念方向",
+        audience="甲方",
+        content_scope=["现状", "策略", "概念"],
+        required=True,
+        selected=True,
+        expected_length="12-16页",
+    )
+
+
+def _workstreams(mission_id, project_id) -> list[Workstream]:
+    return [
+        Workstream(
+            project_id=project_id,
+            mission_id=mission_id,
+            title="历史与案例研究",
+            workstream_type=WorkstreamType.HISTORICAL_RESEARCH,
+            objective="梳理形制依据与同类策略",
+            selected=True,
+        ),
+        Workstream(
+            project_id=project_id,
+            mission_id=mission_id,
+            title="概念生成",
+            workstream_type=WorkstreamType.DESIGN_STRATEGY,
+            objective="形成概念方向比较",
+            selected=True,
+        ),
+        Workstream(
+            project_id=project_id,
+            mission_id=mission_id,
+            title="施工图准备",
+            workstream_type=WorkstreamType.OTHER,
+            objective="不在本轮",
+            selected=False,
+        ),
+    ]
+
+
+def test_build_presentation_request_field_mapping() -> None:
+    mission = _temple_mission()
+    deliverable = _presentation_deliverable()
+    workstreams = _workstreams(mission.id, mission.project_id)
+
+    request = build_presentation_request(mission, deliverable, workstreams=workstreams)
+
+    assert request.title == "概念设计汇报"
+    assert request.audience == "甲方"
+    assert request.purpose == mission.task_statement
+    assert request.core_message == "形成前期策划"
+    assert request.decisions_required == mission.decisions_required
+    assert request.audience_concerns == ["宗教功能", "文化定位"]
+    assert request.required_sections == ["现状", "策略", "概念"]
+    assert request.excluded_topics == ["施工图设计", "施工招标"]
+    assert request.target_slide_count == 14
+    assert request.presentation_type == PresentationType.CONCEPT
+    assert "设计命题" in request.user_notes
+    assert "相关工作路径（生成上下文，非汇报章节大纲）" in request.user_notes
+    assert "历史与案例研究" in request.user_notes
+    assert "施工图准备" not in request.user_notes
+    # Workstream titles must not become required_sections.
+    assert "历史与案例研究" not in request.required_sections
+    assert "概念生成" not in request.required_sections
+
+
+def test_workstream_names_are_not_mechanical_sections() -> None:
+    mission = _temple_mission()
+    workstreams = _workstreams(mission.id, mission.project_id)
+    request = build_presentation_request(mission, workstreams=workstreams)
+    assert request.required_sections == mission.in_scope
+    for ws in workstreams:
+        assert ws.title not in request.required_sections
+
+
+def test_user_overrides_win() -> None:
+    mission = _temple_mission()
+    request = build_presentation_request(
+        mission,
+        _presentation_deliverable(),
+        user_overrides=PresentationOverrides(
+            title="自定义标题",
+            audience="专家评审",
+            target_slide_count=10,
+            presentation_type=PresentationType.COMPETITION,
+        ),
+    )
+    assert request.title == "自定义标题"
+    assert request.audience == "专家评审"
+    assert request.target_slide_count == 10
+    assert request.presentation_type == PresentationType.COMPETITION
+
+
+def test_select_presentation_deliverable_prefers_presentation_type() -> None:
+    mission = _temple_mission()
+    plan = DeliverablePlan(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        deliverables=[
+            PlannedDeliverable(
+                id="del-report",
+                title="研究报告",
+                deliverable_type=DeliverableType.REPORT,
+                purpose="研究",
+                selected=True,
+            ),
+            _presentation_deliverable(),
+        ],
+    )
+    selected, warnings = select_presentation_deliverable(plan)
+    assert selected is not None
+    assert selected.id == "del-concept-ppt"
+    assert warnings == []
+
+
+def test_bridge_roundtrip_draft() -> None:
+    mission = _temple_mission()
+    plan = DeliverablePlan(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        deliverables=[_presentation_deliverable()],
+    )
+    bridge = build_presentation_bridge(
+        mission,
+        plan=plan,
+        workstreams=_workstreams(mission.id, mission.project_id),
+    )
+    restored = bridge_from_draft(bridge.to_draft())
+    assert restored.mission_id == mission.id
+    assert restored.deliverable_id == "del-concept-ppt"
+    assert restored.request.title == bridge.request.title
+    assert restored.request.purpose == bridge.request.purpose
+    assert restored.request.required_sections == bridge.request.required_sections
+
+
+def test_select_unselected_deliverable_raises() -> None:
+    mission = _temple_mission()
+    item = _presentation_deliverable()
+    item.selected = False
+    plan = DeliverablePlan(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        deliverables=[item],
+    )
+    with pytest.raises(WorkflowError, match="未选中"):
+        select_presentation_deliverable(plan, deliverable_id="del-concept-ppt")
+
+
+def test_infer_presentation_type_defaults() -> None:
+    mission = ProjectMission(
+        project_id=uuid4(),
+        title="日常汇报",
+        task_statement="确认方向",
+    )
+    assert infer_presentation_type(mission) == PresentationType.CLIENT_REVIEW

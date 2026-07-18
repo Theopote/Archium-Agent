@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.deliverable_planning_service import DeliverablePlanningService
 from archium.application.mission_clarification_service import MissionClarificationService
+from archium.application.mission_to_presentation_request import build_presentation_bridge
 from archium.application.project_mission_service import ProjectMissionService
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
@@ -17,6 +18,7 @@ from archium.domain.enums import ApprovalStatus, QuestionStatus, WorkflowStatus,
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
+    PresentationRepository,
     ProjectRepository,
     WorkflowRunRepository,
 )
@@ -43,6 +45,7 @@ class PlanningWorkflowRuntime:
         self.llm = llm
         self.settings = settings
         self.projects = ProjectRepository(session)
+        self.presentations = PresentationRepository(session)
         self.workflow_runs = WorkflowRunRepository(session)
         self.missions = MissionRepository(session)
         self.mission_service = ProjectMissionService(session, llm, settings=settings)
@@ -346,34 +349,27 @@ class PlanningWorkflowNodes:
                 "current_step": WorkflowStep.FAILED.value,
                 "errors": ["缺少任务理解，无法准备 PresentationRequest"],
             }
-        selected = plan.selected_deliverables() if plan is not None else []
-        presentation_items = [
-            item for item in selected if item.deliverable_type.value == "presentation"
-        ]
-        primary = presentation_items[0] if presentation_items else None
-        audience = primary.audience if primary and primary.audience else (
-            mission.stakeholders[0].name if mission.stakeholders else "甲方"
+        bridge = build_presentation_bridge(
+            mission,
+            plan=plan,
+            workstreams=list(state.get("workstreams") or []),
         )
-        draft = {
-            "title": primary.title if primary else mission.title,
-            "audience": audience,
-            "purpose": mission.task_statement,
-            "core_message": mission.desired_changes[0] if mission.desired_changes else mission.title,
-            "decisions_required": list(mission.decisions_required),
-            "audience_concerns": [
-                concern
-                for stakeholder in mission.stakeholders
-                for concern in stakeholder.concerns
-            ],
-            "required_sections": list(primary.content_scope) if primary else list(mission.in_scope),
-            "excluded_topics": list(mission.out_of_scope),
-            "user_notes": "\n".join(mission.design_questions),
-            "mission_id": str(mission.id),
-            "deliverable_id": primary.id if primary else None,
-        }
+        draft = bridge.to_draft()
+        presentation_id = state.get("presentation_id")
+        if presentation_id:
+            presentation = self._runtime.presentations.get_presentation(UUID(presentation_id))
+            if presentation is not None and presentation.title != bridge.request.title:
+                presentation.title = bridge.request.title
+                presentation.description = (
+                    f"From mission {mission.id}"
+                    + (f" / deliverable {bridge.deliverable_id}" if bridge.deliverable_id else "")
+                )
+                presentation.touch()
+                self._runtime.presentations.update_presentation(presentation)
         next_state: PlanningWorkflowState = {
             "current_step": WorkflowStep.PLANNING_PREPARE_PRESENTATION.value,
             "presentation_request_draft": draft,
+            "warnings": list(bridge.warnings),
         }
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state
