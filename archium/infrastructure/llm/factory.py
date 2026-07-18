@@ -2,12 +2,28 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
-
 from archium.config.settings import Settings, get_settings
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.llm.mock import MockLLMProvider
 from archium.infrastructure.llm.openai_compatible import OpenAICompatibleProvider
+
+
+def _resolve_provider_settings(settings: Settings | None) -> Settings:
+    """Resolve LLM settings from explicit override, UI session, keyring, or env."""
+    if settings is not None:
+        return settings
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        if get_script_run_ctx() is not None:
+            from archium.ui.llm_settings import get_ui_effective_settings
+
+            return get_ui_effective_settings()
+    except Exception:
+        pass
+    from archium.config.llm_config import get_effective_settings
+
+    return get_effective_settings()
 
 
 def create_llm_provider(
@@ -15,25 +31,23 @@ def create_llm_provider(
     *,
     provider: str | None = None,
 ) -> LLMProvider:
-    """Create an LLM provider based on settings."""
-    settings = settings or get_settings()
-    name = (provider or settings.llm_provider).lower()
+    """Create an LLM provider based on resolved application settings."""
+    resolved = _resolve_provider_settings(settings)
+    name = (provider or resolved.llm_provider).lower()
 
     if name == "mock":
         return MockLLMProvider()
 
     if name in {"openai_compatible", "openai", "gemini"}:
-        return OpenAICompatibleProvider(settings)
+        return OpenAICompatibleProvider(resolved)
 
     raise ValueError(f"Unknown LLM provider: {name}")
 
 
-@lru_cache
 def get_llm_provider() -> LLMProvider:
-    """Return a cached default LLM provider."""
+    """Return an LLM provider using the current effective settings."""
     return create_llm_provider()
 
 
 def reset_llm_provider_cache() -> None:
-    """Clear cached provider (for tests)."""
-    get_llm_provider.cache_clear()
+    """Backward-compatible no-op; providers are created per call."""
