@@ -42,7 +42,8 @@ ArtDirection (整套汇报视觉方向) ──► VisualIntent (单页意图)
 
 ## Visual Workflow
 
-入口：`VisualWorkflowService.run()` / `continue_after_art_direction_approval()` / `resume()`。
+入口：`VisualWorkflowService.run()` / `continue_after_art_direction_approval()` /
+`continue_after_layout_review()` / `resume()`。
 
 默认步骤：
 
@@ -52,8 +53,20 @@ ArtDirection (整套汇报视觉方向) ──► VisualIntent (单页意图)
 4. `generate_visual_intents`
 5. `generate_layout_candidates` → `select_layout_plans`
 6. `validate_layouts` ⇄ `repair_layouts`
-7. `render_presentation`（layout instructions JSON ± PPTX）
-8. `finalize`
+7. 若仍有 ERROR/CRITICAL → `apply_safe_fallback` → 再校验
+8. 仍失败 → **`await_layout_review`**（禁止静默导出）
+9. `render_presentation`（仅 WARNING 可导出 PPTX；ERROR/CRITICAL 一律阻断 PPTX）
+10. `finalize`
+
+校验路由：
+
+| 结果 | 去向 |
+|------|------|
+| 全部通过 | render |
+| 仅 WARNING/INFO | render（带 warnings） |
+| ERROR/CRITICAL 且未用尽修复轮 | repair |
+| ERROR/CRITICAL 且未尝试 fallback | apply_safe_fallback |
+| ERROR/CRITICAL 仍在 | await_layout_review |
 
 工作流状态经 checkpointer 持久化；序列化会剥离 API Key。
 
@@ -77,7 +90,7 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 | `LayoutValidationService` | `validate` |
 | `LayoutRepairService` | `repair` — auto-repairable rule codes（越界 / 重叠 / 字号 / 溢出 / 图纸裁切 / 主视觉占比 / 对齐） |
 | `VisualCompositionService` | 薄编排：意图 → 候选 → 最佳计划 |
-| `VisualWorkflowService` | `run` / `continue_after_art_direction_approval` / `resume` |
+| `VisualWorkflowService` | `run` / `continue_after_art_direction_approval` / `continue_after_layout_review` / `resume` |
 | `PptxGenPresentationRenderer` | `build_layout_instruction_deck` / `export_pptx_from_layout_instructions` |
 
 ## 设计约束（不可违反）

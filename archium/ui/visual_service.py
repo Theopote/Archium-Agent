@@ -114,6 +114,21 @@ def continue_visual_after_art_direction_approval(
     )
 
 
+def continue_visual_after_layout_review(
+    session: Session,
+    workflow_run_id: UUID,
+    *,
+    allow_invalid_layout_export: bool = False,
+    settings: Settings | None = None,
+) -> VisualWorkflowResult:
+    resolved = _resolve_runtime_settings(settings)
+    service = _create_visual_workflow_service(session, settings=resolved, use_llm=False)
+    return service.continue_after_layout_review(
+        workflow_run_id,
+        allow_invalid_layout_export=allow_invalid_layout_export,
+    )
+
+
 def get_presentation_visual_snapshot(
     session: Session,
     presentation_id: UUID,

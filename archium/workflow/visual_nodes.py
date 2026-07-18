@@ -34,6 +34,11 @@ from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentatio
 from archium.logging import ArchiumLogAdapter, get_logger
 from archium.workflow.visual_serialization import snapshot_visual_state
 from archium.workflow.visual_state import VisualWorkflowState
+from archium.workflow.visual_validation_routing import (
+    format_blocking_warnings,
+    report_has_blocking_issues,
+    reports_blocking_summary,
+)
 
 
 class VisualWorkflowRuntime:
@@ -500,10 +505,20 @@ class VisualWorkflowNodes:
                 "validation_reports": reports,
                 "current_step": step,
             }
+            summary = reports_blocking_summary(reports)
+            if summary["warning_only"]:
+                next_state["warnings"] = [
+                    "Layout validation produced warnings only; proceeding to render."
+                ]
             merged = cast(VisualWorkflowState, {**state, **next_state})
             self._persist(merged)
             invalid = sum(1 for item in reports if not item.get("valid", False))
-            logger.info("Validated layouts: %s invalid of %s", invalid, len(reports))
+            logger.info(
+                "Validated layouts: %s invalid of %s (blocking=%s)",
+                invalid,
+                len(reports),
+                summary["blocking_count"],
+            )
             return next_state
         except Exception as exc:
             logger.exception("validate_layouts failed: %s", exc)
@@ -529,7 +544,7 @@ class VisualWorkflowNodes:
                 if plan is None:
                     continue
                 raw = reports_by_id.get(plan_id)
-                if raw is None or raw.get("valid", False):
+                if raw is None or not report_has_blocking_issues(raw):
                     updated_ids.append(plan_id)
                     continue
                 from archium.domain.visual.validation import LayoutValidationReport
@@ -557,6 +572,205 @@ class VisualWorkflowNodes:
             logger.exception("repair_layouts failed: %s", exc)
             return {"errors": [str(exc)], "current_step": step}
 
+    def apply_safe_fallback(self, state: VisualWorkflowState) -> VisualWorkflowState:
+        """Replace still-blocking plans with the next valid candidate when possible."""
+        logger = self._logger(state)
+        step = WorkflowStep.VISUAL_APPLY_SAFE_FALLBACK.value
+        if state.get("errors"):
+            return {"current_step": step}
+        try:
+            design = state.get("design_system")
+            if design is None:
+                return {"errors": ["DesignSystem missing"], "current_step": step}
+
+            reports = list(state.get("validation_reports") or [])
+            by_slide_candidates = dict(state.get("candidate_plan_ids_by_slide") or {})
+            slides = list(state.get("slides") or [])
+            selected_ids: list[str] = []
+            warnings: list[str] = []
+            updated_slides = []
+
+            reports_by_slide = {
+                str(item.get("slide_id")): item
+                for item in reports
+                if item.get("slide_id")
+            }
+
+            for slide in slides:
+                slide_key = str(slide.id)
+                current_id = str(slide.layout_plan_id) if slide.layout_plan_id else None
+                report = reports_by_slide.get(slide_key)
+                if report is None or not report_has_blocking_issues(report):
+                    if current_id:
+                        selected_ids.append(current_id)
+                    updated_slides.append(slide)
+                    continue
+
+                replacement = self._pick_safe_candidate(
+                    current_id=current_id,
+                    candidate_ids=by_slide_candidates.get(slide_key, []),
+                    design=design,
+                )
+                if replacement is None:
+                    warnings.append(
+                        f"No safe fallback candidate for slide {slide_key[:8]}…; "
+                        "keeping current plan for layout review."
+                    )
+                    if current_id:
+                        selected_ids.append(current_id)
+                    updated_slides.append(slide)
+                    continue
+
+                slide.layout_plan_id = replacement.id
+                self._runtime.presentations.save_slide(slide)
+                selected_ids.append(str(replacement.id))
+                updated_slides.append(slide)
+                warnings.append(
+                    f"Applied safe fallback layout {replacement.layout_family.value} "
+                    f"for slide {slide_key[:8]}…"
+                )
+
+            next_state: VisualWorkflowState = {
+                "slides": updated_slides or slides,
+                "layout_plan_ids": selected_ids,
+                "fallback_applied": True,
+                "warnings": warnings,
+                "current_step": step,
+            }
+            merged = cast(VisualWorkflowState, {**state, **next_state})
+            self._persist(merged)
+            logger.info("Safe fallback applied for %s slides", len(warnings))
+            return next_state
+        except Exception as exc:
+            logger.exception("apply_safe_fallback failed: %s", exc)
+            return {"errors": [str(exc)], "current_step": step}
+
+    def _pick_safe_candidate(
+        self,
+        *,
+        current_id: str | None,
+        candidate_ids: list[str],
+        design: object,
+    ):
+        from archium.domain.visual.design_system import DesignSystem
+
+        assert isinstance(design, DesignSystem)
+        for plan_id in candidate_ids:
+            if plan_id == current_id:
+                continue
+            plan = self._runtime.layout_plans.get(UUID(plan_id))
+            if plan is None:
+                continue
+            drawing = plan.layout_family.value == "drawing_focus" or any(
+                el.content_type.value == "drawing" for el in plan.elements
+            )
+            report = self._runtime.layout_validation_service.validate(
+                plan,
+                design,
+                require_source=True,
+                drawing_hero=drawing,
+            )
+            if report.valid or not any(
+                issue.severity.value in {"critical", "error"} for issue in report.issues
+            ):
+                plan.validation_status = (
+                    LayoutValidationStatus.VALID
+                    if report.valid
+                    else LayoutValidationStatus.INVALID
+                )
+                return self._runtime.layout_plans.save(plan)
+        return None
+
+    def await_layout_review(self, state: VisualWorkflowState) -> VisualWorkflowState:
+        """Pause when ERROR/CRITICAL issues remain after repair + fallback."""
+        logger = self._logger(state)
+        step = WorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value
+        if state.get("errors"):
+            return {"current_step": step}
+
+        reports = list(state.get("validation_reports") or [])
+        summary = reports_blocking_summary(reports)
+        blocking_notes = format_blocking_warnings(reports)
+
+        pause_state: VisualWorkflowState = {
+            "current_step": step,
+            "review_gate": "layout_review",
+            "warnings": [
+                "Layout validation still has ERROR/CRITICAL issues after repair "
+                "and safe fallback; paused for user review. PPTX export is blocked."
+            ]
+            + blocking_notes,
+        }
+        merged_pause = cast(VisualWorkflowState, {**state, **pause_state})
+        self._persist(merged_pause, status=WorkflowStatus.AWAITING_REVIEW)
+        logger.info(
+            "Paused for layout review (%s blocking plans)",
+            summary["blocking_count"],
+        )
+
+        decision = interrupt(
+            {
+                "gate": "layout_review",
+                "step": step,
+                "blocking_count": summary["blocking_count"],
+                "blocking_plan_ids": summary["blocking_plan_ids"],
+            }
+        )
+
+        # After resume: never silently export invalid PPTX.
+        allow_invalid = False
+        if isinstance(decision, dict):
+            allow_invalid = bool(decision.get("allow_invalid_layout_export", False))
+
+        design = state.get("design_system")
+        if design is not None:
+            # Re-validate in case the user fixed plans in the UI before continuing.
+            refreshed_reports: list[dict] = []
+            for plan_id in state.get("layout_plan_ids", []):
+                plan = self._runtime.layout_plans.get(UUID(plan_id))
+                if plan is None:
+                    continue
+                drawing = plan.layout_family.value == "drawing_focus" or any(
+                    el.content_type.value == "drawing" for el in plan.elements
+                )
+                report = self._runtime.layout_validation_service.validate(
+                    plan,
+                    design,
+                    require_source=True,
+                    drawing_hero=drawing,
+                )
+                payload = report.model_dump(mode="json")
+                payload["layout_plan_id"] = plan_id
+                payload["slide_id"] = str(plan.slide_id)
+                refreshed_reports.append(payload)
+            reports = refreshed_reports or reports
+
+        still_blocking = reports_blocking_summary(reports)["has_blocking"]
+        resume_warnings = list(state.get("warnings") or [])
+        export_pptx = bool(state.get("export_pptx", False))
+        if still_blocking:
+            export_pptx = False
+            resume_warnings.append(
+                "PPTX export disabled: ERROR/CRITICAL layout issues remain after review."
+            )
+            if allow_invalid:
+                resume_warnings.append(
+                    "User acknowledged invalid layouts; continuing with instructions only."
+                )
+
+        resume_state: VisualWorkflowState = {
+            "validation_reports": reports,
+            "review_gate": None,
+            "export_pptx": export_pptx,
+            "allow_invalid_layout_export": allow_invalid and still_blocking,
+            "warnings": resume_warnings,
+            "current_step": step,
+        }
+        merged_resume = cast(VisualWorkflowState, {**state, **resume_state})
+        self._persist(merged_resume, status=WorkflowStatus.RUNNING)
+        logger.info("Resumed after layout review (still_blocking=%s)", still_blocking)
+        return resume_state
+
     def render_presentation(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
         step = WorkflowStep.VISUAL_RENDER.value
@@ -570,12 +784,25 @@ class VisualWorkflowNodes:
             output_dir = Path(state.get("output_dir") or ".")
             output_dir.mkdir(parents=True, exist_ok=True)
             render_paths: list[str] = []
+            warnings: list[str] = []
             slides = list(state.get("slides") or [])
             plans: list = []
             for plan_id in state.get("layout_plan_ids", []):
                 plan = self._runtime.layout_plans.get(UUID(plan_id))
                 if plan is not None:
                     plans.append(plan)
+
+            reports = list(state.get("validation_reports") or [])
+            blocking = reports_blocking_summary(reports)["has_blocking"]
+            export_pptx = bool(state.get("export_pptx", False))
+            if blocking and export_pptx:
+                export_pptx = False
+                warnings.extend(
+                    [
+                        "Blocked PPTX export: layout still has ERROR/CRITICAL issues.",
+                        *format_blocking_warnings(reports),
+                    ]
+                )
 
             brief = state.get("brief")
             title = brief.title if brief is not None else "Archium Visual Composition"
@@ -608,47 +835,34 @@ class VisualWorkflowNodes:
 
                 reports_path = output_dir / "validation_reports.json"
                 reports_path.write_text(
-                    json.dumps(state.get("validation_reports", []), ensure_ascii=False, indent=2),
+                    json.dumps(reports, ensure_ascii=False, indent=2),
                     encoding="utf-8",
                 )
                 render_paths.append(str(reports_path))
 
-            if state.get("export_pptx", False):
+            if export_pptx:
                 if not plans:
-                    warnings = ["Skipped PPTX export: no LayoutPlan available."]
-                    next_partial: VisualWorkflowState = {
-                        "render_paths": render_paths,
-                        "warnings": warnings,
-                        "current_step": step,
-                    }
-                    merged = cast(VisualWorkflowState, {**state, **next_partial})
-                    self._persist(merged)
-                    return next_partial
-
-                try:
-                    deck_path, pptx_path = (
-                        self._runtime.pptxgen_renderer.export_pptx_from_layout_instructions(
-                            deck,
-                            output_dir=output_dir,
+                    warnings.append("Skipped PPTX export: no LayoutPlan available.")
+                else:
+                    try:
+                        deck_path, pptx_path = (
+                            self._runtime.pptxgen_renderer.export_pptx_from_layout_instructions(
+                                deck,
+                                output_dir=output_dir,
+                            )
                         )
-                    )
-                    for path in (deck_path, pptx_path):
-                        path_str = str(path)
-                        if path_str not in render_paths:
-                            render_paths.append(path_str)
-                except Exception as pptx_exc:
-                    logger.warning("PPTX export failed (non-fatal): %s", pptx_exc)
-                    next_with_warn: VisualWorkflowState = {
-                        "render_paths": render_paths,
-                        "warnings": [f"PPTX export failed: {pptx_exc}"],
-                        "current_step": step,
-                    }
-                    merged_warn = cast(VisualWorkflowState, {**state, **next_with_warn})
-                    self._persist(merged_warn)
-                    return next_with_warn
+                        for path in (deck_path, pptx_path):
+                            path_str = str(path)
+                            if path_str not in render_paths:
+                                render_paths.append(path_str)
+                    except Exception as pptx_exc:
+                        logger.warning("PPTX export failed (non-fatal): %s", pptx_exc)
+                        warnings.append(f"PPTX export failed: {pptx_exc}")
 
             next_state: VisualWorkflowState = {
                 "render_paths": render_paths,
+                "warnings": warnings,
+                "export_pptx": export_pptx,
                 "current_step": step,
             }
             merged = cast(VisualWorkflowState, {**state, **next_state})

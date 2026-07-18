@@ -13,6 +13,7 @@ from langgraph.types import Command
 from archium.domain.enums import ApprovalStatus
 from archium.workflow.visual_nodes import VisualWorkflowNodes, VisualWorkflowRuntime
 from archium.workflow.visual_state import VisualWorkflowState
+from archium.workflow.visual_validation_routing import reports_blocking_summary
 
 
 def _route_on_errors(state: VisualWorkflowState) -> str:
@@ -33,14 +34,27 @@ def _route_after_art_direction(state: VisualWorkflowState) -> str:
 
 
 def _route_after_validation(state: VisualWorkflowState) -> str:
+    """Route validate → repair | fallback | layout_review | render.
+
+    ERROR/CRITICAL layouts must never silently proceed to render after repairs
+    are exhausted. Soft WARNING/INFO issues may render with warnings.
+    """
     if state.get("errors"):
         return "finalize"
-    reports = state.get("validation_reports", [])
-    has_invalid = any(not item.get("valid", False) for item in reports)
+
+    summary = reports_blocking_summary(list(state.get("validation_reports") or []))
     repair_round = int(state.get("repair_round", 0))
     max_rounds = int(state.get("max_repair_rounds", 1))
-    if has_invalid and repair_round < max_rounds:
-        return "repair"
+    fallback_applied = bool(state.get("fallback_applied", False))
+
+    if summary["has_blocking"]:
+        if repair_round < max_rounds:
+            return "repair"
+        if not fallback_applied:
+            return "fallback"
+        return "await_review"
+
+    # Fully valid, or only warnings/info → render (warnings already collected).
     return "render"
 
 
@@ -64,10 +78,11 @@ class VisualWorkflowGraph:
         *,
         thread_id: str,
         resume: bool = False,
+        resume_value: object = True,
     ) -> VisualWorkflowState:
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
         graph_input: VisualWorkflowState | Command = (
-            Command(resume=True) if resume else (state or {})
+            Command(resume=resume_value) if resume else (state or {})
         )
         return cast(VisualWorkflowState, self._graph.invoke(graph_input, config))
 
@@ -88,6 +103,8 @@ class VisualWorkflowGraph:
         builder.add_node("select_layouts", nodes.select_layouts)
         builder.add_node("validate_layouts", nodes.validate_layouts)
         builder.add_node("repair_layouts", nodes.repair_layouts)
+        builder.add_node("apply_safe_fallback", nodes.apply_safe_fallback)
+        builder.add_node("await_layout_review", nodes.await_layout_review)
         builder.add_node("render_presentation", nodes.render_presentation)
         builder.add_node("finalize", nodes.finalize)
 
@@ -136,11 +153,19 @@ class VisualWorkflowGraph:
             _route_after_validation,
             {
                 "repair": "repair_layouts",
+                "fallback": "apply_safe_fallback",
+                "await_review": "await_layout_review",
                 "render": "render_presentation",
                 "finalize": "finalize",
             },
         )
         builder.add_edge("repair_layouts", "validate_layouts")
+        builder.add_edge("apply_safe_fallback", "validate_layouts")
+        builder.add_conditional_edges(
+            "await_layout_review",
+            _route_on_errors,
+            {"continue": "render_presentation", "finalize": "finalize"},
+        )
         builder.add_conditional_edges(
             "render_presentation",
             _route_on_errors,

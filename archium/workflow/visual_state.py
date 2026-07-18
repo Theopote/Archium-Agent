@@ -49,6 +49,8 @@ class VisualWorkflowState(TypedDict, total=False):
     candidate_count: int
     repair_round: int
     max_repair_rounds: int
+    fallback_applied: bool
+    allow_invalid_layout_export: bool
     output_dir: str | None
 
 
@@ -95,6 +97,8 @@ def initial_visual_workflow_state(
         "candidate_count": candidate_count,
         "repair_round": 0,
         "max_repair_rounds": max_repair_rounds,
+        "fallback_applied": False,
+        "allow_invalid_layout_export": False,
         "output_dir": None,
     }
     if design_system_id is not None:

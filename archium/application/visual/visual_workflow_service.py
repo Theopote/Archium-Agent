@@ -187,6 +187,8 @@ class VisualWorkflowService:
                 f"Workflow run {workflow_run_id} is not awaiting review "
                 f"(status={run.status.value})"
             )
+        if run.state.get("review_gate") == "layout_review":
+            return self.continue_after_layout_review(workflow_run_id)
 
         art_direction_id = run.state.get("art_direction_id")
         if not isinstance(art_direction_id, str):
@@ -215,6 +217,61 @@ class VisualWorkflowService:
             raise WorkflowError(f"Workflow run {run.id} disappeared after continuation")
         return self._to_result(refreshed, final_state)
 
+    def continue_after_layout_review(
+        self,
+        workflow_run_id: UUID,
+        *,
+        allow_invalid_layout_export: bool = False,
+    ) -> VisualWorkflowResult:
+        """Resume after layout review gate.
+
+        PPTX export remains blocked while ERROR/CRITICAL issues persist.
+        ``allow_invalid_layout_export`` only acknowledges continuing with
+        layout-instruction artifacts (never silent PPTX of invalid pages).
+        """
+        run = self._workflow_runs.get_by_id(workflow_run_id)
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} not found")
+        if run.status != WorkflowStatus.AWAITING_REVIEW:
+            raise WorkflowError(
+                f"Workflow run {workflow_run_id} is not awaiting review "
+                f"(status={run.status.value})"
+            )
+        if run.state.get("review_gate") not in {None, "layout_review"}:
+            if run.state.get("review_gate") == "art_direction":
+                return self.continue_after_art_direction_approval(workflow_run_id)
+            raise WorkflowError(
+                f"Workflow run {workflow_run_id} is awaiting "
+                f"{run.state.get('review_gate')}, not layout_review"
+            )
+
+        run.status = WorkflowStatus.RUNNING
+        run.errors = []
+        run.touch()
+        self._workflow_runs.update(run)
+
+        try:
+            final_state = self._graph.invoke(
+                None,
+                thread_id=str(run.id),
+                resume=True,
+                resume_value={
+                    "allow_invalid_layout_export": allow_invalid_layout_export,
+                },
+            )
+        except Exception as exc:
+            logger.exception("Visual workflow continue-after-layout-review failed: %s", exc)
+            run.errors = [str(exc)]
+            run.status = WorkflowStatus.FAILED
+            run.touch()
+            self._workflow_runs.update(run)
+            raise WorkflowError(str(exc)) from exc
+
+        refreshed = self._workflow_runs.get_by_id(run.id)
+        if refreshed is None:
+            raise WorkflowError(f"Workflow run {run.id} disappeared after continuation")
+        return self._to_result(refreshed, final_state)
+
     def resume(self, workflow_run_id: UUID) -> VisualWorkflowResult:
         """Resume a paused or failed-but-checkpointed visual workflow."""
         run = self._workflow_runs.get_by_id(workflow_run_id)
@@ -223,6 +280,9 @@ class VisualWorkflowService:
         if run.status == WorkflowStatus.COMPLETED:
             return self._to_result(run, run.state)
         if run.status == WorkflowStatus.AWAITING_REVIEW:
+            gate = run.state.get("review_gate")
+            if gate == "layout_review":
+                return self.continue_after_layout_review(workflow_run_id)
             return self.continue_after_art_direction_approval(workflow_run_id)
 
         restored = restore_visual_artifacts(run.state)

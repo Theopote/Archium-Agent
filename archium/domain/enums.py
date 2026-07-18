@@ -513,5 +513,7 @@ class WorkflowStep(StrEnum):
     VISUAL_SELECT_LAYOUTS = "visual_select_layouts"
     VISUAL_VALIDATE_LAYOUTS = "visual_validate_layouts"
     VISUAL_REPAIR_LAYOUTS = "visual_repair_layouts"
+    VISUAL_APPLY_SAFE_FALLBACK = "visual_apply_safe_fallback"
+    VISUAL_AWAIT_LAYOUT_REVIEW = "visual_await_layout_review"
     VISUAL_RENDER = "visual_render"
     VISUAL_FINALIZE = "visual_finalize"

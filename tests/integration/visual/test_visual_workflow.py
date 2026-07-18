@@ -106,6 +106,20 @@ def seeded_presentation(db_session: Session) -> tuple[Project, Presentation, lis
     return project, presentation, slides
 
 
+@pytest.fixture
+def always_valid_layouts(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Happy-path fixture: isolate workflow graph from layout-quality flakiness."""
+    from archium.domain.visual.validation import LayoutValidationReport
+
+    def _always_valid(self, layout_plan, design_system, **kwargs):  # noqa: ANN001, ARG001
+        return LayoutValidationReport(issues=[], score=1.0)
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _always_valid,
+    )
+
+
 def test_visual_workflow_pauses_for_art_direction_approval(
     db_session: Session,
     test_settings: object,
@@ -140,6 +154,7 @@ def test_visual_workflow_completes_after_art_direction_approval(
     db_session: Session,
     test_settings: object,
     seeded_presentation: tuple[Project, Presentation, list[SlideSpec]],
+    always_valid_layouts: None,
 ) -> None:
     project, presentation, slides = seeded_presentation
     service = VisualWorkflowService(db_session, settings=test_settings)  # type: ignore[arg-type]
@@ -176,6 +191,7 @@ def test_visual_workflow_can_skip_art_direction_gate(
     db_session: Session,
     test_settings: object,
     seeded_presentation: tuple[Project, Presentation, list[SlideSpec]],
+    always_valid_layouts: None,
 ) -> None:
     project, presentation, slides = seeded_presentation
     service = VisualWorkflowService(db_session, settings=test_settings)  # type: ignore[arg-type]
@@ -190,5 +206,72 @@ def test_visual_workflow_can_skip_art_direction_gate(
         assert result.succeeded
         assert len(result.layout_plan_ids) == len(slides)
         assert result.workflow_run.state.get("current_step") == WorkflowStep.VISUAL_FINALIZE.value
+    finally:
+        service.close()
+
+
+def test_visual_workflow_pauses_on_blocking_layout_instead_of_silent_render(
+    db_session: Session,
+    test_settings: object,
+    seeded_presentation: tuple[Project, Presentation, list[SlideSpec]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P0: ERROR/CRITICAL after repair+fallback must await review, not render PPTX."""
+    from archium.domain.visual.enums import LayoutIssueSeverity
+    from archium.domain.visual.validation import (
+        LAYOUT_ELEMENT_OVERLAP,
+        LayoutValidationIssue,
+        LayoutValidationReport,
+    )
+
+    def _always_blocking(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
+        return LayoutValidationReport(
+            issues=[
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_ELEMENT_OVERLAP,
+                    severity=LayoutIssueSeverity.ERROR,
+                    element_ids=["a", "b"],
+                    message="forced overlap for test",
+                    auto_repairable=True,
+                )
+            ],
+            score=0.1,
+        )
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _always_blocking,
+    )
+
+    project, presentation, _slides = seeded_presentation
+    service = VisualWorkflowService(db_session, settings=test_settings)  # type: ignore[arg-type]
+    try:
+        result = service.run(
+            project.id,
+            presentation.id,
+            require_art_direction_review=False,
+            use_llm=False,
+            export_pptx=True,
+            candidate_count=2,
+            max_repair_rounds=1,
+        )
+        assert result.awaiting_review
+        assert result.review_gate == "layout_review"
+        assert result.workflow_run.status == WorkflowStatus.AWAITING_REVIEW
+        assert (
+            result.workflow_run.state.get("current_step")
+            == WorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value
+        )
+        assert bool(result.workflow_run.state.get("fallback_applied"))
+        # Must not have silently produced a PPTX while blocked.
+        assert not any(str(path).endswith(".pptx") for path in result.render_paths)
+
+        continued = service.continue_after_layout_review(
+            result.workflow_run.id,
+            allow_invalid_layout_export=True,
+        )
+        assert continued.workflow_run.status == WorkflowStatus.COMPLETED
+        assert not any(str(path).endswith(".pptx") for path in continued.render_paths)
+        assert any("PPTX" in warning or "blocked" in warning.lower() for warning in continued.warnings)
     finally:
         service.close()

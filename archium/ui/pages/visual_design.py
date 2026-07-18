@@ -23,6 +23,7 @@ from archium.ui.error_handlers import format_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.slide_visual_panel import render_slide_visual_panel
 from archium.ui.visual_service import (
+    continue_visual_after_layout_review,
     get_presentation_visual_snapshot,
     run_visual_workflow,
 )
@@ -246,7 +247,13 @@ def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
             st.session_state.last_visual_workflow_result = result
             st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
             if result.awaiting_review:
-                st.info("已生成视觉方向，等待批准后继续。")
+                if result.review_gate == "layout_review":
+                    st.warning(
+                        "版式仍有 ERROR/CRITICAL 问题，已暂停导出。"
+                        "请在「单页视觉」中调整后，于预览页继续。"
+                    )
+                else:
+                    st.info("已生成视觉方向，等待批准后继续。")
             elif result.succeeded:
                 st.success("视觉编排完成。")
             else:
@@ -275,6 +282,27 @@ def _render_result_summary() -> None:
         with st.expander("输出文件", expanded=False):
             for path in result.render_paths:
                 st.code(path, language=None)
+
+    awaiting_layout = bool(
+        result.awaiting_review and result.review_gate == "layout_review"
+    )
+    if awaiting_layout:
+        st.warning(
+            "版式审核门：存在 ERROR/CRITICAL，禁止静默导出 PPTX。"
+            "可先在「单页视觉」重排，再继续（仍不会导出无效 PPTX）。"
+        )
+        if st.button("继续工作流（跳过无效 PPTX）", type="primary", use_container_width=True):
+            try:
+                with get_session() as session:
+                    continued = continue_visual_after_layout_review(
+                        session,
+                        result.workflow_run.id,
+                        allow_invalid_layout_export=True,
+                    )
+                st.session_state.last_visual_workflow_result = continued
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
 
 
 def _render_composition_tabs(presentation_id: UUID) -> None:
