@@ -15,6 +15,7 @@ from archium.domain.enums import (
 )
 from archium.domain.project_mission import MissionConstraint, ProjectMission
 from archium.domain.workstream import Workstream
+
 from tests.golden.live.mission_eval import collect_auto_observations
 from tests.golden.live.mission_rubric import MISSION_LIVE_RUBRIC, TOTAL_MAX_SCORE
 from tests.golden.mission.loader import MissionGoldenCase

@@ -108,9 +108,7 @@ class MissionScorecard:
 
     def ensure_scaffold(self) -> None:
         if not self.criteria:
-            self.criteria = [
-                CriterionScore(criterion_id=item.id) for item in MISSION_LIVE_RUBRIC
-            ]
+            self.criteria = [CriterionScore(criterion_id=item.id) for item in MISSION_LIVE_RUBRIC]
         if not self.observations:
             self.observations = [
                 ObservationNote(check_id=check_id) for check_id, _ in OBSERVATION_CHECKS

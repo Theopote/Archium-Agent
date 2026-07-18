@@ -115,11 +115,15 @@ def run_mission_live_case(
     else:
         bridge_error = None
 
-    validation = MissionValidationService().validate(
-        generation.mission,
-        knowledge_gaps=generation.knowledge_gaps,
-        clarifying_questions=generation.clarifying_questions,
-    ).to_dict()
+    validation = (
+        MissionValidationService()
+        .validate(
+            generation.mission,
+            knowledge_gaps=generation.knowledge_gaps,
+            clarifying_questions=generation.clarifying_questions,
+        )
+        .to_dict()
+    )
 
     flags, notes = collect_auto_observations(
         case=case,
@@ -193,16 +197,17 @@ def collect_auto_observations(
             notes.append(f"疑似编造指标片段出现：{needle}")
 
     # Generic numeric area fabrication when case says area is unknown.
-    if "area" in {
-        gap.category.value for gap in generation.knowledge_gaps
-    } or any("面积" in u for u in mission.key_unknowns):
+    if "area" in {gap.category.value for gap in generation.knowledge_gaps} or any(
+        "面积" in u for u in mission.key_unknowns
+    ):
         for constraint in mission.known_constraints:
-            if any(token in constraint.name + constraint.value for token in ("面积", "建筑面积")):
-                if any(ch.isdigit() for ch in constraint.value):
-                    flags.append("fabricated_metrics")
-                    notes.append(
-                        f"面积仍未知，但约束含数值：「{constraint.name}={constraint.value}」"
-                    )
+            if any(
+                token in constraint.name + constraint.value for token in ("面积", "建筑面积")
+            ) and any(ch.isdigit() for ch in constraint.value):
+                flags.append("fabricated_metrics")
+                notes.append(
+                    f"面积仍未知，但约束含数值：「{constraint.name}={constraint.value}」"
+                )
 
     consulting_signal = bool(
         natures
@@ -231,9 +236,7 @@ def collect_auto_observations(
     max_q = int(expectations.get("max_clarifying_questions") or 5)
     if len(generation.clarifying_questions) > max_q:
         flags.append("low_value_questions")
-        notes.append(
-            f"澄清问题 {len(generation.clarifying_questions)} 个，超过建议上限 {max_q}"
-        )
+        notes.append(f"澄清问题 {len(generation.clarifying_questions)} 个，超过建议上限 {max_q}")
     elif len(generation.clarifying_questions) >= 4 and not any(
         q.blocking for q in generation.clarifying_questions
     ):
@@ -260,9 +263,7 @@ def collect_auto_observations(
     min_stakeholders = expectations.get("stakeholder_min_count")
     if min_stakeholders is not None and len(mission.stakeholders) < int(min_stakeholders):
         flags.append("missing_stakeholders")
-        notes.append(
-            f"利益相关方仅 {len(mission.stakeholders)} 个，期望至少 {min_stakeholders}"
-        )
+        notes.append(f"利益相关方仅 {len(mission.stakeholders)} 个，期望至少 {min_stakeholders}")
     elif mission.decisions_required and not mission.stakeholders:
         flags.append("missing_stakeholders")
         notes.append("已列决策但无利益相关方")
@@ -388,9 +389,7 @@ def render_scorecard_markdown(scorecard: MissionScorecard) -> str:
         )
         score = "" if scored is None or scored.score is None else str(scored.score)
         notes = "" if scored is None else scored.notes
-        lines.append(
-            f"| {criterion.label} | {criterion.max_score} | {score} | {notes} |"
-        )
+        lines.append(f"| {criterion.label} | {criterion.max_score} | {score} | {notes} |")
     total = scorecard.total_score if scorecard.total_score is not None else ""
     lines.append(
         f"| **合计** | **{TOTAL_MAX_SCORE}** | **{total}** | 及格线 {scorecard.pass_threshold} |"
@@ -428,13 +427,9 @@ def write_run_summary(run_dir: Path, results: list[MissionLiveEvalResult]) -> Pa
     for result in results:
         flags = ", ".join(result.auto_flags) if result.auto_flags else "—"
         critical = "YES" if result.has_critical_flags else "no"
-        scorecard_path = (
-            result.artifact_dir / "SCORECARD.md" if result.artifact_dir else Path(".")
-        )
+        scorecard_path = result.artifact_dir / "SCORECARD.md" if result.artifact_dir else Path(".")
         rel = scorecard_path.relative_to(run_dir) if result.artifact_dir else "—"
-        lines.append(
-            f"| {result.case.id} ({result.case.name}) | {flags} | {critical} | `{rel}` |"
-        )
+        lines.append(f"| {result.case.id} ({result.case.name}) | {flags} | {critical} | `{rel}` |")
     lines.extend(
         [
             "",

@@ -79,8 +79,7 @@ def test_live_mission_case(
     )
     if result.case.id == "case_m6_green_campus":
         assert "consulting_as_full_design" not in result.auto_flags, (
-            "M6 consulting task misclassified as full design: "
-            + "; ".join(result.auto_notes)
+            "M6 consulting task misclassified as full design: " + "; ".join(result.auto_notes)
         )
 
     # Keep a running SUMMARY.md for the human reviewer.
