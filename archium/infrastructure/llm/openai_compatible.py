@@ -14,10 +14,13 @@ from archium.config.settings import Settings, get_settings
 from archium.exceptions import ConfigurationError, LLMProviderError, StructuredOutputError
 from archium.infrastructure.llm.base import LLMRequest, LLMResponse
 from archium.infrastructure.llm.structured import parse_and_validate, strip_code_fence
+from archium.logging import get_logger
 
 T = TypeVar("T", bound=BaseModel)
 
 _TRANSIENT_ERRORS = (APIConnectionError, APITimeoutError, RateLimitError)
+
+logger = get_logger(__name__, operation="llm")
 
 
 class OpenAICompatibleProvider:
@@ -152,8 +155,12 @@ class OpenAICompatibleProvider:
                     max_tokens=max_tokens,
                     response_format={"type": "json_object"},
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(
+                    "JSON mode request failed for model %s; falling back to plain completion: %s",
+                    model,
+                    exc,
+                )
 
         return self.client.chat.completions.create(
             model=model,
