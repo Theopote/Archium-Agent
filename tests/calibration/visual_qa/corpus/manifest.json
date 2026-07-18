@@ -21,40 +21,6 @@
   },
   "samples": [
     {
-      "id": "site_plan_001",
-      "path": "images/site_plan_001.png",
-      "category": "site_plan",
-      "labels": {
-        "drawing_type": "site_plan",
-        "has_north_arrow": null,
-        "has_legend": null,
-        "is_low_resolution": false,
-        "is_clipped": false,
-        "excessive_margins": false,
-        "high_text_density": false,
-        "low_contrast": false
-      },
-      "notes": "合成标定样本",
-      "source": "synthetic_bootstrap"
-    },
-    {
-      "id": "site_plan_002",
-      "path": "images/site_plan_002.png",
-      "category": "site_plan",
-      "labels": {
-        "drawing_type": "site_plan",
-        "has_north_arrow": null,
-        "has_legend": null,
-        "is_low_resolution": true,
-        "is_clipped": false,
-        "excessive_margins": false,
-        "high_text_density": false,
-        "low_contrast": false
-      },
-      "notes": "低分辨率合成样本",
-      "source": "synthetic_bootstrap"
-    },
-    {
       "id": "site_plan_003",
       "path": "images/site_plan_003.png",
       "category": "site_plan",
