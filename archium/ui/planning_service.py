@@ -65,6 +65,7 @@ class PlanningSnapshot:
     artifact_execution_plans: list[dict] = field(default_factory=list)
     readiness: ClarificationReadiness | None = None
     review_gate: str | None = None
+    mission_validation: dict | None = None
     warnings: list[str] = field(default_factory=list)
 
     @property
@@ -135,6 +136,17 @@ def continue_after_clarification(
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.continue_after_clarification(workflow_run_id)
+
+
+def continue_after_mission_correction(
+    session: Session,
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> PlanningWorkflowResult:
+    runtime = _resolve_runtime_settings(settings)
+    service = _create_planning_service(session, runtime)
+    return service.continue_after_mission_correction(workflow_run_id)
 
 
 def approve_mission_and_continue(
@@ -230,10 +242,14 @@ def get_planning_snapshot(
     warnings: list[str] = []
     presentation_request = None
     review_gate = None
+    mission_validation: dict | None = None
     artifact_execution_plans: list[dict] = []
 
     if run is not None:
         review_gate = run.state.get("review_gate") if isinstance(run.state.get("review_gate"), str) else None
+        raw_validation = run.state.get("mission_validation")
+        if isinstance(raw_validation, dict):
+            mission_validation = raw_validation
         if resolved_mission_id is None:
             raw = run.state.get("mission_id")
             if raw:
@@ -267,6 +283,7 @@ def get_planning_snapshot(
             planning_session=planning_session,
             workflow_run=run,
             review_gate=review_gate,
+            mission_validation=mission_validation,
             artifact_execution_plans=artifact_execution_plans,
             warnings=warnings,
         )
@@ -277,6 +294,7 @@ def get_planning_snapshot(
             planning_session=planning_session,
             workflow_run=run,
             review_gate=review_gate,
+            mission_validation=mission_validation,
             artifact_execution_plans=artifact_execution_plans,
             warnings=warnings,
         )
@@ -311,6 +329,7 @@ def get_planning_snapshot(
         artifact_execution_plans=artifact_execution_plans,
         readiness=readiness,
         review_gate=review_gate if isinstance(review_gate, str) else None,
+        mission_validation=mission_validation,
         warnings=warnings,
     )
 
@@ -465,6 +484,92 @@ def get_presentation_bridge(
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.get_presentation_bridge(workflow_run_id, user_overrides=user_overrides)
+
+
+def generate_question_list_artifact(
+    session: Session,
+    mission_id: UUID,
+    *,
+    deliverable_id: str | None = None,
+    settings: Settings | None = None,
+):
+    """Execute QuestionListExecutor against the mission bundle and write MD/JSON."""
+    from archium.application.artifact_executors import (
+        QuestionListExecutor,
+        artifact_output_dir,
+    )
+    from archium.infrastructure.database.repositories import FactRepository
+
+    runtime = _resolve_runtime_settings(settings)
+    missions = MissionRepository(session)
+    mission = missions.get_mission(mission_id)
+    if mission is None:
+        raise WorkflowError(f"Mission {mission_id} not found")
+
+    deliverable = None
+    plans = missions.list_deliverable_plans(mission_id)
+    if plans and deliverable_id:
+        for item in plans[0].deliverables:
+            if item.id == deliverable_id:
+                deliverable = item
+                break
+
+    out_dir = artifact_output_dir(
+        runtime.output_path,
+        mission_id=mission_id,
+        kind="question_list",
+    )
+    return QuestionListExecutor().execute(
+        mission,
+        gaps=missions.list_knowledge_gaps(mission_id),
+        questions=missions.list_clarifying_questions(mission_id),
+        assumptions=missions.list_assumptions(mission_id),
+        facts=FactRepository(session).list_by_project(mission.project_id),
+        deliverable=deliverable,
+        output_dir=out_dir,
+    )
+
+
+def generate_work_plan_artifact(
+    session: Session,
+    mission_id: UUID,
+    *,
+    deliverable_id: str | None = None,
+    settings: Settings | None = None,
+):
+    """Execute WorkPlanExecutor and write MD/JSON work outline."""
+    from archium.application.artifact_executors import (
+        WorkPlanExecutor,
+        artifact_output_dir,
+    )
+
+    runtime = _resolve_runtime_settings(settings)
+    missions = MissionRepository(session)
+    mission = missions.get_mission(mission_id)
+    if mission is None:
+        raise WorkflowError(f"Mission {mission_id} not found")
+
+    plans = missions.list_deliverable_plans(mission_id)
+    plan = plans[0] if plans else None
+    deliverable = None
+    if plan is not None and deliverable_id:
+        for item in plan.deliverables:
+            if item.id == deliverable_id:
+                deliverable = item
+                break
+
+    out_dir = artifact_output_dir(
+        runtime.output_path,
+        mission_id=mission_id,
+        kind="work_plan",
+    )
+    return WorkPlanExecutor().execute(
+        mission,
+        workstreams=missions.list_workstreams(mission_id),
+        deliverable_plan=plan,
+        deliverable=deliverable,
+        output_dir=out_dir,
+    )
 
 
 def start_presentation_from_planning(

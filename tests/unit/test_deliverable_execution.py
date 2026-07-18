@@ -66,7 +66,6 @@ def test_router_report_is_typed_but_unsupported() -> None:
         (DeliverableType.MEMO, "memo", "memo_request"),
         (DeliverableType.CHECKLIST, "checklist", "checklist_request"),
         (DeliverableType.CASE_STUDY, "case_study", "case_study_request"),
-        (DeliverableType.WORK_PLAN, "work_plan", "work_plan_request"),
     ],
 )
 def test_router_other_types_are_unsupported(
@@ -87,6 +86,37 @@ def test_router_other_types_are_unsupported(
     assert plan.request_kind == kind
     assert getattr(plan, attr) is not None
     assert plan.message == UNSUPPORTED_GENERATION_MESSAGE
+
+
+def test_router_question_list_is_supported() -> None:
+    mission = _mission()
+    deliverable = PlannedDeliverable(
+        id="del-ql",
+        title="待澄清问题清单",
+        deliverable_type=DeliverableType.QUESTION_LIST,
+        purpose="汇总待问项",
+        selected=True,
+    )
+    plan = DeliverableExecutionRouter().route(mission, deliverable)
+    assert plan.supported is True
+    assert plan.request_kind == "question_list"
+    assert plan.question_list_request is not None
+    assert plan.checklist_request is None
+
+
+def test_router_work_plan_is_supported() -> None:
+    mission = _mission()
+    deliverable = PlannedDeliverable(
+        id="del-wp",
+        title="项目工作大纲",
+        deliverable_type=DeliverableType.WORK_PLAN,
+        purpose="工作路径",
+        selected=True,
+    )
+    plan = DeliverableExecutionRouter().route(mission, deliverable)
+    assert plan.supported is True
+    assert plan.request_kind == "work_plan"
+    assert plan.work_plan_request is not None
 
 
 def test_require_presentation_rejects_report_only_plan() -> None:

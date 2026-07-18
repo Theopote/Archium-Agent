@@ -19,6 +19,9 @@ from archium.ui.planning_service import (
     PlanningSnapshot,
     approve_mission_and_continue,
     continue_after_clarification,
+    continue_after_mission_correction,
+    generate_question_list_artifact,
+    generate_work_plan_artifact,
     get_planning_snapshot,
     get_presentation_bridge,
     start_planning,
@@ -114,7 +117,9 @@ def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
         st.session_state.mission_step = 1
         return
     gate = snapshot.review_gate
-    if gate == "clarification":
+    if gate == "mission_correction":
+        st.session_state.mission_step = 2
+    elif gate == "clarification":
         st.session_state.mission_step = 2
     elif gate == "mission_approval":
         st.session_state.mission_step = 2
@@ -176,7 +181,10 @@ def _render_describe(project_id: UUID) -> None:
                 if result.mission is not None:
                     st.session_state.planning_mission_id = str(result.mission.id)
                 st.session_state.mission_step = 2
-                st.success("已生成任务理解。请核对并回答关键问题。")
+                if result.review_gate == "mission_correction":
+                    st.warning("已生成任务理解，但存在可修复问题。请先编辑后再继续。")
+                else:
+                    st.success("已生成任务理解。请核对并回答关键问题。")
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
@@ -188,6 +196,51 @@ def _render_mission(snapshot: PlanningSnapshot) -> None:
     if snapshot.mission is None:
         st.info("请先在第 1 步描述并分析任务。")
         return
+
+    if snapshot.review_gate == "mission_correction":
+        st.warning("任务理解存在可修复问题。请先编辑下方字段，再重新校验。")
+        validation = snapshot.mission_validation or {}
+        recoverable = validation.get("recoverable_errors") or []
+        if isinstance(recoverable, list) and recoverable:
+            for item in recoverable:
+                if isinstance(item, str) and item.strip():
+                    st.error(item)
+        elif snapshot.warnings:
+            for item in snapshot.warnings:
+                st.error(item)
+        render_mission_panel(snapshot.mission)
+        if st.session_state.planning_workflow_run_id and st.button(
+            "重新校验并继续",
+            type="primary",
+            use_container_width=True,
+        ):
+            with st.spinner("正在重新校验任务理解…"):
+                try:
+                    with get_session() as session:
+                        result = continue_after_mission_correction(
+                            session,
+                            UUID(st.session_state.planning_workflow_run_id),
+                        )
+                    if result.mission is not None:
+                        st.session_state.planning_mission_id = str(result.mission.id)
+                    if result.review_gate == "mission_correction":
+                        st.warning("仍有待修复问题，请继续编辑后重试。")
+                    elif result.review_gate == "clarification":
+                        st.session_state.mission_step = 3
+                        st.success("校验通过，请继续回答关键问题。")
+                    elif result.review_gate == "mission_approval":
+                        st.session_state.mission_step = 2
+                        st.success("校验通过，请批准任务理解。")
+                    else:
+                        st.session_state.mission_step = 2
+                        st.success("校验通过。")
+                    st.rerun()
+                except WorkflowError as exc:
+                    st.error(format_user_error(exc))
+                except Exception as exc:
+                    st.error(format_user_error(exc))
+        return
+
     render_mission_panel(snapshot.mission)
 
     if snapshot.review_gate == "mission_approval" and st.session_state.planning_workflow_run_id:
@@ -295,10 +348,96 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                 message = item.get("message") or "该成果已完成规划，但当前版本尚未支持自动生成。"
                 st.warning(f"「{title}」（{dtype}）：{message}")
 
+    mission_id = snapshot.mission.id if snapshot.mission is not None else None
+    question_plans = [
+        item
+        for item in execution_plans
+        if item.get("supported")
+        and item.get("deliverable_type") == DeliverableType.QUESTION_LIST.value
+    ]
+    work_plan_plans = [
+        item
+        for item in execution_plans
+        if item.get("supported")
+        and item.get("deliverable_type")
+        in {
+            DeliverableType.WORK_PLAN.value,
+            DeliverableType.IMPLEMENTATION_ROADMAP.value,
+        }
+    ]
+
+    if mission_id is not None and (question_plans or work_plan_plans):
+        st.markdown("**非汇报成果生成**")
+        for item in question_plans:
+            label = item.get("deliverable_title") or "提问清单"
+            if st.button(
+                f"生成提问清单：{label}",
+                key=f"gen_ql_{item.get('deliverable_id')}",
+                use_container_width=True,
+            ):
+                with st.spinner("正在从 Mission 上下文生成提问清单…"):
+                    try:
+                        with get_session() as session:
+                            output = generate_question_list_artifact(
+                                session,
+                                mission_id,
+                                deliverable_id=str(item.get("deliverable_id") or "")
+                                or None,
+                            )
+                        st.session_state[f"artifact_ql_{item.get('deliverable_id')}"] = (
+                            output
+                        )
+                        st.success(
+                            f"已生成 {output.payload.get('item_count', 0)} 项。"
+                            f" Markdown：{output.markdown_path}"
+                        )
+                    except WorkflowError as exc:
+                        st.error(format_user_error(exc))
+                    except Exception as exc:
+                        st.error(format_user_error(exc))
+            cached = st.session_state.get(f"artifact_ql_{item.get('deliverable_id')}")
+            if cached is not None:
+                with st.expander(f"预览：{label}", expanded=False):
+                    st.markdown(cached.markdown)
+                    if cached.json_path:
+                        st.caption(f"JSON：{cached.json_path}")
+
+        for item in work_plan_plans:
+            label = item.get("deliverable_title") or "工作大纲"
+            if st.button(
+                f"生成工作大纲：{label}",
+                key=f"gen_wp_{item.get('deliverable_id')}",
+                use_container_width=True,
+            ):
+                with st.spinner("正在生成工作大纲…"):
+                    try:
+                        with get_session() as session:
+                            output = generate_work_plan_artifact(
+                                session,
+                                mission_id,
+                                deliverable_id=str(item.get("deliverable_id") or "")
+                                or None,
+                            )
+                        st.session_state[f"artifact_wp_{item.get('deliverable_id')}"] = (
+                            output
+                        )
+                        st.success(f"已生成工作大纲。Markdown：{output.markdown_path}")
+                    except WorkflowError as exc:
+                        st.error(format_user_error(exc))
+                    except Exception as exc:
+                        st.error(format_user_error(exc))
+            cached = st.session_state.get(f"artifact_wp_{item.get('deliverable_id')}")
+            if cached is not None:
+                with st.expander(f"预览：{label}", expanded=False):
+                    st.markdown(cached.markdown)
+                    if cached.json_path:
+                        st.caption(f"JSON：{cached.json_path}")
+
     selected_presentations = [
         item
         for item in execution_plans
-        if item.get("supported") and item.get("deliverable_type") == DeliverableType.PRESENTATION.value
+        if item.get("supported")
+        and item.get("deliverable_type") == DeliverableType.PRESENTATION.value
     ]
     if not selected_presentations and snapshot.deliverable_plan is not None:
         selected_presentations = [
@@ -308,10 +447,11 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         ]
 
     if not selected_presentations:
-        st.info(
-            "当前没有可自动生成的「汇报 / Presentation」成果。"
-            "非汇报成果不会静默转换成 PPT；请回到第 5 步勾选汇报类成果，或等待后续版本支持对应生成器。"
-        )
+        if not question_plans and not work_plan_plans:
+            st.info(
+                "当前没有可自动生成的成果。"
+                "请回到第 5 步勾选汇报、提问清单或工作大纲类成果。"
+            )
         return
 
     try:
@@ -364,7 +504,9 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                 st.session_state.last_presentation_result = result
                 st.session_state.last_workflow_result = result
                 if result.awaiting_review:
-                    st.warning("汇报工作流已暂停审核。请到「项目工作台」继续审核 Brief / Storyline。")
+                    st.warning(
+                        "汇报工作流已暂停审核。请到「项目工作台」继续审核 Brief / Storyline。"
+                    )
                 elif result.succeeded:
                     st.success(f"汇报已生成，共 {len(result.slides)} 页。")
                 else:

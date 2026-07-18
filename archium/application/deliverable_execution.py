@@ -1,8 +1,8 @@
 """Route planned deliverables to typed artifact execution plans.
 
-Presentation is the only auto-generated artifact today. Other types receive
-typed request stubs and an explicit unsupported message — never a silent
-PresentationRequest fallback.
+Presentation, Question List, and Work Plan are auto-generatable today.
+Other types receive typed request stubs and an explicit unsupported message —
+never a silent PresentationRequest fallback.
 """
 
 from __future__ import annotations
@@ -23,12 +23,14 @@ from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 
 UNSUPPORTED_GENERATION_MESSAGE = "该成果已完成规划，但当前版本尚未支持自动生成。"
+SUPPORTED_GENERATION_MESSAGE = "可生成本地 Markdown / JSON 成果。"
 
 ArtifactRequestKind = Literal[
     "presentation",
     "report",
     "memo",
     "checklist",
+    "question_list",
     "case_study",
     "work_plan",
     "other",
@@ -62,6 +64,18 @@ class ChecklistRequest:
     audience: str
     items: list[str] = field(default_factory=list)
     notes: str = ""
+
+
+@dataclass(frozen=True)
+class QuestionListRequest:
+    """Intent for QuestionListExecutor — items come from mission bundle at execute time."""
+
+    title: str
+    purpose: str
+    audience: str
+    notes: str = ""
+    # Preview hints only; executor rebuilds from gaps/questions/assumptions/facts.
+    preview_hints: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -99,6 +113,7 @@ class ArtifactExecutionPlan:
     report_request: ReportRequest | None = None
     memo_request: MemoRequest | None = None
     checklist_request: ChecklistRequest | None = None
+    question_list_request: QuestionListRequest | None = None
     case_study_request: CaseStudyRequest | None = None
     work_plan_request: WorkPlanRequest | None = None
     warnings: list[str] = field(default_factory=list)
@@ -141,6 +156,8 @@ class ArtifactExecutionPlan:
             payload["memo_request"] = self.memo_request.__dict__
         if self.checklist_request is not None:
             payload["checklist_request"] = self.checklist_request.__dict__
+        if self.question_list_request is not None:
+            payload["question_list_request"] = self.question_list_request.__dict__
         if self.case_study_request is not None:
             payload["case_study_request"] = self.case_study_request.__dict__
         if self.work_plan_request is not None:
@@ -153,7 +170,7 @@ _TYPE_TO_KIND: dict[DeliverableType, ArtifactRequestKind] = {
     DeliverableType.REPORT: "report",
     DeliverableType.MEMO: "memo",
     DeliverableType.CHECKLIST: "checklist",
-    DeliverableType.QUESTION_LIST: "checklist",
+    DeliverableType.QUESTION_LIST: "question_list",
     DeliverableType.CASE_STUDY: "case_study",
     DeliverableType.WORK_PLAN: "work_plan",
     DeliverableType.IMPLEMENTATION_ROADMAP: "work_plan",
@@ -163,6 +180,8 @@ _TYPE_TO_KIND: dict[DeliverableType, ArtifactRequestKind] = {
     DeliverableType.RISK_REGISTER: "other",
     DeliverableType.OTHER: "other",
 }
+
+_SUPPORTED_KINDS = frozenset({"presentation", "question_list", "work_plan"})
 
 
 class DeliverableExecutionRouter:
@@ -194,21 +213,27 @@ class DeliverableExecutionRouter:
                 presentation_request=request,
             )
 
+        supported = kind in _SUPPORTED_KINDS
         plan = ArtifactExecutionPlan(
             mission_id=mission.id,
             deliverable_id=deliverable.id,
             deliverable_title=deliverable.title,
             deliverable_type=deliverable.deliverable_type,
             request_kind=kind,
-            supported=False,
-            message=UNSUPPORTED_GENERATION_MESSAGE,
+            supported=supported,
+            message="" if supported else UNSUPPORTED_GENERATION_MESSAGE,
         )
+        if supported:
+            plan.message = SUPPORTED_GENERATION_MESSAGE
+
         if kind == "report":
             plan.report_request = _build_report_request(deliverable)
         elif kind == "memo":
             plan.memo_request = _build_memo_request(deliverable)
         elif kind == "checklist":
             plan.checklist_request = _build_checklist_request(deliverable)
+        elif kind == "question_list":
+            plan.question_list_request = _build_question_list_request(mission, deliverable)
         elif kind == "case_study":
             plan.case_study_request = _build_case_study_request(deliverable)
         elif kind == "work_plan":
@@ -317,6 +342,22 @@ def _build_checklist_request(deliverable: PlannedDeliverable) -> ChecklistReques
         audience=deliverable.audience,
         items=list(deliverable.content_scope),
         notes=deliverable.notes or "",
+    )
+
+
+def _build_question_list_request(
+    mission: ProjectMission,
+    deliverable: PlannedDeliverable,
+) -> QuestionListRequest:
+    hints = list(deliverable.content_scope)
+    if not hints and mission.decisions_required:
+        hints = list(mission.decisions_required[:5])
+    return QuestionListRequest(
+        title=deliverable.title,
+        purpose=deliverable.purpose,
+        audience=deliverable.audience,
+        notes=deliverable.notes or "",
+        preview_hints=hints,
     )
 
 

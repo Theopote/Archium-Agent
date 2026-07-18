@@ -42,6 +42,8 @@ class PlanningWorkflowState(TypedDict, total=False):
     require_mission_approval: bool
     require_plan_approval: bool
     review_gate: str | None
+    needs_mission_correction: bool
+    mission_validation_phase: str | None
     current_step: str
     errors: Annotated[list[str], operator.add]
     warnings: Annotated[list[str], operator.add]
@@ -82,6 +84,8 @@ def initial_planning_state(
         "require_mission_approval": require_mission_approval,
         "require_plan_approval": require_plan_approval,
         "review_gate": None,
+        "needs_mission_correction": False,
+        "mission_validation_phase": None,
         "current_step": WorkflowStep.INIT.value,
         "errors": [],
         "warnings": [],

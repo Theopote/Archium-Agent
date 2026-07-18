@@ -92,19 +92,28 @@ class TestMissionValidationService:
         assert report.ok
         assert report.errors == []
 
-    def test_empty_task_natures_is_error(self) -> None:
+    def test_empty_task_natures_is_recoverable(self) -> None:
         report = self.service.validate(_mission(task_natures=[]))
         assert not report.ok
-        assert any("task_natures" in err for err in report.errors)
+        assert report.needs_correction
+        assert not report.is_fatal
+        assert any("task_natures" in err for err in report.recoverable_errors)
         assert "task_natures" in report.inconsistent_fields
+        assert any(
+            issue.rule_code == "MISSION.MISSING_TASK_NATURE" for issue in report.issues
+        )
 
-    def test_scope_conflict_is_error(self) -> None:
+    def test_scope_conflict_is_recoverable(self) -> None:
         report = self.service.validate(
             _mission(in_scope=["施工图设计", "诊断"], out_of_scope=["施工图设计"])
         )
         assert not report.ok
-        assert any("冲突" in err for err in report.errors)
+        assert report.needs_correction
+        assert any("冲突" in err for err in report.recoverable_errors)
         assert "in_scope" in report.inconsistent_fields
+        assert "out_of_scope" in report.inconsistent_fields
+        assert any(issue.rule_code == "MISSION.SCOPE_CONFLICT" for issue in report.issues)
+        assert "issues" in report.to_dict()
 
     def test_empty_service_depth_warns(self) -> None:
         report = self.service.validate(_mission(requested_service_depths=[]))

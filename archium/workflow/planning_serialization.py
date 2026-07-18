@@ -49,6 +49,8 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
         "require_mission_approval": state.get("require_mission_approval", True),
         "require_plan_approval": state.get("require_plan_approval", True),
         "review_gate": state.get("review_gate"),
+        "needs_mission_correction": bool(state.get("needs_mission_correction", False)),
+        "mission_validation_phase": state.get("mission_validation_phase"),
         "errors": list(state.get("errors", [])),
         "warnings": list(state.get("warnings", [])),
         "mission_validation": state.get("mission_validation"),

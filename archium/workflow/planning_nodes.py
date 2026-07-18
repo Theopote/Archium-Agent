@@ -109,38 +109,177 @@ class PlanningWorkflowNodes:
         return next_state
 
     def validate_mission(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+        """Initial mission consistency check before clarification."""
+        return self._validate_mission_state(
+            state,
+            current_step=WorkflowStep.PLANNING_VALIDATE_MISSION,
+            refresh_from_db=False,
+            phase="initial",
+        )
+
+    def validate_revised_mission(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+        """Re-validate after clarification revision — does not loop back to clarification."""
+        return self._validate_mission_state(
+            state,
+            current_step=WorkflowStep.PLANNING_VALIDATE_REVISED_MISSION,
+            refresh_from_db=True,
+            phase="revised",
+        )
+
+    def _validate_mission_state(
+        self,
+        state: PlanningWorkflowState,
+        *,
+        current_step: WorkflowStep,
+        refresh_from_db: bool,
+        phase: str,
+        persist: bool = True,
+    ) -> PlanningWorkflowState:
         mission = state.get("mission")
+        knowledge_gaps = list(state.get("knowledge_gaps") or [])
+        clarifying_questions = list(state.get("clarifying_questions") or [])
+        design_questions = list(state.get("design_questions") or [])
+        assumptions = list(state.get("assumptions") or [])
+
+        if refresh_from_db:
+            mission_id = planning_mission_id(state)
+            if mission_id is not None:
+                bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
+                mission = bundle.mission
+                knowledge_gaps = bundle.knowledge_gaps
+                clarifying_questions = bundle.clarifying_questions
+                design_questions = bundle.design_questions
+                assumptions = bundle.assumptions
+
         if mission is None:
             return {
                 "current_step": WorkflowStep.FAILED.value,
                 "errors": ["任务理解缺失，无法校验"],
+                "needs_mission_correction": False,
+                "mission_validation_phase": phase,
             }
 
         facts = self._runtime.facts.list_by_project(UUID(state["project_id"]))
         report = self._runtime.mission_validator.validate(
             mission,
-            knowledge_gaps=list(state.get("knowledge_gaps") or []),
-            clarifying_questions=list(state.get("clarifying_questions") or []),
+            knowledge_gaps=knowledge_gaps,
+            clarifying_questions=clarifying_questions,
             facts=facts,
         )
-        if not report.ok:
+
+        artifacts: PlanningWorkflowState = {
+            "mission_validation": report.to_dict(),
+            "mission": mission,
+            "knowledge_gaps": knowledge_gaps,
+            "clarifying_questions": clarifying_questions,
+            "design_questions": design_questions,
+            "assumptions": assumptions,
+            "mission_validation_phase": phase,
+        }
+
+        if report.is_fatal:
             return {
+                **artifacts,
                 "current_step": WorkflowStep.FAILED.value,
-                "errors": list(report.errors),
-                "warnings": list(report.warnings) + list(report.suggestions),
-                "mission_validation": report.to_dict(),
+                "errors": list(report.fatal_errors),
+                "warnings": list(report.warnings)
+                + list(report.suggestions)
+                + list(report.recoverable_errors),
+                "needs_mission_correction": False,
             }
 
         notice = list(report.warnings)
         if report.suggestions:
             notice.extend(report.suggestions)
-        next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_VALIDATE_MISSION.value,
+
+        if report.needs_correction:
+            notice = list(report.recoverable_errors) + notice
+            next_state: PlanningWorkflowState = {
+                **artifacts,
+                "current_step": current_step.value,
+                "warnings": notice,
+                "needs_mission_correction": True,
+            }
+            if persist:
+                self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
+            return next_state
+
+        next_state = {
+            **artifacts,
+            "current_step": current_step.value,
             "warnings": notice,
-            "mission_validation": report.to_dict(),
+            "needs_mission_correction": False,
         }
-        self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
+        if persist:
+            self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state
+
+    def await_mission_correction(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+        """Pause for user to fix recoverable mission validation issues, then revalidate."""
+        logger = get_logger(__name__, operation="planning_workflow")
+        mission_id = planning_mission_id(state)
+        if mission_id is None:
+            return {
+                "current_step": WorkflowStep.FAILED.value,
+                "errors": ["缺少 mission_id"],
+                "needs_mission_correction": False,
+            }
+
+        phase = str(state.get("mission_validation_phase") or "initial")
+        working = cast(PlanningWorkflowState, dict(state))
+
+        while True:
+            pause: PlanningWorkflowState = {
+                "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
+                "review_gate": "mission_correction",
+                "needs_mission_correction": True,
+                "mission_validation_phase": phase,
+                "mission_validation": working.get("mission_validation"),
+                "warnings": list(working.get("warnings") or []),
+                "mission": working.get("mission"),
+                "knowledge_gaps": list(working.get("knowledge_gaps") or []),
+                "clarifying_questions": list(working.get("clarifying_questions") or []),
+                "design_questions": list(working.get("design_questions") or []),
+                "assumptions": list(working.get("assumptions") or []),
+            }
+            merged = cast(PlanningWorkflowState, {**working, **pause})
+            self._persist(merged, status=WorkflowStatus.AWAITING_REVIEW)
+            logger.info(
+                "Planning workflow paused for mission correction on mission %s",
+                mission_id,
+            )
+            interrupt(
+                {
+                    "gate": "mission_correction",
+                    "step": WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
+                }
+            )
+
+            validated = self._validate_mission_state(
+                merged,
+                current_step=WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION,
+                refresh_from_db=True,
+                phase=phase,
+                persist=False,
+            )
+            if validated.get("errors"):
+                self._persist({**merged, **validated}, status=WorkflowStatus.RUNNING)
+                return validated
+
+            if not validated.get("needs_mission_correction"):
+                next_state: PlanningWorkflowState = {
+                    **validated,
+                    "review_gate": None,
+                    "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
+                    "needs_mission_correction": False,
+                }
+                self._persist({**merged, **next_state}, status=WorkflowStatus.RUNNING)
+                logger.info("Planning mission correction resolved")
+                return next_state
+
+            # Still recoverable — refresh working state and pause again.
+            working = cast(PlanningWorkflowState, {**merged, **validated})
+            logger.info("Planning mission correction still has recoverable errors")
 
     def await_user_clarification(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
         logger = get_logger(__name__, operation="planning_workflow")
@@ -432,7 +571,10 @@ class PlanningWorkflowNodes:
         self._persist({**merged, **resume_state}, status=WorkflowStatus.RUNNING)
         return resume_state
 
-    def prepare_presentation_request(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+    def prepare_artifact_execution_plans(
+        self, state: PlanningWorkflowState
+    ) -> PlanningWorkflowState:
+        """Build typed execution plans for selected deliverables (not PPT-only)."""
         from archium.application.deliverable_execution import DeliverableExecutionRouter
         from archium.application.mission_to_presentation_request import MissionPresentationBridge
         from archium.domain.enums import DeliverableType
@@ -475,16 +617,19 @@ class PlanningWorkflowNodes:
                 if not item.supported:
                     warnings.append(f"「{item.deliverable_title}」：{item.message}")
             if not execution_plans:
-                warnings.append("未选择任何成果；未生成 PresentationRequest。")
+                warnings.append("未选择任何成果；未生成成果执行计划。")
 
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_PREPARE_PRESENTATION.value,
+            "current_step": WorkflowStep.PLANNING_PREPARE_ARTIFACTS.value,
             "presentation_request_draft": draft,
             "artifact_execution_plans": [item.to_dict() for item in execution_plans],
             "warnings": warnings,
         }
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state
+
+    # Backward-compatible alias for older call sites / docs.
+    prepare_presentation_request = prepare_artifact_execution_plans
 
     def finalize(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
         errors = list(state.get("errors", []))

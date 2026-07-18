@@ -1,0 +1,7 @@
+{
+  "status": "pending_credentials",
+  "note": "Live M1–M6 ×3 eval is ready via `py scripts/eval_mission_live.py --repeats 3` once GEMINI_API_KEY / LLM_API_KEY is configured. Keys are currently commented out in .env.",
+  "command": "ARCHIUM_LIVE_LLM=1 py scripts/eval_mission_live.py --repeats 3",
+  "artifacts_root": "tests/golden/artifacts/live_mission/",
+  "batch_index_dir": "tests/golden/live/results/"
+}

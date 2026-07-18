@@ -418,6 +418,15 @@ class ReviewSeverity(StrEnum):
     SUGGESTION = "suggestion"
 
 
+class ValidationSeverity(StrEnum):
+    """Severity for MissionValidationIssue (mission planning, not slide review)."""
+
+    FATAL = "fatal"
+    ERROR = "error"
+    WARNING = "warning"
+    SUGGESTION = "suggestion"
+
+
 class ReviewStatus(StrEnum):
     OPEN = "open"
     ACKNOWLEDGED = "acknowledged"
@@ -439,6 +448,7 @@ class PlanningSessionStatus(StrEnum):
     DRAFT = "draft"
     CLARIFYING = "clarifying"
     PLANNING = "planning"
+    AWAITING_MISSION_CORRECTION = "awaiting_mission_correction"
     AWAITING_MISSION_APPROVAL = "awaiting_mission_approval"
     AWAITING_APPROVAL = "awaiting_approval"
     READY = "ready"
@@ -477,11 +487,15 @@ class WorkflowStep(StrEnum):
     PLANNING_LOAD_CONTEXT = "planning_load_context"
     PLANNING_ANALYZE_TASK = "planning_analyze_task"
     PLANNING_VALIDATE_MISSION = "planning_validate_mission"
+    PLANNING_AWAIT_MISSION_CORRECTION = "planning_await_mission_correction"
     PLANNING_AWAIT_CLARIFICATION = "planning_await_clarification"
     PLANNING_REVISE_MISSION = "planning_revise_mission"
+    PLANNING_VALIDATE_REVISED_MISSION = "planning_validate_revised_mission"
     PLANNING_AWAIT_MISSION_APPROVAL = "planning_await_mission_approval"
     PLANNING_WORKSTREAMS = "planning_workstreams"
     PLANNING_DELIVERABLES = "planning_deliverables"
     PLANNING_AWAIT_APPROVAL = "planning_await_approval"
+    PLANNING_PREPARE_ARTIFACTS = "planning_prepare_artifacts"
+    # Legacy alias — old checkpoints may still store this string.
     PLANNING_PREPARE_PRESENTATION = "planning_prepare_presentation"
     PLANNING_FINALIZE = "planning_finalize"

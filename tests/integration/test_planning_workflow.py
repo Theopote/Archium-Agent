@@ -257,3 +257,60 @@ def test_planning_workflow_can_skip_gates(
     assert result.presentation is None
     assert result.presentation_request.purpose
     assert result.planning_session.status == PlanningSessionStatus.READY
+
+
+def test_recoverable_validation_pauses_for_mission_correction(
+    temple_project: Project,
+    db_session: Session,
+    test_settings: object,
+) -> None:
+    """Professional issues must not FAILED the session — pause for correction."""
+    from archium.application.project_mission_service import MissionPatch
+    from tests.fixtures.mock_mission_responses import TEMPLE_MISSION_SCOPE_CONFLICT_JSON
+
+    def selector(request: LLMRequest) -> str | None:
+        prompt = request.user_prompt
+        if "DeliverablePlan JSON" in prompt:
+            return TEMPLE_DELIVERABLE_PLAN_JSON
+        if "WorkstreamPlan JSON" in prompt:
+            return TEMPLE_WORKSTREAM_PLAN_JSON
+        if "根据澄清结果修订 ProjectMission JSON" in prompt:
+            return TEMPLE_REVISED_AFTER_CLARIFICATION_JSON
+        if "ProjectMission JSON" in prompt:
+            return TEMPLE_MISSION_SCOPE_CONFLICT_JSON
+        return None
+
+    mock_llm = MockLLMProvider(selector=selector)
+    service = PlanningWorkflowService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
+
+    first = service.run(temple_project.id, TEMPLE_TASK)
+
+    assert first.awaiting_review
+    assert first.review_gate == "mission_correction"
+    assert first.workflow_run.status == WorkflowStatus.AWAITING_REVIEW
+    assert first.planning_session.status == PlanningSessionStatus.AWAITING_MISSION_CORRECTION
+    assert first.planning_session.status != PlanningSessionStatus.FAILED
+    assert first.mission is not None
+    validation = first.workflow_run.state.get("mission_validation") or {}
+    assert validation.get("needs_correction") is True
+    assert not validation.get("is_fatal")
+
+    # User fixes scope conflict then resumes.
+    from archium.application.project_mission_service import ProjectMissionService
+
+    ProjectMissionService(
+        db_session,
+        mock_llm,
+        settings=test_settings,  # type: ignore[arg-type]
+    ).update_mission(
+        first.mission.id,
+        MissionPatch(out_of_scope=["施工招标"]),
+    )
+    db_session.commit()
+
+    second = service.continue_after_mission_correction(first.workflow_run.id)
+
+    assert second.awaiting_review
+    assert second.review_gate == "clarification"
+    assert second.planning_session.status == PlanningSessionStatus.CLARIFYING
+    assert second.workflow_run.status == WorkflowStatus.AWAITING_REVIEW

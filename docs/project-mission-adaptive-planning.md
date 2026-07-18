@@ -47,8 +47,8 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 
 | 步骤 | 页面行为 | 系统动作 |
 |------|----------|----------|
-| 1. 描述任务 | 自由文本 + 可选示例 → **分析任务** | `PlanningWorkflowService.run` → 停在澄清闸门 |
-| 2. 任务理解 | 分字段展示/编辑；澄清修订后需**显式批准** | `MissionPatch` / `approve_mission` |
+| 1. 描述任务 | 自由文本 + 可选示例 → **分析任务** | `PlanningWorkflowService.run` → 停在澄清或任务修正闸门 |
+| 2. 任务理解 | 分字段展示/编辑；可修复校验问题先修正；澄清修订后需**显式批准** | `MissionPatch` / `continue_after_mission_correction` / `approve_mission` |
 | 3. 关键问题 | 回答 / 假设 / 暂不确定 / 不适用 | readiness → `continue_after_clarification` → mission_approval |
 | 4. 工作路径 | 勾选能力卡片 | `WorkstreamPlanningService` 选型 |
 | 5. 选择成果 | 必要项不可取消 | `DeliverablePlanningService` 选型 |
@@ -81,31 +81,38 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 
 ```
 load_project_context → analyze_task → validate_mission
+  → await_mission_correction?  ⟵ interrupt（mission_correction；可修复专业问题）
   → await_user_clarification  ⟵ interrupt（clarification）
-  → revise_mission → await_mission_approval ⟵ interrupt（mission_approval）
+  → revise_mission → validate_revised_mission
+  → await_mission_correction?  ⟵ 修订后仍有可修复问题时再次进入
+  → await_mission_approval ⟵ interrupt（mission_approval）
   → plan_workstreams → plan_deliverables
   → await_plan_approval       ⟵ interrupt（plan_approval）
-  → prepare_presentation_request → finalize
+  → prepare_artifact_execution_plans → finalize
 ```
 
-- **职责分离**：`mission_parser` 负责 LLM draft → domain model（含事实账本防编造）；`MissionValidationService` 负责 domain model → 专业一致性（task_natures、scope 冲突、blocking gap、置信度与未知矛盾、专项咨询误判完整设计等）。`validate_mission` 节点调用后者，`errors` 失败流程，`warnings`/`suggestions` 写入状态。
+- **职责分离**：`mission_parser` 负责 LLM draft → domain model（含事实账本防编造）；`MissionValidationService` 负责 domain model → 专业一致性（task_natures、scope 冲突、blocking gap、置信度与未知矛盾、专项咨询误判完整设计等）。报告区分 `recoverable_errors`（可修复）与 `fatal_errors`（系统/不可恢复），并以稳定 `rule_code`（`MissionValidationIssue`）记录。
+- **校验分流**：初始 `validate_mission` 与修订后 `validate_revised_mission` 共用同一 Service。`fatal_errors` → `FAILED`；`recoverable_errors` → `await_mission_correction`（用户编辑后 `continue_after_mission_correction` 再校验）；通过后初始路径进澄清，修订路径进 Mission 审批。**不会**因空 `task_natures`、范围冲突等专业问题直接终止 PlanningSession。
+- **成果执行**：`prepare_artifact_execution_plans` 为选中成果生成类型化 `artifact_execution_plans`（Presentation / Question List / Work Plan 等）；仅当存在 Presentation 成果时才额外写入 `presentation_request_draft`。旧节点名 `prepare_presentation_request` / step `planning_prepare_presentation` 仅作兼容。
 - **批准 ≠ 继续**：领域层拆分 `approve_mission` / `approve_deliverable_plan` 与 `resume_after_mission_approval` / `resume_after_plan_approval`；UI 可用 facade `approve_mission_and_continue` / `approve_and_continue`。澄清 readiness 不能替代 Mission 批准 gate。
 - Checkpoint：复用 `WorkflowCheckpointerManager`（SQLite）。
 - **`PlanningSession`** 是规划主键；`WorkflowRun.presentation_id` **可空**，规划启动时**不**创建 Presentation。
 - 仅当用户批准并启动已选 `PRESENTATION` 成果时，才由汇报管线创建真正的 Presentation，并写回 `PlanningSession.presentation_id`。
-
+- **下一阶段**：`ArtifactJob` 正式持久化（planned/ready/running/completed/…）；QUESTION_LIST DOCX；Report/Memo/Case Study 执行器。
 ### Presentation 适配
 
 `DeliverableExecutionRouter` 按成果类型路由：
 
 | DeliverableType | 请求类型 | 当前自动生成 |
 |-----------------|----------|--------------|
-| `PRESENTATION` | `PresentationRequest` | 支持 |
+| `PRESENTATION` | `PresentationRequest` | 支持（进入汇报主链） |
+| `QUESTION_LIST` | `QuestionListRequest` → Executor | 支持（Markdown / JSON；DOCX 后续） |
+| `WORK_PLAN` / `IMPLEMENTATION_ROADMAP` | `WorkPlanRequest` → Executor | 支持（Markdown / JSON） |
 | `REPORT` / `TECHNICAL_PROPOSAL` | `ReportRequest` | 规划完成，生成未支持 |
-| `MEMO` | `MemoRequest` | 同上 |
-| `CHECKLIST` | `ChecklistRequest` | 同上 |
-| `CASE_STUDY` | `CaseStudyRequest` | 同上 |
-| `WORK_PLAN` / roadmap | `WorkPlanRequest` | 同上 |
+| `MEMO` | `MemoRequest` | 规划完成，生成未支持 |
+| `CHECKLIST` | `ChecklistRequest`（`content_scope`→items） | 规划完成，生成未支持 |
+| `CASE_STUDY` | `CaseStudyRequest` | 规划完成，生成未支持 |
+| 其他 | — | 规划完成，生成未支持 |
 
 **禁止**将非 PPT 成果静默退化成 `PresentationRequest`。未支持类型显示：「该成果已完成规划，但当前版本尚未支持自动生成。」
 

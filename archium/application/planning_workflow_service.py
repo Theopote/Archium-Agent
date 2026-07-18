@@ -213,6 +213,29 @@ class PlanningWorkflowService:
             log_label="clarification",
         )
 
+    def continue_after_mission_correction(
+        self,
+        workflow_run_id: UUID,
+    ) -> PlanningWorkflowResult:
+        """Resume after the mission-correction interrupt; revalidates on resume."""
+        run = self._require_planning_run(workflow_run_id)
+        if run.status != WorkflowStatus.AWAITING_REVIEW:
+            raise WorkflowError(
+                f"Workflow run {workflow_run_id} is not awaiting mission correction"
+            )
+        if run.state.get("review_gate") != "mission_correction":
+            raise WorkflowError(
+                f"Workflow run {workflow_run_id} is not paused at mission correction gate"
+            )
+
+        mission_id = self._mission_id_from_run(run)
+        return self._resume_interrupted_run(
+            run,
+            session_status=PlanningSessionStatus.PLANNING,
+            mission_id=mission_id,
+            log_label="mission-correction",
+        )
+
     def approve_mission(
         self,
         mission_id: UUID,
@@ -367,6 +390,8 @@ class PlanningWorkflowService:
             return self._to_result(run, run.state)
         if run.status == WorkflowStatus.AWAITING_REVIEW:
             gate = run.state.get("review_gate")
+            if gate == "mission_correction":
+                return self.continue_after_mission_correction(workflow_run_id)
             if gate == "clarification":
                 return self.continue_after_clarification(workflow_run_id)
             if gate == "mission_approval":
@@ -614,6 +639,8 @@ class PlanningWorkflowService:
             return PlanningSessionStatus.READY
         if workflow_run.status == WorkflowStatus.AWAITING_REVIEW:
             gate = workflow_run.state.get("review_gate")
+            if gate == "mission_correction":
+                return PlanningSessionStatus.AWAITING_MISSION_CORRECTION
             if gate == "clarification":
                 return PlanningSessionStatus.CLARIFYING
             if gate == "mission_approval":

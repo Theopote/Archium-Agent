@@ -92,12 +92,20 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional run id (default: timestamp + short uuid).",
     )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=1,
+        help="Run each selected case N times (default: 1). Use 3 for sprint acceptance.",
+    )
     args = parser.parse_args(argv)
+    if args.repeats < 1:
+        raise SystemExit("--repeats must be >= 1")
 
     env = get_settings()
     settings = _build_live_settings(env)
     llm = create_llm_provider(settings)
-    run_id = args.run_id or (
+    base_run_id = args.run_id or (
         datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
     )
 
@@ -114,48 +122,74 @@ def main(argv: list[str] | None = None) -> int:
 
     engine = create_engine_from_settings(settings)
     Base.metadata.create_all(engine)
-    results = []
-    print(f"Live mission eval run_id={run_id}")
+    all_results = []
+    print(f"Live mission eval batch={base_run_id} repeats={args.repeats}")
     print(f"Model={settings.llm_model} provider={settings.llm_provider}")
     print(f"Cases={', '.join(p.stem for p in paths)}")
-    print(f"Artifacts → {live_artifacts_root() / run_id}")
 
     try:
-        for path in paths:
-            session = Session(
-                bind=engine, autoflush=False, autocommit=False, expire_on_commit=False
+        for repeat_idx in range(1, args.repeats + 1):
+            run_id = (
+                base_run_id if args.repeats == 1 else f"{base_run_id}-r{repeat_idx}"
             )
-            try:
-                print(f"\n=== Running {path.stem} ===")
-                result = run_mission_live_case(
-                    session,
-                    llm,
-                    settings,
-                    path,
-                    run_id=run_id,
-                    write_artifacts=True,
+            print(f"\n######## Repeat {repeat_idx}/{args.repeats} run_id={run_id} ########")
+            print(f"Artifacts → {live_artifacts_root() / run_id}")
+            results = []
+            for path in paths:
+                session = Session(
+                    bind=engine, autoflush=False, autocommit=False, expire_on_commit=False
                 )
-                session.commit()
-                results.append(result)
-                flags = ", ".join(result.auto_flags) if result.auto_flags else "none"
-                print(f"  flags: {flags}")
-                print(f"  scorecard: {result.artifact_dir / 'SCORECARD.md'}")
-                if result.has_critical_flags:
-                    print("  CRITICAL flags present — review before trusting scores.")
-            except Exception as exc:
-                session.rollback()
-                print(f"  FAILED: {exc}")
-                raise
-            finally:
-                session.close()
+                try:
+                    print(f"\n=== Running {path.stem} ===")
+                    result = run_mission_live_case(
+                        session,
+                        llm,
+                        settings,
+                        path,
+                        run_id=run_id,
+                        write_artifacts=True,
+                    )
+                    session.commit()
+                    results.append(result)
+                    all_results.append(result)
+                    flags = ", ".join(result.auto_flags) if result.auto_flags else "none"
+                    print(f"  flags: {flags}")
+                    print(f"  scorecard: {result.artifact_dir / 'SCORECARD.md'}")
+                    if result.has_critical_flags:
+                        print("  CRITICAL flags present — review before trusting scores.")
+                except Exception as exc:
+                    session.rollback()
+                    print(f"  FAILED: {exc}")
+                    raise
+                finally:
+                    session.close()
+
+            summary = write_run_summary(live_artifacts_root() / run_id, results)
+            print(f"\nSummary: {summary}")
     finally:
         engine.dispose()
 
-    summary = write_run_summary(live_artifacts_root() / run_id, results)
-    print(f"\nSummary: {summary}")
-    critical = [r.case.id for r in results if r.has_critical_flags]
+    # Compact batch index under tests/golden/live/results/
+    results_root = Path(__file__).resolve().parents[1] / "tests" / "golden" / "live" / "results"
+    results_root.mkdir(parents=True, exist_ok=True)
+    batch_index = {
+        "batch_id": base_run_id,
+        "repeats": args.repeats,
+        "cases": [p.stem for p in paths],
+        "run_count": len(all_results),
+        "artifacts_root": str(live_artifacts_root()),
+        "critical_cases": [r.case.id for r in all_results if r.has_critical_flags],
+    }
+    index_path = results_root / f"{base_run_id}.json"
+    index_path.write_text(
+        __import__("json").dumps(batch_index, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"\nBatch index: {index_path}")
+
+    critical = [r.case.id for r in all_results if r.has_critical_flags]
     if critical:
-        print("Critical cases:", ", ".join(critical))
+        print("Critical cases:", ", ".join(sorted(set(critical))))
         return 2
     return 0
 
