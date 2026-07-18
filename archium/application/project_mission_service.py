@@ -22,7 +22,7 @@ from archium.domain.enums import (
     InterventionScale,
     ProjectDomain,
     ServiceDepth,
-    SlideChangeSource,
+    RevisionSource,
     TaskNature,
     UncertaintyLevel,
 )
@@ -165,7 +165,7 @@ class ProjectMissionService:
             previous.project_id,
             draft,
             previous=previous,
-            change_source=SlideChangeSource.REGENERATION,
+            change_source=RevisionSource.REGENERATION,
         )
         return result
 
@@ -176,7 +176,7 @@ class ProjectMissionService:
         updated = ProjectMission.model_validate(payload)
         updated.touch()
         saved = self._missions.save_mission(updated)
-        self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT)
+        self._history.record_snapshot(saved, RevisionSource.MANUAL_EDIT)
         return saved
 
     def approve_mission(
@@ -195,8 +195,9 @@ class ProjectMissionService:
             history_note = f"{history_note} · by {user_id}"
         self._history.record_snapshot(
             saved,
-            SlideChangeSource.MANUAL_EDIT,
+            RevisionSource.APPROVAL,
             note=history_note,
+            actor=user_id,
         )
         return saved
 
@@ -215,7 +216,7 @@ class ProjectMissionService:
             history_note = f"{history_note} · by {user_id}"
         self._history.record_snapshot(
             saved,
-            SlideChangeSource.MANUAL_EDIT,
+            RevisionSource.MANUAL_EDIT,
             note=history_note,
         )
         return saved
@@ -236,7 +237,7 @@ class ProjectMissionService:
         draft: MissionGenerationDraft,
         *,
         previous: ProjectMission | None = None,
-        change_source: SlideChangeSource = SlideChangeSource.GENERATED,
+        change_source: RevisionSource = RevisionSource.GENERATED,
     ) -> MissionGenerationResult:
         facts = self._fact_ledger.get_ledger(project_id)
         fact_models = [

@@ -23,7 +23,7 @@ from archium.domain.enums import (
     ReviewLayer,
     ReviewSeverity,
     ReviewStatus,
-    SlideChangeSource,
+    RevisionSource,
     SlideRepairSource,
     SlideRepairTier,
 )
@@ -308,13 +308,13 @@ class SlideRepairService:
 
             self._history.record_snapshot(
                 slides_by_id[slide_id],
-                SlideChangeSource.AUTO_REPAIR,
+                RevisionSource.AUTO_REPAIR,
                 note=record.reason,
             )
             if split_slide is not None and split_slide.id in slides_by_id:
                 self._history.record_snapshot(
                     slides_by_id[split_slide.id],
-                    SlideChangeSource.AUTO_REPAIR,
+                    RevisionSource.AUTO_REPAIR,
                     note="由版面拆分自动创建",
                 )
 
@@ -453,7 +453,7 @@ class SlideRepairService:
             records.append(record)
             self._history.record_snapshot(
                 saved,
-                SlideChangeSource.AUTO_REPAIR,
+                RevisionSource.AUTO_REPAIR,
                 note=record.reason,
             )
 

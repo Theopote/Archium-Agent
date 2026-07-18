@@ -13,7 +13,7 @@ from archium.application.slide_diff import (
     slide_to_snapshot,
     snapshot_label,
 )
-from archium.domain.enums import RevisionEntityType, SlideChangeSource
+from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.revision import EntityRevision, SlideLineageOption
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideDiffResult, SlideRevision
@@ -30,7 +30,7 @@ class SlideHistoryService:
     def record_snapshot(
         self,
         slide: SlideSpec,
-        change_source: SlideChangeSource,
+        change_source: RevisionSource,
         *,
         note: str | None = None,
     ) -> SlideRevision:
@@ -55,7 +55,7 @@ class SlideHistoryService:
             archived.append(
                 self.record_snapshot(
                     slide,
-                    SlideChangeSource.REGENERATION,
+                    RevisionSource.REGENERATION,
                     note=note,
                 )
             )
@@ -115,7 +115,7 @@ class SlideHistoryService:
                 meta["latest_revision_number"] = max(latest_number, revision.revision_number)
                 if meta["current_slide_id"] is None:
                     meta["status"] = "historical"
-                elif revision.change_source == SlideChangeSource.REGENERATION:
+                elif revision.change_source == RevisionSource.REGENERATION:
                     meta["status"] = "replaced"
 
         options: list[SlideLineageOption] = []

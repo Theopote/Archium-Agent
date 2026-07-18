@@ -10,7 +10,7 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import IdentifiedModel, utc_now
-from archium.domain.enums import RevisionEntityType, SlideChangeSource
+from archium.domain.enums import RevisionEntityType, RevisionSource
 
 
 class EntityRevision(IdentifiedModel):
@@ -21,7 +21,7 @@ class EntityRevision(IdentifiedModel):
     lineage_id: UUID
     presentation_id: UUID | None = None
     revision_number: int = Field(ge=1)
-    change_source: SlideChangeSource
+    change_source: RevisionSource
     snapshot: dict[str, object] = Field(default_factory=dict)
     note: str | None = None
     actor: str | None = None

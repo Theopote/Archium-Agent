@@ -20,7 +20,7 @@ from archium.application.review_models import (
 from archium.application.slide_history_service import SlideHistoryService
 from archium.domain.enums import (
     ApprovalStatus,
-    SlideChangeSource,
+    RevisionSource,
     SlideStatus,
     SlideType,
     WorkflowStatus,
@@ -125,7 +125,7 @@ class PresentationReviewService:
 
     def update_brief(self, brief_id: UUID, update: BriefUpdate) -> PresentationBrief:
         brief = self._require_brief(brief_id)
-        self._brief_history.record_snapshot(brief, SlideChangeSource.MANUAL_EDIT)
+        self._brief_history.record_snapshot(brief, RevisionSource.MANUAL_EDIT)
         brief.title = update.title.strip()
         brief.audience = update.audience.strip()
         brief.purpose = update.purpose.strip()
@@ -154,7 +154,7 @@ class PresentationReviewService:
 
     def update_storyline(self, storyline_id: UUID, update: StorylineUpdate) -> Storyline:
         storyline = self._require_storyline(storyline_id)
-        self._storyline_history.record_snapshot(storyline, SlideChangeSource.MANUAL_EDIT)
+        self._storyline_history.record_snapshot(storyline, RevisionSource.MANUAL_EDIT)
         storyline.thesis = update.thesis.strip()
         storyline.narrative_pattern = update.narrative_pattern.strip() or "problem_solution"
         storyline.chapters = [_chapter_from_update(item) for item in update.chapters]
@@ -174,7 +174,7 @@ class PresentationReviewService:
 
     def update_slide(self, slide_id: UUID, update: SlideUpdate) -> SlideSpec:
         slide = self._require_slide(slide_id)
-        self._history.record_snapshot(slide, SlideChangeSource.MANUAL_EDIT)
+        self._history.record_snapshot(slide, RevisionSource.MANUAL_EDIT)
         slide.chapter_id = update.chapter_id.strip()
         slide.order = update.order
         slide.title = update.title.strip()

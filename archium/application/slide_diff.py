@@ -5,7 +5,7 @@ from __future__ import annotations
 import difflib
 from uuid import UUID
 
-from archium.domain.enums import SlideChangeSource
+from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideDiffResult, SlideFieldChange
 
@@ -108,11 +108,14 @@ def diff_snapshots(
     )
 
 
-def change_source_label(source: SlideChangeSource) -> str:
+def change_source_label(source: RevisionSource) -> str:
     labels = {
-        SlideChangeSource.GENERATED: "首次生成",
-        SlideChangeSource.MANUAL_EDIT: "人工编辑",
-        SlideChangeSource.REGENERATION: "重新生成前归档",
-        SlideChangeSource.AUTO_REPAIR: "自动修复",
+        RevisionSource.GENERATED: "首次生成",
+        RevisionSource.MANUAL_EDIT: "人工编辑",
+        RevisionSource.REGENERATION: "重新生成前归档",
+        RevisionSource.AUTO_REPAIR: "自动修复",
+        RevisionSource.CLARIFICATION: "澄清修订",
+        RevisionSource.APPROVAL: "审批",
+        RevisionSource.IMPORT: "导入",
     }
     return labels.get(source, source.value)

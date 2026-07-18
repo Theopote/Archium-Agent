@@ -15,7 +15,7 @@ from archium.application.workstream_parser import (
     validate_workstream_plan_draft,
 )
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import SlideChangeSource, WorkstreamStatus
+from archium.domain.enums import RevisionSource, WorkstreamStatus
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
@@ -112,7 +112,7 @@ class WorkstreamPlanningService:
             self._missions.delete_workstreams_for_mission(mission_id)
 
         change_source = (
-            SlideChangeSource.REGENERATION if replace_existing else SlideChangeSource.GENERATED
+            RevisionSource.REGENERATION if replace_existing else RevisionSource.GENERATED
         )
         saved: list[Workstream] = []
         for item in parsed.workstreams:
@@ -135,14 +135,14 @@ class WorkstreamPlanningService:
         workstream = self._require_workstream(workstream_id)
         workstream.select()
         saved = self._missions.save_workstream(workstream)
-        self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT, note="选中工作路径")
+        self._history.record_snapshot(saved, RevisionSource.MANUAL_EDIT, note="选中工作路径")
         return saved
 
     def deselect_workstream(self, workstream_id: UUID) -> Workstream:
         workstream = self._require_workstream(workstream_id)
         workstream.deselect()
         saved = self._missions.save_workstream(workstream)
-        self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT, note="取消选中工作路径")
+        self._history.record_snapshot(saved, RevisionSource.MANUAL_EDIT, note="取消选中工作路径")
         return saved
 
     def set_workstream_selection(

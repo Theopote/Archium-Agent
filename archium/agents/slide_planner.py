@@ -15,7 +15,7 @@ from archium.agents._helpers import (
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import SlideChangeSource
+from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -90,5 +90,5 @@ class SlidePlanner:
         history = SlideHistoryService(self._session)
         for slide in slides:
             saved.append(self._presentations.save_slide(slide))
-            history.record_snapshot(saved[-1], SlideChangeSource.GENERATED)
+            history.record_snapshot(saved[-1], RevisionSource.GENERATED)
         return saved

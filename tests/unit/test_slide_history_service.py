@@ -6,7 +6,7 @@ from archium.application.review_models import SlideUpdate
 from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
-from archium.domain.enums import ProjectType, SlideChangeSource, SlideType
+from archium.domain.enums import ProjectType, RevisionSource, SlideType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec, build_slide_logical_key
@@ -36,8 +36,8 @@ def test_record_snapshot_increments_revision_number_by_lineage(db_session: Sessi
     slide = _seed_slide(db_session)
     history = SlideHistoryService(db_session)
 
-    first = history.record_snapshot(slide, SlideChangeSource.GENERATED)
-    second = history.record_snapshot(slide, SlideChangeSource.MANUAL_EDIT)
+    first = history.record_snapshot(slide, RevisionSource.GENERATED)
+    second = history.record_snapshot(slide, RevisionSource.MANUAL_EDIT)
 
     assert first.revision_number == 1
     assert second.revision_number == 2
@@ -48,7 +48,7 @@ def test_record_snapshot_increments_revision_number_by_lineage(db_session: Sessi
 
 def test_manual_edit_records_history(db_session: Session) -> None:
     slide = _seed_slide(db_session)
-    SlideHistoryService(db_session).record_snapshot(slide, SlideChangeSource.GENERATED)
+    SlideHistoryService(db_session).record_snapshot(slide, RevisionSource.GENERATED)
 
     review = PresentationReviewService(db_session)
     updated = review.update_slide(
@@ -66,7 +66,7 @@ def test_manual_edit_records_history(db_session: Session) -> None:
     revisions = SlideHistoryService(db_session).list_revisions(updated.id)
     assert len(revisions) == 2
     manual_revision = next(
-        revision for revision in revisions if revision.change_source == SlideChangeSource.MANUAL_EDIT
+        revision for revision in revisions if revision.change_source == RevisionSource.MANUAL_EDIT
     )
     diff = SlideHistoryService(db_session).diff_revision_to_current(manual_revision.id, updated)
     assert diff.has_changes
@@ -76,11 +76,11 @@ def test_manual_edit_records_history(db_session: Session) -> None:
 def test_archive_before_regeneration(db_session: Session) -> None:
     slide = _seed_slide(db_session)
     history = SlideHistoryService(db_session)
-    history.record_snapshot(slide, SlideChangeSource.GENERATED)
+    history.record_snapshot(slide, RevisionSource.GENERATED)
 
     archived = history.archive_slides_before_regeneration([slide])
     assert len(archived) == 1
-    assert archived[0].change_source == SlideChangeSource.REGENERATION
+    assert archived[0].change_source == RevisionSource.REGENERATION
 
     revisions = history.list_revisions_by_lineage(slide.lineage_id)
     assert len(revisions) == 2
@@ -112,7 +112,7 @@ def test_list_lineage_options_includes_deleted_slide_history(
 ) -> None:
     slide = _seed_slide(db_session)
     history = SlideHistoryService(db_session)
-    history.record_snapshot(slide, SlideChangeSource.GENERATED)
+    history.record_snapshot(slide, RevisionSource.GENERATED)
     history.archive_slides_before_regeneration([slide])
 
     new_slide = SlideSpec(
@@ -125,7 +125,7 @@ def test_list_lineage_options_includes_deleted_slide_history(
     )
     apply_slide_lineage([new_slide], [slide])
     saved = PresentationRepository(db_session).save_slide(new_slide)
-    history.record_snapshot(saved, SlideChangeSource.GENERATED)
+    history.record_snapshot(saved, RevisionSource.GENERATED)
 
     options = history.list_lineage_options(slide.presentation_id, [saved])
     assert len(options) == 1

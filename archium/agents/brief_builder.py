@@ -16,7 +16,7 @@ from archium.application.artifact_history_service import BriefHistoryService
 from archium.application.artifact_lineage import apply_brief_lineage
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import SlideChangeSource
+from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -82,7 +82,7 @@ class BriefBuilder:
         )
         apply_brief_lineage(brief, previous)
         saved = self._presentations.save_brief(brief)
-        self._history.record_snapshot(saved, SlideChangeSource.GENERATED)
+        self._history.record_snapshot(saved, RevisionSource.GENERATED)
 
         from archium.domain.enums import PresentationStatus
 

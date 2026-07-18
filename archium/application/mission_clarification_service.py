@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents._helpers import to_json
+from archium.application.mission_history_service import MissionHistoryService
 from archium.application.mission_parser import parse_mission_draft, validate_mission_draft
 from archium.application.project_mission_service import (
     MissionGenerationResult,
@@ -20,6 +21,7 @@ from archium.domain.enums import (
     ConstraintSource,
     KnowledgeGapStatus,
     QuestionStatus,
+    RevisionSource,
     VerificationStatus,
 )
 from archium.domain.knowledge_gap import (
@@ -79,6 +81,7 @@ class MissionClarificationService:
         self._mission_service = mission_service or ProjectMissionService(
             session, llm, settings=self._settings
         )
+        self._history = MissionHistoryService(session)
 
     # ── Clarifying questions ───────────────────────────────────────
 
@@ -380,6 +383,11 @@ class MissionClarificationService:
         )
         revised.touch()
         saved = self._missions.save_mission(revised)
+        self._history.record_snapshot(
+            saved,
+            RevisionSource.CLARIFICATION,
+            note="澄清后修订任务理解",
+        )
         return MissionGenerationResult(
             mission=saved,
             knowledge_gaps=self._missions.list_knowledge_gaps(saved.id),

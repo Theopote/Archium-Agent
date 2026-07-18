@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from archium.application.artifact_snapshots import brief_to_snapshot, storyline_to_snapshot
 from archium.application.revision_service import RevisionService
 from archium.application.slide_diff import change_source_label
-from archium.domain.enums import RevisionEntityType, SlideChangeSource
+from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.revision import EntityRevision
 
@@ -24,7 +24,7 @@ class BriefHistoryService:
     def record_snapshot(
         self,
         brief: PresentationBrief,
-        change_source: SlideChangeSource,
+        change_source: RevisionSource,
         *,
         note: str | None = None,
     ) -> EntityRevision:
@@ -46,7 +46,7 @@ class BriefHistoryService:
     ) -> EntityRevision:
         return self.record_snapshot(
             brief,
-            SlideChangeSource.REGENERATION,
+            RevisionSource.REGENERATION,
             note=note,
         )
 
@@ -87,7 +87,7 @@ class StorylineHistoryService:
     def record_snapshot(
         self,
         storyline: Storyline,
-        change_source: SlideChangeSource,
+        change_source: RevisionSource,
         *,
         note: str | None = None,
     ) -> EntityRevision:
@@ -109,7 +109,7 @@ class StorylineHistoryService:
     ) -> EntityRevision:
         return self.record_snapshot(
             storyline,
-            SlideChangeSource.REGENERATION,
+            RevisionSource.REGENERATION,
             note=note,
         )
 

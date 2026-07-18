@@ -15,7 +15,7 @@ from archium.agents._helpers import (
 from archium.application.artifact_history_service import StorylineHistoryService
 from archium.application.artifact_lineage import apply_storyline_lineage
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import SlideChangeSource
+from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -78,7 +78,7 @@ class NarrativeArchitect:
         )
         apply_storyline_lineage(storyline, previous)
         saved = self._presentations.save_storyline(storyline)
-        self._history.record_snapshot(saved, SlideChangeSource.GENERATED)
+        self._history.record_snapshot(saved, RevisionSource.GENERATED)
 
         presentation = self._presentations.get_presentation(brief.presentation_id)
         if presentation is not None:

@@ -16,7 +16,7 @@ from archium.application.mission_snapshots import (
 )
 from archium.application.project_mission_service import ProjectMissionService
 from archium.application.workstream_planning_service import WorkstreamPlanningService
-from archium.domain.enums import RevisionEntityType, SlideChangeSource, WorkstreamType
+from archium.domain.enums import RevisionEntityType, RevisionSource, WorkstreamType
 from archium.domain.project import Project
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
@@ -109,7 +109,7 @@ def test_mission_history_on_generate_and_regenerate(
     revisions = history.list_revisions(generated.mission.id)
     assert len(revisions) == 1
     assert revisions[0].entity_type == RevisionEntityType.MISSION
-    assert revisions[0].change_source == SlideChangeSource.GENERATED
+    assert revisions[0].change_source == RevisionSource.GENERATED
     assert revisions[0].presentation_id is None
 
     regenerated = service.regenerate_mission(
@@ -119,7 +119,7 @@ def test_mission_history_on_generate_and_regenerate(
     lineage_revisions = history.list_revisions_by_lineage(regenerated.mission.lineage_id)
     assert len(lineage_revisions) >= 3  # generated + archive + regeneration
     sources = {item.change_source for item in lineage_revisions}
-    assert SlideChangeSource.REGENERATION in sources
+    assert RevisionSource.REGENERATION in sources
 
     latest = max(lineage_revisions, key=lambda item: item.revision_number)
     previous_diff = history.diff_with_previous(latest.id)
@@ -178,7 +178,7 @@ def test_workstream_history_manual_select(
     selected = service.select_workstream(ws.id)
     assert selected.selected is True
     revisions = WorkstreamHistoryService(db_session).list_revisions_by_lineage(ws.lineage_id)
-    assert any(item.change_source == SlideChangeSource.MANUAL_EDIT for item in revisions)
+    assert any(item.change_source == RevisionSource.MANUAL_EDIT for item in revisions)
 
 
 def test_deliverable_plan_history_service_records(
@@ -211,7 +211,7 @@ def test_deliverable_plan_history_service_records(
         )
     )
     history = DeliverablePlanHistoryService(db_session)
-    history.record_snapshot(plan, SlideChangeSource.GENERATED)
+    history.record_snapshot(plan, RevisionSource.GENERATED)
     revisions = history.list_revisions_by_lineage(plan.lineage_id)
     assert len(revisions) == 1
     assert revisions[0].entity_type == RevisionEntityType.DELIVERABLE_PLAN

@@ -18,7 +18,7 @@ from archium.application.mission_snapshots import (
 from archium.application.revision_service import RevisionService
 from archium.application.slide_diff import change_source_label
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import RevisionEntityType, SlideChangeSource
+from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.project_mission import ProjectMission
 from archium.domain.revision import EntityRevision
 from archium.domain.workstream import Workstream
@@ -37,9 +37,10 @@ class MissionHistoryService:
     def record_snapshot(
         self,
         mission: ProjectMission,
-        change_source: SlideChangeSource,
+        change_source: RevisionSource,
         *,
         note: str | None = None,
+        actor: str | None = None,
     ) -> EntityRevision:
         return self._revisions.record(
             entity_type=RevisionEntityType.MISSION,
@@ -49,6 +50,7 @@ class MissionHistoryService:
             change_source=change_source,
             snapshot=mission_to_snapshot(mission),
             note=note,
+            actor=actor,
         )
 
     def archive_before_regeneration(
@@ -57,7 +59,7 @@ class MissionHistoryService:
         *,
         note: str = "重新生成前归档",
     ) -> EntityRevision:
-        return self.record_snapshot(mission, SlideChangeSource.REGENERATION, note=note)
+        return self.record_snapshot(mission, RevisionSource.REGENERATION, note=note)
 
     def list_revisions(self, mission_id: UUID) -> list[EntityRevision]:
         mission = self._missions.get_mission(mission_id)
@@ -111,9 +113,10 @@ class DeliverablePlanHistoryService:
     def record_snapshot(
         self,
         plan: DeliverablePlan,
-        change_source: SlideChangeSource,
+        change_source: RevisionSource,
         *,
         note: str | None = None,
+        actor: str | None = None,
     ) -> EntityRevision:
         return self._revisions.record(
             entity_type=RevisionEntityType.DELIVERABLE_PLAN,
@@ -123,6 +126,7 @@ class DeliverablePlanHistoryService:
             change_source=change_source,
             snapshot=deliverable_plan_to_snapshot(plan),
             note=note,
+            actor=actor,
         )
 
     def archive_before_regeneration(
@@ -131,7 +135,7 @@ class DeliverablePlanHistoryService:
         *,
         note: str = "重新规划前归档",
     ) -> EntityRevision:
-        return self.record_snapshot(plan, SlideChangeSource.REGENERATION, note=note)
+        return self.record_snapshot(plan, RevisionSource.REGENERATION, note=note)
 
     def list_revisions_by_lineage(self, lineage_id: UUID) -> list[EntityRevision]:
         return self._revisions.list_by_lineage(lineage_id)
@@ -169,9 +173,10 @@ class WorkstreamHistoryService:
     def record_snapshot(
         self,
         workstream: Workstream,
-        change_source: SlideChangeSource,
+        change_source: RevisionSource,
         *,
         note: str | None = None,
+        actor: str | None = None,
     ) -> EntityRevision:
         return self._revisions.record(
             entity_type=RevisionEntityType.WORKSTREAM_PLAN,
@@ -181,6 +186,7 @@ class WorkstreamHistoryService:
             change_source=change_source,
             snapshot=workstream_to_snapshot(workstream),
             note=note,
+            actor=actor,
         )
 
     def list_revisions_by_lineage(self, lineage_id: UUID) -> list[EntityRevision]:

@@ -9,7 +9,7 @@ from archium.application.artifact_history_service import (
 from archium.application.artifact_lineage import apply_brief_lineage, apply_storyline_lineage
 from archium.application.review_models import BriefUpdate, StorylineUpdate
 from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import ProjectType, SlideChangeSource
+from archium.domain.enums import ProjectType, RevisionSource
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
@@ -77,7 +77,7 @@ def test_storyline_lineage_preserved_on_regeneration(db_session: Session) -> Non
 
 def test_brief_manual_edit_records_history(db_session: Session) -> None:
     brief = _seed_brief(db_session)
-    BriefHistoryService(db_session).record_snapshot(brief, SlideChangeSource.GENERATED)
+    BriefHistoryService(db_session).record_snapshot(brief, RevisionSource.GENERATED)
 
     review = PresentationReviewService(db_session)
     review.update_brief(
@@ -100,13 +100,13 @@ def test_brief_manual_edit_records_history(db_session: Session) -> None:
 
     revisions = BriefHistoryService(db_session).list_revisions(brief.id)
     assert len(revisions) == 2
-    assert any(item.change_source == SlideChangeSource.MANUAL_EDIT for item in revisions)
+    assert any(item.change_source == RevisionSource.MANUAL_EDIT for item in revisions)
 
 
 def test_brief_archive_before_regeneration(db_session: Session) -> None:
     brief = _seed_brief(db_session)
     history = BriefHistoryService(db_session)
-    history.record_snapshot(brief, SlideChangeSource.GENERATED)
+    history.record_snapshot(brief, RevisionSource.GENERATED)
 
     replacement = PresentationBrief(
         project_id=brief.project_id,
@@ -119,20 +119,20 @@ def test_brief_archive_before_regeneration(db_session: Session) -> None:
     history.archive_before_regeneration(brief)
     apply_brief_lineage(replacement, brief)
     saved = PresentationRepository(db_session).save_brief(replacement)
-    history.record_snapshot(saved, SlideChangeSource.GENERATED)
+    history.record_snapshot(saved, RevisionSource.GENERATED)
 
     revisions = history.list_revisions_by_lineage(saved.lineage_id)
     assert saved.lineage_id == brief.lineage_id
     assert saved.version == brief.version + 1
     assert len(revisions) == 3
-    assert any(item.change_source == SlideChangeSource.REGENERATION for item in revisions)
+    assert any(item.change_source == RevisionSource.REGENERATION for item in revisions)
 
 
 def test_storyline_archive_before_regeneration(db_session: Session) -> None:
     brief = _seed_brief(db_session)
     storyline = _seed_storyline(db_session, brief)
     history = StorylineHistoryService(db_session)
-    history.record_snapshot(storyline, SlideChangeSource.GENERATED)
+    history.record_snapshot(storyline, RevisionSource.GENERATED)
 
     replacement = Storyline(
         presentation_id=brief.presentation_id,
@@ -142,19 +142,19 @@ def test_storyline_archive_before_regeneration(db_session: Session) -> None:
     history.archive_before_regeneration(storyline)
     apply_storyline_lineage(replacement, storyline)
     saved = PresentationRepository(db_session).save_storyline(replacement)
-    history.record_snapshot(saved, SlideChangeSource.GENERATED)
+    history.record_snapshot(saved, RevisionSource.GENERATED)
 
     revisions = history.list_revisions_by_lineage(saved.lineage_id)
     assert saved.lineage_id == storyline.lineage_id
     assert saved.version == storyline.version + 1
     assert len(revisions) == 3
-    assert any(item.change_source == SlideChangeSource.REGENERATION for item in revisions)
+    assert any(item.change_source == RevisionSource.REGENERATION for item in revisions)
 
 
 def test_storyline_manual_edit_records_history(db_session: Session) -> None:
     brief = _seed_brief(db_session)
     storyline = _seed_storyline(db_session, brief)
-    StorylineHistoryService(db_session).record_snapshot(storyline, SlideChangeSource.GENERATED)
+    StorylineHistoryService(db_session).record_snapshot(storyline, RevisionSource.GENERATED)
 
     review = PresentationReviewService(db_session)
     review.update_storyline(
@@ -168,4 +168,4 @@ def test_storyline_manual_edit_records_history(db_session: Session) -> None:
 
     revisions = StorylineHistoryService(db_session).list_revisions(storyline.id)
     assert len(revisions) == 2
-    assert any(item.change_source == SlideChangeSource.MANUAL_EDIT for item in revisions)
+    assert any(item.change_source == RevisionSource.MANUAL_EDIT for item in revisions)

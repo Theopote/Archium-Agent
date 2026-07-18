@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.domain.enums import RevisionEntityType, SlideChangeSource
+from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.revision import EntityRevision
 from archium.infrastructure.database.repositories import EntityRevisionRepository
 
@@ -24,7 +24,7 @@ class RevisionService:
         entity_id: UUID | None,
         lineage_id: UUID,
         presentation_id: UUID | None,
-        change_source: SlideChangeSource,
+        change_source: RevisionSource,
         snapshot: dict[str, object],
         note: str | None = None,
         actor: str | None = None,

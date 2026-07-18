@@ -161,7 +161,7 @@ alembic current   # 应包含 010_planning_session_decouple
 
 ### Revision / 已知未知
 
-- Mission / Workstream / DeliverablePlan 通过 `MissionHistoryService` 等写入统一 `entity_revisions`（`presentation_id` 可为空），支持 regenerate 前归档与字段 diff。
+- Mission / Workstream / DeliverablePlan 通过 `MissionHistoryService` 等写入统一 `entity_revisions`（`presentation_id` 可为空），`change_source` 使用通用 `RevisionSource`（`GENERATED` / `MANUAL_EDIT` / `REGENERATION` / `CLARIFICATION` / `APPROVAL` 等），不再复用 `SlideChangeSource` 命名。
 - UI「关键问题」步展示五列：**已确认 / 推断 / 假设 / 冲突 / 待确认**，并支持缺口回答、按假设、暂缓，以及事实确认/驳回。
 - 规划链路：`Project → PlanningSession → Mission → DeliverablePlan →`（仅 PRESENTATION）`Presentation`。
 

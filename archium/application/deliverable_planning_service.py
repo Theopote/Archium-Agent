@@ -16,7 +16,7 @@ from archium.application.mission_clarification_service import MissionClarificati
 from archium.application.mission_history_service import DeliverablePlanHistoryService
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
-from archium.domain.enums import DeliverableType, SlideChangeSource
+from archium.domain.enums import DeliverableType, RevisionSource
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
@@ -127,7 +127,7 @@ class DeliverablePlanningService:
         )
         saved = self._missions.save_deliverable_plan(parsed.plan)
         change_source = (
-            SlideChangeSource.REGENERATION if previous is not None else SlideChangeSource.GENERATED
+            RevisionSource.REGENERATION if previous is not None else RevisionSource.GENERATED
         )
         self._history.record_snapshot(saved, change_source)
         mission = self._sync_recommended_ids(mission, saved)
@@ -203,8 +203,9 @@ class DeliverablePlanningService:
             history_note = f"{history_note} · by {user_id}"
         self._history.record_snapshot(
             saved,
-            SlideChangeSource.MANUAL_EDIT,
+            RevisionSource.APPROVAL,
             note=history_note,
+            actor=user_id,
         )
         return saved
 
@@ -233,8 +234,9 @@ class DeliverablePlanningService:
             history_note = f"{history_note} · by {user_id}"
         self._history.record_snapshot(
             saved,
-            SlideChangeSource.MANUAL_EDIT,
+            RevisionSource.APPROVAL,
             note=history_note,
+            actor=user_id,
         )
         return saved
 

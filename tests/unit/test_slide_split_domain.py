@@ -21,7 +21,7 @@ from archium.domain.enums import (
     ReviewCategory,
     ReviewLayer,
     ReviewSeverity,
-    SlideChangeSource,
+    RevisionSource,
     SlideRepairTier,
     SlideStatus,
     SlideType,
@@ -167,7 +167,7 @@ def split_presentation(db_session: Session) -> tuple[UUID, list[SlideSpec], Stor
             saved_slides.append(pres_repo.save_slide(slide))
     SlideHistoryService(db_session).record_snapshot(
         saved_slides[1],
-        SlideChangeSource.GENERATED,
+        RevisionSource.GENERATED,
         note="拆页前基线",
     )
     return presentation.id, saved_slides, storyline
@@ -502,12 +502,12 @@ class TestSplitSlideService:
         baseline = next(
             revision
             for revision in reversed(original_revisions)
-            if revision.change_source == SlideChangeSource.GENERATED
+            if revision.change_source == RevisionSource.GENERATED
         )
         repair_revision = next(
             revision
             for revision in original_revisions
-            if revision.change_source == SlideChangeSource.AUTO_REPAIR
+            if revision.change_source == RevisionSource.AUTO_REPAIR
         )
         assert baseline.snapshot["key_points"] == slide_to_snapshot(target)["key_points"]
         assert repair_revision.note
@@ -518,7 +518,7 @@ class TestSplitSlideService:
         assert any(change.field == "key_points" for change in diff.changes)
 
         assert len(split_revisions) == 1
-        assert split_revisions[0].change_source == SlideChangeSource.AUTO_REPAIR
+        assert split_revisions[0].change_source == RevisionSource.AUTO_REPAIR
         assert split_revisions[0].note == "由版面拆分自动创建"
 
     def test_user_can_undo_split_via_repair_audit_record(

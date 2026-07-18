@@ -106,11 +106,20 @@ class SlideStatus(StrEnum):
     NEEDS_REVISION = "needs_revision"
 
 
-class SlideChangeSource(StrEnum):
+class RevisionSource(StrEnum):
+    """Origin of an entity revision — shared by slides, briefs, missions, plans, etc."""
+
     GENERATED = "generated"
     MANUAL_EDIT = "manual_edit"
     REGENERATION = "regeneration"
     AUTO_REPAIR = "auto_repair"
+    CLARIFICATION = "clarification"
+    APPROVAL = "approval"
+    IMPORT = "import"
+
+
+# Backward-compatible alias; prefer RevisionSource for new code.
+SlideChangeSource = RevisionSource
 
 
 class SlideRepairTier(StrEnum):

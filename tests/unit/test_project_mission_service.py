@@ -137,7 +137,11 @@ def test_regenerate_mission_with_feedback(
 def test_update_and_approve_mission(
     mission_service: ProjectMissionService,
     temple_project: Project,
+    db_session: Session,
 ) -> None:
+    from archium.application.mission_history_service import MissionHistoryService
+    from archium.domain.enums import RevisionSource
+
     result = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
     updated = mission_service.update_mission(
         result.mission.id,
@@ -146,8 +150,12 @@ def test_update_and_approve_mission(
     assert updated.title == "修订后的任务标题"
     assert updated.confidence == 0.6
 
-    approved = mission_service.approve_mission(result.mission.id)
+    approved = mission_service.approve_mission(result.mission.id, user_id="tester")
     assert approved.approval_status == ApprovalStatus.APPROVED
+
+    revisions = MissionHistoryService(db_session).list_revisions(result.mission.id)
+    assert any(item.change_source == RevisionSource.APPROVAL for item in revisions)
+    assert any(item.actor == "tester" for item in revisions)
 
 
 def test_update_mission_classification_fields(
