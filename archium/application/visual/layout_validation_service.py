@@ -11,6 +11,7 @@ from archium.domain.visual.enums import (
     LayoutIssueSeverity,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.text_style import resolve_text_style, role_min_font_pt
 from archium.domain.visual.validation import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,
@@ -214,9 +215,6 @@ class LayoutValidationService:
         thresholds: LayoutThresholds,
     ) -> list[LayoutValidationIssue]:
         issues: list[LayoutValidationIssue] = []
-        min_body = thresholds.min_body_font_pt
-        min_caption = thresholds.min_caption_font_pt
-        min_source = thresholds.min_source_font_pt
         for element in plan.elements:
             if element.content_type != LayoutContentType.TEXT and element.role not in {
                 LayoutElementRole.TITLE,
@@ -226,13 +224,8 @@ class LayoutValidationService:
                 LayoutElementRole.LEAD_STATEMENT,
             }:
                 continue
-            token_name = element.style_token or "body"
-            style = getattr(typography, token_name, typography.body)
-            minimum = min_body
-            if element.role == LayoutElementRole.CAPTION:
-                minimum = min_caption
-            elif element.role == LayoutElementRole.SOURCE:
-                minimum = min_source
+            style = resolve_text_style(element, typography)
+            minimum = role_min_font_pt(element.role, thresholds)
             if style.font_size + 1e-6 < minimum:
                 issues.append(
                     LayoutValidationIssue(
@@ -258,8 +251,7 @@ class LayoutValidationService:
                 LayoutContentType.METRIC,
             }:
                 continue
-            token_name = element.style_token or "body"
-            style = getattr(typography, token_name, typography.body)
+            style = resolve_text_style(element, typography)
             if not self._text.fits(
                 element.text_content,
                 box_width_in=element.width,

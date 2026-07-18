@@ -88,7 +88,7 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 | `VisualIntentService` | `generate_for_slide` |
 | `LayoutPlanningService` | `generate_candidates` / `select_best` / `plan_for_slide` |
 | `LayoutValidationService` | `validate` |
-| `LayoutRepairService` | `repair` — auto-repairable rule codes（越界 / 重叠 / 字号 / 溢出 / 图纸裁切 / 主视觉占比 / 对齐）。文本溢出按优先级：邻接空白 → 减间距 → 微调高度 → 紧凑 token → 换 variant / 建议拆页；**禁止占满整个 safe area** |
+| `LayoutRepairService` | `repair` — auto-repairable rule codes。字号按 DesignSystem 实际 `font_size` 选最小合法更大 token，必要时用阈值内 `font_size_override`；文本溢出按邻接空白→减间距→微调→更小 token→换 variant/拆页 |
 | `VisualCompositionService` | 薄编排：意图 → 候选 → 最佳计划 |
 | `VisualWorkflowService` | `run` / `continue_after_art_direction_approval` / `continue_after_layout_review` / `resume` |
 | `PptxGenPresentationRenderer` | `build_layout_instruction_deck` / `export_pptx_from_layout_instructions` |

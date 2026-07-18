@@ -166,10 +166,116 @@ class TestLayoutRepairService:
         repaired = LayoutRepairService().repair(plan, report, design)
         source = repaired.element_by_id("source")
         assert source is not None
-        assert source.style_token == "caption"
+        # Size-based: footnote (9) is the smallest token > 6 that meets min_source (8),
+        # not a hard-coded source→caption name hop.
+        assert source.style_token == "footnote"
+        assert source.font_size_override is None
         assert not LayoutValidationService().validate(
             repaired, design, require_source=True
         ).issues_for(LAYOUT_FONT_TOO_SMALL)
+
+    def test_font_upgrade_uses_actual_sizes_not_token_names(self) -> None:
+        """When source is larger than footnote, upgrade must not hop source→caption by name."""
+        design = default_presentation_design_system()
+        # Invert the usual assumption: source 11pt, footnote 7pt (below min).
+        typography = design.typography.model_copy(
+            update={
+                "source": design.typography.source.model_copy(update={"font_size": 11}),
+                "footnote": design.typography.footnote.model_copy(update={"font_size": 7}),
+            }
+        )
+        design = design.model_copy(update={"typography": typography})
+        plan = _plan(
+            LayoutElement(
+                id="note",
+                role=LayoutElementRole.SOURCE,
+                content_type=LayoutContentType.TEXT,
+                text_content="脚注",
+                x=0.7,
+                y=5.2,
+                width=3,
+                height=0.2,
+                style_token="footnote",
+            )
+        )
+        report = LayoutValidationService().validate(plan, design, require_source=True)
+        assert report.issues_for(LAYOUT_FONT_TOO_SMALL)
+        repaired = LayoutRepairService().repair(plan, report, design)
+        note = repaired.element_by_id("note")
+        assert note is not None
+        # Smallest legal larger token is source (11), not caption via name map.
+        assert note.style_token == "source"
+        assert design.typography.source.font_size >= design.thresholds.min_source_font_pt
+
+    def test_font_upgrade_override_when_no_larger_token(self) -> None:
+        design = default_presentation_design_system()
+        # Collapse every token below body minimum so only override can fix body text.
+        tiny_tokens = {
+            name: getattr(design.typography, name).model_copy(update={"font_size": 10})
+            for name in (
+                "display",
+                "title",
+                "subtitle",
+                "heading",
+                "body",
+                "caption",
+                "metric",
+                "footnote",
+                "source",
+            )
+        }
+        design = design.model_copy(
+            update={"typography": design.typography.model_copy(update=tiny_tokens)}
+        )
+        plan = _plan(
+            LayoutElement(
+                id="body",
+                role=LayoutElementRole.BODY_TEXT,
+                content_type=LayoutContentType.TEXT,
+                text_content="正文",
+                x=0.7,
+                y=1.0,
+                width=4,
+                height=0.5,
+                style_token="body",
+            )
+        )
+        report = LayoutValidationService().validate(plan, design, require_source=False)
+        assert report.issues_for(LAYOUT_FONT_TOO_SMALL)
+        repaired = LayoutRepairService().repair(plan, report, design)
+        body = repaired.element_by_id("body")
+        assert body is not None
+        assert body.font_size_override == design.thresholds.min_body_font_pt
+        assert not LayoutValidationService().validate(
+            repaired, design, require_source=False
+        ).issues_for(LAYOUT_FONT_TOO_SMALL)
+
+    def test_compact_tokens_never_increase_font_size(self) -> None:
+        from archium.domain.visual.text_style import smaller_compliant_tokens
+
+        design = default_presentation_design_system()
+        element = LayoutElement(
+            id="body",
+            role=LayoutElementRole.BODY_TEXT,
+            content_type=LayoutContentType.TEXT,
+            text_content="x",
+            x=0.7,
+            y=1.0,
+            width=2,
+            height=0.4,
+            style_token="body",
+        )
+        smaller = smaller_compliant_tokens(
+            element,
+            typography=design.typography,
+            minimum_pt=design.thresholds.min_body_font_pt,
+        )
+        body_size = design.typography.body.font_size
+        for name in smaller:
+            assert getattr(design.typography, name).font_size < body_size
+            assert getattr(design.typography, name).font_size >= design.thresholds.min_body_font_pt
+        # body→subtitle would be an *increase* and must not appear.
+        assert "subtitle" not in smaller
 
     def test_repairs_text_overflow(self) -> None:
         design = default_presentation_design_system()

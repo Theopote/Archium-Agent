@@ -9,6 +9,7 @@ from uuid import UUID
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.text_style import resolve_text_style
 
 
 @dataclass
@@ -106,7 +107,7 @@ class PptxLayoutPlanAdapter:
         bundle: SlideContentBundle,
     ) -> dict[str, Any]:
         style_token = element.style_token or "body"
-        typography = getattr(design_system.typography, style_token, design_system.typography.body)
+        typography = resolve_text_style(element, design_system.typography)
         color = design_system.colors.resolve(typography.color_token)
         instruction: dict[str, Any] = {
             "id": element.id,
@@ -125,6 +126,8 @@ class PptxLayoutPlanAdapter:
             "font_weight": typography.font_weight,
             "color": color.lstrip("#"),
         }
+        if element.font_size_override is not None:
+            instruction["font_size_override"] = element.font_size_override
         if element.text_content is not None:
             instruction["text"] = element.text_content
         if element.content_ref:

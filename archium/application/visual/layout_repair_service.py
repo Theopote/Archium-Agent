@@ -11,6 +11,14 @@ from archium.domain.visual.enums import (
     OverflowPolicy,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.text_style import (
+    clamp_font_size_override,
+    next_larger_token,
+    resolve_text_style,
+    role_min_font_pt,
+    smaller_compliant_tokens,
+    typography_tokens_by_size,
+)
 from archium.domain.visual.validation import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,
@@ -26,28 +34,6 @@ from archium.domain.visual.validation import (
 from archium.infrastructure.layout.geometry import Rect, occupied_area, safe_area, whitespace_ratio
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.layout.text_measurement import TextMeasurementService
-
-# Prefer larger readable tokens when repairing FONT_TOO_SMALL.
-_STYLE_UPGRADE: dict[str, str] = {
-    "footnote": "source",
-    "source": "caption",
-    "caption": "body",
-    "body": "subtitle",
-    "subtitle": "heading",
-    "heading": "title",
-    "metric": "heading",
-}
-
-# Prefer more compact tokens when repairing TEXT_OVERFLOW (still threshold-checked).
-_STYLE_COMPACT: dict[str, str] = {
-    "display": "title",
-    "title": "heading",
-    "heading": "subtitle",
-    "subtitle": "body",
-    "body": "caption",
-    "metric": "body",
-    "caption": "source",
-}
 
 _GAP = 0.08
 _MIN_TEXT_W = 0.35
@@ -111,7 +97,7 @@ class LayoutRepairService:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
                     if element is not None:
-                        self._upgrade_style_token(element)
+                        self._upgrade_font_size(element, design_system)
             elif code == LAYOUT_TEXT_OVERFLOW:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
@@ -249,9 +235,35 @@ class LayoutRepairService:
             return right, left
         return left, right
 
-    def _upgrade_style_token(self, element: LayoutElement) -> None:
-        current = element.style_token or "body"
-        element.style_token = _STYLE_UPGRADE.get(current, "body")
+    def _upgrade_font_size(
+        self, element: LayoutElement, design_system: DesignSystem
+    ) -> None:
+        """Raise font size using real DesignSystem sizes — never token-name guesses.
+
+        1. Pick the smallest named token larger than the current effective size
+           that still meets the role minimum.
+        2. If none exists, set ``font_size_override`` to the role minimum
+           (clamped by the largest available token size).
+        """
+        minimum = role_min_font_pt(element.role, design_system.thresholds)
+        larger = next_larger_token(
+            element, typography=design_system.typography, minimum_pt=minimum
+        )
+        if larger is not None:
+            element.style_token = larger
+            element.font_size_override = None
+            return
+
+        # No larger named token — bump override to the legal floor.
+        # Thresholds win over the largest named token when the design system is
+        # inconsistent (all tokens below the role minimum).
+        tokens = typography_tokens_by_size(design_system.typography)
+        max_named = tokens[-1][1].font_size if tokens else minimum
+        element.font_size_override = clamp_font_size_override(
+            minimum,
+            minimum_pt=minimum,
+            maximum_pt=max(max_named, minimum),
+        )
 
     def _repair_text_overflow(
         self,
@@ -269,7 +281,7 @@ class LayoutRepairService:
         1. Expand into adjacent free space (avoid *all* neighbors)
         2. Reduce inter-element padding (tighter gap)
         3. Fine-tune box to the minimum height/width that fits
-        4. Switch to a more compact but still compliant style token
+        4. Switch to a more compact but still compliant style token (by real size)
         5–6. Caller escalates to variant change + split suggestion
         """
         if not element.text_content:
@@ -282,6 +294,7 @@ class LayoutRepairService:
             element.width,
             element.height,
             element.style_token,
+            element.font_size_override,
         )
 
         # Gap schedules: normal spacing, then reduced padding.
@@ -289,14 +302,14 @@ class LayoutRepairService:
             max(_GAP, design_system.spacing.sm),
             max(design_system.spacing.xs, _GAP * 0.5),
         )
-        token_chain = self._compact_token_chain(
-            element, design_system=design_system
-        )
+        token_chain = self._compact_token_chain(element, design_system=design_system)
 
         for token_name in token_chain:
-            style = getattr(
-                design_system.typography, token_name, design_system.typography.body
+            # Compact steps use the named token size (clear any prior override).
+            probe = element.model_copy(
+                update={"style_token": token_name, "font_size_override": None}
             )
+            style = resolve_text_style(probe, design_system.typography)
             for gap in gap_schedule:
                 if self._try_fit_in_adjacent_space(
                     element,
@@ -307,6 +320,7 @@ class LayoutRepairService:
                     gap=gap,
                 ):
                     element.style_token = token_name
+                    element.font_size_override = None
                     self._clamp_to_rect(
                         element,
                         max_w=safe.width,
@@ -316,68 +330,38 @@ class LayoutRepairService:
                         page_w=page_w,
                         page_h=page_h,
                     )
-                    # Re-check: clamp must not reintroduce overflow or overlaps.
                     if self._text_fits(element, style) and not self._overlaps_any(
                         element, neighbors, gap=0.0
                     ):
                         return True
 
         # Restore geometry — do not leave a half-applied full-safe takeover.
-        element.x, element.y, element.width, element.height, element.style_token = (
-            original
-        )
+        (
+            element.x,
+            element.y,
+            element.width,
+            element.height,
+            element.style_token,
+            element.font_size_override,
+        ) = original
         return False
 
     def _compact_token_chain(
         self, element: LayoutElement, *, design_system: DesignSystem
     ) -> list[str]:
-        """Current token first, then progressively more compact compliant tokens."""
+        """Current token first, then progressively smaller compliant tokens by size."""
         start = element.style_token or "body"
+        minimum = role_min_font_pt(element.role, design_system.thresholds)
+        smaller = smaller_compliant_tokens(
+            element,
+            typography=design_system.typography,
+            minimum_pt=minimum,
+        )
         chain = [start]
-        seen = {start}
-        current = start
-        for _ in range(6):
-            nxt = _STYLE_COMPACT.get(current)
-            if nxt is None or nxt in seen:
-                break
-            style = getattr(design_system.typography, nxt, None)
-            if style is None:
-                break
-            if not self._token_meets_min_font(
-                element, token_name=nxt, style=style, design_system=design_system
-            ):
-                break
-            chain.append(nxt)
-            seen.add(nxt)
-            current = nxt
+        for name in smaller:
+            if name not in chain:
+                chain.append(name)
         return chain
-
-    @staticmethod
-    def _token_meets_min_font(
-        element: LayoutElement,
-        *,
-        token_name: str,
-        style: TextStyleToken,
-        design_system: DesignSystem,
-    ) -> bool:
-        thresholds = design_system.thresholds
-        minimum = thresholds.min_body_font_pt
-        if element.role == LayoutElementRole.CAPTION or token_name == "caption":
-            minimum = thresholds.min_caption_font_pt
-        if element.role == LayoutElementRole.SOURCE or token_name in {
-            "source",
-            "footnote",
-        }:
-            minimum = thresholds.min_source_font_pt
-        # Body / lead / title roles must not drop below body minimum.
-        if element.role in {
-            LayoutElementRole.BODY_TEXT,
-            LayoutElementRole.LEAD_STATEMENT,
-            LayoutElementRole.TITLE,
-            LayoutElementRole.SUBTITLE,
-        }:
-            minimum = max(minimum, thresholds.min_body_font_pt)
-        return style.font_size + 1e-6 >= minimum
 
     def _try_fit_in_adjacent_space(
         self,

@@ -35,6 +35,7 @@ class LayoutElement(DomainModel):
     z_index: int = 0
     alignment: str = "left"
     style_token: str | None = None
+    font_size_override: float | None = Field(default=None, gt=0)
     fit_mode: ImageFit | None = None
     crop_policy: CropPolicy | None = None
     min_width: float | None = Field(default=None, gt=0)
