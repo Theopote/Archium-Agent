@@ -39,6 +39,10 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     presentations: Mapped[list[PresentationORM]] = relationship(back_populates="project")
     facts: Mapped[list[ProjectFactORM]] = relationship(back_populates="project")
     assets: Mapped[list[AssetORM]] = relationship(back_populates="project")
+    missions: Mapped[list[ProjectMissionORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
 
 class SourceDocumentORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -352,3 +356,253 @@ class UserPreferenceORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")
     )
     description: Mapped[str | None] = mapped_column(Text)
+
+
+class ProjectMissionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "project_missions"
+    __table_args__ = (
+        Index("ix_project_missions_project_id", "project_id"),
+        Index("ix_project_missions_lineage_id", "lineage_id"),
+        Index("ix_project_missions_approval_status", "approval_status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="project-mission")
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    task_statement: Mapped[str] = mapped_column(Text, nullable=False)
+    task_natures_json: Mapped[list[str]] = mapped_column("task_natures", JSON, default=list)
+    domains_json: Mapped[list[str]] = mapped_column("domains", JSON, default=list)
+    intervention_scales_json: Mapped[list[str]] = mapped_column("intervention_scales", JSON, default=list)
+    requested_service_depths_json: Mapped[list[str]] = mapped_column(
+        "requested_service_depths", JSON, default=list
+    )
+    project_context: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    current_situation: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    primary_problems_json: Mapped[list[str]] = mapped_column("primary_problems", JSON, default=list)
+    desired_changes_json: Mapped[list[str]] = mapped_column("desired_changes", JSON, default=list)
+    in_scope_json: Mapped[list[str]] = mapped_column("in_scope", JSON, default=list)
+    out_of_scope_json: Mapped[list[str]] = mapped_column("out_of_scope", JSON, default=list)
+    stakeholders_json: Mapped[list[dict[str, object]]] = mapped_column("stakeholders", JSON, default=list)
+    decision_context: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    decisions_required_json: Mapped[list[str]] = mapped_column("decisions_required", JSON, default=list)
+    known_constraints_json: Mapped[list[dict[str, object]]] = mapped_column(
+        "known_constraints", JSON, default=list
+    )
+    key_unknowns_json: Mapped[list[str]] = mapped_column("key_unknowns", JSON, default=list)
+    research_questions_json: Mapped[list[str]] = mapped_column("research_questions", JSON, default=list)
+    design_question_summaries_json: Mapped[list[str]] = mapped_column(
+        "design_question_summaries", JSON, default=list
+    )
+    evaluation_criteria_json: Mapped[list[dict[str, object]]] = mapped_column(
+        "evaluation_criteria", JSON, default=list
+    )
+    recommended_workstream_ids_json: Mapped[list[str]] = mapped_column(
+        "recommended_workstream_ids", JSON, default=list
+    )
+    recommended_deliverable_ids_json: Mapped[list[str]] = mapped_column(
+        "recommended_deliverable_ids", JSON, default=list
+    )
+    uncertainty_level: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    project: Mapped[ProjectORM] = relationship(back_populates="missions")
+    knowledge_gaps: Mapped[list[KnowledgeGapORM]] = relationship(
+        back_populates="mission",
+        cascade="all, delete-orphan",
+    )
+    assumptions: Mapped[list[ProjectAssumptionORM]] = relationship(
+        back_populates="mission",
+        cascade="all, delete-orphan",
+    )
+    clarifying_questions: Mapped[list[ClarifyingQuestionORM]] = relationship(
+        back_populates="mission",
+        cascade="all, delete-orphan",
+    )
+    design_questions: Mapped[list[DesignQuestionORM]] = relationship(
+        back_populates="mission",
+        cascade="all, delete-orphan",
+    )
+    workstreams: Mapped[list[WorkstreamORM]] = relationship(
+        back_populates="mission",
+        cascade="all, delete-orphan",
+    )
+    deliverable_plans: Mapped[list[DeliverablePlanORM]] = relationship(
+        back_populates="mission",
+        cascade="all, delete-orphan",
+    )
+
+
+class KnowledgeGapORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "knowledge_gaps"
+    __table_args__ = (
+        Index("ix_knowledge_gaps_project_id", "project_id"),
+        Index("ix_knowledge_gaps_mission_id", "mission_id"),
+        Index("ix_knowledge_gaps_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("project_missions.id", ondelete="CASCADE"), nullable=False
+    )
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    why_it_matters: Mapped[str] = mapped_column(Text, nullable=False)
+    impact_if_unresolved: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    resolution_methods_json: Mapped[list[str]] = mapped_column("resolution_methods", JSON, default=list)
+    suggested_owner: Mapped[str | None] = mapped_column(String(200))
+    priority: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
+    blocking: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="open")
+    resolution: Mapped[str | None] = mapped_column(Text)
+
+    mission: Mapped[ProjectMissionORM] = relationship(back_populates="knowledge_gaps")
+
+
+class ProjectAssumptionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "project_assumptions"
+    __table_args__ = (
+        Index("ix_project_assumptions_project_id", "project_id"),
+        Index("ix_project_assumptions_mission_id", "mission_id"),
+        Index("ix_project_assumptions_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("project_missions.id", ondelete="CASCADE"), nullable=False
+    )
+    statement: Mapped[str] = mapped_column(Text, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    scope_of_use: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    risk_level: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
+    requires_confirmation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="proposed")
+    related_gap_ids_json: Mapped[list[str]] = mapped_column("related_gap_ids", JSON, default=list)
+    evidence_refs_json: Mapped[list[str]] = mapped_column("evidence_refs", JSON, default=list)
+
+    mission: Mapped[ProjectMissionORM] = relationship(back_populates="assumptions")
+
+
+class ClarifyingQuestionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "clarifying_questions"
+    __table_args__ = (
+        Index("ix_clarifying_questions_project_id", "project_id"),
+        Index("ix_clarifying_questions_mission_id", "mission_id"),
+        Index("ix_clarifying_questions_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("project_missions.id", ondelete="CASCADE"), nullable=False
+    )
+    knowledge_gap_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("knowledge_gaps.id", ondelete="SET NULL")
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    why_asked: Mapped[str] = mapped_column(Text, nullable=False)
+    answer_type: Mapped[str] = mapped_column(String(30), nullable=False, default="text")
+    options_json: Mapped[list[str]] = mapped_column("options", JSON, default=list)
+    priority: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
+    blocking: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    can_assume: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    suggested_assumption: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    answer_json: Mapped[object | None] = mapped_column("answer", JSON)
+    answer_source: Mapped[str | None] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="open")
+
+    mission: Mapped[ProjectMissionORM] = relationship(back_populates="clarifying_questions")
+
+
+class DesignQuestionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "design_questions"
+    __table_args__ = (
+        Index("ix_design_questions_project_id", "project_id"),
+        Index("ix_design_questions_mission_id", "mission_id"),
+        Index("ix_design_questions_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("project_missions.id", ondelete="CASCADE"), nullable=False
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    context: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    related_problem: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    constraints_json: Mapped[list[str]] = mapped_column("constraints", JSON, default=list)
+    desired_outcome: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    priority: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+
+    mission: Mapped[ProjectMissionORM] = relationship(back_populates="design_questions")
+
+
+class WorkstreamORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "workstreams"
+    __table_args__ = (
+        Index("ix_workstreams_project_id", "project_id"),
+        Index("ix_workstreams_mission_id", "mission_id"),
+        Index("ix_workstreams_lineage_id", "lineage_id"),
+        Index("ix_workstreams_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("project_missions.id", ondelete="CASCADE"), nullable=False
+    )
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    workstream_type: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    objective: Mapped[str] = mapped_column(Text, nullable=False)
+    questions_json: Mapped[list[str]] = mapped_column("questions", JSON, default=list)
+    inputs_required_json: Mapped[list[str]] = mapped_column("inputs_required", JSON, default=list)
+    activities_json: Mapped[list[str]] = mapped_column("activities", JSON, default=list)
+    outputs_json: Mapped[list[str]] = mapped_column("outputs", JSON, default=list)
+    dependencies_json: Mapped[list[str]] = mapped_column("dependencies", JSON, default=list)
+    blocking_gaps_json: Mapped[list[str]] = mapped_column("blocking_gaps", JSON, default=list)
+    priority: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
+    effort_level: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
+    recommended: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    selected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="proposed")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    mission: Mapped[ProjectMissionORM] = relationship(back_populates="workstreams")
+
+
+class DeliverablePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "deliverable_plans"
+    __table_args__ = (
+        Index("ix_deliverable_plans_project_id", "project_id"),
+        Index("ix_deliverable_plans_mission_id", "mission_id"),
+        Index("ix_deliverable_plans_lineage_id", "lineage_id"),
+        Index("ix_deliverable_plans_approval_status", "approval_status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("project_missions.id", ondelete="CASCADE"), nullable=False
+    )
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="deliverable-plan")
+    deliverables_json: Mapped[list[dict[str, object]]] = mapped_column("deliverables", JSON, default=list)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    mission: Mapped[ProjectMissionORM] = relationship(back_populates="deliverable_plans")
