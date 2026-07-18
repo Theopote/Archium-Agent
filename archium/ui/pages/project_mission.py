@@ -258,23 +258,35 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         st.info("缺少规划工作流，请从第 1 步重新开始。")
         return
 
-    plan = snapshot.deliverable_plan
-    selected_presentations = []
-    if plan is not None:
+    execution_plans = snapshot.artifact_execution_plans
+    if execution_plans:
+        st.markdown("**成果执行路由**")
+        for item in execution_plans:
+            title = item.get("deliverable_title") or item.get("deliverable_id")
+            dtype = item.get("deliverable_type", "other")
+            if item.get("supported"):
+                st.success(f"「{title}」（{dtype}）→ 可启动自动生成")
+            else:
+                message = item.get("message") or "该成果已完成规划，但当前版本尚未支持自动生成。"
+                st.warning(f"「{title}」（{dtype}）：{message}")
+
+    selected_presentations = [
+        item
+        for item in execution_plans
+        if item.get("supported") and item.get("deliverable_type") == DeliverableType.PRESENTATION.value
+    ]
+    if not selected_presentations and snapshot.deliverable_plan is not None:
         selected_presentations = [
             item
-            for item in plan.deliverables
+            for item in snapshot.deliverable_plan.deliverables
             if item.selected and item.deliverable_type == DeliverableType.PRESENTATION
         ]
+
     if not selected_presentations:
         st.info(
-            "当前成果计划未选择「汇报 / Presentation」。"
-            "规划已完成，不会自动创建 Presentation；如需汇报，请回到第 5 步勾选汇报类成果。"
+            "当前没有可自动生成的「汇报 / Presentation」成果。"
+            "非汇报成果不会静默转换成 PPT；请回到第 5 步勾选汇报类成果，或等待后续版本支持对应生成器。"
         )
-        if plan is not None:
-            other = [item.title for item in plan.deliverables if item.selected]
-            if other:
-                st.write("已选非汇报成果：" + "、".join(other))
         return
 
     try:

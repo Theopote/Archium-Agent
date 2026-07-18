@@ -62,6 +62,7 @@ class PlanningSnapshot:
     deliverable_plan: DeliverablePlan | None = None
     project_facts: list[ProjectFact] = field(default_factory=list)
     presentation_request: PresentationRequest | None = None
+    artifact_execution_plans: list[dict] = field(default_factory=list)
     readiness: ClarificationReadiness | None = None
     review_gate: str | None = None
     warnings: list[str] = field(default_factory=list)
@@ -190,6 +191,7 @@ def get_planning_snapshot(
     warnings: list[str] = []
     presentation_request = None
     review_gate = None
+    artifact_execution_plans: list[dict] = []
 
     if run is not None:
         review_gate = run.state.get("review_gate") if isinstance(run.state.get("review_gate"), str) else None
@@ -209,6 +211,12 @@ def get_planning_snapshot(
                 warnings.extend(bridge.warnings)
             except WorkflowError:
                 pass
+        raw_plans = run.state.get("artifact_execution_plans")
+        if isinstance(raw_plans, list):
+            artifact_execution_plans = [item for item in raw_plans if isinstance(item, dict)]
+        warnings.extend(
+            item for item in (run.state.get("warnings") or []) if isinstance(item, str)
+        )
 
     if resolved_mission_id is None and project_id is not None:
         project_missions = missions.list_missions_by_project(project_id)
@@ -220,6 +228,7 @@ def get_planning_snapshot(
             planning_session=planning_session,
             workflow_run=run,
             review_gate=review_gate,
+            artifact_execution_plans=artifact_execution_plans,
             warnings=warnings,
         )
 
@@ -229,6 +238,7 @@ def get_planning_snapshot(
             planning_session=planning_session,
             workflow_run=run,
             review_gate=review_gate,
+            artifact_execution_plans=artifact_execution_plans,
             warnings=warnings,
         )
 
@@ -236,6 +246,17 @@ def get_planning_snapshot(
     plan = plans[0] if plans else None
     readiness = clarification.get_readiness(resolved_mission_id)
     project_facts = FactRepository(session).list_by_project(mission.project_id)
+    workstreams = missions.list_workstreams(resolved_mission_id)
+
+    if not artifact_execution_plans and plan is not None:
+        from archium.application.deliverable_execution import DeliverableExecutionRouter
+
+        artifact_execution_plans = [
+            item.to_dict()
+            for item in DeliverableExecutionRouter().route_plan(
+                mission, plan, workstreams=workstreams
+            )
+        ]
 
     return PlanningSnapshot(
         planning_session=planning_session,
@@ -244,10 +265,11 @@ def get_planning_snapshot(
         knowledge_gaps=missions.list_knowledge_gaps(resolved_mission_id),
         assumptions=missions.list_assumptions(resolved_mission_id),
         clarifying_questions=missions.list_clarifying_questions(resolved_mission_id),
-        workstreams=missions.list_workstreams(resolved_mission_id),
+        workstreams=workstreams,
         deliverable_plan=plan,
         project_facts=project_facts,
         presentation_request=presentation_request,
+        artifact_execution_plans=artifact_execution_plans,
         readiness=readiness,
         review_gate=review_gate if isinstance(review_gate, str) else None,
         warnings=warnings,

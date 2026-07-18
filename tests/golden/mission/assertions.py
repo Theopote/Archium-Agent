@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from archium.application.deliverable_execution import ArtifactExecutionPlan
 from archium.application.mission_to_presentation_request import MissionPresentationBridge
 from archium.application.project_mission_service import MissionGenerationResult
 from archium.domain.deliverable import DeliverablePlan
@@ -22,6 +23,7 @@ def assert_mission_expectations(
     workstreams: list[Workstream],
     plan: DeliverablePlan,
     bridge: MissionPresentationBridge | None = None,
+    execution_plans: list[ArtifactExecutionPlan] | None = None,
 ) -> None:
     mission = generation.mission
     natures = {item.value for item in mission.task_natures}
@@ -146,3 +148,13 @@ def assert_mission_expectations(
         for ws in workstreams:
             if ws.selected:
                 assert ws.title not in bridge.request.required_sections
+    elif execution_plans is not None and not expectations.get("presentation_deliverable_required"):
+        # Non-PPT plans must stay typed and unsupported — never a silent PresentationRequest.
+        assert all(
+            (item.supported and item.is_presentation) or not item.supported
+            for item in execution_plans
+        )
+        non_ppt = [item for item in execution_plans if not item.is_presentation]
+        assert non_ppt
+        assert all(not item.supported for item in non_ppt)
+        assert all(item.presentation_request is None for item in non_ppt)

@@ -44,6 +44,7 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
         "workstreams": [item.model_dump(mode="json") for item in state.get("workstreams", [])],
         "deliverable_plan": plan.model_dump(mode="json") if plan is not None else None,
         "presentation_request_draft": state.get("presentation_request_draft"),
+        "artifact_execution_plans": list(state.get("artifact_execution_plans") or []),
         "require_clarification": state.get("require_clarification", True),
         "require_plan_approval": state.get("require_plan_approval", True),
         "review_gate": state.get("review_gate"),

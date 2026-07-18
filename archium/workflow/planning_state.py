@@ -37,6 +37,7 @@ class PlanningWorkflowState(TypedDict, total=False):
     workstreams: list[Workstream]
     deliverable_plan: DeliverablePlan | None
     presentation_request_draft: dict[str, Any] | None
+    artifact_execution_plans: list[dict[str, Any]]
     require_clarification: bool
     require_plan_approval: bool
     review_gate: str | None
@@ -73,6 +74,7 @@ def initial_planning_state(
         "workstreams": [],
         "deliverable_plan": None,
         "presentation_request_draft": None,
+        "artifact_execution_plans": [],
         "require_clarification": require_clarification,
         "require_plan_approval": require_plan_approval,
         "review_gate": None,

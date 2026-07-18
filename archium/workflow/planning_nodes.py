@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from archium.application.deliverable_planning_service import DeliverablePlanningService
 from archium.application.mission_clarification_service import MissionClarificationService
-from archium.application.mission_to_presentation_request import build_presentation_bridge
 from archium.application.project_mission_service import ProjectMissionService
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
@@ -342,23 +341,55 @@ class PlanningWorkflowNodes:
         return resume_state
 
     def prepare_presentation_request(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+        from archium.application.deliverable_execution import DeliverableExecutionRouter
+        from archium.application.mission_to_presentation_request import MissionPresentationBridge
+        from archium.domain.enums import DeliverableType
+
         mission = state.get("mission")
         plan = state.get("deliverable_plan")
         if mission is None:
             return {
                 "current_step": WorkflowStep.FAILED.value,
-                "errors": ["缺少任务理解，无法准备 PresentationRequest"],
+                "errors": ["缺少任务理解，无法准备成果执行计划"],
             }
-        bridge = build_presentation_bridge(
-            mission,
-            plan=plan,
-            workstreams=list(state.get("workstreams") or []),
+
+        workstreams = list(state.get("workstreams") or [])
+        router = DeliverableExecutionRouter()
+        execution_plans = (
+            router.route_plan(mission, plan, workstreams=workstreams)
+            if plan is not None
+            else []
         )
-        draft = bridge.to_draft()
+        warnings: list[str] = []
+        draft = None
+        presentation_plans = [
+            item
+            for item in execution_plans
+            if item.supported and item.deliverable_type == DeliverableType.PRESENTATION
+        ]
+        if presentation_plans:
+            chosen = presentation_plans[0]
+            assert chosen.presentation_request is not None
+            bridge = MissionPresentationBridge(
+                request=chosen.presentation_request,
+                mission_id=mission.id,
+                deliverable_id=chosen.deliverable_id,
+                warnings=list(chosen.warnings),
+            )
+            draft = bridge.to_draft()
+            warnings.extend(bridge.warnings)
+        else:
+            for item in execution_plans:
+                if not item.supported:
+                    warnings.append(f"「{item.deliverable_title}」：{item.message}")
+            if not execution_plans:
+                warnings.append("未选择任何成果；未生成 PresentationRequest。")
+
         next_state: PlanningWorkflowState = {
             "current_step": WorkflowStep.PLANNING_PREPARE_PRESENTATION.value,
             "presentation_request_draft": draft,
-            "warnings": list(bridge.warnings),
+            "artifact_execution_plans": [item.to_dict() for item in execution_plans],
+            "warnings": warnings,
         }
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state

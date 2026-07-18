@@ -169,6 +169,58 @@ def test_select_presentation_deliverable_prefers_presentation_type() -> None:
     assert warnings == []
 
 
+def test_select_presentation_deliverable_does_not_fall_back_to_report() -> None:
+    mission = _temple_mission()
+    plan = DeliverablePlan(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        deliverables=[
+            PlannedDeliverable(
+                id="del-report",
+                title="绿色低碳专项建议报告",
+                deliverable_type=DeliverableType.REPORT,
+                purpose="专项建议",
+                selected=True,
+            ),
+        ],
+    )
+    selected, warnings = select_presentation_deliverable(plan)
+    assert selected is None
+    assert warnings == []
+
+
+def test_bridge_rejects_report_only_plan() -> None:
+    mission = _temple_mission()
+    plan = DeliverablePlan(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        deliverables=[
+            PlannedDeliverable(
+                id="del-report",
+                title="绿色低碳专项建议报告",
+                deliverable_type=DeliverableType.REPORT,
+                purpose="专项建议",
+                selected=True,
+            ),
+        ],
+    )
+    with pytest.raises(WorkflowError, match="不会自动转换成 PresentationRequest"):
+        build_presentation_bridge(mission, plan=plan)
+
+
+def test_build_presentation_request_rejects_non_presentation_deliverable() -> None:
+    mission = _temple_mission()
+    report = PlannedDeliverable(
+        id="del-report",
+        title="专项报告",
+        deliverable_type=DeliverableType.REPORT,
+        purpose="报告",
+        selected=True,
+    )
+    with pytest.raises(WorkflowError, match="不能构建 PresentationRequest"):
+        build_presentation_request(mission, report)
+
+
 def test_bridge_roundtrip_draft() -> None:
     mission = _temple_mission()
     plan = DeliverablePlan(

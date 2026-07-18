@@ -5,10 +5,19 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from archium.application.deliverable_execution import (
+    ArtifactExecutionPlan,
+    DeliverableExecutionRouter,
+)
 from archium.application.deliverable_planning_service import DeliverablePlanningService
-from archium.application.mission_to_presentation_request import build_presentation_bridge
+from archium.application.mission_to_presentation_request import (
+    MissionPresentationBridge,
+    build_presentation_bridge,
+)
 from archium.application.project_mission_service import ProjectMissionService
 from archium.application.workstream_planning_service import WorkstreamPlanningService
+from archium.domain.enums import DeliverableType
+from archium.exceptions import WorkflowError
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
 from tests.fixtures.mock_mission_golden import CASE_MOCKS, make_mission_case_selector
@@ -44,11 +53,34 @@ def test_mission_golden_case(
         generation.mission.id,
         require_ready=True,
     )
-    bridge = build_presentation_bridge(
+    execution_plans: list[ArtifactExecutionPlan] = DeliverableExecutionRouter().route_plan(
         deliverable_result.mission,
-        plan=deliverable_result.plan,
+        deliverable_result.plan,
         workstreams=deliverable_result.workstreams,
     )
+    bridge: MissionPresentationBridge | None = None
+    has_presentation = any(
+        item.supported and item.deliverable_type == DeliverableType.PRESENTATION
+        for item in execution_plans
+    )
+    if has_presentation:
+        bridge = build_presentation_bridge(
+            deliverable_result.mission,
+            plan=deliverable_result.plan,
+            workstreams=deliverable_result.workstreams,
+        )
+    elif case.expectations.get("presentation_deliverable_required"):
+        pytest.fail("expected a selected presentation deliverable for bridge")
+    else:
+        with pytest.raises(
+            WorkflowError,
+            match="不会自动转换成 PresentationRequest|未找到已选中的 presentation",
+        ):
+            build_presentation_bridge(
+                deliverable_result.mission,
+                plan=deliverable_result.plan,
+                workstreams=deliverable_result.workstreams,
+            )
 
     assert_mission_expectations(
         expectations=case.expectations,
@@ -56,6 +88,7 @@ def test_mission_golden_case(
         workstreams=workstream_result.workstreams,
         plan=deliverable_result.plan,
         bridge=bridge,
+        execution_plans=execution_plans,
     )
 
 

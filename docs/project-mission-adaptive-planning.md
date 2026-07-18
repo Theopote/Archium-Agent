@@ -93,7 +93,20 @@ load_project_context → analyze_task → validate_mission
 
 ### Presentation 适配
 
-`build_presentation_request(mission, deliverable, workstreams=..., user_overrides=...)`：
+`DeliverableExecutionRouter` 按成果类型路由：
+
+| DeliverableType | 请求类型 | 当前自动生成 |
+|-----------------|----------|--------------|
+| `PRESENTATION` | `PresentationRequest` | 支持 |
+| `REPORT` / `TECHNICAL_PROPOSAL` | `ReportRequest` | 规划完成，生成未支持 |
+| `MEMO` | `MemoRequest` | 同上 |
+| `CHECKLIST` | `ChecklistRequest` | 同上 |
+| `CASE_STUDY` | `CaseStudyRequest` | 同上 |
+| `WORK_PLAN` / roadmap | `WorkPlanRequest` | 同上 |
+
+**禁止**将非 PPT 成果静默退化成 `PresentationRequest`。未支持类型显示：「该成果已完成规划，但当前版本尚未支持自动生成。」
+
+`build_presentation_request(mission, deliverable, workstreams=..., user_overrides=...)` 仅接受 `PRESENTATION`：
 
 | 来源 | → PresentationRequest |
 |------|------------------------|

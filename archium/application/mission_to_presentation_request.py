@@ -80,6 +80,11 @@ def build_presentation_request(
     They are never copied wholesale into ``required_sections`` as chapter titles;
     Storyline still decides final chapters from the Brief.
     """
+    if deliverable is not None and deliverable.deliverable_type != DeliverableType.PRESENTATION:
+        raise WorkflowError(
+            f"成果「{deliverable.title}」类型为 {deliverable.deliverable_type.value}，"
+            "不能构建 PresentationRequest。请使用 DeliverableExecutionRouter。"
+        )
     primary = deliverable
 
     title = (primary.title if primary and primary.title.strip() else mission.title).strip()
@@ -131,14 +136,42 @@ def build_presentation_bridge(
     workstreams: list[Workstream] | None = None,
     user_overrides: PresentationOverrides | None = None,
 ) -> MissionPresentationBridge:
-    """Build request and attach mission / deliverable lineage."""
+    """Build PresentationRequest only for PRESENTATION deliverables.
+
+    Non-presentation deliverables must go through :class:`DeliverableExecutionRouter`.
+    This function never silently converts REPORT/MEMO/etc. into a PPT request.
+    """
+    from archium.application.deliverable_execution import DeliverableExecutionRouter
+
     warnings: list[str] = []
     primary = deliverable
     if primary is None and plan is not None:
-        primary, pick_warnings = select_presentation_deliverable(plan, deliverable_id=deliverable_id)
-        warnings.extend(pick_warnings)
+        execution = DeliverableExecutionRouter().require_presentation_plan(
+            mission,
+            plan,
+            workstreams=workstreams,
+            deliverable_id=deliverable_id,
+            user_overrides=user_overrides,
+        )
+        assert execution.presentation_request is not None
+        return MissionPresentationBridge(
+            request=execution.presentation_request,
+            mission_id=mission.id,
+            deliverable_id=execution.deliverable_id,
+            warnings=list(execution.warnings),
+        )
     if primary is None:
-        warnings.append("未找到已选中的 presentation 成果，使用任务理解字段生成汇报请求。")
+        raise WorkflowError(
+            "未指定 presentation 成果，无法构建 PresentationRequest。"
+            "非汇报成果请使用 DeliverableExecutionRouter，禁止静默退化成 PPT。"
+        )
+    if primary.deliverable_type != DeliverableType.PRESENTATION:
+        raise WorkflowError(
+            f"成果「{primary.title}」类型为 {primary.deliverable_type.value}，"
+            "不能转换为 PresentationRequest。"
+        )
+    if not primary.selected:
+        raise WorkflowError(f"成果「{primary.title}」未选中，无法作为汇报来源")
 
     request = build_presentation_request(
         mission,
@@ -146,16 +179,10 @@ def build_presentation_bridge(
         workstreams=workstreams,
         user_overrides=user_overrides,
     )
-    # Re-run type warning path for non-presentation deliverables already handled inside build.
-    if primary is not None and primary.deliverable_type != DeliverableType.PRESENTATION:
-        warnings.append(
-            f"使用成果「{primary.title}」({primary.deliverable_type.value}) 作为汇报来源。"
-        )
-
     return MissionPresentationBridge(
         request=request,
         mission_id=mission.id,
-        deliverable_id=primary.id if primary is not None else None,
+        deliverable_id=primary.id,
         warnings=warnings,
     )
 
@@ -165,26 +192,28 @@ def select_presentation_deliverable(
     *,
     deliverable_id: str | None = None,
 ) -> tuple[PlannedDeliverable | None, list[str]]:
-    """Pick the primary presentation deliverable from an approved/selected plan."""
+    """Pick a selected PRESENTATION deliverable. Never falls back to other types."""
     warnings: list[str] = []
-    selected = plan.selected_deliverables()
     if deliverable_id:
         for item in plan.deliverables:
             if item.id == deliverable_id:
                 if not item.selected:
                     raise WorkflowError(f"成果「{item.title}」未选中，无法作为汇报来源")
+                if item.deliverable_type != DeliverableType.PRESENTATION:
+                    raise WorkflowError(
+                        f"成果「{item.title}」不是 presentation 类型，"
+                        "不能作为汇报来源（禁止静默退化成 PPT）"
+                    )
                 return item, warnings
         raise WorkflowError(f"成果 {deliverable_id} 不存在于交付计划中")
 
     presentations = [
-        item for item in selected if item.deliverable_type == DeliverableType.PRESENTATION
+        item
+        for item in plan.selected_deliverables()
+        if item.deliverable_type == DeliverableType.PRESENTATION
     ]
     if presentations:
         return presentations[0], warnings
-
-    if selected:
-        warnings.append("计划中无 presentation 类型成果，回退到首个已选成果。")
-        return selected[0], warnings
     return None, warnings
 
 
