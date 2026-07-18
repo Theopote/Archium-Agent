@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.deliverable_planning_service import DeliverablePlanningService
 from archium.application.mission_clarification_service import MissionClarificationService
+from archium.application.mission_validation_service import MissionValidationService
 from archium.application.project_mission_service import ProjectMissionService
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
@@ -17,6 +18,7 @@ from archium.domain.enums import ApprovalStatus, QuestionStatus, WorkflowStatus,
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
+    FactRepository,
     PresentationRepository,
     ProjectRepository,
     WorkflowRunRepository,
@@ -47,7 +49,9 @@ class PlanningWorkflowRuntime:
         self.presentations = PresentationRepository(session)
         self.workflow_runs = WorkflowRunRepository(session)
         self.missions = MissionRepository(session)
+        self.facts = FactRepository(session)
         self.mission_service = ProjectMissionService(session, llm, settings=settings)
+        self.mission_validator = MissionValidationService()
         self.clarification_service = MissionClarificationService(
             session, llm, settings=settings, mission_service=self.mission_service
         )
@@ -111,13 +115,29 @@ class PlanningWorkflowNodes:
                 "current_step": WorkflowStep.FAILED.value,
                 "errors": ["任务理解缺失，无法校验"],
             }
-        if not mission.task_statement.strip():
+
+        facts = self._runtime.facts.list_by_project(UUID(state["project_id"]))
+        report = self._runtime.mission_validator.validate(
+            mission,
+            knowledge_gaps=list(state.get("knowledge_gaps") or []),
+            clarifying_questions=list(state.get("clarifying_questions") or []),
+            facts=facts,
+        )
+        if not report.ok:
             return {
                 "current_step": WorkflowStep.FAILED.value,
-                "errors": ["任务陈述为空"],
+                "errors": list(report.errors),
+                "warnings": list(report.warnings) + list(report.suggestions),
+                "mission_validation": report.to_dict(),
             }
+
+        notice = list(report.warnings)
+        if report.suggestions:
+            notice.extend(report.suggestions)
         next_state: PlanningWorkflowState = {
             "current_step": WorkflowStep.PLANNING_VALIDATE_MISSION.value,
+            "warnings": notice,
+            "mission_validation": report.to_dict(),
         }
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state

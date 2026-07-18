@@ -50,6 +50,7 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
         "review_gate": state.get("review_gate"),
         "errors": list(state.get("errors", [])),
         "warnings": list(state.get("warnings", [])),
+        "mission_validation": state.get("mission_validation"),
     }
 
 

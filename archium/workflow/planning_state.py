@@ -44,6 +44,7 @@ class PlanningWorkflowState(TypedDict, total=False):
     current_step: str
     errors: Annotated[list[str], operator.add]
     warnings: Annotated[list[str], operator.add]
+    mission_validation: dict[str, Any] | None
 
 
 def initial_planning_state(
@@ -81,4 +82,5 @@ def initial_planning_state(
         "current_step": WorkflowStep.INIT.value,
         "errors": [],
         "warnings": [],
+        "mission_validation": None,
     }

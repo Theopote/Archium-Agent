@@ -72,7 +72,7 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 |----|------|------|
 | Domain | `archium/domain/project_mission.py` 等 | Mission / Gap / Assumption / Question / Workstream / Deliverable |
 | Persistence | `mission_mappers.py` / `mission_repositories.py` / Alembic `008` | 7 张表 + cascade |
-| Application | `project_mission_service.py`、`mission_clarification_service.py`、`workstream_planning_service.py`、`deliverable_planning_service.py`、`mission_to_presentation_request.py`、`planning_workflow_service.py` | 生成、澄清、规划、适配、工作流门面 |
+| Application | `project_mission_service.py`、`mission_parser.py`、`mission_validation_service.py`、`mission_clarification_service.py`、`workstream_planning_service.py`、`deliverable_planning_service.py`、`mission_to_presentation_request.py`、`planning_workflow_service.py` | 生成、解析、专业一致性校验、澄清、规划、适配、工作流门面 |
 | Workflow | `planning_state.py` / `planning_nodes.py` / `planning_graph.py` | LangGraph + interrupt/resume |
 | UI | `pages/project_mission.py` + `*_panel.py` + `planning_service.py` | 六步工作台 |
 | Tests | `tests/unit/test_*mission*`、`tests/integration/test_planning_workflow.py`、`tests/golden/mission/` | 单元 / 闸门 / Golden M1–M6 |
@@ -87,6 +87,7 @@ load_project_context → analyze_task → validate_mission
   → prepare_presentation_request → finalize
 ```
 
+- **职责分离**：`mission_parser` 负责 LLM draft → domain model（含事实账本防编造）；`MissionValidationService` 负责 domain model → 专业一致性（task_natures、scope 冲突、blocking gap、置信度与未知矛盾、专项咨询误判完整设计等）。`validate_mission` 节点调用后者，`errors` 失败流程，`warnings`/`suggestions` 写入状态。
 - Checkpoint：复用 `WorkflowCheckpointerManager`（SQLite）。
 - **`PlanningSession`** 是规划主键；`WorkflowRun.presentation_id` **可空**，规划启动时**不**创建 Presentation。
 - 仅当用户批准并启动已选 `PRESENTATION` 成果时，才由汇报管线创建真正的 Presentation，并写回 `PlanningSession.presentation_id`。
