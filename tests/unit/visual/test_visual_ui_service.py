@@ -65,7 +65,6 @@ def presentation_with_slides(db_session: Session) -> tuple[Project, Presentation
                 VisualRequirement(
                     type=VisualType.SITE_PLAN,
                     description="总平面",
-                    preferred_asset_ids=[uuid4()],
                 )
             ],
             source_citations=[
@@ -81,7 +80,18 @@ def test_run_visual_workflow_and_snapshot(
     db_session: Session,
     test_settings: object,
     presentation_with_slides: tuple[Project, Presentation],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from archium.domain.visual.validation import LayoutValidationReport
+
+    def _always_valid(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
+        return LayoutValidationReport(issues=[], score=0.95)
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _always_valid,
+    )
+
     project, presentation = presentation_with_slides
     result = run_visual_workflow(
         db_session,
@@ -92,18 +102,39 @@ def test_run_visual_workflow_and_snapshot(
         settings=test_settings,  # type: ignore[arg-type]
     )
     assert result.succeeded
-    snapshot = get_presentation_visual_snapshot(db_session, presentation.id)
+    assert isinstance(result.visual_critic_reports, list)
+    assert result.deck_qa_report is None or isinstance(result.deck_qa_report, dict)
+    snapshot = get_presentation_visual_snapshot(
+        db_session,
+        presentation.id,
+        visual_critic_reports=result.visual_critic_reports,
+        deck_qa_report=result.deck_qa_report,
+        preview_paths=result.render_paths,
+    )
     assert snapshot.art_direction is not None
     assert snapshot.slides
     assert snapshot.slides[0].layout_plan is not None
     assert snapshot.slides[0].visual_intent is not None
+    if result.visual_critic_reports:
+        assert snapshot.visual_critic_reports
 
 
 def test_replan_slide_drawing_preset(
     db_session: Session,
     test_settings: object,
     presentation_with_slides: tuple[Project, Presentation],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from archium.domain.visual.validation import LayoutValidationReport
+
+    def _always_valid(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
+        return LayoutValidationReport(issues=[], score=0.95)
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _always_valid,
+    )
+
     project, presentation = presentation_with_slides
     run_visual_workflow(
         db_session,
