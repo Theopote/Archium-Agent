@@ -6,14 +6,17 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from archium.application.automated_review_service import AutomatedReviewService, critical_export_block_messages
+from archium.application.automated_review_service import (
+    AutomatedReviewService,
+    critical_export_block_messages,
+)
 from archium.application.visual_qa_service import VisualQAService
 from archium.config.settings import Settings
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType, ProjectType, ReviewSeverity, VisualType
-from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
+from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import (
     AssetRepository,
@@ -270,7 +273,7 @@ class TestVisualQAService:
             presentation.id,
             [slide],
         )
-        layout_issues = AutomatedReviewService(
+        AutomatedReviewService(
             db_session,
             settings=settings,
         ).run_layout_review(

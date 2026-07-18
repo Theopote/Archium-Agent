@@ -15,7 +15,7 @@ from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, Vi
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.domain.visual_qa import VisualQAReport, VisualQACheck
+from archium.domain.visual_qa import VisualQACheck, VisualQAReport
 from archium.infrastructure.database.repositories import AssetRepository, VisualQAReportRepository
 from archium.infrastructure.vision.analyzer import analyze_image
 from archium.infrastructure.vision.analyzer_version import ANALYZER_VERSION

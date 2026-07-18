@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from uuid import UUID
 
 from archium.application.slide_repair_policy import contains_protected_signal
 from archium.domain.presentation import Storyline

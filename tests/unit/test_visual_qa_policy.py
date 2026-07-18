@@ -38,6 +38,8 @@ def test_decide_check_issue_emits_suspected_in_mid_band() -> None:
         check,
         rule_code=ReviewRuleCode.VISUAL_EXCESSIVE_MARGINS,
     )
+    assert decision.emit is True
+    assert decision.requires_confirmation is True
 
 
 def test_decide_check_issue_suppresses_low_confidence() -> None:

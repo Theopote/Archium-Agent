@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 from archium.application.visual_qa_calibration import (
-    DEFAULT_MANIFEST_PATH,
     corpus_progress,
     load_manifest,
     run_calibration,

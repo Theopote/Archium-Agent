@@ -95,7 +95,7 @@ class TestVisualQACalibrationMetrics:
         codes = formal_emit_rule_codes(missing)
         assert ReviewRuleCode.VISUAL_DIMENSIONS_TOO_SMALL in codes
         assert ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW not in codes
-        assert ALWAYS_FORMAL_RULE_CODES <= codes
+        assert codes >= ALWAYS_FORMAL_RULE_CODES
         assert codes == formal_emit_rule_codes(missing)
 
     def test_formal_emit_reads_calibration_report(self, tmp_path: Path) -> None:
@@ -132,9 +132,9 @@ class TestVisualQACalibrationMetrics:
         assert PRECISION_TARGETS[ReviewRuleCode.VISUAL_MISSING_LEGEND] == 0.80
         assert PRECISION_TARGETS[ReviewRuleCode.VISUAL_CONTENT_CLIPPED] == 0.75
         assert PRECISION_TARGETS[ReviewRuleCode.VISUAL_HIGH_TEXT_DENSITY] == 0.75
-        assert DEFAULT_FORMAL_EMIT_RULE_CODES == ALWAYS_FORMAL_RULE_CODES | {
+        assert ALWAYS_FORMAL_RULE_CODES | {
             ReviewRuleCode.VISUAL_DIMENSIONS_TOO_SMALL
-        }
+        } == DEFAULT_FORMAL_EMIT_RULE_CODES
 
     def test_load_manifest_requires_samples(self, tmp_path: Path) -> None:
         bad = tmp_path / "bad.json"

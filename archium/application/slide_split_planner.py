@@ -13,6 +13,7 @@ from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan, citation_key
 from archium.infrastructure.llm.base import LLMProvider
+
 _STRATEGY_RE = re.compile(r"(?:策略|方案|措施|步骤|举措|路径)")
 _PROBLEM_RE = re.compile(r"(?:问题|原因|现状|挑战|痛点|制约)")
 

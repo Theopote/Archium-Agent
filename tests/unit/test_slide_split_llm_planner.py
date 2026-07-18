@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-import pytest
 from archium.application.slide_split_llm_planner import (
     plan_from_llm_draft,
     try_build_llm_split_plan,
@@ -16,7 +15,7 @@ from archium.domain.citation import Citation
 from archium.domain.enums import SlideStatus, SlideType, VisualType
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.infrastructure.llm import LLMRequest, MockLLMProvider
+from archium.infrastructure.llm import MockLLMProvider
 from archium.infrastructure.llm.presentation_schemas import SlideSplitDraft, SlideSplitPageDraft
 
 from tests.fixtures.mock_llm import pipeline_mock_selector
@@ -241,7 +240,6 @@ class TestLlmSplitPlanner:
 
     def test_choose_split_plan_prefers_rule_when_llm_needs_approval(self) -> None:
         from archium.application.slide_split_llm_planner import choose_split_plan
-        from archium.domain.slide_split import SlideSplitPlan
 
         slide = _traffic_slide()
         rule_plan = build_split_plan(

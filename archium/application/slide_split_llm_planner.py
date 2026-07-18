@@ -11,12 +11,11 @@ from archium.application.slide_split_planner import (
     _allocate_citations,
     _allocate_visuals,
 )
-from archium.domain.slide_split import citation_key
 from archium.application.slide_split_validator import validate_split_plan
 from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
-from archium.domain.slide_split import SlideSplitPlan
+from archium.domain.slide_split import SlideSplitPlan, citation_key
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import SlideSplitDraft
 from archium.logging import get_logger

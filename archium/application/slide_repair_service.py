@@ -7,8 +7,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents._helpers import sanitize_slide_message
-from archium.application.slide_diff import slide_to_snapshot
 from archium.application.asset_matching_service import AssetMatchingService
+from archium.application.slide_diff import slide_to_snapshot
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_repair_policy import (
     apply_tiered_layout_repair,

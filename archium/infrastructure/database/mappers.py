@@ -40,9 +40,9 @@ from archium.domain.presentation import (
 )
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
-from archium.domain.visual_qa import VisualQAReport
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logical_key
+from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
     AssetORM,

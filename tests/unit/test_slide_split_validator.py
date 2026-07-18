@@ -7,11 +7,10 @@ from uuid import uuid4
 from archium.application.slide_split_planner import build_split_plan
 from archium.application.slide_split_validator import validate_split_plan
 from archium.domain.citation import Citation
-from archium.domain.enums import SlideStatus, SlideType
+from archium.domain.enums import SlideStatus, SlideType, VisualType
 from archium.domain.presentation import Chapter, Storyline
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan
-from archium.domain.enums import VisualType
 
 
 def _slide(**overrides: object) -> SlideSpec:
@@ -167,6 +166,9 @@ class TestSlideSplitValidator:
             storyline=_storyline(),
             chapter_slide_count=3,
         )
+
+        assert set(plan.asset_mapping.keys()) == set(range(len(original.visual_requirements)))
+        assert not any("视觉素材" in issue for issue in plan.validation_issues)
 
     def test_citation_stays_on_source_when_evidence_did_not_move(self) -> None:
         original = _slide(
