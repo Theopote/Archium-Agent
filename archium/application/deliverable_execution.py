@@ -184,6 +184,12 @@ _TYPE_TO_KIND: dict[DeliverableType, ArtifactRequestKind] = {
 _SUPPORTED_KINDS = frozenset({"presentation", "question_list", "work_plan"})
 
 
+def supports_auto_generation(deliverable_type: DeliverableType) -> bool:
+    """Return True when this deliverable type can be auto-generated today."""
+    kind = _TYPE_TO_KIND.get(deliverable_type, "other")
+    return kind in _SUPPORTED_KINDS
+
+
 class DeliverableExecutionRouter:
     """Map each planned deliverable to a typed execution plan."""
 
@@ -213,7 +219,7 @@ class DeliverableExecutionRouter:
                 presentation_request=request,
             )
 
-        supported = kind in _SUPPORTED_KINDS
+        supported = supports_auto_generation(deliverable.deliverable_type)
         plan = ArtifactExecutionPlan(
             mission_id=mission.id,
             deliverable_id=deliverable.id,

@@ -8,6 +8,7 @@ import pytest
 from archium.application.deliverable_execution import (
     UNSUPPORTED_GENERATION_MESSAGE,
     DeliverableExecutionRouter,
+    supports_auto_generation,
 )
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import DeliverableType, TaskNature
@@ -173,3 +174,22 @@ def test_route_plan_mixed_selection() -> None:
     assert by_id["del-report"].supported is False
     assert by_id["del-ppt"].supported is True
     assert "del-memo" not in by_id
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (DeliverableType.PRESENTATION, True),
+        (DeliverableType.QUESTION_LIST, True),
+        (DeliverableType.WORK_PLAN, True),
+        (DeliverableType.IMPLEMENTATION_ROADMAP, True),
+        (DeliverableType.REPORT, False),
+        (DeliverableType.MEMO, False),
+        (DeliverableType.CHECKLIST, False),
+        (DeliverableType.CASE_STUDY, False),
+        (DeliverableType.RISK_REGISTER, False),
+        (DeliverableType.OTHER, False),
+    ],
+)
+def test_supports_auto_generation(dtype: DeliverableType, expected: bool) -> None:
+    assert supports_auto_generation(dtype) is expected
