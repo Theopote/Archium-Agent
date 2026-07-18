@@ -1,16 +1,8 @@
 {
-  "created_at": "2026-07-18T11:09:45.591356Z",
-  "updated_at": "2026-07-18T11:09:45.591356Z",
-  "version": 1,
-  "id": "bf116aad-9672-419b-958c-b224e945a060",
-  "schema_version": 1,
-  "slide_id": "5a8f4d2b-e65c-4480-b3bf-b7173bb31408",
   "layout_family": "drawing_focus",
   "layout_variant": "drawing_with_metrics",
   "page_width": 10.0,
   "page_height": 5.625,
-  "grid_columns": 12,
-  "grid_rows": null,
   "hero_element_id": "hero",
   "reading_order": [
     "title",
@@ -19,151 +11,63 @@
     "caption",
     "source"
   ],
-  "whitespace_ratio": 0.39285432098765416,
   "balance_strategy": "drawing_dominant",
-  "overflow_policy": "warn",
+  "whitespace_ratio": 0.3929,
   "elements": [
     {
-      "id": "title",
-      "role": "title",
+      "id": "caption",
+      "role": "caption",
       "content_type": "text",
-      "content_ref": null,
-      "text_content": "总体规划与空间结构",
       "x": 0.7,
-      "y": 0.45,
-      "width": 8.600000000000001,
-      "height": 0.5,
-      "z_index": 0,
-      "alignment": "left",
-      "style_token": "title",
+      "y": 4.283,
+      "w": 5.59,
+      "h": 0.28,
       "fit_mode": null,
-      "crop_policy": null,
-      "min_width": null,
-      "min_height": null,
-      "max_width": null,
-      "max_height": null,
-      "locked": false
+      "crop_policy": null
     },
     {
       "id": "hero",
       "role": "hero_visual",
       "content_type": "drawing",
-      "content_ref": "19bb77df-cd32-4355-9e8f-348060946ba4",
-      "text_content": null,
       "x": 0.7,
-      "y": 1.0333333333333332,
-      "width": 6.072000000000001,
-      "height": 3.2083333333333335,
-      "z_index": 0,
-      "alignment": "left",
-      "style_token": "drawing",
+      "y": 1.033,
+      "w": 6.072,
+      "h": 3.208,
       "fit_mode": "contain",
-      "crop_policy": "forbidden",
-      "min_width": null,
-      "min_height": null,
-      "max_width": null,
-      "max_height": null,
-      "locked": true
+      "crop_policy": "forbidden"
     },
     {
       "id": "metric_0",
       "role": "metric",
       "content_type": "metric",
-      "content_ref": null,
-      "text_content": "绿地率 42%",
-      "x": 6.938666666666668,
-      "y": 1.0333333333333332,
-      "width": 2.3613333333333344,
-      "height": 3.2083333333333335,
-      "z_index": 0,
-      "alignment": "left",
-      "style_token": "metric",
+      "x": 6.939,
+      "y": 1.033,
+      "w": 2.361,
+      "h": 3.208,
       "fit_mode": null,
-      "crop_policy": null,
-      "min_width": null,
-      "min_height": null,
-      "max_width": null,
-      "max_height": null,
-      "locked": false
-    },
-    {
-      "id": "caption",
-      "role": "caption",
-      "content_type": "text",
-      "content_ref": null,
-      "text_content": "总平面确立院落轴线与核心公服节点。",
-      "x": 0.7,
-      "y": 4.283333333333334,
-      "width": 5.590000000000001,
-      "height": 0.28,
-      "z_index": 0,
-      "alignment": "left",
-      "style_token": "caption",
-      "fit_mode": null,
-      "crop_policy": null,
-      "min_width": null,
-      "min_height": null,
-      "max_width": null,
-      "max_height": null,
-      "locked": false
+      "crop_policy": null
     },
     {
       "id": "source",
       "role": "source",
       "content_type": "text",
-      "content_ref": null,
-      "text_content": "总体规划说明书.pdf p.12",
       "x": 0.7,
       "y": 4.605,
-      "width": 5.590000000000001,
-      "height": 0.22,
-      "z_index": 0,
-      "alignment": "left",
-      "style_token": "source",
+      "w": 5.59,
+      "h": 0.22,
       "fit_mode": null,
-      "crop_policy": null,
-      "min_width": null,
-      "min_height": null,
-      "max_width": null,
-      "max_height": null,
-      "locked": false
-    }
-  ],
-  "constraints": [
-    {
-      "constraint_type": "contain_within_safe_area",
-      "element_ids": [
-        "title",
-        "hero",
-        "metric_0",
-        "caption",
-        "source"
-      ],
-      "value": null,
-      "priority": "required"
+      "crop_policy": null
     },
     {
-      "constraint_type": "preserve_aspect_ratio",
-      "element_ids": [
-        "hero"
-      ],
-      "value": null,
-      "priority": "required"
-    },
-    {
-      "constraint_type": "no_overlap",
-      "element_ids": [
-        "title",
-        "hero",
-        "metric_0",
-        "caption",
-        "source"
-      ],
-      "value": null,
-      "priority": "required"
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.5,
+      "fit_mode": null,
+      "crop_policy": null
     }
-  ],
-  "design_system_id": "61c576e0-45c5-47ff-975d-7bbdffe80132",
-  "visual_intent_id": "2d5c9a56-355c-48be-ba45-ff17815a6c85",
-  "validation_status": "pending"
+  ]
 }

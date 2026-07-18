@@ -64,9 +64,12 @@ _CONTENT_FAMILY_PRESETS: dict[VisualContentType, list[LayoutFamily]] = {
     ],
     VisualContentType.ANALYTICAL_DIAGRAM: [
         LayoutFamily.ANALYTICAL_DIAGRAM,
-        LayoutFamily.EVIDENCE_BOARD,
+        LayoutFamily.DRAWING_FOCUS,
     ],
-    VisualContentType.PROCESS: [LayoutFamily.PROCESS_NARRATIVE],
+    VisualContentType.PROCESS: [
+        LayoutFamily.PROCESS_NARRATIVE,
+        LayoutFamily.STRATEGY_CARDS,
+    ],
     VisualContentType.MIXED: [
         LayoutFamily.HYBRID_CANVAS,
         LayoutFamily.STRATEGY_CARDS,

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout import LayoutPlan
+from archium.infrastructure.layout.generators.analytical_diagram import (
+    AnalyticalDiagramLayoutGenerator,
+)
 from archium.infrastructure.layout.generators.base import LayoutGenerator, LayoutGeneratorContext
 from archium.infrastructure.layout.generators.comparative_matrix import (
     ComparativeMatrixLayoutGenerator,
@@ -11,6 +14,13 @@ from archium.infrastructure.layout.generators.comparative_matrix import (
 from archium.infrastructure.layout.generators.drawing_focus import DrawingFocusLayoutGenerator
 from archium.infrastructure.layout.generators.evidence_board import EvidenceBoardLayoutGenerator
 from archium.infrastructure.layout.generators.hero import HeroLayoutGenerator
+from archium.infrastructure.layout.generators.hybrid_canvas import HybridCanvasLayoutGenerator
+from archium.infrastructure.layout.generators.metric_dashboard import (
+    MetricDashboardLayoutGenerator,
+)
+from archium.infrastructure.layout.generators.process_narrative import (
+    ProcessNarrativeLayoutGenerator,
+)
 from archium.infrastructure.layout.generators.strategy_cards import StrategyCardsLayoutGenerator
 from archium.infrastructure.layout.generators.textual_argument import (
     TextualArgumentLayoutGenerator,
@@ -26,8 +36,12 @@ class LayoutSolver:
             LayoutFamily.EVIDENCE_BOARD: EvidenceBoardLayoutGenerator(),
             LayoutFamily.DRAWING_FOCUS: DrawingFocusLayoutGenerator(),
             LayoutFamily.COMPARATIVE_MATRIX: ComparativeMatrixLayoutGenerator(),
+            LayoutFamily.PROCESS_NARRATIVE: ProcessNarrativeLayoutGenerator(),
+            LayoutFamily.ANALYTICAL_DIAGRAM: AnalyticalDiagramLayoutGenerator(),
+            LayoutFamily.METRIC_DASHBOARD: MetricDashboardLayoutGenerator(),
             LayoutFamily.STRATEGY_CARDS: StrategyCardsLayoutGenerator(),
             LayoutFamily.TEXTUAL_ARGUMENT: TextualArgumentLayoutGenerator(),
+            LayoutFamily.HYBRID_CANVAS: HybridCanvasLayoutGenerator(),
         }
 
     def supported_families(self) -> list[LayoutFamily]:

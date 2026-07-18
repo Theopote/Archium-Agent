@@ -12,14 +12,14 @@
 | `evidence_board` | 现场问题 / 证据网格 | ✅ |
 | `drawing_focus` | 总平面 / 平面 / 剖面 | ✅ |
 | `comparative_matrix` | 案例比较 / 前后对比 | ✅ |
+| `process_narrative` | 过程 / 分期路径 | ✅ |
+| `analytical_diagram` | 分析图 + callout | ✅ |
+| `metric_dashboard` | 指标看板 | ✅ |
 | `strategy_cards` | 策略卡片 | ✅ |
 | `textual_argument` | 文字论述 | ✅ |
-| `process_narrative` | 过程叙事 | 注册，未实现 generator |
-| `analytical_diagram` | 分析图 | 注册，未实现 generator |
-| `metric_dashboard` | 指标看板 | 注册，未实现 generator |
-| `hybrid_canvas` | 混合画布 | 注册，未实现 generator |
+| `hybrid_canvas` | 图文混合分栏 | ✅ |
 
-Solver：`LayoutSolver` 仅对已注册 generator 的族生成计划；其余族不会被选为可执行候选（除非后续补齐）。
+Solver：`LayoutSolver` 已对 **全部 10 个** LayoutFamily 注册确定性 generator。`hybrid_canvas` 仍是确定性分栏，**不是** LLM 自由坐标。
 
 ## 变体示例
 

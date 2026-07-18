@@ -28,7 +28,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | ArtDirection（生成 / 审核 / 再生） | ✅ |
 | VisualIntent（规则 / LLM） | ✅ |
 | LayoutFamily Registry（10 族） | ✅ |
-| LayoutPlan generators（6 个） | ✅ |
+| LayoutPlan generators（10 个） | ✅ |
 | LayoutValidator + 候选评分 | ✅ |
 | Visual Workflow（可暂停 / 可恢复） | ✅ |
 | 视觉设计 UI | ✅ |

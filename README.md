@@ -487,7 +487,7 @@ Copyright (c) 2026 Theopote and Archium contributors
 - 驳回后可一键重新生成 Brief、Storyline 或 Slide 计划
 - Marp 仍作为预览/降级路径
 - PPTX / PDF 导出依赖 Marp CLI；原生元素 PPTX 需 Node.js 并在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`
-- Round 1 视觉编排尚未覆盖：完整视觉语言模型审核、复杂约束求解、自动效果图生成、剩余 4 个 LayoutFamily generator
+- Round 1 视觉编排尚未覆盖：完整视觉语言模型审核、复杂约束求解、自动效果图生成；LayoutPlan PPTX 截图级回归仍待加强（现有 smoke + composition JSON fingerprint）
 - 文件整理为实验性遗留功能
 
 ## 开发路线图

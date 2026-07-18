@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -14,10 +16,12 @@ from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual import (
     LayoutFamily,
+    LayoutPlan,
     VisualContentType,
     default_presentation_design_system,
 )
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutElementRole
+from archium.domain.visual.validation import LayoutValidationReport
 from archium.infrastructure.layout.generators.base import (
     LayoutGeneratorContext,
     content_from_slide,
@@ -26,17 +30,82 @@ from archium.infrastructure.layout.layout_solver import LayoutSolver
 
 GOLDEN_ROOT = Path(__file__).resolve().parent
 DOCUMENT_ID = UUID("11111111-1111-1111-1111-111111111111")
+UPDATE_ENV = "UPDATE_VISUAL_COMPOSITION_GOLDENS"
 
 
-def _write_baseline(case_dir: Path, plan_json: dict[str, object], report_json: dict[str, object]) -> None:
+def _fingerprint_plan(plan: LayoutPlan) -> dict[str, Any]:
+    """Stable geometry fingerprint — strips volatile UUIDs/timestamps."""
+    elements = []
+    for element in sorted(plan.elements, key=lambda el: el.id):
+        elements.append(
+            {
+                "id": element.id,
+                "role": element.role.value,
+                "content_type": element.content_type.value,
+                "x": round(element.x, 3),
+                "y": round(element.y, 3),
+                "w": round(element.width, 3),
+                "h": round(element.height, 3),
+                "fit_mode": element.fit_mode.value if element.fit_mode else None,
+                "crop_policy": element.crop_policy.value if element.crop_policy else None,
+            }
+        )
+    return {
+        "layout_family": plan.layout_family.value,
+        "layout_variant": plan.layout_variant,
+        "page_width": plan.page_width,
+        "page_height": plan.page_height,
+        "hero_element_id": plan.hero_element_id,
+        "reading_order": list(plan.reading_order),
+        "balance_strategy": plan.balance_strategy,
+        "whitespace_ratio": round(plan.whitespace_ratio, 4),
+        "elements": elements,
+    }
+
+
+def _fingerprint_report(report: LayoutValidationReport) -> dict[str, Any]:
+    return {
+        "valid": report.valid,
+        "score": round(report.score, 4),
+        "has_critical": report.has_critical(),
+        "rule_codes": sorted({issue.rule_code for issue in report.issues}),
+    }
+
+
+def _assert_or_update_baseline(
+    case_dir: Path,
+    *,
+    plan: LayoutPlan,
+    report: LayoutValidationReport,
+) -> None:
     case_dir.mkdir(parents=True, exist_ok=True)
-    (case_dir / "layout_plan.json").write_text(
-        json.dumps(plan_json, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    plan_fp = _fingerprint_plan(plan)
+    report_fp = _fingerprint_report(report)
+    plan_path = case_dir / "layout_plan.json"
+    report_path = case_dir / "validation_report.json"
+
+    if os.environ.get(UPDATE_ENV) == "1":
+        plan_path.write_text(
+            json.dumps(plan_fp, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        report_path.write_text(
+            json.dumps(report_fp, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return
+
+    assert plan_path.exists(), f"Missing golden baseline: {plan_path}"
+    assert report_path.exists(), f"Missing golden baseline: {report_path}"
+    expected_plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    expected_report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert plan_fp == expected_plan, (
+        f"LayoutPlan fingerprint drift in {case_dir.name}. "
+        f"Re-run with {UPDATE_ENV}=1 after intentional changes."
     )
-    (case_dir / "validation_report.json").write_text(
-        json.dumps(report_json, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    assert report_fp == expected_report, (
+        f"Validation fingerprint drift in {case_dir.name}. "
+        f"Re-run with {UPDATE_ENV}=1 after intentional changes."
     )
 
 
@@ -70,10 +139,18 @@ def test_v1_drawing_focus_site_plan(intent_service: VisualIntentService) -> None
         message="总平面确立院落轴线与核心公服节点。",
         key_points=["绿地率 42%", "容积率 1.8", "公服半径 500m", "轴线贯通", "开放院落"],
         visual_requirements=[
-            VisualRequirement(type=VisualType.SITE_PLAN, description="总平面图", preferred_asset_ids=[uuid4()])
+            VisualRequirement(
+                type=VisualType.SITE_PLAN,
+                description="总平面图",
+                preferred_asset_ids=[uuid4()],
+            )
         ],
         source_citations=[
-            Citation(document_id=DOCUMENT_ID, document_name="总体规划说明书.pdf", page_number=12)
+            Citation(
+                document_id=DOCUMENT_ID,
+                document_name="总体规划说明书.pdf",
+                page_number=12,
+            )
         ],
     )
     intent = intent_service.generate_for_slide(slide, use_llm=False)
@@ -101,14 +178,7 @@ def test_v1_drawing_focus_site_plan(intent_service: VisualIntentService) -> None
     assert plan.elements_by_role(LayoutElementRole.SOURCE)
     assert plan.elements_by_role(LayoutElementRole.TITLE)
     assert not report.has_critical()
-
-    case_dir = GOLDEN_ROOT / "v1_drawing_focus"
-    _write_baseline(
-        case_dir,
-        plan.model_dump(mode="json"),
-        report.model_dump(mode="json"),
-    )
-    assert (case_dir / "layout_plan.json").exists()
+    _assert_or_update_baseline(GOLDEN_ROOT / "v1_drawing_focus", plan=plan, report=report)
 
 
 def test_v2_evidence_board_photos(intent_service: VisualIntentService) -> None:
@@ -153,12 +223,7 @@ def test_v2_evidence_board_photos(intent_service: VisualIntentService) -> None:
     assert len({round(el.width, 3) for el in photos_els}) == 1
     assert plan.elements_by_role(LayoutElementRole.LEAD_STATEMENT)
     assert not report.has_critical()
-
-    _write_baseline(
-        GOLDEN_ROOT / "v2_evidence_board",
-        plan.model_dump(mode="json"),
-        report.model_dump(mode="json"),
-    )
+    _assert_or_update_baseline(GOLDEN_ROOT / "v2_evidence_board", plan=plan, report=report)
 
 
 def test_v3_comparative_matrix(intent_service: VisualIntentService) -> None:
@@ -168,18 +233,35 @@ def test_v3_comparative_matrix(intent_service: VisualIntentService) -> None:
         order=3,
         title="三个既有图书馆更新案例比较",
         message="既有图书馆更新应优先重建公共性与可达性，而非单纯扩容。",
-        key_points=["空间策略", "运营模式", "公众可达性", "案例A：中庭再生", "案例B：街道界面"],
+        key_points=[
+            "空间策略",
+            "运营模式",
+            "公众可达性",
+            "案例A：中庭再生",
+            "案例B：街道界面",
+        ],
         visual_requirements=[
-            VisualRequirement(type=VisualType.COMPARISON, description="案例比较", preferred_asset_ids=[uuid4()]),
-            VisualRequirement(type=VisualType.REFERENCE_CASE, description="案例图1", preferred_asset_ids=[uuid4()]),
-            VisualRequirement(type=VisualType.REFERENCE_CASE, description="案例图2", preferred_asset_ids=[uuid4()]),
+            VisualRequirement(
+                type=VisualType.COMPARISON,
+                description="案例比较",
+                preferred_asset_ids=[uuid4()],
+            ),
+            VisualRequirement(
+                type=VisualType.REFERENCE_CASE,
+                description="案例图1",
+                preferred_asset_ids=[uuid4()],
+            ),
+            VisualRequirement(
+                type=VisualType.REFERENCE_CASE,
+                description="案例图2",
+                preferred_asset_ids=[uuid4()],
+            ),
         ],
         source_citations=[
             Citation(document_id=DOCUMENT_ID, document_name="案例研究汇编.pdf", page_number=8)
         ],
     )
     intent = intent_service.generate_for_slide(slide, use_llm=False)
-    # Force comparison dominance for golden expectation when mixed refs exist.
     if intent.dominant_content_type != VisualContentType.COMPARISON:
         intent.dominant_content_type = VisualContentType.COMPARISON
         intent.preferred_layout_families = [LayoutFamily.COMPARATIVE_MATRIX]
@@ -202,9 +284,4 @@ def test_v3_comparative_matrix(intent_service: VisualIntentService) -> None:
     assert len({round(img.width, 3) for img in images}) == 1
     assert plan.elements_by_role(LayoutElementRole.LEAD_STATEMENT)
     assert not report.has_critical()
-
-    _write_baseline(
-        GOLDEN_ROOT / "v3_comparative_matrix",
-        plan.model_dump(mode="json"),
-        report.model_dump(mode="json"),
-    )
+    _assert_or_update_baseline(GOLDEN_ROOT / "v3_comparative_matrix", plan=plan, report=report)

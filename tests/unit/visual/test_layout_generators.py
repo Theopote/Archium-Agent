@@ -78,12 +78,19 @@ class TestLayoutFamilyRegistry:
     def test_ten_families_registered(self) -> None:
         registry = get_layout_family_registry()
         assert len(registry.all()) == 10
-        assert len(registry.implemented()) == 6
+        assert len(registry.implemented()) == 10
 
     def test_drawing_focus_candidates(self) -> None:
         registry = get_layout_family_registry()
         candidates = registry.candidates_for(VisualContentType.SITE_PLAN, asset_count=1)
         assert candidates[0].family == LayoutFamily.DRAWING_FOCUS
+
+    def test_process_and_metrics_candidates(self) -> None:
+        registry = get_layout_family_registry()
+        process = registry.candidates_for(VisualContentType.PROCESS, asset_count=0)
+        assert process[0].family == LayoutFamily.PROCESS_NARRATIVE
+        metrics = registry.candidates_for(VisualContentType.METRICS, asset_count=0)
+        assert metrics[0].family == LayoutFamily.METRIC_DASHBOARD
 
 
 class TestGenerators:
@@ -145,17 +152,78 @@ class TestGenerators:
         assert len({round(img.width, 3) for img in images}) == 1
         assert plan.elements_by_role(LayoutElementRole.LEAD_STATEMENT)
 
-    def test_all_six_generators_emit_title(self) -> None:
+    def test_process_narrative_steps(self) -> None:
+        slide = _slide(
+            title="实施路径",
+            message="分三阶段推进院区更新。",
+            key_points=["近期交通重组", "中期功能置换", "远期空间织补"],
+            visual_requirements=[
+                VisualRequirement(type=VisualType.TIMELINE, description="分期")
+            ],
+        )
+        plan = LayoutSolver().generate(
+            LayoutFamily.PROCESS_NARRATIVE,
+            _context(
+                LayoutFamily.PROCESS_NARRATIVE,
+                content_type=VisualContentType.PROCESS,
+                variant="steps_horizontal",
+                slide=slide,
+            ),
+        )
+        bodies = plan.elements_by_role(LayoutElementRole.BODY_TEXT)
+        assert len(bodies) == 3
+
+    def test_metric_dashboard_cards(self) -> None:
+        slide = _slide(
+            title="核心指标",
+            message="更新后公服可达性显著提升。",
+            key_points=["绿地率 42%", "容积率 1.8", "服务半径 500m", "床位 800"],
+            visual_requirements=[
+                VisualRequirement(type=VisualType.CHART, description="指标")
+            ],
+        )
+        plan = LayoutSolver().generate(
+            LayoutFamily.METRIC_DASHBOARD,
+            _context(
+                LayoutFamily.METRIC_DASHBOARD,
+                content_type=VisualContentType.METRICS,
+                slide=slide,
+            ),
+        )
+        assert len(plan.elements_by_role(LayoutElementRole.METRIC)) >= 3
+
+    def test_analytical_diagram_protects_aspect(self) -> None:
+        plan = LayoutSolver().generate(
+            LayoutFamily.ANALYTICAL_DIAGRAM,
+            _context(
+                LayoutFamily.ANALYTICAL_DIAGRAM,
+                content_type=VisualContentType.ANALYTICAL_DIAGRAM,
+                variant="diagram_with_callouts",
+            ),
+        )
+        hero = plan.element_by_id("hero")
+        assert hero is not None
+        assert hero.fit_mode == ImageFit.CONTAIN
+        assert hero.crop_policy == CropPolicy.FORBIDDEN
+        assert plan.elements_by_role(LayoutElementRole.ANNOTATION)
+
+    def test_all_ten_generators_emit_title(self) -> None:
         solver = LayoutSolver()
         mapping = [
             (LayoutFamily.HERO, VisualContentType.HERO_IMAGE),
             (LayoutFamily.EVIDENCE_BOARD, VisualContentType.PHOTO_EVIDENCE),
             (LayoutFamily.DRAWING_FOCUS, VisualContentType.SITE_PLAN),
             (LayoutFamily.COMPARATIVE_MATRIX, VisualContentType.COMPARISON),
+            (LayoutFamily.PROCESS_NARRATIVE, VisualContentType.PROCESS),
+            (LayoutFamily.ANALYTICAL_DIAGRAM, VisualContentType.ANALYTICAL_DIAGRAM),
+            (LayoutFamily.METRIC_DASHBOARD, VisualContentType.METRICS),
             (LayoutFamily.STRATEGY_CARDS, VisualContentType.TEXT_ARGUMENT),
             (LayoutFamily.TEXTUAL_ARGUMENT, VisualContentType.TEXT_ARGUMENT),
+            (LayoutFamily.HYBRID_CANVAS, VisualContentType.MIXED),
         ]
+        assert len(solver.supported_families()) == 10
         for family, content in mapping:
             plan = solver.generate(family, _context(family, content_type=content))
             assert plan.elements_by_role(LayoutElementRole.TITLE)
             assert plan.reading_order
+            assert plan.layout_family == family
