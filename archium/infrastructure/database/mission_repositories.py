@@ -212,6 +212,10 @@ class MissionRepository:
             _handle_error("save workstream", exc)
             raise
 
+    def get_workstream(self, workstream_id: UUID) -> Workstream | None:
+        orm = self._session.get(WorkstreamORM, workstream_id)
+        return mission_mappers.workstream_to_domain(orm) if orm else None
+
     def list_workstreams(self, mission_id: UUID) -> list[Workstream]:
         stmt = (
             select(WorkstreamORM)
