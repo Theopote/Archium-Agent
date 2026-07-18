@@ -79,6 +79,7 @@ markers = [
     "marp_smoke: Marp CLI export smoke tests",
     "migration_smoke: Alembic migration smoke tests",
     "streamlit_smoke: Streamlit startup smoke tests",
+    "calibration: Visual QA labeled corpus calibration (optional, not in default CI)",
 ]
 
 [tool.ruff]

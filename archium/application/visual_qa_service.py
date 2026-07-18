@@ -305,7 +305,8 @@ class VisualQAService:
             spec = _CHECK_ISSUE_SPECS.get(check.check_name)
             if spec is None:
                 continue
-            decision = decide_check_issue(check)
+            rule_code, title, suggestion, layer, category, base_severity = spec
+            decision = decide_check_issue(check, rule_code=rule_code)
             if not decision.emit:
                 logger.debug(
                     "Suppressing low-confidence visual QA finding %s (confidence=%.2f)",
@@ -313,7 +314,6 @@ class VisualQAService:
                     check.confidence,
                 )
                 continue
-            rule_code, title, suggestion, layer, category, base_severity = spec
             issues.append(
                 self._issue(
                     presentation_id,
@@ -399,7 +399,10 @@ class VisualQAService:
             method="drawing_classifier",
             threshold=DRAWING_TYPE_MISMATCH_MIN_CONFIDENCE,
         )
-        decision = decide_check_issue(synthetic)
+        decision = decide_check_issue(
+            synthetic,
+            rule_code=ReviewRuleCode.VISUAL_DRAWING_TYPE_MISMATCH,
+        )
         if not decision.emit:
             return []
 

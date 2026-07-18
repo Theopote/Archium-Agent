@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "description": "Visual QA calibration corpus. Add labeled samples under samples[]. See README.md.",
+  "category_targets": {
+    "site_plan": 50,
+    "floor_plan": 50,
+    "section": 30,
+    "elevation": 30,
+    "diagram": 50,
+    "photo": 50
+  },
+  "label_schema": {
+    "drawing_type": "site_plan | floor_plan | section | elevation | diagram | photo",
+    "has_north_arrow": "boolean | null (skip north_arrow metric when null)",
+    "has_legend": "boolean | null",
+    "is_low_resolution": "boolean | null",
+    "is_clipped": "boolean | null",
+    "excessive_margins": "boolean | null",
+    "high_text_density": "boolean | null",
+    "low_contrast": "boolean | null"
+  },
+  "samples": []
+}
