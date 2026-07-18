@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.planning_workflow_service import PlanningWorkflowService
+from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, WorkflowStep
 from archium.domain.project import Project
 from archium.exceptions import WorkflowError
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 from tests.fixtures.mock_deliverable_responses import TEMPLE_DELIVERABLE_PLAN_JSON
 from tests.fixtures.mock_mission_responses import (
     TEMPLE_MISSION_JSON,
+    TEMPLE_MISSION_SCOPE_CONFLICT_JSON,
     TEMPLE_REVISED_AFTER_CLARIFICATION_JSON,
 )
 from tests.fixtures.mock_workstream_responses import TEMPLE_WORKSTREAM_PLAN_JSON
@@ -265,8 +267,6 @@ def test_recoverable_validation_pauses_for_mission_correction(
     test_settings: object,
 ) -> None:
     """Professional issues must not FAILED the session — pause for correction."""
-    from archium.application.project_mission_service import MissionPatch
-    from tests.fixtures.mock_mission_responses import TEMPLE_MISSION_SCOPE_CONFLICT_JSON
 
     def selector(request: LLMRequest) -> str | None:
         prompt = request.user_prompt
@@ -296,8 +296,6 @@ def test_recoverable_validation_pauses_for_mission_correction(
     assert not validation.get("is_fatal")
 
     # User fixes scope conflict then resumes.
-    from archium.application.project_mission_service import ProjectMissionService
-
     ProjectMissionService(
         db_session,
         mock_llm,

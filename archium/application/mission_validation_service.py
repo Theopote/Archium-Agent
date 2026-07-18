@@ -507,6 +507,4 @@ def _constraint_supported_by_facts(
             return True
         if fact_value and fact_value in value:
             return True
-    if constraint.evidence_refs:
-        return True
-    return False
+    return bool(constraint.evidence_refs)

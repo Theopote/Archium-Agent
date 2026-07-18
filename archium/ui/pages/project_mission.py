@@ -117,11 +117,7 @@ def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
         st.session_state.mission_step = 1
         return
     gate = snapshot.review_gate
-    if gate == "mission_correction":
-        st.session_state.mission_step = 2
-    elif gate == "clarification":
-        st.session_state.mission_step = 2
-    elif gate == "mission_approval":
+    if gate in {"mission_correction", "clarification", "mission_approval"}:
         st.session_state.mission_step = 2
     elif gate == "plan_approval":
         st.session_state.mission_step = 4

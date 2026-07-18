@@ -21,8 +21,8 @@ from archium.domain._base import DomainModel
 from archium.domain.enums import (
     InterventionScale,
     ProjectDomain,
-    ServiceDepth,
     RevisionSource,
+    ServiceDepth,
     TaskNature,
     UncertaintyLevel,
 )
