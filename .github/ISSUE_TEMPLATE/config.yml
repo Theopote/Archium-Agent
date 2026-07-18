@@ -1,0 +1,7 @@
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Theopote/Archium-Agent/security/advisories/new
+    about: Please report security issues privately (see SECURITY.md). Do not open a public issue.
+  - name: Discussions
+    url: https://github.com/Theopote/Archium-Agent/discussions
+    about: Questions, ideas, and design discussions (enable Discussions in repo settings if not yet on).

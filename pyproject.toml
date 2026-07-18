@@ -8,14 +8,40 @@ version = "0.2.0a5"
 description = "Archium — intelligent architectural presentation production tool"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
-authors = [{ name = "Archium Team" }]
+license = { text = "MIT" }
+authors = [{ name = "Archium contributors" }]
+keywords = [
+    "architecture",
+    "presentation",
+    "llm",
+    "streamlit",
+    "langgraph",
+    "planning",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Office/Business",
+]
 dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Theopote/Archium-Agent"
+Repository = "https://github.com/Theopote/Archium-Agent"
+Issues = "https://github.com/Theopote/Archium-Agent/issues"
+Documentation = "https://github.com/Theopote/Archium-Agent/tree/main/docs"
+Changelog = "https://github.com/Theopote/Archium-Agent/releases"
 
 [project.optional-dependencies]
 ui = ["streamlit>=1.32.0", "keyring>=25.0.0", "alembic>=1.13"]

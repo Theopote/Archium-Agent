@@ -1,8 +1,12 @@
 # Archium Agent
 
 [![CI](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
 Archium（阿基姆）是一款面向建筑师、规划师、设计院和建筑事务所的**智能汇报生产工具**。
+
+本仓库以 **[MIT License](LICENSE)** 开源。欢迎 Star、Issue 与 PR——贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 它的目标不是简单地「让 AI 写一个 PPT」，而是：
 
@@ -424,6 +428,24 @@ marp --version
 - API Key 不会写入日志或代码
 - 上传文件内容不会完整记录到日志
 - 所有数据默认保存在本地
+- 使用第三方 LLM API 时，请遵守该服务商的数据与隐私条款；**不要**将未脱敏的客户机密资料发到公开 Issue
+
+## 参与贡献
+
+- 开发与 PR 流程：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- 安全漏洞私下报告：[SECURITY.md](SECURITY.md)
+- 第三方依赖许可说明：[NOTICE](NOTICE)
+
+## License
+
+本项目采用 [MIT License](LICENSE) 开源。
+
+```
+Copyright (c) 2026 Theopote and Archium contributors
+```
+
+你可以将本软件用于商业与非商业用途，前提是保留版权与许可声明。软件按「原样」提供，不附带担保。依赖包与生成产物的权属说明见 [NOTICE](NOTICE)。
 
 ## 当前限制
 
@@ -478,7 +500,3 @@ marp --version
 以下模块属于 v0.1 实验性功能，将在后续阶段移入 `legacy/` 并与主汇报流程解耦：
 
 - `file_manager.py` — AI 辅助文件整理（**CLI 中唯一会移动本地文件的路径**；执行前会展示分类方案并要求二次确认）
-
-## License
-
-Proprietary — internal use only.

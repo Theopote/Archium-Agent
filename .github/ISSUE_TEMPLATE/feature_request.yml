@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest an enhancement for Archium
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve for architects / planners?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch the desired behavior. Prefer workflow clarity over more fields.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require uploading confidential client documents to the issue
+          required: true
+        - label: I understand Archium is alpha and APIs may change
+          required: true

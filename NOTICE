@@ -1,0 +1,13 @@
+# Third-party notices
+
+Archium is released under the **MIT License** (see [LICENSE](LICENSE)).
+
+This software depends on third-party packages (Python packages via `pip`, and
+optional Node packages under `archium/infrastructure/renderers/pptxgen`). Those
+dependencies remain under their respective licenses (for example MIT, Apache-2.0,
+BSD). Installing extras such as `[full]` pulls those packages from PyPI / npm;
+review their licenses if you redistribute a bundled binary or offline wheelhouse.
+
+Generated outputs (JSON, Markdown, PPTX, PDF) produced by users from their own
+project data belong to the users / their clients, subject to their own policies
+and any terms of the LLM API provider they configure.
