@@ -1,6 +1,17 @@
 """Architectural visual composition domain models."""
 
 from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.critic import (
+    CRITIC_COLOR_CHAOS,
+    CRITIC_FOCUS_UNCLEAR,
+    CRITIC_HERO_WEAK,
+    CRITIC_MECHANICAL,
+    CRITIC_PAGE_REPETITION,
+    CRITIC_READING_ORDER_AWKWARD,
+    VisualCriticDimensions,
+    VisualCriticFinding,
+    VisualCriticReport,
+)
 from archium.domain.visual.defaults import (
     default_presentation_design_system,
     drawing_canvas_design_system,
@@ -75,6 +86,12 @@ from archium.domain.visual.validation import (
 from archium.domain.visual.visual_intent import VisualIntent
 
 __all__ = [
+    "CRITIC_COLOR_CHAOS",
+    "CRITIC_FOCUS_UNCLEAR",
+    "CRITIC_HERO_WEAK",
+    "CRITIC_MECHANICAL",
+    "CRITIC_PAGE_REPETITION",
+    "CRITIC_READING_ORDER_AWKWARD",
     "LAYOUT_DRAWING_CROPPED",
     "LAYOUT_ELEMENT_OUTSIDE_PAGE",
     "LAYOUT_ELEMENT_OUTSIDE_SAFE_AREA",
@@ -136,6 +153,9 @@ __all__ = [
     "TextStyleToken",
     "TypographySystem",
     "VisualContentType",
+    "VisualCriticDimensions",
+    "VisualCriticFinding",
+    "VisualCriticReport",
     "VisualEmphasis",
     "VisualIntent",
     "VisualPreferences",

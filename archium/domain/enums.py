@@ -516,4 +516,5 @@ class WorkflowStep(StrEnum):
     VISUAL_APPLY_SAFE_FALLBACK = "visual_apply_safe_fallback"
     VISUAL_AWAIT_LAYOUT_REVIEW = "visual_await_layout_review"
     VISUAL_RENDER = "visual_render"
+    VISUAL_CRITIQUE = "visual_critique"
     VISUAL_FINALIZE = "visual_finalize"

@@ -107,6 +107,15 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 
 下一阶段再增加 **screenshot-based Visual Critic**。候选选择与 golden `score_baseline` 均只约束 Layout Quality。
 
+### Visual Critic（heuristic_v0，只读）
+
+工作流在 `render_presentation` 之后增加 `critique_visuals`（`VISUAL_CRITIC_ENABLED`）：
+
+- 产出 `VisualCriticReport`（`score_kind: visual_quality`），与 Layout Quality Score 分离
+- 评价维度：focus / reading order / hero / color（需截图）/ mechanical / multi-page repetition
+- **不**调用 `LayoutRepairService`，**不**参与正式 PPTX 门禁
+- 结果写入 `visual_critic_reports.json` 与 workflow warnings
+
 ## 设计约束（不可违反）
 
 1. 不用「医院模板 / 校园模板」等项目类型固定套版驱动排版。

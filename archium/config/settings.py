@@ -189,6 +189,13 @@ class Settings(BaseSettings):
             "(dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type)."
         ),
     )
+    visual_critic_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, run read-only Visual Critic after visual render "
+            "(Visual Quality heuristics; never auto-repairs or blocks PPTX export)."
+        ),
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

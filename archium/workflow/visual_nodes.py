@@ -22,6 +22,7 @@ from archium.application.visual.layout_planning_service import (
 )
 from archium.application.visual.layout_repair_service import LayoutRepairService
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
@@ -76,6 +77,7 @@ class VisualWorkflowRuntime:
         )
         self.layout_validation_service = LayoutValidationService()
         self.layout_repair_service = LayoutRepairService()
+        self.visual_critic_service = VisualCriticService()
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
             settings, session=session
         )
@@ -934,6 +936,78 @@ class VisualWorkflowNodes:
         except Exception as exc:
             logger.exception("render_presentation failed: %s", exc)
             return {"errors": [str(exc)], "current_step": step}
+
+    def critique_visuals(self, state: VisualWorkflowState) -> VisualWorkflowState:
+        """Read-only Visual Critic after render — never repairs or blocks PPTX."""
+        logger = self._logger(state)
+        step = WorkflowStep.VISUAL_CRITIQUE.value
+        if state.get("errors"):
+            return {"current_step": step}
+        if not bool(getattr(self._runtime.settings, "visual_critic_enabled", True)):
+            return {"current_step": step, "visual_critic_reports": []}
+
+        try:
+            plans = []
+            for plan_id in state.get("layout_plan_ids", []):
+                plan = self._runtime.layout_plans.get(UUID(plan_id))
+                if plan is not None:
+                    plans.append(plan)
+
+            # Prefer any PNG already present in render_paths (future PPTX screenshots).
+            image_paths: dict[str, Path] = {}
+            for raw in state.get("render_paths") or []:
+                path = Path(str(raw))
+                if path.suffix.lower() == ".png" and path.is_file():
+                    # Best-effort: single shared preview maps to all plans if only one.
+                    image_paths.setdefault("shared", path)
+
+            reports = self._runtime.visual_critic_service.evaluate_deck(
+                plans,
+                image_paths=(
+                    {str(plan.id): image_paths["shared"] for plan in plans}
+                    if "shared" in image_paths and len(plans) == 1
+                    else {}
+                ),
+            )
+            payloads = [report.model_dump(mode="json") for report in reports]
+            warnings: list[str] = []
+            for report in reports:
+                for finding in report.findings:
+                    warnings.append(
+                        f"VisualCritic {finding.rule_code}: {finding.message}"
+                    )
+
+            output_dir = Path(state.get("output_dir") or ".")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            report_path = output_dir / "visual_critic_reports.json"
+            report_path.write_text(
+                json.dumps(payloads, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            render_paths = list(state.get("render_paths") or [])
+            render_paths.append(str(report_path))
+
+            next_state: VisualWorkflowState = {
+                "visual_critic_reports": payloads,
+                "render_paths": render_paths,
+                "warnings": warnings,
+                "current_step": step,
+            }
+            merged = cast(VisualWorkflowState, {**state, **next_state})
+            self._persist(merged)
+            logger.info(
+                "Visual Critic complete: %s reports (%s findings)",
+                len(payloads),
+                sum(len(r.findings) for r in reports),
+            )
+            return next_state
+        except Exception as exc:
+            # Soft-fail: critic must never fail the workflow.
+            logger.warning("critique_visuals failed (non-fatal): %s", exc)
+            return {
+                "current_step": step,
+                "warnings": [f"Visual Critic skipped: {exc}"],
+            }
 
     def finalize(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)

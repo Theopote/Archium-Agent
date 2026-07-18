@@ -34,12 +34,13 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | 视觉设计 UI | ✅ |
 | LayoutPlan → 原生 PPTX（`render-plan.mjs`） | ✅ |
 | Golden V1–V7（composition） | ✅ |
+| Visual Critic heuristic_v0（只读 Visual Quality） | ✅ 初版 |
 
 ## Round 1 明确不做
 
-自动效果图生成、复杂约束求解器、**完整 Visual Quality / screenshot Visual Critic**、拖拽式 PPT 编辑器、组织品牌模板导入等。详见任务书「非目标」。
+自动效果图生成、复杂约束求解器、**完整 LLM Visual Quality / 自动修图**、拖拽式 PPT 编辑器、组织品牌模板导入等。详见任务书「非目标」。
 
-当前评分仅为 **Layout Quality Score**（结构与规则），不评价图片语义匹配、色彩协调、多页节奏或建筑汇报气质。下一阶段再引入基于截图的 Visual Critic。
+当前 **Layout Quality Score** 只覆盖结构与规则。`heuristic_v0` Visual Critic 提供只读视觉质量提示（可无截图时走几何先验；有 PNG 时补色彩），**不**自动修复、**不**阻断 PPTX。完整 screenshot / LLM Critic 与 deck-level QA 仍在后续。
 
 ## 与旧路径的关系
 
