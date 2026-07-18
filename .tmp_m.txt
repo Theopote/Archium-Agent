@@ -1,0 +1,201 @@
+===== PAGE 26 =====
+12.3 Workflow Tests
+测试完整流程：
+任务描述
+→ Mission
+→ Questions
+→ Interrupt
+→ 用户回答
+→ Revised Mission
+→ Workstreams
+→ Deliverables
+→ Approve
+→ PresentationRequest
+测试：
+resume
+checkpointer
+用户退出后恢复
+再生成不会重复对象
+失败重试
+LLM JSON 非法处理
+12.4 Golden Scenarios
+至少增加以下 6 个确定性场景。
+Case M1：清凉寺重建
+输入：
+历史多次毁建
+当前希望新建
+面积未知
+有地方志与现场照片
+希望形成前期策划和概念汇报
+期望：
+reconstruction / historical research
+历史可信度 KnowledgeGap
+宗教使用要求问题
+重建立场问题
+不得编造面积
+推荐历史研究、案例分析、概念策略
+推荐项目任务理解和概念汇报
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+26
+
+===== PAGE 27 =====
+Case M2：大学图书馆改造
+期望：
+renovation / adaptive reuse
+功能、空间、运营、分期
+用户需求与现状诊断
+案例研究
+不停业改造问题
+推荐改造汇报与分期路线图
+Case M3：医院环境提升
+期望：
+不是自动理解为新建医院
+project diagnosis / strategy
+患者体验、流线、候诊、导视
+快速措施与中长期措施
+患者旅程 Workstream
+推荐决策汇报
+Case M4：村庄更新
+期望：
+village / urban renewal
+人口、产业、空间、居民、运营
+利益相关方复杂
+需要居民参与问题
+推荐资源盘点、居民需求、实施机制
+不直接生成固定乡村模板
+Case M5：消防站新建
+输入有明确用地、建筑面积、高度。
+期望：
+所有明确指标保留
+new build / public safety
+规范、车辆流线、训练、生活
+不产生“面积待确认”
+推荐功能策划和规范研究
+Case M6：园区绿色低碳专项建议
+期望：
+consulting / technical study
+不将其误判为完整建筑设计
+明确 out of scope：
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+27
+
+===== PAGE 28 =====
+施工图
+设备选型
+正式碳认证
+推荐目标体系、技术筛选、实施路线
+Deliverable 为专项建议报告，而不是默认 20 页方案 PPT
+十三、验收标准
+本轮完成必须满足：
+功能验收
+用户可以自由描述任意建筑任务。
+AI 能生成结构化 ProjectMission。
+AI 不依赖固定项目模板。
+信息不足时生成 KnowledgeGap。
+用户可以回答问题或接受假设。
+系统能生成动态 Workstream。
+系统能生成动态 DeliverablePlan。
+用户批准后可以进入现有 Presentation 主链。
+现有 Brief / Storyline / SlideSpec 不被破坏。
+页面刷新后状态保留。
+支持恢复中断工作流。
+专业验收
+不编造面积、用地、高度、预算和规范条件。
+不把项目类型等同于任务性质。
+不把专项咨询误判为完整建筑设计。
+设计问题能够表达条件、矛盾和目标。
+案例研究只有在有明确目的时才被推荐。
+技术专题只有在与项目目标相关时才被推荐。
+工作范围和非工作范围明确。
+关键问题优先级合理。
+未回答问题不会全部阻塞流程。
+工程验收
+Ruff 通过
+Mypy 通过
+Pytest 通过
+Coverage 不下降
+Alembic migration smoke 通过
+Streamlit startup smoke 通过
+Python 3.11 / 3.12 CI 通过
+新增模型有数据库测试
+新增工作流有 checkpointer/resume 测试
+不泄露 API Key
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+28
+

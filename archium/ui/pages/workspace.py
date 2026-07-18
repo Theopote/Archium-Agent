@@ -369,6 +369,7 @@ def render() -> None:
     _init_session_state()
     st.markdown("### 项目工作台")
     st.caption("管理项目资料，运行结构化汇报生成管线")
+    st.info("推荐先走「项目任务」：自由描述任务 → 澄清 → 工作路径 → 成果 → 再进入汇报主链。直接填 Brief 仍可作为快捷路径。")
 
     _render_create_project()
     project_id = _render_project_selector()

@@ -19,5 +19,4427 @@
     "high_text_density": "boolean | null",
     "low_contrast": "boolean | null"
   },
-  "samples": []
+  "samples": [
+    {
+      "id": "site_plan_001",
+      "path": "images/site_plan_001.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_002",
+      "path": "images/site_plan_002.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_003",
+      "path": "images/site_plan_003.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_004",
+      "path": "images/site_plan_004.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_005",
+      "path": "images/site_plan_005.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_006",
+      "path": "images/site_plan_006.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_007",
+      "path": "images/site_plan_007.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_008",
+      "path": "images/site_plan_008.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_009",
+      "path": "images/site_plan_009.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_010",
+      "path": "images/site_plan_010.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_011",
+      "path": "images/site_plan_011.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_012",
+      "path": "images/site_plan_012.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_013",
+      "path": "images/site_plan_013.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_014",
+      "path": "images/site_plan_014.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_015",
+      "path": "images/site_plan_015.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_016",
+      "path": "images/site_plan_016.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_017",
+      "path": "images/site_plan_017.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_018",
+      "path": "images/site_plan_018.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_019",
+      "path": "images/site_plan_019.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_020",
+      "path": "images/site_plan_020.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_021",
+      "path": "images/site_plan_021.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_022",
+      "path": "images/site_plan_022.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_023",
+      "path": "images/site_plan_023.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_024",
+      "path": "images/site_plan_024.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_025",
+      "path": "images/site_plan_025.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_026",
+      "path": "images/site_plan_026.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_027",
+      "path": "images/site_plan_027.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_028",
+      "path": "images/site_plan_028.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_029",
+      "path": "images/site_plan_029.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_030",
+      "path": "images/site_plan_030.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_031",
+      "path": "images/site_plan_031.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_032",
+      "path": "images/site_plan_032.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_033",
+      "path": "images/site_plan_033.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_034",
+      "path": "images/site_plan_034.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_035",
+      "path": "images/site_plan_035.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_036",
+      "path": "images/site_plan_036.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_037",
+      "path": "images/site_plan_037.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_038",
+      "path": "images/site_plan_038.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_039",
+      "path": "images/site_plan_039.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_040",
+      "path": "images/site_plan_040.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_041",
+      "path": "images/site_plan_041.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_042",
+      "path": "images/site_plan_042.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_043",
+      "path": "images/site_plan_043.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_044",
+      "path": "images/site_plan_044.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_045",
+      "path": "images/site_plan_045.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_046",
+      "path": "images/site_plan_046.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_047",
+      "path": "images/site_plan_047.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_048",
+      "path": "images/site_plan_048.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_049",
+      "path": "images/site_plan_049.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "site_plan_050",
+      "path": "images/site_plan_050.png",
+      "category": "site_plan",
+      "labels": {
+        "drawing_type": "site_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_001",
+      "path": "images/floor_plan_001.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_002",
+      "path": "images/floor_plan_002.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_003",
+      "path": "images/floor_plan_003.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_004",
+      "path": "images/floor_plan_004.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_005",
+      "path": "images/floor_plan_005.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_006",
+      "path": "images/floor_plan_006.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_007",
+      "path": "images/floor_plan_007.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_008",
+      "path": "images/floor_plan_008.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_009",
+      "path": "images/floor_plan_009.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_010",
+      "path": "images/floor_plan_010.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_011",
+      "path": "images/floor_plan_011.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_012",
+      "path": "images/floor_plan_012.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_013",
+      "path": "images/floor_plan_013.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_014",
+      "path": "images/floor_plan_014.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_015",
+      "path": "images/floor_plan_015.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_016",
+      "path": "images/floor_plan_016.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_017",
+      "path": "images/floor_plan_017.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_018",
+      "path": "images/floor_plan_018.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_019",
+      "path": "images/floor_plan_019.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_020",
+      "path": "images/floor_plan_020.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_021",
+      "path": "images/floor_plan_021.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_022",
+      "path": "images/floor_plan_022.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_023",
+      "path": "images/floor_plan_023.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_024",
+      "path": "images/floor_plan_024.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_025",
+      "path": "images/floor_plan_025.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_026",
+      "path": "images/floor_plan_026.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_027",
+      "path": "images/floor_plan_027.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_028",
+      "path": "images/floor_plan_028.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_029",
+      "path": "images/floor_plan_029.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_030",
+      "path": "images/floor_plan_030.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_031",
+      "path": "images/floor_plan_031.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_032",
+      "path": "images/floor_plan_032.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_033",
+      "path": "images/floor_plan_033.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_034",
+      "path": "images/floor_plan_034.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_035",
+      "path": "images/floor_plan_035.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_036",
+      "path": "images/floor_plan_036.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_037",
+      "path": "images/floor_plan_037.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_038",
+      "path": "images/floor_plan_038.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_039",
+      "path": "images/floor_plan_039.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_040",
+      "path": "images/floor_plan_040.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_041",
+      "path": "images/floor_plan_041.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_042",
+      "path": "images/floor_plan_042.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_043",
+      "path": "images/floor_plan_043.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": true,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_044",
+      "path": "images/floor_plan_044.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": false,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少指北针的合成总图/平面图",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_045",
+      "path": "images/floor_plan_045.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_046",
+      "path": "images/floor_plan_046.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_047",
+      "path": "images/floor_plan_047.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_048",
+      "path": "images/floor_plan_048.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_049",
+      "path": "images/floor_plan_049.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "floor_plan_050",
+      "path": "images/floor_plan_050.png",
+      "category": "floor_plan",
+      "labels": {
+        "drawing_type": "floor_plan",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_001",
+      "path": "images/section_001.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_002",
+      "path": "images/section_002.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_003",
+      "path": "images/section_003.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_004",
+      "path": "images/section_004.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_005",
+      "path": "images/section_005.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_006",
+      "path": "images/section_006.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_007",
+      "path": "images/section_007.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_008",
+      "path": "images/section_008.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_009",
+      "path": "images/section_009.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_010",
+      "path": "images/section_010.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_011",
+      "path": "images/section_011.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_012",
+      "path": "images/section_012.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_013",
+      "path": "images/section_013.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_014",
+      "path": "images/section_014.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_015",
+      "path": "images/section_015.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_016",
+      "path": "images/section_016.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_017",
+      "path": "images/section_017.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_018",
+      "path": "images/section_018.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_019",
+      "path": "images/section_019.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_020",
+      "path": "images/section_020.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_021",
+      "path": "images/section_021.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_022",
+      "path": "images/section_022.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_023",
+      "path": "images/section_023.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_024",
+      "path": "images/section_024.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_025",
+      "path": "images/section_025.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_026",
+      "path": "images/section_026.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_027",
+      "path": "images/section_027.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_028",
+      "path": "images/section_028.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_029",
+      "path": "images/section_029.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "section_030",
+      "path": "images/section_030.png",
+      "category": "section",
+      "labels": {
+        "drawing_type": "section",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_001",
+      "path": "images/elevation_001.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_002",
+      "path": "images/elevation_002.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_003",
+      "path": "images/elevation_003.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_004",
+      "path": "images/elevation_004.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_005",
+      "path": "images/elevation_005.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_006",
+      "path": "images/elevation_006.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_007",
+      "path": "images/elevation_007.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_008",
+      "path": "images/elevation_008.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_009",
+      "path": "images/elevation_009.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_010",
+      "path": "images/elevation_010.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_011",
+      "path": "images/elevation_011.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_012",
+      "path": "images/elevation_012.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_013",
+      "path": "images/elevation_013.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_014",
+      "path": "images/elevation_014.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_015",
+      "path": "images/elevation_015.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_016",
+      "path": "images/elevation_016.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_017",
+      "path": "images/elevation_017.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_018",
+      "path": "images/elevation_018.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_019",
+      "path": "images/elevation_019.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_020",
+      "path": "images/elevation_020.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_021",
+      "path": "images/elevation_021.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_022",
+      "path": "images/elevation_022.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_023",
+      "path": "images/elevation_023.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_024",
+      "path": "images/elevation_024.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_025",
+      "path": "images/elevation_025.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_026",
+      "path": "images/elevation_026.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_027",
+      "path": "images/elevation_027.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_028",
+      "path": "images/elevation_028.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_029",
+      "path": "images/elevation_029.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "elevation_030",
+      "path": "images/elevation_030.png",
+      "category": "elevation",
+      "labels": {
+        "drawing_type": "elevation",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_001",
+      "path": "images/diagram_001.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_002",
+      "path": "images/diagram_002.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_003",
+      "path": "images/diagram_003.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_004",
+      "path": "images/diagram_004.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_005",
+      "path": "images/diagram_005.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_006",
+      "path": "images/diagram_006.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_007",
+      "path": "images/diagram_007.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_008",
+      "path": "images/diagram_008.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_009",
+      "path": "images/diagram_009.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_010",
+      "path": "images/diagram_010.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_011",
+      "path": "images/diagram_011.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_012",
+      "path": "images/diagram_012.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_013",
+      "path": "images/diagram_013.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_014",
+      "path": "images/diagram_014.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_015",
+      "path": "images/diagram_015.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_016",
+      "path": "images/diagram_016.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_017",
+      "path": "images/diagram_017.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_018",
+      "path": "images/diagram_018.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_019",
+      "path": "images/diagram_019.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_020",
+      "path": "images/diagram_020.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_021",
+      "path": "images/diagram_021.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_022",
+      "path": "images/diagram_022.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_023",
+      "path": "images/diagram_023.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_024",
+      "path": "images/diagram_024.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_025",
+      "path": "images/diagram_025.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_026",
+      "path": "images/diagram_026.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_027",
+      "path": "images/diagram_027.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_028",
+      "path": "images/diagram_028.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_029",
+      "path": "images/diagram_029.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_030",
+      "path": "images/diagram_030.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_031",
+      "path": "images/diagram_031.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_032",
+      "path": "images/diagram_032.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_033",
+      "path": "images/diagram_033.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_034",
+      "path": "images/diagram_034.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_035",
+      "path": "images/diagram_035.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_036",
+      "path": "images/diagram_036.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_037",
+      "path": "images/diagram_037.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_038",
+      "path": "images/diagram_038.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_039",
+      "path": "images/diagram_039.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_040",
+      "path": "images/diagram_040.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_041",
+      "path": "images/diagram_041.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_042",
+      "path": "images/diagram_042.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_043",
+      "path": "images/diagram_043.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_044",
+      "path": "images/diagram_044.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_045",
+      "path": "images/diagram_045.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": true,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_046",
+      "path": "images/diagram_046.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_047",
+      "path": "images/diagram_047.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_048",
+      "path": "images/diagram_048.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_049",
+      "path": "images/diagram_049.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "diagram_050",
+      "path": "images/diagram_050.png",
+      "category": "diagram",
+      "labels": {
+        "drawing_type": "diagram",
+        "has_north_arrow": null,
+        "has_legend": false,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "缺少图例的合成图纸",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_001",
+      "path": "images/photo_001.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_002",
+      "path": "images/photo_002.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_003",
+      "path": "images/photo_003.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_004",
+      "path": "images/photo_004.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_005",
+      "path": "images/photo_005.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_006",
+      "path": "images/photo_006.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_007",
+      "path": "images/photo_007.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_008",
+      "path": "images/photo_008.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_009",
+      "path": "images/photo_009.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_010",
+      "path": "images/photo_010.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_011",
+      "path": "images/photo_011.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_012",
+      "path": "images/photo_012.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_013",
+      "path": "images/photo_013.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_014",
+      "path": "images/photo_014.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_015",
+      "path": "images/photo_015.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_016",
+      "path": "images/photo_016.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_017",
+      "path": "images/photo_017.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_018",
+      "path": "images/photo_018.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_019",
+      "path": "images/photo_019.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_020",
+      "path": "images/photo_020.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_021",
+      "path": "images/photo_021.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_022",
+      "path": "images/photo_022.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_023",
+      "path": "images/photo_023.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_024",
+      "path": "images/photo_024.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_025",
+      "path": "images/photo_025.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_026",
+      "path": "images/photo_026.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_027",
+      "path": "images/photo_027.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_028",
+      "path": "images/photo_028.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_029",
+      "path": "images/photo_029.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_030",
+      "path": "images/photo_030.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_031",
+      "path": "images/photo_031.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_032",
+      "path": "images/photo_032.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_033",
+      "path": "images/photo_033.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_034",
+      "path": "images/photo_034.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_035",
+      "path": "images/photo_035.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_036",
+      "path": "images/photo_036.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_037",
+      "path": "images/photo_037.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_038",
+      "path": "images/photo_038.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_039",
+      "path": "images/photo_039.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_040",
+      "path": "images/photo_040.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_041",
+      "path": "images/photo_041.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_042",
+      "path": "images/photo_042.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": true,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "低分辨率合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_043",
+      "path": "images/photo_043.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_044",
+      "path": "images/photo_044.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_045",
+      "path": "images/photo_045.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "含图例色块的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_046",
+      "path": "images/photo_046.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": true,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "有效图面偏小的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_047",
+      "path": "images/photo_047.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": true,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "内容贴边的合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_048",
+      "path": "images/photo_048.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": true
+      },
+      "notes": "低对比度合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_049",
+      "path": "images/photo_049.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": true,
+        "low_contrast": false
+      },
+      "notes": "高边缘密度/文字拥挤合成样本",
+      "source": "synthetic_bootstrap"
+    },
+    {
+      "id": "photo_050",
+      "path": "images/photo_050.png",
+      "category": "photo",
+      "labels": {
+        "drawing_type": "photo",
+        "has_north_arrow": null,
+        "has_legend": null,
+        "is_low_resolution": false,
+        "is_clipped": false,
+        "excessive_margins": false,
+        "high_text_density": false,
+        "low_contrast": false
+      },
+      "notes": "合成标定样本",
+      "source": "synthetic_bootstrap"
+    }
+  ],
+  "corpus_kind": "synthetic_bootstrap"
 }

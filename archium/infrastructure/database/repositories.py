@@ -613,6 +613,22 @@ class WorkflowRunRepository:
         )
         return [mappers.workflow_run_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def list_by_project(self, project_id: UUID) -> list[WorkflowRun]:
+        stmt = (
+            select(WorkflowRunORM)
+            .where(WorkflowRunORM.project_id == project_id)
+            .order_by(WorkflowRunORM.created_at.desc())
+        )
+        return [mappers.workflow_run_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def list_planning_by_project(self, project_id: UUID) -> list[WorkflowRun]:
+        """Return planning workflow runs (newest first)."""
+        return [
+            run
+            for run in self.list_by_project(project_id)
+            if run.state.get("workflow_kind") == "planning"
+        ]
+
     def update(self, run: WorkflowRun) -> WorkflowRun:
         try:
             orm = self._session.get(WorkflowRunORM, run.id)
