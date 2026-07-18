@@ -180,3 +180,128 @@ def render() -> None:
         st.info("当前 Archium 已具备 LLM 调用能力，可在项目工作台开始生成。")
     else:
         st.warning("尚未配置可用的 LLM API Key。可在此页面配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
+
+    st.divider()
+    _render_image_search_settings()
+
+
+def _render_image_search_settings() -> None:
+    from archium.application.image_search_settings_service import ImageSearchSettingsService
+    from archium.config.settings import get_settings
+    from archium.infrastructure.database.session import get_session
+    from archium.ui.image_search_settings import (
+        delete_pexels_api_key,
+        delete_unsplash_api_key,
+        pexels_credential_status,
+        save_pexels_api_key,
+        save_unsplash_api_key,
+        unsplash_credential_status,
+    )
+
+    st.markdown("### 网络搜图")
+    st.caption(
+        "导出 PPTX 时，若项目素材缺失，可为效果图/现场照片/参考案例页自动检索授权图。"
+        "不会用于总平、平面图等需精确标注的图纸类型。"
+    )
+
+    base_settings = get_settings()
+    with get_session() as session:
+        prefs_service = ImageSearchSettingsService(session)
+        prefs = prefs_service.get_preferences(base_settings=base_settings)
+
+    enabled = st.toggle("启用网络搜图", value=prefs.enabled)
+    persist_to_library = st.toggle(
+        "保存到项目素材库",
+        value=prefs.persist_to_library,
+        help="下载的授权图会复制到项目 web_imports 目录，便于后续复用与手动分配。",
+    )
+
+    st.markdown("#### Pexels")
+    pexels_configured, pexels_masked, pexels_source = pexels_credential_status()
+    pexels_key_input = st.text_input(
+        "Pexels API Key",
+        type="password",
+        placeholder=f"已配置：{pexels_masked}" if pexels_masked else "输入 Pexels API Key",
+        help="在 https://www.pexels.com/api/ 申请。",
+        key="pexels_api_key_input",
+    )
+    pexels_save_mode = st.radio(
+        "Pexels 密钥保存方式",
+        ["保存到本机安全凭据库", "仅本次会话"],
+        horizontal=True,
+        key="pexels_save_mode",
+    )
+    st.caption(
+        f"Pexels 密钥来源：{_SOURCE_LABELS[pexels_source]}"
+        + (f"（{pexels_masked}）" if pexels_masked else "")
+    )
+
+    st.markdown("#### Unsplash（备选）")
+    unsplash_configured, unsplash_masked, unsplash_source = unsplash_credential_status()
+    unsplash_key_input = st.text_input(
+        "Unsplash Access Key",
+        type="password",
+        placeholder=f"已配置：{unsplash_masked}" if unsplash_masked else "输入 Unsplash Access Key",
+        help="在 https://unsplash.com/developers 申请。Pexels 无结果时会尝试 Unsplash。",
+        key="unsplash_api_key_input",
+    )
+    unsplash_save_mode = st.radio(
+        "Unsplash 密钥保存方式",
+        ["保存到本机安全凭据库", "仅本次会话"],
+        horizontal=True,
+        key="unsplash_save_mode",
+    )
+    st.caption(
+        f"Unsplash 密钥来源：{_SOURCE_LABELS[unsplash_source]}"
+        + (f"（{unsplash_masked}）" if unsplash_masked else "")
+    )
+
+    save_col, delete_pexels_col, delete_unsplash_col = st.columns(3)
+    save_clicked = save_col.button("保存搜图配置", type="primary", use_container_width=True)
+    delete_pexels_clicked = delete_pexels_col.button("删除 Pexels 密钥", use_container_width=True)
+    delete_unsplash_clicked = delete_unsplash_col.button("删除 Unsplash 密钥", use_container_width=True)
+
+    if save_clicked:
+        if not pexels_configured and not unsplash_configured and not pexels_key_input.strip() and not unsplash_key_input.strip():
+            st.error("请至少配置 Pexels 或 Unsplash 其中一个 API Key。")
+        else:
+            with get_session() as session:
+                ImageSearchSettingsService(session).save_preferences(
+                    enabled=enabled,
+                    persist_to_library=persist_to_library,
+                )
+                session.commit()
+            if pexels_key_input.strip():
+                save_pexels_api_key(
+                    api_key=pexels_key_input.strip(),
+                    persist=pexels_save_mode == "保存到本机安全凭据库",
+                    session_store=st.session_state,
+                )
+            if unsplash_key_input.strip():
+                save_unsplash_api_key(
+                    api_key=unsplash_key_input.strip(),
+                    persist=unsplash_save_mode == "保存到本机安全凭据库",
+                    session_store=st.session_state,
+                )
+            st.success("搜图配置已保存")
+            st.rerun()
+
+    if delete_pexels_clicked:
+        delete_pexels_api_key(session_store=st.session_state)
+        st.warning("已删除 Pexels API Key")
+        st.rerun()
+
+    if delete_unsplash_clicked:
+        delete_unsplash_api_key(session_store=st.session_state)
+        st.warning("已删除 Unsplash Access Key")
+        st.rerun()
+
+    if pexels_configured or unsplash_configured:
+        providers = []
+        if pexels_configured:
+            providers.append("Pexels")
+        if unsplash_configured:
+            providers.append("Unsplash")
+        st.info(f"已配置 {' / '.join(providers)}，导出时将按顺序尝试检索授权配图。")
+    else:
+        st.warning("尚未配置搜图 API Key。可在此页面配置，或在 `.env` 中设置 `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY`。")

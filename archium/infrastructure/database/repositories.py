@@ -442,6 +442,20 @@ class AssetRepository:
         stmt = select(AssetORM).where(AssetORM.project_id == project_id)
         return [mappers.asset_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def update(self, asset: Asset) -> Asset:
+        try:
+            orm = self._session.get(AssetORM, asset.id)
+            if orm is None:
+                raise RepositoryError(f"Asset {asset.id} not found")
+            mappers.asset_to_orm(asset, orm)
+            self._session.flush()
+            return mappers.asset_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update asset", exc)
+            raise
+
     def delete(self, asset_id: UUID) -> bool:
         try:
             orm = self._session.get(AssetORM, asset_id)

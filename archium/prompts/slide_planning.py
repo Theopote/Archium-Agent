@@ -12,6 +12,21 @@ SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - 项目资料中的 `[chunk_id=...]` 可直接复制到 source_citations.chunk_id。
 - 为每页分配合适的 slide_type 与 visual_requirements。
 
+数值与图表表达：
+- 2 个及以上可对比数值（面积、床位数、比例等）→ 优先 `slide_type: "data"`，
+  key_points 使用 `指标名：数值`（如 `总建筑面积：120000 ㎡`），系统会自动生成原生图表。
+- 需要强调构成/占比 → 在 visual_requirements 中加入 `{"type": "chart", ...}`，
+  或在标题/要点中出现「占比/比例/构成」字样以触发饼图。
+- 多列对比（改造前/后、分期指标）→ visual_requirements 使用 `{"type": "table", ...}`，
+  key_points 使用管道符表格行，如 `指标|改造前|改造后`、`建筑面积|80000|120000`。
+- 单个 KPI → `slide_type: "data"`，1 条 key_point 即可。
+- 优先引用【项目事实账本】中已确认数值，不要编造数据。
+
+图纸与素材：
+- 总图/平面图/剖面/效果图使用对应 visual_requirements（site_plan、floor_plan 等）。
+- 不要在 key_points 或 message 中伪造指北针方向、比例尺或图例内容；
+  这些由素材标注元数据负责，未标注时不应声称图纸已含这些元素。
+
 禁止事项：
 - 不要输出 Markdown 代码块。
 - 不要编造来源或项目数据。
@@ -48,5 +63,7 @@ def build_slide_plan_user_prompt(
         f"请生成约 {target_slide_count} 页的 SlidePlan JSON。\n\n"
         f"【项目资料】\n{project_context}\n\n"
         f"【PresentationBrief】\n{brief_json}\n\n"
-        f"【Storyline】\n{storyline_json}"
+        f"【Storyline】\n{storyline_json}\n\n"
+        "数值页请优先使用 slide_type=data 或 visual_requirements 中的 chart/table；"
+        "key_points 使用 `标签：数值` 或 `列1|列2|列3` 格式。"
     )

@@ -8,6 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.asset_board_service import AssetBoardRow, AssetBoardService
+from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 
@@ -150,6 +151,12 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
             st.error(str(exc))
 
     _render_asset_preview(selected, assets)
+    if picked_asset:
+        render_plan_overlay_editor_for_asset(
+            asset_id=UUID(picked_asset),
+            visual_type=selected.visual_type,
+            key_prefix=f"asset_board_overlay_{selected_key}",
+        )
 
 
 def _row_key(row: AssetBoardRow) -> str:

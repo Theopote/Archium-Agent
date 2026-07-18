@@ -145,6 +145,59 @@ class Settings(BaseSettings):
             "(dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type)."
         ),
     )
+    visual_fallback_enabled: bool = Field(
+        default=True,
+        description="When true, export tries relaxed asset matching and programmatic diagram fallbacks.",
+    )
+    visual_fallback_relaxed_matching: bool = Field(
+        default=True,
+        description="When true, unmatched visuals may bind to the best available project asset at export time.",
+    )
+    visual_fallback_relaxed_min_score: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        description="Minimum score for relaxed asset fallback during export.",
+    )
+    visual_fallback_generate_diagrams: bool = Field(
+        default=True,
+        description="When true, generate schematic PNG diagrams for unmatched diagram/plan/timeline visuals.",
+    )
+    web_image_search_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, export may download licensed stock photos for rendering/site-photo/reference visuals "
+            "before falling back to schematic diagrams."
+        ),
+    )
+    web_image_search_provider: str = Field(
+        default="pexels",
+        description="Stock photo provider used for web image search (currently only pexels).",
+    )
+    pexels_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PEXELS_API_KEY"),
+    )
+    web_image_search_timeout_seconds: float = Field(
+        default=15.0,
+        gt=0,
+        le=120.0,
+        description="HTTP timeout for stock photo search and download.",
+    )
+    web_image_search_per_page: int = Field(
+        default=5,
+        ge=1,
+        le=15,
+        description="Number of Pexels results to consider per visual requirement.",
+    )
+    web_image_search_persist_to_library: bool = Field(
+        default=True,
+        description="When true, downloaded web images are copied into the project asset library.",
+    )
+    unsplash_access_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("UNSPLASH_ACCESS_KEY"),
+    )
 
     discord_bot_token: str | None = Field(
         default=None,

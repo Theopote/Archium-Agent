@@ -23,6 +23,27 @@ export function addImageOrPlaceholder(pres, page, image, theme, rect) {
       w: rect.w,
       h: rect.h,
     });
+    if (image.attribution) {
+      page.addShape("rect", {
+        x: rect.x,
+        y: rect.y + rect.h - 0.28,
+        w: rect.w,
+        h: 0.28,
+        fill: { color: "000000", transparency: 35 },
+        line: { width: 0 },
+      });
+      page.addText(image.attribution, {
+        x: rect.x + 0.05,
+        y: rect.y + rect.h - 0.26,
+        w: rect.w - 0.1,
+        h: 0.22,
+        fontSize: 7,
+        color: "FFFFFF",
+        fontFace: theme.fonts.caption,
+        align: "left",
+        valign: "mid",
+      });
+    }
     return;
   }
   page.addShape("rect", {
@@ -33,7 +54,12 @@ export function addImageOrPlaceholder(pres, page, image, theme, rect) {
     fill: { color: theme.colors.light },
     line: { color: theme.colors.accent, width: 1 },
   });
-  page.addText(image.description ?? "图片占位", {
+  page.addText(
+    image.attribution
+      ? `${image.description ?? "配图"}\n${image.attribution}`
+      : image.generated
+        ? `${image.description ?? "示意草图"}\n（自动生成）`
+        : (image.description ?? "图片占位"),
     x: rect.x + 0.2,
     y: rect.y + rect.h / 2 - 0.4,
     w: rect.w - 0.4,

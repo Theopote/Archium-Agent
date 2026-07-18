@@ -9,6 +9,7 @@ from uuid import UUID
 from archium.domain.asset import Asset
 from archium.domain.enums import SlideType, VisualType
 from archium.domain.fact import ProjectFact
+from archium.domain.fallback_image import FallbackImage
 from archium.domain.plan_overlay import PlanOverlayMetadata, plan_overlay_from_asset
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_spec import (
@@ -53,11 +54,13 @@ def build_presentation_spec(
     asset_paths: dict[UUID, Path] | None = None,
     assets: dict[UUID, Asset] | None = None,
     facts: list[ProjectFact] | None = None,
+    fallback_images: dict[tuple[UUID, int], FallbackImage] | None = None,
 ) -> PresentationSpec:
     """Convert Brief / Storyline / SlideSpec into a renderer-agnostic spec."""
     resolved_assets = asset_paths or {}
     resolved_asset_records = assets or {}
     resolved_facts = facts or []
+    resolved_fallbacks = fallback_images or {}
     spec_slides: list[SpecSlide] = [
         SpecSlide(
             order=0,
@@ -86,6 +89,7 @@ def build_presentation_spec(
                 asset_paths=resolved_assets,
                 assets=resolved_asset_records,
                 facts=resolved_facts,
+                fallback_images=resolved_fallbacks,
             )
         )
 
@@ -106,8 +110,9 @@ def _build_spec_slide(
     asset_paths: dict[UUID, Path],
     assets: dict[UUID, Asset],
     facts: list[ProjectFact],
+    fallback_images: dict[tuple[UUID, int], FallbackImage],
 ) -> SpecSlide:
-    images = _build_image_placements(slide, asset_paths)
+    images = _build_image_placements(slide, asset_paths, fallback_images)
     layout = _resolve_layout(slide, has_images=bool(images), facts=facts)
     plan_overlays = _build_plan_overlays(slide, assets) if layout == _LAYOUT_SITE_PLAN else None
     subtitle = None
@@ -154,6 +159,15 @@ def _build_spec_slide(
         ]
         citation_block = "来源：\n" + "\n".join(f"- {line}" for line in citation_lines)
         notes = f"{notes}\n\n{citation_block}".strip() if notes else citation_block
+
+    attribution_lines = [
+        image.attribution
+        for image in images
+        if image.web_sourced and image.attribution
+    ]
+    if attribution_lines:
+        attribution_block = "配图来源：\n" + "\n".join(f"- {line}" for line in attribution_lines)
+        notes = f"{notes}\n\n{attribution_block}".strip() if notes else attribution_block
 
     return SpecSlide(
         order=order,
@@ -286,6 +300,10 @@ def _full_bleed_image(placement: SpecImagePlacement) -> SpecImagePlacement:
     return SpecImagePlacement(
         description=placement.description,
         asset_path=placement.asset_path,
+        generated=placement.generated,
+        web_sourced=placement.web_sourced,
+        attribution=placement.attribution,
+        source_url=placement.source_url,
         x=0.7,
         y=1.45,
         w=8.6,
@@ -296,6 +314,7 @@ def _full_bleed_image(placement: SpecImagePlacement) -> SpecImagePlacement:
 def _build_image_placements(
     slide: SlideSpec,
     asset_paths: dict[UUID, Path],
+    fallback_images: dict[tuple[UUID, int], FallbackImage],
 ) -> list[SpecImagePlacement]:
     placements: list[SpecImagePlacement] = []
     for index, requirement in enumerate(slide.visual_requirements):
@@ -303,14 +322,29 @@ def _build_image_placements(
             continue
         asset_id = requirement.primary_asset_id
         asset_path = None
+        generated = False
+        web_sourced = False
+        attribution = None
+        source_url = None
         if asset_id is not None:
             resolved = asset_paths.get(asset_id)
             if resolved is not None and resolved.exists():
                 asset_path = str(resolved)
+        fallback = fallback_images.get((slide.id, index))
+        if asset_path is None and fallback is not None and fallback.path.exists():
+            asset_path = str(fallback.path)
+            generated = fallback.generated
+            web_sourced = fallback.web_sourced
+            attribution = fallback.attribution
+            source_url = fallback.source_url
         placements.append(
             SpecImagePlacement(
                 description=requirement.description,
                 asset_path=asset_path,
+                generated=generated,
+                web_sourced=web_sourced,
+                attribution=attribution,
+                source_url=source_url,
                 x=5.0,
                 y=1.5 + index * 0.2,
                 w=4.0,

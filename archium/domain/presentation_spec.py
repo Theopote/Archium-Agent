@@ -13,6 +13,10 @@ class SpecImagePlacement(DomainModel):
 
     description: str
     asset_path: str | None = None
+    generated: bool = False
+    web_sourced: bool = False
+    attribution: str | None = None
+    source_url: str | None = None
     x: float = 5.0
     y: float = 1.5
     w: float = 4.0

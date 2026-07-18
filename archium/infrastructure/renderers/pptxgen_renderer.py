@@ -7,9 +7,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.image_search_settings_service import ImageSearchSettingsService
+from archium.application.visual_fallback_service import VisualFallbackService
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
-from archium.domain.fact import ProjectFact
+from archium.domain.fallback_image import FallbackImage
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_spec import PresentationSpec
 from archium.domain.slide import SlideSpec
@@ -51,6 +53,29 @@ class PptxGenPresentationRenderer:
         slides: list[SlideSpec],
         version: int = 1,
     ) -> PresentationSpec:
+        output_dir = self.output_dir(presentation_id, version)
+        asset_paths = self._resolve_asset_paths(project_id, slides)
+        facts = self._resolve_project_facts(project_id)
+        fallback_images: dict[tuple[UUID, int], FallbackImage] = {}
+        if self._session is not None:
+            image_search_preferences = ImageSearchSettingsService(self._session).get_preferences(
+                base_settings=self._settings,
+            )
+            fallback_images = VisualFallbackService(
+                self._session,
+                settings=self._settings,
+                pexels_session_api_key=_resolve_pexels_session_api_key(),
+                unsplash_session_api_key=_resolve_unsplash_session_api_key(),
+                image_search_preferences=image_search_preferences,
+            ).resolve_export_images(
+                project_id,
+                slides,
+                output_dir=output_dir,
+                base_paths=asset_paths,
+                facts=facts,
+            )
+            if self._session.new:
+                self._session.commit()
         return build_presentation_spec(
             presentation_id=presentation_id,
             brief=brief,
@@ -58,9 +83,10 @@ class PptxGenPresentationRenderer:
             slides=slides,
             version=version,
             theme=self._theme,
-            asset_paths=self._resolve_asset_paths(project_id, slides),
+            asset_paths=asset_paths,
             assets=self._resolve_assets(project_id, slides),
-            facts=self._resolve_project_facts(project_id),
+            facts=facts,
+            fallback_images=fallback_images,
         )
 
     def render(
@@ -179,3 +205,21 @@ class PptxGenPresentationRenderer:
         if self._session is None:
             return []
         return FactRepository(self._session).list_by_project(project_id)
+
+
+def _resolve_pexels_session_api_key() -> str | None:
+    try:
+        import streamlit as st
+    except ImportError:
+        return None
+    value = st.session_state.get("pexels_session_api_key")
+    return value if isinstance(value, str) and value else None
+
+
+def _resolve_unsplash_session_api_key() -> str | None:
+    try:
+        import streamlit as st
+    except ImportError:
+        return None
+    value = st.session_state.get("unsplash_session_api_key")
+    return value if isinstance(value, str) and value else None
