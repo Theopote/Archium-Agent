@@ -150,6 +150,55 @@ def test_update_and_approve_mission(
     assert approved.approval_status == ApprovalStatus.APPROVED
 
 
+def test_update_mission_classification_fields(
+    mission_service: ProjectMissionService,
+    temple_project: Project,
+) -> None:
+    from archium.domain.enums import (
+        InterventionScale,
+        ProjectDomain,
+        ServiceDepth,
+        TaskNature,
+        UncertaintyLevel,
+    )
+    from archium.domain.project_mission import (
+        EvaluationCriterion,
+        MissionConstraint,
+        Stakeholder,
+    )
+
+    result = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    updated = mission_service.update_mission(
+        result.mission.id,
+        MissionPatch(
+            task_natures=[TaskNature.RENOVATION, TaskNature.STRATEGY],
+            domains=[ProjectDomain.HEALTHCARE],
+            intervention_scales=[InterventionScale.BUILDING],
+            requested_service_depths=[
+                ServiceDepth.PROJECT_DIAGNOSIS,
+                ServiceDepth.CONCEPT_PLANNING,
+            ],
+            uncertainty_level=UncertaintyLevel.HIGH,
+            stakeholders=[
+                Stakeholder(name="院方", role="业主", concerns=["不停业", "流线"]),
+            ],
+            known_constraints=[
+                MissionConstraint(name="不停业", value="施工期需维持门诊", importance="high"),
+            ],
+            evaluation_criteria=[
+                EvaluationCriterion(name="运营连续性", description="是否影响门诊", weight=0.4),
+            ],
+        ),
+    )
+    assert updated.task_natures == [TaskNature.RENOVATION, TaskNature.STRATEGY]
+    assert updated.domains == [ProjectDomain.HEALTHCARE]
+    assert ServiceDepth.PROJECT_DIAGNOSIS in updated.requested_service_depths
+    assert updated.uncertainty_level == UncertaintyLevel.HIGH
+    assert updated.stakeholders[0].name == "院方"
+    assert updated.known_constraints[0].name == "不停业"
+    assert updated.evaluation_criteria[0].name == "运营连续性"
+
+
 def test_empty_task_description_rejected(
     mission_service: ProjectMissionService,
     temple_project: Project,

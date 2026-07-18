@@ -43,6 +43,13 @@ _MISSION_FIELDS: tuple[tuple[str, str], ...] = (
     ("decisions_required", "关键决策"),
     ("design_questions", "设计命题"),
     ("key_unknowns", "关键未知"),
+    ("task_natures", "任务性质"),
+    ("domains", "领域"),
+    ("intervention_scales", "干预尺度"),
+    ("requested_service_depths", "服务深度"),
+    ("stakeholders", "利益相关方"),
+    ("known_constraints", "已知约束"),
+    ("evaluation_criteria", "评价标准"),
     ("uncertainty_level", "不确定性"),
     ("confidence", "置信度"),
     ("approval_status", "审批状态"),
@@ -82,11 +89,25 @@ def mission_to_snapshot(mission: ProjectMission) -> dict[str, object]:
         "decisions_required": list(mission.decisions_required),
         "design_questions": list(mission.design_questions),
         "key_unknowns": list(mission.key_unknowns),
+        "task_natures": [item.value for item in mission.task_natures],
+        "domains": [item.value for item in mission.domains],
+        "intervention_scales": [item.value for item in mission.intervention_scales],
+        "requested_service_depths": [item.value for item in mission.requested_service_depths],
+        "stakeholders": [
+            f"{item.name}|{item.role}|{','.join(item.concerns)}" for item in mission.stakeholders
+        ],
+        "known_constraints": [
+            f"{item.name}|{item.value}|{item.importance}|{item.source.value}"
+            for item in mission.known_constraints
+        ],
+        "evaluation_criteria": [
+            f"{item.name}|{item.description}|{item.weight if item.weight is not None else ''}"
+            for item in mission.evaluation_criteria
+        ],
         "uncertainty_level": mission.uncertainty_level.value,
         "confidence": mission.confidence,
         "approval_status": mission.approval_status.value,
         "version": mission.version,
-        "task_natures": [item.value for item in mission.task_natures],
     }
 
 

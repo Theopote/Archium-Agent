@@ -55,13 +55,31 @@ TEMPLE_TASK = (
 
 
 def test_mission_snapshot_and_field_diff(project_id: UUID) -> None:
+    from archium.domain.enums import ServiceDepth, TaskNature, UncertaintyLevel
+    from archium.domain.project_mission import Stakeholder
+
     mission = ProjectMission(
         project_id=project_id,
         title="初版",
         task_statement="形成前期策划",
+        task_natures=[TaskNature.NEW_BUILD],
+        requested_service_depths=[ServiceDepth.CONCEPT_PLANNING],
+        uncertainty_level=UncertaintyLevel.MEDIUM,
         version=1,
     )
-    updated = mission.model_copy(update={"title": "修订版", "version": 2})
+    updated = mission.model_copy(
+        update={
+            "title": "修订版",
+            "version": 2,
+            "task_natures": [TaskNature.RENOVATION, TaskNature.STRATEGY],
+            "requested_service_depths": [
+                ServiceDepth.PROJECT_DIAGNOSIS,
+                ServiceDepth.CONCEPT_PLANNING,
+            ],
+            "uncertainty_level": UncertaintyLevel.HIGH,
+            "stakeholders": [Stakeholder(name="院方", role="业主", concerns=["不停业"])],
+        }
+    )
     diff = diff_mission_snapshots(
         mission_to_snapshot(mission),
         mission_to_snapshot(updated),
@@ -72,6 +90,10 @@ def test_mission_snapshot_and_field_diff(project_id: UUID) -> None:
     fields = {change.field for change in diff.changes}
     assert "title" in fields
     assert "version" in fields
+    assert "task_natures" in fields
+    assert "requested_service_depths" in fields
+    assert "uncertainty_level" in fields
+    assert "stakeholders" in fields
     assert diff.has_changes
 
 

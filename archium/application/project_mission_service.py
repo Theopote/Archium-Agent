@@ -18,7 +18,14 @@ from archium.application.mission_parser import (
 )
 from archium.config.settings import Settings, get_settings
 from archium.domain._base import DomainModel
-from archium.domain.enums import SlideChangeSource
+from archium.domain.enums import (
+    InterventionScale,
+    ProjectDomain,
+    ServiceDepth,
+    SlideChangeSource,
+    TaskNature,
+    UncertaintyLevel,
+)
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -26,7 +33,12 @@ from archium.domain.knowledge_gap import (
     KnowledgeGap,
 )
 from archium.domain.project import Project
-from archium.domain.project_mission import ProjectMission
+from archium.domain.project_mission import (
+    EvaluationCriterion,
+    MissionConstraint,
+    ProjectMission,
+    Stakeholder,
+)
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import ProjectRepository
@@ -56,6 +68,14 @@ class MissionPatch(DomainModel):
     research_questions: list[str] | None = None
     design_questions: list[str] | None = None
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    task_natures: list[TaskNature] | None = None
+    domains: list[ProjectDomain] | None = None
+    intervention_scales: list[InterventionScale] | None = None
+    requested_service_depths: list[ServiceDepth] | None = None
+    stakeholders: list[Stakeholder] | None = None
+    known_constraints: list[MissionConstraint] | None = None
+    evaluation_criteria: list[EvaluationCriterion] | None = None
+    uncertainty_level: UncertaintyLevel | None = None
 
 
 @dataclass
@@ -151,8 +171,9 @@ class ProjectMissionService:
 
     def update_mission(self, mission_id: UUID, patch: MissionPatch) -> ProjectMission:
         mission = self._require_mission(mission_id)
-        updates = patch.model_dump(exclude_none=True)
-        updated = mission.model_copy(update=updates)
+        payload = mission.model_dump(mode="json")
+        payload.update(patch.model_dump(mode="json", exclude_none=True))
+        updated = ProjectMission.model_validate(payload)
         updated.touch()
         saved = self._missions.save_mission(updated)
         self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT)

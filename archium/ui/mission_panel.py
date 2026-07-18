@@ -5,8 +5,19 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.application.project_mission_service import MissionPatch
-from archium.domain.enums import InterventionScale, TaskNature, UncertaintyLevel
-from archium.domain.project_mission import ProjectMission
+from archium.domain.enums import (
+    InterventionScale,
+    ProjectDomain,
+    ServiceDepth,
+    TaskNature,
+    UncertaintyLevel,
+)
+from archium.domain.project_mission import (
+    EvaluationCriterion,
+    MissionConstraint,
+    ProjectMission,
+    Stakeholder,
+)
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -47,6 +58,41 @@ SCALE_LABELS = {
     InterventionScale.SYSTEM: "系统",
 }
 
+DEPTH_LABELS = {
+    ServiceDepth.TASK_INTERPRETATION: "任务解读",
+    ServiceDepth.INFORMATION_COLLECTION: "资料收集",
+    ServiceDepth.PRELIMINARY_RESEARCH: "前期研究",
+    ServiceDepth.PROJECT_DIAGNOSIS: "项目诊断",
+    ServiceDepth.FEASIBILITY: "可行性",
+    ServiceDepth.PROGRAMMING: "功能策划",
+    ServiceDepth.CONCEPT_PLANNING: "概念策划",
+    ServiceDepth.CONCEPT_DESIGN: "概念设计",
+    ServiceDepth.SCHEMATIC_SUPPORT: "方案支持",
+    ServiceDepth.CASE_STUDY: "案例研究",
+    ServiceDepth.TECHNICAL_PROPOSAL: "技术建议",
+    ServiceDepth.IMPLEMENTATION_STRATEGY: "实施策略",
+    ServiceDepth.DECISION_SUPPORT: "决策支持",
+    ServiceDepth.PRESENTATION_PRODUCTION: "汇报制作",
+}
+
+DOMAIN_LABELS = {
+    ProjectDomain.ARCHITECTURE: "建筑",
+    ProjectDomain.URBAN: "城市",
+    ProjectDomain.LANDSCAPE: "景观",
+    ProjectDomain.INTERIOR: "室内",
+    ProjectDomain.HERITAGE: "遗产",
+    ProjectDomain.HEALTHCARE: "医疗",
+    ProjectDomain.EDUCATION: "教育",
+    ProjectDomain.CULTURE: "文化",
+    ProjectDomain.HOUSING: "居住",
+    ProjectDomain.COMMERCIAL: "商业",
+    ProjectDomain.INDUSTRIAL: "工业",
+    ProjectDomain.TRANSPORT: "交通",
+    ProjectDomain.SUSTAINABILITY: "可持续",
+    ProjectDomain.OPERATIONS: "运营",
+    ProjectDomain.OTHER: "其他",
+}
+
 UNCERTAINTY_LABELS = {
     UncertaintyLevel.LOW: "低",
     UncertaintyLevel.MEDIUM: "中",
@@ -63,33 +109,119 @@ def _list_to_lines(items: list[str]) -> str:
     return "\n".join(items)
 
 
+def _stakeholders_to_text(items: list[Stakeholder]) -> str:
+    lines: list[str] = []
+    for item in items:
+        concerns = "、".join(item.concerns)
+        lines.append(f"{item.name} | {item.role} | {concerns}")
+    return "\n".join(lines)
+
+
+def _parse_stakeholders(text: str) -> list[Stakeholder]:
+    result: list[Stakeholder] = []
+    for line in _lines_to_list(text):
+        parts = [part.strip() for part in line.split("|")]
+        name = parts[0] if parts else ""
+        role = parts[1] if len(parts) > 1 and parts[1] else "相关方"
+        concerns_raw = parts[2] if len(parts) > 2 else ""
+        concerns = [c.strip() for c in concerns_raw.replace("、", ",").split(",") if c.strip()]
+        if name:
+            result.append(Stakeholder(name=name, role=role, concerns=concerns))
+    return result
+
+
+def _constraints_to_text(items: list[MissionConstraint]) -> str:
+    return "\n".join(f"{item.name} | {item.value} | {item.importance}" for item in items)
+
+
+def _parse_constraints(text: str) -> list[MissionConstraint]:
+    result: list[MissionConstraint] = []
+    for line in _lines_to_list(text):
+        parts = [part.strip() for part in line.split("|")]
+        name = parts[0] if parts else ""
+        value = parts[1] if len(parts) > 1 else ""
+        importance = parts[2] if len(parts) > 2 and parts[2] else "medium"
+        if name and value:
+            result.append(MissionConstraint(name=name, value=value, importance=importance))
+    return result
+
+
+def _criteria_to_text(items: list[EvaluationCriterion]) -> str:
+    lines: list[str] = []
+    for item in items:
+        weight = "" if item.weight is None else str(item.weight)
+        lines.append(f"{item.name} | {item.description} | {weight}")
+    return "\n".join(lines)
+
+
+def _parse_criteria(text: str) -> list[EvaluationCriterion]:
+    result: list[EvaluationCriterion] = []
+    for line in _lines_to_list(text):
+        parts = [part.strip() for part in line.split("|")]
+        name = parts[0] if parts else ""
+        description = parts[1] if len(parts) > 1 else ""
+        weight: float | None = None
+        if len(parts) > 2 and parts[2]:
+            try:
+                weight = float(parts[2])
+            except ValueError:
+                weight = None
+        if name and description:
+            result.append(
+                EvaluationCriterion(name=name, description=description, weight=weight)
+            )
+    return result
+
+
 def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission") -> None:
     """Render structured mission understanding with per-field editing."""
     st.markdown("#### 我对任务的理解")
     st.caption(f"{mission.title} · v{mission.version} · 置信度 {mission.confidence:.0%}")
-
-    natures = "、".join(
-        TASK_NATURE_LABELS.get(item, item.value) for item in mission.task_natures
-    ) or "未标注"
-    scales = "、".join(
-        SCALE_LABELS.get(item, item.value) for item in mission.intervention_scales
-    ) or "未标注"
-    depths = "、".join(item.value for item in mission.requested_service_depths) or "未标注"
-    domains = "、".join(item.value for item in mission.domains) or "未标注"
-
-    meta1, meta2, meta3, meta4 = st.columns(4)
-    meta1.markdown(f"**任务性质**\n\n{natures}")
-    meta2.markdown(f"**项目尺度**\n\n{scales}")
-    meta3.markdown(f"**服务深度**\n\n{depths}")
-    meta4.markdown(
-        f"**不确定性**\n\n"
-        f"{UNCERTAINTY_LABELS.get(mission.uncertainty_level, mission.uncertainty_level.value)}"
-    )
-    st.caption(f"领域：{domains}")
+    st.caption("可纠正 AI 对任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
 
     with st.form(f"{key_prefix}_edit_form"):
         title = st.text_input("标题", value=mission.title)
         task_statement = st.text_area("任务陈述", value=mission.task_statement, height=90)
+
+        nature_options = list(TASK_NATURE_LABELS.keys())
+        selected_natures = st.multiselect(
+            "任务性质（可多选）",
+            options=nature_options,
+            default=[item for item in mission.task_natures if item in TASK_NATURE_LABELS],
+            format_func=lambda item: TASK_NATURE_LABELS.get(item, item.value),
+        )
+        domain_options = list(DOMAIN_LABELS.keys())
+        selected_domains = st.multiselect(
+            "领域（可多选）",
+            options=domain_options,
+            default=[item for item in mission.domains if item in DOMAIN_LABELS],
+            format_func=lambda item: DOMAIN_LABELS.get(item, item.value),
+        )
+        scale_options = list(SCALE_LABELS.keys())
+        selected_scales = st.multiselect(
+            "干预尺度（可多选）",
+            options=scale_options,
+            default=[item for item in mission.intervention_scales if item in SCALE_LABELS],
+            format_func=lambda item: SCALE_LABELS.get(item, item.value),
+        )
+        depth_options = list(DEPTH_LABELS.keys())
+        selected_depths = st.multiselect(
+            "服务深度（可多选）",
+            options=depth_options,
+            default=[
+                item for item in mission.requested_service_depths if item in DEPTH_LABELS
+            ],
+            format_func=lambda item: DEPTH_LABELS.get(item, item.value),
+        )
+        uncertainty = st.selectbox(
+            "不确定性",
+            options=list(UNCERTAINTY_LABELS.keys()),
+            index=list(UNCERTAINTY_LABELS.keys()).index(mission.uncertainty_level)
+            if mission.uncertainty_level in UNCERTAINTY_LABELS
+            else 1,
+            format_func=lambda item: UNCERTAINTY_LABELS.get(item, item.value),
+        )
+
         current_situation = st.text_area(
             "当前情况", value=mission.current_situation or "", height=70
         )
@@ -127,16 +259,21 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
                 height=80,
             )
 
-        if mission.stakeholders:
-            st.markdown("**利益相关方**")
-            for stakeholder in mission.stakeholders:
-                concerns = "、".join(stakeholder.concerns) if stakeholder.concerns else "—"
-                st.write(f"- {stakeholder.name}（{stakeholder.role}）：关注 {concerns}")
-
-        if mission.known_constraints:
-            st.markdown("**已知约束**")
-            for constraint in mission.known_constraints:
-                st.write(f"- {constraint.name}：{constraint.value}")
+        stakeholders_text = st.text_area(
+            "利益相关方（每行：姓名 | 角色 | 关注点，逗号/顿号分隔）",
+            value=_stakeholders_to_text(mission.stakeholders),
+            height=90,
+        )
+        constraints_text = st.text_area(
+            "已知约束（每行：名称 | 值 | 重要性）",
+            value=_constraints_to_text(mission.known_constraints),
+            height=90,
+        )
+        criteria_text = st.text_area(
+            "评价标准（每行：名称 | 描述 | 权重可选）",
+            value=_criteria_to_text(mission.evaluation_criteria),
+            height=90,
+        )
 
         saved = st.form_submit_button("保存修改", use_container_width=True)
 
@@ -151,6 +288,14 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
             out_of_scope=_lines_to_list(out_of_scope),
             decisions_required=_lines_to_list(decisions_required),
             design_questions=_lines_to_list(design_questions),
+            task_natures=selected_natures,
+            domains=selected_domains,
+            intervention_scales=selected_scales,
+            requested_service_depths=selected_depths,
+            uncertainty_level=uncertainty,
+            stakeholders=_parse_stakeholders(stakeholders_text),
+            known_constraints=_parse_constraints(constraints_text),
+            evaluation_criteria=_parse_criteria(criteria_text),
         )
         try:
             with get_session() as session:
