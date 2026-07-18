@@ -104,6 +104,9 @@ class PresentationReviewService:
     def list_review_issues(self, presentation_id: UUID) -> list[ReviewIssue]:
         return self._reviews.list_by_presentation(presentation_id)
 
+    def list_review_issues_by_project(self, project_id: UUID) -> list[ReviewIssue]:
+        return self._reviews.list_by_project(project_id)
+
     def resolve_review_issue(self, issue_id: UUID) -> ReviewIssue:
         issue = self._require_review_issue(issue_id)
         issue.resolve()

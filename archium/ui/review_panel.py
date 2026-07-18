@@ -7,7 +7,6 @@ from uuid import UUID
 import pandas as pd
 import streamlit as st
 
-from archium.application.review_analytics import summarize_rule_codes
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
@@ -37,6 +36,7 @@ from archium.ui.artifact_history_panel import (
 )
 from archium.ui.asset_board_panel import render_asset_board_panel
 from archium.ui.error_handlers import format_user_error
+from archium.ui.review_analytics_panel import REPAIR_STRATEGY_LABELS, render_rule_code_stats
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workspace_service import (
     continue_workflow_after_review,
@@ -88,13 +88,6 @@ LAYER_LABELS = {
     ReviewLayer.EVIDENCE: "证据层",
     ReviewLayer.ARCHITECTURAL: "建筑专业层",
     ReviewLayer.LAYOUT: "版面层",
-}
-
-REPAIR_STRATEGY_LABELS = {
-    "tiered_layout": "分层版面修复",
-    "llm_content": "LLM 内容修复",
-    "manual": "人工确认",
-    "none": "无自动策略",
 }
 
 STATUS_LABELS = {
@@ -507,37 +500,6 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
     render_slide_history_panel(presentation_id=context_presentation_id, slides=context.slides)
 
 
-def _format_dismiss_rate(rate: float | None) -> str:
-    if rate is None:
-        return "—"
-    return f"{rate * 100:.0f}%"
-
-
-def _render_rule_code_stats(issues: list[ReviewIssue]) -> None:
-    stats = summarize_rule_codes(issues)
-    if not stats:
-        st.caption("暂无 rule_code 统计数据。")
-        return
-
-    rows = [
-        {
-            "rule_code": item.rule_code,
-            "命中数": item.total,
-            "待处理": item.open,
-            "已解决": item.resolved,
-            "已忽略": item.dismissed,
-            "误报率(忽略占比)": _format_dismiss_rate(item.dismiss_rate),
-            "修复策略": REPAIR_STRATEGY_LABELS.get(item.repair_strategy, item.repair_strategy),
-        }
-        for item in stats
-    ]
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-    st.caption(
-        "误报率以「已忽略 / (已解决 + 已忽略)」估算，仅作规则调优参考。"
-        " rule_code 亦可在下方问题列表中查看。"
-    )
-
-
 def _render_review_issues_panel(
     presentation_id: UUID,
     *,
@@ -555,7 +517,8 @@ def _render_review_issues_panel(
         return
 
     with st.expander("规则命中统计（rule_code）", expanded=False):
-        _render_rule_code_stats(all_issues)
+        render_rule_code_stats(all_issues)
+        st.caption("rule_code 亦可在下方问题列表中查看。")
 
     issues = all_issues
     layer_counts: dict[ReviewLayer, int] = {}

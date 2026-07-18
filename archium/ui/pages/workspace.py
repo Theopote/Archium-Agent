@@ -15,6 +15,7 @@ from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.error_handlers import format_user_error
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
+from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
 from archium.ui.review_panel import render_review_panel
 from archium.ui.workspace_service import (
     build_presentation_request,
@@ -375,6 +376,8 @@ def render() -> None:
 
     st.divider()
     _render_overview(project_id)
+    st.divider()
+    render_project_review_quality_dashboard(project_id)
     st.divider()
     _render_documents(project_id)
     st.divider()

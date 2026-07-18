@@ -481,6 +481,15 @@ class ReviewRepository:
         )
         return [mappers.review_issue_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def list_by_project(self, project_id: UUID) -> list[ReviewIssue]:
+        stmt = (
+            select(ReviewIssueORM)
+            .join(PresentationORM, ReviewIssueORM.presentation_id == PresentationORM.id)
+            .where(PresentationORM.project_id == project_id)
+            .order_by(ReviewIssueORM.created_at.desc())
+        )
+        return [mappers.review_issue_to_domain(row) for row in self._session.scalars(stmt)]
+
     def update(self, issue: ReviewIssue) -> ReviewIssue:
         try:
             orm = self._session.get(ReviewIssueORM, issue.id)

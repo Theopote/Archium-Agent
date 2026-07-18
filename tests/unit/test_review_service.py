@@ -129,3 +129,41 @@ def test_resolve_and_dismiss_review_issue(db_session: Session) -> None:
     )
     dismissed = service.dismiss_review_issue(issue2.id)
     assert dismissed.status.value == "dismissed"
+
+
+def test_list_review_issues_by_project(db_session: Session) -> None:
+    from archium.infrastructure.database.repositories import ReviewRepository
+
+    brief = _seed_brief(db_session)
+    project_id = brief.project_id
+    presentation_two = PresentationRepository(db_session).create_presentation(
+        Presentation(project_id=project_id, title="第二版汇报")
+    )
+    ReviewRepository(db_session).create(
+        ReviewIssue(
+            presentation_id=brief.presentation_id,
+            category=ReviewCategory.CONTENT,
+            severity=ReviewSeverity.MEDIUM,
+            rule_code=ReviewRuleCode.EVIDENCE_MISSING_CITATION,
+            title="缺少引用来源",
+            description="第一版",
+        )
+    )
+    ReviewRepository(db_session).create(
+        ReviewIssue(
+            presentation_id=presentation_two.id,
+            category=ReviewCategory.CONTENT,
+            severity=ReviewSeverity.MEDIUM,
+            rule_code=ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS,
+            title="要点过多",
+            description="第二版",
+        )
+    )
+
+    service = PresentationReviewService(db_session)
+    project_issues = service.list_review_issues_by_project(project_id)
+
+    assert len(project_issues) == 2
+    rule_codes = {issue.rule_code for issue in project_issues}
+    assert ReviewRuleCode.EVIDENCE_MISSING_CITATION in rule_codes
+    assert ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS in rule_codes
