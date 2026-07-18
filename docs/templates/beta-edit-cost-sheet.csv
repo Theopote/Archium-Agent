@@ -1,0 +1,7 @@
+session_id,participant_id,role,project_label,slide_index,slide_title,edit_category,edit_summary,minutes_spent,blocking_export,notes
+# session_id: YYYY-MM-DD-session1  |  participant_id: P1/P2/P3 (非开发用户)
+# edit_category: text | layout | image | fact_citation | structure | export | other
+# blocking_export: yes | no  — 是否若不修则无法交付
+# minutes_spent: 该页累计人工修改分钟数（可填小数，如 2.5）
+2026-07-18-session1,P1,建筑师,脱敏医院项目,1,封面,text,修改副标题措辞,3,no,
+2026-07-18-session1,P1,建筑师,脱敏医院项目,2,院区现状,image,替换素材并裁切,8,yes,

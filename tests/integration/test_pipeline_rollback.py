@@ -1,10 +1,10 @@
-"""Integration tests for pipeline transaction rollback."""
+"""Integration tests for pipeline transaction rollback via workflow service."""
 
 from __future__ import annotations
 
 import pytest
 from archium.application.presentation_models import PresentationRequest
-from archium.application.presentation_service import PresentationService
+from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.domain.enums import ProjectType
 from archium.domain.project import Project
 from archium.exceptions import LLMProviderError, WorkflowError
@@ -34,7 +34,7 @@ def request_payload() -> PresentationRequest:
     )
 
 
-def test_run_pipeline_rolls_back_on_failure(
+def test_workflow_run_marks_failure_without_leaving_completed_state(
     test_settings: object,
     request_payload: PresentationRequest,
 ) -> None:
@@ -42,18 +42,19 @@ def test_run_pipeline_rolls_back_on_failure(
     Base.metadata.create_all(engine)
     failing_llm = MockLLMProvider(selector=_failing_after_brief_selector)
 
-    with (
-        pytest.raises(WorkflowError, match="Presentation pipeline failed"),
-        get_session(engine) as session,
-    ):
+    with get_session(engine) as session:
         project = ProjectRepository(session).create(
             Project(name="Rollback Test Project", project_type=ProjectType.HEALTHCARE)
         )
-        service = PresentationService(session, failing_llm, settings=test_settings)  # type: ignore[arg-type]
-        service.run_pipeline(project.id, request_payload)
+        service = PresentationWorkflowService(session, failing_llm, settings=test_settings)  # type: ignore[arg-type]
+        try:
+            with pytest.raises(WorkflowError, match="Simulated storyline failure"):
+                service.run(project.id, request_payload)
+        finally:
+            service.close()
 
-    with get_session(engine) as session:
         presentations = PresentationRepository(session).list_by_project(project.id)
-        assert presentations == []
+        assert len(presentations) == 1
+        assert presentations[0].status.value != "exported"
 
     engine.dispose()

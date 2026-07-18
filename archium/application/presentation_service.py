@@ -1,8 +1,7 @@
-"""Presentation generation pipeline service."""
+"""Atomic presentation generation capabilities used by the LangGraph workflow."""
 
 from __future__ import annotations
 
-import warnings
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -10,17 +9,11 @@ from sqlalchemy.orm import Session
 from archium.agents.brief_builder import BriefBuilder
 from archium.agents.narrative_architect import NarrativeArchitect
 from archium.agents.slide_planner import SlidePlanner
-from archium.application.presentation_models import PipelineResult, PresentationRequest
-from archium.application.workflow_models import WorkflowRunResult
+from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
-from archium.exceptions import (
-    PresentationNotFoundError,
-    ProjectNotFoundError,
-    UnsupportedOperationError,
-    WorkflowError,
-)
+from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
@@ -87,69 +80,3 @@ class PresentationService:
         storyline: Storyline,
     ) -> list[SlideSpec]:
         return self._slide_planner.generate(project_id, brief, storyline)
-
-    def run_pipeline(
-        self,
-        project_id: UUID,
-        request: PresentationRequest,
-        *,
-        presentation_id: UUID | None = None,
-        export_json: bool = True,
-        export_marp: bool = False,
-        export_pptx: bool = False,
-        export_pdf: bool = False,
-    ) -> PipelineResult:
-        """Deprecated: delegate to :class:`PresentationWorkflowService`.
-
-        Will be removed in v0.3. Passing ``presentation_id`` is no longer supported.
-        """
-        message = (
-            "PresentationService.run_pipeline() is deprecated and will be removed in v0.3; "
-            "use PresentationWorkflowService.run() instead."
-        )
-        if presentation_id is not None:
-            message += (
-                " Passing presentation_id is no longer supported and will raise "
-                "UnsupportedOperationError."
-            )
-        warnings.warn(message, DeprecationWarning, stacklevel=2)
-        logger.warning(message)
-        from archium.application.presentation_workflow_service import PresentationWorkflowService
-
-        if presentation_id is not None:
-            existing = self._presentations.get_presentation(presentation_id)
-            if existing is None:
-                raise PresentationNotFoundError(presentation_id)
-            raise UnsupportedOperationError(
-                "Updating existing presentations through run_pipeline is no longer supported"
-            )
-
-        workflow = PresentationWorkflowService(
-            self._session,
-            self._llm,
-            settings=self._settings,
-            renderer=self._renderer,
-        )
-        try:
-            workflow_result = workflow.run(
-                project_id,
-                request,
-                export_json=export_json,
-                export_marp=export_marp,
-                export_pptx=export_pptx,
-                export_pdf=export_pdf,
-            )
-        except WorkflowError:
-            raise WorkflowError("Presentation pipeline failed") from None
-        return _workflow_result_to_pipeline(workflow_result)
-
-
-def _workflow_result_to_pipeline(result: WorkflowRunResult) -> PipelineResult:
-    return PipelineResult(
-        presentation=result.presentation,
-        brief=result.brief,
-        storyline=result.storyline,
-        slides=list(result.slides),
-        render=result.render,
-        errors=list(result.errors),
-    )

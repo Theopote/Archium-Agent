@@ -1,0 +1,6 @@
+session_id,issue_id,severity,page_or_area,summary,triage_bucket,owner,status,linked_edit_rows
+# triage_bucket: beta_blocker | post_beta_improvement | future_idea
+# severity: critical | high | medium | low
+# status: open | fixed | wontfix | deferred
+2026-07-18-session1,I-001,high,Slide 2 素材,自动匹配图片比例错误,beta_blocker,eng,open,2026-07-18-session1:P1:2
+2026-07-18-session1,I-002,medium,Brief 审核,专业术语需手动替换,post_beta_improvement,product,open,

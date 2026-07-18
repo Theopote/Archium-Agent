@@ -33,7 +33,7 @@ class PresentationRequest:
 
 @dataclass
 class PipelineResult:
-    """Result of running the presentation generation pipeline."""
+    """Legacy pipeline result shape. Prefer :class:`WorkflowRunResult` for new code."""
 
     presentation: Presentation
     brief: PresentationBrief | None = None
