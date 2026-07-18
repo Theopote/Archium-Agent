@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from archium.domain.review_rules import ReviewRuleCode
@@ -238,7 +238,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if "samples" not in payload:
         raise ValueError(f"Manifest missing 'samples': {path}")
-    return payload
+    return cast(dict[str, Any], payload)
 
 
 def corpus_progress(manifest: dict[str, Any]) -> dict[str, Any]:
@@ -350,7 +350,7 @@ def write_calibration_report(report: dict[str, Any], output_path: Path) -> None:
 def load_calibration_report(path: Path = DEFAULT_REPORT_PATH) -> dict[str, Any] | None:
     if not path.is_file():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
 
 
 def formal_emit_rule_codes(report_path: Path = DEFAULT_REPORT_PATH) -> frozenset[str]:

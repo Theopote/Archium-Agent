@@ -9,7 +9,7 @@ from archium.domain.asset import Asset
 try:
     from PIL import Image
 except ImportError:  # pragma: no cover - optional documents extra
-    Image = None  # type: ignore[misc, assignment]
+    Image = None  # type: ignore[assignment]
 
 
 def load_image_from_path(path: str | Path) -> Image.Image:

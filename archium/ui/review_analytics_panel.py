@@ -71,7 +71,7 @@ def render_project_review_quality_dashboard(project_id: UUID) -> None:
         st.caption("暂无审核问题。运行完整工作流后将在此显示规则命中统计。")
         return
 
-    presentation_options = {"全部汇报": None}
+    presentation_options: dict[str, UUID | None] = {"全部汇报": None}
     for presentation in presentations:
         presentation_options[presentation.title] = presentation.id
 

@@ -12,10 +12,10 @@ if TYPE_CHECKING:
 try:
     from PIL import Image, ImageFilter, ImageOps, ImageStat
 except ImportError:  # pragma: no cover
-    Image = None  # type: ignore[misc, assignment]
-    ImageFilter = None  # type: ignore[misc, assignment]
-    ImageOps = None  # type: ignore[misc, assignment]
-    ImageStat = None  # type: ignore[misc, assignment]
+    Image = None  # type: ignore[assignment]
+    ImageFilter = None  # type: ignore[assignment]
+    ImageOps = None  # type: ignore[assignment]
+    ImageStat = None  # type: ignore[assignment]
 
 from uuid import UUID
 
@@ -280,7 +280,7 @@ def check_north_arrow(image: Image.Image) -> VisualQACheck:
         region = gray.crop(box)
         scores[name] = _corner_symbol_score(region)
 
-    best_corner = max(scores, key=scores.get)
+    best_corner = max(scores, key=lambda corner: scores[corner])
     best_score = scores[best_corner]
     passed = best_score >= _NORTH_ARROW_MIN_SCORE
     return VisualQACheck(
@@ -363,7 +363,7 @@ def classify_drawing(image: Image.Image) -> tuple[str, float, dict[str, object]]
         "diagram": _score_diagram(edge_ratio, color_count),
         "photo": _score_photo(stdev, color_count, edge_ratio),
     }
-    drawing_type = max(scores, key=scores.get)
+    drawing_type = max(scores, key=lambda label: scores[label])
     confidence = scores[drawing_type]
     return drawing_type, round(confidence, 3), {
         "scores": {key: round(value, 3) for key, value in scores.items()},

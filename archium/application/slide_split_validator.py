@@ -6,6 +6,7 @@ import re
 from uuid import UUID
 
 from archium.application.slide_repair_policy import contains_protected_signal
+from archium.domain.citation import Citation
 from archium.domain.presentation import Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan, citation_key
@@ -165,7 +166,7 @@ def _point_supported_by_citations(point: str, citations: list) -> bool:
     return False
 
 
-def _citation_on_slide(citation, slide: SlideSpec) -> bool:
+def _citation_on_slide(citation: Citation, slide: SlideSpec) -> bool:
     for item in slide.source_citations:
         if citation.chunk_id is not None and item.chunk_id == citation.chunk_id:
             return True
