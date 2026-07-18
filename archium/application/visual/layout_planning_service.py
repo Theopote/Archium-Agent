@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
@@ -13,7 +14,6 @@ from archium.domain.visual.enums import LayoutFamily, LayoutValidationStatus, Vi
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,

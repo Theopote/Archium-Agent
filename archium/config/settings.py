@@ -242,6 +242,39 @@ class Settings(BaseSettings):
         default=True,
         description="When true, generate schematic PNG diagrams for unmatched diagram/plan/timeline visuals.",
     )
+    layout_min_body_font_pt: float = Field(
+        default=14.0,
+        gt=0,
+        description="Minimum body text size (pt) for LayoutValidator.",
+    )
+    layout_min_caption_font_pt: float = Field(
+        default=9.0,
+        gt=0,
+        description="Minimum caption text size (pt) for LayoutValidator.",
+    )
+    layout_min_source_font_pt: float = Field(
+        default=8.0,
+        gt=0,
+        description="Minimum source text size (pt) for LayoutValidator.",
+    )
+    layout_min_hero_area_ratio: float = Field(
+        default=0.45,
+        ge=0.0,
+        le=1.0,
+        description="Minimum hero area ratio of safe area for hero/drawing pages.",
+    )
+    layout_min_whitespace_ratio: float = Field(
+        default=0.08,
+        ge=0.0,
+        le=1.0,
+        description="Minimum whitespace ratio for LayoutValidator.",
+    )
+    layout_max_whitespace_ratio: float = Field(
+        default=0.60,
+        ge=0.0,
+        le=1.0,
+        description="Maximum whitespace ratio for LayoutValidator.",
+    )
     web_image_search_enabled: bool = Field(
         default=True,
         description=(

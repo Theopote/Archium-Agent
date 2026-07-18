@@ -1,0 +1,26 @@
+{
+  "issues": [
+    {
+      "rule_code": "LAYOUT.TEXT_OVERFLOW",
+      "severity": "error",
+      "element_ids": [
+        "title"
+      ],
+      "message": "Text in title overflows its box.",
+      "suggestion": "Enlarge the text box or shorten the copy.",
+      "auto_repairable": true
+    }
+  ],
+  "score": 0.925,
+  "layout_score": {
+    "validity_score": 0.85,
+    "readability_score": 0.8,
+    "hierarchy_score": 1.0,
+    "alignment_score": 1.0,
+    "whitespace_score": 1.0,
+    "asset_usage_score": 1.0,
+    "consistency_score": 1.0,
+    "total_score": 0.925
+  },
+  "valid": false
+}

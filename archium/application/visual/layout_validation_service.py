@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from archium.domain.visual.design_system import DesignSystem, TypographySystem
+from archium.domain.visual.design_system import DesignSystem, LayoutThresholds, TypographySystem
 from archium.domain.visual.enums import (
     CropPolicy,
     ImageFit,
@@ -119,28 +119,32 @@ class LayoutValidationService:
                         auto_repairable=True,
                     )
                 )
-            elif design_system.page.safe_area_enabled and (
-                rect.x < safe.x - 1e-6
-                or rect.y < safe.y - 1e-6
-                or rect.right > safe.right + 1e-6
-                or rect.bottom > safe.bottom + 1e-6
-            ):
-                # Footer/source may sit in bottom margin strip — allow SOURCE/FOOTER/PAGE_NUMBER.
-                if element.role not in {
+            elif (
+                design_system.page.safe_area_enabled
+                and (
+                    rect.x < safe.x - 1e-6
+                    or rect.y < safe.y - 1e-6
+                    or rect.right > safe.right + 1e-6
+                    or rect.bottom > safe.bottom + 1e-6
+                )
+                and element.role
+                not in {
                     LayoutElementRole.SOURCE,
                     LayoutElementRole.FOOTER,
                     LayoutElementRole.PAGE_NUMBER,
-                }:
-                    issues.append(
-                        LayoutValidationIssue(
-                            rule_code=LAYOUT_ELEMENT_OUTSIDE_SAFE_AREA,
-                            severity=LayoutIssueSeverity.ERROR,
-                            element_ids=[element.id],
-                            message=f"Element {element.id} is outside the safe area.",
-                            suggestion="Move the element into the safe content area.",
-                            auto_repairable=True,
-                        )
+                }
+            ):
+                # Footer/source may sit in bottom margin strip.
+                issues.append(
+                    LayoutValidationIssue(
+                        rule_code=LAYOUT_ELEMENT_OUTSIDE_SAFE_AREA,
+                        severity=LayoutIssueSeverity.ERROR,
+                        element_ids=[element.id],
+                        message=f"Element {element.id} is outside the safe area.",
+                        suggestion="Move the element into the safe content area.",
+                        auto_repairable=True,
                     )
+                )
         return issues
 
     def _check_overlaps(
@@ -207,12 +211,12 @@ class LayoutValidationService:
         self,
         plan: LayoutPlan,
         typography: TypographySystem,
-        thresholds: object,
+        thresholds: LayoutThresholds,
     ) -> list[LayoutValidationIssue]:
         issues: list[LayoutValidationIssue] = []
-        min_body = getattr(thresholds, "min_body_font_pt")
-        min_caption = getattr(thresholds, "min_caption_font_pt")
-        min_source = getattr(thresholds, "min_source_font_pt")
+        min_body = thresholds.min_body_font_pt
+        min_caption = thresholds.min_caption_font_pt
+        min_source = thresholds.min_source_font_pt
         for element in plan.elements:
             if element.content_type != LayoutContentType.TEXT and element.role not in {
                 LayoutElementRole.TITLE,
@@ -415,19 +419,21 @@ class LayoutValidationService:
             xs = [el.x for el in group]
             ys = [el.y for el in group]
             widths = [el.width for el in group]
-            if max(xs) - min(xs) > 0.05 and max(ys) - min(ys) > 0.05:
-                # Neither left-aligned nor top-aligned as a set.
-                if max(widths) - min(widths) > 0.08:
-                    issues.append(
-                        LayoutValidationIssue(
-                            rule_code=LAYOUT_INCONSISTENT_ALIGNMENT,
-                            severity=LayoutIssueSeverity.WARNING,
-                            element_ids=[el.id for el in group],
-                            message=f"Elements with role {role.value} are inconsistently aligned.",
-                            suggestion="Align shared edges or equalize widths.",
-                            auto_repairable=True,
-                        )
+            if (
+                max(xs) - min(xs) > 0.05
+                and max(ys) - min(ys) > 0.05
+                and max(widths) - min(widths) > 0.08
+            ):
+                issues.append(
+                    LayoutValidationIssue(
+                        rule_code=LAYOUT_INCONSISTENT_ALIGNMENT,
+                        severity=LayoutIssueSeverity.WARNING,
+                        element_ids=[el.id for el in group],
+                        message=f"Elements with role {role.value} are inconsistently aligned.",
+                        suggestion="Align shared edges or equalize widths.",
+                        auto_repairable=True,
                     )
+                )
         return issues
 
     def _score(

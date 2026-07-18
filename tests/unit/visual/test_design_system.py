@@ -32,14 +32,23 @@ class TestDesignSystem:
         assert system.thresholds.min_body_font_pt == 14.0
 
     def test_spacing_must_be_non_decreasing(self) -> None:
-        system = default_presentation_design_system()
+        from archium.domain.visual.design_system import SpacingSystem
+
         with pytest.raises(ValidationError):
-            system.spacing.model_copy(update={"sm": 0.01, "xs": 0.2})
+            SpacingSystem(xs=0.2, sm=0.01, md=0.15, lg=0.2, xl=0.3, xxl=0.4)
 
     def test_margins_cannot_exceed_page(self) -> None:
-        system = default_presentation_design_system()
+        from archium.domain.visual.design_system import PageSystem
+
         with pytest.raises(ValidationError):
-            system.page.model_copy(update={"margin_left": 6.0, "margin_right": 6.0})
+            PageSystem(
+                width=10,
+                height=5.625,
+                margin_top=0.45,
+                margin_right=6.0,
+                margin_bottom=0.45,
+                margin_left=6.0,
+            )
 
     def test_color_resolve_token(self) -> None:
         system = default_presentation_design_system()

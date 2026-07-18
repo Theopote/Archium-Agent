@@ -12,7 +12,11 @@ from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.domain.citation import Citation
 from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.domain.visual import LayoutFamily, VisualContentType, default_presentation_design_system
+from archium.domain.visual import (
+    LayoutFamily,
+    VisualContentType,
+    default_presentation_design_system,
+)
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutElementRole
 from archium.infrastructure.layout.generators.base import (
     LayoutGeneratorContext,
@@ -64,7 +68,7 @@ def test_v1_drawing_focus_site_plan(intent_service: VisualIntentService) -> None
         order=1,
         title="总体规划与空间结构",
         message="总平面确立院落轴线与核心公服节点。",
-        key_points=["绿地率 42%", "容积率 1.8", "公服半径 500m", "轴线贯通", "开放院落", "界面连续"],
+        key_points=["绿地率 42%", "容积率 1.8", "公服半径 500m", "轴线贯通", "开放院落"],
         visual_requirements=[
             VisualRequirement(type=VisualType.SITE_PLAN, description="总平面图", preferred_asset_ids=[uuid4()])
         ],
@@ -164,7 +168,7 @@ def test_v3_comparative_matrix(intent_service: VisualIntentService) -> None:
         order=3,
         title="三个既有图书馆更新案例比较",
         message="既有图书馆更新应优先重建公共性与可达性，而非单纯扩容。",
-        key_points=["空间策略", "运营模式", "公众可达性", "案例A：中庭再生", "案例B：街道界面", "案例C：社区嵌入"],
+        key_points=["空间策略", "运营模式", "公众可达性", "案例A：中庭再生", "案例B：街道界面"],
         visual_requirements=[
             VisualRequirement(type=VisualType.COMPARISON, description="案例比较", preferred_asset_ids=[uuid4()]),
             VisualRequirement(type=VisualType.REFERENCE_CASE, description="案例图1", preferred_asset_ids=[uuid4()]),

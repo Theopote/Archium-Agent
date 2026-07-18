@@ -6,7 +6,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from archium.domain.visual.enums import ContinuityRole, DensityLevel, LayoutFamily, VisualContentType
+from archium.domain.visual.enums import (
+    ContinuityRole,
+    DensityLevel,
+    LayoutFamily,
+    VisualContentType,
+)
 
 
 class ArtDirectionDraft(BaseModel):

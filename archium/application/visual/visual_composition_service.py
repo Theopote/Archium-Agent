@@ -14,8 +14,8 @@ from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
-from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.defaults import default_presentation_design_system
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.validation import LayoutValidationReport

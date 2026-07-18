@@ -1,0 +1,66 @@
+{
+  "issues": [
+    {
+      "rule_code": "LAYOUT.FONT_TOO_SMALL",
+      "severity": "error",
+      "element_ids": [
+        "annotation_0"
+      ],
+      "message": "Font size for annotation_0 is below minimum (14.0 pt).",
+      "suggestion": "Increase font size or use a larger style token.",
+      "auto_repairable": true
+    },
+    {
+      "rule_code": "LAYOUT.FONT_TOO_SMALL",
+      "severity": "error",
+      "element_ids": [
+        "annotation_1"
+      ],
+      "message": "Font size for annotation_1 is below minimum (14.0 pt).",
+      "suggestion": "Increase font size or use a larger style token.",
+      "auto_repairable": true
+    },
+    {
+      "rule_code": "LAYOUT.FONT_TOO_SMALL",
+      "severity": "error",
+      "element_ids": [
+        "annotation_2"
+      ],
+      "message": "Font size for annotation_2 is below minimum (14.0 pt).",
+      "suggestion": "Increase font size or use a larger style token.",
+      "auto_repairable": true
+    },
+    {
+      "rule_code": "LAYOUT.FONT_TOO_SMALL",
+      "severity": "error",
+      "element_ids": [
+        "annotation_3"
+      ],
+      "message": "Font size for annotation_3 is below minimum (14.0 pt).",
+      "suggestion": "Increase font size or use a larger style token.",
+      "auto_repairable": true
+    },
+    {
+      "rule_code": "LAYOUT.TEXT_OVERFLOW",
+      "severity": "error",
+      "element_ids": [
+        "title"
+      ],
+      "message": "Text in title overflows its box.",
+      "suggestion": "Enlarge the text box or shorten the copy.",
+      "auto_repairable": true
+    }
+  ],
+  "score": 0.625,
+  "layout_score": {
+    "validity_score": 0.25,
+    "readability_score": 0.0,
+    "hierarchy_score": 1.0,
+    "alignment_score": 1.0,
+    "whitespace_score": 1.0,
+    "asset_usage_score": 1.0,
+    "consistency_score": 1.0,
+    "total_score": 0.625
+  },
+  "valid": false
+}

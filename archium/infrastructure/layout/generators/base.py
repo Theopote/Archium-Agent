@@ -134,8 +134,6 @@ def content_from_slide(
 
 def _looks_like_metric(text: str) -> bool:
     stripped = text.strip()
-    if any(ch.isdigit() for ch in stripped) and any(
+    return any(ch.isdigit() for ch in stripped) and any(
         unit in stripped for unit in ("%", "㎡", "m²", "m2", "公顷", "人", "床", "层")
-    ):
-        return True
-    return False
+    )
