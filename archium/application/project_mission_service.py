@@ -179,14 +179,44 @@ class ProjectMissionService:
         self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT)
         return saved
 
-    def approve_mission(self, mission_id: UUID) -> ProjectMission:
+    def approve_mission(
+        self,
+        mission_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> ProjectMission:
+        """Mark the mission approved (domain action only — does not resume workflow)."""
         mission = self._require_mission(mission_id)
         mission.approve()
         saved = self._missions.save_mission(mission)
+        history_note = note or "批准任务理解"
+        if user_id:
+            history_note = f"{history_note} · by {user_id}"
         self._history.record_snapshot(
             saved,
             SlideChangeSource.MANUAL_EDIT,
-            note="批准任务理解",
+            note=history_note,
+        )
+        return saved
+
+    def reject_mission(
+        self,
+        mission_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> ProjectMission:
+        mission = self._require_mission(mission_id)
+        mission.reject()
+        saved = self._missions.save_mission(mission)
+        history_note = note or "驳回任务理解"
+        if user_id:
+            history_note = f"{history_note} · by {user_id}"
+        self._history.record_snapshot(
+            saved,
+            SlideChangeSource.MANUAL_EDIT,
+            note=history_note,
         )
         return saved
 

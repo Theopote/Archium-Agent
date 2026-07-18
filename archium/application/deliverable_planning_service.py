@@ -185,23 +185,58 @@ class DeliverablePlanningService:
         plan.touch()
         return self._missions.save_deliverable_plan(plan)
 
-    def approve_plan(self, plan_id: UUID) -> DeliverablePlan:
+    def approve_deliverable_plan(
+        self,
+        plan_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> DeliverablePlan:
+        """Mark the deliverable plan approved (domain action only — does not resume workflow)."""
         plan = self._require_plan(plan_id)
         if not plan.selected_deliverables():
             raise WorkflowError("请至少选择一项成果后再批准")
         plan.approve()
         saved = self._missions.save_deliverable_plan(plan)
+        history_note = note or "批准成果规划"
+        if user_id:
+            history_note = f"{history_note} · by {user_id}"
         self._history.record_snapshot(
             saved,
             SlideChangeSource.MANUAL_EDIT,
-            note="批准成果规划",
+            note=history_note,
         )
         return saved
 
-    def reject_plan(self, plan_id: UUID) -> DeliverablePlan:
+    def approve_plan(
+        self,
+        plan_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> DeliverablePlan:
+        """Alias for :meth:`approve_deliverable_plan`."""
+        return self.approve_deliverable_plan(plan_id, user_id=user_id, note=note)
+
+    def reject_plan(
+        self,
+        plan_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> DeliverablePlan:
         plan = self._require_plan(plan_id)
         plan.reject()
-        return self._missions.save_deliverable_plan(plan)
+        saved = self._missions.save_deliverable_plan(plan)
+        history_note = note or "驳回成果规划"
+        if user_id:
+            history_note = f"{history_note} · by {user_id}"
+        self._history.record_snapshot(
+            saved,
+            SlideChangeSource.MANUAL_EDIT,
+            note=history_note,
+        )
+        return saved
 
     def _sync_recommended_ids(
         self,

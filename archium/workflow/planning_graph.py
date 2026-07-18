@@ -26,6 +26,18 @@ def _route_after_clarification(state: PlanningWorkflowState) -> str:
     return "revise_mission"
 
 
+def _route_after_mission_revision(state: PlanningWorkflowState) -> str:
+    if state.get("errors"):
+        return "finalize"
+    return "await_mission_approval"
+
+
+def _route_after_mission_approval(state: PlanningWorkflowState) -> str:
+    if state.get("errors"):
+        return "finalize"
+    return "plan_workstreams"
+
+
 def _route_after_approval(state: PlanningWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
@@ -72,6 +84,7 @@ class PlanningWorkflowGraph:
         builder.add_node("validate_mission", nodes.validate_mission)
         builder.add_node("await_user_clarification", nodes.await_user_clarification)
         builder.add_node("revise_mission", nodes.revise_mission)
+        builder.add_node("await_mission_approval", nodes.await_mission_approval)
         builder.add_node("plan_workstreams", nodes.plan_workstreams)
         builder.add_node("plan_deliverables", nodes.plan_deliverables)
         builder.add_node("await_plan_approval", nodes.await_plan_approval)
@@ -101,8 +114,16 @@ class PlanningWorkflowGraph:
         )
         builder.add_conditional_edges(
             "revise_mission",
-            _route_on_errors,
-            {"continue": "plan_workstreams", "finalize": "finalize"},
+            _route_after_mission_revision,
+            {
+                "await_mission_approval": "await_mission_approval",
+                "finalize": "finalize",
+            },
+        )
+        builder.add_conditional_edges(
+            "await_mission_approval",
+            _route_after_mission_approval,
+            {"plan_workstreams": "plan_workstreams", "finalize": "finalize"},
         )
         builder.add_conditional_edges(
             "plan_workstreams",

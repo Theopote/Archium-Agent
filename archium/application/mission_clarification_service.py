@@ -15,6 +15,7 @@ from archium.application.project_mission_service import (
 )
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import (
+    ApprovalStatus,
     AssumptionStatus,
     ConstraintSource,
     KnowledgeGapStatus,
@@ -367,13 +368,14 @@ class MissionClarificationService:
             version=previous.version + 1,
         )
         # Keep identity; update content only. Clarification records stay attached.
+        # Revised content requires a fresh explicit approval gate.
         revised = parsed.mission.model_copy(
             update={
                 "id": previous.id,
                 "lineage_id": previous.lineage_id,
                 "logical_key": previous.logical_key,
                 "created_at": previous.created_at,
-                "approval_status": previous.approval_status,
+                "approval_status": ApprovalStatus.DRAFT,
             }
         )
         revised.touch()

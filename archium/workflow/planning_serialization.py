@@ -46,6 +46,7 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
         "presentation_request_draft": state.get("presentation_request_draft"),
         "artifact_execution_plans": list(state.get("artifact_execution_plans") or []),
         "require_clarification": state.get("require_clarification", True),
+        "require_mission_approval": state.get("require_mission_approval", True),
         "require_plan_approval": state.get("require_plan_approval", True),
         "review_gate": state.get("review_gate"),
         "errors": list(state.get("errors", [])),

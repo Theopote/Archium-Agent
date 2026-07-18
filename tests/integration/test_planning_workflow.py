@@ -7,6 +7,7 @@ from archium.application.mission_clarification_service import MissionClarificati
 from archium.application.planning_workflow_service import PlanningWorkflowService
 from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, WorkflowStep
 from archium.domain.project import Project
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
@@ -52,6 +53,19 @@ def planning_service(db_session: Session, test_settings: object) -> PlanningWork
     return PlanningWorkflowService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
 
 
+def _answer_first_question(
+    planning_service: PlanningWorkflowService,
+    db_session: Session,
+    first,
+) -> None:
+    clarification = MissionClarificationService(
+        db_session,
+        MockLLMProvider(selector=planning_workflow_mock_selector),
+    )
+    clarification.answer_question(first.clarifying_questions[0].id, "传统语汇新建")
+    db_session.commit()
+
+
 def test_planning_run_does_not_create_presentation(
     planning_service: PlanningWorkflowService,
     temple_project: Project,
@@ -87,36 +101,80 @@ def test_planning_workflow_pauses_for_clarification(
     )
 
 
-def test_planning_workflow_continues_after_clarification_to_plan_approval(
+def test_planning_workflow_pauses_for_mission_approval_after_clarification(
     planning_service: PlanningWorkflowService,
     temple_project: Project,
     db_session: Session,
 ) -> None:
     first = planning_service.run(temple_project.id, TEMPLE_TASK)
-    assert first.awaiting_review
-    assert first.mission is not None
-
-    clarification = MissionClarificationService(
-        db_session,
-        MockLLMProvider(selector=planning_workflow_mock_selector),
-    )
-    clarification.answer_question(first.clarifying_questions[0].id, "传统语汇新建")
-    db_session.commit()
+    _answer_first_question(planning_service, db_session, first)
 
     second = planning_service.continue_after_clarification(first.workflow_run.id)
 
     assert second.awaiting_review
-    assert second.review_gate == "plan_approval"
+    assert second.review_gate == "mission_approval"
     assert second.mission is not None
-    assert second.workstreams
-    assert second.deliverable_plan is not None
-    assert second.deliverable_plan.approval_status == ApprovalStatus.DRAFT
-    assert second.presentation_request_draft is None
-    assert second.presentation is None
-    assert second.planning_session.status == PlanningSessionStatus.AWAITING_APPROVAL
+    assert second.mission.approval_status == ApprovalStatus.DRAFT
+    assert second.workstreams == []
+    assert second.deliverable_plan is None
+    assert second.planning_session.status == PlanningSessionStatus.AWAITING_MISSION_APPROVAL
     assert (
-        second.workflow_run.state["current_step"] == WorkflowStep.PLANNING_AWAIT_APPROVAL.value
+        second.workflow_run.state["current_step"]
+        == WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value
     )
+
+
+def test_resume_after_mission_approval_requires_prior_approve(
+    planning_service: PlanningWorkflowService,
+    temple_project: Project,
+    db_session: Session,
+) -> None:
+    first = planning_service.run(temple_project.id, TEMPLE_TASK)
+    _answer_first_question(planning_service, db_session, first)
+    second = planning_service.continue_after_clarification(first.workflow_run.id)
+
+    with pytest.raises(WorkflowError, match="尚未批准"):
+        planning_service.resume_after_mission_approval(second.workflow_run.id)
+
+
+def test_planning_workflow_continues_after_mission_approval_to_plan_approval(
+    planning_service: PlanningWorkflowService,
+    temple_project: Project,
+    db_session: Session,
+) -> None:
+    first = planning_service.run(temple_project.id, TEMPLE_TASK)
+    _answer_first_question(planning_service, db_session, first)
+    second = planning_service.continue_after_clarification(first.workflow_run.id)
+
+    third = planning_service.approve_mission_and_continue(second.workflow_run.id)
+
+    assert third.awaiting_review
+    assert third.review_gate == "plan_approval"
+    assert third.mission is not None
+    assert third.mission.approval_status == ApprovalStatus.APPROVED
+    assert third.workstreams
+    assert third.deliverable_plan is not None
+    assert third.deliverable_plan.approval_status == ApprovalStatus.DRAFT
+    assert third.presentation_request_draft is None
+    assert third.presentation is None
+    assert third.planning_session.status == PlanningSessionStatus.AWAITING_APPROVAL
+    assert (
+        third.workflow_run.state["current_step"] == WorkflowStep.PLANNING_AWAIT_APPROVAL.value
+    )
+
+
+def test_resume_after_plan_approval_requires_prior_approve(
+    planning_service: PlanningWorkflowService,
+    temple_project: Project,
+    db_session: Session,
+) -> None:
+    first = planning_service.run(temple_project.id, TEMPLE_TASK)
+    _answer_first_question(planning_service, db_session, first)
+    second = planning_service.continue_after_clarification(first.workflow_run.id)
+    third = planning_service.approve_mission_and_continue(second.workflow_run.id)
+
+    with pytest.raises(WorkflowError, match="尚未批准"):
+        planning_service.resume_after_plan_approval(third.workflow_run.id)
 
 
 def test_planning_workflow_completes_after_plan_approval(
@@ -126,39 +184,53 @@ def test_planning_workflow_completes_after_plan_approval(
 ) -> None:
     before = len(PresentationRepository(db_session).list_by_project(temple_project.id))
     first = planning_service.run(temple_project.id, TEMPLE_TASK)
-    clarification = MissionClarificationService(
-        db_session,
-        MockLLMProvider(selector=planning_workflow_mock_selector),
-    )
-    clarification.answer_question(first.clarifying_questions[0].id, "传统语汇新建")
-    db_session.commit()
-
+    _answer_first_question(planning_service, db_session, first)
     second = planning_service.continue_after_clarification(first.workflow_run.id)
-    assert second.deliverable_plan is not None
-
-    third = planning_service.continue_after_plan_approval(second.workflow_run.id)
-
-    assert not third.awaiting_review
-    assert third.workflow_run.status == WorkflowStatus.COMPLETED
-    assert third.presentation is None
-    assert third.workflow_run.presentation_id is None
-    assert third.planning_session.status == PlanningSessionStatus.READY
-    assert third.presentation_request_draft is not None
-    assert third.presentation_request is not None
-    assert third.presentation_request.purpose == third.mission.task_statement
-    assert third.presentation_request.title == "概念设计汇报"
-    assert "施工图" in " ".join(third.presentation_request.excluded_topics)
-    assert third.presentation_request_draft.get("mission_id") == str(third.mission.id)
+    third = planning_service.approve_mission_and_continue(second.workflow_run.id)
     assert third.deliverable_plan is not None
-    assert third.deliverable_plan.approval_status == ApprovalStatus.APPROVED
+
+    # Domain approve + resume are separable; facade combines them for UI.
+    planning_service.approve_deliverable_plan(third.deliverable_plan.id)
+    fourth = planning_service.resume_after_plan_approval(third.workflow_run.id)
+
+    assert not fourth.awaiting_review
+    assert fourth.workflow_run.status == WorkflowStatus.COMPLETED
+    assert fourth.presentation is None
+    assert fourth.workflow_run.presentation_id is None
+    assert fourth.planning_session.status == PlanningSessionStatus.READY
+    assert fourth.presentation_request_draft is not None
+    assert fourth.presentation_request is not None
+    assert fourth.presentation_request.purpose == fourth.mission.task_statement
+    assert fourth.presentation_request.title == "概念设计汇报"
+    assert "施工图" in " ".join(fourth.presentation_request.excluded_topics)
+    assert fourth.presentation_request_draft.get("mission_id") == str(fourth.mission.id)
+    assert fourth.deliverable_plan is not None
+    assert fourth.deliverable_plan.approval_status == ApprovalStatus.APPROVED
     assert (
-        third.workflow_run.state["current_step"] == WorkflowStep.PLANNING_FINALIZE.value
+        fourth.workflow_run.state["current_step"] == WorkflowStep.PLANNING_FINALIZE.value
     )
     assert len(PresentationRepository(db_session).list_by_project(temple_project.id)) == before
 
-    bridge = planning_service.get_presentation_bridge(third.workflow_run.id)
-    assert bridge.request.title == third.presentation_request.title
+    bridge = planning_service.get_presentation_bridge(fourth.workflow_run.id)
+    assert bridge.request.title == fourth.presentation_request.title
     assert bridge.deliverable_id == "del-concept-ppt"
+
+
+def test_approve_and_continue_facade(
+    planning_service: PlanningWorkflowService,
+    temple_project: Project,
+    db_session: Session,
+) -> None:
+    first = planning_service.run(temple_project.id, TEMPLE_TASK)
+    _answer_first_question(planning_service, db_session, first)
+    second = planning_service.continue_after_clarification(first.workflow_run.id)
+    third = planning_service.approve_mission_and_continue(second.workflow_run.id)
+
+    fourth = planning_service.approve_and_continue(third.workflow_run.id)
+    assert not fourth.awaiting_review
+    assert fourth.workflow_run.status == WorkflowStatus.COMPLETED
+    assert fourth.deliverable_plan is not None
+    assert fourth.deliverable_plan.approval_status == ApprovalStatus.APPROVED
 
 
 def test_planning_workflow_can_skip_gates(
@@ -169,12 +241,14 @@ def test_planning_workflow_can_skip_gates(
         temple_project.id,
         TEMPLE_TASK,
         require_clarification=False,
+        require_mission_approval=False,
         require_plan_approval=False,
     )
 
     assert not result.awaiting_review
     assert result.workflow_run.status == WorkflowStatus.COMPLETED
     assert result.mission is not None
+    assert result.mission.approval_status == ApprovalStatus.APPROVED
     assert result.workstreams
     assert result.deliverable_plan is not None
     assert result.deliverable_plan.approval_status == ApprovalStatus.APPROVED

@@ -17,6 +17,7 @@ from archium.ui.mission_panel import render_mission_panel
 from archium.ui.planning_service import (
     TASK_EXAMPLE_PROMPTS,
     PlanningSnapshot,
+    approve_mission_and_continue,
     continue_after_clarification,
     get_planning_snapshot,
     get_presentation_bridge,
@@ -115,6 +116,8 @@ def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
     gate = snapshot.review_gate
     if gate == "clarification":
         st.session_state.mission_step = 2
+    elif gate == "mission_approval":
+        st.session_state.mission_step = 2
     elif gate == "plan_approval":
         st.session_state.mission_step = 4
     elif snapshot.presentation_request is not None:
@@ -186,6 +189,28 @@ def _render_mission(snapshot: PlanningSnapshot) -> None:
         st.info("请先在第 1 步描述并分析任务。")
         return
     render_mission_panel(snapshot.mission)
+
+    if snapshot.review_gate == "mission_approval" and st.session_state.planning_workflow_run_id:
+        st.info("澄清已完成。请确认任务理解无误后批准，再进入工作路径与成果规划。")
+        if st.button("批准任务理解并继续规划", type="primary", use_container_width=True):
+            with st.spinner("正在批准任务理解并生成工作路径与成果计划…"):
+                try:
+                    with get_session() as session:
+                        result = approve_mission_and_continue(
+                            session,
+                            UUID(st.session_state.planning_workflow_run_id),
+                        )
+                    if result.mission is not None:
+                        st.session_state.planning_mission_id = str(result.mission.id)
+                    st.session_state.mission_step = 4
+                    st.success("任务理解已批准，已生成工作路径与成果计划。")
+                    st.rerun()
+                except WorkflowError as exc:
+                    st.error(format_user_error(exc))
+                except Exception as exc:
+                    st.error(format_user_error(exc))
+        return
+
     if st.button("下一步：回答关键问题", use_container_width=True):
         st.session_state.mission_step = 3
         st.rerun()
@@ -209,12 +234,12 @@ def _render_questions(snapshot: PlanningSnapshot, project_id: UUID) -> None:
 
     can_continue = snapshot.readiness is None or snapshot.readiness.can_continue
     if st.button(
-        "继续规划工作路径与成果",
+        "完成澄清，提交任务理解审批",
         type="primary",
         use_container_width=True,
         disabled=not can_continue or not st.session_state.planning_workflow_run_id,
     ):
-        with st.spinner("正在修订任务理解并生成工作路径与成果计划…"):
+        with st.spinner("正在修订任务理解…"):
             try:
                 with get_session() as session:
                     result = continue_after_clarification(
@@ -223,8 +248,8 @@ def _render_questions(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                     )
                 if result.mission is not None:
                     st.session_state.planning_mission_id = str(result.mission.id)
-                st.session_state.mission_step = 4
-                st.success("已生成工作路径与成果计划。")
+                st.session_state.mission_step = 2
+                st.success("已修订任务理解，请确认并批准后再继续规划。")
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))

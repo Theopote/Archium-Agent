@@ -48,11 +48,11 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 | 步骤 | 页面行为 | 系统动作 |
 |------|----------|----------|
 | 1. 描述任务 | 自由文本 + 可选示例 → **分析任务** | `PlanningWorkflowService.run` → 停在澄清闸门 |
-| 2. 任务理解 | 分字段展示/编辑（非整段 AI 文本） | `MissionPatch` 保存 |
-| 3. 关键问题 | 回答 / 假设 / 暂不确定 / 不适用 | 仅 **blocking** 项会挡住继续 |
+| 2. 任务理解 | 分字段展示/编辑；澄清修订后需**显式批准** | `MissionPatch` / `approve_mission` |
+| 3. 关键问题 | 回答 / 假设 / 暂不确定 / 不适用 | readiness → `continue_after_clarification` → mission_approval |
 | 4. 工作路径 | 勾选能力卡片 | `WorkstreamPlanningService` 选型 |
 | 5. 选择成果 | 必要项不可取消 | `DeliverablePlanningService` 选型 |
-| 6. 开始执行 | 预览 PresentationRequest → 批准并生成汇报 | 批准计划 → 适配 → `PresentationWorkflowService.run` |
+| 6. 开始执行 | 预览 PresentationRequest → 批准并生成汇报 | `approve_and_continue` → 适配 → Presentation 主链 |
 
 页面刷新后可通过 `workflow_kind=planning` 的 WorkflowRun 恢复进度。
 
@@ -82,12 +82,14 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 ```
 load_project_context → analyze_task → validate_mission
   → await_user_clarification  ⟵ interrupt（clarification）
-  → revise_mission → plan_workstreams → plan_deliverables
+  → revise_mission → await_mission_approval ⟵ interrupt（mission_approval）
+  → plan_workstreams → plan_deliverables
   → await_plan_approval       ⟵ interrupt（plan_approval）
   → prepare_presentation_request → finalize
 ```
 
 - **职责分离**：`mission_parser` 负责 LLM draft → domain model（含事实账本防编造）；`MissionValidationService` 负责 domain model → 专业一致性（task_natures、scope 冲突、blocking gap、置信度与未知矛盾、专项咨询误判完整设计等）。`validate_mission` 节点调用后者，`errors` 失败流程，`warnings`/`suggestions` 写入状态。
+- **批准 ≠ 继续**：领域层拆分 `approve_mission` / `approve_deliverable_plan` 与 `resume_after_mission_approval` / `resume_after_plan_approval`；UI 可用 facade `approve_mission_and_continue` / `approve_and_continue`。澄清 readiness 不能替代 Mission 批准 gate。
 - Checkpoint：复用 `WorkflowCheckpointerManager`（SQLite）。
 - **`PlanningSession`** 是规划主键；`WorkflowRun.presentation_id` **可空**，规划启动时**不**创建 Presentation。
 - 仅当用户批准并启动已选 `PRESENTATION` 成果时，才由汇报管线创建真正的 Presentation，并写回 `PlanningSession.presentation_id`。
@@ -175,8 +177,12 @@ planning = PlanningWorkflowService(session, llm, settings=settings)
 result = planning.run(project_id, "自由任务描述…")
 # …用户回答问题后…
 result = planning.continue_after_clarification(result.workflow_run.id)
+# …确认任务理解后（批准与继续可拆分）…
+result = planning.approve_mission_and_continue(result.workflow_run.id)
 # …调整 workstream/deliverable 后…
-result = planning.continue_after_plan_approval(result.workflow_run.id)
+planning.approve_deliverable_plan(result.deliverable_plan.id)
+result = planning.resume_after_plan_approval(result.workflow_run.id)
+# 或 UI facade：result = planning.approve_and_continue(result.workflow_run.id)
 bridge = planning.get_presentation_bridge(result.workflow_run.id)
 
 presentation = PresentationWorkflowService(session, llm, settings=settings)
@@ -219,7 +225,7 @@ pytest tests/golden/mission -v -m regression
 - [x] 用户批准后进入现有 Presentation 主链
 - [x] 不破坏 Brief / Storyline / SlideSpec
 - [x] 页面刷新可恢复规划状态
-- [x] LangGraph interrupt / resume（澄清 + 成果批准）
+- [x] LangGraph interrupt / resume（澄清 + Mission 批准 + 成果批准；批准与继续分离）
 
 ### 专业
 

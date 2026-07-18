@@ -85,6 +85,7 @@ def test_start_presentation_requires_presentation_deliverable(
         project.id,
         "园区希望做绿色低碳专项建议，不是完整建筑设计。",
         require_clarification=False,
+        require_mission_approval=False,
         require_plan_approval=False,
     )
     # Force-clear selected presentation deliverables to simulate non-presentation plan

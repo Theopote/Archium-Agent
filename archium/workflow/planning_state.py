@@ -39,6 +39,7 @@ class PlanningWorkflowState(TypedDict, total=False):
     presentation_request_draft: dict[str, Any] | None
     artifact_execution_plans: list[dict[str, Any]]
     require_clarification: bool
+    require_mission_approval: bool
     require_plan_approval: bool
     review_gate: str | None
     current_step: str
@@ -55,6 +56,7 @@ def initial_planning_state(
     user_task_description: str,
     presentation_id: str | None = None,
     require_clarification: bool = True,
+    require_mission_approval: bool = True,
     require_plan_approval: bool = True,
 ) -> PlanningWorkflowState:
     return {
@@ -77,6 +79,7 @@ def initial_planning_state(
         "presentation_request_draft": None,
         "artifact_execution_plans": [],
         "require_clarification": require_clarification,
+        "require_mission_approval": require_mission_approval,
         "require_plan_approval": require_plan_approval,
         "review_gate": None,
         "current_step": WorkflowStep.INIT.value,

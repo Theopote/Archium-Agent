@@ -20,7 +20,7 @@ from archium.application.mission_to_presentation_request import (
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import PlanningSessionStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, WorkflowStep
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -132,6 +132,7 @@ class PlanningWorkflowService:
         user_task_description: str,
         *,
         require_clarification: bool = True,
+        require_mission_approval: bool = True,
         require_plan_approval: bool = True,
     ) -> PlanningWorkflowResult:
         if not user_task_description.strip():
@@ -155,6 +156,7 @@ class PlanningWorkflowService:
                     "current_step": WorkflowStep.INIT.value,
                     "user_task_description": user_task_description,
                     "require_clarification": require_clarification,
+                    "require_mission_approval": require_mission_approval,
                     "require_plan_approval": require_plan_approval,
                 },
             )
@@ -171,6 +173,7 @@ class PlanningWorkflowService:
             user_task_description=user_task_description,
             presentation_id=None,
             require_clarification=require_clarification,
+            require_mission_approval=require_mission_approval,
             require_plan_approval=require_plan_approval,
         )
 
@@ -203,31 +206,82 @@ class PlanningWorkflowService:
 
         mission_id = self._mission_id_from_run(run)
         self._clarification.ensure_can_continue(mission_id)
+        return self._resume_interrupted_run(
+            run,
+            session_status=PlanningSessionStatus.PLANNING,
+            mission_id=mission_id,
+            log_label="clarification",
+        )
 
-        run.status = WorkflowStatus.RUNNING
-        run.errors = []
-        run.touch()
-        self._workflow_runs.update(run)
-        self._set_session_status(run, PlanningSessionStatus.PLANNING, mission_id=mission_id)
+    def approve_mission(
+        self,
+        mission_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> ProjectMission:
+        """Approve mission understanding (domain action only)."""
+        return self._runtime.mission_service.approve_mission(
+            mission_id, user_id=user_id, note=note
+        )
 
-        try:
-            final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
-        except Exception as exc:
-            logger.exception("Planning continue-after-clarification failed: %s", exc)
-            run.errors = [str(exc)]
-            run.status = WorkflowStatus.FAILED
-            run.touch()
-            self._workflow_runs.update(run)
-            self._mark_session_failed_for_run(run.id)
-            raise WorkflowError(str(exc)) from exc
+    def resume_after_mission_approval(
+        self,
+        workflow_run_id: UUID,
+    ) -> PlanningWorkflowResult:
+        """Resume after the mission-approval interrupt; mission must already be approved."""
+        run = self._require_planning_run(workflow_run_id)
+        if run.status != WorkflowStatus.AWAITING_REVIEW:
+            raise WorkflowError(f"Workflow run {workflow_run_id} is not awaiting mission approval")
+        if run.state.get("review_gate") != "mission_approval":
+            raise WorkflowError(
+                f"Workflow run {workflow_run_id} is not paused at mission approval gate"
+            )
 
-        refreshed = self._workflow_runs.get_by_id(run.id)
-        if refreshed is None:
-            raise WorkflowError(f"Workflow run {run.id} disappeared after continuation")
-        return self._ensure_success(self._to_result(refreshed, final_state))
+        mission_id = self._mission_id_from_run(run)
+        mission = self._runtime.missions.get_mission(mission_id)
+        if mission is None:
+            raise WorkflowError(f"Mission {mission_id} not found")
+        if mission.approval_status != ApprovalStatus.APPROVED:
+            raise WorkflowError("任务理解尚未批准，无法继续。请先调用 approve_mission。")
 
-    def continue_after_plan_approval(self, workflow_run_id: UUID) -> PlanningWorkflowResult:
-        """Resume after the deliverable-plan approval interrupt."""
+        return self._resume_interrupted_run(
+            run,
+            session_status=PlanningSessionStatus.PLANNING,
+            mission_id=mission_id,
+            log_label="mission-approval",
+        )
+
+    def approve_mission_and_continue(
+        self,
+        workflow_run_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> PlanningWorkflowResult:
+        """UI facade: approve mission then resume past the mission-approval gate."""
+        run = self._require_planning_run(workflow_run_id)
+        mission_id = self._mission_id_from_run(run)
+        self.approve_mission(mission_id, user_id=user_id, note=note)
+        return self.resume_after_mission_approval(workflow_run_id)
+
+    def approve_deliverable_plan(
+        self,
+        plan_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> DeliverablePlan:
+        """Approve deliverable plan (domain action only)."""
+        return self._deliverables.approve_deliverable_plan(
+            plan_id, user_id=user_id, note=note
+        )
+
+    def resume_after_plan_approval(
+        self,
+        workflow_run_id: UUID,
+    ) -> PlanningWorkflowResult:
+        """Resume after the plan-approval interrupt; plan must already be approved."""
         run = self._require_planning_run(workflow_run_id)
         if run.status != WorkflowStatus.AWAITING_REVIEW:
             raise WorkflowError(f"Workflow run {workflow_run_id} is not awaiting plan approval")
@@ -239,20 +293,61 @@ class PlanningWorkflowService:
         plan_data = run.state.get("deliverable_plan")
         if not isinstance(plan_data, dict) or "id" not in plan_data:
             raise WorkflowError(f"Workflow run {workflow_run_id} is missing deliverable_plan")
-        plan = self._deliverables.approve_plan(UUID(str(plan_data["id"])))
-        if plan.approval_status.value != "approved":
-            raise WorkflowError("交付成果计划尚未批准，无法继续")
+        plan = self._runtime.missions.get_deliverable_plan(UUID(str(plan_data["id"])))
+        if plan is None:
+            raise WorkflowError(f"DeliverablePlan {plan_data['id']} not found")
+        if plan.approval_status != ApprovalStatus.APPROVED:
+            raise WorkflowError(
+                "交付成果计划尚未批准，无法继续。请先调用 approve_deliverable_plan。"
+            )
 
+        return self._resume_interrupted_run(
+            run,
+            session_status=PlanningSessionStatus.PLANNING,
+            log_label="plan-approval",
+        )
+
+    def approve_and_continue(
+        self,
+        workflow_run_id: UUID,
+        *,
+        user_id: str | None = None,
+        note: str | None = None,
+    ) -> PlanningWorkflowResult:
+        """UI facade: approve deliverable plan then resume past the plan-approval gate."""
+        run = self._require_planning_run(workflow_run_id)
+        plan_data = run.state.get("deliverable_plan")
+        if not isinstance(plan_data, dict) or "id" not in plan_data:
+            raise WorkflowError(f"Workflow run {workflow_run_id} is missing deliverable_plan")
+        self.approve_deliverable_plan(
+            UUID(str(plan_data["id"])),
+            user_id=user_id,
+            note=note,
+        )
+        return self.resume_after_plan_approval(workflow_run_id)
+
+    def continue_after_plan_approval(self, workflow_run_id: UUID) -> PlanningWorkflowResult:
+        """Deprecated alias for :meth:`approve_and_continue`."""
+        return self.approve_and_continue(workflow_run_id)
+
+    def _resume_interrupted_run(
+        self,
+        run: WorkflowRun,
+        *,
+        session_status: PlanningSessionStatus,
+        mission_id: UUID | None = None,
+        log_label: str,
+    ) -> PlanningWorkflowResult:
         run.status = WorkflowStatus.RUNNING
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
-        self._set_session_status(run, PlanningSessionStatus.PLANNING)
+        self._set_session_status(run, session_status, mission_id=mission_id)
 
         try:
             final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
-            logger.exception("Planning continue-after-plan-approval failed: %s", exc)
+            logger.exception("Planning continue-after-%s failed: %s", log_label, exc)
             run.errors = [str(exc)]
             run.status = WorkflowStatus.FAILED
             run.touch()
@@ -274,8 +369,10 @@ class PlanningWorkflowService:
             gate = run.state.get("review_gate")
             if gate == "clarification":
                 return self.continue_after_clarification(workflow_run_id)
+            if gate == "mission_approval":
+                return self.resume_after_mission_approval(workflow_run_id)
             if gate == "plan_approval":
-                return self.continue_after_plan_approval(workflow_run_id)
+                return self.resume_after_plan_approval(workflow_run_id)
             raise WorkflowError(f"Unknown planning review gate: {gate}")
 
         restored = restore_planning_artifacts(run.state)
@@ -296,6 +393,7 @@ class PlanningWorkflowService:
             user_task_description=str(user_task),
             presentation_id=str(run.presentation_id) if run.presentation_id else None,
             require_clarification=bool(run.state.get("require_clarification", True)),
+            require_mission_approval=bool(run.state.get("require_mission_approval", True)),
             require_plan_approval=bool(run.state.get("require_plan_approval", True)),
         )
         initial_state = cast(
@@ -518,6 +616,8 @@ class PlanningWorkflowService:
             gate = workflow_run.state.get("review_gate")
             if gate == "clarification":
                 return PlanningSessionStatus.CLARIFYING
+            if gate == "mission_approval":
+                return PlanningSessionStatus.AWAITING_MISSION_APPROVAL
             if gate == "plan_approval":
                 return PlanningSessionStatus.AWAITING_APPROVAL
         if workflow_run.status == WorkflowStatus.RUNNING:

@@ -137,7 +137,36 @@ def continue_after_clarification(
     return service.continue_after_clarification(workflow_run_id)
 
 
-def continue_after_plan_approval(
+def approve_mission_and_continue(
+    session: Session,
+    workflow_run_id: UUID,
+    *,
+    user_id: str | None = None,
+    note: str | None = None,
+    settings: Settings | None = None,
+) -> PlanningWorkflowResult:
+    runtime = _resolve_runtime_settings(settings)
+    service = _create_planning_service(session, runtime)
+    return service.approve_mission_and_continue(
+        workflow_run_id, user_id=user_id, note=note
+    )
+
+
+def approve_and_continue(
+    session: Session,
+    workflow_run_id: UUID,
+    *,
+    user_id: str | None = None,
+    note: str | None = None,
+    settings: Settings | None = None,
+) -> PlanningWorkflowResult:
+    """UI facade: approve deliverable plan then resume the planning workflow."""
+    runtime = _resolve_runtime_settings(settings)
+    service = _create_planning_service(session, runtime)
+    return service.approve_and_continue(workflow_run_id, user_id=user_id, note=note)
+
+
+def resume_after_plan_approval(
     session: Session,
     workflow_run_id: UUID,
     *,
@@ -145,7 +174,17 @@ def continue_after_plan_approval(
 ) -> PlanningWorkflowResult:
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
-    return service.continue_after_plan_approval(workflow_run_id)
+    return service.resume_after_plan_approval(workflow_run_id)
+
+
+def continue_after_plan_approval(
+    session: Session,
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> PlanningWorkflowResult:
+    """Deprecated alias for :func:`approve_and_continue`."""
+    return approve_and_continue(session, workflow_run_id, settings=settings)
 
 
 def get_planning_snapshot(
@@ -447,7 +486,7 @@ def start_presentation_from_planning(
         raise WorkflowError(f"Workflow run {workflow_run_id} not found")
 
     if run.status.value == "awaiting_review" and run.state.get("review_gate") == "plan_approval":
-        planning.continue_after_plan_approval(workflow_run_id)
+        planning.approve_and_continue(workflow_run_id)
         run = planning.get_run(workflow_run_id)
         if run is None:
             raise WorkflowError(f"Workflow run {workflow_run_id} disappeared after plan approval")

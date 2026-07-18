@@ -243,6 +243,78 @@ class PlanningWorkflowNodes:
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state
 
+    def await_mission_approval(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+        """Explicit gate: mission must be approved before workstream planning."""
+        logger = get_logger(__name__, operation="planning_workflow")
+        mission_id = planning_mission_id(state)
+        if mission_id is None:
+            return {
+                "current_step": WorkflowStep.FAILED.value,
+                "errors": ["缺少 mission_id"],
+            }
+
+        mission = self._runtime.missions.get_mission(mission_id)
+        if mission is None:
+            return {
+                "current_step": WorkflowStep.FAILED.value,
+                "errors": [f"Mission {mission_id} 不存在"],
+            }
+
+        run = self._runtime.workflow_runs.get_by_id(UUID(state["workflow_run_id"]))
+        if (
+            run is not None
+            and run.state.get("review_gate") == "mission_approval"
+            and mission.approval_status == ApprovalStatus.APPROVED
+        ):
+            bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
+            resume_state: PlanningWorkflowState = {
+                "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+                "review_gate": "mission_approval",
+                "mission": bundle.mission,
+                "knowledge_gaps": bundle.knowledge_gaps,
+                "assumptions": bundle.assumptions,
+                "clarifying_questions": bundle.clarifying_questions,
+                "design_questions": bundle.design_questions,
+            }
+            self._persist({**state, **resume_state}, status=WorkflowStatus.RUNNING)
+            logger.info("Planning workflow resumed after mission approval")
+            return resume_state
+
+        if not state.get("require_mission_approval", True):
+            if mission.approval_status != ApprovalStatus.APPROVED:
+                mission = self._runtime.mission_service.approve_mission(mission_id)
+            return {
+                "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+                "mission": mission,
+            }
+
+        pause: PlanningWorkflowState = {
+            "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+            "review_gate": "mission_approval",
+            "mission": mission,
+        }
+        merged = cast(PlanningWorkflowState, {**state, **pause})
+        self._persist(merged, status=WorkflowStatus.AWAITING_REVIEW)
+        logger.info("Planning workflow paused for mission approval")
+        interrupt(
+            {
+                "gate": "mission_approval",
+                "step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+            }
+        )
+
+        bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
+        resume_state = {
+            **pause,
+            "mission": bundle.mission,
+            "knowledge_gaps": bundle.knowledge_gaps,
+            "assumptions": bundle.assumptions,
+            "clarifying_questions": bundle.clarifying_questions,
+            "design_questions": bundle.design_questions,
+        }
+        self._persist({**merged, **resume_state}, status=WorkflowStatus.RUNNING)
+        return resume_state
+
     def plan_workstreams(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
         mission_id = planning_mission_id(state)
         if mission_id is None:
