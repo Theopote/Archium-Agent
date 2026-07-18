@@ -127,18 +127,24 @@ load_project_context → analyze_task → validate_mission
 
 | 项 | 值 |
 |----|-----|
-| Revision | `008_project_mission_planning` |
-| 文件 | `alembic/versions/008_project_mission_planning.py` |
+| Head | `009_workstream_recommendation_reason` |
+| 前置 | `008_project_mission_planning`（7 张规划表） |
+| 009 | `workstreams.recommendation_reason`（「为什么推荐」） |
 | 验证 | `pytest tests/smoke/test_alembic_migration.py -v` |
 
 已有本地库升级：
 
 ```bash
 alembic upgrade head
-alembic current   # 应包含 008_project_mission_planning
+alembic current   # 应包含 009_workstream_recommendation_reason
 ```
 
 `init_database()` / `create_all` **不会**自动给旧库补新表；共享/生产环境必须跑 Alembic。
+
+### Revision / 已知未知
+
+- Mission / Workstream / DeliverablePlan 通过 `MissionHistoryService` 等写入统一 `entity_revisions`（`presentation_id` 可为空），支持 regenerate 前归档与字段 diff。
+- UI「关键问题」步展示五列：**已确认 / 推断 / 假设 / 冲突 / 待确认**，并支持缺口回答、按假设、暂缓，以及事实确认/驳回。
 
 ---
 

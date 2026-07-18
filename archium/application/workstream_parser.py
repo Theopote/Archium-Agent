@@ -47,6 +47,7 @@ def parse_workstream_plan_draft(
                 priority=_parse_enum(item.priority, Priority, Priority.MEDIUM),
                 effort_level=_parse_enum(item.effort_level, EffortLevel, EffortLevel.MEDIUM),
                 recommended=item.recommended,
+                recommendation_reason=(item.reason or "").strip(),
                 selected=item.recommended,
             )
         )

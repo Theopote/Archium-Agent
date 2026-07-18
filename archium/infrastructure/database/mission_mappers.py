@@ -346,6 +346,7 @@ def workstream_to_domain(orm: WorkstreamORM) -> Workstream:
         priority=Priority(orm.priority),
         effort_level=EffortLevel(orm.effort_level),
         recommended=orm.recommended,
+        recommendation_reason=getattr(orm, "recommendation_reason", "") or "",
         selected=orm.selected,
         status=WorkstreamStatus(orm.status),
         version=orm.version,
@@ -371,6 +372,7 @@ def workstream_to_orm(domain: Workstream, orm: WorkstreamORM | None = None) -> W
     target.priority = domain.priority.value
     target.effort_level = domain.effort_level.value
     target.recommended = domain.recommended
+    target.recommendation_reason = domain.recommendation_reason
     target.selected = domain.selected
     target.status = domain.status.value
     target.version = domain.version

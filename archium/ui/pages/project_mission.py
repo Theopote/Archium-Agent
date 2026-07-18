@@ -187,6 +187,8 @@ def _render_questions(snapshot: PlanningSnapshot, project_id: UUID) -> None:
     render_known_unknown_panel(
         gaps=snapshot.knowledge_gaps,
         assumptions=snapshot.assumptions,
+        facts=snapshot.project_facts,
+        constraints=snapshot.mission.known_constraints if snapshot.mission else [],
     )
     st.divider()
     render_clarification_panel(

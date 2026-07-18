@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from archium.agents._helpers import build_project_context, to_json
 from archium.application.fact_ledger_service import FactLedgerService
+from archium.application.mission_history_service import MissionHistoryService
 from archium.application.mission_lineage import apply_mission_lineage
 from archium.application.mission_parser import (
     parse_mission_draft,
@@ -17,6 +18,7 @@ from archium.application.mission_parser import (
 )
 from archium.config.settings import Settings, get_settings
 from archium.domain._base import DomainModel
+from archium.domain.enums import SlideChangeSource
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -82,6 +84,7 @@ class ProjectMissionService:
         self._projects = ProjectRepository(session)
         self._missions = MissionRepository(session)
         self._fact_ledger = FactLedgerService(session, llm=llm, settings=self._settings)
+        self._history = MissionHistoryService(session)
 
     def generate_mission(
         self,
@@ -137,10 +140,12 @@ class ProjectMissionService:
             MissionGenerationDraft,
         )
         self._clear_mission_artifacts(previous.id)
+        self._history.archive_before_regeneration(previous)
         result = self._persist_generation(
             previous.project_id,
             draft,
             previous=previous,
+            change_source=SlideChangeSource.REGENERATION,
         )
         return result
 
@@ -149,12 +154,20 @@ class ProjectMissionService:
         updates = patch.model_dump(exclude_none=True)
         updated = mission.model_copy(update=updates)
         updated.touch()
-        return self._missions.save_mission(updated)
+        saved = self._missions.save_mission(updated)
+        self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT)
+        return saved
 
     def approve_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._require_mission(mission_id)
         mission.approve()
-        return self._missions.save_mission(mission)
+        saved = self._missions.save_mission(mission)
+        self._history.record_snapshot(
+            saved,
+            SlideChangeSource.MANUAL_EDIT,
+            note="批准任务理解",
+        )
+        return saved
 
     def get_mission_bundle(self, mission_id: UUID) -> MissionGenerationResult:
         mission = self._require_mission(mission_id)
@@ -172,6 +185,7 @@ class ProjectMissionService:
         draft: MissionGenerationDraft,
         *,
         previous: ProjectMission | None = None,
+        change_source: SlideChangeSource = SlideChangeSource.GENERATED,
     ) -> MissionGenerationResult:
         facts = self._fact_ledger.get_ledger(project_id)
         fact_models = [
@@ -191,6 +205,7 @@ class ProjectMissionService:
         )
         apply_mission_lineage(parsed.mission, previous)
         saved_mission = self._missions.save_mission(parsed.mission)
+        self._history.record_snapshot(saved_mission, change_source)
 
         gaps = [self._missions.save_knowledge_gap(item) for item in parsed.knowledge_gaps]
         assumptions = [self._missions.save_assumption(item) for item in parsed.assumptions]

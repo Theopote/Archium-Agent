@@ -577,6 +577,7 @@ class WorkstreamORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     priority: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
     effort_level: Mapped[str] = mapped_column(String(30), nullable=False, default="medium")
     recommended: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    recommendation_reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
     selected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="proposed")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

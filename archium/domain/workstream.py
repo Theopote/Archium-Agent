@@ -59,6 +59,7 @@ class Workstream(IdentifiedModel, VersionedModel, TimestampedModel):
     priority: Priority = Priority.MEDIUM
     effort_level: EffortLevel = EffortLevel.MEDIUM
     recommended: bool = True
+    recommendation_reason: str = ""
     selected: bool = False
     status: WorkstreamStatus = WorkstreamStatus.PROPOSED
 

@@ -13,9 +13,10 @@ from archium.application.deliverable_parser import (
     validate_deliverable_plan_draft,
 )
 from archium.application.mission_clarification_service import MissionClarificationService
+from archium.application.mission_history_service import DeliverablePlanHistoryService
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
-from archium.domain.enums import DeliverableType
+from archium.domain.enums import DeliverableType, SlideChangeSource
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
@@ -64,6 +65,7 @@ class DeliverablePlanningService:
         self._llm = llm
         self._settings = settings or get_settings()
         self._missions = MissionRepository(session)
+        self._history = DeliverablePlanHistoryService(session)
         self._clarification = clarification_service or MissionClarificationService(
             session, llm, settings=self._settings
         )
@@ -93,6 +95,8 @@ class DeliverablePlanningService:
 
         previous_plans = self._missions.list_deliverable_plans(mission_id)
         previous = previous_plans[0] if previous_plans else None
+        if previous is not None:
+            self._history.archive_before_regeneration(previous)
 
         draft = self._llm.generate_structured(
             LLMRequest(
@@ -122,6 +126,10 @@ class DeliverablePlanningService:
             previous=previous,
         )
         saved = self._missions.save_deliverable_plan(parsed.plan)
+        change_source = (
+            SlideChangeSource.REGENERATION if previous is not None else SlideChangeSource.GENERATED
+        )
+        self._history.record_snapshot(saved, change_source)
         mission = self._sync_recommended_ids(mission, saved)
         return DeliverablePlanResult(
             mission=mission,
@@ -182,7 +190,13 @@ class DeliverablePlanningService:
         if not plan.selected_deliverables():
             raise WorkflowError("请至少选择一项成果后再批准")
         plan.approve()
-        return self._missions.save_deliverable_plan(plan)
+        saved = self._missions.save_deliverable_plan(plan)
+        self._history.record_snapshot(
+            saved,
+            SlideChangeSource.MANUAL_EDIT,
+            note="批准成果规划",
+        )
+        return saved
 
     def reject_plan(self, plan_id: UUID) -> DeliverablePlan:
         plan = self._require_plan(plan_id)

@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.deliverable_planning_service import DeliverablePlanningService
+from archium.application.fact_ledger_service import FactLedgerService
 from archium.application.mission_clarification_service import (
     ClarificationActionResult,
     ClarificationReadiness,
@@ -29,13 +30,14 @@ from archium.application.workstream_planning_service import WorkstreamPlanningSe
 from archium.config.settings import Settings
 from archium.domain.deliverable import DeliverablePlan
 from archium.domain.enums import KnowledgeGapStatus, QuestionStatus
+from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
-from archium.infrastructure.database.repositories import WorkflowRunRepository
+from archium.infrastructure.database.repositories import FactRepository, WorkflowRunRepository
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -52,6 +54,7 @@ class PlanningSnapshot:
     clarifying_questions: list[ClarifyingQuestion] = field(default_factory=list)
     workstreams: list[Workstream] = field(default_factory=list)
     deliverable_plan: DeliverablePlan | None = None
+    project_facts: list[ProjectFact] = field(default_factory=list)
     presentation_request: PresentationRequest | None = None
     readiness: ClarificationReadiness | None = None
     review_gate: str | None = None
@@ -199,6 +202,7 @@ def get_planning_snapshot(
     plans = missions.list_deliverable_plans(resolved_mission_id)
     plan = plans[0] if plans else None
     readiness = clarification.get_readiness(resolved_mission_id)
+    project_facts = FactRepository(session).list_by_project(mission.project_id)
 
     return PlanningSnapshot(
         workflow_run=run,
@@ -208,6 +212,7 @@ def get_planning_snapshot(
         clarifying_questions=missions.list_clarifying_questions(resolved_mission_id),
         workstreams=missions.list_workstreams(resolved_mission_id),
         deliverable_plan=plan,
+        project_facts=project_facts,
         presentation_request=presentation_request,
         readiness=readiness,
         review_gate=review_gate if isinstance(review_gate, str) else None,
@@ -277,6 +282,51 @@ def mark_question_not_applicable(
     return MissionClarificationService(session, llm, settings=runtime).mark_question_not_applicable(
         question_id
     )
+
+
+def answer_knowledge_gap(
+    session: Session,
+    gap_id: UUID,
+    answer: str,
+    *,
+    settings: Settings | None = None,
+) -> ClarificationActionResult:
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return MissionClarificationService(session, llm, settings=runtime).answer_gap(gap_id, answer)
+
+
+def assume_knowledge_gap(
+    session: Session,
+    gap_id: UUID,
+    assumption_text: str,
+    *,
+    settings: Settings | None = None,
+) -> ClarificationActionResult:
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return MissionClarificationService(session, llm, settings=runtime).assume_gap(
+        gap_id, assumption_text
+    )
+
+
+def defer_knowledge_gap(
+    session: Session,
+    gap_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> ClarificationActionResult:
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return MissionClarificationService(session, llm, settings=runtime).defer_gap(gap_id)
+
+
+def confirm_project_fact(session: Session, fact_id: UUID) -> ProjectFact:
+    return FactLedgerService(session).confirm_fact(fact_id)
+
+
+def reject_project_fact(session: Session, fact_id: UUID) -> ProjectFact:
+    return FactLedgerService(session).reject_fact(fact_id)
 
 
 def set_workstream_selected(

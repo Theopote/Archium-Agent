@@ -11,7 +11,7 @@ from archium.domain.enums import (
 )
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
-from archium.exceptions import WorkflowError
+from archium.exceptions import StructuredOutputError, WorkflowError
 from archium.infrastructure.database.repositories import FactRepository, ProjectRepository
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 from sqlalchemy.orm import Session
@@ -166,3 +166,35 @@ def test_get_mission_bundle(
     bundle = mission_service.get_mission_bundle(generated.mission.id)
     assert bundle.mission.id == generated.mission.id
     assert len(bundle.knowledge_gaps) == len(generated.knowledge_gaps)
+
+
+def test_illegal_llm_json_raises_structured_output_error(
+    db_session: Session,
+    temple_project: Project,
+) -> None:
+    llm = MockLLMProvider(selector=lambda _request: "{not-json")
+    service = ProjectMissionService(db_session, llm)
+    with pytest.raises(StructuredOutputError):
+        service.generate_mission(temple_project.id, TEMPLE_TASK)
+
+
+def test_regenerate_does_not_duplicate_open_gaps(
+    mission_service: ProjectMissionService,
+    temple_project: Project,
+) -> None:
+    first = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    second = mission_service.regenerate_mission(
+        first.mission.id,
+        "请更强调历史研究，面积仍未知",
+    )
+    first_bundle = mission_service.get_mission_bundle(first.mission.id)
+    second_bundle = mission_service.get_mission_bundle(second.mission.id)
+    assert second.mission.id != first.mission.id
+    assert second.mission.lineage_id == first.mission.lineage_id
+    assert second.mission.version == first.mission.version + 1
+    # New version has its own gap set; regenerating must not pile onto the old mission
+    assert len(first_bundle.knowledge_gaps) == len(first.knowledge_gaps)
+    assert len(second_bundle.knowledge_gaps) == len(second.knowledge_gaps)
+    assert {g.id for g in first_bundle.knowledge_gaps}.isdisjoint(
+        {g.id for g in second_bundle.knowledge_gaps}
+    )

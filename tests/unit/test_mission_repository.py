@@ -156,12 +156,14 @@ def test_workstream_persistence_and_delete(mission_repo: MissionRepository, proj
         title="历史研究",
         workstream_type=WorkstreamType.HISTORICAL_RESEARCH,
         objective="梳理历史沿革",
+        recommendation_reason="重建任务依赖历史依据",
     )
     ws.select()
     mission_repo.save_workstream(ws)
     workstreams = mission_repo.list_workstreams(mission.id)
     assert len(workstreams) == 1
     assert workstreams[0].selected is True
+    assert workstreams[0].recommendation_reason == "重建任务依赖历史依据"
     deleted = mission_repo.delete_workstreams_for_mission(mission.id)
     assert deleted == 1
     assert mission_repo.list_workstreams(mission.id) == []

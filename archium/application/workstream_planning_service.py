@@ -9,12 +9,13 @@ from sqlalchemy.orm import Session
 
 from archium.agents._helpers import build_project_context, to_json
 from archium.application.mission_clarification_service import MissionClarificationService
+from archium.application.mission_history_service import WorkstreamHistoryService
 from archium.application.workstream_parser import (
     parse_workstream_plan_draft,
     validate_workstream_plan_draft,
 )
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import WorkstreamStatus
+from archium.domain.enums import SlideChangeSource, WorkstreamStatus
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
@@ -54,6 +55,7 @@ class WorkstreamPlanningService:
         self._llm = llm
         self._settings = settings or get_settings()
         self._missions = MissionRepository(session)
+        self._history = WorkstreamHistoryService(session)
         self._clarification = clarification_service or MissionClarificationService(
             session, llm, settings=self._settings
         )
@@ -109,7 +111,14 @@ class WorkstreamPlanningService:
         if replace_existing:
             self._missions.delete_workstreams_for_mission(mission_id)
 
-        saved = [self._missions.save_workstream(item) for item in parsed.workstreams]
+        change_source = (
+            SlideChangeSource.REGENERATION if replace_existing else SlideChangeSource.GENERATED
+        )
+        saved: list[Workstream] = []
+        for item in parsed.workstreams:
+            persisted = self._missions.save_workstream(item)
+            self._history.record_snapshot(persisted, change_source)
+            saved.append(persisted)
         mission = self._sync_recommended_ids(mission, saved)
         return WorkstreamPlanResult(
             mission=mission,
@@ -125,12 +134,16 @@ class WorkstreamPlanningService:
     def select_workstream(self, workstream_id: UUID) -> Workstream:
         workstream = self._require_workstream(workstream_id)
         workstream.select()
-        return self._missions.save_workstream(workstream)
+        saved = self._missions.save_workstream(workstream)
+        self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT, note="选中工作路径")
+        return saved
 
     def deselect_workstream(self, workstream_id: UUID) -> Workstream:
         workstream = self._require_workstream(workstream_id)
         workstream.deselect()
-        return self._missions.save_workstream(workstream)
+        saved = self._missions.save_workstream(workstream)
+        self._history.record_snapshot(saved, SlideChangeSource.MANUAL_EDIT, note="取消选中工作路径")
+        return saved
 
     def set_workstream_selection(
         self,

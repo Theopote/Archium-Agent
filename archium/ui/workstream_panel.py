@@ -53,6 +53,8 @@ def render_workstream_panel(
                 key=f"{key_prefix}_sel_{workstream.id}",
             )
             st.write(workstream.objective)
+            if workstream.recommendation_reason:
+                st.caption(f"为什么推荐：{workstream.recommendation_reason}")
             meta1, meta2, meta3 = st.columns(3)
             meta1.caption(
                 f"优先级：{PRIORITY_LABELS.get(workstream.priority, workstream.priority.value)}"
