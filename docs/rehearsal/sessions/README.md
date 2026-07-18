@@ -10,7 +10,8 @@ Required files (copy from [`../templates/`](../templates/)):
 After a session:
 
 ```bash
-python scripts/summarize_beta_rehearsal.py docs/rehearsal/sessions/2026-07-18-session1/ --output docs/rehearsal/sessions/2026-07-18-session1/summary.json
+python scripts/new_beta_session.py <session_id>
+python scripts/summarize_beta_rehearsal.py docs/rehearsal/sessions/<session_id>/ --output docs/rehearsal/sessions/<session_id>/summary.json
 ```
 
 Update [`../v0.2-beta-release-decision.md`](../v0.2-beta-release-decision.md) when B10 is satisfied.
