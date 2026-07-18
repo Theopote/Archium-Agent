@@ -14,7 +14,12 @@ from archium.application.mission_clarification_service import MissionClarificati
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
 from archium.domain.enums import WorkflowStatus, WorkflowStep
-from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, DesignQuestion, KnowledgeGap
+from archium.domain.knowledge_gap import (
+    Assumption,
+    ClarifyingQuestion,
+    DesignQuestion,
+    KnowledgeGap,
+)
 from archium.domain.presentation import Presentation
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workflow import WorkflowRun

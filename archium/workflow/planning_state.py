@@ -7,7 +7,12 @@ from typing import Annotated, Any, TypedDict
 
 from archium.domain.deliverable import DeliverablePlan
 from archium.domain.enums import WorkflowStep
-from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, DesignQuestion, KnowledgeGap
+from archium.domain.knowledge_gap import (
+    Assumption,
+    ClarifyingQuestion,
+    DesignQuestion,
+    KnowledgeGap,
+)
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 
