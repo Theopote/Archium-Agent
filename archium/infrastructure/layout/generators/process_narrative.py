@@ -1,9 +1,11 @@
-"""Process-narrative layout generator — timeline / horizontal steps."""
+"""Process-narrative layout generator — timeline / horizontal steps with visuals."""
 
 from __future__ import annotations
 
 from archium.domain.visual.enums import (
     ConstraintPriority,
+    CropPolicy,
+    ImageFit,
     LayoutConstraintType,
     LayoutContentType,
     LayoutElementRole,
@@ -11,7 +13,12 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
 from archium.infrastructure.layout.generators.base import LayoutGenerator, LayoutGeneratorContext
-from archium.infrastructure.layout.geometry import Rect, grid_cells, split_horizontal
+from archium.infrastructure.layout.geometry import (
+    Rect,
+    grid_cells,
+    split_horizontal,
+    split_vertical,
+)
 
 
 class ProcessNarrativeLayoutGenerator(LayoutGenerator):
@@ -29,8 +36,9 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
         ]
         step_count = max(2, min(len(steps), 5))
         steps = steps[:step_count]
+        stage_assets = list(context.content.supporting_asset_refs[:step_count])
 
-        title_h = 0.5
+        title_h = 0.45
         elements.append(
             LayoutElement(
                 id="title",
@@ -45,7 +53,7 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
             )
         )
 
-        lead_h = 0.35
+        lead_h = 0.32
         elements.append(
             LayoutElement(
                 id="lead",
@@ -62,17 +70,51 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
 
         board_top = safe.y + title_h + lead_h + spacing.md
         source_reserve = 0.28 if context.content.source_text else 0.0
+        summary_reserve = 0.36 if context.content.insight else 0.0
         board = Rect(
             safe.x,
             board_top,
             safe.width,
-            max(1.2, safe.bottom - board_top - source_reserve - spacing.xs),
+            max(
+                1.2,
+                safe.bottom - board_top - source_reserve - summary_reserve - spacing.xs,
+            ),
         )
 
         step_ids: list[str] = []
-        if context.variant == "steps_horizontal" or context.content.hero_asset_ref is None:
+        arrow_ids: list[str] = []
+        visual_ids: list[str] = []
+
+        use_horizontal = (
+            context.variant == "steps_horizontal" or context.content.hero_asset_ref is None
+        )
+
+        if use_horizontal:
             cells = grid_cells(board, rows=1, cols=step_count, gap_x=spacing.md, gap_y=0)
             for index, (cell, step) in enumerate(zip(cells, steps, strict=True)):
+                if stage_assets and index < len(stage_assets):
+                    image_area, text_area = split_vertical(cell, top_ratio=0.55, gap=spacing.xs)
+                    vid = f"stage_visual_{index}"
+                    visual_ids.append(vid)
+                    elements.append(
+                        LayoutElement(
+                            id=vid,
+                            role=LayoutElementRole.SUPPORTING_VISUAL,
+                            content_type=LayoutContentType.IMAGE,
+                            content_ref=stage_assets[index],
+                            x=image_area.x,
+                            y=image_area.y,
+                            width=image_area.width,
+                            height=image_area.height,
+                            fit_mode=ImageFit.COVER,
+                            crop_policy=CropPolicy.SAFE_TRIM,
+                            style_token="body",
+                        )
+                    )
+                    text_box = text_area
+                else:
+                    text_box = cell
+
                 sid = f"step_{index}"
                 step_ids.append(sid)
                 elements.append(
@@ -81,15 +123,36 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                         role=LayoutElementRole.BODY_TEXT,
                         content_type=LayoutContentType.TEXT,
                         text_content=f"{index + 1}. {step}",
-                        x=cell.x,
-                        y=cell.y,
-                        width=cell.width,
-                        height=cell.height,
+                        x=text_box.x,
+                        y=text_box.y,
+                        width=text_box.width,
+                        height=text_box.height,
                         style_token="body",
                     )
                 )
+
+                if index < step_count - 1:
+                    next_cell = cells[index + 1]
+                    arrow_id = f"arrow_{index}"
+                    arrow_ids.append(arrow_id)
+                    gap_left = cell.right
+                    gap_right = next_cell.x
+                    arrow_w = max(0.08, gap_right - gap_left)
+                    elements.append(
+                        LayoutElement(
+                            id=arrow_id,
+                            role=LayoutElementRole.DECORATION,
+                            content_type=LayoutContentType.SHAPE,
+                            text_content="→",
+                            x=gap_left,
+                            y=cell.y + cell.height * 0.35,
+                            width=arrow_w,
+                            height=0.28,
+                            style_token="caption",
+                            alignment="center",
+                        )
+                    )
         else:
-            # timeline: steps on left, optional visual on right
             left, right = split_horizontal(board, left_ratio=0.58, gap=spacing.lg)
             row_h = (left.height - spacing.sm * (step_count - 1)) / step_count
             for index, step in enumerate(steps):
@@ -119,7 +182,26 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                     y=right.y,
                     width=right.width,
                     height=right.height,
+                    fit_mode=ImageFit.COVER,
+                    crop_policy=CropPolicy.SAFE_TRIM,
                     style_token="body",
+                )
+            )
+            visual_ids.append("support")
+
+        if context.content.insight:
+            summary_y = board.bottom + spacing.xs
+            elements.append(
+                LayoutElement(
+                    id="summary",
+                    role=LayoutElementRole.CAPTION,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=f"总结：{context.content.insight}",
+                    x=safe.x,
+                    y=summary_y,
+                    width=safe.width,
+                    height=0.32,
+                    style_token="caption",
                 )
             )
 
@@ -147,7 +229,7 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
             ),
             LayoutConstraint(
                 constraint_type=LayoutConstraintType.NO_OVERLAP,
-                element_ids=[el.id for el in elements],
+                element_ids=[el.id for el in elements if el.role != LayoutElementRole.DECORATION],
                 priority=ConstraintPriority.REQUIRED,
             ),
             LayoutConstraint(
@@ -156,9 +238,9 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                 priority=ConstraintPriority.MEDIUM,
             ),
         ]
-        reading = ["title", "lead", *step_ids]
-        if any(el.id == "support" for el in elements):
-            reading.append("support")
+        reading = ["title", "lead", *step_ids, *visual_ids, *arrow_ids]
+        if any(el.id == "summary" for el in elements):
+            reading.append("summary")
         if context.content.source_text:
             reading.append("source")
 
@@ -166,7 +248,7 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
             context,
             elements=elements,
             constraints=constraints,
-            hero_element_id="support" if any(el.id == "support" for el in elements) else None,
+            hero_element_id=visual_ids[0] if visual_ids else None,
             reading_order=reading,
             balance_strategy="sequential_steps",
         )

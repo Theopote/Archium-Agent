@@ -1,0 +1,193 @@
+{
+  "layout_family": "process_narrative",
+  "layout_variant": "steps_horizontal",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "stage_visual_0",
+  "reading_order": [
+    "title",
+    "lead",
+    "step_0",
+    "step_1",
+    "step_2",
+    "step_3",
+    "stage_visual_0",
+    "stage_visual_1",
+    "stage_visual_2",
+    "stage_visual_3",
+    "arrow_0",
+    "arrow_1",
+    "arrow_2",
+    "summary",
+    "source"
+  ],
+  "balance_strategy": "sequential_steps",
+  "whitespace_ratio": 0.4049,
+  "elements": [
+    {
+      "id": "arrow_0",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 2.756,
+      "y": 2.324,
+      "w": 0.125,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "arrow_1",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 4.938,
+      "y": 2.324,
+      "w": 0.125,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "arrow_2",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 7.119,
+      "y": 2.324,
+      "w": 0.125,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.942,
+      "w": 8.6,
+      "h": 0.32,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "stage_visual_0",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 1.345,
+      "w": 2.056,
+      "h": 1.516,
+      "fit_mode": "cover",
+      "crop_policy": "safe_trim"
+    },
+    {
+      "id": "stage_visual_1",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 2.881,
+      "y": 1.345,
+      "w": 2.056,
+      "h": 1.516,
+      "fit_mode": "cover",
+      "crop_policy": "safe_trim"
+    },
+    {
+      "id": "stage_visual_2",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 5.063,
+      "y": 1.345,
+      "w": 2.056,
+      "h": 1.516,
+      "fit_mode": "cover",
+      "crop_policy": "safe_trim"
+    },
+    {
+      "id": "stage_visual_3",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 7.244,
+      "y": 1.345,
+      "w": 2.056,
+      "h": 1.516,
+      "fit_mode": "cover",
+      "crop_policy": "safe_trim"
+    },
+    {
+      "id": "step_0",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 2.903,
+      "w": 2.056,
+      "h": 1.241,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_1",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 2.881,
+      "y": 2.903,
+      "w": 2.056,
+      "h": 1.241,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_2",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 5.063,
+      "y": 2.903,
+      "w": 2.056,
+      "h": 1.241,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_3",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 7.244,
+      "y": 2.903,
+      "w": 2.056,
+      "h": 1.241,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "summary",
+      "role": "caption",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.185,
+      "w": 8.6,
+      "h": 0.32,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.45,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

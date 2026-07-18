@@ -33,7 +33,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Visual Workflow（可暂停 / 可恢复） | ✅ |
 | 视觉设计 UI | ✅ |
 | LayoutPlan → 原生 PPTX（`render-plan.mjs`） | ✅ |
-| Golden V1–V3（composition） | ✅ |
+| Golden V1–V7（composition） | ✅ |
 
 ## Round 1 明确不做
 

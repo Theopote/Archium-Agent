@@ -1,4 +1,4 @@
-"""Analytical-diagram layout generator — diagram focus with optional callouts."""
+"""Analytical-diagram layout generator — diagram + legend + conclusions."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
 from archium.infrastructure.layout.generators.base import LayoutGenerator, LayoutGeneratorContext
-from archium.infrastructure.layout.geometry import Rect, split_horizontal
+from archium.infrastructure.layout.geometry import Rect, split_horizontal, split_vertical
 
 
 class AnalyticalDiagramLayoutGenerator(LayoutGenerator):
@@ -48,11 +48,16 @@ class AnalyticalDiagramLayoutGenerator(LayoutGenerator):
             max(1.2, safe.bottom - body_top - source_reserve),
         )
 
-        callouts = list(context.content.key_points[:4])
-        use_callouts = context.variant == "diagram_with_callouts" and bool(callouts)
+        conclusions = list(context.content.key_points[:3])
+        legend_items = list(context.content.captions[:4]) or [
+            point for point in context.content.key_points[3:6]
+        ]
+        use_side = context.variant == "diagram_with_callouts" and (
+            bool(conclusions) or bool(legend_items)
+        )
 
-        if use_callouts:
-            diagram, side = split_horizontal(body, left_ratio=0.68, gap=spacing.lg)
+        if use_side:
+            diagram, side = split_horizontal(body, left_ratio=0.62, gap=spacing.lg)
         else:
             diagram = body
             side = None
@@ -74,25 +79,55 @@ class AnalyticalDiagramLayoutGenerator(LayoutGenerator):
             )
         )
 
-        callout_ids: list[str] = []
+        side_ids: list[str] = []
         if side is not None:
-            row_h = (side.height - spacing.sm * (len(callouts) - 1)) / max(1, len(callouts))
-            for index, text in enumerate(callouts):
-                cid = f"callout_{index}"
-                callout_ids.append(cid)
+            has_legend = bool(legend_items)
+            has_conclusions = bool(conclusions)
+            if has_legend and has_conclusions:
+                legend_area, conclusion_area = split_vertical(
+                    side, top_ratio=0.38, gap=spacing.sm
+                )
+            elif has_legend:
+                legend_area, conclusion_area = side, None
+            else:
+                legend_area, conclusion_area = None, side
+
+            if legend_area is not None and legend_items:
                 elements.append(
                     LayoutElement(
-                        id=cid,
-                        role=LayoutElementRole.ANNOTATION,
+                        id="legend",
+                        role=LayoutElementRole.CAPTION,
                         content_type=LayoutContentType.TEXT,
-                        text_content=text,
-                        x=side.x,
-                        y=side.y + index * (row_h + spacing.sm),
-                        width=side.width,
-                        height=row_h,
+                        text_content="图例\n" + "\n".join(f"· {item}" for item in legend_items),
+                        x=legend_area.x,
+                        y=legend_area.y,
+                        width=legend_area.width,
+                        height=legend_area.height,
                         style_token="caption",
                     )
                 )
+                side_ids.append("legend")
+
+            if conclusion_area is not None and conclusions:
+                row_h = (
+                    conclusion_area.height - spacing.xs * (len(conclusions) - 1)
+                ) / max(1, len(conclusions))
+                for index, text in enumerate(conclusions):
+                    cid = f"conclusion_{index}"
+                    side_ids.append(cid)
+                    elements.append(
+                        LayoutElement(
+                            id=cid,
+                            role=LayoutElementRole.ANNOTATION,
+                            content_type=LayoutContentType.TEXT,
+                            text_content=f"结论 {index + 1}：{text}",
+                            x=conclusion_area.x,
+                            y=conclusion_area.y + index * (row_h + spacing.xs),
+                            width=conclusion_area.width,
+                            height=row_h,
+                            style_token="caption",
+                        )
+                    )
 
         if context.content.source_text:
             page = context.design_system.page
@@ -127,7 +162,7 @@ class AnalyticalDiagramLayoutGenerator(LayoutGenerator):
                 priority=ConstraintPriority.REQUIRED,
             ),
         ]
-        reading = ["title", "hero", *callout_ids]
+        reading = ["title", "hero", *side_ids]
         if context.content.source_text:
             reading.append("source")
 

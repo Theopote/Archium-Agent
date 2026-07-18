@@ -108,7 +108,9 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
                     id="chart",
                     role=LayoutElementRole.BODY_TEXT,
                     content_type=LayoutContentType.CHART,
-                    text_content=context.content.insight or "指标趋势示意",
+                    text_content=context.content.insight
+                    or context.content.message
+                    or "指标趋势示意",
                     x=chart_area.x,
                     y=chart_area.y,
                     width=chart_area.width,

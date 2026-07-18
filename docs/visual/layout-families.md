@@ -64,6 +64,14 @@ VisualIntent (+ ArtDirection hints)
 | V1 | `drawing_focus` | `tests/golden/visual/composition/v1_drawing_focus/` |
 | V2 | `evidence_board` | `tests/golden/visual/composition/v2_evidence_board/` |
 | V3 | `comparative_matrix` | `tests/golden/visual/composition/v3_comparative_matrix/` |
+| V4 | `analytical_diagram` | `tests/golden/visual/composition/v4_analytical_diagram/` |
+| V5 | `process_narrative` | `tests/golden/visual/composition/v5_process_narrative/` |
+| V6 | `metric_dashboard` | `tests/golden/visual/composition/v6_metric_dashboard/` |
+| V7 | `hybrid_canvas` | `tests/golden/visual/composition/v7_hybrid_canvas/` |
+
+每案至少包含：`layout_plan.json`、`validation_report.json`、`score_baseline.json`、`preview.png`；在 Node/pptxgen 可用时更新还会写出 `deck.pptx`。
+
+**不能仅凭 generator 存在就认为视觉质量已通过** — 以 golden 回归为准。
 
 ```bash
 pytest tests/golden/visual/composition -v

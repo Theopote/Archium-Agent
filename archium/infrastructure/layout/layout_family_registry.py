@@ -154,6 +154,8 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         optional=(
             LayoutElementRole.LEAD_STATEMENT,
             LayoutElementRole.SUPPORTING_VISUAL,
+            LayoutElementRole.CAPTION,
+            LayoutElementRole.DECORATION,
             LayoutElementRole.SOURCE,
         ),
         implemented=True,
@@ -167,7 +169,7 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         variants=("diagram_focus", "diagram_with_callouts"),
         default="diagram_focus",
         required=(LayoutElementRole.TITLE, LayoutElementRole.HERO_VISUAL),
-        optional=(LayoutElementRole.ANNOTATION, LayoutElementRole.SOURCE),
+        optional=(LayoutElementRole.ANNOTATION, LayoutElementRole.CAPTION, LayoutElementRole.SOURCE),
         implemented=True,
         description="Analytical diagram focus with optional callouts.",
     ),
@@ -228,6 +230,9 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         optional=(
             LayoutElementRole.LEAD_STATEMENT,
             LayoutElementRole.BODY_TEXT,
+            LayoutElementRole.SUPPORTING_VISUAL,
+            LayoutElementRole.METRIC,
+            LayoutElementRole.CAPTION,
             LayoutElementRole.SOURCE,
         ),
         implemented=True,
