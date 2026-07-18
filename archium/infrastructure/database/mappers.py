@@ -11,6 +11,7 @@ from archium.domain.enums import (
     ApprovalStatus,
     AssetType,
     DocumentType,
+    PlanningSessionStatus,
     PresentationStatus,
     PresentationType,
     ProcessingStatus,
@@ -30,6 +31,7 @@ from archium.domain.enums import (
 )
 from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.memory import UserPreference
+from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
     STORYLINE_LOGICAL_KEY,
@@ -48,6 +50,7 @@ from archium.infrastructure.database.models import (
     AssetORM,
     ChapterORM,
     DocumentChunkORM,
+    PlanningSessionORM,
     PresentationBriefORM,
     PresentationORM,
     ProjectFactORM,
@@ -580,6 +583,36 @@ def workflow_run_to_orm(domain: WorkflowRun, orm: WorkflowRunORM | None = None) 
     target.state_json = dict(domain.state)
     target.errors_json = list(domain.errors)
     target.output_files_json = list(domain.output_files)
+    target.created_at = domain.created_at
+    target.updated_at = domain.updated_at
+    return target
+
+
+def planning_session_to_domain(orm: PlanningSessionORM) -> PlanningSession:
+    return PlanningSession(
+        id=orm.id,
+        project_id=orm.project_id,
+        status=PlanningSessionStatus(orm.status),
+        current_mission_id=orm.current_mission_id,
+        workflow_run_id=orm.workflow_run_id,
+        presentation_id=orm.presentation_id,
+        user_task_description=orm.user_task_description or "",
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def planning_session_to_orm(
+    domain: PlanningSession,
+    orm: PlanningSessionORM | None = None,
+) -> PlanningSessionORM:
+    target = orm or PlanningSessionORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.status = domain.status.value
+    target.current_mission_id = domain.current_mission_id
+    target.workflow_run_id = domain.workflow_run_id
+    target.presentation_id = domain.presentation_id
+    target.user_task_description = domain.user_task_description
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

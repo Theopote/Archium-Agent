@@ -6,6 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.clarification_panel import render_clarification_panel, render_known_unknown_panel
@@ -39,6 +40,7 @@ def _init_state() -> None:
     defaults = {
         "selected_project_id": None,
         "mission_step": 1,
+        "planning_session_id": None,
         "planning_workflow_run_id": None,
         "planning_mission_id": None,
         "last_presentation_result": None,
@@ -71,6 +73,11 @@ def _project_selector() -> UUID | None:
 
 
 def _load_snapshot(project_id: UUID) -> PlanningSnapshot:
+    session_id = (
+        UUID(st.session_state.planning_session_id)
+        if st.session_state.planning_session_id
+        else None
+    )
     run_id = (
         UUID(st.session_state.planning_workflow_run_id)
         if st.session_state.planning_workflow_run_id
@@ -84,10 +91,13 @@ def _load_snapshot(project_id: UUID) -> PlanningSnapshot:
     with get_session() as session:
         snapshot = get_planning_snapshot(
             session,
+            planning_session_id=session_id,
             workflow_run_id=run_id,
             mission_id=mission_id,
             project_id=project_id,
         )
+    if snapshot.planning_session is not None:
+        st.session_state.planning_session_id = str(snapshot.planning_session.id)
     if snapshot.workflow_run is not None:
         st.session_state.planning_workflow_run_id = str(snapshot.workflow_run.id)
     if snapshot.mission is not None:
@@ -158,6 +168,7 @@ def _render_describe(project_id: UUID) -> None:
             try:
                 with get_session() as session:
                     result = start_planning(session, project_id, task)
+                st.session_state.planning_session_id = str(result.planning_session.id)
                 st.session_state.planning_workflow_run_id = str(result.workflow_run.id)
                 if result.mission is not None:
                     st.session_state.planning_mission_id = str(result.mission.id)
@@ -245,6 +256,25 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
     st.markdown("#### 开始执行")
     if not st.session_state.planning_workflow_run_id:
         st.info("缺少规划工作流，请从第 1 步重新开始。")
+        return
+
+    plan = snapshot.deliverable_plan
+    selected_presentations = []
+    if plan is not None:
+        selected_presentations = [
+            item
+            for item in plan.deliverables
+            if item.selected and item.deliverable_type == DeliverableType.PRESENTATION
+        ]
+    if not selected_presentations:
+        st.info(
+            "当前成果计划未选择「汇报 / Presentation」。"
+            "规划已完成，不会自动创建 Presentation；如需汇报，请回到第 5 步勾选汇报类成果。"
+        )
+        if plan is not None:
+            other = [item.title for item in plan.deliverables if item.selected]
+            if other:
+                st.write("已选非汇报成果：" + "、".join(other))
         return
 
     try:

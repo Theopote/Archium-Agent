@@ -12,10 +12,10 @@ from archium.domain.enums import WorkflowStatus
 
 
 class WorkflowRun(IdentifiedModel, TimestampedModel):
-    """Persisted execution record for a multi-step presentation workflow."""
+    """Persisted execution record for a multi-step workflow (presentation or planning)."""
 
     project_id: UUID
-    presentation_id: UUID
+    presentation_id: UUID | None = None
     status: WorkflowStatus = WorkflowStatus.RUNNING
     state: dict[str, Any] = Field(default_factory=dict)
     errors: list[str] = Field(default_factory=list)

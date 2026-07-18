@@ -197,6 +197,11 @@ class PresentationWorkflowService:
         run.touch()
         self._workflow_runs.update(run)
 
+        if run.presentation_id is None:
+            raise WorkflowError(
+                f"Workflow run {workflow_run_id} is missing presentation_id"
+            )
+
         initial_state = initial_workflow_state(
             project_id=str(run.project_id),
             presentation_id=str(run.presentation_id),

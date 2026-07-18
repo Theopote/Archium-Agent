@@ -424,6 +424,18 @@ class WorkflowStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class PlanningSessionStatus(StrEnum):
+    """Lifecycle of a mission-first planning session (not a Presentation)."""
+
+    DRAFT = "draft"
+    CLARIFYING = "clarifying"
+    PLANNING = "planning"
+    AWAITING_APPROVAL = "awaiting_approval"
+    READY = "ready"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class WorkflowStep(StrEnum):
     INIT = "init"
     LOAD_PROJECT = "load_project"

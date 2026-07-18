@@ -12,6 +12,7 @@ from archium.domain.asset import Asset
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProjectStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
+from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
@@ -24,6 +25,7 @@ from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
     AssetORM,
     DocumentChunkORM,
+    PlanningSessionORM,
     PresentationBriefORM,
     PresentationORM,
     ProjectFactORM,
@@ -641,6 +643,61 @@ class WorkflowRunRepository:
             raise
         except SQLAlchemyError as exc:
             _handle_error("update workflow run", exc)
+            raise
+
+
+class PlanningSessionRepository:
+    """CRUD for mission-first planning sessions."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, planning_session: PlanningSession) -> PlanningSession:
+        try:
+            orm = mappers.planning_session_to_orm(planning_session)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.planning_session_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create planning session", exc)
+            raise
+
+    def get_by_id(self, session_id: UUID) -> PlanningSession | None:
+        orm = self._session.get(PlanningSessionORM, session_id)
+        return mappers.planning_session_to_domain(orm) if orm else None
+
+    def get_by_workflow_run_id(self, workflow_run_id: UUID) -> PlanningSession | None:
+        stmt = (
+            select(PlanningSessionORM)
+            .where(PlanningSessionORM.workflow_run_id == workflow_run_id)
+            .order_by(PlanningSessionORM.created_at.desc())
+            .limit(1)
+        )
+        orm = self._session.scalar(stmt)
+        return mappers.planning_session_to_domain(orm) if orm else None
+
+    def list_by_project(self, project_id: UUID) -> list[PlanningSession]:
+        stmt = (
+            select(PlanningSessionORM)
+            .where(PlanningSessionORM.project_id == project_id)
+            .order_by(PlanningSessionORM.created_at.desc())
+        )
+        return [
+            mappers.planning_session_to_domain(row) for row in self._session.scalars(stmt)
+        ]
+
+    def update(self, planning_session: PlanningSession) -> PlanningSession:
+        try:
+            orm = self._session.get(PlanningSessionORM, planning_session.id)
+            if orm is None:
+                raise RepositoryError(f"Planning session {planning_session.id} not found")
+            mappers.planning_session_to_orm(planning_session, orm)
+            self._session.flush()
+            return mappers.planning_session_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update planning session", exc)
             raise
 
 

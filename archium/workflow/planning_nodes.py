@@ -355,17 +355,6 @@ class PlanningWorkflowNodes:
             workstreams=list(state.get("workstreams") or []),
         )
         draft = bridge.to_draft()
-        presentation_id = state.get("presentation_id")
-        if presentation_id:
-            presentation = self._runtime.presentations.get_presentation(UUID(presentation_id))
-            if presentation is not None and presentation.title != bridge.request.title:
-                presentation.title = bridge.request.title
-                presentation.description = (
-                    f"From mission {mission.id}"
-                    + (f" / deliverable {bridge.deliverable_id}" if bridge.deliverable_id else "")
-                )
-                presentation.touch()
-                self._runtime.presentations.update_presentation(presentation)
         next_state: PlanningWorkflowState = {
             "current_step": WorkflowStep.PLANNING_PREPARE_PRESENTATION.value,
             "presentation_request_draft": draft,

@@ -22,7 +22,8 @@ class PlanningWorkflowState(TypedDict, total=False):
 
     workflow_kind: str
     project_id: str
-    presentation_id: str
+    planning_session_id: str
+    presentation_id: str | None
     workflow_run_id: str
     user_task_description: str
     project_name: str | None
@@ -47,15 +48,17 @@ class PlanningWorkflowState(TypedDict, total=False):
 def initial_planning_state(
     *,
     project_id: str,
-    presentation_id: str,
     workflow_run_id: str,
+    planning_session_id: str,
     user_task_description: str,
+    presentation_id: str | None = None,
     require_clarification: bool = True,
     require_plan_approval: bool = True,
 ) -> PlanningWorkflowState:
     return {
         "workflow_kind": "planning",
         "project_id": project_id,
+        "planning_session_id": planning_session_id,
         "presentation_id": presentation_id,
         "workflow_run_id": workflow_run_id,
         "user_task_description": user_task_description,

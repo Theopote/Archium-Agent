@@ -88,7 +88,8 @@ load_project_context → analyze_task → validate_mission
 ```
 
 - Checkpoint：复用 `WorkflowCheckpointerManager`（SQLite）。
-- `WorkflowRun` 仍需 `presentation_id`：规划 run 使用草稿 Presentation，`state.workflow_kind = "planning"`。
+- **`PlanningSession`** 是规划主键；`WorkflowRun.presentation_id` **可空**，规划启动时**不**创建 Presentation。
+- 仅当用户批准并启动已选 `PRESENTATION` 成果时，才由汇报管线创建真正的 Presentation，并写回 `PlanningSession.presentation_id`。
 
 ### Presentation 适配
 
@@ -109,12 +110,13 @@ load_project_context → analyze_task → validate_mission
 
 | 表 / 实体 | 说明 |
 |-----------|------|
+| `planning_sessions` | 规划会话主键（`current_mission_id` / `workflow_run_id` / 可选 `presentation_id`） |
 | `project_missions` | 版本化任务理解（`lineage_id` + `version`） |
 | `knowledge_gaps` | 知识缺口（含 `blocking`） |
 | `project_assumptions` | 正式假设 |
 | `clarifying_questions` | 用户追问（首轮建议 ≤5） |
 | `design_questions` | 设计命题 |
-| `workstreams` | 动态工作路径（可选中） |
+| `workstreams` | 动态工作路径（可选中；含 `recommendation_reason`） |
 | `deliverable_plans` | 成果计划；`deliverables` JSON + Pydantic 校验 |
 
 关键枚举（节选）：`TaskNature`、`InterventionScale`、`ServiceDepth`、`ProjectDomain`、`WorkstreamType`、`DeliverableType`、`RevisionEntityType`（含 `MISSION` / `WORKSTREAM_PLAN` / `DELIVERABLE_PLAN` / `ASSUMPTION`）。
@@ -127,16 +129,16 @@ load_project_context → analyze_task → validate_mission
 
 | 项 | 值 |
 |----|-----|
-| Head | `009_workstream_recommendation_reason` |
-| 前置 | `008_project_mission_planning`（7 张规划表） |
-| 009 | `workstreams.recommendation_reason`（「为什么推荐」） |
+| Head | `010_planning_session_decouple` |
+| 009 | `workstreams.recommendation_reason` |
+| 010 | `planning_sessions` + `workflow_runs.presentation_id` 可空 |
 | 验证 | `pytest tests/smoke/test_alembic_migration.py -v` |
 
 已有本地库升级：
 
 ```bash
 alembic upgrade head
-alembic current   # 应包含 009_workstream_recommendation_reason
+alembic current   # 应包含 010_planning_session_decouple
 ```
 
 `init_database()` / `create_all` **不会**自动给旧库补新表；共享/生产环境必须跑 Alembic。
@@ -145,6 +147,7 @@ alembic current   # 应包含 009_workstream_recommendation_reason
 
 - Mission / Workstream / DeliverablePlan 通过 `MissionHistoryService` 等写入统一 `entity_revisions`（`presentation_id` 可为空），支持 regenerate 前归档与字段 diff。
 - UI「关键问题」步展示五列：**已确认 / 推断 / 假设 / 冲突 / 待确认**，并支持缺口回答、按假设、暂缓，以及事实确认/驳回。
+- 规划链路：`Project → PlanningSession → Mission → DeliverablePlan →`（仅 PRESENTATION）`Presentation`。
 
 ---
 

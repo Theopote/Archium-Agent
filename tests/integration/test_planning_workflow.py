@@ -5,9 +5,12 @@ from __future__ import annotations
 import pytest
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.planning_workflow_service import PlanningWorkflowService
-from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, WorkflowStep
 from archium.domain.project import Project
-from archium.infrastructure.database.repositories import ProjectRepository
+from archium.infrastructure.database.repositories import (
+    PresentationRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 from sqlalchemy.orm import Session
 
@@ -47,6 +50,22 @@ def temple_project(db_session: Session) -> Project:
 def planning_service(db_session: Session, test_settings: object) -> PlanningWorkflowService:
     mock_llm = MockLLMProvider(selector=planning_workflow_mock_selector)
     return PlanningWorkflowService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
+
+
+def test_planning_run_does_not_create_presentation(
+    planning_service: PlanningWorkflowService,
+    temple_project: Project,
+    db_session: Session,
+) -> None:
+    before = len(PresentationRepository(db_session).list_by_project(temple_project.id))
+    first = planning_service.run(temple_project.id, TEMPLE_TASK)
+    after = len(PresentationRepository(db_session).list_by_project(temple_project.id))
+
+    assert after == before
+    assert first.presentation is None
+    assert first.workflow_run.presentation_id is None
+    assert first.planning_session.workflow_run_id == first.workflow_run.id
+    assert first.planning_session.status == PlanningSessionStatus.CLARIFYING
 
 
 def test_planning_workflow_pauses_for_clarification(
@@ -93,6 +112,8 @@ def test_planning_workflow_continues_after_clarification_to_plan_approval(
     assert second.deliverable_plan is not None
     assert second.deliverable_plan.approval_status == ApprovalStatus.DRAFT
     assert second.presentation_request_draft is None
+    assert second.presentation is None
+    assert second.planning_session.status == PlanningSessionStatus.AWAITING_APPROVAL
     assert (
         second.workflow_run.state["current_step"] == WorkflowStep.PLANNING_AWAIT_APPROVAL.value
     )
@@ -103,6 +124,7 @@ def test_planning_workflow_completes_after_plan_approval(
     temple_project: Project,
     db_session: Session,
 ) -> None:
+    before = len(PresentationRepository(db_session).list_by_project(temple_project.id))
     first = planning_service.run(temple_project.id, TEMPLE_TASK)
     clarification = MissionClarificationService(
         db_session,
@@ -118,18 +140,21 @@ def test_planning_workflow_completes_after_plan_approval(
 
     assert not third.awaiting_review
     assert third.workflow_run.status == WorkflowStatus.COMPLETED
+    assert third.presentation is None
+    assert third.workflow_run.presentation_id is None
+    assert third.planning_session.status == PlanningSessionStatus.READY
     assert third.presentation_request_draft is not None
     assert third.presentation_request is not None
     assert third.presentation_request.purpose == third.mission.task_statement
     assert third.presentation_request.title == "概念设计汇报"
     assert "施工图" in " ".join(third.presentation_request.excluded_topics)
     assert third.presentation_request_draft.get("mission_id") == str(third.mission.id)
-    assert third.presentation.title == "概念设计汇报"
     assert third.deliverable_plan is not None
     assert third.deliverable_plan.approval_status == ApprovalStatus.APPROVED
     assert (
         third.workflow_run.state["current_step"] == WorkflowStep.PLANNING_FINALIZE.value
     )
+    assert len(PresentationRepository(db_session).list_by_project(temple_project.id)) == before
 
     bridge = planning_service.get_presentation_bridge(third.workflow_run.id)
     assert bridge.request.title == third.presentation_request.title
@@ -155,4 +180,6 @@ def test_planning_workflow_can_skip_gates(
     assert result.deliverable_plan.approval_status == ApprovalStatus.APPROVED
     assert result.presentation_request_draft is not None
     assert result.presentation_request is not None
+    assert result.presentation is None
     assert result.presentation_request.purpose
+    assert result.planning_session.status == PlanningSessionStatus.READY

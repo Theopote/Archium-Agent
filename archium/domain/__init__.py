@@ -15,6 +15,7 @@ from archium.domain.enums import (
     InterventionScale,
     KnowledgeGapCategory,
     KnowledgeGapStatus,
+    PlanningSessionStatus,
     PresentationStatus,
     PresentationType,
     Priority,
@@ -50,6 +51,7 @@ from archium.domain.knowledge_gap import (
     KnowledgeGap,
 )
 from archium.domain.memory import UserPreference
+from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.project_mission import (
@@ -85,6 +87,8 @@ __all__ = [
     "KnowledgeGapCategory",
     "KnowledgeGapStatus",
     "MissionConstraint",
+    "PlanningSession",
+    "PlanningSessionStatus",
     "PlannedDeliverable",
     "Presentation",
     "PresentationBrief",

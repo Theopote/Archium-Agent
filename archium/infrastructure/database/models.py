@@ -337,13 +337,44 @@ class WorkflowRunORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
-    presentation_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
+    presentation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=True
     )
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="running")
     state_json: Mapped[dict[str, object]] = mapped_column("state", JSON, default=dict)
     errors_json: Mapped[list[str]] = mapped_column("errors", JSON, default=list)
     output_files_json: Mapped[list[str]] = mapped_column("output_files", JSON, default=list)
+
+
+class PlanningSessionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "planning_sessions"
+    __table_args__ = (
+        Index("ix_planning_sessions_project_id", "project_id"),
+        Index("ix_planning_sessions_workflow_run_id", "workflow_run_id"),
+        Index("ix_planning_sessions_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    current_mission_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_missions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    workflow_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("workflow_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    presentation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("presentations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    user_task_description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
 
 
 class UserPreferenceORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):

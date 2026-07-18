@@ -29,15 +29,20 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import KnowledgeGapStatus, QuestionStatus
+from archium.domain.enums import DeliverableType, KnowledgeGapStatus, QuestionStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
+from archium.domain.planning_session import PlanningSession
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
-from archium.infrastructure.database.repositories import FactRepository, WorkflowRunRepository
+from archium.infrastructure.database.repositories import (
+    FactRepository,
+    PlanningSessionRepository,
+    WorkflowRunRepository,
+)
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -47,6 +52,7 @@ from archium.ui.workspace_service import _resolve_runtime_settings
 class PlanningSnapshot:
     """UI-ready snapshot of the active planning session."""
 
+    planning_session: PlanningSession | None = None
     workflow_run: WorkflowRun | None = None
     mission: ProjectMission | None = None
     knowledge_gaps: list[KnowledgeGap] = field(default_factory=list)
@@ -144,6 +150,7 @@ def continue_after_plan_approval(
 def get_planning_snapshot(
     session: Session,
     *,
+    planning_session_id: UUID | None = None,
     workflow_run_id: UUID | None = None,
     mission_id: UUID | None = None,
     project_id: UUID | None = None,
@@ -152,18 +159,34 @@ def get_planning_snapshot(
     """Load the best available planning snapshot for the UI."""
     runtime = _resolve_runtime_settings(settings)
     runs = WorkflowRunRepository(session)
+    sessions = PlanningSessionRepository(session)
     missions = MissionRepository(session)
     llm = create_llm_provider(runtime)
     clarification = MissionClarificationService(session, llm, settings=runtime)
 
+    planning_session: PlanningSession | None = None
+    if planning_session_id is not None:
+        planning_session = sessions.get_by_id(planning_session_id)
+    elif workflow_run_id is not None:
+        planning_session = sessions.get_by_workflow_run_id(workflow_run_id)
+    elif project_id is not None:
+        project_sessions = sessions.list_by_project(project_id)
+        planning_session = project_sessions[0] if project_sessions else None
+
     run: WorkflowRun | None = None
     if workflow_run_id is not None:
         run = runs.get_by_id(workflow_run_id)
+    elif planning_session is not None and planning_session.workflow_run_id is not None:
+        run = runs.get_by_id(planning_session.workflow_run_id)
     elif project_id is not None:
         planning_runs = runs.list_planning_by_project(project_id)
         run = planning_runs[0] if planning_runs else None
+        if planning_session is None and run is not None:
+            planning_session = sessions.get_by_workflow_run_id(run.id)
 
     resolved_mission_id = mission_id
+    if resolved_mission_id is None and planning_session is not None:
+        resolved_mission_id = planning_session.current_mission_id
     warnings: list[str] = []
     presentation_request = None
     review_gate = None
@@ -193,11 +216,21 @@ def get_planning_snapshot(
             resolved_mission_id = project_missions[0].id
 
     if resolved_mission_id is None:
-        return PlanningSnapshot(workflow_run=run, review_gate=review_gate, warnings=warnings)
+        return PlanningSnapshot(
+            planning_session=planning_session,
+            workflow_run=run,
+            review_gate=review_gate,
+            warnings=warnings,
+        )
 
     mission = missions.get_mission(resolved_mission_id)
     if mission is None:
-        return PlanningSnapshot(workflow_run=run, review_gate=review_gate, warnings=warnings)
+        return PlanningSnapshot(
+            planning_session=planning_session,
+            workflow_run=run,
+            review_gate=review_gate,
+            warnings=warnings,
+        )
 
     plans = missions.list_deliverable_plans(resolved_mission_id)
     plan = plans[0] if plans else None
@@ -205,6 +238,7 @@ def get_planning_snapshot(
     project_facts = FactRepository(session).list_by_project(mission.project_id)
 
     return PlanningSnapshot(
+        planning_session=planning_session,
         workflow_run=run,
         mission=mission,
         knowledge_gaps=missions.list_knowledge_gaps(resolved_mission_id),
@@ -392,10 +426,42 @@ def start_presentation_from_planning(
 
     if run.status.value == "awaiting_review" and run.state.get("review_gate") == "plan_approval":
         planning.continue_after_plan_approval(workflow_run_id)
+        run = planning.get_run(workflow_run_id)
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} disappeared after plan approval")
+
+    missions = MissionRepository(session)
+    mission_id = None
+    raw = run.state.get("mission_id")
+    if raw:
+        mission_id = UUID(str(raw))
+    plan = None
+    if mission_id is not None:
+        plan = missions.get_approved_deliverable_plan(mission_id)
+        if plan is None:
+            plans = missions.list_deliverable_plans(mission_id)
+            plan = plans[0] if plans else None
+    if plan is None:
+        plan_data = run.state.get("deliverable_plan")
+        if isinstance(plan_data, dict) and plan_data.get("id"):
+            plan = missions.get_deliverable_plan(UUID(str(plan_data["id"])))
+    if plan is None:
+        raise WorkflowError("尚未生成成果规划，无法启动汇报")
+
+    selected_presentations = [
+        item
+        for item in plan.deliverables
+        if item.selected and item.deliverable_type == DeliverableType.PRESENTATION
+    ]
+    if not selected_presentations:
+        raise WorkflowError(
+            "当前成果计划未选择「汇报 / Presentation」类成果。"
+            "非汇报成果不会自动创建 Presentation；请调整成果选择后再启动。"
+        )
 
     bridge = planning.get_presentation_bridge(workflow_run_id)
-    presentation = _create_presentation_service(session, runtime)
-    return presentation.run(
+    presentation_service = _create_presentation_service(session, runtime)
+    result = presentation_service.run(
         project_id,
         bridge.request,
         export_json=export_json,
@@ -403,6 +469,11 @@ def start_presentation_from_planning(
         require_brief_review=require_brief_review,
         require_storyline_review=require_storyline_review,
     )
+
+    planning_session = planning.get_session_for_run(workflow_run_id)
+    if planning_session is not None:
+        planning.attach_presentation(planning_session.id, result.presentation.id)
+    return result
 
 
 TASK_EXAMPLE_PROMPTS = [

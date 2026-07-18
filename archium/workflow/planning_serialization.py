@@ -25,6 +25,7 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
         "workflow_kind": "planning",
         "current_step": state.get("current_step", WorkflowStep.INIT.value),
         "project_id": state.get("project_id"),
+        "planning_session_id": state.get("planning_session_id"),
         "presentation_id": state.get("presentation_id"),
         "workflow_run_id": state.get("workflow_run_id"),
         "user_task_description": state.get("user_task_description", ""),

@@ -20,13 +20,14 @@ from archium.application.mission_to_presentation_request import (
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import WorkflowStatus, WorkflowStep
+from archium.domain.enums import PlanningSessionStatus, WorkflowStatus, WorkflowStep
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
     DesignQuestion,
     KnowledgeGap,
 )
+from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workflow import WorkflowRun
@@ -34,6 +35,7 @@ from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
+    PlanningSessionRepository,
     PresentationRepository,
     WorkflowRunRepository,
 )
@@ -55,8 +57,9 @@ logger = get_logger(__name__, operation="planning_workflow")
 class PlanningWorkflowResult:
     """Outcome of a mission planning workflow execution."""
 
+    planning_session: PlanningSession
     workflow_run: WorkflowRun
-    presentation: Presentation
+    presentation: Presentation | None = None
     mission: ProjectMission | None = None
     knowledge_gaps: list[KnowledgeGap] = field(default_factory=list)
     assumptions: list[Assumption] = field(default_factory=list)
@@ -98,6 +101,7 @@ class PlanningWorkflowService:
         self._settings = settings or get_settings()
         self._runtime = PlanningWorkflowRuntime(session, llm, settings=self._settings)
         self._workflow_runs = WorkflowRunRepository(session)
+        self._planning_sessions = PlanningSessionRepository(session)
         self._presentations = PresentationRepository(session)
         self._clarification = MissionClarificationService(
             session, llm, settings=self._settings
@@ -133,20 +137,21 @@ class PlanningWorkflowService:
         if not user_task_description.strip():
             raise WorkflowError("任务描述不能为空")
 
-        presentation = self._presentations.create_presentation(
-            Presentation(
+        planning_session = self._planning_sessions.create(
+            PlanningSession(
                 project_id=project_id,
-                title="规划草稿（待任务理解完成）",
-                description="Planning workflow carrier presentation",
+                status=PlanningSessionStatus.DRAFT,
+                user_task_description=user_task_description.strip(),
             )
         )
         workflow_run = self._workflow_runs.create(
             WorkflowRun(
                 project_id=project_id,
-                presentation_id=presentation.id,
+                presentation_id=None,
                 status=WorkflowStatus.RUNNING,
                 state={
                     "workflow_kind": "planning",
+                    "planning_session_id": str(planning_session.id),
                     "current_step": WorkflowStep.INIT.value,
                     "user_task_description": user_task_description,
                     "require_clarification": require_clarification,
@@ -154,12 +159,17 @@ class PlanningWorkflowService:
                 },
             )
         )
+        planning_session.workflow_run_id = workflow_run.id
+        planning_session.status = PlanningSessionStatus.PLANNING
+        planning_session.touch()
+        planning_session = self._planning_sessions.update(planning_session)
 
         initial_state = initial_planning_state(
             project_id=str(project_id),
-            presentation_id=str(presentation.id),
             workflow_run_id=str(workflow_run.id),
+            planning_session_id=str(planning_session.id),
             user_task_description=user_task_description,
+            presentation_id=None,
             require_clarification=require_clarification,
             require_plan_approval=require_plan_approval,
         )
@@ -173,6 +183,7 @@ class PlanningWorkflowService:
             workflow_run.state = snapshot_planning_state(initial_state)
             workflow_run.touch()
             self._workflow_runs.update(workflow_run)
+            self._mark_session_failed(planning_session.id)
             raise WorkflowError(str(exc)) from exc
 
         refreshed = self._workflow_runs.get_by_id(workflow_run.id)
@@ -197,6 +208,7 @@ class PlanningWorkflowService:
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
+        self._set_session_status(run, PlanningSessionStatus.PLANNING, mission_id=mission_id)
 
         try:
             final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
@@ -206,6 +218,7 @@ class PlanningWorkflowService:
             run.status = WorkflowStatus.FAILED
             run.touch()
             self._workflow_runs.update(run)
+            self._mark_session_failed_for_run(run.id)
             raise WorkflowError(str(exc)) from exc
 
         refreshed = self._workflow_runs.get_by_id(run.id)
@@ -234,6 +247,7 @@ class PlanningWorkflowService:
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
+        self._set_session_status(run, PlanningSessionStatus.PLANNING)
 
         try:
             final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
@@ -243,6 +257,7 @@ class PlanningWorkflowService:
             run.status = WorkflowStatus.FAILED
             run.touch()
             self._workflow_runs.update(run)
+            self._mark_session_failed_for_run(run.id)
             raise WorkflowError(str(exc)) from exc
 
         refreshed = self._workflow_runs.get_by_id(run.id)
@@ -268,6 +283,7 @@ class PlanningWorkflowService:
         if not user_task:
             raise WorkflowError(f"Workflow run {workflow_run_id} is missing resumable state")
 
+        planning_session = self._require_session_for_run(run)
         run.status = WorkflowStatus.RUNNING
         run.errors = []
         run.touch()
@@ -275,9 +291,10 @@ class PlanningWorkflowService:
 
         initial_state = initial_planning_state(
             project_id=str(run.project_id),
-            presentation_id=str(run.presentation_id),
             workflow_run_id=str(run.id),
+            planning_session_id=str(planning_session.id),
             user_task_description=str(user_task),
+            presentation_id=str(run.presentation_id) if run.presentation_id else None,
             require_clarification=bool(run.state.get("require_clarification", True)),
             require_plan_approval=bool(run.state.get("require_plan_approval", True)),
         )
@@ -294,6 +311,7 @@ class PlanningWorkflowService:
             run.status = WorkflowStatus.FAILED
             run.touch()
             self._workflow_runs.update(run)
+            self._mark_session_failed(planning_session.id)
             raise WorkflowError(str(exc)) from exc
 
         refreshed = self._workflow_runs.get_by_id(run.id)
@@ -303,6 +321,26 @@ class PlanningWorkflowService:
 
     def get_run(self, workflow_run_id: UUID) -> WorkflowRun | None:
         return self._workflow_runs.get_by_id(workflow_run_id)
+
+    def get_session(self, planning_session_id: UUID) -> PlanningSession | None:
+        return self._planning_sessions.get_by_id(planning_session_id)
+
+    def get_session_for_run(self, workflow_run_id: UUID) -> PlanningSession | None:
+        return self._planning_sessions.get_by_workflow_run_id(workflow_run_id)
+
+    def attach_presentation(
+        self,
+        planning_session_id: UUID,
+        presentation_id: UUID,
+    ) -> PlanningSession:
+        """Record the Presentation created after launching a PRESENTATION deliverable."""
+        session = self._planning_sessions.get_by_id(planning_session_id)
+        if session is None:
+            raise WorkflowError(f"Planning session {planning_session_id} not found")
+        session.presentation_id = presentation_id
+        session.status = PlanningSessionStatus.COMPLETED
+        session.touch()
+        return self._planning_sessions.update(session)
 
     def get_presentation_bridge(
         self,
@@ -366,6 +404,17 @@ class PlanningWorkflowService:
             raise WorkflowError(f"Workflow run {workflow_run_id} is not a planning workflow")
         return run
 
+    def _require_session_for_run(self, run: WorkflowRun) -> PlanningSession:
+        session = self._planning_sessions.get_by_workflow_run_id(run.id)
+        if session is not None:
+            return session
+        raw = run.state.get("planning_session_id")
+        if raw:
+            session = self._planning_sessions.get_by_id(UUID(str(raw)))
+            if session is not None:
+                return session
+        raise WorkflowError(f"Planning session for workflow run {run.id} not found")
+
     @staticmethod
     def _mission_id_from_run(run: WorkflowRun) -> UUID:
         raw = run.state.get("mission_id")
@@ -385,11 +434,9 @@ class PlanningWorkflowService:
         if isinstance(final_state, dict):
             restored.update(restore_planning_artifacts(cast(dict[str, Any], final_state)))
 
-        presentation = self._presentations.get_presentation(workflow_run.presentation_id)
-        if presentation is None:
-            raise WorkflowError(
-                f"Workflow run {workflow_run.id} is missing presentation {workflow_run.presentation_id}"
-            )
+        presentation = None
+        if workflow_run.presentation_id is not None:
+            presentation = self._presentations.get_presentation(workflow_run.presentation_id)
 
         draft = restored.get("presentation_request_draft")
         if draft is None and isinstance(final_state, dict):
@@ -406,10 +453,21 @@ class PlanningWorkflowService:
             except WorkflowError:
                 presentation_request = None
 
+        mission = restored.get("mission")
+        mission_id = mission.id if mission is not None else None
+        if mission_id is None and restored.get("mission_id"):
+            mission_id = UUID(str(restored["mission_id"]))
+
+        planning_session = self._sync_session_from_run(
+            workflow_run,
+            mission_id=mission_id,
+        )
+
         return PlanningWorkflowResult(
+            planning_session=planning_session,
             workflow_run=workflow_run,
             presentation=presentation,
-            mission=restored.get("mission"),
+            mission=mission,
             knowledge_gaps=list(restored.get("knowledge_gaps", [])),
             assumptions=list(restored.get("assumptions", [])),
             clarifying_questions=list(restored.get("clarifying_questions", [])),
@@ -421,6 +479,80 @@ class PlanningWorkflowService:
             errors=list(workflow_run.errors),
             warnings=warnings,
         )
+
+    def _sync_session_from_run(
+        self,
+        workflow_run: WorkflowRun,
+        *,
+        mission_id: UUID | None,
+    ) -> PlanningSession:
+        session = self._require_session_for_run(workflow_run)
+        status = self._derive_session_status(workflow_run, session)
+        changed = False
+        if session.workflow_run_id != workflow_run.id:
+            session.workflow_run_id = workflow_run.id
+            changed = True
+        if mission_id is not None and session.current_mission_id != mission_id:
+            session.current_mission_id = mission_id
+            changed = True
+        if session.status != status:
+            session.status = status
+            changed = True
+        if changed:
+            session.touch()
+            return self._planning_sessions.update(session)
+        return session
+
+    @staticmethod
+    def _derive_session_status(
+        workflow_run: WorkflowRun,
+        session: PlanningSession,
+    ) -> PlanningSessionStatus:
+        if session.presentation_id is not None:
+            return PlanningSessionStatus.COMPLETED
+        if workflow_run.status == WorkflowStatus.FAILED:
+            return PlanningSessionStatus.FAILED
+        if workflow_run.status == WorkflowStatus.COMPLETED:
+            return PlanningSessionStatus.READY
+        if workflow_run.status == WorkflowStatus.AWAITING_REVIEW:
+            gate = workflow_run.state.get("review_gate")
+            if gate == "clarification":
+                return PlanningSessionStatus.CLARIFYING
+            if gate == "plan_approval":
+                return PlanningSessionStatus.AWAITING_APPROVAL
+        if workflow_run.status == WorkflowStatus.RUNNING:
+            return PlanningSessionStatus.PLANNING
+        return session.status
+
+    def _set_session_status(
+        self,
+        run: WorkflowRun,
+        status: PlanningSessionStatus,
+        *,
+        mission_id: UUID | None = None,
+    ) -> None:
+        session = self._planning_sessions.get_by_workflow_run_id(run.id)
+        if session is None:
+            return
+        session.status = status
+        if mission_id is not None:
+            session.current_mission_id = mission_id
+        session.touch()
+        self._planning_sessions.update(session)
+
+    def _mark_session_failed(self, planning_session_id: UUID) -> None:
+        session = self._planning_sessions.get_by_id(planning_session_id)
+        if session is None:
+            return
+        session.status = PlanningSessionStatus.FAILED
+        session.touch()
+        self._planning_sessions.update(session)
+
+    def _mark_session_failed_for_run(self, workflow_run_id: UUID) -> None:
+        session = self._planning_sessions.get_by_workflow_run_id(workflow_run_id)
+        if session is None:
+            return
+        self._mark_session_failed(session.id)
 
     @staticmethod
     def _ensure_success(result: PlanningWorkflowResult) -> PlanningWorkflowResult:
