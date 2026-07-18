@@ -8,6 +8,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Security audit: report-only until observation ends, then block on high/critical.
+  # Set SECURITY_AUDIT_ENFORCE=true to enforce early after triage (see docs/ci-security-audit.md).
+  SECURITY_AUDIT_ENFORCE: "false"
+  SECURITY_AUDIT_ENFORCE_AFTER: "2026-08-08"
+
 jobs:
   test:
     name: test (${{ matrix.python-version }})
@@ -147,13 +153,24 @@ jobs:
         run: pytest tests/smoke/test_streamlit_startup.py -v
 
   security-scan:
-    name: security audit (report only)
+    name: security audit
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve enforcement mode
+        id: security_gate
+        run: |
+          if [ "${{ env.SECURITY_AUDIT_ENFORCE }}" = "true" ]; then
+            echo "enforce=true" >> "$GITHUB_OUTPUT"
+          elif [ "$(date -u +%Y-%m-%d)" \>= "${{ env.SECURITY_AUDIT_ENFORCE_AFTER }}" ]; then
+            echo "enforce=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enforce=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Security audit enforcement: $(grep enforce "$GITHUB_OUTPUT" | cut -d= -f2) (auto after ${{ env.SECURITY_AUDIT_ENFORCE_AFTER }})"
 
       - uses: actions/setup-python@v5
         with:
@@ -163,10 +180,14 @@ jobs:
       - name: Install project and pip-audit
         run: |
           pip install -e ".[full,dev]"
-          pip install pip-audit
+          pip install "pip-audit>=2.8"
 
-      - name: pip-audit
+      - name: pip-audit (full report)
+        continue-on-error: true
         run: pip-audit --desc on 2>&1 | tee pip-audit-report.txt
+
+      - name: pip-audit (high/critical gate)
+        run: bash scripts/ci_security_audit_gate.sh "${{ steps.security_gate.outputs.enforce }}" pip
 
       - uses: actions/setup-node@v4
         with:
@@ -178,8 +199,12 @@ jobs:
         working-directory: archium/infrastructure/renderers/pptxgen
         run: npm ci
 
-      - name: npm audit (production deps)
+      - name: npm audit (full report)
+        continue-on-error: true
         run: npm audit --omit=dev --prefix archium/infrastructure/renderers/pptxgen 2>&1 | tee npm-audit-report.txt
+
+      - name: npm audit (high/critical gate)
+        run: bash scripts/ci_security_audit_gate.sh "${{ steps.security_gate.outputs.enforce }}" npm --omit=dev --prefix archium/infrastructure/renderers/pptxgen
 
       - name: Upload security audit reports
         if: always()
@@ -188,6 +213,8 @@ jobs:
           name: security-audit-reports
           path: |
             pip-audit-report.txt
+            pip-audit-enforce.txt
             npm-audit-report.txt
+            npm-audit-enforce.txt
           if-no-files-found: ignore
           retention-days: 7
