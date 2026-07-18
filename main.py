@@ -58,6 +58,28 @@ def _expand_path(value: str) -> str:
     return str(Path(value).expanduser().resolve())
 
 
+ConfirmFileMoves = Callable[[str, dict[str, str]], bool]
+
+
+def _default_confirm_file_moves(folder: str, plan: dict[str, str]) -> bool:
+    print()
+    print("⚠️  文件移动会永久改变本地磁盘上的文件位置（不可通过本工具撤销）。")
+    print(f"     源文件夹：`{folder}`")
+    print(f"     待移动：**{len(plan)}** 个文件")
+    for name, dest in plan.items():
+        print(f"     - `{name}` → `{dest}`")
+    print()
+    if not sys.stdin.isatty():
+        print("     当前为非交互环境，已自动取消文件移动。")
+        return False
+    try:
+        answer = input("确认执行以上移动？(输入 yes 确认，其他任意键取消): ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer in {"y", "yes", "是", "确认"}
+
+
 def _route_instruction(instruction: str) -> RouterPlan:
     provider = get_llm_provider()
     return provider.generate_structured(
@@ -83,7 +105,11 @@ def _print_step(label: str, message: str) -> None:
     print(f"\n{label}  {message}")
 
 
-def _run_file_manager(params: dict[str, Any]) -> StepResult:
+def _run_file_manager(
+    params: dict[str, Any],
+    *,
+    confirm_moves: ConfirmFileMoves | None = None,
+) -> StepResult:
     label = TOOL_LABELS["file_manager"]
     lines: list[str] = []
     file_paths: list[str] = []
@@ -108,6 +134,11 @@ def _run_file_manager(params: dict[str, Any]) -> StepResult:
     lines.append("**分类方案：**")
     for name, dest in plan.items():
         lines.append(f"- `{name}` → `{dest}`")
+
+    confirm = confirm_moves or _default_confirm_file_moves
+    if not confirm(folder, plan):
+        lines.append("已取消文件移动；本地文件未被修改。")
+        return StepResult("file_manager", label, False, lines)
 
     lines.append("开始安全移动文件…")
     results = move_files(plan, source_folder=folder)
@@ -206,6 +237,7 @@ def execute_plan(
     steps: list[RouterStep],
     *,
     discord_runner: DiscordRunner | None = None,
+    confirm_file_moves: ConfirmFileMoves | None = None,
 ) -> tuple[list[StepResult], bool]:
     if not steps:
         return [], True
@@ -222,7 +254,7 @@ def execute_plan(
 
         try:
             if tool == "file_manager":
-                result = _run_file_manager(params)
+                result = _run_file_manager(params, confirm_moves=confirm_file_moves)
             elif tool == "ppt_generator":
                 result = _run_ppt_generator(params)
             else:
@@ -239,6 +271,9 @@ def execute_plan(
             print(f"     {line}")
         results.append(result)
 
+        if not result.success:
+            return results, False
+
         if tool == "discord_watcher":
             return results, True
 
@@ -254,6 +289,7 @@ def run_instruction(
     instruction: str,
     *,
     discord_runner: DiscordRunner | None = None,
+    confirm_file_moves: ConfirmFileMoves | None = None,
 ) -> ExecutionReport:
     plan = _route_instruction(instruction)
 
@@ -261,7 +297,11 @@ def run_instruction(
         return ExecutionReport(plan.summary, [], [], True)
 
     plan_labels = [TOOL_LABELS.get(step.tool, step.tool) for step in plan.steps]
-    step_results, success = execute_plan(plan.steps, discord_runner=discord_runner)
+    step_results, success = execute_plan(
+        plan.steps,
+        discord_runner=discord_runner,
+        confirm_file_moves=confirm_file_moves,
+    )
     return ExecutionReport(plan.summary, plan_labels, step_results, success)
 
 

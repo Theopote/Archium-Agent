@@ -255,6 +255,36 @@ pip install -e ".[full]"
 
 > **无 API Key 时应用可以正常启动**；只有执行 LLM 相关功能时才会提示未配置。
 
+## 数据库初始化与迁移
+
+项目存在两条建表/升级路径，**不要混用场景**：
+
+| 路径 | 触发方式 | 适用场景 |
+|------|----------|----------|
+| **`init_database()`** | `streamlit run app.py` 首次启动时自动调用（见 `archium/ui/bootstrap.py`） | 本地全新 SQLite、clone 后空库快速跑通 |
+| **Alembic 迁移** | 手动 `alembic upgrade head` | 已有数据库增量升级、生产/staging 部署、CI migration smoke |
+
+### 什么时候必须用 Alembic？
+
+- **生产或共享环境部署**：部署流程中应执行 `alembic upgrade head`，不要依赖 `create_all` 替代 schema 变更管理。
+- **已有 `data/database/archium.db` 且仓库新增了 migration**（如 `002`–`005`）：必须 `alembic upgrade head` 才能补上新列/表；`init_database()` / `create_all` **不会**修改已有表结构。
+- **验证 migration 链**：`pytest tests/smoke/test_alembic_migration.py -v`
+
+### 什么时候可以只用 `init_database()`？
+
+- **全新 clone、数据库文件尚不存在**：直接 `streamlit run app.py`，启动时会自动建表。
+- **pytest 等临时测试库**：测试自行 `create_all`，不依赖 Alembic。
+
+> **双轨设计说明：** `001_initial_schema` 的 upgrade 为空操作——baseline 表由 `create_all` 创建；后续 revision 通过 Alembic 做增量变更。开发环境省心，生产环境可升级。
+
+```bash
+# 生产 / 已有库升级
+alembic upgrade head
+
+# 查看当前 revision
+alembic current
+```
+
 ## 运行
 
 ```bash
@@ -273,7 +303,7 @@ pytest tests/golden -v   # Golden Case 回归
 ruff check archium tests
 mypy archium
 
-# 数据库迁移（可选，开发环境默认使用 init_database 自动建表）
+# 已有数据库升级 / migration smoke（详见上文「数据库初始化与迁移」）
 alembic upgrade head
 ```
 
@@ -404,7 +434,7 @@ marp --version
 
 以下模块属于 v0.1 实验性功能，将在后续阶段移入 `legacy/` 并与主汇报流程解耦：
 
-- `file_manager.py` — AI 辅助文件整理
+- `file_manager.py` — AI 辅助文件整理（**CLI 中唯一会移动本地文件的路径**；执行前会展示分类方案并要求二次确认）
 - `discord_watcher.py` — Discord @ 消息优先级过滤
 
 ## License
