@@ -73,6 +73,21 @@ SEVERITY_LABELS = {
     ReviewSeverity.SUGGESTION: "建议",
 }
 
+# Reuse sidebar status-dot colors (dot-red / dot-yellow / dot-green).
+SEVERITY_DOT_COLORS: dict[ReviewSeverity, str] = {
+    ReviewSeverity.CRITICAL: "red",
+    ReviewSeverity.HIGH: "red",
+    ReviewSeverity.MEDIUM: "yellow",
+    ReviewSeverity.SUGGESTION: "green",
+}
+
+SEVERITY_EMOJI: dict[ReviewSeverity, str] = {
+    ReviewSeverity.CRITICAL: "🔴",
+    ReviewSeverity.HIGH: "🟠",
+    ReviewSeverity.MEDIUM: "🟡",
+    ReviewSeverity.SUGGESTION: "🟢",
+}
+
 CATEGORY_LABELS = {
     ReviewCategory.CITATION: "引用",
     ReviewCategory.CONTENT: "内容",
@@ -101,6 +116,26 @@ STATUS_LABELS = {
 
 def _approval_badge(status: ApprovalStatus) -> str:
     return APPROVAL_LABELS.get(status, status.value)
+
+
+def _severity_label(severity: ReviewSeverity) -> str:
+    return SEVERITY_LABELS.get(severity, severity.value)
+
+
+def _severity_badge_html(severity: ReviewSeverity) -> str:
+    """Colored severity label using the shared status-dot CSS."""
+    color = SEVERITY_DOT_COLORS.get(severity, "yellow")
+    label = _severity_label(severity)
+    return (
+        f'<span class="status-dot dot-{color}" '
+        f'style="vertical-align:middle;"></span>{label}'
+    )
+
+
+def _severity_table_label(severity: ReviewSeverity) -> str:
+    """Severity for dataframe cells (emoji cue; HTML is not rendered there)."""
+    emoji = SEVERITY_EMOJI.get(severity, "⚪")
+    return f"{emoji} {_severity_label(severity)}"
 
 
 def _slide_status_badge(status: SlideStatus) -> str:
@@ -591,7 +626,7 @@ def _render_review_issues_panel(
             "id": str(issue.id),
             "layer": LAYER_LABELS.get(issue.reviewer_layer, issue.reviewer_layer.value),
             "page": _issue_slide_label(issue, slides_by_id),
-            "severity": SEVERITY_LABELS.get(issue.severity, issue.severity.value),
+            "severity": _severity_table_label(issue.severity),
             "category": CATEGORY_LABELS.get(issue.category, issue.category.value),
             "rule_code": issue.rule_code,
             "title": issue.title,
@@ -621,8 +656,9 @@ def _render_review_issues_panel(
         strategy = repair_strategy_for_rule(issue.rule_code)
         cols[0].markdown(
             f"**{LAYER_LABELS.get(issue.reviewer_layer, issue.reviewer_layer.value)}** · "
-            f"**{SEVERITY_LABELS.get(issue.severity, issue.severity.value)}** · "
-            f"{issue.title}{page_hint} — {issue.description}"
+            f"{_severity_badge_html(issue.severity)} · "
+            f"{issue.title}{page_hint} — {issue.description}",
+            unsafe_allow_html=True,
         )
         cols[0].caption(
             f"`{issue.rule_code}` · "
