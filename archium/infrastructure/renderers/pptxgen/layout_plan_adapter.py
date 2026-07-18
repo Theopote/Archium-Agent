@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
+from archium.application.visual.asset_reference import is_supported_layout_image_path
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
@@ -135,6 +136,9 @@ class PptxLayoutPlanAdapter:
             path = bundle.asset_paths.get(element.content_ref)
             if path:
                 instruction["path"] = path
+                if not is_supported_layout_image_path(path):
+                    instruction["asset_unresolved"] = True
+                    instruction["asset_error"] = "LAYOUT.UNSUPPORTED_IMAGE_FORMAT"
             elif element.content_type in {
                 LayoutContentType.IMAGE,
                 LayoutContentType.DRAWING,
@@ -142,18 +146,22 @@ class PptxLayoutPlanAdapter:
             }:
                 # Explicit failure marker — renderer must not silently omit the box.
                 instruction["asset_unresolved"] = True
-                instruction["asset_error"] = "LAYOUT.UNRESOLVED_ASSET_PATH"
+                if element.content_type == LayoutContentType.DRAWING:
+                    instruction["asset_error"] = "LAYOUT.TECHNICAL_DRAWING_MISSING"
+                else:
+                    instruction["asset_error"] = "LAYOUT.UNRESOLVED_ASSET_PATH"
         elif element.content_type in {
             LayoutContentType.IMAGE,
             LayoutContentType.DRAWING,
             LayoutContentType.CHART,
         }:
             instruction["asset_unresolved"] = True
-            instruction["asset_error"] = (
-                "LAYOUT.HERO_ASSET_MISSING"
-                if element.role == LayoutElementRole.HERO_VISUAL
-                else "LAYOUT.MISSING_ASSET_REFERENCE"
-            )
+            if element.content_type == LayoutContentType.DRAWING:
+                instruction["asset_error"] = "LAYOUT.TECHNICAL_DRAWING_MISSING"
+            elif element.role == LayoutElementRole.HERO_VISUAL:
+                instruction["asset_error"] = "LAYOUT.HERO_ASSET_MISSING"
+            else:
+                instruction["asset_error"] = "LAYOUT.MISSING_ASSET_REFERENCE"
         if element.fit_mode is not None:
             instruction["fit_mode"] = element.fit_mode.value
         if element.crop_policy is not None:

@@ -103,4 +103,4 @@ def test_pptx_adapter_marks_unresolved_asset_explicitly() -> None:
     assert element["content_ref"] == ref
     assert "path" not in element
     assert element["asset_unresolved"] is True
-    assert element["asset_error"] == "LAYOUT.UNRESOLVED_ASSET_PATH"
+    assert element["asset_error"] == "LAYOUT.TECHNICAL_DRAWING_MISSING"

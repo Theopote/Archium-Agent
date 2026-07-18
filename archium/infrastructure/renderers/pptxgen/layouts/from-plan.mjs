@@ -145,7 +145,15 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme) {
     element.content_type === "drawing" ? "图纸占位" : "图片占位";
   if (element.asset_unresolved) {
     const code = element.asset_error || "LAYOUT.UNRESOLVED_ASSET_PATH";
-    label = code === "LAYOUT.HERO_ASSET_MISSING" ? "主图素材缺失" : "素材缺失/路径未解析";
+    if (code === "LAYOUT.HERO_ASSET_MISSING") {
+      label = "主图素材缺失";
+    } else if (code === "LAYOUT.TECHNICAL_DRAWING_MISSING") {
+      label = "技术图纸缺失";
+    } else if (code === "LAYOUT.UNSUPPORTED_IMAGE_FORMAT") {
+      label = "素材格式不支持";
+    } else {
+      label = "素材缺失/路径未解析";
+    }
   }
   page.addText(label, {
     x: rect.x + 0.15,

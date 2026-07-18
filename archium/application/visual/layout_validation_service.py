@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from archium.application.visual.asset_reference import AssetReferenceContext
+from archium.application.visual.asset_reference import (
+    AssetReferenceContext,
+    is_supported_layout_image_path,
+    is_technical_drawing_asset_type,
+)
 from archium.domain.visual.design_system import DesignSystem, LayoutThresholds, TypographySystem
 from archium.domain.visual.enums import (
     CropPolicy,
@@ -31,8 +35,10 @@ from archium.domain.visual.validation import (
     LAYOUT_MISSING_ASSET_REFERENCE,
     LAYOUT_MISSING_SOURCE,
     LAYOUT_MISSING_TITLE,
+    LAYOUT_TECHNICAL_DRAWING_MISSING,
     LAYOUT_TEXT_OVERFLOW,
     LAYOUT_UNRESOLVED_ASSET_PATH,
+    LAYOUT_UNSUPPORTED_IMAGE_FORMAT,
     LayoutScore,
     LayoutValidationIssue,
     LayoutValidationReport,
@@ -104,11 +110,13 @@ class LayoutValidationService:
         issues: list[LayoutValidationIssue] = []
         known = asset_context.known_asset_ids
         resolved = asset_context.resolved_paths
+        asset_types = asset_context.asset_types
 
         for element in plan.elements:
             if element.content_type not in _ASSET_CONTENT_TYPES:
                 continue
             is_hero = self._is_hero_element(plan, element)
+            is_drawing_slot = element.content_type == LayoutContentType.DRAWING
             severity = (
                 LayoutIssueSeverity.ERROR if is_hero else LayoutIssueSeverity.WARNING
             )
@@ -137,6 +145,12 @@ class LayoutValidationService:
                             ),
                             suggestion="Bind a supporting asset or remove the visual slot.",
                             auto_repairable=False,
+                        )
+                    )
+                if is_drawing_slot:
+                    issues.append(
+                        self._technical_drawing_missing_issue(
+                            element.id, severity=severity, reason="no content_ref"
                         )
                     )
                 continue
@@ -173,6 +187,14 @@ class LayoutValidationService:
                             auto_repairable=False,
                         )
                     )
+                if is_drawing_slot:
+                    issues.append(
+                        self._technical_drawing_missing_issue(
+                            element.id,
+                            severity=severity,
+                            reason="content_ref not in project catalog",
+                        )
+                    )
                 continue
 
             if unresolved:
@@ -202,8 +224,78 @@ class LayoutValidationService:
                             auto_repairable=False,
                         )
                     )
+                if is_drawing_slot:
+                    issues.append(
+                        self._technical_drawing_missing_issue(
+                            element.id,
+                            severity=severity,
+                            reason="drawing file path unresolved",
+                        )
+                    )
+                continue
+
+            # Path is resolvable — check format + drawing type.
+            assert path is not None
+            if not is_supported_layout_image_path(path):
+                suffix = Path(path).suffix.lower() or "(none)"
+                issues.append(
+                    LayoutValidationIssue(
+                        rule_code=LAYOUT_UNSUPPORTED_IMAGE_FORMAT,
+                        severity=severity,
+                        element_ids=[element.id],
+                        message=(
+                            f"Element {element.id} asset format {suffix} "
+                            "is not supported by the layout PPTX renderer."
+                        ),
+                        suggestion=(
+                            "Convert to png/jpg/jpeg/webp/gif before binding, "
+                            "or replace the asset."
+                        ),
+                        auto_repairable=False,
+                    )
+                )
+                if is_drawing_slot:
+                    issues.append(
+                        self._technical_drawing_missing_issue(
+                            element.id,
+                            severity=severity,
+                            reason=f"unsupported drawing format {suffix}",
+                        )
+                    )
+
+            if is_drawing_slot:
+                asset_type = asset_types.get(ref)
+                if asset_type and not is_technical_drawing_asset_type(asset_type):
+                    issues.append(
+                        self._technical_drawing_missing_issue(
+                            element.id,
+                            severity=severity,
+                            reason=(
+                                f"bound asset type is {asset_type}, "
+                                "expected drawing/diagram"
+                            ),
+                        )
+                    )
 
         return issues
+
+    @staticmethod
+    def _technical_drawing_missing_issue(
+        element_id: str,
+        *,
+        severity: LayoutIssueSeverity,
+        reason: str,
+    ) -> LayoutValidationIssue:
+        return LayoutValidationIssue(
+            rule_code=LAYOUT_TECHNICAL_DRAWING_MISSING,
+            severity=severity,
+            element_ids=[element_id],
+            message=f"Technical drawing for {element_id} is missing ({reason}).",
+            suggestion=(
+                "Bind a project drawing/diagram asset with a supported image format."
+            ),
+            auto_repairable=False,
+        )
 
     @staticmethod
     def _is_hero_element(plan: LayoutPlan, element: LayoutElement) -> bool:
@@ -602,6 +694,8 @@ class LayoutValidationService:
             LAYOUT_MISSING_ASSET_REFERENCE,
             LAYOUT_UNRESOLVED_ASSET_PATH,
             LAYOUT_HERO_ASSET_MISSING,
+            LAYOUT_TECHNICAL_DRAWING_MISSING,
+            LAYOUT_UNSUPPORTED_IMAGE_FORMAT,
         }
         if any(i.rule_code in asset_codes for i in issues):
             asset_usage = 0.4

@@ -62,6 +62,8 @@ VisualIntent (+ ArtDirection hints)
 | `LAYOUT.MISSING_ASSET_REFERENCE` | `content_ref` 不在项目 Asset 中 / 为空 | hero → ERROR；supporting → WARNING |
 | `LAYOUT.UNRESOLVED_ASSET_PATH` | Asset 存在但磁盘路径不可解析 | 同上 |
 | `LAYOUT.HERO_ASSET_MISSING` | 主图素材缺失或不可加载 | ERROR |
+| `LAYOUT.TECHNICAL_DRAWING_MISSING` | DRAWING 槽位无可用图纸（缺引用 / 路径失败 / 类型非 drawing·diagram / 格式不支持） | hero → ERROR；supporting → WARNING |
+| `LAYOUT.UNSUPPORTED_IMAGE_FORMAT` | 路径可解析但扩展名非 png/jpg/jpeg/webp/gif | 同上 |
 
 并产出稳定 `rule_code`。Workflow 校验会注入 `AssetReferenceContext`；PPTX adapter 对未解析素材会标记 `asset_unresolved`，渲染为明确占位而非静默空白。
 

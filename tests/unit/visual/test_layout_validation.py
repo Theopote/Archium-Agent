@@ -15,8 +15,10 @@ from archium.domain.visual import (
     LAYOUT_HERO_NOT_DOMINANT,
     LAYOUT_IMAGE_DISTORTION,
     LAYOUT_MISSING_ASSET_REFERENCE,
+    LAYOUT_TECHNICAL_DRAWING_MISSING,
     LAYOUT_TEXT_OVERFLOW,
     LAYOUT_UNRESOLVED_ASSET_PATH,
+    LAYOUT_UNSUPPORTED_IMAGE_FORMAT,
     LayoutElement,
     LayoutElementRole,
     LayoutFamily,
@@ -24,6 +26,7 @@ from archium.domain.visual import (
     default_presentation_design_system,
 )
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutContentType, LayoutIssueSeverity
+from archium.domain.enums import AssetType
 
 
 def _base_plan(*elements: LayoutElement, family: LayoutFamily = LayoutFamily.HERO) -> LayoutPlan:
@@ -226,6 +229,7 @@ class TestLayoutValidationService:
         hero_issues = report.issues_for(LAYOUT_HERO_ASSET_MISSING)
         assert hero_issues
         assert hero_issues[0].severity == LayoutIssueSeverity.ERROR
+        assert report.issues_for(LAYOUT_TECHNICAL_DRAWING_MISSING)
         assert not report.valid
 
     def test_missing_asset_reference_severity_by_role(self) -> None:
@@ -299,3 +303,120 @@ class TestLayoutValidationService:
         assert unresolved
         assert unresolved[0].severity == LayoutIssueSeverity.ERROR
         assert report.issues_for(LAYOUT_HERO_ASSET_MISSING)
+        assert report.issues_for(LAYOUT_TECHNICAL_DRAWING_MISSING)
+
+    def test_technical_drawing_missing_when_bound_photo(self, tmp_path) -> None:  # noqa: ANN001
+        asset_id = str(uuid4())
+        photo = tmp_path / "site.jpg"
+        photo.write_bytes(b"fake")
+        ctx = AssetReferenceContext(
+            known_asset_ids=frozenset({asset_id}),
+            resolved_paths={asset_id: str(photo)},
+            asset_types={asset_id: AssetType.PHOTO.value},
+        )
+        plan = _base_plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                content_ref=asset_id,
+                x=0.7,
+                y=1.0,
+                width=8,
+                height=3.5,
+                fit_mode=ImageFit.CONTAIN,
+                crop_policy=CropPolicy.FORBIDDEN,
+            ),
+            family=LayoutFamily.DRAWING_FOCUS,
+        )
+        report = LayoutValidationService().validate(
+            plan,
+            default_presentation_design_system(),
+            require_source=False,
+            drawing_hero=True,
+            asset_context=ctx,
+        )
+        drawing_issues = report.issues_for(LAYOUT_TECHNICAL_DRAWING_MISSING)
+        assert drawing_issues
+        assert drawing_issues[0].severity == LayoutIssueSeverity.ERROR
+        assert not report.valid
+
+    def test_unsupported_image_format_blocks_hero(self, tmp_path) -> None:  # noqa: ANN001
+        asset_id = str(uuid4())
+        tiff = tmp_path / "plan.tiff"
+        tiff.write_bytes(b"fake")
+        ctx = AssetReferenceContext(
+            known_asset_ids=frozenset({asset_id}),
+            resolved_paths={asset_id: str(tiff)},
+            asset_types={asset_id: AssetType.DRAWING.value},
+        )
+        plan = _base_plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                content_ref=asset_id,
+                x=0.7,
+                y=1.0,
+                width=5,
+                height=3,
+            ),
+        )
+        report = LayoutValidationService().validate(
+            plan,
+            default_presentation_design_system(),
+            require_source=False,
+            asset_context=ctx,
+        )
+        fmt_issues = report.issues_for(LAYOUT_UNSUPPORTED_IMAGE_FORMAT)
+        assert fmt_issues
+        assert fmt_issues[0].severity == LayoutIssueSeverity.ERROR
+        assert not report.valid
+
+    def test_unsupported_format_warning_for_supporting(self, tmp_path) -> None:  # noqa: ANN001
+        asset_id = str(uuid4())
+        bmp = tmp_path / "detail.bmp"
+        bmp.write_bytes(b"fake")
+        ctx = AssetReferenceContext(
+            known_asset_ids=frozenset({asset_id}),
+            resolved_paths={asset_id: str(bmp)},
+            asset_types={asset_id: AssetType.IMAGE.value},
+        )
+        plan = _base_plan(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="标题",
+                x=0.7,
+                y=0.45,
+                width=8,
+                height=0.7,
+                style_token="title",
+            ),
+            LayoutElement(
+                id="support",
+                role=LayoutElementRole.SUPPORTING_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                content_ref=asset_id,
+                x=6.0,
+                y=1.5,
+                width=3,
+                height=2,
+            ),
+        )
+        report = LayoutValidationService().validate(
+            plan,
+            default_presentation_design_system(),
+            require_source=False,
+            asset_context=ctx,
+        )
+        fmt_issues = report.issues_for(LAYOUT_UNSUPPORTED_IMAGE_FORMAT)
+        assert fmt_issues
+        assert fmt_issues[0].severity == LayoutIssueSeverity.WARNING
+        assert not any(
+            issue.rule_code == LAYOUT_UNSUPPORTED_IMAGE_FORMAT
+            and issue.severity
+            in {LayoutIssueSeverity.ERROR, LayoutIssueSeverity.CRITICAL}
+            for issue in report.issues
+        )
