@@ -40,6 +40,7 @@ from archium.domain.presentation import (
 )
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
+from archium.domain.visual_qa import VisualQAReport
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logical_key
 from archium.domain.workflow import WorkflowRun
@@ -57,6 +58,7 @@ from archium.infrastructure.database.models import (
     SourceDocumentORM,
     StorylineORM,
     UserPreferenceORM,
+    VisualQAReportORM,
     WorkflowRunORM,
 )
 
@@ -474,6 +476,9 @@ def review_issue_to_domain(orm: ReviewIssueORM) -> ReviewIssue:
         suggestion=orm.suggestion,
         auto_fixable=orm.auto_fixable,
         status=ReviewStatus(orm.status),
+        confidence=orm.confidence,
+        detection_method=orm.detection_method,
+        requires_confirmation=orm.requires_confirmation,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -492,8 +497,33 @@ def review_issue_to_orm(domain: ReviewIssue, orm: ReviewIssueORM | None = None) 
     target.suggestion = domain.suggestion
     target.auto_fixable = domain.auto_fixable
     target.status = domain.status.value
+    target.confidence = domain.confidence
+    target.detection_method = domain.detection_method
+    target.requires_confirmation = domain.requires_confirmation
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
+    return target
+
+
+def visual_qa_report_to_domain(orm: VisualQAReportORM) -> VisualQAReport:
+    payload = dict(orm.report_json)
+    payload.setdefault("analyzer_version", orm.analyzer_version)
+    payload.setdefault("file_hash", orm.file_hash)
+    return VisualQAReport.model_validate(payload)
+
+
+def visual_qa_report_to_orm(
+    report: VisualQAReport,
+    *,
+    file_hash: str,
+    analyzer_version: str,
+    orm: VisualQAReportORM | None = None,
+) -> VisualQAReportORM:
+    target = orm or VisualQAReportORM()
+    target.asset_id = report.asset_id
+    target.file_hash = file_hash
+    target.analyzer_version = analyzer_version
+    target.report_json = report.model_dump(mode="json")
     return target
 
 

@@ -17,6 +17,7 @@ from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec
+from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import mappers
@@ -32,6 +33,7 @@ from archium.infrastructure.database.models import (
     SlideRevisionORM,
     SourceDocumentORM,
     StorylineORM,
+    VisualQAReportORM,
     WorkflowRunORM,
 )
 
@@ -502,6 +504,56 @@ class ReviewRepository:
             raise
         except SQLAlchemyError as exc:
             _handle_error("update review issue", exc)
+            raise
+
+
+class VisualQAReportRepository:
+    """Persist and retrieve cached visual QA reports per asset fingerprint."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get_cached(
+        self,
+        asset_id: UUID,
+        *,
+        file_hash: str,
+        analyzer_version: str,
+    ) -> VisualQAReport | None:
+        stmt = select(VisualQAReportORM).where(
+            VisualQAReportORM.asset_id == asset_id,
+            VisualQAReportORM.file_hash == file_hash,
+            VisualQAReportORM.analyzer_version == analyzer_version,
+        )
+        orm = self._session.scalars(stmt).first()
+        return mappers.visual_qa_report_to_domain(orm) if orm else None
+
+    def save(
+        self,
+        report: VisualQAReport,
+        *,
+        file_hash: str,
+        analyzer_version: str,
+    ) -> VisualQAReport:
+        try:
+            stmt = select(VisualQAReportORM).where(
+                VisualQAReportORM.asset_id == report.asset_id,
+                VisualQAReportORM.file_hash == file_hash,
+                VisualQAReportORM.analyzer_version == analyzer_version,
+            )
+            existing = self._session.scalars(stmt).first()
+            orm = mappers.visual_qa_report_to_orm(
+                report,
+                file_hash=file_hash,
+                analyzer_version=analyzer_version,
+                orm=existing,
+            )
+            if existing is None:
+                self._session.add(orm)
+            self._session.flush()
+            return mappers.visual_qa_report_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save visual QA report", exc)
             raise
 
 

@@ -6,14 +6,20 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual_qa_policy import (
+    DRAWING_TYPE_MISMATCH_MIN_CONFIDENCE,
+    decide_check_issue,
+)
 from archium.domain.asset import Asset
 from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, VisualType
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.domain.visual_qa import VisualQAReport
-from archium.infrastructure.database.repositories import AssetRepository
+from archium.domain.visual_qa import VisualQAReport, VisualQACheck
+from archium.infrastructure.database.repositories import AssetRepository, VisualQAReportRepository
 from archium.infrastructure.vision.analyzer import analyze_image
+from archium.infrastructure.vision.analyzer_version import ANALYZER_VERSION
+from archium.infrastructure.vision.asset_fingerprint import asset_content_hash
 from archium.infrastructure.vision.asset_load_errors import rule_code_for_asset_load_error
 from archium.infrastructure.vision.image_loader import load_asset_image
 from archium.logging import get_logger
@@ -29,6 +35,65 @@ _VISUAL_TYPE_TO_DRAWING = {
     VisualType.MAP: "site_plan",
     VisualType.SITE_PHOTO: "photo",
     VisualType.RENDERING: "photo",
+}
+
+_CHECK_ISSUE_SPECS: dict[str, tuple[str, str, str, ReviewLayer, ReviewCategory, ReviewSeverity]] = {
+    "image_dimensions": (
+        ReviewRuleCode.VISUAL_DIMENSIONS_TOO_SMALL,
+        "图像分辨率不足",
+        "替换更高分辨率素材或裁剪重点区域。",
+        ReviewLayer.LAYOUT,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.MEDIUM,
+    ),
+    "blank_margins": (
+        ReviewRuleCode.VISUAL_EXCESSIVE_MARGINS,
+        "图像空白边距过大",
+        "裁剪空白边距以提升有效图面占比。",
+        ReviewLayer.LAYOUT,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.SUGGESTION,
+    ),
+    "dominant_colors": (
+        ReviewRuleCode.VISUAL_LOW_COLOR_CONTRAST,
+        "图像对比度偏低",
+        "检查流线颜色或标注是否足够清晰。",
+        ReviewLayer.LAYOUT,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.SUGGESTION,
+    ),
+    "edge_clipping": (
+        ReviewRuleCode.VISUAL_CONTENT_CLIPPED,
+        "图像可能被裁切",
+        "确认图纸边缘内容完整，必要时重新导出或调整裁剪。",
+        ReviewLayer.LAYOUT,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.MEDIUM,
+    ),
+    "text_density": (
+        ReviewRuleCode.VISUAL_HIGH_TEXT_DENSITY,
+        "图纸文字密度过高",
+        "检查标注字号是否过小，必要时拆分页面或放大图面。",
+        ReviewLayer.LAYOUT,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.SUGGESTION,
+    ),
+    "north_arrow": (
+        ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW,
+        "图像未检测到指北针",
+        "在总平面图中补充指北针或明确北向标注。",
+        ReviewLayer.ARCHITECTURAL,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.MEDIUM,
+    ),
+    "legend_region": (
+        ReviewRuleCode.VISUAL_MISSING_LEGEND,
+        "图像未检测到图例区域",
+        "补充流线颜色图例，确保受众能读懂颜色含义。",
+        ReviewLayer.ARCHITECTURAL,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.SUGGESTION,
+    ),
 }
 
 _ASSET_LOAD_RULE_CODES = frozenset(
@@ -54,11 +119,45 @@ class VisualQAService:
     def __init__(self, session: Session) -> None:
         self._session = session
         self._assets = AssetRepository(session)
+        self._reports = VisualQAReportRepository(session)
+
+    def _get_or_analyze_report(
+        self,
+        asset: Asset,
+        report_cache: dict[UUID, VisualQAReport | Exception],
+    ) -> VisualQAReport:
+        cached = report_cache.get(asset.id)
+        if isinstance(cached, VisualQAReport):
+            return cached
+        if isinstance(cached, Exception):
+            raise cached
+
+        file_hash = asset_content_hash(asset.path)
+        stored = self._reports.get_cached(
+            asset.id,
+            file_hash=file_hash,
+            analyzer_version=ANALYZER_VERSION,
+        )
+        if stored is not None:
+            report_cache[asset.id] = stored
+            return stored
+
+        image = load_asset_image(asset)
+        report = analyze_image(asset.id, asset.path, image).model_copy(
+            update={"file_hash": file_hash, "analyzer_version": ANALYZER_VERSION}
+        )
+        saved = self._reports.save(
+            report,
+            file_hash=file_hash,
+            analyzer_version=ANALYZER_VERSION,
+        )
+        report_cache[asset.id] = saved
+        return saved
 
     def analyze_asset(self, asset: Asset) -> VisualQAReport:
         """Load and analyze one asset image; raises on load/analyze failure."""
-        image = load_asset_image(asset)
-        return analyze_image(asset.id, asset.path, image)
+        cache: dict[UUID, VisualQAReport | Exception] = {}
+        return self._get_or_analyze_report(asset, cache)
 
     def review_slides(
         self,
@@ -99,7 +198,7 @@ class VisualQAService:
 
                     if asset_id not in report_cache:
                         try:
-                            report_cache[asset_id] = self.analyze_asset(asset)
+                            report_cache[asset_id] = self._get_or_analyze_report(asset, report_cache)
                         except Exception as exc:
                             logger.warning(
                                 "Visual QA failed to load asset %s (%s): %s",
@@ -198,154 +297,49 @@ class VisualQAService:
         issues: list[ReviewIssue] = []
         prefix = f"第 {slide.order + 1} 页素材「{asset.filename}」"
 
-        dimensions = report.check("image_dimensions")
-        if dimensions is not None and not dimensions.passed:
+        for check in report.checks:
+            if check.passed or check.check_name == "drawing_classifier":
+                continue
+            if not self._check_applies_to_requirement(check.check_name, slide, requirement):
+                continue
+            spec = _CHECK_ISSUE_SPECS.get(check.check_name)
+            if spec is None:
+                continue
+            decision = decide_check_issue(check)
+            if not decision.emit:
+                logger.debug(
+                    "Suppressing low-confidence visual QA finding %s (confidence=%.2f)",
+                    check.check_name,
+                    check.confidence,
+                )
+                continue
+            rule_code, title, suggestion, layer, category, base_severity = spec
             issues.append(
                 self._issue(
                     presentation_id,
                     slide,
-                    layer=ReviewLayer.LAYOUT,
-                    category=ReviewCategory.VISUAL,
-                    severity=ReviewSeverity.MEDIUM,
-                    rule_code=ReviewRuleCode.VISUAL_DIMENSIONS_TOO_SMALL,
-                    title="图像分辨率不足",
-                    description=f"{prefix}：{dimensions.summary}",
-                    suggestion="替换更高分辨率素材或裁剪重点区域。",
-                    evidence=dimensions.evidence,
+                    layer=layer,
+                    category=category,
+                    severity=base_severity,
+                    rule_code=rule_code,
+                    title=title,
+                    description=f"{prefix}：{check.summary}",
+                    suggestion=suggestion,
+                    check=check,
+                    requires_confirmation=decision.requires_confirmation,
                 )
             )
 
-        margins = report.check("blank_margins")
-        if margins is not None and not margins.passed:
-            issues.append(
-                self._issue(
-                    presentation_id,
-                    slide,
-                    layer=ReviewLayer.LAYOUT,
-                    category=ReviewCategory.VISUAL,
-                    severity=ReviewSeverity.SUGGESTION,
-                    rule_code=ReviewRuleCode.VISUAL_EXCESSIVE_MARGINS,
-                    title="图像空白边距过大",
-                    description=f"{prefix}：{margins.summary}",
-                    suggestion="裁剪空白边距以提升有效图面占比。",
-                    evidence=margins.evidence,
-                )
+        issues.extend(
+            self._drawing_type_mismatch_issues(
+                presentation_id,
+                slide,
+                requirement,
+                asset,
+                report,
+                prefix=prefix,
             )
-
-        colors = report.check("dominant_colors")
-        if colors is not None and not colors.passed:
-            issues.append(
-                self._issue(
-                    presentation_id,
-                    slide,
-                    layer=ReviewLayer.LAYOUT,
-                    category=ReviewCategory.VISUAL,
-                    severity=ReviewSeverity.SUGGESTION,
-                    rule_code=ReviewRuleCode.VISUAL_LOW_COLOR_CONTRAST,
-                    title="图像对比度偏低",
-                    description=f"{prefix}：{colors.summary}",
-                    suggestion="检查流线颜色或标注是否足够清晰。",
-                    evidence=colors.evidence,
-                )
-            )
-
-        clipping = report.check("edge_clipping")
-        if clipping is not None and not clipping.passed:
-            issues.append(
-                self._issue(
-                    presentation_id,
-                    slide,
-                    layer=ReviewLayer.LAYOUT,
-                    category=ReviewCategory.VISUAL,
-                    severity=ReviewSeverity.MEDIUM,
-                    rule_code=ReviewRuleCode.VISUAL_CONTENT_CLIPPED,
-                    title="图像可能被裁切",
-                    description=f"{prefix}：{clipping.summary}",
-                    suggestion="确认图纸边缘内容完整，必要时重新导出或调整裁剪。",
-                    evidence=clipping.evidence,
-                )
-            )
-
-        text_density = report.check("text_density")
-        if text_density is not None and not text_density.passed:
-            issues.append(
-                self._issue(
-                    presentation_id,
-                    slide,
-                    layer=ReviewLayer.LAYOUT,
-                    category=ReviewCategory.VISUAL,
-                    severity=ReviewSeverity.SUGGESTION,
-                    rule_code=ReviewRuleCode.VISUAL_HIGH_TEXT_DENSITY,
-                    title="图纸文字密度过高",
-                    description=f"{prefix}：{text_density.summary}",
-                    suggestion="检查标注字号是否过小，必要时拆分页面或放大图面。",
-                    evidence=text_density.evidence,
-                )
-            )
-
-        if requirement.type in {VisualType.SITE_PLAN, VisualType.MAP}:
-            north = report.check("north_arrow")
-            if north is not None and not north.passed:
-                issues.append(
-                    self._issue(
-                        presentation_id,
-                        slide,
-                        layer=ReviewLayer.ARCHITECTURAL,
-                        category=ReviewCategory.VISUAL,
-                        severity=ReviewSeverity.MEDIUM,
-                        rule_code=ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW,
-                        title="图像未检测到指北针",
-                        description=f"{prefix}：{north.summary}",
-                        suggestion="在总平面图中补充指北针或明确北向标注。",
-                        evidence=north.evidence,
-                    )
-                )
-
-        if requirement.type in {VisualType.SITE_PLAN, VisualType.DIAGRAM, VisualType.MAP}:
-            context = " ".join((slide.title, slide.message, requirement.description)).lower()
-            if any(keyword in context for keyword in ("流线", "交通", "traffic", "circulation", "图例")):
-                legend = report.check("legend_region")
-                if legend is not None and not legend.passed:
-                    issues.append(
-                        self._issue(
-                            presentation_id,
-                            slide,
-                            layer=ReviewLayer.ARCHITECTURAL,
-                            category=ReviewCategory.VISUAL,
-                            severity=ReviewSeverity.SUGGESTION,
-                            rule_code=ReviewRuleCode.VISUAL_MISSING_LEGEND,
-                            title="图像未检测到图例区域",
-                            description=f"{prefix}：{legend.summary}",
-                            suggestion="补充流线颜色图例，确保受众能读懂颜色含义。",
-                            evidence=legend.evidence,
-                        )
-                    )
-
-        expected = _VISUAL_TYPE_TO_DRAWING.get(requirement.type)
-        if (
-            expected is not None
-            and report.drawing_type is not None
-            and report.drawing_type != expected
-            and (report.drawing_type_confidence or 0.0) >= 0.55
-        ):
-            classifier = report.check("drawing_classifier")
-            issues.append(
-                self._issue(
-                    presentation_id,
-                    slide,
-                    layer=ReviewLayer.ARCHITECTURAL,
-                    category=ReviewCategory.VISUAL,
-                    severity=ReviewSeverity.MEDIUM,
-                    rule_code=ReviewRuleCode.VISUAL_DRAWING_TYPE_MISMATCH,
-                    title="图像类型与页面需求不一致",
-                    description=(
-                        f"{prefix}：页面要求 {requirement.type.value}，"
-                        f"图像分类倾向 {report.drawing_type}（置信度 {report.drawing_type_confidence:.2f}）。"
-                    ),
-                    suggestion="确认是否绑定了错误图纸，或在 Asset Board 中更换素材。",
-                    evidence=classifier.evidence if classifier else {},
-                )
-            )
+        )
 
         if not issues:
             logger.debug(
@@ -355,6 +349,80 @@ class VisualQAService:
                 asset.filename,
             )
         return issues
+
+    def _check_applies_to_requirement(
+        self,
+        check_name: str,
+        slide: SlideSpec,
+        requirement: VisualRequirement,
+    ) -> bool:
+        if check_name == "north_arrow":
+            return requirement.type in {VisualType.SITE_PLAN, VisualType.MAP}
+        if check_name == "legend_region":
+            if requirement.type not in {VisualType.SITE_PLAN, VisualType.DIAGRAM, VisualType.MAP}:
+                return False
+            context = " ".join((slide.title, slide.message, requirement.description)).lower()
+            return any(
+                keyword in context
+                for keyword in ("流线", "交通", "traffic", "circulation", "图例")
+            )
+        return True
+
+    def _drawing_type_mismatch_issues(
+        self,
+        presentation_id: UUID,
+        slide: SlideSpec,
+        requirement: VisualRequirement,
+        asset: Asset,
+        report: VisualQAReport,
+        *,
+        prefix: str,
+    ) -> list[ReviewIssue]:
+        expected = _VISUAL_TYPE_TO_DRAWING.get(requirement.type)
+        confidence = report.drawing_type_confidence or 0.0
+        if (
+            expected is None
+            or report.drawing_type is None
+            or report.drawing_type == expected
+            or confidence < DRAWING_TYPE_MISMATCH_MIN_CONFIDENCE
+        ):
+            return []
+
+        synthetic = VisualQACheck(
+            check_name="drawing_type_mismatch",
+            passed=False,
+            confidence=confidence,
+            summary=(
+                f"页面要求 {requirement.type.value}，"
+                f"图像分类倾向 {report.drawing_type}"
+            ),
+            method="drawing_classifier",
+            threshold=DRAWING_TYPE_MISMATCH_MIN_CONFIDENCE,
+        )
+        decision = decide_check_issue(synthetic)
+        if not decision.emit:
+            return []
+
+        classifier = report.check("drawing_classifier")
+        return [
+            self._issue(
+                presentation_id,
+                slide,
+                layer=ReviewLayer.ARCHITECTURAL,
+                category=ReviewCategory.VISUAL,
+                severity=ReviewSeverity.MEDIUM,
+                rule_code=ReviewRuleCode.VISUAL_DRAWING_TYPE_MISMATCH,
+                title="图像类型与页面需求不一致",
+                description=(
+                    f"{prefix}：页面要求 {requirement.type.value}，"
+                    f"图像分类倾向 {report.drawing_type}（置信度 {confidence:.2f}）。"
+                ),
+                suggestion="确认是否绑定了错误图纸，或在 Asset Board 中更换素材。",
+                evidence=classifier.evidence if classifier else {},
+                check=synthetic,
+                requires_confirmation=decision.requires_confirmation,
+            )
+        ]
 
     def _issue(
         self,
@@ -369,19 +437,45 @@ class VisualQAService:
         description: str,
         suggestion: str | None = None,
         evidence: dict[str, object] | None = None,
+        check: VisualQACheck | None = None,
+        confidence: float | None = None,
+        detection_method: str | None = None,
+        requires_confirmation: bool = False,
     ) -> ReviewIssue:
-        if evidence:
-            description = f"{description}（依据：{self._format_evidence(evidence)}）"
+        resolved_evidence = evidence or (check.evidence if check else None)
+        if resolved_evidence:
+            description = f"{description}（依据：{self._format_evidence(resolved_evidence)}）"
+
+        resolved_confidence = confidence if confidence is not None else (check.confidence if check else None)
+        resolved_method = detection_method or (check.method if check else None)
+        meta_parts: list[str] = []
+        if resolved_confidence is not None:
+            meta_parts.append(f"confidence={resolved_confidence:.2f}")
+        if resolved_method:
+            meta_parts.append(f"method={resolved_method}")
+        if check is not None and check.threshold is not None:
+            meta_parts.append(f"threshold={check.threshold}")
+        if meta_parts:
+            description = f"{description}（{'；'.join(meta_parts)}）"
+
+        display_title = f"【疑似】{title}" if requires_confirmation else title
+        resolved_severity = (
+            ReviewSeverity.SUGGESTION if requires_confirmation else severity
+        )
+
         return ReviewIssue(
             presentation_id=presentation_id,
             slide_id=slide.id,
             reviewer_layer=layer,
             category=category,
-            severity=severity,
+            severity=resolved_severity,
             rule_code=rule_code,
-            title=title,
+            title=display_title,
             description=description,
             suggestion=suggestion,
+            confidence=resolved_confidence,
+            detection_method=resolved_method,
+            requires_confirmation=requires_confirmation,
         )
 
     @staticmethod

@@ -77,6 +77,21 @@ _EXTREME_ASPECT_RATIO_LOW = 0.4
 _EXTREME_ASPECT_RATIO_HIGH = 2.5
 
 
+def export_blocking_open_issues(issues: list[ReviewIssue]) -> list[ReviewIssue]:
+    """Return open review issues that should block formal export."""
+    asset_load_rules = asset_load_rule_codes()
+    blocking: list[ReviewIssue] = []
+    for issue in issues:
+        if issue.status != ReviewStatus.OPEN:
+            continue
+        if issue.severity == ReviewSeverity.CRITICAL:
+            blocking.append(issue)
+            continue
+        if issue.severity == ReviewSeverity.HIGH and issue.rule_code in asset_load_rules:
+            blocking.append(issue)
+    return blocking
+
+
 def critical_export_block_messages(
     issues: list[ReviewIssue],
     *,
@@ -85,20 +100,10 @@ def critical_export_block_messages(
     """Return workflow error messages when open review issues should block export."""
     if not block_enabled:
         return []
-    asset_load_rules = asset_load_rule_codes()
-    messages: list[str] = []
-    for issue in issues:
-        if issue.status != ReviewStatus.OPEN:
-            continue
-        if issue.severity == ReviewSeverity.CRITICAL:
-            messages.append(f"[{issue.category.value}] {issue.title}: {issue.description}")
-            continue
-        if (
-            issue.severity == ReviewSeverity.HIGH
-            and issue.rule_code in asset_load_rules
-        ):
-            messages.append(f"[{issue.category.value}] {issue.title}: {issue.description}")
-    return messages
+    return [
+        f"[{issue.category.value}] {issue.title}: {issue.description}"
+        for issue in export_blocking_open_issues(issues)
+    ]
 
 
 class AutomatedReviewService:

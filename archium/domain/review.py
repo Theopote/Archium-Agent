@@ -85,6 +85,9 @@ class ReviewIssue(IdentifiedModel, TimestampedModel):
     suggestion: str | None = None
     auto_fixable: bool = False
     status: ReviewStatus = ReviewStatus.OPEN
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    detection_method: str | None = Field(default=None, max_length=100)
+    requires_confirmation: bool = False
 
     @model_validator(mode="before")
     @classmethod

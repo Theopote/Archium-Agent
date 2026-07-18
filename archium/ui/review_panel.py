@@ -7,6 +7,7 @@ from uuid import UUID
 import pandas as pd
 import streamlit as st
 
+from archium.application.automated_review_service import export_blocking_open_issues
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
@@ -124,6 +125,17 @@ def _issue_slide_label(issue: ReviewIssue, slides_by_id: dict[UUID, SlideSpec]) 
 
 def _focus_slide(slide_id: UUID) -> None:
     st.session_state[FOCUS_SLIDE_SESSION_KEY] = str(slide_id)
+
+
+def _export_block_summary(blockers: list[ReviewIssue]) -> str:
+    critical_count = sum(1 for issue in blockers if issue.severity == ReviewSeverity.CRITICAL)
+    asset_load_count = len(blockers) - critical_count
+    parts: list[str] = []
+    if critical_count:
+        parts.append(f"{critical_count} 个严重")
+    if asset_load_count:
+        parts.append(f"{asset_load_count} 个必需素材无法读取")
+    return "、".join(parts) if parts else f"{len(blockers)} 个"
 
 
 def _render_critical_recovery_actions(
@@ -553,27 +565,25 @@ def _render_review_issues_panel(
         )
         issues = [issue for issue in issues if issue.reviewer_layer == selected_layer]
 
-    open_critical = [
-        issue
-        for issue in issues
-        if issue.severity == ReviewSeverity.CRITICAL and issue.status == ReviewStatus.OPEN
-    ]
-    if open_critical and settings.block_export_on_critical_review:
+    open_export_blockers = export_blocking_open_issues(all_issues)
+    if open_export_blockers and settings.block_export_on_critical_review:
         st.error(
-            f"存在 {len(open_critical)} 个未处理的严重问题，已阻断 JSON/Marp 导出。"
-            "请处理后重新运行或继续工作流。"
+            f"存在 {_export_block_summary(open_export_blockers)}未处理的阻断问题，"
+            "已阻断 JSON/Marp 导出。请处理后重新运行或继续工作流。"
         )
         _render_critical_recovery_actions(
             presentation_id=presentation_id,
             workflow_run_id=workflow_run_id,
-            open_critical=open_critical,
+            open_critical=open_export_blockers,
         )
-    elif open_critical:
-        st.warning(f"存在 {len(open_critical)} 个严重问题（当前未启用导出阻断）。")
+    elif open_export_blockers:
+        st.warning(
+            f"存在 {_export_block_summary(open_export_blockers)}阻断问题（当前未启用导出阻断）。"
+        )
         _render_critical_recovery_actions(
             presentation_id=presentation_id,
             workflow_run_id=workflow_run_id,
-            open_critical=open_critical,
+            open_critical=open_export_blockers,
         )
 
     rows = [
@@ -585,6 +595,8 @@ def _render_review_issues_panel(
             "category": CATEGORY_LABELS.get(issue.category, issue.category.value),
             "rule_code": issue.rule_code,
             "title": issue.title,
+            "confidence": issue.confidence,
+            "requires_confirmation": issue.requires_confirmation,
             "description": issue.description,
             "suggestion": issue.suggestion or "",
             "status": STATUS_LABELS.get(issue.status, issue.status.value),

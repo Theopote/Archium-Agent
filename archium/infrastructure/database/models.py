@@ -301,8 +301,30 @@ class ReviewIssueORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     suggestion: Mapped[str | None] = mapped_column(Text)
     auto_fixable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="open")
+    confidence: Mapped[float | None] = mapped_column(Float)
+    detection_method: Mapped[str | None] = mapped_column(String(100))
+    requires_confirmation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="review_issues")
+
+
+class VisualQAReportORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "visual_qa_reports"
+    __table_args__ = (
+        UniqueConstraint(
+            "asset_id",
+            "file_hash",
+            "analyzer_version",
+            name="uq_visual_qa_asset_hash_version",
+        ),
+    )
+
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False
+    )
+    file_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    analyzer_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    report_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
 
 
 class WorkflowRunORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):

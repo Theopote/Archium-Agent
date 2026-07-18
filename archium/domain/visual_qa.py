@@ -16,6 +16,8 @@ class VisualQACheck(DomainModel):
     passed: bool
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     summary: str = Field(min_length=1)
+    method: str = Field(default="pillow_heuristic", min_length=1)
+    threshold: float | None = Field(default=None)
     evidence: dict[str, object] = Field(default_factory=dict)
 
 
@@ -26,6 +28,8 @@ class VisualQAReport(DomainModel):
     asset_path: str
     width: int = Field(ge=1)
     height: int = Field(ge=1)
+    analyzer_version: str = Field(default="1.0.0", min_length=1)
+    file_hash: str | None = Field(default=None, min_length=64, max_length=64)
     drawing_type: str | None = None
     drawing_type_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     checks: list[VisualQACheck] = Field(default_factory=list)

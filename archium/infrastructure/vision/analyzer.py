@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover
 from uuid import UUID
 
 from archium.domain.visual_qa import VisualQACheck, VisualQAReport
+from archium.infrastructure.vision.analyzer_version import ANALYZER_VERSION
 
 _MIN_PRESENTATION_WIDTH = 800
 _MIN_PRESENTATION_HEIGHT = 600
@@ -61,6 +62,7 @@ def analyze_image(asset_id: UUID, asset_path: str, image: Image.Image) -> Visual
         asset_path=asset_path,
         width=width,
         height=height,
+        analyzer_version=ANALYZER_VERSION,
         drawing_type=drawing_type,
         drawing_type_confidence=confidence,
         checks=checks,
@@ -73,12 +75,14 @@ def check_dimensions(image: Image.Image) -> VisualQACheck:
     return VisualQACheck(
         check_name="image_dimensions",
         passed=passed,
-        confidence=1.0,
+        confidence=1.0 if not passed else 1.0,
         summary=(
             f"分辨率 {width}×{height} 满足汇报展示要求"
             if passed
             else f"分辨率 {width}×{height} 低于建议下限 {_MIN_PRESENTATION_WIDTH}×{_MIN_PRESENTATION_HEIGHT}"
         ),
+        method="pillow_heuristic",
+        threshold=float(_MIN_PRESENTATION_WIDTH),
         evidence={
             "width": width,
             "height": height,
@@ -119,6 +123,8 @@ def check_blank_margins(image: Image.Image) -> VisualQACheck:
             if passed
             else "检测到过大空白边距，有效图面占比偏低"
         ),
+        method="pillow_heuristic",
+        threshold=_EXCESSIVE_MARGIN_RATIO,
         evidence={
             "margin_contrast_by_edge": {key: round(value, 2) for key, value in margin_scores.items()},
             "margin_ratio": round(margin_ratio, 3),
@@ -160,6 +166,8 @@ def check_dominant_colors(image: Image.Image) -> VisualQACheck:
             if passed
             else "图像整体对比度偏低，流线或文字可能不够清晰"
         ),
+        method="pillow_heuristic",
+        threshold=_LOW_CONTRAST_STDEV,
         evidence={
             "luminance_stdev": round(stdev, 2),
             "threshold_stdev": _LOW_CONTRAST_STDEV,
@@ -198,6 +206,8 @@ def check_edge_clipping(image: Image.Image) -> VisualQACheck:
             if passed
             else f"图面内容可能贴边裁切：{', '.join(clipped_edges)}"
         ),
+        method="pillow_heuristic",
+        threshold=_EDGE_CLIP_DARK_RATIO,
         evidence={
             "dark_pixel_ratio_by_edge": {key: round(value, 3) for key, value in edge_ratios.items()},
             "threshold": _EDGE_CLIP_DARK_RATIO,
@@ -232,6 +242,8 @@ def check_text_density(image: Image.Image) -> VisualQACheck:
                 "char_density_per_10k_px": round(char_density, 2),
                 "edge_density": round(edge_density, 3),
             },
+            method="ocr_char_density" if ocr_engine else "pillow_heuristic",
+            threshold=120.0,
         )
 
     passed = edge_density < _HIGH_TEXT_EDGE_DENSITY
@@ -244,6 +256,8 @@ def check_text_density(image: Image.Image) -> VisualQACheck:
             if passed
             else "边缘密度偏高，可能存在过小文字或密集标注"
         ),
+        method="edge_density_proxy",
+        threshold=_HIGH_TEXT_EDGE_DENSITY,
         evidence={
             "ocr_engine": None,
             "edge_density": round(edge_density, 3),
@@ -278,6 +292,8 @@ def check_north_arrow(image: Image.Image) -> VisualQACheck:
             if passed
             else "未在图角区域检测到指北针/北向符号"
         ),
+        method="pillow_heuristic",
+        threshold=_NORTH_ARROW_MIN_SCORE,
         evidence={
             "corner_scores": {key: round(value, 3) for key, value in scores.items()},
             "best_corner": best_corner,
@@ -316,6 +332,8 @@ def check_legend_region(image: Image.Image) -> VisualQACheck:
             if passed
             else "未检测到有足够色块分区的图例区域"
         ),
+        method="pillow_heuristic",
+        threshold=0.4,
         evidence={
             "best_region": best_region,
             "color_patch_count": best_patches,

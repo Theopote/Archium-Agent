@@ -111,7 +111,7 @@ class TestVisualAnalyzer:
 
 
 class TestVisualQAService:
-    def test_review_slides_flags_missing_north_arrow_on_site_plan(
+    def test_review_slides_suppresses_low_confidence_north_arrow(
         self,
         db_session: Session,
         project_and_asset: tuple[object, Asset],
@@ -144,11 +144,51 @@ class TestVisualQAService:
             {asset.id: asset},
         )
 
-        assert any(issue.rule_code == ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW for issue in issues)
-        north_issue = next(
-            issue for issue in issues if issue.rule_code == ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW
+        assert not any(issue.rule_code == ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW for issue in issues)
+
+    def test_review_slides_flags_small_dimensions_as_formal_issue(
+        self,
+        db_session: Session,
+        project_and_asset: tuple[object, Asset],
+        tmp_path: Path,
+    ) -> None:
+        project_id, asset = project_and_asset
+        small_path = tmp_path / "small_plan.png"
+        Image.new("RGB", (640, 480), color=(240, 240, 240)).save(small_path, format="PNG")
+        asset.path = str(small_path)
+        asset.width = 640
+        asset.height = 480
+        presentation = PresentationRepository(db_session).create_presentation(
+            Presentation(project_id=project_id, title="Small Image QA")  # type: ignore[arg-type]
         )
-        assert "指北针" in north_issue.description
+        slide = SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="总平面",
+            message="院区总平面布局。",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PLAN,
+                    description="总平面图",
+                    preferred_asset_ids=[asset.id],
+                )
+            ],
+        )
+
+        issues = VisualQAService(db_session).review_slides(
+            presentation.id,
+            [slide],
+            {asset.id: asset},
+        )
+
+        assert any(issue.rule_code == ReviewRuleCode.VISUAL_DIMENSIONS_TOO_SMALL for issue in issues)
+        dim_issue = next(
+            issue for issue in issues if issue.rule_code == ReviewRuleCode.VISUAL_DIMENSIONS_TOO_SMALL
+        )
+        assert dim_issue.confidence == 1.0
+        assert dim_issue.detection_method == "pillow_heuristic"
+        assert not dim_issue.requires_confirmation
 
     def test_layout_review_runs_visual_qa_when_enabled(
         self,
@@ -158,15 +198,16 @@ class TestVisualQAService:
         project = ProjectRepository(db_session).create(
             Project(name="Layout QA Project", project_type=ProjectType.HEALTHCARE)
         )
-        image_path = create_site_plan_image(tmp_path / "layout_plan.png", with_north=False)
+        small_path = tmp_path / "layout_small.png"
+        Image.new("RGB", (640, 480), color=(240, 240, 240)).save(small_path, format="PNG")
         asset = AssetRepository(db_session).create(
             Asset(
                 project_id=project.id,
                 filename="layout_plan.png",
-                path=str(image_path),
+                path=str(small_path),
                 asset_type=AssetType.DRAWING,
-                width=1200,
-                height=900,
+                width=640,
+                height=480,
                 description="总平面图",
                 tags=["site_plan"],
             )
@@ -198,7 +239,7 @@ class TestVisualQAService:
             project_id=project.id,
         )
 
-        assert any(issue.rule_code == ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW for issue in issues)
+        assert any(issue.rule_code == ReviewRuleCode.VISUAL_DIMENSIONS_TOO_SMALL for issue in issues)
 
     def test_layout_review_skips_text_north_hint_when_visual_qa_enabled(
         self,
@@ -347,8 +388,57 @@ class TestVisualQAService:
         assert analyze_mock.call_count == 2
         assert isinstance(issues, list)
 
+    def test_review_slides_reuses_persisted_visual_qa_report(
+        self,
+        db_session: Session,
+        project_and_asset: tuple[object, Asset],
+    ) -> None:
+        from unittest.mock import patch
+
+        project_id, asset = project_and_asset
+        presentation = PresentationRepository(db_session).create_presentation(
+            Presentation(project_id=project_id, title="Persisted QA")  # type: ignore[arg-type]
+        )
+        slide = SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="总平面",
+            message="布局说明。",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PLAN,
+                    description="总平面图",
+                    preferred_asset_ids=[asset.id],
+                )
+            ],
+        )
+
+        with patch(
+            "archium.application.visual_qa_service.analyze_image",
+            wraps=analyze_image,
+        ) as analyze_mock:
+            VisualQAService(db_session).review_slides(
+                presentation.id,
+                [slide],
+                {asset.id: asset},
+            )
+        assert analyze_mock.call_count == 1
+
+        with patch(
+            "archium.application.visual_qa_service.analyze_image",
+            wraps=analyze_image,
+        ) as analyze_mock:
+            VisualQAService(db_session).review_slides(
+                presentation.id,
+                [slide],
+                {asset.id: asset},
+            )
+        assert analyze_mock.call_count == 0
+
 
 def test_critical_export_block_includes_high_asset_load_issues() -> None:
+    from archium.application.automated_review_service import export_blocking_open_issues
     from archium.domain.enums import ReviewCategory, ReviewStatus
     from archium.domain.review import ReviewIssue
 
@@ -362,7 +452,9 @@ def test_critical_export_block_includes_high_asset_load_issues() -> None:
         status=ReviewStatus.OPEN,
     )
 
+    blockers = export_blocking_open_issues([issue])
     messages = critical_export_block_messages([issue], block_enabled=True)
 
+    assert blockers == [issue]
     assert len(messages) == 1
     assert "素材文件无法读取" in messages[0]

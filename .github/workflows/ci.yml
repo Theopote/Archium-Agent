@@ -4,15 +4,20 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: test (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
-
-    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +33,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: archium/infrastructure/renderers/pptxgen/package-lock.json
 
       - name: Install PptxGenJS dependencies
         working-directory: archium/infrastructure/renderers/pptxgen
@@ -52,6 +59,7 @@ jobs:
           name: golden-artifacts-py${{ matrix.python-version }}
           path: tests/golden/artifacts/
           if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload PptxGen smoke artifact
         if: always()
@@ -60,10 +68,12 @@ jobs:
           name: pptxgen-smoke-py${{ matrix.python-version }}
           path: tests/smoke/artifacts/
           if-no-files-found: ignore
+          retention-days: 7
 
   marp-export:
     name: marp export smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -96,10 +106,12 @@ jobs:
           name: marp-smoke
           path: tests/smoke/artifacts/
           if-no-files-found: ignore
+          retention-days: 7
 
   migration-smoke:
     name: alembic migration smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -118,6 +130,7 @@ jobs:
   streamlit-smoke:
     name: streamlit startup smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -133,3 +146,48 @@ jobs:
       - name: Streamlit startup smoke test
         run: pytest tests/smoke/test_streamlit_startup.py -v
 
+  security-scan:
+    name: security audit (report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project and pip-audit
+        run: |
+          pip install -e ".[full,dev]"
+          pip install pip-audit
+
+      - name: pip-audit
+        run: pip-audit --desc on 2>&1 | tee pip-audit-report.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: archium/infrastructure/renderers/pptxgen/package-lock.json
+
+      - name: Install PptxGenJS dependencies
+        working-directory: archium/infrastructure/renderers/pptxgen
+        run: npm ci
+
+      - name: npm audit (production deps)
+        run: npm audit --omit=dev --prefix archium/infrastructure/renderers/pptxgen 2>&1 | tee npm-audit-report.txt
+
+      - name: Upload security audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-reports
+          path: |
+            pip-audit-report.txt
+            npm-audit-report.txt
+          if-no-files-found: ignore
+          retention-days: 7
