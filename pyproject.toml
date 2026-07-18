@@ -62,7 +62,8 @@ dev = [
 ]
 
 [project.scripts]
-archium = "main:main"
+archium = "archium.cli:main"
+archium-legacy = "main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

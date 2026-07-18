@@ -1,6 +1,11 @@
 """
-Archium Agent — 主入口 CLI
-通过 Gemini 路由用户自然语言指令，顺序调用各功能模块。
+Archium Agent — Legacy v0.1 CLI (experimental)
+
+This is NOT the v0.2 product entry point. Use ``archium`` or
+``streamlit run app.py`` for the project workspace.
+
+Natural-language router for v0.1 tools: file organization, quick Marp PPT,
+Discord watcher. Requires ``pip install -e ".[legacy]"`` for Discord support.
 """
 
 from __future__ import annotations
@@ -94,6 +99,9 @@ def _route_instruction(instruction: str) -> RouterPlan:
 
 def _print_banner() -> None:
     print()
+    print("=" * 52)
+    print("  LEGACY — v0.1 CLI (not the v0.2 product entry)")
+    print("  Use `archium` or `streamlit run app.py` for the workspace.")
     print("=" * 52)
     print("  🏛️  Archium Agent — 建筑师 AI 助手")
     print("  📂 文件整理  |  📊 PPT 生成  |  🤖 Discord 守卫")
