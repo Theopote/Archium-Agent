@@ -75,7 +75,7 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 | `VisualIntentService` | `generate_for_slide` |
 | `LayoutPlanningService` | `generate_candidates` / `select_best` / `plan_for_slide` |
 | `LayoutValidationService` | `validate` |
-| `LayoutRepairService` | `repair` |
+| `LayoutRepairService` | `repair` — auto-repairable rule codes（越界 / 重叠 / 字号 / 溢出 / 图纸裁切 / 主视觉占比 / 对齐） |
 | `VisualCompositionService` | 薄编排：意图 → 候选 → 最佳计划 |
 | `VisualWorkflowService` | `run` / `continue_after_art_direction_approval` / `resume` |
 | `PptxGenPresentationRenderer` | `build_layout_instruction_deck` / `export_pptx_from_layout_instructions` |
