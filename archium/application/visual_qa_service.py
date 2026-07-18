@@ -14,6 +14,7 @@ from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual_qa import VisualQAReport
 from archium.infrastructure.database.repositories import AssetRepository
 from archium.infrastructure.vision.analyzer import analyze_image
+from archium.infrastructure.vision.asset_load_errors import rule_code_for_asset_load_error
 from archium.infrastructure.vision.image_loader import load_asset_image
 from archium.logging import get_logger
 
@@ -30,6 +31,22 @@ _VISUAL_TYPE_TO_DRAWING = {
     VisualType.RENDERING: "photo",
 }
 
+_ASSET_LOAD_RULE_CODES = frozenset(
+    {
+        ReviewRuleCode.VISUAL_ASSET_UNREADABLE,
+        ReviewRuleCode.VISUAL_ASSET_FILE_NOT_FOUND,
+        ReviewRuleCode.VISUAL_ASSET_FORMAT_UNSUPPORTED,
+        ReviewRuleCode.VISUAL_ASSET_DECODE_FAILED,
+        ReviewRuleCode.VISUAL_ASSET_PERMISSION_DENIED,
+        ReviewRuleCode.VISUAL_ASSET_RECORD_MISSING,
+    }
+)
+
+
+def asset_load_rule_codes() -> frozenset[str]:
+    """Rule codes for asset load / binding failures that may block export."""
+    return _ASSET_LOAD_RULE_CODES
+
 
 class VisualQAService:
     """Run lightweight image checks on slide-bound assets."""
@@ -38,13 +55,9 @@ class VisualQAService:
         self._session = session
         self._assets = AssetRepository(session)
 
-    def analyze_asset(self, asset: Asset) -> VisualQAReport | None:
-        try:
-            image = load_asset_image(asset)
-        except Exception as exc:
-            logger.warning("Visual QA skipped for asset %s: %s", asset.id, exc)
-            return None
-
+    def analyze_asset(self, asset: Asset) -> VisualQAReport:
+        """Load and analyze one asset image; raises on load/analyze failure."""
+        image = load_asset_image(asset)
         return analyze_image(asset.id, asset.path, image)
 
     def review_slides(
@@ -54,31 +67,123 @@ class VisualQAService:
         assets_by_id: dict[UUID, Asset],
     ) -> list[ReviewIssue]:
         issues: list[ReviewIssue] = []
+        report_cache: dict[UUID, VisualQAReport | Exception] = {}
+
         for slide in slides:
             for index, requirement in enumerate(slide.visual_requirements):
                 if requirement.type == VisualType.TEXT_ONLY:
                     continue
-                asset_id = requirement.primary_asset_id
-                if asset_id is None:
-                    continue
-                asset = assets_by_id.get(asset_id)
-                if asset is None:
+
+                bound_ids = requirement.bound_asset_ids()
+                if not bound_ids:
                     continue
 
-                report = self.analyze_asset(asset)
-                if report is None:
-                    continue
-                issues.extend(
-                    self._issues_for_requirement(
-                        presentation_id,
-                        slide,
-                        requirement,
-                        asset,
-                        report,
-                        requirement_index=index,
+                for asset_id in bound_ids:
+                    asset = assets_by_id.get(asset_id)
+                    if asset is None:
+                        issues.append(
+                            self._asset_binding_issue(
+                                presentation_id,
+                                slide,
+                                requirement,
+                                asset_id=asset_id,
+                                rule_code=ReviewRuleCode.VISUAL_ASSET_RECORD_MISSING,
+                                title="素材记录缺失",
+                                description=(
+                                    f"第 {slide.order + 1} 页绑定了素材 {asset_id}，"
+                                    "但项目素材库中找不到对应记录。"
+                                ),
+                            )
+                        )
+                        continue
+
+                    if asset_id not in report_cache:
+                        try:
+                            report_cache[asset_id] = self.analyze_asset(asset)
+                        except Exception as exc:
+                            logger.warning(
+                                "Visual QA failed to load asset %s (%s): %s",
+                                asset.id,
+                                asset.filename,
+                                exc,
+                            )
+                            report_cache[asset_id] = exc
+
+                    cached = report_cache[asset_id]
+                    if isinstance(cached, Exception):
+                        issues.append(
+                            self._asset_load_issue(
+                                presentation_id,
+                                slide,
+                                requirement,
+                                asset,
+                                cached,
+                            )
+                        )
+                        continue
+
+                    issues.extend(
+                        self._issues_for_requirement(
+                            presentation_id,
+                            slide,
+                            requirement,
+                            asset,
+                            cached,
+                            requirement_index=index,
+                        )
                     )
-                )
         return issues
+
+    def _asset_binding_issue(
+        self,
+        presentation_id: UUID,
+        slide: SlideSpec,
+        requirement: VisualRequirement,
+        *,
+        asset_id: UUID,
+        rule_code: str,
+        title: str,
+        description: str,
+    ) -> ReviewIssue:
+        required_note = "（必需素材）" if requirement.required else ""
+        return self._issue(
+            presentation_id,
+            slide,
+            layer=ReviewLayer.LAYOUT,
+            category=ReviewCategory.VISUAL,
+            severity=self._asset_failure_severity(requirement),
+            rule_code=rule_code,
+            title=title,
+            description=f"{description}{required_note}",
+            suggestion="在 Asset Board 中重新绑定有效素材，或重新导入缺失文件。",
+        )
+
+    def _asset_load_issue(
+        self,
+        presentation_id: UUID,
+        slide: SlideSpec,
+        requirement: VisualRequirement,
+        asset: Asset,
+        exc: Exception,
+    ) -> ReviewIssue:
+        rule_code = rule_code_for_asset_load_error(exc)
+        prefix = f"第 {slide.order + 1} 页素材「{asset.filename}」"
+        required_note = "（必需素材）" if requirement.required else ""
+        return self._issue(
+            presentation_id,
+            slide,
+            layer=ReviewLayer.LAYOUT,
+            category=ReviewCategory.VISUAL,
+            severity=self._asset_failure_severity(requirement),
+            rule_code=rule_code,
+            title="素材文件无法读取",
+            description=f"{prefix}：{exc}{required_note}",
+            suggestion="确认文件路径有效、格式受支持且当前进程有读取权限。",
+        )
+
+    @staticmethod
+    def _asset_failure_severity(requirement: VisualRequirement) -> ReviewSeverity:
+        return ReviewSeverity.HIGH if requirement.required else ReviewSeverity.MEDIUM
 
     def _issues_for_requirement(
         self,

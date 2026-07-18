@@ -6,11 +6,11 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from archium.application.automated_review_service import AutomatedReviewService
+from archium.application.automated_review_service import AutomatedReviewService, critical_export_block_messages
 from archium.application.visual_qa_service import VisualQAService
 from archium.config.settings import Settings
 from archium.domain.asset import Asset
-from archium.domain.enums import AssetType, ProjectType, VisualType
+from archium.domain.enums import AssetType, ProjectType, ReviewSeverity, VisualType
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
@@ -241,3 +241,128 @@ class TestVisualQAService:
         assert not any(
             issue.rule_code == ReviewRuleCode.ARCH_PLAN_MISSING_NORTH_ARROW for issue in arch_issues
         )
+
+    def test_review_slides_flags_missing_asset_file_as_high_issue(
+        self,
+        db_session: Session,
+        project_and_asset: tuple[object, Asset],
+    ) -> None:
+        project_id, asset = project_and_asset
+        asset.path = str(Path("/tmp/does-not-exist") / asset.filename)
+        presentation = PresentationRepository(db_session).create_presentation(
+            Presentation(project_id=project_id, title="Missing Asset")  # type: ignore[arg-type]
+        )
+        slide = SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="总平面",
+            message="布局说明。",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PLAN,
+                    description="总平面图",
+                    preferred_asset_ids=[asset.id],
+                    required=True,
+                )
+            ],
+        )
+
+        issues = VisualQAService(db_session).review_slides(
+            presentation.id,
+            [slide],
+            {asset.id: asset},
+        )
+
+        assert any(issue.rule_code == ReviewRuleCode.VISUAL_ASSET_FILE_NOT_FOUND for issue in issues)
+        load_issue = next(
+            issue for issue in issues if issue.rule_code == ReviewRuleCode.VISUAL_ASSET_FILE_NOT_FOUND
+        )
+        assert load_issue.severity == ReviewSeverity.HIGH
+        assert "必需素材" in load_issue.description
+
+    def test_review_slides_analyzes_candidate_assets_and_caches_reports(
+        self,
+        db_session: Session,
+        project_and_asset: tuple[object, Asset],
+        tmp_path: Path,
+    ) -> None:
+        from unittest.mock import patch
+
+        project_id, primary = project_and_asset
+        secondary_path = create_site_plan_image(tmp_path / "candidate.png", with_north=True)
+        secondary = AssetRepository(db_session).create(
+            Asset(
+                project_id=project_id,  # type: ignore[arg-type]
+                filename="candidate.png",
+                path=str(secondary_path),
+                asset_type=AssetType.DRAWING,
+                width=1200,
+                height=900,
+            )
+        )
+        presentation = PresentationRepository(db_session).create_presentation(
+            Presentation(project_id=project_id, title="Multi Asset")  # type: ignore[arg-type]
+        )
+        slide_one = SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="对比页",
+            message="方案对比。",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PLAN,
+                    description="方案 A",
+                    preferred_asset_ids=[primary.id],
+                    candidate_asset_ids=[secondary.id],
+                )
+            ],
+        )
+        slide_two = SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=1,
+            title="复用页",
+            message="复用同一素材。",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PLAN,
+                    description="方案 A 复用",
+                    preferred_asset_ids=[primary.id],
+                )
+            ],
+        )
+
+        with patch(
+            "archium.application.visual_qa_service.analyze_image",
+            wraps=analyze_image,
+        ) as analyze_mock:
+            issues = VisualQAService(db_session).review_slides(
+                presentation.id,
+                [slide_one, slide_two],
+                {primary.id: primary, secondary.id: secondary},
+            )
+
+        assert analyze_mock.call_count == 2
+        assert isinstance(issues, list)
+
+
+def test_critical_export_block_includes_high_asset_load_issues() -> None:
+    from archium.domain.enums import ReviewCategory, ReviewStatus
+    from archium.domain.review import ReviewIssue
+
+    issue = ReviewIssue(
+        presentation_id=uuid4(),
+        category=ReviewCategory.VISUAL,
+        severity=ReviewSeverity.HIGH,
+        rule_code=ReviewRuleCode.VISUAL_ASSET_FILE_NOT_FOUND,
+        title="素材文件无法读取",
+        description="文件不存在（必需素材）",
+        status=ReviewStatus.OPEN,
+    )
+
+    messages = critical_export_block_messages([issue], block_enabled=True)
+
+    assert len(messages) == 1
+    assert "素材文件无法读取" in messages[0]

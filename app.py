@@ -31,7 +31,7 @@ with st.sidebar:
     render_discord_settings()
     st.markdown(
         '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
-        "Archium v0.2-alpha.4<br>建筑 · 归档 · 智能"
+        "Archium v0.2-alpha.5<br>建筑 · 归档 · 智能"
         "</div>",
         unsafe_allow_html=True,
     )

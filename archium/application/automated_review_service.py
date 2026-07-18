@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.chunk_models import ProjectContextBundle
-from archium.application.visual_qa_service import VisualQAService
+from archium.application.visual_qa_service import VisualQAService, asset_load_rule_codes
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.enums import (
@@ -82,14 +82,23 @@ def critical_export_block_messages(
     *,
     block_enabled: bool,
 ) -> list[str]:
-    """Return workflow error messages when critical open issues should block export."""
+    """Return workflow error messages when open review issues should block export."""
     if not block_enabled:
         return []
-    return [
-        f"[{issue.category.value}] {issue.title}: {issue.description}"
-        for issue in issues
-        if issue.severity == ReviewSeverity.CRITICAL and issue.status == ReviewStatus.OPEN
-    ]
+    asset_load_rules = asset_load_rule_codes()
+    messages: list[str] = []
+    for issue in issues:
+        if issue.status != ReviewStatus.OPEN:
+            continue
+        if issue.severity == ReviewSeverity.CRITICAL:
+            messages.append(f"[{issue.category.value}] {issue.title}: {issue.description}")
+            continue
+        if (
+            issue.severity == ReviewSeverity.HIGH
+            and issue.rule_code in asset_load_rules
+        ):
+            messages.append(f"[{issue.category.value}] {issue.title}: {issue.description}")
+    return messages
 
 
 class AutomatedReviewService:
@@ -402,7 +411,7 @@ class AutomatedReviewService:
 
             for requirement in slide.visual_requirements:
                 if requirement.type == VisualType.SITE_PLAN:
-                    if requirement.primary_asset_id is not None and self._settings.visual_qa_enabled:
+                    if requirement.bound_asset_ids() and self._settings.visual_qa_enabled:
                         continue
                     context = " ".join(
                         (
@@ -452,7 +461,7 @@ class AutomatedReviewService:
                             )
                         )
                 if requirement.type in {VisualType.SITE_PLAN, VisualType.DIAGRAM, VisualType.MAP}:
-                    if requirement.primary_asset_id is not None and self._settings.visual_qa_enabled:
+                    if requirement.bound_asset_ids() and self._settings.visual_qa_enabled:
                         continue
                     context = " ".join(
                         (

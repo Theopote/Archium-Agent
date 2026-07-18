@@ -34,6 +34,17 @@ class VisualRequirement(DomainModel):
     def primary_asset_id(self) -> UUID | None:
         return self.preferred_asset_ids[0] if self.preferred_asset_ids else None
 
+    def bound_asset_ids(self) -> list[UUID]:
+        """Return unique bound asset IDs (preferred first, then candidates)."""
+        seen: set[UUID] = set()
+        ordered: list[UUID] = []
+        for asset_id in [*self.preferred_asset_ids, *self.candidate_asset_ids]:
+            if asset_id in seen:
+                continue
+            seen.add(asset_id)
+            ordered.append(asset_id)
+        return ordered
+
 
 class SlideSpec(IdentifiedModel, VersionedModel):
     """Specification for a single presentation slide."""
