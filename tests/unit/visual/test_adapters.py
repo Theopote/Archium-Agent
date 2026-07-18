@@ -62,6 +62,7 @@ def test_pptx_layout_plan_adapter_preserves_coordinates() -> None:
     assert instruction.elements[0]["x"] == 0.7
     assert instruction.elements[0]["y"] == 0.45
     assert instruction.elements[0]["w"] == 8.6
+    assert instruction.to_dict()["layout_family"] == "textual_argument"
     theme = design_system_to_pptx_theme(design)
     assert theme["slide_size"]["width"] == 10.0
     assert "primary" in theme["colors"]

@@ -30,10 +30,6 @@ from archium.infrastructure.database.visual_repositories import (
     LayoutPlanRepository,
 )
 from archium.infrastructure.llm.base import LLMProvider
-from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import (
-    PptxLayoutPlanAdapter,
-    SlideContentBundle,
-)
 from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 from archium.logging import ArchiumLogAdapter, get_logger
 from archium.workflow.visual_serialization import snapshot_visual_state
@@ -65,7 +61,6 @@ class VisualWorkflowRuntime:
         self.layout_planning_service = LayoutPlanningService(session, llm=llm)
         self.layout_validation_service = LayoutValidationService()
         self.layout_repair_service = LayoutRepairService()
-        self.layout_plan_adapter = PptxLayoutPlanAdapter()
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
             settings, session=session
         )
@@ -575,38 +570,41 @@ class VisualWorkflowNodes:
             output_dir = Path(state.get("output_dir") or ".")
             output_dir.mkdir(parents=True, exist_ok=True)
             render_paths: list[str] = []
+            slides = list(state.get("slides") or [])
+            plans: list = []
+            for plan_id in state.get("layout_plan_ids", []):
+                plan = self._runtime.layout_plans.get(UUID(plan_id))
+                if plan is not None:
+                    plans.append(plan)
+
+            brief = state.get("brief")
+            title = brief.title if brief is not None else "Archium Visual Composition"
+            deck = self._runtime.pptxgen_renderer.build_layout_instruction_deck(
+                title=title,
+                plans=plans,
+                design_system=design,
+                slides=slides,
+                project_id=UUID(state["project_id"]),
+            )
 
             if state.get("export_layout_instructions", True):
                 instructions_dir = output_dir / "layout_instructions"
                 instructions_dir.mkdir(parents=True, exist_ok=True)
-                for index, plan_id in enumerate(state.get("layout_plan_ids", []), start=1):
-                    plan = self._runtime.layout_plans.get(UUID(plan_id))
-                    if plan is None:
-                        continue
-                    instruction = self._runtime.layout_plan_adapter.render_slide(
-                        plan,
-                        design,
-                        SlideContentBundle(page_number=index),
-                    )
-                    path = instructions_dir / f"slide_{index:02d}_{plan.layout_family.value}.json"
+                for index, slide_payload in enumerate(deck.get("slides", []), start=1):
+                    family = slide_payload.get("layout_family", "layout")
+                    path = instructions_dir / f"slide_{index:02d}_{family}.json"
                     path.write_text(
-                        json.dumps(
-                            {
-                                "layout_plan_id": str(instruction.layout_plan_id),
-                                "design_system_id": str(instruction.design_system_id),
-                                "layout_family": instruction.layout_family,
-                                "layout_variant": instruction.layout_variant,
-                                "page_width": instruction.page_width,
-                                "page_height": instruction.page_height,
-                                "theme_tokens": instruction.theme_tokens,
-                                "elements": instruction.elements,
-                            },
-                            ensure_ascii=False,
-                            indent=2,
-                        ),
+                        json.dumps(slide_payload, ensure_ascii=False, indent=2),
                         encoding="utf-8",
                     )
                     render_paths.append(str(path))
+
+                deck_path = output_dir / "presentation.layout_instructions.json"
+                deck_path.write_text(
+                    json.dumps(deck, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                render_paths.append(str(deck_path))
 
                 reports_path = output_dir / "validation_reports.json"
                 reports_path.write_text(
@@ -616,14 +614,8 @@ class VisualWorkflowNodes:
                 render_paths.append(str(reports_path))
 
             if state.get("export_pptx", False):
-                brief = state.get("brief")
-                storyline = state.get("storyline")
-                slides = list(state.get("slides") or [])
-                if brief is None or storyline is None:
-                    warnings = [
-                        "Skipped PPTX export: brief/storyline missing "
-                        "(layout instructions still written)."
-                    ]
+                if not plans:
+                    warnings = ["Skipped PPTX export: no LayoutPlan available."]
                     next_partial: VisualWorkflowState = {
                         "render_paths": render_paths,
                         "warnings": warnings,
@@ -634,15 +626,16 @@ class VisualWorkflowNodes:
                     return next_partial
 
                 try:
-                    spec_path, pptx_path = self._runtime.pptxgen_renderer.render_and_export_pptx(
-                        presentation_id=UUID(state["presentation_id"]),
-                        project_id=UUID(state["project_id"]),
-                        brief=brief,
-                        storyline=storyline,
-                        slides=slides,
-                        version=brief.version,
+                    deck_path, pptx_path = (
+                        self._runtime.pptxgen_renderer.export_pptx_from_layout_instructions(
+                            deck,
+                            output_dir=output_dir,
+                        )
                     )
-                    render_paths.extend([str(spec_path), str(pptx_path)])
+                    for path in (deck_path, pptx_path):
+                        path_str = str(path)
+                        if path_str not in render_paths:
+                            render_paths.append(path_str)
                 except Exception as pptx_exc:
                     logger.warning("PPTX export failed (non-fatal): %s", pptx_exc)
                     next_with_warn: VisualWorkflowState = {

@@ -359,8 +359,8 @@ def render() -> None:
     _init_session_state()
     st.markdown("### 视觉设计")
     st.caption(
-        "为已有 SlideSpec 生成 ArtDirection、VisualIntent 与 LayoutPlan，"
-        "并在审核后导出布局指令（可选 PPTX）。"
+        "为已有 SlideSpec 生成 ArtDirection、VisualIntent 与 LayoutPlan；"
+        "导出时按 LayoutPlan 坐标执行 PPTX（不重排版式）。"
     )
 
     project_id = _render_project_selector()

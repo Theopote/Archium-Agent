@@ -11,7 +11,7 @@ from archium.exceptions import RenderingError
 
 
 class PptxGenCliRunner:
-    """Invoke the bundled Node script to convert PresentationSpec JSON to PPTX."""
+    """Invoke the bundled Node scripts to convert JSON specs to PPTX."""
 
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
@@ -24,6 +24,10 @@ class PptxGenCliRunner:
     def script_path(self) -> Path:
         return self._settings.resolved_pptxgen_script_path
 
+    @property
+    def layout_plan_script_path(self) -> Path:
+        return self.script_path.parent / "render-plan.mjs"
+
     def is_available(self) -> bool:
         if shutil.which(self.command) is None:
             return False
@@ -33,8 +37,18 @@ class PptxGenCliRunner:
 
     def render(self, spec_path: Path, output_path: Path) -> Path:
         """Convert a PresentationSpec JSON file to an editable PPTX."""
-        if not spec_path.exists():
-            raise RenderingError(f"PresentationSpec file not found: {spec_path}")
+        return self._run_script(self.script_path, spec_path, output_path)
+
+    def render_layout_instructions(self, deck_path: Path, output_path: Path) -> Path:
+        """Convert a LayoutPlan instruction deck JSON to an editable PPTX."""
+        script = self.layout_plan_script_path
+        if not script.exists():
+            raise RenderingError(f"LayoutPlan render script not found: {script}")
+        return self._run_script(script, deck_path, output_path)
+
+    def _run_script(self, script_path: Path, input_path: Path, output_path: Path) -> Path:
+        if not input_path.exists():
+            raise RenderingError(f"Input file not found: {input_path}")
 
         if output_path.suffix.lower() != ".pptx":
             raise RenderingError("PptxGen output must use .pptx extension")
@@ -49,14 +63,14 @@ class PptxGenCliRunner:
             )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        resolved_spec = spec_path.resolve()
+        resolved_input = input_path.resolve()
         resolved_output = output_path.resolve()
         result = subprocess.run(
             [
                 self.command,
-                str(self.script_path),
+                str(script_path),
                 "--input",
-                str(resolved_spec),
+                str(resolved_input),
                 "--output",
                 str(resolved_output),
             ],
@@ -65,7 +79,7 @@ class PptxGenCliRunner:
             encoding="utf-8",
             errors="replace",
             check=False,
-            cwd=str(self.script_path.parent),
+            cwd=str(script_path.parent),
         )
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "").strip()

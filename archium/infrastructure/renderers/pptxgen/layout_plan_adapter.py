@@ -17,11 +17,12 @@ class SlideContentBundle:
 
     asset_paths: dict[str, str] = field(default_factory=dict)
     page_number: int | None = None
+    speaker_notes: str | None = None
 
 
 @dataclass
 class RenderedSlideInstruction:
-    """Renderer-agnostic instruction payload consumed by pptxgen Node layer later."""
+    """Executable instruction payload consumed by pptxgen `render-plan.mjs`."""
 
     layout_plan_id: UUID
     design_system_id: UUID
@@ -31,6 +32,22 @@ class RenderedSlideInstruction:
     page_height: float
     theme_tokens: dict[str, Any]
     elements: list[dict[str, Any]]
+    speaker_notes: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "layout_plan_id": str(self.layout_plan_id),
+            "design_system_id": str(self.design_system_id),
+            "layout_family": self.layout_family,
+            "layout_variant": self.layout_variant,
+            "page_width": self.page_width,
+            "page_height": self.page_height,
+            "theme_tokens": self.theme_tokens,
+            "elements": self.elements,
+        }
+        if self.speaker_notes:
+            payload["speaker_notes"] = self.speaker_notes
+        return payload
 
 
 class PptxLayoutPlanAdapter:
@@ -128,3 +145,22 @@ class PptxLayoutPlanAdapter:
         if element.role == LayoutElementRole.PAGE_NUMBER and bundle.page_number is not None:
             instruction["text"] = str(bundle.page_number)
         return instruction
+
+    def render_deck(
+        self,
+        *,
+        title: str,
+        slides: list[tuple[LayoutPlan, DesignSystem, SlideContentBundle | None]],
+    ) -> dict[str, Any]:
+        """Build a deck JSON payload for `render-plan.mjs`."""
+        instructions: list[dict[str, Any]] = []
+        for plan, design_system, bundle in slides:
+            instruction = self.render_slide(plan, design_system, bundle)
+            if bundle is not None and bundle.speaker_notes:
+                instruction.speaker_notes = bundle.speaker_notes
+            instructions.append(instruction.to_dict())
+        return {
+            "title": title,
+            "schema": "archium.layout_instructions.v1",
+            "slides": instructions,
+        }
