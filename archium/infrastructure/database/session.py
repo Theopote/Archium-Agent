@@ -67,11 +67,15 @@ def get_session(engine: Engine | None = None) -> Generator[Session, None, None]:
 
 
 def init_database(engine: Engine | None = None) -> None:
-    """Create all database tables."""
+    """Create all database tables and apply pending schema migrations."""
     import archium.infrastructure.database.models  # noqa: F401
 
     target = engine or get_engine()
     Base.metadata.create_all(target)
+    if engine is None:
+        from archium.infrastructure.database.migrations import run_pending_migrations
+
+        run_pending_migrations()
 
 
 def reset_engine_cache() -> None:
