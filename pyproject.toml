@@ -70,7 +70,10 @@ include = ["archium*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "default::DeprecationWarning:archium",
+]
 markers = [
     "smoke: End-to-end smoke tests (PptxGenJS, Marp CLI, migrations, Streamlit)",
     "marp_smoke: Marp CLI export smoke tests",

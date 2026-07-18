@@ -103,12 +103,17 @@ class PresentationService:
 
         Will be removed in v0.3. Passing ``presentation_id`` is no longer supported.
         """
-        warnings.warn(
+        message = (
             "PresentationService.run_pipeline() is deprecated and will be removed in v0.3; "
-            "use PresentationWorkflowService.run() instead.",
-            DeprecationWarning,
-            stacklevel=2,
+            "use PresentationWorkflowService.run() instead."
         )
+        if presentation_id is not None:
+            message += (
+                " Passing presentation_id is no longer supported and will raise "
+                "UnsupportedOperationError."
+            )
+        warnings.warn(message, DeprecationWarning, stacklevel=2)
+        logger.warning(message)
         from archium.application.presentation_workflow_service import PresentationWorkflowService
 
         if presentation_id is not None:
