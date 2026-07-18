@@ -102,7 +102,7 @@ Do not edit them manually.
 | `PPTXGEN_NODE_COMMAND` | `node` | No | Node.js executable used for PptxGenJS editable PPTX export. |
 | `PPTXGEN_SCRIPT_PATH` | `*(unset)*` | No | Path to render.mjs. Defaults to bundled archium/infrastructure/renderers/pptxgen/render.mjs. |
 
-## Visual fallback & web image search {#visual}
+## Visual fallback, layout thresholds & web image search {#visual}
 
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
@@ -110,6 +110,12 @@ Do not edit them manually.
 | `VISUAL_FALLBACK_RELAXED_MATCHING` | `true` | No | When true, unmatched visuals may bind to the best available project asset at export time. |
 | `VISUAL_FALLBACK_RELAXED_MIN_SCORE` | `0.2` | No | Minimum score for relaxed asset fallback during export. |
 | `VISUAL_FALLBACK_GENERATE_DIAGRAMS` | `true` | No | When true, generate schematic PNG diagrams for unmatched diagram/plan/timeline visuals. |
+| `LAYOUT_MIN_BODY_FONT_PT` | `14.0` | No | Minimum body text size (pt) for LayoutValidator. |
+| `LAYOUT_MIN_CAPTION_FONT_PT` | `9.0` | No | Minimum caption text size (pt) for LayoutValidator. |
+| `LAYOUT_MIN_SOURCE_FONT_PT` | `8.0` | No | Minimum source text size (pt) for LayoutValidator. |
+| `LAYOUT_MIN_HERO_AREA_RATIO` | `0.45` | No | Minimum hero area ratio of safe area for hero/drawing pages. |
+| `LAYOUT_MIN_WHITESPACE_RATIO` | `0.08` | No | Minimum whitespace ratio for LayoutValidator. |
+| `LAYOUT_MAX_WHITESPACE_RATIO` | `0.6` | No | Maximum whitespace ratio for LayoutValidator. |
 | `WEB_IMAGE_SEARCH_ENABLED` | `true` | No | When true, export may download licensed stock photos for rendering/site-photo/reference visuals before falling back to schematic diagrams. |
 | `WEB_IMAGE_SEARCH_PROVIDER` | `pexels` | No | Stock photo provider used for web image search (currently only pexels). |
 | `PEXELS_API_KEY` | `*(unset)*` | No | Pexels API key for web image search during export. |

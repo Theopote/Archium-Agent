@@ -48,7 +48,7 @@ DOMAIN_LABELS: dict[ConfigDomain, str] = {
     ConfigDomain.REVIEW: "review.* — Quality review & export gating",
     ConfigDomain.REPAIR: "repair.* — Automated slide repair",
     ConfigDomain.RENDER: "render.* — Marp & PptxGenJS export",
-    ConfigDomain.VISUAL: "Visual fallback & web image search",
+    ConfigDomain.VISUAL: "Visual fallback, layout thresholds & web image search",
     ConfigDomain.LEGACY: "Legacy modules (optional)",
 }
 
@@ -101,6 +101,12 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "visual_fallback_relaxed_matching": ConfigDomain.VISUAL,
     "visual_fallback_relaxed_min_score": ConfigDomain.VISUAL,
     "visual_fallback_generate_diagrams": ConfigDomain.VISUAL,
+    "layout_min_body_font_pt": ConfigDomain.VISUAL,
+    "layout_min_caption_font_pt": ConfigDomain.VISUAL,
+    "layout_min_source_font_pt": ConfigDomain.VISUAL,
+    "layout_min_hero_area_ratio": ConfigDomain.VISUAL,
+    "layout_min_whitespace_ratio": ConfigDomain.VISUAL,
+    "layout_max_whitespace_ratio": ConfigDomain.VISUAL,
     "web_image_search_enabled": ConfigDomain.VISUAL,
     "web_image_search_provider": ConfigDomain.VISUAL,
     "pexels_api_key": ConfigDomain.VISUAL,

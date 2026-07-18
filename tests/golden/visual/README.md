@@ -28,6 +28,8 @@ Each baseline fixes:
 | Tolerant pixel diff (≤5%) | Template / spacing drift |
 | Margin ink density | Possible text or object overflow at bottom/right edges |
 
+> For **LayoutPlan composition** golden cases (V1–V3 drawing/evidence/comparison), see [`composition/README.md`](composition/README.md) — those assert plan JSON / validation, not Marp PNG pixels.
+
 ## Run
 
 Requires Marp CLI (`npm install -g @marp-team/marp-cli`).
