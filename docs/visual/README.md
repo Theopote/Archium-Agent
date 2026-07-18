@@ -29,7 +29,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | VisualIntent（规则 / LLM） | ✅ |
 | LayoutFamily Registry（10 族） | ✅ |
 | LayoutPlan generators（10 个） | ✅ |
-| LayoutValidator + 候选评分 | ✅ |
+| LayoutValidator + **Layout Quality Score**（几何/规则） | ✅ |
 | Visual Workflow（可暂停 / 可恢复） | ✅ |
 | 视觉设计 UI | ✅ |
 | LayoutPlan → 原生 PPTX（`render-plan.mjs`） | ✅ |
@@ -37,7 +37,9 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 
 ## Round 1 明确不做
 
-自动效果图生成、复杂约束求解器、完整视觉语言模型审核、拖拽式 PPT 编辑器、组织品牌模板导入等。详见任务书「非目标」。
+自动效果图生成、复杂约束求解器、**完整 Visual Quality / screenshot Visual Critic**、拖拽式 PPT 编辑器、组织品牌模板导入等。详见任务书「非目标」。
+
+当前评分仅为 **Layout Quality Score**（结构与规则），不评价图片语义匹配、色彩协调、多页节奏或建筑汇报气质。下一阶段再引入基于截图的 Visual Critic。
 
 ## 与旧路径的关系
 

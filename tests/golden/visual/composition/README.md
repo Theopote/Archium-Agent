@@ -19,8 +19,8 @@ Each case directory contains:
 | Artifact | Purpose |
 |----------|---------|
 | `layout_plan.json` | family / variant / element geometry fingerprint |
-| `validation_report.json` | valid / score / rule codes |
-| `score_baseline.json` | score baseline for regression |
+| `validation_report.json` | valid / **Layout Quality** score / rule codes |
+| `score_baseline.json` | Layout Quality score baseline（非 Visual Quality） |
 | `preview.png` | deterministic wireframe preview of boxes |
 | `deck.pptx` | optional real PPTX (generated when Node/pptxgen available at update time) |
 

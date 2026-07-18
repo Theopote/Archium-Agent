@@ -79,7 +79,7 @@ VisualIntent (+ ArtDirection hints)
 
 每案至少包含：`layout_plan.json`、`validation_report.json`、`score_baseline.json`、`preview.png`；在 Node/pptxgen 可用时更新还会写出 `deck.pptx`。
 
-**不能仅凭 generator 存在就认为视觉质量已通过** — 以 golden 回归为准。
+**不能仅凭 generator 存在或 Layout Quality Score 高就认为视觉质量已通过** — golden 回归只覆盖结构/几何；完整观感需后续 Visual Critic。
 
 ```bash
 pytest tests/golden/visual/composition -v

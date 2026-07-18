@@ -17,7 +17,7 @@ UI (Streamlit 视觉设计)
 | 层 | 职责 | 禁止 |
 |----|------|------|
 | `domain/visual` | DesignSystem、ArtDirection、VisualIntent、LayoutPlan、校验模型 | 渲染细节、Streamlit |
-| `application/visual` | 生成、候选、评分、修复、工作流编排 | 写死坐标、UI 控件 |
+| `application/visual` | 生成、候选、**Layout Quality** 评分、修复、工作流编排 | 写死坐标、UI 控件 |
 | `infrastructure/layout` | Family Registry、确定性 generators、几何与文本测量 | LLM 自由坐标 |
 | `infrastructure/renderers/pptxgen` | Adapter + execute-only Node | 重选版式族 / 重算版心 |
 | `workflow/visual_*` | 独立 Visual Composition 图 | 并入 PlanningWorkflow |
@@ -92,6 +92,20 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 | `VisualCompositionService` | 薄编排：意图 → 候选 → 最佳计划 |
 | `VisualWorkflowService` | `run` / `continue_after_art_direction_approval` / `continue_after_layout_review` / `resume` |
 | `PptxGenPresentationRenderer` | `build_layout_instruction_deck` / `export_pptx_from_layout_instructions` |
+
+## Layout Quality Score（非 Visual Quality）
+
+`LayoutScore` / `LayoutQualityScore` 是 **Layout Quality Score**：由规则与几何推导，维度为 validity / readability / hierarchy / alignment / whitespace / asset usage / consistency。
+
+它**不是**完整 Visual Quality Score，目前**不能**判断：
+
+- 图片是否与观点匹配
+- 页面是否“像建筑汇报”
+- 主视觉表达力量、色彩协调
+- 多页节奏、案例图统一尺度
+- “不重叠但仍机械”的观感
+
+下一阶段再增加 **screenshot-based Visual Critic**。候选选择与 golden `score_baseline` 均只约束 Layout Quality。
 
 ## 设计约束（不可违反）
 

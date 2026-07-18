@@ -62,7 +62,9 @@ def fingerprint_report(report: LayoutValidationReport) -> dict[str, Any]:
 
 
 def score_baseline(report: LayoutValidationReport) -> dict[str, Any]:
+    """Layout Quality Score baseline — not a Visual Quality Score."""
     return {
+        "score_kind": "layout_quality",
         "score": round(report.score, 4),
         "valid": report.valid,
         "has_critical": report.has_critical(),

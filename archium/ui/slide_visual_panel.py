@@ -83,7 +83,10 @@ def render_slide_visual_panel(*, snapshot: SlideVisualSnapshot) -> None:
             if snapshot.validation is not None:
                 score = snapshot.validation.score
                 valid = snapshot.validation.valid
-                st.write(f"评分：{score:.2f} · {'通过' if valid else '需修复'}")
+                st.write(
+                    f"版式质量评分：{score:.2f} · {'通过' if valid else '需修复'}"
+                )
+                st.caption("Layout Quality Score（几何/规则）· 非完整视觉质量")
                 if snapshot.validation.issues:
                     with st.expander("校验问题", expanded=not valid):
                         for issue in snapshot.validation.issues[:8]:

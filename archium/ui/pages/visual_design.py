@@ -365,7 +365,7 @@ def _render_composition_tabs(presentation_id: UUID) -> None:
                     "内容类型": intent.dominant_content_type.value if intent else "—",
                     "版式族": plan.layout_family.value if plan else "—",
                     "变体": plan.layout_variant if plan else "—",
-                    "评分": (
+                    "版式质量": (
                         f"{item.validation.score:.2f}"
                         if item.validation is not None
                         else "—"

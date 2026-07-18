@@ -1,6 +1,8 @@
-"""Layout validation report models and scoring."""
+"""Layout validation report models and Layout Quality Score."""
 
 from __future__ import annotations
+
+from typing import Literal
 
 from pydantic import Field, computed_field
 
@@ -20,8 +22,20 @@ class LayoutValidationIssue(DomainModel):
 
 
 class LayoutScore(DomainModel):
-    """Rule-based layout quality score (no vision model required)."""
+    """Layout Quality Score — structural / geometric / rule-based only.
 
+    Round 1 measures whether a LayoutPlan is *mechanically sound*:
+    validity, readability, hierarchy, alignment, whitespace, asset usage,
+    consistency.
+
+    This is **not** a Visual Quality Score. It does **not** judge:
+    image–message fit, architectural presentation presence, color harmony,
+    multi-page rhythm, case-image consistency, or “non-overlapping but
+    mechanical” composition. Those require a later screenshot-based
+    Visual Critic.
+    """
+
+    score_kind: Literal["layout_quality"] = "layout_quality"
     validity_score: float = Field(ge=0.0, le=1.0)
     readability_score: float = Field(ge=0.0, le=1.0)
     hierarchy_score: float = Field(ge=0.0, le=1.0)
@@ -32,11 +46,24 @@ class LayoutScore(DomainModel):
     total_score: float = Field(ge=0.0, le=1.0)
 
 
+# Prefer this name in new code / docs; LayoutScore kept for serialization stability.
+LayoutQualityScore = LayoutScore
+
+
 class LayoutValidationReport(DomainModel):
-    """Aggregated validation result for a LayoutPlan."""
+    """Aggregated validation result for a LayoutPlan.
+
+    ``score`` / ``layout_score`` are **Layout Quality** metrics (geometry + rules),
+    not full visual quality.
+    """
 
     issues: list[LayoutValidationIssue] = Field(default_factory=list)
-    score: float = Field(default=0.0, ge=0.0, le=1.0)
+    score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Layout Quality Score total (0–1). Not Visual Quality.",
+    )
     layout_score: LayoutScore | None = None
 
     @computed_field  # type: ignore[prop-decorator]
@@ -46,6 +73,11 @@ class LayoutValidationReport(DomainModel):
             issue.severity in {LayoutIssueSeverity.CRITICAL, LayoutIssueSeverity.ERROR}
             for issue in self.issues
         )
+
+    @property
+    def layout_quality_score(self) -> float:
+        """Alias clarifying that ``score`` is Layout Quality, not Visual Quality."""
+        return self.score
 
     def issues_for(self, rule_code: str) -> list[LayoutValidationIssue]:
         return [issue for issue in self.issues if issue.rule_code == rule_code]

@@ -564,6 +564,11 @@ class LayoutValidationService:
     def _score(
         self, plan: LayoutPlan, issues: list[LayoutValidationIssue]
     ) -> LayoutScore:
+        """Compute Layout Quality Score from geometric / rule findings only.
+
+        Explicitly excludes semantic visual judgment (image–message fit, color
+        harmony, multi-page rhythm, etc.) — that belongs to a future Visual Critic.
+        """
         critical = sum(1 for i in issues if i.severity == LayoutIssueSeverity.CRITICAL)
         errors = sum(1 for i in issues if i.severity == LayoutIssueSeverity.ERROR)
         warnings = sum(1 for i in issues if i.severity == LayoutIssueSeverity.WARNING)
