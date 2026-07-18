@@ -60,15 +60,17 @@ export function addImageOrPlaceholder(pres, page, image, theme, rect) {
       : image.generated
         ? `${image.description ?? "示意草图"}\n（自动生成）`
         : (image.description ?? "图片占位"),
-    x: rect.x + 0.2,
-    y: rect.y + rect.h / 2 - 0.4,
-    w: rect.w - 0.4,
-    h: 0.8,
-    fontSize: theme.component_styles.caption.fontSize,
-    color: theme.colors.muted,
-    fontFace: theme.fonts.caption,
-    align: "center",
-  });
+    {
+      x: rect.x + 0.2,
+      y: rect.y + rect.h / 2 - 0.4,
+      w: rect.w - 0.4,
+      h: 0.8,
+      fontSize: theme.component_styles.caption.fontSize,
+      color: theme.colors.muted,
+      fontFace: theme.fonts.caption,
+      align: "center",
+    },
+  );
 }
 
 /** @param {Array<object>} images @param {number} columns @param {object} area */

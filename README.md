@@ -74,7 +74,7 @@ pytest tests/smoke -v                # PptxGen / Marp / Streamlit / Alembic smok
 pytest tests/smoke/test_pptxgen_render.py -v  # PptxGenJS 真实 Node 渲染
 ```
 
-跨平台说明见 [`docs/cross-platform-validation.md`](docs/cross-platform-validation.md)。Real Project Validation 清单见 [`docs/real-project-validation-preparation.md`](docs/real-project-validation-preparation.md)。
+跨平台说明见 [`docs/cross-platform-validation.md`](docs/cross-platform-validation.md) 与 Beta 支持矩阵 [`docs/beta-platform-support-matrix.md`](docs/beta-platform-support-matrix.md)。Windows 实机 smoke： nightly [`.github/workflows/windows-smoke.yml`](.github/workflows/windows-smoke.yml)。Real Project Validation 清单见 [`docs/real-project-validation-preparation.md`](docs/real-project-validation-preparation.md)。
 
 ## 能力矩阵
 
