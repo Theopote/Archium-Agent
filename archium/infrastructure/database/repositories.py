@@ -556,6 +556,20 @@ class VisualQAReportRepository:
             _handle_error("save visual QA report", exc)
             raise
 
+    def get_latest_by_asset_ids(self, asset_ids: set[UUID]) -> dict[UUID, VisualQAReport]:
+        if not asset_ids:
+            return {}
+        stmt = select(VisualQAReportORM).where(VisualQAReportORM.asset_id.in_(asset_ids))
+        latest_orms: dict[UUID, VisualQAReportORM] = {}
+        for orm in self._session.scalars(stmt):
+            existing = latest_orms.get(orm.asset_id)
+            if existing is None or orm.updated_at > existing.updated_at:
+                latest_orms[orm.asset_id] = orm
+        return {
+            asset_id: mappers.visual_qa_report_to_domain(orm)
+            for asset_id, orm in latest_orms.items()
+        }
+
 
 class WorkflowRunRepository:
     """CRUD operations for workflow runs."""

@@ -5,7 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from archium.domain.enums import PresentationType, SlideType, VisualType
+from archium.domain.asset import Asset
+from archium.domain.enums import AssetType, PresentationType, SlideType, VisualType
+from archium.domain.fact import ProjectFact
+from archium.domain.plan_overlay import PLAN_NORTH_ARROW_KEY, PLAN_SCALE_LABEL_KEY
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.renderers.presentation_spec_builder import build_presentation_spec
@@ -119,9 +122,139 @@ def test_build_presentation_spec_uses_image_layout_when_assets_present(tmp_path:
     )
 
     content_slide = spec.slides[-1]
-    assert content_slide.layout == "image_content"
+    assert content_slide.layout == "site_plan"
     assert len(content_slide.images) == 1
     assert content_slide.images[0].asset_path == str(asset_file)
+    assert content_slide.plan_overlays is None
+
+
+def test_build_presentation_spec_site_plan_uses_verified_overlays_only(tmp_path: Path) -> None:
+    presentation_id = uuid4()
+    asset_id = uuid4()
+    asset_file = tmp_path / "site_plan.png"
+    asset_file.write_bytes(b"png")
+    brief, storyline = _minimal_brief_storyline(presentation_id)
+    slides = [
+        SlideSpec(
+            presentation_id=presentation_id,
+            chapter_id="ch1",
+            order=0,
+            title="总图分析",
+            message="交通组织需优化",
+            slide_type=SlideType.CONTENT,
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PLAN,
+                    description="总平面图",
+                    required=True,
+                    preferred_asset_ids=[asset_id],
+                )
+            ],
+        )
+    ]
+    asset = Asset(
+        id=asset_id,
+        project_id=uuid4(),
+        filename="site_plan.png",
+        path=str(asset_file),
+        asset_type=AssetType.DRAWING,
+        metadata={
+            PLAN_NORTH_ARROW_KEY: True,
+            PLAN_SCALE_LABEL_KEY: "0 — 100m",
+        },
+    )
+
+    spec = build_presentation_spec(
+        presentation_id=presentation_id,
+        brief=brief,
+        storyline=storyline,
+        slides=slides,
+        asset_paths={asset_id: asset_file},
+        assets={asset_id: asset},
+    )
+
+    content_slide = spec.slides[-1]
+    assert content_slide.layout == "site_plan"
+    assert content_slide.plan_overlays is not None
+    assert content_slide.plan_overlays.show_north_arrow is True
+    assert content_slide.plan_overlays.scale_label == "0 — 100m"
+
+
+def test_build_presentation_spec_chart_layout_from_facts() -> None:
+    presentation_id = uuid4()
+    brief, storyline = _minimal_brief_storyline(presentation_id)
+    facts = [
+        ProjectFact(
+            project_id=uuid4(),
+            key="building_area",
+            label="建筑面积",
+            value=120000,
+            unit="㎡",
+            category="area",
+        ),
+        ProjectFact(
+            project_id=uuid4(),
+            key="bed_count",
+            label="床位数",
+            value=800,
+            category="capacity",
+        ),
+    ]
+    slides = [
+        SlideSpec(
+            presentation_id=presentation_id,
+            chapter_id="ch1",
+            order=0,
+            title="规模指标",
+            message="核心规模数据",
+            slide_type=SlideType.DATA,
+            key_points=["建筑面积：120000 ㎡", "床位数：800"],
+        )
+    ]
+
+    spec = build_presentation_spec(
+        presentation_id=presentation_id,
+        brief=brief,
+        storyline=storyline,
+        slides=slides,
+        facts=facts,
+    )
+
+    chart_slide = spec.slides[-1]
+    assert chart_slide.layout == "chart"
+    assert chart_slide.chart is not None
+    assert chart_slide.chart.series[0].values == [120000.0, 800.0]
+
+
+def test_build_presentation_spec_table_layout_from_visual_requirement() -> None:
+    presentation_id = uuid4()
+    brief, storyline = _minimal_brief_storyline(presentation_id)
+    slides = [
+        SlideSpec(
+            presentation_id=presentation_id,
+            chapter_id="ch1",
+            order=0,
+            title="投资对比",
+            message="改造前后指标",
+            key_points=["指标|改造前|改造后", "建筑面积|80000|120000", "床位数|600|800"],
+            visual_requirements=[
+                VisualRequirement(type=VisualType.TABLE, description="投资估算对比表")
+            ],
+        )
+    ]
+
+    spec = build_presentation_spec(
+        presentation_id=presentation_id,
+        brief=brief,
+        storyline=storyline,
+        slides=slides,
+    )
+
+    table_slide = spec.slides[-1]
+    assert table_slide.layout == "table"
+    assert table_slide.table is not None
+    assert table_slide.table.headers == ["指标", "改造前", "改造后"]
+    assert table_slide.table.rows[0] == ["建筑面积", "80000", "120000"]
 
 
 def _minimal_brief_storyline(presentation_id: object) -> tuple[PresentationBrief, Storyline]:
@@ -234,10 +367,10 @@ def test_build_presentation_spec_data_layout() -> None:
     )
 
     data_slide = spec.slides[-1]
-    assert data_slide.layout == "data"
-    assert len(data_slide.metrics) == 3
-    assert data_slide.metrics[0].label == "总建筑面积"
-    assert data_slide.metrics[0].value == "120000 ㎡"
+    assert data_slide.layout == "chart"
+    assert data_slide.chart is not None
+    assert len(data_slide.chart.series[0].labels) == 3
+    assert data_slide.chart.series[0].values[0] == 120000.0
 
 
 def test_build_presentation_spec_image_full_layout(tmp_path: Path) -> None:

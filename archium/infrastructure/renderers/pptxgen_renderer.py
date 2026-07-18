@@ -8,10 +8,12 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.config.settings import Settings, get_settings
+from archium.domain.asset import Asset
+from archium.domain.fact import ProjectFact
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_spec import PresentationSpec
 from archium.domain.slide import SlideSpec
-from archium.infrastructure.database.repositories import AssetRepository
+from archium.infrastructure.database.repositories import AssetRepository, FactRepository
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from archium.infrastructure.renderers.presentation_spec_builder import build_presentation_spec
 
@@ -57,6 +59,8 @@ class PptxGenPresentationRenderer:
             version=version,
             theme=self._theme,
             asset_paths=self._resolve_asset_paths(project_id, slides),
+            assets=self._resolve_assets(project_id, slides),
+            facts=self._resolve_project_facts(project_id),
         )
 
     def render(
@@ -145,3 +149,33 @@ class PptxGenPresentationRenderer:
                 path = self._settings.project_storage_path / str(project_id) / path
             resolved[asset_id] = path
         return resolved
+
+    def _resolve_assets(
+        self,
+        project_id: UUID,
+        slides: list[SlideSpec],
+    ) -> dict[UUID, Asset]:
+        if self._session is None:
+            return {}
+
+        asset_ids: set[UUID] = set()
+        for slide in slides:
+            for requirement in slide.visual_requirements:
+                asset_id = requirement.primary_asset_id
+                if asset_id is not None:
+                    asset_ids.add(asset_id)
+        if not asset_ids:
+            return {}
+
+        repo = AssetRepository(self._session)
+        resolved: dict[UUID, Asset] = {}
+        for asset_id in asset_ids:
+            asset = repo.get_by_id(asset_id)
+            if asset is not None and asset.project_id == project_id:
+                resolved[asset_id] = asset
+        return resolved
+
+    def _resolve_project_facts(self, project_id: UUID) -> list[ProjectFact]:
+        if self._session is None:
+            return []
+        return FactRepository(self._session).list_by_project(project_id)

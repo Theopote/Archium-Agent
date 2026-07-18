@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.plan_overlay import PlanOverlayMetadata
 
 
 class SpecImagePlacement(DomainModel):
@@ -40,6 +41,31 @@ class SpecMetric(DomainModel):
     value: str = Field(min_length=1)
 
 
+class SpecChartSeries(DomainModel):
+    """One data series for a native PptxGenJS chart."""
+
+    name: str = Field(min_length=1)
+    labels: list[str] = Field(default_factory=list)
+    values: list[float] = Field(default_factory=list)
+
+
+class SpecChart(DomainModel):
+    """Native chart payload for the chart layout."""
+
+    chart_type: str = Field(default="bar", min_length=1)
+    title: str | None = None
+    series: list[SpecChartSeries] = Field(default_factory=list)
+    show_legend: bool = True
+    show_value: bool = False
+
+
+class SpecTable(DomainModel):
+    """Native table payload for the table layout."""
+
+    headers: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+
+
 class SpecSlide(DomainModel):
     """One slide in a PresentationSpec."""
 
@@ -54,6 +80,9 @@ class SpecSlide(DomainModel):
     columns: list[SpecColumn] = Field(default_factory=list)
     timeline_items: list[SpecTimelineItem] = Field(default_factory=list)
     metrics: list[SpecMetric] = Field(default_factory=list)
+    chart: SpecChart | None = None
+    table: SpecTable | None = None
+    plan_overlays: PlanOverlayMetadata | None = None
 
 
 class PresentationSpec(DomainModel):

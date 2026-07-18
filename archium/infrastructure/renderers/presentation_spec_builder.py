@@ -6,17 +6,23 @@ import re
 from pathlib import Path
 from uuid import UUID
 
+from archium.domain.asset import Asset
 from archium.domain.enums import SlideType, VisualType
+from archium.domain.fact import ProjectFact
+from archium.domain.plan_overlay import PlanOverlayMetadata, plan_overlay_from_asset
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_spec import (
     PresentationSpec,
+    SpecChart,
     SpecColumn,
     SpecImagePlacement,
     SpecMetric,
     SpecSlide,
+    SpecTable,
     SpecTimelineItem,
 )
 from archium.domain.slide import SlideSpec
+from archium.infrastructure.renderers.spec_data_builder import build_chart, build_table, resolve_numeric_layout
 
 _LAYOUT_TITLE = "title"
 _LAYOUT_THESIS = "thesis"
@@ -28,6 +34,9 @@ _LAYOUT_IMAGE_FULL = "image_full"
 _LAYOUT_COMPARISON = "comparison"
 _LAYOUT_TIMELINE = "timeline"
 _LAYOUT_DATA = "data"
+_LAYOUT_CHART = "chart"
+_LAYOUT_TABLE = "table"
+_LAYOUT_SITE_PLAN = "site_plan"
 _LAYOUT_CLOSING = "closing"
 
 _LABEL_SPLIT_PATTERN = re.compile(r"^([^：:|]+)[：:|]\s*(.+)$")
@@ -42,9 +51,13 @@ def build_presentation_spec(
     version: int = 1,
     theme: str = "architecture-board",
     asset_paths: dict[UUID, Path] | None = None,
+    assets: dict[UUID, Asset] | None = None,
+    facts: list[ProjectFact] | None = None,
 ) -> PresentationSpec:
     """Convert Brief / Storyline / SlideSpec into a renderer-agnostic spec."""
     resolved_assets = asset_paths or {}
+    resolved_asset_records = assets or {}
+    resolved_facts = facts or []
     spec_slides: list[SpecSlide] = [
         SpecSlide(
             order=0,
@@ -71,6 +84,8 @@ def build_presentation_spec(
                 slide,
                 order=len(spec_slides),
                 asset_paths=resolved_assets,
+                assets=resolved_asset_records,
+                facts=resolved_facts,
             )
         )
 
@@ -89,9 +104,12 @@ def _build_spec_slide(
     *,
     order: int,
     asset_paths: dict[UUID, Path],
+    assets: dict[UUID, Asset],
+    facts: list[ProjectFact],
 ) -> SpecSlide:
     images = _build_image_placements(slide, asset_paths)
-    layout = _resolve_layout(slide, has_images=bool(images))
+    layout = _resolve_layout(slide, has_images=bool(images), facts=facts)
+    plan_overlays = _build_plan_overlays(slide, assets) if layout == _LAYOUT_SITE_PLAN else None
     subtitle = None
     message = slide.message.strip() or None
     bullets = list(slide.key_points)
@@ -106,6 +124,8 @@ def _build_spec_slide(
     columns: list[SpecColumn] = []
     timeline_items: list[SpecTimelineItem] = []
     metrics: list[SpecMetric] = []
+    chart: SpecChart | None = None
+    table: SpecTable | None = None
 
     if layout == _LAYOUT_COMPARISON:
         columns = _build_comparison_columns(slide)
@@ -115,6 +135,12 @@ def _build_spec_slide(
         bullets = []
     elif layout == _LAYOUT_DATA:
         metrics = _build_metrics(slide.key_points)
+        bullets = []
+    elif layout == _LAYOUT_CHART:
+        chart = build_chart(slide, facts)
+        bullets = []
+    elif layout == _LAYOUT_TABLE:
+        table = build_table(slide, facts)
         bullets = []
     elif layout == _LAYOUT_IMAGE_FULL and images:
         images = [_full_bleed_image(images[0])]
@@ -141,10 +167,13 @@ def _build_spec_slide(
         columns=columns,
         timeline_items=timeline_items,
         metrics=metrics,
+        chart=chart,
+        table=table,
+        plan_overlays=plan_overlays,
     )
 
 
-def _resolve_layout(slide: SlideSpec, *, has_images: bool) -> str:
+def _resolve_layout(slide: SlideSpec, *, has_images: bool, facts: list[ProjectFact]) -> str:
     if slide.slide_type == SlideType.TITLE:
         return _LAYOUT_TITLE
     if slide.slide_type == SlideType.SECTION:
@@ -155,8 +184,14 @@ def _resolve_layout(slide: SlideSpec, *, has_images: bool) -> str:
         return _LAYOUT_COMPARISON
     if slide.slide_type == SlideType.TIMELINE:
         return _LAYOUT_TIMELINE
-    if slide.slide_type == SlideType.DATA:
-        return _LAYOUT_DATA
+
+    numeric_layout = resolve_numeric_layout(slide, facts)
+    if numeric_layout is not None:
+        return numeric_layout
+
+    primary_visual = _primary_visual_type(slide)
+    if has_images and primary_visual in {VisualType.SITE_PLAN, VisualType.MAP}:
+        return _LAYOUT_SITE_PLAN
     if slide.slide_type == SlideType.IMAGE:
         return _LAYOUT_IMAGE_FULL if has_images else _LAYOUT_CONTENT_MESSAGE
     if has_images:
@@ -164,6 +199,29 @@ def _resolve_layout(slide: SlideSpec, *, has_images: bool) -> str:
     if slide.key_points:
         return _LAYOUT_CONTENT_BULLETS
     return _LAYOUT_CONTENT_MESSAGE
+
+
+def _primary_visual_type(slide: SlideSpec) -> VisualType | None:
+    for requirement in slide.visual_requirements:
+        if requirement.type != VisualType.TEXT_ONLY:
+            return requirement.type
+    return None
+
+
+def _build_plan_overlays(
+    slide: SlideSpec,
+    assets: dict[UUID, Asset],
+) -> PlanOverlayMetadata | None:
+    for requirement in slide.visual_requirements:
+        if requirement.type not in {VisualType.SITE_PLAN, VisualType.MAP}:
+            continue
+        asset_id = requirement.primary_asset_id
+        if asset_id is None:
+            continue
+        overlay = plan_overlay_from_asset(assets.get(asset_id))
+        if overlay is not None and overlay.has_any_overlay:
+            return overlay
+    return None
 
 
 def _build_comparison_columns(slide: SlideSpec) -> list[SpecColumn]:
@@ -241,7 +299,7 @@ def _build_image_placements(
 ) -> list[SpecImagePlacement]:
     placements: list[SpecImagePlacement] = []
     for index, requirement in enumerate(slide.visual_requirements):
-        if requirement.type == VisualType.TEXT_ONLY:
+        if requirement.type in {VisualType.TEXT_ONLY, VisualType.CHART, VisualType.TABLE}:
             continue
         asset_id = requirement.primary_asset_id
         asset_path = None

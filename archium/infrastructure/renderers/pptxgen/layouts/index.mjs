@@ -1,3 +1,4 @@
+import { renderChartSlide } from "./chart.mjs";
 import { renderComparisonSlide } from "./comparison.mjs";
 import {
   renderBulletsSlide,
@@ -10,6 +11,7 @@ import {
   renderTimelineSlide,
 } from "./content.mjs";
 import { renderDataSlide } from "./data.mjs";
+import { renderTableSlide } from "./table.mjs";
 import { renderImageGridSlide } from "./image-grid.mjs";
 import { renderSitePlanSlide } from "./site-plan.mjs";
 import { renderTitleSlide } from "./title.mjs";
@@ -52,6 +54,12 @@ export function renderSlide(pres, slide, theme) {
       break;
     case "data":
       renderDataSlide(pres, slide, theme);
+      break;
+    case "chart":
+      renderChartSlide(pres, slide, theme);
+      break;
+    case "table":
+      renderTableSlide(pres, slide, theme);
       break;
     case "closing":
       renderClosingSlide(pres, slide, theme);

@@ -6,11 +6,17 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.asset_matching_visual import drawing_type_match_adjustment
 from archium.application.asset_visual_utils import infer_visual_processing_flags
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType, VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.infrastructure.database.repositories import AssetRepository, PresentationRepository
+from archium.domain.visual_qa import VisualQAReport
+from archium.infrastructure.database.repositories import (
+    AssetRepository,
+    PresentationRepository,
+    VisualQAReportRepository,
+)
 
 _VISUAL_ASSET_TYPES: dict[VisualType, set[AssetType]] = {
     VisualType.SITE_PLAN: {AssetType.DRAWING, AssetType.DIAGRAM, AssetType.IMAGE},
@@ -36,7 +42,12 @@ def _tokenize(text: str) -> set[str]:
     return {part for part in normalized.replace("，", " ").replace("。", " ").split() if len(part) > 1}
 
 
-def score_asset_for_requirement(requirement: VisualRequirement, asset: Asset) -> float:
+def score_asset_for_requirement(
+    requirement: VisualRequirement,
+    asset: Asset,
+    *,
+    qa_report: VisualQAReport | None = None,
+) -> float:
     """Score how well an asset satisfies a visual requirement."""
     if requirement.type == VisualType.TEXT_ONLY:
         return 0.0
@@ -62,6 +73,8 @@ def score_asset_for_requirement(requirement: VisualRequirement, asset: Asset) ->
     if asset.is_low_resolution:
         score -= 0.15
 
+    score += drawing_type_match_adjustment(requirement, qa_report)
+
     return max(score, 0.0)
 
 
@@ -71,9 +84,21 @@ def rank_assets_for_requirement(
     *,
     min_score: float = 0.35,
     top_k: int = 3,
+    qa_reports: dict[UUID, VisualQAReport] | None = None,
 ) -> list[tuple[Asset, float]]:
+    reports = qa_reports or {}
     ranked = sorted(
-        ((asset, score_asset_for_requirement(requirement, asset)) for asset in assets),
+        (
+            (
+                asset,
+                score_asset_for_requirement(
+                    requirement,
+                    asset,
+                    qa_report=reports.get(asset.id),
+                ),
+            )
+            for asset in assets
+        ),
         key=lambda item: item[1],
         reverse=True,
     )
@@ -121,6 +146,12 @@ class AssetMatchingService:
         self._session = session
         self._assets = AssetRepository(session)
         self._presentations = PresentationRepository(session)
+        self._qa_reports = VisualQAReportRepository(session)
+
+    def _load_qa_reports(self, assets: list[Asset]) -> dict[UUID, VisualQAReport]:
+        if not assets:
+            return {}
+        return self._qa_reports.get_latest_by_asset_ids({asset.id for asset in assets})
 
     def match_presentation_slides(
         self,
@@ -132,6 +163,7 @@ class AssetMatchingService:
     ) -> tuple[list[SlideSpec], int]:
         """Populate preferred_asset_ids and return updated slides plus match count."""
         assets = self._assets.list_by_project(project_id)
+        qa_reports = self._load_qa_reports(assets)
         slides = self._presentations.list_slides(presentation_id)
         if not slides:
             return [], 0
@@ -142,6 +174,7 @@ class AssetMatchingService:
             matched_slide, slide_matches, changed = self._match_slide(
                 slide,
                 assets,
+                qa_reports=qa_reports,
                 min_score=min_score,
                 rematch=rematch,
                 only_unmatched=False,
@@ -166,6 +199,7 @@ class AssetMatchingService:
             return [], 0
 
         assets = self._assets.list_by_project(project_id)
+        qa_reports = self._load_qa_reports(assets)
         match_count = 0
         updated_by_id: dict[UUID, SlideSpec] = {}
 
@@ -175,6 +209,7 @@ class AssetMatchingService:
             matched_slide, slide_matches, changed = self._match_slide(
                 slide,
                 assets,
+                qa_reports=qa_reports,
                 min_score=min_score,
                 rematch=rematch,
                 only_unmatched=only_unmatched,
@@ -213,6 +248,7 @@ class AssetMatchingService:
         slide: SlideSpec,
         assets: list[Asset],
         *,
+        qa_reports: dict[UUID, VisualQAReport],
         min_score: float,
         rematch: bool,
         only_unmatched: bool,
@@ -243,6 +279,7 @@ class AssetMatchingService:
                 requirement,
                 assets,
                 min_score=min_score,
+                qa_reports=qa_reports,
             )
             if apply_asset_match(requirement, ranked, overwrite=rematch):
                 changed = True
