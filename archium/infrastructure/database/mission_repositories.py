@@ -97,6 +97,10 @@ class MissionRepository:
             _handle_error("save knowledge gap", exc)
             raise
 
+    def get_knowledge_gap(self, gap_id: UUID) -> KnowledgeGap | None:
+        orm = self._session.get(KnowledgeGapORM, gap_id)
+        return mission_mappers.knowledge_gap_to_domain(orm) if orm else None
+
     def list_knowledge_gaps(self, mission_id: UUID) -> list[KnowledgeGap]:
         stmt = (
             select(KnowledgeGapORM)
@@ -123,6 +127,10 @@ class MissionRepository:
             _handle_error("save assumption", exc)
             raise
 
+    def get_assumption(self, assumption_id: UUID) -> Assumption | None:
+        orm = self._session.get(ProjectAssumptionORM, assumption_id)
+        return mission_mappers.assumption_to_domain(orm) if orm else None
+
     def list_assumptions(self, mission_id: UUID) -> list[Assumption]:
         stmt = (
             select(ProjectAssumptionORM)
@@ -146,6 +154,10 @@ class MissionRepository:
         except SQLAlchemyError as exc:
             _handle_error("save clarifying question", exc)
             raise
+
+    def get_clarifying_question(self, question_id: UUID) -> ClarifyingQuestion | None:
+        orm = self._session.get(ClarifyingQuestionORM, question_id)
+        return mission_mappers.clarifying_question_to_domain(orm) if orm else None
 
     def list_clarifying_questions(self, mission_id: UUID) -> list[ClarifyingQuestion]:
         stmt = (

@@ -92,3 +92,37 @@ FABRICATED_AREA_MISSION_JSON = """{
   "clarifying_questions": [],
   "design_questions": []
 }"""
+
+TEMPLE_REVISED_AFTER_CLARIFICATION_JSON = """{
+  "title": "清凉寺重建前期策划（已澄清）",
+  "task_statement": "在三原县历史文化语境下，以传统语汇新建为倾向，形成宗教建筑重建的前期策划、案例研究与概念设计汇报",
+  "task_natures": ["reconstruction", "research", "planning"],
+  "domains": ["heritage", "culture"],
+  "intervention_scales": ["site", "building"],
+  "requested_service_depths": ["preliminary_research", "concept_planning", "presentation_production"],
+  "project_context": "历史上多次毁建，现有地方志与现场照片；重建策略倾向传统语汇新建",
+  "current_situation": "原建筑已不存，甲方希望重新建设，建设规模尚未明确",
+  "primary_problems": ["历史形制可信度不足", "建设规模未知"],
+  "desired_changes": ["形成前期策划", "完成案例研究", "输出概念汇报"],
+  "in_scope": ["前期策划", "案例研究", "概念设计汇报"],
+  "out_of_scope": ["施工图设计", "施工招标"],
+  "stakeholders": [{"name": "甲方", "role": "业主", "concerns": ["宗教功能", "文化定位"]}],
+  "decision_context": "重建策略取向已倾向传统语汇新建",
+  "decisions_required": ["主要宗教与公共功能确认"],
+  "known_constraints": [
+    {"name": "资料条件", "value": "部分地方志与现场照片", "source": "document", "verification_status": "extracted", "importance": "high"},
+    {"name": "重建策略倾向", "value": "传统语汇新建", "source": "assumption", "verification_status": "inferred", "importance": "high"}
+  ],
+  "key_unknowns": ["用地范围", "建设规模", "历史形制可信度"],
+  "research_questions": ["历史形制有哪些可信依据？"],
+  "design_question_summaries": ["如何在历史可信度有限条件下形成可接受的重建策略？"],
+  "evaluation_criteria": [{"name": "历史可信度", "description": "策略应标注历史依据来源", "weight": 0.3}],
+  "uncertainty_level": "medium",
+  "confidence": 0.55,
+  "knowledge_gaps": [],
+  "assumptions": [
+    {"statement": "传统语汇新建", "reason": "用户采用建议假设", "scope_of_use": "clarification", "confidence": 0.6}
+  ],
+  "clarifying_questions": [],
+  "design_questions": []
+}"""
