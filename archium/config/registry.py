@@ -16,6 +16,9 @@ from archium.config.settings import Settings
 _GENERATED_HEADER = (
     "# AUTO-GENERATED from archium/config/settings.py — do not edit manually.\n"
     "# Regenerate: python scripts/generate_config_docs.py\n"
+    "# Copy to .env and fill in values as needed.\n"
+    "# The app starts without an API key; LLM features require configuration.\n"
+    "# Never commit a filled .env — Archium is MIT-licensed; secrets remain your responsibility.\n"
 )
 
 
@@ -180,8 +183,6 @@ def _group_specs_by_domain(specs: list[SettingSpec]) -> dict[ConfigDomain, list[
 def render_env_example() -> str:
     lines = [
         _GENERATED_HEADER.rstrip("\n"),
-        "# Copy to .env and fill in values as needed.",
-        "# The app starts without an API key; LLM features require configuration.",
         "",
     ]
     grouped = _group_specs_by_domain(iter_setting_specs())
