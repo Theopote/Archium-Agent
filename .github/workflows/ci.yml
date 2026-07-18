@@ -108,6 +108,9 @@ jobs:
       - name: Marp export smoke test
         run: pytest tests/smoke/test_marp_export.py -v
 
+      - name: Golden visual regression
+        run: pytest tests/golden/visual/test_visual_regression.py -v
+
       - name: Upload Marp smoke artifacts
         if: always()
         uses: actions/upload-artifact@v4

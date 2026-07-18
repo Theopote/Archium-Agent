@@ -1,0 +1,188 @@
+{
+  "presentation_id": "5c973088-1b0f-4db2-af57-4b15f1a8b6f1",
+  "version": 1,
+  "generated_at": "2026-07-18T04:57:58.389691+00:00",
+  "brief": {
+    "created_at": "2026-07-18T04:57:58.310069Z",
+    "updated_at": "2026-07-18T04:57:58.315067Z",
+    "version": 1,
+    "id": "80f2439d-17d3-45bf-94fe-162228bbdca8",
+    "project_id": "b9577719-1a58-4de7-99d1-c0bc2dccca28",
+    "presentation_id": "5c973088-1b0f-4db2-af57-4b15f1a8b6f1",
+    "lineage_id": "d8323b00-9d7e-4f07-bed3-22158affeda9",
+    "logical_key": "presentation-brief",
+    "title": "老院区更新概念汇报",
+    "presentation_type": "client_review",
+    "audience": "医院管理层",
+    "purpose": "确认总体改造方向",
+    "duration_minutes": 20,
+    "target_slide_count": 4,
+    "core_message": "通过交通重组与公共空间提升改善老院区体验",
+    "decisions_required": [
+      "确认改造范围",
+      "确认分期策略"
+    ],
+    "audience_concerns": [
+      "施工对运营影响"
+    ],
+    "tone": "professional",
+    "required_sections": [
+      "现状分析",
+      "改造策略"
+    ],
+    "excluded_topics": [],
+    "language": "zh-CN",
+    "approval_status": "approved"
+  },
+  "storyline": {
+    "created_at": "2026-07-18T04:57:58.321836",
+    "updated_at": "2026-07-18T04:57:58.327373",
+    "version": 1,
+    "id": "8634b164-af91-4e44-9c1c-af80417a033c",
+    "presentation_id": "5c973088-1b0f-4db2-af57-4b15f1a8b6f1",
+    "lineage_id": "8ecf08ae-962e-4245-8e69-c0bd93f6279b",
+    "logical_key": "presentation-storyline",
+    "thesis": "交通重组带动老院区整体品质提升",
+    "narrative_pattern": "problem_solution",
+    "chapters": [
+      {
+        "id": "ch1",
+        "title": "现状与问题",
+        "purpose": "建立改造必要性",
+        "key_message": "现有交通组织无法满足日常运营",
+        "order": 0,
+        "estimated_slide_count": 2
+      },
+      {
+        "id": "ch2",
+        "title": "改造策略",
+        "purpose": "提出总体方向",
+        "key_message": "交通重组带动公共空间提升",
+        "order": 1,
+        "estimated_slide_count": 2
+      }
+    ],
+    "approval_status": "approved"
+  },
+  "slides": [
+    {
+      "version": 1,
+      "id": "1c565879-00db-40e4-a237-e2cf20861336",
+      "presentation_id": "5c973088-1b0f-4db2-af57-4b15f1a8b6f1",
+      "lineage_id": "edf41ca0-3adc-4d65-9ca6-79c29aa86053",
+      "logical_key": "ch1-p0",
+      "chapter_id": "ch1",
+      "order": 0,
+      "title": "院区现状",
+      "message": "现有交通组织无法满足医院日常运营需求",
+      "slide_type": "content",
+      "layout_id": "default",
+      "key_points": [
+        "人车混行",
+        "停车不足"
+      ],
+      "visual_requirements": [
+        {
+          "type": "site_plan",
+          "description": "总平面图标注交通流线",
+          "preferred_asset_ids": [],
+          "candidate_asset_ids": [],
+          "match_score": null,
+          "confirmed": false,
+          "needs_crop": false,
+          "needs_highlight": false,
+          "processing_instructions": [],
+          "required": true
+        }
+      ],
+      "source_citations": [
+        {
+          "document_id": "3822cfd0-21a1-4cff-84e3-32425f0c486e",
+          "document_name": "任务书.pdf",
+          "page_number": 1,
+          "chunk_id": "bd3f05df-c705-49b1-95f3-97ddece3341c",
+          "quote": "交通组织混乱",
+          "confidence": 0.9
+        }
+      ],
+      "speaker_notes": "强调痛点",
+      "status": "approved"
+    },
+    {
+      "version": 1,
+      "id": "1960e001-c413-4058-9786-7347c84442c8",
+      "presentation_id": "5c973088-1b0f-4db2-af57-4b15f1a8b6f1",
+      "lineage_id": "af8c7abc-d5d5-46f5-89f3-a1385c38b509",
+      "logical_key": "ch1-p1",
+      "chapter_id": "ch1",
+      "order": 1,
+      "title": "核心问题",
+      "message": "人车混行导致高峰期通行效率低",
+      "slide_type": "content",
+      "layout_id": "default",
+      "key_points": [
+        "高峰期拥堵",
+        "安全隐患"
+      ],
+      "visual_requirements": [],
+      "source_citations": [],
+      "speaker_notes": null,
+      "status": "approved"
+    },
+    {
+      "version": 1,
+      "id": "3b26e8d9-96a9-4e6d-be5f-923db476019d",
+      "presentation_id": "5c973088-1b0f-4db2-af57-4b15f1a8b6f1",
+      "lineage_id": "2f2406c9-a8ec-4eed-9cb2-d7df2d5e4ca1",
+      "logical_key": "ch2-p2",
+      "chapter_id": "ch2",
+      "order": 2,
+      "title": "改造策略",
+      "message": "通过交通重组释放公共空间潜力",
+      "slide_type": "content",
+      "layout_id": "default",
+      "key_points": [
+        "人车分流",
+        "增设落客区"
+      ],
+      "visual_requirements": [
+        {
+          "type": "diagram",
+          "description": "交通重组示意",
+          "preferred_asset_ids": [],
+          "candidate_asset_ids": [],
+          "match_score": null,
+          "confirmed": false,
+          "needs_crop": false,
+          "needs_highlight": false,
+          "processing_instructions": [],
+          "required": true
+        }
+      ],
+      "source_citations": [],
+      "speaker_notes": null,
+      "status": "approved"
+    },
+    {
+      "version": 1,
+      "id": "b678a298-d899-46cf-8eb4-ccd3be419a4f",
+      "presentation_id": "5c973088-1b0f-4db2-af57-4b15f1a8b6f1",
+      "lineage_id": "b7279c63-3677-4f32-a4bf-b3592bccc9e9",
+      "logical_key": "ch2-p3",
+      "chapter_id": "ch2",
+      "order": 3,
+      "title": "下一步",
+      "message": "建议确认改造范围与分期策略",
+      "slide_type": "summary",
+      "layout_id": "default",
+      "key_points": [
+        "确认范围",
+        "确认分期"
+      ],
+      "visual_requirements": [],
+      "source_citations": [],
+      "speaker_notes": "推动决策",
+      "status": "approved"
+    }
+  ]
+}

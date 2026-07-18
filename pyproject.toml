@@ -83,6 +83,7 @@ markers = [
     "migration_smoke: Alembic migration smoke tests",
     "streamlit_smoke: Streamlit startup smoke tests",
     "calibration: Visual QA labeled corpus calibration (optional, not in default CI)",
+    "visual_regression: PNG preview baseline checks for key Golden Cases (requires Marp CLI)",
 ]
 
 [tool.ruff]
