@@ -64,6 +64,7 @@ def snapshot_visual_state(state: VisualWorkflowState) -> dict[str, Any]:
         "max_repair_rounds": int(state.get("max_repair_rounds", 1)),
         "fallback_applied": bool(state.get("fallback_applied", False)),
         "allow_invalid_layout_export": bool(state.get("allow_invalid_layout_export", False)),
+        "repair_diffs": list(state.get("repair_diffs") or []),
         "output_dir": state.get("output_dir"),
         "presentation": presentation.model_dump(mode="json") if presentation else None,
         "brief": brief.model_dump(mode="json") if brief else None,
@@ -109,6 +110,7 @@ def restore_visual_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
         "allow_invalid_layout_export": bool(
             state_data.get("allow_invalid_layout_export", False)
         ),
+        "repair_diffs": list(state_data.get("repair_diffs") or []),
         "output_dir": state_data.get("output_dir"),
     }
     if state_data.get("presentation"):

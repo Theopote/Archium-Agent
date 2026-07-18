@@ -275,3 +275,206 @@ def test_visual_workflow_pauses_on_blocking_layout_instead_of_silent_render(
         assert any("PPTX" in warning or "blocked" in warning.lower() for warning in continued.warnings)
     finally:
         service.close()
+
+
+def test_visual_workflow_critical_blocks_pptx_even_after_ack(
+    db_session: Session,
+    test_settings: object,
+    seeded_presentation: tuple[Project, Presentation, list[SlideSpec]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CRITICAL remains a hard PPTX gate; allow_invalid only unlocks instructions."""
+    from archium.domain.visual.enums import LayoutIssueSeverity
+    from archium.domain.visual.validation import (
+        LAYOUT_HERO_NOT_DOMINANT,
+        LayoutValidationIssue,
+        LayoutValidationReport,
+    )
+
+    def _always_critical(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
+        return LayoutValidationReport(
+            issues=[
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_HERO_NOT_DOMINANT,
+                    severity=LayoutIssueSeverity.CRITICAL,
+                    element_ids=["hero"],
+                    message="forced critical hero failure",
+                    auto_repairable=False,
+                )
+            ],
+            score=0.0,
+        )
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _always_critical,
+    )
+
+    project, presentation, _slides = seeded_presentation
+    service = VisualWorkflowService(db_session, settings=test_settings)  # type: ignore[arg-type]
+    try:
+        result = service.run(
+            project.id,
+            presentation.id,
+            require_art_direction_review=False,
+            use_llm=False,
+            export_pptx=True,
+            candidate_count=2,
+            max_repair_rounds=1,
+        )
+        assert result.awaiting_review
+        assert result.review_gate == "layout_review"
+        assert not any(str(path).endswith(".pptx") for path in result.render_paths)
+
+        continued = service.continue_after_layout_review(
+            result.workflow_run.id,
+            allow_invalid_layout_export=True,
+        )
+        assert continued.workflow_run.status == WorkflowStatus.COMPLETED
+        assert continued.workflow_run.state.get("export_pptx") is False
+        assert not any(str(path).endswith(".pptx") for path in continued.render_paths)
+        assert any(
+            "PPTX export disabled" in warning for warning in continued.warnings
+        )
+    finally:
+        service.close()
+
+
+def test_visual_workflow_warning_only_may_export_pptx(
+    db_session: Session,
+    test_settings: object,
+    seeded_presentation: tuple[Project, Presentation, list[SlideSpec]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """WARNING-only layouts must not pause the export gate; formal PPTX may proceed."""
+    from archium.domain.visual.enums import LayoutIssueSeverity
+    from archium.domain.visual.validation import (
+        LAYOUT_INCONSISTENT_ALIGNMENT,
+        LayoutValidationIssue,
+        LayoutValidationReport,
+    )
+
+    def _warning_only(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
+        return LayoutValidationReport(
+            issues=[
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_INCONSISTENT_ALIGNMENT,
+                    severity=LayoutIssueSeverity.WARNING,
+                    element_ids=["m0", "m1"],
+                    message="soft alignment warning",
+                    auto_repairable=False,
+                )
+            ],
+            score=0.85,
+        )
+
+    def _fake_export(
+        self,
+        deck,
+        *,
+        output_dir,
+        pptx_name: str = "presentation.layout_plan.pptx",
+        deck_name: str = "presentation.layout_instructions.json",
+    ):  # noqa: ANN001
+        from pathlib import Path
+
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        deck_path = out / deck_name
+        if not deck_path.exists():
+            deck_path.write_text("{}", encoding="utf-8")
+        pptx_path = out / pptx_name
+        pptx_path.write_bytes(b"PK\x03\x04fake")
+        return deck_path, pptx_path
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _warning_only,
+    )
+    monkeypatch.setattr(
+        "archium.infrastructure.renderers.pptxgen_renderer.PptxGenPresentationRenderer.export_pptx_from_layout_instructions",
+        _fake_export,
+    )
+
+    project, presentation, _slides = seeded_presentation
+    service = VisualWorkflowService(db_session, settings=test_settings)  # type: ignore[arg-type]
+    try:
+        result = service.run(
+            project.id,
+            presentation.id,
+            require_art_direction_review=False,
+            use_llm=False,
+            export_pptx=True,
+            candidate_count=2,
+            max_repair_rounds=1,
+        )
+        assert result.succeeded
+        assert not result.awaiting_review
+        assert (
+            result.workflow_run.state.get("current_step")
+            == WorkflowStep.VISUAL_FINALIZE.value
+        )
+        assert bool(result.workflow_run.state.get("export_pptx")) is True
+        assert any(str(path).endswith(".pptx") for path in result.render_paths)
+    finally:
+        service.close()
+
+
+def test_visual_workflow_records_repair_diffs_on_blocking_round(
+    db_session: Session,
+    test_settings: object,
+    seeded_presentation: tuple[Project, Presentation, list[SlideSpec]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each repair round persists before/after diffs into workflow state."""
+    from archium.domain.visual.enums import LayoutIssueSeverity
+    from archium.domain.visual.validation import (
+        LAYOUT_ELEMENT_OUTSIDE_PAGE,
+        LayoutValidationIssue,
+        LayoutValidationReport,
+    )
+
+    def _blocking_then_ok(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
+        from archium.domain.visual.enums import LayoutValidationStatus
+
+        if layout_plan.validation_status == LayoutValidationStatus.REPAIRED:
+            return LayoutValidationReport(issues=[], score=0.95)
+        return LayoutValidationReport(
+            issues=[
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_ELEMENT_OUTSIDE_PAGE,
+                    severity=LayoutIssueSeverity.ERROR,
+                    element_ids=[layout_plan.elements[0].id],
+                    message="forced outside for repair diff",
+                    auto_repairable=True,
+                )
+            ],
+            score=0.2,
+        )
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _blocking_then_ok,
+    )
+
+    project, presentation, _slides = seeded_presentation
+    service = VisualWorkflowService(db_session, settings=test_settings)  # type: ignore[arg-type]
+    try:
+        result = service.run(
+            project.id,
+            presentation.id,
+            require_art_direction_review=False,
+            use_llm=False,
+            export_pptx=False,
+            candidate_count=1,
+            max_repair_rounds=1,
+        )
+        diffs = list(result.workflow_run.state.get("repair_diffs") or [])
+        # Either repaired cleanly (diffs present) or paused after fallback — both OK,
+        # but if repair ran we must have recorded diffs.
+        if int(result.workflow_run.state.get("repair_round") or 0) >= 1:
+            assert diffs, "repair_round advanced without recording repair_diffs"
+            assert all("diffs" in item for item in diffs)
+            assert all("layout_plan_id" in item for item in diffs)
+    finally:
+        service.close()

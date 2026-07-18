@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from typing import Any
+
 from archium.domain.visual.design_system import DesignSystem, TextStyleToken
 from archium.domain.visual.enums import (
     CropPolicy,
@@ -38,6 +41,66 @@ from archium.infrastructure.layout.text_measurement import TextMeasurementServic
 _GAP = 0.08
 _MIN_TEXT_W = 0.35
 _MIN_TEXT_H = 0.2
+_SNAPSHOT_KEYS = (
+    "x",
+    "y",
+    "width",
+    "height",
+    "style_token",
+    "font_size_override",
+    "fit_mode",
+    "crop_policy",
+)
+_HERO_REFLOW_ROLES = frozenset(
+    {
+        LayoutElementRole.BODY_TEXT,
+        LayoutElementRole.SUPPORTING_VISUAL,
+        LayoutElementRole.ANNOTATION,
+        LayoutElementRole.CAPTION,
+        LayoutElementRole.METRIC,
+    }
+)
+
+
+@dataclass
+class ElementRepairDiff:
+    """Before/after snapshot for one repaired element."""
+
+    element_id: str
+    before: dict[str, Any]
+    after: dict[str, Any]
+
+    @property
+    def changed_fields(self) -> list[str]:
+        return sorted(
+            key for key in _SNAPSHOT_KEYS if self.before.get(key) != self.after.get(key)
+        )
+
+
+@dataclass
+class LayoutRepairResult:
+    """Repair output with plan + per-element diffs (repair contract)."""
+
+    plan: LayoutPlan
+    diffs: list[ElementRepairDiff] = field(default_factory=list)
+    reading_order_preserved: bool = True
+
+    def to_log_dict(self) -> dict[str, Any]:
+        return {
+            "layout_plan_id": str(self.plan.id),
+            "version": self.plan.version,
+            "reading_order_preserved": self.reading_order_preserved,
+            "diff_count": len(self.diffs),
+            "diffs": [
+                {
+                    "element_id": item.element_id,
+                    "changed_fields": item.changed_fields,
+                    "before": item.before,
+                    "after": item.after,
+                }
+                for item in self.diffs
+            ],
+        }
 
 
 class LayoutRepairService:
@@ -51,7 +114,7 @@ class LayoutRepairService:
         layout_plan: LayoutPlan,
         report: LayoutValidationReport,
         design_system: DesignSystem,
-    ) -> LayoutPlan:
+    ) -> LayoutRepairResult:
         elements = [el.model_copy(deep=True) for el in layout_plan.elements]
         by_id = {el.id: el for el in elements}
         page_w = layout_plan.page_width
@@ -60,6 +123,8 @@ class LayoutRepairService:
         overflow_policy = layout_plan.overflow_policy
         layout_variant = layout_plan.layout_variant
         unresolved_overflow_ids: list[str] = []
+        reading_order = list(layout_plan.reading_order)
+        before_snapshots = {el.id: self._snapshot_element(el) for el in elements}
 
         for issue in report.issues:
             if not issue.auto_repairable:
@@ -81,7 +146,14 @@ class LayoutRepairService:
                         page_h=page_h,
                     )
             elif code == LAYOUT_ELEMENT_OVERLAP:
-                self._repair_overlap(issue.element_ids, by_id, safe=safe, page_w=page_w, page_h=page_h)
+                self._repair_overlap(
+                    issue.element_ids,
+                    by_id,
+                    safe=safe,
+                    page_w=page_w,
+                    page_h=page_h,
+                    reading_order=reading_order,
+                )
             elif code == LAYOUT_IMAGE_DISTORTION:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
@@ -124,6 +196,8 @@ class LayoutRepairService:
                         design_system=design_system,
                         safe=safe,
                         by_id=by_id,
+                        page_w=page_w,
+                        page_h=page_h,
                     )
             elif code == LAYOUT_INCONSISTENT_ALIGNMENT:
                 self._align_group(issue.element_ids, by_id)
@@ -140,6 +214,7 @@ class LayoutRepairService:
         repaired = layout_plan.model_copy(
             update={
                 "elements": ordered,
+                "reading_order": reading_order,
                 "whitespace_ratio": whitespace_ratio(design_system.page, occupied),
                 "validation_status": LayoutValidationStatus.REPAIRED,
                 "version": layout_plan.version + 1,
@@ -148,7 +223,36 @@ class LayoutRepairService:
             }
         )
         repaired.touch()
-        return repaired
+
+        diffs: list[ElementRepairDiff] = []
+        for element in ordered:
+            after = self._snapshot_element(element)
+            before = before_snapshots.get(element.id, {})
+            if after != before:
+                diffs.append(
+                    ElementRepairDiff(
+                        element_id=element.id, before=before, after=after
+                    )
+                )
+
+        return LayoutRepairResult(
+            plan=repaired,
+            diffs=diffs,
+            reading_order_preserved=list(repaired.reading_order) == reading_order,
+        )
+
+    @staticmethod
+    def _snapshot_element(element: LayoutElement) -> dict[str, Any]:
+        return {
+            "x": round(element.x, 4),
+            "y": round(element.y, 4),
+            "width": round(element.width, 4),
+            "height": round(element.height, 4),
+            "style_token": element.style_token,
+            "font_size_override": element.font_size_override,
+            "fit_mode": element.fit_mode.value if element.fit_mode else None,
+            "crop_policy": element.crop_policy.value if element.crop_policy else None,
+        }
 
     def _repair_overlap(
         self,
@@ -158,6 +262,7 @@ class LayoutRepairService:
         safe: Rect,
         page_w: float,
         page_h: float,
+        reading_order: list[str],
     ) -> None:
         if len(element_ids) < 2:
             return
@@ -165,7 +270,7 @@ class LayoutRepairService:
         right = by_id.get(element_ids[1])
         if left is None or right is None:
             return
-        mover, anchor = self._pick_mover(left, right)
+        mover, anchor = self._pick_mover(left, right, reading_order=reading_order)
         if mover is None:
             # Both locked — shrink the second slightly if possible.
             target = right if not right.locked else left
@@ -222,15 +327,32 @@ class LayoutRepairService:
 
     @staticmethod
     def _pick_mover(
-        left: LayoutElement, right: LayoutElement
+        left: LayoutElement,
+        right: LayoutElement,
+        *,
+        reading_order: list[str],
     ) -> tuple[LayoutElement | None, LayoutElement]:
+        """Choose which element to move — prefer later reading_order, never locked."""
         if left.locked and right.locked:
             return None, left
         if left.locked:
             return right, left
         if right.locked:
             return left, right
-        # Move the lower / later element to preserve hierarchy at top.
+
+        try:
+            left_rank = reading_order.index(left.id)
+            right_rank = reading_order.index(right.id)
+        except ValueError:
+            left_rank = right_rank = -1
+
+        if left_rank >= 0 and right_rank >= 0:
+            # Move the later reader so earlier hierarchy stays put.
+            if right_rank >= left_rank:
+                return right, left
+            return left, right
+
+        # Fallback: move the lower / later element on the page.
         if right.y >= left.y:
             return right, left
         return left, right
@@ -593,6 +715,8 @@ class LayoutRepairService:
         design_system: DesignSystem,
         safe: Rect,
         by_id: dict[str, LayoutElement],
+        page_w: float,
+        page_h: float,
     ) -> None:
         min_ratio = design_system.thresholds.min_hero_area_ratio
         target_area = min_ratio * safe.area * 1.02
@@ -620,6 +744,107 @@ class LayoutRepairService:
             hero.y = available.y
             hero.width = available.width
             hero.height = available.height
+
+        # Contract: enlarging hero must reflow supporting content out of the hero rect.
+        self._reflow_supporting_after_hero(
+            hero,
+            by_id=by_id,
+            reading_order=list(plan.reading_order),
+            safe=safe,
+            page_w=page_w,
+            page_h=page_h,
+        )
+
+    def _reflow_supporting_after_hero(
+        self,
+        hero: LayoutElement,
+        *,
+        by_id: dict[str, LayoutElement],
+        reading_order: list[str],
+        safe: Rect,
+        page_w: float,
+        page_h: float,
+    ) -> None:
+        """Push unlocked supporting elements clear of the enlarged hero.
+
+        Order follows ``reading_order`` so earlier hierarchy is placed first;
+        later elements cascade below/right of both hero and already-moved peers.
+        """
+        ordered_ids = list(reading_order)
+        for element_id in by_id:
+            if element_id not in ordered_ids:
+                ordered_ids.append(element_id)
+
+        for element_id in ordered_ids:
+            element = by_id.get(element_id)
+            if element is None or element.id == hero.id or element.locked:
+                continue
+            if element.role not in _HERO_REFLOW_ROLES:
+                continue
+            if not self._rects_overlap(element, hero, gap=_GAP):
+                continue
+
+            room_below = safe.bottom - (hero.bottom + _GAP)
+            room_right = safe.right - (hero.right + _GAP)
+            placed = False
+
+            if room_below >= _MIN_TEXT_H:
+                element.y = hero.bottom + _GAP
+                element.height = min(element.height, room_below)
+                placed = True
+            elif room_right >= _MIN_TEXT_W:
+                element.x = hero.right + _GAP
+                element.width = min(element.width, room_right)
+                placed = True
+            else:
+                # Compact into remaining strip below the title / above page bottom.
+                element.y = min(element.y, safe.bottom - _MIN_TEXT_H)
+                element.height = max(_MIN_TEXT_H, min(element.height, room_below or _MIN_TEXT_H))
+                element.width = max(_MIN_TEXT_W, min(element.width, safe.width * 0.45))
+                element.x = max(safe.x, min(element.x, safe.right - element.width))
+                placed = True
+
+            if placed:
+                # Avoid stacking on peers already reflowed in reading order.
+                peers = [
+                    by_id[peer_id]
+                    for peer_id in ordered_ids
+                    if peer_id in by_id
+                    and peer_id not in {element.id, hero.id}
+                    and ordered_ids.index(peer_id) < ordered_ids.index(element_id)
+                ]
+                for peer in peers:
+                    if peer.locked or peer.role not in _HERO_REFLOW_ROLES:
+                        continue
+                    if not self._rects_overlap(element, peer, gap=_GAP):
+                        continue
+                    element.y = peer.bottom + _GAP
+                    element.height = min(
+                        element.height, max(_MIN_TEXT_H, safe.bottom - element.y)
+                    )
+
+                self._clamp_to_rect(
+                    element,
+                    max_w=safe.width,
+                    max_h=safe.height,
+                    origin_x=safe.x,
+                    origin_y=safe.y,
+                    page_w=page_w,
+                    page_h=page_h,
+                )
+
+    @staticmethod
+    def _rects_overlap(
+        left: LayoutElement, right: LayoutElement, *, gap: float = 0.0
+    ) -> bool:
+        probe = Rect(left.x, left.y, left.width, left.height)
+        other = Rect(
+            right.x - gap,
+            right.y - gap,
+            right.width + 2 * gap,
+            right.height + 2 * gap,
+        )
+        return probe.overlaps(other, tolerance=0.0)
 
     def _align_group(self, element_ids: list[str], by_id: dict[str, LayoutElement]) -> None:
         group = [by_id[eid] for eid in element_ids if eid in by_id and not by_id[eid].locked]

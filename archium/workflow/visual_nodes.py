@@ -576,6 +576,7 @@ class VisualWorkflowNodes:
                 for item in state.get("validation_reports", [])
             }
             updated_ids: list[str] = []
+            repair_diffs: list[dict] = []
             for plan_id in state.get("layout_plan_ids", []):
                 plan = self._runtime.layout_plans.get(UUID(plan_id))
                 if plan is None:
@@ -592,13 +593,33 @@ class VisualWorkflowNodes:
                     if key not in {"layout_plan_id", "slide_id", "valid"}
                 }
                 report = LayoutValidationReport.model_validate(filtered)
-                repaired = self._runtime.layout_repair_service.repair(plan, report, design)
-                saved = self._runtime.layout_plans.save(repaired)
+                result = self._runtime.layout_repair_service.repair(plan, report, design)
+                saved = self._runtime.layout_plans.save(result.plan)
                 updated_ids.append(str(saved.id))
+                round_index = int(state.get("repair_round", 0)) + 1
+                repair_diffs.append(
+                    {
+                        "round": round_index,
+                        **result.to_log_dict(),
+                    }
+                )
+                if not result.reading_order_preserved:
+                    logger.warning(
+                        "Repair changed reading_order for plan %s (round %s)",
+                        plan_id,
+                        round_index,
+                    )
+                logger.info(
+                    "Repair diffs for plan %s: %s field changes across %s elements",
+                    plan_id,
+                    sum(len(d.changed_fields) for d in result.diffs),
+                    len(result.diffs),
+                )
 
             next_state: VisualWorkflowState = {
                 "layout_plan_ids": updated_ids,
                 "repair_round": int(state.get("repair_round", 0)) + 1,
+                "repair_diffs": repair_diffs,
                 "current_step": step,
             }
             merged = cast(VisualWorkflowState, {**state, **next_state})

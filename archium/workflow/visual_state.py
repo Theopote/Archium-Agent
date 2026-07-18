@@ -51,6 +51,8 @@ class VisualWorkflowState(TypedDict, total=False):
     max_repair_rounds: int
     fallback_applied: bool
     allow_invalid_layout_export: bool
+    # Accumulated per-round repair before/after diffs (repair contract audit trail).
+    repair_diffs: Annotated[list[dict], operator.add]
     output_dir: str | None
 
 
@@ -99,6 +101,7 @@ def initial_visual_workflow_state(
         "max_repair_rounds": max_repair_rounds,
         "fallback_applied": False,
         "allow_invalid_layout_export": False,
+        "repair_diffs": [],
         "output_dir": None,
     }
     if design_system_id is not None:

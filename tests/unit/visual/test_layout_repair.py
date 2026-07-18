@@ -65,7 +65,7 @@ class TestLayoutRepairService:
         validator = LayoutValidationService()
         report = validator.validate(plan, design)
         assert report.issues_for(LAYOUT_ELEMENT_OUTSIDE_PAGE)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         assert repaired.validation_status == LayoutValidationStatus.REPAIRED
         title = repaired.element_by_id("title")
         assert title is not None
@@ -100,7 +100,7 @@ class TestLayoutRepairService:
         )
         report = LayoutValidationService().validate(plan, design)
         assert report.issues_for(LAYOUT_ELEMENT_OVERLAP)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         b = repaired.element_by_id("b")
         a = repaired.element_by_id("a")
         assert a is not None and b is not None
@@ -135,7 +135,7 @@ class TestLayoutRepairService:
             ),
         )
         report = LayoutValidationService().validate(plan, design)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         locked = repaired.element_by_id("locked")
         text = repaired.element_by_id("text")
         assert locked is not None and text is not None
@@ -163,7 +163,7 @@ class TestLayoutRepairService:
         )
         report = LayoutValidationService().validate(plan, design, require_source=True)
         assert report.issues_for(LAYOUT_FONT_TOO_SMALL)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         source = repaired.element_by_id("source")
         assert source is not None
         # Size-based: footnote (9) is the smallest token > 6 that meets min_source (8),
@@ -200,7 +200,7 @@ class TestLayoutRepairService:
         )
         report = LayoutValidationService().validate(plan, design, require_source=True)
         assert report.issues_for(LAYOUT_FONT_TOO_SMALL)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         note = repaired.element_by_id("note")
         assert note is not None
         # Smallest legal larger token is source (11), not caption via name map.
@@ -242,7 +242,7 @@ class TestLayoutRepairService:
         )
         report = LayoutValidationService().validate(plan, design, require_source=False)
         assert report.issues_for(LAYOUT_FONT_TOO_SMALL)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         body = repaired.element_by_id("body")
         assert body is not None
         assert body.font_size_override == design.thresholds.min_body_font_pt
@@ -294,7 +294,7 @@ class TestLayoutRepairService:
         )
         report = LayoutValidationService().validate(plan, design, require_source=False)
         assert report.issues_for(LAYOUT_TEXT_OVERFLOW)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         body = repaired.element_by_id("body")
         assert body is not None
         assert body.height > 0.4 or body.width > 2.0
@@ -340,7 +340,7 @@ class TestLayoutRepairService:
         overflow_only = report.model_copy(
             update={"issues": list(report.issues_for(LAYOUT_TEXT_OVERFLOW))}
         )
-        repaired = LayoutRepairService().repair(plan, overflow_only, design)
+        repaired = LayoutRepairService().repair(plan, overflow_only, design).plan
         body = repaired.element_by_id("body")
         hero = repaired.element_by_id("hero")
         assert body is not None and hero is not None
@@ -384,7 +384,7 @@ class TestLayoutRepairService:
         before_variant = plan.layout_variant
         report = LayoutValidationService().validate(plan, design, require_source=False)
         assert report.issues_for(LAYOUT_TEXT_OVERFLOW)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         caption = repaired.element_by_id("caption")
         hero = repaired.element_by_id("hero")
         assert caption is not None and hero is not None
@@ -414,7 +414,7 @@ class TestLayoutRepairService:
         assert report.issues_for(LAYOUT_DRAWING_CROPPED) or report.issues_for(
             LAYOUT_IMAGE_DISTORTION
         )
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         hero = repaired.element_by_id("hero")
         assert hero is not None
         assert hero.fit_mode == ImageFit.CONTAIN
@@ -452,7 +452,7 @@ class TestLayoutRepairService:
         assert report.issues_for(LAYOUT_HERO_NOT_DOMINANT)
         before = plan.element_by_id("hero")
         assert before is not None
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         hero = repaired.element_by_id("hero")
         assert hero is not None
         assert hero.area > before.area
@@ -500,9 +500,154 @@ class TestLayoutRepairService:
         )
         report = LayoutValidationService().validate(plan, design, require_source=False)
         assert report.issues_for(LAYOUT_INCONSISTENT_ALIGNMENT)
-        repaired = LayoutRepairService().repair(plan, report, design)
+        repaired = LayoutRepairService().repair(plan, report, design).plan
         widths = [el.width for el in repaired.elements_by_role(LayoutElementRole.METRIC)]
         assert max(widths) - min(widths) < 1e-6
         assert not LayoutValidationService().validate(
             repaired, design, require_source=False
         ).issues_for(LAYOUT_INCONSISTENT_ALIGNMENT)
+
+
+class TestLayoutRepairContracts:
+    """Repair contracts: reading_order, hero reflow, before/after diffs."""
+
+    def test_overlap_moves_later_reading_order_not_lower_y(self) -> None:
+        """Later reading_order element moves even when it sits higher on the page."""
+        from archium.domain.visual.enums import LayoutIssueSeverity
+        from archium.domain.visual.validation import LayoutValidationIssue, LayoutValidationReport
+
+        design = default_presentation_design_system()
+        # a: earlier in reading_order but lower on page (larger y)
+        # b: later in reading_order but higher on page (smaller y)
+        plan = _plan(
+            LayoutElement(
+                id="a",
+                role=LayoutElementRole.BODY_TEXT,
+                content_type=LayoutContentType.TEXT,
+                text_content="Earlier",
+                x=1.0,
+                y=2.0,
+                width=3.0,
+                height=1.5,
+                style_token="body",
+            ),
+            LayoutElement(
+                id="b",
+                role=LayoutElementRole.BODY_TEXT,
+                content_type=LayoutContentType.TEXT,
+                text_content="Later",
+                x=2.0,
+                y=1.0,
+                width=3.0,
+                height=1.5,
+                style_token="body",
+            ),
+        )
+        assert plan.reading_order == ["a", "b"]
+        a_before = plan.element_by_id("a")
+        assert a_before is not None
+        a_geom = (a_before.x, a_before.y, a_before.width, a_before.height)
+
+        report = LayoutValidationReport(
+            issues=[
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_ELEMENT_OVERLAP,
+                    severity=LayoutIssueSeverity.ERROR,
+                    element_ids=["a", "b"],
+                    message="forced overlap",
+                    auto_repairable=True,
+                )
+            ],
+            score=0.2,
+        )
+        result = LayoutRepairService().repair(plan, report, design)
+        repaired = result.plan
+        a = repaired.element_by_id("a")
+        b = repaired.element_by_id("b")
+        assert a is not None and b is not None
+        # Earlier reader stays put; later reader is the mover.
+        assert (a.x, a.y, a.width, a.height) == a_geom
+        assert b.y >= a.bottom - 1e-6 or b.x >= a.right - 1e-6
+        assert list(repaired.reading_order) == ["a", "b"]
+        assert result.reading_order_preserved
+
+    def test_hero_enlarge_reflows_supporting_body(self) -> None:
+        design = default_presentation_design_system()
+        plan = _plan(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="标题",
+                x=0.7,
+                y=0.45,
+                width=8.0,
+                height=0.5,
+                style_token="title",
+            ),
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                x=0.7,
+                y=1.2,
+                width=2.0,
+                height=1.0,
+                fit_mode=ImageFit.CONTAIN,
+                crop_policy=CropPolicy.FORBIDDEN,
+                locked=True,
+            ),
+            LayoutElement(
+                id="body",
+                role=LayoutElementRole.BODY_TEXT,
+                content_type=LayoutContentType.TEXT,
+                text_content="Supporting copy that will be covered by an enlarged hero.",
+                x=1.0,
+                y=1.5,
+                width=4.0,
+                height=1.2,
+                style_token="body",
+            ),
+            family=LayoutFamily.DRAWING_FOCUS,
+        )
+        report = LayoutValidationService().validate(plan, design, drawing_hero=True)
+        assert report.issues_for(LAYOUT_HERO_NOT_DOMINANT)
+        result = LayoutRepairService().repair(plan, report, design)
+        hero = result.plan.element_by_id("hero")
+        body = result.plan.element_by_id("body")
+        assert hero is not None and body is not None
+        assert hero.area > 2.0
+        # Supporting body must not remain inside the enlarged hero.
+        assert body.y >= hero.bottom - 1e-6 or body.x >= hero.right - 1e-6
+        assert list(result.plan.reading_order) == list(plan.reading_order)
+        assert result.reading_order_preserved
+        assert any(item.element_id == "hero" for item in result.diffs)
+        assert any(item.element_id == "body" for item in result.diffs)
+
+    def test_repair_records_before_after_diffs(self) -> None:
+        design = default_presentation_design_system()
+        plan = _plan(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="标题",
+                x=9.5,
+                y=0.4,
+                width=2.0,
+                height=0.5,
+                style_token="title",
+            )
+        )
+        report = LayoutValidationService().validate(plan, design)
+        assert report.issues_for(LAYOUT_ELEMENT_OUTSIDE_PAGE)
+        result = LayoutRepairService().repair(plan, report, design)
+        assert result.diffs
+        title_diff = next(item for item in result.diffs if item.element_id == "title")
+        assert "x" in title_diff.changed_fields or "width" in title_diff.changed_fields
+        assert title_diff.before["x"] != title_diff.after["x"] or (
+            title_diff.before["width"] != title_diff.after["width"]
+        )
+        payload = result.to_log_dict()
+        assert payload["diff_count"] == len(result.diffs)
+        assert payload["reading_order_preserved"] is True
