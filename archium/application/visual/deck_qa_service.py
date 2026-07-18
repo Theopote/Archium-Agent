@@ -17,6 +17,7 @@ from archium.domain.visual.deck_qa import (
     DECK_CHROME_INCONSISTENT,
     DECK_FOOTER_INCONSISTENT,
     DECK_IMAGE_SCALE_INCONSISTENT,
+    DECK_PALETTE_DRIFT,
     DECK_REPEATED_LAYOUT_FAMILY,
     DECK_TYPOGRAPHY_INCONSISTENT,
     DECK_WEAK_SECTION_TRANSITION,
@@ -24,8 +25,10 @@ from archium.domain.visual.deck_qa import (
     DeckQAFinding,
     DeckQAReport,
 )
+from archium.domain.visual.design_system import DesignSystem, TypographySystem
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.text_style import TYPOGRAPHY_TOKEN_NAMES
 
 _METHOD = "deck_heuristic_v0"
 _CHROME_ROLES = frozenset(
@@ -53,6 +56,8 @@ class DeckQAService:
         plans: Sequence[LayoutPlan],
         *,
         slides: Sequence[SlideSpec] | None = None,
+        design_system: DesignSystem | None = None,
+        palette_strategy: str | None = None,
     ) -> DeckQAReport:
         ordered = list(plans)
         notes: list[str] = []
@@ -88,6 +93,15 @@ class DeckQAService:
         chrome_score, chrome_findings = self._check_chrome_consistency(ordered)
         findings.extend(chrome_findings)
 
+        palette_score, palette_findings = self._check_palette_drift(
+            ordered,
+            design_system=design_system,
+            palette_strategy=palette_strategy,
+        )
+        findings.extend(palette_findings)
+        if palette_strategy:
+            notes.append(f"ArtDirection palette_strategy noted: {palette_strategy[:120]}")
+
         dimensions = DeckQADimensions(
             layout_variety=round(layout_variety, 3),
             footer_consistency=round(footer_score, 3),
@@ -97,6 +111,9 @@ class DeckQAService:
             ),
             image_scale_consistency=round(image_score, 3),
             chrome_consistency=round(chrome_score, 3),
+            palette_consistency=(
+                None if palette_score is None else round(palette_score, 3)
+            ),
         )
         total = self._aggregate(dimensions)
         return DeckQAReport(
@@ -120,6 +137,7 @@ class DeckQAService:
                 dimensions.section_transition,
                 dimensions.image_scale_consistency,
                 dimensions.chrome_consistency,
+                dimensions.palette_consistency,
             )
             if value is not None
         ]
@@ -398,3 +416,86 @@ class DeckQAService:
             )
             return score, findings
         return 1.0, findings
+
+    def _check_palette_drift(
+        self,
+        plans: list[LayoutPlan],
+        *,
+        design_system: DesignSystem | None,
+        palette_strategy: str | None,
+    ) -> tuple[float | None, list[DeckQAFinding]]:
+        """Detect cross-slide color-token / resolved-hex drift vs DesignSystem."""
+        findings: list[DeckQAFinding] = []
+        if design_system is None:
+            return None, findings
+
+        per_slide_tokens: list[set[str]] = []
+        unknown: list[str] = []
+        for plan in plans:
+            tokens = self._color_tokens_for_plan(plan, design_system.typography)
+            per_slide_tokens.append(tokens)
+            for token in tokens:
+                try:
+                    design_system.colors.resolve(token)
+                except KeyError:
+                    unknown.append(token)
+
+        if not any(per_slide_tokens):
+            return 1.0, findings
+
+        similarities: list[float] = []
+        for index, left in enumerate(per_slide_tokens):
+            for right in per_slide_tokens[index + 1 :]:
+                if not left and not right:
+                    similarities.append(1.0)
+                    continue
+                union = left | right
+                if not union:
+                    similarities.append(1.0)
+                    continue
+                similarities.append(len(left & right) / len(union))
+        mean_sim = sum(similarities) / len(similarities) if similarities else 1.0
+        unknown_penalty = min(0.4, 0.1 * len(set(unknown)))
+        score = max(0.0, mean_sim - unknown_penalty)
+
+        if score < 0.65 or unknown:
+            findings.append(
+                DeckQAFinding(
+                    rule_code=DECK_PALETTE_DRIFT,
+                    severity=LayoutIssueSeverity.WARNING,
+                    message=(
+                        "Deck color usage drifts across slides or leaves the DesignSystem palette."
+                    ),
+                    suggestion=(
+                        "Keep title/body/accent color tokens aligned with DesignSystem.colors"
+                        + (
+                            f"; respect ArtDirection palette: {palette_strategy[:80]}"
+                            if palette_strategy
+                            else ""
+                        )
+                    ),
+                    evidence={
+                        "mean_token_jaccard": round(mean_sim, 3),
+                        "unknown_tokens": sorted(set(unknown)),
+                        "per_slide_token_counts": [len(item) for item in per_slide_tokens],
+                    },
+                )
+            )
+        return score, findings
+
+    @staticmethod
+    def _color_tokens_for_plan(
+        plan: LayoutPlan, typography: TypographySystem
+    ) -> set[str]:
+        tokens: set[str] = set()
+        for element in plan.elements:
+            name = element.style_token
+            if not name or name not in TYPOGRAPHY_TOKEN_NAMES:
+                continue
+            style = getattr(typography, name, None)
+            if style is None:
+                continue
+            color_token = getattr(style, "color_token", None)
+            if color_token:
+                tokens.add(str(color_token))
+        return tokens

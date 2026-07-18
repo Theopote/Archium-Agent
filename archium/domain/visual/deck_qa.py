@@ -40,6 +40,7 @@ class DeckQADimensions(DomainModel):
     section_transition: float | None = Field(default=None, ge=0.0, le=1.0)
     image_scale_consistency: float | None = Field(default=None, ge=0.0, le=1.0)
     chrome_consistency: float | None = Field(default=None, ge=0.0, le=1.0)
+    palette_consistency: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class DeckQAReport(DomainModel):

@@ -1,8 +1,6 @@
-"""Read-only Visual Critic — Visual Quality heuristics (no auto-repair).
+"""Read-only Visual Critic — Visual Quality heuristics + optional LLM vision.
 
-v0 evaluates composed pages using LayoutPlan geometry as a soft prior, and
-optionally a screenshot PNG when available. Findings are advisory only and
-must never mutate layouts or unlock/block formal PPTX export.
+Never calls LayoutRepairService and never blocks formal PPTX export.
 """
 
 from __future__ import annotations
@@ -11,6 +9,8 @@ import statistics
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, Field
 
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
@@ -26,6 +26,8 @@ from archium.domain.visual.critic import (
 from archium.domain.visual.enums import LayoutElementRole, LayoutIssueSeverity
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.infrastructure.layout.geometry import Rect
+from archium.infrastructure.llm.base import LLMProvider, LLMRequest
+from archium.logging import get_logger
 
 try:
     from PIL import Image
@@ -34,10 +36,46 @@ except ImportError:  # pragma: no cover
 
 
 _METHOD = "heuristic_v0"
+_METHOD_LLM = "heuristic_v0+llm_vision"
+logger = get_logger(__name__, operation="visual_critic")
+
+_VISION_SYSTEM = (
+    "You are an architectural presentation Visual Critic. "
+    "Evaluate ONLY visual quality of the slide screenshot. "
+    "Do not invent layout repairs. Return JSON only."
+)
+
+
+class _VisionFindingDraft(BaseModel):
+    rule_code: str
+    severity: str = "warning"
+    message: str
+    suggestion: str | None = None
+
+
+class _VisionCriticDraft(BaseModel):
+    focus_hierarchy_clarity: float = Field(ge=0.0, le=1.0)
+    reading_order_naturalness: float = Field(ge=0.0, le=1.0)
+    hero_prominence: float = Field(ge=0.0, le=1.0)
+    color_chaos: float = Field(ge=0.0, le=1.0, description="1=calm palette, 0=chaotic")
+    mechanical_feel: float = Field(ge=0.0, le=1.0, description="1=organic, 0=mechanical")
+    findings: list[_VisionFindingDraft] = Field(default_factory=list)
+    summary: str = ""
 
 
 class VisualCriticService:
     """Evaluate Visual Quality — never calls LayoutRepairService."""
+
+    def __init__(
+        self,
+        *,
+        llm: LLMProvider | None = None,
+        llm_enabled: bool = False,
+        llm_model: str | None = None,
+    ) -> None:
+        self._llm = llm
+        self._llm_enabled = llm_enabled
+        self._llm_model = llm_model
 
     def evaluate_plan(
         self,
@@ -47,7 +85,6 @@ class VisualCriticService:
         page_area: float | None = None,
         peer_plans: list[LayoutPlan] | None = None,
     ) -> VisualCriticReport:
-        """Critique one layout (geometry prior + optional screenshot)."""
         findings: list[VisualCriticFinding] = []
         notes: list[str] = []
         safe = Rect(0.0, 0.0, plan.page_width, plan.page_height)
@@ -59,6 +96,7 @@ class VisualCriticService:
         mechanical = self._score_mechanical(plan)
         color = None
         repetition = self._score_repetition(plan, peer_plans or [])
+        method = _METHOD
 
         if focus < 0.55:
             findings.append(
@@ -66,7 +104,10 @@ class VisualCriticService:
                     rule_code=CRITIC_FOCUS_UNCLEAR,
                     severity=LayoutIssueSeverity.WARNING,
                     message="Page visual focus / hierarchy looks unclear.",
-                    suggestion="Strengthen title/hero contrast or reduce competing equal-weight boxes.",
+                    suggestion=(
+                        "Strengthen title/hero contrast or reduce competing "
+                        "equal-weight boxes."
+                    ),
                     evidence={"focus_hierarchy_clarity": focus},
                 )
             )
@@ -123,14 +164,36 @@ class VisualCriticService:
                             rule_code=CRITIC_COLOR_CHAOS,
                             severity=LayoutIssueSeverity.WARNING,
                             message="Screenshot palette looks noisy / over-saturated.",
-                            suggestion="Reduce accent variety; prefer restrained presentation colors.",
+                            suggestion=(
+                                "Reduce accent variety; prefer restrained "
+                                "presentation colors."
+                            ),
                             evidence={"color_calm": color},
                         )
                     )
+                if self._llm_enabled and self._llm is not None:
+                    vision = self._llm_vision_critique(plan, path)
+                    if vision is not None:
+                        method = _METHOD_LLM
+                        focus = (focus + vision.focus_hierarchy_clarity) / 2
+                        reading = (reading + vision.reading_order_naturalness) / 2
+                        if hero is not None:
+                            hero = (hero + vision.hero_prominence) / 2
+                        mechanical = (mechanical + vision.mechanical_feel) / 2
+                        color = (
+                            vision.color_chaos
+                            if color is None
+                            else (color + vision.color_chaos) / 2
+                        )
+                        findings.extend(self._findings_from_vision(vision))
+                        if vision.summary:
+                            notes.append(f"LLM vision: {vision.summary[:240]}")
             else:
                 notes.append(f"Screenshot not found: {path}")
         else:
-            notes.append("No screenshot provided; color_chaos skipped (geometry-only critic).")
+            notes.append(
+                "No screenshot provided; color_chaos skipped (geometry-only critic)."
+            )
 
         dimensions = VisualCriticDimensions(
             focus_hierarchy_clarity=round(focus, 3),
@@ -142,16 +205,15 @@ class VisualCriticService:
                 None if repetition is None else round(repetition, 3)
             ),
         )
-        total = self._aggregate(dimensions)
         return VisualCriticReport(
             score_kind="visual_quality",
-            method=_METHOD,
+            method=method,
             layout_plan_id=str(plan.id),
             slide_id=str(plan.slide_id),
             source_image=source,
             dimensions=dimensions,
-            findings=findings,
-            total_score=total,
+            findings=self._dedupe_findings(findings),
+            total_score=self._aggregate(dimensions),
             notes=notes,
         )
 
@@ -161,7 +223,6 @@ class VisualCriticService:
         *,
         image_paths: dict[str, str | Path] | None = None,
     ) -> list[VisualCriticReport]:
-        """Critique every plan; peer plans feed the repetition dimension."""
         paths = image_paths or {}
         reports: list[VisualCriticReport] = []
         for plan in plans:
@@ -174,6 +235,85 @@ class VisualCriticService:
                 )
             )
         return reports
+
+    def _llm_vision_critique(
+        self, plan: LayoutPlan, image_path: Path
+    ) -> _VisionCriticDraft | None:
+        assert self._llm is not None
+        prompt = (
+            "Critique this architectural presentation slide screenshot.\n"
+            f"LayoutFamily={plan.layout_family.value} variant={plan.layout_variant}.\n"
+            "Score 0-1 for: focus_hierarchy_clarity, reading_order_naturalness, "
+            "hero_prominence, color_chaos (1=calm), mechanical_feel (1=organic).\n"
+            "Findings rule_code must be one of: "
+            "CRITIC.FOCUS_UNCLEAR, CRITIC.READING_ORDER_AWKWARD, CRITIC.HERO_WEAK, "
+            "CRITIC.COLOR_CHAOS, CRITIC.MECHANICAL.\n"
+            "Return JSON matching the schema."
+        )
+        try:
+            return self._llm.generate_structured(
+                LLMRequest(
+                    system_prompt=_VISION_SYSTEM,
+                    user_prompt=prompt,
+                    model=self._llm_model,
+                    temperature=0.2,
+                    json_mode=True,
+                    image_paths=(str(image_path),),
+                    metadata={"task": "visual_critic_vision"},
+                ),
+                _VisionCriticDraft,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("LLM vision critic failed (non-fatal): %s", exc)
+            return None
+
+    @staticmethod
+    def _findings_from_vision(draft: _VisionCriticDraft) -> list[VisualCriticFinding]:
+        allowed = {
+            CRITIC_FOCUS_UNCLEAR,
+            CRITIC_READING_ORDER_AWKWARD,
+            CRITIC_HERO_WEAK,
+            CRITIC_COLOR_CHAOS,
+            CRITIC_MECHANICAL,
+        }
+        out: list[VisualCriticFinding] = []
+        for item in draft.findings:
+            code = item.rule_code.strip().upper().replace(" ", "_")
+            if not code.startswith("CRITIC."):
+                code = f"CRITIC.{code}" if "." not in code else code
+            normalized = {
+                "CRITIC.FOCUS_UNCLEAR": CRITIC_FOCUS_UNCLEAR,
+                "CRITIC.READING_ORDER_AWKWARD": CRITIC_READING_ORDER_AWKWARD,
+                "CRITIC.HERO_WEAK": CRITIC_HERO_WEAK,
+                "CRITIC.COLOR_CHAOS": CRITIC_COLOR_CHAOS,
+                "CRITIC.MECHANICAL": CRITIC_MECHANICAL,
+            }.get(code, code)
+            if normalized not in allowed:
+                continue
+            severity = LayoutIssueSeverity.WARNING
+            if item.severity.lower() in {"info", "suggestion"}:
+                severity = LayoutIssueSeverity.INFO
+            out.append(
+                VisualCriticFinding(
+                    rule_code=normalized,
+                    severity=severity,
+                    message=item.message,
+                    suggestion=item.suggestion,
+                    evidence={"source": "llm_vision"},
+                )
+            )
+        return out
+
+    @staticmethod
+    def _dedupe_findings(findings: list[VisualCriticFinding]) -> list[VisualCriticFinding]:
+        seen: set[str] = set()
+        out: list[VisualCriticFinding] = []
+        for item in findings:
+            if item.rule_code in seen:
+                continue
+            seen.add(item.rule_code)
+            out.append(item)
+        return out
 
     @staticmethod
     def _aggregate(dimensions: VisualCriticDimensions) -> float | None:
@@ -219,7 +359,6 @@ class VisualCriticService:
         for index, left in enumerate(ordered):
             for right in ordered[index + 1 :]:
                 pairs += 1
-                # Prefer earlier readers above later ones (smaller y).
                 if left.y - right.y > 0.35:
                     inversions += 1
                 elif abs(left.y - right.y) <= 0.15 and left.x - right.x > 0.5:
@@ -238,11 +377,9 @@ class VisualCriticService:
         if hero is None:
             return None
         ratio = hero.area / page_area
-        # Map ~0.15→0.4, ~0.35→0.85, ≥0.5→1.0
         return max(0.0, min(1.0, (ratio - 0.08) / 0.42))
 
     def _score_mechanical(self, plan: LayoutPlan) -> float:
-        """Lower when many similar-sized boxes share near-identical widths/tops."""
         boxes = [el for el in plan.elements if el.role != LayoutElementRole.DECORATION]
         if len(boxes) < 3:
             return 0.85
@@ -253,7 +390,6 @@ class VisualCriticService:
         height_mode = Counter(heights).most_common(1)[0][1] / len(heights)
         top_mode = Counter(tops).most_common(1)[0][1] / len(tops)
         regularity = (width_mode + height_mode + top_mode) / 3.0
-        # High regularity → mechanical (low organic score).
         return max(0.0, min(1.0, 1.0 - regularity))
 
     def _score_repetition(
@@ -264,12 +400,18 @@ class VisualCriticService:
         fingerprint = self._geometry_fingerprint(plan)
         best = 0.0
         for peer in peers:
-            best = max(best, self._fingerprint_similarity(fingerprint, self._geometry_fingerprint(peer)))
-        # similarity 1 → repetition score 0
+            best = max(
+                best,
+                self._fingerprint_similarity(
+                    fingerprint, self._geometry_fingerprint(peer)
+                ),
+            )
         return max(0.0, min(1.0, 1.0 - best))
 
     @staticmethod
-    def _geometry_fingerprint(plan: LayoutPlan) -> list[tuple[str, float, float, float, float]]:
+    def _geometry_fingerprint(
+        plan: LayoutPlan,
+    ) -> list[tuple[str, float, float, float, float]]:
         return [
             (
                 el.role.value,
@@ -287,7 +429,6 @@ class VisualCriticService:
     ) -> float:
         if not left or not right:
             return 0.0
-        # Role-sequence match + mean absolute geometry delta.
         roles_l = [item[0] for item in left]
         roles_r = [item[0] for item in right]
         if roles_l != roles_r:
@@ -320,12 +461,8 @@ class VisualCriticService:
             return None
         if not pixels:
             return None
-        # Sample unique-ish quantized colors; many bins → chaos.
-        buckets = Counter(
-            ((r // 32), (g // 32), (b // 32)) for r, g, b in pixels
-        )
+        buckets = Counter(((r // 32), (g // 32), (b // 32)) for r, g, b in pixels)
         unique = len(buckets)
-        # Also penalize very high saturation variance.
         sats: list[float] = []
         for r, g, b in pixels[:: max(1, len(pixels) // 200)]:
             mx = max(r, g, b)

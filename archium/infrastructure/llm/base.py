@@ -21,6 +21,8 @@ class LLMRequest:
     max_tokens: int | None = None
     json_mode: bool = False
     metadata: dict[str, str] = field(default_factory=dict)
+    # Optional local image paths for multimodal / vision models.
+    image_paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

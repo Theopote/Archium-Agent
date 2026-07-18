@@ -44,14 +44,18 @@ class SlideVisualSnapshot:
     layout_plan: LayoutPlan | None
     candidates: list[LayoutPlan] = field(default_factory=list)
     validation: LayoutValidationReport | None = None
+    visual_critic: dict | None = None
+    preview_image: str | None = None
 
 
 @dataclass
 class PresentationVisualSnapshot:
     presentation_id: UUID
-    design_system: DesignSystem | None
-    art_direction: ArtDirection | None
+    design_system: DesignSystem | None = None
+    art_direction: ArtDirection | None = None
     slides: list[SlideVisualSnapshot] = field(default_factory=list)
+    deck_qa_report: dict | None = None
+    visual_critic_reports: list[dict] = field(default_factory=list)
 
 
 def _create_visual_workflow_service(
@@ -132,6 +136,10 @@ def continue_visual_after_layout_review(
 def get_presentation_visual_snapshot(
     session: Session,
     presentation_id: UUID,
+    *,
+    visual_critic_reports: list[dict] | None = None,
+    deck_qa_report: dict | None = None,
+    preview_paths: list[str] | None = None,
 ) -> PresentationVisualSnapshot:
     presentations = PresentationRepository(session)
     intents = VisualIntentRepository(session)
@@ -156,9 +164,17 @@ def get_presentation_visual_snapshot(
     if art_direction is not None and art_direction.design_system_id is not None:
         design_system = design_repo.get(art_direction.design_system_id)
 
+    critic_by_slide: dict[str, dict] = {}
+    for report in visual_critic_reports or []:
+        slide_key = str(report.get("slide_id") or "")
+        if slide_key:
+            critic_by_slide[slide_key] = report
+
+    preview_by_index = _preview_pngs_by_order(preview_paths or [])
+
     slide_snapshots: list[SlideVisualSnapshot] = []
     validator = LayoutValidationService()
-    for slide in slides:
+    for index, slide in enumerate(slides):
         intent = (
             intents.get(slide.visual_intent_id)
             if slide.visual_intent_id is not None
@@ -181,6 +197,9 @@ def get_presentation_visual_snapshot(
                 require_source=True,
                 drawing_hero=plan.layout_family == LayoutFamily.DRAWING_FOCUS,
             )
+        critic = critic_by_slide.get(str(slide.id))
+        if critic is None and plan is not None:
+            critic = critic_by_slide.get(str(plan.slide_id))
         slide_snapshots.append(
             SlideVisualSnapshot(
                 slide=slide,
@@ -188,6 +207,8 @@ def get_presentation_visual_snapshot(
                 layout_plan=plan,
                 candidates=candidates,
                 validation=validation,
+                visual_critic=critic,
+                preview_image=preview_by_index.get(index),
             )
         )
 
@@ -196,7 +217,28 @@ def get_presentation_visual_snapshot(
         design_system=design_system,
         art_direction=art_direction,
         slides=slide_snapshots,
+        deck_qa_report=deck_qa_report,
+        visual_critic_reports=list(visual_critic_reports or []),
     )
+
+
+def _preview_pngs_by_order(render_paths: list[str]) -> dict[int, str]:
+    """Map 0-based slide index → slide_NN.png path from workflow render_paths."""
+    from pathlib import Path
+
+    previews = sorted(
+        [
+            path
+            for path in render_paths
+            if path.lower().endswith(".png")
+            and (
+                "slide_preview" in path.replace("\\", "/").lower()
+                or Path(path).name.lower().startswith("slide_")
+            )
+        ],
+        key=lambda value: Path(value).name,
+    )
+    return {index: path for index, path in enumerate(previews)}
 
 
 def update_art_direction(

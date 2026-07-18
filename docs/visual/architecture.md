@@ -128,6 +128,8 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 
 产出 `DeckQAReport`（`score_kind: deck_consistency`）→ `deck_qa_report.json`。同样不修布局、不挡导出。
 
+导出 PPTX 且本机有 LibreOffice + pdftoppm 时，会尝试写出 `slide_previews/slide_XX.png` 供 Critic 做色彩启发式（`VISUAL_PPTX_SCREENSHOTS_ENABLED`）。UI「预览与产物」展示 Deck QA / Visual Critic；单页面板同步显示 Critic 分与可选截图。
+
 ## 设计约束（不可违反）
 
 1. 不用「医院模板 / 校园模板」等项目类型固定套版驱动排版。

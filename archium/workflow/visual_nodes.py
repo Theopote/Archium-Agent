@@ -78,7 +78,11 @@ class VisualWorkflowRuntime:
         )
         self.layout_validation_service = LayoutValidationService()
         self.layout_repair_service = LayoutRepairService()
-        self.visual_critic_service = VisualCriticService()
+        self.visual_critic_service = VisualCriticService(
+            llm=llm,
+            llm_enabled=bool(getattr(settings, "visual_critic_llm_enabled", False)),
+            llm_model=getattr(settings, "visual_critic_llm_model", None),
+        )
         self.deck_qa_service = DeckQAService()
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
             settings, session=session
@@ -921,6 +925,27 @@ class VisualWorkflowNodes:
                             path_str = str(path)
                             if path_str not in render_paths:
                                 render_paths.append(path_str)
+                        if bool(
+                            getattr(
+                                self._runtime.settings,
+                                "visual_pptx_screenshots_enabled",
+                                True,
+                            )
+                        ):
+                            from archium.infrastructure.renderers.pptx_screenshot import (
+                                export_pptx_slide_pngs,
+                            )
+
+                            preview_dir = output_dir / "slide_previews"
+                            pngs = export_pptx_slide_pngs(pptx_path, preview_dir)
+                            if pngs:
+                                for png in pngs:
+                                    render_paths.append(str(png))
+                            else:
+                                warnings.append(
+                                    "PPTX screenshots skipped "
+                                    "(LibreOffice/pdftoppm unavailable or failed)."
+                                )
                     except Exception as pptx_exc:
                         logger.warning("PPTX export failed (non-fatal): %s", pptx_exc)
                         warnings.append(f"PPTX export failed: {pptx_exc}")
@@ -970,19 +995,10 @@ class VisualWorkflowNodes:
             output_dir.mkdir(parents=True, exist_ok=True)
 
             if critic_on:
-                image_paths: dict[str, Path] = {}
-                for raw in state.get("render_paths") or []:
-                    path = Path(str(raw))
-                    if path.suffix.lower() == ".png" and path.is_file():
-                        image_paths.setdefault("shared", path)
-
+                image_paths = self._map_slide_preview_pngs(plans, state.get("render_paths") or [])
                 reports = self._runtime.visual_critic_service.evaluate_deck(
                     plans,
-                    image_paths=(
-                        {str(plan.id): image_paths["shared"] for plan in plans}
-                        if "shared" in image_paths and len(plans) == 1
-                        else {}
-                    ),
+                    image_paths=image_paths,
                 )
                 payloads = [report.model_dump(mode="json") for report in reports]
                 for report in reports:
@@ -997,15 +1013,21 @@ class VisualWorkflowNodes:
                 )
                 render_paths.append(str(report_path))
                 logger.info(
-                    "Visual Critic complete: %s reports (%s findings)",
+                    "Visual Critic complete: %s reports (%s findings, %s with images)",
                     len(payloads),
                     sum(len(r.findings) for r in reports),
+                    sum(1 for r in reports if r.source_image),
                 )
 
             if deck_on:
+                art = state.get("art_direction")
                 deck_report = self._runtime.deck_qa_service.evaluate(
                     plans,
                     slides=list(state.get("slides") or []),
+                    design_system=state.get("design_system"),
+                    palette_strategy=(
+                        art.palette_strategy if art is not None else None
+                    ),
                 )
                 deck_payload = deck_report.model_dump(mode="json")
                 for finding in deck_report.findings:
@@ -1039,6 +1061,39 @@ class VisualWorkflowNodes:
                 "current_step": step,
                 "warnings": [f"Visual Critic / Deck QA skipped: {exc}"],
             }
+
+    @staticmethod
+    def _map_slide_preview_pngs(
+        plans: list, render_paths: list[str]
+    ) -> dict[str, Path]:
+        """Map layout_plan_id → slide_NN.png by render order when previews exist."""
+        previews = sorted(
+            [
+                Path(raw)
+                for raw in render_paths
+                if str(raw).lower().endswith(".png")
+                and "slide_preview" in str(raw).replace("\\", "/").lower()
+                and Path(raw).is_file()
+            ],
+            key=lambda path: path.name,
+        )
+        if not previews:
+            # Fallback: any slide_XX.png under render_paths.
+            previews = sorted(
+                [
+                    Path(raw)
+                    for raw in render_paths
+                    if Path(raw).name.lower().startswith("slide_")
+                    and Path(raw).suffix.lower() == ".png"
+                    and Path(raw).is_file()
+                ],
+                key=lambda path: path.name,
+            )
+        mapping: dict[str, Path] = {}
+        for plan, png in zip(plans, previews, strict=False):
+            mapping[str(plan.id)] = png
+            mapping[str(plan.slide_id)] = png
+        return mapping
 
     def finalize(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)

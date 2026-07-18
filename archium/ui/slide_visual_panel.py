@@ -93,6 +93,24 @@ def render_slide_visual_panel(*, snapshot: SlideVisualSnapshot) -> None:
                             st.write(
                                 f"- `{issue.rule_code}` · {issue.severity.value} · {issue.message}"
                             )
+            if snapshot.visual_critic is not None:
+                critic = snapshot.visual_critic
+                total = critic.get("total_score")
+                score_label = (
+                    f"{total:.2f}" if isinstance(total, (int, float)) else "—"
+                )
+                st.write(f"视觉质量（Critic）：{score_label}")
+                st.caption("Visual Quality · 只读启发式，不自动修复")
+                findings = list(critic.get("findings") or [])
+                if findings:
+                    with st.expander("Visual Critic 发现", expanded=False):
+                        for item in findings[:8]:
+                            st.write(
+                                f"- `{item.get('rule_code')}` · "
+                                f"{item.get('severity')} · {item.get('message')}"
+                            )
+            if snapshot.preview_image:
+                st.image(snapshot.preview_image, use_container_width=True)
 
     _render_candidates(snapshot)
     _render_actions(snapshot)

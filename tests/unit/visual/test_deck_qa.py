@@ -267,3 +267,51 @@ class TestDeckQAService:
         assert any(
             item.rule_code == DECK_WEAK_SECTION_TRANSITION for item in report.findings
         )
+
+    def test_palette_drift_unknown_token(self) -> None:
+        from archium.domain.visual import DECK_PALETTE_DRIFT, default_presentation_design_system
+
+        design = default_presentation_design_system()
+        plans = [
+            _plan(
+                LayoutElement(
+                    id="title",
+                    role=LayoutElementRole.TITLE,
+                    content_type=LayoutContentType.TEXT,
+                    text_content="A",
+                    x=0.7,
+                    y=0.4,
+                    width=8,
+                    height=0.5,
+                    style_token="title",
+                )
+            ),
+            _plan(
+                LayoutElement(
+                    id="title",
+                    role=LayoutElementRole.TITLE,
+                    content_type=LayoutContentType.TEXT,
+                    text_content="B",
+                    x=0.7,
+                    y=0.4,
+                    width=8,
+                    height=0.5,
+                    style_token="not_a_real_token",
+                )
+            ),
+        ]
+        # Force a made-up color token via typography mutation on a copy is hard;
+        # instead inject unknown by using a style that resolve will fail — patch
+        # color_tokens_for_plan path: empty second set vs first still scores high.
+        # Use design_system with evaluate; unknown comes when token name is valid
+        # typography name but color_token is bogus — set body.color_token temporarily.
+        design.typography.title.color_token = "primary_text"
+        design.typography.body.color_token = "totally_unknown_hex_token"
+        plans[1].elements[0].style_token = "body"
+        report = DeckQAService().evaluate(
+            plans,
+            design_system=design,
+            palette_strategy="克制中性色，避免高饱和跳变",
+        )
+        assert any(item.rule_code == DECK_PALETTE_DRIFT for item in report.findings)
+        assert report.dimensions.palette_consistency is not None

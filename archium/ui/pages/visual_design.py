@@ -275,9 +275,20 @@ def _render_result_summary() -> None:
     cols[0].metric("状态", result.workflow_run.status.value)
     cols[1].metric("意图数", len(result.visual_intent_ids))
     cols[2].metric("版式数", len(result.layout_plan_ids))
-    cols[3].metric("产物数", len(result.render_paths))
+    deck_score = (
+        result.deck_qa_report.get("total_score")
+        if isinstance(result.deck_qa_report, dict)
+        else None
+    )
+    cols[3].metric(
+        "Deck QA",
+        f"{deck_score:.2f}" if isinstance(deck_score, (int, float)) else str(len(result.render_paths)),
+    )
     if result.warnings:
         st.caption("警告：" + "；".join(result.warnings))
+
+    _render_quality_reports(result)
+
     if result.render_paths:
         with st.expander("输出文件", expanded=False):
             for path in result.render_paths:
@@ -305,11 +316,76 @@ def _render_result_summary() -> None:
                 st.error(format_user_error(exc))
 
 
-def _render_composition_tabs(presentation_id: UUID) -> None:
-    with get_session() as session:
-        snapshot = get_presentation_visual_snapshot(session, presentation_id)
+def _render_quality_reports(result) -> None:  # noqa: ANN001
+    """Show Deck QA + Visual Critic from the last workflow run (read-only)."""
+    deck = result.deck_qa_report if isinstance(result.deck_qa_report, dict) else None
+    critics = list(result.visual_critic_reports or [])
+    if deck is None and not critics:
+        return
 
+    st.markdown("**视觉可靠性（只读）**")
+    st.caption("Visual Critic / Deck QA 不参与 PPTX 门禁，也不自动修复版式。")
+
+    if deck is not None:
+        score = deck.get("total_score")
+        dims = deck.get("dimensions") or {}
+        with st.expander(
+            f"Deck QA · 一致性 "
+            f"{f'{score:.2f}' if isinstance(score, (int, float)) else '—'}",
+            expanded=bool(deck.get("findings")),
+        ):
+            dim_line = " · ".join(
+                f"{key}={value:.2f}"
+                for key, value in dims.items()
+                if isinstance(value, (int, float))
+            )
+            st.write(dim_line or "暂无维度分")
+            for item in list(deck.get("findings") or [])[:12]:
+                st.write(
+                    f"- `{item.get('rule_code')}` · {item.get('severity')} · "
+                    f"{item.get('message')}"
+                )
+
+    if critics:
+        with st.expander(f"Visual Critic · 共 {len(critics)} 页", expanded=False):
+            rows = []
+            for report in critics:
+                total = report.get("total_score")
+                findings = report.get("findings") or []
+                rows.append(
+                    {
+                        "slide": str(report.get("slide_id") or "")[:8],
+                        "视觉质量": (
+                            f"{total:.2f}" if isinstance(total, (int, float)) else "—"
+                        ),
+                        "发现数": len(findings),
+                        "截图": "有" if report.get("source_image") else "无",
+                        "codes": ", ".join(
+                            sorted({str(item.get("rule_code")) for item in findings})
+                        )
+                        or "—",
+                    }
+                )
+            st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_composition_tabs(presentation_id: UUID) -> None:
     result = st.session_state.last_visual_workflow_result
+    with get_session() as session:
+        snapshot = get_presentation_visual_snapshot(
+            session,
+            presentation_id,
+            visual_critic_reports=(
+                list(result.visual_critic_reports) if result is not None else None
+            ),
+            deck_qa_report=(
+                result.deck_qa_report
+                if result is not None and isinstance(result.deck_qa_report, dict)
+                else None
+            ),
+            preview_paths=list(result.render_paths) if result is not None else None,
+        )
+
     awaiting = bool(result and result.awaiting_review and result.review_gate == "art_direction")
     workflow_run_id = None
     if result is not None:
@@ -358,6 +434,9 @@ def _render_composition_tabs(presentation_id: UUID) -> None:
         for item in snapshot.slides:
             plan = item.layout_plan
             intent = item.visual_intent
+            critic_score = None
+            if item.visual_critic is not None:
+                critic_score = item.visual_critic.get("total_score")
             rows.append(
                 {
                     "页码": item.slide.order + 1,
@@ -368,6 +447,11 @@ def _render_composition_tabs(presentation_id: UUID) -> None:
                     "版式质量": (
                         f"{item.validation.score:.2f}"
                         if item.validation is not None
+                        else "—"
+                    ),
+                    "视觉质量": (
+                        f"{critic_score:.2f}"
+                        if isinstance(critic_score, (int, float))
                         else "—"
                     ),
                     "校验": (

@@ -203,6 +203,24 @@ class Settings(BaseSettings):
             "(footer/chrome/typography/family rhythm; never blocks PPTX export)."
         ),
     )
+    visual_critic_llm_enabled: bool = Field(
+        default=False,
+        description=(
+            "When true and LLM is configured, enrich Visual Critic with multimodal "
+            "vision on slide PNGs (soft-fail; never blocks PPTX)."
+        ),
+    )
+    visual_critic_llm_model: str | None = Field(
+        default=None,
+        description="Optional vision-capable model override for Visual Critic LLM path.",
+    )
+    visual_pptx_screenshots_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, attempt PPTX→PNG screenshots (LibreOffice + pdftoppm) after "
+            "export for Visual Critic. Soft-skips when tools are missing."
+        ),
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+import mimetypes
 import time
-from typing import TypeVar
+from pathlib import Path
+from typing import Any, TypeVar
 
 from openai import APIConnectionError, APITimeoutError, OpenAI, RateLimitError
 from openai.types.chat import ChatCompletion
@@ -63,6 +66,7 @@ class OpenAICompatibleProvider:
             max_tokens=request.max_tokens,
             json_mode=True,
             metadata=request.metadata,
+            image_paths=request.image_paths,
         )
         last_error: Exception | None = None
         raw = ""
@@ -100,13 +104,15 @@ class OpenAICompatibleProvider:
             max_tokens=original.max_tokens,
             json_mode=True,
             metadata=original.metadata,
+            image_paths=original.image_paths,
         )
 
     def _complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self._settings.llm_model
+        user_content = self._user_content(request)
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": request.system_prompt},
-            {"role": "user", "content": request.user_prompt},
+            {"role": "user", "content": user_content},  # type: ignore[arg-type]
         ]
 
         last_error: Exception | None = None
@@ -168,3 +174,24 @@ class OpenAICompatibleProvider:
             temperature=temperature,
             max_tokens=max_tokens,
         )
+
+    @staticmethod
+    def _user_content(request: LLMRequest) -> str | list[dict[str, Any]]:
+        """Build text or multimodal user content for OpenAI-compatible APIs."""
+        if not request.image_paths:
+            return request.user_prompt
+        parts: list[dict[str, Any]] = [{"type": "text", "text": request.user_prompt}]
+        for raw in request.image_paths:
+            path = Path(raw)
+            if not path.is_file():
+                continue
+            mime, _ = mimetypes.guess_type(path.name)
+            media_type = mime or "image/png"
+            encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+            parts.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{media_type};base64,{encoded}"},
+                }
+            )
+        return parts if len(parts) > 1 else request.user_prompt

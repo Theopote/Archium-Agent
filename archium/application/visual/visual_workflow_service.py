@@ -50,6 +50,8 @@ class VisualWorkflowResult:
     visual_intent_ids: list[str] = field(default_factory=list)
     render_paths: list[str] = field(default_factory=list)
     validation_reports: list[dict[str, Any]] = field(default_factory=list)
+    visual_critic_reports: list[dict[str, Any]] = field(default_factory=list)
+    deck_qa_report: dict[str, Any] | None = None
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -362,6 +364,10 @@ class VisualWorkflowService:
             visual_intent_ids=list(live.get("visual_intent_ids") or []),
             render_paths=list(live.get("render_paths") or []),
             validation_reports=list(live.get("validation_reports") or []),
+            visual_critic_reports=list(live.get("visual_critic_reports") or []),
+            deck_qa_report=live.get("deck_qa_report")
+            if isinstance(live.get("deck_qa_report"), dict)
+            else None,
             errors=list(run.errors or live.get("errors") or []),
             warnings=list(live.get("warnings") or []),
         )
