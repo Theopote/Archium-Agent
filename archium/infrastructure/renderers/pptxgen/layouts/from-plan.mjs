@@ -131,7 +131,7 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme) {
 
   const colors = slideInstruction.theme_tokens?.colors ?? deckTheme?.colors ?? {};
   const fill = _stripHash(colors.surface || colors.light || "F4F6F8");
-  const line = _stripHash(colors.accent || colors.primary || "2E6DA4");
+  const line = _stripHash(colors.warning || colors.accent || colors.primary || "B45309");
   const muted = _stripHash(colors.muted_text || colors.muted || "666666");
   page.addShape(pres.shapes.RECTANGLE, {
     x: rect.x,
@@ -139,10 +139,14 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme) {
     w: rect.w,
     h: rect.h,
     fill: { color: fill },
-    line: { color: line, width: 1 },
+    line: { color: line, width: element.asset_unresolved ? 1.5 : 1, dashType: element.asset_unresolved ? "dash" : undefined },
   });
-  const label =
+  let label =
     element.content_type === "drawing" ? "图纸占位" : "图片占位";
+  if (element.asset_unresolved) {
+    const code = element.asset_error || "LAYOUT.UNRESOLVED_ASSET_PATH";
+    label = code === "LAYOUT.HERO_ASSET_MISSING" ? "主图素材缺失" : "素材缺失/路径未解析";
+  }
   page.addText(label, {
     x: rect.x + 0.15,
     y: rect.y + rect.h / 2 - 0.2,

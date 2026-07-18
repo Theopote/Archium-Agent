@@ -66,3 +66,41 @@ def test_pptx_layout_plan_adapter_preserves_coordinates() -> None:
     theme = design_system_to_pptx_theme(design)
     assert theme["slide_size"]["width"] == 10.0
     assert "primary" in theme["colors"]
+
+
+def test_pptx_adapter_marks_unresolved_asset_explicitly() -> None:
+    design = default_presentation_design_system()
+    ref = str(uuid4())
+    plan = LayoutPlan(
+        slide_id=uuid4(),
+        layout_family=LayoutFamily.DRAWING_FOCUS,
+        layout_variant="full_canvas",
+        page_width=10,
+        page_height=5.625,
+        design_system_id=design.id,
+        visual_intent_id=uuid4(),
+        hero_element_id="hero",
+        reading_order=["hero"],
+        elements=[
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                content_ref=ref,
+                x=0.7,
+                y=1.0,
+                width=8,
+                height=3.5,
+            )
+        ],
+    )
+    instruction = PptxLayoutPlanAdapter().render_slide(
+        plan,
+        design,
+        SlideContentBundle(asset_paths={}),  # content_ref present, path missing
+    )
+    element = instruction.elements[0]
+    assert element["content_ref"] == ref
+    assert "path" not in element
+    assert element["asset_unresolved"] is True
+    assert element["asset_error"] == "LAYOUT.UNRESOLVED_ASSET_PATH"

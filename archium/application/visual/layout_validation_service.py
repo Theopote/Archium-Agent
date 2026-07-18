@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from archium.application.visual.asset_reference import AssetReferenceContext
 from archium.domain.visual.design_system import DesignSystem, LayoutThresholds, TypographySystem
 from archium.domain.visual.enums import (
     CropPolicy,
@@ -19,20 +22,31 @@ from archium.domain.visual.validation import (
     LAYOUT_ELEMENT_OVERLAP,
     LAYOUT_EXCESSIVE_DENSITY,
     LAYOUT_FONT_TOO_SMALL,
+    LAYOUT_HERO_ASSET_MISSING,
     LAYOUT_HERO_NOT_DOMINANT,
     LAYOUT_IMAGE_DISTORTION,
     LAYOUT_INCONSISTENT_ALIGNMENT,
     LAYOUT_INSUFFICIENT_WHITESPACE,
     LAYOUT_INVALID_SIZE,
+    LAYOUT_MISSING_ASSET_REFERENCE,
     LAYOUT_MISSING_SOURCE,
     LAYOUT_MISSING_TITLE,
     LAYOUT_TEXT_OVERFLOW,
+    LAYOUT_UNRESOLVED_ASSET_PATH,
     LayoutScore,
     LayoutValidationIssue,
     LayoutValidationReport,
 )
 from archium.infrastructure.layout.geometry import Rect, safe_area
 from archium.infrastructure.layout.text_measurement import TextMeasurementService
+
+_ASSET_CONTENT_TYPES = frozenset(
+    {
+        LayoutContentType.IMAGE,
+        LayoutContentType.DRAWING,
+        LayoutContentType.CHART,
+    }
+)
 
 
 class LayoutValidationService:
@@ -48,6 +62,7 @@ class LayoutValidationService:
         *,
         require_source: bool = True,
         drawing_hero: bool = False,
+        asset_context: AssetReferenceContext | None = None,
     ) -> LayoutValidationReport:
         issues: list[LayoutValidationIssue] = []
         page = Rect(0, 0, layout_plan.page_width, layout_plan.page_height)
@@ -70,6 +85,8 @@ class LayoutValidationService:
             )
         )
         issues.extend(self._check_alignment(layout_plan))
+        if asset_context is not None:
+            issues.extend(self._check_asset_references(layout_plan, asset_context))
 
         score = self._score(layout_plan, issues)
         return LayoutValidationReport(
@@ -77,6 +94,122 @@ class LayoutValidationService:
             score=score.total_score,
             layout_score=score,
         )
+
+    def _check_asset_references(
+        self,
+        plan: LayoutPlan,
+        asset_context: AssetReferenceContext,
+    ) -> list[LayoutValidationIssue]:
+        """Validate content_ref integrity against known assets and resolvable paths."""
+        issues: list[LayoutValidationIssue] = []
+        known = asset_context.known_asset_ids
+        resolved = asset_context.resolved_paths
+
+        for element in plan.elements:
+            if element.content_type not in _ASSET_CONTENT_TYPES:
+                continue
+            is_hero = self._is_hero_element(plan, element)
+            severity = (
+                LayoutIssueSeverity.ERROR if is_hero else LayoutIssueSeverity.WARNING
+            )
+
+            if not element.content_ref:
+                if is_hero:
+                    issues.append(
+                        LayoutValidationIssue(
+                            rule_code=LAYOUT_HERO_ASSET_MISSING,
+                            severity=LayoutIssueSeverity.ERROR,
+                            element_ids=[element.id],
+                            message=f"Hero element {element.id} has no asset content_ref.",
+                            suggestion="Bind a project asset to the hero visual.",
+                            auto_repairable=False,
+                        )
+                    )
+                else:
+                    issues.append(
+                        LayoutValidationIssue(
+                            rule_code=LAYOUT_MISSING_ASSET_REFERENCE,
+                            severity=LayoutIssueSeverity.WARNING,
+                            element_ids=[element.id],
+                            message=(
+                                f"Element {element.id} expects an asset but "
+                                "content_ref is empty."
+                            ),
+                            suggestion="Bind a supporting asset or remove the visual slot.",
+                            auto_repairable=False,
+                        )
+                    )
+                continue
+
+            ref = element.content_ref
+            missing = ref not in known
+            path = resolved.get(ref)
+            unresolved = (not missing) and (
+                path is None or not Path(str(path)).is_file()
+            )
+
+            if missing:
+                issues.append(
+                    LayoutValidationIssue(
+                        rule_code=LAYOUT_MISSING_ASSET_REFERENCE,
+                        severity=severity,
+                        element_ids=[element.id],
+                        message=(
+                            f"Element {element.id} content_ref {ref[:8]}… "
+                            "does not match a project asset."
+                        ),
+                        suggestion="Re-bind the element to an existing project asset.",
+                        auto_repairable=False,
+                    )
+                )
+                if is_hero:
+                    issues.append(
+                        LayoutValidationIssue(
+                            rule_code=LAYOUT_HERO_ASSET_MISSING,
+                            severity=LayoutIssueSeverity.ERROR,
+                            element_ids=[element.id],
+                            message=f"Hero asset for {element.id} is missing from the project.",
+                            suggestion="Upload or select a valid hero asset.",
+                            auto_repairable=False,
+                        )
+                    )
+                continue
+
+            if unresolved:
+                issues.append(
+                    LayoutValidationIssue(
+                        rule_code=LAYOUT_UNRESOLVED_ASSET_PATH,
+                        severity=severity,
+                        element_ids=[element.id],
+                        message=(
+                            f"Element {element.id} asset {ref[:8]}… "
+                            "exists but its file path could not be resolved."
+                        ),
+                        suggestion="Restore the asset file or re-import the asset.",
+                        auto_repairable=False,
+                    )
+                )
+                if is_hero:
+                    issues.append(
+                        LayoutValidationIssue(
+                            rule_code=LAYOUT_HERO_ASSET_MISSING,
+                            severity=LayoutIssueSeverity.ERROR,
+                            element_ids=[element.id],
+                            message=(
+                                f"Hero asset for {element.id} cannot be loaded from storage."
+                            ),
+                            suggestion="Fix the hero asset file path before export.",
+                            auto_repairable=False,
+                        )
+                    )
+
+        return issues
+
+    @staticmethod
+    def _is_hero_element(plan: LayoutPlan, element: LayoutElement) -> bool:
+        if plan.hero_element_id is not None and element.id == plan.hero_element_id:
+            return True
+        return element.role == LayoutElementRole.HERO_VISUAL
 
     def _check_sizes(self, plan: LayoutPlan) -> list[LayoutValidationIssue]:
         issues: list[LayoutValidationIssue] = []
@@ -458,11 +591,17 @@ class LayoutValidationService:
         ):
             whitespace = 0.6
         asset_usage = 1.0
-        if any(
-            i.rule_code in {LAYOUT_IMAGE_DISTORTION, LAYOUT_DRAWING_CROPPED}
-            for i in issues
-        ):
+        asset_codes = {
+            LAYOUT_IMAGE_DISTORTION,
+            LAYOUT_DRAWING_CROPPED,
+            LAYOUT_MISSING_ASSET_REFERENCE,
+            LAYOUT_UNRESOLVED_ASSET_PATH,
+            LAYOUT_HERO_ASSET_MISSING,
+        }
+        if any(i.rule_code in asset_codes for i in issues):
             asset_usage = 0.4
+            if any(i.rule_code == LAYOUT_HERO_ASSET_MISSING for i in issues):
+                asset_usage = 0.15
         consistency = max(0.0, 1.0 - warnings * 0.05)
         total = (
             validity * 0.3

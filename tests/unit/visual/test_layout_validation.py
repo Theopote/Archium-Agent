@@ -4,22 +4,26 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from archium.application.visual.asset_reference import AssetReferenceContext
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.domain.visual import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,
     LAYOUT_ELEMENT_OVERLAP,
     LAYOUT_FONT_TOO_SMALL,
+    LAYOUT_HERO_ASSET_MISSING,
     LAYOUT_HERO_NOT_DOMINANT,
     LAYOUT_IMAGE_DISTORTION,
+    LAYOUT_MISSING_ASSET_REFERENCE,
     LAYOUT_TEXT_OVERFLOW,
+    LAYOUT_UNRESOLVED_ASSET_PATH,
     LayoutElement,
     LayoutElementRole,
     LayoutFamily,
     LayoutPlan,
     default_presentation_design_system,
 )
-from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutContentType
+from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutContentType, LayoutIssueSeverity
 
 
 def _base_plan(*elements: LayoutElement, family: LayoutFamily = LayoutFamily.HERO) -> LayoutPlan:
@@ -195,3 +199,103 @@ class TestLayoutValidationService:
             plan, default_presentation_design_system(), drawing_hero=True
         )
         assert report.issues_for(LAYOUT_HERO_NOT_DOMINANT)
+
+    def test_hero_asset_missing_is_error(self) -> None:
+        plan = _base_plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                x=0.7,
+                y=1.0,
+                width=8,
+                height=3.5,
+                fit_mode=ImageFit.CONTAIN,
+                crop_policy=CropPolicy.FORBIDDEN,
+            ),
+            family=LayoutFamily.DRAWING_FOCUS,
+        )
+        ctx = AssetReferenceContext(known_asset_ids=frozenset(), resolved_paths={})
+        report = LayoutValidationService().validate(
+            plan,
+            default_presentation_design_system(),
+            require_source=False,
+            drawing_hero=True,
+            asset_context=ctx,
+        )
+        hero_issues = report.issues_for(LAYOUT_HERO_ASSET_MISSING)
+        assert hero_issues
+        assert hero_issues[0].severity == LayoutIssueSeverity.ERROR
+        assert not report.valid
+
+    def test_missing_asset_reference_severity_by_role(self) -> None:
+        missing_id = str(uuid4())
+        plan = _base_plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                content_ref=missing_id,
+                x=0.7,
+                y=1.0,
+                width=5,
+                height=3,
+            ),
+            LayoutElement(
+                id="support",
+                role=LayoutElementRole.SUPPORTING_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                content_ref=str(uuid4()),
+                x=6.0,
+                y=1.0,
+                width=3,
+                height=2,
+            ),
+        )
+        ctx = AssetReferenceContext(known_asset_ids=frozenset(), resolved_paths={})
+        report = LayoutValidationService().validate(
+            plan,
+            default_presentation_design_system(),
+            require_source=False,
+            asset_context=ctx,
+        )
+        missing = report.issues_for(LAYOUT_MISSING_ASSET_REFERENCE)
+        assert len(missing) >= 2
+        by_el = {issue.element_ids[0]: issue.severity for issue in missing}
+        assert by_el["hero"] == LayoutIssueSeverity.ERROR
+        assert by_el["support"] == LayoutIssueSeverity.WARNING
+        assert report.issues_for(LAYOUT_HERO_ASSET_MISSING)
+
+    def test_unresolved_asset_path(self, tmp_path) -> None:  # noqa: ANN001
+        asset_id = str(uuid4())
+        # Known in catalog but file path missing / not a file.
+        ctx = AssetReferenceContext(
+            known_asset_ids=frozenset({asset_id}),
+            resolved_paths={asset_id: str(tmp_path / "does-not-exist.png")},
+        )
+        plan = _base_plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                content_ref=asset_id,
+                x=0.7,
+                y=1.0,
+                width=8,
+                height=3.5,
+                fit_mode=ImageFit.CONTAIN,
+                crop_policy=CropPolicy.FORBIDDEN,
+            ),
+            family=LayoutFamily.DRAWING_FOCUS,
+        )
+        report = LayoutValidationService().validate(
+            plan,
+            default_presentation_design_system(),
+            require_source=False,
+            drawing_hero=True,
+            asset_context=ctx,
+        )
+        unresolved = report.issues_for(LAYOUT_UNRESOLVED_ASSET_PATH)
+        assert unresolved
+        assert unresolved[0].severity == LayoutIssueSeverity.ERROR
+        assert report.issues_for(LAYOUT_HERO_ASSET_MISSING)

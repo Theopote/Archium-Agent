@@ -135,6 +135,25 @@ class PptxLayoutPlanAdapter:
             path = bundle.asset_paths.get(element.content_ref)
             if path:
                 instruction["path"] = path
+            elif element.content_type in {
+                LayoutContentType.IMAGE,
+                LayoutContentType.DRAWING,
+                LayoutContentType.CHART,
+            }:
+                # Explicit failure marker — renderer must not silently omit the box.
+                instruction["asset_unresolved"] = True
+                instruction["asset_error"] = "LAYOUT.UNRESOLVED_ASSET_PATH"
+        elif element.content_type in {
+            LayoutContentType.IMAGE,
+            LayoutContentType.DRAWING,
+            LayoutContentType.CHART,
+        }:
+            instruction["asset_unresolved"] = True
+            instruction["asset_error"] = (
+                "LAYOUT.HERO_ASSET_MISSING"
+                if element.role == LayoutElementRole.HERO_VISUAL
+                else "LAYOUT.MISSING_ASSET_REFERENCE"
+            )
         if element.fit_mode is not None:
             instruction["fit_mode"] = element.fit_mode.value
         if element.crop_policy is not None:

@@ -11,7 +11,15 @@ from langgraph.types import interrupt
 from sqlalchemy.orm import Session
 
 from archium.application.visual.art_direction_service import ArtDirectionService
-from archium.application.visual.layout_planning_service import LayoutPlanningService
+from archium.application.visual.asset_reference import (
+    AssetReferenceContext,
+    build_asset_reference_context,
+    content_refs_from_plan,
+)
+from archium.application.visual.layout_planning_service import (
+    LayoutPlanningService,
+    format_layout_decision_warnings,
+)
 from archium.application.visual.layout_repair_service import LayoutRepairService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.visual_intent_service import VisualIntentService
@@ -63,7 +71,9 @@ class VisualWorkflowRuntime:
         self.layout_plans = LayoutPlanRepository(session)
         self.art_direction_service = ArtDirectionService(session, llm=llm)
         self.visual_intent_service = VisualIntentService(session, llm=llm)
-        self.layout_planning_service = LayoutPlanningService(session, llm=llm)
+        self.layout_planning_service = LayoutPlanningService(
+            session, llm=llm, settings=settings
+        )
         self.layout_validation_service = LayoutValidationService()
         self.layout_repair_service = LayoutRepairService()
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
@@ -107,6 +117,19 @@ class VisualWorkflowNodes:
             run.status = status
         run.touch()
         self._runtime.workflow_runs.update(run)
+
+    def _asset_context_for_plan(
+        self, state: VisualWorkflowState, plan
+    ) -> AssetReferenceContext | None:
+        project_id_raw = state.get("project_id")
+        if not project_id_raw:
+            return None
+        return build_asset_reference_context(
+            self._runtime.session,
+            project_id=UUID(str(project_id_raw)),
+            content_refs=content_refs_from_plan(plan),
+            settings=self._runtime.settings,
+        )
 
     def load_presentation_context(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
@@ -362,6 +385,7 @@ class VisualWorkflowNodes:
             design_id = UUID(state["design_system_id"])
             candidate_count = int(state.get("candidate_count", 3))
             by_slide: dict[str, list[str]] = {}
+            decision_warnings: list[str] = []
 
             for slide in slides:
                 if slide.visual_intent_id is None:
@@ -375,6 +399,14 @@ class VisualWorkflowNodes:
                     art_direction_id=UUID(art_id) if art_id else None,
                     design_system_id=design_id,
                     candidate_count=candidate_count,
+                    project_id=UUID(str(state["project_id"]))
+                    if state.get("project_id")
+                    else None,
+                )
+                decision_warnings.extend(
+                    format_layout_decision_warnings(
+                        self._runtime.layout_planning_service.drain_warnings()
+                    )
                 )
                 ids: list[str] = []
                 for plan, _report in candidates:
@@ -386,6 +418,9 @@ class VisualWorkflowNodes:
                 "candidate_plan_ids_by_slide": by_slide,
                 "current_step": step,
             }
+            if decision_warnings:
+                # Dedupe while preserving order (same LLM outage across slides).
+                next_state["warnings"] = list(dict.fromkeys(decision_warnings))
             merged = cast(VisualWorkflowState, {**state, **next_state})
             self._persist(merged)
             logger.info("Generated layout candidates for %s slides", len(by_slide))
@@ -425,6 +460,7 @@ class VisualWorkflowNodes:
                         require_source=True,
                         drawing_hero=drawing
                         or plan.layout_family.value == "drawing_focus",
+                        asset_context=self._asset_context_for_plan(state, plan),
                     )
                     pairs.append((plan, report))
                 if not pairs:
@@ -489,6 +525,7 @@ class VisualWorkflowNodes:
                     design,
                     require_source=True,
                     drawing_hero=drawing,
+                    asset_context=self._asset_context_for_plan(state, plan),
                 )
                 plan.validation_status = (
                     LayoutValidationStatus.VALID
@@ -610,6 +647,7 @@ class VisualWorkflowNodes:
                     current_id=current_id,
                     candidate_ids=by_slide_candidates.get(slide_key, []),
                     design=design,
+                    state=state,
                 )
                 if replacement is None:
                     warnings.append(
@@ -651,6 +689,7 @@ class VisualWorkflowNodes:
         current_id: str | None,
         candidate_ids: list[str],
         design: object,
+        state: VisualWorkflowState,
     ):
         from archium.domain.visual.design_system import DesignSystem
 
@@ -669,6 +708,7 @@ class VisualWorkflowNodes:
                 design,
                 require_source=True,
                 drawing_hero=drawing,
+                asset_context=self._asset_context_for_plan(state, plan),
             )
             if report.valid or not any(
                 issue.severity.value in {"critical", "error"} for issue in report.issues
@@ -738,6 +778,7 @@ class VisualWorkflowNodes:
                     design,
                     require_source=True,
                     drawing_hero=drawing,
+                    asset_context=self._asset_context_for_plan(state, plan),
                 )
                 payload = report.model_dump(mode="json")
                 payload["layout_plan_id"] = plan_id

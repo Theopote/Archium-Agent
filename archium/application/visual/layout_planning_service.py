@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.asset_reference import (
+    build_asset_reference_context,
+    content_refs_from_plan,
+)
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.config.settings import Settings, get_settings
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
@@ -28,10 +34,15 @@ from archium.infrastructure.layout.layout_family_registry import get_layout_fami
 from archium.infrastructure.layout.layout_solver import LayoutSolver
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.visual_schemas import LayoutDecisionDraft
+from archium.logging import get_logger
 from archium.prompts.layout_plan import (
     LAYOUT_PLAN_SYSTEM_PROMPT,
     build_layout_plan_user_prompt,
 )
+
+logger = get_logger(__name__, operation="layout_planning")
+
+LAYOUT_DECISION_LLM_FALLBACK = "VISUAL.LAYOUT_DECISION_LLM_FALLBACK"
 
 
 class LayoutPlanningService:
@@ -44,6 +55,7 @@ class LayoutPlanningService:
         llm: LLMProvider | None = None,
         validator: LayoutValidationService | None = None,
         solver: LayoutSolver | None = None,
+        settings: Settings | None = None,
     ) -> None:
         self._session = session
         self._llm = llm
@@ -54,6 +66,14 @@ class LayoutPlanningService:
         self._intents = VisualIntentRepository(session)
         self._art = ArtDirectionRepository(session)
         self._design = DesignSystemRepository(session)
+        self._settings = settings or get_settings()
+        self._warnings: list[dict[str, Any]] = []
+
+    def drain_warnings(self) -> list[dict[str, Any]]:
+        """Return and clear structured warnings collected during the last plan call."""
+        warnings = list(self._warnings)
+        self._warnings.clear()
+        return warnings
 
     def plan_slide(
         self,
@@ -83,7 +103,9 @@ class LayoutPlanningService:
         art_direction_id: UUID | None,
         design_system_id: UUID,
         candidate_count: int = 3,
+        project_id: UUID | None = None,
     ) -> list[tuple[LayoutPlan, LayoutValidationReport]]:
+        self._warnings.clear()
         intent = self._intents.get(visual_intent_id)
         if intent is None:
             raise ValueError(f"VisualIntent {visual_intent_id} not found")
@@ -114,12 +136,21 @@ class LayoutPlanningService:
                 variant=variant,
             )
             plan = self._solver.generate(family, context)
+            asset_context = None
+            if project_id is not None:
+                asset_context = build_asset_reference_context(
+                    self._session,
+                    project_id=project_id,
+                    content_refs=content_refs_from_plan(plan),
+                    settings=self._settings,
+                )
             report = self._validator.validate(
                 plan,
                 design,
                 require_source=bool(content.source_text)
                 or family == LayoutFamily.DRAWING_FOCUS,
                 drawing_hero=drawing,
+                asset_context=asset_context,
             )
             plan.validation_status = (
                 LayoutValidationStatus.VALID
@@ -185,7 +216,6 @@ class LayoutPlanningService:
                     LayoutDecisionDraft,
                 )
                 if draft.layout_family in allowed:
-                    # Build variants around the LLM primary choice.
                     primary = draft
                     extras = self._rule_decisions(intent, asset_count, candidate_count)
                     merged = [primary]
@@ -198,10 +228,70 @@ class LayoutPlanningService:
                         if len(merged) >= candidate_count:
                             break
                     return merged[:candidate_count]
-            except Exception:
-                pass
+                fallback = self._rule_decisions(intent, asset_count, candidate_count)
+                self._record_llm_fallback(
+                    error_type="DisallowedLayoutFamily",
+                    fallback_family=fallback[0].layout_family,
+                    detail=f"llm_family={draft.layout_family}",
+                )
+                return fallback
+            except Exception as exc:
+                fallback = self._rule_decisions(intent, asset_count, candidate_count)
+                self._record_llm_fallback(
+                    error_type=type(exc).__name__,
+                    fallback_family=fallback[0].layout_family,
+                )
+                return fallback
 
         return self._rule_decisions(intent, asset_count, candidate_count)
+
+    def _record_llm_fallback(
+        self,
+        *,
+        error_type: str,
+        fallback_family: str,
+        detail: str | None = None,
+    ) -> None:
+        provider, model = self._llm_identity()
+        payload: dict[str, Any] = {
+            "code": LAYOUT_DECISION_LLM_FALLBACK,
+            "provider": provider,
+            "model": model,
+            "error_type": error_type,
+            "fallback_family": fallback_family,
+        }
+        if detail:
+            payload["detail"] = detail
+        self._warnings.append(payload)
+        # Structured log — never include prompts or secrets.
+        logger.warning(
+            "%s provider=%s model=%s error_type=%s fallback_family=%s%s",
+            LAYOUT_DECISION_LLM_FALLBACK,
+            provider,
+            model,
+            error_type,
+            fallback_family,
+            f" detail={detail}" if detail else "",
+            extra={
+                "rule_code": LAYOUT_DECISION_LLM_FALLBACK,
+                "llm_provider": provider,
+                "llm_model": model,
+                "error_type": error_type,
+                "fallback_family": fallback_family,
+            },
+        )
+
+    def _llm_identity(self) -> tuple[str, str]:
+        llm = self._llm
+        if llm is None:
+            return "none", "none"
+        provider = getattr(llm, "provider_name", None) or type(llm).__name__
+        model = getattr(llm, "model", None)
+        settings = getattr(llm, "_settings", None)
+        if settings is not None:
+            provider = getattr(settings, "llm_provider", None) or provider
+            model = model or getattr(settings, "llm_model", None)
+        return str(provider), str(model or "unknown")
 
     def _rule_decisions(
         self,
@@ -245,3 +335,20 @@ class LayoutPlanningService:
                 )
             )
         return decisions
+
+
+def format_layout_decision_warnings(warnings: list[dict[str, Any]]) -> list[str]:
+    """Human-readable lines for workflow / UI warning lists."""
+    lines: list[str] = []
+    for item in warnings:
+        if item.get("code") != LAYOUT_DECISION_LLM_FALLBACK:
+            continue
+        lines.append(
+            f"{LAYOUT_DECISION_LLM_FALLBACK} "
+            f"provider={item.get('provider', '?')} "
+            f"model={item.get('model', '?')} "
+            f"error_type={item.get('error_type', '?')} "
+            f"fallback_family={item.get('fallback_family', '?')}"
+            + (f" detail={item['detail']}" if item.get("detail") else "")
+        )
+    return lines

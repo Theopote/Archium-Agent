@@ -55,7 +55,15 @@ VisualIntent (+ ArtDirection hints)
 | Drawing（总图/平面等） | `contain` | `forbidden` |
 | Photo | 可用 `cover` | 允许安全裁切 |
 
-校验会检查越界、重叠、文字溢出、主视觉面积、留白、图纸拉伸等，并产出稳定 `rule_code`。
+校验会检查越界、重叠、文字溢出、主视觉面积、留白、图纸拉伸，以及 Asset 引用完整性：
+
+| rule_code | 含义 | 严重度 |
+|-----------|------|--------|
+| `LAYOUT.MISSING_ASSET_REFERENCE` | `content_ref` 不在项目 Asset 中 / 为空 | hero → ERROR；supporting → WARNING |
+| `LAYOUT.UNRESOLVED_ASSET_PATH` | Asset 存在但磁盘路径不可解析 | 同上 |
+| `LAYOUT.HERO_ASSET_MISSING` | 主图素材缺失或不可加载 | ERROR |
+
+并产出稳定 `rule_code`。Workflow 校验会注入 `AssetReferenceContext`；PPTX adapter 对未解析素材会标记 `asset_unresolved`，渲染为明确占位而非静默空白。
 
 ## Golden Cases
 
