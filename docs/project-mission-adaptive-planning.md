@@ -162,7 +162,8 @@ alembic current   # 应包含 010_planning_session_decouple
 ### Revision / 已知未知
 
 - Mission / Workstream / DeliverablePlan 通过 `MissionHistoryService` 等写入统一 `entity_revisions`（`presentation_id` 可为空），`change_source` 使用通用 `RevisionSource`（`GENERATED` / `MANUAL_EDIT` / `REGENERATION` / `CLARIFICATION` / `APPROVAL` 等），不再复用 `SlideChangeSource` 命名。
-- UI「关键问题」步展示五列：**已确认 / 推断 / 假设 / 冲突 / 待确认**，并支持缺口回答、按假设、暂缓，以及事实确认/驳回。
+- UI「关键问题」步展示已知/未知：**顶部计数概览** + 默认 **Tabs**（已确认 / 推断 / 假设 / 冲突 / 待确认）；宽屏可选手动切换并排五列。支持缺口回答、按假设、暂缓，以及事实确认/驳回。
+- 建筑师可用性测试记录模板：[`docs/architect-usability-test.md`](architect-usability-test.md)（耗时、看不懂字段、不愿答的问题、重复信息、退出步、Workstream vs Deliverable）。
 - 规划链路：`Project → PlanningSession → Mission → DeliverablePlan →`（仅 PRESENTATION）`Presentation`。
 
 ---

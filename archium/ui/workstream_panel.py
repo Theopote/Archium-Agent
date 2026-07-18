@@ -35,7 +35,10 @@ def render_workstream_panel(
     key_prefix: str = "ws",
 ) -> None:
     st.markdown("#### 工作路径")
-    st.caption("勾选本轮需要推进的能力路径。名称不会自动变成汇报章节大纲。")
+    st.caption(
+        "工作路径（Workstream）= 本轮要做哪些分析/研究能力。"
+        "它不是最终交付物，名称也不会自动变成汇报章节。"
+    )
 
     if not workstreams:
         st.info("尚未生成工作路径。请先完成关键问题并继续规划。")

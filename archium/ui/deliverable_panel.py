@@ -25,6 +25,10 @@ def render_deliverable_panel(
         st.info("尚未生成成果计划。请先确认工作路径并继续。")
         return
 
+    st.caption(
+        "成果（Deliverable）= 最终要交给甲方/团队的产出物（汇报、报告、清单等）。"
+        "与「工作路径」不同：路径是怎么做，成果是交付什么。"
+    )
     st.caption(f"计划版本 v{plan.version} · 状态 {plan.approval_status.value}")
     by_id = {ws.id: ws for ws in (workstreams or [])}
 
