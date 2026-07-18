@@ -54,11 +54,16 @@ pytest tests/golden/fixtures -v -m fixture_acceptance
 
 真实 LLM，手动或定期运行，**不进入默认 CI**：
 
-```bash
-set ARCHIUM_LIVE_LLM=1
-pytest tests/golden/live -v -m live_llm
+```powershell
+$env:ARCHIUM_LIVE_LLM = "1"
+py scripts/eval_mission_live.py          # Mission M1–M6 + 人工评分表
+pytest tests/golden/live -v -m live_llm  # 含 Mission live gates
 ```
 
+产物：`tests/golden/artifacts/live_mission/<run_id>/`（`result.json` + `SCORECARD.md`）。  
+评分量表与特别观察见 [live/README.md](live/README.md) / [live/EVALUATION_CHECKLIST.md](live/EVALUATION_CHECKLIST.md)。
+
+> Layer 1b Mock 只能证明 parser / persistence / workflow / bridge；**真实任务理解必须靠 Layer 3**。
 ## 全部 Golden 测试
 
 ```bash

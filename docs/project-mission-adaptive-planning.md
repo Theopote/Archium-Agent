@@ -195,6 +195,8 @@ UI 门面：`archium/ui/planning_service.py`。
 
 ## 7. Golden Scenarios（M1–M6）
 
+### Layer 1b — Mock regression（CI）
+
 ```bash
 pytest tests/golden/mission -v -m regression
 ```
@@ -207,6 +209,18 @@ pytest tests/golden/mission -v -m regression
 | M4 | 村庄更新 | 多主体；资源/居民/实施；反模板 |
 | M5 | 消防站新建 | 保留明确指标；无「面积待确认」 |
 | M6 | 园区绿色低碳专项 | consulting；排除施工图/设备选型/碳认证；报告非方案 PPT |
+
+### Layer 3 — Live API + 人工评分（必做下一轮）
+
+Mock 不能证明真实模型理解六种任务。用真实 API：
+
+```powershell
+$env:ARCHIUM_LIVE_LLM = "1"
+py scripts/eval_mission_live.py
+```
+
+人工评分（满分 100，及格 ≥70）：任务性质 15 · 尺度与服务深度 10 · 事实忠实度 20 · 关键未知 15 · 澄清问题价值 15 · Workstream 15 · Deliverable 10。  
+详见 `tests/golden/live/EVALUATION_CHECKLIST.md`。
 
 规划闸门集成测试：`pytest tests/integration/test_planning_workflow.py -v`。
 

@@ -1,4 +1,8 @@
-"""Layer 3: live model evaluation (manual / scheduled, not default CI)."""
+"""Layer 3: live presentation-pipeline evaluation (manual / scheduled).
+
+Mission M1–M6 live scoring lives in ``test_live_mission_evaluation.py`` and
+``scripts/eval_mission_live.py``. This module remains for Brief/Storyline live runs.
+"""
 
 from __future__ import annotations
 
@@ -15,9 +19,9 @@ pytestmark = [
 ]
 
 
-def test_live_model_evaluation_placeholder() -> None:
-    """Placeholder — implement periodic quality review against real LLM providers."""
+def test_live_presentation_evaluation_points_to_checklist() -> None:
+    """Presentation live eval is checklist-driven; Mission live eval is implemented."""
     pytest.skip(
-        "Live model evaluation is manual. "
-        "Copy a regression manifest, point to real fixtures, and review outputs offline."
+        "Presentation live eval: follow tests/golden/live/EVALUATION_CHECKLIST.md section B. "
+        "For Mission M1–M6, run: py scripts/eval_mission_live.py"
     )
