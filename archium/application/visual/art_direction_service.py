@@ -143,6 +143,45 @@ class ArtDirectionService:
         art.approve()
         return self._art_directions.save(art)
 
+    def update(self, art_direction_id: UUID, updates: dict[str, object]) -> ArtDirection:
+        """Apply user edits to an ArtDirection and mark pending re-approval."""
+        art = self._art_directions.get(art_direction_id)
+        if art is None:
+            raise ValueError(f"ArtDirection {art_direction_id} not found")
+        allowed = {
+            "concept_name",
+            "rationale",
+            "visual_tone",
+            "emotional_keywords",
+            "palette_strategy",
+            "typography_strategy",
+            "grid_strategy",
+            "image_strategy",
+            "drawing_strategy",
+            "diagram_strategy",
+            "annotation_strategy",
+            "cover_strategy",
+            "section_strategy",
+            "content_strategy",
+            "closing_strategy",
+            "pacing_strategy",
+            "consistency_rules",
+            "forbidden_styles",
+        }
+        payload = {key: value for key, value in updates.items() if key in allowed}
+        updated = art.model_copy(
+            update={
+                **payload,
+                "version": art.version + 1,
+                "approval_status": ApprovalStatus.PENDING,
+            }
+        )
+        updated.touch()
+        return self._art_directions.save(updated)
+
+    def get(self, art_direction_id: UUID) -> ArtDirection | None:
+        return self._art_directions.get(art_direction_id)
+
     def _ensure_design_system(self, design_system_id: UUID | None) -> UUID:
         if design_system_id is not None:
             existing = self._design_systems.get(design_system_id)

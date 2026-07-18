@@ -164,6 +164,7 @@ def _render_documents(project_id: UUID) -> None:
 
 def _render_generation_form(project_id: UUID) -> None:
     st.markdown("#### 生成汇报")
+    st.caption("生成 SlideSpec 后，可前往「视觉设计」进行 ArtDirection 与版式编排。")
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")

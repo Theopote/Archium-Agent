@@ -164,5 +164,6 @@ def render_module_status() -> None:
     marp_c, marp_h = module_status_marp_export()
     legacy_c, legacy_h = module_status_legacy_ppt()
     render_status("📁 项目工作台", pipeline_c, pipeline_h)
+    render_status("🎨 视觉设计", "green", "就绪")
     render_status("📝 Marp 导出", marp_c, marp_h)
     render_status("📊 快速 PPT", legacy_c, legacy_h)
