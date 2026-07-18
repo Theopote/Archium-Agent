@@ -179,31 +179,39 @@ def _render_generation_form(project_id: UUID) -> None:
             "必要章节（每行一项，或用顿号分隔）",
             placeholder="现状分析\n改造策略\n实施计划",
         )
-        col1, col2, col3, col4 = st.columns(4)
-        export_json = col1.checkbox("导出 JSON", value=True)
-        export_marp = col2.checkbox("导出 Marp Markdown", value=True)
-        export_pptx = col3.checkbox("导出 PPTX（Marp CLI）", value=False)
-        export_pdf = col4.checkbox("导出 PDF（Marp CLI）", value=False)
-        spec_col1, spec_col2 = st.columns(2)
-        export_presentation_spec = spec_col1.checkbox(
-            "导出 PresentationSpec JSON",
-            value=False,
-            help="生成 presentation.spec.json，供 PptxGenJS 或其它渲染器使用。",
-        )
-        export_editable_pptx = spec_col2.checkbox(
-            "导出可编辑 PPTX（PptxGenJS）",
-            value=False,
-            help="需 Node.js，并在 archium/infrastructure/renderers/pptxgen 目录运行 npm install。",
-        )
-        export_preview_images = st.checkbox(
-            "生成幻灯片预览图 PNG（需 Marp CLI）",
-            value=export_marp,
-            help="导出 Marp Markdown 后，通过 marp --images 生成逐页 PNG 预览。",
-        )
-        review_col1, review_col2, review_col3 = st.columns(3)
-        require_brief_review = review_col1.checkbox("Brief 生成后暂停审核", value=True)
-        require_storyline_review = review_col2.checkbox("Storyline 生成后暂停审核", value=True)
-        require_slides_review = review_col3.checkbox("SlideSpec 生成后暂停审核", value=False)
+        with st.expander("高级选项", expanded=False):
+            st.caption("导出格式与分阶段审核暂停。默认即可生成；需要时再展开调整。")
+            col1, col2, col3, col4 = st.columns(4)
+            export_json = col1.checkbox("导出 JSON", value=True)
+            export_marp = col2.checkbox("导出 Marp Markdown", value=True)
+            export_pptx = col3.checkbox("导出 PPTX（Marp CLI）", value=False)
+            export_pdf = col4.checkbox("导出 PDF（Marp CLI）", value=False)
+            spec_col1, spec_col2 = st.columns(2)
+            export_presentation_spec = spec_col1.checkbox(
+                "导出 PresentationSpec JSON",
+                value=False,
+                help="生成 presentation.spec.json，供 PptxGenJS 或其它渲染器使用。",
+            )
+            export_editable_pptx = spec_col2.checkbox(
+                "导出可编辑 PPTX（PptxGenJS）",
+                value=False,
+                help="需 Node.js，并在 archium/infrastructure/renderers/pptxgen 目录运行 npm install。",
+            )
+            export_preview_images = st.checkbox(
+                "生成幻灯片预览图 PNG（需 Marp CLI）",
+                value=export_marp,
+                help="导出 Marp Markdown 后，通过 marp --images 生成逐页 PNG 预览。",
+            )
+            review_col1, review_col2, review_col3 = st.columns(3)
+            require_brief_review = review_col1.checkbox("Brief 生成后暂停审核", value=True)
+            require_storyline_review = review_col2.checkbox(
+                "Storyline 生成后暂停审核",
+                value=True,
+            )
+            require_slides_review = review_col3.checkbox(
+                "SlideSpec 生成后暂停审核",
+                value=False,
+            )
         submitted = st.form_submit_button("运行汇报管线", use_container_width=True)
 
     if not submitted:
@@ -249,7 +257,7 @@ def _render_generation_form(project_id: UUID) -> None:
             return
 
     if result.awaiting_review:
-        st.warning("工作流已暂停，请在下方审核 Brief / Storyline 后继续。")
+        st.warning("工作流已暂停，请切换到「审核」标签页继续处理 Brief / Storyline。")
     elif result.succeeded:
         st.success(f"汇报已生成，共 {len(result.slides)} 页。")
     else:
@@ -309,7 +317,7 @@ def _render_last_result() -> None:
             st.caption(
                 f"质量审核：{len(issues)} 条记录，{open_count} 条待处理"
                 + (f"，{critical_count} 条严重" if critical_count else "")
-                + "。详见「质量审核」标签页。"
+                + "。详见「审核」标签页。"
             )
 
     if result.errors:
@@ -369,28 +377,39 @@ def render() -> None:
     _init_session_state()
     st.markdown("### 项目工作台")
     st.caption("管理项目资料，运行结构化汇报生成管线")
-    st.info("推荐先走「项目任务」：自由描述任务 → 澄清 → 工作路径 → 成果 → 再进入汇报主链。直接填 Brief 仍可作为快捷路径。")
+    st.info(
+        "推荐先走「项目任务」：自由描述任务 → 澄清 → 工作路径 → 成果 → 再进入汇报主链。"
+        "直接填 Brief 仍可作为快捷路径。"
+    )
 
     _render_create_project()
     project_id = _render_project_selector()
     if project_id is None:
         return
 
-    st.divider()
     _render_overview(project_id)
-    st.divider()
-    render_project_review_quality_dashboard(project_id)
-    st.divider()
-    _render_documents(project_id)
-    st.divider()
-    render_chunk_panel(project_id)
-    st.divider()
-    render_fact_ledger_panel(project_id)
-    st.divider()
-    render_asset_metadata_panel(project_id)
-    st.divider()
-    _render_generation_form(project_id)
-    _render_review_section(project_id)
-    _render_last_result()
-    st.divider()
-    _render_history(project_id)
+
+    tab_materials, tab_generate, tab_review, tab_history = st.tabs(
+        ["资料管理", "生成", "审核", "历史"]
+    )
+
+    with tab_materials:
+        _render_documents(project_id)
+        st.divider()
+        render_chunk_panel(project_id)
+        st.divider()
+        render_fact_ledger_panel(project_id)
+        st.divider()
+        render_asset_metadata_panel(project_id)
+
+    with tab_generate:
+        _render_generation_form(project_id)
+        _render_last_result()
+
+    with tab_review:
+        render_project_review_quality_dashboard(project_id)
+        st.divider()
+        _render_review_section(project_id)
+
+    with tab_history:
+        _render_history(project_id)
