@@ -11,6 +11,7 @@ from archium.application.image_search_settings_service import ImageSearchSetting
 from archium.application.visual_fallback_service import VisualFallbackService
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
+from archium.domain.fact import ProjectFact
 from archium.domain.fallback_image import FallbackImage
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_spec import PresentationSpec

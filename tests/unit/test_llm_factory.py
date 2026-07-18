@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from archium.config.settings import Settings
 from archium.infrastructure.llm.factory import create_llm_provider
@@ -26,7 +26,9 @@ def test_resolve_provider_settings_uses_ui_settings_in_streamlit_context() -> No
     from archium.infrastructure.llm import factory
 
     ui_settings = Settings(_env_file=None, llm_api_key="ui-key")
-    with patch("streamlit.runtime.scriptrunner.get_script_run_ctx", return_value=object()):
-        with patch("archium.ui.llm_settings.get_ui_effective_settings", return_value=ui_settings):
-            resolved = factory._resolve_provider_settings(None)
+    with (
+        patch("streamlit.runtime.scriptrunner.get_script_run_ctx", return_value=object()),
+        patch("archium.ui.llm_settings.get_ui_effective_settings", return_value=ui_settings),
+    ):
+        resolved = factory._resolve_provider_settings(None)
     assert resolved.llm_api_key == "ui-key"

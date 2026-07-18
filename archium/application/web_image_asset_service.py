@@ -14,6 +14,7 @@ from archium.domain.enums import AssetType
 from archium.domain.fallback_image import FallbackImage
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import AssetRepository
+from archium.infrastructure.images.web_search.models import WebImageCandidate
 
 _WEB_IMPORT_DIR = "web_imports"
 _METADATA_SOURCE_URL = "web_source_url"
@@ -82,7 +83,10 @@ class WebImageAssetService:
         provider: str,
     ) -> Asset:
         """Download one preview candidate into the project asset library."""
-        from archium.infrastructure.images.web_search.downloader import download_image, is_safe_https_url
+        from archium.infrastructure.images.web_search.downloader import (
+            download_image,
+            is_safe_https_url,
+        )
 
         if candidate.page_url:
             existing = self._find_by_source_url(project_id, candidate.page_url)

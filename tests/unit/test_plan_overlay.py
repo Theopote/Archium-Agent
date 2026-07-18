@@ -10,11 +10,10 @@ from archium.domain.plan_overlay import (
     PLAN_LEGEND_KEY,
     PLAN_NORTH_ARROW_KEY,
     PLAN_SCALE_LABEL_KEY,
-    PLAN_SCALE_PENDING_KEY,
+    PlanOverlayMetadata,
     plan_overlay_from_asset,
     plan_overlay_to_metadata,
 )
-from archium.domain.plan_overlay import PlanLegendItem, PlanOverlayMetadata
 
 
 def test_plan_overlay_from_asset_empty_metadata() -> None:

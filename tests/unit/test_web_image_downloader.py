@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.infrastructure.images.web_search.downloader import download_image, is_safe_https_url
 
 

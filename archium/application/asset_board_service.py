@@ -7,11 +7,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.asset_provenance import format_asset_provenance
 from archium.application.asset_matching_service import (
     AssetMatchingService,
     score_asset_for_requirement,
 )
+from archium.application.asset_provenance import format_asset_provenance
 from archium.domain.asset import Asset
 from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement

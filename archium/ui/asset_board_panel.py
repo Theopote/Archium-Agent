@@ -10,10 +10,10 @@ import streamlit as st
 from archium.application.asset_board_service import AssetBoardRow, AssetBoardService
 from archium.application.asset_provenance import format_asset_option_label
 from archium.config.settings import get_settings
-from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
-from archium.ui.web_image_preview_panel import render_web_image_preview_panel
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
+from archium.ui.web_image_preview_panel import render_web_image_preview_panel
 
 
 def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None:

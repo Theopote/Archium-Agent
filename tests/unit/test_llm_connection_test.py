@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-from openai import AuthenticationError, RateLimitError
-
 from archium.infrastructure.llm.connection_test import verify_llm_connection
+from openai import AuthenticationError, RateLimitError
 
 
 def _mock_client(*, content: str = "ARCHIUM_CONNECTION_OK", side_effect: Exception | None = None) -> MagicMock:

@@ -7,15 +7,15 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.ui.llm_settings import get_ui_effective_settings
 from archium.domain.enums import ProjectType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.ui.asset_metadata_panel import render_asset_metadata_panel
 from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.error_handlers import format_user_error
-from archium.ui.asset_metadata_panel import render_asset_metadata_panel
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
+from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
 from archium.ui.review_panel import render_review_panel
 from archium.ui.workspace_service import (

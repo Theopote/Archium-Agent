@@ -11,7 +11,11 @@ from archium.domain.enums import AssetType, ProjectType, VisualType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.infrastructure.database.repositories import AssetRepository, PresentationRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    AssetRepository,
+    PresentationRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.images.web_search.models import WebImageCandidate
 from archium.infrastructure.images.web_search.service import WebImageSearchService
 from sqlalchemy.orm import Session

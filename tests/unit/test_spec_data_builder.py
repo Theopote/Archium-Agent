@@ -7,7 +7,11 @@ from uuid import uuid4
 from archium.domain.enums import SlideType, VerificationStatus, VisualType
 from archium.domain.fact import ProjectFact
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.infrastructure.renderers.spec_data_builder import build_chart, build_table, resolve_numeric_layout
+from archium.infrastructure.renderers.spec_data_builder import (
+    build_chart,
+    build_table,
+    resolve_numeric_layout,
+)
 
 
 def _slide(**overrides: object) -> SlideSpec:

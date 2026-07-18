@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from archium.config.llm_config import get_effective_settings
-from archium.infrastructure.credentials.resolver import resolve_llm_api_key
 from archium.config.settings import Settings
 from archium.domain.llm_profile import LLMProfile
+from archium.infrastructure.credentials.resolver import resolve_llm_api_key
 
 
 def _profile(**overrides: object) -> LLMProfile:

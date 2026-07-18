@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 import keyring
 from keyring.errors import KeyringError, PasswordDeleteError
 
@@ -24,10 +26,8 @@ class CredentialStore:
             return None
 
     def delete(self, credential_key: str) -> None:
-        try:
+        with contextlib.suppress(PasswordDeleteError):
             keyring.delete_password(self._service_name, credential_key)
-        except PasswordDeleteError:
-            pass
 
     def has_credential(self, credential_key: str) -> bool:
         return bool(self.get(credential_key))

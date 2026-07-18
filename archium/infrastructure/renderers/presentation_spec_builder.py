@@ -23,7 +23,11 @@ from archium.domain.presentation_spec import (
     SpecTimelineItem,
 )
 from archium.domain.slide import SlideSpec
-from archium.infrastructure.renderers.spec_data_builder import build_chart, build_table, resolve_numeric_layout
+from archium.infrastructure.renderers.spec_data_builder import (
+    build_chart,
+    build_table,
+    resolve_numeric_layout,
+)
 
 _LAYOUT_TITLE = "title"
 _LAYOUT_THESIS = "thesis"

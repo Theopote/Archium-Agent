@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import ipaddress
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 

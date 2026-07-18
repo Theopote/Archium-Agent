@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from archium.config.settings import Settings, get_settings
+from archium.config.settings import Settings
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.llm.mock import MockLLMProvider
 from archium.infrastructure.llm.openai_compatible import OpenAICompatibleProvider

@@ -11,7 +11,10 @@ from archium.domain.enums import VisualType
 from archium.domain.fact import ProjectFact
 from archium.domain.fallback_image import FallbackImage
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.infrastructure.credentials.resolver import resolve_pexels_api_key, resolve_unsplash_access_key
+from archium.infrastructure.credentials.resolver import (
+    resolve_pexels_api_key,
+    resolve_unsplash_access_key,
+)
 from archium.infrastructure.images.web_search.downloader import download_image, is_safe_https_url
 from archium.infrastructure.images.web_search.models import WebImageCandidate
 from archium.infrastructure.images.web_search.pexels import PexelsClient

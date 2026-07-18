@@ -15,7 +15,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.llm_config import get_effective_settings
-from archium.config.settings import Settings, get_settings
+from archium.config.settings import Settings
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import PresentationType, ProjectType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline

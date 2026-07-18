@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from archium.infrastructure.credentials.resolver import PEXELS_CREDENTIAL_KEY, resolve_pexels_api_key
+from archium.infrastructure.credentials.resolver import (
+    PEXELS_CREDENTIAL_KEY,
+    resolve_pexels_api_key,
+)
 from archium.infrastructure.credentials.store import CredentialStore
 
 
