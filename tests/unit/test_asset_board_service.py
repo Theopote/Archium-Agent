@@ -147,3 +147,67 @@ def test_rematch_refreshes_board(
 
     assert view.matched_count == 1
     assert view.rows[0].candidate_asset_id is not None
+
+
+def test_build_board_marks_web_import_provenance_and_eligibility(
+    db_session: Session,
+    board_context: tuple[object, object, object],
+) -> None:
+    project_id, presentation_id, asset_id = board_context
+    AssetRepository(db_session).update(
+        AssetRepository(db_session).get_by_id(asset_id).model_copy(  # type: ignore[union-attr]
+            update={
+                "tags": ["web_import", "pexels"],
+                "metadata": {
+                    "provider": "pexels",
+                    "attribution": "Photo by Alex on Pexels",
+                },
+            }
+        )
+    )
+    pres_repo = PresentationRepository(db_session)
+    pres_repo.save_slide(
+        SlideSpec(
+            presentation_id=presentation_id,  # type: ignore[arg-type]
+            chapter_id="ch1",
+            order=0,
+            title="效果图",
+            message="入口",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.RENDERING,
+                    description="透视",
+                    required=True,
+                    preferred_asset_ids=[asset_id],  # type: ignore[list-item]
+                )
+            ],
+        )
+    )
+    pres_repo.save_slide(
+        SlideSpec(
+            presentation_id=presentation_id,  # type: ignore[arg-type]
+            chapter_id="ch1",
+            order=1,
+            title="另一页",
+            message="无素材",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PHOTO,
+                    description="现场",
+                    required=True,
+                )
+            ],
+        )
+    )
+
+    rows = AssetBoardService(db_session).build_board(
+        project_id,  # type: ignore[arg-type]
+        presentation_id,  # type: ignore[arg-type]
+    ).rows
+    matched = next(row for row in rows if row.candidate_asset_id == asset_id)
+    assert matched.asset_source is not None
+    assert "网络搜图" in matched.asset_source
+    assert "pexels" in matched.asset_source
+
+    missing = next(row for row in rows if row.candidate_asset_id is None)
+    assert missing.web_search_eligible is True

@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.asset_provenance import format_asset_provenance
 from archium.application.asset_matching_service import (
     AssetMatchingService,
     score_asset_for_requirement,
@@ -43,6 +44,7 @@ class AssetBoardRow:
     needs_crop: bool
     needs_highlight: bool
     low_resolution: bool
+    web_search_eligible: bool = False
 
 
 @dataclass
@@ -183,8 +185,13 @@ class AssetBoardService:
             if asset.width and asset.height:
                 resolution = f"{asset.width}×{asset.height}"
             aspect_ratio = asset.aspect_ratio
-            if asset.document_id is not None:
-                asset_source = document_names.get(asset.document_id, "项目资料")
+            asset_source = format_asset_provenance(asset, document_names=document_names)
+
+        web_search_eligible = (
+            asset_id is None
+            and requirement.type
+            in {VisualType.RENDERING, VisualType.SITE_PHOTO, VisualType.REFERENCE_CASE}
+        )
 
         return AssetBoardRow(
             slide_id=slide.id,
@@ -206,6 +213,7 @@ class AssetBoardService:
             needs_crop=requirement.needs_crop,
             needs_highlight=requirement.needs_highlight,
             low_resolution=low_resolution,
+            web_search_eligible=web_search_eligible,
         )
 
     def _document_name_map(self, assets: list[Asset]) -> dict[UUID, str]:

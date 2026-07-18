@@ -91,6 +91,28 @@ class WebImageSearchService:
                     )
         return None
 
+    def search_candidates(
+        self,
+        slide: SlideSpec,
+        requirement: VisualRequirement,
+        *,
+        facts: list[ProjectFact] | None = None,
+        limit: int = 6,
+    ) -> tuple[str, list[tuple[str, WebImageCandidate]]]:
+        """Return query text and provider/candidate pairs without downloading."""
+        query = build_search_query(slide, requirement, facts=facts)
+        results: list[tuple[str, WebImageCandidate]] = []
+        for provider in self._build_providers():
+            candidates = provider.search(
+                query,
+                per_page=self._settings.web_image_search_per_page,
+            )
+            for candidate in candidates:
+                results.append((provider.provider_name, candidate))
+                if len(results) >= limit:
+                    return query, results
+        return query, results
+
     def _build_providers(self) -> list[WebSearchProvider]:
         if self._providers is not None:
             return self._providers

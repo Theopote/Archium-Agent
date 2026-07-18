@@ -305,3 +305,8 @@ def _render_image_search_settings() -> None:
         st.info(f"已配置 {' / '.join(providers)}，导出时将按顺序尝试检索授权配图。")
     else:
         st.warning("尚未配置搜图 API Key。可在此页面配置，或在 `.env` 中设置 `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY`。")
+
+    st.divider()
+    from archium.ui.visual_qa_corpus_panel import render_visual_qa_corpus_panel
+
+    render_visual_qa_corpus_panel()

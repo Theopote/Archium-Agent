@@ -8,7 +8,10 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.asset_board_service import AssetBoardRow, AssetBoardService
+from archium.application.asset_provenance import format_asset_option_label
+from archium.config.settings import get_settings
 from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
+from archium.ui.web_image_preview_panel import render_web_image_preview_panel
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 
@@ -46,7 +49,7 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
             "需求描述": row.description,
             "候选素材": row.asset_filename or "—",
             "推荐分": f"{row.match_score:.2f}" if row.match_score is not None else "—",
-            "来源": row.asset_source or "—",
+            "来源": row.asset_source or ("可网络搜图" if row.web_search_eligible else "—"),
             "页": row.asset_page or "—",
             "分辨率": row.resolution or "—",
             "宽高比": f"{row.aspect_ratio:.2f}" if row.aspect_ratio else "—",
@@ -72,8 +75,9 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
     )
     selected = next(row for row in board.rows if _row_key(row) == selected_key)
 
-    asset_options = {str(asset.id): asset.filename for asset in assets}
-    asset_options = {"": "— 未选择 —", **asset_options}
+    asset_options = {"": "— 未选择 —"}
+    for asset in assets:
+        asset_options[str(asset.id)] = format_asset_option_label(asset)
     current_asset = str(selected.candidate_asset_id) if selected.candidate_asset_id else ""
     picked_asset = st.selectbox(
         "候选素材",
@@ -150,7 +154,15 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
         except WorkflowError as exc:
             st.error(str(exc))
 
-    _render_asset_preview(selected, assets)
+    _render_asset_preview(project_id, selected, assets)
+    render_web_image_preview_panel(
+        project_id=project_id,
+        presentation_id=presentation_id,
+        slide=_load_slide(selected.slide_id),
+        requirement=_load_requirement(selected),
+        requirement_index=selected.requirement_index,
+        web_search_eligible=selected.web_search_eligible,
+    )
     if picked_asset:
         render_plan_overlay_editor_for_asset(
             asset_id=UUID(picked_asset),
@@ -163,13 +175,31 @@ def _row_key(row: AssetBoardRow) -> str:
     return f"{row.slide_id}:{row.requirement_index}"
 
 
-def _render_asset_preview(selected: AssetBoardRow, assets: list) -> None:
+def _load_slide(slide_id: UUID) -> object:
+    with get_session() as session:
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        slide = PresentationRepository(session).get_slide(slide_id)
+        if slide is None:
+            raise WorkflowError(f"Slide {slide_id} not found")
+        return slide
+
+
+def _load_requirement(row: AssetBoardRow):
+    slide = _load_slide(row.slide_id)
+    return slide.visual_requirements[row.requirement_index]  # type: ignore[union-attr]
+
+
+def _render_asset_preview(project_id: UUID, selected: AssetBoardRow, assets: list) -> None:
     if selected.candidate_asset_id is None:
         return
     asset = next((item for item in assets if item.id == selected.candidate_asset_id), None)
     if asset is None:
         return
+    settings = get_settings()
     path = Path(asset.path)
+    if not path.is_absolute():
+        path = settings.project_storage_path / str(project_id) / path
     if not path.exists():
         st.caption(f"预览不可用：{path}")
         return

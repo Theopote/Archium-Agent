@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
@@ -70,6 +70,55 @@ class WebImageAssetService:
             )
         )
         return self._to_fallback(asset, image, absolute_path=absolute_path)
+
+    def import_candidate(
+        self,
+        project_id: UUID,
+        candidate: WebImageCandidate,
+        *,
+        slide: SlideSpec,
+        requirement: VisualRequirement,
+        search_query: str,
+        provider: str,
+    ) -> Asset:
+        """Download one preview candidate into the project asset library."""
+        from archium.infrastructure.images.web_search.downloader import download_image, is_safe_https_url
+
+        if candidate.page_url:
+            existing = self._find_by_source_url(project_id, candidate.page_url)
+            if existing is not None:
+                return existing
+
+        if not is_safe_https_url(candidate.download_url):
+            raise ValueError(f"Refusing to download from untrusted URL: {candidate.download_url}")
+
+        project_dir = self._settings.project_storage_path / str(project_id) / _WEB_IMPORT_DIR
+        project_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"web_{provider}_{uuid4().hex[:8]}.jpg"
+        dest_path = project_dir / filename
+        download_image(
+            candidate.download_url,
+            dest_path,
+            timeout=self._settings.web_image_search_timeout_seconds,
+        )
+        relative = f"{_WEB_IMPORT_DIR}/{dest_path.name}".replace("\\", "/")
+        return self._assets.create(
+            Asset(
+                project_id=project_id,
+                filename=dest_path.name,
+                path=relative,
+                asset_type=self._asset_type_for(requirement),
+                description=(requirement.description or slide.title).strip() or None,
+                tags=["web_import", provider, requirement.type.value],
+                metadata={
+                    _METADATA_SOURCE_URL: candidate.page_url,
+                    "attribution": candidate.attribution,
+                    "visual_type_hint": requirement.type.value,
+                    "search_query": search_query,
+                    "provider": provider,
+                },
+            )
+        )
 
     def _find_by_source_url(self, project_id: UUID, source_url: str) -> Asset | None:
         for asset in self._assets.list_by_project(project_id):

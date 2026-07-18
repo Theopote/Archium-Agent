@@ -99,3 +99,42 @@ def test_web_search_skips_site_plan_requirements() -> None:
     service = WebImageSearchService(settings)
     assert service.can_search(VisualType.SITE_PLAN) is False
     assert service.resolve_requirement(slide, slide.visual_requirements[0], 0, output_dir=Path(".")) is None
+
+
+def test_search_candidates_returns_without_download() -> None:
+    from archium.infrastructure.images.web_search.models import WebImageCandidate
+
+    slide = SlideSpec(
+        id=uuid4(),
+        presentation_id=uuid4(),
+        chapter_id="ch1",
+        order=0,
+        title="效果图",
+        message="入口",
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.RENDERING,
+                description="透视",
+                required=True,
+            )
+        ],
+    )
+
+    class FakeProvider:
+        provider_name = "pexels"
+
+        def search(self, query: str, *, per_page: int = 5):
+            return [
+                WebImageCandidate(
+                    download_url="https://images.pexels.com/photos/1.jpeg",
+                    page_url="https://www.pexels.com/photo/1/",
+                    attribution="Photo by Alex on Pexels",
+                )
+            ]
+
+    settings = Settings(_env_file=None, web_image_search_enabled=True, pexels_api_key="key")
+    service = WebImageSearchService(settings, providers=[FakeProvider()])  # type: ignore[list-item]
+    query, items = service.search_candidates(slide, slide.visual_requirements[0], limit=3)
+    assert "透视" in query
+    assert len(items) == 1
+    assert items[0][0] == "pexels"
