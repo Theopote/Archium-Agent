@@ -256,32 +256,22 @@ cp .env.example .env
 
 ## 环境变量
 
-| 变量 | 说明 | 必填 |
-|------|------|------|
-| `DATABASE_PATH` | SQLite 数据库文件路径（相对项目根目录），默认 `data/database/archium.db` | 否 |
-| `DATABASE_URL` | SQLAlchemy 连接 URL 覆盖项（未设置时使用 `DATABASE_PATH`） | 否 |
-| `GEMINI_API_KEY` / `LLM_API_KEY` | OpenAI 兼容 API Key（如 Gemini） | 否（调用 LLM 时需要） |
-| `LLM_BASE_URL` | API Base URL | 否 |
-| `LLM_MODEL` | 模型名称，默认 `gemini-2.5-flash` | 否 |
-| `EMBEDDING_API_KEY` | Embedding 专用 API Key（未设置时回退到 LLM Key） | 否 |
-| `EMBEDDING_BASE_URL` | Embedding API Base URL（未设置时回退到 LLM Base URL） | 否 |
-| `EMBEDDING_MODEL` | Embedding 模型名称 | 否（启用向量检索时需要） |
-| `RETRIEVAL_ENABLED` | 是否启用向量检索，默认 `false` | 否 |
-| `WORKFLOW_CHECKPOINT_PATH` | LangGraph SqliteSaver checkpoint 路径 | 否 |
-| `BLOCK_EXPORT_ON_CRITICAL_REVIEW` | 为 `true` 时，未处理的严重审核问题将阻断 JSON/Marp 导出 | 否 |
-| `LLM_PROFESSIONAL_REVIEW_ENABLED` | 为 `true` 且已配置 LLM 时，额外运行 LLM 专业审核 | 否 |
-| `FACT_EXTRACTION_ENABLED` | 为 `true` 且 LLM 可用时，在检索上下文后提取 ProjectFact | 否 |
-| `SLIDE_REPAIR_ENABLED` | 为 `true` 且 LLM 可用时，自动修复页面级严重/高优先级审核问题 | 否 |
-| `SLIDE_REPAIR_MAX_ROUNDS` | 单次工作流内自动修复→四层复审的最大轮次，默认 `2` | 否 |
-| `MARP_COMMAND` | Marp CLI 命令，默认 `marp` | 否 |
-| `MARP_PREVIEW_IMAGES_ENABLED` | 导出 Marp Markdown 时是否生成 PNG 预览图，默认 `true` | 否 |
-| `MARP_PREVIEW_IMAGE_FORMAT` | 预览图格式（`png` 或 `jpeg`），默认 `png` | 否 |
-| `PPTXGEN_NODE_COMMAND` | Node.js 可执行文件，默认 `node` | 否 |
-| `PPTXGEN_SCRIPT_PATH` | PptxGenJS 渲染脚本路径，默认 bundled `render.mjs` | 否 |
-| `DISCORD_BOT_TOKEN` | Discord Bot Token（遗留模块） | 否 |
-| `DISCORD_USER_ID` | Discord 用户 ID（遗留模块） | 否 |
+所有开关的**默认值、环境变量名与说明**以 [`archium/config/settings.py`](archium/config/settings.py) 为唯一事实源。
 
-> **无 API Key 时应用可以正常启动**；只有执行 LLM 相关功能时才会提示未配置。
+| 产物 | 说明 |
+|------|------|
+| [`docs/configuration-reference.md`](docs/configuration-reference.md) | 按能力域分组的完整参考（`retrieval.*` / `review.*` / `repair.*` / `render.*` 等） |
+| [`.env.example`](.env.example) | 可复制的环境变量模板（含默认值注释） |
+
+以上文件由 `scripts/generate_config_docs.py` **自动生成**；CI 会校验与 `settings.py` 一致，请勿手工编辑。
+
+```bash
+python scripts/generate_config_docs.py        # 本地更新
+python scripts/generate_config_docs.py --check  # CI 一致性检查
+```
+
+> **无 API Key 时应用可以正常启动**；只有执行 LLM 相关功能时才会提示未配置。  
+> 常见误区：`BLOCK_EXPORT_ON_CRITICAL_REVIEW` 与 `SLIDE_REPAIR_ENABLED` 默认均为 **`false`**；`FACT_EXTRACTION_ENABLED` 默认为 **`true`**。以配置参考文档为准。
 
 ## 数据库初始化与迁移
 

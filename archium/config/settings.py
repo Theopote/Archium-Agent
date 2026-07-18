@@ -16,6 +16,10 @@ class Settings(BaseSettings):
 
     Missing API keys do not prevent startup; LLM calls fail at runtime with
     a clear :class:`ConfigurationError`.
+
+    Domain groupings (``retrieval.*``, ``review.*``, ``repair.*``, ``render.*``)
+    are documented in :mod:`archium.config.registry` and generated into
+    ``docs/configuration-reference.md``.
     """
 
     model_config = SettingsConfigDict(
@@ -25,94 +29,148 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    app_name: str = "Archium"
-    environment: str = "development"
-    log_level: str = "INFO"
+    # ── app.* ────────────────────────────────────────────────────────────────
+    app_name: str = Field(default="Archium", description="Application display name.")
+    environment: str = Field(
+        default="development",
+        description="Runtime environment label (development, staging, production).",
+    )
+    log_level: str = Field(default="INFO", description="Root logger level.")
 
+    # ── storage.* ────────────────────────────────────────────────────────────
     database_path: Path = Field(
         default=Path("data/database/archium.db"),
         validation_alias=AliasChoices("DATABASE_PATH"),
+        description="SQLite database file path, relative to project root unless absolute.",
     )
     database_url: str | None = Field(
         default=None,
         validation_alias=AliasChoices("DATABASE_URL"),
         description="Optional SQLAlchemy URL override. When unset, database_path is used.",
     )
-    workflow_checkpoint_path: Path = Path("data/database/workflow_checkpoints.db")
-    project_storage_path: Path = Path("data/projects")
-    output_path: Path = Path("data/outputs")
-    chroma_path: Path = Path("data/chroma")
+    workflow_checkpoint_path: Path = Field(
+        default=Path("data/database/workflow_checkpoints.db"),
+        description="LangGraph SqliteSaver checkpoint database path.",
+    )
+    project_storage_path: Path = Field(
+        default=Path("data/projects"),
+        description="Uploaded project documents and assets root directory.",
+    )
+    output_path: Path = Field(
+        default=Path("data/outputs"),
+        description="Generated presentation export output directory.",
+    )
+    chroma_path: Path = Field(
+        default=Path("data/chroma"),
+        description="Chroma vector index storage directory.",
+    )
 
-    llm_provider: str = "openai_compatible"
+    # ── llm.* ────────────────────────────────────────────────────────────────
+    llm_provider: str = Field(
+        default="openai_compatible",
+        description="LLM provider backend identifier.",
+    )
     llm_api_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("LLM_API_KEY", "GEMINI_API_KEY"),
+        description="OpenAI-compatible API key (e.g. Gemini). Unset allows startup; LLM calls fail at runtime.",
     )
     llm_base_url: str | None = Field(
         default="https://generativelanguage.googleapis.com/v1beta/openai/",
         validation_alias=AliasChoices("LLM_BASE_URL", "GEMINI_BASE_URL"),
+        description="OpenAI-compatible API base URL.",
     )
     llm_model: str = Field(
         default="gemini-2.5-flash",
         validation_alias=AliasChoices("LLM_MODEL", "GEMINI_MODEL"),
+        description="Default chat/completion model name.",
     )
-    llm_max_retries: int = Field(default=2, ge=0, le=5)
-    llm_repair_attempts: int = Field(default=2, ge=0, le=5)
-    llm_timeout_seconds: float = Field(default=60.0, gt=0)
+    llm_max_retries: int = Field(default=2, ge=0, le=5, description="Maximum LLM request retries.")
+    llm_repair_attempts: int = Field(
+        default=2,
+        ge=0,
+        le=5,
+        description="Maximum structured-output repair attempts per LLM call.",
+    )
+    llm_timeout_seconds: float = Field(default=60.0, gt=0, description="LLM request timeout in seconds.")
 
-    embedding_provider: str = "openai_compatible"
+    # ── embedding.* ──────────────────────────────────────────────────────────
+    embedding_provider: str = Field(
+        default="openai_compatible",
+        description="Embedding provider backend identifier.",
+    )
     embedding_api_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("EMBEDDING_API_KEY"),
+        description="Embedding API key. Falls back to LLM key when unset.",
     )
     embedding_base_url: str | None = Field(
         default=None,
         validation_alias=AliasChoices("EMBEDDING_BASE_URL"),
+        description="Embedding API base URL. Falls back to LLM base URL when unset.",
     )
     embedding_model: str | None = Field(
         default=None,
         validation_alias=AliasChoices("EMBEDDING_MODEL"),
+        description="Embedding model name. Required for remote embedding providers when retrieval is enabled.",
     )
     embedding_dimensions: int | None = Field(
         default=None,
         ge=1,
         validation_alias=AliasChoices("EMBEDDING_DIMENSIONS"),
+        description="Optional embedding vector dimension override.",
     )
 
-    retrieval_enabled: bool = False
-    retrieval_top_k: int = Field(default=12, ge=1, le=50)
-    chunk_context_max_chars: int = Field(default=600, ge=100, le=2000)
+    # ── retrieval.* ──────────────────────────────────────────────────────────
+    retrieval_enabled: bool = Field(
+        default=False,
+        description="Enable Chroma vector retrieval during generation. Auto-disabled when embedding is not configured.",
+    )
+    retrieval_top_k: int = Field(default=12, ge=1, le=50, description="Top-k chunks returned from vector search.")
+    chunk_context_max_chars: int = Field(
+        default=600,
+        ge=100,
+        le=2000,
+        description="Maximum characters injected per retrieved chunk into LLM context.",
+    )
 
-    embedding_chunking_enabled: bool = True
-    embedding_chunk_min_segment_chars: int = Field(default=1200, ge=400, le=8000)
-    embedding_breakpoint_threshold: float = Field(default=0.65, ge=0.0, le=1.0)
-
-    semantic_chunking_enabled: bool = True
-    chunk_max_chars: int = Field(default=800, ge=100, le=4000)
-    chunk_min_chars: int = Field(default=80, ge=1, le=500)
-    chunk_overlap_chars: int = Field(default=120, ge=0, le=500)
-
-    marp_command: str = "marp"
-    marp_preview_images_enabled: bool = Field(
+    # ── chunking.* ───────────────────────────────────────────────────────────
+    embedding_chunking_enabled: bool = Field(
         default=True,
-        description="When true and Marp Markdown is exported, generate PNG slide previews via Marp CLI.",
+        description="Use embedding breakpoint detection for long paragraph splitting.",
     )
-    marp_preview_image_format: str = Field(
-        default="png",
-        description="Image format for Marp --images export (png or jpeg).",
+    embedding_chunk_min_segment_chars: int = Field(
+        default=1200,
+        ge=400,
+        le=8000,
+        description="Minimum segment size before embedding breakpoint chunking applies.",
+    )
+    embedding_breakpoint_threshold: float = Field(
+        default=0.65,
+        ge=0.0,
+        le=1.0,
+        description="Cosine-distance threshold for embedding breakpoint splits.",
+    )
+    semantic_chunking_enabled: bool = Field(
+        default=True,
+        description="Enable semantic paragraph merging and recursive text splitting on import.",
+    )
+    chunk_max_chars: int = Field(default=800, ge=100, le=4000, description="Maximum characters per document chunk.")
+    chunk_min_chars: int = Field(default=80, ge=1, le=500, description="Minimum characters per document chunk.")
+    chunk_overlap_chars: int = Field(
+        default=120,
+        ge=0,
+        le=500,
+        description="Character overlap between adjacent chunks.",
     )
 
-    pptxgen_node_command: str = Field(
-        default="node",
-        validation_alias=AliasChoices("PPTXGEN_NODE_COMMAND"),
-        description="Node.js executable used for PptxGenJS editable PPTX export.",
-    )
-    pptxgen_script_path: Path | None = Field(
-        default=None,
-        validation_alias=AliasChoices("PPTXGEN_SCRIPT_PATH"),
-        description="Path to render.mjs. Defaults to bundled archium/infrastructure/renderers/pptxgen/render.mjs.",
+    # ── workflow.* ─────────────────────────────────────────────────────────────
+    fact_extraction_enabled: bool = Field(
+        default=True,
+        description="When true and LLM is available, extract ProjectFact records after context retrieval.",
     )
 
+    # ── review.* ─────────────────────────────────────────────────────────────
     block_export_on_critical_review: bool = Field(
         default=False,
         description="When true, open CRITICAL ReviewIssue records block JSON/Marp export.",
@@ -124,10 +182,15 @@ class Settings(BaseSettings):
             "layers (content/evidence/architectural/layout) and Brief semantic alignment."
         ),
     )
-    fact_extraction_enabled: bool = Field(
+    visual_qa_enabled: bool = Field(
         default=True,
-        description="When true and LLM is available, extract ProjectFact records after context retrieval.",
+        description=(
+            "When true and Pillow is available, run explainable image QA on matched slide assets "
+            "(dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type)."
+        ),
     )
+
+    # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(
         default=False,
         description="When true and LLM is available, auto-repair slide-level CRITICAL/HIGH review issues.",
@@ -138,13 +201,29 @@ class Settings(BaseSettings):
         le=5,
         description="Maximum automated repair → four-layer re-review cycles per workflow run.",
     )
-    visual_qa_enabled: bool = Field(
+
+    # ── render.* ─────────────────────────────────────────────────────────────
+    marp_command: str = Field(default="marp", description="Marp CLI executable name or path.")
+    marp_preview_images_enabled: bool = Field(
         default=True,
-        description=(
-            "When true and Pillow is available, run explainable image QA on matched slide assets "
-            "(dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type)."
-        ),
+        description="When true and Marp Markdown is exported, generate PNG slide previews via Marp CLI.",
     )
+    marp_preview_image_format: str = Field(
+        default="png",
+        description="Image format for Marp --images export (png or jpeg).",
+    )
+    pptxgen_node_command: str = Field(
+        default="node",
+        validation_alias=AliasChoices("PPTXGEN_NODE_COMMAND"),
+        description="Node.js executable used for PptxGenJS editable PPTX export.",
+    )
+    pptxgen_script_path: Path | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PPTXGEN_SCRIPT_PATH"),
+        description="Path to render.mjs. Defaults to bundled archium/infrastructure/renderers/pptxgen/render.mjs.",
+    )
+
+    # ── visual.* ─────────────────────────────────────────────────────────────
     visual_fallback_enabled: bool = Field(
         default=True,
         description="When true, export tries relaxed asset matching and programmatic diagram fallbacks.",
@@ -177,6 +256,7 @@ class Settings(BaseSettings):
     pexels_api_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("PEXELS_API_KEY"),
+        description="Pexels API key for web image search during export.",
     )
     web_image_search_timeout_seconds: float = Field(
         default=15.0,
@@ -197,15 +277,19 @@ class Settings(BaseSettings):
     unsplash_access_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("UNSPLASH_ACCESS_KEY"),
+        description="Unsplash access key (reserved for future provider support).",
     )
 
+    # ── legacy.* ─────────────────────────────────────────────────────────────
     discord_bot_token: str | None = Field(
         default=None,
         validation_alias=AliasChoices("DISCORD_BOT_TOKEN"),
+        description="Discord Bot token for legacy discord_watcher module.",
     )
     discord_user_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("DISCORD_USER_ID"),
+        description="Discord user ID filter for legacy discord_watcher module.",
     )
 
     @model_validator(mode="after")

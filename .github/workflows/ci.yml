@@ -49,6 +49,9 @@ jobs:
       - name: Ruff
         run: ruff check archium tests
 
+      - name: Config reference sync
+        run: python scripts/generate_config_docs.py --check
+
       - name: Mypy
         run: mypy archium --python-version ${{ matrix.python-version }}
 
