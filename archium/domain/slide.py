@@ -63,6 +63,9 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     source_citations: list[Citation] = Field(default_factory=list)
     speaker_notes: str | None = None
     status: SlideStatus = SlideStatus.PLANNED
+    # Optional links into the visual composition pipeline (external relation preferred long-term).
+    visual_intent_id: UUID | None = None
+    layout_plan_id: UUID | None = None
 
     @model_validator(mode="after")
     def _ensure_lineage_defaults(self) -> SlideSpec:

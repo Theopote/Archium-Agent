@@ -148,6 +148,10 @@ class RevisionEntityType(StrEnum):
     WORKSTREAM_PLAN = "workstream_plan"
     DELIVERABLE_PLAN = "deliverable_plan"
     ASSUMPTION = "assumption"
+    DESIGN_SYSTEM = "design_system"
+    ART_DIRECTION = "art_direction"
+    VISUAL_INTENT = "visual_intent"
+    LAYOUT_PLAN = "layout_plan"
 
 
 class TaskNature(StrEnum):

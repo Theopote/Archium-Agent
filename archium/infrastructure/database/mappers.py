@@ -401,6 +401,8 @@ def slide_to_domain(orm: SlideORM) -> SlideSpec:
         speaker_notes=orm.speaker_notes,
         status=SlideStatus(orm.status),
         version=orm.version,
+        visual_intent_id=getattr(orm, "visual_intent_id", None),
+        layout_plan_id=getattr(orm, "layout_plan_id", None),
     )
 
 
@@ -421,6 +423,8 @@ def slide_to_orm(domain: SlideSpec, orm: SlideORM | None = None) -> SlideORM:
     target.version = domain.version
     target.lineage_id = domain.lineage_id
     target.logical_key = domain.logical_key or build_slide_logical_key(domain.chapter_id, domain.order)
+    target.visual_intent_id = domain.visual_intent_id
+    target.layout_plan_id = domain.layout_plan_id
     return target
 
 

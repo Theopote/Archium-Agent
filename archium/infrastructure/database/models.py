@@ -215,6 +215,8 @@ class SlideORM(UUIDPrimaryKeyMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
     logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    visual_intent_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    layout_plan_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="slides")
 
@@ -614,6 +616,82 @@ class WorkstreamORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     mission: Mapped[ProjectMissionORM] = relationship(back_populates="workstreams")
+
+
+class DesignSystemORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "design_systems"
+    __table_args__ = (
+        Index("ix_design_systems_name", "name"),
+        Index("ix_design_systems_approval_status", "approval_status"),
+    )
+
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="approved")
+    source_type: Mapped[str] = mapped_column(String(30), nullable=False, default="builtin")
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
+class ArtDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "art_directions"
+    __table_args__ = (
+        Index("ix_art_directions_project_id", "project_id"),
+        Index("ix_art_directions_presentation_id", "presentation_id"),
+        Index("ix_art_directions_approval_status", "approval_status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    presentation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="SET NULL"), nullable=True
+    )
+    deliverable_id: Mapped[str | None] = mapped_column(String(200))
+    design_system_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
+class VisualIntentORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "visual_intents"
+    __table_args__ = (
+        Index("ix_visual_intents_slide_id", "slide_id"),
+        Index("ix_visual_intents_presentation_id", "presentation_id"),
+    )
+
+    slide_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("slides.id", ondelete="CASCADE"), nullable=False
+    )
+    presentation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="SET NULL"), nullable=True
+    )
+    art_direction_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
+class LayoutPlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "layout_plans"
+    __table_args__ = (
+        Index("ix_layout_plans_slide_id", "slide_id"),
+        Index("ix_layout_plans_visual_intent_id", "visual_intent_id"),
+        Index("ix_layout_plans_layout_family", "layout_family"),
+    )
+
+    slide_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("slides.id", ondelete="CASCADE"), nullable=False
+    )
+    design_system_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    visual_intent_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    layout_family: Mapped[str] = mapped_column(String(50), nullable=False)
+    layout_variant: Mapped[str] = mapped_column(String(80), nullable=False)
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    validation_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
 
 
 class DeliverablePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
