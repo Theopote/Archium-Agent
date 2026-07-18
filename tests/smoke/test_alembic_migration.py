@@ -18,7 +18,7 @@ from sqlalchemy import inspect, text
 pytestmark = [pytest.mark.smoke, pytest.mark.migration_smoke]
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_HEAD_REVISION = "005_review_issue_rule_code"
+_HEAD_REVISION = "006_review_issue_rule_code_index"
 _PRE_RULE_CODE_REVISION = "004_review_layer"
 _BASELINE_REVISION = "003_fact_conflict_group"
 
@@ -81,12 +81,29 @@ def _drop_review_issue_migration_columns(database_path: Path) -> None:
     settings = Settings(_env_file=None, database_path=database_path)
     engine = create_engine_from_settings(settings)
     try:
-        columns = _review_issue_columns(database_path)
+        inspector = inspect(engine)
+        columns = {column["name"] for column in inspector.get_columns("review_issues")}
+        indexes = {index["name"] for index in inspector.get_indexes("review_issues")}
         with engine.begin() as connection:
+            if "ix_review_issues_presentation_rule_code" in indexes:
+                connection.execute(text("DROP INDEX ix_review_issues_presentation_rule_code"))
+            if "ix_review_issues_rule_code" in indexes:
+                connection.execute(text("DROP INDEX ix_review_issues_rule_code"))
             if "rule_code" in columns:
                 connection.execute(text("ALTER TABLE review_issues DROP COLUMN rule_code"))
             if "reviewer_layer" in columns:
                 connection.execute(text("ALTER TABLE review_issues DROP COLUMN reviewer_layer"))
+    finally:
+        engine.dispose()
+
+
+def _review_issue_indexes(database_path: Path) -> set[str]:
+    reset_settings()
+    settings = Settings(_env_file=None, database_path=database_path)
+    engine = create_engine_from_settings(settings)
+    try:
+        inspector = inspect(engine)
+        return {index["name"] for index in inspector.get_indexes("review_issues")}
     finally:
         engine.dispose()
 
@@ -105,6 +122,9 @@ def test_alembic_upgrade_head_on_initialized_database(tmp_path: Path) -> None:
     assert _HEAD_REVISION in current.stdout
 
     assert _expected_orm_tables() == _database_tables(database_path)
+    indexes = _review_issue_indexes(database_path)
+    assert "ix_review_issues_rule_code" in indexes
+    assert "ix_review_issues_presentation_rule_code" in indexes
 
 
 def test_alembic_incremental_upgrade_from_previous_revision(tmp_path: Path) -> None:

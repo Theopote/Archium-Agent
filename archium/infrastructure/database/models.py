@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -282,6 +283,10 @@ class CitationORM(UUIDPrimaryKeyMixin, Base):
 
 class ReviewIssueORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "review_issues"
+    __table_args__ = (
+        Index("ix_review_issues_rule_code", "rule_code"),
+        Index("ix_review_issues_presentation_rule_code", "presentation_id", "rule_code"),
+    )
 
     presentation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False

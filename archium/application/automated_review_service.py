@@ -22,7 +22,7 @@ from archium.domain.enums import (
 )
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
-from archium.domain.review_rules import ReviewRuleCode
+from archium.domain.review_rules import ReviewRuleCode, is_auto_fixable_rule
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import AssetRepository, ReviewRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -521,7 +521,6 @@ class AutomatedReviewService:
                             "超过建议上限，可能导致版面溢出。"
                         ),
                         suggestion="减少要点数量或缩短每条表述。",
-                        auto_fixable=True,
                     )
                 )
             for point in slide.key_points:
@@ -540,7 +539,6 @@ class AutomatedReviewService:
                                 "换行后可能超出文本框。"
                             ),
                             suggestion="拆分为两条要点或使用更短表述。",
-                            auto_fixable=True,
                         )
                     )
                     break
@@ -556,7 +554,6 @@ class AutomatedReviewService:
                         rule_code=ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS,
                         title="要点过多",
                         description=f"第 {slide.order + 1} 页要点超过 5 条，建议精简。",
-                        auto_fixable=True,
                     )
                 )
             if (
@@ -578,7 +575,6 @@ class AutomatedReviewService:
                             "可能导致版面拥挤或溢出。"
                         ),
                         suggestion="拆分为要点列表或精简表述。",
-                        auto_fixable=True,
                     )
                 )
 
@@ -888,7 +884,7 @@ class AutomatedReviewService:
         title: str,
         description: str,
         suggestion: str | None = None,
-        auto_fixable: bool = False,
+        auto_fixable: bool | None = None,
     ) -> ReviewIssue:
         return ReviewIssue(
             presentation_id=presentation_id,
@@ -900,7 +896,7 @@ class AutomatedReviewService:
             title=title,
             description=description,
             suggestion=suggestion,
-            auto_fixable=auto_fixable,
+            auto_fixable=is_auto_fixable_rule(rule_code) if auto_fixable is None else auto_fixable,
         )
 
 

@@ -495,3 +495,6 @@ def test_layout_review_flags_text_density_and_extreme_aspect_ratio(
 
     assert any(issue.title == "页面信息密度过高" for issue in issues)
     assert any(issue.title == "素材宽高比极端" for issue in issues)
+    density_issue = next(issue for issue in issues if issue.title == "页面信息密度过高")
+    assert density_issue.rule_code == ReviewRuleCode.LAYOUT_HIGH_TEXT_DENSITY
+    assert density_issue.auto_fixable is True

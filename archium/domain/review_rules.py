@@ -95,3 +95,49 @@ TITLE_TO_RULE_CODE: dict[str, str] = {
 def resolve_rule_code_from_title(title: str) -> str:
     """Map a legacy display title to a stable rule code when possible."""
     return TITLE_TO_RULE_CODE.get(title.strip(), ReviewRuleCode.LEGACY_UNSPECIFIED)
+
+
+class ReviewRepairStrategy:
+    """Repair routing for automated review findings."""
+
+    TIERED_LAYOUT = "tiered_layout"
+    LLM_CONTENT = "llm_content"
+    MANUAL = "manual"
+    NONE = "none"
+
+
+# Layout rules handled by deterministic tiered repair (see slide_repair_policy).
+AUTO_FIXABLE_RULE_CODES: frozenset[str] = frozenset(
+    {
+        ReviewRuleCode.LAYOUT_HIGH_TEXT_DENSITY,
+        ReviewRuleCode.LAYOUT_BULLET_TOO_LONG,
+        ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS,
+        ReviewRuleCode.LAYOUT_MESSAGE_TOO_LONG,
+    }
+)
+
+RULE_REPAIR_STRATEGIES: dict[str, str] = {
+    ReviewRuleCode.LAYOUT_HIGH_TEXT_DENSITY: ReviewRepairStrategy.TIERED_LAYOUT,
+    ReviewRuleCode.LAYOUT_BULLET_TOO_LONG: ReviewRepairStrategy.TIERED_LAYOUT,
+    ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS: ReviewRepairStrategy.TIERED_LAYOUT,
+    ReviewRuleCode.LAYOUT_MESSAGE_TOO_LONG: ReviewRepairStrategy.TIERED_LAYOUT,
+    ReviewRuleCode.LAYOUT_MANUAL_LAYOUT_CONFIRMATION: ReviewRepairStrategy.MANUAL,
+    ReviewRuleCode.CONTENT_MISSING_TITLE: ReviewRepairStrategy.LLM_CONTENT,
+    ReviewRuleCode.CONTENT_MISSING_MESSAGE: ReviewRepairStrategy.LLM_CONTENT,
+    ReviewRuleCode.CONTENT_MESSAGE_TOO_SHORT: ReviewRepairStrategy.LLM_CONTENT,
+    ReviewRuleCode.CONTENT_DUPLICATE_TITLE: ReviewRepairStrategy.LLM_CONTENT,
+    ReviewRuleCode.CONTENT_BRIEF_CORE_NOT_REFLECTED: ReviewRepairStrategy.LLM_CONTENT,
+    ReviewRuleCode.CONTENT_BRIEF_ALIGNMENT_GAP: ReviewRepairStrategy.LLM_CONTENT,
+    ReviewRuleCode.EVIDENCE_MISSING_CITATION: ReviewRepairStrategy.LLM_CONTENT,
+    ReviewRuleCode.EVIDENCE_NUMERIC_CLAIM_UNCITED: ReviewRepairStrategy.LLM_CONTENT,
+}
+
+
+def is_auto_fixable_rule(rule_code: str) -> bool:
+    """Return True when a rule code has a deterministic auto-repair path."""
+    return rule_code in AUTO_FIXABLE_RULE_CODES
+
+
+def repair_strategy_for_rule(rule_code: str) -> str:
+    """Map a rule code to a repair strategy identifier."""
+    return RULE_REPAIR_STRATEGIES.get(rule_code, ReviewRepairStrategy.NONE)

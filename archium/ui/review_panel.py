@@ -7,6 +7,7 @@ from uuid import UUID
 import pandas as pd
 import streamlit as st
 
+from archium.application.review_analytics import summarize_rule_codes
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
@@ -26,6 +27,7 @@ from archium.domain.enums import (
     SlideType,
 )
 from archium.domain.review import ReviewIssue
+from archium.domain.review_rules import repair_strategy_for_rule
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
@@ -86,6 +88,13 @@ LAYER_LABELS = {
     ReviewLayer.EVIDENCE: "证据层",
     ReviewLayer.ARCHITECTURAL: "建筑专业层",
     ReviewLayer.LAYOUT: "版面层",
+}
+
+REPAIR_STRATEGY_LABELS = {
+    "tiered_layout": "分层版面修复",
+    "llm_content": "LLM 内容修复",
+    "manual": "人工确认",
+    "none": "无自动策略",
 }
 
 STATUS_LABELS = {
@@ -498,6 +507,37 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
     render_slide_history_panel(presentation_id=context_presentation_id, slides=context.slides)
 
 
+def _format_dismiss_rate(rate: float | None) -> str:
+    if rate is None:
+        return "—"
+    return f"{rate * 100:.0f}%"
+
+
+def _render_rule_code_stats(issues: list[ReviewIssue]) -> None:
+    stats = summarize_rule_codes(issues)
+    if not stats:
+        st.caption("暂无 rule_code 统计数据。")
+        return
+
+    rows = [
+        {
+            "rule_code": item.rule_code,
+            "命中数": item.total,
+            "待处理": item.open,
+            "已解决": item.resolved,
+            "已忽略": item.dismissed,
+            "误报率(忽略占比)": _format_dismiss_rate(item.dismiss_rate),
+            "修复策略": REPAIR_STRATEGY_LABELS.get(item.repair_strategy, item.repair_strategy),
+        }
+        for item in stats
+    ]
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.caption(
+        "误报率以「已忽略 / (已解决 + 已忽略)」估算，仅作规则调优参考。"
+        " rule_code 亦可在下方问题列表中查看。"
+    )
+
+
 def _render_review_issues_panel(
     presentation_id: UUID,
     *,
@@ -508,12 +548,16 @@ def _render_review_issues_panel(
     slides_by_id = _slide_lookup(slides)
     with get_session() as session:
         review_service = PresentationReviewService(session)
-        issues = review_service.list_review_issues(presentation_id)
+        all_issues = review_service.list_review_issues(presentation_id)
 
-    if not issues:
+    if not all_issues:
         st.caption("暂无自动审核问题。运行完整工作流后将在此显示四层审核结果。")
         return
 
+    with st.expander("规则命中统计（rule_code）", expanded=False):
+        _render_rule_code_stats(all_issues)
+
+    issues = all_issues
     layer_counts: dict[ReviewLayer, int] = {}
     for issue in issues:
         layer_counts[issue.reviewer_layer] = layer_counts.get(issue.reviewer_layer, 0) + 1
@@ -599,10 +643,15 @@ def _render_review_issues_panel(
     for issue in open_issues[:12]:
         cols = st.columns([4, 1, 1, 1])
         page_hint = f"（{_issue_slide_label(issue, slides_by_id)}）"
+        strategy = repair_strategy_for_rule(issue.rule_code)
         cols[0].markdown(
             f"**{LAYER_LABELS.get(issue.reviewer_layer, issue.reviewer_layer.value)}** · "
             f"**{SEVERITY_LABELS.get(issue.severity, issue.severity.value)}** · "
             f"{issue.title}{page_hint} — {issue.description}"
+        )
+        cols[0].caption(
+            f"`{issue.rule_code}` · "
+            f"{REPAIR_STRATEGY_LABELS.get(strategy, strategy)}"
         )
         if issue.slide_id is not None and cols[1].button(
             "定位页面",
