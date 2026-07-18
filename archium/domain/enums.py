@@ -503,3 +503,15 @@ class WorkflowStep(StrEnum):
     # Legacy alias — old checkpoints may still store this string.
     PLANNING_PREPARE_PRESENTATION = "planning_prepare_presentation"
     PLANNING_FINALIZE = "planning_finalize"
+    # Visual composition workflow (independent of presentation generation chain)
+    VISUAL_LOAD_CONTEXT = "visual_load_context"
+    VISUAL_LOAD_DESIGN_SYSTEM = "visual_load_design_system"
+    VISUAL_GENERATE_ART_DIRECTION = "visual_generate_art_direction"
+    VISUAL_AWAIT_ART_DIRECTION_APPROVAL = "visual_await_art_direction_approval"
+    VISUAL_GENERATE_INTENTS = "visual_generate_intents"
+    VISUAL_GENERATE_LAYOUT_CANDIDATES = "visual_generate_layout_candidates"
+    VISUAL_SELECT_LAYOUTS = "visual_select_layouts"
+    VISUAL_VALIDATE_LAYOUTS = "visual_validate_layouts"
+    VISUAL_REPAIR_LAYOUTS = "visual_repair_layouts"
+    VISUAL_RENDER = "visual_render"
+    VISUAL_FINALIZE = "visual_finalize"

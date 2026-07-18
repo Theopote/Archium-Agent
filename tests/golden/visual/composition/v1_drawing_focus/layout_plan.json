@@ -1,10 +1,10 @@
 {
-  "created_at": "2026-07-18T11:05:31.784896Z",
-  "updated_at": "2026-07-18T11:05:31.784896Z",
+  "created_at": "2026-07-18T11:09:45.591356Z",
+  "updated_at": "2026-07-18T11:09:45.591356Z",
   "version": 1,
-  "id": "8e28d129-1083-4d36-917b-199e1abf0dee",
+  "id": "bf116aad-9672-419b-958c-b224e945a060",
   "schema_version": 1,
-  "slide_id": "894c0b8a-292e-4bf6-90de-9c4427ccaac1",
+  "slide_id": "5a8f4d2b-e65c-4480-b3bf-b7173bb31408",
   "layout_family": "drawing_focus",
   "layout_variant": "drawing_with_metrics",
   "page_width": 10.0,
@@ -48,7 +48,7 @@
       "id": "hero",
       "role": "hero_visual",
       "content_type": "drawing",
-      "content_ref": "a8cdcf0a-1c13-4e5f-a0ea-4b96f21ba57d",
+      "content_ref": "19bb77df-cd32-4355-9e8f-348060946ba4",
       "text_content": null,
       "x": 0.7,
       "y": 1.0333333333333332,
@@ -163,7 +163,7 @@
       "priority": "required"
     }
   ],
-  "design_system_id": "d8979ed7-0ffe-45c1-a7aa-a858b3112c0e",
-  "visual_intent_id": "0fea1be4-2aa6-44ae-9985-5f3664da516c",
+  "design_system_id": "61c576e0-45c5-47ff-975d-7bbdffe80132",
+  "visual_intent_id": "2d5c9a56-355c-48be-ba45-ff17815a6c85",
   "validation_status": "pending"
 }

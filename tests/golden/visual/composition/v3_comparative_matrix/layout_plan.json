@@ -1,10 +1,10 @@
 {
-  "created_at": "2026-07-18T11:05:31.789967Z",
-  "updated_at": "2026-07-18T11:05:31.789967Z",
+  "created_at": "2026-07-18T11:09:45.596120Z",
+  "updated_at": "2026-07-18T11:09:45.596120Z",
   "version": 1,
-  "id": "a47304e2-ef62-45be-9406-cd038a04cf4e",
+  "id": "c4a04142-172b-4a31-b35a-df447f830e4d",
   "schema_version": 1,
-  "slide_id": "be84fe3b-c7d7-4562-98a5-e5054a54558d",
+  "slide_id": "1e412056-a5dd-4ca9-805d-4c1e318eea5f",
   "layout_family": "comparative_matrix",
   "layout_variant": "matrix_with_insight",
   "page_width": 10.0,
@@ -52,7 +52,7 @@
       "id": "case_image_0",
       "role": "supporting_visual",
       "content_type": "image",
-      "content_ref": "0606630b-ab5d-462e-b3f2-07a1fee9b010",
+      "content_ref": "3106da37-d839-45f5-bac5-abfcd0dff828",
       "text_content": null,
       "x": 0.7,
       "y": 1.0333333333333332,
@@ -94,7 +94,7 @@
       "id": "case_image_1",
       "role": "supporting_visual",
       "content_type": "image",
-      "content_ref": "48a09d19-5592-4f1b-b371-89e78d8cbaf1",
+      "content_ref": "ed81e9bc-b394-4409-b281-19c517972ef5",
       "text_content": null,
       "x": 3.6083333333333334,
       "y": 1.0333333333333332,
@@ -136,7 +136,7 @@
       "id": "case_image_2",
       "role": "supporting_visual",
       "content_type": "image",
-      "content_ref": "5072fa82-b9ff-4096-909a-0425c97c1a76",
+      "content_ref": "6d15a306-b72f-4cbe-967a-c97dc4bd5e7d",
       "text_content": null,
       "x": 6.5166666666666675,
       "y": 1.0333333333333332,
@@ -291,7 +291,7 @@
       "priority": "required"
     }
   ],
-  "design_system_id": "a0aa55b9-97e8-4df7-8c57-3e0d9a0785bb",
-  "visual_intent_id": "a3199ea3-868d-4308-b580-3d4f5abd6596",
+  "design_system_id": "768585e7-b224-45cf-b36d-520adf47b2b5",
+  "visual_intent_id": "7eff1027-9779-444d-aba0-c03d8c272887",
   "validation_status": "pending"
 }
