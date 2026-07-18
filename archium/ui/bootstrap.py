@@ -12,6 +12,7 @@ from dotenv import load_dotenv, set_key
 from archium.config import get_settings
 from archium.infrastructure.database.session import init_database
 from archium.logging import setup_logging
+from archium.ui.llm_settings import get_ui_effective_settings
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV_PATH = PROJECT_ROOT / ".env"
@@ -136,7 +137,7 @@ def render_status(name: str, color: str, hint: str) -> None:
 
 
 def module_status_pipeline() -> tuple[str, str]:
-    settings = get_settings()
+    settings = get_ui_effective_settings()
     if not settings.llm_configured:
         return "red", "缺少 API Key"
     return "green", "就绪"
@@ -150,7 +151,7 @@ def module_status_marp_export() -> tuple[str, str]:
 
 
 def module_status_legacy_ppt() -> tuple[str, str]:
-    settings = get_settings()
+    settings = get_ui_effective_settings()
     if not settings.llm_configured:
         return "red", "缺少 API Key"
     if not shutil.which(settings.marp_command):

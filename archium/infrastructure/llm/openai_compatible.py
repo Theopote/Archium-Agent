@@ -40,7 +40,7 @@ class OpenAICompatibleProvider:
         if self._client is None:
             if not self._settings.llm_configured:
                 raise ConfigurationError(
-                    "未配置 LLM API Key。请在 .env 中设置 GEMINI_API_KEY 或 LLM_API_KEY。"
+                    "未配置 LLM API Key。请前往 Archium 设置页面配置，或在 .env 中设置 GEMINI_API_KEY / LLM_API_KEY。"
                 )
             self._client = OpenAI(
                 api_key=self._settings.llm_api_key,

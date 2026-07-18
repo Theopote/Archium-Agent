@@ -13,9 +13,9 @@ from archium.ui.components import render_file_downloads
 
 
 def _module_status_file_manager() -> tuple[str, str]:
-    from archium.config import get_settings
+    from archium.ui.llm_settings import get_ui_effective_settings
 
-    settings = get_settings()
+    settings = get_ui_effective_settings()
     if not settings.llm_configured:
         return "red", "缺少 API Key"
     return "green", "就绪"

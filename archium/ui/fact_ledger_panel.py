@@ -7,7 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.fact_ledger_service import FactLedgerService
-from archium.config import get_settings
+from archium.ui.llm_settings import get_ui_effective_settings
 from archium.domain.enums import VerificationStatus
 from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.factory import create_llm_provider
@@ -25,7 +25,7 @@ def render_fact_ledger_panel(project_id: UUID) -> None:
     st.markdown("#### 项目事实账本")
     st.caption("结构化项目参数 · 确认后将优先注入 Brief / Storyline / SlideSpec 生成上下文")
 
-    settings = get_settings()
+    settings = get_ui_effective_settings()
     with get_session() as session:
         service = FactLedgerService(
             session,

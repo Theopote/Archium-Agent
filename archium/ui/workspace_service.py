@@ -14,6 +14,7 @@ from archium.application.ingestion_service import ImportItemResult, IngestionSer
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.workflow_models import WorkflowRunResult
+from archium.config.llm_config import get_effective_settings
 from archium.config.settings import Settings, get_settings
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import PresentationType, ProjectType
@@ -28,6 +29,21 @@ from archium.infrastructure.database.repositories import (
 from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
+
+
+def _resolve_runtime_settings(settings: Settings | None) -> Settings:
+    if settings is not None:
+        return settings
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        if get_script_run_ctx() is not None:
+            from archium.ui.llm_settings import get_ui_effective_settings
+
+            return get_ui_effective_settings()
+    except Exception:
+        pass
+    return get_effective_settings()
 
 
 def _create_workflow_service(
@@ -184,7 +200,7 @@ def run_presentation_workflow(
     require_slides_review: bool = False,
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
-    resolved_settings = settings or get_settings()
+    resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     service = _create_workflow_service(session, llm, resolved_settings)
     resolved_preview_images = (
@@ -213,7 +229,7 @@ def continue_workflow_after_review(
     *,
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
-    resolved_settings = settings or get_settings()
+    resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
         service = _create_workflow_service(session, llm, resolved_settings)
@@ -226,7 +242,7 @@ def resume_workflow(
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
     """Resume or retry a workflow from its LangGraph checkpoint."""
-    resolved_settings = settings or get_settings()
+    resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
         service = _create_workflow_service(session, llm, resolved_settings)
@@ -241,7 +257,7 @@ def regenerate_brief(
 ) -> PresentationBrief:
     from archium.application.regeneration_service import RegenerationService
 
-    resolved_settings = settings or get_settings()
+    resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_brief(
@@ -258,7 +274,7 @@ def regenerate_storyline(
 ) -> Storyline:
     from archium.application.regeneration_service import RegenerationService
 
-    resolved_settings = settings or get_settings()
+    resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_storyline(
@@ -275,7 +291,7 @@ def regenerate_slide_plan(
 ) -> list[SlideSpec]:
     from archium.application.regeneration_service import RegenerationService
 
-    resolved_settings = settings or get_settings()
+    resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_slide_plan(

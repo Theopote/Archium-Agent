@@ -7,7 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.config import get_settings
+from archium.ui.llm_settings import get_ui_effective_settings
 from archium.domain.enums import ProjectType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
@@ -163,9 +163,9 @@ def _render_documents(project_id: UUID) -> None:
 
 def _render_generation_form(project_id: UUID) -> None:
     st.markdown("#### 生成汇报")
-    settings = get_settings()
+    settings = get_ui_effective_settings()
     if not settings.llm_configured:
-        st.error("未配置 LLM API Key。请在 `.env` 中设置 `GEMINI_API_KEY` 或 `LLM_API_KEY`。")
+        st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
         return
 
     with st.form("presentation_form"):

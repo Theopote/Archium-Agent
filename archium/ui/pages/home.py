@@ -12,6 +12,7 @@ def render() -> None:
 Archium（阿基姆）面向建筑师与规划师，帮助你将项目资料组织为**可追溯、可编辑、可审核**的汇报材料。
 
 **推荐工作流：**
+0. 在 **设置** 中配置 AI 服务商与 API Key（或使用 `.env`）
 1. 在 **项目工作台** 创建项目并导入 PDF / DOCX / PPTX 等资料
 2. 填写汇报 Brief，运行 Brief → Storyline → SlideSpec 管线（可开启分阶段人工审核）
 3. 在审核面板编辑并批准 Brief / Storyline，再继续生成后续阶段
