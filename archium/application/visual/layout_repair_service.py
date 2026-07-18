@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.design_system import DesignSystem, TextStyleToken
 from archium.domain.visual.enums import (
     CropPolicy,
     ImageFit,
     LayoutElementRole,
     LayoutValidationStatus,
+    OverflowPolicy,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.validation import (
@@ -23,6 +24,7 @@ from archium.domain.visual.validation import (
     LayoutValidationReport,
 )
 from archium.infrastructure.layout.geometry import Rect, occupied_area, safe_area, whitespace_ratio
+from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.layout.text_measurement import TextMeasurementService
 
 # Prefer larger readable tokens when repairing FONT_TOO_SMALL.
@@ -36,7 +38,20 @@ _STYLE_UPGRADE: dict[str, str] = {
     "metric": "heading",
 }
 
+# Prefer more compact tokens when repairing TEXT_OVERFLOW (still threshold-checked).
+_STYLE_COMPACT: dict[str, str] = {
+    "display": "title",
+    "title": "heading",
+    "heading": "subtitle",
+    "subtitle": "body",
+    "body": "caption",
+    "metric": "body",
+    "caption": "source",
+}
+
 _GAP = 0.08
+_MIN_TEXT_W = 0.35
+_MIN_TEXT_H = 0.2
 
 
 class LayoutRepairService:
@@ -56,6 +71,9 @@ class LayoutRepairService:
         page_w = layout_plan.page_width
         page_h = layout_plan.page_height
         safe = safe_area(design_system)
+        overflow_policy = layout_plan.overflow_policy
+        layout_variant = layout_plan.layout_variant
+        unresolved_overflow_ids: list[str] = []
 
         for issue in report.issues:
             if not issue.auto_repairable:
@@ -99,7 +117,7 @@ class LayoutRepairService:
                     element = by_id.get(element_id)
                     if element is None or element.locked:
                         continue
-                    self._expand_text_box(
+                    fixed = self._repair_text_overflow(
                         element,
                         design_system=design_system,
                         safe=safe,
@@ -107,6 +125,8 @@ class LayoutRepairService:
                         page_h=page_h,
                         others=list(by_id.values()),
                     )
+                    if not fixed:
+                        unresolved_overflow_ids.append(element_id)
             elif code == LAYOUT_HERO_NOT_DOMINANT:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
@@ -122,6 +142,13 @@ class LayoutRepairService:
             elif code == LAYOUT_INCONSISTENT_ALIGNMENT:
                 self._align_group(issue.element_ids, by_id)
 
+        if unresolved_overflow_ids:
+            # Escalate: try another family variant next cycle, and flag split.
+            layout_variant = self._next_layout_variant(
+                layout_plan.layout_family, layout_variant
+            )
+            overflow_policy = OverflowPolicy.SPLIT
+
         ordered = [by_id[el.id] for el in layout_plan.elements if el.id in by_id]
         occupied = occupied_area([Rect(el.x, el.y, el.width, el.height) for el in ordered])
         repaired = layout_plan.model_copy(
@@ -130,6 +157,8 @@ class LayoutRepairService:
                 "whitespace_ratio": whitespace_ratio(design_system.page, occupied),
                 "validation_status": LayoutValidationStatus.REPAIRED,
                 "version": layout_plan.version + 1,
+                "overflow_policy": overflow_policy,
+                "layout_variant": layout_variant,
             }
         )
         repaired.touch()
@@ -224,7 +253,7 @@ class LayoutRepairService:
         current = element.style_token or "body"
         element.style_token = _STYLE_UPGRADE.get(current, "body")
 
-    def _expand_text_box(
+    def _repair_text_overflow(
         self,
         element: LayoutElement,
         *,
@@ -233,57 +262,344 @@ class LayoutRepairService:
         page_w: float,
         page_h: float,
         others: list[LayoutElement],
-    ) -> None:
+    ) -> bool:
+        """Fix text overflow without claiming the whole safe area.
+
+        Priority:
+        1. Expand into adjacent free space (avoid *all* neighbors)
+        2. Reduce inter-element padding (tighter gap)
+        3. Fine-tune box to the minimum height/width that fits
+        4. Switch to a more compact but still compliant style token
+        5–6. Caller escalates to variant change + split suggestion
+        """
         if not element.text_content:
-            return
-        token_name = element.style_token or "body"
-        style = getattr(design_system.typography, token_name, design_system.typography.body)
+            return True
 
-        # Prefer expanding within the remaining safe area under the current top.
-        candidates = [
-            (element.x, element.y, min(safe.right - element.x, safe.width), safe.bottom - element.y),
-            (safe.x, element.y, safe.width, safe.bottom - element.y),
-            (safe.x, safe.y, safe.width, safe.height),
-        ]
-        for x, y, width, height in candidates:
-            if width < 0.3 or height < 0.2:
-                continue
-            if self._text.fits(
-                element.text_content,
-                box_width_in=width,
-                box_height_in=height,
-                style=style,
-            ):
-                element.x = x
-                element.y = y
-                element.width = width
-                element.height = height
-                break
-        else:
-            # Nothing fits — take the largest safe box as best effort.
-            element.x = safe.x
-            element.y = safe.y
-            element.width = safe.width
-            element.height = safe.height
-
-        self._clamp_to_rect(
-            element,
-            max_w=safe.width,
-            max_h=safe.height,
-            origin_x=safe.x,
-            origin_y=safe.y,
-            page_w=page_w,
-            page_h=page_h,
+        neighbors = [el for el in others if el.id != element.id]
+        original = (
+            element.x,
+            element.y,
+            element.width,
+            element.height,
+            element.style_token,
         )
-        # Avoid introducing overlap with locked neighbors when expanding.
-        for other in others:
-            if other.id == element.id or not other.locked:
-                continue
-            if Rect(element.x, element.y, element.width, element.height).overlaps(
-                Rect(other.x, other.y, other.width, other.height),
-                tolerance=0.0,
+
+        # Gap schedules: normal spacing, then reduced padding.
+        gap_schedule = (
+            max(_GAP, design_system.spacing.sm),
+            max(design_system.spacing.xs, _GAP * 0.5),
+        )
+        token_chain = self._compact_token_chain(
+            element, design_system=design_system
+        )
+
+        for token_name in token_chain:
+            style = getattr(
+                design_system.typography, token_name, design_system.typography.body
+            )
+            for gap in gap_schedule:
+                if self._try_fit_in_adjacent_space(
+                    element,
+                    text=element.text_content,
+                    style=style,
+                    safe=safe,
+                    neighbors=neighbors,
+                    gap=gap,
+                ):
+                    element.style_token = token_name
+                    self._clamp_to_rect(
+                        element,
+                        max_w=safe.width,
+                        max_h=safe.height,
+                        origin_x=safe.x,
+                        origin_y=safe.y,
+                        page_w=page_w,
+                        page_h=page_h,
+                    )
+                    # Re-check: clamp must not reintroduce overflow or overlaps.
+                    if self._text_fits(element, style) and not self._overlaps_any(
+                        element, neighbors, gap=0.0
+                    ):
+                        return True
+
+        # Restore geometry — do not leave a half-applied full-safe takeover.
+        element.x, element.y, element.width, element.height, element.style_token = (
+            original
+        )
+        return False
+
+    def _compact_token_chain(
+        self, element: LayoutElement, *, design_system: DesignSystem
+    ) -> list[str]:
+        """Current token first, then progressively more compact compliant tokens."""
+        start = element.style_token or "body"
+        chain = [start]
+        seen = {start}
+        current = start
+        for _ in range(6):
+            nxt = _STYLE_COMPACT.get(current)
+            if nxt is None or nxt in seen:
+                break
+            style = getattr(design_system.typography, nxt, None)
+            if style is None:
+                break
+            if not self._token_meets_min_font(
+                element, token_name=nxt, style=style, design_system=design_system
             ):
-                element.height = max(0.2, other.y - _GAP - element.y)
+                break
+            chain.append(nxt)
+            seen.add(nxt)
+            current = nxt
+        return chain
+
+    @staticmethod
+    def _token_meets_min_font(
+        element: LayoutElement,
+        *,
+        token_name: str,
+        style: TextStyleToken,
+        design_system: DesignSystem,
+    ) -> bool:
+        thresholds = design_system.thresholds
+        minimum = thresholds.min_body_font_pt
+        if element.role == LayoutElementRole.CAPTION or token_name == "caption":
+            minimum = thresholds.min_caption_font_pt
+        if element.role == LayoutElementRole.SOURCE or token_name in {
+            "source",
+            "footnote",
+        }:
+            minimum = thresholds.min_source_font_pt
+        # Body / lead / title roles must not drop below body minimum.
+        if element.role in {
+            LayoutElementRole.BODY_TEXT,
+            LayoutElementRole.LEAD_STATEMENT,
+            LayoutElementRole.TITLE,
+            LayoutElementRole.SUBTITLE,
+        }:
+            minimum = max(minimum, thresholds.min_body_font_pt)
+        return style.font_size + 1e-6 >= minimum
+
+    def _try_fit_in_adjacent_space(
+        self,
+        element: LayoutElement,
+        *,
+        text: str,
+        style: TextStyleToken,
+        safe: Rect,
+        neighbors: list[LayoutElement],
+        gap: float,
+    ) -> bool:
+        """Grow into free adjacent space, then shrink to the minimum fitting size."""
+        room = self._directional_room(element, neighbors, safe=safe, gap=gap)
+        # Candidate boxes ordered by invasiveness (local → wider strip, never full safe).
+        candidates: list[tuple[float, float, float, float]] = []
+
+        # 3. Fine-tune height at current width (down / up).
+        need_h = self._needed_height(text, element.width, style)
+        if need_h <= element.height + room["down"] + 1e-6:
+            candidates.append(
+                (element.x, element.y, element.width, max(element.height, need_h))
+            )
+        if need_h <= element.height + room["up"] + 1e-6:
+            new_h = max(element.height, need_h)
+            candidates.append(
+                (element.x, element.y + element.height - new_h, element.width, new_h)
+            )
+
+        # 1. Expand into adjacent whitespace (width then height).
+        max_w = element.width + room["left"] + room["right"]
+        max_h_down = element.height + room["down"]
+        max_h = element.height + room["up"] + room["down"]
+
+        for width in self._width_steps(element.width, max_w):
+            need = self._needed_height(text, width, style)
+            # Prefer growing downward from the current top.
+            if need <= max_h_down + 1e-6:
+                x = element.x
+                # Prefer expanding right first; use left only if needed.
+                extra_w = width - element.width
+                if extra_w > room["right"] + 1e-9:
+                    x = element.x - (extra_w - room["right"])
+                candidates.append((x, element.y, width, need))
+            elif need <= max_h + 1e-6:
+                x = element.x
+                extra_w = width - element.width
+                if extra_w > room["right"] + 1e-9:
+                    x = element.x - (extra_w - room["right"])
+                y = element.y - min(room["up"], max(0.0, need - max_h_down))
+                candidates.append((x, y, width, need))
+
+        # Also try the max free band anchored at the element (still not full safe).
+        free = self._seeded_free_band(element, neighbors, safe=safe, gap=gap)
+        if free.width >= _MIN_TEXT_W and free.height >= _MIN_TEXT_H:
+            need = self._needed_height(text, free.width, style)
+            if need <= free.height + 1e-6:
+                candidates.append((free.x, free.y, free.width, need))
+            # Slightly narrower than full free width can still help wrapping.
+            for width in self._width_steps(element.width, free.width):
+                need = self._needed_height(text, width, style)
+                if need <= free.height + 1e-6:
+                    candidates.append((free.x, free.y, width, need))
+
+        # Prefer smaller area growth.
+        candidates.sort(
+            key=lambda box: (box[2] * box[3], box[2] - element.width, box[3] - element.height)
+        )
+
+        for x, y, width, height in candidates:
+            if width < _MIN_TEXT_W or height < _MIN_TEXT_H:
+                continue
+            probe = element.model_copy(
+                update={"x": x, "y": y, "width": width, "height": height}
+            )
+            if not self._text_fits(probe, style):
+                continue
+            if self._overlaps_any(probe, neighbors, gap=gap):
+                continue
+            if not self._within_safe(probe, safe):
+                continue
+            element.x = x
+            element.y = y
+            element.width = width
+            element.height = height
+            return True
+        return False
+
+    def _directional_room(
+        self,
+        element: LayoutElement,
+        neighbors: list[LayoutElement],
+        *,
+        safe: Rect,
+        gap: float,
+    ) -> dict[str, float]:
+        room = {
+            "left": max(0.0, element.x - safe.x),
+            "right": max(0.0, safe.right - element.right),
+            "up": max(0.0, element.y - safe.y),
+            "down": max(0.0, safe.bottom - element.bottom),
+        }
+        for other in neighbors:
+            vert_overlap = not (
+                element.bottom <= other.y + 1e-9 or other.bottom <= element.y + 1e-9
+            )
+            horiz_overlap = not (
+                element.right <= other.x + 1e-9 or other.right <= element.x + 1e-9
+            )
+            if vert_overlap:
+                if other.right <= element.x + 1e-9:
+                    room["left"] = min(
+                        room["left"], max(0.0, element.x - other.right - gap)
+                    )
+                elif other.x >= element.right - 1e-9:
+                    room["right"] = min(
+                        room["right"], max(0.0, other.x - element.right - gap)
+                    )
+                else:
+                    # Already colliding in this band — no lateral expansion.
+                    room["left"] = 0.0
+                    room["right"] = 0.0
+            if horiz_overlap:
+                if other.bottom <= element.y + 1e-9:
+                    room["up"] = min(
+                        room["up"], max(0.0, element.y - other.bottom - gap)
+                    )
+                elif other.y >= element.bottom - 1e-9:
+                    room["down"] = min(
+                        room["down"], max(0.0, other.y - element.bottom - gap)
+                    )
+                else:
+                    room["up"] = 0.0
+                    room["down"] = 0.0
+        return room
+
+    def _seeded_free_band(
+        self,
+        element: LayoutElement,
+        neighbors: list[LayoutElement],
+        *,
+        safe: Rect,
+        gap: float,
+    ) -> Rect:
+        """Largest axis-aligned free band that still contains the element seed."""
+        room = self._directional_room(element, neighbors, safe=safe, gap=gap)
+        return Rect(
+            x=element.x - room["left"],
+            y=element.y - room["up"],
+            width=element.width + room["left"] + room["right"],
+            height=element.height + room["up"] + room["down"],
+        )
+
+    @staticmethod
+    def _width_steps(current: float, maximum: float) -> list[float]:
+        if maximum <= current + 1e-9:
+            return [current]
+        steps = [current]
+        # Grow gradually — never jump straight to the max free width first.
+        cursor = current
+        while cursor < maximum - 1e-9:
+            cursor = min(maximum, cursor + max(0.25, (maximum - current) / 4))
+            steps.append(cursor)
+        if steps[-1] < maximum - 1e-9:
+            steps.append(maximum)
+        # De-dupe while preserving order.
+        out: list[float] = []
+        for value in steps:
+            if not out or abs(out[-1] - value) > 1e-9:
+                out.append(value)
+        return out
+
+    def _needed_height(self, text: str, width: float, style: TextStyleToken) -> float:
+        lines = self._text.estimate_lines(text, box_width_in=width, style=style)
+        return max(_MIN_TEXT_H, lines * (style.line_height / 72.0))
+
+    def _text_fits(self, element: LayoutElement, style: TextStyleToken) -> bool:
+        if not element.text_content:
+            return True
+        return self._text.fits(
+            element.text_content,
+            box_width_in=element.width,
+            box_height_in=element.height,
+            style=style,
+        )
+
+    @staticmethod
+    def _overlaps_any(
+        element: LayoutElement, neighbors: list[LayoutElement], *, gap: float
+    ) -> bool:
+        probe = Rect(element.x, element.y, element.width, element.height)
+        for other in neighbors:
+            other_rect = Rect(other.x, other.y, other.width, other.height)
+            # Enforce gap by inflating the other rect slightly.
+            padded = Rect(
+                other_rect.x - gap,
+                other_rect.y - gap,
+                other_rect.width + 2 * gap,
+                other_rect.height + 2 * gap,
+            )
+            if probe.overlaps(padded, tolerance=0.0):
+                return True
+        return False
+
+    @staticmethod
+    def _within_safe(element: LayoutElement, safe: Rect) -> bool:
+        return (
+            element.x + 1e-6 >= safe.x
+            and element.y + 1e-6 >= safe.y
+            and element.right <= safe.right + 1e-6
+            and element.bottom <= safe.bottom + 1e-6
+        )
+
+    @staticmethod
+    def _next_layout_variant(family, current: str) -> str:
+        variants = list(get_layout_family_registry().get(family).supported_variants)
+        if len(variants) < 2:
+            return current
+        try:
+            idx = variants.index(current)
+        except ValueError:
+            return variants[0]
+        return variants[(idx + 1) % len(variants)]
 
     def _enlarge_hero(
         self,

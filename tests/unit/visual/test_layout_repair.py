@@ -26,6 +26,7 @@ from archium.domain.visual.enums import (
     ImageFit,
     LayoutContentType,
     LayoutValidationStatus,
+    OverflowPolicy,
 )
 
 
@@ -191,9 +192,101 @@ class TestLayoutRepairService:
         body = repaired.element_by_id("body")
         assert body is not None
         assert body.height > 0.4 or body.width > 2.0
+        # Must not casually claim the entire safe area.
+        from archium.infrastructure.layout.geometry import safe_area as safe_rect
+
+        safe = safe_rect(design)
+        assert body.area < safe.area * 0.95
         assert not LayoutValidationService().validate(
             repaired, design, require_source=False
         ).issues_for(LAYOUT_TEXT_OVERFLOW)
+
+    def test_text_overflow_does_not_cover_unlocked_neighbors(self) -> None:
+        """P0: overflow repair must not paint over unlocked hero/body/metrics."""
+        design = default_presentation_design_system()
+        plan = _plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                x=4.5,
+                y=1.0,
+                width=4.8,
+                height=3.5,
+                locked=False,
+            ),
+            LayoutElement(
+                id="body",
+                role=LayoutElementRole.BODY_TEXT,
+                content_type=LayoutContentType.TEXT,
+                text_content="溢出正文需要更多空间" * 12,
+                x=0.7,
+                y=1.0,
+                width=2.0,
+                height=0.35,
+                style_token="body",
+            ),
+            family=LayoutFamily.HERO,
+        )
+        report = LayoutValidationService().validate(plan, design, require_source=False)
+        assert report.issues_for(LAYOUT_TEXT_OVERFLOW)
+        # Repair only the overflow issue so hero geometry stays put for this assertion.
+        overflow_only = report.model_copy(
+            update={"issues": list(report.issues_for(LAYOUT_TEXT_OVERFLOW))}
+        )
+        repaired = LayoutRepairService().repair(plan, overflow_only, design)
+        body = repaired.element_by_id("body")
+        hero = repaired.element_by_id("hero")
+        assert body is not None and hero is not None
+        assert hero.x == 4.5 and hero.y == 1.0 and hero.width == 4.8
+        # No overlap with the unlocked neighbor.
+        assert (
+            body.right <= hero.x + 1e-6
+            or body.bottom <= hero.y + 1e-6
+            or body.y >= hero.bottom - 1e-6
+            or body.x >= hero.right - 1e-6
+        )
+        assert body.width < 8.0  # did not snap to full safe width
+
+    def test_text_overflow_unresolved_suggests_split_and_variant(self) -> None:
+        """When text cannot fit without covering neighbors, escalate — don't fill safe."""
+        design = default_presentation_design_system()
+        plan = _plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                x=0.7,
+                y=1.0,
+                width=8.6,
+                height=3.5,
+                locked=False,
+            ),
+            LayoutElement(
+                id="caption",
+                role=LayoutElementRole.CAPTION,
+                content_type=LayoutContentType.TEXT,
+                text_content="极窄缝隙中的超长说明文字" * 30,
+                x=0.7,
+                y=4.55,
+                width=8.6,
+                height=0.25,
+                style_token="caption",
+            ),
+            family=LayoutFamily.HERO,
+        )
+        before_variant = plan.layout_variant
+        report = LayoutValidationService().validate(plan, design, require_source=False)
+        assert report.issues_for(LAYOUT_TEXT_OVERFLOW)
+        repaired = LayoutRepairService().repair(plan, report, design)
+        caption = repaired.element_by_id("caption")
+        hero = repaired.element_by_id("hero")
+        assert caption is not None and hero is not None
+        # Must not cover the hero by claiming the safe area.
+        assert caption.height <= 0.5
+        assert caption.y + 1e-6 >= hero.bottom or caption.bottom <= hero.y + 1e-6
+        assert repaired.overflow_policy == OverflowPolicy.SPLIT
+        assert repaired.layout_variant != before_variant
 
     def test_repairs_drawing_crop_and_distortion(self) -> None:
         design = default_presentation_design_system()
