@@ -1,4 +1,4 @@
-"""Backward-compatible re-exports for automated review."""
+"""Automated presentation review — content / evidence / architectural / layout / visual QA."""
 
 from archium.application.review.export_gating import (
     critical_export_block_messages,
