@@ -35,6 +35,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | LayoutPlan → 原生 PPTX（`render-plan.mjs`） | ✅ |
 | Golden V1–V7（composition） | ✅ |
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ 初版 |
+| Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 
 ## Round 1 明确不做
 

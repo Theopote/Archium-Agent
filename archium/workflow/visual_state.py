@@ -54,6 +54,7 @@ class VisualWorkflowState(TypedDict, total=False):
     # Accumulated per-round repair before/after diffs (repair contract audit trail).
     repair_diffs: Annotated[list[dict], operator.add]
     visual_critic_reports: list[dict]
+    deck_qa_report: dict | None
     output_dir: str | None
 
 
@@ -104,6 +105,7 @@ def initial_visual_workflow_state(
         "allow_invalid_layout_export": False,
         "repair_diffs": [],
         "visual_critic_reports": [],
+        "deck_qa_report": None,
         "output_dir": None,
     }
     if design_system_id is not None:

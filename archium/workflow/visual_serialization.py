@@ -66,6 +66,7 @@ def snapshot_visual_state(state: VisualWorkflowState) -> dict[str, Any]:
         "allow_invalid_layout_export": bool(state.get("allow_invalid_layout_export", False)),
         "repair_diffs": list(state.get("repair_diffs") or []),
         "visual_critic_reports": list(state.get("visual_critic_reports") or []),
+        "deck_qa_report": state.get("deck_qa_report"),
         "output_dir": state.get("output_dir"),
         "presentation": presentation.model_dump(mode="json") if presentation else None,
         "brief": brief.model_dump(mode="json") if brief else None,
@@ -113,6 +114,7 @@ def restore_visual_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
         ),
         "repair_diffs": list(state_data.get("repair_diffs") or []),
         "visual_critic_reports": list(state_data.get("visual_critic_reports") or []),
+        "deck_qa_report": state_data.get("deck_qa_report"),
         "output_dir": state_data.get("output_dir"),
     }
     if state_data.get("presentation"):

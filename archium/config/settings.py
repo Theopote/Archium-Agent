@@ -196,6 +196,13 @@ class Settings(BaseSettings):
             "(Visual Quality heuristics; never auto-repairs or blocks PPTX export)."
         ),
     )
+    visual_deck_qa_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, run read-only deck-level consistency QA after visual render "
+            "(footer/chrome/typography/family rhythm; never blocks PPTX export)."
+        ),
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

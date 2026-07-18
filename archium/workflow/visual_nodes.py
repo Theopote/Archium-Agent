@@ -16,6 +16,7 @@ from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
 )
+from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_planning_service import (
     LayoutPlanningService,
     format_layout_decision_warnings,
@@ -78,6 +79,7 @@ class VisualWorkflowRuntime:
         self.layout_validation_service = LayoutValidationService()
         self.layout_repair_service = LayoutRepairService()
         self.visual_critic_service = VisualCriticService()
+        self.deck_qa_service = DeckQAService()
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
             settings, session=session
         )
@@ -938,13 +940,20 @@ class VisualWorkflowNodes:
             return {"errors": [str(exc)], "current_step": step}
 
     def critique_visuals(self, state: VisualWorkflowState) -> VisualWorkflowState:
-        """Read-only Visual Critic after render — never repairs or blocks PPTX."""
+        """Read-only Visual Critic + Deck QA after render — never repairs/blocks PPTX."""
         logger = self._logger(state)
         step = WorkflowStep.VISUAL_CRITIQUE.value
         if state.get("errors"):
             return {"current_step": step}
-        if not bool(getattr(self._runtime.settings, "visual_critic_enabled", True)):
-            return {"current_step": step, "visual_critic_reports": []}
+
+        critic_on = bool(getattr(self._runtime.settings, "visual_critic_enabled", True))
+        deck_on = bool(getattr(self._runtime.settings, "visual_deck_qa_enabled", True))
+        if not critic_on and not deck_on:
+            return {
+                "current_step": step,
+                "visual_critic_reports": [],
+                "deck_qa_report": None,
+            }
 
         try:
             plans = []
@@ -953,60 +962,82 @@ class VisualWorkflowNodes:
                 if plan is not None:
                     plans.append(plan)
 
-            # Prefer any PNG already present in render_paths (future PPTX screenshots).
-            image_paths: dict[str, Path] = {}
-            for raw in state.get("render_paths") or []:
-                path = Path(str(raw))
-                if path.suffix.lower() == ".png" and path.is_file():
-                    # Best-effort: single shared preview maps to all plans if only one.
-                    image_paths.setdefault("shared", path)
-
-            reports = self._runtime.visual_critic_service.evaluate_deck(
-                plans,
-                image_paths=(
-                    {str(plan.id): image_paths["shared"] for plan in plans}
-                    if "shared" in image_paths and len(plans) == 1
-                    else {}
-                ),
-            )
-            payloads = [report.model_dump(mode="json") for report in reports]
             warnings: list[str] = []
-            for report in reports:
-                for finding in report.findings:
-                    warnings.append(
-                        f"VisualCritic {finding.rule_code}: {finding.message}"
-                    )
-
+            render_paths = list(state.get("render_paths") or [])
+            payloads: list[dict] = []
+            deck_payload: dict | None = None
             output_dir = Path(state.get("output_dir") or ".")
             output_dir.mkdir(parents=True, exist_ok=True)
-            report_path = output_dir / "visual_critic_reports.json"
-            report_path.write_text(
-                json.dumps(payloads, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            render_paths = list(state.get("render_paths") or [])
-            render_paths.append(str(report_path))
+
+            if critic_on:
+                image_paths: dict[str, Path] = {}
+                for raw in state.get("render_paths") or []:
+                    path = Path(str(raw))
+                    if path.suffix.lower() == ".png" and path.is_file():
+                        image_paths.setdefault("shared", path)
+
+                reports = self._runtime.visual_critic_service.evaluate_deck(
+                    plans,
+                    image_paths=(
+                        {str(plan.id): image_paths["shared"] for plan in plans}
+                        if "shared" in image_paths and len(plans) == 1
+                        else {}
+                    ),
+                )
+                payloads = [report.model_dump(mode="json") for report in reports]
+                for report in reports:
+                    for finding in report.findings:
+                        warnings.append(
+                            f"VisualCritic {finding.rule_code}: {finding.message}"
+                        )
+                report_path = output_dir / "visual_critic_reports.json"
+                report_path.write_text(
+                    json.dumps(payloads, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                render_paths.append(str(report_path))
+                logger.info(
+                    "Visual Critic complete: %s reports (%s findings)",
+                    len(payloads),
+                    sum(len(r.findings) for r in reports),
+                )
+
+            if deck_on:
+                deck_report = self._runtime.deck_qa_service.evaluate(
+                    plans,
+                    slides=list(state.get("slides") or []),
+                )
+                deck_payload = deck_report.model_dump(mode="json")
+                for finding in deck_report.findings:
+                    warnings.append(f"DeckQA {finding.rule_code}: {finding.message}")
+                deck_path = output_dir / "deck_qa_report.json"
+                deck_path.write_text(
+                    json.dumps(deck_payload, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                render_paths.append(str(deck_path))
+                logger.info(
+                    "Deck QA complete: score=%s findings=%s",
+                    deck_report.total_score,
+                    len(deck_report.findings),
+                )
 
             next_state: VisualWorkflowState = {
                 "visual_critic_reports": payloads,
+                "deck_qa_report": deck_payload,
                 "render_paths": render_paths,
                 "warnings": warnings,
                 "current_step": step,
             }
             merged = cast(VisualWorkflowState, {**state, **next_state})
             self._persist(merged)
-            logger.info(
-                "Visual Critic complete: %s reports (%s findings)",
-                len(payloads),
-                sum(len(r.findings) for r in reports),
-            )
             return next_state
         except Exception as exc:
-            # Soft-fail: critic must never fail the workflow.
+            # Soft-fail: critic / deck QA must never fail the workflow.
             logger.warning("critique_visuals failed (non-fatal): %s", exc)
             return {
                 "current_step": step,
-                "warnings": [f"Visual Critic skipped: {exc}"],
+                "warnings": [f"Visual Critic / Deck QA skipped: {exc}"],
             }
 
     def finalize(self, state: VisualWorkflowState) -> VisualWorkflowState:

@@ -116,6 +116,18 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 - **不**调用 `LayoutRepairService`，**不**参与正式 PPTX 门禁
 - 结果写入 `visual_critic_reports.json` 与 workflow warnings
 
+### Deck QA（deck_heuristic_v0，只读）
+
+同节点内（`VISUAL_DECK_QA_ENABLED`）运行跨页一致性检查：
+
+- `DECK.REPEATED_LAYOUT_FAMILY` — 连续同族版式
+- `DECK.FOOTER_INCONSISTENT` / `DECK.CHROME_INCONSISTENT` — 页脚/页码/来源漂移
+- `DECK.TYPOGRAPHY_INCONSISTENT` — 同级文字 token 不一致
+- `DECK.IMAGE_SCALE_INCONSISTENT` — 主图尺度跳变
+- `DECK.WEAK_SECTION_TRANSITION` — 封面/章节页误用密内容族
+
+产出 `DeckQAReport`（`score_kind: deck_consistency`）→ `deck_qa_report.json`。同样不修布局、不挡导出。
+
 ## 设计约束（不可违反）
 
 1. 不用「医院模板 / 校园模板」等项目类型固定套版驱动排版。

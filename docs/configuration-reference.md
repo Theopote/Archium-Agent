@@ -85,6 +85,7 @@ Do not edit them manually.
 | `LLM_PROFESSIONAL_REVIEW_ENABLED` | `false` | No | When true and LLM is configured, run LLM-assisted review across all four layers (content/evidence/architectural/layout) and Brief semantic alignment. |
 | `VISUAL_QA_ENABLED` | `true` | No | When true and Pillow is available, run explainable image QA on matched slide assets (dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type). |
 | `VISUAL_CRITIC_ENABLED` | `true` | No | When true, run read-only Visual Critic after visual render (Visual Quality heuristics). Never auto-repairs layouts and never blocks PPTX export. |
+| `VISUAL_DECK_QA_ENABLED` | `true` | No | When true, run read-only deck-level consistency QA after visual render (family rhythm, footer/chrome, typography, hero scale). Never blocks PPTX export. |
 
 ## repair.* — Automated slide repair {#repair}
 
