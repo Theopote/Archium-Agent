@@ -14,8 +14,11 @@ from archium.domain.visual_qa import VisualQAReport
 from archium.infrastructure.vision.analyzer import analyze_image
 from archium.infrastructure.vision.analyzer_version import ANALYZER_VERSION
 
-DEFAULT_MANIFEST_PATH = Path("tests/calibration/visual_qa/corpus/manifest.json")
-DEFAULT_REPORT_PATH = Path("tests/calibration/visual_qa/corpus/calibration_report.json")
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_MANIFEST_PATH = _PROJECT_ROOT / "tests/calibration/visual_qa/corpus/manifest.json"
+DEFAULT_REPORT_PATH = (
+    _PROJECT_ROOT / "tests/calibration/visual_qa/corpus/calibration_report.json"
+)
 
 CORPUS_CATEGORY_TARGETS: dict[str, int] = {
     "site_plan": 50,
