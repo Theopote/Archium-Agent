@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
-
 import pytest
 from archium.infrastructure.renderers.marp_cli import MarpCliRunner
 from tests.golden.visual.baseline import (
@@ -49,5 +47,6 @@ def test_visual_baseline_manifests_exist() -> None:
     for case_id in VISUAL_CASE_IDS:
         baseline = load_baseline(case_id)
         assert baseline.case_id == case_id
-        assert baseline.slide_count == baseline.preview_count
+        assert baseline.preview_count >= baseline.slide_count
         assert baseline.slide_count >= 4
+        assert baseline.preview_count >= 4

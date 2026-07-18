@@ -11,6 +11,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+import archium.infrastructure.database.models  # noqa: F401,E402
 from archium.config.settings import Settings  # noqa: E402
 from archium.infrastructure.database.base import Base  # noqa: E402
 from archium.infrastructure.database.session import create_engine_from_settings  # noqa: E402

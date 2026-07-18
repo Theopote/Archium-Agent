@@ -7,8 +7,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageChops
 from archium.domain.slide import SlideSpec
+from PIL import Image, ImageChops
 
 BASELINE_ROOT = Path(__file__).resolve().parent / "baselines"
 VISUAL_CASE_IDS: tuple[str, ...] = (
@@ -110,14 +110,15 @@ def hamming_hex(a: str, b: str) -> int:
     return (int(a, 16) ^ int(b, 16)).bit_count()
 
 
-def build_manifest(
-    *,
-    case_id: str,
-    slides: list[SlideSpec],
-    preview_paths: list[Path],
-    marp_theme: str = MARP_THEME,
-) -> BaselineManifest:
-    slide_snapshots = tuple(
+def _diff_pixel_ratio(base_rgb: Image.Image, act_rgb: Image.Image, *, threshold: int = 10) -> float:
+    diff = ImageChops.difference(base_rgb, act_rgb).convert("L")
+    pixels = list(diff.getdata())
+    differing = sum(1 for value in pixels if value > threshold)
+    return differing / len(pixels) if pixels else 0.0
+
+
+def _slide_snapshots(slides: list[SlideSpec]) -> tuple[SlideSnapshot, ...]:
+    return tuple(
         SlideSnapshot(
             index=index,
             title=slide.title.strip(),
@@ -127,6 +128,16 @@ def build_manifest(
         )
         for index, slide in enumerate(slides)
     )
+
+
+def build_manifest(
+    *,
+    case_id: str,
+    slides: list[SlideSpec],
+    preview_paths: list[Path],
+    marp_theme: str = MARP_THEME,
+) -> BaselineManifest:
+    slide_snapshots = _slide_snapshots(slides)
     preview_snapshots: list[PreviewSnapshot] = []
     for index, path in enumerate(preview_paths, start=1):
         with Image.open(path) as image:
@@ -203,11 +214,7 @@ def compare_preview_image(
                 f"(Hamming {hamming_hex(expected_hash, actual_hash)} > {MAX_AHASH_HAMMING})"
             )
 
-        diff = ImageChops.difference(base_rgb, act_rgb)
-        histogram = diff.histogram()
-        diff_pixels = sum(histogram[1::2])
-        total_pixels = base_rgb.size[0] * base_rgb.size[1]
-        ratio = diff_pixels / total_pixels if total_pixels else 0.0
+        ratio = _diff_pixel_ratio(base_rgb, act_rgb)
         if ratio > MAX_PIXEL_DIFF_RATIO:
             issues.append(
                 f"{actual_path.name}: pixel diff {ratio:.1%} exceeds {MAX_PIXEL_DIFF_RATIO:.1%}"
@@ -238,11 +245,7 @@ def compare_structure(
             f"preview count changed: expected {baseline.preview_count}, got {len(preview_paths)}"
         )
 
-    actual_snapshots = build_manifest(
-        case_id=baseline.case_id,
-        slides=slides,
-        preview_paths=preview_paths,
-    ).slides
+    actual_snapshots = _slide_snapshots(slides)
     for expected, actual in zip(baseline.slides, actual_snapshots, strict=False):
         if not actual.title:
             issues.append(f"slide {actual.index}: missing title")

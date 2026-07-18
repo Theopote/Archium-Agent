@@ -49,3 +49,14 @@ pytest tests/golden -v
 ```
 
 产物：`tests/golden/artifacts/`（CI 上传为 workflow artifact）
+
+## Visual regression（Layer 1 扩展）
+
+在流程/结构 Golden 之上，对 **3 个关键 Case** 的 Marp PNG 预览建立视觉基线：
+
+```bash
+pytest tests/golden/visual -v -m visual_regression   # 需 Marp CLI
+python scripts/update_visual_baselines.py            # 有意变更后刷新基线
+```
+
+详见 [visual/README.md](visual/README.md)。检测项：页数变化、标题缺失、布局大偏差、边距溢出——**非**像素级完全一致。

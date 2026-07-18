@@ -1,0 +1,74 @@
+{
+  "case_id": "case_a_hospital",
+  "marp_theme": "default",
+  "slide_count": 4,
+  "preview_count": 6,
+  "slides": [
+    {
+      "index": 0,
+      "title": "院区现状",
+      "slide_type": "content",
+      "layout_id": "default",
+      "has_message": true
+    },
+    {
+      "index": 1,
+      "title": "核心问题",
+      "slide_type": "content",
+      "layout_id": "default",
+      "has_message": true
+    },
+    {
+      "index": 2,
+      "title": "改造策略",
+      "slide_type": "content",
+      "layout_id": "default",
+      "has_message": true
+    },
+    {
+      "index": 3,
+      "title": "下一步",
+      "slide_type": "summary",
+      "layout_id": "default",
+      "has_message": true
+    }
+  ],
+  "previews": [
+    {
+      "file": "slide_01.png",
+      "width": 1280,
+      "height": 720,
+      "average_hash": "ffff1f1f0707ffff"
+    },
+    {
+      "file": "slide_02.png",
+      "width": 1280,
+      "height": 720,
+      "average_hash": "ffffff1f0fffffff"
+    },
+    {
+      "file": "slide_03.png",
+      "width": 1280,
+      "height": 720,
+      "average_hash": "ff3f0f3f1f1f0fff"
+    },
+    {
+      "file": "slide_04.png",
+      "width": 1280,
+      "height": 720,
+      "average_hash": "ffff3f1f1f3fffff"
+    },
+    {
+      "file": "slide_05.png",
+      "width": 1280,
+      "height": 720,
+      "average_hash": "ffff1f1f3f1fbfff"
+    },
+    {
+      "file": "slide_06.png",
+      "width": 1280,
+      "height": 720,
+      "average_hash": "ffffff1f1fffffff"
+    }
+  ]
+}

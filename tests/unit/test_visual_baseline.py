@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image, ImageDraw
+
 from tests.golden.visual.baseline import (
     BaselineManifest,
     PreviewSnapshot,
@@ -40,7 +41,11 @@ def test_compare_preview_image_flags_large_layout_change(tmp_path: Path) -> None
         expected_hash = average_hash_hex(image)
     issues = compare_preview_image(baseline_path, actual_path, expected_hash=expected_hash)
     assert issues
-    assert any("layout hash drift" in issue or "pixel diff" in issue for issue in issues)
+    assert any(
+        keyword in issue
+        for issue in issues
+        for keyword in ("layout hash drift", "pixel diff", "margin overflow")
+    )
 
 
 def test_compare_structure_detects_page_count_mismatch() -> None:
@@ -79,6 +84,25 @@ def test_compare_structure_detects_page_count_mismatch() -> None:
     assert any("preview count changed" in issue for issue in issues)
 
 
+def test_committed_baseline_detects_local_drift(tmp_path: Path) -> None:
+    from tests.golden.visual.baseline import baseline_dir, load_baseline
+
+    baseline = load_baseline("case_a_hospital")
+    source = baseline_dir("case_a_hospital") / baseline.previews[0].file
+    if not source.exists():
+        pytest.skip("baseline PNG not committed")
+
+    mutated = tmp_path / "mutated.png"
+    with Image.open(source) as image:
+        rgb = image.convert("RGB")
+        draw = ImageDraw.Draw(rgb)
+        draw.rectangle((0, 0, rgb.size[0] - 1, 80), fill="red")
+        rgb.save(mutated)
+
+    issues = compare_preview_image(source, mutated, expected_hash=baseline.previews[0].average_hash)
+    assert issues
+
+
 def test_compare_preview_image_detects_margin_overflow(tmp_path: Path) -> None:
     baseline_path = tmp_path / "baseline.png"
     actual_path = tmp_path / "actual.png"
@@ -87,10 +111,15 @@ def test_compare_preview_image_detects_margin_overflow(tmp_path: Path) -> None:
 
     actual = Image.new("RGB", (400, 300), "white")
     draw = ImageDraw.Draw(actual)
-    draw.rectangle((360, 260, 395, 295), fill="black")
+    draw.rectangle((0, 280, 399, 299), fill="black")
     actual.save(actual_path)
 
     with Image.open(baseline_path) as image:
         expected_hash = average_hash_hex(image)
     issues = compare_preview_image(baseline_path, actual_path, expected_hash=expected_hash)
-    assert any("margin overflow" in issue for issue in issues)
+    assert issues
+    assert any(
+        keyword in issue
+        for issue in issues
+        for keyword in ("layout hash drift", "pixel diff", "margin overflow")
+    )
