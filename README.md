@@ -36,7 +36,7 @@ archium                            # 启动项目工作台（Streamlit UI）
 |------|------|------|
 | **主路径** | `archium` | 安装后的默认命令，启动 v0.2 项目工作台 |
 | 等价主路径 | `streamlit run app.py` | 与 `archium` 相同，适合已有 Streamlit 工作流的用户 |
-| Legacy（高级） | `archium-legacy` 或 `python main.py` | v0.1 实验 CLI（文件整理 / 快速 PPT / Discord），**不是**主产品 |
+| Legacy（高级） | `archium-legacy` 或 `python main.py` | v0.1 实验 CLI（文件整理 / 快速 PPT），**不是**主产品 |
 
 开发者额外依赖：`pip install -e ".[full,legacy,dev]"`。Legacy CLI 需 `[legacy]` extra；详见下文「Legacy 入口」。
 
@@ -107,7 +107,7 @@ pytest tests/smoke/test_pptxgen_render.py -v  # PptxGenJS 真实 Node 渲染
 | Streamlit 启动 smoke | ✅ | ✅ | — | ⚠️ |
 | Alembic migration smoke | ✅ | ✅ | — | ⚠️ |
 | CLI 指令中心（`main.py` / `archium-legacy`） | ✅ | ⚠️ | — | ❌ |
-| 遗留实验模块（文件整理 / Discord） | ✅ | ⚠️ | — | ❌ |
+| 遗留实验模块（文件整理） | ✅ | ⚠️ | — | ❌ |
 
 图例：✅ 已满足 · ⚠️ 部分满足或依赖外部工具 · ❌ 未满足或不稳定
 
@@ -117,7 +117,7 @@ pytest tests/smoke/test_pptxgen_render.py -v  # PptxGenJS 真实 Node 渲染
 |------|------|------|------|
 | **主入口** | `archium` | v0.2 正式路径 | 安装后的默认命令；启动 Streamlit 项目工作台与结构化汇报管线 |
 | **等价主入口** | `streamlit run app.py` | v0.2 正式路径 | 与 `archium` 相同，适合脚本或 IDE 直接调用 Streamlit |
-| **Legacy CLI** | `archium-legacy` 或 `python main.py` | 遗留/实验 | v0.1 自然语言路由（文件整理、快速 PPT、Discord 守卫）；需 `[legacy]` extra |
+| **Legacy CLI** | `archium-legacy` 或 `python main.py` | 遗留/实验 | v0.1 自然语言路由（文件整理、快速 PPT） |
 | **库 API** | `archium/` 包内服务 | v0.2 核心 | `PresentationWorkflowService`、`IngestionService` 等 |
 
 `main.py` 与 `ppt_generator.py` 属于 **Legacy v0.1** 快速原型路径，**不等同**于项目工作台内的 Brief → Storyline → SlideSpec 主流程。
@@ -315,7 +315,7 @@ streamlit run app.py
 
 ### Legacy 入口（高级 / 实验）
 
-v0.1 自然语言 CLI，**不是** v0.2 主产品。需 `pip install -e ".[legacy]"`（Discord 等功能）。
+v0.1 自然语言 CLI，**不是** v0.2 主产品。
 
 ```bash
 archium-legacy
@@ -430,7 +430,7 @@ marp --version
 - 驳回后可一键重新生成 Brief、Storyline 或 Slide 计划
 - Marp 仍作为预览/降级路径
 - PPTX / PDF 导出依赖 Marp CLI；原生元素 PPTX 需 Node.js 并在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`
-- Discord 与文件整理为实验性遗留功能
+- 文件整理为实验性遗留功能
 
 ## 开发路线图
 
@@ -463,7 +463,6 @@ marp --version
 以下模块属于 v0.1 实验性功能，将在后续阶段移入 `legacy/` 并与主汇报流程解耦：
 
 - `file_manager.py` — AI 辅助文件整理（**CLI 中唯一会移动本地文件的路径**；执行前会展示分类方案并要求二次确认）
-- `discord_watcher.py` — Discord @ 消息优先级过滤
 
 ## License
 

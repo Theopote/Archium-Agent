@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 from archium.infrastructure.llm.schemas import (
-    DiscordClassification,
     FileClassificationPlan,
     RouterPlan,
 )
@@ -20,7 +19,6 @@ def mock_provider() -> MockLLMProvider:
                 '"params": {"topic": "周报", "output_path": "output/a.pptx"}}]}'
             ),
             "classify": '{"report.pdf": "D:/Reports", "photo.jpg": "D:/Images"}',
-            "discord": '{"important": true, "summary": "紧急会议通知"}',
         }
     )
 
@@ -50,15 +48,6 @@ def test_mock_file_classification(mock_provider: MockLLMProvider) -> None:
     )
     result = plan.validate_expected_files({"report.pdf", "photo.jpg"})
     assert result["report.pdf"] == "D:/Reports"
-
-
-def test_mock_discord_classification(mock_provider: MockLLMProvider) -> None:
-    result = mock_provider.generate_structured(
-        LLMRequest(system_prompt="discord", user_prompt="消息"),
-        DiscordClassification,
-    )
-    assert result.important is True
-    assert "会议" in result.summary
 
 
 def test_router_plan_empty_steps() -> None:

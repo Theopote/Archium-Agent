@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, RootModel, field_validator
+from pydantic import BaseModel, Field, RootModel
 
 
 class RouterStep(BaseModel):
-    tool: Literal["file_manager", "ppt_generator", "discord_watcher"]
+    tool: Literal["file_manager", "ppt_generator"]
     params: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -34,13 +34,3 @@ class FileClassificationPlan(RootModel[dict[str, str]]):
             if not name or not dest:
                 raise ValueError(f"分类项不能为空：{name!r} -> {dest!r}")
         return result
-
-
-class DiscordClassification(BaseModel):
-    important: bool
-    summary: str = Field(max_length=200)
-
-    @field_validator("summary")
-    @classmethod
-    def _strip_summary(cls, value: str) -> str:
-        return value.strip()

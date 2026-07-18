@@ -280,18 +280,6 @@ class Settings(BaseSettings):
         description="Unsplash access key (reserved for future provider support).",
     )
 
-    # ── legacy.* ─────────────────────────────────────────────────────────────
-    discord_bot_token: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("DISCORD_BOT_TOKEN"),
-        description="Discord Bot token for legacy discord_watcher module.",
-    )
-    discord_user_id: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("DISCORD_USER_ID"),
-        description="Discord user ID filter for legacy discord_watcher module.",
-    )
-
     @model_validator(mode="after")
     def _validate_chunk_settings(self) -> Settings:
         if self.chunk_overlap_chars >= self.chunk_max_chars:

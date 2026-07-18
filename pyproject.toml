@@ -46,11 +46,7 @@ full = [
     "chromadb>=0.5",
     "openai>=1.0.0",
 ]
-legacy = [
-    "discord.py>=2.3.0",
-    "plyer>=2.1.0",
-    "watchdog>=4.0.0",
-]
+legacy = []
 dev = [
     "alembic>=1.13",
     "pytest>=8.0",
@@ -109,7 +105,7 @@ ignore_missing_imports = true
 packages = ["archium"]
 
 [[tool.mypy.overrides]]
-module = ["main", "app", "config", "ppt_generator", "file_manager", "discord_watcher"]
+module = ["main", "app", "config", "ppt_generator", "file_manager"]
 ignore_errors = true
 
 # chromadb → numpy ships 3.12-only stub syntax; skip third-party follow-imports.

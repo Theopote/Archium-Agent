@@ -117,10 +117,3 @@ Do not edit them manually.
 | `WEB_IMAGE_SEARCH_PER_PAGE` | `5` | No | Number of Pexels results to consider per visual requirement. |
 | `WEB_IMAGE_SEARCH_PERSIST_TO_LIBRARY` | `true` | No | When true, downloaded web images are copied into the project asset library. |
 | `UNSPLASH_ACCESS_KEY` | `*(unset)*` | No | Unsplash access key (reserved for future provider support). |
-
-## Legacy modules (optional) {#legacy}
-
-| Environment variable | Default | Required at startup | Description |
-|----------------------|---------|:-------------------:|-------------|
-| `DISCORD_BOT_TOKEN` | `*(unset)*` | No | Discord Bot token for legacy discord_watcher module. |
-| `DISCORD_USER_ID` | `*(unset)*` | No | Discord user ID filter for legacy discord_watcher module. |

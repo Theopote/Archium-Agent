@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import threading
 from pathlib import Path
 
 import streamlit as st
@@ -19,40 +17,6 @@ def _module_status_file_manager() -> tuple[str, str]:
     if not settings.llm_configured:
         return "red", "缺少 API Key"
     return "green", "就绪"
-
-
-def _module_status_discord() -> tuple[str, str]:
-    token = st.session_state.get("discord_token") or os.getenv("DISCORD_BOT_TOKEN", "")
-    user_id = os.getenv("DISCORD_USER_ID", "")
-    if st.session_state.get("discord_running"):
-        return "green", "运行中"
-    if token and user_id:
-        return "yellow", "已配置 · 未启动"
-    if token:
-        return "yellow", "缺少 User ID"
-    return "red", "未配置 Token"
-
-
-def _start_discord_background() -> None:
-    if st.session_state.get("discord_running"):
-        return
-    token = st.session_state.get("discord_token") or os.getenv("DISCORD_BOT_TOKEN", "")
-    if not token:
-        raise ValueError("请先在侧边栏填写 Discord Bot Token")
-    if not os.getenv("DISCORD_USER_ID"):
-        raise ValueError("请在 .env 中设置 DISCORD_USER_ID")
-
-    os.environ["DISCORD_BOT_TOKEN"] = token
-
-    def _run_bot() -> None:
-        import discord_watcher
-
-        discord_watcher.run()
-
-    thread = threading.Thread(target=_run_bot, daemon=True)
-    thread.start()
-    st.session_state.discord_running = True
-    st.session_state.discord_thread_started = True
 
 
 def _format_report_markdown(report: ExecutionReport) -> str:
@@ -86,22 +50,17 @@ def _render_file_artifacts(results: list[StepResult]) -> None:
     render_file_downloads(paths, key_prefix="command_center")
 
 
-def _process_instruction(instruction: str) -> ExecutionReport:
-    return run_instruction(instruction, discord_runner=_start_discord_background)
-
-
 def _init_chat_state() -> None:
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {
                 "role": "assistant",
                 "content": (
-                    "你好，我是 **Archium（阿基姆）**——你的架构与知识管理智能体。\n\n"
+                    "你好，我是 **Archium（阿基姆）**——你的建筑汇报与知识管理智能体。\n\n"
                     "你可以用自然语言告诉我需要做什么，例如：\n"
                     "- 整理 `~/Downloads` 文件夹\n"
-                    "- 做一份本周项目进度 PPT\n"
-                    "- 启动 Discord 消息守卫\n\n"
-                    "如需结构化项目汇报，请使用 **项目工作台**。"
+                    "- 做一份本周项目进度 PPT\n\n"
+                    "如需结构化建筑项目汇报，请使用 **项目工作台**。"
                 ),
                 "artifacts": [],
             }
@@ -111,11 +70,10 @@ def _init_chat_state() -> None:
 def render() -> None:
     _init_chat_state()
     st.markdown("### 指令中心")
-    st.caption("用自然语言驱动 PPT 生成、文件整理与 Discord 守卫（v0.1 遗留路径）")
+    st.caption("用自然语言驱动 PPT 生成与文件整理（v0.1 遗留路径）")
 
-    fm_c, fm_h = _module_status_file_manager()
-    dc_c, dc_h = _module_status_discord()
-    st.caption(f"文件管家：{fm_h} · Discord 守卫：{dc_h}")
+    _fm_c, fm_h = _module_status_file_manager()
+    st.caption(f"文件管家：{fm_h}")
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"], avatar="🏛️" if msg["role"] == "assistant" else None):
@@ -130,7 +88,7 @@ def render() -> None:
 
         with st.chat_message("assistant", avatar="🏛️"), st.spinner("Archium 正在思考…"):
             try:
-                report = _process_instruction(prompt)
+                report = run_instruction(prompt)
                 reply = _format_report_markdown(report)
                 st.markdown(reply)
                 if report.step_results:
@@ -148,13 +106,3 @@ def render() -> None:
                 st.session_state.messages.append(
                     {"role": "assistant", "content": err, "artifacts": []}
                 )
-
-    if st.button("启动 Discord 守卫", use_container_width=True):
-        if not (st.session_state.get("discord_token") or os.getenv("DISCORD_BOT_TOKEN")):
-            st.error("请先在侧边栏填写 Discord Bot Token")
-        elif not os.getenv("DISCORD_USER_ID"):
-            st.error("请在 .env 中设置 DISCORD_USER_ID")
-        else:
-            _start_discord_background()
-            st.toast("Discord 守卫已在后台启动", icon="🤖")
-            st.rerun()

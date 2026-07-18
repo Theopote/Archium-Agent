@@ -4,8 +4,8 @@ Archium Agent — Legacy v0.1 CLI (experimental)
 This is NOT the v0.2 product entry point. Use ``archium`` or
 ``streamlit run app.py`` for the project workspace.
 
-Natural-language router for v0.1 tools: file organization, quick Marp PPT,
-Discord watcher. Requires ``pip install -e ".[legacy]"`` for Discord support.
+Natural-language router for v0.1 tools: file organization and quick Marp PPT.
+Requires ``pip install -e ".[legacy]"`` for legacy CLI extras.
 """
 
 from __future__ import annotations
@@ -37,9 +37,6 @@ ROUTER_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
    - topic (str)：演示文稿主题
    - output_path (str)：输出文件路径，必须以 .pptx 或 .pdf 结尾
      示例：output/weekly_report.pptx
-
-3. discord_watcher — 启动 Discord 消息守卫 Bot（长期运行，阻塞进程）
-   params：{} （无需参数，Token 从 .env 读取）
 
 规则：
 - 用户可能要求连续执行多个工具，按逻辑顺序排列 steps（例如先整理文件再做 PPT）。
@@ -104,7 +101,7 @@ def _print_banner() -> None:
     print("  Use `archium` or `streamlit run app.py` for the workspace.")
     print("=" * 52)
     print("  🏛️  Archium Agent — 建筑师 AI 助手")
-    print("  📂 文件整理  |  📊 PPT 生成  |  🤖 Discord 守卫")
+    print("  📂 文件整理  |  📊 PPT 生成")
     print("=" * 52)
     print()
 
@@ -182,26 +179,6 @@ def _run_ppt_generator(params: dict[str, Any]) -> StepResult:
     return StepResult("ppt_generator", label, True, lines, [str(result)])
 
 
-def _run_discord_watcher(
-    _params: dict[str, Any],
-    *,
-    discord_runner: DiscordRunner | None = None,
-) -> StepResult:
-    label = TOOL_LABELS["discord_watcher"]
-    lines = ["正在启动 Discord 消息守卫…"]
-
-    runner = discord_runner or _default_discord_runner
-    runner()
-    lines.append("Discord 守卫已在后台运行。")
-    return StepResult("discord_watcher", label, True, lines)
-
-
-def _default_discord_runner() -> None:
-    import discord_watcher
-
-    discord_watcher.run()
-
-
 def _print_step_result_cli(result: StepResult) -> None:
     for line in result.lines:
         print(f"     {line}")
@@ -210,13 +187,11 @@ def _print_step_result_cli(result: StepResult) -> None:
 TOOL_RUNNERS = {
     "file_manager": _run_file_manager,
     "ppt_generator": _run_ppt_generator,
-    "discord_watcher": _run_discord_watcher,
 }
 
 TOOL_LABELS = {
     "file_manager": "📂 文件管家",
     "ppt_generator": "📊 PPT 生成器",
-    "discord_watcher": "🤖 Discord 守卫",
 }
 
 
@@ -238,13 +213,9 @@ class ExecutionReport:
     error: str | None = None
 
 
-DiscordRunner = Callable[[], None]
-
-
 def execute_plan(
     steps: list[RouterStep],
     *,
-    discord_runner: DiscordRunner | None = None,
     confirm_file_moves: ConfirmFileMoves | None = None,
 ) -> tuple[list[StepResult], bool]:
     if not steps:
@@ -261,12 +232,13 @@ def execute_plan(
         _print_step("▶️ ", f"步骤 {index + 1}/{total}：{label}")
 
         try:
+            runner = TOOL_RUNNERS.get(tool)
+            if runner is None:
+                raise ValueError(f"未知工具：{tool}")
             if tool == "file_manager":
                 result = _run_file_manager(params, confirm_moves=confirm_file_moves)
-            elif tool == "ppt_generator":
-                result = _run_ppt_generator(params)
             else:
-                result = _run_discord_watcher(params, discord_runner=discord_runner)
+                result = runner(params)
         except KeyboardInterrupt:
             _print_step("🛑", "用户中断当前任务。")
             raise
@@ -282,9 +254,6 @@ def execute_plan(
         if not result.success:
             return results, False
 
-        if tool == "discord_watcher":
-            return results, True
-
     return results, True
 
 
@@ -296,7 +265,6 @@ def _execute_plan(steps: list[RouterStep]) -> bool:
 def run_instruction(
     instruction: str,
     *,
-    discord_runner: DiscordRunner | None = None,
     confirm_file_moves: ConfirmFileMoves | None = None,
 ) -> ExecutionReport:
     plan = _route_instruction(instruction)
@@ -307,7 +275,6 @@ def run_instruction(
     plan_labels = [TOOL_LABELS.get(step.tool, step.tool) for step in plan.steps]
     step_results, success = execute_plan(
         plan.steps,
-        discord_runner=discord_runner,
         confirm_file_moves=confirm_file_moves,
     )
     return ExecutionReport(plan.summary, plan_labels, step_results, success)

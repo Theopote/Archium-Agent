@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 from pathlib import Path
 
 import streamlit as st
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
 
 from archium.config import get_settings
 from archium.infrastructure.database.session import init_database
@@ -167,29 +166,3 @@ def render_module_status() -> None:
     render_status("📁 项目工作台", pipeline_c, pipeline_h)
     render_status("📝 Marp 导出", marp_c, marp_h)
     render_status("📊 快速 PPT", legacy_c, legacy_h)
-
-
-def save_discord_token(token: str) -> None:
-    os.environ["DISCORD_BOT_TOKEN"] = token
-    st.session_state.discord_token = token
-    if ENV_PATH.exists() and token:
-        set_key(str(ENV_PATH), "DISCORD_BOT_TOKEN", token)
-
-
-def render_discord_settings() -> None:
-    if "discord_token" not in st.session_state:
-        st.session_state.discord_token = os.getenv("DISCORD_BOT_TOKEN", "")
-    if "discord_running" not in st.session_state:
-        st.session_state.discord_running = False
-
-    st.markdown('<div class="section-label">Settings</div>', unsafe_allow_html=True)
-    token_input = st.text_input(
-        "Discord Bot Token",
-        value=st.session_state.discord_token,
-        type="password",
-        placeholder="MTxxxxxx.xxxxxx.xxxxx",
-        help="保存后写入 .env，供 Discord 守卫模块使用",
-    )
-    if token_input != st.session_state.discord_token:
-        save_discord_token(token_input)
-        st.toast("Discord Token 已保存", icon="✅")

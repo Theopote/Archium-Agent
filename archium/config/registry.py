@@ -105,8 +105,6 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "web_image_search_per_page": ConfigDomain.VISUAL,
     "web_image_search_persist_to_library": ConfigDomain.VISUAL,
     "unsplash_access_key": ConfigDomain.VISUAL,
-    "discord_bot_token": ConfigDomain.LEGACY,
-    "discord_user_id": ConfigDomain.LEGACY,
 }
 
 

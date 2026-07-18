@@ -33,7 +33,7 @@
 | **中文字体 / 排版像素级** | **Manual**（PowerPoint 打开 PPTX） | **Manual** | **N/A**（CI 字体降级，仅验证可打开） |
 | **PowerPoint 可打开性 & 版式主观质量** | **Manual**（权威终检） | **Manual** | **N/A** |
 | **Live LLM 输出质量（L3）** | Manual | Manual | Manual |
-| **Discord / Legacy CLI** | Manual | Manual | Manual |
+| **Legacy CLI** | Manual | Manual | Manual |
 
 ## 自动化入口
 

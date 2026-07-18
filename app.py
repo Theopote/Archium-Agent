@@ -5,12 +5,10 @@ Archium（阿基姆）— Streamlit Web 前端
 from __future__ import annotations
 
 import streamlit as st
-
 from archium.ui.bootstrap import (
-    inject_styles,
     init_app,
+    inject_styles,
     render_branding,
-    render_discord_settings,
     render_module_status,
 )
 from archium.ui.pages import command_center, home, settings, workspace
@@ -28,7 +26,6 @@ inject_styles()
 with st.sidebar:
     render_branding()
     render_module_status()
-    render_discord_settings()
     st.markdown(
         '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
         "Archium v0.2-alpha.5<br>建筑 · 归档 · 智能"
