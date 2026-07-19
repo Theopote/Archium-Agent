@@ -12,6 +12,7 @@ from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
+from archium.ui.availability_labels import format_availability_suffix
 from archium.ui.planning_service import set_deliverable_selected
 
 
@@ -45,7 +46,11 @@ def render_deliverable_panel(
                 label += " · 必要"
             if item.notes and "不建议" in item.notes:
                 label += " · 不建议"
-            label += " · 可自动生成" if auto_ok else " · 即将支持"
+            label += format_availability_suffix(
+                available=auto_ok,
+                available_label="可自动生成",
+                coming_soon_label="即将支持",
+            )
 
             # Required selected items stay locked; unsupported unselected items
             # cannot be newly checked (avoid discovering the gap only at step 6).

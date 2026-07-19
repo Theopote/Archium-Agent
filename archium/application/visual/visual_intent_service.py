@@ -15,6 +15,7 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.visual_repositories import VisualIntentRepository
+from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.visual_schemas import VisualIntentDraft
 from archium.prompts.visual_intent import (
@@ -138,7 +139,9 @@ class VisualIntentService:
             supporting_asset_ids=supporting,
             hierarchy=list(draft.hierarchy),
             reading_order=list(draft.reading_order),
-            preferred_layout_families=list(draft.preferred_layout_families),
+            preferred_layout_families=self._implemented_preferred_families(
+                draft.preferred_layout_families
+            ),
             composition_strategy=draft.composition_strategy,
             image_treatment=draft.image_treatment,
             annotation_strategy=draft.annotation_strategy,
@@ -149,6 +152,14 @@ class VisualIntentService:
             approval_status=ApprovalStatus.PENDING,
         )
         return self._intents.save(intent)
+
+    @staticmethod
+    def _implemented_preferred_families(
+        families: list[LayoutFamily],
+    ) -> list[LayoutFamily]:
+        implemented = {item.family for item in get_layout_family_registry().implemented()}
+        filtered = [family for family in families if family in implemented]
+        return filtered or [LayoutFamily.TEXTUAL_ARGUMENT]
 
     def _rule_based_draft(self, slide: SlideSpec) -> VisualIntentDraft:
         primary_type = VisualType.TEXT_ONLY
@@ -175,16 +186,7 @@ class VisualIntentService:
             content = _VISUAL_TYPE_MAP.get(primary_type, VisualContentType.MIXED)
 
         families = list(_CONTENT_FAMILY_PRESETS.get(content, [LayoutFamily.TEXTUAL_ARGUMENT]))
-        # Prefer implemented families first for planning.
-        implemented = {
-            LayoutFamily.HERO,
-            LayoutFamily.EVIDENCE_BOARD,
-            LayoutFamily.DRAWING_FOCUS,
-            LayoutFamily.COMPARATIVE_MATRIX,
-            LayoutFamily.STRATEGY_CARDS,
-            LayoutFamily.TEXTUAL_ARGUMENT,
-        }
-        families = [f for f in families if f in implemented] or [LayoutFamily.TEXTUAL_ARGUMENT]
+        families = self._implemented_preferred_families(families)
 
         hierarchy = ["title", "hero", "supporting", "source"]
         if content == VisualContentType.TEXT_ARGUMENT:

@@ -5,36 +5,30 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.domain.visual.enums import LayoutFamily
-from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
-from archium.ui.slide_visual_panel import FAMILY_LABELS
-
-FAMILY_SCENARIOS: dict[LayoutFamily, str] = {
-    LayoutFamily.HERO: "封面或开篇，大图配合标题",
-    LayoutFamily.EVIDENCE_BOARD: "多张照片/证据网格与说明",
-    LayoutFamily.DRAWING_FOCUS: "平面图、剖面、立面等图纸主导",
-    LayoutFamily.COMPARATIVE_MATRIX: "多案例并列对比",
-    LayoutFamily.PROCESS_NARRATIVE: "时间线或步骤流程",
-    LayoutFamily.ANALYTICAL_DIAGRAM: "分析图与标注说明",
-    LayoutFamily.METRIC_DASHBOARD: "关键指标与数据摘要",
-    LayoutFamily.STRATEGY_CARDS: "分点策略或要点卡片",
-    LayoutFamily.TEXTUAL_ARGUMENT: "以文字论述为主",
-    LayoutFamily.HYBRID_CANVAS: "图文混合、非标准结构",
-}
-
-
-def _implemented_family_count() -> int:
-    return len(get_layout_family_registry().implemented())
+from archium.ui.layout_family_ui import (
+    FAMILY_SCENARIOS,
+    format_layout_family_label,
+    implemented_layout_family_definitions,
+    planned_layout_family_definitions,
+)
 
 
 def render_visual_engine_scope(*, expanded: bool = False) -> None:
     """Explain what Round 1 layout engine can and cannot do."""
-    count = _implemented_family_count()
-    st.info(
-        f"当前版式引擎覆盖 {count} 类常见建筑汇报场景（固定排布规则，非通用约束求解器）。"
+    implemented = implemented_layout_family_definitions()
+    planned = planned_layout_family_definitions()
+    implemented_count = len(implemented)
+
+    summary = (
+        f"当前版式引擎已可用 {implemented_count} 类常见建筑汇报场景"
+        "（固定排布规则，非通用约束求解器）。"
         "并非针对任意数量、任意长宽比素材逐页计算「最优」排布；"
         "超出范围时会尝试几何校验/修复或切换候选版式，"
         "未运行视觉编排时导出可退回 PresentationSpec 通用模板。"
     )
+    if planned:
+        summary += f"另有 {len(planned)} 类版式族已注册但尚未实现，界面会标注「即将支持」。"
+    st.info(summary)
 
     with st.expander("了解版式引擎能力边界", expanded=expanded):
         st.markdown(
@@ -43,13 +37,24 @@ def render_visual_engine_scope(*, expanded: bool = False) -> None:
             "PPTX 导出按 LayoutPlan 执行，不会重新求解版式。"
         )
 
-        st.markdown("**已覆盖的常见场景：**")
-        rows = []
-        for family in LayoutFamily:
-            label = FAMILY_LABELS.get(family, family.value)
-            scenario = FAMILY_SCENARIOS.get(family, "—")
-            rows.append(f"- **{label}**（`{family.value}`）：{scenario}")
-        st.markdown("\n".join(rows))
+        st.markdown(f"**已可用（{implemented_count} 类）：**")
+        implemented_rows = []
+        for definition in sorted(implemented, key=lambda item: item.family.value):
+            scenario = FAMILY_SCENARIOS.get(definition.family, "—")
+            label = format_layout_family_label(definition.family, show_availability=False)
+            implemented_rows.append(
+                f"- **{label}**（`{definition.family.value}`）：{scenario}"
+            )
+        st.markdown("\n".join(implemented_rows))
+
+        if planned:
+            st.markdown(f"**即将支持（{len(planned)} 类，暂不可选）：**")
+            planned_rows = []
+            for definition in sorted(planned, key=lambda item: item.family.value):
+                label = format_layout_family_label(definition.family, show_availability=True)
+                description = definition.description or FAMILY_SCENARIOS.get(definition.family, "—")
+                planned_rows.append(f"- **{label}**：{description}")
+            st.markdown("\n".join(planned_rows))
 
         st.markdown(
             "**超出范围时会发生什么：**\n"

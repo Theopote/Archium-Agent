@@ -6,27 +6,23 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.layout import LayoutPlan
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
+from archium.ui.layout_family_ui import (
+    FAMILY_LABELS,
+    format_layout_family_label,
+    layout_family_availability_status,
+    layout_family_implemented,
+)
 from archium.ui.visual_service import (
     SlideVisualSnapshot,
     replan_slide,
     select_layout_candidate,
 )
 
-FAMILY_LABELS = {
-    LayoutFamily.HERO: "主视觉页",
-    LayoutFamily.EVIDENCE_BOARD: "证据板",
-    LayoutFamily.DRAWING_FOCUS: "图纸主导",
-    LayoutFamily.COMPARATIVE_MATRIX: "案例比较",
-    LayoutFamily.PROCESS_NARRATIVE: "过程叙事",
-    LayoutFamily.ANALYTICAL_DIAGRAM: "分析图",
-    LayoutFamily.METRIC_DASHBOARD: "指标看板",
-    LayoutFamily.STRATEGY_CARDS: "策略卡片",
-    LayoutFamily.TEXTUAL_ARGUMENT: "文字论述",
-    LayoutFamily.HYBRID_CANVAS: "混合画布",
-}
+# Backward-compatible re-export for modules that imported labels from here.
+__all__ = ["FAMILY_LABELS", "render_slide_visual_panel"]
 
 PRESET_BUTTONS = [
     ("reduce_text", "减少文字"),
@@ -58,7 +54,7 @@ def render_slide_visual_panel(*, snapshot: SlideVisualSnapshot) -> None:
             st.write(f"密度：`{intent.density_level.value}`")
             st.write(f"连续角色：`{intent.continuity_role.value}`")
             families = ", ".join(
-                FAMILY_LABELS.get(family, family.value)
+                format_layout_family_label(family)
                 for family in intent.preferred_layout_families
             )
             st.write(f"推荐版式族：{families or '—'}")
@@ -73,9 +69,9 @@ def render_slide_visual_panel(*, snapshot: SlideVisualSnapshot) -> None:
         if plan is None:
             st.caption("尚未生成 LayoutPlan。")
         else:
-            st.write(
-                f"版式族：{FAMILY_LABELS.get(plan.layout_family, plan.layout_family.value)}"
-            )
+            st.write(f"版式族：{format_layout_family_label(plan.layout_family)}")
+            if not layout_family_implemented(plan.layout_family):
+                st.caption("该版式族尚未实现 generator，当前页面可能无法正确导出。")
             st.write(f"变体：`{plan.layout_variant}`")
             st.write(f"元素数：{len(plan.elements)}")
             st.write(f"留白率：{plan.whitespace_ratio:.0%}")
@@ -123,28 +119,41 @@ def _render_candidates(snapshot: SlideVisualSnapshot) -> None:
     st.markdown("**候选版式**")
     current_id = snapshot.layout_plan.id if snapshot.layout_plan else None
     rows = []
+    selectable: dict[str, LayoutPlan] = {}
     for plan in candidates:
         rows.append(
             {
                 "id": str(plan.id),
                 "当前": "✓" if plan.id == current_id else "",
-                "版式族": FAMILY_LABELS.get(plan.layout_family, plan.layout_family.value),
+                "版式族": format_layout_family_label(plan.layout_family, show_availability=False),
+                "可用性": layout_family_availability_status(plan.layout_family),
                 "变体": plan.layout_variant,
                 "元素": len(plan.elements),
                 "留白": f"{plan.whitespace_ratio:.0%}",
                 "状态": plan.validation_status.value,
             }
         )
+        if layout_family_implemented(plan.layout_family):
+            selectable[str(plan.id)] = plan
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
-    options = {str(plan.id): plan for plan in candidates}
+    unimplemented_count = len(candidates) - len(selectable)
+    if unimplemented_count:
+        st.caption(
+            f"{unimplemented_count} 个候选属于「即将支持」版式族，已从可选列表中隐藏。"
+        )
+
+    if not selectable:
+        st.warning("当前候选版式均尚未实现 generator，暂不可切换。请尝试其他重新排版方式。")
+        return
+
     selected = st.selectbox(
         "选择候选版式",
-        options=list(options.keys()),
+        options=list(selectable.keys()),
         format_func=lambda value: (
-            f"{FAMILY_LABELS.get(options[value].layout_family, options[value].layout_family.value)}"
-            f" · {options[value].layout_variant}"
-            f"{'（当前）' if options[value].id == current_id else ''}"
+            f"{format_layout_family_label(selectable[value].layout_family, show_availability=False)}"
+            f" · {selectable[value].layout_variant}"
+            f"{'（当前）' if selectable[value].id == current_id else ''}"
         ),
         key=f"candidate_select_{snapshot.slide.id}",
     )

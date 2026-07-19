@@ -28,6 +28,7 @@ from archium.domain.render import RenderResult
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
@@ -372,6 +373,11 @@ def select_layout_candidate(
         raise ValueError(f"LayoutPlan {layout_plan_id} not found")
     if plan.slide_id != slide_id:
         raise ValueError("LayoutPlan does not belong to this slide")
+    if not get_layout_family_registry().get(plan.layout_family).implemented:
+        raise WorkflowError(
+            f"版式族「{plan.layout_family.value}」尚未实现 generator，暂不可选用。"
+            "请在界面中选择已可用版式，或等待后续版本支持。"
+        )
     slide.layout_plan_id = plan.id
     presentations.save_slide(slide)
     return plan
