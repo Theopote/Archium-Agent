@@ -17,6 +17,7 @@ from archium.infrastructure.database.repositories import (
 )
 from archium.ui.visual_service import (
     get_presentation_visual_snapshot,
+    presentation_has_visual_layout,
     replan_slide,
     run_visual_workflow,
 )
@@ -117,6 +118,34 @@ def test_run_visual_workflow_and_snapshot(
     assert snapshot.slides[0].visual_intent is not None
     if result.visual_critic_reports:
         assert snapshot.visual_critic_reports
+
+
+def test_presentation_has_visual_layout(
+    db_session: Session,
+    presentation_with_slides: tuple[Project, Presentation],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from archium.domain.visual.validation import LayoutValidationReport
+
+    def _always_valid(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
+        return LayoutValidationReport(issues=[], score=0.95)
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _always_valid,
+    )
+
+    project, presentation = presentation_with_slides
+    assert presentation_has_visual_layout(db_session, presentation.id) is False
+
+    run_visual_workflow(
+        db_session,
+        project.id,
+        presentation.id,
+        require_art_direction_review=False,
+        use_llm=False,
+    )
+    assert presentation_has_visual_layout(db_session, presentation.id) is True
 
 
 def test_replan_slide_drawing_preset(

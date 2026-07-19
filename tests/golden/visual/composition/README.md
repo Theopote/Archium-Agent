@@ -23,9 +23,41 @@ Each case directory contains:
 | `score_baseline.json` | Layout Quality score baseline（非 Visual Quality） |
 | `preview.png` | deterministic wireframe preview of boxes |
 | `deck.pptx` | optional real PPTX (generated when Node/pptxgen available at update time) |
+| `pptx_screenshot.png` | rasterized first slide from `deck.pptx` (LibreOffice + pdftoppm) |
+| `pptx_screenshot_manifest.json` | screenshot dimensions + average hash for regression |
 
 Volatile UUIDs and timestamps are stripped so CI can catch layout regressions.
-**Generator existence alone is not a visual-quality pass** — these goldens are the regression gate.
+**Generator existence alone is not a visual-quality pass** — JSON goldens gate geometry; **PPTX screenshot baselines** gate rendered appearance (catches “data-valid but visually awkward” drift).
+
+## LayoutPlan PPTX screenshot regression
+
+Re-renders each case via PptxGenJS, rasterizes slide 1 with [`pptx_screenshot.py`](../../../archium/infrastructure/renderers/pptx_screenshot.py), and compares to committed PNG baselines (same tolerant checks as Marp visual regression: aHash, ≤5% pixel diff, margin ink).
+
+Requires **Node.js**, **PptxGenJS** (`npm ci` in `archium/infrastructure/renderers/pptxgen`), **LibreOffice**, and **pdftoppm** (Poppler).
+
+```bash
+pytest tests/golden/visual/composition/test_pptx_screenshot_regression.py -v -m layout_pptx_screenshot
+```
+
+Included in CI job **layout pptx screenshot regression** (Ubuntu + `libreoffice` + `poppler-utils`).
+
+### Update screenshot baselines (intentional renderer / theme change)
+
+```bash
+# Windows PowerShell
+$env:UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS="1"
+python scripts/update_layout_pptx_screenshot_baselines.py
+Remove-Item Env:UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS
+```
+
+```bash
+# macOS / Linux / CI
+UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS=1 python scripts/update_layout_pptx_screenshot_baselines.py
+```
+
+Commit `pptx_screenshot.png` and `pptx_screenshot_manifest.json` under each `v*/` directory.
+
+**First-time bootstrap:** run the update script on Linux (or CI) once, then commit the generated files. Until baselines are committed, regression tests fail with an explicit message.
 
 ## Update baselines (intentional geometry change)
 

@@ -120,6 +120,56 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  layout-pptx-screenshot:
+    name: layout pptx screenshot regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[full,dev]"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: archium/infrastructure/renderers/pptxgen/package-lock.json
+
+      - name: Install PptxGenJS dependencies
+        working-directory: archium/infrastructure/renderers/pptxgen
+        run: npm ci
+
+      - name: Install screenshot tools (LibreOffice + Poppler)
+        run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils
+
+      - name: Bootstrap screenshot baselines when not committed
+        run: |
+          if [ ! -f tests/golden/visual/composition/v1_drawing_focus/pptx_screenshot.png ]; then
+            echo "No committed baselines — generating in CI workspace (commit artifacts after review)"
+            python scripts/update_layout_pptx_screenshot_baselines.py
+          fi
+
+      - name: LayoutPlan PPTX screenshot regression
+        run: pytest tests/golden/visual/composition/test_pptx_screenshot_regression.py -v
+
+      - name: Upload screenshot baselines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layout-pptx-screenshot-baselines
+          path: |
+            tests/golden/visual/composition/**/pptx_screenshot.png
+            tests/golden/visual/composition/**/pptx_screenshot_manifest.json
+          if-no-files-found: ignore
+          retention-days: 14
+
   migration-smoke:
     name: alembic migration smoke
     runs-on: ubuntu-latest

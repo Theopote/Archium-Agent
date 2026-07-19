@@ -24,8 +24,11 @@ from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualConten
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.validation import LayoutValidationReport
+from archium.domain.render import RenderResult
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
@@ -130,6 +133,93 @@ def continue_visual_after_layout_review(
     return service.continue_after_layout_review(
         workflow_run_id,
         allow_invalid_layout_export=allow_invalid_layout_export,
+    )
+
+
+def presentation_has_visual_layout(session: Session, presentation_id: UUID) -> bool:
+    """Return True when every slide has a persisted LayoutPlan."""
+    presentations = PresentationRepository(session)
+    plans = LayoutPlanRepository(session)
+    slides = presentations.list_slides(presentation_id)
+    if not slides:
+        return False
+    for slide in slides:
+        if slide.layout_plan_id is None:
+            return False
+        if plans.get(slide.layout_plan_id) is None:
+            return False
+    return True
+
+
+def export_presentation_pptx_from_layout_plans(
+    session: Session,
+    presentation_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> RenderResult:
+    """Export editable PPTX from saved LayoutPlans (no template re-layout)."""
+    resolved = _resolve_runtime_settings(settings)
+    presentations = PresentationRepository(session)
+    presentation = presentations.get_presentation(presentation_id)
+    if presentation is None:
+        raise WorkflowError(f"Presentation {presentation_id} not found")
+    if not presentation_has_visual_layout(session, presentation_id):
+        raise WorkflowError("尚未生成视觉版式，无法按 LayoutPlan 导出 PPTX。")
+
+    brief = None
+    if presentation.current_brief_id is not None:
+        brief = presentations.get_brief(presentation.current_brief_id)
+    if brief is None:
+        briefs = presentations.list_briefs(presentation_id)
+        brief = briefs[0] if briefs else None
+    if brief is None:
+        raise WorkflowError("Brief is required before export")
+
+    slides = presentations.list_slides(presentation_id)
+    snapshot = get_presentation_visual_snapshot(session, presentation_id)
+    design = snapshot.design_system
+    if design is None:
+        from archium.domain.visual.defaults import default_presentation_design_system
+
+        design = default_presentation_design_system()
+
+    layout_plans: list[LayoutPlan] = []
+    for item in snapshot.slides:
+        if item.layout_plan is None:
+            raise WorkflowError(
+                f"第 {item.slide.order + 1} 页缺少 LayoutPlan，请先运行视觉编排。"
+            )
+        layout_plans.append(item.layout_plan)
+
+    renderer = PptxGenPresentationRenderer(resolved, session=session)
+    output_dir = renderer.output_dir(presentation_id, version=brief.version)
+    _, pptx_path = renderer.render_and_export_pptx_from_layout_plans(
+        title=brief.title,
+        plans=layout_plans,
+        design_system=design,
+        output_dir=output_dir,
+        slides=slides,
+        project_id=presentation.project_id,
+    )
+    return RenderResult(editable_pptx_path=pptx_path)
+
+
+def generate_visual_and_export_pptx(
+    session: Session,
+    project_id: UUID,
+    presentation_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> VisualWorkflowResult:
+    """Run visual composition with PPTX export enabled (streamlined export path)."""
+    return run_visual_workflow(
+        session,
+        project_id,
+        presentation_id,
+        require_art_direction_review=False,
+        use_llm=False,
+        export_pptx=True,
+        settings=settings,
     )
 
 

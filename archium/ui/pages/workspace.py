@@ -8,6 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.domain.enums import ProjectType
+from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_asset_metadata_panel
@@ -21,12 +22,18 @@ from archium.ui.review_panel import render_review_panel
 from archium.ui.workspace_service import (
     build_presentation_request,
     create_project,
+    export_presentation_pptx_legacy,
     get_project_overview,
     import_uploaded_file,
     list_project_documents,
     list_project_presentations,
     list_projects,
     run_presentation_workflow,
+)
+from archium.ui.visual_service import (
+    export_presentation_pptx_from_layout_plans,
+    generate_visual_and_export_pptx,
+    presentation_has_visual_layout,
 )
 
 PROJECT_TYPE_LABELS = {
@@ -45,6 +52,25 @@ def _init_session_state() -> None:
         st.session_state.selected_project_id = None
     if "last_workflow_result" not in st.session_state:
         st.session_state.last_workflow_result = None
+    if "last_pptx_export_result" not in st.session_state:
+        st.session_state.last_pptx_export_result = None
+
+
+def _resolve_active_presentation_id(project_id: UUID) -> UUID | None:
+    result = st.session_state.get("last_workflow_result")
+    if result is not None and result.presentation is not None:
+        return result.presentation.id
+    with get_session() as session:
+        presentations = list_project_presentations(session, project_id)
+    return presentations[0].id if presentations else None
+
+
+def _pptx_export_prompt_key(presentation_id: UUID) -> str:
+    return f"pptx_export_prompt_{presentation_id}"
+
+
+def _store_pptx_export_result(result: RenderResult) -> None:
+    st.session_state.last_pptx_export_result = result
 
 
 def _render_project_selector() -> UUID | None:
@@ -164,7 +190,10 @@ def _render_documents(project_id: UUID) -> None:
 
 def _render_generation_form(project_id: UUID) -> None:
     st.markdown("#### 生成汇报")
-    st.caption("生成 SlideSpec 后，可前往「视觉设计」进行 ArtDirection 与版式编排。")
+    st.caption(
+        "生成 SlideSpec 后，可直接在本页「导出 PPTX」。"
+        "若尚未运行视觉编排，导出时会提示是否先生成版式。"
+    )
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
@@ -354,6 +383,150 @@ def _render_last_result() -> None:
         render_file_downloads(download_paths, key_prefix="workflow_result")
 
 
+def _render_pptx_export_section(project_id: UUID) -> None:
+    presentation_id = _resolve_active_presentation_id(project_id)
+    if presentation_id is None:
+        st.caption("生成汇报后可在此导出 PPTX。")
+        return
+
+    st.markdown("#### 导出 PPTX")
+    st.caption(
+        "推荐路径：先完成视觉编排，再按 LayoutPlan 坐标导出可编辑 PPTX。"
+        "也可跳过视觉编排，直接使用旧版 PresentationSpec 模板。"
+    )
+
+    with get_session() as session:
+        has_visual_layout = presentation_has_visual_layout(session, presentation_id)
+
+    prompt_key = _pptx_export_prompt_key(presentation_id)
+    show_prompt = bool(st.session_state.get(prompt_key))
+
+    if st.button(
+        "导出 PPTX",
+        type="primary",
+        use_container_width=True,
+        key=f"export_pptx_main_{presentation_id}",
+    ):
+        if has_visual_layout:
+            st.session_state.pop(prompt_key, None)
+            try:
+                with st.spinner("正在按 LayoutPlan 导出 PPTX…"):
+                    with get_session() as session:
+                        export_result = export_presentation_pptx_from_layout_plans(
+                            session,
+                            presentation_id,
+                        )
+                _store_pptx_export_result(export_result)
+                st.success("PPTX 已导出（视觉版式）。")
+            except WorkflowError as exc:
+                st.error(format_user_error(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+        else:
+            st.session_state[prompt_key] = True
+            st.rerun()
+
+    if show_prompt:
+        st.warning(
+            "检测到尚未生成视觉版式。"
+            "推荐现在生成 ArtDirection 与 LayoutPlan 后再导出；"
+            "也可直接使用旧版模板导出（质量较低）。"
+        )
+        col_recommended, col_legacy = st.columns(2)
+        if col_recommended.button(
+            "现在生成（推荐）",
+            type="primary",
+            use_container_width=True,
+            key=f"export_pptx_generate_{presentation_id}",
+        ):
+            st.session_state.pop(prompt_key, None)
+            try:
+                with st.spinner("正在生成视觉编排并导出 PPTX…"):
+                    with get_session() as session:
+                        visual_result = generate_visual_and_export_pptx(
+                            session,
+                            project_id,
+                            presentation_id,
+                        )
+                st.session_state.last_visual_workflow_result = visual_result
+                if visual_result.awaiting_review:
+                    if visual_result.review_gate == "layout_review":
+                        st.warning(
+                            "版式仍有 ERROR/CRITICAL 问题，已暂停 PPTX 导出。"
+                            "请前往「视觉设计 → 单页视觉」调整后继续，"
+                            "或使用旧版模板导出。"
+                        )
+                    else:
+                        st.info("已生成视觉方向，等待批准。请前往「视觉设计」继续。")
+                elif visual_result.succeeded:
+                    pptx_paths = [
+                        Path(path)
+                        for path in visual_result.render_paths
+                        if path.lower().endswith(".pptx")
+                    ]
+                    if pptx_paths:
+                        _store_pptx_export_result(
+                            RenderResult(
+                                editable_pptx_path=pptx_paths[-1],
+                                warnings=list(visual_result.warnings),
+                            )
+                        )
+                        st.success("视觉编排完成，PPTX 已导出。")
+                    else:
+                        with get_session() as session:
+                            export_result = export_presentation_pptx_from_layout_plans(
+                                session,
+                                presentation_id,
+                            )
+                        _store_pptx_export_result(export_result)
+                        st.success("视觉编排完成，PPTX 已导出。")
+                else:
+                    detail = (
+                        "；".join(visual_result.errors)
+                        if visual_result.errors
+                        else "未知错误"
+                    )
+                    st.error(f"视觉编排未完成：{detail}")
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(format_user_error(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
+        if col_legacy.button(
+            "直接用旧版模板导出",
+            use_container_width=True,
+            key=f"export_pptx_legacy_{presentation_id}",
+        ):
+            st.session_state.pop(prompt_key, None)
+            try:
+                with st.spinner("正在使用旧版模板导出 PPTX…"):
+                    with get_session() as session:
+                        export_result = export_presentation_pptx_legacy(
+                            session,
+                            presentation_id,
+                        )
+                _store_pptx_export_result(export_result)
+                st.success("PPTX 已导出（旧版模板）。")
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(format_user_error(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+    elif has_visual_layout:
+        st.caption("当前汇报已具备视觉版式，点击上方按钮将按 LayoutPlan 导出。")
+
+    export_result = st.session_state.get("last_pptx_export_result")
+    if export_result is not None:
+        download_paths = list(export_result.output_paths())
+        if export_result.warnings:
+            for warning in export_result.warnings:
+                st.warning(warning)
+        if download_paths:
+            st.markdown("**PPTX 下载**")
+            render_file_downloads(download_paths, key_prefix="pptx_export")
+
+
 def _render_history(project_id: UUID) -> None:
     st.markdown("#### 历史汇报")
     with get_session() as session:
@@ -406,6 +579,8 @@ def render() -> None:
     with tab_generate:
         _render_generation_form(project_id)
         _render_last_result()
+        st.divider()
+        _render_pptx_export_section(project_id)
 
     with tab_review:
         render_project_review_quality_dashboard(project_id)

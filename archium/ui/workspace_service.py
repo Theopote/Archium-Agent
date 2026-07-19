@@ -10,6 +10,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.chunk_service import ChunkService
+from archium.application.export_service import PresentationExportService
+from archium.domain.render import RenderResult
 from archium.application.ingestion_service import ImportItemResult, IngestionService
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
@@ -298,3 +300,19 @@ def regenerate_slide_plan(
             presentation_id,
             workflow_run_id=workflow_run_id,
         )
+
+
+def export_presentation_pptx_legacy(
+    session: Session,
+    presentation_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> RenderResult:
+    """Export editable PPTX via legacy PresentationSpec templates."""
+    resolved_settings = _resolve_runtime_settings(settings)
+    return PresentationExportService(session, settings=resolved_settings).reexport(
+        presentation_id,
+        export_json=False,
+        export_marp=False,
+        export_editable_pptx=True,
+    )
