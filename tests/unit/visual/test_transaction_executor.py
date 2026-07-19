@@ -430,3 +430,24 @@ def test_lock_and_unlock_roundtrip() -> None:
     )
     assert result.success is True
     assert repo.plan.elements[0].locked is False
+
+
+def test_successful_transaction_records_history() -> None:
+    plan = _sample_plan()
+    history = _FakeHistory()
+    slide = type(
+        "Slide",
+        (),
+        {"id": plan.slide_id, "layout_plan_id": plan.id, "visual_intent_id": plan.visual_intent_id},
+    )()
+    executor = TransactionExecutor(_TrackingSession(), history)
+    result = executor.execute_transaction(
+        operations=[IncreaseWhitespaceOperation()],
+        slide_id=slide.id,
+        slide_snapshot=None,
+        intents_repo=_FakeIntentsRepo(),
+        plans_repo=_FakePlansRepo(plan),
+        presentations_repo=_FakePresentationsRepo(slide),
+    )
+    assert result.success is True
+    assert history.records

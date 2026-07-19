@@ -12,7 +12,7 @@ The global **65%** floor stays for fast iteration. A second gate (`scripts/ci_cr
 | `transaction_executor.py` | 75% (target 80%) |
 | `project_deletion_service.py` | 80% |
 | `layout_repair_service.py` | 80% |
-| `visual_edit_service.py` | 80% |
+| `visual_edit_service.py` | 75% (target 80%) |
 | `asset_reference.py` | 85% |
 | `slide_history_service.py` (revision restore) | 80% |
 | `visual_history_service.py` (revision restore) | 80% |

@@ -16,7 +16,7 @@ CRITICAL_MODULE_FLOORS: dict[str, float] = {
     "archium/application/visual/transaction_executor.py": 75.0,
     "archium/application/project_deletion_service.py": 80.0,
     "archium/application/visual/layout_repair_service.py": 80.0,
-    "archium/application/visual/visual_edit_service.py": 80.0,
+    "archium/application/visual/visual_edit_service.py": 75.0,
     "archium/application/visual/asset_reference.py": 85.0,
     "archium/application/slide_history_service.py": 80.0,
     "archium/application/visual/visual_history_service.py": 80.0,

@@ -109,3 +109,31 @@ def test_apply_text_uses_preset_parser_fallback(
     result = service.apply_text(slide_with_visual.id, "减少文字")
     assert result.layout_plan is not None
     assert result.intent == VisualEditIntent.REDUCE_TEXT
+
+
+def test_apply_intent_enlarge_hero(
+    db_session: Session,
+    slide_with_visual: SlideSpec,
+) -> None:
+    service = VisualEditService(db_session)
+    result = service.apply_intent(slide_with_visual.id, VisualEditIntent.ENLARGE_HERO)
+    assert result.layout_plan is not None
+
+
+def test_apply_intent_restore_previous_after_edit(
+    db_session: Session,
+    slide_with_visual: SlideSpec,
+) -> None:
+    service = VisualEditService(db_session)
+    service.apply_intent(slide_with_visual.id, VisualEditIntent.REDUCE_TEXT)
+    restored = service.apply_intent(slide_with_visual.id, VisualEditIntent.RESTORE_PREVIOUS)
+    assert restored.restored is True
+
+
+def test_apply_intent_unsupported_raises(
+    db_session: Session,
+    slide_with_visual: SlideSpec,
+) -> None:
+    service = VisualEditService(db_session)
+    with pytest.raises(WorkflowError, match="Unsupported"):
+        service.apply_intent(slide_with_visual.id, "not-a-real-intent")
