@@ -183,7 +183,8 @@ Project → SourceDocument → ProjectFact
 ```
 
 - Mission Planning：[docs/project-mission-adaptive-planning.md](docs/project-mission-adaptive-planning.md)
-- Visual Composition：[docs/visual/README.md](docs/visual/README.md) · [架构](docs/visual/architecture.md) · [用户指南](docs/visual/user-guide.md)
+- **汇报工作室**：[docs/studio-user-guide.md](docs/studio-user-guide.md)（主编辑界面）
+- Visual Composition：[docs/visual/README.md](docs/visual/README.md) · [架构](docs/visual/architecture.md) · [视觉设计指南](docs/visual/user-guide.md)
 
 ## 项目目录
 
@@ -211,6 +212,7 @@ Archium-Agent/
 │   ├── exceptions.py
 │   └── logging.py
 ├── docs/
+│   ├── studio-user-guide.md # 汇报工作室用户指南
 │   └── visual/             # 建筑视觉编排文档
 ├── legacy/
 ├── data/
@@ -478,6 +480,7 @@ Copyright (c) 2026 Theopote and Archium contributors
 - Brief、Storyline、SlideSpec 均支持基于 `lineage_id` 的统一修订历史；SlideSpec 另支持字段 diff 与 unified diff 对比
 - 项目事实账本（Fact Ledger）支持标准键提取、冲突检测与人工确认；已确认事实优先注入生成上下文
 - 素材看板（Asset Board）支持视觉需求扁平化视图、素材匹配、人工指定与确认
+- **汇报工作室**页支持三栏浏览、NL 视觉编辑（8 意图）、内容适配（4 动作）与 PPTX 导出（见 [`docs/studio-user-guide.md`](docs/studio-user-guide.md)）
 - **视觉设计**页支持 ArtDirection 审核、单页候选版式与预设重排（见 [`docs/visual/user-guide.md`](docs/visual/user-guide.md)）
 - 四层质量审核：内容层、证据层、建筑专业层、版面层；严重问题可阻断导出
 - 原生元素 PPTX 现有两条路径：

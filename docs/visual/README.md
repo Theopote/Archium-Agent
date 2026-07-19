@@ -6,11 +6,12 @@
 
 | 文档 | 内容 |
 |------|------|
+| [Studio User Guide](../studio-user-guide.md) | **汇报工作室** — 主编辑界面（浏览 / NL 编辑 / 导出） |
 | [Architecture](architecture.md) | 分层、数据流、工作流与边界 |
 | [Design System](design-system.md) | DesignSystem 令牌与默认预设 |
 | [Layout Families](layout-families.md) | 10 个版式族、变体与 generator |
 | [Renderer](renderer.md) | LayoutPlan → PptxGenJS 执行路径 |
-| [User Guide](user-guide.md) | 视觉设计页操作指南 |
+| [User Guide](user-guide.md) | 视觉设计页操作指南（ArtDirection / 候选版式） |
 
 ## 一句话
 
