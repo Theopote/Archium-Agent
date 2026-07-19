@@ -13,6 +13,7 @@ from archium.application.mission_clarification_service import MissionClarificati
 from archium.application.mission_validation_service import MissionValidationService
 from archium.application.project_mission_service import ProjectMissionService
 from archium.application.workstream_planning_service import WorkstreamPlanningService
+from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, QuestionStatus, WorkflowStatus, WorkflowStep
 from archium.exceptions import WorkflowError
@@ -654,9 +655,10 @@ class PlanningWorkflowNodes:
         run = self._runtime.workflow_runs.get_by_id(UUID(run_id))
         if run is None:
             return
-        run.state = snapshot_planning_state(state)
+        finalize_run_state(run, snapshot_planning_state(state))
         run.errors = list(state.get("errors", []))
         if status is not None:
             run.status = status
         run.touch()
         self._runtime.workflow_runs.update(run)
+        commit_workflow_checkpoint(self._runtime.session, self._runtime.settings)

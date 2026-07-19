@@ -36,11 +36,15 @@ from archium.ui.artifact_history_panel import (
     render_storyline_history_panel,
 )
 from archium.ui.asset_board_panel import render_asset_board_panel
+from archium.ui.background_workflow_runner import (
+    background_workflows_enabled,
+    submit_continue_after_review,
+)
 from archium.ui.error_handlers import format_user_error
 from archium.ui.review_analytics_panel import REPAIR_STRATEGY_LABELS, render_rule_code_stats
 from archium.ui.slide_history_panel import render_slide_history_panel
+from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
 from archium.ui.workspace_service import (
-    continue_workflow_after_review,
     regenerate_brief,
     regenerate_slide_plan,
     regenerate_storyline,
@@ -738,8 +742,22 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         type="primary",
         use_container_width=True,
     ):
+        project_id = context.presentation.project_id
+        settings = get_settings()
+        if background_workflows_enabled(settings):
+            job = submit_continue_after_review(
+                project_id,
+                workflow_run_id,
+                settings=settings,
+            )
+            set_active_job_id(project_id, job.job_id)
+            st.info("已在后台继续运行工作流，请查看进度。")
+            render_workflow_progress_panel(project_id, job_id=job.job_id)
+            return
         try:
-            result = continue_workflow_after_review(workflow_run_id)
+            from archium.ui.workspace_service import continue_workflow_after_review
+
+            result = continue_workflow_after_review(workflow_run_id, settings=settings)
             st.session_state.last_workflow_result = result
             if result.awaiting_review:
                 st.warning("工作流已进入下一审核节点，请继续审核。")

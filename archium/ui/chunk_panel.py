@@ -42,9 +42,10 @@ def render_chunk_panel(project_id: UUID) -> None:
     preview_rows = [
         {
             "序号": chunk.chunk_index,
+            "类型": "图档语义" if chunk.content_type == "asset_caption" else "文本",
             "页码": chunk.page_number or "-",
             "章节": chunk.section_title or "",
-            "策略": chunk.metadata.get("chunk_strategy", "semantic"),
+            "策略": chunk.metadata.get("chunk_strategy", chunk.content_type or "semantic"),
             "字数": len(chunk.content),
             "内容预览": chunk.content[:120] + ("…" if len(chunk.content) > 120 else ""),
         }
@@ -64,6 +65,11 @@ def render_chunk_panel(project_id: UUID) -> None:
             key=f"chunk_edit_select_{project_id}",
         )
         selected = next(item for item in chunks if str(item.id) == chunk_id)
+        if selected.content_type == "asset_caption":
+            st.caption(
+                "此为图档语义索引片段（由 Vision/启发式 caption 生成）。"
+                "修改后向量索引会更新；如需重生成 caption，请使用「补建图档语义索引」。"
+            )
         section_title = st.text_input("章节标题", value=selected.section_title or "")
         content = st.text_area("片段内容", value=selected.content, height=220)
         if st.button("保存片段修改", key=f"save_chunk_{chunk_id}"):

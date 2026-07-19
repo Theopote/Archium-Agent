@@ -6,6 +6,7 @@ from uuid import UUID
 
 from archium.application.automated_review_service import AutomatedReviewService
 from archium.application.review_service import slides_are_approved
+from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.domain.enums import ApprovalStatus, WorkflowStatus
 from archium.domain.review import ReviewIssue, merge_review_findings
 from archium.domain.slide import SlideSpec
@@ -55,7 +56,7 @@ class WorkflowNodeBase:
         run = self._runtime.workflow_runs.get_by_id(UUID(workflow_run_id))
         if run is None:
             return
-        run.state = snapshot_state(state)
+        finalize_run_state(run, snapshot_state(state))
         run.errors = list(state.get("errors", []))
         output_files = list(run.output_files)
         json_path = state.get("json_path")
@@ -78,6 +79,7 @@ class WorkflowNodeBase:
             run.status = status
         run.touch()
         self._runtime.workflow_runs.update(run)
+        commit_workflow_checkpoint(self._runtime.session, self._runtime.settings)
 
     def _load_slides_for_export(self, state: PresentationWorkflowState) -> list[SlideSpec]:
         presentation_id = UUID(state["presentation_id"])

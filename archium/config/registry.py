@@ -61,6 +61,8 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "database_path": ConfigDomain.STORAGE,
     "database_url": ConfigDomain.STORAGE,
     "workflow_checkpoint_path": ConfigDomain.STORAGE,
+    "workflow_checkpoint_commit_enabled": ConfigDomain.STORAGE,
+    "streamlit_background_workflows_enabled": ConfigDomain.APP,
     "project_storage_path": ConfigDomain.STORAGE,
     "output_path": ConfigDomain.STORAGE,
     "chroma_path": ConfigDomain.STORAGE,

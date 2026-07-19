@@ -17,10 +17,18 @@ from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.error_handlers import format_user_error
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
+from archium.ui.rag_preview_panel import render_rag_preview_panel
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
 from archium.ui.review_panel import render_review_panel
-from archium.ui.visual_service import (
+from archium.ui.background_workflow_runner import (
+    background_workflows_enabled,
+    submit_presentation_workflow,
+)
+from archium.ui.workflow_progress_panel import (
+    render_workflow_progress_panel,
+    set_active_job_id,
+)
     export_presentation_pptx_from_layout_plans,
     generate_visual_and_export_pptx,
     presentation_has_visual_layout,
@@ -219,11 +227,14 @@ def _render_documents(project_id: UUID) -> None:
 
 def _render_generation_form(project_id: UUID) -> None:
     st.markdown("#### 生成汇报")
+    settings = get_ui_effective_settings()
+    if render_workflow_progress_panel(project_id):
+        return
+
     st.caption(
         "生成 SlideSpec 后，可直接在本页「导出 PPTX」。"
         "若尚未运行视觉编排，导出时会提示是否先生成版式。"
     )
-    settings = get_ui_effective_settings()
     if not settings.llm_configured:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
         return
@@ -289,6 +300,31 @@ def _render_generation_form(project_id: UUID) -> None:
         required_sections_text=required_sections,
     )
 
+    export_kwargs = {
+        "export_json": export_json,
+        "export_marp": export_marp,
+        "export_presentation_spec": export_presentation_spec or export_editable_pptx,
+        "export_editable_pptx": export_editable_pptx,
+        "export_pptx": export_pptx,
+        "export_pdf": export_pdf,
+        "export_preview_images": export_preview_images and export_marp,
+        "require_brief_review": require_brief_review,
+        "require_storyline_review": require_storyline_review,
+        "require_slides_review": require_slides_review,
+    }
+
+    if background_workflows_enabled(settings):
+        job = submit_presentation_workflow(
+            project_id,
+            request,
+            settings=settings,
+            **export_kwargs,
+        )
+        set_active_job_id(project_id, job.job_id)
+        st.info("已在后台启动汇报管线，下方将实时显示进度。")
+        render_workflow_progress_panel(project_id, job_id=job.job_id)
+        return
+
     with st.spinner("正在运行 Brief → Storyline → SlideSpec 工作流…"):
         try:
             with get_session() as session:
@@ -296,16 +332,8 @@ def _render_generation_form(project_id: UUID) -> None:
                     session,
                     project_id,
                     request,
-                    export_json=export_json,
-                    export_marp=export_marp,
-                    export_presentation_spec=export_presentation_spec or export_editable_pptx,
-                    export_editable_pptx=export_editable_pptx,
-                    export_pptx=export_pptx,
-                    export_pdf=export_pdf,
-                    export_preview_images=export_preview_images and export_marp,
-                    require_brief_review=require_brief_review,
-                    require_storyline_review=require_storyline_review,
-                    require_slides_review=require_slides_review,
+                    settings=settings,
+                    **export_kwargs,
                 )
             st.session_state.last_workflow_result = result
         except WorkflowError as exc:
@@ -608,6 +636,8 @@ def render() -> None:
         render_chunk_panel(project_id)
         st.divider()
         render_fact_ledger_panel(project_id)
+        st.divider()
+        render_rag_preview_panel(project_id)
         st.divider()
         render_asset_metadata_panel(project_id)
 

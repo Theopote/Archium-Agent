@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
@@ -14,10 +15,14 @@ from archium.application.review_service import PresentationReviewService
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import WorkflowStatus, WorkflowStep
+from archium.domain.presentation import Presentation
 from archium.domain.render import RenderResult
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.repositories import WorkflowRunRepository
+from archium.infrastructure.database.repositories import (
+    PresentationRepository,
+    WorkflowRunRepository,
+)
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
 from archium.logging import get_logger
@@ -85,6 +90,39 @@ class PresentationWorkflowService:
         require_storyline_review: bool = False,
         require_slides_review: bool = False,
     ) -> WorkflowRunResult:
+        workflow_run = self.prepare_run(
+            project_id,
+            request,
+            export_json=export_json,
+            export_presentation_spec=export_presentation_spec,
+            export_editable_pptx=export_editable_pptx,
+            export_marp=export_marp,
+            export_pptx=export_pptx,
+            export_pdf=export_pdf,
+            export_preview_images=export_preview_images,
+            require_brief_review=require_brief_review,
+            require_storyline_review=require_storyline_review,
+            require_slides_review=require_slides_review,
+        )
+        return self.execute_prepared(workflow_run.id)
+
+    def prepare_run(
+        self,
+        project_id: UUID,
+        request: PresentationRequest,
+        *,
+        export_json: bool = True,
+        export_presentation_spec: bool = False,
+        export_editable_pptx: bool = False,
+        export_marp: bool = False,
+        export_pptx: bool = False,
+        export_pdf: bool = False,
+        export_preview_images: bool | None = None,
+        require_brief_review: bool = False,
+        require_storyline_review: bool = False,
+        require_slides_review: bool = False,
+    ) -> WorkflowRun:
+        """Create presentation + WorkflowRun records without invoking the graph."""
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
         resolved_preview_images = (
             export_preview_images
@@ -98,6 +136,12 @@ class PresentationWorkflowService:
                 status=WorkflowStatus.RUNNING,
                 state={
                     "current_step": WorkflowStep.INIT.value,
+                    "step_log": [
+                        {
+                            "step": WorkflowStep.INIT.value,
+                            "at": datetime.now(UTC).isoformat(),
+                        }
+                    ],
                     "request": request_to_dict(request),
                     "export_json": export_json,
                     "export_presentation_spec": export_presentation_spec or export_editable_pptx,
@@ -112,41 +156,52 @@ class PresentationWorkflowService:
                 },
             )
         )
+        if self._settings.workflow_checkpoint_commit_enabled:
+            self._session.commit()
+        return workflow_run
 
-        initial_state = initial_workflow_state(
-            project_id=str(project_id),
-            presentation_id=str(presentation.id),
-            workflow_run_id=str(workflow_run.id),
-            request=request,
-            presentation=presentation,
-            export_json=export_json,
-            export_presentation_spec=export_presentation_spec,
-            export_editable_pptx=export_editable_pptx,
-            export_marp=export_marp,
-            export_pptx=export_pptx,
-            export_pdf=export_pdf,
-            export_preview_images=resolved_preview_images,
-            require_brief_review=require_brief_review,
-            require_storyline_review=require_storyline_review,
-            require_slides_review=require_slides_review,
-        )
+    def execute_prepared(self, workflow_run_id: UUID) -> WorkflowRunResult:
+        """Invoke the LangGraph pipeline for a prepared workflow run."""
+        run = self._workflow_runs.get_by_id(workflow_run_id)
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} not found")
+
+        restored = restore_domain_artifacts(run.state)
+        request = restored.get("request")
+        if request is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} is missing request in state")
+
+        presentation = restored.get("presentation") or self._load_presentation(run)
+        if presentation is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} is missing presentation")
+
+        initial_state = self._build_initial_state(run, request, presentation)
 
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(workflow_run.id))
+            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
         except Exception as exc:
             logger.exception("Workflow graph execution failed: %s", exc)
-            workflow_run.errors = [str(exc)]
-            workflow_run.status = WorkflowStatus.FAILED
-            workflow_run.state = snapshot_state(initial_state)
-            workflow_run.touch()
-            self._workflow_runs.update(workflow_run)
+            run.errors = [str(exc)]
+            run.status = WorkflowStatus.FAILED
+            run.state = snapshot_state(initial_state)
+            run.touch()
+            self._workflow_runs.update(run)
+            if self._settings.workflow_checkpoint_commit_enabled:
+                self._session.commit()
             raise WorkflowError(str(exc)) from exc
 
-        refreshed = self._workflow_runs.get_by_id(workflow_run.id)
+        refreshed = self._workflow_runs.get_by_id(run.id)
         if refreshed is None:
-            raise WorkflowError(f"Workflow run {workflow_run.id} disappeared after execution")
+            raise WorkflowError(f"Workflow run {run.id} disappeared after execution")
 
         return self._ensure_success(self._to_result(refreshed, final_state))
+
+    def result_from_run(self, workflow_run_id: UUID) -> WorkflowRunResult:
+        """Build a result snapshot from persisted workflow state (no graph invoke)."""
+        run = self._workflow_runs.get_by_id(workflow_run_id)
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} not found")
+        return self._to_result(run, run.state)
 
     def continue_after_review(self, workflow_run_id: UUID) -> WorkflowRunResult:
         """Resume a workflow paused at a LangGraph interrupt for human review."""
@@ -160,6 +215,8 @@ class PresentationWorkflowService:
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
+        if self._settings.workflow_checkpoint_commit_enabled:
+            self._session.commit()
 
         try:
             final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
@@ -188,7 +245,7 @@ class PresentationWorkflowService:
 
         restored = restore_domain_artifacts(run.state)
         request = restored.get("request")
-        presentation = restored.get("presentation")
+        presentation = restored.get("presentation") or self._load_presentation(run)
         if request is None or presentation is None:
             raise WorkflowError(f"Workflow run {workflow_run_id} is missing resumable state")
 
@@ -202,23 +259,7 @@ class PresentationWorkflowService:
                 f"Workflow run {workflow_run_id} is missing presentation_id"
             )
 
-        initial_state = initial_workflow_state(
-            project_id=str(run.project_id),
-            presentation_id=str(run.presentation_id),
-            workflow_run_id=str(run.id),
-            request=request,
-            presentation=presentation,
-            export_json=bool(run.state.get("export_json", True)),
-            export_presentation_spec=bool(run.state.get("export_presentation_spec", False)),
-            export_editable_pptx=bool(run.state.get("export_editable_pptx", False)),
-            export_marp=bool(run.state.get("export_marp", False)),
-            export_pptx=bool(run.state.get("export_pptx", False)),
-            export_pdf=bool(run.state.get("export_pdf", False)),
-            export_preview_images=bool(run.state.get("export_preview_images", False)),
-            require_brief_review=bool(run.state.get("require_brief_review", False)),
-            require_storyline_review=bool(run.state.get("require_storyline_review", False)),
-            require_slides_review=bool(run.state.get("require_slides_review", False)),
-        )
+        initial_state = self._build_initial_state(run, request, presentation)
         initial_state = cast(
             PresentationWorkflowState,
             {
@@ -255,7 +296,7 @@ class PresentationWorkflowService:
         if isinstance(final_state, dict):
             restored.update(restore_domain_artifacts(cast(dict[str, Any], final_state)))
 
-        presentation = restored.get("presentation")
+        presentation = restored.get("presentation") or self._load_presentation(workflow_run)
         if presentation is None:
             raise WorkflowError(
                 f"Workflow run {workflow_run.id} is missing presentation in final state"
@@ -305,3 +346,34 @@ class PresentationWorkflowService:
             message = "; ".join(result.errors)
             raise WorkflowError(f"Presentation workflow failed: {message}")
         return result
+
+    def _load_presentation(self, run: WorkflowRun) -> Presentation | None:
+        if run.presentation_id is None:
+            return None
+        return PresentationRepository(self._session).get_presentation(run.presentation_id)
+
+    def _build_initial_state(
+        self,
+        run: WorkflowRun,
+        request: PresentationRequest,
+        presentation: Presentation,
+    ) -> PresentationWorkflowState:
+        if run.presentation_id is None:
+            raise WorkflowError(f"Workflow run {run.id} is missing presentation_id")
+        return initial_workflow_state(
+            project_id=str(run.project_id),
+            presentation_id=str(run.presentation_id),
+            workflow_run_id=str(run.id),
+            request=request,
+            presentation=presentation,
+            export_json=bool(run.state.get("export_json", True)),
+            export_presentation_spec=bool(run.state.get("export_presentation_spec", False)),
+            export_editable_pptx=bool(run.state.get("export_editable_pptx", False)),
+            export_marp=bool(run.state.get("export_marp", False)),
+            export_pptx=bool(run.state.get("export_pptx", False)),
+            export_pdf=bool(run.state.get("export_pdf", False)),
+            export_preview_images=bool(run.state.get("export_preview_images", False)),
+            require_brief_review=bool(run.state.get("require_brief_review", False)),
+            require_storyline_review=bool(run.state.get("require_storyline_review", False)),
+            require_slides_review=bool(run.state.get("require_slides_review", False)),
+        )

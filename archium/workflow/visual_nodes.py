@@ -25,6 +25,7 @@ from archium.application.visual.layout_repair_service import LayoutRepairService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.application.visual.visual_intent_service import VisualIntentService
+from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
 from archium.domain.visual.enums import LayoutValidationStatus
@@ -115,7 +116,7 @@ class VisualWorkflowNodes:
         run = self._runtime.workflow_runs.get_by_id(UUID(workflow_run_id))
         if run is None:
             return
-        run.state = snapshot_visual_state(state)
+        finalize_run_state(run, snapshot_visual_state(state))
         run.errors = list(state.get("errors", []))
         output_files = list(run.output_files)
         for path in state.get("render_paths", []):
@@ -126,6 +127,7 @@ class VisualWorkflowNodes:
             run.status = status
         run.touch()
         self._runtime.workflow_runs.update(run)
+        commit_workflow_checkpoint(self._runtime.session, self._runtime.settings)
 
     def _asset_context_for_plan(
         self, state: VisualWorkflowState, plan: LayoutPlan

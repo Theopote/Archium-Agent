@@ -52,6 +52,17 @@ class Settings(BaseSettings):
         default=Path("data/database/workflow_checkpoints.db"),
         description="LangGraph SqliteSaver checkpoint database path.",
     )
+    workflow_checkpoint_commit_enabled: bool = Field(
+        default=True,
+        description=(
+            "Commit the SQLAlchemy session after each workflow checkpoint so "
+            "Streamlit and other clients can poll WorkflowRun progress."
+        ),
+    )
+    streamlit_background_workflows_enabled: bool = Field(
+        default=True,
+        description="Run LangGraph presentation workflows in a background thread from Streamlit.",
+    )
     project_storage_path: Path = Field(
         default=Path("data/projects"),
         description="Uploaded project documents and assets root directory.",

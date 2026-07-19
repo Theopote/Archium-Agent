@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.export_service import PresentationExportService
 from archium.application.ingestion_service import ImportItemResult, IngestionService
@@ -173,6 +174,26 @@ def backfill_project_asset_vision(
 
     resolved = _resolve_runtime_settings(settings)
     return AssetVisionBackfillService(session, settings=resolved).backfill_project(project_id)
+
+
+def preview_project_retrieval(
+    session: Session,
+    project_id: UUID,
+    query: str,
+    *,
+    settings: Settings | None = None,
+    max_chunks: int = 12,
+) -> ProjectContextBundle:
+    from archium.agents._helpers import build_project_context_bundle
+
+    resolved = _resolve_runtime_settings(settings)
+    return build_project_context_bundle(
+        session,
+        project_id,
+        query=query,
+        max_chunks=max_chunks,
+        settings=resolved,
+    )
 
 
 def build_presentation_request(

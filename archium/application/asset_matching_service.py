@@ -42,6 +42,37 @@ def _tokenize(text: str) -> set[str]:
     return {part for part in normalized.replace("，", " ").replace("。", " ").split() if len(part) > 1}
 
 
+_VISUAL_DRAWING_TYPE_HINTS: dict[VisualType, set[str]] = {
+    VisualType.SITE_PLAN: {"site_plan", "map"},
+    VisualType.FLOOR_PLAN: {"floor_plan"},
+    VisualType.SECTION: {"section"},
+    VisualType.ELEVATION: {"elevation"},
+    VisualType.DIAGRAM: {"diagram", "analytical"},
+    VisualType.MAP: {"site_plan", "map"},
+}
+
+
+def _asset_search_text(asset: Asset) -> str:
+    parts = [asset.filename, asset.description or ""]
+    vision = asset.metadata.get("vision_caption")
+    if isinstance(vision, dict):
+        summary = vision.get("summary")
+        if isinstance(summary, str):
+            parts.append(summary)
+        for key in ("spatial_elements", "annotations", "metrics_visible"):
+            values = vision.get(key)
+            if isinstance(values, list):
+                parts.extend(str(value) for value in values if str(value).strip())
+    drawing_type = asset.metadata.get("drawing_type")
+    if isinstance(drawing_type, str) and drawing_type.strip():
+        parts.append(drawing_type)
+    return " ".join(part for part in parts if part)
+
+
+def _tokenize_asset(asset: Asset) -> set[str]:
+    return _tokenize(_asset_search_text(asset)) | {tag for tag in asset.tags if tag}
+
+
 def score_asset_for_requirement(
     requirement: VisualRequirement,
     asset: Asset,
@@ -58,14 +89,17 @@ def score_asset_for_requirement(
         score += 0.45
 
     requirement_tokens = _tokenize(requirement.type.value) | _tokenize(requirement.description)
-    asset_tokens = _tokenize(asset.filename)
-    if asset.description:
-        asset_tokens |= _tokenize(asset.description)
-    asset_tokens |= set(asset.tags)
+    asset_tokens = _tokenize_asset(asset)
 
     overlap = requirement_tokens & asset_tokens
     if overlap:
         score += min(0.35, 0.1 * len(overlap))
+
+    drawing_type = asset.metadata.get("drawing_type")
+    if isinstance(drawing_type, str):
+        hints = _VISUAL_DRAWING_TYPE_HINTS.get(requirement.type, set())
+        if drawing_type in hints:
+            score += 0.12
 
     if asset.quality_score is not None:
         score += 0.2 * asset.quality_score
