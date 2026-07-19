@@ -99,4 +99,5 @@ def test_derive_acceptance_slide_review_from_layout_qa() -> None:
     )
     assert review.accepted
     assert review.weighted_score() >= 3.5
-    assert "Acceptance rehearsal" in review.reviewer_notes
+    assert review.is_scaffold_review()
+    assert "acceptance rehearsal" in review.reviewer_notes.lower()

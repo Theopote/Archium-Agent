@@ -1,0 +1,16 @@
+{
+  "case_id": "case_023_survey_photo_grid",
+  "source": "layout_qa_derived",
+  "information_hierarchy": 5,
+  "visual_focus": 5,
+  "reading_order": 5,
+  "image_text_relationship": 5,
+  "whitespace_density": 5,
+  "architectural_expression": 5,
+  "aesthetic_finish": 4,
+  "editability": 5,
+  "major_problems": [],
+  "minor_problems": [],
+  "accepted": true,
+  "reviewer_notes": "AUTO: layout QA rehearsal baseline (score 1.00); replace with manual human review."
+}

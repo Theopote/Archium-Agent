@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Self
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import LayoutFamily
@@ -23,6 +24,26 @@ HUMAN_REVIEW_WEIGHTS: dict[str, float] = {
     "aesthetic_finish": 0.10,
     "editability": 0.10,
 }
+
+
+class HumanVisualReviewSource(StrEnum):
+    """Provenance for a visual review record."""
+
+    MANUAL = "manual"
+    PLACEHOLDER = "placeholder"
+    LAYOUT_QA_DERIVED = "layout_qa_derived"
+
+
+_DERIVED_REVIEW_NOTE_MARKERS = (
+    "derived from layout",
+    "acceptance rehearsal derived",
+)
+_PLACEHOLDER_REVIEW_NOTE_MARKERS = (
+    "占位",
+    "待真实",
+    "template",
+    "placeholder",
+)
 
 
 class ArchitecturalSlideCategory(StrEnum):
@@ -55,6 +76,7 @@ class HumanVisualReview(DomainModel):
     """Manual visual quality review for one benchmark slide."""
 
     case_id: str = Field(min_length=1)
+    source: HumanVisualReviewSource = HumanVisualReviewSource.MANUAL
     information_hierarchy: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
     visual_focus: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
     reading_order: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
@@ -96,6 +118,28 @@ class HumanVisualReview(DomainModel):
 
     def passes_threshold(self, threshold: float = HUMAN_REVIEW_PASS_THRESHOLD) -> bool:
         return self.weighted_score() >= threshold
+
+    @model_validator(mode="after")
+    def _infer_source_from_notes(self) -> Self:
+        """Backfill provenance for legacy JSON without an explicit ``source`` field."""
+        if self.source != HumanVisualReviewSource.MANUAL:
+            return self
+        notes = self.reviewer_notes.strip().lower()
+        if any(marker in notes for marker in _DERIVED_REVIEW_NOTE_MARKERS):
+            return self.model_copy(update={"source": HumanVisualReviewSource.LAYOUT_QA_DERIVED})
+        if any(marker in notes for marker in _PLACEHOLDER_REVIEW_NOTE_MARKERS):
+            return self.model_copy(update={"source": HumanVisualReviewSource.PLACEHOLDER})
+        return self
+
+    def is_manual_review(self) -> bool:
+        return self.source == HumanVisualReviewSource.MANUAL
+
+    def is_scaffold_review(self) -> bool:
+        """Return True for placeholder templates and layout-QA-derived stand-ins."""
+        return self.source in {
+            HumanVisualReviewSource.PLACEHOLDER,
+            HumanVisualReviewSource.LAYOUT_QA_DERIVED,
+        }
 
 
 class BenchmarkRuleScore(DomainModel):

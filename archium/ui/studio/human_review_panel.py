@@ -6,18 +6,18 @@ from pathlib import Path
 from uuid import UUID
 
 import streamlit as st
+from pydantic import ValidationError
 
 from archium.application.studio_human_review_store import (
     load_slide_review,
     save_slide_review,
 )
-from pydantic import ValidationError
-
 from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
     HUMAN_REVIEW_PASS_THRESHOLD,
     HumanVisualReview,
+    HumanVisualReviewSource,
 )
 from archium.infrastructure.database.session import get_session
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -133,6 +133,7 @@ def render_human_review_panel(
 
     preview = HumanVisualReview(
         case_id=case_id,
+        source=HumanVisualReviewSource.MANUAL,
         **scores,
         major_problems=[line.strip() for line in major.splitlines() if line.strip()],
         minor_problems=[line.strip() for line in minor.splitlines() if line.strip()],

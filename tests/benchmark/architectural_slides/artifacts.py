@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from archium.application.visual.benchmark_service import BenchmarkCaseResult
-from archium.domain.visual.benchmark import HumanVisualReview
+from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource
 
 from tests.benchmark.architectural_slides.fixtures import ensure_case_assets
 from tests.golden.visual.composition.artifacts import (
@@ -94,6 +94,7 @@ def fingerprint_deck_qa(result: BenchmarkCaseResult) -> dict[str, Any]:
 def default_human_review(case_id: str) -> HumanVisualReview:
     review = HumanVisualReview(
         case_id=case_id,
+        source=HumanVisualReviewSource.PLACEHOLDER,
         information_hierarchy=4,
         visual_focus=4,
         reading_order=4,
@@ -118,10 +119,8 @@ def default_human_review(case_id: str) -> HumanVisualReview:
 
 
 def human_review_is_placeholder(review: HumanVisualReview) -> bool:
-    """Return True when a benchmark review still uses template placeholder notes."""
-    notes = review.reviewer_notes.strip().lower()
-    markers = ("占位", "待真实", "template", "placeholder")
-    return any(marker in notes for marker in markers)
+    """Return True when a benchmark review is not a real manual rating."""
+    return review.is_scaffold_review()
 
 
 def derive_benchmark_human_review(
@@ -130,11 +129,12 @@ def derive_benchmark_human_review(
     layout_score: float,
     layout_valid: bool,
 ) -> HumanVisualReview:
-    """Derive a non-placeholder review score from automated layout QA."""
+    """Derive a layout-QA stand-in review (not a manual human rating)."""
     base = 3.0 + min(2.0, max(0.0, layout_score) * 2.0)
     score = int(round(min(5.0, max(1.0, base))))
     return HumanVisualReview(
         case_id=case_id,
+        source=HumanVisualReviewSource.LAYOUT_QA_DERIVED,
         information_hierarchy=score,
         visual_focus=score,
         reading_order=score,
@@ -146,7 +146,10 @@ def derive_benchmark_human_review(
         major_problems=[] if layout_valid else ["layout validation failed"],
         minor_problems=[],
         accepted=layout_valid and base >= 3.5,
-        reviewer_notes=f"Derived from layout QA score {layout_score:.2f}.",
+        reviewer_notes=(
+            f"AUTO: layout QA rehearsal baseline (score {layout_score:.2f}); "
+            "replace with manual human review."
+        ),
     )
 
 
@@ -177,15 +180,21 @@ def write_case_artifacts(result: BenchmarkCaseResult) -> Path:
     _write_json(directory / "validation_report.json", fingerprint_report(result.report))
     _write_json(directory / "score_baseline.json", score_baseline(result.report))
     _write_json(directory / "deck_qa_report.json", fingerprint_deck_qa(result))
-    review = derive_benchmark_human_review(
+    derived_review = derive_benchmark_human_review(
         result.definition.case_id,
         layout_score=result.rule_score.layout_score,
         layout_valid=result.rule_score.layout_valid,
     )
     _write_json(
-        directory / "human_review.json",
-        review.model_dump(mode="json"),
+        directory / "layout_qa_review.json",
+        derived_review.model_dump(mode="json"),
     )
+    review_path = directory / "human_review.json"
+    if not review_path.exists():
+        _write_json(
+            review_path,
+            default_human_review(result.definition.case_id).model_dump(mode="json"),
+        )
     (directory / "notes.md").write_text(default_notes(result), encoding="utf-8")
     render_layout_preview_png(result.plan, directory / "preview.png")
     maybe_export_pptx(

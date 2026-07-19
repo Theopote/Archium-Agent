@@ -7,10 +7,13 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.studio_human_review_store import load_presentation_reviews, save_slide_review
+from archium.application.studio_human_review_store import (
+    load_presentation_reviews,
+    save_slide_review,
+)
 from archium.config.settings import Settings
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.benchmark import HumanVisualReview
+from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource
 
 
 def derive_acceptance_slide_review(
@@ -30,6 +33,7 @@ def derive_acceptance_slide_review(
         major_problems.append("layout validation failed")
     return HumanVisualReview(
         case_id=str(slide_id),
+        source=HumanVisualReviewSource.LAYOUT_QA_DERIVED,
         information_hierarchy=score,
         visual_focus=score,
         reading_order=score,
@@ -41,7 +45,9 @@ def derive_acceptance_slide_review(
         major_problems=major_problems,
         minor_problems=[],
         accepted=layout_valid and not has_blocking_issues and base >= 3.5,
-        reviewer_notes=f"Acceptance rehearsal derived from layout QA score {layout_score:.2f}.",
+        reviewer_notes=(
+            f"AUTO: acceptance rehearsal derived from layout QA score {layout_score:.2f}."
+        ),
     )
 
 
@@ -96,13 +102,18 @@ def derive_acceptance_human_metrics_from_reviews(
     slide_count: int,
     fallback: dict[str, float],
 ) -> dict[str, float]:
-    """Prefer stored Studio human reviews when available."""
-    if not reviews or slide_count <= 0:
+    """Prefer stored Studio manual human reviews when available."""
+    manual_reviews = [review for review in reviews if review.is_manual_review()]
+    if not manual_reviews or slide_count <= 0:
         return fallback
-    scores = [review.weighted_score() for review in reviews]
-    accepted = sum(1 for review in reviews if review.accepted)
-    major_pages = sum(1 for review in reviews if review.major_problems)
-    minor_pages = sum(1 for review in reviews if review.minor_problems and not review.major_problems)
+    scores = [review.weighted_score() for review in manual_reviews]
+    accepted = sum(1 for review in manual_reviews if review.accepted)
+    major_pages = sum(1 for review in manual_reviews if review.major_problems)
+    minor_pages = sum(
+        1
+        for review in manual_reviews
+        if review.minor_problems and not review.major_problems
+    )
     return {
         "major_edit_page_ratio": round(min(1.0, major_pages / slide_count), 3),
         "minor_edit_page_ratio": round(min(1.0, minor_pages / slide_count), 3),

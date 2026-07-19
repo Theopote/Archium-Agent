@@ -18,7 +18,8 @@
 | `score_baseline.json` | Layout Quality 分数基线 |
 | `output.pptx` | 可选 PPTX（Node 可用时生成） |
 | `preview.png` | 线框预览 |
-| `human_review.json` | 人工 9 维评分模板 |
+| `human_review.json` | 人工 9 维评分（手动填写；基线更新时不覆盖） |
+| `layout_qa_review.json` | 可选：由 layout QA 派生的 rehearsal 分数（非人工） |
 | `notes.md` | 问题与修复记录 |
 
 ## Case 目录
@@ -66,11 +67,11 @@ python scripts/build_architectural_benchmark_report.py
 
 ## 人工评分
 
-编辑各 Case 目录下的 `human_review.json`。加权门槛默认 **3.5/5**（见 `HumanVisualReview.passes_threshold()`）。
+编辑各 Case 目录下的 `human_review.json`（`source: "manual"`）。加权门槛默认 **3.5/5**（见 `HumanVisualReview.passes_threshold()`）。
 
-使用 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` 重新生成基线时，`human_review.json` 会从 layout QA 派生非占位评分。
+使用 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` 重新生成基线时，**不会覆盖**已有 `human_review.json`；缺失时写入占位模板。layout QA 派生分数写入 `layout_qa_review.json`。
 
-严格模式（CI 可选）拒绝占位评审：
+严格模式（CI 可选）拒绝占位/派生评审：
 
 ```bash
 STRICT_BENCHMARK_HUMAN_REVIEW=1 pytest tests/benchmark/architectural_slides -v

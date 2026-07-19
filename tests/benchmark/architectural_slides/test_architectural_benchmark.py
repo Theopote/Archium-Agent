@@ -119,14 +119,15 @@ def test_default_human_review_template_passes_threshold() -> None:
     assert human_review_is_placeholder(review)
 
 
-def test_derived_benchmark_human_review_is_not_placeholder() -> None:
+def test_derived_benchmark_human_review_is_scaffold() -> None:
     review = derive_benchmark_human_review(
         "case_001_site_plan",
         layout_score=0.92,
         layout_valid=True,
     )
     assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD)
-    assert not human_review_is_placeholder(review)
+    assert human_review_is_placeholder(review)
+    assert review.source.value == "layout_qa_derived"
 
 
 def test_case_001_drawing_hero_constraints() -> None:

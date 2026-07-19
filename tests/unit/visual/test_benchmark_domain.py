@@ -54,3 +54,22 @@ def test_human_visual_review_rejects_out_of_range() -> None:
             aesthetic_finish=3,
             editability=3,
         )
+
+
+def test_human_visual_review_infers_derived_source_from_notes() -> None:
+    review = HumanVisualReview.model_validate(
+        {
+            "case_id": "case_demo",
+            "information_hierarchy": 5,
+            "visual_focus": 5,
+            "reading_order": 5,
+            "image_text_relationship": 5,
+            "whitespace_density": 5,
+            "architectural_expression": 5,
+            "aesthetic_finish": 4,
+            "editability": 5,
+            "reviewer_notes": "Derived from layout QA score 1.00.",
+        }
+    )
+    assert review.is_scaffold_review()
+    assert not review.is_manual_review()

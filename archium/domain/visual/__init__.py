@@ -7,6 +7,7 @@ from archium.domain.visual.benchmark import (
     BenchmarkRuleScore,
     HUMAN_REVIEW_PASS_THRESHOLD,
     HumanVisualReview,
+    HumanVisualReviewSource,
 )
 from archium.domain.visual.deck_composition import (
     DeckCompositionPlan,
@@ -157,6 +158,7 @@ __all__ = [
     "BenchmarkRuleScore",
     "HUMAN_REVIEW_PASS_THRESHOLD",
     "HumanVisualReview",
+    "HumanVisualReviewSource",
     "AssetVisualRole",
     "ChartStyleSystem",
     "ColorSystem",
