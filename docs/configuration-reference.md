@@ -84,8 +84,10 @@ Do not edit them manually.
 | `BLOCK_EXPORT_ON_CRITICAL_REVIEW` | `false` | No | When true, open CRITICAL ReviewIssue records block JSON/Marp export. |
 | `LLM_PROFESSIONAL_REVIEW_ENABLED` | `false` | No | When true and LLM is configured, run LLM-assisted review across all four layers (content/evidence/architectural/layout) and Brief semantic alignment. |
 | `VISUAL_QA_ENABLED` | `true` | No | When true and Pillow is available, run explainable image QA on matched slide assets (dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type). |
-| `VISUAL_CRITIC_ENABLED` | `true` | No | When true, run read-only Visual Critic after visual render (Visual Quality heuristics). Never auto-repairs layouts and never blocks PPTX export. |
-| `VISUAL_DECK_QA_ENABLED` | `true` | No | When true, run read-only deck-level consistency QA after visual render (family rhythm, footer/chrome, typography, hero scale, palette drift). Never blocks PPTX export. |
+| `VISUAL_CRITIC_ENABLED` | `true` | No | When true, run read-only Visual Critic after visual render (Visual Quality heuristics; never auto-repairs or blocks PPTX export). |
+| `VISUAL_DECK_QA_ENABLED` | `true` | No | When true, run read-only deck-level consistency QA after visual render (footer/chrome/typography/family rhythm; never blocks PPTX export). |
+| `VISUAL_CRITIC_LLM_ENABLED` | `false` | No | When true and LLM is configured, enrich Visual Critic with multimodal vision on slide PNGs (soft-fail; never blocks PPTX). |
+| `VISUAL_CRITIC_LLM_MODEL` | `*(unset)*` | No | Optional vision-capable model override for Visual Critic LLM path. |
 | `VISUAL_PPTX_SCREENSHOTS_ENABLED` | `true` | No | When true, attempt PPTX→PNG screenshots (LibreOffice + pdftoppm) after export for Visual Critic. Soft-skips when tools are missing. |
 
 ## repair.* — Automated slide repair {#repair}
