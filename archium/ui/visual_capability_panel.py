@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-from archium.domain.visual.enums import LayoutFamily
 from archium.ui.layout_family_ui import (
     FAMILY_SCENARIOS,
     format_layout_family_label,

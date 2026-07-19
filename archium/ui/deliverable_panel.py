@@ -11,8 +11,8 @@ from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
 from archium.ui.availability_labels import format_availability_suffix
+from archium.ui.error_handlers import format_user_error
 from archium.ui.planning_service import set_deliverable_selected
 
 

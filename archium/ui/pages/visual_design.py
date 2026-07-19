@@ -23,9 +23,9 @@ from archium.infrastructure.database.session import get_session
 from archium.ui.art_direction_panel import render_art_direction_panel
 from archium.ui.error_handlers import format_user_error
 from archium.ui.layout_family_ui import format_layout_family_label
-from archium.ui.visual_capability_panel import render_visual_engine_scope
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.slide_visual_panel import render_slide_visual_panel
+from archium.ui.visual_capability_panel import render_visual_engine_scope
 from archium.ui.visual_service import (
     continue_visual_after_layout_review,
     get_presentation_visual_snapshot,

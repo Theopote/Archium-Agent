@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 
 from archium.application.chunk_service import ChunkService
 from archium.application.export_service import PresentationExportService
-from archium.domain.render import RenderResult
 from archium.application.ingestion_service import ImportItemResult, IngestionService
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
@@ -22,6 +21,7 @@ from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import PresentationType, ProjectType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
+from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import (
     DocumentRepository,

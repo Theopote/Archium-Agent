@@ -6,13 +6,18 @@ import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Protocol, cast
 
 try:
     from PIL import ImageFont
 except ImportError:  # pragma: no cover - optional until documents/full extra installed
-    ImageFont = None  # type: ignore[assignment,misc]
+    ImageFont = None  # type: ignore[assignment]
 
 _FONT_ROOT = Path(__file__).resolve().parent / "fonts"
+
+
+class TruetypeFont(Protocol):
+    def getbbox(self, text: str, /, *args: object, **kwargs: object) -> tuple[int, int, int, int]: ...
 
 # Logical family name → platform candidate paths (path, collection index).
 _FONT_CANDIDATES: dict[str, dict[str, list[tuple[str, int]]]] = {
@@ -115,7 +120,7 @@ def resolve_font_file(family: str, *, bold: bool = False) -> ResolvedFont | None
 
 
 @lru_cache(maxsize=64)
-def load_truetype_font(family: str, *, bold: bool, size_px: int) -> object | None:
+def load_truetype_font(family: str, *, bold: bool, size_px: int) -> TruetypeFont | None:
     """Load a PIL FreeTypeFont for ``family`` at ``size_px``, or None when unavailable."""
     if ImageFont is None or size_px <= 0:
         return None
@@ -123,7 +128,8 @@ def load_truetype_font(family: str, *, bold: bool, size_px: int) -> object | Non
     if resolved is None:
         return None
     try:
-        return ImageFont.truetype(str(resolved.path), size_px, index=resolved.index)
+        loaded = ImageFont.truetype(str(resolved.path), size_px, index=resolved.index)
+        return cast(TruetypeFont, loaded)
     except OSError:
         return None
 

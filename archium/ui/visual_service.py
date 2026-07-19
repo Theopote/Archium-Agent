@@ -17,6 +17,7 @@ from archium.application.visual.visual_workflow_service import (
 )
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus
+from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
@@ -24,19 +25,18 @@ from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualConten
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.validation import LayoutValidationReport
-from archium.domain.render import RenderResult
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
-from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
-from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
     LayoutPlanRepository,
     VisualIntentRepository,
 )
+from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
+from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
 

@@ -5,7 +5,11 @@ from __future__ import annotations
 import re
 
 from archium.domain.visual.design_system import TextStyleToken
-from archium.infrastructure.layout.font_resolver import fonts_available, load_truetype_font
+from archium.infrastructure.layout.font_resolver import (
+    TruetypeFont,
+    fonts_available,
+    load_truetype_font,
+)
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="text_measurement")
@@ -171,7 +175,7 @@ class TextMeasurementService:
     def _font_size_px(self, font_size_pt: float, dpi: float) -> int:
         return max(1, round(font_size_pt * dpi / 72.0))
 
-    def _font_for_char(self, char: str, style: TextStyleToken, size_px: int) -> object | None:
+    def _font_for_char(self, char: str, style: TextStyleToken, size_px: int) -> TruetypeFont | None:
         bold = style.font_weight >= _BOLD_WEIGHT_THRESHOLD
         if _CJK_RE.match(char):
             family = style.font_family
@@ -185,7 +189,7 @@ class TextMeasurementService:
         if font is None:
             return self.char_width_em(char) * style.font_size
         bbox = font.getbbox(char)
-        width_px = max(0, bbox[2] - bbox[0])
+        width_px = float(max(0, bbox[2] - bbox[0]))
         width_px += self._letter_spacing_px(style, dpi)
         return width_px * 72.0 / dpi
 

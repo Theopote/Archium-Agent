@@ -7,6 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.workflow_models import WorkflowRunResult
 from archium.domain.enums import ProjectType
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
@@ -19,6 +20,11 @@ from archium.ui.fact_ledger_panel import render_fact_ledger_panel
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
 from archium.ui.review_panel import render_review_panel
+from archium.ui.visual_service import (
+    export_presentation_pptx_from_layout_plans,
+    generate_visual_and_export_pptx,
+    presentation_has_visual_layout,
+)
 from archium.ui.workspace_service import (
     build_presentation_request,
     create_project,
@@ -29,11 +35,6 @@ from archium.ui.workspace_service import (
     list_project_presentations,
     list_projects,
     run_presentation_workflow,
-)
-from archium.ui.visual_service import (
-    export_presentation_pptx_from_layout_plans,
-    generate_visual_and_export_pptx,
-    presentation_has_visual_layout,
 )
 
 PROJECT_TYPE_LABELS = {
@@ -57,7 +58,7 @@ def _init_session_state() -> None:
 
 
 def _resolve_active_presentation_id(project_id: UUID) -> UUID | None:
-    result = st.session_state.get("last_workflow_result")
+    result: WorkflowRunResult | None = st.session_state.get("last_workflow_result")
     if result is not None and result.presentation is not None:
         return result.presentation.id
     with get_session() as session:
@@ -410,12 +411,14 @@ def _render_pptx_export_section(project_id: UUID) -> None:
         if has_visual_layout:
             st.session_state.pop(prompt_key, None)
             try:
-                with st.spinner("正在按 LayoutPlan 导出 PPTX…"):
-                    with get_session() as session:
-                        export_result = export_presentation_pptx_from_layout_plans(
-                            session,
-                            presentation_id,
-                        )
+                with (
+                    st.spinner("正在按 LayoutPlan 导出 PPTX…"),
+                    get_session() as session,
+                ):
+                    export_result = export_presentation_pptx_from_layout_plans(
+                        session,
+                        presentation_id,
+                    )
                 _store_pptx_export_result(export_result)
                 st.success("PPTX 已导出（视觉版式）。")
             except WorkflowError as exc:
@@ -441,13 +444,15 @@ def _render_pptx_export_section(project_id: UUID) -> None:
         ):
             st.session_state.pop(prompt_key, None)
             try:
-                with st.spinner("正在生成视觉编排并导出 PPTX…"):
-                    with get_session() as session:
-                        visual_result = generate_visual_and_export_pptx(
-                            session,
-                            project_id,
-                            presentation_id,
-                        )
+                with (
+                    st.spinner("正在生成视觉编排并导出 PPTX…"),
+                    get_session() as session,
+                ):
+                    visual_result = generate_visual_and_export_pptx(
+                        session,
+                        project_id,
+                        presentation_id,
+                    )
                 st.session_state.last_visual_workflow_result = visual_result
                 if visual_result.awaiting_review:
                     if visual_result.review_gate == "layout_review":
@@ -500,12 +505,14 @@ def _render_pptx_export_section(project_id: UUID) -> None:
         ):
             st.session_state.pop(prompt_key, None)
             try:
-                with st.spinner("正在使用旧版模板导出 PPTX…"):
-                    with get_session() as session:
-                        export_result = export_presentation_pptx_legacy(
-                            session,
-                            presentation_id,
-                        )
+                with (
+                    st.spinner("正在使用旧版模板导出 PPTX…"),
+                    get_session() as session,
+                ):
+                    export_result = export_presentation_pptx_legacy(
+                        session,
+                        presentation_id,
+                    )
                 _store_pptx_export_result(export_result)
                 st.success("PPTX 已导出（旧版模板）。")
                 st.rerun()
@@ -516,11 +523,11 @@ def _render_pptx_export_section(project_id: UUID) -> None:
     elif has_visual_layout:
         st.caption("当前汇报已具备视觉版式，点击上方按钮将按 LayoutPlan 导出。")
 
-    export_result = st.session_state.get("last_pptx_export_result")
-    if export_result is not None:
-        download_paths = list(export_result.output_paths())
-        if export_result.warnings:
-            for warning in export_result.warnings:
+    cached_export_result: RenderResult | None = st.session_state.get("last_pptx_export_result")
+    if cached_export_result is not None:
+        download_paths = list(cached_export_result.output_paths())
+        if cached_export_result.warnings:
+            for warning in cached_export_result.warnings:
                 st.warning(warning)
         if download_paths:
             st.markdown("**PPTX 下载**")
