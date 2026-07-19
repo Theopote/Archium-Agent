@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from archium.config.settings import Settings
 from archium.domain.enums import AssetType
+from archium.domain.visual.layout import LayoutPlan
 from archium.infrastructure.database.repositories import AssetRepository
 
 # Formats pptxgen / LayoutPlan render path can place reliably.
@@ -102,5 +103,5 @@ def build_asset_reference_context(
     )
 
 
-def content_refs_from_plan(plan) -> list[str]:  # noqa: ANN001
+def content_refs_from_plan(plan: LayoutPlan) -> list[str]:
     return [el.content_ref for el in plan.elements if el.content_ref]

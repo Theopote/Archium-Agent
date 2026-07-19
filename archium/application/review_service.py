@@ -212,6 +212,9 @@ class PresentationReviewService:
         if run.status != WorkflowStatus.AWAITING_REVIEW:
             raise WorkflowError(f"Workflow run {workflow_run_id} is not awaiting review")
 
+        if run.presentation_id is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} has no presentation")
+
         context = self.get_review_context(run.presentation_id, workflow_run_id=run.id)
         if context is None:
             raise WorkflowError(f"Presentation {run.presentation_id} not found")

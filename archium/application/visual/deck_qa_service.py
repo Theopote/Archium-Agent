@@ -386,11 +386,11 @@ class DeckQAService:
                 break
 
         missing_roles: list[str] = []
-        for role, flags in presence.items():
+        for role_name, flags in presence.items():
             if not flags:
                 continue
             if any(flags) and not all(flags):
-                missing_roles.append(role)
+                missing_roles.append(role_name)
 
         position_drift = False
         if len(page_number_boxes) >= 2:

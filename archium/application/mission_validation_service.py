@@ -19,7 +19,7 @@ from archium.domain.enums import (
 )
 from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import ClarifyingQuestion, KnowledgeGap
-from archium.domain.project_mission import ProjectMission
+from archium.domain.project_mission import MissionConstraint, ProjectMission
 
 _FULL_DESIGN_DEPTHS = frozenset(
     {
@@ -494,7 +494,7 @@ def _looks_like_question(text: str) -> bool:
 
 
 def _constraint_supported_by_facts(
-    constraint,
+    constraint: MissionConstraint,
     facts: list[ProjectFact],
 ) -> bool:
     name = constraint.name.lower()

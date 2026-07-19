@@ -142,7 +142,7 @@ class ColorSystem(DomainModel):
         """Resolve a color token name to a hex value."""
         key = token.strip().lstrip("#")
         if hasattr(self, key):
-            return getattr(self, key)
+            return str(getattr(self, key))
         # Allow direct hex passthrough for migration paths.
         if len(key) in {3, 6, 8} and all(c in "0123456789abcdefABCDEF" for c in key):
             return f"#{key.upper()}"

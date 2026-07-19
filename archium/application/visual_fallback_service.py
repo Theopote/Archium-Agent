@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from uuid import UUID
 
@@ -146,7 +147,7 @@ class VisualFallbackService:
         project_id: UUID,
         requirement: VisualRequirement,
         assets: list[Asset],
-        qa_reports: dict[UUID, object],
+        qa_reports: Mapping[UUID, object],
     ) -> Path | None:
         if not self._settings.visual_fallback_relaxed_matching:
             return None

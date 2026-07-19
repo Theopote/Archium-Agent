@@ -10,6 +10,7 @@ import streamlit as st
 from archium.application.asset_board_service import AssetBoardRow, AssetBoardService
 from archium.application.asset_provenance import format_asset_option_label
 from archium.config.settings import get_settings
+from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
@@ -175,7 +176,7 @@ def _row_key(row: AssetBoardRow) -> str:
     return f"{row.slide_id}:{row.requirement_index}"
 
 
-def _load_slide(slide_id: UUID) -> object:
+def _load_slide(slide_id: UUID) -> SlideSpec:
     with get_session() as session:
         from archium.infrastructure.database.repositories import PresentationRepository
 
@@ -185,9 +186,9 @@ def _load_slide(slide_id: UUID) -> object:
         return slide
 
 
-def _load_requirement(row: AssetBoardRow):
+def _load_requirement(row: AssetBoardRow) -> VisualRequirement:
     slide = _load_slide(row.slide_id)
-    return slide.visual_requirements[row.requirement_index]  # type: ignore[union-attr]
+    return slide.visual_requirements[row.requirement_index]
 
 
 def _render_asset_preview(project_id: UUID, selected: AssetBoardRow, assets: list) -> None:

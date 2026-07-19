@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import TypeVar
 from uuid import UUID
 
 from archium.domain.enums import (
@@ -32,7 +34,10 @@ from archium.domain.project_mission import (
     ProjectMission,
     Stakeholder,
 )
-from archium.infrastructure.llm.mission_schemas import MissionGenerationDraft
+from archium.infrastructure.llm.mission_schemas import (
+    MissionConstraintDraft,
+    MissionGenerationDraft,
+)
 
 PROTECTED_FACT_KEYS = frozenset(
     {
@@ -243,14 +248,14 @@ def parse_mission_draft(
     )
 
 
-def _parse_enum(value: str, enum_cls, fallback):
+def _parse_enum(value: str, enum_cls: type[_EnumT], fallback: _EnumT) -> _EnumT:
     try:
         return enum_cls(value)
     except ValueError:
         return fallback
 
 
-def _parse_enums(values: list[str], enum_cls, fallback):
+def _parse_enums(values: list[str], enum_cls: type[_EnumT], fallback: _EnumT) -> list[_EnumT]:
     parsed = []
     for value in values:
         try:
@@ -351,7 +356,9 @@ def _constraint_contains_unsupported_metric(
     return not _constraint_supported_by_facts(constraint, facts)
 
 
-def _looks_like_metric_constraint(constraint) -> bool:
+def _looks_like_metric_constraint(
+    constraint: MissionConstraint | MissionConstraintDraft,
+) -> bool:
     if _constraint_contains_numeric(constraint):
         name_lower = constraint.name.lower()
         if any(token in name_lower for token in ("面积", "高度", "预算", "用地", "层数", "容积")):
@@ -361,11 +368,15 @@ def _looks_like_metric_constraint(constraint) -> bool:
     return False
 
 
-def _constraint_contains_numeric(constraint) -> bool:
+def _constraint_contains_numeric(
+    constraint: MissionConstraint | MissionConstraintDraft,
+) -> bool:
     return _NUMERIC_CLAIM_RE.search(constraint.value) is not None
 
 
-def _constraint_supported_by_facts(constraint, facts: list[ProjectFact]) -> bool:
+def _constraint_supported_by_facts(
+    constraint: MissionConstraint | MissionConstraintDraft, facts: list[ProjectFact]
+) -> bool:
     for fact in facts:
         if fact.verification_status in {
             VerificationStatus.USER_CONFIRMED,
@@ -378,3 +389,6 @@ def _constraint_supported_by_facts(constraint, facts: list[ProjectFact]) -> bool
 def _has_fact_support(constraint: MissionConstraint, active_keys: set[str]) -> bool:
     name_lower = constraint.name.lower()
     return any(key.replace("_", " ") in name_lower or key in name_lower for key in active_keys)
+
+
+_EnumT = TypeVar("_EnumT", bound=Enum)

@@ -34,6 +34,10 @@ class WebSearchProvider(Protocol):
     def search(self, query: str, *, per_page: int = 5) -> list[WebImageCandidate]: ...
 
 
+class _SearchClient(Protocol):
+    def search(self, query: str, *, per_page: int = 5) -> list[WebImageCandidate]: ...
+
+
 class WebImageSearchService:
     """Search stock photo providers and download the first suitable image."""
 
@@ -170,7 +174,7 @@ class WebImageSearchService:
 
 
 class _NamedProvider:
-    def __init__(self, name: str, client: WebSearchProvider) -> None:
+    def __init__(self, name: str, client: _SearchClient) -> None:
         self.provider_name = name
         self._client = client
 

@@ -32,7 +32,7 @@ from archium.logging import get_logger
 try:
     from PIL import Image
 except ImportError:  # pragma: no cover
-    Image = None  # type: ignore[assignment, misc]
+    Image = None  # type: ignore[assignment]
 
 
 _METHOD = "heuristic_v0"
@@ -454,7 +454,7 @@ class VisualCriticService:
                 rgb = image.convert("RGB")
                 rgb.thumbnail((160, 90))
                 if hasattr(rgb, "get_flattened_data"):
-                    pixels = list(rgb.get_flattened_data())  # type: ignore[attr-defined]
+                    pixels = list(rgb.get_flattened_data())
                 else:
                     pixels = list(rgb.getdata())
         except OSError:

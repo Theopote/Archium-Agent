@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import TypeVar
 from uuid import UUID, uuid4
 
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
@@ -105,7 +107,10 @@ def validate_deliverable_plan_draft(draft: DeliverablePlanDraft) -> list[str]:
     return errors
 
 
-def _parse_enum(value: str, enum_cls, fallback):
+_EnumT = TypeVar("_EnumT", bound=Enum)
+
+
+def _parse_enum(value: str, enum_cls: type[_EnumT], fallback: _EnumT) -> _EnumT:
     try:
         return enum_cls(value)
     except ValueError:

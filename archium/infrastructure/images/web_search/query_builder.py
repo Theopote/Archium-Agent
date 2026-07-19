@@ -41,7 +41,10 @@ def build_search_query(
 
     if facts:
         for fact in facts[:2]:
-            value = fact.value.strip()
+            raw_value = fact.value
+            if not isinstance(raw_value, str):
+                continue
+            value = raw_value.strip()
             if value and len(value) <= 40:
                 parts.append(value)
 

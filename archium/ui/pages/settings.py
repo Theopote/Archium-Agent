@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import streamlit as st
 
 from archium.application.llm_profile_service import CredentialStatus, LLMProfileService
@@ -159,7 +161,7 @@ def render() -> None:
                         draft_profile,
                         api_key_input.strip(),
                         persist=save_mode == "保存到本机安全凭据库",
-                        session_store=st.session_state,
+                        session_store=cast(dict[str, object], st.session_state),
                     )
                 session.commit()
             reset_llm_provider_cache()
@@ -169,7 +171,9 @@ def render() -> None:
     if delete_clicked:
         with get_session() as session:
             delete_service = LLMProfileService(session)
-            delete_service.delete_api_key(draft_profile, session_store=st.session_state)
+            delete_service.delete_api_key(
+                draft_profile, session_store=cast(dict[str, object], st.session_state)
+            )
             session.commit()
         reset_llm_provider_cache()
         st.warning("已删除本机凭据库中的 API Key（环境变量不受影响）")
@@ -275,24 +279,24 @@ def _render_image_search_settings() -> None:
                 save_pexels_api_key(
                     api_key=pexels_key_input.strip(),
                     persist=pexels_save_mode == "保存到本机安全凭据库",
-                    session_store=st.session_state,
+                    session_store=cast(dict[str, object], st.session_state),
                 )
             if unsplash_key_input.strip():
                 save_unsplash_api_key(
                     api_key=unsplash_key_input.strip(),
                     persist=unsplash_save_mode == "保存到本机安全凭据库",
-                    session_store=st.session_state,
+                    session_store=cast(dict[str, object], st.session_state),
                 )
             st.success("搜图配置已保存")
             st.rerun()
 
     if delete_pexels_clicked:
-        delete_pexels_api_key(session_store=st.session_state)
+        delete_pexels_api_key(session_store=cast(dict[str, object], st.session_state))
         st.warning("已删除 Pexels API Key")
         st.rerun()
 
     if delete_unsplash_clicked:
-        delete_unsplash_api_key(session_store=st.session_state)
+        delete_unsplash_api_key(session_store=cast(dict[str, object], st.session_state))
         st.warning("已删除 Unsplash Access Key")
         st.rerun()
 

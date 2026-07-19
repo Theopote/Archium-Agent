@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 from archium.domain.deliverable import (
@@ -28,6 +29,7 @@ from archium.domain.enums import (
     WorkstreamType,
 )
 from archium.domain.knowledge_gap import (
+    AnswerValue,
     Assumption,
     ClarifyingQuestion,
     DesignQuestion,
@@ -254,7 +256,7 @@ def clarifying_question_to_domain(orm: ClarifyingQuestionORM) -> ClarifyingQuest
         blocking=orm.blocking,
         can_assume=orm.can_assume,
         suggested_assumption=orm.suggested_assumption,
-        answer=orm.answer_json,
+        answer=cast(AnswerValue, orm.answer_json),
         answer_source=orm.answer_source,
         status=QuestionStatus(orm.status),
         created_at=orm.created_at,

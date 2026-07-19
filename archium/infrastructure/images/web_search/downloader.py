@@ -5,6 +5,7 @@ from __future__ import annotations
 import ipaddress
 from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
@@ -76,7 +77,7 @@ def _fetch_bytes(url: str, timeout: float) -> bytes:
         content_type = response.headers.get("Content-Type", "")
         if content_type and not content_type.startswith("image/"):
             raise ValueError(f"Unexpected content type: {content_type}")
-        return response.read()
+        return cast(bytes, response.read())
 
 
 def _guess_suffix(url: str, payload: bytes) -> str:

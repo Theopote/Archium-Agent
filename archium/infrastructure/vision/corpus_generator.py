@@ -10,9 +10,9 @@ from archium.application.visual_qa_calibration import CORPUS_CATEGORY_TARGETS
 try:
     from PIL import Image, ImageDraw, ImageFilter
 except ImportError:  # pragma: no cover
-    Image = None  # type: ignore[assignment,misc]
-    ImageDraw = None  # type: ignore[assignment,misc]
-    ImageFilter = None  # type: ignore[assignment,misc]
+    Image = None  # type: ignore[assignment]
+    ImageDraw = None  # type: ignore[assignment]
+    ImageFilter = None  # type: ignore[assignment]
 
 _PLAN_CATEGORIES = frozenset({"site_plan", "floor_plan"})
 _DRAWING_CATEGORIES = frozenset({"site_plan", "floor_plan", "section", "elevation", "diagram"})

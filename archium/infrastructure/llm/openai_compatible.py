@@ -112,7 +112,7 @@ class OpenAICompatibleProvider:
         user_content = self._user_content(request)
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": request.system_prompt},
-            {"role": "user", "content": user_content},  # type: ignore[arg-type]
+            {"role": "user", "content": user_content},  # type: ignore[misc,list-item]
         ]
 
         last_error: Exception | None = None
