@@ -46,7 +46,38 @@ class Settings(BaseSettings):
     database_url: str | None = Field(
         default=None,
         validation_alias=AliasChoices("DATABASE_URL"),
-        description="Optional SQLAlchemy URL override. When unset, database_path is used.",
+        description=(
+            "Optional SQLAlchemy URL override. When unset, database_path is used. "
+            "Set to postgresql+psycopg://user:pass@host:5432/dbname for multi-user deployments."
+        ),
+    )
+    database_pool_size: int = Field(
+        default=5,
+        ge=1,
+        description="PostgreSQL connection pool size (ignored for SQLite).",
+    )
+    database_max_overflow: int = Field(
+        default=10,
+        ge=0,
+        description="PostgreSQL pool overflow connections beyond pool_size.",
+    )
+    database_pool_recycle_seconds: int = Field(
+        default=3600,
+        ge=0,
+        description="Recycle PostgreSQL connections after this many seconds (0 = disabled).",
+    )
+    database_pool_pre_ping: bool = Field(
+        default=True,
+        description="Ping PostgreSQL connections before checkout to drop stale connections.",
+    )
+    database_sqlite_busy_timeout_ms: int = Field(
+        default=30000,
+        ge=0,
+        description="SQLite busy timeout in milliseconds (WAL + busy_timeout reduce 'database is locked').",
+    )
+    database_sqlite_wal_enabled: bool = Field(
+        default=True,
+        description="Enable SQLite WAL journal mode for better concurrent read/write behavior.",
     )
     workflow_checkpoint_path: Path = Field(
         default=Path("data/database/workflow_checkpoints.db"),
@@ -412,8 +443,26 @@ class Settings(BaseSettings):
     def resolved_database_url(self) -> str:
         """Return a stable SQLAlchemy URL independent of process working directory."""
         if self.database_url:
-            return self._normalize_database_url(self.database_url)
+            return self._normalize_database_url(self.database_url.strip())
         return f"sqlite:///{self.database_path.as_posix()}"
+
+    @property
+    def database_backend(self) -> str:
+        """Primary database dialect label: sqlite, postgresql, or other."""
+        url = self.resolved_database_url
+        if url.startswith("sqlite"):
+            return "sqlite"
+        if url.startswith("postgresql"):
+            return "postgresql"
+        return "other"
+
+    @property
+    def is_sqlite(self) -> bool:
+        return self.database_backend == "sqlite"
+
+    @property
+    def is_postgresql(self) -> bool:
+        return self.database_backend == "postgresql"
 
     @staticmethod
     def _normalize_database_url(url: str) -> str:

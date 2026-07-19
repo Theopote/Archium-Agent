@@ -71,8 +71,9 @@ full = [
     "langgraph-checkpoint-sqlite>=2.0",
     "chromadb>=0.5",
     "openai>=1.0.0",
+    "psycopg[binary]>=3.1",
 ]
-legacy = []
+postgres = ["psycopg[binary]>=3.1"]
 dev = [
     "alembic>=1.13",
     "pytest>=8.0",

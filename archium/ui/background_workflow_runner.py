@@ -169,7 +169,7 @@ def _run_presentation_job(
 ) -> None:
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
-        with get_session() as session:
+        with get_session(scoped=False) as session:
             llm = create_llm_provider(settings)
             service = _create_presentation_service(session, llm, settings)
             try:
@@ -194,7 +194,7 @@ def _run_continue_job(job: BackgroundWorkflowJob, *, settings: Settings) -> None
         return
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
-        with get_session() as session:
+        with get_session(scoped=False) as session:
             llm = create_llm_provider(settings)
             service = _create_presentation_service(session, llm, settings)
             try:
@@ -283,7 +283,7 @@ def _run_planning_job(
     if workflow_run_id is not None:
         job.workflow_run_id = workflow_run_id
     try:
-        with get_session() as session:
+        with get_session(scoped=False) as session:
             service = _create_planning_service(session, settings)
             try:
                 if action == PlanningJobAction.START:
@@ -372,7 +372,7 @@ def _run_visual_job(
         job.workflow_run_id = workflow_run_id
     use_llm = bool(run_kwargs.get("use_llm", False))
     try:
-        with get_session() as session:
+        with get_session(scoped=False) as session:
             service = _create_visual_service(session, settings, use_llm=use_llm)
             try:
                 if action == VisualJobAction.RUN:
@@ -438,7 +438,7 @@ def find_running_workflow_run_id(
     presentation_id: UUID | None = None,
 ) -> UUID | None:
     """Return the newest in-flight workflow run for a project (browser refresh recovery)."""
-    with get_session() as session:
+    with get_session(scoped=False) as session:
         runs = WorkflowRunRepository(session).list_by_project(project_id)
     for run in runs:
         if run.status != WorkflowStatus.RUNNING:
@@ -463,7 +463,7 @@ def load_workflow_result(
 ) -> WorkflowRunResult:
     """Load a presentation WorkflowRunResult from persisted DB state."""
     resolved = _resolve_settings(settings)
-    with get_session() as session:
+    with get_session(scoped=False) as session:
         llm = create_llm_provider(resolved)
         service = _create_presentation_service(session, llm, resolved)
         try:
@@ -475,7 +475,7 @@ def load_workflow_result(
 def load_planning_result(workflow_run_id: UUID, *, settings: Settings | None = None):
     """Load a planning workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
-    with get_session() as session:
+    with get_session(scoped=False) as session:
         service = _create_planning_service(session, resolved)
         try:
             return service.result_from_run(workflow_run_id)
@@ -486,7 +486,7 @@ def load_planning_result(workflow_run_id: UUID, *, settings: Settings | None = N
 def load_visual_result(workflow_run_id: UUID, *, settings: Settings | None = None):
     """Load a visual workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
-    with get_session() as session:
+    with get_session(scoped=False) as session:
         service = _create_visual_service(session, resolved, use_llm=False)
         try:
             return service.result_from_run(workflow_run_id)

@@ -11,7 +11,14 @@ from archium.ui.bootstrap import (
     render_branding,
     render_module_status,
 )
-from archium.ui.pages import command_center, home, project_mission, settings, visual_design, workspace
+from archium.ui.pages import (
+    command_center,
+    home,
+    project_mission,
+    settings,
+    visual_design,
+    workspace,
+)
 
 st.set_page_config(
     page_title="Archium · 阿基姆",
@@ -23,24 +30,29 @@ st.set_page_config(
 init_app()
 inject_styles()
 
-with st.sidebar:
-    render_branding()
-    render_module_status()
-    st.markdown(
-        '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
-        "Archium v0.2-alpha.5<br>建筑 · 归档 · 智能"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+try:
+    with st.sidebar:
+        render_branding()
+        render_module_status()
+        st.markdown(
+            '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
+            "Archium v0.2-alpha.5<br>建筑 · 归档 · 智能"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
-navigation = st.navigation(
-    [
-        st.Page(home.render, title="首页", icon="🏛️", url_path="home", default=True),
-        st.Page(project_mission.render, title="项目任务", icon="🧭", url_path="project-mission"),
-        st.Page(workspace.render, title="项目工作台", icon="📁", url_path="workspace"),
-        st.Page(visual_design.render, title="视觉设计", icon="🎨", url_path="visual-design"),
-        st.Page(settings.render, title="设置", icon="⚙️", url_path="settings"),
-        st.Page(command_center.render, title="指令中心", icon="💬", url_path="command-center"),
-    ]
-)
-navigation.run()
+    navigation = st.navigation(
+        [
+            st.Page(home.render, title="首页", icon="🏛️", url_path="home", default=True),
+            st.Page(project_mission.render, title="项目任务", icon="🧭", url_path="project-mission"),
+            st.Page(workspace.render, title="项目工作台", icon="📁", url_path="workspace"),
+            st.Page(visual_design.render, title="视觉设计", icon="🎨", url_path="visual-design"),
+            st.Page(settings.render, title="设置", icon="⚙️", url_path="settings"),
+            st.Page(command_center.render, title="指令中心", icon="💬", url_path="command-center"),
+        ]
+    )
+    navigation.run()
+finally:
+    from archium.infrastructure.database.session import close_scoped_session
+
+    close_scoped_session()

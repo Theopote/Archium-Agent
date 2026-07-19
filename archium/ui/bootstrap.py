@@ -9,7 +9,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from archium.config import get_settings
-from archium.infrastructure.database.session import init_database
+from archium.infrastructure.database.session import close_scoped_session, init_database
 from archium.logging import setup_logging
 from archium.ui.llm_settings import get_ui_effective_settings
 
@@ -105,6 +105,7 @@ div[data-testid="stChatInput"] textarea {
 
 def init_app() -> None:
     """Initialize environment, logging, and database once per session."""
+    close_scoped_session()
     if st.session_state.get("_archium_initialized"):
         return
     load_dotenv()
