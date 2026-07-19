@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：入口混行、停车占道与景观缺失叠加，患者到达体验差。",
+  "dominant_content_type": "photo_evidence",
+  "density_level": "compact",
+  "continuity_role": "evidence",
+  "preferred_layout_families": [
+    "evidence_board"
+  ],
+  "composition_strategy": "以 evidence_board 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 4
+}

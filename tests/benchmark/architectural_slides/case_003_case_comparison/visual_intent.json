@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：三个案例均通过公共界面与流线重组提升可达性，而非单纯扩容。",
+  "dominant_content_type": "comparison",
+  "density_level": "balanced",
+  "continuity_role": "comparison",
+  "preferred_layout_families": [
+    "comparative_matrix"
+  ],
+  "composition_strategy": "以 comparative_matrix 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 2
+}

@@ -1,0 +1,17 @@
+{
+  "case_id": "case_004_economic_metrics",
+  "title": "经济技术指标一览",
+  "category": "data_metrics",
+  "page_type": "经济技术指标",
+  "page_task": "汇总用地、建筑面积与关键经济技术指标。",
+  "visual_focus": "指标卡片清晰可读，趋势图辅助解释关键变化。",
+  "expected_layout_family": "metric_dashboard",
+  "allowed_layout_variants": [
+    "metric_with_chart",
+    "metrics_only"
+  ],
+  "layout_variant": "metric_with_chart",
+  "assets": [
+    "assets/c0040001-0001-4001-8001-000000000001.png"
+  ]
+}

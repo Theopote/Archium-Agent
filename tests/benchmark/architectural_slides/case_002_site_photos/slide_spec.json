@@ -1,0 +1,35 @@
+{
+  "title": "老院区交通与环境问题",
+  "message": "入口混行、停车占道与景观缺失叠加，患者到达体验差。",
+  "chapter_id": "site_issues",
+  "order": 2,
+  "key_points": [
+    "入口混行",
+    "停车占道",
+    "景观缺失",
+    "导向不清"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "现场问题照片 1",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "现场问题照片 2",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "现场问题照片 3",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "现场问题照片 4",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

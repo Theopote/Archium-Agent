@@ -1,6 +1,13 @@
 """Architectural visual composition domain models."""
 
 from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.benchmark import (
+    ArchitecturalSlideCategory,
+    BenchmarkCaseDefinition,
+    BenchmarkRuleScore,
+    HUMAN_REVIEW_PASS_THRESHOLD,
+    HumanVisualReview,
+)
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
     CRITIC_FOCUS_UNCLEAR,
@@ -131,7 +138,12 @@ __all__ = [
     "LAYOUT_UNRESOLVED_ASSET_PATH",
     "LAYOUT_UNSUPPORTED_IMAGE_FORMAT",
     "AnnotationStyleSystem",
+    "ArchitecturalSlideCategory",
     "ArtDirection",
+    "BenchmarkCaseDefinition",
+    "BenchmarkRuleScore",
+    "HUMAN_REVIEW_PASS_THRESHOLD",
+    "HumanVisualReview",
     "AssetVisualRole",
     "ChartStyleSystem",
     "ColorSystem",

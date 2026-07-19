@@ -1,0 +1,17 @@
+{
+  "case_id": "case_001_site_plan",
+  "title": "院区总平面与指标",
+  "category": "drawing",
+  "page_type": "单张总平面主导页",
+  "page_task": "以总平面为主视觉，辅以关键规划指标说明改造范围。",
+  "visual_focus": "总平面图纸应占据页面主视觉区，指标作为辅助阅读。",
+  "expected_layout_family": "drawing_focus",
+  "allowed_layout_variants": [
+    "drawing_with_metrics",
+    "drawing_only"
+  ],
+  "layout_variant": "drawing_with_metrics",
+  "assets": [
+    "assets/c0010001-0001-4001-8001-000000000001.png"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "title": "院区总平面与改造范围",
+  "message": "总平面明确急救、门诊与后勤分区，并标注近期改造范围。",
+  "chapter_id": "site_plan",
+  "order": 1,
+  "key_points": [
+    "绿地率 38%",
+    "容积率 1.6",
+    "改造范围 2.4ha",
+    "急救独立入口"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_plan",
+      "description": "院区总平面图",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

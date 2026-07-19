@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-07-19T04:55:01.280043+00:00",
+  "case_count": 5,
+  "rule_passed_count": 0,
+  "rule_pass_rate": 0.0,
+  "cases": [
+    {
+      "case_id": "case_001_site_plan",
+      "title": "院区总平面与指标",
+      "category": "drawing",
+      "page_type": "单张总平面主导页",
+      "layout_family": "drawing_focus",
+      "layout_variant": "drawing_with_metrics",
+      "preview_png": "case_001_site_plan\\preview.png",
+      "rule_passed": false,
+      "layout_score": 0.925,
+      "has_critical": false,
+      "human_weighted_score": 4.0,
+      "human_accepted": false,
+      "major_problems": []
+    },
+    {
+      "case_id": "case_002_site_photos",
+      "title": "老院区交通与环境问题",
+      "category": "photo_analysis",
+      "page_type": "四张现场问题照片",
+      "layout_family": "evidence_board",
+      "layout_variant": "numbered_grid",
+      "preview_png": "case_002_site_photos\\preview.png",
+      "rule_passed": false,
+      "layout_score": 0.925,
+      "has_critical": false,
+      "human_weighted_score": 4.0,
+      "human_accepted": false,
+      "major_problems": []
+    },
+    {
+      "case_id": "case_003_case_comparison",
+      "title": "国内外三座医疗更新案例比较",
+      "category": "case_comparison",
+      "page_type": "三案例横向比较",
+      "layout_family": "comparative_matrix",
+      "layout_variant": "matrix_with_insight",
+      "preview_png": "case_003_case_comparison\\preview.png",
+      "rule_passed": false,
+      "layout_score": 0.925,
+      "has_critical": false,
+      "human_weighted_score": 4.0,
+      "human_accepted": false,
+      "major_problems": []
+    },
+    {
+      "case_id": "case_004_economic_metrics",
+      "title": "经济技术指标一览",
+      "category": "data_metrics",
+      "page_type": "经济技术指标",
+      "layout_family": "metric_dashboard",
+      "layout_variant": "metric_with_chart",
+      "preview_png": "case_004_economic_metrics\\preview.png",
+      "rule_passed": false,
+      "layout_score": 0.85,
+      "has_critical": false,
+      "human_weighted_score": 4.0,
+      "human_accepted": false,
+      "major_problems": []
+    },
+    {
+      "case_id": "case_005_design_concept",
+      "title": "设计理念：以患者路径组织空间",
+      "category": "text_narrative",
+      "page_type": "设计理念",
+      "layout_family": "textual_argument",
+      "layout_variant": "lead_and_points",
+      "preview_png": "case_005_design_concept\\preview.png",
+      "rule_passed": false,
+      "layout_score": 0.925,
+      "has_critical": false,
+      "human_weighted_score": 4.0,
+      "human_accepted": false,
+      "major_problems": []
+    }
+  ]
+}

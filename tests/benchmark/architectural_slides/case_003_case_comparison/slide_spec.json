@@ -1,0 +1,30 @@
+{
+  "title": "三座医疗更新案例横向比较",
+  "message": "三个案例均通过公共界面与流线重组提升可达性，而非单纯扩容。",
+  "chapter_id": "reference_cases",
+  "order": 3,
+  "key_points": [
+    "空间策略",
+    "运营模式",
+    "公众可达性",
+    "改造强度"
+  ],
+  "visual_requirements": [
+    {
+      "type": "comparison",
+      "description": "案例比较",
+      "asset_count": 1
+    },
+    {
+      "type": "reference_case",
+      "description": "案例 B",
+      "asset_count": 1
+    },
+    {
+      "type": "reference_case",
+      "description": "案例 C",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

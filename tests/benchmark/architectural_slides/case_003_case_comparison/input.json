@@ -1,0 +1,19 @@
+{
+  "case_id": "case_003_case_comparison",
+  "title": "国内外三座医疗更新案例比较",
+  "category": "case_comparison",
+  "page_type": "三案例横向比较",
+  "page_task": "横向比较三个案例的空间策略与公众可达性。",
+  "visual_focus": "三案例图像尺度一致，结论区收束比较洞察。",
+  "expected_layout_family": "comparative_matrix",
+  "allowed_layout_variants": [
+    "matrix_with_insight",
+    "matrix_only"
+  ],
+  "layout_variant": "matrix_with_insight",
+  "assets": [
+    "assets/c0030001-0001-4001-8001-000000000001.png",
+    "assets/c0030002-0001-4001-8001-000000000002.png",
+    "assets/c0030003-0001-4001-8001-000000000003.png"
+  ]
+}

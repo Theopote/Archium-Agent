@@ -1,0 +1,141 @@
+{
+  "layout_family": "evidence_board",
+  "layout_variant": "numbered_grid",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "photo_0",
+  "reading_order": [
+    "title",
+    "lead",
+    "photo_0",
+    "photo_1",
+    "photo_2",
+    "photo_3",
+    "source"
+  ],
+  "balance_strategy": "evidence_grid",
+  "whitespace_ratio": 0.378,
+  "elements": [
+    {
+      "id": "annotation_0",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 2.74,
+      "w": 4.238,
+      "h": 0.331,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "annotation_1",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 5.063,
+      "y": 2.74,
+      "w": 4.238,
+      "h": 0.331,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "annotation_2",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.411,
+      "w": 4.238,
+      "h": 0.331,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "annotation_3",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 5.063,
+      "y": 4.411,
+      "w": 4.238,
+      "h": 0.331,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.992,
+      "w": 8.6,
+      "h": 0.45,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "photo_0",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 1.525,
+      "w": 4.238,
+      "h": 1.173,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "photo_1",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 5.063,
+      "y": 1.525,
+      "w": 4.238,
+      "h": 1.173,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "photo_2",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 3.196,
+      "w": 4.238,
+      "h": 1.173,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "photo_3",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 5.063,
+      "y": 3.196,
+      "w": 4.238,
+      "h": 1.173,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.5,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

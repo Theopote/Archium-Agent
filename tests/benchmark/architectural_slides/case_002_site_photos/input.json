@@ -1,0 +1,20 @@
+{
+  "case_id": "case_002_site_photos",
+  "title": "老院区交通与环境问题",
+  "category": "photo_analysis",
+  "page_type": "四张现场问题照片",
+  "page_task": "用四张现场照片并列呈现交通混乱与环境短板。",
+  "visual_focus": "四张照片等权重排列，标题点明问题主题。",
+  "expected_layout_family": "evidence_board",
+  "allowed_layout_variants": [
+    "numbered_grid",
+    "caption_grid"
+  ],
+  "layout_variant": "numbered_grid",
+  "assets": [
+    "assets/c0020001-0001-4001-8001-000000000001.png",
+    "assets/c0020002-0001-4001-8001-000000000002.png",
+    "assets/c0020003-0001-4001-8001-000000000003.png",
+    "assets/c0020004-0001-4001-8001-000000000004.png"
+  ]
+}

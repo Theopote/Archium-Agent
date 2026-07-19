@@ -107,6 +107,7 @@ markers = [
     "streamlit_smoke: Streamlit startup smoke tests",
     "calibration: Visual QA labeled corpus calibration (optional, not in default CI)",
     "visual_regression: PNG preview baseline checks for key Golden Cases (requires Marp CLI)",
+    "architectural_benchmark: Architectural slide visual benchmark cases (LayoutPlan + PNG baselines)",
     "windows_smoke: Windows real-machine smoke (PptxGen, checkpoint, Unicode paths; windows-smoke.yml)",
 ]
 

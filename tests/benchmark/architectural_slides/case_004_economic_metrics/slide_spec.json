@@ -1,0 +1,15 @@
+{
+  "title": "经济技术指标",
+  "message": "改造后总建筑面积控制在合理区间，公服与绿地指标同步提升。",
+  "chapter_id": "metrics",
+  "order": 4,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "chart",
+      "description": "指标趋势图",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

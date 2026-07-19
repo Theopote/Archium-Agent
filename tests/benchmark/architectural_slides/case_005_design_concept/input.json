@@ -1,0 +1,16 @@
+{
+  "case_id": "case_005_design_concept",
+  "title": "设计理念：以患者路径组织空间",
+  "category": "text_narrative",
+  "page_type": "设计理念",
+  "page_task": "阐述以患者路径为主线的空间组织理念。",
+  "visual_focus": "核心论断突出，正文层次清晰，留白适度。",
+  "expected_layout_family": "textual_argument",
+  "allowed_layout_variants": [
+    "lead_and_points",
+    "two_column_text",
+    "quote_argument"
+  ],
+  "layout_variant": "lead_and_points",
+  "assets": []
+}

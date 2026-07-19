@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：改造后总建筑面积控制在合理区间，公服与绿地指标同步提升。",
+  "dominant_content_type": "metrics",
+  "density_level": "spacious",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "metric_dashboard"
+  ],
+  "composition_strategy": "以 metric_dashboard 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}
