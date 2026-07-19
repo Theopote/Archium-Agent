@@ -15,7 +15,7 @@ from archium.domain.visual.atomic_operation import AtomicOperation, OperationTyp
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.slide import SlideSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.infrastructure.error_framework import WorkflowError
+from archium.exceptions import WorkflowError
 
 
 @dataclass
@@ -219,10 +219,10 @@ class TransactionExecutor:
             element_id = operation.target_element_id
             if not element_id:
                 raise WorkflowError("Lock operation requires target_element_id")
-            # Find element spec and set locked=True
-            for spec in layout_plan.element_specs:
-                if spec.id == element_id:
-                    spec.locked = True
+            # Find element and set locked=True
+            for element in layout_plan.elements:
+                if element.id == str(element_id):
+                    element.locked = True
             plans_repo.save(layout_plan)
             return visual_intent, layout_plan
 
@@ -232,10 +232,10 @@ class TransactionExecutor:
             element_id = operation.target_element_id
             if not element_id:
                 raise WorkflowError("Unlock operation requires target_element_id")
-            # Find element spec and set locked=False
-            for spec in layout_plan.element_specs:
-                if spec.id == element_id:
-                    spec.locked = False
+            # Find element and set locked=False
+            for element in layout_plan.elements:
+                if element.id == str(element_id):
+                    element.locked = False
             plans_repo.save(layout_plan)
             return visual_intent, layout_plan
 
@@ -256,19 +256,19 @@ class TransactionExecutor:
             elif op_type == OperationType.ENLARGE_HERO:
                 # Find hero element and scale it
                 scale_factor = operation.params.get("scale_factor", 1.3)
-                for spec in layout_plan.element_specs:
-                    if spec.role in ("hero", "main_visual"):
+                for element in layout_plan.elements:
+                    if element.role.value in ("hero_visual", "main_visual"):
                         # Scale dimensions
-                        spec.w = int(spec.w * scale_factor)
-                        spec.h = int(spec.h * scale_factor)
+                        element.width = int(element.width * scale_factor)
+                        element.height = int(element.height * scale_factor)
                 plans_repo.save(layout_plan)
 
             elif op_type == OperationType.INCREASE_WHITESPACE:
                 # Reduce element sizes to increase whitespace
-                for spec in layout_plan.element_specs:
-                    if not spec.locked:
-                        spec.w = int(spec.w * 0.9)
-                        spec.h = int(spec.h * 0.9)
+                for element in layout_plan.elements:
+                    if not element.locked:
+                        element.width = int(element.width * 0.9)
+                        element.height = int(element.height * 0.9)
                 plans_repo.save(layout_plan)
 
             return visual_intent, layout_plan
@@ -346,17 +346,17 @@ class TransactionExecutor:
         return {
             "id": str(plan.id),
             "layout_family": plan.layout_family.value if plan.layout_family else None,
-            "element_specs": [
+            "elements": [
                 {
-                    "id": str(spec.id),
-                    "role": spec.role,
-                    "locked": spec.locked,
-                    "x": spec.x,
-                    "y": spec.y,
-                    "w": spec.w,
-                    "h": spec.h,
+                    "id": element.id,
+                    "role": element.role.value if element.role else None,
+                    "locked": element.locked,
+                    "x": element.x,
+                    "y": element.y,
+                    "width": element.width,
+                    "height": element.height,
                 }
-                for spec in plan.element_specs
+                for element in plan.elements
             ],
         }
 
@@ -384,15 +384,15 @@ class TransactionExecutor:
         if not plan:
             return None
 
-        # Restore element specs
-        for spec_snapshot in snapshot.get("element_specs", []):
-            spec_id = UUID(spec_snapshot["id"])
-            for spec in plan.element_specs:
-                if spec.id == spec_id:
-                    spec.locked = spec_snapshot["locked"]
-                    spec.x = spec_snapshot["x"]
-                    spec.y = spec_snapshot["y"]
-                    spec.w = spec_snapshot["w"]
-                    spec.h = spec_snapshot["h"]
+        # Restore elements
+        for element_snapshot in snapshot.get("elements", []):
+            element_id = element_snapshot["id"]
+            for element in plan.elements:
+                if element.id == element_id:
+                    element.locked = element_snapshot["locked"]
+                    element.x = element_snapshot["x"]
+                    element.y = element_snapshot["y"]
+                    element.width = element_snapshot["width"]
+                    element.height = element_snapshot["height"]
 
         return plan

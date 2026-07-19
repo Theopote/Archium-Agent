@@ -1,7 +1,8 @@
 """Tests for composite operation execution with transaction support."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from archium.domain.visual.atomic_operation import (
     LockOperation,
@@ -9,7 +10,7 @@ from archium.domain.visual.atomic_operation import (
     ReduceTextOperation,
 )
 from archium.domain.visual.edit_intent import VisualEditIntent
-from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.enums import LayoutFamily, LayoutElementRole, LayoutContentType
 from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
 
 
@@ -21,7 +22,7 @@ class TestOperationDecomposition:
         # Arrange
         from archium.application.visual.operation_decomposer import OperationDecomposer
         from archium.domain.visual.slide import SlideSnapshot
-        from archium.domain.visual.layout import LayoutPlan, SlideElementSpec
+        from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
         # Create mock slide snapshot
         drawing_id = uuid4()
@@ -31,17 +32,24 @@ class TestOperationDecomposition:
             id=uuid4(),
             slide_id=uuid4(),
             layout_family=LayoutFamily.DRAWING_FOCUS,
-            element_specs=[
-                SlideElementSpec(
-                    id=drawing_id,
-                    role="drawing",
-                    x=100, y=100, w=400, h=300,
+            layout_variant="default",
+            page_width=720,
+            page_height=540,
+            design_system_id=uuid4(),
+            visual_intent_id=uuid4(),
+            elements=[
+                LayoutElement(
+                    id=str(drawing_id),
+                    role=LayoutElementRole.DRAWING,
+                    content_type=LayoutContentType.IMAGE,
+                    x=100, y=100, width=400, height=300,
                     locked=False,
                 ),
-                SlideElementSpec(
-                    id=caption_id,
-                    role="caption",
-                    x=100, y=450, w=400, h=100,
+                LayoutElement(
+                    id=str(caption_id),
+                    role=LayoutElementRole.CAPTION,
+                    content_type=LayoutContentType.TEXT,
+                    x=100, y=450, width=400, height=100,
                     locked=False,
                 ),
             ],
@@ -88,7 +96,7 @@ class TestOperationDecomposition:
         """Test: '把说明放右边并减少两行文字'"""
         from archium.application.visual.operation_decomposer import OperationDecomposer
         from archium.domain.visual.slide import SlideSnapshot
-        from archium.domain.visual.layout import LayoutPlan, SlideElementSpec
+        from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
         caption_id = uuid4()
 
@@ -96,11 +104,17 @@ class TestOperationDecomposition:
             id=uuid4(),
             slide_id=uuid4(),
             layout_family=LayoutFamily.DRAWING_FOCUS,
-            element_specs=[
-                SlideElementSpec(
-                    id=caption_id,
-                    role="caption",
-                    x=100, y=450, w=400, h=100,
+            layout_variant="default",
+            page_width=720,
+            page_height=540,
+            design_system_id=uuid4(),
+            visual_intent_id=uuid4(),
+            elements=[
+                LayoutElement(
+                    id=str(caption_id),
+                    role=LayoutElementRole.CAPTION,
+                    content_type=LayoutContentType.TEXT,
+                    x=100, y=450, width=400, height=100,
                     locked=False,
                 ),
             ],
@@ -152,7 +166,7 @@ class TestOperationDecomposition:
         """Test: '保持图纸不动，把说明放右边并减少两行文字'"""
         from archium.application.visual.operation_decomposer import OperationDecomposer
         from archium.domain.visual.slide import SlideSnapshot
-        from archium.domain.visual.layout import LayoutPlan, SlideElementSpec
+        from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
         drawing_id = uuid4()
         caption_id = uuid4()
@@ -161,17 +175,24 @@ class TestOperationDecomposition:
             id=uuid4(),
             slide_id=uuid4(),
             layout_family=LayoutFamily.DRAWING_FOCUS,
-            element_specs=[
-                SlideElementSpec(
-                    id=drawing_id,
-                    role="drawing",
-                    x=100, y=100, w=400, h=300,
+            layout_variant="default",
+            page_width=720,
+            page_height=540,
+            design_system_id=uuid4(),
+            visual_intent_id=uuid4(),
+            elements=[
+                LayoutElement(
+                    id=str(drawing_id),
+                    role=LayoutElementRole.DRAWING,
+                    content_type=LayoutContentType.IMAGE,
+                    x=100, y=100, width=400, height=300,
                     locked=False,
                 ),
-                SlideElementSpec(
-                    id=caption_id,
-                    role="caption",
-                    x=100, y=450, w=400, h=100,
+                LayoutElement(
+                    id=str(caption_id),
+                    role=LayoutElementRole.CAPTION,
+                    content_type=LayoutContentType.TEXT,
+                    x=100, y=450, width=400, height=100,
                     locked=False,
                 ),
             ],

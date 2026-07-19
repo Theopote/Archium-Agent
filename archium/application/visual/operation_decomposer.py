@@ -22,7 +22,7 @@ from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.nlp_parser import ModifierType, ParsedIntent
 from archium.domain.visual.slide import SlideSnapshot
-from archium.infrastructure.error_framework import WorkflowError
+from archium.exceptions import WorkflowError
 
 
 class OperationDecomposer:
@@ -292,14 +292,11 @@ class OperationDecomposer:
         if not layout_plan:
             return None
 
-        for spec in layout_plan.element_specs:
+        for element in layout_plan.elements:
             # Check role match
-            if spec.role and spec.role.lower() == role:
-                return spec.id
-
-            # Check label match (if available)
-            # Note: SlideElementSpec might not have direct label access
-            # This would require looking at the actual slide elements
+            if element.role and element.role.value.lower() == role:
+                return UUID(element.id)
 
         # If no match found, return None
+        return None
         return None
