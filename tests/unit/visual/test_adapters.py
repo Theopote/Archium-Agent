@@ -27,6 +27,8 @@ def test_text_measurement_cjk_and_latin() -> None:
     style = default_presentation_design_system().typography.body
     assert service.estimate_lines("你好世界", box_width_in=2.0, style=style) >= 1
     assert service.fits("短句", box_width_in=4.0, box_height_in=1.0, style=style)
+    if service.uses_real_metrics:
+        assert service.measure_width_pt("，", style=style) < service.measure_width_pt("汉", style=style)
 
 
 def test_pptx_layout_plan_adapter_preserves_coordinates() -> None:

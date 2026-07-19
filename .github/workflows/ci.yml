@@ -46,6 +46,9 @@ jobs:
         working-directory: archium/infrastructure/renderers/pptxgen
         run: npm ci
 
+      - name: Install fonts for layout text measurement
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-liberation
+
       - name: Ruff
         run: ruff check archium tests
 

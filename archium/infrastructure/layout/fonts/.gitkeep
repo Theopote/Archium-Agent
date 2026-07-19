@@ -1,0 +1,3 @@
+# Optional bundled reference fonts for cross-platform text measurement.
+# Place NotoSansSC-Regular.otf / NotoSans-Regular.ttf here, or rely on OS fonts
+# (Microsoft YaHei + Arial on Windows; fonts-noto-cjk + fonts-liberation on Linux CI).
