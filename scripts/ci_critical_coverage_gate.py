@@ -51,6 +51,17 @@ def load_module_rates(coverage_xml: Path) -> dict[str, float]:
     return rates
 
 
+def _resolve_rate(rates: dict[str, float], filename: str) -> float | None:
+    normalized = _normalize_filename(filename)
+    if normalized in rates:
+        return rates[normalized]
+    suffix = normalized.removeprefix("archium/")
+    for key, value in rates.items():
+        if _normalize_filename(key).endswith(suffix):
+            return value
+    return None
+
+
 def evaluate(coverage_xml: Path = DEFAULT_COVERAGE_XML) -> list[ModuleCoverage]:
     if not coverage_xml.is_file():
         raise FileNotFoundError(f"Coverage report not found: {coverage_xml}")
@@ -58,7 +69,7 @@ def evaluate(coverage_xml: Path = DEFAULT_COVERAGE_XML) -> list[ModuleCoverage]:
     rates = load_module_rates(coverage_xml)
     results: list[ModuleCoverage] = []
     for filename, floor in sorted(CRITICAL_MODULE_FLOORS.items()):
-        line_rate = rates.get(filename)
+        line_rate = _resolve_rate(rates, filename)
         if line_rate is None:
             raise KeyError(f"Critical module missing from coverage.xml: {filename}")
         results.append(ModuleCoverage(filename=filename, line_rate=line_rate, floor=floor))

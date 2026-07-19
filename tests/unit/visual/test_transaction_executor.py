@@ -408,6 +408,16 @@ def test_validation_failure_rolls_back_layout() -> None:
     assert hero_after.width == original_width
 
 
+def test_swap_missing_element_raises() -> None:
+    plan, first_id, _second_id = _two_element_plan()
+    result, _ = _execute(
+        plan=plan,
+        operations=[SwapOperation(first_id, str(uuid4()))],
+    )
+    assert result.success is False
+    assert isinstance(result.error, WorkflowError)
+
+
 def test_lock_and_unlock_roundtrip() -> None:
     plan = _sample_plan()
     element_id = plan.elements[0].id

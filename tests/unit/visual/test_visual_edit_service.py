@@ -12,6 +12,7 @@ from archium.domain.presentation import Presentation, PresentationBrief, Storyli
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual.edit_intent import VisualEditIntent
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
@@ -89,3 +90,22 @@ def test_apply_reduce_text_records_revision_and_replans(
     restored = service.restore_previous(slide_with_visual.id)
     assert restored.restored is True
     assert restored.layout_plan is not None
+
+
+def test_restore_previous_without_history_raises(
+    db_session: Session,
+    slide_with_visual: SlideSpec,
+) -> None:
+    service = VisualEditService(db_session)
+    with pytest.raises(WorkflowError, match="没有可恢复"):
+        service.restore_previous(slide_with_visual.id)
+
+
+def test_apply_text_uses_preset_parser_fallback(
+    db_session: Session,
+    slide_with_visual: SlideSpec,
+) -> None:
+    service = VisualEditService(db_session)
+    result = service.apply_text(slide_with_visual.id, "减少文字")
+    assert result.layout_plan is not None
+    assert result.intent == VisualEditIntent.REDUCE_TEXT
