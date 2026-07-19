@@ -12,6 +12,7 @@ from archium.config.settings import Settings
 from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.ui.app_navigation import get_app_page
 from archium.ui.background_workflow_runner import (
     PlanningJobAction,
     background_workflows_enabled,
@@ -56,9 +57,9 @@ def _render_post_presentation_links() -> None:
     st.markdown("**下一步**")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link("workspace", label="到项目工作台审核内容", icon="📁")
+        st.page_link(get_app_page("workspace"), label="到项目工作台审核内容", icon="📁")
     with link_cols[1]:
-        st.page_link("studio", label="到汇报工作室生成版式", icon="🎬")
+        st.page_link(get_app_page("studio"), label="到汇报工作室生成版式", icon="🎬")
 
 
 def _apply_planning_result(result: object) -> None:

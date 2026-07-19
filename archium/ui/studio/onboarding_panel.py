@@ -10,6 +10,7 @@ from archium.config.settings import Settings
 from archium.domain.enums import ProjectType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.ui.app_navigation import get_app_page
 from archium.ui.error_handlers import format_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.studio_service import (
@@ -85,9 +86,9 @@ def render_studio_no_presentation_hint(*, project_id: UUID) -> None:
     st.warning("该项目还没有汇报内容。请导入资料后，到项目工作台或项目任务生成页面内容。")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link("project-mission", label="前往项目任务", icon="🧭")
+        st.page_link(get_app_page("project-mission"), label="前往项目任务", icon="🧭")
     with link_cols[1]:
-        st.page_link("workspace", label="前往项目工作台", icon="📁")
+        st.page_link(get_app_page("workspace"), label="前往项目工作台", icon="📁")
 
 
 def _run_import(project_id: UUID, uploads: list, *, settings: Settings) -> None:
