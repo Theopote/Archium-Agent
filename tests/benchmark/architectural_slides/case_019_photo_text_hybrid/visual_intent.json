@@ -1,0 +1,13 @@
+{
+  "communication_goal": "让受众理解：针对入口混行与导向缺失，提出分层到达与清晰标识系统。",
+  "dominant_content_type": "photo_evidence",
+  "density_level": "balanced",
+  "continuity_role": "evidence",
+  "preferred_layout_families": [
+    "evidence_board",
+    "analytical_diagram"
+  ],
+  "composition_strategy": "以 evidence_board 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 1
+}

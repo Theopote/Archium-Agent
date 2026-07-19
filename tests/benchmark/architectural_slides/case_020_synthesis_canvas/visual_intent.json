@@ -1,0 +1,13 @@
+{
+  "communication_goal": "让受众理解：方案在保持运营连续的前提下，重建公共性与可达性。",
+  "dominant_content_type": "hero_image",
+  "density_level": "balanced",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "hero",
+    "hybrid_canvas"
+  ],
+  "composition_strategy": "以 hero 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 1
+}

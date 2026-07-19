@@ -1,0 +1,24 @@
+{
+  "title": "方案综合解读",
+  "message": "方案在保持运营连续的前提下，重建公共性与可达性。",
+  "chapter_id": "synthesis",
+  "order": 20,
+  "key_points": [
+    "运营连续",
+    "公共性重建",
+    "可达性提升"
+  ],
+  "visual_requirements": [
+    {
+      "type": "rendering",
+      "description": "综合效果图",
+      "asset_count": 1
+    },
+    {
+      "type": "diagram",
+      "description": "策略示意",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

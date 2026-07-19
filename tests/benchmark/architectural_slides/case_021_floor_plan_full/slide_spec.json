@@ -1,0 +1,15 @@
+{
+  "title": "门诊层平面",
+  "message": "门诊公共带沿内院展开，科室成组布置并共享候诊空间。",
+  "chapter_id": "floor_plan",
+  "order": 21,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "floor_plan",
+      "description": "门诊层平面",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

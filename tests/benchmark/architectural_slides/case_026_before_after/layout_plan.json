@@ -1,0 +1,121 @@
+{
+  "layout_family": "comparative_matrix",
+  "layout_variant": "before_after",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": null,
+  "reading_order": [
+    "title",
+    "case_image_0",
+    "case_image_1",
+    "case_image_2",
+    "case_text_0",
+    "case_text_1",
+    "case_text_2",
+    "insight",
+    "source"
+  ],
+  "balance_strategy": "equal_columns",
+  "whitespace_ratio": 0.3595,
+  "elements": [
+    {
+      "id": "case_image_0",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 1.033,
+      "w": 2.783,
+      "h": 1.691,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "case_image_1",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 3.608,
+      "y": 1.033,
+      "w": 2.783,
+      "h": 1.691,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "case_image_2",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 6.517,
+      "y": 1.033,
+      "w": 2.783,
+      "h": 1.691,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "case_text_0",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 2.766,
+      "w": 2.783,
+      "h": 1.384,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "case_text_1",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 3.608,
+      "y": 2.766,
+      "w": 2.783,
+      "h": 1.384,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "case_text_2",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 6.517,
+      "y": 2.766,
+      "w": 2.783,
+      "h": 1.384,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "insight",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.275,
+      "w": 8.6,
+      "h": 0.55,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.5,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

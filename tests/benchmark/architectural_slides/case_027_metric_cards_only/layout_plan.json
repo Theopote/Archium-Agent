@@ -1,0 +1,109 @@
+{
+  "layout_family": "metric_dashboard",
+  "layout_variant": "metric_cards",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "metric_0",
+  "reading_order": [
+    "title",
+    "lead",
+    "metric_0",
+    "metric_1",
+    "metric_2",
+    "metric_3",
+    "metric_4",
+    "source"
+  ],
+  "balance_strategy": "metric_grid",
+  "whitespace_ratio": 0.4797,
+  "elements": [
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.992,
+      "w": 8.6,
+      "h": 0.4,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_0",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 0.7,
+      "y": 1.475,
+      "w": 2.783,
+      "h": 1.452,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_1",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 3.608,
+      "y": 1.475,
+      "w": 2.783,
+      "h": 1.452,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_2",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 6.517,
+      "y": 1.475,
+      "w": 2.783,
+      "h": 1.452,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_3",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 0.7,
+      "y": 3.052,
+      "w": 2.783,
+      "h": 1.452,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_4",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 3.608,
+      "y": 3.052,
+      "w": 2.783,
+      "h": 1.452,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.5,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

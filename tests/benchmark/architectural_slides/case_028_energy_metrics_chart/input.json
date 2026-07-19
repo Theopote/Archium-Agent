@@ -1,0 +1,17 @@
+{
+  "case_id": "case_028_energy_metrics_chart",
+  "title": "能耗指标与趋势",
+  "category": "data_metrics",
+  "page_type": "指标+趋势图",
+  "page_task": "展示能耗指标卡片并辅以趋势图说明优化幅度。",
+  "visual_focus": "指标与图表分区，趋势变化可读。",
+  "expected_layout_family": "metric_dashboard",
+  "allowed_layout_variants": [
+    "metric_with_chart",
+    "metric_cards"
+  ],
+  "layout_variant": "metric_with_chart",
+  "assets": [
+    "assets/c0280001-0001-4001-8001-000000000001.png"
+  ]
+}

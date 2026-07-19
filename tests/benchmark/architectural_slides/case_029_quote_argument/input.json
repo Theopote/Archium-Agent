@@ -1,0 +1,16 @@
+{
+  "case_id": "case_029_quote_argument",
+  "title": "引用式理念陈述",
+  "category": "text_narrative",
+  "page_type": "引用体文字页",
+  "page_task": "以引用格式强调设计理念核心句。",
+  "visual_focus": "引用句突出，支撑论点简洁。",
+  "expected_layout_family": "textual_argument",
+  "allowed_layout_variants": [
+    "quote_argument",
+    "lead_and_points",
+    "two_column_text"
+  ],
+  "layout_variant": "quote_argument",
+  "assets": []
+}

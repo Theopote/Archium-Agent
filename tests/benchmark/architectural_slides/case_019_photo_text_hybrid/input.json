@@ -1,0 +1,17 @@
+{
+  "case_id": "case_019_photo_text_hybrid",
+  "title": "现场问题与策略回应",
+  "category": "photo_analysis",
+  "page_type": "混合画布：照片+文字",
+  "page_task": "并列呈现现场证据与设计回应要点。",
+  "visual_focus": "照片证据与文字回应形成对照阅读。",
+  "expected_layout_family": "hybrid_canvas",
+  "allowed_layout_variants": [
+    "freeform"
+  ],
+  "layout_variant": "freeform",
+  "assets": [
+    "assets/c0190001-0001-4001-8001-000000000001.png",
+    "assets/c0190002-0001-4001-8001-000000000002.png"
+  ]
+}

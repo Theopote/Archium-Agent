@@ -1,0 +1,15 @@
+{
+  "case_id": "case_027_metric_cards_only",
+  "title": "核心指标卡片",
+  "category": "data_metrics",
+  "page_type": "纯指标卡片",
+  "page_task": "以卡片形式汇总五项核心规划指标。",
+  "visual_focus": "指标卡片等权重，无图表干扰。",
+  "expected_layout_family": "metric_dashboard",
+  "allowed_layout_variants": [
+    "metric_cards",
+    "metric_with_chart"
+  ],
+  "layout_variant": "metric_cards",
+  "assets": []
+}

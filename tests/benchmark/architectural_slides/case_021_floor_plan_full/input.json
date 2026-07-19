@@ -1,0 +1,18 @@
+{
+  "case_id": "case_021_floor_plan_full",
+  "title": "门诊层平面全幅",
+  "category": "drawing",
+  "page_type": "单张平面主导页",
+  "page_task": "以门诊层平面为主视觉，说明科室与公共区关系。",
+  "visual_focus": "平面全幅展示，标注关键公共节点。",
+  "expected_layout_family": "drawing_focus",
+  "allowed_layout_variants": [
+    "full_canvas",
+    "drawing_with_metrics",
+    "drawing_with_annotations"
+  ],
+  "layout_variant": "full_canvas",
+  "assets": [
+    "assets/c0210001-0001-4001-8001-000000000001.png"
+  ]
+}

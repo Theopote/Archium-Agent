@@ -1,0 +1,19 @@
+{
+  "title": "总平面与核心指标",
+  "message": "改造后保留原有结构骨架，新增公共内院与独立急救入口。",
+  "chapter_id": "hybrid_plan",
+  "order": 18,
+  "key_points": [
+    "保留结构骨架",
+    "新增公共内院",
+    "独立急救入口"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_plan",
+      "description": "总平面",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

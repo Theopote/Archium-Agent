@@ -1,0 +1,25 @@
+{
+  "title": "方案 A / 方案 B 比较",
+  "message": "方案 A 保留更多现状结构；方案 B 重建公共内院但实施强度更高。",
+  "chapter_id": "scheme_compare",
+  "order": 25,
+  "key_points": [
+    "实施强度",
+    "公共性",
+    "改造成本",
+    "运营影响"
+  ],
+  "visual_requirements": [
+    {
+      "type": "comparison",
+      "description": "方案 A",
+      "asset_count": 1
+    },
+    {
+      "type": "comparison",
+      "description": "方案 B",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

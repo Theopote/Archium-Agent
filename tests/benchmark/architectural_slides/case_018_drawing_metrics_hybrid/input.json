@@ -1,0 +1,16 @@
+{
+  "case_id": "case_018_drawing_metrics_hybrid",
+  "title": "总平面与指标综合页",
+  "category": "drawing",
+  "page_type": "混合画布：图纸+指标",
+  "page_task": "同页呈现总平面与关键指标，服务方案汇报综合阅读。",
+  "visual_focus": "图纸与指标分区明确，避免互相挤压。",
+  "expected_layout_family": "hybrid_canvas",
+  "allowed_layout_variants": [
+    "freeform"
+  ],
+  "layout_variant": "freeform",
+  "assets": [
+    "assets/c0180001-0001-4001-8001-000000000001.png"
+  ]
+}

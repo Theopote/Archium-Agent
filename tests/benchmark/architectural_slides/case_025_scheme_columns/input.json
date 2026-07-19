@@ -1,0 +1,19 @@
+{
+  "case_id": "case_025_scheme_columns",
+  "title": "两套方案等列比较",
+  "category": "case_comparison",
+  "page_type": "双方案等列比较",
+  "page_task": "并列比较保守更新与激进更新两套方案。",
+  "visual_focus": "两列图像尺度一致，结论居中收束。",
+  "expected_layout_family": "comparative_matrix",
+  "allowed_layout_variants": [
+    "equal_columns",
+    "matrix_with_insight",
+    "before_after"
+  ],
+  "layout_variant": "equal_columns",
+  "assets": [
+    "assets/c0250001-0001-4001-8001-000000000001.png",
+    "assets/c0250002-0001-4001-8001-000000000002.png"
+  ]
+}

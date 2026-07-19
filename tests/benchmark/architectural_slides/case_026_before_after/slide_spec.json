@@ -1,0 +1,20 @@
+{
+  "title": "入口空间：改造前后",
+  "message": "改造后入口由混行变为分层到达，公共界面显著开放。",
+  "chapter_id": "before_after",
+  "order": 26,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "改造前",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "改造后",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

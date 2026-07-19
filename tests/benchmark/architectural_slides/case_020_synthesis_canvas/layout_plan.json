@@ -1,0 +1,121 @@
+{
+  "layout_family": "hybrid_canvas",
+  "layout_variant": "freeform",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "hero",
+  "reading_order": [
+    "title",
+    "hero",
+    "support_0",
+    "metric_0",
+    "metric_1",
+    "metric_2",
+    "lead",
+    "body",
+    "source"
+  ],
+  "balance_strategy": "hybrid_split",
+  "whitespace_ratio": 0.3897,
+  "elements": [
+    {
+      "id": "body",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 5.252,
+      "y": 3.712,
+      "w": 4.048,
+      "h": 0.833,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "hero",
+      "role": "hero_visual",
+      "content_type": "drawing",
+      "x": 0.7,
+      "y": 0.983,
+      "w": 4.385,
+      "h": 3.562,
+      "fit_mode": "contain",
+      "crop_policy": "forbidden"
+    },
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 5.252,
+      "y": 3.2,
+      "w": 4.048,
+      "h": 0.471,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_0",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 5.252,
+      "y": 2.417,
+      "w": 1.322,
+      "h": 0.7,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_1",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 6.615,
+      "y": 2.417,
+      "w": 1.322,
+      "h": 0.7,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_2",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 7.978,
+      "y": 2.417,
+      "w": 1.322,
+      "h": 0.7,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "support_0",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 5.252,
+      "y": 0.983,
+      "w": 4.048,
+      "h": 1.35,
+      "fit_mode": "cover",
+      "crop_policy": "safe_trim"
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.45,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "case_id": "case_020_synthesis_canvas",
+  "title": "方案综合解读页",
+  "category": "case_comparison",
+  "page_type": "混合画布：多元素综合",
+  "page_task": "综合效果图、指标与结论，服务方案定稿汇报。",
+  "visual_focus": "主效果图配合辅助信息与结论收束。",
+  "expected_layout_family": "hybrid_canvas",
+  "allowed_layout_variants": [
+    "freeform"
+  ],
+  "layout_variant": "freeform",
+  "assets": [
+    "assets/c0200001-0001-4001-8001-000000000001.png",
+    "assets/c0200002-0001-4001-8001-000000000002.png"
+  ]
+}

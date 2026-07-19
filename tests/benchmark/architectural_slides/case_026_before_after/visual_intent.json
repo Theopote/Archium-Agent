@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：改造后入口由混行变为分层到达，公共界面显著开放。",
+  "dominant_content_type": "comparison",
+  "density_level": "balanced",
+  "continuity_role": "evidence",
+  "preferred_layout_families": [
+    "comparative_matrix"
+  ],
+  "composition_strategy": "以 evidence_board 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 1
+}

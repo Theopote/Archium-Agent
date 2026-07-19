@@ -1,0 +1,24 @@
+{
+  "title": "现场问题与设计回应",
+  "message": "针对入口混行与导向缺失，提出分层到达与清晰标识系统。",
+  "chapter_id": "hybrid_evidence",
+  "order": 19,
+  "key_points": [
+    "分层到达",
+    "清晰标识",
+    "慢行优先"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "混行入口",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "导向缺失",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

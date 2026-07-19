@@ -1,0 +1,23 @@
+{
+  "case_id": "case_023_survey_photo_grid",
+  "title": "踏勘照片九宫格",
+  "category": "photo_analysis",
+  "page_type": "多张照片网格",
+  "page_task": "以六张踏勘照片呈现场地现状多样性。",
+  "visual_focus": "照片网格整齐，标题概括现状问题。",
+  "expected_layout_family": "evidence_board",
+  "allowed_layout_variants": [
+    "photo_grid",
+    "numbered_grid",
+    "journey_with_photos"
+  ],
+  "layout_variant": "photo_grid",
+  "assets": [
+    "assets/c0230001-0001-4001-8001-000000000001.png",
+    "assets/c0230002-0001-4001-8001-000000000002.png",
+    "assets/c0230003-0001-4001-8001-000000000003.png",
+    "assets/c0230004-0001-4001-8001-000000000004.png",
+    "assets/c0230005-0001-4001-8001-000000000005.png",
+    "assets/c0230006-0001-4001-8001-000000000006.png"
+  ]
+}

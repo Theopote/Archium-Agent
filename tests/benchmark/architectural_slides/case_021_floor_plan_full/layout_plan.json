@@ -1,0 +1,61 @@
+{
+  "layout_family": "drawing_focus",
+  "layout_variant": "full_canvas",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "hero",
+  "reading_order": [
+    "title",
+    "hero",
+    "caption",
+    "source"
+  ],
+  "balance_strategy": "drawing_dominant",
+  "whitespace_ratio": 0.3833,
+  "elements": [
+    {
+      "id": "caption",
+      "role": "caption",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.283,
+      "w": 5.59,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "hero",
+      "role": "hero_visual",
+      "content_type": "drawing",
+      "x": 0.7,
+      "y": 1.033,
+      "w": 8.6,
+      "h": 3.208,
+      "fit_mode": "contain",
+      "crop_policy": "forbidden"
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.605,
+      "w": 5.59,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.5,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

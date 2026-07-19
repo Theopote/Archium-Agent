@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：通过逐期更新，院区由封闭界面转向开放公共内院。",
+  "dominant_content_type": "photo_evidence",
+  "density_level": "compact",
+  "continuity_role": "evidence",
+  "preferred_layout_families": [
+    "evidence_board"
+  ],
+  "composition_strategy": "以 evidence_board 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 4
+}

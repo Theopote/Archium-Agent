@@ -1,0 +1,15 @@
+{
+  "title": "能耗与碳排指标",
+  "message": "被动式设计结合机电优化，预计运营能耗下降 22%。",
+  "chapter_id": "energy_metrics",
+  "order": 28,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "chart",
+      "description": "能耗趋势",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：方案 A 保留更多现状结构；方案 B 重建公共内院但实施强度更高。",
+  "dominant_content_type": "comparison",
+  "density_level": "balanced",
+  "continuity_role": "comparison",
+  "preferred_layout_families": [
+    "comparative_matrix"
+  ],
+  "composition_strategy": "以 comparative_matrix 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 1
+}

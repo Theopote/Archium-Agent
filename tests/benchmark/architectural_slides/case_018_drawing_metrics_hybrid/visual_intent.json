@@ -1,0 +1,13 @@
+{
+  "communication_goal": "让受众理解：改造后保留原有结构骨架，新增公共内院与独立急救入口。",
+  "dominant_content_type": "site_plan",
+  "density_level": "balanced",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "drawing_focus",
+    "hybrid_canvas"
+  ],
+  "composition_strategy": "以 drawing_focus 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}

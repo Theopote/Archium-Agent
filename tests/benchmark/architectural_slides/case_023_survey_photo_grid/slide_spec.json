@@ -1,0 +1,46 @@
+{
+  "title": "场地踏勘照片",
+  "message": "场地现状呈现交通混行、界面封闭与景观缺失三类问题。",
+  "chapter_id": "site_survey",
+  "order": 23,
+  "key_points": [
+    "交通混行",
+    "界面封闭",
+    "景观缺失",
+    "标识不足",
+    "无障碍短板"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "踏勘 1",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "踏勘 2",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "踏勘 3",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "踏勘 4",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "踏勘 5",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "踏勘 6",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：指标控制在规划上限内，同时提升公服与绿地比例。",
+  "dominant_content_type": "metrics",
+  "density_level": "spacious",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "metric_dashboard"
+  ],
+  "composition_strategy": "以 textual_argument 表达主信息",
+  "has_hero_asset": false,
+  "supporting_asset_count": 0
+}

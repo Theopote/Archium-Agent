@@ -1,0 +1,19 @@
+{
+  "title": "竖向流线剖面",
+  "message": "地面层服务公众到达，上层布置诊疗与科研，后勤置于地下。",
+  "chapter_id": "section",
+  "order": 22,
+  "key_points": [
+    "地面公众层",
+    "上层诊疗",
+    "地下后勤"
+  ],
+  "visual_requirements": [
+    {
+      "type": "section",
+      "description": "竖向剖面",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

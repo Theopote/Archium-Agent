@@ -1,0 +1,35 @@
+{
+  "title": "改造历程：从封闭到开放",
+  "message": "通过逐期更新，院区由封闭界面转向开放公共内院。",
+  "chapter_id": "renovation_journey",
+  "order": 24,
+  "key_points": [
+    "现状封闭",
+    "一期开放",
+    "二期整合",
+    "内院完成"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "现状",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "一期",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "二期",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "完成",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

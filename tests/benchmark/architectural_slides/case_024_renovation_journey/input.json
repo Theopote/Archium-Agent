@@ -1,0 +1,21 @@
+{
+  "case_id": "case_024_renovation_journey",
+  "title": "改造历程照片叙事",
+  "category": "photo_analysis",
+  "page_type": "历程照片叙事",
+  "page_task": "用四张阶段性照片讲述改造历程。",
+  "visual_focus": "照片顺序对应时间推进，标题点明叙事主题。",
+  "expected_layout_family": "evidence_board",
+  "allowed_layout_variants": [
+    "journey_with_photos",
+    "numbered_grid",
+    "photo_grid"
+  ],
+  "layout_variant": "journey_with_photos",
+  "assets": [
+    "assets/c0240001-0001-4001-8001-000000000001.png",
+    "assets/c0240002-0001-4001-8001-000000000002.png",
+    "assets/c0240003-0001-4001-8001-000000000003.png",
+    "assets/c0240004-0001-4001-8001-000000000004.png"
+  ]
+}

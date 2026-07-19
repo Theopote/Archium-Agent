@@ -1,0 +1,16 @@
+{
+  "case_id": "case_030_two_column_policy",
+  "title": "政策响应双栏论述",
+  "category": "text_narrative",
+  "page_type": "双栏文字页",
+  "page_task": "双栏呈现规划政策要点与方案响应。",
+  "visual_focus": "左右双栏对齐，便于对照阅读。",
+  "expected_layout_family": "textual_argument",
+  "allowed_layout_variants": [
+    "two_column_text",
+    "lead_and_points",
+    "quote_argument"
+  ],
+  "layout_variant": "two_column_text",
+  "assets": []
+}

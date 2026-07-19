@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：地面层服务公众到达，上层布置诊疗与科研，后勤置于地下。",
+  "dominant_content_type": "section",
+  "density_level": "balanced",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "drawing_focus"
+  ],
+  "composition_strategy": "以 drawing_focus 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}

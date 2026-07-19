@@ -1,0 +1,61 @@
+{
+  "layout_family": "textual_argument",
+  "layout_variant": "quote_argument",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": null,
+  "reading_order": [
+    "title",
+    "lead",
+    "body",
+    "source"
+  ],
+  "balance_strategy": "text_led",
+  "whitespace_ratio": 0.3585,
+  "elements": [
+    {
+      "id": "body",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 2.516,
+      "w": 8.6,
+      "h": 2.226,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 1.125,
+      "w": 8.6,
+      "h": 1.266,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.55,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

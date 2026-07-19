@@ -1,0 +1,19 @@
+{
+  "case_id": "case_026_before_after",
+  "title": "改造前后对比",
+  "category": "case_comparison",
+  "page_type": "前后对比",
+  "page_task": "对比改造前后入口空间与公共界面变化。",
+  "visual_focus": "前后图像对齐，变化点一目了然。",
+  "expected_layout_family": "comparative_matrix",
+  "allowed_layout_variants": [
+    "before_after",
+    "equal_columns",
+    "matrix_with_insight"
+  ],
+  "layout_variant": "before_after",
+  "assets": [
+    "assets/c0260001-0001-4001-8001-000000000001.png",
+    "assets/c0260002-0001-4001-8001-000000000002.png"
+  ]
+}
