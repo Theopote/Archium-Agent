@@ -16,6 +16,7 @@ from archium.ui.pages import (
     home,
     project_mission,
     settings,
+    studio,
     visual_design,
     workspace,
 )
@@ -45,6 +46,7 @@ try:
         [
             st.Page(home.render, title="首页", icon="🏛️", url_path="home", default=True),
             st.Page(project_mission.render, title="项目任务", icon="🧭", url_path="project-mission"),
+            st.Page(studio.render, title="汇报工作室", icon="🎬", url_path="studio"),
             st.Page(workspace.render, title="项目工作台", icon="📁", url_path="workspace"),
             st.Page(visual_design.render, title="视觉设计", icon="🎨", url_path="visual-design"),
             st.Page(settings.render, title="设置", icon="⚙️", url_path="settings"),
