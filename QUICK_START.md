@@ -155,5 +155,5 @@ print(f"参数: {parsed.params}")
 ## 获取帮助
 
 - 查看测试用例：`tests/unit/visual/test_enhanced_nlp_parser.py`
-- 运行演示脚本：`demo_nlp_parsing_fixed.py`
+- 运行演示脚本：`scripts/demos/demo_nlp_parsing.py`
 - 阅读源码注释：所有函数都有详细的 docstring
