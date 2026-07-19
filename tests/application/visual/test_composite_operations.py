@@ -40,8 +40,8 @@ class TestOperationDecomposition:
             elements=[
                 LayoutElement(
                     id=str(drawing_id),
-                    role=LayoutElementRole.DRAWING,
-                    content_type=LayoutContentType.IMAGE,
+                    role=LayoutElementRole.HERO_VISUAL,
+                    content_type=LayoutContentType.DRAWING,
                     x=100, y=100, width=400, height=300,
                     locked=False,
                 ),
@@ -88,8 +88,9 @@ class TestOperationDecomposition:
         assert isinstance(operations[0], LockOperation)
         assert operations[0].target_element_id == drawing_id
 
-        # Subsequent operations handle the layout change
-        # (exact implementation depends on how CHANGE_LAYOUT is executed)
+        # Subsequent operations should include moving the caption
+        op_types = {type(op).__name__ for op in operations[1:]}
+        assert "MoveOperation" in op_types
 
 
     def test_decompose_move_and_reduce_text(self):
@@ -183,8 +184,8 @@ class TestOperationDecomposition:
             elements=[
                 LayoutElement(
                     id=str(drawing_id),
-                    role=LayoutElementRole.DRAWING,
-                    content_type=LayoutContentType.IMAGE,
+                    role=LayoutElementRole.HERO_VISUAL,
+                    content_type=LayoutContentType.DRAWING,
                     x=100, y=100, width=400, height=300,
                     locked=False,
                 ),

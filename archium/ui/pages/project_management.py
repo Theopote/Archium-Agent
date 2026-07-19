@@ -7,6 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.project_deletion_service import ProjectDeletionService
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.database.session import get_session
@@ -97,23 +98,23 @@ def _render_delete_confirmation(project: Project) -> None:
     st.warning(f"⚠️ 确定要删除项目「{project.name}」吗？")
     st.markdown("**此操作不可撤销**，将删除：")
     st.markdown("""
-    - 项目下的所有汇报 (Presentations)
-    - 所有幻灯片 (Slides)
-    - 所有布局方案 (LayoutPlans)
-    - 所有导入的文档和资料
+    - 项目记录及数据库中的关联数据（汇报、幻灯片、布局方案、任务与修订等）
+    - 项目上传的文档与素材文件
+    - 项目向量检索索引
+    - 相关 Studio 预览缓存
     """)
+    st.caption("删除由应用层统一执行，数据库外键级联与应用存储清理一并处理。")
 
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🗑️ 确认删除", use_container_width=True, type="primary"):
             try:
                 with get_session() as session:
-                    repo = ProjectRepository(session)
-                    # TODO: 实现级联删除逻辑
-                    # 目前只删除项目本身，需要补充删除关联数据
-                    repo.delete(project.id)
-                    session.commit()
+                    result = ProjectDeletionService(session).delete_project(project.id)
                 st.success("✅ 项目已删除")
+                if result.warnings:
+                    for warning in result.warnings:
+                        st.warning(warning)
                 st.session_state.deleting_project_id = None
                 st.session_state.selected_project_id = None
                 st.rerun()

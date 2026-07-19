@@ -86,6 +86,16 @@ class ChromaVectorStore:
         collection.delete(where={"document_id": str(document_id)})
         logger.info("Removed vectors for document %s from project %s", document_id, project_id)
 
+    def delete_project(self, project_id: UUID) -> bool:
+        """Remove the entire vector collection for a project."""
+        collection_name = self._collection_name(project_id)
+        try:
+            self._client.delete_collection(collection_name)
+            logger.info("Removed Chroma collection for project %s", project_id)
+            return True
+        except Exception:
+            return False
+
     def query(
         self,
         project_id: UUID,

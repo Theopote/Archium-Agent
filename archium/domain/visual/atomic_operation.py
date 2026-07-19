@@ -52,6 +52,8 @@ class AtomicOperation:
     def modifies_layout(self) -> bool:
         """Check if this operation modifies the layout plan."""
         return self.operation_type in {
+            OperationType.MOVE,
+            OperationType.RESIZE,
             OperationType.CHANGE_LAYOUT,
             OperationType.ENLARGE_HERO,
             OperationType.INCREASE_WHITESPACE,

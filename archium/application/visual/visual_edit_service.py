@@ -12,10 +12,14 @@ from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
 )
+from archium.application.visual.composite_operation_policy import assert_composite_operations_supported
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.operation_decomposer import OperationDecomposer
-from archium.application.visual.transaction_executor import TransactionExecutor
+from archium.application.visual.transaction_executor import (
+    TransactionExecutionContext,
+    TransactionExecutor,
+)
 from archium.application.visual.visual_history_service import VisualHistoryService
 from archium.application.visual.visual_intent_presets import (
     apply_hero_asset,
@@ -36,7 +40,7 @@ from archium.domain.visual.element_lock import (
     ElementEditOperation,
     assert_element_editable,
 )
-from archium.domain.visual.enums import LayoutElementRole, LayoutFamily
+from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.slide import SlideSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
@@ -315,6 +319,13 @@ class VisualEditService:
         except Exception as e:
             raise WorkflowError(f"无法分解复合操作: {str(e)}")
 
+        assert_composite_operations_supported(operations)
+
+        execution_context = self._build_transaction_execution_context(
+            slide,
+            candidate_count=candidate_count,
+        )
+
         # Execute as transaction
         result = self._transaction_executor.execute_transaction(
             operations=operations,
@@ -323,6 +334,7 @@ class VisualEditService:
             intents_repo=self._intents,
             plans_repo=self._plans,
             presentations_repo=self._presentations,
+            execution_context=execution_context,
         )
 
         if not result.success:
@@ -359,6 +371,104 @@ class VisualEditService:
             validation=validation,
             restored=False,
             message=f"已执行复合操作 ({len(result.executed_operations)} 步)",
+        )
+
+    def _build_transaction_execution_context(
+        self,
+        slide: object,
+        *,
+        candidate_count: int,
+    ) -> TransactionExecutionContext:
+        def replan_layout_change(
+            target_slide: object,
+            intent: VisualIntent,
+            current_plan: LayoutPlan,
+            layout_family: LayoutFamily,
+        ) -> tuple[VisualIntent, LayoutPlan]:
+            if not get_layout_family_registry().get(layout_family).implemented:
+                raise WorkflowError(f"版式族「{layout_family.value}」尚未实现，无法切换。")
+            updated_intent = apply_layout_family_preference(intent, layout_family)
+            updated_intent = self._intents.save(updated_intent)
+            target_slide.visual_intent_id = updated_intent.id  # type: ignore[attr-defined]
+            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+
+            llm = create_llm_provider(self._settings) if self._use_llm else None
+            planner = LayoutPlanningService(self._session, llm=llm)
+            art, design = self._resolve_art_and_design(target_slide, updated_intent)  # type: ignore[arg-type]
+            candidates = planner.generate_candidates(
+                slide=target_slide,  # type: ignore[arg-type]
+                visual_intent_id=updated_intent.id,
+                art_direction_id=art.id if art else None,
+                design_system_id=design.id,
+                candidate_count=candidate_count,
+                previous_layout_plan=current_plan,
+            )
+            best = planner.select_best(candidates, previous_layout_plan=current_plan)
+            saved_plan = self._plans.save(best)
+            target_slide.layout_plan_id = saved_plan.id  # type: ignore[attr-defined]
+            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+            return updated_intent, saved_plan
+
+        def validate_layout(plan: LayoutPlan) -> None:
+            design = self._resolve_design_system(slide, None)  # type: ignore[arg-type]
+            if design is None:
+                return
+            report = LayoutValidationService().validate(
+                plan,
+                design,
+                require_source=True,
+                drawing_hero=plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+            )
+            if not report.valid:
+                blocking = next(
+                    (
+                        issue.message
+                        for issue in report.issues
+                        if issue.severity
+                        in {LayoutIssueSeverity.CRITICAL, LayoutIssueSeverity.ERROR}
+                    ),
+                    "版式不满足约束",
+                )
+                raise WorkflowError(f"版式校验失败: {blocking}")
+
+        def replan_current_intent(
+            target_slide: object,
+            intent: VisualIntent,
+            current_plan: LayoutPlan,
+        ) -> tuple[VisualIntent, LayoutPlan]:
+            intent = self._intents.save(intent)
+            target_slide.visual_intent_id = intent.id  # type: ignore[attr-defined]
+            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+
+            llm = create_llm_provider(self._settings) if self._use_llm else None
+            planner = LayoutPlanningService(self._session, llm=llm)
+            art, design = self._resolve_art_and_design(target_slide, intent)  # type: ignore[arg-type]
+            candidates = planner.generate_candidates(
+                slide=target_slide,  # type: ignore[arg-type]
+                visual_intent_id=intent.id,
+                art_direction_id=art.id if art else None,
+                design_system_id=design.id,
+                candidate_count=candidate_count,
+                previous_layout_plan=current_plan,
+            )
+            best = planner.select_best(candidates, previous_layout_plan=current_plan)
+            saved_plan = self._plans.save(best)
+            target_slide.layout_plan_id = saved_plan.id  # type: ignore[attr-defined]
+            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+            return intent, saved_plan
+
+        def resolve_asset_ref(content_ref: str, element: LayoutElement | None) -> str:
+            return self._validate_asset_binding(
+                slide,  # type: ignore[arg-type]
+                content_ref=content_ref,
+                element=element,
+            )
+
+        return TransactionExecutionContext(
+            replan_layout_change=replan_layout_change,
+            validate_layout=validate_layout,
+            replan_current_intent=replan_current_intent,
+            resolve_asset_ref=resolve_asset_ref,
         )
 
     def _apply_element_direct_edit(

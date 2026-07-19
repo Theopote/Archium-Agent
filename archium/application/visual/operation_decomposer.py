@@ -19,7 +19,7 @@ from archium.domain.visual.atomic_operation import (
     OperationType,
 )
 from archium.domain.visual.edit_intent import VisualEditIntent
-from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.nlp_parser import ModifierType, ParsedIntent
 from archium.domain.visual.slide import SlideSnapshot
 from archium.exceptions import WorkflowError
@@ -134,9 +134,17 @@ class OperationDecomposer:
         # Build operation based on type
         if op_type == OperationType.CHANGE_LAYOUT:
             layout_family = params.get("layout_family")
-            if not layout_family:
-                raise WorkflowError("change_layout requires layout_family parameter")
-            return ChangeLayoutOperation(layout_family)
+            if isinstance(layout_family, LayoutFamily):
+                return ChangeLayoutOperation(layout_family)
+            target = params.get("target")
+            position = params.get("position", "right")
+            if target:
+                element_id = self._resolve_element_name(target, slide_snapshot)
+                if element_id:
+                    return MoveOperation(element_id, str(position), preserve_size=True)
+            raise WorkflowError(
+                "change_layout requires layout_family or a movable target with position"
+            )
 
         elif op_type == OperationType.ENLARGE_HERO:
             # Apply relative adjustment if present
@@ -212,21 +220,7 @@ class OperationDecomposer:
                     )
 
             elif operation_name == "swap" and len(targets) >= 2:
-                # Swap two elements (requires two move operations)
-                elem1 = self._resolve_element_name(targets[0], slide_snapshot)
-                elem2 = self._resolve_element_name(targets[1], slide_snapshot)
-                if elem1 and elem2:
-                    # Note: actual swap requires storing positions first
-                    # For now, just create move operations
-                    multi_step_ops.append(
-                        MoveOperation(elem1, "temp", preserve_size=True)
-                    )
-                    multi_step_ops.append(
-                        MoveOperation(elem2, f"position_of_{targets[0]}", preserve_size=True)
-                    )
-                    multi_step_ops.append(
-                        MoveOperation(elem1, f"position_of_{targets[1]}", preserve_size=True)
-                    )
+                raise WorkflowError("元素交换（swap）暂未支持，请分步移动元素。")
 
         # Also check for inline "reduce_lines" operations
         if "reduce_lines" in params and params["reduce_lines"]:
@@ -287,16 +281,24 @@ class OperationDecomposer:
         # Map Chinese name to English role
         role = name_mappings.get(normalized, normalized)
 
-        # Search for element by role or label
         layout_plan = slide_snapshot.layout_plan
         if not layout_plan:
             return None
 
+        if role in {"drawing", "hero", "hero_visual", "main_visual"}:
+            for candidate_role in (
+                LayoutElementRole.HERO_VISUAL,
+                LayoutElementRole.SUPPORTING_VISUAL,
+            ):
+                for element in layout_plan.elements:
+                    if element.role == candidate_role:
+                        return UUID(element.id)
+
+        # Search for element by role or label
         for element in layout_plan.elements:
-            # Check role match
             if element.role and element.role.value.lower() == role:
                 return UUID(element.id)
+            if role == "text" and element.content_type == LayoutContentType.TEXT:
+                return UUID(element.id)
 
-        # If no match found, return None
-        return None
         return None
