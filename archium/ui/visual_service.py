@@ -347,6 +347,8 @@ def select_layout_candidate(
     slide_id: UUID,
     layout_plan_id: UUID,
 ) -> LayoutPlan:
+    from archium.application.visual.layout_locked import preserve_locked_elements
+
     presentations = PresentationRepository(session)
     plans = LayoutPlanRepository(session)
     slide = presentations.get_slide(slide_id)
@@ -362,6 +364,13 @@ def select_layout_candidate(
             f"版式族「{plan.layout_family.value}」尚未实现 generator，暂不可选用。"
             "请在界面中选择已可用版式，或等待后续版本支持。"
         )
+    previous_plan = None
+    if slide.layout_plan_id is not None:
+        previous_plan = plans.get(slide.layout_plan_id)
+    merged = preserve_locked_elements(plan, previous_plan)
+    if merged is not plan:
+        merged = plans.save(merged)
+        plan = merged
     slide.layout_plan_id = plan.id
     presentations.save_slide(slide)
     return plan

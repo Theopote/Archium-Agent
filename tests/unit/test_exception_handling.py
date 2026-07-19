@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
 
@@ -45,8 +47,6 @@ def test_llm_provider_error() -> None:
 
 def test_project_not_found_error() -> None:
     """Test ProjectNotFoundError with UUID."""
-    from uuid import uuid4
-
     project_id = uuid4()
     error = ProjectNotFoundError(project_id)
 
@@ -90,10 +90,14 @@ def test_exception_hierarchy() -> None:
         ConfigurationError,
         DocumentParseError,
         LLMProviderError,
-        ProjectNotFoundError,
     ]
 
     for exc_class in exceptions:
-        error = exc_class("test") if exc_class != ProjectNotFoundError else ProjectNotFoundError(uuid4())  # type: ignore
+        error = exc_class("test")
         assert isinstance(error, ArchiumError)
         assert isinstance(error, Exception)
+
+    # Test ProjectNotFoundError separately (different constructor)
+    project_error = ProjectNotFoundError(uuid4())
+    assert isinstance(project_error, ArchiumError)
+    assert isinstance(project_error, Exception)

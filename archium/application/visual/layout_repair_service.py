@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from archium.domain.visual.design_system import DesignSystem, LayoutThresholds, TextStyleToken
+from archium.domain.visual.element_lock import ElementEditOperation, element_is_editable
 from archium.domain.visual.enums import (
     CropPolicy,
     ImageFit,
@@ -15,7 +16,6 @@ from archium.domain.visual.enums import (
     OverflowPolicy,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.text_style import (
     clamp_font_size_override,
     next_larger_token,
     resolve_text_style,
@@ -137,6 +137,8 @@ class LayoutRepairService:
                     element = by_id.get(element_id)
                     if element is None:
                         continue
+                    if not element_is_editable(element, ElementEditOperation.REPAIR_GEOMETRY):
+                        continue
                     self._clamp_to_rect(
                         element,
                         max_w=page_w if use_page else safe.width,
@@ -158,23 +160,31 @@ class LayoutRepairService:
             elif code == LAYOUT_IMAGE_DISTORTION:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
-                    if element is not None:
+                    if element is not None and element_is_editable(
+                        element, ElementEditOperation.REPAIR_STYLE
+                    ):
                         element.fit_mode = ImageFit.CONTAIN
             elif code == LAYOUT_DRAWING_CROPPED:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
-                    if element is not None:
+                    if element is not None and element_is_editable(
+                        element, ElementEditOperation.REPAIR_STYLE
+                    ):
                         element.fit_mode = ImageFit.CONTAIN
                         element.crop_policy = CropPolicy.FORBIDDEN
             elif code == LAYOUT_FONT_TOO_SMALL:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
-                    if element is not None:
+                    if element is not None and element_is_editable(
+                        element, ElementEditOperation.REPAIR_STYLE
+                    ):
                         self._upgrade_font_size(element, design_system)
             elif code == LAYOUT_TEXT_OVERFLOW:
                 for element_id in issue.element_ids:
                     element = by_id.get(element_id)
-                    if element is None or element.locked:
+                    if element is None or not element_is_editable(
+                        element, ElementEditOperation.REPAIR_GEOMETRY
+                    ):
                         continue
                     fixed = self._repair_text_overflow(
                         element,
@@ -192,6 +202,8 @@ class LayoutRepairService:
                     element = by_id.get(element_id)
                     if element is None:
                         continue
+                    if not element_is_editable(element, ElementEditOperation.REPAIR_GEOMETRY):
+                        continue
                     self._enlarge_hero(
                         element,
                         plan=layout_plan,
@@ -202,7 +214,14 @@ class LayoutRepairService:
                         page_h=page_h,
                     )
             elif code == LAYOUT_INCONSISTENT_ALIGNMENT:
-                self._align_group(issue.element_ids, by_id)
+                editable_ids = [
+                    element_id
+                    for element_id in issue.element_ids
+                    if (element := by_id.get(element_id)) is not None
+                    and element_is_editable(element, ElementEditOperation.REPAIR_GEOMETRY)
+                ]
+                if editable_ids:
+                    self._align_group(editable_ids, by_id)
 
         if unresolved_overflow_ids:
             # Escalate: try another family variant next cycle, and flag split.

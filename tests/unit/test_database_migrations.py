@@ -12,7 +12,7 @@ from archium.infrastructure.database.migrations import (
     get_head_revision,
     has_pending_migrations,
 )
-from archium.infrastructure.database.session import get_engine, init_database
+from archium.infrastructure.database.session import init_database
 
 
 def test_get_head_revision() -> None:
@@ -39,8 +39,6 @@ def test_has_pending_migrations_new_db() -> None:
 
 def test_init_database_creates_tables(tmp_sqlite_engine) -> None:
     """Test that init_database creates necessary tables."""
-    from archium.infrastructure.database.base import Base
-
     init_database(tmp_sqlite_engine)
 
     # Check that tables were created

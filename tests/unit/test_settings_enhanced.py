@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from archium.config.settings import Settings
-from archium.exceptions import ConfigurationError
 
 
 def test_settings_defaults() -> None:
@@ -96,13 +96,13 @@ def test_settings_database_url_override() -> None:
 def test_settings_validation_constraints() -> None:
     """Test settings validation constraints."""
     # Invalid values should raise validation errors
-    with pytest.raises(Exception):  # Pydantic ValidationError
+    with pytest.raises(ValidationError):
         Settings(_env_file=None, llm_max_concurrent_requests=0)
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         Settings(_env_file=None, chroma_max_documents=50)  # Below minimum
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         Settings(_env_file=None, workflow_checkpoint_retention_days=0)
 
 

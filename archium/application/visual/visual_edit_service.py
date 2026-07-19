@@ -24,8 +24,12 @@ from archium.domain.visual.edit_intent import (
     intent_from_preset,
     parse_natural_language,
 )
+from archium.domain.visual.element_lock import (
+    ElementEditOperation,
+    assert_element_editable,
+)
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily
-from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -134,6 +138,7 @@ class VisualEditService:
                 params or {},
             )
 
+        self._assert_replan_intent_allowed(current_plan, resolved, params or {})
         updated_intent = self._mutate_intent(current_intent, slide, resolved, params or {})
         replanned = self._replan(
             slide,
@@ -243,11 +248,13 @@ class VisualEditService:
                 updated_elements.append(element)
                 continue
             if edit_intent == VisualEditIntent.UPDATE_ELEMENT_TEXT:
+                assert_element_editable(element, ElementEditOperation.UPDATE_TEXT)
                 text = str(params.get("text") or "")
                 if not text.strip():
                     raise WorkflowError("文字内容不能为空。")
                 updated_elements.append(element.model_copy(update={"text_content": text}))
             elif edit_intent == VisualEditIntent.SET_ELEMENT_ASSET:
+                assert_element_editable(element, ElementEditOperation.SET_ASSET)
                 content_ref = str(params.get("content_ref") or params.get("asset_id") or "")
                 if not content_ref.strip():
                     raise WorkflowError("请指定素材引用。")
@@ -405,6 +412,51 @@ class VisualEditService:
         if edit_intent == VisualEditIntent.REMOVE_ASSET:
             return remove_primary_asset(intent)
         return intent
+
+    def _assert_replan_intent_allowed(
+        self,
+        plan: LayoutPlan | None,
+        edit_intent: VisualEditIntent,
+        params: dict[str, object],
+    ) -> None:
+        if plan is None:
+            return
+
+        hero = self._resolve_hero_element(plan)
+        if edit_intent == VisualEditIntent.SET_HERO_ASSET:
+            target = self._resolve_target_element(plan, params.get("element_id")) or hero
+            if target is not None:
+                assert_element_editable(target, ElementEditOperation.SET_HERO)
+            return
+
+        if edit_intent == VisualEditIntent.REMOVE_ASSET:
+            if hero is not None:
+                assert_element_editable(hero, ElementEditOperation.REMOVE_ASSET)
+            return
+
+        if edit_intent == VisualEditIntent.ENLARGE_HERO and hero is not None:
+            assert_element_editable(hero, ElementEditOperation.REPAIR_GEOMETRY)
+
+    @staticmethod
+    def _resolve_hero_element(plan: LayoutPlan) -> LayoutElement | None:
+        if plan.hero_element_id is not None:
+            hero = plan.element_by_id(plan.hero_element_id)
+            if hero is not None:
+                return hero
+        heroes = plan.elements_by_role(LayoutElementRole.HERO_VISUAL)
+        return heroes[0] if heroes else None
+
+    @staticmethod
+    def _resolve_target_element(
+        plan: LayoutPlan,
+        element_id: object,
+    ) -> LayoutElement | None:
+        if element_id is None:
+            return None
+        normalized = str(element_id).strip()
+        if not normalized:
+            return None
+        return plan.element_by_id(normalized)
 
     def _replan(
         self,

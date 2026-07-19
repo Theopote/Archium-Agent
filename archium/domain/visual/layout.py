@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
+from archium.domain.visual.element_lock import ElementLockScope
 from archium.domain.visual.enums import (
     ConstraintPriority,
     CropPolicy,
@@ -43,6 +44,7 @@ class LayoutElement(DomainModel):
     max_width: float | None = Field(default=None, gt=0)
     max_height: float | None = Field(default=None, gt=0)
     locked: bool = False
+    lock_scopes: list[ElementLockScope] = Field(default_factory=list)
 
     @property
     def right(self) -> float:
