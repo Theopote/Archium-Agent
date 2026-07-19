@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import streamlit as st
@@ -18,6 +19,7 @@ from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
     HUMAN_REVIEW_PASS_THRESHOLD,
+    HUMAN_REVIEW_PENDING_LABEL,
     HumanVisualReview,
     HumanVisualReviewSource,
 )
@@ -28,7 +30,7 @@ def render_benchmark_review_panel() -> None:
     st.markdown("### 建筑幻灯片基准 · 人工视觉评审")
     st.caption(
         "逐项查看 `preview.png` 并填写 9 维评分。保存后写入各 case 的 `human_review.json`（`source=manual`）。"
-        "仅真实人工评审可勾选「可接受交付」。"
+        "占位评审在报告中显示为「待人工评审」，不会计入可交付统计。"
     )
 
     progress = review_progress()
@@ -40,6 +42,12 @@ def render_benchmark_review_panel() -> None:
     metric_cols[1].metric("已人工评审", progress["manual_review_count"])
     metric_cols[2].metric("可交付（人工）", progress["manual_accepted_count"])
     metric_cols[3].metric("待评审", progress["placeholder_count"])
+
+    if progress["manual_accepted_count"] == 0:
+        st.info(
+            "当前尚无真实人工评审通过页。"
+            "在 `manual_human_accepted_count > 0` 之前，不能宣称 Benchmark 人工质量全面通过。"
+        )
 
     cases = list_benchmark_cases()
     if not cases:
@@ -120,11 +128,18 @@ def _render_case_preview(
             column.caption(
                 f"Layout 规则分 {case.layout_score:.3f} · {rule_label}"
             )
-        if review is not None:
-            source = review.source.value
-            column.caption(
-                f"当前评审来源：{source} · 综合 {review.weighted_score():.2f}/5"
-            )
+        if review is None:
+            column.markdown(f"**人工评分：** {HUMAN_REVIEW_PENDING_LABEL}")
+            return
+        if review.is_scaffold_review():
+            column.markdown(f"**人工评分：** {HUMAN_REVIEW_PENDING_LABEL}")
+            column.caption(f"当前来源：{review.source.value}（占位/派生，不可用于验收）")
+            return
+        column.markdown(f"**人工评分：** {review.human_score_label()} / 5")
+        if review.reviewer:
+            column.caption(f"评审人：{review.reviewer}")
+        if review.reviewed_at is not None:
+            column.caption(f"评审时间：{review.reviewed_at.isoformat()}")
 
 
 def _render_review_form(
@@ -133,6 +148,10 @@ def _render_review_form(
     existing: HumanVisualReview | None,
 ) -> Path | None:
     with column:
+        is_manual = existing is not None and existing.is_manual_review()
+        if existing is not None and existing.is_scaffold_review():
+            st.warning("当前为占位评审。请填写下方表单并保存，以替换为真实 manual 评审。")
+
         defaults = {
             field: getattr(existing, field, 4)
             for field in REVIEW_DIMENSION_LABELS
@@ -147,6 +166,12 @@ def _render_review_form(
                 key=f"benchmark_human_review_{case.case_id}_{field}",
             )
 
+        reviewer = st.text_input(
+            "评审人",
+            value=existing.reviewer if is_manual else "",
+            placeholder="真实姓名或工号",
+            key=f"benchmark_human_reviewer_{case.case_id}",
+        )
         major = st.text_area(
             "主要问题（每行一条）",
             value="\n".join(existing.major_problems if existing else []),
@@ -159,7 +184,7 @@ def _render_review_form(
             height=72,
             key=f"benchmark_human_minor_{case.case_id}",
         )
-        accepted_default = bool(existing.accepted if existing and existing.is_manual_review() else False)
+        accepted_default = bool(existing.accepted if is_manual else False)
         accepted = st.checkbox(
             "本页可接受交付",
             value=accepted_default,
@@ -167,11 +192,7 @@ def _render_review_form(
         )
         notes = st.text_input(
             "评审备注",
-            value=(
-                existing.reviewer_notes
-                if existing and existing.is_manual_review()
-                else ""
-            ),
+            value=existing.reviewer_notes if is_manual else "",
             key=f"benchmark_human_notes_{case.case_id}",
         )
 
@@ -182,6 +203,8 @@ def _render_review_form(
             major_problems=[line.strip() for line in major.splitlines() if line.strip()],
             minor_problems=[line.strip() for line in minor.splitlines() if line.strip()],
             accepted=accepted,
+            reviewer=reviewer.strip(),
+            reviewed_at=datetime.now(UTC),
             reviewer_notes=notes.strip(),
         )
         st.caption(

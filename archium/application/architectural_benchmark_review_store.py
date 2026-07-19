@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource
+from archium.exceptions import WorkflowError
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BENCHMARK_ROOT = (
@@ -90,6 +92,10 @@ def save_case_review(
     if review.source != HumanVisualReviewSource.MANUAL:
         msg = "Benchmark human reviews saved from the UI must use source=manual"
         raise ValueError(msg)
+    if not review.reviewer.strip():
+        raise WorkflowError("请填写评审人姓名后再保存人工评审。")
+    if review.reviewed_at is None:
+        review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
     path = benchmark_root(root) / review.case_id / "human_review.json"
     if not path.parent.is_dir():
         msg = f"Unknown benchmark case directory: {review.case_id}"

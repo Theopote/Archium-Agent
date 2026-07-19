@@ -12,6 +12,7 @@ from archium.domain.visual.benchmark import HumanVisualReview
 
 from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir
 from tests.benchmark.architectural_slides.case_registry import get_case_definition
+from tests.benchmark.architectural_slides.human_review_summary import human_review_summary_fields
 from tests.benchmark.architectural_slides.runner import run_all_cases
 
 
@@ -23,6 +24,7 @@ def build_benchmark_summary(*, update: bool = False) -> dict[str, Any]:
         directory = case_dir(summary.case_id)
         human_payload = _read_optional_json(directory / "human_review.json")
         human = HumanVisualReview.model_validate(human_payload) if human_payload else None
+        human_fields = human_review_summary_fields(human)
         cases.append(
             {
                 "case_id": summary.case_id,
@@ -35,25 +37,32 @@ def build_benchmark_summary(*, update: bool = False) -> dict[str, Any]:
                 "rule_passed": summary.passed,
                 "layout_score": summary.layout_score,
                 "has_critical": summary.has_critical,
-                "human_weighted_score": human.weighted_score() if human else None,
-                "human_review_source": human.source.value if human else None,
-                "human_accepted_for_delivery": (
-                    bool(human.accepted and human.is_manual_review()) if human else False
-                ),
-                "human_accepted": human.accepted if human else None,
-                "major_problems": human.major_problems if human else [],
+                **human_fields,
             }
         )
     passed_count = sum(1 for item in cases if item["rule_passed"])
     manual_accepted_count = sum(
         1 for item in cases if item["human_accepted_for_delivery"]
     )
+    manual_review_count = sum(
+        1
+        for item in cases
+        if item.get("human_review_source") == "manual"
+    )
+    placeholder_review_count = sum(
+        1
+        for item in cases
+        if item.get("human_review_source") in {"placeholder", "layout_qa_derived"}
+    )
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "case_count": len(cases),
         "rule_passed_count": passed_count,
         "rule_pass_rate": round(passed_count / len(cases), 3) if cases else 0.0,
+        "manual_human_review_count": manual_review_count,
         "manual_human_accepted_count": manual_accepted_count,
+        "placeholder_human_review_count": placeholder_review_count,
+        "human_quality_gate_passed": manual_accepted_count == len(cases) and len(cases) > 0,
         "cases": cases,
     }
 
@@ -81,7 +90,7 @@ def _render_html(summary: dict[str, Any]) -> str:
             f"<td><img src=\"{preview}\" alt=\"preview\" width=\"180\" /></td>"
             f"<td>{'通过' if item['rule_passed'] else '未通过'}</td>"
             f"<td>{item['layout_score']}</td>"
-            f"<td>{item['human_weighted_score'] if item['human_weighted_score'] is not None else '—'}</td>"
+            f"<td>{escape(str(item.get('human_score_label') or '—'))}</td>"
             f"<td>{escape(str(item.get('human_review_source') or '—'))}</td>"
             f"<td>{'是' if item.get('human_accepted_for_delivery') else '否'}</td>"
             f"<td>{', '.join(escape(p) for p in item['major_problems']) or '—'}</td>"
@@ -97,6 +106,11 @@ def _render_html(summary: dict[str, Any]) -> str:
         f"<p>生成时间: {escape(str(summary['generated_at']))}</p>"
         f"<p>规则通过: {summary['rule_passed_count']}/{summary['case_count']} "
         f"({summary['rule_pass_rate']:.1%})</p>"
+        f"<p>人工评审: {summary.get('manual_human_review_count', 0)}/{summary['case_count']} · "
+        f"可交付: {summary.get('manual_human_accepted_count', 0)}/{summary['case_count']} · "
+        f"占位: {summary.get('placeholder_human_review_count', 0)}</p>"
+        f"<p>人工质量门禁: "
+        f"{'通过' if summary.get('human_quality_gate_passed') else '未通过（需真实 manual 评审）'}</p>"
         "<table><thead><tr>"
         "<th>Case</th><th>标题</th><th>页面类型</th><th>LayoutFamily</th>"
         "<th>预览</th><th>规则</th><th>规则分</th><th>人工分</th><th>评审来源</th><th>可交付</th><th>主要问题</th>"

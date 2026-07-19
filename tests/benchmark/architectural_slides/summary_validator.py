@@ -132,7 +132,15 @@ def assert_committed_benchmark_reports_valid(
 
 
 def _compare_summary_payloads(actual: dict[str, Any], expected: dict[str, Any]) -> None:
-    keys = ("case_count", "rule_passed_count", "rule_pass_rate")
+    keys = (
+        "case_count",
+        "rule_passed_count",
+        "rule_pass_rate",
+        "manual_human_review_count",
+        "manual_human_accepted_count",
+        "placeholder_human_review_count",
+        "human_quality_gate_passed",
+    )
     for key in keys:
         if actual.get(key) != expected.get(key):
             msg = f"summary {key} mismatch: committed={actual.get(key)!r} live={expected.get(key)!r}"
@@ -149,6 +157,7 @@ def _compare_summary_payloads(actual: dict[str, Any], expected: dict[str, Any]) 
         "layout_score",
         "has_critical",
         "human_weighted_score",
+        "human_score_label",
         "human_review_source",
         "human_accepted_for_delivery",
     )

@@ -86,11 +86,31 @@ python scripts/build_architectural_benchmark_report.py
 - `rule_pass_rate >= 1.0`（正式 layout 规则门槛）
 - **占位/派生人工评审不得 `accepted=true`**（仅 `source=manual` 可标记可交付）
 
-当前状态：**30 页数量 + layout 规则质量已通过；人工视觉质量验收未通过**（`manual_human_accepted_count=0`，待真实 `human_review.json`）。
+当前状态：**30 页 layout 规则质量已通过；人工视觉质量验收未通过**（`manual_human_accepted_count=0`，`human_quality_gate_passed=false`）。占位评审在报告中显示为 **待人工评审**，不会展示 4.0 占位分。
 
 ## 人工评分
 
+### 三轮验收流程（推荐）
+
+1. **第一轮**：项目作者逐页真实审阅 30 页（设置 → 建筑幻灯片基准 · 人工视觉评审）
+2. **第二轮**：另请一位建筑师复核其中 10 页
+3. **第三轮**：争议页修改后复评
+
+### 必填字段（`source=manual`）
+
+| 字段 | 说明 |
+|------|------|
+| `reviewer` | 评审人 |
+| `reviewed_at` | 评审时间（ISO 8601） |
+| `source` | 必须为 `manual` |
+| 9 维分数 | `information_hierarchy` … `editability`（1–5） |
+| `major_problems` / `minor_problems` | 问题列表 |
+| `accepted` | 是否可交付（仅 manual 可设为 true） |
+| `reviewer_notes` | 评审备注 |
+
 在 Streamlit **设置** 页底部的「建筑幻灯片基准 · 人工视觉评审」面板中逐项查看 `preview.png` 并保存评分；或直接编辑各 Case 目录下的 `human_review.json`（`source: "manual"`）。加权门槛默认 **3.5/5**（见 `HumanVisualReview.passes_threshold()`）。
+
+**在真人评审完成前**，报告与 UI 对占位/派生评审显示 **待人工评审**，不突出展示占位数值分数。
 
 使用 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` 重新生成基线时，**不会覆盖**已有 `human_review.json`；缺失时写入占位模板。layout QA 派生分数写入 `layout_qa_review.json`。
 

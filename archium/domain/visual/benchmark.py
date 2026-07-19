@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Self
 
@@ -13,6 +14,7 @@ from archium.domain.visual.enums import LayoutFamily
 HUMAN_REVIEW_MIN_SCORE = 1
 HUMAN_REVIEW_MAX_SCORE = 5
 HUMAN_REVIEW_PASS_THRESHOLD = 3.5
+HUMAN_REVIEW_PENDING_LABEL = "待人工评审"
 
 HUMAN_REVIEW_WEIGHTS: dict[str, float] = {
     "information_hierarchy": 0.15,
@@ -90,6 +92,8 @@ class HumanVisualReview(DomainModel):
     major_problems: list[str] = Field(default_factory=list)
     minor_problems: list[str] = Field(default_factory=list)
     accepted: bool = False
+    reviewer: str = ""
+    reviewed_at: datetime | None = None
     reviewer_notes: str = ""
 
     @field_validator(
@@ -118,6 +122,18 @@ class HumanVisualReview(DomainModel):
 
     def passes_threshold(self, threshold: float = HUMAN_REVIEW_PASS_THRESHOLD) -> bool:
         return self.weighted_score() >= threshold
+
+    def human_score_label(self) -> str:
+        """User-facing score text; scaffold reviews must not show placeholder numbers."""
+        if self.is_scaffold_review():
+            return HUMAN_REVIEW_PENDING_LABEL
+        return f"{self.weighted_score():.2f}"
+
+    def reportable_weighted_score(self) -> float | None:
+        """Return weighted score only for real manual reviews."""
+        if self.is_scaffold_review():
+            return None
+        return self.weighted_score()
 
     @model_validator(mode="after")
     def _infer_source_from_notes(self) -> Self:

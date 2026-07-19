@@ -18,6 +18,7 @@ from archium.application.visual.asset_reference import (
 )
 from archium.application.visual.deck_composition_service import DeckCompositionPlanningService
 from archium.application.visual.deck_qa_service import DeckQAService
+from archium.application.visual.layout_locked import preserve_locked_elements
 from archium.application.visual.layout_planning_service import (
     LayoutPlanningService,
     format_layout_decision_warnings,
@@ -491,6 +492,9 @@ class VisualWorkflowNodes:
                     if composition_plan is not None
                     else None
                 )
+                previous_plan = None
+                if slide.layout_plan_id is not None:
+                    previous_plan = self._runtime.layout_plans.get(slide.layout_plan_id)
                 candidates = self._runtime.layout_planning_service.generate_candidates(
                     slide=slide,
                     visual_intent_id=slide.visual_intent_id,
@@ -501,6 +505,7 @@ class VisualWorkflowNodes:
                     if state.get("project_id")
                     else None,
                     deck_directive=directive,
+                    previous_layout_plan=previous_plan,
                 )
                 decision_warnings.extend(
                     format_layout_decision_warnings(
@@ -826,6 +831,9 @@ class VisualWorkflowNodes:
         from archium.domain.visual.design_system import DesignSystem
 
         assert isinstance(design, DesignSystem)
+        current_plan = (
+            self._runtime.layout_plans.get(UUID(current_id)) if current_id else None
+        )
         for plan_id in candidate_ids:
             if plan_id == current_id:
                 continue
@@ -845,12 +853,13 @@ class VisualWorkflowNodes:
             if report.valid or not any(
                 issue.severity.value in {"critical", "error"} for issue in report.issues
             ):
-                plan.validation_status = (
+                merged = preserve_locked_elements(plan, current_plan)
+                merged.validation_status = (
                     LayoutValidationStatus.VALID
                     if report.valid
                     else LayoutValidationStatus.INVALID
                 )
-                return self._runtime.layout_plans.save(plan)
+                return self._runtime.layout_plans.save(merged)
         return None
 
     def await_layout_review(self, state: VisualWorkflowState) -> VisualWorkflowState:

@@ -73,3 +73,26 @@ def test_human_visual_review_infers_derived_source_from_notes() -> None:
     )
     assert review.is_scaffold_review()
     assert not review.is_manual_review()
+
+
+def test_scaffold_review_shows_pending_label_not_numeric_score() -> None:
+    from archium.domain.visual.benchmark import (
+        HUMAN_REVIEW_PENDING_LABEL,
+        HumanVisualReviewSource,
+    )
+
+    review = HumanVisualReview(
+        case_id="case_demo",
+        source=HumanVisualReviewSource.PLACEHOLDER,
+        information_hierarchy=4,
+        visual_focus=4,
+        reading_order=4,
+        image_text_relationship=4,
+        whitespace_density=4,
+        architectural_expression=4,
+        aesthetic_finish=4,
+        editability=4,
+    )
+    assert review.human_score_label() == HUMAN_REVIEW_PENDING_LABEL
+    assert review.reportable_weighted_score() is None
+    assert review.weighted_score() == 4.0

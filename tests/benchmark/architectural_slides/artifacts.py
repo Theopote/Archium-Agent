@@ -107,14 +107,8 @@ def default_human_review(case_id: str) -> HumanVisualReview:
         major_problems=[],
         minor_problems=[],
         accepted=False,
-        reviewer_notes="规则层已通过；待真实人工视觉评审确认。",
+        reviewer_notes="占位模板；分数不可用于验收，待真实人工评审替换。",
     )
-    if review.passes_threshold():
-        return review.model_copy(
-            update={
-                "reviewer_notes": "规则层已通过；占位人工评分满足 3.5 门槛，待真实评审替换。",
-            }
-        )
     return review
 
 
