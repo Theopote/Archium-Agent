@@ -6,7 +6,7 @@
 
 ```bash
 cd /path/to/Archium-Agent
-python demo_nlp_parsing_fixed.py
+python scripts/demos/demo_nlp_parsing.py
 ```
 
 这将展示新解析器如何处理各种复杂指令。
@@ -14,10 +14,7 @@ python demo_nlp_parsing_fixed.py
 ### 2. 运行测试
 
 ```bash
-# 独立测试（无需依赖）
-python test_nlp_standalone.py
-
-# 完整单元测试（需要项目依赖）
+# 单元测试
 pytest tests/unit/visual/test_enhanced_nlp_parser.py -v
 ```
 

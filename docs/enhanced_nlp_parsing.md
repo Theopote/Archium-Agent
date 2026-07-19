@@ -297,10 +297,7 @@ CONSTRAINT_PATTERNS = [
 运行测试验证功能：
 
 ```bash
-# 运行增强解析器测试
-python test_nlp_standalone.py
-
-# 运行完整单元测试
+# 运行单元测试
 pytest tests/unit/visual/test_enhanced_nlp_parser.py -v
 ```
 
