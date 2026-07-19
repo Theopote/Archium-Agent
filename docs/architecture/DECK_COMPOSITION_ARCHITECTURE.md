@@ -263,8 +263,14 @@ class FeedbackSemanticAnalyzer:
         返回 JSON 格式。
         """
         
-        response = self._llm.complete(prompt)
-        return FeedbackIntent.from_json(response)
+        request = LLMRequest(
+            system_prompt="你是演示文稿用户反馈的语义解析器，只返回符合要求格式的 JSON。",
+            user_prompt=prompt,
+            temperature=0.1,
+            json_mode=True,
+        )
+        draft = self._llm.generate_structured(request, _FeedbackIntentDraft)
+        return FeedbackIntent(**draft.model_dump())
 
 @dataclass
 class FeedbackIntent:

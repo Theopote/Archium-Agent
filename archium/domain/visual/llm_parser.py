@@ -2,12 +2,27 @@
 
 from __future__ import annotations
 
-import json
+import logging
+from contextlib import suppress
 from typing import Any
+
+from pydantic import BaseModel, Field
 
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
-from archium.domain.visual.nlp_parser import ModifierType, ParsedIntent, Modifier
+from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
+from archium.infrastructure.llm.base import LLMRequest
+
+logger = logging.getLogger(__name__)
+
+
+class _IntentParseDraft(BaseModel):
+    """Structured output schema for LLM intent parsing."""
+
+    intent: str | None = None
+    params: dict[str, Any] = Field(default_factory=dict)
+    modifiers: list[dict[str, Any]] = Field(default_factory=list)
+    confidence: float = 0.0
 
 
 class LLMIntentParser:
@@ -101,78 +116,52 @@ class LLMIntentParser:
         Returns:
             ParsedIntent if successfully parsed, None if LLM failed or couldn't understand
         """
+        request = LLMRequest(
+            system_prompt=self.SYSTEM_PROMPT,
+            user_prompt=self.USER_PROMPT_TEMPLATE.format(instruction=text),
+            temperature=0.1,  # 低温度以获得更确定的输出
+            max_tokens=800,
+            json_mode=True,
+        )
         try:
-            prompt = self.USER_PROMPT_TEMPLATE.format(instruction=text)
-            response = self._llm.complete(
-                messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.1,  # 低温度以获得更确定的输出
-                max_tokens=800,
-            )
-
-            # 解析 LLM 响应
-            result = self._parse_llm_response(response)
-            if result is None or result.confidence < 0.5:
-                return None
-
-            return result
-
-        except Exception as e:
-            # 记录错误但不抛出，让调用方处理
-            print(f"LLM parsing failed: {e}")
+            draft = self._llm.generate_structured(request, _IntentParseDraft)
+        except Exception as exc:
+            # 记录错误但不抛出，让调用方回退到规则解析
+            logger.warning("LLM intent parsing failed: %s", exc)
             return None
 
-    def _parse_llm_response(self, response: str) -> ParsedIntent | None:
-        """Parse the LLM's JSON response into ParsedIntent."""
-        try:
-            # 提取 JSON（LLM 可能会在前后添加说明文字）
-            json_str = self._extract_json(response)
-            data = json.loads(json_str)
-
-            # 验证必需字段
-            if not data.get("intent"):
-                return None
-
-            # 解析意图
-            try:
-                intent = VisualEditIntent(data["intent"])
-            except ValueError:
-                return None
-
-            # 解析参数
-            params = self._parse_params(data.get("params", {}))
-
-            # 解析修饰符
-            modifiers = self._parse_modifiers(data.get("modifiers", []))
-
-            # 获取置信度
-            confidence = float(data.get("confidence", 0.5))
-
-            # 推断复杂度类型
-            complexity = self._infer_complexity(modifiers)
-
-            return ParsedIntent(
-                intent=intent,
-                params=params,
-                modifiers=modifiers,
-                confidence=confidence,
-                complexity=complexity,
-            )
-
-        except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
-            print(f"Failed to parse LLM response: {e}")
+        result = self._parse_draft(draft)
+        if result is None or result.confidence < 0.5:
             return None
 
-    def _extract_json(self, text: str) -> str:
-        """Extract JSON object from potentially noisy text."""
-        # 查找第一个 { 和最后一个 }
-        start = text.find("{")
-        end = text.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            raise ValueError("No JSON object found in response")
-        return text[start : end + 1]
+        return result
+
+    def _parse_draft(self, draft: _IntentParseDraft) -> ParsedIntent | None:
+        """Convert the validated LLM draft into a ParsedIntent."""
+        if not draft.intent:
+            return None
+
+        try:
+            intent = VisualEditIntent(draft.intent)
+        except ValueError:
+            return None
+
+        # 解析参数
+        params = self._parse_params(draft.params)
+
+        # 解析修饰符
+        modifiers = self._parse_modifiers(draft.modifiers)
+
+        # 推断复杂度类型
+        complexity = self._infer_complexity(modifiers)
+
+        return ParsedIntent(
+            intent=intent,
+            params=params,
+            modifiers=modifiers,
+            confidence=draft.confidence,
+            complexity=complexity,
+        )
 
     def _parse_params(self, params_data: dict[str, Any]) -> dict[str, Any]:
         """Parse and validate parameters."""
@@ -180,10 +169,8 @@ class LLMIntentParser:
 
         # 版式类型
         if "layout_family" in params_data:
-            try:
+            with suppress(ValueError):
                 params["layout_family"] = LayoutFamily(params_data["layout_family"])
-            except ValueError:
-                pass
 
         # 元素 ID
         if "element_id" in params_data:

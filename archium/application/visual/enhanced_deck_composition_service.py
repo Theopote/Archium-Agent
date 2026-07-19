@@ -11,30 +11,31 @@ This module extends the base DeckCompositionPlanningService with:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
-from uuid import UUID
 
 import numpy as np
+from pydantic import BaseModel
 
+# Import base service
+from archium.application.visual.deck_composition_service import (
+    DeckCompositionPlanningService,
+)
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_composition import (
     DeckCompositionPlan,
-    PacingRole,
     SlideCompositionDirective,
     VisualIntensity,
     density_to_score,
     intensity_to_score,
 )
 from archium.domain.visual.deck_qa import DeckQAReport, LayoutIssueSeverity
-from archium.domain.visual.enums import DensityLevel, LayoutFamily
+from archium.domain.visual.enums import DensityLevel
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.infrastructure.llm.base import LLMRequest
+from archium.logging import get_logger
 
-# Import base service
-from archium.application.visual.deck_composition_service import (
-    DeckCompositionPlanningService,
-)
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,17 @@ class FeedbackIntent:
     scope: str  # "global", "section:1", "slides:3,5,7"
     desired_direction: str  # "increase_contrast", "enhance_hero"
     adjustment_magnitude: float  # 0.1-1.0
+    specific_pages: list[int] | None = None
+
+
+class _FeedbackIntentDraft(BaseModel):
+    """Structured output schema for LLM feedback parsing."""
+
+    problem_type: str = "general"
+    severity: str = "moderate"
+    scope: str = "global"
+    desired_direction: str = "improve_overall"
+    adjustment_magnitude: float = 0.5
     specific_pages: list[int] | None = None
 
 
@@ -206,25 +218,18 @@ class FeedbackSemanticParser:
   "specific_pages": [page_numbers] or null
 }}
 """
-
+        request = LLMRequest(
+            system_prompt="你是演示文稿用户反馈的语义解析器，只返回符合要求格式的 JSON。",
+            user_prompt=prompt,
+            temperature=0.1,
+            json_mode=True,
+        )
         try:
-            import json
-
-            response = self._llm.complete(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-            )
-
-            # Extract JSON from response
-            json_start = response.find("{")
-            json_end = response.rfind("}") + 1
-            if json_start >= 0 and json_end > json_start:
-                data = json.loads(response[json_start:json_end])
-                return FeedbackIntent(**data)
-        except Exception as e:
-            print(f"LLM parsing failed: {e}, falling back to keywords")
-
-        return self._parse_with_keywords(feedback)
+            draft = self._llm.generate_structured(request, _FeedbackIntentDraft)
+            return FeedbackIntent(**draft.model_dump())
+        except Exception as exc:
+            logger.warning("LLM feedback parsing failed, falling back to keywords: %s", exc)
+            return self._parse_with_keywords(feedback)
 
 
 class VisualIntensityAnalyzer:
