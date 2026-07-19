@@ -102,7 +102,11 @@ filterwarnings = [
     "default::DeprecationWarning:archium",
 ]
 markers = [
-    "smoke: End-to-end smoke tests (PptxGenJS, Marp CLI, migrations, Streamlit)",
+    "unit: Fast isolated tests (tests/unit, tests/application); CI job: pytest -m unit",
+    "integration: Service wiring tests (tests/integration); CI job: pytest -m \"integration and not e2e\"",
+    "e2e: Full workflow quality gates (nightly); CI job: pytest -m e2e",
+    "benchmark: Architectural slide benchmark suite (tests/benchmark); CI job: pytest -m benchmark",
+    "smoke: Toolchain smoke tests (tests/smoke); CI jobs run pytest -m smoke",
     "marp_smoke: Marp CLI export smoke tests",
     "migration_smoke: Alembic migration smoke tests",
     "streamlit_smoke: Streamlit startup smoke tests",
@@ -111,8 +115,6 @@ markers = [
     "architectural_benchmark: Architectural slide visual benchmark cases (LayoutPlan + PNG baselines)",
     "real_project_acceptance: Five desensitized real-project end-to-end acceptance scenarios",
     "windows_smoke: Windows real-machine smoke (PptxGen, checkpoint, Unicode paths; windows-smoke.yml)",
-    "e2e: End-to-end benchmark tests (E2EBenchmarkService full workflow; nightly quality gate)",
-    "integration: Integration tests requiring full service interaction",
 ]
 
 [tool.ruff]

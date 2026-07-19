@@ -58,14 +58,17 @@ jobs:
       - name: Mypy
         run: mypy archium --python-version ${{ matrix.python-version }}
 
-      - name: Pytest
-        run: pytest -m "not smoke and not e2e" --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
+      - name: Pytest (unit)
+        run: pytest -m unit --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
 
-      - name: E2E Benchmark Service Integration Tests
-        run: pytest tests/integration/visual/test_e2e_benchmark_service.py -v -m "not e2e"
+      - name: Pytest (integration)
+        run: pytest -m "integration and not e2e" -v
 
-      - name: Architectural slide benchmark quality gate
-        run: pytest tests/benchmark/architectural_slides -v -m architectural_benchmark
+      - name: Pytest (benchmark)
+        run: pytest -m benchmark -v
+
+      - name: Pytest (golden regression)
+        run: pytest tests/golden/regression tests/golden/mission tests/golden/fixtures -v
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'

@@ -32,7 +32,7 @@ from tests.benchmark.architectural_slides.summary_validator import (
     assert_committed_benchmark_reports_valid,
 )
 
-pytestmark = pytest.mark.architectural_benchmark
+pytestmark = [pytest.mark.benchmark, pytest.mark.architectural_benchmark]
 
 
 def test_benchmark_catalog_has_thirty_cases() -> None:

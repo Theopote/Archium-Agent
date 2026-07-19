@@ -34,9 +34,22 @@ streamlit run app.py
 
 ## 测试
 
+Pytest 按 **互斥** 的 CI 层级 marker 组织（见 `pyproject.toml` → `[tool.pytest.ini_options].markers`）：
+
+| Marker | 目录 | PR CI |
+|--------|------|-------|
+| `unit` | `tests/unit`, `tests/application` | ✅ |
+| `integration` | `tests/integration` | ✅（`-m "integration and not e2e"`） |
+| `benchmark` | `tests/benchmark` | ✅ |
+| `e2e` | `tests/e2e`, nightly quality gate | nightly |
+| `smoke` | `tests/smoke` | 独立 smoke jobs |
+
+本地常用命令：
+
 ```bash
-pytest tests/unit -q
-pytest tests/integration -q
+pytest -m unit -q
+pytest -m "integration and not e2e" -q
+pytest -m benchmark -q
 pytest tests/golden/mission -v -m regression
 pytest tests/golden/regression -v -m regression
 ```

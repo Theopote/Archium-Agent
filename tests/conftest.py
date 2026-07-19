@@ -58,6 +58,42 @@ def db_session(test_settings: Settings) -> Generator[Session, None, None]:
         engine.dispose()
 
 
+_TIER_MARKERS = frozenset({"unit", "integration", "e2e", "benchmark", "smoke"})
+
+# Primary CI tier markers are assigned from path when not declared on the test module/class.
+_TIER_PATH_PREFIXES: tuple[tuple[str, str], ...] = (
+    ("tests/unit/", "unit"),
+    ("tests/application/", "integration"),
+    ("tests/integration/", "integration"),
+    ("tests/benchmark/", "benchmark"),
+    ("tests/e2e/", "e2e"),
+    ("tests/smoke/", "smoke"),
+)
+
+
+def _normalize_test_path(path: Path) -> str:
+    return path.as_posix()
+
+
+def _tier_marker_for_path(path: Path) -> str | None:
+    normalized = _normalize_test_path(path)
+    for prefix, tier in _TIER_PATH_PREFIXES:
+        if normalized.startswith(prefix) or f"/{prefix}" in normalized:
+            return tier
+    return None
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    del config
+    for item in items:
+        existing = {mark.name for mark in item.iter_markers()}
+        if existing & _TIER_MARKERS:
+            continue
+        tier = _tier_marker_for_path(item.path)
+        if tier is not None:
+            item.add_marker(getattr(pytest.mark, tier))
+
+
 @pytest.fixture
 def tmp_sqlite_engine(tmp_path: Path):
     """Provide a temporary SQLite engine for testing."""
