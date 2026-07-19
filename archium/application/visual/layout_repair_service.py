@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from archium.domain.visual.design_system import DesignSystem, TextStyleToken
+from archium.domain.visual.design_system import DesignSystem, LayoutThresholds, TextStyleToken
 from archium.domain.visual.enums import (
     CropPolicy,
     ImageFit,
@@ -179,6 +179,7 @@ class LayoutRepairService:
                     fixed = self._repair_text_overflow(
                         element,
                         design_system=design_system,
+                        thresholds=design_system.thresholds,
                         safe=safe,
                         page_w=page_w,
                         page_h=page_h,
@@ -393,6 +394,7 @@ class LayoutRepairService:
         element: LayoutElement,
         *,
         design_system: DesignSystem,
+        thresholds: LayoutThresholds,
         safe: Rect,
         page_w: float,
         page_h: float,
@@ -438,6 +440,7 @@ class LayoutRepairService:
                     element,
                     text=element.text_content,
                     style=style,
+                    thresholds=thresholds,
                     safe=safe,
                     neighbors=neighbors,
                     gap=gap,
@@ -453,7 +456,7 @@ class LayoutRepairService:
                         page_w=page_w,
                         page_h=page_h,
                     )
-                    if self._text_fits(element, style) and not self._overlaps_any(
+                    if self._text_fits(element, style, thresholds=thresholds) and not self._overlaps_any(
                         element, neighbors, gap=0.0
                     ):
                         return True
@@ -492,6 +495,7 @@ class LayoutRepairService:
         *,
         text: str,
         style: TextStyleToken,
+        thresholds: LayoutThresholds,
         safe: Rect,
         neighbors: list[LayoutElement],
         gap: float,
@@ -502,7 +506,7 @@ class LayoutRepairService:
         candidates: list[tuple[float, float, float, float]] = []
 
         # 3. Fine-tune height at current width (down / up).
-        need_h = self._needed_height(text, element.width, style)
+        need_h = self._needed_height(text, element.width, style, thresholds)
         if need_h <= element.height + room["down"] + 1e-6:
             candidates.append(
                 (element.x, element.y, element.width, max(element.height, need_h))
@@ -519,7 +523,7 @@ class LayoutRepairService:
         max_h = element.height + room["up"] + room["down"]
 
         for width in self._width_steps(element.width, max_w):
-            need = self._needed_height(text, width, style)
+            need = self._needed_height(text, width, style, thresholds)
             # Prefer growing downward from the current top.
             if need <= max_h_down + 1e-6:
                 x = element.x
@@ -539,12 +543,12 @@ class LayoutRepairService:
         # Also try the max free band anchored at the element (still not full safe).
         free = self._seeded_free_band(element, neighbors, safe=safe, gap=gap)
         if free.width >= _MIN_TEXT_W and free.height >= _MIN_TEXT_H:
-            need = self._needed_height(text, free.width, style)
+            need = self._needed_height(text, free.width, style, thresholds)
             if need <= free.height + 1e-6:
                 candidates.append((free.x, free.y, free.width, need))
             # Slightly narrower than full free width can still help wrapping.
             for width in self._width_steps(element.width, free.width):
-                need = self._needed_height(text, width, style)
+                need = self._needed_height(text, width, style, thresholds)
                 if need <= free.height + 1e-6:
                     candidates.append((free.x, free.y, width, need))
 
@@ -559,7 +563,7 @@ class LayoutRepairService:
             probe = element.model_copy(
                 update={"x": x, "y": y, "width": width, "height": height}
             )
-            if not self._text_fits(probe, style):
+            if not self._text_fits(probe, style, thresholds=thresholds):
                 continue
             if self._overlaps_any(probe, neighbors, gap=gap):
                 continue
@@ -656,19 +660,39 @@ class LayoutRepairService:
                 out.append(value)
         return out
 
-    def _needed_height(self, text: str, width: float, style: TextStyleToken) -> float:
-        lines = self._text.estimate_lines(text, box_width_in=width, style=style)
-        return max(_MIN_TEXT_H, lines * (style.line_height / 72.0))
+    def _needed_height(
+        self,
+        text: str,
+        width: float,
+        style: TextStyleToken,
+        thresholds: LayoutThresholds,
+    ) -> float:
+        return max(
+            _MIN_TEXT_H,
+            self._text.estimate_block_height_in(
+                text,
+                box_width_in=width,
+                style=style,
+                vertical_slack_in=thresholds.text_overflow_repair_slack_in,
+            ),
+        )
 
-    def _text_fits(self, element: LayoutElement, style: TextStyleToken) -> bool:
+    def _text_fits(
+        self,
+        element: LayoutElement,
+        style: TextStyleToken,
+        *,
+        thresholds: LayoutThresholds,
+    ) -> bool:
         if not element.text_content:
             return True
-        return self._text.fits(
+        return self._text.overflow_amount(
             element.text_content,
             box_width_in=element.width,
             box_height_in=element.height,
             style=style,
-        )
+            vertical_tolerance_in=thresholds.text_overflow_validation_tolerance_in,
+        ) <= 0
 
     @staticmethod
     def _overlaps_any(

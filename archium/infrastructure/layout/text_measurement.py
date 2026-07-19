@@ -91,6 +91,30 @@ class TextMeasurementService:
 
         return self._estimate_lines_heuristic(text, box_width_pt=box_width_pt, style=style)
 
+    def estimate_block_height_in(
+        self,
+        text: str,
+        *,
+        box_width_in: float,
+        style: TextStyleToken,
+        vertical_slack_in: float = 0.0,
+        dpi: float | None = None,
+    ) -> float:
+        """Estimated vertical space for wrapped text (inches), optional repair slack."""
+        lines = self.estimate_lines(
+            text,
+            box_width_in=box_width_in,
+            style=style,
+            dpi=dpi if dpi is not None else self._dpi,
+        )
+        if lines == 0:
+            return vertical_slack_in
+        line_height_in = self._effective_line_height_in(style, dpi=dpi if dpi is not None else self._dpi)
+        block = lines * line_height_in
+        if self._can_use_real_metrics():
+            block += self._descender_slack_in(style, dpi=dpi if dpi is not None else self._dpi)
+        return block + vertical_slack_in
+
     def fits(
         self,
         text: str,
@@ -98,13 +122,18 @@ class TextMeasurementService:
         box_width_in: float,
         box_height_in: float,
         style: TextStyleToken,
+        vertical_tolerance_in: float = 0.0,
     ) -> bool:
-        lines = self.estimate_lines(text, box_width_in=box_width_in, style=style)
-        if style.max_lines is not None and lines > style.max_lines:
-            return False
-        line_height_in = style.line_height / 72.0
-        needed = lines * line_height_in
-        return needed <= box_height_in + 1e-6
+        needed = self.estimate_block_height_in(
+            text,
+            box_width_in=box_width_in,
+            style=style,
+        )
+        if style.max_lines is not None:
+            lines = self.estimate_lines(text, box_width_in=box_width_in, style=style)
+            if lines > style.max_lines:
+                return False
+        return needed <= box_height_in + vertical_tolerance_in + 1e-6
 
     def overflow_amount(
         self,
@@ -113,12 +142,20 @@ class TextMeasurementService:
         box_width_in: float,
         box_height_in: float,
         style: TextStyleToken,
+        vertical_tolerance_in: float = 0.0,
     ) -> float:
-        """Return inches of vertical overflow (0 if fits)."""
-        lines = self.estimate_lines(text, box_width_in=box_width_in, style=style)
-        line_height_in = style.line_height / 72.0
-        needed = lines * line_height_in
-        return max(0.0, needed - box_height_in)
+        """Return inches of vertical overflow after tolerance (0 if fits)."""
+        needed = self.estimate_block_height_in(
+            text,
+            box_width_in=box_width_in,
+            style=style,
+        )
+        if style.max_lines is not None:
+            lines = self.estimate_lines(text, box_width_in=box_width_in, style=style)
+            if lines > style.max_lines:
+                line_height_in = self._effective_line_height_in(style)
+                needed = max(needed, style.max_lines * line_height_in)
+        return max(0.0, needed - box_height_in - vertical_tolerance_in)
 
     def _can_use_real_metrics(self) -> bool:
         if fonts_available():
@@ -251,3 +288,32 @@ class TextMeasurementService:
                     line_width += token_w
             total_lines += lines
         return total_lines
+
+    def _effective_line_height_in(self, style: TextStyleToken, *, dpi: float | None = None) -> float:
+        design_line_in = style.line_height / 72.0
+        if not self._can_use_real_metrics():
+            return design_line_in
+        resolved_dpi = dpi if dpi is not None else self._dpi
+        glyph_line_in = self._glyph_line_height_in(style, dpi=resolved_dpi)
+        return max(design_line_in, glyph_line_in)
+
+    def _glyph_line_height_in(self, style: TextStyleToken, *, dpi: float) -> float:
+        """Natural single-line bbox height from mixed CJK/Latin sample glyphs."""
+        sample = "Hg因，"
+        size_px = self._font_size_px(style.font_size, dpi)
+        max_height_px = 0.0
+        for char in sample:
+            font = self._font_for_char(char, style, size_px)
+            if font is None:
+                continue
+            bbox = font.getbbox(char)
+            max_height_px = max(max_height_px, float(bbox[3] - bbox[1]))
+        if max_height_px <= 0:
+            return style.line_height / 72.0
+        return max_height_px / dpi
+
+    def _descender_slack_in(self, style: TextStyleToken, *, dpi: float) -> float:
+        """One-time bottom slack when glyph bbox exceeds design line height."""
+        design_line_in = style.line_height / 72.0
+        glyph_line_in = self._glyph_line_height_in(style, dpi=dpi)
+        return max(0.0, glyph_line_in - design_line_in) * 0.5

@@ -80,7 +80,11 @@ class LayoutValidationService:
         issues.extend(self._check_overlaps(layout_plan, thresholds.max_overlap_tolerance))
         issues.extend(self._check_required_roles(layout_plan, require_source=require_source))
         issues.extend(self._check_typography(layout_plan, design_system.typography, thresholds))
-        issues.extend(self._check_text_overflow(layout_plan, design_system.typography))
+        issues.extend(self._check_text_overflow(
+            layout_plan,
+            design_system.typography,
+            thresholds,
+        ))
         issues.extend(self._check_image_rules(layout_plan, drawing_hero=drawing_hero))
         issues.extend(self._check_hero_dominance(layout_plan, safe, thresholds.min_hero_area_ratio))
         issues.extend(
@@ -465,9 +469,13 @@ class LayoutValidationService:
         return issues
 
     def _check_text_overflow(
-        self, plan: LayoutPlan, typography: TypographySystem
+        self,
+        plan: LayoutPlan,
+        typography: TypographySystem,
+        thresholds: LayoutThresholds,
     ) -> list[LayoutValidationIssue]:
         issues: list[LayoutValidationIssue] = []
+        tolerance = thresholds.text_overflow_validation_tolerance_in
         for element in plan.elements:
             if not element.text_content:
                 continue
@@ -477,22 +485,28 @@ class LayoutValidationService:
             }:
                 continue
             style = resolve_text_style(element, typography)
-            if not self._text.fits(
+            overflow_in = self._text.overflow_amount(
                 element.text_content,
                 box_width_in=element.width,
                 box_height_in=element.height,
                 style=style,
-            ):
-                issues.append(
-                    LayoutValidationIssue(
-                        rule_code=LAYOUT_TEXT_OVERFLOW,
-                        severity=LayoutIssueSeverity.ERROR,
-                        element_ids=[element.id],
-                        message=f"Text in {element.id} overflows its box.",
-                        suggestion="Enlarge the text box or shorten the copy.",
-                        auto_repairable=True,
-                    )
+                vertical_tolerance_in=tolerance,
+            )
+            if overflow_in <= 0:
+                continue
+            issues.append(
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_TEXT_OVERFLOW,
+                    severity=LayoutIssueSeverity.ERROR,
+                    element_ids=[element.id],
+                    message=(
+                        f"Text in {element.id} overflows its box "
+                        f"by {overflow_in * 72:.1f} pt (after {tolerance * 72:.1f} pt tolerance)."
+                    ),
+                    suggestion="Enlarge the text box or shorten the copy.",
+                    auto_repairable=True,
                 )
+            )
         return issues
 
     def _check_image_rules(

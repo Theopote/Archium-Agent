@@ -210,6 +210,17 @@ class LayoutThresholds(DomainModel):
     max_whitespace_ratio: float = Field(default=0.60, ge=0.0, le=1.0)
     max_title_lines: int = Field(default=2, ge=1)
     max_overlap_tolerance: float = Field(default=0.01, ge=0)
+    # Real font metrics vs PptxGen line spacing can differ by ~1 pt; keep thresholds in DesignSystem.
+    text_overflow_validation_tolerance_in: float = Field(
+        default=0.012,
+        ge=0,
+        description="Vertical slack (inches) before LAYOUT.TEXT_OVERFLOW is raised.",
+    )
+    text_overflow_repair_slack_in: float = Field(
+        default=0.020,
+        ge=0,
+        description="Extra vertical padding (inches) when sizing repaired text boxes.",
+    )
 
 
 class DesignSystem(IdentifiedModel, VersionedModel, TimestampedModel):
