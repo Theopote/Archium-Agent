@@ -36,6 +36,14 @@ from archium.infrastructure.database.repositories import PresentationRepository
 
 
 @dataclass(frozen=True)
+class AdaptationWarning:
+    """记录内容调整过程中的警告信息"""
+    action: ContentAdaptationAction
+    message: str
+    severity: str  # "info" | "warning" | "error"
+
+
+@dataclass(frozen=True)
 class ContentAdaptationResult:
     slide: SlideSpec
     action: ContentAdaptationAction
@@ -43,6 +51,7 @@ class ContentAdaptationResult:
     split_plan: SlideSplitPlan | None = None
     replanned_slide_ids: list[UUID] = field(default_factory=list)
     message: str = ""
+    warnings: list[AdaptationWarning] = field(default_factory=list)
 
 
 class ContentAdaptationService:
@@ -53,6 +62,7 @@ class ContentAdaptationService:
         self._presentations = PresentationRepository(session)
         self._history = SlideHistoryService(session)
         self._visual_edits = VisualEditService(session)
+        self._warnings: list[AdaptationWarning] = []
 
     def analyze(
         self,
@@ -72,6 +82,7 @@ class ContentAdaptationService:
         *,
         replan_visual: bool = True,
     ) -> ContentAdaptationResult:
+        self._warnings = []  # 重置警告列表
         resolved = (
             action
             if isinstance(action, ContentAdaptationAction)
@@ -101,7 +112,16 @@ class ContentAdaptationService:
         if replan_visual:
             result = self._replan_affected_slides(result)
 
-        return result
+        # 将警告附加到结果中
+        return ContentAdaptationResult(
+            slide=result.slide,
+            action=result.action,
+            created_slides=result.created_slides,
+            split_plan=result.split_plan,
+            replanned_slide_ids=result.replanned_slide_ids,
+            message=result.message,
+            warnings=self._warnings,
+        )
 
     def restore_at_revision(
         self,
@@ -187,7 +207,13 @@ class ContentAdaptationService:
             if not applied:
                 summary = shorten_repetitive_expression(updated.message)
                 if len(summary) > 80:
-                    summary = summary[:79].rstrip() + "…"
+                    # 使用安全截断，而非硬截断
+                    summary = self._safe_truncate(summary, max_length=80)
+                    self._add_warning(
+                        ContentAdaptationAction.CONVERT_TO_BULLETS,
+                        f"摘要已自动压缩至 80 字符，请检查语义完整性。原因：{reason or '无法安全缩短'}",
+                        severity="warning"
+                    )
             updated.message = summary
         else:
             parts = _split_into_bullet_candidates(updated.message)
@@ -209,7 +235,12 @@ class ContentAdaptationService:
         updated = deepcopy(slide)
         promoted = updated.message.strip()
         if updated.key_points:
-            promoted = max(updated.key_points, key=len).strip()
+            # 使用智能评分选择最重要的要点，而非最长的
+            promoted = self._select_most_important_point(
+                updated.key_points,
+                title=updated.title,
+                message=updated.message
+            )
             updated.key_points = [point for point in updated.key_points if point.strip() != promoted]
 
         promoted, applied, reason = smart_shorten_text(promoted, _MAX_MESSAGE_LENGTH)
@@ -298,6 +329,193 @@ class ContentAdaptationService:
             replanned_slide_ids=replanned,
             message=result.message,
         )
+
+    def _add_warning(
+        self,
+        action: ContentAdaptationAction,
+        message: str,
+        severity: str = "warning"
+    ) -> None:
+        """添加警告信息"""
+        self._warnings.append(AdaptationWarning(
+            action=action,
+            message=message,
+            severity=severity
+        ))
+
+    def _safe_truncate(self, text: str, max_length: int) -> str:
+        """
+        安全截断文本：优先在句子边界、逗号、空格处截断。
+        避免破坏数值单位、专有名词、否定关系等语义结构。
+        """
+        if len(text) <= max_length:
+            return text
+
+        # 尝试在不同的分隔符处截断，优先级从高到低
+        delimiters = [
+            ("。", 1),  # 句号
+            ("；", 1),  # 分号
+            ("，", 1),  # 逗号
+            ("、", 1),  # 顿号
+            (" ", 1),   # 空格
+        ]
+
+        for delimiter, offset in delimiters:
+            # 在 max_length 之前查找最后一个分隔符
+            idx = text.rfind(delimiter, 0, max_length - 1)
+            # 至少保留 70% 的内容，避免过度截断
+            if idx > max_length * 0.7:
+                return text[:idx + offset].rstrip() + "…"
+
+        # 如果找不到合适的分隔符，尝试在词边界截断
+        # 检查是否会截断数字单位（如 "15%", "100万"）
+        truncate_pos = max_length - 1
+
+        # 向前查找安全的截断点：不在数字或字母中间
+        while truncate_pos > max_length * 0.7:
+            char = text[truncate_pos] if truncate_pos < len(text) else ""
+            prev_char = text[truncate_pos - 1] if truncate_pos > 0 else ""
+
+            # 如果当前字符是数字、字母、百分号、货币符号，继续向前
+            if char.isalnum() or char in "%$€¥万亿":
+                truncate_pos -= 1
+            # 如果前一个字符是数字，当前是单位，继续向前
+            elif prev_char.isdigit() and char in "个件台套份次":
+                truncate_pos -= 1
+            else:
+                break
+
+        return text[:truncate_pos].rstrip() + "…"
+
+    def _select_most_important_point(
+        self,
+        points: list[str],
+        title: str = "",
+        message: str = ""
+    ) -> str:
+        """
+        基于多维度评分选择最重要的要点。
+        不再简单使用 max(key=len)，而是考虑：
+        1. 与标题的相关性
+        2. 位置权重（首尾要点通常更重要）
+        3. 结论性关键词
+        4. 数据密度
+        5. 长度（作为次要因素）
+        """
+        if not points:
+            return ""
+
+        if len(points) == 1:
+            return points[0].strip()
+
+        scored_points: list[tuple[float, str]] = []
+
+        for idx, point in enumerate(points):
+            score = self._calculate_importance_score(
+                point=point,
+                title=title,
+                message=message,
+                position=idx,
+                total_count=len(points)
+            )
+            scored_points.append((score, point))
+
+        # 选择得分最高的要点
+        best_point = max(scored_points, key=lambda x: x[0])[1]
+        return best_point.strip()
+
+    def _calculate_importance_score(
+        self,
+        point: str,
+        title: str,
+        message: str,
+        position: int,
+        total_count: int
+    ) -> float:
+        """
+        计算要点的重要性得分。
+
+        评分维度：
+        - 标题相关性：与标题关键词重叠越多越重要
+        - 位置权重：第一个和最后一个要点通常更重要
+        - 结论性关键词：包含总结性词汇（高权重）
+        - 数据密度：包含具体数据和百分比（高权重）
+        - 长度因素：强烈惩罚过长文本（避免选择冗长细节）
+        """
+        score = 0.0
+        point_lower = point.lower()
+
+        # 1. 标题相关性（权重：1.5，降低以避免过度匹配技术词汇）
+        if title:
+            title_words = set(self._tokenize_chinese(title.lower()))
+            point_words = set(self._tokenize_chinese(point_lower))
+            overlap = len(title_words & point_words)
+            score += overlap * 1.5
+
+        # 2. 位置权重（权重：2.0/3.0，降低以平衡其他因素）
+        if position == 0:
+            score += 2.0  # 首要点
+        elif position == total_count - 1:
+            score += 3.0  # 末要点（通常是结论）
+
+        # 3. 结论性关键词（权重：8.0，提高以突出重要指标）
+        conclusion_keywords = [
+            "总结", "结论", "因此", "所以", "综上", "总之",
+            "核心", "关键", "重点", "最", "首要",
+            "ROI", "收益", "价值", "优势", "回本",
+            "建议", "应该", "必须", "立即"
+        ]
+        for keyword in conclusion_keywords:
+            if keyword in point:
+                score += 8.0
+                break
+
+        # 4. 数据密度（权重：5.0，提高以重视量化指标）
+        if re.search(r'\d+%', point):  # 百分比
+            score += 5.0
+        if re.search(r'\d+倍', point):  # 倍数
+            score += 5.0
+        if re.search(r'增长|降低|提升|减少|提高', point):  # 变化动词
+            if re.search(r'\d+', point):  # 有数字支撑
+                score += 3.0
+
+        # 5. 长度因素（强烈惩罚过长文本）
+        # 理想长度：8-35字符
+        ideal_min = 8
+        ideal_max = 35
+        point_len = len(point)
+
+        if ideal_min <= point_len <= ideal_max:
+            score += 2.0  # 理想长度奖励
+        elif point_len < ideal_min:
+            # 过短扣分（但不会太严重）
+            score -= (ideal_min - point_len) / ideal_min * 3.0
+        else:
+            # 过长严重扣分（避免选择冗长细节）
+            penalty = (point_len - ideal_max) / 10.0
+            score -= min(penalty, 8.0)  # 最多扣8分
+
+        return score
+
+    def _tokenize_chinese(self, text: str) -> list[str]:
+        """
+        简单的中文分词：提取2字以上的连续中文字符作为词。
+        用于计算标题和要点的关键词重叠。
+        """
+        # 提取所有中文字符序列
+        chinese_pattern = re.compile(r'[一-鿿]+')
+        matches = chinese_pattern.findall(text)
+
+        # 对于长词，也提取2-3字的子串
+        tokens = []
+        for match in matches:
+            if len(match) >= 2:
+                tokens.append(match)
+                # 提取2字词
+                for i in range(len(match) - 1):
+                    tokens.append(match[i:i+2])
+
+        return tokens
 
 
 def _split_into_bullet_candidates(text: str) -> list[str]:
