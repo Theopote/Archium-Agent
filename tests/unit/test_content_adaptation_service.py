@@ -63,15 +63,15 @@ def slide(db_session: Session) -> SlideSpec:
 
 def test_analyze_returns_recommendations(db_session: Session, slide: SlideSpec) -> None:
     service = ContentAdaptationService(db_session)
-    analysis = service.analyze(slide.id)
-    assert analysis.slide_id == slide.id
-    assert analysis.recommended_actions
+    suggestions = service.analyze(slide.id)
+    assert suggestions
+    assert all(item.action for item in suggestions)
 
 
 def test_apply_shorten_updates_slide(db_session: Session, slide: SlideSpec) -> None:
     service = ContentAdaptationService(db_session)
     before = len(slide.message)
-    result = service.apply(slide.id, ContentAdaptationAction.SHORTEN_TEXT, replan_visual=False)
+    result = service.apply(slide.id, ContentAdaptationAction.SHORTEN, replan_visual=False)
     assert len(result.slide.message) <= before
     assert service.list_content_revisions(slide.id)
 
