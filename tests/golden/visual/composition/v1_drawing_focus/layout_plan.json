@@ -12,7 +12,7 @@
     "source"
   ],
   "balance_strategy": "drawing_dominant",
-  "whitespace_ratio": 0.3929,
+  "whitespace_ratio": 0.3924,
   "elements": [
     {
       "id": "caption",
@@ -30,9 +30,9 @@
       "role": "hero_visual",
       "content_type": "drawing",
       "x": 0.7,
-      "y": 1.033,
+      "y": 1.191,
       "w": 6.072,
-      "h": 3.208,
+      "h": 3.051,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },
@@ -41,9 +41,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 6.939,
-      "y": 1.033,
+      "y": 1.191,
       "w": 2.361,
-      "h": 3.208,
+      "h": 3.051,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -65,7 +65,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.5,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

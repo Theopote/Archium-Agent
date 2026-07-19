@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual import (
@@ -14,7 +15,6 @@ from archium.domain.visual import (
     default_presentation_design_system,
 )
 from archium.domain.visual.enums import CropPolicy, ImageFit
-from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.infrastructure.layout.generators.base import (
     LayoutGeneratorContext,
     content_from_slide,
