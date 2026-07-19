@@ -76,6 +76,70 @@ STATUS_LABELS: dict[WorkflowStatus, str] = {
 }
 
 
+PRESENTATION_PROGRESS_STEPS: tuple[str, ...] = (
+    WorkflowStep.INIT.value,
+    WorkflowStep.LOAD_PROJECT.value,
+    WorkflowStep.VALIDATE_SOURCES.value,
+    WorkflowStep.RETRIEVE_CONTEXT.value,
+    WorkflowStep.EXTRACT_FACTS.value,
+    WorkflowStep.VALIDATE_FACTS.value,
+    WorkflowStep.BRIEF.value,
+    WorkflowStep.REVIEW_BRIEF.value,
+    WorkflowStep.STORYLINE.value,
+    WorkflowStep.REVIEW_STORYLINE.value,
+    WorkflowStep.SLIDES.value,
+    WorkflowStep.REVIEW_SLIDES.value,
+    WorkflowStep.RESOLVE_CITATIONS.value,
+    WorkflowStep.MATCH_ASSETS.value,
+    WorkflowStep.CONTENT_REVIEW.value,
+    WorkflowStep.EVIDENCE_REVIEW.value,
+    WorkflowStep.ARCHITECTURAL_REVIEW.value,
+    WorkflowStep.LAYOUT_REVIEW.value,
+    WorkflowStep.PROFESSIONAL_REVIEW.value,
+    WorkflowStep.REPAIR_SLIDES.value,
+    WorkflowStep.SLIDE_VALIDATION.value,
+    WorkflowStep.EXPORT.value,
+    WorkflowStep.PRESENTATION_SPEC.value,
+    WorkflowStep.MARP.value,
+    WorkflowStep.FINALIZE.value,
+)
+
+PLANNING_PROGRESS_STEPS: tuple[str, ...] = (
+    WorkflowStep.PLANNING_LOAD_CONTEXT.value,
+    WorkflowStep.PLANNING_ANALYZE_TASK.value,
+    WorkflowStep.PLANNING_VALIDATE_MISSION.value,
+    WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
+    WorkflowStep.PLANNING_AWAIT_CLARIFICATION.value,
+    WorkflowStep.PLANNING_REVISE_MISSION.value,
+    WorkflowStep.PLANNING_VALIDATE_REVISED_MISSION.value,
+    WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+    WorkflowStep.PLANNING_WORKSTREAMS.value,
+    WorkflowStep.PLANNING_DELIVERABLES.value,
+    WorkflowStep.PLANNING_AWAIT_APPROVAL.value,
+    WorkflowStep.PLANNING_PREPARE_ARTIFACTS.value,
+    WorkflowStep.PLANNING_PREPARE_PRESENTATION.value,
+    WorkflowStep.PLANNING_FINALIZE.value,
+)
+
+VISUAL_PROGRESS_STEPS: tuple[str, ...] = (
+    WorkflowStep.VISUAL_LOAD_CONTEXT.value,
+    WorkflowStep.VISUAL_LOAD_DESIGN_SYSTEM.value,
+    WorkflowStep.VISUAL_GENERATE_ART_DIRECTION.value,
+    WorkflowStep.VISUAL_AWAIT_ART_DIRECTION_APPROVAL.value,
+    WorkflowStep.VISUAL_GENERATE_INTENTS.value,
+    WorkflowStep.VISUAL_GENERATE_DECK_COMPOSITION.value,
+    WorkflowStep.VISUAL_GENERATE_LAYOUT_CANDIDATES.value,
+    WorkflowStep.VISUAL_SELECT_LAYOUTS.value,
+    WorkflowStep.VISUAL_VALIDATE_LAYOUTS.value,
+    WorkflowStep.VISUAL_REPAIR_LAYOUTS.value,
+    WorkflowStep.VISUAL_APPLY_SAFE_FALLBACK.value,
+    WorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value,
+    WorkflowStep.VISUAL_RENDER.value,
+    WorkflowStep.VISUAL_CRITIQUE.value,
+    WorkflowStep.VISUAL_FINALIZE.value,
+)
+
+
 @dataclass(frozen=True)
 class WorkflowProgressSnapshot:
     """UI-friendly view of a persisted workflow run."""
@@ -84,6 +148,7 @@ class WorkflowProgressSnapshot:
     status: WorkflowStatus
     current_step: str | None
     current_step_label: str
+    progress_fraction: float
     step_log: list[dict[str, str]]
     errors: list[str]
     is_terminal: bool
@@ -133,6 +198,53 @@ def label_for_step(step: str | None, *, state: dict[str, Any] | None = None) -> 
     return label
 
 
+def infer_workflow_kind(step: str | None) -> str:
+    """Return ``presentation``, ``planning``, or ``visual`` from a step id."""
+    if not step:
+        return "presentation"
+    if step.startswith("planning_"):
+        return "planning"
+    if step.startswith("visual_"):
+        return "visual"
+    return "presentation"
+
+
+def progress_steps_for_kind(kind: str) -> tuple[str, ...]:
+    if kind == "planning":
+        return PLANNING_PROGRESS_STEPS
+    if kind == "visual":
+        return VISUAL_PROGRESS_STEPS
+    return PRESENTATION_PROGRESS_STEPS
+
+
+def progress_fraction(
+    step: str | None,
+    *,
+    status: WorkflowStatus | None = None,
+    state: dict[str, Any] | None = None,
+) -> float:
+    """Estimate workflow completion as a 0–1 fraction for progress bars."""
+    if status in {
+        WorkflowStatus.COMPLETED,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    }:
+        return 1.0 if status == WorkflowStatus.COMPLETED else 0.0
+    kind = infer_workflow_kind(step)
+    ordered = progress_steps_for_kind(kind)
+    if not step:
+        log = list((state or {}).get("step_log") or [])
+        if not log:
+            return 0.0
+        return min(1.0, len(log) / max(len(ordered), 1))
+    try:
+        index = ordered.index(step)
+    except ValueError:
+        log = list((state or {}).get("step_log") or [])
+        return min(1.0, len(log) / max(len(ordered), 1))
+    return round(min(1.0, (index + 1) / len(ordered)), 3)
+
+
 def snapshot_from_run(run: WorkflowRun) -> WorkflowProgressSnapshot:
     state = dict(run.state or {})
     current_step = state.get("current_step")
@@ -141,14 +253,13 @@ def snapshot_from_run(run: WorkflowRun) -> WorkflowProgressSnapshot:
     status = run.status
     if isinstance(status, str):
         status = WorkflowStatus(status)
+    step_text = str(current_step) if current_step else None
     return WorkflowProgressSnapshot(
         workflow_run_id=str(run.id),
         status=status,
-        current_step=str(current_step) if current_step else None,
-        current_step_label=label_for_step(
-            str(current_step) if current_step else None,
-            state=state,
-        ),
+        current_step=step_text,
+        current_step_label=label_for_step(step_text, state=state),
+        progress_fraction=progress_fraction(step_text, status=status, state=state),
         step_log=[dict(entry) for entry in state.get("step_log") or []],
         errors=list(run.errors or []),
         is_terminal=status

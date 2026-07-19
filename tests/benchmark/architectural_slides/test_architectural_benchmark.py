@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from archium.domain.visual.benchmark import (
     ArchitecturalSlideCategory,
@@ -11,6 +13,7 @@ from archium.domain.visual.benchmark import (
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutElementRole, LayoutFamily
 
 from tests.benchmark.architectural_slides.artifacts import (
+    STRICT_HUMAN_REVIEW_ENV,
     UPDATE_ENV,
     assert_or_update_case_baseline,
     case_dir,
@@ -90,6 +93,7 @@ def test_benchmark_category_minimums() -> None:
 
 
 def test_benchmark_human_review_meets_threshold() -> None:
+    strict = os.environ.get(STRICT_HUMAN_REVIEW_ENV) == "1"
     scores: list[float] = []
     for case_id in BENCHMARK_CASE_IDS:
         path = case_dir(case_id) / "human_review.json"
@@ -99,6 +103,11 @@ def test_benchmark_human_review_meets_threshold() -> None:
             f"{review.weighted_score()}"
         )
         assert review.accepted, f"{case_id} human review not accepted"
+        if strict:
+            assert not human_review_is_placeholder(review), (
+                f"{case_id} still uses placeholder human review; "
+                f"regenerate with {UPDATE_ENV}=1"
+            )
         scores.append(review.weighted_score())
     assert sum(scores) / len(scores) >= HUMAN_REVIEW_PASS_THRESHOLD
 

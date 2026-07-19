@@ -68,6 +68,14 @@ python scripts/build_architectural_benchmark_report.py
 
 编辑各 Case 目录下的 `human_review.json`。加权门槛默认 **3.5/5**（见 `HumanVisualReview.passes_threshold()`）。
 
+使用 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` 重新生成基线时，`human_review.json` 会从 layout QA 派生非占位评分。
+
+严格模式（CI 可选）拒绝占位评审：
+
+```bash
+STRICT_BENCHMARK_HUMAN_REVIEW=1 pytest tests/benchmark/architectural_slides -v
+```
+
 ## 与 V1–V7 Golden 的区别
 
 - V1–V7：验证 LayoutFamily 几何与渲染回归

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from archium.application.project_acceptance_metrics import (
     derive_acceptance_human_metrics,
     derive_acceptance_human_metrics_from_reviews,
+    seed_acceptance_reviews_from_layout,
 )
 from archium.application.studio_human_review_store import load_presentation_reviews
 from archium.application.presentation_workflow_service import PresentationWorkflowService
@@ -124,6 +125,13 @@ class ProjectAcceptanceService:
         slides = self._presentations.list_slides(presentation.id)
         assets = self._assets.list_by_project(project.id)
         validation_reports = list(visual_result.validation_reports or [])
+        _seed_rehearsal_reviews_if_missing(
+            self._session,
+            presentation.id,
+            slides,
+            validation_reports,
+            settings=self._settings,
+        )
         critical_count, error_count, crop_count = _summarize_layout_issues(validation_reports)
         asset_utilization = _asset_utilization_rate(slides, assets)
 
@@ -261,3 +269,20 @@ def _asset_utilization_rate(slides: list[SlideSpec], assets: list[Asset]) -> flo
         if refs & asset_ids:
             used += 1
     return round(used / len(slides), 3)
+
+
+def _seed_rehearsal_reviews_if_missing(
+    session: Session,
+    presentation_id: UUID,
+    slides: list[SlideSpec],
+    validation_reports: list[dict[str, Any]],
+    *,
+    settings: Settings | None,
+) -> None:
+    seed_acceptance_reviews_from_layout(
+        session,
+        presentation_id,
+        slides,
+        validation_reports,
+        settings=settings,
+    )

@@ -110,6 +110,25 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
     revision_labels = {
         str(revision.id): _revision_option_label(revision) for revision in slide_revisions
     }
+
+    if current_slide is not None:
+        restore_id = st.selectbox(
+            "恢复到历史版本",
+            options=list(revision_labels.keys()),
+            format_func=lambda value: revision_labels[value],
+            key=f"history_restore_{presentation_id}",
+        )
+        if st.button(
+            "恢复到此版本",
+            key=f"history_restore_btn_{presentation_id}",
+            use_container_width=True,
+        ):
+            with get_session() as session:
+                SlideHistoryService(session).restore_at_revision(UUID(restore_id))
+                session.commit()
+            st.success("页面内容已恢复到所选版本。")
+            st.rerun()
+
     compare_mode = st.radio(
         "对比方式",
         options=["与上一版对比", "与当前版本对比", "选择两个版本"],

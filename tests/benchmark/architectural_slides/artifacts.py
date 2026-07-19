@@ -20,6 +20,7 @@ from tests.golden.visual.composition.artifacts import (
 )
 
 UPDATE_ENV = "UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES"
+STRICT_HUMAN_REVIEW_ENV = "STRICT_BENCHMARK_HUMAN_REVIEW"
 BENCHMARK_ROOT = Path(__file__).resolve().parent
 
 
@@ -176,9 +177,14 @@ def write_case_artifacts(result: BenchmarkCaseResult) -> Path:
     _write_json(directory / "validation_report.json", fingerprint_report(result.report))
     _write_json(directory / "score_baseline.json", score_baseline(result.report))
     _write_json(directory / "deck_qa_report.json", fingerprint_deck_qa(result))
+    review = derive_benchmark_human_review(
+        result.definition.case_id,
+        layout_score=result.rule_score.layout_score,
+        layout_valid=result.rule_score.layout_valid,
+    )
     _write_json(
         directory / "human_review.json",
-        default_human_review(result.definition.case_id).model_dump(mode="json"),
+        review.model_dump(mode="json"),
     )
     (directory / "notes.md").write_text(default_notes(result), encoding="utf-8")
     render_layout_preview_png(result.plan, directory / "preview.png")

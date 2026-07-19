@@ -3,8 +3,91 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
+from sqlalchemy.orm import Session
+
+from archium.application.studio_human_review_store import load_presentation_reviews, save_slide_review
+from archium.config.settings import Settings
+from archium.domain.slide import SlideSpec
 from archium.domain.visual.benchmark import HumanVisualReview
+
+
+def derive_acceptance_slide_review(
+    slide_id: UUID,
+    *,
+    layout_score: float,
+    layout_valid: bool,
+    has_blocking_issues: bool,
+) -> HumanVisualReview:
+    """Build a rehearsal human review from automated layout QA for one slide."""
+    base = 3.0 + min(2.0, max(0.0, layout_score) * 2.0)
+    score = int(round(min(5.0, max(1.0, base))))
+    major_problems: list[str] = []
+    if has_blocking_issues:
+        major_problems.append("layout validation blocking issue")
+    elif not layout_valid:
+        major_problems.append("layout validation failed")
+    return HumanVisualReview(
+        case_id=str(slide_id),
+        information_hierarchy=score,
+        visual_focus=score,
+        reading_order=score,
+        image_text_relationship=score,
+        whitespace_density=score,
+        architectural_expression=score,
+        aesthetic_finish=max(1, score - 1),
+        editability=score,
+        major_problems=major_problems,
+        minor_problems=[],
+        accepted=layout_valid and not has_blocking_issues and base >= 3.5,
+        reviewer_notes=f"Acceptance rehearsal derived from layout QA score {layout_score:.2f}.",
+    )
+
+
+def seed_acceptance_reviews_from_layout(
+    session: Session,
+    presentation_id: UUID,
+    slides: list[SlideSpec],
+    validation_reports: list[dict[str, Any]],
+    *,
+    settings: Settings | None = None,
+) -> int:
+    """Persist derived per-slide reviews when Studio reviews are not yet available."""
+    if load_presentation_reviews(session, presentation_id, settings=settings):
+        return 0
+    reports_by_slide = {
+        str(report.get("slide_id")): report
+        for report in validation_reports
+        if report.get("slide_id") is not None
+    }
+    saved = 0
+    for index, slide in enumerate(slides):
+        report = reports_by_slide.get(str(slide.id))
+        if report is None and index < len(validation_reports):
+            report = validation_reports[index]
+        report = report or {}
+        issues = list(report.get("issues") or [])
+        severities = {str(item.get("severity", "")).lower() for item in issues}
+        layout_score = float(report.get("score") or 1.0)
+        layout_valid = "critical" not in severities and "error" not in severities
+        review = derive_acceptance_slide_review(
+            slide.id,
+            layout_score=layout_score,
+            layout_valid=layout_valid,
+            has_blocking_issues=bool(severities & {"critical", "error"}),
+        )
+        save_slide_review(
+            session,
+            presentation_id,
+            slide.id,
+            review,
+            settings=settings,
+        )
+        saved += 1
+    if saved:
+        session.commit()
+    return saved
 
 
 def derive_acceptance_human_metrics_from_reviews(

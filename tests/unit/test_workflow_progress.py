@@ -6,7 +6,9 @@ from uuid import uuid4
 
 from archium.application.workflow_progress import (
     append_step_log,
+    infer_workflow_kind,
     label_for_step,
+    progress_fraction,
     snapshot_from_run,
 )
 from archium.domain.enums import WorkflowStatus, WorkflowStep
@@ -62,3 +64,18 @@ def test_snapshot_from_run_includes_step_log() -> None:
     assert snapshot.current_step == WorkflowStep.SLIDES.value
     assert len(snapshot.step_log) == 2
     assert snapshot.is_terminal is False
+    assert 0.0 < snapshot.progress_fraction < 1.0
+
+
+def test_infer_workflow_kind_from_step_prefix() -> None:
+    assert infer_workflow_kind(WorkflowStep.VISUAL_VALIDATE_LAYOUTS.value) == "visual"
+    assert infer_workflow_kind(WorkflowStep.PLANNING_WORKSTREAMS.value) == "planning"
+    assert infer_workflow_kind(WorkflowStep.BRIEF.value) == "presentation"
+
+
+def test_progress_fraction_completed_run() -> None:
+    fraction = progress_fraction(
+        WorkflowStep.FINALIZE.value,
+        status=WorkflowStatus.COMPLETED,
+    )
+    assert fraction == 1.0

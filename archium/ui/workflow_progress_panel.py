@@ -196,6 +196,9 @@ def _render_progress_body(workflow_run_id: UUID) -> None:
         st.metric("状态", status_label)
     with col_step:
         st.markdown(f"**当前步骤：** {snapshot.current_step_label}")
+        percent = int(round(snapshot.progress_fraction * 100))
+        st.progress(snapshot.progress_fraction)
+        st.caption(f"整体进度约 {percent}%")
 
     if snapshot.errors:
         for error in snapshot.errors[-3:]:

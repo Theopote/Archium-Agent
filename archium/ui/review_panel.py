@@ -42,6 +42,7 @@ from archium.ui.background_workflow_runner import (
 )
 from archium.ui.error_handlers import format_user_error
 from archium.ui.review_analytics_panel import REPAIR_STRATEGY_LABELS, render_rule_code_stats
+from archium.ui.label_map import entity_label
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
 from archium.ui.workspace_service import (
@@ -52,6 +53,11 @@ from archium.ui.workspace_service import (
 )
 
 FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
+
+_BRIEF_LABEL = entity_label("PresentationBrief")
+_STORYLINE_LABEL = entity_label("Storyline")
+_SLIDE_LABEL = entity_label("SlideSpec")
+_ASSET_BOARD_LABEL = entity_label("AssetBoard")
 
 APPROVAL_LABELS = {
     ApprovalStatus.DRAFT: "草稿",
@@ -248,7 +254,7 @@ def _render_critical_recovery_actions(
             st.error(format_user_error(exc))
 
     if has_slide_issues:
-        st.caption("页面级问题可使用下方「定位页面」跳转到 SlideSpec 标签页编辑。")
+        st.caption(f"页面级问题可使用下方「定位页面」跳转到 {_SLIDE_LABEL} 标签页编辑。")
 
 
 def _render_regenerate_actions(
@@ -305,11 +311,11 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
             workflow_run_id=workflow_run_id,
         )
     if context is None or context.brief is None:
-        st.caption("当前没有可编辑的 Brief。")
+        st.caption(f"当前没有可编辑的 {_BRIEF_LABEL}。")
         return
 
     brief = context.brief
-    st.markdown(f"**Brief 审核** · 状态：{_approval_badge(brief.approval_status)}")
+    st.markdown(f"**{_BRIEF_LABEL} 审核** · 状态：{_approval_badge(brief.approval_status)}")
 
     with st.form(f"brief_review_{brief.id}"):
         title = st.text_input("标题", value=brief.title)
@@ -343,8 +349,8 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
 
         col1, col2, col3 = st.columns(3)
         save_clicked = col1.form_submit_button("保存修改", use_container_width=True)
-        approve_clicked = col2.form_submit_button("批准 Brief", use_container_width=True)
-        reject_clicked = col3.form_submit_button("驳回 Brief", use_container_width=True)
+        approve_clicked = col2.form_submit_button(f"批准 {_BRIEF_LABEL}", use_container_width=True)
+        reject_clicked = col3.form_submit_button(f"驳回 {_BRIEF_LABEL}", use_container_width=True)
 
     update = BriefUpdate(
         title=title,
@@ -369,7 +375,7 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
                 review_service.approve_brief(brief.id)
             elif reject_clicked:
                 review_service.reject_brief(brief.id)
-        st.success("Brief 已更新。")
+        st.success(f"{_BRIEF_LABEL} 已更新。")
         st.rerun()
 
     render_brief_history_panel(brief_id=brief.id)
@@ -383,11 +389,11 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
             workflow_run_id=workflow_run_id,
         )
     if context is None or context.storyline is None:
-        st.caption("当前没有可编辑的 Storyline。")
+        st.caption(f"当前没有可编辑的 {_STORYLINE_LABEL}。")
         return
 
     storyline = context.storyline
-    st.markdown(f"**Storyline 审核** · 状态：{_approval_badge(storyline.approval_status)}")
+    st.markdown(f"**{_STORYLINE_LABEL} 审核** · 状态：{_approval_badge(storyline.approval_status)}")
 
     with st.form(f"storyline_meta_{storyline.id}"):
         thesis = st.text_area("总体论点", value=storyline.thesis)
@@ -413,9 +419,21 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
     )
 
     col1, col2, col3 = st.columns(3)
-    save_clicked = col1.button("保存 Storyline", key=f"save_storyline_{storyline.id}", use_container_width=True)
-    approve_clicked = col2.button("批准 Storyline", key=f"approve_storyline_{storyline.id}", use_container_width=True)
-    reject_clicked = col3.button("驳回 Storyline", key=f"reject_storyline_{storyline.id}", use_container_width=True)
+    save_clicked = col1.button(
+        f"保存 {_STORYLINE_LABEL}",
+        key=f"save_storyline_{storyline.id}",
+        use_container_width=True,
+    )
+    approve_clicked = col2.button(
+        f"批准 {_STORYLINE_LABEL}",
+        key=f"approve_storyline_{storyline.id}",
+        use_container_width=True,
+    )
+    reject_clicked = col3.button(
+        f"驳回 {_STORYLINE_LABEL}",
+        key=f"reject_storyline_{storyline.id}",
+        use_container_width=True,
+    )
 
     if meta_submit or save_clicked or approve_clicked or reject_clicked:
         chapters = [
@@ -442,7 +460,7 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
                 review_service.approve_storyline(storyline.id)
             elif reject_clicked:
                 review_service.reject_storyline(storyline.id)
-        st.success("Storyline 已更新。")
+        st.success(f"{_STORYLINE_LABEL} 已更新。")
         st.rerun()
 
     render_storyline_history_panel(storyline_id=storyline.id)
@@ -456,11 +474,11 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
             workflow_run_id=workflow_run_id,
         )
     if context is None or not context.slides:
-        st.caption("当前没有可编辑的 SlideSpec。")
+        st.caption(f"当前没有可编辑的 {_SLIDE_LABEL}。")
         return
 
     approved_count = sum(1 for slide in context.slides if slide.status == SlideStatus.APPROVED)
-    st.markdown(f"**SlideSpec 审核** · 已通过 {approved_count}/{len(context.slides)} 页")
+    st.markdown(f"**{_SLIDE_LABEL} 审核** · 已通过 {approved_count}/{len(context.slides)} 页")
 
     focus_id = st.session_state.get(FOCUS_SLIDE_SESSION_KEY)
     if focus_id:
@@ -530,7 +548,7 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
                         key_points=parse_multiline_items(str(row.get("key_points", ""))),
                     ),
                 )
-        st.success("SlideSpec 已保存。")
+        st.success(f"{_SLIDE_LABEL} 已保存。")
         st.rerun()
 
     if approve_all_clicked:
@@ -673,7 +691,7 @@ def _render_review_issues_panel(
             key=f"focus_issue_{issue.id}",
         ):
             _focus_slide(issue.slide_id)
-            st.toast(f"已定位到 {_issue_slide_label(issue, slides_by_id)}，请切换到 SlideSpec 标签页。")
+            st.toast(f"已定位到 {_issue_slide_label(issue, slides_by_id)}，请切换到 {_SLIDE_LABEL} 标签页。")
             st.rerun()
         if cols[2].button("标记已解决", key=f"resolve_issue_{issue.id}"):
             with get_session() as session:
@@ -717,7 +735,7 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
     )
 
     tab_brief, tab_storyline, tab_slides, tab_assets, tab_quality = st.tabs(
-        ["Brief", "Storyline", "SlideSpec", "Asset Board", "质量审核"]
+        [_BRIEF_LABEL, _STORYLINE_LABEL, _SLIDE_LABEL, _ASSET_BOARD_LABEL, "质量审核"]
     )
     with tab_brief:
         _render_brief_editor(presentation_id, workflow_run_id)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from archium.application.project_acceptance_metrics import (
     derive_acceptance_human_metrics,
     derive_acceptance_human_metrics_from_reviews,
+    derive_acceptance_slide_review,
 )
 from archium.domain.visual.benchmark import HumanVisualReview
 
@@ -85,3 +86,17 @@ def test_derive_metrics_from_reviews_overrides_layout_fallback() -> None:
     assert derived["average_human_visual_score"] == 4.5
     assert derived["exported_page_ratio"] == 0.5
     assert derived["major_edit_page_ratio"] == 0.5
+
+
+def test_derive_acceptance_slide_review_from_layout_qa() -> None:
+    from uuid import uuid4
+
+    review = derive_acceptance_slide_review(
+        uuid4(),
+        layout_score=0.9,
+        layout_valid=True,
+        has_blocking_issues=False,
+    )
+    assert review.accepted
+    assert review.weighted_score() >= 3.5
+    assert "Acceptance rehearsal" in review.reviewer_notes
