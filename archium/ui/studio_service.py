@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.render import RenderResult
@@ -18,6 +20,7 @@ from archium.ui.visual_service import (
     presentation_has_visual_layout,
 )
 from archium.ui.workspace_service import (
+    _resolve_runtime_settings,
     get_project_overview,
     list_project_presentations,
     list_projects,
@@ -34,6 +37,7 @@ class StudioPresentationContext:
     ready_for_export: bool
     slide_count: int
     layout_ready_count: int
+    preview_ready_count: int
 
 
 def list_studio_projects(session: Session) -> list[Project]:
@@ -52,6 +56,7 @@ def load_studio_context(
     visual_critic_reports: list[dict] | None = None,
     deck_qa_report: dict | None = None,
     preview_paths: list[str] | None = None,
+    workflow_output_dir: str | Path | None = None,
 ) -> StudioPresentationContext | None:
     overview = get_project_overview(session, project_id)
     if overview is None:
@@ -69,7 +74,35 @@ def load_studio_context(
         deck_qa_report=deck_qa_report,
         preview_paths=preview_paths,
     )
+    settings = _resolve_runtime_settings(None)
+    preview_service = SlidePreviewService(settings)
+    existing_preview_by_index = {
+        index: item.preview_image for index, item in enumerate(snapshot.slides)
+    }
+    resolutions = preview_service.resolve_previews(
+        presentation_id=presentation_id,
+        layout_plans=[item.layout_plan for item in snapshot.slides],
+        existing_preview_by_index=existing_preview_by_index,
+        render_paths=list(preview_paths or []),
+        workflow_output_dir=workflow_output_dir,
+    )
+    enriched_slides: list[SlideVisualSnapshot] = []
+    for item, resolution in zip(snapshot.slides, resolutions, strict=True):
+        enriched_slides.append(
+            replace(
+                item,
+                preview_image=resolution.path,
+                preview_kind=resolution.kind,
+            )
+        )
+    snapshot = replace(snapshot, slides=enriched_slides)
+
     layout_ready_count = sum(1 for item in snapshot.slides if item.layout_plan is not None)
+    preview_ready_count = sum(
+        1
+        for item in snapshot.slides
+        if item.preview_image and Path(item.preview_image).is_file()
+    )
     ready_for_export = presentation_has_visual_layout(session, presentation_id)
 
     return StudioPresentationContext(
@@ -79,6 +112,7 @@ def load_studio_context(
         ready_for_export=ready_for_export,
         slide_count=len(snapshot.slides),
         layout_ready_count=layout_ready_count,
+        preview_ready_count=preview_ready_count,
     )
 
 

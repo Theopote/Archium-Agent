@@ -50,5 +50,6 @@ def test_studio_readiness_label(
         ready_for_export=ready_for_export,
         slide_count=slide_count,
         layout_ready_count=layout_ready_count,
+        preview_ready_count=0,
     )
     assert studio_readiness_label(context) == expected

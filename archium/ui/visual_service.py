@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.slide_preview_service import map_preview_pngs_by_order
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.visual.visual_workflow_service import (
     VisualWorkflowResult,
@@ -50,6 +52,7 @@ class SlideVisualSnapshot:
     validation: LayoutValidationReport | None = None
     visual_critic: dict | None = None
     preview_image: str | None = None
+    preview_kind: Literal["screenshot", "wireframe"] | None = None
 
 
 @dataclass
@@ -261,7 +264,7 @@ def get_presentation_visual_snapshot(
         if slide_key:
             critic_by_slide[slide_key] = report
 
-    preview_by_index = _preview_pngs_by_order(preview_paths or [])
+    preview_by_index = map_preview_pngs_by_order(preview_paths or [])
 
     slide_snapshots: list[SlideVisualSnapshot] = []
     validator = LayoutValidationService()
@@ -311,25 +314,6 @@ def get_presentation_visual_snapshot(
         deck_qa_report=deck_qa_report,
         visual_critic_reports=list(visual_critic_reports or []),
     )
-
-
-def _preview_pngs_by_order(render_paths: list[str]) -> dict[int, str]:
-    """Map 0-based slide index → slide_NN.png path from workflow render_paths."""
-    from pathlib import Path
-
-    previews = sorted(
-        [
-            path
-            for path in render_paths
-            if path.lower().endswith(".png")
-            and (
-                "slide_preview" in path.replace("\\", "/").lower()
-                or Path(path).name.lower().startswith("slide_")
-            )
-        ],
-        key=lambda value: Path(value).name,
-    )
-    return {index: path for index, path in enumerate(previews)}
 
 
 def update_art_direction(

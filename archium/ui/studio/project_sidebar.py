@@ -35,6 +35,7 @@ def render_studio_selection(
     visual_critic_reports: list[dict] | None = None,
     deck_qa_report: dict | None = None,
     preview_paths: list[str] | None = None,
+    workflow_output_dir: str | None = None,
 ) -> StudioPresentationContext | None:
     """Render project/presentation pickers and return loaded studio context."""
     _init_studio_session_state()
@@ -109,6 +110,7 @@ def render_studio_selection(
             visual_critic_reports=visual_critic_reports,
             deck_qa_report=deck_qa_report,
             preview_paths=preview_paths,
+            workflow_output_dir=workflow_output_dir,
         )
     if context is None:
         st.error("无法加载汇报上下文。")
@@ -117,5 +119,6 @@ def render_studio_selection(
     readiness = studio_readiness_label(context)
     with selector_cols[2]:
         st.metric("版式就绪", f"{context.layout_ready_count}/{context.slide_count or 0}")
+        st.metric("预览就绪", f"{context.preview_ready_count}/{context.slide_count or 0}")
         st.caption(STATUS_LABELS.get(readiness, readiness))
     return context

@@ -16,14 +16,15 @@ from archium.ui.studio_service import get_selected_slide_snapshot
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel
 
 
-def _workflow_artifacts() -> tuple[list[dict] | None, dict | None, list[str] | None]:
+def _workflow_artifacts() -> tuple[list[dict] | None, dict | None, list[str] | None, str | None]:
     result = st.session_state.get("last_visual_workflow_result")
     if not isinstance(result, VisualWorkflowResult):
-        return None, None, None
+        return None, None, None, None
     deck_qa = result.deck_qa_report if isinstance(result.deck_qa_report, dict) else None
     critics = list(result.visual_critic_reports or [])
     previews = list(result.render_paths or [])
-    return critics, deck_qa, previews
+    output_dir = result.workflow_run.state.get("output_dir")
+    return critics, deck_qa, previews, output_dir if isinstance(output_dir, str) else None
 
 
 def _apply_visual_result(result: object) -> None:
@@ -39,11 +40,12 @@ def render() -> None:
         "高级模式可显示 SlideSpec / LayoutPlan 等技术术语。"
     )
 
-    critics, deck_qa, previews = _workflow_artifacts()
+    critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
     context = render_studio_selection(
         visual_critic_reports=critics,
         deck_qa_report=deck_qa,
         preview_paths=previews,
+        workflow_output_dir=workflow_output_dir,
     )
     if context is None:
         return
