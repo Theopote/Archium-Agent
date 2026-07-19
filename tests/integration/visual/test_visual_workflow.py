@@ -173,6 +173,8 @@ def test_visual_workflow_completes_after_art_direction_approval(
         assert second.succeeded
         assert second.workflow_run.status == WorkflowStatus.COMPLETED
         assert len(second.visual_intent_ids) == len(slides)
+        assert second.workflow_run.state.get("deck_composition_plan_id")
+        assert second.workflow_run.state.get("deck_composition_plan")
         assert len(second.layout_plan_ids) == len(slides)
         assert second.render_paths
         assert any(path.endswith(".json") for path in second.render_paths)

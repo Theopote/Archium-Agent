@@ -8,6 +8,7 @@ from archium.domain.enums import WorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.deck_composition import DeckCompositionPlan
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.preferences import VisualPreferences
 from archium.workflow.visual_state import VisualWorkflowState
@@ -35,6 +36,7 @@ def snapshot_visual_state(state: VisualWorkflowState) -> dict[str, Any]:
     storyline = state.get("storyline")
     design_system = state.get("design_system")
     art_direction = state.get("art_direction")
+    deck_composition_plan = state.get("deck_composition_plan")
     preferences = state.get("preferences")
     slides = state.get("slides", [])
 
@@ -46,6 +48,7 @@ def snapshot_visual_state(state: VisualWorkflowState) -> dict[str, Any]:
         "workflow_run_id": state.get("workflow_run_id"),
         "design_system_id": state.get("design_system_id"),
         "art_direction_id": state.get("art_direction_id"),
+        "deck_composition_plan_id": state.get("deck_composition_plan_id"),
         "slide_ids": list(state.get("slide_ids", [])),
         "visual_intent_ids": list(state.get("visual_intent_ids", [])),
         "layout_plan_ids": list(state.get("layout_plan_ids", [])),
@@ -67,6 +70,7 @@ def snapshot_visual_state(state: VisualWorkflowState) -> dict[str, Any]:
         "repair_diffs": list(state.get("repair_diffs") or []),
         "visual_critic_reports": list(state.get("visual_critic_reports") or []),
         "deck_qa_report": state.get("deck_qa_report"),
+        "deck_composition_plan": _serialize_deck_composition_plan(deck_composition_plan),
         "output_dir": state.get("output_dir"),
         "presentation": presentation.model_dump(mode="json") if presentation else None,
         "brief": brief.model_dump(mode="json") if brief else None,
@@ -87,6 +91,7 @@ def restore_visual_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
         "workflow_run_id": state_data.get("workflow_run_id"),
         "design_system_id": state_data.get("design_system_id"),
         "art_direction_id": state_data.get("art_direction_id"),
+        "deck_composition_plan_id": state_data.get("deck_composition_plan_id"),
         "slide_ids": list(state_data.get("slide_ids") or []),
         "visual_intent_ids": list(state_data.get("visual_intent_ids") or []),
         "layout_plan_ids": list(state_data.get("layout_plan_ids") or []),
@@ -117,6 +122,10 @@ def restore_visual_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
         "deck_qa_report": state_data.get("deck_qa_report"),
         "output_dir": state_data.get("output_dir"),
     }
+    if state_data.get("deck_composition_plan"):
+        restored["deck_composition_plan"] = DeckCompositionPlan.model_validate(
+            state_data["deck_composition_plan"]
+        )
     if state_data.get("presentation"):
         restored["presentation"] = Presentation.model_validate(state_data["presentation"])
     if state_data.get("brief"):
@@ -132,6 +141,18 @@ def restore_visual_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
     if state_data.get("preferences"):
         restored["preferences"] = VisualPreferences.model_validate(state_data["preferences"])
     return restored
+
+
+def _serialize_deck_composition_plan(
+    plan: DeckCompositionPlan | dict[str, object] | None,
+) -> dict[str, object] | None:
+    if plan is None:
+        return None
+    if isinstance(plan, DeckCompositionPlan):
+        return plan.model_dump(mode="json")
+    if isinstance(plan, dict):
+        return DeckCompositionPlan.model_validate(plan).model_dump(mode="json")
+    return None
 
 
 def _strip_forbidden(payload: dict[str, Any]) -> dict[str, Any]:

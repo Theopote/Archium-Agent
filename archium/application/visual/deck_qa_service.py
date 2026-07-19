@@ -13,8 +13,11 @@ from uuid import UUID
 
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.deck_composition import DeckCompositionPlan
 from archium.domain.visual.deck_qa import (
     DECK_CHROME_INCONSISTENT,
+    DECK_COMPOSITION_FAMILY_DEVIATION,
+    DECK_COMPOSITION_INTENSITY_DRIFT,
     DECK_FOOTER_INCONSISTENT,
     DECK_IMAGE_SCALE_INCONSISTENT,
     DECK_PALETTE_DRIFT,
@@ -46,6 +49,23 @@ _SECTION_TYPES = frozenset(
         SlideType.SUMMARY,
     }
 )
+_VISUAL_STRONG_FAMILIES = frozenset(
+    {
+        LayoutFamily.HERO,
+        LayoutFamily.DRAWING_FOCUS,
+        LayoutFamily.EVIDENCE_BOARD,
+        LayoutFamily.HYBRID_CANVAS,
+    }
+)
+_TEXT_FAMILIES = frozenset({LayoutFamily.TEXTUAL_ARGUMENT, LayoutFamily.STRATEGY_CARDS})
+
+
+def _intensity_score_for_plan(plan: LayoutPlan) -> float:
+    if plan.layout_family in _VISUAL_STRONG_FAMILIES:
+        return 1.0 if plan.layout_family == LayoutFamily.HERO else 0.75
+    if plan.layout_family in _TEXT_FAMILIES:
+        return 0.25
+    return 0.5
 
 
 class DeckQAService:
@@ -58,6 +78,7 @@ class DeckQAService:
         slides: Sequence[SlideSpec] | None = None,
         design_system: DesignSystem | None = None,
         palette_strategy: str | None = None,
+        composition_plan: DeckCompositionPlan | None = None,
     ) -> DeckQAReport:
         ordered = list(plans)
         notes: list[str] = []
@@ -101,6 +122,17 @@ class DeckQAService:
         findings.extend(palette_findings)
         if palette_strategy:
             notes.append(f"ArtDirection palette_strategy noted: {palette_strategy[:120]}")
+
+        if composition_plan is not None:
+            composition_findings = self._check_composition_plan(
+                ordered,
+                composition_plan=composition_plan,
+            )
+            findings.extend(composition_findings)
+            if composition_findings:
+                notes.append(
+                    f"Deck composition deviations: {len(composition_findings)} finding(s)."
+                )
 
         dimensions = DeckQADimensions(
             layout_variety=round(layout_variety, 3),
@@ -482,6 +514,62 @@ class DeckQAService:
                 )
             )
         return score, findings
+
+    def _check_composition_plan(
+        self,
+        plans: list[LayoutPlan],
+        *,
+        composition_plan: DeckCompositionPlan,
+    ) -> list[DeckQAFinding]:
+        findings: list[DeckQAFinding] = []
+        plan_by_slide = {plan.slide_id: plan for plan in plans}
+        family_deviations: list[str] = []
+        intensity_deltas: list[float] = []
+
+        for directive in composition_plan.slide_directives:
+            plan = plan_by_slide.get(directive.slide_id)
+            if plan is None:
+                continue
+            expected = (
+                directive.preferred_layout_families[0]
+                if directive.preferred_layout_families
+                else None
+            )
+            if expected is not None and plan.layout_family != expected:
+                family_deviations.append(str(directive.slide_id))
+            if directive.slide_index < len(composition_plan.visual_intensity_curve):
+                planned = composition_plan.visual_intensity_curve[directive.slide_index]
+                actual = _intensity_score_for_plan(plan)
+                intensity_deltas.append(abs(planned - actual))
+
+        if len(family_deviations) >= max(2, len(plans) // 3):
+            findings.append(
+                DeckQAFinding(
+                    rule_code=DECK_COMPOSITION_FAMILY_DEVIATION,
+                    severity=LayoutIssueSeverity.WARNING,
+                    message="实际版式与 DeckCompositionPlan 推荐 family 偏差较多",
+                    suggestion="检查 select_layouts 是否遵循 slide directive 的 preferred families",
+                    slide_ids=family_deviations,
+                    evidence={"deviation_count": len(family_deviations)},
+                )
+            )
+
+        if intensity_deltas and sum(intensity_deltas) / len(intensity_deltas) > 0.35:
+            findings.append(
+                DeckQAFinding(
+                    rule_code=DECK_COMPOSITION_INTENSITY_DRIFT,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="视觉强度曲线与 Composition Plan 存在可感知偏差",
+                    suggestion="确认 hero/transition 页是否按节奏规划生成",
+                    evidence={
+                        "mean_intensity_delta": round(
+                            sum(intensity_deltas) / len(intensity_deltas),
+                            3,
+                        )
+                    },
+                )
+            )
+        return findings
 
     @staticmethod
     def _color_tokens_for_plan(

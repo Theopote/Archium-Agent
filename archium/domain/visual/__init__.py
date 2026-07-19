@@ -8,6 +8,15 @@ from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_PASS_THRESHOLD,
     HumanVisualReview,
 )
+from archium.domain.visual.deck_composition import (
+    DeckCompositionPlan,
+    PacingRole,
+    SectionCompositionPlan,
+    SlideCompositionDirective,
+    VisualIntensity,
+    density_to_score,
+    intensity_to_score,
+)
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
     CRITIC_FOCUS_UNCLEAR,
@@ -21,6 +30,8 @@ from archium.domain.visual.critic import (
 )
 from archium.domain.visual.deck_qa import (
     DECK_CHROME_INCONSISTENT,
+    DECK_COMPOSITION_FAMILY_DEVIATION,
+    DECK_COMPOSITION_INTENSITY_DRIFT,
     DECK_FOOTER_INCONSISTENT,
     DECK_IMAGE_SCALE_INCONSISTENT,
     DECK_PALETTE_DRIFT,
@@ -112,6 +123,8 @@ __all__ = [
     "CRITIC_PAGE_REPETITION",
     "CRITIC_READING_ORDER_AWKWARD",
     "DECK_CHROME_INCONSISTENT",
+    "DECK_COMPOSITION_FAMILY_DEVIATION",
+    "DECK_COMPOSITION_INTENSITY_DRIFT",
     "DECK_FOOTER_INCONSISTENT",
     "DECK_IMAGE_SCALE_INCONSISTENT",
     "DECK_PALETTE_DRIFT",
@@ -150,11 +163,18 @@ __all__ = [
     "ConstraintPriority",
     "ContinuityRole",
     "CropPolicy",
+    "DeckCompositionPlan",
     "DeckQADimensions",
     "DeckQAFinding",
     "DeckQAReport",
     "DecorationLevel",
     "DensityLevel",
+    "PacingRole",
+    "SectionCompositionPlan",
+    "SlideCompositionDirective",
+    "VisualIntensity",
+    "density_to_score",
+    "intensity_to_score",
     "DesignSystem",
     "DesignSystemSource",
     "DrawingDisplayMode",

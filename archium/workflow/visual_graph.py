@@ -99,6 +99,7 @@ class VisualWorkflowGraph:
         builder.add_node("generate_art_direction", nodes.generate_art_direction)
         builder.add_node("await_art_direction_approval", nodes.await_art_direction_approval)
         builder.add_node("generate_visual_intents", nodes.generate_visual_intents)
+        builder.add_node("generate_deck_composition_plan", nodes.generate_deck_composition_plan)
         builder.add_node("generate_layout_candidates", nodes.generate_layout_candidates)
         builder.add_node("select_layouts", nodes.select_layouts)
         builder.add_node("validate_layouts", nodes.validate_layouts)
@@ -136,6 +137,11 @@ class VisualWorkflowGraph:
         )
         builder.add_conditional_edges(
             "generate_visual_intents",
+            _route_on_errors,
+            {"continue": "generate_deck_composition_plan", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "generate_deck_composition_plan",
             _route_on_errors,
             {"continue": "generate_layout_candidates", "finalize": "finalize"},
         )

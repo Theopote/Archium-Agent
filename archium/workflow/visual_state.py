@@ -9,6 +9,7 @@ from archium.domain.enums import WorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.deck_composition import DeckCompositionPlan
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.preferences import VisualPreferences
 
@@ -21,6 +22,7 @@ class VisualWorkflowState(TypedDict, total=False):
     workflow_run_id: str
     design_system_id: str
     art_direction_id: str
+    deck_composition_plan_id: str
     slide_ids: list[str]
     visual_intent_ids: list[str]
     layout_plan_ids: list[str]
@@ -40,6 +42,7 @@ class VisualWorkflowState(TypedDict, total=False):
     slides: list[SlideSpec]
     design_system: DesignSystem | None
     art_direction: ArtDirection | None
+    deck_composition_plan: DeckCompositionPlan | None
     preferences: VisualPreferences | None
 
     require_art_direction_review: bool
@@ -106,6 +109,7 @@ def initial_visual_workflow_state(
         "repair_diffs": [],
         "visual_critic_reports": [],
         "deck_qa_report": None,
+        "deck_composition_plan": None,
         "output_dir": None,
     }
     if design_system_id is not None:

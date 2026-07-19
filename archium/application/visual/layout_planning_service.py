@@ -15,6 +15,7 @@ from archium.application.visual.layout_validation_service import LayoutValidatio
 from archium.config.settings import Settings, get_settings
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.deck_composition import SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily, LayoutValidationStatus, VisualContentType
 from archium.domain.visual.layout import LayoutPlan
@@ -104,6 +105,7 @@ class LayoutPlanningService:
         design_system_id: UUID,
         candidate_count: int = 3,
         project_id: UUID | None = None,
+        deck_directive: SlideCompositionDirective | None = None,
     ) -> list[tuple[LayoutPlan, LayoutValidationReport]]:
         self._warnings.clear()
         intent = self._intents.get(visual_intent_id)
@@ -114,7 +116,14 @@ class LayoutPlanningService:
             raise ValueError(f"DesignSystem {design_system_id} not found")
         art = self._art.get(art_direction_id) if art_direction_id else None
 
-        decisions = self._decide_candidates(slide, intent, art, design, candidate_count)
+        decisions = self._decide_candidates(
+            slide,
+            intent,
+            art,
+            design,
+            candidate_count,
+            deck_directive=deck_directive,
+        )
         content = content_from_slide(slide, intent)
         drawing = intent.dominant_content_type in {
             VisualContentType.SITE_PLAN,
@@ -161,7 +170,24 @@ class LayoutPlanningService:
         return results
 
     def select_best(
-        self, candidates: list[tuple[LayoutPlan, LayoutValidationReport]]
+        self,
+        candidates: list[tuple[LayoutPlan, LayoutValidationReport]],
+        *,
+        deck_directive: SlideCompositionDirective | None = None,
+        previous_layout_plan: LayoutPlan | None = None,
+    ) -> LayoutPlan:
+        return self.select_best_for_deck(
+            candidates,
+            deck_directive=deck_directive,
+            previous_layout_plan=previous_layout_plan,
+        )
+
+    def select_best_for_deck(
+        self,
+        candidates: list[tuple[LayoutPlan, LayoutValidationReport]],
+        *,
+        deck_directive: SlideCompositionDirective | None = None,
+        previous_layout_plan: LayoutPlan | None = None,
     ) -> LayoutPlan:
         if not candidates:
             raise ValueError("no layout candidates to select")
@@ -173,12 +199,53 @@ class LayoutPlanningService:
         pool = non_critical or candidates
         pool_sorted = sorted(
             pool,
-            key=lambda item: (
-                0 if item[1].valid else 1,
-                -(item[1].score),
+            key=lambda item: self._selection_sort_key(
+                item,
+                deck_directive=deck_directive,
+                previous_layout_plan=previous_layout_plan,
             ),
         )
         return pool_sorted[0][0]
+
+    @staticmethod
+    def _selection_sort_key(
+        item: tuple[LayoutPlan, LayoutValidationReport],
+        *,
+        deck_directive: SlideCompositionDirective | None,
+        previous_layout_plan: LayoutPlan | None,
+    ) -> tuple[float, float, float, str]:
+        plan, report = item
+        validity_rank = 0.0 if report.valid else 1.0
+        score_rank = -report.score
+        composition_penalty = 0.0
+        composition_bonus = 0.0
+
+        if deck_directive is not None:
+            if plan.layout_family in deck_directive.forbidden_layout_families:
+                composition_penalty += 1.0
+            preferred = deck_directive.preferred_layout_families
+            if preferred and plan.layout_family == preferred[0]:
+                composition_bonus += 0.08
+            elif preferred and plan.layout_family in preferred[1:]:
+                composition_bonus += 0.03
+
+        if previous_layout_plan is not None:
+            if plan.layout_family == previous_layout_plan.layout_family:
+                if deck_directive is not None and deck_directive.should_contrast_previous:
+                    composition_penalty += 0.12
+                elif deck_directive is not None and deck_directive.should_match_previous:
+                    composition_bonus += 0.05
+                else:
+                    composition_penalty += 0.04
+            if plan.layout_variant == previous_layout_plan.layout_variant:
+                composition_penalty += 0.06
+
+        return (
+            validity_rank + composition_penalty,
+            score_rank - composition_bonus,
+            composition_penalty,
+            str(plan.id),
+        )
 
     def _decide_candidates(
         self,
@@ -187,6 +254,7 @@ class LayoutPlanningService:
         art: ArtDirection | None,
         design: DesignSystem,
         candidate_count: int,
+        deck_directive: SlideCompositionDirective | None = None,
     ) -> list[LayoutDecisionDraft]:
         asset_count = (
             (1 if intent.hero_asset_id else 0) + len(intent.supporting_asset_ids)
@@ -201,6 +269,7 @@ class LayoutPlanningService:
                     preferred=list(intent.preferred_layout_families),
                 )
             ]
+            allowed = self._filter_allowed_families(allowed, deck_directive)
             try:
                 draft = self._llm.generate_structured(
                     LLMRequest(
@@ -217,7 +286,12 @@ class LayoutPlanningService:
                 )
                 if draft.layout_family in allowed:
                     primary = draft
-                    extras = self._rule_decisions(intent, asset_count, candidate_count)
+                    extras = self._rule_decisions(
+                        intent,
+                        asset_count,
+                        candidate_count,
+                        deck_directive=deck_directive,
+                    )
                     merged = [primary]
                     for extra in extras:
                         if extra.layout_family == primary.layout_family and (
@@ -227,8 +301,17 @@ class LayoutPlanningService:
                         merged.append(extra)
                         if len(merged) >= candidate_count:
                             break
-                    return merged[:candidate_count]
-                fallback = self._rule_decisions(intent, asset_count, candidate_count)
+                    return self._apply_directive_to_decisions(
+                        merged[:candidate_count],
+                        deck_directive,
+                        candidate_count,
+                    )
+                fallback = self._rule_decisions(
+                    intent,
+                    asset_count,
+                    candidate_count,
+                    deck_directive=deck_directive,
+                )
                 self._record_llm_fallback(
                     error_type="DisallowedLayoutFamily",
                     fallback_family=fallback[0].layout_family,
@@ -236,14 +319,24 @@ class LayoutPlanningService:
                 )
                 return fallback
             except Exception as exc:
-                fallback = self._rule_decisions(intent, asset_count, candidate_count)
+                fallback = self._rule_decisions(
+                    intent,
+                    asset_count,
+                    candidate_count,
+                    deck_directive=deck_directive,
+                )
                 self._record_llm_fallback(
                     error_type=type(exc).__name__,
                     fallback_family=fallback[0].layout_family,
                 )
                 return fallback
 
-        return self._rule_decisions(intent, asset_count, candidate_count)
+        return self._rule_decisions(
+            intent,
+            asset_count,
+            candidate_count,
+            deck_directive=deck_directive,
+        )
 
     def _record_llm_fallback(
         self,
@@ -298,14 +391,25 @@ class LayoutPlanningService:
         intent: VisualIntent,
         asset_count: int,
         candidate_count: int,
+        deck_directive: SlideCompositionDirective | None = None,
     ) -> list[LayoutDecisionDraft]:
+        preferred = list(intent.preferred_layout_families)
+        if deck_directive is not None:
+            preferred = list(
+                dict.fromkeys([*deck_directive.preferred_layout_families, *preferred])
+            )
         definitions = self._registry.candidates_for(
             intent.dominant_content_type,
             asset_count=max(asset_count, 0),
-            preferred=list(intent.preferred_layout_families),
+            preferred=preferred,
         )
         decisions: list[LayoutDecisionDraft] = []
         for definition in definitions:
+            if (
+                deck_directive is not None
+                and definition.family in deck_directive.forbidden_layout_families
+            ):
+                continue
             for variant in definition.supported_variants:
                 decisions.append(
                     LayoutDecisionDraft(
@@ -324,7 +428,11 @@ class LayoutPlanningService:
                     )
                 )
                 if len(decisions) >= candidate_count:
-                    return decisions
+                    return self._apply_directive_to_decisions(
+                        decisions,
+                        deck_directive,
+                        candidate_count,
+                    )
         if not decisions:
             decisions.append(
                 LayoutDecisionDraft(
@@ -334,7 +442,55 @@ class LayoutPlanningService:
                     density_adjustment=intent.density_level.value,
                 )
             )
-        return decisions
+        return self._apply_directive_to_decisions(decisions, deck_directive, candidate_count)
+
+    @staticmethod
+    def _filter_allowed_families(
+        allowed: list[str],
+        deck_directive: SlideCompositionDirective | None,
+    ) -> list[str]:
+        if deck_directive is None:
+            return allowed
+        forbidden = {family.value for family in deck_directive.forbidden_layout_families}
+        filtered = [family for family in allowed if family not in forbidden]
+        if deck_directive.preferred_layout_families:
+            preferred = [family.value for family in deck_directive.preferred_layout_families]
+            ordered = [family for family in preferred if family in filtered]
+            ordered.extend(family for family in filtered if family not in ordered)
+            return ordered or filtered or allowed
+        return filtered or allowed
+
+    @staticmethod
+    def _apply_directive_to_decisions(
+        decisions: list[LayoutDecisionDraft],
+        deck_directive: SlideCompositionDirective | None,
+        candidate_count: int,
+    ) -> list[LayoutDecisionDraft]:
+        if deck_directive is None or not decisions:
+            return decisions[:candidate_count]
+        forbidden = {family.value for family in deck_directive.forbidden_layout_families}
+        filtered = [item for item in decisions if item.layout_family not in forbidden]
+        pool = filtered or list(decisions)
+        if deck_directive.preferred_layout_families:
+            preferred = [family.value for family in deck_directive.preferred_layout_families]
+
+            def sort_key(item: LayoutDecisionDraft) -> tuple[int, str]:
+                if item.layout_family in preferred:
+                    return preferred.index(item.layout_family), item.layout_variant
+                return len(preferred), item.layout_family
+
+            pool = sorted(pool, key=sort_key)
+        deduped: list[LayoutDecisionDraft] = []
+        seen: set[tuple[str, str]] = set()
+        for item in pool:
+            key = (item.layout_family, item.layout_variant)
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(item)
+            if len(deduped) >= candidate_count:
+                break
+        return deduped
 
 
 def format_layout_decision_warnings(warnings: list[dict[str, Any]]) -> list[str]:

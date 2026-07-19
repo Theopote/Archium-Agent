@@ -55,6 +55,7 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.VISUAL_GENERATE_ART_DIRECTION.value: "生成视觉方向",
     WorkflowStep.VISUAL_AWAIT_ART_DIRECTION_APPROVAL.value: "等待视觉方向审核",
     WorkflowStep.VISUAL_GENERATE_INTENTS.value: "生成页面视觉意图",
+    WorkflowStep.VISUAL_GENERATE_DECK_COMPOSITION.value: "规划整套视觉节奏",
     WorkflowStep.VISUAL_GENERATE_LAYOUT_CANDIDATES.value: "生成版式候选",
     WorkflowStep.VISUAL_SELECT_LAYOUTS.value: "选择版式方案",
     WorkflowStep.VISUAL_VALIDATE_LAYOUTS.value: "校验版式",
@@ -62,6 +63,7 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.VISUAL_APPLY_SAFE_FALLBACK.value: "应用安全回退版式",
     WorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value: "等待版式审核",
     WorkflowStep.VISUAL_RENDER.value: "渲染 PPTX",
+    WorkflowStep.VISUAL_CRITIQUE.value: "整套一致性检查",
     WorkflowStep.VISUAL_FINALIZE.value: "完成视觉编排",
 }
 

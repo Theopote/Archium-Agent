@@ -509,6 +509,7 @@ class WorkflowStep(StrEnum):
     VISUAL_GENERATE_ART_DIRECTION = "visual_generate_art_direction"
     VISUAL_AWAIT_ART_DIRECTION_APPROVAL = "visual_await_art_direction_approval"
     VISUAL_GENERATE_INTENTS = "visual_generate_intents"
+    VISUAL_GENERATE_DECK_COMPOSITION = "visual_generate_deck_composition"
     VISUAL_GENERATE_LAYOUT_CANDIDATES = "visual_generate_layout_candidates"
     VISUAL_SELECT_LAYOUTS = "visual_select_layouts"
     VISUAL_VALIDATE_LAYOUTS = "visual_validate_layouts"

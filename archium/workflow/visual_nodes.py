@@ -16,6 +16,7 @@ from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
 )
+from archium.application.visual.deck_composition_service import DeckCompositionPlanningService
 from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_planning_service import (
     LayoutPlanningService,
@@ -28,6 +29,7 @@ from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
+from archium.domain.visual.deck_composition import DeckCompositionPlan
 from archium.domain.visual.enums import LayoutValidationStatus
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
@@ -40,6 +42,7 @@ from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
     LayoutPlanRepository,
+    VisualIntentRepository,
 )
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
@@ -51,6 +54,18 @@ from archium.workflow.visual_validation_routing import (
     report_has_blocking_issues,
     reports_blocking_summary,
 )
+
+
+def composition_plan_from_state(state: VisualWorkflowState) -> DeckCompositionPlan | None:
+    """Normalize deck composition plan from graph state or persisted snapshot."""
+    plan = state.get("deck_composition_plan")
+    if plan is None:
+        return None
+    if isinstance(plan, DeckCompositionPlan):
+        return plan
+    if isinstance(plan, dict):
+        return DeckCompositionPlan.model_validate(plan)
+    return None
 
 
 class VisualWorkflowRuntime:
@@ -86,6 +101,7 @@ class VisualWorkflowRuntime:
             llm_model=getattr(settings, "visual_critic_llm_model", None),
         )
         self.deck_qa_service = DeckQAService()
+        self.deck_composition_service = DeckCompositionPlanningService()
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
             settings, session=session
         )
@@ -385,16 +401,82 @@ class VisualWorkflowNodes:
             logger.exception("generate_visual_intents failed: %s", exc)
             return {"errors": [str(exc)], "current_step": step}
 
+    def generate_deck_composition_plan(self, state: VisualWorkflowState) -> VisualWorkflowState:
+        logger = self._logger(state)
+        step = WorkflowStep.VISUAL_GENERATE_DECK_COMPOSITION.value
+        if state.get("errors"):
+            return {"current_step": step}
+        try:
+            slides = sorted(list(state.get("slides") or []), key=lambda item: item.order)
+            art = state.get("art_direction")
+            art_id = state.get("art_direction_id")
+            if art is None or art_id is None:
+                return {"errors": ["ArtDirection missing"], "current_step": step}
+
+            intents = []
+            for slide in slides:
+                if slide.visual_intent_id is None:
+                    return {
+                        "errors": [f"Slide {slide.id} is missing visual_intent_id"],
+                        "current_step": step,
+                    }
+                intent = VisualIntentRepository(self._runtime.session).get(
+                    slide.visual_intent_id
+                )
+                if intent is None:
+                    return {
+                        "errors": [f"VisualIntent {slide.visual_intent_id} not found"],
+                        "current_step": step,
+                    }
+                intents.append(intent)
+
+            plan = self._runtime.deck_composition_service.plan(
+                presentation_id=UUID(str(state["presentation_id"])),
+                art_direction_id=UUID(art_id),
+                slides=slides,
+                visual_intents=intents,
+                art_direction=art,
+                auto_approve=True,
+            )
+
+            output_dir = Path(state.get("output_dir") or ".")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            plan_path = output_dir / "deck_composition_plan.json"
+            plan_path.write_text(
+                json.dumps(plan.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            next_state: VisualWorkflowState = {
+                "deck_composition_plan_id": str(plan.id),
+                "deck_composition_plan": plan,
+                "current_step": step,
+            }
+            render_paths = list(state.get("render_paths") or [])
+            render_paths.append(str(plan_path))
+            next_state["render_paths"] = render_paths
+            merged = cast(VisualWorkflowState, {**state, **next_state})
+            self._persist(merged)
+            logger.info(
+                "Generated deck composition plan with %s slide directives",
+                len(plan.slide_directives),
+            )
+            return next_state
+        except Exception as exc:
+            logger.exception("generate_deck_composition_plan failed: %s", exc)
+            return {"errors": [str(exc)], "current_step": step}
+
     def generate_layout_candidates(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
         step = WorkflowStep.VISUAL_GENERATE_LAYOUT_CANDIDATES.value
         if state.get("errors"):
             return {"current_step": step}
         try:
-            slides = list(state.get("slides") or [])
+            slides = sorted(list(state.get("slides") or []), key=lambda item: item.order)
             art_id = state.get("art_direction_id")
             design_id = UUID(state["design_system_id"])
             candidate_count = int(state.get("candidate_count", 3))
+            composition_plan = composition_plan_from_state(state)
             by_slide: dict[str, list[str]] = {}
             decision_warnings: list[str] = []
 
@@ -404,6 +486,11 @@ class VisualWorkflowNodes:
                         "errors": [f"Slide {slide.id} is missing visual_intent_id"],
                         "current_step": step,
                     }
+                directive = (
+                    composition_plan.directive_for_slide(slide.id)
+                    if composition_plan is not None
+                    else None
+                )
                 candidates = self._runtime.layout_planning_service.generate_candidates(
                     slide=slide,
                     visual_intent_id=slide.visual_intent_id,
@@ -413,6 +500,7 @@ class VisualWorkflowNodes:
                     project_id=UUID(str(state["project_id"]))
                     if state.get("project_id")
                     else None,
+                    deck_directive=directive,
                 )
                 decision_warnings.extend(
                     format_layout_decision_warnings(
@@ -451,9 +539,11 @@ class VisualWorkflowNodes:
                 return {"errors": ["DesignSystem missing"], "current_step": step}
 
             by_slide = dict(state.get("candidate_plan_ids_by_slide") or {})
+            composition_plan = composition_plan_from_state(state)
             selected_ids: list[str] = []
             updated_slides = []
-            for slide in list(state.get("slides") or []):
+            previous_plan: LayoutPlan | None = None
+            for slide in sorted(list(state.get("slides") or []), key=lambda item: item.order):
                 candidate_ids = by_slide.get(str(slide.id), [])
                 pairs = []
                 for plan_id in candidate_ids:
@@ -479,8 +569,18 @@ class VisualWorkflowNodes:
                         "errors": [f"No layout candidates for slide {slide.id}"],
                         "current_step": step,
                     }
-                best = self._runtime.layout_planning_service.select_best(pairs)
+                directive = (
+                    composition_plan.directive_for_slide(slide.id)
+                    if composition_plan is not None
+                    else None
+                )
+                best = self._runtime.layout_planning_service.select_best_for_deck(
+                    pairs,
+                    deck_directive=directive,
+                    previous_layout_plan=previous_plan,
+                )
                 saved = self._runtime.layout_plans.save(best)
+                previous_plan = saved
                 slide.layout_plan_id = saved.id
                 self._runtime.presentations.save_slide(slide)
                 selected_ids.append(str(saved.id))
@@ -1024,6 +1124,7 @@ class VisualWorkflowNodes:
 
             if deck_on:
                 art = state.get("art_direction")
+                composition_plan = composition_plan_from_state(state)
                 deck_report = self._runtime.deck_qa_service.evaluate(
                     plans,
                     slides=list(state.get("slides") or []),
@@ -1031,6 +1132,7 @@ class VisualWorkflowNodes:
                     palette_strategy=(
                         art.palette_strategy if art is not None else None
                     ),
+                    composition_plan=composition_plan,
                 )
                 deck_payload = deck_report.model_dump(mode="json")
                 for deck_finding in deck_report.findings:
