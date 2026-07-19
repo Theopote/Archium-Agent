@@ -37,6 +37,7 @@ data/database/*.db-shm
 data/projects/
 data/chroma/
 data/outputs/
+data/tmp/
 output/
 
 # Logs
