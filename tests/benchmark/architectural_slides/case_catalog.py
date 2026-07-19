@@ -847,6 +847,140 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         source_document="政策梳理.pdf",
         source_page=5,
     ),
+    # ────────────────────────────────────────────────────────────────────────────
+    # Edge Cases (031-034): Test boundary conditions and challenging scenarios
+    # ────────────────────────────────────────────────────────────────────────────
+    CaseCatalogEntry(
+        definition=_definition(
+            "edge_031_minimal_content",
+            title="极少内容场景",
+            category=ArchitecturalSlideCategory.TEXT_NARRATIVE,
+            page_type="极简文字页",
+            page_task="测试系统处理极少内容的能力：仅标题，无要点，无素材。",
+            visual_focus="标题应清晰展示，留白应充足但不过度空旷。",
+            expected_layout_family=LayoutFamily.TEXTUAL_ARGUMENT,
+            allowed_layout_variants=("lead_and_points", "quote_argument", "two_column_text"),
+            layout_variant="lead_and_points",
+            chapter_id="edge_cases",
+            slide_order=31,
+        ),
+        slide_title="设计原则",
+        message="以人为本。",
+        key_points=(),  # 无要点
+        metrics=(),
+        assets=(),  # 无素材
+        dominant_content_type=VisualContentType.TEXT_ARGUMENT,
+        preferred_layout_families=(LayoutFamily.TEXTUAL_ARGUMENT,),
+        source_document="简报.pdf",
+        source_page=1,
+    ),
+    CaseCatalogEntry(
+        definition=_definition(
+            "edge_032_excessive_content",
+            title="极多内容场景",
+            category=ArchitecturalSlideCategory.DATA_METRICS,
+            page_type="密集指标页",
+            page_task="测试系统处理过多内容的能力：10+ 要点，多个指标。",
+            visual_focus="应能合理组织大量信息，避免拥挤，保持可读性。",
+            expected_layout_family=LayoutFamily.METRIC_GRID,
+            allowed_layout_variants=("metric_grid_2x3", "metric_grid_3x2", "metric_list"),
+            layout_variant="metric_grid_3x2",
+            chapter_id="edge_cases",
+            slide_order=32,
+        ),
+        slide_title="全专业技术指标汇总",
+        message="汇总建筑、结构、机电、景观、装修五大专业核心技术指标。",
+        key_points=(
+            "建筑面积 45,000㎡",
+            "结构形式：框架剪力墙",
+            "抗震设防：8度",
+            "给排水：市政+中水",
+            "暖通：VAV变风量系统",
+            "电气：双路供电+应急",
+            "弱电：智能化集成平台",
+            "消防：自动喷淋+报警",
+            "景观：屋顶绿化 2,000㎡",
+            "装修：医疗专用材料",
+            "节能：三星绿建标准",
+        ),
+        metrics=(
+            "容积率 2.8",
+            "绿地率 35%",
+            "停车位 450个",
+        ),
+        dominant_content_type=VisualContentType.QUANTITATIVE_DATA,
+        preferred_layout_families=(LayoutFamily.METRIC_GRID,),
+        source_document="技术指标表.xlsx",
+        source_page=1,
+    ),
+    CaseCatalogEntry(
+        definition=_definition(
+            "edge_033_no_assets",
+            title="无素材场景",
+            category=ArchitecturalSlideCategory.TEXT_NARRATIVE,
+            page_type="纯文字页",
+            page_task="测试系统处理无图片素材的能力：仅文字内容。",
+            visual_focus="文字层次应清晰，排版应舒适，不因缺少图片显得单调。",
+            expected_layout_family=LayoutFamily.TEXTUAL_ARGUMENT,
+            allowed_layout_variants=("lead_and_points", "two_column_text", "quote_argument"),
+            layout_variant="lead_and_points",
+            chapter_id="edge_cases",
+            slide_order=33,
+        ),
+        slide_title="设计策略与实施路径",
+        message="项目采用"功能主导、景观渗透、分期实施"三大策略，通过近中远期规划确保医院持续运营。",
+        key_points=(
+            "功能主导：医疗流线优先，避免交叉感染",
+            "景观渗透：内庭院系统改善就医环境",
+            "分期实施：三期建设，不影响运营",
+            "技术集成：智能化平台统一管理",
+            "绿色建筑：达到三星绿建标准",
+        ),
+        assets=(),  # 无素材
+        dominant_content_type=VisualContentType.TEXT_ARGUMENT,
+        preferred_layout_families=(LayoutFamily.TEXTUAL_ARGUMENT,),
+        source_document="方案说明.pdf",
+        source_page=8,
+    ),
+    CaseCatalogEntry(
+        definition=_definition(
+            "edge_034_conflicting_assets",
+            title="冲突素材场景",
+            category=ArchitecturalSlideCategory.CASE_COMPARISON,
+            page_type="混合构图对比页",
+            page_task="测试系统处理横竖构图混合的能力：横向照片 + 竖向立面图。",
+            visual_focus="应合理布局不同比例的素材，避免变形或裁剪不当。",
+            expected_layout_family=LayoutFamily.EVIDENCE_BOARD,
+            allowed_layout_variants=("image_grid_2x2", "image_grid_3x1", "split_comparison"),
+            layout_variant="image_grid_2x2",
+            chapter_id="edge_cases",
+            slide_order=34,
+        ),
+        slide_title="现状照片与改造立面",
+        message="对比现状建筑照片（横图）与改造后立面图（竖图），展示改造前后变化。",
+        key_points=(
+            "现状：外立面老旧，缺乏识别性",
+            "改造：统一材质，增强标识系统",
+            "色彩：采用医疗建筑常用白色+蓝色",
+            "细节：增加遮阳百叶，提升节能",
+        ),
+        assets=(
+            _asset(34, 1, VisualType.PHOTO, "现状建筑照片（横图）"),  # 横向照片
+            _asset(34, 2, VisualType.ELEVATION, "改造后南立面图（竖图）"),  # 竖向立面图
+            _asset(34, 3, VisualType.PHOTO, "现状入口照片（横图）"),  # 横向照片
+            _asset(34, 4, VisualType.ELEVATION, "改造后东立面图（竖图）"),  # 竖向立面图
+        ),
+        hero_asset_id=catalog_asset_uuid(34, 1),
+        supporting_asset_ids=(
+            catalog_asset_uuid(34, 2),
+            catalog_asset_uuid(34, 3),
+            catalog_asset_uuid(34, 4),
+        ),
+        dominant_content_type=VisualContentType.COMPARATIVE_EVIDENCE,
+        preferred_layout_families=(LayoutFamily.EVIDENCE_BOARD,),
+        source_document="现状调研.pdf",
+        source_page=12,
+    ),
 )
 
 _CATALOG_BY_ID: dict[str, CaseCatalogEntry] = {item.definition.case_id: item for item in CASE_CATALOG}
