@@ -29,6 +29,7 @@ from archium.domain.visual.edit_intent import (
     intent_from_preset,
     parse_natural_language,
 )
+from archium.domain.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.element_lock import (
     ElementEditOperation,
     assert_element_editable,
@@ -78,6 +79,10 @@ class VisualEditService:
         self._design_repo = DesignSystemRepository(session)
         self._history = VisualHistoryService(session)
 
+        # 初始化混合解析器
+        llm_provider = create_llm_provider(self._settings) if self._use_llm else None
+        self._hybrid_parser = create_hybrid_parser(llm_provider, use_llm=self._use_llm)
+
     def apply_text(
         self,
         slide_id: UUID,
@@ -85,9 +90,18 @@ class VisualEditService:
         *,
         candidate_count: int = 3,
     ) -> VisualEditResult:
-        intent, params = parse_natural_language(text)
-        if intent is None:
-            raise WorkflowError("无法识别修改意图。请使用预设按钮或更明确的描述。")
+        # 使用混合解析器
+        parsed = self._hybrid_parser.parse(text)
+
+        if parsed is None:
+            # 回退到原始解析器
+            intent, params = parse_natural_language(text)
+            if intent is None:
+                raise WorkflowError("无法识别修改意图。请使用预设按钮或更明确的描述。")
+        else:
+            intent = parsed.intent
+            params = parsed.params
+
         return self.apply_intent(
             slide_id,
             intent,
