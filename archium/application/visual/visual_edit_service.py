@@ -14,6 +14,8 @@ from archium.application.visual.asset_reference import (
 )
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.operation_decomposer import OperationDecomposer
+from archium.application.visual.transaction_executor import TransactionExecutor
 from archium.application.visual.visual_history_service import VisualHistoryService
 from archium.application.visual.visual_intent_presets import (
     apply_hero_asset,
@@ -36,6 +38,7 @@ from archium.domain.visual.element_lock import (
 )
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.slide import SlideSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -83,6 +86,10 @@ class VisualEditService:
         llm_provider = create_llm_provider(self._settings) if self._use_llm else None
         self._hybrid_parser = create_hybrid_parser(llm_provider, use_llm=self._use_llm)
 
+        # 初始化事务执行组件
+        self._decomposer = OperationDecomposer()
+        self._transaction_executor = TransactionExecutor(session, self._history)
+
     def apply_text(
         self,
         slide_id: UUID,
@@ -98,16 +105,36 @@ class VisualEditService:
             intent, params = parse_natural_language(text)
             if intent is None:
                 raise WorkflowError("无法识别修改意图。请使用预设按钮或更明确的描述。")
+            # 单一意图，使用原有路径
+            return self.apply_intent(
+                slide_id,
+                intent,
+                params=params,
+                candidate_count=candidate_count,
+            )
+
+        # 检查是否为复合操作
+        has_constraints = any(m.type.value == "constraint" for m in parsed.modifiers)
+        has_multi_step = any(m.type.value == "multi_step" for m in parsed.modifiers)
+        is_composite = has_constraints or has_multi_step or "multi_step_operations" in parsed.params
+
+        if is_composite:
+            # 使用事务执行路径处理复合操作
+            return self._apply_composite_operation(
+                slide_id,
+                parsed,
+                candidate_count=candidate_count,
+            )
         else:
+            # 单一意图，使用原有路径
             intent = parsed.intent
             params = parsed.params
-
-        return self.apply_intent(
-            slide_id,
-            intent,
-            params=params,
-            candidate_count=candidate_count,
-        )
+            return self.apply_intent(
+                slide_id,
+                intent,
+                params=params,
+                candidate_count=candidate_count,
+            )
 
     def apply_intent(
         self,
@@ -244,6 +271,94 @@ class VisualEditService:
             validation=validation,
             restored=True,
             message="已恢复到上一版视觉状态。",
+        )
+
+    def _apply_composite_operation(
+        self,
+        slide_id: UUID,
+        parsed_intent: object,  # ParsedIntent from nlp_parser
+        candidate_count: int = 3,
+    ) -> VisualEditResult:
+        """
+        Apply a composite operation using transaction executor.
+
+        Handles:
+        - Constraint extraction (locks)
+        - Multi-step operation sequencing
+        - Atomic execution with rollback on failure
+        """
+        slide = self._require_slide(slide_id)
+        current_intent = self._load_intent(slide)
+        current_plan = self._load_plan(slide)
+
+        # Record pre-transaction state
+        self._history.record_state(
+            slide=slide,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+            change_source=RevisionSource.MANUAL_EDIT,
+            note=f"before_composite_operation: {parsed_intent.intent.value}",
+        )
+
+        # Build slide snapshot for decomposition
+        from archium.domain.visual.slide import SlideSnapshot
+        slide_snapshot = SlideSnapshot(
+            slide_id=slide.id,
+            presentation_id=slide.presentation_id,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+        )
+
+        # Decompose into atomic operations
+        try:
+            operations = self._decomposer.decompose(parsed_intent, slide_snapshot)
+        except Exception as e:
+            raise WorkflowError(f"无法分解复合操作: {str(e)}")
+
+        # Execute as transaction
+        result = self._transaction_executor.execute_transaction(
+            operations=operations,
+            slide_id=slide_id,
+            slide_snapshot=slide_snapshot,
+            intents_repo=self._intents,
+            plans_repo=self._plans,
+            presentations_repo=self._presentations,
+        )
+
+        if not result.success:
+            error_msg = f"操作失败"
+            if result.error_at_step is not None:
+                error_msg += f" (第{result.error_at_step + 1}步)"
+            if result.error:
+                error_msg += f": {str(result.error)}"
+            raise WorkflowError(error_msg)
+
+        # Reload updated state
+        slide = self._require_slide(slide_id)
+        updated_intent = self._load_intent(slide)
+        updated_plan = self._load_plan(slide)
+
+        # Validate and cache invalidation
+        validation = None
+        design = self._resolve_design_system(slide, updated_intent)
+        if updated_plan is not None and design is not None:
+            validation = LayoutValidationService().validate(
+                updated_plan,
+                design,
+                require_source=True,
+                drawing_hero=updated_plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+            )
+        if updated_plan is not None:
+            self._invalidate_preview_cache(slide.presentation_id, updated_plan)
+
+        return VisualEditResult(
+            slide_id=slide.id,
+            intent=parsed_intent.intent,
+            visual_intent=updated_intent,
+            layout_plan=updated_plan,
+            validation=validation,
+            restored=False,
+            message=f"已执行复合操作 ({len(result.executed_operations)} 步)",
         )
 
     def _apply_element_direct_edit(

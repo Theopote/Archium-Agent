@@ -1,0 +1,305 @@
+"""Decompose parsed intents into atomic operations for transactional execution."""
+
+from __future__ import annotations
+
+import re
+from uuid import UUID
+
+from archium.domain.visual.atomic_operation import (
+    AtomicOperation,
+    ChangeLayoutOperation,
+    EnlargeHeroOperation,
+    IncreaseWhitespaceOperation,
+    LockOperation,
+    MoveOperation,
+    ReduceTextOperation,
+    ResizeOperation,
+    UnlockOperation,
+    intent_to_operation_type,
+    OperationType,
+)
+from archium.domain.visual.edit_intent import VisualEditIntent
+from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.nlp_parser import ModifierType, ParsedIntent
+from archium.domain.visual.slide import SlideSnapshot
+from archium.infrastructure.error_framework import WorkflowError
+
+
+class OperationDecomposer:
+    """
+    Decompose complex parsed intents into sequences of atomic operations.
+
+    Handles:
+    - Constraint extraction (lock/preserve operations)
+    - Multi-step operation sequencing
+    - Semantic operation expansion
+    - Relative adjustment translation
+    """
+
+    def decompose(
+        self,
+        parsed_intent: ParsedIntent,
+        slide_snapshot: SlideSnapshot,
+    ) -> list[AtomicOperation]:
+        """
+        Decompose a parsed intent into atomic operations.
+
+        Operations are ordered:
+        1. Lock operations (from constraints)
+        2. Main operation
+        3. Additional operations (from multi-step)
+
+        Args:
+            parsed_intent: The parsed natural language intent
+            slide_snapshot: Current slide state for element resolution
+
+        Returns:
+            List of atomic operations in execution order
+
+        Raises:
+            WorkflowError: If intent cannot be decomposed
+        """
+        operations: list[AtomicOperation] = []
+
+        # Step 1: Extract lock operations from constraints
+        lock_ops = self._extract_lock_operations(
+            parsed_intent.modifiers,
+            slide_snapshot,
+        )
+        operations.extend(lock_ops)
+
+        # Step 2: Create main operation
+        main_op = self._create_main_operation(
+            parsed_intent.intent,
+            parsed_intent.params,
+            slide_snapshot,
+        )
+        if main_op:
+            operations.append(main_op)
+
+        # Step 3: Extract multi-step operations
+        multi_step_ops = self._extract_multi_step_operations(
+            parsed_intent.params,
+            slide_snapshot,
+        )
+        operations.extend(multi_step_ops)
+
+        if not operations:
+            raise WorkflowError(
+                f"Cannot decompose intent {parsed_intent.intent}: no valid operations"
+            )
+
+        return operations
+
+    def _extract_lock_operations(
+        self,
+        modifiers: list,
+        slide_snapshot: SlideSnapshot,
+    ) -> list[AtomicOperation]:
+        """Extract lock operations from constraint modifiers."""
+        lock_ops: list[AtomicOperation] = []
+
+        for modifier in modifiers:
+            if modifier.type != ModifierType.CONSTRAINT:
+                continue
+
+            # Check if this is a "preserve" or "keep unchanged" constraint
+            if modifier.value in ("preserve", "dont_touch"):
+                element_id = self._resolve_element_name(
+                    modifier.target,
+                    slide_snapshot,
+                )
+                if element_id:
+                    lock_ops.append(LockOperation(element_id))
+
+        return lock_ops
+
+    def _create_main_operation(
+        self,
+        intent: VisualEditIntent,
+        params: dict,
+        slide_snapshot: SlideSnapshot,
+    ) -> AtomicOperation | None:
+        """Create the main operation from the intent."""
+        # Special handling for restore (not a regular operation)
+        if intent == VisualEditIntent.RESTORE_PREVIOUS:
+            return None
+
+        # Map intent to operation type
+        try:
+            op_type = intent_to_operation_type(intent)
+        except ValueError:
+            raise WorkflowError(f"Cannot map intent {intent} to operation")
+
+        # Build operation based on type
+        if op_type == OperationType.CHANGE_LAYOUT:
+            layout_family = params.get("layout_family")
+            if not layout_family:
+                raise WorkflowError("change_layout requires layout_family parameter")
+            return ChangeLayoutOperation(layout_family)
+
+        elif op_type == OperationType.ENLARGE_HERO:
+            # Apply relative adjustment if present
+            scale_factor = 1.3
+            if "adjustment_strength" in params:
+                # Scale the adjustment: 0.3 strength -> 1.09x, 0.8 strength -> 1.24x
+                strength = params["adjustment_strength"]
+                scale_factor = 1.0 + (0.3 * strength)
+            return EnlargeHeroOperation(scale_factor)
+
+        elif op_type == OperationType.REDUCE_TEXT:
+            element_id = params.get("element_id")
+            if element_id:
+                element_id = self._resolve_element_name(element_id, slide_snapshot)
+            reduce_lines = params.get("reduce_lines")
+            return ReduceTextOperation(element_id, reduce_lines)
+
+        elif op_type == OperationType.INCREASE_WHITESPACE:
+            return IncreaseWhitespaceOperation()
+
+        elif op_type == OperationType.LOCK:
+            element_id = params.get("element_id")
+            if not element_id:
+                raise WorkflowError("lock operation requires element_id")
+            element_id = self._resolve_element_name(element_id, slide_snapshot)
+            if not element_id:
+                raise WorkflowError(f"Cannot resolve element: {params.get('element_id')}")
+            return LockOperation(element_id)
+
+        elif op_type == OperationType.UNLOCK:
+            element_id = params.get("element_id")
+            if not element_id:
+                raise WorkflowError("unlock operation requires element_id")
+            element_id = self._resolve_element_name(element_id, slide_snapshot)
+            if not element_id:
+                raise WorkflowError(f"Cannot resolve element: {params.get('element_id')}")
+            return UnlockOperation(element_id)
+
+        else:
+            # Generic operation - wrap params directly
+            return AtomicOperation(
+                operation_type=op_type,
+                target_element_id=params.get("element_id"),
+                params=params,
+            )
+
+    def _extract_multi_step_operations(
+        self,
+        params: dict,
+        slide_snapshot: SlideSnapshot,
+    ) -> list[AtomicOperation]:
+        """Extract additional operations from multi_step_operations parameter."""
+        multi_step_ops: list[AtomicOperation] = []
+
+        if "multi_step_operations" not in params:
+            return multi_step_ops
+
+        for step in params["multi_step_operations"]:
+            if not isinstance(step, dict):
+                continue
+
+            operation_name = step.get("operation")
+            targets = step.get("targets", [])
+
+            if operation_name == "move_to" and len(targets) >= 2:
+                # Move element to position
+                element_name = targets[0]
+                position = targets[1] if len(targets) > 1 else "right"
+                element_id = self._resolve_element_name(element_name, slide_snapshot)
+                if element_id:
+                    multi_step_ops.append(
+                        MoveOperation(element_id, position, preserve_size=True)
+                    )
+
+            elif operation_name == "swap" and len(targets) >= 2:
+                # Swap two elements (requires two move operations)
+                elem1 = self._resolve_element_name(targets[0], slide_snapshot)
+                elem2 = self._resolve_element_name(targets[1], slide_snapshot)
+                if elem1 and elem2:
+                    # Note: actual swap requires storing positions first
+                    # For now, just create move operations
+                    multi_step_ops.append(
+                        MoveOperation(elem1, "temp", preserve_size=True)
+                    )
+                    multi_step_ops.append(
+                        MoveOperation(elem2, f"position_of_{targets[0]}", preserve_size=True)
+                    )
+                    multi_step_ops.append(
+                        MoveOperation(elem1, f"position_of_{targets[1]}", preserve_size=True)
+                    )
+
+        # Also check for inline "reduce_lines" operations
+        if "reduce_lines" in params and params["reduce_lines"]:
+            # This is an additional reduction operation
+            element_id = params.get("reduce_text_element")
+            if element_id:
+                element_id = self._resolve_element_name(element_id, slide_snapshot)
+            multi_step_ops.append(
+                ReduceTextOperation(element_id, params["reduce_lines"])
+            )
+
+        return multi_step_ops
+
+    def _resolve_element_name(
+        self,
+        name: str | UUID | None,
+        slide_snapshot: SlideSnapshot,
+    ) -> UUID | None:
+        """
+        Resolve element name to UUID.
+
+        Args:
+            name: Element name (Chinese or English) or UUID
+            slide_snapshot: Current slide state
+
+        Returns:
+            Element UUID if found, None otherwise
+        """
+        if name is None:
+            return None
+
+        # Already a UUID
+        if isinstance(name, UUID):
+            return name
+
+        # Try to parse as UUID string
+        try:
+            return UUID(name)
+        except (ValueError, AttributeError):
+            pass
+
+        # Normalize name for matching
+        normalized = name.strip().lower()
+
+        # Common element name mappings (Chinese to role)
+        name_mappings = {
+            "图纸": "drawing",
+            "主图": "hero",
+            "说明": "caption",
+            "标题": "title",
+            "正文": "body",
+            "文字": "text",
+            "证据": "evidence",
+            "数据": "data",
+            "图表": "chart",
+        }
+
+        # Map Chinese name to English role
+        role = name_mappings.get(normalized, normalized)
+
+        # Search for element by role or label
+        layout_plan = slide_snapshot.layout_plan
+        if not layout_plan:
+            return None
+
+        for spec in layout_plan.element_specs:
+            # Check role match
+            if spec.role and spec.role.lower() == role:
+                return spec.id
+
+            # Check label match (if available)
+            # Note: SlideElementSpec might not have direct label access
+            # This would require looking at the actual slide elements
+
+        # If no match found, return None
+        return None
