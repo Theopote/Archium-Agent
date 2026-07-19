@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.visual.e2e_benchmark_service import (
     E2E_CONTENT_NOTES,
+    E2E_DELIVERABLE_NOTES,
     E2E_FULL_NOTES,
     E2E_LITE_NOTES,
     E2EBenchmarkService,
@@ -149,6 +150,68 @@ def full_benchmark_case(content_planning_benchmark_case: E2EBenchmarkCase) -> E2
 
 
 @pytest.fixture
+def deliverable_benchmark_case(full_benchmark_case: E2EBenchmarkCase) -> E2EBenchmarkCase:
+    return full_benchmark_case.model_copy(
+        update={
+            "case_id": "deliverable_001",
+            "enable_pptx_export": True,
+            "enable_screenshot_check": True,
+        }
+    )
+
+
+@pytest.fixture
+def fake_pptx_export(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fake_export(
+        self,
+        deck,
+        *,
+        output_dir,
+        pptx_name: str = "presentation.layout_plan.pptx",
+        deck_name: str = "presentation.layout_instructions.json",
+    ):  # noqa: ANN001
+        from pathlib import Path
+
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        deck_path = out / deck_name
+        if not deck_path.exists():
+            deck_path.write_text("{}", encoding="utf-8")
+        pptx_path = out / pptx_name
+        pptx_path.write_bytes(b"PK\x03\x04fake")
+        return deck_path, pptx_path
+
+    def _fake_export_pptx_slide_pngs(
+        pptx_path,
+        output_dir,
+        **kwargs,  # noqa: ANN003, ARG001
+    ):
+        from pathlib import Path
+
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        paths = []
+        for index in range(1, 5):
+            png_path = out / f"slide_{index:02d}.png"
+            png_path.write_bytes(b"\x89PNG\r\n\x1a\n")
+            paths.append(png_path)
+        return paths
+
+    monkeypatch.setattr(
+        "archium.infrastructure.renderers.pptxgen_renderer.PptxGenPresentationRenderer.export_pptx_from_layout_instructions",
+        _fake_export,
+    )
+    monkeypatch.setattr(
+        "archium.infrastructure.renderers.pptx_screenshot.export_pptx_slide_pngs",
+        _fake_export_pptx_slide_pngs,
+    )
+    monkeypatch.setattr(
+        "archium.application.visual.e2e_benchmark_service.screenshot_tools_available",
+        lambda: True,
+    )
+
+
+@pytest.fixture
 def always_valid_layouts(monkeypatch: pytest.MonkeyPatch) -> None:
     from archium.domain.visual.validation import LayoutValidationReport
 
@@ -280,6 +343,27 @@ class TestE2EBenchmarkServiceIntegration:
         assert result.visual_layout_plan_count == 4
         assert result.design_system_id is not None
         assert all(detail["layout_family"] is not None for detail in result.slide_details)
+
+    def test_deliverable_export_produces_pptx_and_screenshots(
+        self,
+        benchmark_service_with_llm: E2EBenchmarkService,
+        deliverable_benchmark_case: E2EBenchmarkCase,
+        always_valid_layouts: None,
+        fake_pptx_export: None,
+    ) -> None:
+        result = benchmark_service_with_llm.run_case(deliverable_benchmark_case)
+
+        assert result.execution_mode == "full"
+        assert result.notes == E2E_DELIVERABLE_NOTES
+        assert result.actual_slide_count == 4
+        assert result.deliverable is not None
+        assert result.deliverable.pptx_exported is True
+        assert result.deliverable.pptx_path is not None
+        assert result.deliverable.pptx_path.endswith(".pptx")
+        assert result.deliverable.screenshot_tools_available is True
+        assert result.deliverable.screenshot_count == 4
+        assert len(result.deliverable.screenshot_paths) == 4
+        assert result.deliverable.passed is True
 
     def test_layout_plan_repository_integration(
         self,

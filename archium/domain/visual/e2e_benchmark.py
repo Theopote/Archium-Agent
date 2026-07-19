@@ -131,6 +131,12 @@ class E2EBenchmarkCase(DomainModel):
     # Visual Workflow：ArtDirection → Composition → Layout → Render（需已有 SlideSpec）
     enable_visual_workflow: bool = False
 
+    # PPTX 导出 + slide screenshot（需 enable_visual_workflow）
+    enable_pptx_export: bool = False
+
+    # 校验 screenshot PNG（需 enable_pptx_export；LibreOffice 不可用时 soft-skip）
+    enable_screenshot_check: bool = False
+
     # 元数据
     difficulty: str = "medium"  # "easy" | "medium" | "hard"
     tags: list[str] = Field(default_factory=list)
@@ -188,6 +194,18 @@ class E2EQualityMetrics:
     passed: bool
 
 
+@dataclass(frozen=True)
+class E2EDeliverableResult:
+    """PPTX 导出与 screenshot 检查结果。"""
+
+    pptx_exported: bool
+    pptx_path: str | None
+    screenshot_count: int
+    screenshot_paths: list[str]
+    screenshot_tools_available: bool
+    passed: bool
+
+
 class E2EBenchmarkResult(DomainModel):
     """端到端基准案例的评估结果"""
 
@@ -199,6 +217,7 @@ class E2EBenchmarkResult(DomainModel):
     design_system_id: UUID | None = None
     imported_asset_count: int = Field(default=0, ge=0)
     visual_layout_plan_count: int = Field(default=0, ge=0)
+    deliverable: E2EDeliverableResult | None = None
 
     # 基本统计
     actual_slide_count: int

@@ -10,8 +10,9 @@
 - ``lite``：SlideSpec 由 case 预置（默认）
 - ``content``：Brief → Storyline → SlideSpec（需 ``enable_content_planning`` + LLM）
 - ``full``：content/lite 页面 + VisualWorkflowService（需 ``enable_visual_workflow``）
+- deliverable：full + PPTX 导出 + screenshot 检查（需 ``enable_pptx_export``）
 
-仍未实现：PPTX 导出、Screenshot QA、自主 Hero 选图验证。
+仍未实现：Screenshot QA 视觉回归基线对比。
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from archium.application.project_acceptance_service import (
 from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.slide_preview_service import map_preview_pngs_by_order
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.visual.visual_workflow_service import (
     VisualWorkflowResult,
@@ -51,6 +53,7 @@ from archium.domain.visual.e2e_benchmark import (
     E2EBenchmarkSummary,
     E2EContentCoverageResult,
     E2EContentExpectation,
+    E2EDeliverableResult,
     E2EExecutionMode,
     E2EHeroAssetExpectation,
     E2EHeroAssetResult,
@@ -72,6 +75,7 @@ from archium.infrastructure.database.visual_repositories import (
     VisualIntentRepository,
 )
 from archium.infrastructure.llm.base import LLMProvider
+from archium.infrastructure.renderers.pptx_screenshot import screenshot_tools_available
 
 E2E_LITE_NOTES = (
     "E2E Lite: SlideSpec 由 case 预置；未执行 Brief/Storyline/Visual Workflow/"
@@ -83,7 +87,11 @@ E2E_CONTENT_NOTES = (
 )
 E2E_FULL_NOTES = (
     "E2E Full: 已执行 VisualWorkflowService（ArtDirection → Composition → "
-    "Layout → Render）；仍未执行 PPTX / Screenshot QA。"
+    "Layout → Render）；未导出 PPTX / Screenshot。"
+)
+E2E_DELIVERABLE_NOTES = (
+    "E2E Deliverable: Visual Workflow + PPTX 导出 + slide screenshot 检查；"
+    "LibreOffice/pdftoppm 不可用时 screenshot 检查 soft-skip。"
 )
 E2E_LITE_SKIPPED = [
     "brief_generation",
@@ -97,7 +105,7 @@ E2E_LITE_SKIPPED = [
 
 
 class E2EBenchmarkService:
-    """端到端 Benchmark 执行和评估服务（当前为 E2E Lite）。"""
+    """端到端 Benchmark 执行和评估服务。"""
 
     def __init__(
         self,
@@ -125,11 +133,16 @@ class E2EBenchmarkService:
         self._assets = AssetRepository(session)
 
     def run_case(self, case: E2EBenchmarkCase) -> E2EBenchmarkResult:
-        """执行单个 E2E Lite 案例。"""
+        """执行单个 E2E 案例（lite / content / full / deliverable）。"""
         start_time = time.time()
         failure_reasons: list[str] = []
         design_system: DesignSystem | None = None
         imported_assets: list[Asset] = []
+
+        if case.enable_pptx_export and not case.enable_visual_workflow:
+            failure_reasons.append("enable_pptx_export 需要 enable_visual_workflow")
+        if case.enable_screenshot_check and not case.enable_pptx_export:
+            failure_reasons.append("enable_screenshot_check 需要 enable_pptx_export")
 
         try:
             project = Project(
@@ -194,19 +207,23 @@ class E2EBenchmarkService:
                     self._presentations.save_slide(slide)
 
             visual_layout_plan_count = 0
+            visual_result: VisualWorkflowResult | None = None
             if case.enable_visual_workflow:
                 if not case.enable_content_planning:
                     art_direction.presentation_id = presentation.id
                     self._art_directions.save(art_direction)
                 execution_mode = "full"
                 try:
-                    visual_layout_plan_count = self._run_visual_workflow_for_case(
+                    visual_result = self._run_visual_workflow_for_case(
                         project_id=project.id,
                         presentation_id=presentation.id,
                         design_system_id=design_system.id,
                         imported_assets=imported_assets,
+                        export_pptx=case.enable_pptx_export,
+                        case=case,
                         failure_reasons=failure_reasons,
                     )
+                    visual_layout_plan_count = len(visual_result.layout_plan_ids)
                 except Exception as e:
                     failure_reasons.append(f"Visual Workflow 失败: {e}")
             else:
@@ -280,6 +297,25 @@ class E2EBenchmarkService:
             if not quality_metrics.passed:
                 failure_reasons.append("质量指标不达标")
 
+            deliverable_result = None
+            if case.enable_pptx_export or case.enable_screenshot_check:
+                deliverable_result = self._evaluate_deliverables(
+                    case=case,
+                    visual_result=visual_result,
+                    slide_count=len(slides),
+                )
+                if case.enable_pptx_export and not deliverable_result.pptx_exported:
+                    failure_reasons.append("PPTX 未导出")
+                if (
+                    case.enable_screenshot_check
+                    and deliverable_result.screenshot_tools_available
+                    and deliverable_result.screenshot_count < len(slides)
+                ):
+                    failure_reasons.append(
+                        "Screenshot 数量不足: "
+                        f"{deliverable_result.screenshot_count}/{len(slides)}"
+                    )
+
             passed = (
                 len(failure_reasons) == 0
                 and expectations.min_slide_count <= len(slides) <= expectations.max_slide_count
@@ -294,6 +330,7 @@ class E2EBenchmarkService:
                 design_system_id=design_system.id,
                 imported_asset_count=len(imported_assets),
                 visual_layout_plan_count=visual_layout_plan_count,
+                deliverable=deliverable_result,
                 actual_slide_count=len(slides),
                 execution_time_seconds=round(execution_time, 2),
                 content_coverage=content_result,
@@ -303,7 +340,10 @@ class E2EBenchmarkService:
                 passed=passed,
                 failure_reasons=failure_reasons,
                 slide_details=self._build_slide_details(slides, plans, validation_reports),
-                notes=self._notes_for_mode(execution_mode),
+                notes=self._notes_for_mode(
+                    execution_mode,
+                    enable_deliverables=case.enable_pptx_export,
+                ),
             )
 
         except Exception as e:
@@ -791,8 +831,10 @@ class E2EBenchmarkService:
         presentation_id: UUID,
         design_system_id: UUID,
         imported_assets: list[Asset],
+        export_pptx: bool,
+        case: E2EBenchmarkCase,
         failure_reasons: list[str],
-    ) -> int:
+    ) -> VisualWorkflowResult:
         assets = imported_assets or self._assets.list_by_project(project_id)
         _attach_project_assets(
             self._presentations,
@@ -812,7 +854,7 @@ class E2EBenchmarkService:
                 presentation_id,
                 require_art_direction_review=False,
                 use_llm=False,
-                export_pptx=False,
+                export_pptx=export_pptx,
                 export_layout_instructions=True,
                 candidate_count=1,
                 max_repair_rounds=1,
@@ -823,12 +865,53 @@ class E2EBenchmarkService:
                 failure_reasons.append("Visual Workflow 未完成")
                 failure_reasons.extend(result.errors)
             elif result.warnings:
-                failure_reasons.extend(
-                    [f"Visual Workflow 警告: {warning}" for warning in result.warnings]
-                )
-            return len(result.layout_plan_ids)
+                for warning in result.warnings:
+                    if self._is_soft_screenshot_warning(case, warning):
+                        continue
+                    failure_reasons.append(f"Visual Workflow 警告: {warning}")
+            return result
         finally:
             visual_service.close()
+
+    def _evaluate_deliverables(
+        self,
+        *,
+        case: E2EBenchmarkCase,
+        visual_result: VisualWorkflowResult | None,
+        slide_count: int,
+    ) -> E2EDeliverableResult:
+        render_paths = list(visual_result.render_paths) if visual_result else []
+        pptx_paths = [path for path in render_paths if path.lower().endswith(".pptx")]
+        pptx_exported = bool(pptx_paths)
+        pptx_path = pptx_paths[0] if pptx_paths else None
+
+        tools_available = screenshot_tools_available()
+        preview_by_order = map_preview_pngs_by_order(render_paths)
+        screenshot_paths = list(preview_by_order.values())
+        screenshot_count = len(screenshot_paths)
+
+        passed = True
+        if case.enable_pptx_export and not pptx_exported:
+            passed = False
+        if case.enable_screenshot_check and tools_available:
+            if screenshot_count < slide_count:
+                passed = False
+
+        return E2EDeliverableResult(
+            pptx_exported=pptx_exported,
+            pptx_path=pptx_path,
+            screenshot_count=screenshot_count,
+            screenshot_paths=screenshot_paths,
+            screenshot_tools_available=tools_available,
+            passed=passed,
+        )
+
+    @staticmethod
+    def _is_soft_screenshot_warning(case: E2EBenchmarkCase, warning: str) -> bool:
+        if not case.enable_screenshot_check or screenshot_tools_available():
+            return False
+        lowered = warning.lower()
+        return "pptx screenshots skipped" in lowered or "libreoffice" in lowered
 
     @staticmethod
     def _resume_visual_if_paused(
@@ -848,7 +931,13 @@ class E2EBenchmarkService:
         return result
 
     @staticmethod
-    def _notes_for_mode(mode: E2EExecutionMode) -> str:
+    def _notes_for_mode(
+        mode: E2EExecutionMode,
+        *,
+        enable_deliverables: bool = False,
+    ) -> str:
+        if enable_deliverables:
+            return E2E_DELIVERABLE_NOTES
         if mode == "full":
             return E2E_FULL_NOTES
         if mode == "content":
