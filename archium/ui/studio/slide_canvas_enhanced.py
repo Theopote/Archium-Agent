@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from archium.domain.visual.enums import LayoutIssueSeverity
+from archium.domain.visual.layout import LayoutPlan
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.studio.element_labels import format_element_label
@@ -20,12 +21,73 @@ _SEVERITY_COLORS = {
 }
 
 
+def preview_file_exists(preview_path: str | None) -> bool:
+    return bool(preview_path and Path(preview_path).is_file())
+
+
+def can_render_interactive_canvas(
+    *,
+    use_interactive_canvas: bool,
+    plan: LayoutPlan | None,
+    preview_path: str | None,
+) -> bool:
+    return bool(use_interactive_canvas and plan is not None and preview_file_exists(preview_path))
+
+
 def _preview_caption(kind: str | None) -> str:
     if kind == "screenshot":
         return "PPTX 截图预览（来自最近一次视觉编排导出）"
     if kind == "wireframe":
         return "版式线框预览（由 LayoutPlan 几何自动生成）"
     return "暂无预览。生成版式后将显示线框；导出 PPTX 后可显示截图。"
+
+
+def _render_empty_preview_placeholder(*, has_layout_plan: bool = False) -> None:
+    hint = (
+        "版式已生成，暂无预览图。运行带 PPTX 导出的视觉编排后可显示截图。"
+        if has_layout_plan
+        else "请先生成版式，或运行带 PPTX 导出的视觉编排"
+    )
+    st.markdown(
+        '<div style="border:1px dashed #d8d6d0;border-radius:8px;'
+        'padding:3rem 1rem;text-align:center;color:#8a8780;background:#faf9f7;">'
+        "暂无页面预览<br>"
+        f"<span style='font-size:0.85rem;'>{hint}</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_plan_wireframe(plan: LayoutPlan, *, selected_element_id: str | None) -> None:
+    """Render element geometry when no raster preview is available."""
+    width = float(plan.page_width or 10)
+    height = float(plan.page_height or 5.625)
+    boxes: list[str] = []
+    for element in plan.elements:
+        left = max(0.0, element.x / width * 100)
+        top = max(0.0, element.y / height * 100)
+        box_width = max(1.0, element.width / width * 100)
+        box_height = max(1.0, element.height / height * 100)
+        if element.id == selected_element_id:
+            border = "2px solid #175cd3"
+            background = "rgba(23, 92, 211, 0.08)"
+        else:
+            border = "1px solid #98a2b3"
+            background = "rgba(152, 162, 179, 0.12)"
+        boxes.append(
+            "<div style="
+            f"'position:absolute;left:{left:.2f}%;top:{top:.2f}%;"
+            f"width:{box_width:.2f}%;height:{box_height:.2f}%;"
+            f"border:{border};background:{background};border-radius:4px;'></div>"
+        )
+    st.caption("版式线框预览（由 LayoutPlan 几何自动生成）")
+    st.markdown(
+        "<div style='position:relative;width:100%;aspect-ratio:16/9;"
+        "background:#faf9f7;border:1px solid #eceae4;border-radius:8px;'>"
+        + "".join(boxes)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def _render_validation_overlay(
@@ -90,20 +152,72 @@ def _render_validation_overlay(
         )
 
 
+def _render_static_or_empty_state(
+    *,
+    slide_snapshot: SlideVisualSnapshot,
+    selected_element_id: str | None,
+) -> None:
+    preview_path = slide_snapshot.preview_image
+    plan = slide_snapshot.layout_plan
+    if preview_file_exists(preview_path):
+        st.image(preview_path, use_container_width=True)
+        st.caption(_preview_caption(slide_snapshot.preview_kind))
+    elif plan is not None and plan.elements:
+        _render_plan_wireframe(plan, selected_element_id=selected_element_id)
+    else:
+        _render_empty_preview_placeholder(has_layout_plan=plan is not None)
+
+    _render_validation_overlay(
+        slide_snapshot=slide_snapshot,
+        selected_element_id=selected_element_id,
+    )
+
+
+def _render_interactive_canvas(
+    *,
+    slide_snapshot: SlideVisualSnapshot,
+    plan: LayoutPlan,
+    preview_path: str,
+    selected_element_id: str | None,
+) -> bool:
+    from archium.ui.components.canvas_editor import (
+        CanvasEditorUnavailableError,
+        canvas_editor,
+        canvas_editor_unavailable_reason,
+    )
+
+    try:
+        clicked_element_id = canvas_editor(
+            image_url=preview_path,
+            layout_plan=plan,
+            selected_element_id=selected_element_id,
+            show_labels=True,
+            show_all_borders=True,
+            key=f"canvas_{slide_snapshot.slide.id}",
+        )
+    except CanvasEditorUnavailableError as exc:
+        reason = canvas_editor_unavailable_reason() or str(exc)
+        st.warning(f"交互式画布不可用，已切换为静态预览。{reason}")
+        return False
+    except Exception as exc:
+        st.warning(f"交互式画布加载失败，已切换为静态预览：{exc}")
+        return False
+
+    if clicked_element_id != selected_element_id:
+        st.session_state["studio_selected_element_id"] = clicked_element_id
+        st.rerun()
+
+    st.caption(_preview_caption(slide_snapshot.preview_kind))
+    return True
+
+
 def render_slide_canvas(
     *,
     slide_snapshot: SlideVisualSnapshot | None,
     advanced: bool,
     use_interactive_canvas: bool = True,
 ) -> None:
-    """
-    Render the selected slide preview area.
-
-    Args:
-        slide_snapshot: Current slide snapshot with layout and preview
-        advanced: Show advanced details
-        use_interactive_canvas: Use interactive canvas editor (default: True)
-    """
+    """Render the selected slide preview area."""
     st.markdown("**页面预览**")
     if slide_snapshot is None:
         st.info("请选择左侧页面。")
@@ -112,6 +226,7 @@ def render_slide_canvas(
     slide = slide_snapshot.slide
     plan = slide_snapshot.layout_plan
     selected_element_id = st.session_state.get("studio_selected_element_id")
+    selected_element_id_str = str(selected_element_id) if selected_element_id else None
 
     header_cols = st.columns([3, 1])
     with header_cols[0]:
@@ -128,61 +243,35 @@ def render_slide_canvas(
             )
 
     preview_path = slide_snapshot.preview_image
+    interactive_ready = can_render_interactive_canvas(
+        use_interactive_canvas=use_interactive_canvas,
+        plan=plan,
+        preview_path=preview_path,
+    )
 
-    # Use interactive canvas if enabled and layout plan exists
-    if use_interactive_canvas and plan is not None and preview_path and Path(preview_path).is_file():
-        try:
-            from archium.ui.components.canvas_editor import canvas_editor
-
-            # Render interactive canvas
-            clicked_element_id = canvas_editor(
-                image_url=preview_path,
-                layout_plan=plan,
-                selected_element_id=selected_element_id,
-                show_labels=True,
-                show_all_borders=True,
-                key=f"canvas_{slide.id}",
-            )
-
-            # Update selected element if clicked
-            if clicked_element_id != selected_element_id:
-                st.session_state["studio_selected_element_id"] = clicked_element_id
-                st.rerun()
-
-            st.caption(_preview_caption(slide_snapshot.preview_kind))
-
-        except ImportError:
-            # Fallback to static preview if component not available
-            st.warning("交互式画布组件未安装，使用静态预览。运行 build.sh 构建组件。")
-            use_interactive_canvas = False
-
-    # Static preview fallback
-    if not use_interactive_canvas:
-        if preview_path and Path(preview_path).is_file():
-            st.image(preview_path, use_container_width=True)
-            st.caption(_preview_caption(slide_snapshot.preview_kind))
-        else:
-            st.markdown(
-                '<div style="border:1px dashed #d8d6d0;border-radius:8px;'
-                'padding:3rem 1rem;text-align:center;color:#8a8780;background:#faf9f7;">'
-                "暂无页面预览<br>"
-                "<span style='font-size:0.85rem;'>请先生成版式，或运行带 PPTX 导出的视觉编排</span>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
-
-        # Render validation overlay for static preview
-        _render_validation_overlay(
+    rendered_interactive = False
+    if interactive_ready and plan is not None and preview_path is not None:
+        rendered_interactive = _render_interactive_canvas(
             slide_snapshot=slide_snapshot,
-            selected_element_id=str(selected_element_id) if selected_element_id else None,
+            plan=plan,
+            preview_path=preview_path,
+            selected_element_id=selected_element_id_str,
+        )
+
+    if not rendered_interactive:
+        _render_static_or_empty_state(
+            slide_snapshot=slide_snapshot,
+            selected_element_id=selected_element_id_str,
         )
 
     if plan is not None:
         highlight = ""
-        if selected_element_id and plan.element_by_id(str(selected_element_id)) is not None:
-            element = plan.element_by_id(str(selected_element_id))
+        if selected_element_id_str and plan.element_by_id(selected_element_id_str) is not None:
+            element = plan.element_by_id(selected_element_id_str)
             if element is not None:
-                highlight = f" · 当前元素：{format_element_label(element_id=element.id, role=element.role)}"
+                highlight = (
+                    f" · 当前元素：{format_element_label(element_id=element.id, role=element.role)}"
+                )
         st.caption(
             f"版式：{format_layout_family_label(plan.layout_family)} · "
             f"变体 {plan.layout_variant} · 留白 {plan.whitespace_ratio:.0%}{highlight}"

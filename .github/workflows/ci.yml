@@ -224,6 +224,13 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[full,ui,dev]"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Canvas Editor build smoke
+        run: pytest tests/smoke/test_canvas_editor_build.py -v
+
       - name: Streamlit startup smoke test
         run: pytest tests/smoke/test_streamlit_startup.py -v
 

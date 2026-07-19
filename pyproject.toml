@@ -87,6 +87,7 @@ dev = [
 [project.scripts]
 archium = "archium.cli:main"
 archium-legacy = "main:main"
+archium-build-canvas = "archium.ui.components.canvas_editor.build_frontend:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

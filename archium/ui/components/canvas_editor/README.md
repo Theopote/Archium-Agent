@@ -25,38 +25,33 @@
 
 ## 安装
 
-### 1. 安装依赖
+### 1. 构建组件（生产模式必需）
+
+生产模式（默认）使用 `frontend/build/` 中的静态资源。仓库不包含构建产物，克隆后需先构建：
 
 ```bash
-cd archium/ui/components/canvas_editor/frontend
-npm install
-```
+# 推荐：项目根目录
+archium-build-canvas
 
-### 2. 构建组件
-
-```bash
-# 从组件目录运行
+# 或
 cd archium/ui/components/canvas_editor
 bash build.sh
 ```
 
-或者手动构建：
+构建成功后会生成 `frontend/build/index.html`。若未构建，Studio 会自动降级为静态预览/线框，并提示运行上述命令。
+
+### 2. 开发模式（可选）
+
+设置环境变量 `ARCHIUM_CANVAS_EDITOR_DEV=1` 后，组件会连接 React 开发服务器（默认 `http://localhost:3000`）：
 
 ```bash
+export ARCHIUM_CANVAS_EDITOR_DEV=1
 cd frontend
-npm run build
-```
-
-### 3. 开发模式（可选）
-
-在开发模式下，组件会连接到 React 开发服务器：
-
-```bash
-cd frontend
+npm install
 npm start
 ```
 
-然后在 `__init__.py` 中设置 `_RELEASE = False`。
+也可通过 `ARCHIUM_CANVAS_EDITOR_DEV_URL` 覆盖 dev server 地址。
 
 ## 使用方法
 
