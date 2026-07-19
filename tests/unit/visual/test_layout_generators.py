@@ -14,6 +14,7 @@ from archium.domain.visual import (
     default_presentation_design_system,
 )
 from archium.domain.visual.enums import CropPolicy, ImageFit
+from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.infrastructure.layout.generators.base import (
     LayoutGeneratorContext,
     content_from_slide,
@@ -227,3 +228,18 @@ class TestGenerators:
             assert plan.elements_by_role(LayoutElementRole.TITLE)
             assert plan.reading_order
             assert plan.layout_family == family
+
+    def test_title_band_avoids_text_overflow(self) -> None:
+        design = default_presentation_design_system()
+        slide = _slide(title="院区总平面与改造范围说明页")
+        plan = LayoutSolver().generate(
+            LayoutFamily.DRAWING_FOCUS,
+            _context(LayoutFamily.DRAWING_FOCUS, content_type=VisualContentType.SITE_PLAN, slide=slide),
+        )
+        report = LayoutValidationService().validate(plan, design, require_source=False)
+        title_issues = [
+            issue
+            for issue in report.issues
+            if issue.rule_code == "LAYOUT.TEXT_OVERFLOW" and "title" in issue.element_ids
+        ]
+        assert not title_issues

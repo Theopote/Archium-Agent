@@ -26,7 +26,7 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []
 
-        title_h = 0.45
+        title_h = self._title_band_height(context)
         elements.append(
             LayoutElement(
                 id="title",
@@ -130,7 +130,21 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
 
         metric_ids: list[str] = []
         if metrics:
-            metric_h = min(0.7, right.bottom - cursor_top - 0.8)
+            metric_col_w = right.width / max(len(metrics), 1)
+            metric_cell_heights = [
+                self._text_band_height(
+                    context,
+                    metric,
+                    "metric",
+                    box_width_in=metric_col_w,
+                    min_height=0.35,
+                )
+                for metric in metrics
+            ]
+            metric_h = min(
+                max(metric_cell_heights),
+                max(0.35, right.bottom - cursor_top - 0.8),
+            )
             if metric_h >= 0.35:
                 metric_area = Rect(right.x, cursor_top, right.width, metric_h)
                 cells = grid_cells(
@@ -159,7 +173,14 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
                     )
                 cursor_top = metric_area.bottom + spacing.sm
 
-        lead_h = min(0.55, max(0.28, right.bottom - cursor_top) * 0.35)
+        lead_h = self._text_band_height(
+            context,
+            context.content.message,
+            "subtitle",
+            box_width_in=right.width,
+            min_height=0.28,
+        )
+        lead_h = min(lead_h, max(0.28, right.bottom - cursor_top))
         elements.append(
             LayoutElement(
                 id="lead",
@@ -176,22 +197,43 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
         cursor_top = cursor_top + lead_h + spacing.xs
 
         if points and cursor_top < right.bottom - 0.25:
-            points_text = "\n".join(f"· {point}" for point in points)
             body_bottom = right.bottom - (0.24 if len(captions) > 1 else 0.0)
-            elements.append(
-                LayoutElement(
-                    id="body",
-                    role=LayoutElementRole.BODY_TEXT,
-                    content_type=LayoutContentType.TEXT,
-                    text_content=points_text,
-                    x=right.x,
-                    y=cursor_top,
-                    width=right.width,
-                    height=max(0.35, body_bottom - cursor_top),
-                    style_token="body",
-                )
+            available = max(0.35, body_bottom - cursor_top)
+            trimmed_points = list(points)
+            points_text = "\n".join(f"· {point}" for point in trimmed_points)
+            needed = self._text_band_height(
+                context,
+                points_text,
+                "body",
+                box_width_in=right.width,
+                min_height=0.35,
             )
-            cursor_top = body_bottom
+            while trimmed_points and needed > available + 1e-6 and len(trimmed_points) > 1:
+                trimmed_points = trimmed_points[:-1]
+                points_text = "\n".join(f"· {point}" for point in trimmed_points)
+                needed = self._text_band_height(
+                    context,
+                    points_text,
+                    "body",
+                    box_width_in=right.width,
+                    min_height=0.35,
+                )
+            if trimmed_points and needed <= available + 1e-6:
+                body_h = min(max(needed, 0.35), available)
+                elements.append(
+                    LayoutElement(
+                        id="body",
+                        role=LayoutElementRole.BODY_TEXT,
+                        content_type=LayoutContentType.TEXT,
+                        text_content=points_text,
+                        x=right.x,
+                        y=cursor_top,
+                        width=right.width,
+                        height=body_h,
+                        style_token="body",
+                    )
+                )
+                cursor_top = body_bottom
 
         if len(captions) > 1:
             elements.append(

@@ -18,9 +18,9 @@
       "role": "body_text",
       "content_type": "text",
       "x": 0.7,
-      "y": 2.516,
+      "y": 2.586,
       "w": 8.6,
-      "h": 2.226,
+      "h": 2.156,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -29,9 +29,9 @@
       "role": "lead_statement",
       "content_type": "text",
       "x": 0.7,
-      "y": 1.125,
+      "y": 1.232,
       "w": 8.6,
-      "h": 1.266,
+      "h": 1.228,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -53,7 +53,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.55,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

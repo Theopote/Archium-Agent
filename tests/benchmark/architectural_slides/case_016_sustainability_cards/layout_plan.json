@@ -13,16 +13,16 @@
     "source"
   ],
   "balance_strategy": "equal_cards",
-  "whitespace_ratio": 0.3672,
+  "whitespace_ratio": 0.3662,
   "elements": [
     {
       "id": "card_0",
       "role": "body_text",
       "content_type": "text",
       "x": 0.7,
-      "y": 1.075,
+      "y": 1.232,
       "w": 2.056,
-      "h": 3.667,
+      "h": 3.509,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -31,9 +31,9 @@
       "role": "body_text",
       "content_type": "text",
       "x": 2.881,
-      "y": 1.075,
+      "y": 1.232,
       "w": 2.056,
-      "h": 3.667,
+      "h": 3.509,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -42,9 +42,9 @@
       "role": "body_text",
       "content_type": "text",
       "x": 5.063,
-      "y": 1.075,
+      "y": 1.232,
       "w": 2.056,
-      "h": 3.667,
+      "h": 3.509,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -53,9 +53,9 @@
       "role": "body_text",
       "content_type": "text",
       "x": 7.244,
-      "y": 1.075,
+      "y": 1.232,
       "w": 2.056,
-      "h": 3.667,
+      "h": 3.509,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -77,7 +77,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.5,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

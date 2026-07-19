@@ -38,7 +38,7 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
         steps = steps[:step_count]
         stage_assets = list(context.content.supporting_asset_refs[:step_count])
 
-        title_h = 0.45
+        title_h = self._title_band_height(context)
         elements.append(
             LayoutElement(
                 id="title",
@@ -53,7 +53,12 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
             )
         )
 
-        lead_h = 0.32
+        lead_h = self._text_band_height(
+            context,
+            context.content.message,
+            "subtitle",
+            min_height=0.32,
+        )
         elements.append(
             LayoutElement(
                 id="lead",

@@ -22,7 +22,7 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []
 
-        title_h = 0.55
+        title_h = self._title_band_height(context)
         elements.append(
             LayoutElement(
                 id="title",

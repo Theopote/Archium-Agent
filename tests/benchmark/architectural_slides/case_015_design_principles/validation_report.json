@@ -1,8 +1,6 @@
 {
-  "valid": false,
-  "score": 0.88,
+  "valid": true,
+  "score": 0.955,
   "has_critical": false,
-  "rule_codes": [
-    "LAYOUT.TEXT_OVERFLOW"
-  ]
+  "rule_codes": []
 }

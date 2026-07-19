@@ -1,7 +1,7 @@
 {
   "score_kind": "layout_quality",
-  "score": 0.85,
-  "valid": false,
+  "score": 1.0,
+  "valid": true,
   "has_critical": false,
-  "blocking_error_count": 2
+  "blocking_error_count": 0
 }

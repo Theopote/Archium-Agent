@@ -14,16 +14,16 @@
     "source"
   ],
   "balance_strategy": "diagram_dominant",
-  "whitespace_ratio": 0.383,
+  "whitespace_ratio": 0.3825,
   "elements": [
     {
       "id": "conclusion_0",
       "role": "annotation",
       "content_type": "text",
       "x": 6.095,
-      "y": 2.419,
+      "y": 2.517,
       "w": 3.205,
-      "h": 0.681,
+      "h": 0.648,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -32,9 +32,9 @@
       "role": "annotation",
       "content_type": "text",
       "x": 6.095,
-      "y": 3.142,
+      "y": 3.207,
       "w": 3.205,
-      "h": 0.681,
+      "h": 0.648,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -43,9 +43,9 @@
       "role": "annotation",
       "content_type": "text",
       "x": 6.095,
-      "y": 3.864,
+      "y": 3.897,
       "w": 3.205,
-      "h": 0.681,
+      "h": 0.648,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -54,9 +54,9 @@
       "role": "hero_visual",
       "content_type": "drawing",
       "x": 0.7,
-      "y": 1.033,
+      "y": 1.191,
       "w": 5.229,
-      "h": 3.512,
+      "h": 3.354,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },
@@ -65,9 +65,9 @@
       "role": "caption",
       "content_type": "text",
       "x": 6.095,
-      "y": 1.033,
+      "y": 1.191,
       "w": 3.205,
-      "h": 1.303,
+      "h": 1.243,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -89,7 +89,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.5,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

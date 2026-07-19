@@ -30,7 +30,7 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
         cols = 3 if count >= 3 else count
         rows = (count + cols - 1) // cols
 
-        title_h = 0.5
+        title_h = self._title_band_height(context)
         elements.append(
             LayoutElement(
                 id="title",
@@ -45,7 +45,12 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
             )
         )
 
-        lead_h = 0.4
+        lead_h = self._text_band_height(
+            context,
+            context.content.message,
+            "subtitle",
+            min_height=0.4,
+        )
         elements.append(
             LayoutElement(
                 id="lead",
@@ -115,7 +120,7 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
                     y=chart_area.y,
                     width=chart_area.width,
                     height=chart_area.height,
-                    style_token="caption",
+                    style_token="body",
                 )
             )
 

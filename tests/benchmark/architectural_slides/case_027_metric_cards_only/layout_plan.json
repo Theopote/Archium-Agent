@@ -15,14 +15,14 @@
     "source"
   ],
   "balance_strategy": "metric_grid",
-  "whitespace_ratio": 0.4797,
+  "whitespace_ratio": 0.4751,
   "elements": [
     {
       "id": "lead",
       "role": "lead_statement",
       "content_type": "text",
       "x": 0.7,
-      "y": 0.992,
+      "y": 1.149,
       "w": 8.6,
       "h": 0.4,
       "fit_mode": null,
@@ -33,9 +33,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 0.7,
-      "y": 1.475,
+      "y": 1.632,
       "w": 2.783,
-      "h": 1.452,
+      "h": 1.373,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -44,9 +44,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 3.608,
-      "y": 1.475,
+      "y": 1.632,
       "w": 2.783,
-      "h": 1.452,
+      "h": 1.373,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -55,9 +55,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 6.517,
-      "y": 1.475,
+      "y": 1.632,
       "w": 2.783,
-      "h": 1.452,
+      "h": 1.373,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -66,9 +66,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 0.7,
-      "y": 3.052,
+      "y": 3.13,
       "w": 2.783,
-      "h": 1.452,
+      "h": 1.373,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -77,9 +77,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 3.608,
-      "y": 3.052,
+      "y": 3.13,
       "w": 2.783,
-      "h": 1.452,
+      "h": 1.373,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -101,7 +101,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.5,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

@@ -87,6 +87,47 @@ class LayoutGenerator(ABC):
             visual_intent_id=context.visual_intent.id,
         )
 
+    def _text_band_height(
+        self,
+        context: LayoutGeneratorContext,
+        text: str,
+        style_token: str,
+        *,
+        box_width_in: float | None = None,
+        min_height: float = 0.0,
+    ) -> float:
+        """Minimum element height so wrapped copy fits typography + repair slack."""
+        from archium.infrastructure.layout.text_measurement import TextMeasurementService
+
+        design_system = context.design_system
+        safe = self._safe(design_system)
+        width = box_width_in if box_width_in is not None else safe.width
+        cleaned = text.strip()
+        if not cleaned:
+            return min_height
+        typography = design_system.typography
+        style = getattr(typography, style_token, typography.body)
+        slack = design_system.thresholds.text_overflow_repair_slack_in
+        needed = TextMeasurementService().estimate_block_height_in(
+            cleaned,
+            box_width_in=width,
+            style=style,
+            vertical_slack_in=slack,
+        )
+        return max(min_height, needed)
+
+    def _title_band_height(
+        self,
+        context: LayoutGeneratorContext,
+        title: str | None = None,
+    ) -> float:
+        return self._text_band_height(
+            context,
+            title or context.content.title or " ",
+            "title",
+            min_height=0.5,
+        )
+
 
 def asset_ref(asset_id: UUID | None, *, fallback: str | None = None) -> str | None:
     if asset_id is not None:

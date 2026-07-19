@@ -27,7 +27,7 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
         while len(points) < card_count:
             points.append(f"策略 {len(points) + 1}")
 
-        title_h = 0.5
+        title_h = self._title_band_height(context)
         elements.append(
             LayoutElement(
                 id="title",

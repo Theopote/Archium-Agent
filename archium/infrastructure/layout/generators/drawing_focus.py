@@ -25,7 +25,7 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
         variant = context.variant
         elements: list[LayoutElement] = []
 
-        title_h = 0.5
+        title_h = self._title_band_height(context)
         elements.append(
             LayoutElement(
                 id="title",

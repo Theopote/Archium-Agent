@@ -47,7 +47,19 @@ def test_architectural_benchmark_case(case_id: str) -> None:
         f"{case_id} has critical layout issues: "
         f"{[issue.rule_code for issue in result.report.issues if issue.severity.value == 'critical']}"
     )
+    blocking = [
+        issue
+        for issue in result.report.issues
+        if issue.severity.value in {"error", "critical"}
+    ]
+    assert not blocking, f"{case_id} has blocking layout issues: {[issue.rule_code for issue in blocking]}"
+    assert result.rule_score.passed, f"{case_id} failed layout rule score"
     assert_or_update_case_baseline(result)
+
+
+def test_benchmark_rule_pass_rate_meets_eighty_percent() -> None:
+    passed = sum(1 for case_id in BENCHMARK_CASE_IDS if build_benchmark_case(case_id).rule_score.passed)
+    assert passed / len(BENCHMARK_CASE_IDS) >= 0.8
 
 
 def test_case_001_drawing_hero_constraints() -> None:

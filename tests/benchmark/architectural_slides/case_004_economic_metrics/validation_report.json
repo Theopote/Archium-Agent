@@ -1,9 +1,6 @@
 {
-  "valid": false,
-  "score": 0.85,
+  "valid": true,
+  "score": 1.0,
   "has_critical": false,
-  "rule_codes": [
-    "LAYOUT.FONT_TOO_SMALL",
-    "LAYOUT.TEXT_OVERFLOW"
-  ]
+  "rule_codes": []
 }

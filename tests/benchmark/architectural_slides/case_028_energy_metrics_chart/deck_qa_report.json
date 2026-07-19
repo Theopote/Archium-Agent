@@ -1,12 +1,9 @@
 {
   "deck_qa_score": 1.0,
-  "passed": false,
-  "layout_valid": false,
-  "layout_score": 0.85,
+  "passed": true,
+  "layout_valid": true,
+  "layout_score": 1.0,
   "has_critical": false,
-  "blocking_issue_count": 2,
-  "rule_codes": [
-    "LAYOUT.FONT_TOO_SMALL",
-    "LAYOUT.TEXT_OVERFLOW"
-  ]
+  "blocking_issue_count": 0,
+  "rule_codes": []
 }
