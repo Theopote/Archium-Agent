@@ -8,12 +8,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from pydantic import Field
+
+E2EExecutionMode = Literal["lite", "full"]
 
 
 class E2EBenchmarkScenario(str):
@@ -185,6 +187,11 @@ class E2EBenchmarkResult(DomainModel):
 
     case_id: str
     scenario: str
+
+    # 执行模式：lite = 跳过 Brief/Storyline/SlideSpec 自动生成/PPTX/Screenshot
+    execution_mode: E2EExecutionMode = "lite"
+    design_system_id: UUID | None = None
+    imported_asset_count: int = Field(default=0, ge=0)
 
     # 基本统计
     actual_slide_count: int

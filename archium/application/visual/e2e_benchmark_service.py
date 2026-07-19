@@ -2,17 +2,19 @@
 
 执行完整的端到端验证：
 1. 模拟用户导入文档和素材
-2. 让系统自主完成所有决策（不预先指定 LayoutFamily/素材/Variant）
+2. 让系统自主完成布局相关决策（不预先指定 LayoutFamily/Variant）
 3. 评估最终输出质量
 4. 对比期望标准
 
-注意：当前实现为简化版本（E2E Lite），跳过了以下步骤：
+注意：当前实现为 E2E Lite（execution_mode="lite"），跳过：
 - Brief 生成
 - Storyline 生成
-- SlideSpec 生成
-- 完整的 Visual Workflow
+- SlideSpec 自动生成（由 case 预置内容）
+- 完整 Visual Workflow
+- PPTX 导出
+- Screenshot 检查
 
-完整的 E2E 流程应该是：
+完整 E2E（execution_mode="full"）目标流程：
 原始任务 → 创建项目 → 导入资料 → Brief → Storyline → SlideSpec →
 Visual Workflow → Composition → Layout → PPTX → Screenshot → QA
 """
@@ -20,7 +22,6 @@ Visual Workflow → Composition → Layout → PPTX → Screenshot → QA
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
@@ -29,11 +30,17 @@ from sqlalchemy.orm import Session
 
 from archium.application.ingestion_service import IngestionService
 from archium.application.visual.deck_qa_service import DeckQAService
+from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
-from archium.application.visual.visual_edit_service import VisualEditService
+from archium.application.visual.visual_intent_service import VisualIntentService
+from archium.domain.asset import Asset
+from archium.domain.enums import ApprovalStatus, SlideType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.defaults import default_presentation_design_system
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.e2e_benchmark import (
     E2EBenchmarkCase,
     E2EBenchmarkResult,
@@ -49,20 +56,29 @@ from archium.domain.visual.enums import LayoutFamily
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.visual_repositories import (
+    ArtDirectionRepository,
     DesignSystemRepository,
     LayoutPlanRepository,
+    VisualIntentRepository,
 )
+
+E2E_LITE_NOTES = (
+    "E2E Lite: SlideSpec 由 case 预置；未执行 Brief/Storyline/Visual Workflow/"
+    "PPTX/Screenshot；Hero 选图能力仅验证已导入素材是否被引用。"
+)
+E2E_LITE_SKIPPED = [
+    "brief_generation",
+    "storyline_generation",
+    "slidespec_auto_generation",
+    "visual_workflow",
+    "pptx_export",
+    "screenshot_qa",
+    "autonomous_hero_selection_from_unlabeled_pool",
+]
 
 
 class E2EBenchmarkService:
-    """端到端 Benchmark 执行和评估服务
-
-    注意：当前为简化版本（E2E Lite）
-    - 手动创建 Project 和 Presentation
-    - 手动构建 SlideSpec（从 case 定义）
-    - 跳过 Brief/Storyline 生成
-    - 使用 VisualEditService 生成布局
-    """
+    """端到端 Benchmark 执行和评估服务（当前为 E2E Lite）。"""
 
     def __init__(
         self,
@@ -74,36 +90,23 @@ class E2EBenchmarkService:
         self._projects = ProjectRepository(session)
         self._presentations = PresentationRepository(session)
         self._ingestion = IngestionService(session)
-        self._visual_edits = VisualEditService(session)
+        self._intent_service = VisualIntentService(session)
+        self._layout_planning = LayoutPlanningService(session)
         self._validation = LayoutValidationService()
         self._deck_qa = DeckQAService()
         self._layout_plans = LayoutPlanRepository(session)
         self._design_systems = DesignSystemRepository(session)
+        self._art_directions = ArtDirectionRepository(session)
+        self._visual_intents = VisualIntentRepository(session)
 
     def run_case(self, case: E2EBenchmarkCase) -> E2EBenchmarkResult:
-        """
-        执行单个端到端案例。
-
-        简化流程（当前实现）：
-        1. 创建 Project
-        2. 导入文档和素材（调用 IngestionService.import_file）
-        3. 创建 Presentation 和 SlideSpec（手动构建）
-        4. 生成布局（调用 VisualEditService.regenerate_layout）
-        5. 验证质量（调用 LayoutValidationService + DeckQAService）
-        6. 检查是否符合期望标准
-
-        TODO: 补充完整流程
-        - Brief 生成
-        - Storyline 生成
-        - 完整 Visual Workflow
-        - PPTX 导出
-        - Screenshot 生成
-        """
+        """执行单个 E2E Lite 案例。"""
         start_time = time.time()
         failure_reasons: list[str] = []
+        design_system: DesignSystem | None = None
+        imported_assets: list[Asset] = []
 
         try:
-            # Step 1: 创建项目
             project = Project(
                 id=uuid4(),
                 name=f"E2E_Benchmark_{case.case_id}",
@@ -111,11 +114,14 @@ class E2EBenchmarkService:
             )
             project = self._projects.create(project)
 
-            # Step 2: 导入文档和素材
+            design_system, art_direction = self._create_case_design_binding(
+                project_id=project.id,
+                case=case,
+            )
+
             document_paths = [self._data_dir / doc for doc in case.input_documents]
             image_paths = [self._data_dir / img for img in case.input_images]
 
-            # 使用正确的 API：逐个文件导入
             for doc_path in document_paths:
                 if not doc_path.exists():
                     failure_reasons.append(f"文档不存在: {doc_path}")
@@ -124,39 +130,41 @@ class E2EBenchmarkService:
                 if result.error:
                     failure_reasons.append(f"导入文档失败 {doc_path.name}: {result.error}")
 
-            # TODO: 导入图片应该使用 AssetService
-            # 目前先记录图片路径，实际使用时需要补充
+            for image_path in image_paths:
+                if not image_path.exists():
+                    failure_reasons.append(f"图片不存在: {image_path}")
+                    continue
+                result = self._ingestion.import_file(project.id, image_path)
+                if result.error:
+                    failure_reasons.append(f"导入图片失败 {image_path.name}: {result.error}")
+                else:
+                    imported_assets.extend(result.assets)
 
-            # Step 3: 创建 Presentation（手动构建，暂时跳过 Brief/Storyline）
             presentation = Presentation(
                 id=uuid4(),
                 project_id=project.id,
                 title=case.task_description,
             )
-            presentation = self._presentations.create(presentation)
+            presentation = self._presentations.create_presentation(presentation)
+            art_direction.presentation_id = presentation.id
+            self._art_directions.save(art_direction)
 
-            # Step 4: 手动创建 SlideSpec
-            # TODO: 这里应该从导入的文档中自动生成，当前为简化版
-            # 实际应该调用 PresentationService 生成 Brief → Storyline → SlideSpec
             slides = self._create_slides_from_case(case, presentation.id)
             for slide in slides:
                 self._presentations.save_slide(slide)
 
-            # Step 5: 为每个页面生成布局（系统自主决策）
             for slide in slides:
                 try:
-                    # 不预先指定任何参数，让 VisualEditService 自主决策：
-                    # - LayoutFamily 选择
-                    # - Variant 选择
-                    # - 素材分配
-                    self._visual_edits.regenerate_layout(slide.id)
-                except WorkflowError as e:
+                    self._generate_layout_for_slide(
+                        slide=slide,
+                        art_direction_id=art_direction.id,
+                        design_system_id=design_system.id,
+                    )
+                except (WorkflowError, ValueError) as e:
                     failure_reasons.append(f"Slide {slide.order} 生成失败: {e}")
 
-            # Step 6: 收集结果并评估
             slides = self._presentations.list_slides(presentation.id)
 
-            # 使用正确的 API：通过 LayoutPlanRepository 获取 LayoutPlan
             plans = []
             for slide in slides:
                 if slide.layout_plan_id:
@@ -164,39 +172,25 @@ class E2EBenchmarkService:
                     if plan:
                         plans.append(plan)
 
-            # 获取 DesignSystem（使用 DesignSystemRepository）
-            # TODO: 应该从 project 配置中获取正确的 design_system_id
-            design_systems = self._design_systems.list_all()
-            if not design_systems:
-                failure_reasons.append("没有可用的 DesignSystem")
-                design_system = None
-            else:
-                design_system = design_systems[0]  # 使用第一个
-
-            # 验证每个页面
             validation_reports = []
-            if design_system:
-                for plan in plans:
-                    report = self._validation.validate(
-                        plan,
-                        design_system,
-                        require_source=False,
-                    )
-                    validation_reports.append(report)
+            for plan in plans:
+                report = self._validation.validate(
+                    plan,
+                    design_system,
+                    require_source=False,
+                )
+                validation_reports.append(report)
 
-            # DeckQA 评估
             deck_qa_report = None
-            if design_system:
+            if plans:
                 deck_qa_report = self._deck_qa.evaluate(
                     plans,
                     slides=slides,
                     design_system=design_system,
                 )
 
-            # Step 7: 对比期望标准
             expectations = case.expected_outcomes
 
-            # 7.1 检查内容覆盖度
             content_result = None
             if expectations.content_expectations:
                 content_result = self._check_content_coverage(
@@ -205,30 +199,28 @@ class E2EBenchmarkService:
                 if not content_result.passed:
                     failure_reasons.append("内容覆盖度不达标")
 
-            # 7.2 检查 Hero Asset 使用
             hero_result = None
             if expectations.hero_asset_expectations:
                 hero_result = self._check_hero_assets(
-                    slides, plans, expectations.hero_asset_expectations, image_paths
+                    plans,
+                    expectations.hero_asset_expectations,
+                    imported_assets,
                 )
                 if not hero_result.passed:
                     failure_reasons.append("Hero Asset 使用不当")
 
-            # 7.3 检查布局分布
             layout_result = self._check_layout_distribution(
                 plans, expectations.layout_distribution
             )
             if not layout_result.passed:
                 failure_reasons.append("布局分布不符合预期")
 
-            # 7.4 检查质量指标
             quality_metrics = self._compute_quality_metrics(
                 slides, validation_reports, deck_qa_report, expectations
             )
             if not quality_metrics.passed:
                 failure_reasons.append("质量指标不达标")
 
-            # 判断总体通过状态
             passed = (
                 len(failure_reasons) == 0
                 and expectations.min_slide_count <= len(slides) <= expectations.max_slide_count
@@ -239,6 +231,9 @@ class E2EBenchmarkService:
             return E2EBenchmarkResult(
                 case_id=case.case_id,
                 scenario=case.scenario,
+                execution_mode="lite",
+                design_system_id=design_system.id,
+                imported_asset_count=len(imported_assets),
                 actual_slide_count=len(slides),
                 execution_time_seconds=round(execution_time, 2),
                 content_coverage=content_result,
@@ -248,6 +243,7 @@ class E2EBenchmarkService:
                 passed=passed,
                 failure_reasons=failure_reasons,
                 slide_details=self._build_slide_details(slides, plans, validation_reports),
+                notes=E2E_LITE_NOTES,
             )
 
         except Exception as e:
@@ -255,6 +251,9 @@ class E2EBenchmarkService:
             return E2EBenchmarkResult(
                 case_id=case.case_id,
                 scenario=case.scenario,
+                execution_mode="lite",
+                design_system_id=design_system.id if design_system else None,
+                imported_asset_count=len(imported_assets),
                 actual_slide_count=0,
                 execution_time_seconds=round(execution_time, 2),
                 quality_metrics=E2EQualityMetrics(
@@ -268,6 +267,7 @@ class E2EBenchmarkService:
                 ),
                 passed=False,
                 failure_reasons=[f"执行异常: {str(e)}"],
+                notes=E2E_LITE_NOTES,
             )
 
     def run_suite(self, cases: list[E2EBenchmarkCase]) -> E2EBenchmarkSummary:
@@ -392,46 +392,69 @@ class E2EBenchmarkService:
 
     def _check_hero_assets(
         self,
-        slides: list[Any],
         plans: list[Any],
         expectations: E2EHeroAssetExpectation,
-        available_assets: list[Path],
+        imported_assets: list[Asset],
     ) -> E2EHeroAssetResult:
-        """检查 Hero Asset 使用情况"""
-        # 收集使用的 hero assets
+        """检查 Hero Asset 是否引用已导入素材（Lite：不验证自主选图逻辑）。"""
         hero_usage: dict[str, int] = {}
         for plan in plans:
-            if plan.hero_element and plan.hero_element.asset_ref:
-                asset_ref = plan.hero_element.asset_ref
-                hero_usage[asset_ref] = hero_usage.get(asset_ref, 0) + 1
+            hero = (
+                plan.element_by_id(plan.hero_element_id)
+                if plan.hero_element_id
+                else None
+            )
+            if hero is None or not hero.content_ref:
+                continue
+            asset_ref = hero.content_ref
+            hero_usage[asset_ref] = hero_usage.get(asset_ref, 0) + 1
 
         total_hero_count = sum(hero_usage.values())
         unique_hero_count = len(hero_usage)
         max_reuse = max(hero_usage.values()) if hero_usage else 0
 
-        # TODO: 检查素材标签（需要从 AssetMetadata 获取）
         preferred_tag_usage = 0
         avoided_tag_usage = 0
 
-        # 计算使用率
-        used_assets = set(hero_usage.keys())
-        available_count = len(available_assets)
-        usage_ratio = len(used_assets) / available_count if available_count > 0 else 0.0
+        imported_refs = {
+            str(asset.id): asset
+            for asset in imported_assets
+        }
+        imported_refs.update(
+            {asset.path: asset for asset in imported_assets}
+        )
+        imported_refs.update(
+            {asset.filename: asset for asset in imported_assets}
+        )
 
-        # 计算正确性得分
+        used_assets = set(hero_usage.keys())
+        available_count = len(imported_assets)
+        matched_used = {
+            ref
+            for ref in used_assets
+            if ref in imported_refs or any(ref in key for key in imported_refs)
+        }
+        usage_ratio = len(matched_used) / available_count if available_count > 0 else 1.0
+
         correctness_score = 1.0
         if max_reuse > expectations.max_reuse_count:
             correctness_score -= 0.3
-        if usage_ratio < expectations.min_usage_ratio:
+        if available_count > 0 and usage_ratio < expectations.min_usage_ratio:
             correctness_score -= 0.2
         correctness_score = max(0.0, correctness_score)
 
         passed = (
             max_reuse <= expectations.max_reuse_count
-            and usage_ratio >= expectations.min_usage_ratio
+            and (available_count == 0 or usage_ratio >= expectations.min_usage_ratio)
         )
 
-        unused = [str(p.name) for p in available_assets if str(p) not in used_assets]
+        unused = [
+            asset.filename
+            for asset in imported_assets
+            if asset.filename not in used_assets
+            and str(asset.id) not in used_assets
+            and asset.path not in used_assets
+        ]
 
         return E2EHeroAssetResult(
             total_hero_count=total_hero_count,
@@ -531,7 +554,7 @@ class E2EBenchmarkService:
                 "slide_order": slide.order,
                 "title": slide.title,
                 "layout_family": plan.layout_family.value if plan else None,
-                "layout_variant": plan.variant if plan else None,
+                "layout_variant": plan.layout_variant if plan else None,
                 "valid": report.valid,
                 "score": round(report.score, 3),
                 "issues": [
@@ -566,10 +589,12 @@ class E2EBenchmarkService:
             slide = SlideSpec(
                 id=uuid4(),
                 presentation_id=presentation_id,
+                chapter_id="benchmark",
                 order=0,
-                title=case.task_description[:50],  # 截取标题
+                title=case.task_description[:50],
                 message=" ".join(content_exp.required_keywords[:3]),
                 key_points=content_exp.required_keywords[:5],
+                slide_type=SlideType.CONTENT,
             )
             slides.append(slide)
         else:
@@ -577,10 +602,12 @@ class E2EBenchmarkService:
             slide = SlideSpec(
                 id=uuid4(),
                 presentation_id=presentation_id,
+                chapter_id="benchmark",
                 order=0,
                 title=case.task_description[:50],
                 message="自动生成的测试页面",
                 key_points=["测试要点1", "测试要点2", "测试要点3"],
+                slide_type=SlideType.CONTENT,
             )
             slides.append(slide)
 
@@ -590,12 +617,71 @@ class E2EBenchmarkService:
             slide = SlideSpec(
                 id=uuid4(),
                 presentation_id=presentation_id,
+                chapter_id="benchmark",
                 order=i,
                 title=f"页面 {i + 1}",
                 message=f"这是第 {i + 1} 页的内容",
                 key_points=[f"要点 {i + 1}.1", f"要点 {i + 1}.2", f"要点 {i + 1}.3"],
+                slide_type=SlideType.CONTENT,
             )
             slides.append(slide)
 
         return slides
+
+    def _create_case_design_binding(
+        self,
+        *,
+        project_id: UUID,
+        case: E2EBenchmarkCase,
+    ) -> tuple[DesignSystem, ArtDirection]:
+        """Create an isolated DesignSystem + ArtDirection for one benchmark case."""
+        design = default_presentation_design_system()
+        design.name = f"E2E Benchmark · {case.case_id}"
+        design = self._design_systems.save(design)
+
+        art_direction = ArtDirection(
+            id=uuid4(),
+            project_id=project_id,
+            concept_name=f"E2E Benchmark {case.case_id}",
+            rationale=case.description,
+            visual_tone=["professional"],
+            palette_strategy="neutral",
+            typography_strategy="default",
+            grid_strategy="12-col",
+            image_strategy="contain",
+            drawing_strategy="dominant",
+            diagram_strategy="minimal",
+            annotation_strategy="caption",
+            cover_strategy="hero",
+            section_strategy="title",
+            content_strategy="balanced",
+            closing_strategy="summary",
+            pacing_strategy="steady",
+            design_system_id=design.id,
+            approval_status=ApprovalStatus.APPROVED,
+        )
+        art_direction = self._art_directions.save(art_direction)
+        return design, art_direction
+
+    def _generate_layout_for_slide(
+        self,
+        *,
+        slide: SlideSpec,
+        art_direction_id: UUID,
+        design_system_id: UUID,
+    ) -> None:
+        """Generate VisualIntent + LayoutPlan for one slide (Lite path)."""
+        intent = self._intent_service.generate_for_slide(slide, use_llm=False)
+        intent = self._visual_intents.save(intent)
+        slide.visual_intent_id = intent.id
+
+        plan = self._layout_planning.plan_slide(
+            slide=slide,
+            visual_intent_id=intent.id,
+            art_direction_id=art_direction_id,
+            design_system_id=design_system_id,
+            candidate_count=1,
+        )
+        slide.layout_plan_id = plan.id
+        self._presentations.save_slide(slide)
 
