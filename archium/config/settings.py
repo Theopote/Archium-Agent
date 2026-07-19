@@ -106,6 +106,17 @@ class Settings(BaseSettings):
         default=Path("data/chroma"),
         description="Chroma vector index storage directory.",
     )
+    chroma_max_documents: int = Field(
+        default=10000,
+        ge=100,
+        description="Maximum number of documents in Chroma vector store to prevent memory issues.",
+    )
+    workflow_checkpoint_retention_days: int = Field(
+        default=7,
+        ge=1,
+        le=90,
+        description="Auto-delete workflow checkpoints older than this many days to manage storage.",
+    )
 
     # ── llm.* ────────────────────────────────────────────────────────────────
     llm_provider: str = Field(
@@ -135,6 +146,12 @@ class Settings(BaseSettings):
         description="Maximum structured-output repair attempts per LLM call.",
     )
     llm_timeout_seconds: float = Field(default=60.0, gt=0, description="LLM request timeout in seconds.")
+    llm_max_concurrent_requests: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion.",
+    )
 
     # ── embedding.* ──────────────────────────────────────────────────────────
     embedding_provider: str = Field(

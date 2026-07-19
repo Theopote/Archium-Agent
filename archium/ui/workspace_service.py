@@ -48,7 +48,8 @@ def _resolve_runtime_settings(settings: Settings | None) -> Settings:
             from archium.ui.llm_settings import get_ui_effective_settings
 
             return get_ui_effective_settings()
-    except Exception:
+    except (ImportError, RuntimeError):
+        # Streamlit not available or not in Streamlit context
         pass
     return get_effective_settings()
 

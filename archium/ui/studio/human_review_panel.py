@@ -11,6 +11,8 @@ from archium.application.studio_human_review_store import (
     load_slide_review,
     save_slide_review,
 )
+from pydantic import ValidationError
+
 from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
@@ -48,7 +50,8 @@ def get_stored_human_review(
         if isinstance(payload, dict):
             try:
                 return HumanVisualReview.model_validate(payload)
-            except Exception:
+            except ValidationError:
+                # Invalid cached review data, ignore and load from DB
                 pass
     with get_session() as session:
         return load_slide_review(
