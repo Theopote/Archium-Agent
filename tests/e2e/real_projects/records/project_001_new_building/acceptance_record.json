@@ -1,0 +1,24 @@
+{
+  "project_id": "project_001_new_building",
+  "scenario": "new_building",
+  "title": "新建建筑方案汇报：滨海文化综合体",
+  "run_at": "2026-07-19T05:29:11.539401Z",
+  "metrics": {
+    "first_generation_seconds": 1.045,
+    "generation_succeeded": true,
+    "slide_count": 20,
+    "asset_count": 10,
+    "layout_plan_count": 20,
+    "critical_layout_page_count": 0,
+    "error_layout_page_count": 0,
+    "drawing_crop_issue_count": 0,
+    "export_acceptable": true,
+    "real_asset_utilization_rate": 1.0,
+    "major_edit_page_ratio": null,
+    "minor_edit_page_ratio": null,
+    "exported_page_ratio": null,
+    "average_human_visual_score": null,
+    "user_edit_minutes": null
+  },
+  "notes": "slides>=20: True; assets>=10: True"
+}

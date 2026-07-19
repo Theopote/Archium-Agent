@@ -1,0 +1,46 @@
+{
+  "id": "project_004_government_client",
+  "scenario": "government_client_decision",
+  "name": "政府决策汇报：城市更新片区规划",
+  "project": {
+    "name": "老城更新片区规划",
+    "project_type": "urban_design"
+  },
+  "inline_docx": {
+    "filename": "规划说明.docx",
+    "paragraphs": [
+      "片区更新需兼顾历史风貌保护与现代功能植入。",
+      "公共交通与慢行系统优先，减少机动车穿越。",
+      "公服设施与开放空间同步提升。"
+    ]
+  },
+  "inline_pdf": {
+    "filename": "政策依据.pdf",
+    "text": "响应城市更新条例与片区控规要求，强调公共利益优先。"
+  },
+  "inline_assets": [
+    {"filename": "aerial.png", "label": "片区航拍", "visual_type": "site_photo"},
+    {"filename": "policy_map.png", "label": "规划结构", "visual_type": "map"},
+    {"filename": "metrics.png", "label": "指标示意", "visual_type": "chart"}
+  ],
+  "facts": [
+    {"key": "area", "label": "更新范围", "value": "86 ha"},
+    {"key": "population", "label": "服务人口", "value": "12 万人"}
+  ],
+  "request": {
+    "title": "城市更新片区规划决策汇报",
+    "audience": "政府部门与甲方决策层",
+    "purpose": "汇报更新策略、指标与分期决策事项",
+    "duration_minutes": 45,
+    "target_slide_count": 20,
+    "core_message": "以公共利益与慢行优先组织片区更新",
+    "required_sections": ["片区现状", "问题诊断", "更新策略", "分期实施", "决策事项"],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 20,
+    "min_assets": 10,
+    "workflow_status": "completed",
+    "export_presentation_spec": true
+  }
+}

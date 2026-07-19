@@ -1,0 +1,46 @@
+{
+  "id": "project_001_new_building",
+  "scenario": "new_building",
+  "name": "新建建筑方案汇报：滨海文化综合体",
+  "project": {
+    "name": "滨海文化综合体方案",
+    "project_type": "mixed_use"
+  },
+  "inline_docx": {
+    "filename": "任务书.docx",
+    "paragraphs": [
+      "项目位于滨海片区，需整合展览、办公与公共开放空间。",
+      "方案强调城市界面开放与慢行系统贯通。",
+      "需在一期建设中预留二期扩展弹性。"
+    ]
+  },
+  "inline_pdf": {
+    "filename": "规划条件.pdf",
+    "text": "容积率 2.8，建筑限高 80m，需保留 15% 公共开放空间。"
+  },
+  "inline_assets": [
+    {"filename": "hero_render.png", "label": "效果图", "visual_type": "rendering"},
+    {"filename": "site_plan.png", "label": "总平面", "visual_type": "site_plan"},
+    {"filename": "section.png", "label": "剖面", "visual_type": "section"}
+  ],
+  "facts": [
+    {"key": "far", "label": "容积率", "value": "2.8"},
+    {"key": "height", "label": "建筑限高", "value": "80 m"}
+  ],
+  "request": {
+    "title": "滨海文化综合体方案汇报",
+    "audience": "规划主管部门与业主代表",
+    "purpose": "汇报新建方案空间结构与实施策略",
+    "duration_minutes": 40,
+    "target_slide_count": 20,
+    "core_message": "以公共开放空间串联文化、办公与商业功能",
+    "required_sections": ["区位背景", "设计理念", "空间结构", "立面材料", "总结决策"],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 20,
+    "min_assets": 10,
+    "workflow_status": "completed",
+    "export_presentation_spec": true
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "project_002_renovation",
+  "scenario": "existing_renovation",
+  "name": "既有建筑改造：工业厂房转创意办公",
+  "project": {
+    "name": "工业厂房创意办公改造",
+    "project_type": "urban_renewal"
+  },
+  "inline_docx": {
+    "filename": "改造任务书.docx",
+    "paragraphs": [
+      "厂区保留原有结构框架，需植入新功能并提升公共界面。",
+      "改造需分三期实施，保障既有租户基本运营。",
+      "结构加固与机电更新需同步推进。"
+    ]
+  },
+  "inline_xlsx": {
+    "filename": "面积指标.xlsx",
+    "sheet_name": "指标",
+    "rows": [
+      ["指标", "现状", "改造后"],
+      ["建筑面积", "2.4 万㎡", "3.1 万㎡"],
+      ["公共空间", "8%", "18%"]
+    ]
+  },
+  "inline_assets": [
+    {"filename": "before_photo.png", "label": "改造前", "visual_type": "site_photo"},
+    {"filename": "structure.png", "label": "结构现状", "visual_type": "diagram"},
+    {"filename": "plan.png", "label": "改造平面", "visual_type": "floor_plan"}
+  ],
+  "facts": [
+    {"key": "gfa", "label": "改造后建面", "value": "3.1 万㎡"},
+    {"key": "phase", "label": "分期", "value": "三期"}
+  ],
+  "request": {
+    "title": "工业厂房创意办公改造汇报",
+    "audience": "业主与运营方",
+    "purpose": "确认改造策略、分期与结构保留原则",
+    "duration_minutes": 35,
+    "target_slide_count": 20,
+    "core_message": "保留结构骨架，重建公共界面与功能弹性",
+    "required_sections": ["厂区现状", "问题诊断", "改造策略", "分期实施", "总结决策"],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 20,
+    "min_assets": 10,
+    "workflow_status": "completed",
+    "export_presentation_spec": true
+  }
+}

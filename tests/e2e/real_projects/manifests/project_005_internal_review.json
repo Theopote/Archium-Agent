@@ -1,0 +1,47 @@
+{
+  "id": "project_005_internal_review",
+  "scenario": "internal_design_review",
+  "name": "内部设计评审：总部大楼概念方案",
+  "project": {
+    "name": "企业总部大楼概念方案",
+    "project_type": "office"
+  },
+  "inline_docx": {
+    "filename": "内审简报.docx",
+    "paragraphs": [
+      "概念方案聚焦中庭采光与灵活办公模块。",
+      "结构采用模数化柱网，支持未来功能调整。",
+      "立面语言需体现企业品牌但避免过度符号化。"
+    ]
+  },
+  "inline_pptx": {
+    "filename": "参考案例.pptx",
+    "title": "参考案例",
+    "body": "对标国际总部办公中庭与公共界面处理方式。"
+  },
+  "inline_assets": [
+    {"filename": "concept_render.png", "label": "概念效果", "visual_type": "rendering"},
+    {"filename": "module.png", "label": "模块分析", "visual_type": "diagram"},
+    {"filename": "facade.png", "label": "立面研究", "visual_type": "elevation"}
+  ],
+  "facts": [
+    {"key": "gfa", "label": "建筑面积", "value": "6.8 万㎡"},
+    {"key": "floors", "label": "层数", "value": "32 层"}
+  ],
+  "request": {
+    "title": "总部大楼概念方案内部评审",
+    "audience": "设计团队与主创",
+    "purpose": "内部评审空间结构、立面语言与实施风险",
+    "duration_minutes": 30,
+    "target_slide_count": 20,
+    "core_message": "以中庭与模数化结构支撑灵活总部办公",
+    "required_sections": ["概念定位", "空间结构", "立面材料", "风险事项", "下步计划"],
+    "presentation_type": "internal"
+  },
+  "expectations": {
+    "min_slides": 20,
+    "min_assets": 10,
+    "workflow_status": "completed",
+    "export_presentation_spec": true
+  }
+}

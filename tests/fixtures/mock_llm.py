@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from archium.infrastructure.llm import LLMRequest
 
 from tests.fixtures.mock_full_deck_responses import (
@@ -25,11 +27,13 @@ from tests.fixtures.mock_presentation_responses import (
 
 def _wants_full_deck(request: LLMRequest) -> bool:
     haystack = request.user_prompt
-    return (
-        '"target_slide_count": 20' in haystack
-        or "目标页数: 20" in haystack
-        or "请生成约 20 页" in haystack
-    )
+    if "目标页数: 20" in haystack or "请生成约 20 页" in haystack:
+        return True
+    match = re.search(r'"target_slide_count"\s*:\s*(\d+)', haystack)
+    if match and int(match.group(1)) >= 15:
+        return True
+    match = re.search(r"target_slide_count[=:\s]+(\d+)", haystack)
+    return bool(match and int(match.group(1)) >= 15)
 
 
 def pipeline_mock_selector(request: LLMRequest) -> str | None:

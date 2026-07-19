@@ -1,0 +1,12 @@
+"""Pytest config for e2e acceptance tests."""
+
+from __future__ import annotations
+
+import pytest
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        "real_project_acceptance: Five real-project end-to-end acceptance scenarios",
+    )
