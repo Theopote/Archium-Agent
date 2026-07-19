@@ -256,42 +256,69 @@ class TestOperationDecomposition:
         assert has_reduce, "应该包含减少文字操作"
 
 
-class TestTransactionExecution:
-    """Test that transactions execute atomically with rollback support."""
+def test_decompose_swap_produces_two_absolute_moves() -> None:
+    """Swap should decompose into two absolute move operations."""
+    from archium.application.visual.operation_decomposer import OperationDecomposer
+    from archium.domain.visual.slide import SlideSnapshot
+    from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
-    def test_transaction_commits_on_success(self):
-        """Verify all operations execute and commit on success."""
-        # This would require database setup and full integration
-        # Placeholder for integration test
-        pass
-
-    def test_transaction_rolls_back_on_failure(self):
-        """Verify all operations roll back when one fails."""
-        # This would require database setup and full integration
-        # Placeholder for integration test
-        pass
-
-    def test_locks_preserved_across_operations(self):
-        """Verify locked elements remain locked throughout transaction."""
-        # This would require database setup and full integration
-        # Placeholder for integration test
-        pass
-
-
-class TestRevisionChain:
-    """Test that revision chains track multi-step operations."""
-
-    def test_revision_per_step(self):
-        """Verify each operation creates a revision."""
-        # This would require database setup and full integration
-        # Placeholder for integration test
-        pass
-
-    def test_rollback_entire_chain(self):
-        """Verify entire operation chain can be rolled back."""
-        # This would require database setup and full integration
-        # Placeholder for integration test
-        pass
+    left_id = uuid4()
+    right_id = uuid4()
+    layout_plan = LayoutPlan(
+        id=uuid4(),
+        slide_id=uuid4(),
+        layout_family=LayoutFamily.DRAWING_FOCUS,
+        layout_variant="default",
+        page_width=720,
+        page_height=540,
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+        elements=[
+            LayoutElement(
+                id=str(left_id),
+                role=LayoutElementRole.CAPTION,
+                content_type=LayoutContentType.TEXT,
+                x=80,
+                y=200,
+                width=120,
+                height=60,
+                text_content="左",
+            ),
+            LayoutElement(
+                id=str(right_id),
+                role=LayoutElementRole.BODY_TEXT,
+                content_type=LayoutContentType.TEXT,
+                x=480,
+                y=260,
+                width=120,
+                height=60,
+                text_content="右",
+            ),
+        ],
+    )
+    parsed = ParsedIntent(
+        intent=VisualEditIntent.CHANGE_LAYOUT,
+        params={
+            "multi_step_operations": [
+                {"operation": "swap", "targets": [str(left_id), str(right_id)]},
+            ],
+        },
+        modifiers=[],
+        confidence=0.9,
+    )
+    operations = OperationDecomposer().decompose(
+        parsed,
+        SlideSnapshot(
+            slide_id=layout_plan.slide_id,
+            presentation_id=uuid4(),
+            visual_intent=None,
+            layout_plan=layout_plan,
+        ),
+    )
+    assert len(operations) == 2
+    assert operations[0].params["position"] == "absolute"
+    assert operations[0].params["x"] == 480
+    assert operations[1].params["x"] == 80
 
 
 if __name__ == "__main__":

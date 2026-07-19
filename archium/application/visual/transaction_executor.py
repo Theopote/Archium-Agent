@@ -401,7 +401,13 @@ class TransactionExecutor:
                 updated_elements.append(element)
                 continue
             assert_element_editable(element, ElementEditOperation.REPAIR_GEOMETRY)
-            x, y, width, height = compute_element_placement(element, layout_plan, position)
+            x, y, width, height = compute_element_placement(
+                element,
+                layout_plan,
+                position,
+                absolute_x=operation.params.get("x"),
+                absolute_y=operation.params.get("y"),
+            )
             updated_elements.append(
                 element.model_copy(update={"x": x, "y": y, "width": width, "height": height})
             )

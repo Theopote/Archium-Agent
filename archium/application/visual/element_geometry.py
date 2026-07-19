@@ -27,6 +27,8 @@ _POSITION_ALIASES: dict[str, str] = {
 def normalize_position(position: str) -> str:
     """Map natural-language position hints to canonical placement names."""
     normalized = position.strip().lower()
+    if normalized == "absolute":
+        return "absolute"
     if normalized in _POSITION_ALIASES:
         return _POSITION_ALIASES[normalized]
     if normalized.startswith("position_of_") or normalized == "temp":
@@ -38,6 +40,9 @@ def compute_element_placement(
     element: LayoutElement,
     layout_plan: LayoutPlan,
     position: str,
+    *,
+    absolute_x: float | None = None,
+    absolute_y: float | None = None,
 ) -> tuple[float, float, float, float]:
     """Return x, y, width, height for moving an element to a page region."""
     canonical = normalize_position(position)
@@ -45,7 +50,12 @@ def compute_element_placement(
     width = element.width
     height = element.height
 
-    if canonical == "right":
+    if canonical == "absolute":
+        if absolute_x is None or absolute_y is None:
+            raise WorkflowError("absolute move requires x and y coordinates")
+        x = absolute_x
+        y = absolute_y
+    elif canonical == "right":
         x = layout_plan.page_width * 0.52
         y = element.y
     elif canonical == "left":

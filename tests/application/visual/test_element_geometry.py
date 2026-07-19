@@ -53,6 +53,37 @@ def test_compute_element_placement_moves_to_right_column() -> None:
     assert y == element.y
 
 
-def test_swap_position_raises() -> None:
-    with pytest.raises(WorkflowError, match="swap"):
-        normalize_position("position_of_说明")
+def test_absolute_placement() -> None:
+    from archium.application.visual.element_geometry import compute_element_placement
+
+    plan = LayoutPlan(
+        id=uuid4(),
+        slide_id=uuid4(),
+        layout_family=LayoutFamily.DRAWING_FOCUS,
+        layout_variant="default",
+        page_width=720,
+        page_height=540,
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+        elements=[],
+    )
+    element = LayoutElement(
+        id="box",
+        role=LayoutElementRole.CAPTION,
+        content_type=LayoutContentType.TEXT,
+        x=10,
+        y=10,
+        width=100,
+        height=50,
+        text_content="test",
+    )
+    x, y, width, height = compute_element_placement(
+        element,
+        plan,
+        "absolute",
+        absolute_x=300,
+        absolute_y=200,
+    )
+    assert x == 300
+    assert y == 200
+    assert width == 100

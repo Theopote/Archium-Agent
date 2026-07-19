@@ -142,6 +142,8 @@ class OperationDecomposer:
                 element_id = self._resolve_element_name(target, slide_snapshot)
                 if element_id:
                     return MoveOperation(element_id, str(position), preserve_size=True)
+            if params.get("multi_step_operations"):
+                return None
             raise WorkflowError(
                 "change_layout requires layout_family or a movable target with position"
             )
@@ -220,7 +222,41 @@ class OperationDecomposer:
                     )
 
             elif operation_name == "swap" and len(targets) >= 2:
-                raise WorkflowError("元素交换（swap）暂未支持，请分步移动元素。")
+                layout_plan = slide_snapshot.layout_plan
+                if layout_plan is None:
+                    raise WorkflowError("swap requires an existing layout plan")
+                elem1_id = self._resolve_element_name(targets[0], slide_snapshot)
+                elem2_id = self._resolve_element_name(targets[1], slide_snapshot)
+                if elem1_id is None or elem2_id is None:
+                    raise WorkflowError("无法解析 swap 目标元素")
+                first = layout_plan.element_by_id(str(elem1_id))
+                second = layout_plan.element_by_id(str(elem2_id))
+                if first is None or second is None:
+                    raise WorkflowError("无法解析 swap 目标元素")
+                multi_step_ops.append(
+                    AtomicOperation(
+                        operation_type=OperationType.MOVE,
+                        target_element_id=elem1_id,
+                        params={
+                            "position": "absolute",
+                            "x": second.x,
+                            "y": second.y,
+                            "preserve_size": True,
+                        },
+                    )
+                )
+                multi_step_ops.append(
+                    AtomicOperation(
+                        operation_type=OperationType.MOVE,
+                        target_element_id=elem2_id,
+                        params={
+                            "position": "absolute",
+                            "x": first.x,
+                            "y": first.y,
+                            "preserve_size": True,
+                        },
+                    )
+                )
 
         # Also check for inline "reduce_lines" operations
         if "reduce_lines" in params and params["reduce_lines"]:
@@ -284,6 +320,13 @@ class OperationDecomposer:
         layout_plan = slide_snapshot.layout_plan
         if not layout_plan:
             return None
+
+        for element in layout_plan.elements:
+            if element.id.lower() == normalized:
+                try:
+                    return UUID(element.id)
+                except ValueError:
+                    return None
 
         if role in {"drawing", "hero", "hero_visual", "main_visual"}:
             for candidate_role in (
