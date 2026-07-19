@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.visual.e2e_benchmark_service import (
     E2E_CONTENT_NOTES,
+    E2E_FULL_NOTES,
     E2E_LITE_NOTES,
     E2EBenchmarkService,
 )
@@ -137,6 +138,29 @@ def content_planning_benchmark_case(
     )
 
 
+@pytest.fixture
+def full_benchmark_case(content_planning_benchmark_case: E2EBenchmarkCase) -> E2EBenchmarkCase:
+    return content_planning_benchmark_case.model_copy(
+        update={
+            "case_id": "full_pipeline_001",
+            "enable_visual_workflow": True,
+        }
+    )
+
+
+@pytest.fixture
+def always_valid_layouts(monkeypatch: pytest.MonkeyPatch) -> None:
+    from archium.domain.visual.validation import LayoutValidationReport
+
+    def _always_valid(self, layout_plan, design_system, **kwargs):  # noqa: ANN001, ARG001
+        return LayoutValidationReport(issues=[], score=1.0)
+
+    monkeypatch.setattr(
+        "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
+        _always_valid,
+    )
+
+
 class TestE2EBenchmarkServiceBasic:
     def test_service_initialization(self, db_session: Session, tmp_path: Path) -> None:
         service = E2EBenchmarkService(db_session, tmp_path)
@@ -242,6 +266,21 @@ class TestE2EBenchmarkServiceIntegration:
         assert "院区现状" in titles
         assert "改造策略" in titles
 
+    def test_full_pipeline_runs_visual_workflow(
+        self,
+        benchmark_service_with_llm: E2EBenchmarkService,
+        full_benchmark_case: E2EBenchmarkCase,
+        always_valid_layouts: None,
+    ) -> None:
+        result = benchmark_service_with_llm.run_case(full_benchmark_case)
+
+        assert result.execution_mode == "full"
+        assert result.notes == E2E_FULL_NOTES
+        assert result.actual_slide_count == 4
+        assert result.visual_layout_plan_count == 4
+        assert result.design_system_id is not None
+        assert all(detail["layout_family"] is not None for detail in result.slide_details)
+
     def test_layout_plan_repository_integration(
         self,
         benchmark_service: E2EBenchmarkService,
@@ -254,13 +293,15 @@ class TestE2EBenchmarkServiceIntegration:
 class TestE2EBenchmarkServiceEndToEnd:
     def test_complete_workflow_smoke(
         self,
-        benchmark_service: E2EBenchmarkService,
-        sample_benchmark_case: E2EBenchmarkCase,
+        benchmark_service_with_llm: E2EBenchmarkService,
+        full_benchmark_case: E2EBenchmarkCase,
+        always_valid_layouts: None,
     ) -> None:
-        """Full marker test: still E2E Lite until Brief/Storyline/PPTX exist."""
-        result = benchmark_service.run_case(sample_benchmark_case)
-        assert result.execution_mode == "lite"
+        """Marked e2e: content planning + VisualWorkflowService."""
+        result = benchmark_service_with_llm.run_case(full_benchmark_case)
+        assert result.execution_mode == "full"
         assert result.actual_slide_count >= 1
+        assert result.visual_layout_plan_count >= 1
         assert result.design_system_id is not None
         assert isinstance(result.failure_reasons, list)
 

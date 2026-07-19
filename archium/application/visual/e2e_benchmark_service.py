@@ -6,13 +6,12 @@
 3. 评估最终输出质量
 4. 对比期望标准
 
-注意：当前支持两种执行模式：
+注意：当前支持三种执行模式：
 - ``lite``：SlideSpec 由 case 预置（默认）
 - ``content``：Brief → Storyline → SlideSpec（需 ``enable_content_planning`` + LLM）
+- ``full``：content/lite 页面 + VisualWorkflowService（需 ``enable_visual_workflow``）
 
-仍未实现 ``full``（Visual Workflow / PPTX / Screenshot）。
-原始任务 → 创建项目 → 导入资料 → Brief → Storyline → SlideSpec →
-Visual Workflow → Composition → Layout → PPTX → Screenshot → QA
+仍未实现：PPTX 导出、Screenshot QA、自主 Hero 选图验证。
 """
 
 from __future__ import annotations
@@ -27,10 +26,17 @@ from sqlalchemy.orm import Session
 from archium.application.ingestion_service import IngestionService
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
+from archium.application.project_acceptance_service import (
+    _attach_project_assets,
+)
 from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.visual_intent_service import VisualIntentService
+from archium.application.visual.visual_workflow_service import (
+    VisualWorkflowResult,
+    VisualWorkflowService,
+)
 from archium.domain.asset import Asset
 from archium.domain.enums import ApprovalStatus, SlideType
 from archium.domain.presentation import Presentation
@@ -54,7 +60,11 @@ from archium.domain.visual.e2e_benchmark import (
 from archium.domain.visual.enums import LayoutFamily
 from archium.config.settings import Settings, get_settings
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    AssetRepository,
+    PresentationRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
@@ -70,6 +80,10 @@ E2E_LITE_NOTES = (
 E2E_CONTENT_NOTES = (
     "E2E Content: 已通过 Brief → Storyline → SlideSpec 从导入资料生成页面；"
     "仍未执行 Visual Workflow / PPTX / Screenshot。"
+)
+E2E_FULL_NOTES = (
+    "E2E Full: 已执行 VisualWorkflowService（ArtDirection → Composition → "
+    "Layout → Render）；仍未执行 PPTX / Screenshot QA。"
 )
 E2E_LITE_SKIPPED = [
     "brief_generation",
@@ -108,6 +122,7 @@ class E2EBenchmarkService:
         self._design_systems = DesignSystemRepository(session)
         self._art_directions = ArtDirectionRepository(session)
         self._visual_intents = VisualIntentRepository(session)
+        self._assets = AssetRepository(session)
 
     def run_case(self, case: E2EBenchmarkCase) -> E2EBenchmarkResult:
         """执行单个 E2E Lite 案例。"""
@@ -178,18 +193,34 @@ class E2EBenchmarkService:
                 for slide in slides:
                     self._presentations.save_slide(slide)
 
-            art_direction.presentation_id = presentation.id
-            self._art_directions.save(art_direction)
-
-            for slide in slides:
+            visual_layout_plan_count = 0
+            if case.enable_visual_workflow:
+                if not case.enable_content_planning:
+                    art_direction.presentation_id = presentation.id
+                    self._art_directions.save(art_direction)
+                execution_mode = "full"
                 try:
-                    self._generate_layout_for_slide(
-                        slide=slide,
-                        art_direction_id=art_direction.id,
+                    visual_layout_plan_count = self._run_visual_workflow_for_case(
+                        project_id=project.id,
+                        presentation_id=presentation.id,
                         design_system_id=design_system.id,
+                        imported_assets=imported_assets,
+                        failure_reasons=failure_reasons,
                     )
-                except (WorkflowError, ValueError) as e:
-                    failure_reasons.append(f"Slide {slide.order} 生成失败: {e}")
+                except Exception as e:
+                    failure_reasons.append(f"Visual Workflow 失败: {e}")
+            else:
+                art_direction.presentation_id = presentation.id
+                self._art_directions.save(art_direction)
+                for slide in slides:
+                    try:
+                        self._generate_layout_for_slide(
+                            slide=slide,
+                            art_direction_id=art_direction.id,
+                            design_system_id=design_system.id,
+                        )
+                    except (WorkflowError, ValueError) as e:
+                        failure_reasons.append(f"Slide {slide.order} 生成失败: {e}")
 
             slides = self._presentations.list_slides(presentation.id)
 
@@ -262,6 +293,7 @@ class E2EBenchmarkService:
                 execution_mode=execution_mode,
                 design_system_id=design_system.id,
                 imported_asset_count=len(imported_assets),
+                visual_layout_plan_count=visual_layout_plan_count,
                 actual_slide_count=len(slides),
                 execution_time_seconds=round(execution_time, 2),
                 content_coverage=content_result,
@@ -271,7 +303,7 @@ class E2EBenchmarkService:
                 passed=passed,
                 failure_reasons=failure_reasons,
                 slide_details=self._build_slide_details(slides, plans, validation_reports),
-                notes=E2E_CONTENT_NOTES if execution_mode == "content" else E2E_LITE_NOTES,
+                notes=self._notes_for_mode(execution_mode),
             )
 
         except Exception as e:
@@ -751,4 +783,75 @@ class E2EBenchmarkService:
         if not slides:
             raise WorkflowError("内容规划未生成任何 SlideSpec")
         return presentation, slides
+
+    def _run_visual_workflow_for_case(
+        self,
+        *,
+        project_id: UUID,
+        presentation_id: UUID,
+        design_system_id: UUID,
+        imported_assets: list[Asset],
+        failure_reasons: list[str],
+    ) -> int:
+        assets = imported_assets or self._assets.list_by_project(project_id)
+        _attach_project_assets(
+            self._presentations,
+            presentation_id,
+            project_id,
+            assets,
+        )
+
+        visual_service = VisualWorkflowService(
+            self._session,
+            llm=self._llm,
+            settings=self._settings,
+        )
+        try:
+            result = visual_service.run(
+                project_id,
+                presentation_id,
+                require_art_direction_review=False,
+                use_llm=False,
+                export_pptx=False,
+                export_layout_instructions=True,
+                candidate_count=1,
+                max_repair_rounds=1,
+                design_system_id=design_system_id,
+            )
+            result = self._resume_visual_if_paused(visual_service, result)
+            if not result.succeeded:
+                failure_reasons.append("Visual Workflow 未完成")
+                failure_reasons.extend(result.errors)
+            elif result.warnings:
+                failure_reasons.extend(
+                    [f"Visual Workflow 警告: {warning}" for warning in result.warnings]
+                )
+            return len(result.layout_plan_ids)
+        finally:
+            visual_service.close()
+
+    @staticmethod
+    def _resume_visual_if_paused(
+        visual_service: VisualWorkflowService,
+        result: VisualWorkflowResult,
+    ) -> VisualWorkflowResult:
+        if result.succeeded or not result.awaiting_review:
+            return result
+        gate = result.review_gate
+        if gate == "layout_review":
+            return visual_service.continue_after_layout_review(
+                result.workflow_run.id,
+                allow_invalid_layout_export=True,
+            )
+        if gate == "art_direction":
+            return visual_service.continue_after_art_direction_approval(result.workflow_run.id)
+        return result
+
+    @staticmethod
+    def _notes_for_mode(mode: E2EExecutionMode) -> str:
+        if mode == "full":
+            return E2E_FULL_NOTES
+        if mode == "content":
+            return E2E_CONTENT_NOTES
+        return E2E_LITE_NOTES
 

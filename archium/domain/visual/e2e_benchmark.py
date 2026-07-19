@@ -128,6 +128,9 @@ class E2EBenchmarkCase(DomainModel):
     # 内容规划：Brief → Storyline → SlideSpec（需 E2EBenchmarkService 注入 LLM）
     enable_content_planning: bool = False
 
+    # Visual Workflow：ArtDirection → Composition → Layout → Render（需已有 SlideSpec）
+    enable_visual_workflow: bool = False
+
     # 元数据
     difficulty: str = "medium"  # "easy" | "medium" | "hard"
     tags: list[str] = Field(default_factory=list)
@@ -195,6 +198,7 @@ class E2EBenchmarkResult(DomainModel):
     execution_mode: E2EExecutionMode = "lite"
     design_system_id: UUID | None = None
     imported_asset_count: int = Field(default=0, ge=0)
+    visual_layout_plan_count: int = Field(default=0, ge=0)
 
     # 基本统计
     actual_slide_count: int
