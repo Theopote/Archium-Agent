@@ -965,9 +965,9 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
             "细节：增加遮阳百叶，提升节能",
         ),
         assets=(
-            _asset(34, 1, VisualType.PHOTO, "现状建筑照片（横图）"),  # 横向照片
+            _asset(34, 1, VisualType.SITE_PHOTO, "现状建筑照片（横图）"),  # 横向照片
             _asset(34, 2, VisualType.ELEVATION, "改造后南立面图（竖图）"),  # 竖向立面图
-            _asset(34, 3, VisualType.PHOTO, "现状入口照片（横图）"),  # 横向照片
+            _asset(34, 3, VisualType.SITE_PHOTO, "现状入口照片（横图）"),  # 横向照片
             _asset(34, 4, VisualType.ELEVATION, "改造后东立面图（竖图）"),  # 竖向立面图
         ),
         hero_asset_id=catalog_asset_uuid(34, 1),
