@@ -19,6 +19,7 @@ def test_all_operation_types_covered_in_policy() -> None:
         OperationType.LOCK,
         OperationType.UNLOCK,
         OperationType.MOVE,
+        OperationType.SWAP,
         OperationType.RESIZE,
         OperationType.CHANGE_LAYOUT,
         OperationType.ENLARGE_HERO,

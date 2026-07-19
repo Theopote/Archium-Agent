@@ -1,0 +1,91 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试和文档
+tests/
+docs/
+*.md
+!README.md
+*.rst
+
+# 数据和临时文件
+data/
+uploads/
+outputs/
+*.db
+*.db-shm
+*.db-wal
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# 日志
+*.log
+
+# 分发
+dist/
+build/
+*.egg-info/
+
+# Node modules (会在镜像内重新安装)
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# 环境变量（会通过 docker-compose 注入）
+.env
+.env.local
+.env.*.local
+
+# 覆盖率报告
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Jupyter
+.ipynb_checkpoints
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 大文件示例
+examples/large_files/
+*.pptx
+*.pdf
+*.zip
+*.tar.gz

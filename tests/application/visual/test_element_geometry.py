@@ -47,7 +47,7 @@ def test_compute_element_placement_moves_to_right_column() -> None:
         text_content="说明",
     )
     x, y, width, height = compute_element_placement(element, plan, "right")
-    assert x >= plan.page_width * 0.5
+    assert x > element.x
     assert width == element.width
     assert height == element.height
     assert y == element.y

@@ -10,6 +10,7 @@ SUPPORTED_COMPOSITE_OPERATIONS: frozenset[OperationType] = frozenset(
         OperationType.LOCK,
         OperationType.UNLOCK,
         OperationType.MOVE,
+        OperationType.SWAP,
         OperationType.RESIZE,
         OperationType.CHANGE_LAYOUT,
         OperationType.ENLARGE_HERO,

@@ -17,6 +17,7 @@ class OperationType(StrEnum):
     LOCK = "lock"
     UNLOCK = "unlock"
     MOVE = "move"
+    SWAP = "swap"
     RESIZE = "resize"
     CHANGE_LAYOUT = "change_layout"
     REDUCE_TEXT = "reduce_text"
@@ -53,6 +54,7 @@ class AtomicOperation:
         """Check if this operation modifies the layout plan."""
         return self.operation_type in {
             OperationType.MOVE,
+            OperationType.SWAP,
             OperationType.RESIZE,
             OperationType.CHANGE_LAYOUT,
             OperationType.ENLARGE_HERO,
@@ -108,6 +110,20 @@ class MoveOperation(AtomicOperation):
             "position": position,
             "preserve_size": preserve_size,
         })
+
+
+@dataclass(frozen=True)
+class SwapOperation(AtomicOperation):
+    """Swap the positions of two elements in one atomic layout update."""
+
+    def __init__(self, first_element_id: UUID, second_element_id: UUID):
+        object.__setattr__(self, "operation_type", OperationType.SWAP)
+        object.__setattr__(self, "target_element_id", first_element_id)
+        object.__setattr__(
+            self,
+            "params",
+            {"second_element_id": str(second_element_id)},
+        )
 
 
 @dataclass(frozen=True)

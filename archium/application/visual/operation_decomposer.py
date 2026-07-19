@@ -14,6 +14,7 @@ from archium.domain.visual.atomic_operation import (
     MoveOperation,
     ReduceTextOperation,
     ResizeOperation,
+    SwapOperation,
     UnlockOperation,
     intent_to_operation_type,
     OperationType,
@@ -82,6 +83,15 @@ class OperationDecomposer:
             parsed_intent.params,
             slide_snapshot,
         )
+        if main_op is not None and main_op.operation_type == OperationType.MOVE:
+            multi_step_ops = [
+                op
+                for op in multi_step_ops
+                if not (
+                    op.operation_type == OperationType.MOVE
+                    and op.target_element_id == main_op.target_element_id
+                )
+            ]
         operations.extend(multi_step_ops)
 
         if not operations:
@@ -233,30 +243,7 @@ class OperationDecomposer:
                 second = layout_plan.element_by_id(str(elem2_id))
                 if first is None or second is None:
                     raise WorkflowError("无法解析 swap 目标元素")
-                multi_step_ops.append(
-                    AtomicOperation(
-                        operation_type=OperationType.MOVE,
-                        target_element_id=elem1_id,
-                        params={
-                            "position": "absolute",
-                            "x": second.x,
-                            "y": second.y,
-                            "preserve_size": True,
-                        },
-                    )
-                )
-                multi_step_ops.append(
-                    AtomicOperation(
-                        operation_type=OperationType.MOVE,
-                        target_element_id=elem2_id,
-                        params={
-                            "position": "absolute",
-                            "x": first.x,
-                            "y": first.y,
-                            "preserve_size": True,
-                        },
-                    )
-                )
+                multi_step_ops.append(SwapOperation(elem1_id, elem2_id))
 
         # Also check for inline "reduce_lines" operations
         if "reduce_lines" in params and params["reduce_lines"]:

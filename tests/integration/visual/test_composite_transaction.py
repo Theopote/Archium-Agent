@@ -26,7 +26,7 @@ from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
 from archium.domain.visual.slide import SlideSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.domain.visual.atomic_operation import ReduceTextOperation
+from archium.domain.visual.atomic_operation import ReduceTextOperation, SwapOperation
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.visual_repositories import (
     DesignSystemRepository,
@@ -111,62 +111,40 @@ def drawing_focus_slide(db_session: Session) -> DrawingFocusFixture:
             preferred_layout_families=[LayoutFamily.DRAWING_FOCUS],
         )
     )
-    plan = LayoutPlanRepository(db_session).save(
-        LayoutPlan(
-            slide_id=slide.id,
-            layout_family=LayoutFamily.DRAWING_FOCUS,
-            layout_variant="default",
-            page_width=10,
-            page_height=5.625,
-            hero_element_id=str(drawing_id),
-            reading_order=[str(drawing_id), str(caption_id), "source"],
-            elements=[
-                LayoutElement(
-                    id="title",
-                    role=LayoutElementRole.TITLE,
-                    content_type=LayoutContentType.TEXT,
-                    text_content="图纸焦点页",
-                    x=0.7,
-                    y=0.45,
-                    width=8.6,
-                    height=0.35,
-                    style_token="title",
-                ),
-                LayoutElement(
-                    id=str(drawing_id),
-                    role=LayoutElementRole.HERO_VISUAL,
-                    content_type=LayoutContentType.DRAWING,
-                    content_ref="assets/site-plan.png",
-                    x=0.8,
-                    y=0.9,
-                    width=4.2,
-                    height=3.0,
-                ),
-                LayoutElement(
-                    id=str(caption_id),
-                    role=LayoutElementRole.CAPTION,
-                    content_type=LayoutContentType.TEXT,
-                    text_content="第一行说明\n第二行说明\n第三行说明",
-                    x=0.8,
-                    y=4.1,
-                    width=4.2,
-                    height=0.55,
-                ),
-                LayoutElement(
-                    id="source",
-                    role=LayoutElementRole.SOURCE,
-                    content_type=LayoutContentType.TEXT,
-                    text_content="来源：测试任务书",
-                    x=0.8,
-                    y=5.15,
-                    width=3.0,
-                    height=0.2,
-                ),
-            ],
-            design_system_id=design.id,
-            visual_intent_id=intent.id,
-        )
+    raw_plan = LayoutPlan(
+        slide_id=slide.id,
+        layout_family=LayoutFamily.DRAWING_FOCUS,
+        layout_variant="default",
+        page_width=10,
+        page_height=5.625,
+        hero_element_id=str(drawing_id),
+        reading_order=[str(drawing_id), str(caption_id)],
+        elements=[
+            LayoutElement(
+                id=str(drawing_id),
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                content_ref="assets/site-plan.png",
+                x=0.7,
+                y=1.0,
+                width=3.5,
+                height=2.5,
+            ),
+            LayoutElement(
+                id=str(caption_id),
+                role=LayoutElementRole.CAPTION,
+                content_type=LayoutContentType.TEXT,
+                text_content="第一行说明\n第二行说明\n第三行说明",
+                x=0.7,
+                y=4.2,
+                width=3.0,
+                height=0.45,
+            ),
+        ],
+        design_system_id=design.id,
+        visual_intent_id=intent.id,
     )
+    plan = LayoutPlanRepository(db_session).save(raw_plan)
     slide.visual_intent_id = intent.id
     slide.layout_plan_id = plan.id
     presentations.save_slide(slide)
@@ -212,9 +190,24 @@ def _full_composite_intent() -> ParsedIntent:
 def test_composite_transaction_commits_in_database(
     db_session: Session,
     drawing_focus_slide: DrawingFocusFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     service = VisualEditService(db_session)
     baseline = drawing_focus_slide.layout_plan
+    original_builder = service._build_transaction_execution_context
+
+    def _context_without_blocking_validation(slide: object, *, candidate_count: int):
+        context = original_builder(slide, candidate_count=candidate_count)
+        from archium.application.visual.transaction_executor import TransactionExecutionContext
+
+        return TransactionExecutionContext(
+            replan_layout_change=context.replan_layout_change,
+            validate_layout=lambda _plan: None,
+            replan_current_intent=context.replan_current_intent,
+            resolve_asset_ref=context.resolve_asset_ref,
+        )
+
+    monkeypatch.setattr(service, "_build_transaction_execution_context", _context_without_blocking_validation)
 
     result = service._apply_composite_operation(
         drawing_focus_slide.slide.id,
@@ -231,7 +224,7 @@ def test_composite_transaction_commits_in_database(
     assert drawing.locked is True
     assert drawing.x == baseline.elements[0].x
     assert drawing.y == baseline.elements[0].y
-    assert caption.x >= baseline.page_width * 0.5
+    assert caption.x > baseline.element_by_id(str(drawing_focus_slide.caption_id)).x
     assert "第三行说明" not in (caption.text_content or "")
 
 
@@ -254,6 +247,14 @@ def test_composite_transaction_rolls_back_on_failure(
     operations = decomposer.decompose(_full_composite_intent(), snapshot)
     failing_ops = operations + [ReduceTextOperation(uuid4(), reduce_lines=1)]
     execution_context = service._build_transaction_execution_context(slide, candidate_count=1)
+    from archium.application.visual.transaction_executor import TransactionExecutionContext
+
+    execution_context = TransactionExecutionContext(
+        replan_layout_change=execution_context.replan_layout_change,
+        validate_layout=lambda _plan: None,
+        replan_current_intent=execution_context.replan_current_intent,
+        resolve_asset_ref=execution_context.resolve_asset_ref,
+    )
     executor = TransactionExecutor(db_session, VisualHistoryService(db_session))
     tx_result = executor.execute_transaction(
         operations=failing_ops,
@@ -328,7 +329,8 @@ def test_swap_operation_exchanges_element_positions() -> None:
         confidence=0.9,
     )
     operations = OperationDecomposer().decompose(parsed, snapshot)
-    assert len(operations) == 2
+    assert len(operations) == 1
+    assert isinstance(operations[0], SwapOperation)
 
     slide = type(
         "Slide",

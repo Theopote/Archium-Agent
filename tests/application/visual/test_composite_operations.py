@@ -8,6 +8,7 @@ from archium.domain.visual.atomic_operation import (
     LockOperation,
     MoveOperation,
     ReduceTextOperation,
+    SwapOperation,
 )
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily, LayoutElementRole, LayoutContentType
@@ -315,10 +316,9 @@ def test_decompose_swap_produces_two_absolute_moves() -> None:
             layout_plan=layout_plan,
         ),
     )
-    assert len(operations) == 2
-    assert operations[0].params["position"] == "absolute"
-    assert operations[0].params["x"] == 480
-    assert operations[1].params["x"] == 80
+    assert len(operations) == 1
+    assert isinstance(operations[0], SwapOperation)
+    assert operations[0].params["second_element_id"] == str(right_id)
 
 
 if __name__ == "__main__":

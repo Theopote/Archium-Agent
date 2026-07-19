@@ -49,6 +49,7 @@ def compute_element_placement(
     margin = min(layout_plan.page_width, layout_plan.page_height) * 0.05
     width = element.width
     height = element.height
+    edge_margin = max(margin, layout_plan.page_width * 0.08)
 
     if canonical == "absolute":
         if absolute_x is None or absolute_y is None:
@@ -56,7 +57,7 @@ def compute_element_placement(
         x = absolute_x
         y = absolute_y
     elif canonical == "right":
-        x = layout_plan.page_width * 0.52
+        x = layout_plan.page_width - width - edge_margin
         y = element.y
     elif canonical == "left":
         x = margin

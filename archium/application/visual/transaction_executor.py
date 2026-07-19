@@ -267,6 +267,11 @@ class TransactionExecutor:
             plans_repo.save(layout_plan)
             return visual_intent, layout_plan
 
+        if op_type == OperationType.SWAP:
+            layout_plan = self._swap_elements(layout_plan, operation)
+            plans_repo.save(layout_plan)
+            return visual_intent, layout_plan
+
         if op_type == OperationType.REDUCE_TEXT:
             visual_intent, layout_plan = self._reduce_text(
                 visual_intent,
@@ -381,6 +386,27 @@ class TransactionExecutor:
         updated_plan.touch()
         return plans_repo.save(updated_plan)
 
+    @staticmethod
+    def _assert_no_element_overlap(
+        layout_plan: LayoutPlan,
+        *,
+        target_id: str,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        tolerance: float = 0.05,
+    ) -> None:
+        from archium.infrastructure.layout.geometry import Rect
+
+        moved = Rect(x, y, width, height)
+        for other in layout_plan.elements:
+            if other.id == target_id:
+                continue
+            other_rect = Rect(other.x, other.y, other.width, other.height)
+            if moved.overlaps(other_rect, tolerance=tolerance):
+                raise WorkflowError(f"移动后会与元素 `{other.id}` 重叠，无法执行")
+
     def _move_element(
         self,
         layout_plan: LayoutPlan | None,
@@ -408,6 +434,14 @@ class TransactionExecutor:
                 absolute_x=operation.params.get("x"),
                 absolute_y=operation.params.get("y"),
             )
+            self._assert_no_element_overlap(
+                layout_plan,
+                target_id=target_id,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+            )
             updated_elements.append(
                 element.model_copy(update={"x": x, "y": y, "width": width, "height": height})
             )
@@ -415,6 +449,59 @@ class TransactionExecutor:
 
         if not changed:
             raise WorkflowError(f"未找到可移动的元素：{target_id}")
+
+        updated_plan = layout_plan.model_copy(
+            update={"elements": updated_elements, "version": layout_plan.version + 1}
+        )
+        updated_plan.touch()
+        return updated_plan
+
+    def _swap_elements(
+        self,
+        layout_plan: LayoutPlan | None,
+        operation: AtomicOperation,
+    ) -> LayoutPlan:
+        if layout_plan is None:
+            raise WorkflowError("Cannot swap elements: no layout plan")
+        first_id = operation.target_element_id
+        second_id = operation.params.get("second_element_id")
+        if not first_id or not second_id:
+            raise WorkflowError("Swap operation requires two element ids")
+
+        first = layout_plan.element_by_id(str(first_id))
+        second = layout_plan.element_by_id(str(second_id))
+        if first is None or second is None:
+            raise WorkflowError("无法解析 swap 目标元素")
+
+        assert_element_editable(first, ElementEditOperation.REPAIR_GEOMETRY)
+        assert_element_editable(second, ElementEditOperation.REPAIR_GEOMETRY)
+
+        updated_elements: list[LayoutElement] = []
+        for element in layout_plan.elements:
+            if element.id == first.id:
+                updated_elements.append(
+                    element.model_copy(
+                        update={
+                            "x": second.x,
+                            "y": second.y,
+                            "width": second.width,
+                            "height": second.height,
+                        }
+                    )
+                )
+            elif element.id == second.id:
+                updated_elements.append(
+                    element.model_copy(
+                        update={
+                            "x": first.x,
+                            "y": first.y,
+                            "width": first.width,
+                            "height": first.height,
+                        }
+                    )
+                )
+            else:
+                updated_elements.append(element)
 
         updated_plan = layout_plan.model_copy(
             update={"elements": updated_elements, "version": layout_plan.version + 1}
