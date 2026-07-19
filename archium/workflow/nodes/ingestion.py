@@ -140,13 +140,6 @@ class IngestionNodesMixin(WorkflowNodeBase):
         try:
             project_id = UUID(state["project_id"])
             facts_repo = FactRepository(self._runtime.session)
-            existing_db = facts_repo.list_by_project(project_id)
-            if existing_db:
-                return {
-                    "project_facts": existing_db,
-                    "extracted_fact_count": 0,
-                    "current_step": WorkflowStep.EXTRACT_FACTS.value,
-                }
 
             extractor = FactExtractionService(
                 self._runtime.session,

@@ -104,6 +104,17 @@ class IngestionService:
             for chunk in chunks:
                 saved_chunks.append(self._documents.create_chunk(chunk))
 
+            vision_result = self._process_asset_vision_rag(
+                project_id,
+                document,
+                assets,
+                base_chunk_index=len(saved_chunks),
+            )
+            assets = vision_result.assets
+            for chunk in vision_result.chunks:
+                saved_chunks.append(self._documents.create_chunk(chunk))
+
+            self._extract_facts_at_ingest(project_id, document.filename, saved_chunks)
             self._index_chunks(project_id, document, saved_chunks)
 
             document.metadata = {
@@ -162,6 +173,17 @@ class IngestionService:
             for chunk in chunks:
                 saved_chunks.append(self._documents.create_chunk(chunk))
 
+            vision_result = self._process_asset_vision_rag(
+                document.project_id,
+                document,
+                assets,
+                base_chunk_index=len(saved_chunks),
+            )
+            assets = vision_result.assets
+            for chunk in vision_result.chunks:
+                saved_chunks.append(self._documents.create_chunk(chunk))
+
+            self._extract_facts_at_ingest(document.project_id, document.filename, saved_chunks)
             self._index_chunks(document.project_id, document, saved_chunks)
 
             document.metadata = {
@@ -288,6 +310,46 @@ class IngestionService:
         if self._retrieval is None:
             self._retrieval = create_retrieval_service(self._session, self._settings)
         return self._retrieval
+
+    def _extract_facts_at_ingest(
+        self,
+        project_id: UUID,
+        document_name: str,
+        chunks: list[DocumentChunk],
+    ) -> None:
+        try:
+            from archium.application.fact_extraction_service import FactExtractionService
+
+            FactExtractionService(self._session, settings=self._settings).extract_from_document(
+                project_id,
+                document_name=document_name,
+                chunks=chunks,
+            )
+        except Exception as exc:
+            logger.warning("Parse-time fact extraction failed for %s: %s", document_name, exc)
+
+    def _process_asset_vision_rag(
+        self,
+        project_id: UUID,
+        document: SourceDocument,
+        assets: list[Asset],
+        *,
+        base_chunk_index: int,
+    ):
+        try:
+            from archium.application.asset_vision_rag_service import AssetVisionRagService
+
+            return AssetVisionRagService(self._session, settings=self._settings).process_document_assets(
+                project_id,
+                document,
+                assets,
+                base_chunk_index=base_chunk_index,
+            )
+        except Exception as exc:
+            logger.warning("Asset vision RAG failed for %s: %s", document.filename, exc)
+            from archium.application.asset_vision_rag_service import AssetVisionRagResult
+
+            return AssetVisionRagResult(assets=assets, chunks=[])
 
     def _index_chunks(
         self,

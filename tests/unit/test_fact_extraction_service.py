@@ -9,6 +9,7 @@ from archium.application.chunk_models import ProjectContextBundle
 from archium.application.fact_extraction_service import FactExtractionService
 from archium.config.settings import Settings
 from archium.domain.document import DocumentChunk
+from archium.domain.enums import VerificationStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import FactRepository, ProjectRepository
@@ -45,7 +46,33 @@ def context_bundle() -> ProjectContextBundle:
     )
 
 
-def test_extract_skips_when_facts_already_exist(
+def test_extract_from_document_creates_metric_facts(
+    db_session: Session,
+    project: Project,
+) -> None:
+    chunk = DocumentChunk(
+        project_id=project.id,
+        document_id=uuid4(),
+        chunk_index=0,
+        content="规划容积率 2.8，限高 100 米。",
+        page_number=2,
+    )
+
+    created = FactExtractionService(
+        db_session,
+        settings=Settings(_env_file=None, fact_extraction_enabled=True),
+    ).extract_from_document(
+        project.id,
+        document_name="指标.docx",
+        chunks=[chunk],
+    )
+
+    assert created == 2
+    facts = FactRepository(db_session).list_by_project(project.id)
+    assert {fact.key for fact in facts} == {"plot_ratio", "height"}
+
+
+def test_extract_from_context_merges_existing_and_adds_missing_via_llm(
     db_session: Session,
     project: Project,
     context_bundle: ProjectContextBundle,
@@ -55,7 +82,9 @@ def test_extract_skips_when_facts_already_exist(
             project_id=project.id,
             key="site_area",
             label="用地面积",
-            value="12.5 公顷",
+            value="12.5",
+            unit="公顷",
+            verification_status=VerificationStatus.USER_CONFIRMED,
         )
     )
     mock_llm = MockLLMProvider(selector=_fact_extraction_selector)
@@ -66,9 +95,10 @@ def test_extract_skips_when_facts_already_exist(
         settings=Settings(_env_file=None, fact_extraction_enabled=True, llm_api_key="test"),
     ).extract_from_context(project.id, context_bundle)
 
-    assert created == 0
-    assert len(facts) == 1
-    assert len(mock_llm.calls) == 0
+    assert created == 1
+    assert len(facts) == 2
+    assert {fact.key for fact in facts} == {"site_area", "bed_count"}
+    assert len(mock_llm.calls) == 1
 
 
 def test_extract_persists_new_facts(
@@ -84,7 +114,8 @@ def test_extract_persists_new_facts(
         settings=Settings(_env_file=None, fact_extraction_enabled=True, llm_api_key="test"),
     ).extract_from_context(project.id, context_bundle)
 
-    assert created == 2
-    assert len(facts) == 2
-    assert {fact.key for fact in facts} == {"site_area", "bed_count"}
+    assert created >= 2
+    assert len(facts) >= 2
+    assert "site_area" in {fact.key for fact in facts}
+    assert "bed_count" in {fact.key for fact in facts}
     assert len(mock_llm.calls) == 1

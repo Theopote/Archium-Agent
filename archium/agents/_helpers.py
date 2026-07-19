@@ -92,6 +92,10 @@ def build_project_context_bundle(
     settings: Settings | None = None,
 ) -> ProjectContextBundle:
     """Build prompt context plus chunk metadata for citation linking."""
+    from archium.application.fact_retrieval import (
+        match_fact_keys_from_query,
+        rank_facts_for_context,
+    )
     from archium.application.retrieval_service import create_retrieval_service
     from archium.config.settings import get_settings
 
@@ -113,28 +117,53 @@ def build_project_context_bundle(
         if document is not None:
             document_names[chunk.document_id] = document.filename
 
-    facts = facts_repo.list_by_project(project_id)[:30]
+    all_facts = facts_repo.list_by_project(project_id)
+    active_facts = [
+        fact for fact in all_facts if fact.verification_status != VerificationStatus.REJECTED
+    ]
+    query_keys = match_fact_keys_from_query(query or "")
+    ranked_facts = rank_facts_for_context(active_facts, query=query, limit=30)
     max_chars = resolved_settings.chunk_context_max_chars
 
     lines: list[str] = []
+    highlighted_keys: set[str] = set()
+    if query_keys and ranked_facts:
+        matched = [fact for fact in ranked_facts if fact.key in query_keys]
+        if matched:
+            lines.append("【与检索相关的项目事实 · 结构化优先】")
+            for fact in matched:
+                lines.append(_format_fact_line(fact))
+                highlighted_keys.add(fact.key)
+
     if chunks:
         lines.append("【文档片段】")
         for chunk in chunks:
-            prefix = f"p.{chunk.page_number}" if chunk.page_number else "p.?"
-            title = f" [{chunk.section_title}]" if chunk.section_title else ""
             doc_name = document_names.get(chunk.document_id, "未知文档")
             snippet = chunk.content[:max_chars]
+            if chunk.content_type == "asset_caption":
+                asset_id = chunk.metadata.get("asset_id")
+                drawing_type = chunk.metadata.get("drawing_type", "drawing")
+                asset_hint = f"[asset_id={asset_id}]" if asset_id else "[asset]"
+                lines.append(
+                    f"- {asset_hint} [doc={doc_name}] ({drawing_type}) {snippet}"
+                )
+                continue
+            prefix = f"p.{chunk.page_number}" if chunk.page_number else "p.?"
+            title = f" [{chunk.section_title}]" if chunk.section_title else ""
             lines.append(
                 f"- [chunk_id={chunk.id}] [doc={doc_name}] ({prefix}){title} {snippet}"
             )
-    active_facts = [
-        fact for fact in facts if fact.verification_status != VerificationStatus.REJECTED
+
+    confirmed_facts = [fact for fact in ranked_facts if fact.is_confirmed]
+    pending_facts = [fact for fact in ranked_facts if not fact.is_confirmed]
+    ledger_facts = [
+        fact
+        for fact in confirmed_facts + pending_facts
+        if fact.key not in highlighted_keys
     ]
-    confirmed_facts = [fact for fact in active_facts if fact.is_confirmed]
-    pending_facts = [fact for fact in active_facts if not fact.is_confirmed]
-    if confirmed_facts or pending_facts:
+    if ledger_facts:
         lines.append("【项目事实账本 · 已确认优先】")
-        for fact in confirmed_facts + pending_facts:
+        for fact in ledger_facts:
             lines.append(_format_fact_line(fact))
     if not lines:
         return ProjectContextBundle(text="暂无项目资料，请基于用户需求保守生成。")

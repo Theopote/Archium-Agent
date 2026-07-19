@@ -57,6 +57,9 @@ Do not edit them manually.
 |----------------------|---------|:-------------------:|-------------|
 | `RETRIEVAL_ENABLED` | `false` | No | Enable Chroma vector retrieval during generation. Auto-disabled when embedding is not configured. |
 | `RETRIEVAL_TOP_K` | `12` | No | Top-k chunks returned from vector search. |
+| `ASSET_VISION_RAG_ENABLED` | `true` | No | When true, generate heuristic or LLM vision captions for drawing/image assets at ingest and index them as searchable RAG chunks. |
+| `ASSET_VISION_LLM_ENABLED` | `false` | No | When true and LLM is configured, use multimodal vision to caption drawing assets at ingest (falls back to heuristic caption when unavailable). |
+| `ASSET_VISION_LLM_MODEL` | `*(unset)*` | No | Optional vision-capable model override for asset captioning at ingest. |
 | `CHUNK_CONTEXT_MAX_CHARS` | `600` | No | Maximum characters injected per retrieved chunk into LLM context. |
 
 ## Document chunking {#chunking}
@@ -75,7 +78,7 @@ Do not edit them manually.
 
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
-| `FACT_EXTRACTION_ENABLED` | `true` | No | When true and LLM is available, extract ProjectFact records after context retrieval. |
+| `FACT_EXTRACTION_ENABLED` | `true` | No | When true, extract ProjectFact records at document ingest (rule-based metrics) and after context retrieval (LLM for remaining standard facts). |
 
 ## review.* — Quality review & export gating {#review}
 

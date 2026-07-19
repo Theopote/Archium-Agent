@@ -393,6 +393,15 @@ class FactRepository:
         )
         return [mappers.project_fact_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def get_by_project_key(self, project_id: UUID, key: str) -> ProjectFact | None:
+        normalized = key.strip().lower().replace(" ", "_")
+        stmt = select(ProjectFactORM).where(
+            ProjectFactORM.project_id == project_id,
+            ProjectFactORM.key == normalized,
+        )
+        orm = self._session.scalar(stmt)
+        return mappers.project_fact_to_domain(orm) if orm else None
+
     def update(self, fact: ProjectFact) -> ProjectFact:
         try:
             orm = self._session.get(ProjectFactORM, fact.id)

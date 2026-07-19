@@ -60,6 +60,8 @@ class ChromaVectorStore:
                 "section_title": chunk.section_title or "",
                 "chunk_index": chunk.chunk_index,
                 "document_name": document_name,
+                "content_type": chunk.content_type,
+                "asset_id": str(chunk.metadata.get("asset_id") or ""),
             }
             for chunk in chunks
         ]

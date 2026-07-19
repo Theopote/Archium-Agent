@@ -127,6 +127,24 @@ class Settings(BaseSettings):
         description="Enable Chroma vector retrieval during generation. Auto-disabled when embedding is not configured.",
     )
     retrieval_top_k: int = Field(default=12, ge=1, le=50, description="Top-k chunks returned from vector search.")
+    asset_vision_rag_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, generate heuristic or LLM vision captions for drawing/image assets "
+            "at ingest and index them as searchable RAG chunks."
+        ),
+    )
+    asset_vision_llm_enabled: bool = Field(
+        default=False,
+        description=(
+            "When true and LLM is configured, use multimodal vision to caption drawing assets "
+            "at ingest (falls back to heuristic caption when unavailable)."
+        ),
+    )
+    asset_vision_llm_model: str | None = Field(
+        default=None,
+        description="Optional vision-capable model override for asset captioning at ingest.",
+    )
     chunk_context_max_chars: int = Field(
         default=600,
         ge=100,
@@ -167,7 +185,10 @@ class Settings(BaseSettings):
     # ── workflow.* ─────────────────────────────────────────────────────────────
     fact_extraction_enabled: bool = Field(
         default=True,
-        description="When true and LLM is available, extract ProjectFact records after context retrieval.",
+        description=(
+            "When true, extract ProjectFact records at document ingest (rule-based metrics) "
+            "and after context retrieval (LLM for remaining standard facts)."
+        ),
     )
 
     # ── review.* ─────────────────────────────────────────────────────────────

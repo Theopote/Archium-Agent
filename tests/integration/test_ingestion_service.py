@@ -8,11 +8,11 @@ import pytest
 from archium.application.ingestion_service import IngestionService
 from archium.domain.enums import ProcessingStatus, ProjectType
 from archium.domain.project import Project
-from archium.infrastructure.database.repositories import DocumentRepository, ProjectRepository
+from archium.infrastructure.database.repositories import DocumentRepository, FactRepository, ProjectRepository
 from docx import Document
 from sqlalchemy.orm import Session
 
-from tests.fixtures.sample_files import create_sample_docx, create_sample_pdf
+from tests.fixtures.sample_files import create_sample_docx, create_sample_image, create_sample_pdf
 
 
 @pytest.fixture
@@ -45,6 +45,26 @@ def test_import_pdf_creates_document_and_chunks(
     assert result.chunks[0].page_number == 1
 
 
+def test_import_docx_extracts_metric_facts_at_ingest(
+    ingestion_service: IngestionService,
+    project: Project,
+    tmp_path: Path,
+    db_session: Session,
+) -> None:
+    docx_path = create_sample_docx(
+        tmp_path / "规划指标.docx",
+        body="规划容积率 2.5，建筑高度 80 米，用地面积约 3.2 公顷。",
+    )
+    result = ingestion_service.import_file(project.id, docx_path)
+
+    assert result.document is not None
+    facts = FactRepository(db_session).list_by_project(project.id)
+    keys = {fact.key for fact in facts}
+    assert "plot_ratio" in keys
+    assert "height" in keys
+    assert "site_area" in keys
+
+
 def test_import_docx_persists_chunks(
     ingestion_service: IngestionService,
     project: Project,
@@ -60,6 +80,24 @@ def test_import_docx_persists_chunks(
     chunks = repo.list_chunks(result.document.id)
     assert len(chunks) == len(result.chunks)
     assert any("项目背景" in chunk.content for chunk in chunks)
+
+
+def test_import_image_creates_asset_caption_chunk(
+    ingestion_service: IngestionService,
+    project: Project,
+    tmp_path: Path,
+    db_session: Session,
+) -> None:
+    image_path = create_sample_image(tmp_path / "总图.jpg")
+    result = ingestion_service.import_file(project.id, image_path)
+
+    assert result.document is not None
+    assert result.assets
+    chunks = DocumentRepository(db_session).list_chunks(result.document.id)
+    caption_chunks = [chunk for chunk in chunks if chunk.content_type == "asset_caption"]
+    assert len(caption_chunks) == 1
+    assert "【图纸资产" in caption_chunks[0].content
+    assert result.assets[0].description
 
 
 def test_import_long_pdf_uses_semantic_chunks(

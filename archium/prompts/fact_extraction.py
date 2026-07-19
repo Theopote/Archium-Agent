@@ -20,9 +20,21 @@ facts: [{ key, label, value, unit, category, confidence, chunk_id, quote }]
 """
 
 
-def build_fact_extraction_user_prompt(*, project_context: str) -> str:
+def build_fact_extraction_user_prompt(
+    *,
+    project_context: str,
+    existing_keys: list[str] | None = None,
+) -> str:
+    existing_hint = ""
+    if existing_keys:
+        existing_hint = (
+            "\n以下 key 已存在于事实账本，请勿重复输出："
+            + "、".join(existing_keys)
+            + "\n"
+        )
     return (
         "请从以下项目资料中提取结构化事实 JSON。\n\n"
         f"【项目资料】\n{project_context}\n\n"
+        f"{existing_hint}"
         "若某类信息在资料中不存在，不要猜测补写。"
     )
