@@ -19,6 +19,15 @@ env:
 
 After the observation window, enforcement also turns on automatically when the run date is on or after `SECURITY_AUDIT_ENFORCE_AFTER`.
 
+## Before external / user release (required)
+
+1. Run `pip-audit --min-severity high` and `npm audit --audit-level=high` locally; upgrade or document every high/critical finding.
+2. Set `SECURITY_AUDIT_ENFORCE: "true"` in `ci.yml` **or** merge after **2026-08-08** when auto-enforcement starts.
+3. Add `security audit` to branch protection required checks.
+4. Confirm at least one green main-branch run with enforcement enabled before tagging a user-facing release.
+
+Until then, high/critical findings are visible in artifacts but **do not block merge** — acceptable for fast internal iteration only.
+
 ## What gets blocked
 
 Only **high** and **critical** severities:

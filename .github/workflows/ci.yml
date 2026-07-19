@@ -62,7 +62,10 @@ jobs:
         run: pytest -m unit --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
 
       - name: Pytest (integration)
-        run: pytest -m "integration and not e2e" -v
+        run: pytest -m "integration and not e2e" --cov=archium --cov-append --cov-report=xml -v
+
+      - name: Critical module coverage gate
+        run: python scripts/ci_critical_coverage_gate.py
 
       - name: Pytest (benchmark)
         run: pytest -m benchmark -v
