@@ -30,16 +30,11 @@ tests/golden/fixtures/files/**
 
 # Data (runtime)
 data/database/*.db
+data/database/*.db-wal
+data/database/*.db-shm
+*.db-wal
+*.db-shm
 data/projects/
 data/chroma/
 data/outputs/
-output/
-
-# Logs
-*.log
-alerts.log
-
-# IDE
-.idea/
-.vscode/
-*.swp
+outp
