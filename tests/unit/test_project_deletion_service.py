@@ -9,7 +9,7 @@ import pytest
 from archium.application.project_deletion_service import ProjectDeletionService
 from archium.config.settings import Settings
 from archium.domain.project import Project
-from archium.exceptions import WorkflowError
+from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.repositories import ProjectRepository
 from sqlalchemy.orm import Session
 
@@ -48,5 +48,5 @@ def test_delete_missing_project_raises(
     deletion_settings: Settings,
 ) -> None:
     service = ProjectDeletionService(db_session, settings=deletion_settings)
-    with pytest.raises(WorkflowError, match="不存在"):
+    with pytest.raises(ProjectNotFoundError):
         service.delete_project(uuid4())

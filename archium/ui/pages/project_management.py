@@ -8,21 +8,21 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.project_deletion_service import ProjectDeletionService
+from archium.application.project_management_service import ProjectManagementService
 from archium.domain.project import Project
-from archium.infrastructure.database.repositories import ProjectRepository
+from archium.exceptions import ProjectNotFoundError, ValidationError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
+from archium.ui.error_handlers import report_user_error
 
 
 def _format_datetime(dt: datetime | None) -> str:
-    """Format datetime for display."""
     if dt is None:
         return "未知"
     return dt.strftime("%Y-%m-%d %H:%M")
 
 
 def _render_project_card(project: Project, index: int) -> None:
-    """Render a single project card with actions."""
     with st.container():
         col1, col2, col3 = st.columns([3, 2, 1])
 
@@ -35,21 +35,18 @@ def _render_project_card(project: Project, index: int) -> None:
 
         with col2:
             st.caption(f"创建时间: {_format_datetime(project.created_at)}")
-            if hasattr(project, 'updated_at') and project.updated_at:
-                st.caption(f"更新时间: {_format_datetime(project.updated_at)}")
+            st.caption(f"更新时间: {_format_datetime(project.updated_at)}")
 
         with col3:
-            # Edit button
             if st.button("✏️ 编辑", key=f"edit_{project.id}", use_container_width=True):
                 st.session_state.editing_project_id = str(project.id)
+                st.session_state.editing_project_updated_at = project.updated_at.isoformat()
                 st.rerun()
 
-            # Delete button
             if st.button("🗑️ 删除", key=f"delete_{project.id}", use_container_width=True, type="secondary"):
                 st.session_state.deleting_project_id = str(project.id)
                 st.rerun()
 
-            # Open button
             if st.button("📂 打开", key=f"open_{project.id}", use_container_width=True, type="primary"):
                 st.session_state.selected_project_id = str(project.id)
                 st.switch_page(get_app_page("workspace"))
@@ -57,8 +54,16 @@ def _render_project_card(project: Project, index: int) -> None:
         st.divider()
 
 
-def _render_edit_dialog(project: Project) -> None:
-    """Render edit dialog for a project."""
+def _render_edit_dialog(project_id: UUID, expected_updated_at: datetime | None) -> None:
+    try:
+        with get_session() as session:
+            project = ProjectManagementService(session).get_project(project_id)
+    except ProjectNotFoundError:
+        st.warning("项目不存在或已被删除。")
+        st.session_state.editing_project_id = None
+        st.session_state.editing_project_updated_at = None
+        return
+
     st.subheader(f"编辑项目: {project.name}")
 
     with st.form(key="edit_project_form"):
@@ -72,29 +77,38 @@ def _render_edit_dialog(project: Project) -> None:
             cancel = st.form_submit_button("❌ 取消", use_container_width=True)
 
         if submit:
-            if not new_name.strip():
-                st.error("项目名称不能为空")
-            else:
-                try:
-                    with get_session() as session:
-                        repo = ProjectRepository(session)
-                        project.name = new_name.strip()
-                        project.description = new_description.strip() or None
-                        repo.update(project)
-                        session.commit()
-                    st.success("✅ 项目已更新")
-                    st.session_state.editing_project_id = None
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ 更新失败: {e}")
+            try:
+                with get_session() as session:
+                    ProjectManagementService(session).update_project(
+                        project_id,
+                        name=new_name,
+                        description=new_description,
+                        expected_updated_at=expected_updated_at,
+                    )
+                st.success("✅ 项目已更新")
+                st.session_state.editing_project_id = None
+                st.session_state.editing_project_updated_at = None
+                st.rerun()
+            except ValidationError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(report_user_error(exc))
 
         if cancel:
             st.session_state.editing_project_id = None
+            st.session_state.editing_project_updated_at = None
             st.rerun()
 
 
-def _render_delete_confirmation(project: Project) -> None:
-    """Render delete confirmation dialog."""
+def _render_delete_confirmation(project_id: UUID) -> None:
+    try:
+        with get_session() as session:
+            project = ProjectManagementService(session).get_project(project_id)
+    except ProjectNotFoundError:
+        st.warning("项目不存在或已被删除。")
+        st.session_state.deleting_project_id = None
+        return
+
     st.warning(f"⚠️ 确定要删除项目「{project.name}」吗？")
     st.markdown("**此操作不可撤销**，将删除：")
     st.markdown("""
@@ -110,16 +124,16 @@ def _render_delete_confirmation(project: Project) -> None:
         if st.button("🗑️ 确认删除", use_container_width=True, type="primary"):
             try:
                 with get_session() as session:
-                    result = ProjectDeletionService(session).delete_project(project.id)
+                    result = ProjectDeletionService(session).delete_project(project_id)
                 st.success("✅ 项目已删除")
                 if result.warnings:
                     for warning in result.warnings:
-                        st.warning(warning)
+                        st.warning("部分关联资源未能清理，项目记录已删除。")
                 st.session_state.deleting_project_id = None
                 st.session_state.selected_project_id = None
                 st.rerun()
-            except Exception as e:
-                st.error(f"❌ 删除失败: {e}")
+            except Exception as exc:
+                st.error(report_user_error(exc))
 
     with col2:
         if st.button("❌ 取消", use_container_width=True):
@@ -128,7 +142,6 @@ def _render_delete_confirmation(project: Project) -> None:
 
 
 def _render_create_project_form() -> None:
-    """Render form to create a new project."""
     st.subheader("创建新项目")
 
     with st.form(key="create_project_form"):
@@ -141,25 +154,20 @@ def _render_create_project_form() -> None:
         submit = st.form_submit_button("➕ 创建项目", use_container_width=True, type="primary")
 
         if submit:
-            if not project_name.strip():
-                st.error("项目名称不能为空")
-            else:
-                try:
-                    with get_session() as session:
-                        repo = ProjectRepository(session)
-                        new_project = Project(
-                            name=project_name.strip(),
-                            description=project_description.strip() or None,
-                        )
-                        created_project = repo.create(new_project)
-                        session.commit()
-                    st.success(f"✅ 项目「{created_project.name}」创建成功")
-                    st.session_state.selected_project_id = str(created_project.id)
-                    # Collapse the create form
-                    st.session_state.show_create_form = False
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ 创建失败: {e}")
+            try:
+                with get_session() as session:
+                    created_project = ProjectManagementService(session).create_project(
+                        project_name,
+                        project_description,
+                    )
+                st.success(f"✅ 项目「{created_project.name}」创建成功")
+                st.session_state.selected_project_id = str(created_project.id)
+                st.session_state.show_create_form = False
+                st.rerun()
+            except ValidationError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(report_user_error(exc))
 
 
 def render() -> None:
@@ -167,20 +175,18 @@ def render() -> None:
     st.title("📁 项目管理")
     st.markdown("管理你的所有项目，查看、编辑或删除项目。")
 
-    # Initialize session state
     if "editing_project_id" not in st.session_state:
         st.session_state.editing_project_id = None
+    if "editing_project_updated_at" not in st.session_state:
+        st.session_state.editing_project_updated_at = None
     if "deleting_project_id" not in st.session_state:
         st.session_state.deleting_project_id = None
     if "show_create_form" not in st.session_state:
         st.session_state.show_create_form = False
 
-    # Load projects
     with get_session() as session:
-        repo = ProjectRepository(session)
-        projects = repo.list_all()
+        projects = ProjectManagementService(session).list_projects()
 
-    # Create project button
     col1, col2 = st.columns([3, 1])
     with col2:
         if st.button(
@@ -192,47 +198,37 @@ def render() -> None:
             st.session_state.show_create_form = True
             st.rerun()
 
-    # Show create form if toggled
     if st.session_state.show_create_form:
         _render_create_project_form()
         st.divider()
 
-    # Show project list
     if not projects:
         st.info("🎯 还没有项目，点击上方「新建项目」开始。")
         return
 
     st.markdown(f"### 所有项目 ({len(projects)})")
 
-    # Handle edit dialog
     if st.session_state.editing_project_id:
-        editing_project = next(
-            (p for p in projects if str(p.id) == st.session_state.editing_project_id),
-            None,
-        )
-        if editing_project:
-            _render_edit_dialog(editing_project)
-            st.divider()
+        expected_updated_at = None
+        if st.session_state.editing_project_updated_at:
+            expected_updated_at = datetime.fromisoformat(
+                st.session_state.editing_project_updated_at
+            )
+        _render_edit_dialog(UUID(st.session_state.editing_project_id), expected_updated_at)
+        st.divider()
 
-    # Handle delete confirmation
     if st.session_state.deleting_project_id:
-        deleting_project = next(
-            (p for p in projects if str(p.id) == st.session_state.deleting_project_id),
-            None,
-        )
-        if deleting_project:
-            _render_delete_confirmation(deleting_project)
-            st.divider()
+        _render_delete_confirmation(UUID(st.session_state.deleting_project_id))
+        st.divider()
 
-    # Render project cards
     for index, project in enumerate(projects):
-        # Skip if currently editing or deleting
-        if (st.session_state.editing_project_id == str(project.id) or
-            st.session_state.deleting_project_id == str(project.id)):
+        if (
+            st.session_state.editing_project_id == str(project.id)
+            or st.session_state.deleting_project_id == str(project.id)
+        ):
             continue
         _render_project_card(project, index)
 
-    # Navigation links
     st.markdown("---")
     st.markdown("### 快速导航")
     link_cols = st.columns(3)

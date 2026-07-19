@@ -10,7 +10,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.config.settings import Settings, get_settings
-from archium.exceptions import WorkflowError
+from archium.exceptions import ProjectNotFoundError, WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.vector.chroma_store import ChromaVectorStore
 from archium.logging import get_logger
@@ -45,7 +45,7 @@ class ProjectDeletionService:
     def delete_project(self, project_id: UUID) -> ProjectDeletionResult:
         project = self._projects.get_by_id(project_id)
         if project is None:
-            raise WorkflowError(f"项目 {project_id} 不存在")
+            raise ProjectNotFoundError(project_id)
 
         presentations = self._presentations.list_by_project(project_id)
         warnings: list[str] = []
