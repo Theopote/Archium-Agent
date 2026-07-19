@@ -17,11 +17,12 @@ from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
+from archium.ui.label_map import entity_label
 from archium.ui.web_image_preview_panel import render_web_image_preview_panel
 
 
 def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None:
-    st.markdown("#### Asset Board")
+    st.markdown(f"#### {entity_label('AssetBoard')}")
     st.caption("逐页视觉需求 · 候选素材匹配 · 人工确认")
 
     with get_session() as session:
@@ -42,7 +43,9 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
         st.rerun()
 
     if not board.rows:
-        st.info("当前汇报暂无视觉需求。生成 SlideSpec 并运行工作流后会在此显示匹配结果。")
+        st.info(
+            f"当前汇报暂无视觉需求。生成{entity_label('SlideSpec')}并运行工作流后会在此显示匹配结果。"
+        )
         return
 
     table_rows = [

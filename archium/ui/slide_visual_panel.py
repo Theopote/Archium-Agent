@@ -9,6 +9,7 @@ import streamlit as st
 from archium.domain.visual.layout import LayoutPlan
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
+from archium.ui.label_map import entity_label
 from archium.ui.layout_family_ui import (
     FAMILY_LABELS,
     format_layout_family_label,
@@ -43,9 +44,9 @@ def render_slide_visual_panel(*, snapshot: SlideVisualSnapshot) -> None:
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("**视觉意图**")
+        st.markdown(f"**{entity_label('VisualIntent')}**")
         if intent is None:
-            st.caption("尚未生成 VisualIntent。请先运行视觉编排。")
+            st.caption(f"尚未生成{entity_label('VisualIntent')}。请先运行视觉编排。")
         else:
             st.write(f"沟通目标：{intent.communication_goal}")
             st.write(f"受众带走：{intent.audience_takeaway}")
@@ -67,7 +68,7 @@ def render_slide_visual_panel(*, snapshot: SlideVisualSnapshot) -> None:
     with col2:
         st.markdown("**当前版式**")
         if plan is None:
-            st.caption("尚未生成 LayoutPlan。")
+            st.caption(f"尚未生成{entity_label('LayoutPlan')}。")
         else:
             st.write(f"版式族：{format_layout_family_label(plan.layout_family)}")
             if not layout_family_implemented(plan.layout_family):
@@ -99,7 +100,7 @@ def render_slide_visual_panel(*, snapshot: SlideVisualSnapshot) -> None:
                 st.caption("Visual Quality · 只读启发式，不自动修复")
                 findings = list(critic.get("findings") or [])
                 if findings:
-                    with st.expander("Visual Critic 发现", expanded=False):
+                    with st.expander(f"{entity_label('Visual Critic')} 发现", expanded=False):
                         for item in findings[:8]:
                             st.write(
                                 f"- `{item.get('rule_code')}` · "

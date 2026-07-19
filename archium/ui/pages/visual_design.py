@@ -28,6 +28,12 @@ from archium.ui.background_workflow_runner import (
     submit_visual_job,
 )
 from archium.ui.error_handlers import format_user_error
+from archium.ui.label_map import (
+    content_pipeline_chain,
+    entity_label,
+    visual_pipeline_chain,
+    visual_quality_pair,
+)
 from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.slide_visual_panel import render_slide_visual_panel
@@ -128,7 +134,9 @@ def _render_presentation_selector(project_id: UUID) -> UUID | None:
     with get_session() as session:
         presentations = list_project_presentations(session, project_id)
     if not presentations:
-        st.warning("该项目还没有 Presentation。请先在「项目工作台」生成 Brief → Storyline → SlideSpec。")
+        st.warning(
+            f"该项目还没有汇报。请先在「项目工作台」生成 {content_pipeline_chain()}。"
+        )
         return None
 
     labels = {
@@ -358,7 +366,7 @@ def _render_result_summary(project_id: UUID, presentation_id: UUID) -> None:
         else None
     )
     cols[3].metric(
-        "Deck QA",
+        entity_label("Deck QA"),
         f"{deck_score:.2f}" if isinstance(deck_score, (int, float)) else str(len(result.render_paths)),
     )
     if result.warnings:
@@ -412,13 +420,13 @@ def _render_quality_reports(result: VisualWorkflowResult) -> None:
         return
 
     st.markdown("**视觉可靠性（只读）**")
-    st.caption("Visual Critic / Deck QA 不参与 PPTX 门禁，也不自动修复版式。")
+    st.caption(f"{visual_quality_pair()} 不参与 PPTX 门禁，也不自动修复版式。")
 
     if deck is not None:
         score = deck.get("total_score")
         dims = deck.get("dimensions") or {}
         with st.expander(
-            f"Deck QA · 一致性 "
+            f"{entity_label('Deck QA')} · 一致性 "
             f"{f'{score:.2f}' if isinstance(score, (int, float)) else '—'}",
             expanded=bool(deck.get("findings")),
         ):
@@ -435,7 +443,10 @@ def _render_quality_reports(result: VisualWorkflowResult) -> None:
                 )
 
     if critics:
-        with st.expander(f"Visual Critic · 共 {len(critics)} 页", expanded=False):
+        with st.expander(
+            f"{entity_label('Visual Critic')} · 共 {len(critics)} 页",
+            expanded=False,
+        ):
             rows = []
             for report in critics:
                 total = report.get("total_score")
@@ -487,7 +498,9 @@ def _render_composition_tabs(project_id: UUID, presentation_id: UUID) -> None:
 
     with tab_direction:
         if snapshot.art_direction is None:
-            st.caption("尚未生成 ArtDirection。请先点击「生成视觉编排」。")
+            st.caption(
+                f"尚未生成{entity_label('ArtDirection')}。请先点击「生成视觉编排」。"
+            )
         else:
             render_art_direction_panel(
                 art_direction=snapshot.art_direction,
@@ -563,8 +576,8 @@ def render() -> None:
     _init_session_state()
     st.markdown("### 视觉设计")
     st.caption(
-        "为已有 SlideSpec 生成 ArtDirection、VisualIntent 与 LayoutPlan；"
-        "导出时按 LayoutPlan 坐标执行 PPTX（不重排版式）。"
+        f"为已有{entity_label('SlideSpec')}生成{visual_pipeline_chain()}；"
+        f"导出时按{entity_label('LayoutPlan')}坐标执行 PPTX（不重排版式）。"
     )
     render_visual_engine_scope()
 

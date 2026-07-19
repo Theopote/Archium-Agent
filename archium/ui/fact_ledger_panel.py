@@ -10,6 +10,7 @@ from archium.application.fact_ledger_service import FactLedgerService
 from archium.domain.enums import VerificationStatus
 from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.factory import create_llm_provider
+from archium.ui.label_map import content_pipeline_chain
 from archium.ui.llm_settings import get_ui_effective_settings
 
 STATUS_LABELS = {
@@ -23,7 +24,9 @@ STATUS_LABELS = {
 
 def render_fact_ledger_panel(project_id: UUID) -> None:
     st.markdown("#### 项目事实账本")
-    st.caption("结构化项目参数 · 确认后将优先注入 Brief / Storyline / SlideSpec 生成上下文")
+    st.caption(
+        f"结构化项目参数 · 确认后将优先注入 {content_pipeline_chain()} 生成上下文"
+    )
 
     settings = get_ui_effective_settings()
     with get_session() as session:

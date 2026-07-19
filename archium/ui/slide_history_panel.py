@@ -12,6 +12,7 @@ from archium.domain.revision import SlideLineageOption
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideFieldChange, SlideRevision
 from archium.infrastructure.database.session import get_session
+from archium.ui.label_map import entity_label
 
 
 def _revision_option_label(revision: SlideRevision) -> str:
@@ -58,7 +59,9 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
         lineage_options = history.list_lineage_options(presentation_id, slides)
 
     if not revisions:
-        st.caption("保存或重新生成 SlideSpec 后，可在此查看页面修订历史。")
+        st.caption(
+            f"保存或重新生成{entity_label('SlideSpec')}后，可在此查看页面修订历史。"
+        )
         return
 
     st.markdown("**修订历史**")

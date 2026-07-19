@@ -41,8 +41,13 @@ from archium.ui.background_workflow_runner import (
     submit_continue_after_review,
 )
 from archium.ui.error_handlers import format_user_error
+from archium.ui.label_map import (
+    entity_label,
+    regenerate_failure_label,
+    regenerate_label,
+    regenerate_success_label,
+)
 from archium.ui.review_analytics_panel import REPAIR_STRATEGY_LABELS, render_rule_code_stats
-from archium.ui.label_map import entity_label
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
 from archium.ui.workspace_service import (
@@ -199,37 +204,39 @@ def _render_critical_recovery_actions(
 
     col1, col2, col3 = st.columns(3)
     if col1.button(
-        "重新生成 Slide 计划",
+        regenerate_label("SlideSpec"),
         key=f"recover_regen_slides_{presentation_id}",
         use_container_width=True,
     ):
         try:
             regenerate_slide_plan(presentation_id, workflow_run_id=workflow_run_id)
-            st.success("Slide 计划已重新生成，请重新审核质量结果。")
+            st.success(
+                f"{regenerate_success_label('SlideSpec')}请重新审核质量结果。"
+            )
             st.rerun()
         except Exception as exc:
             st.error(f"重新生成失败：{exc}")
 
     if has_structure and col2.button(
-        "重新生成 Storyline",
+        regenerate_label("Storyline"),
         key=f"recover_regen_storyline_{presentation_id}",
         use_container_width=True,
     ):
         try:
             regenerate_storyline(presentation_id, workflow_run_id=workflow_run_id)
-            st.success("Storyline 已重新生成。")
+            st.success(regenerate_success_label("Storyline"))
             st.rerun()
         except Exception as exc:
             st.error(f"重新生成失败：{exc}")
 
     if has_coverage and col3.button(
-        "重新生成 Brief",
+        regenerate_label("PresentationBrief"),
         key=f"recover_regen_brief_{presentation_id}",
         use_container_width=True,
     ):
         try:
             regenerate_brief(presentation_id, workflow_run_id=workflow_run_id)
-            st.success("Brief 已重新生成。")
+            st.success(regenerate_success_label("PresentationBrief"))
             st.rerun()
         except Exception as exc:
             st.error(f"重新生成失败：{exc}")
@@ -267,40 +274,40 @@ def _render_regenerate_actions(
 ) -> None:
     cols = st.columns(3)
     if brief_status == ApprovalStatus.REJECTED and cols[0].button(
-        "重新生成 Brief",
+        regenerate_label("PresentationBrief"),
         key=f"regen_brief_{presentation_id}",
         use_container_width=True,
     ):
         try:
             regenerate_brief(presentation_id, workflow_run_id=workflow_run_id)
-            st.success("Brief 已重新生成，请审核后继续。")
+            st.success(f"{regenerate_success_label('PresentationBrief')}请审核后继续。")
             st.rerun()
         except Exception as exc:
-            st.error(f"重新生成 Brief 失败：{exc}")
+            st.error(regenerate_failure_label("PresentationBrief").format(error=exc))
 
     if storyline_status == ApprovalStatus.REJECTED and cols[1].button(
-        "重新生成 Storyline",
+        regenerate_label("Storyline"),
         key=f"regen_storyline_{presentation_id}",
         use_container_width=True,
     ):
         try:
             regenerate_storyline(presentation_id, workflow_run_id=workflow_run_id)
-            st.success("Storyline 已重新生成，请审核后继续。")
+            st.success(f"{regenerate_success_label('Storyline')}请审核后继续。")
             st.rerun()
         except Exception as exc:
-            st.error(f"重新生成 Storyline 失败：{exc}")
+            st.error(regenerate_failure_label("Storyline").format(error=exc))
 
     if slides_need_revision and cols[2].button(
-        "重新生成 Slide 计划",
+        regenerate_label("SlideSpec"),
         key=f"regen_slides_{presentation_id}",
         use_container_width=True,
     ):
         try:
             regenerate_slide_plan(presentation_id, workflow_run_id=workflow_run_id)
-            st.success("Slide 计划已重新生成，请审核后继续。")
+            st.success(f"{regenerate_success_label('SlideSpec')}请审核后继续。")
             st.rerun()
         except Exception as exc:
-            st.error(f"重新生成 Slide 计划失败：{exc}")
+            st.error(regenerate_failure_label("SlideSpec").format(error=exc))
 
 
 def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
@@ -525,7 +532,7 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
         use_container_width=True,
     )
     regen_clicked = col3.button(
-        "重新生成 Slide 计划",
+        regenerate_label("SlideSpec"),
         key=f"regen_slides_inline_{context_presentation_id}",
         use_container_width=True,
     )
@@ -561,7 +568,7 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
     if regen_clicked:
         try:
             regenerate_slide_plan(context_presentation_id, workflow_run_id=workflow_run_id)
-            st.success("Slide 计划已重新生成。")
+            st.success(regenerate_success_label("SlideSpec"))
             st.rerun()
         except Exception as exc:
             st.error(f"重新生成失败：{exc}")

@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from archium.ui.label_map import entity_label, field_label
+from archium.ui.label_map import content_pipeline_chain, entity_label, field_label
 from archium.ui.studio_service import StudioPresentationContext, studio_readiness_label
 from archium.ui.visual_service import PresentationVisualSnapshot
 
@@ -13,6 +13,18 @@ from archium.ui.visual_service import PresentationVisualSnapshot
 def test_entity_label_user_mode() -> None:
     assert entity_label("SlideSpec") == "页面内容"
     assert entity_label("LayoutPlan") == "页面版式"
+
+
+def test_content_pipeline_chain() -> None:
+    assert "汇报要求" in content_pipeline_chain()
+    assert "Brief" not in content_pipeline_chain()
+
+
+def test_visual_pipeline_chain() -> None:
+    from archium.ui.label_map import visual_pipeline_chain, visual_quality_pair
+
+    assert "视觉方向" in visual_pipeline_chain()
+    assert "整套一致性检查" in visual_quality_pair()
 
 
 def test_entity_label_advanced_mode() -> None:

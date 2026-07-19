@@ -21,6 +21,11 @@ from archium.ui.background_workflow_runner import (
 from archium.ui.clarification_panel import render_clarification_panel, render_known_unknown_panel
 from archium.ui.deliverable_panel import render_deliverable_panel
 from archium.ui.error_handlers import format_user_error
+from archium.ui.label_map import (
+    brief_storyline_pair,
+    content_pipeline_chain,
+    entity_label,
+)
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.mission_panel import render_mission_panel
 from archium.ui.planning_service import (
@@ -631,8 +636,14 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
 
     export_json = st.checkbox("导出 JSON", value=True)
     export_marp = st.checkbox("导出 Marp Markdown", value=True)
-    require_brief = st.checkbox("Brief 生成后暂停审核", value=True)
-    require_storyline = st.checkbox("Storyline 生成后暂停审核", value=True)
+    require_brief = st.checkbox(
+        f"{entity_label('PresentationBrief')} 生成后暂停审核",
+        value=True,
+    )
+    require_storyline = st.checkbox(
+        f"{entity_label('Storyline')} 生成后暂停审核",
+        value=True,
+    )
 
     if st.button("批准成果计划并生成汇报", type="primary", use_container_width=True):
         run_id = UUID(st.session_state.planning_workflow_run_id)
@@ -654,12 +665,14 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             workflow_run_id=run_id,
             on_complete=_on_presentation_complete,
             success_message="汇报管线已启动并完成当前阶段。",
-            awaiting_review_message="汇报工作流已暂停审核。请到「项目工作台」继续审核 Brief / Storyline。",
+            awaiting_review_message=(
+                f"汇报工作流已暂停审核。请到「项目工作台」继续审核 {brief_storyline_pair()}。"
+            ),
             export_kwargs=export_kwargs,
         ):
             return
 
-        with st.spinner("正在批准规划并启动 Brief → Storyline → SlideSpec…"):
+        with st.spinner(f"正在批准规划并启动 {content_pipeline_chain()}…"):
             try:
                 with get_session() as session:
                     result = start_presentation_from_planning(
@@ -675,7 +688,7 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                 st.session_state.last_workflow_result = result
                 if result.awaiting_review:
                     st.warning(
-                        "汇报工作流已暂停审核。请到「项目工作台」继续审核 Brief / Storyline。"
+                        f"汇报工作流已暂停审核。请到「项目工作台」继续审核 {brief_storyline_pair()}。"
                     )
                 elif result.succeeded:
                     st.success(f"汇报已生成，共 {len(result.slides)} 页。")

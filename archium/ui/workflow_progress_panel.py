@@ -28,6 +28,7 @@ from archium.ui.background_workflow_runner import (
     load_workflow_result,
 )
 from archium.ui.error_handlers import format_user_error
+from archium.ui.label_map import brief_storyline_pair
 
 WorkflowScope = str  # "presentation" | "planning" | "visual"
 
@@ -127,7 +128,7 @@ def _default_awaiting_message(scope: WorkflowScope) -> str:
         return "规划工作流已暂停，请按当前步骤继续审核或编辑。"
     if scope == "visual":
         return "视觉编排已暂停，请审核视觉方向或版式后继续。"
-    return "工作流已暂停，请切换到「审核」标签页继续处理 Brief / Storyline。"
+    return f"工作流已暂停，请切换到「审核」标签页继续处理 {brief_storyline_pair()}。"
 
 
 def _apply_job_completion(

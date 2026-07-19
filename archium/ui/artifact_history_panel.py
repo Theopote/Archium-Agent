@@ -14,6 +14,7 @@ from archium.application.artifact_history_service import (
 from archium.application.slide_diff import change_source_label
 from archium.domain.revision import EntityRevision
 from archium.infrastructure.database.session import get_session
+from archium.ui.label_map import revision_history_label
 
 
 def _render_revision_table(
@@ -40,7 +41,7 @@ def _render_revision_table(
 
 
 def render_brief_history_panel(*, brief_id: UUID) -> None:
-    with st.expander("Brief 修订历史", expanded=False):
+    with st.expander(revision_history_label("PresentationBrief"), expanded=False):
         with get_session() as session:
             history = BriefHistoryService(session)
             revisions = history.list_revisions(brief_id)
@@ -51,7 +52,7 @@ def render_brief_history_panel(*, brief_id: UUID) -> None:
 
 
 def render_storyline_history_panel(*, storyline_id: UUID) -> None:
-    with st.expander("Storyline 修订历史", expanded=False):
+    with st.expander(revision_history_label("Storyline"), expanded=False):
         with get_session() as session:
             history = StorylineHistoryService(session)
             revisions = history.list_revisions(storyline_id)

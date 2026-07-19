@@ -367,7 +367,7 @@ def _render_generation_form(project_id: UUID) -> None:
 
 
 def _render_review_section(project_id: UUID) -> None:
-    st.markdown("#### Brief / Storyline 审核")
+    st.markdown(f"#### {brief_storyline_pair()} 审核")
     result = st.session_state.get("last_workflow_result")
     presentation_id = result.presentation.id if result is not None else None
     workflow_run_id = result.workflow_run.id if result is not None else None
@@ -376,7 +376,10 @@ def _render_review_section(project_id: UUID) -> None:
         with get_session() as session:
             presentations = list_project_presentations(session, project_id)
         if not presentations:
-            st.caption("生成汇报后，可在此编辑 Brief 与 Storyline。")
+            st.caption(
+                f"生成汇报后，可在此编辑{entity_label('PresentationBrief')}与"
+                f"{entity_label('Storyline')}。"
+            )
             return
         presentation_id = presentations[0].id
 
@@ -393,13 +396,13 @@ def _render_last_result() -> None:
 
     st.markdown("#### 最近生成结果")
     if result.brief:
-        st.markdown(f"**Brief：** {result.brief.title}")
+        st.markdown(f"**{entity_label('PresentationBrief')}：** {result.brief.title}")
         st.caption(
             f"对象：{result.brief.audience} · 目的：{result.brief.purpose} · "
             f"核心信息：{result.brief.core_message}"
         )
     if result.storyline:
-        st.caption(f"Storyline 论点：{result.storyline.thesis}")
+        st.caption(f"{entity_label('Storyline')} 论点：{result.storyline.thesis}")
 
     if result.presentation is not None:
         with get_session() as session:
@@ -461,7 +464,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
 
     st.markdown("#### 导出 PPTX")
     st.caption(
-        "推荐路径：先完成视觉编排，再按 LayoutPlan 坐标导出可编辑 PPTX。"
+        f"推荐路径：先完成视觉编排，再按{entity_label('LayoutPlan')}坐标导出可编辑 PPTX。"
         "也可跳过视觉编排，直接使用旧版 PresentationSpec 模板。"
     )
 
@@ -481,7 +484,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
             st.session_state.pop(prompt_key, None)
             try:
                 with (
-                    st.spinner("正在按 LayoutPlan 导出 PPTX…"),
+                    st.spinner(f"正在按{entity_label('LayoutPlan')}导出 PPTX…"),
                     get_session() as session,
                 ):
                     export_result = export_presentation_pptx_from_layout_plans(
@@ -501,7 +504,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
     if show_prompt:
         st.warning(
             "检测到尚未生成视觉版式。"
-            "推荐现在生成 ArtDirection 与 LayoutPlan 后再导出；"
+            f"推荐现在生成{entity_label('ArtDirection')}与{entity_label('LayoutPlan')}后再导出；"
             "也可直接使用旧版模板导出（质量较低）。"
         )
         col_recommended, col_legacy = st.columns(2)
@@ -590,7 +593,9 @@ def _render_pptx_export_section(project_id: UUID) -> None:
             except Exception as exc:
                 st.error(format_user_error(exc))
     elif has_visual_layout:
-        st.caption("当前汇报已具备视觉版式，点击上方按钮将按 LayoutPlan 导出。")
+        st.caption(
+            f"当前汇报已具备视觉版式，点击上方按钮将按{entity_label('LayoutPlan')}导出。"
+        )
 
     cached_export_result: RenderResult | None = st.session_state.get("last_pptx_export_result")
     if cached_export_result is not None:
@@ -629,7 +634,7 @@ def render() -> None:
     st.caption("管理项目资料，运行结构化汇报生成管线")
     st.info(
         "推荐先走「项目任务」：自由描述任务 → 澄清 → 工作路径 → 成果 → 再进入汇报主链。"
-        "直接填 Brief 仍可作为快捷路径。"
+        f"直接填写{entity_label('PresentationBrief')}仍可作为快捷路径。"
     )
 
     _render_create_project()

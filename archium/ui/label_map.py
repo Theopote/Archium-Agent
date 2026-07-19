@@ -81,6 +81,25 @@ def brief_storyline_pair(*, advanced: bool = False) -> str:
     return f"{entity_label('PresentationBrief', advanced=advanced)} / {entity_label('Storyline', advanced=advanced)}"
 
 
+def visual_pipeline_chain(*, advanced: bool = False) -> str:
+    """User-facing label for ArtDirection → VisualIntent → LayoutPlan pipeline."""
+    return " → ".join(
+        [
+            entity_label("ArtDirection", advanced=advanced),
+            entity_label("VisualIntent", advanced=advanced),
+            entity_label("LayoutPlan", advanced=advanced),
+        ]
+    )
+
+
+def visual_quality_pair(*, advanced: bool = False) -> str:
+    """User-facing label for Visual Critic + Deck QA."""
+    return (
+        f"{entity_label('Visual Critic', advanced=advanced)} / "
+        f"{entity_label('Deck QA', advanced=advanced)}"
+    )
+
+
 def revision_history_label(entity: str, *, advanced: bool = False) -> str:
     """User-facing revision history title for an entity."""
     return f"{entity_label(entity, advanced=advanced)}{entity_label('Revision', advanced=advanced)}"
