@@ -6,15 +6,11 @@
 3. 评估最终输出质量
 4. 对比期望标准
 
-注意：当前实现为 E2E Lite（execution_mode="lite"），跳过：
-- Brief 生成
-- Storyline 生成
-- SlideSpec 自动生成（由 case 预置内容）
-- 完整 Visual Workflow
-- PPTX 导出
-- Screenshot 检查
+注意：当前支持两种执行模式：
+- ``lite``：SlideSpec 由 case 预置（默认）
+- ``content``：Brief → Storyline → SlideSpec（需 ``enable_content_planning`` + LLM）
 
-完整 E2E（execution_mode="full"）目标流程：
+仍未实现 ``full``（Visual Workflow / PPTX / Screenshot）。
 原始任务 → 创建项目 → 导入资料 → Brief → Storyline → SlideSpec →
 Visual Workflow → Composition → Layout → PPTX → Screenshot → QA
 """
@@ -29,6 +25,8 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from archium.application.ingestion_service import IngestionService
+from archium.application.presentation_models import PresentationRequest
+from archium.application.presentation_service import PresentationService
 from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
@@ -47,12 +45,14 @@ from archium.domain.visual.e2e_benchmark import (
     E2EBenchmarkSummary,
     E2EContentCoverageResult,
     E2EContentExpectation,
+    E2EExecutionMode,
     E2EHeroAssetExpectation,
     E2EHeroAssetResult,
     E2ELayoutDistributionResult,
     E2EQualityMetrics,
 )
 from archium.domain.visual.enums import LayoutFamily
+from archium.config.settings import Settings, get_settings
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.visual_repositories import (
@@ -61,10 +61,15 @@ from archium.infrastructure.database.visual_repositories import (
     LayoutPlanRepository,
     VisualIntentRepository,
 )
+from archium.infrastructure.llm.base import LLMProvider
 
 E2E_LITE_NOTES = (
     "E2E Lite: SlideSpec 由 case 预置；未执行 Brief/Storyline/Visual Workflow/"
     "PPTX/Screenshot；Hero 选图能力仅验证已导入素材是否被引用。"
+)
+E2E_CONTENT_NOTES = (
+    "E2E Content: 已通过 Brief → Storyline → SlideSpec 从导入资料生成页面；"
+    "仍未执行 Visual Workflow / PPTX / Screenshot。"
 )
 E2E_LITE_SKIPPED = [
     "brief_generation",
@@ -84,9 +89,14 @@ class E2EBenchmarkService:
         self,
         session: Session,
         benchmark_data_dir: Path,
+        *,
+        llm: LLMProvider | None = None,
+        settings: Settings | None = None,
     ) -> None:
         self._session = session
         self._data_dir = benchmark_data_dir
+        self._llm = llm
+        self._settings = settings or get_settings()
         self._projects = ProjectRepository(session)
         self._presentations = PresentationRepository(session)
         self._ingestion = IngestionService(session)
@@ -140,18 +150,36 @@ class E2EBenchmarkService:
                 else:
                     imported_assets.extend(result.assets)
 
-            presentation = Presentation(
-                id=uuid4(),
-                project_id=project.id,
-                title=case.task_description,
-            )
-            presentation = self._presentations.create_presentation(presentation)
+            presentation: Presentation | None = None
+            slides: list[SlideSpec] = []
+            execution_mode: E2EExecutionMode = "lite"
+
+            if case.enable_content_planning and self._llm is not None:
+                try:
+                    presentation, slides = self._plan_slides_from_imported_content(
+                        project.id,
+                        case,
+                    )
+                    execution_mode = "content"
+                except Exception as e:
+                    failure_reasons.append(f"内容规划失败: {e}")
+
+            if presentation is None:
+                presentation = self._presentations.create_presentation(
+                    Presentation(
+                        id=uuid4(),
+                        project_id=project.id,
+                        title=case.title,
+                    )
+                )
+
+            if not slides:
+                slides = self._create_slides_from_case(case, presentation.id)
+                for slide in slides:
+                    self._presentations.save_slide(slide)
+
             art_direction.presentation_id = presentation.id
             self._art_directions.save(art_direction)
-
-            slides = self._create_slides_from_case(case, presentation.id)
-            for slide in slides:
-                self._presentations.save_slide(slide)
 
             for slide in slides:
                 try:
@@ -231,7 +259,7 @@ class E2EBenchmarkService:
             return E2EBenchmarkResult(
                 case_id=case.case_id,
                 scenario=case.scenario,
-                execution_mode="lite",
+                execution_mode=execution_mode,
                 design_system_id=design_system.id,
                 imported_asset_count=len(imported_assets),
                 actual_slide_count=len(slides),
@@ -243,7 +271,7 @@ class E2EBenchmarkService:
                 passed=passed,
                 failure_reasons=failure_reasons,
                 slide_details=self._build_slide_details(slides, plans, validation_reports),
-                notes=E2E_LITE_NOTES,
+                notes=E2E_CONTENT_NOTES if execution_mode == "content" else E2E_LITE_NOTES,
             )
 
         except Exception as e:
@@ -684,4 +712,43 @@ class E2EBenchmarkService:
         )
         slide.layout_plan_id = plan.id
         self._presentations.save_slide(slide)
+
+    def _build_presentation_request(self, case: E2EBenchmarkCase) -> PresentationRequest:
+        expectations = case.expected_outcomes
+        required_sections: list[str] = []
+        if expectations.content_expectations:
+            required_sections = list(expectations.content_expectations.required_keywords)
+        return PresentationRequest(
+            title=case.title,
+            audience="项目相关方",
+            purpose=case.task_description,
+            duration_minutes=20,
+            target_slide_count=expectations.max_slide_count,
+            core_message=case.task_description,
+            required_sections=required_sections,
+            user_notes=case.description,
+        )
+
+    def _plan_slides_from_imported_content(
+        self,
+        project_id: UUID,
+        case: E2EBenchmarkCase,
+    ) -> tuple[Presentation, list[SlideSpec]]:
+        """Brief → Storyline → SlideSpec via PresentationService."""
+        if self._llm is None:
+            raise WorkflowError("内容规划需要 LLM provider")
+
+        request = self._build_presentation_request(case)
+        presentation_service = PresentationService(
+            self._session,
+            self._llm,
+            settings=self._settings,
+        )
+        presentation = presentation_service.create_presentation(project_id, request)
+        brief = presentation_service.generate_brief(project_id, presentation.id, request)
+        storyline = presentation_service.generate_storyline(project_id, brief)
+        slides = presentation_service.generate_slide_plan(project_id, brief, storyline)
+        if not slides:
+            raise WorkflowError("内容规划未生成任何 SlideSpec")
+        return presentation, slides
 

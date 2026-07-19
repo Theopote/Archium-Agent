@@ -15,7 +15,7 @@ from archium.domain._base import DomainModel
 from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from pydantic import Field
 
-E2EExecutionMode = Literal["lite", "full"]
+E2EExecutionMode = Literal["lite", "content", "full"]
 
 
 class E2EBenchmarkScenario(str):
@@ -124,6 +124,9 @@ class E2EBenchmarkCase(DomainModel):
 
     # 期望的输出质量
     expected_outcomes: E2EExpectedOutcomes
+
+    # 内容规划：Brief → Storyline → SlideSpec（需 E2EBenchmarkService 注入 LLM）
+    enable_content_planning: bool = False
 
     # 元数据
     difficulty: str = "medium"  # "easy" | "medium" | "hard"

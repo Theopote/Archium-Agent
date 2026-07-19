@@ -10,9 +10,11 @@ import pytest
 from sqlalchemy.orm import Session
 
 from archium.application.visual.e2e_benchmark_service import (
+    E2E_CONTENT_NOTES,
     E2E_LITE_NOTES,
     E2EBenchmarkService,
 )
+from archium.infrastructure.llm import MockLLMProvider
 from archium.domain.visual.e2e_benchmark import (
     E2EBenchmarkCase,
     E2EContentExpectation,
@@ -20,10 +22,46 @@ from archium.domain.visual.e2e_benchmark import (
     E2EHeroAssetExpectation,
 )
 
+from tests.fixtures.mock_llm import pipeline_mock_selector
+from tests.golden.fixtures.loader import materialize_inline_docx
+
 
 @pytest.fixture
 def benchmark_service(db_session: Session, tmp_path: Path) -> E2EBenchmarkService:
     return E2EBenchmarkService(db_session, tmp_path)
+
+
+@pytest.fixture
+def mock_llm() -> MockLLMProvider:
+    return MockLLMProvider(selector=pipeline_mock_selector)
+
+
+@pytest.fixture
+def benchmark_service_with_llm(
+    db_session: Session,
+    tmp_path: Path,
+    test_settings: object,
+    mock_llm: MockLLMProvider,
+) -> E2EBenchmarkService:
+    return E2EBenchmarkService(
+        db_session,
+        tmp_path,
+        llm=mock_llm,
+        settings=test_settings,  # type: ignore[arg-type]
+    )
+
+
+@pytest.fixture
+def sample_docx_file(tmp_path: Path) -> Path:
+    return materialize_inline_docx(
+        tmp_path / "source.docx",
+        {
+            "paragraphs": [
+                "老院区交通组织混乱，人车混行严重。",
+                "需要通过交通重组改善患者到达体验。",
+            ],
+        },
+    )
 
 
 @pytest.fixture
@@ -56,6 +94,37 @@ def sample_benchmark_case(sample_image_file: Path) -> E2EBenchmarkCase:
             max_slide_count=3,
             content_expectations=E2EContentExpectation(
                 required_keywords=["测试", "说明"],
+            ),
+            hero_asset_expectations=E2EHeroAssetExpectation(
+                min_usage_ratio=0.0,
+                max_reuse_count=3,
+            ),
+            min_rule_pass_rate=0.0,
+            min_avg_layout_score=0.0,
+            min_deck_qa_score=0.0,
+        ),
+    )
+
+
+@pytest.fixture
+def content_planning_benchmark_case(
+    sample_docx_file: Path,
+    sample_image_file: Path,
+) -> E2EBenchmarkCase:
+    return E2EBenchmarkCase(
+        case_id="content_planning_001",
+        scenario="project_proposal",
+        title="老院区更新概念汇报",
+        description="Verify Brief→Storyline→SlideSpec from imported DOCX.",
+        task_description="根据任务书制作交通改造汇报",
+        input_documents=[sample_docx_file.name],
+        input_images=[sample_image_file.name],
+        enable_content_planning=True,
+        expected_outcomes=E2EExpectedOutcomes(
+            min_slide_count=4,
+            max_slide_count=4,
+            content_expectations=E2EContentExpectation(
+                required_keywords=["交通", "改造"],
             ),
             hero_asset_expectations=E2EHeroAssetExpectation(
                 min_usage_ratio=0.0,
@@ -157,6 +226,21 @@ class TestE2EBenchmarkServiceIntegration:
     ) -> None:
         result = benchmark_service.run_case(sample_benchmark_case)
         assert result.imported_asset_count == 1
+
+    def test_content_planning_generates_slides_from_imported_document(
+        self,
+        benchmark_service_with_llm: E2EBenchmarkService,
+        content_planning_benchmark_case: E2EBenchmarkCase,
+    ) -> None:
+        result = benchmark_service_with_llm.run_case(content_planning_benchmark_case)
+
+        assert result.execution_mode == "content"
+        assert result.notes == E2E_CONTENT_NOTES
+        assert result.actual_slide_count == 4
+        assert result.design_system_id is not None
+        titles = [detail["title"] for detail in result.slide_details]
+        assert "院区现状" in titles
+        assert "改造策略" in titles
 
     def test_layout_plan_repository_integration(
         self,
