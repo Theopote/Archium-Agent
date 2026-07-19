@@ -81,15 +81,13 @@ def render_studio_import_panel(*, project_id: UUID, expanded: bool = False) -> N
 
 def render_studio_no_presentation_hint(*, project_id: UUID) -> None:
     """Guide user when project exists but has no presentation yet."""
-    from archium.ui.pages import project_mission, workspace
-
     render_studio_import_panel(project_id=project_id, expanded=True)
     st.warning("该项目还没有汇报内容。请导入资料后，到项目工作台或项目任务生成页面内容。")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link(project_mission.render, label="前往项目任务", icon="🧭")
+        st.page_link("project-mission", label="前往项目任务", icon="🧭")
     with link_cols[1]:
-        st.page_link(workspace.render, label="前往项目工作台", icon="📁")
+        st.page_link("workspace", label="前往项目工作台", icon="📁")
 
 
 def _run_import(project_id: UUID, uploads: list, *, settings: Settings) -> None:

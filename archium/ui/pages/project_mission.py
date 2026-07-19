@@ -41,7 +41,6 @@ from archium.ui.workflow_progress_panel import (
 )
 from archium.ui.workspace_service import list_projects
 from archium.ui.workstream_panel import render_workstream_panel
-from archium.ui.pages import studio, workspace
 
 STEP_LABELS = [
     "1. 描述任务",
@@ -57,9 +56,9 @@ def _render_post_presentation_links() -> None:
     st.markdown("**下一步**")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link(workspace.render, label="到项目工作台审核内容", icon="📁")
+        st.page_link("workspace", label="到项目工作台审核内容", icon="📁")
     with link_cols[1]:
-        st.page_link(studio.render, label="到汇报工作室生成版式", icon="🎬")
+        st.page_link("studio", label="到汇报工作室生成版式", icon="🎬")
 
 
 def _apply_planning_result(result: object) -> None:
