@@ -8,7 +8,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource
+from archium.domain.visual.benchmark import (
+    HUMAN_REVIEW_PENDING_LABEL,
+    HumanVisualReview,
+    HumanVisualReviewSource,
+)
 from archium.exceptions import WorkflowError
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -32,6 +36,81 @@ class BenchmarkCaseSummary:
     human_review_path: Path
     layout_score: float | None
     rule_passed: bool | None
+
+
+@dataclass(frozen=True)
+class CaseReviewStatus:
+    """Review status row for one benchmark case."""
+
+    case_id: str
+    title: str
+    category: str
+    page_type: str
+    rule_passed: bool | None
+    human_score_label: str
+    passes_threshold: bool | None
+    accepted_for_delivery: bool
+    reviewer: str | None
+    pending: bool
+
+
+def list_case_review_statuses(*, root: Path | None = None) -> list[CaseReviewStatus]:
+    statuses: list[CaseReviewStatus] = []
+    for case in list_benchmark_cases(root=root):
+        review = load_case_review(case.case_id, root=root)
+        pending = review is None or review.is_scaffold_review()
+        if pending:
+            statuses.append(
+                CaseReviewStatus(
+                    case_id=case.case_id,
+                    title=case.title,
+                    category=case.category,
+                    page_type=case.page_type,
+                    rule_passed=case.rule_passed,
+                    human_score_label=HUMAN_REVIEW_PENDING_LABEL,
+                    passes_threshold=None,
+                    accepted_for_delivery=False,
+                    reviewer=None,
+                    pending=True,
+                )
+            )
+            continue
+        assert review is not None
+        statuses.append(
+            CaseReviewStatus(
+                case_id=case.case_id,
+                title=case.title,
+                category=case.category,
+                page_type=case.page_type,
+                rule_passed=case.rule_passed,
+                human_score_label=review.human_score_label(),
+                passes_threshold=review.passes_threshold(),
+                accepted_for_delivery=bool(review.accepted),
+                reviewer=review.reviewer or None,
+                pending=False,
+            )
+        )
+    return statuses
+
+
+def benchmark_report_paths(*, root: Path | None = None) -> tuple[Path, Path]:
+    reports_dir = benchmark_root(root) / "reports"
+    return reports_dir / "benchmark-report.html", reports_dir / "benchmark-summary.json"
+
+
+def review_progress_by_category(*, root: Path | None = None) -> dict[str, dict[str, int]]:
+    by_category: dict[str, dict[str, int]] = {}
+    for status in list_case_review_statuses(root=root):
+        bucket = by_category.setdefault(
+            status.category,
+            {"case_count": 0, "manual_review_count": 0, "manual_accepted_count": 0},
+        )
+        bucket["case_count"] += 1
+        if not status.pending:
+            bucket["manual_review_count"] += 1
+        if status.accepted_for_delivery:
+            bucket["manual_accepted_count"] += 1
+    return by_category
 
 
 def benchmark_root(root: Path | None = None) -> Path:

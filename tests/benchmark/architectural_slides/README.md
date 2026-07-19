@@ -110,6 +110,14 @@ python scripts/build_architectural_benchmark_report.py
 
 在 Streamlit **设置** 页底部的「建筑幻灯片基准 · 人工视觉评审」面板中逐项查看 `preview.png` 并保存评分；或直接编辑各 Case 目录下的 `human_review.json`（`source: "manual"`）。加权门槛默认 **3.5/5**（见 `HumanVisualReview.passes_threshold()`）。
 
+**设置页评审面板功能：**
+
+- **评审总览**：30 页状态表 + 分类进度
+- **筛选**：待评审 / 已评审（未接受）/ 已接受 / 全部，可按 A1–A5 分类过滤
+- **导航**：上一页 / 下一页、**从第一个待评审开始**、**保存并下一页**
+- **评审人记忆**：填写一次后自动带入后续 case
+- **保存后自动更新报告**（可关闭）：写入 `human_review.json` 后刷新 `benchmark-summary.json` / `benchmark-report.html`
+
 **在真人评审完成前**，报告与 UI 对占位/派生评审显示 **待人工评审**，不突出展示占位数值分数。
 
 使用 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` 重新生成基线时，**不会覆盖**已有 `human_review.json`；缺失时写入占位模板。layout QA 派生分数写入 `layout_qa_review.json`。
