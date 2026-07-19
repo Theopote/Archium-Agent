@@ -8,6 +8,7 @@ import streamlit as st
 
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label
+from archium.ui.studio.element_labels import format_element_label
 from archium.ui.visual_service import SlideVisualSnapshot
 
 
@@ -57,9 +58,15 @@ def render_slide_canvas(*, slide_snapshot: SlideVisualSnapshot | None, advanced:
         )
 
     if plan is not None:
+        selected_element_id = st.session_state.get("studio_selected_element_id")
+        highlight = ""
+        if selected_element_id and plan.element_by_id(str(selected_element_id)) is not None:
+            element = plan.element_by_id(str(selected_element_id))
+            if element is not None:
+                highlight = f" · 当前元素：{format_element_label(element_id=element.id, role=element.role)}"
         st.caption(
             f"版式：{format_layout_family_label(plan.layout_family)} · "
-            f"变体 {plan.layout_variant} · 留白 {plan.whitespace_ratio:.0%}"
+            f"变体 {plan.layout_variant} · 留白 {plan.whitespace_ratio:.0%}{highlight}"
         )
 
     with st.expander(entity_label("SlideSpec", advanced=advanced), expanded=False):

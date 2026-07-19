@@ -26,7 +26,23 @@ def test_append_step_log_deduplicates_consecutive_steps() -> None:
 
 
 def test_label_for_step_storyline() -> None:
-    assert "Storyline" in label_for_step(WorkflowStep.STORYLINE.value)
+    assert "叙事结构" in label_for_step(WorkflowStep.STORYLINE.value)
+
+
+def test_label_for_step_repair_slides_with_index() -> None:
+    label = label_for_step(
+        WorkflowStep.REPAIR_SLIDES.value,
+        state={"repair_slide_index": 2},
+    )
+    assert "第 3 页" in label
+
+
+def test_label_for_step_visual_critique_with_plans() -> None:
+    label = label_for_step(
+        WorkflowStep.VISUAL_CRITIQUE.value,
+        state={"layout_plans": [{}, {}, {}]},
+    )
+    assert "3 页" in label
 
 
 def test_snapshot_from_run_includes_step_log() -> None:

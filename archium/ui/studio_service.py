@@ -16,6 +16,7 @@ from archium.application.content_adaptation_service import ContentAdaptationServ
 from archium.domain.content_adaptation import ContentAdaptationSuggestion
 from archium.domain.enums import SlideStatus, SlideType
 from archium.domain.slide import SlideSpec, build_slide_logical_key
+from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.renderers.pptx_pdf import convert_pptx_to_pdf
@@ -298,6 +299,16 @@ def apply_slide_content_adaptation(
     if resolved is None:
         raise WorkflowError(f"Unsupported content adaptation: {action}")
     return service.apply(slide_id, resolved)
+
+
+def apply_deck_repair_suggestion(session: Session, suggestion: DeckRepairSuggestion) -> object:
+    """Apply one deck-level repair suggestion via existing visual edit service."""
+    return apply_slide_visual_edit(
+        session,
+        suggestion.slide_id,
+        intent=suggestion.intent,
+        params=dict(suggestion.params),
+    )
 
 
 def count_visual_revisions(session: Session, slide_id: UUID) -> int:

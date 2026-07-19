@@ -6,6 +6,13 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.domain.visual.scene_presets import (
+    SCENE_PRESET_DESCRIPTIONS,
+    SCENE_PRESET_KEYS,
+    SCENE_PRESET_LABELS,
+    scene_preset_preferences,
+)
+from archium.domain.visual.preferences import VisualPreferences
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.config.settings import Settings
 from archium.exceptions import WorkflowError
@@ -33,11 +40,19 @@ def _apply_visual_result(result: object) -> None:
         st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
 
 
+def _resolve_scene_preferences() -> VisualPreferences:
+    preset_key = str(st.session_state.get("studio_scene_preset") or SCENE_PRESET_KEYS[0])
+    if preset_key not in SCENE_PRESET_KEYS:
+        preset_key = SCENE_PRESET_KEYS[0]
+    return scene_preset_preferences(preset_key)
+
+
 def _launch_visual_job(
     project_id: UUID,
     presentation_id: UUID,
     *,
     settings: Settings,
+    preferences: VisualPreferences | None = None,
 ) -> bool:
     if not background_workflows_enabled(settings):
         return False
@@ -51,6 +66,7 @@ def _launch_visual_job(
         export_pptx=True,
         export_layout_instructions=True,
         candidate_count=3,
+        preferences=preferences,
     )
     set_active_job_id(project_id, job.job_id, scope="visual", presentation_id=presentation_id)
     st.info("已在后台生成视觉版式，进度见页面底部。")
@@ -76,6 +92,18 @@ def render_export_panel(
     presentation_id = context.presentation.id
     settings = get_ui_effective_settings()
     export_disabled = not context.ready_for_export
+    preferences = _resolve_scene_preferences()
+
+    preset_cols = st.columns([1.2, 2.8])
+    with preset_cols[0]:
+        preset_key = st.selectbox(
+            "场景预设",
+            options=list(SCENE_PRESET_KEYS),
+            format_func=lambda value: SCENE_PRESET_LABELS.get(value, value),
+            key="studio_scene_preset",
+        )
+    with preset_cols[1]:
+        st.caption(SCENE_PRESET_DESCRIPTIONS.get(preset_key, ""))
 
     (
         col_title,
@@ -92,7 +120,12 @@ def render_export_panel(
 
     with col_generate:
         if st.button("生成版式", type="primary", use_container_width=True, key="studio_generate_layouts"):
-            if _launch_visual_job(project_id, presentation_id, settings=settings):
+            if _launch_visual_job(
+                project_id,
+                presentation_id,
+                settings=settings,
+                preferences=preferences,
+            ):
                 return
             try:
                 with st.spinner("正在生成视觉版式…"), get_session() as session:
@@ -104,6 +137,7 @@ def render_export_panel(
                         use_llm=False,
                         export_pptx=True,
                         candidate_count=3,
+                        preferences=preferences,
                     )
                 _apply_visual_result(result)
                 if result.succeeded:

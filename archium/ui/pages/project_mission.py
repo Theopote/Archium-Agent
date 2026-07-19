@@ -41,6 +41,7 @@ from archium.ui.workflow_progress_panel import (
 )
 from archium.ui.workspace_service import list_projects
 from archium.ui.workstream_panel import render_workstream_panel
+from archium.ui.pages import studio, workspace
 
 STEP_LABELS = [
     "1. 描述任务",
@@ -50,6 +51,15 @@ STEP_LABELS = [
     "5. 选择成果",
     "6. 开始执行",
 ]
+
+
+def _render_post_presentation_links() -> None:
+    st.markdown("**下一步**")
+    link_cols = st.columns(2)
+    with link_cols[0]:
+        st.page_link(workspace.render, label="到项目工作台审核内容", icon="📁")
+    with link_cols[1]:
+        st.page_link(studio.render, label="到汇报工作室生成版式", icon="🎬")
 
 
 def _apply_planning_result(result: object) -> None:
@@ -669,6 +679,7 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                     )
                 elif result.succeeded:
                     st.success(f"汇报已生成，共 {len(result.slides)} 页。")
+                    _render_post_presentation_links()
                 else:
                     st.error("汇报工作流完成但存在错误。")
             except WorkflowError as exc:
@@ -681,6 +692,8 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         st.caption(
             f"最近结果：{last_result.brief.title} · 状态 {last_result.workflow_run.status.value}"
         )
+        if last_result.succeeded and not last_result.awaiting_review:
+            _render_post_presentation_links()
 
 
 def render() -> None:

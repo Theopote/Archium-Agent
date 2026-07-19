@@ -16,12 +16,12 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.RETRIEVE_CONTEXT.value: "检索项目上下文（RAG）",
     WorkflowStep.EXTRACT_FACTS.value: "抽取结构化指标",
     WorkflowStep.VALIDATE_FACTS.value: "校验指标一致性",
-    WorkflowStep.BRIEF.value: "生成 Brief",
-    WorkflowStep.REVIEW_BRIEF.value: "等待 Brief 审核",
-    WorkflowStep.STORYLINE.value: "正在梳理 Storyline…",
-    WorkflowStep.REVIEW_STORYLINE.value: "等待 Storyline 审核",
-    WorkflowStep.SLIDES.value: "正在生成 SlideSpec…",
-    WorkflowStep.REVIEW_SLIDES.value: "等待 SlideSpec 审核",
+    WorkflowStep.BRIEF.value: "生成汇报简报",
+    WorkflowStep.REVIEW_BRIEF.value: "等待汇报简报审核",
+    WorkflowStep.STORYLINE.value: "正在梳理叙事结构…",
+    WorkflowStep.REVIEW_STORYLINE.value: "等待叙事结构审核",
+    WorkflowStep.SLIDES.value: "正在生成页面内容…",
+    WorkflowStep.REVIEW_SLIDES.value: "等待页面内容审核",
     WorkflowStep.RESOLVE_CITATIONS.value: "解析引用与出处",
     WorkflowStep.MATCH_ASSETS.value: "匹配图档与素材",
     WorkflowStep.CONTENT_REVIEW.value: "内容质量审核",
@@ -30,20 +30,20 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.LAYOUT_REVIEW.value: "版面校验",
     WorkflowStep.PROFESSIONAL_REVIEW.value: "综合专业审核",
     WorkflowStep.REPAIR_SLIDES.value: "修复问题页",
-    WorkflowStep.SLIDE_VALIDATION.value: "SlideSpec 校验",
+    WorkflowStep.SLIDE_VALIDATION.value: "页面内容校验",
     WorkflowStep.EXPORT.value: "导出 JSON",
-    WorkflowStep.PRESENTATION_SPEC.value: "生成 PresentationSpec",
-    WorkflowStep.MARP.value: "渲染 Marp / 预览",
+    WorkflowStep.PRESENTATION_SPEC.value: "生成导出规格",
+    WorkflowStep.MARP.value: "渲染预览图",
     WorkflowStep.FINALIZE.value: "收尾与归档",
     WorkflowStep.FAILED.value: "工作流失败",
-    WorkflowStep.PLANNING_LOAD_CONTEXT.value: "加载 Mission 上下文",
+    WorkflowStep.PLANNING_LOAD_CONTEXT.value: "加载任务上下文",
     WorkflowStep.PLANNING_ANALYZE_TASK.value: "理解任务与识别缺口",
     WorkflowStep.PLANNING_VALIDATE_MISSION.value: "校验任务理解",
     WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value: "等待修正任务理解",
     WorkflowStep.PLANNING_AWAIT_CLARIFICATION.value: "等待补充澄清",
-    WorkflowStep.PLANNING_REVISE_MISSION.value: "修订 Mission",
-    WorkflowStep.PLANNING_VALIDATE_REVISED_MISSION.value: "校验修订后的 Mission",
-    WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value: "等待批准 Mission",
+    WorkflowStep.PLANNING_REVISE_MISSION.value: "修订任务理解",
+    WorkflowStep.PLANNING_VALIDATE_REVISED_MISSION.value: "校验修订后的任务理解",
+    WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value: "等待批准任务理解",
     WorkflowStep.PLANNING_WORKSTREAMS.value: "规划工作路径",
     WorkflowStep.PLANNING_DELIVERABLES.value: "规划成果清单",
     WorkflowStep.PLANNING_AWAIT_APPROVAL.value: "等待批准规划",
@@ -119,6 +119,17 @@ def label_for_step(step: str | None, *, state: dict[str, Any] | None = None) -> 
         plans = state.get("layout_plans") or []
         if plans:
             return f"正在校验 {len(plans)} 页版式…"
+    if step == WorkflowStep.VISUAL_CRITIQUE.value and state:
+        plans = state.get("layout_plans") or []
+        if plans:
+            return f"正在检查 {len(plans)} 页整套一致性…"
+    if step == WorkflowStep.REPAIR_SLIDES.value and state:
+        slide_index = state.get("repair_slide_index")
+        if slide_index is not None:
+            try:
+                return f"正在修复第 {int(slide_index) + 1} 页…"
+            except (TypeError, ValueError):
+                pass
     return label
 
 

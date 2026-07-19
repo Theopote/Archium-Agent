@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from archium.ui.pages import project_mission, studio, workspace
+
 
 def render() -> None:
     st.markdown("### 欢迎使用 Archium")
@@ -11,21 +13,29 @@ def render() -> None:
         """
 Archium（阿基姆）面向建筑师与规划师，帮助你将项目资料组织为**可追溯、可编辑、可审核**的汇报材料。
 
-**推荐工作流：**
-0. 在 **设置** 中配置 AI 服务商与 API Key（或使用 `.env`）
-1. 在 **项目任务** 中自由描述任务，经澄清与路径规划后选定成果（从模糊需求起步的推荐入口）
-2. 进入 **项目工作台**：导入资料、运行 Brief → Storyline → 页面内容 管线，审核并导出
-3. 在审核面板编辑并批准 Brief / Storyline，再继续生成后续阶段
-4. 进入 **汇报工作室**：浏览页面、查看版式、导出 PPTX（推荐主编辑入口）
-5. 或使用 **视觉设计**：生成 ArtDirection 与 LayoutPlan，审核视觉方向并选择候选版式
-6. 导出 JSON、Marp Markdown，或进一步导出 PPTX
+**推荐主流程（9 步）：**
+1. **设置** — 配置 AI 服务商与 API Key（或使用 `.env`）
+2. **项目任务** — 用自然语言描述任务，澄清需求并规划成果（从模糊需求起步的推荐入口）
+3. **项目工作台** — 导入资料，生成并审核「汇报简报 → 叙事结构 → 页面内容」
+4. **汇报工作室** — 浏览全部页面、生成版式、内容微调与导出 PPTX / PDF（**日常主编辑入口**）
+5. 逐页检查版式质量与整套一致性
+6. 按需使用内容适配（改文字结构）或 AI 编辑（改版式表现）
+7. 导出 PowerPoint 或 PDF 交付
+8. （可选）**视觉设计** — 审核视觉方向、在候选版式间精细挑选
+9. （可选）**指令中心** — v0.1 自然语言任务路由（快速 PPT、文件整理）
 
-**项目任务** 负责从模糊任务描述澄清到规划；**项目工作台** 是持续编辑、审核与导出的工作区；**汇报工作室** 是页面级预览与导出的主界面；**视觉设计** 负责深度视觉编排与候选版式调整。若目标已明确，也可跳过项目任务，直接在工作台填写 Brief。
-
-**遗留能力：**
-- **指令中心** 仍支持 v0.1 自然语言任务路由（快速 PPT、文件整理）
+若目标已明确，可跳过项目任务，直接在工作台填写简报并生成内容。
 """
     )
+
+    st.markdown("#### 快速开始")
+    link_cols = st.columns(3)
+    with link_cols[0]:
+        st.page_link(project_mission.render, label="从任务描述开始", icon="🧭")
+    with link_cols[1]:
+        st.page_link(workspace.render, label="进入项目工作台", icon="📁")
+    with link_cols[2]:
+        st.page_link(studio.render, label="打开汇报工作室", icon="🎬")
 
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:

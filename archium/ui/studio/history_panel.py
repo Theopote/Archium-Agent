@@ -6,6 +6,7 @@ import streamlit as st
 
 from archium.infrastructure.database.session import get_session
 from archium.ui.label_map import STATUS_LABELS, entity_label
+from archium.ui.studio.deck_repair_panel import render_deck_repair_panel
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.studio_service import (
     StudioPresentationContext,
@@ -41,6 +42,7 @@ def render_history_panel(
                 st.write(
                     f"- {item.get('severity')} · {item.get('message')}"
                 )
+        render_deck_repair_panel(context=context)
 
     result = st.session_state.get("last_visual_workflow_result")
     if result is not None:

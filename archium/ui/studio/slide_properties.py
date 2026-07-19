@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import streamlit as st
 
+from archium.domain.visual.enums import LayoutContentType
+from archium.infrastructure.database.session import get_session
+from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label, layout_family_implemented
-from archium.ui.studio_service import SlideVisualSnapshot
+from archium.ui.studio.element_labels import CONTENT_TYPE_LABELS, ROLE_LABELS, format_element_label
+from archium.ui.studio_service import SlideVisualSnapshot, apply_slide_visual_edit
 
 
 def render_slide_properties(*, slide_snapshot: SlideVisualSnapshot | None, advanced: bool) -> None:
-    """Render user-language slide properties."""
+    """Render user-language slide and element properties."""
     st.markdown("**页面属性**")
     if slide_snapshot is None:
         st.caption("暂无选中页面。")
@@ -49,9 +53,85 @@ def render_slide_properties(*, slide_snapshot: SlideVisualSnapshot | None, advan
                     for issue in validation.issues[:6]:
                         st.write(f"- {issue.severity.value} · {issue.message}")
 
+        _render_element_properties(slide_snapshot=slide_snapshot, advanced=advanced)
+
     if slide_snapshot.visual_critic is not None:
         critic = slide_snapshot.visual_critic
         total = critic.get("total_score")
         score_label = f"{total:.2f}" if isinstance(total, (int, float)) else "—"
         st.markdown(f"**{entity_label('Visual Critic', advanced=advanced)}**")
         st.write(f"评分：{score_label}")
+
+
+def _render_element_properties(*, slide_snapshot: SlideVisualSnapshot, advanced: bool) -> None:
+    plan = slide_snapshot.layout_plan
+    if plan is None or not plan.elements:
+        return
+
+    st.divider()
+    st.markdown("**元素属性**")
+    element_ids = [element.id for element in plan.elements]
+    selected_id = st.session_state.get("studio_selected_element_id")
+    if selected_id not in element_ids:
+        selected_id = element_ids[0]
+
+    selected_id = st.selectbox(
+        "选择元素",
+        options=element_ids,
+        index=element_ids.index(selected_id),
+        format_func=lambda value: format_element_label(
+            element_id=value,
+            role=plan.element_by_id(value).role,  # type: ignore[union-attr]
+        ),
+        key=f"studio_element_select_{slide_snapshot.slide.id}",
+    )
+    st.session_state.studio_selected_element_id = selected_id
+
+    element = plan.element_by_id(selected_id)
+    if element is None:
+        return
+
+    role_label = ROLE_LABELS.get(element.role, element.role.value)
+    content_label = CONTENT_TYPE_LABELS.get(element.content_type, element.content_type.value)
+    st.write(f"角色：{role_label}")
+    st.write(f"类型：{content_label}")
+    st.write(f"位置：{element.x:.2f}, {element.y:.2f}")
+    st.write(f"尺寸：{element.width:.2f} × {element.height:.2f}")
+    st.write(f"锁定：{'是' if element.locked else '否'}")
+
+    if element.content_type == LayoutContentType.TEXT and element.text_content:
+        st.text_area(
+            "文字内容",
+            value=element.text_content,
+            height=80,
+            disabled=True,
+            key=f"studio_element_text_{slide_snapshot.slide.id}_{element.id}",
+        )
+    elif element.content_ref:
+        st.write(f"素材引用：`{element.content_ref}`")
+        if element.fit_mode is not None:
+            st.write(f"适配方式：`{element.fit_mode.value}`")
+        if element.crop_policy is not None:
+            st.write(f"裁切策略：`{element.crop_policy.value}`")
+
+    if not element.locked:
+        if st.button(
+            "锁定此元素",
+            use_container_width=True,
+            key=f"studio_lock_element_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            try:
+                with get_session() as session:
+                    apply_slide_visual_edit(
+                        session,
+                        slide_snapshot.slide.id,
+                        intent="lock_element",
+                        params={"element_id": element.id},
+                    )
+                st.success("已锁定元素。")
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
+    if advanced:
+        st.caption(f"元素 ID：`{element.id}` · style `{element.style_token or '—'}`")
