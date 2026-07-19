@@ -10,6 +10,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.project_acceptance_metrics import derive_acceptance_human_metrics
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.visual.visual_workflow_service import VisualWorkflowService
 from archium.config.settings import Settings
@@ -124,6 +125,13 @@ class ProjectAcceptanceService:
 
         min_slides = int(manifest.expectations.get("min_slides", REAL_PROJECT_MIN_SLIDES))
         min_assets = int(manifest.expectations.get("min_assets", REAL_PROJECT_MIN_ASSETS))
+        derived = derive_acceptance_human_metrics(
+            slide_count=len(slides),
+            critical_layout_page_count=critical_count,
+            error_layout_page_count=error_count,
+            validation_reports=validation_reports,
+            first_generation_seconds=elapsed,
+        )
         metrics = RealProjectAcceptanceMetrics(
             first_generation_seconds=elapsed,
             generation_succeeded=content_ok and visual_ok,
@@ -135,10 +143,16 @@ class ProjectAcceptanceService:
             drawing_crop_issue_count=crop_count,
             export_acceptable=critical_count == 0,
             real_asset_utilization_rate=asset_utilization,
+            major_edit_page_ratio=derived["major_edit_page_ratio"],
+            minor_edit_page_ratio=derived["minor_edit_page_ratio"],
+            exported_page_ratio=derived["exported_page_ratio"],
+            average_human_visual_score=derived["average_human_visual_score"],
+            user_edit_minutes=derived["user_edit_minutes"],
         )
         notes = (
             f"slides>={min_slides}: {metrics.slide_count >= min_slides}; "
-            f"assets>={min_assets}: {metrics.asset_count >= min_assets}"
+            f"assets>={min_assets}: {metrics.asset_count >= min_assets}; "
+            "human metrics derived from layout validation (rehearsal baseline)"
         )
         return RealProjectAcceptanceRecord(
             project_id=manifest.project_id,

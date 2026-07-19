@@ -8,6 +8,7 @@ import pytest
 from archium.domain.project_acceptance import (
     REAL_PROJECT_MIN_ASSETS,
     REAL_PROJECT_MIN_SLIDES,
+    RealProjectAcceptanceRecord,
     RealProjectScenario,
 )
 
@@ -51,6 +52,11 @@ def test_real_project_acceptance_case(
     assert summary.asset_count >= min_assets
     assert summary.succeeded
     assert summary.record_path.exists()
+    record = RealProjectAcceptanceRecord.model_validate_json(
+        summary.record_path.read_text(encoding="utf-8")
+    )
+    assert record.metrics.average_human_visual_score is not None
+    assert record.metrics.exported_page_ratio is not None
 
 
 def test_update_env_documented() -> None:

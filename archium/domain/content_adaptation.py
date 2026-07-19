@@ -4,6 +4,17 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from pydantic import Field
+
+from archium.domain._base import DomainModel
+from archium.domain.slide import SlideSpec
+from archium.domain.visual.validation import (
+    LAYOUT_EXCESSIVE_DENSITY,
+    LAYOUT_FONT_TOO_SMALL,
+    LAYOUT_TEXT_OVERFLOW,
+    LayoutValidationReport,
+)
+
 
 class ContentAdaptationAction(StrEnum):
     SHORTEN = "shorten"
@@ -19,6 +30,16 @@ ACTION_USER_LABELS: dict[ContentAdaptationAction, str] = {
     ContentAdaptationAction.PROMOTE_KEY_MESSAGE: "突出核心信息",
 }
 
+
+class ContentAdaptationSuggestion(DomainModel):
+    """Suggested content adaptation triggered by layout or content heuristics."""
+
+    action: ContentAdaptationAction
+    reason: str = Field(min_length=1)
+    trigger_rule_codes: list[str] = Field(default_factory=list)
+    requires_user_approval: bool = False
+
+
 _NL_RULES: list[tuple[ContentAdaptationAction, tuple[str, ...]]] = [
     (ContentAdaptationAction.SHORTEN, ("缩短", "精简", "shorten", "更少文字")),
     (ContentAdaptationAction.CONVERT_TO_BULLETS, ("要点", "bullet", "条目", "转要点")),
@@ -28,6 +49,12 @@ _NL_RULES: list[tuple[ContentAdaptationAction, tuple[str, ...]]] = [
         ("突出核心", "核心信息", "promote", "强调结论"),
     ),
 ]
+
+_OVERFLOW_RULES = {
+    LAYOUT_TEXT_OVERFLOW,
+    LAYOUT_EXCESSIVE_DENSITY,
+    LAYOUT_FONT_TOO_SMALL,
+}
 
 
 def parse_content_adaptation_text(text: str) -> ContentAdaptationAction | None:
@@ -45,3 +72,70 @@ def action_from_value(value: str) -> ContentAdaptationAction | None:
         return ContentAdaptationAction(value)
     except ValueError:
         return None
+
+
+def suggest_content_adaptations(
+    slide: SlideSpec,
+    *,
+    layout_report: LayoutValidationReport | None = None,
+) -> list[ContentAdaptationSuggestion]:
+    """Analyze slide content and layout issues; return ordered adaptation suggestions."""
+    suggestions: list[ContentAdaptationSuggestion] = []
+    rule_codes = (
+        [issue.rule_code for issue in layout_report.issues] if layout_report is not None else []
+    )
+    overflow_rules = [code for code in rule_codes if code in _OVERFLOW_RULES]
+
+    if overflow_rules:
+        suggestions.append(
+            ContentAdaptationSuggestion(
+                action=ContentAdaptationAction.SHORTEN,
+                reason="版式校验发现文字过多或密度过高，建议先缩短正文。",
+                trigger_rule_codes=overflow_rules,
+            )
+        )
+        suggestions.append(
+            ContentAdaptationSuggestion(
+                action=ContentAdaptationAction.CONVERT_TO_BULLETS,
+                reason="将长段落整理为要点，通常能缓解溢出并提升可读性。",
+                trigger_rule_codes=overflow_rules,
+            )
+        )
+
+    bullet_count = len(slide.key_points)
+    total_chars = len(slide.message) + sum(len(point) for point in slide.key_points)
+    if bullet_count >= 5 or total_chars > 420:
+        suggestions.append(
+            ContentAdaptationSuggestion(
+                action=ContentAdaptationAction.SPLIT_SLIDE,
+                reason="本页信息点较多，拆成两页可减轻拥挤。",
+                trigger_rule_codes=rule_codes,
+                requires_user_approval=True,
+            )
+        )
+
+    if bullet_count >= 3 and len(slide.message) > 96:
+        suggestions.append(
+            ContentAdaptationSuggestion(
+                action=ContentAdaptationAction.PROMOTE_KEY_MESSAGE,
+                reason="核心结论被长段落淹没，建议突出一条主信息。",
+                trigger_rule_codes=rule_codes,
+            )
+        )
+
+    if not suggestions and not slide.key_points and len(slide.message) > 120:
+        suggestions.append(
+            ContentAdaptationSuggestion(
+                action=ContentAdaptationAction.CONVERT_TO_BULLETS,
+                reason="核心信息较长，整理为要点更利于版式排版。",
+            )
+        )
+
+    deduped: list[ContentAdaptationSuggestion] = []
+    seen: set[ContentAdaptationAction] = set()
+    for item in suggestions:
+        if item.action in seen:
+            continue
+        seen.add(item.action)
+        deduped.append(item)
+    return deduped

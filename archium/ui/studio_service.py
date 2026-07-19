@@ -12,7 +12,13 @@ from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.render import RenderResult
+from archium.application.content_adaptation_service import ContentAdaptationService
+from archium.domain.content_adaptation import ContentAdaptationSuggestion
+from archium.domain.enums import SlideStatus, SlideType
+from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.exceptions import WorkflowError
+from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.renderers.pptx_pdf import convert_pptx_to_pdf
 from archium.ui.visual_service import (
     PresentationVisualSnapshot,
     SlideVisualSnapshot,
@@ -138,6 +144,105 @@ def export_presentation_from_studio(
         session,
         presentation_id,
         settings=settings,  # type: ignore[arg-type]
+    )
+
+
+def export_presentation_pdf_from_studio(
+    session: Session,
+    presentation_id: UUID,
+    *,
+    settings: object | None = None,
+) -> RenderResult:
+    """Export PDF by rendering LayoutPlan PPTX then converting with LibreOffice."""
+    pptx_result = export_presentation_from_studio(
+        session,
+        presentation_id,
+        settings=settings,
+    )
+    pptx_path = pptx_result.editable_pptx_path
+    if pptx_path is None:
+        raise WorkflowError("PPTX 导出失败，无法继续生成 PDF。")
+    pdf_path = convert_pptx_to_pdf(pptx_path, pptx_path.parent)
+    if pdf_path is None:
+        pptx_result.warnings.append(
+            "未检测到 LibreOffice，无法将 PPTX 转为 PDF。请安装 LibreOffice 后重试。"
+        )
+        return pptx_result
+    return RenderResult(
+        editable_pptx_path=pptx_path,
+        pdf_path=pdf_path,
+        warnings=list(pptx_result.warnings),
+    )
+
+
+def add_studio_slide(
+    session: Session,
+    presentation_id: UUID,
+    *,
+    after_index: int | None = None,
+) -> SlideSpec:
+    """Insert a blank slide after ``after_index`` (or append when None)."""
+    presentations = PresentationRepository(session)
+    slides = presentations.list_slides(presentation_id)
+    if not slides:
+        chapter_id = "ch1"
+        order = 0
+    elif after_index is None:
+        last = slides[-1]
+        chapter_id = last.chapter_id
+        order = last.order + 1
+    else:
+        index = max(0, min(after_index, len(slides) - 1))
+        anchor = slides[index]
+        chapter_id = anchor.chapter_id
+        order = anchor.order + 1
+        for slide in reversed(slides):
+            if slide.order >= order:
+                presentations.save_slide(
+                    slide.model_copy(
+                        update={
+                            "order": slide.order + 1,
+                            "logical_key": build_slide_logical_key(
+                                slide.chapter_id,
+                                slide.order + 1,
+                            ),
+                        }
+                    )
+                )
+
+    new_slide = SlideSpec(
+        presentation_id=presentation_id,
+        chapter_id=chapter_id,
+        order=order,
+        title="新页面",
+        message="请填写本页核心信息。",
+        slide_type=SlideType.CONTENT,
+        status=SlideStatus.PLANNED,
+    )
+    return presentations.save_slide(new_slide)
+
+
+def delete_studio_slide(session: Session, slide_id: UUID) -> None:
+    """Delete one slide; raises when it is the last page in the deck."""
+    presentations = PresentationRepository(session)
+    slide = presentations.get_slide(slide_id)
+    if slide is None:
+        raise WorkflowError("页面不存在。")
+    remaining = presentations.list_slides(slide.presentation_id)
+    if len(remaining) <= 1:
+        raise WorkflowError("至少保留一页，无法删除。")
+    presentations.delete_slide(slide_id)
+
+
+def analyze_slide_content_adaptation(
+    session: Session,
+    slide_id: UUID,
+    *,
+    layout_report: object | None = None,
+) -> list[ContentAdaptationSuggestion]:
+    return ContentAdaptationService(session).analyze(
+        slide_id,
+        layout_report=layout_report,  # type: ignore[arg-type]
     )
 
 

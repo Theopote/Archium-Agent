@@ -6,6 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.domain.visual.layout import LayoutPlan
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -15,8 +16,8 @@ from archium.ui.layout_family_ui import (
     layout_family_availability_status,
     layout_family_implemented,
 )
-from archium.domain.visual.layout import LayoutPlan
-from archium.ui.visual_service import SlideVisualSnapshot, replan_slide, select_layout_candidate
+from archium.ui.studio.slide_actions import run_studio_replan, show_studio_validation_feedback
+from archium.ui.visual_service import SlideVisualSnapshot, select_layout_candidate
 
 
 def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None, advanced: bool) -> None:
@@ -47,19 +48,14 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
             use_container_width=True,
             key=f"studio_replan_{slide_id}",
         ):
-            _run_replan(slide_id)
+            run_studio_replan(slide_id)
     with action_cols[1]:
         if st.button(
             "检查问题",
             use_container_width=True,
             key=f"studio_check_issues_{slide_id}",
         ):
-            if validation is None:
-                st.info("尚未生成版式，无法检查。")
-            elif valid:
-                st.success("当前页未发现需修复的版式问题。")
-            else:
-                st.warning(f"发现 {issue_count} 个版式问题，请查看上方列表。")
+            show_studio_validation_feedback(slide_snapshot)
 
     candidates = slide_snapshot.candidates
     if not candidates:
@@ -119,13 +115,3 @@ def _candidate_label(plan: LayoutPlan, *, current_id: UUID | None) -> str:
     availability = layout_family_availability_status(plan.layout_family)
     suffix = "（当前）" if current_id is not None and plan.id == current_id else ""
     return f"{family_label} · {plan.layout_variant} · {availability}{suffix}"
-
-
-def _run_replan(slide_id: UUID) -> None:
-    try:
-        with st.spinner("正在重新生成候选版式…"), get_session() as session:
-            replan_slide(session, slide_id=slide_id, preset=None, candidate_count=3)
-        st.success("已重新生成候选版式。")
-        st.rerun()
-    except Exception as exc:
-        st.error(format_user_error(exc))

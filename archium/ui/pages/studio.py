@@ -52,7 +52,10 @@ def render() -> None:
     if context is None:
         return
 
-    render_export_panel(context=context)
+    selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
+    slide_snapshot = get_selected_slide_snapshot(context, selected_index)
+
+    render_export_panel(context=context, slide_snapshot=slide_snapshot)
     st.divider()
 
     left_col, center_col, right_col = st.columns([1.05, 2.1, 1.05], gap="medium")

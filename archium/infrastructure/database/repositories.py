@@ -17,7 +17,7 @@ from archium.domain.presentation import Presentation, PresentationBrief, Storyli
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.revision import EntityRevision
-from archium.domain.slide import SlideSpec
+from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import RepositoryError
@@ -349,6 +349,33 @@ class PresentationRepository:
             .order_by(StorylineORM.version.desc())
         )
         return [mappers.storyline_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def delete_slide(self, slide_id: UUID) -> None:
+        """Delete one slide and renumber remaining slides in the presentation."""
+        try:
+            orm = self._session.get(SlideORM, slide_id)
+            if orm is None:
+                return
+            presentation_id = orm.presentation_id
+            deleted_order = orm.order
+            self._session.delete(orm)
+            self._session.flush()
+            remaining = self.list_slides(presentation_id)
+            for slide in remaining:
+                if slide.order > deleted_order:
+                    updated = slide.model_copy(
+                        update={
+                            "order": slide.order - 1,
+                            "logical_key": build_slide_logical_key(
+                                slide.chapter_id,
+                                slide.order - 1,
+                            ),
+                        }
+                    )
+                    self.save_slide(updated)
+        except SQLAlchemyError as exc:
+            _handle_error("delete slide", exc)
+            raise
 
     def delete_slides_for_presentation(self, presentation_id: UUID) -> int:
         try:

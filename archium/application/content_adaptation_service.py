@@ -18,11 +18,16 @@ from archium.application.slide_repair_policy import (
 )
 from archium.application.slide_split_planner import build_split_plan
 from archium.application.visual.visual_edit_service import VisualEditService
-from archium.domain.content_adaptation import ContentAdaptationAction
-from archium.domain.enums import RevisionSource
+from archium.domain.content_adaptation import (
+    ContentAdaptationAction,
+    ContentAdaptationSuggestion,
+    suggest_content_adaptations,
+)
+from archium.domain.enums import RevisionSource, SlideStatus, SlideType
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_split import SlideSplitPlan
 from archium.domain.visual.edit_intent import VisualEditIntent
+from archium.domain.visual.validation import LayoutValidationReport
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 
@@ -45,6 +50,17 @@ class ContentAdaptationService:
         self._presentations = PresentationRepository(session)
         self._history = SlideHistoryService(session)
         self._visual_edits = VisualEditService(session)
+
+    def analyze(
+        self,
+        slide_id: UUID,
+        *,
+        layout_report: LayoutValidationReport | None = None,
+    ) -> list[ContentAdaptationSuggestion]:
+        slide = self._presentations.get_slide(slide_id)
+        if slide is None:
+            raise WorkflowError(f"页面 {slide_id} 不存在")
+        return suggest_content_adaptations(slide, layout_report=layout_report)
 
     def apply(
         self,

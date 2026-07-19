@@ -6,8 +6,16 @@ from pathlib import Path
 
 import streamlit as st
 
+from archium.exceptions import WorkflowError
+from archium.infrastructure.database.session import get_session
+from archium.ui.error_handlers import format_user_error
 from archium.ui.layout_family_ui import format_layout_family_label
-from archium.ui.studio_service import StudioPresentationContext, get_selected_slide_snapshot
+from archium.ui.studio_service import (
+    StudioPresentationContext,
+    add_studio_slide,
+    delete_studio_slide,
+    get_selected_slide_snapshot,
+)
 
 
 def _set_selected_slide(index: int) -> None:
@@ -24,6 +32,46 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     selected_index = max(0, min(selected_index, len(slides) - 1))
+
+    manage_cols = st.columns(2)
+    with manage_cols[0]:
+        if st.button(
+            "新增页面",
+            key=f"studio_add_slide_{context.presentation.id}",
+            use_container_width=True,
+        ):
+            try:
+                with get_session() as session:
+                    new_slide = add_studio_slide(
+                        session,
+                        context.presentation.id,
+                        after_index=selected_index,
+                    )
+                st.session_state.studio_selected_slide_index = selected_index + 1
+                st.success(f"已新增 P{new_slide.order + 1}。")
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(format_user_error(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+    with manage_cols[1]:
+        current = slides[selected_index]
+        if st.button(
+            "删除当前页",
+            key=f"studio_delete_slide_{context.presentation.id}",
+            use_container_width=True,
+            disabled=len(slides) <= 1,
+        ):
+            try:
+                with get_session() as session:
+                    delete_studio_slide(session, current.slide.id)
+                st.session_state.studio_selected_slide_index = max(0, selected_index - 1)
+                st.success("已删除当前页。")
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(format_user_error(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
 
     nav_cols = st.columns([1, 2, 1])
     with nav_cols[0]:
@@ -82,7 +130,7 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
                 st.rerun()
 
     st.session_state.studio_selected_slide_index = selected_index
-    current = get_selected_slide_snapshot(context, selected_index)
-    if current is not None:
-        st.caption(f"当前：P{current.slide.order + 1} · {family}")
+    current_snapshot = get_selected_slide_snapshot(context, selected_index)
+    if current_snapshot is not None:
+        st.caption(f"当前：P{current_snapshot.slide.order + 1} · {family}")
     return selected_index
