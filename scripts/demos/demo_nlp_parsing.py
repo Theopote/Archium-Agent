@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Demo script for enhanced natural language parsing capabilities."""
 
-import sys
 from typing import Any
 
 
@@ -46,8 +45,6 @@ def simulate_parse(instruction: str) -> dict[str, Any]:
         "modifiers": [],
         "confidence": 0.0,
     }
-
-    instruction_lower = instruction.lower()
 
     # Detect intent
     if "放大" in instruction or "大" in instruction:
@@ -121,12 +118,12 @@ def print_parse_result(result: dict[str, Any]) -> None:
         print(f"    置信度: {colorize(confidence_str, 'cyan')}")
 
         if result["params"]:
-            print(f"    参数:")
+            print("    参数:")
             for key, value in result["params"].items():
                 print(f"      • {key}: {value}")
 
         if result["modifiers"]:
-            print(f"    修饰符:")
+            print("    修饰符:")
             for mod in result["modifiers"]:
                 print(f"      • {mod['description']}")
     else:

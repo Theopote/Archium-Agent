@@ -80,9 +80,9 @@ def test_safe_truncate():
                     found_delimiter = True
                     break
             if not found_delimiter:
-                print(f"⚠ 未在预期分隔符处截断")
+                print("⚠ 未在预期分隔符处截断")
 
-        print(f"状态: ✓ 通过")
+        print("状态: ✓ 通过")
 
 
 def test_importance_scoring():
@@ -164,7 +164,7 @@ def test_importance_scoring():
     for i, case in enumerate(test_cases, 1):
         print(f"\n测试用例 {i}: {case['name']}")
         print(f"标题: {case['title']}")
-        print(f"要点:")
+        print("要点:")
         for idx, point in enumerate(case["points"]):
             print(f"  {idx}. {point}")
 
@@ -194,10 +194,10 @@ def test_importance_scoring():
         print(f"原因: {case['reason']}")
 
         if selected_idx == case["expected_index"]:
-            print(f"状态: ✓ 通过（符合预期）")
+            print("状态: ✓ 通过（符合预期）")
         else:
             print(f"状态: ⚠ 未选择预期要点（预期: {case['expected_index']}, 实际: {selected_idx}）")
-            print(f"这可能是评分算法的参数需要调整，但至少不是基于长度选择")
+            print("这可能是评分算法的参数需要调整，但至少不是基于长度选择")
 
 
 def test_old_vs_new_behavior():
@@ -219,16 +219,16 @@ def test_old_vs_new_behavior():
         "部署环境：AWS",
     ]
 
-    print(f"\n测试要点:")
+    print("\n测试要点:")
     for idx, point in enumerate(test_points):
         print(f"  {idx}. {point} (长度: {len(point)})")
 
     # 旧版本：基于长度
     old_selected = max(test_points, key=len)
     old_idx = test_points.index(old_selected)
-    print(f"\n旧版本选择（max by length）:")
+    print("\n旧版本选择（max by length）:")
     print(f"  要点 {old_idx}: {old_selected}")
-    print(f"  ❌ 问题: 选择了技术细节，而非业务价值")
+    print("  ❌ 问题: 选择了技术细节，而非业务价值")
 
     # 新版本：基于重要性
     new_selected = service._select_most_important_point(
@@ -237,13 +237,13 @@ def test_old_vs_new_behavior():
         message="推荐采用云原生架构"
     )
     new_idx = test_points.index(new_selected)
-    print(f"\n新版本选择（importance scoring）:")
+    print("\n新版本选择（importance scoring）:")
     print(f"  要点 {new_idx}: {new_selected}")
 
     if new_idx != old_idx:
-        print(f"  ✓ 改进: 新版本选择了更重要的要点")
+        print("  ✓ 改进: 新版本选择了更重要的要点")
     else:
-        print(f"  ⚠ 两个版本选择了相同要点")
+        print("  ⚠ 两个版本选择了相同要点")
 
 
 def test_warning_mechanism():
@@ -254,7 +254,6 @@ def test_warning_mechanism():
 
     from archium.application.content_adaptation_service import (
         ContentAdaptationService,
-        AdaptationWarning,
     )
     from archium.domain.content_adaptation import ContentAdaptationAction
 
@@ -274,12 +273,12 @@ def test_warning_mechanism():
     assert len(service._warnings) == 1, "应该有 1 个警告"
 
     warning = service._warnings[0]
-    print(f"警告内容:")
+    print("警告内容:")
     print(f"  - 操作: {warning.action.value}")
     print(f"  - 消息: {warning.message}")
     print(f"  - 严重性: {warning.severity}")
 
-    print(f"\n状态: ✓ 警告机制工作正常")
+    print("\n状态: ✓ 警告机制工作正常")
 
 
 def main():
@@ -307,7 +306,7 @@ def main():
         print(f"\n❌ 测试失败: {e}")
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+        raise SystemExit(1) from e
 
 
 if __name__ == "__main__":
