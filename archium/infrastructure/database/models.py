@@ -35,10 +35,22 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     client: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
 
-    documents: Mapped[list[SourceDocumentORM]] = relationship(back_populates="project")
-    presentations: Mapped[list[PresentationORM]] = relationship(back_populates="project")
-    facts: Mapped[list[ProjectFactORM]] = relationship(back_populates="project")
-    assets: Mapped[list[AssetORM]] = relationship(back_populates="project")
+    documents: Mapped[list[SourceDocumentORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    presentations: Mapped[list[PresentationORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    facts: Mapped[list[ProjectFactORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    assets: Mapped[list[AssetORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
     missions: Mapped[list[ProjectMissionORM]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
@@ -63,7 +75,10 @@ class SourceDocumentORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     metadata_json: Mapped[dict[str, object]] = mapped_column("metadata", JSON, default=dict)
 
     project: Mapped[ProjectORM] = relationship(back_populates="documents")
-    chunks: Mapped[list[DocumentChunkORM]] = relationship(back_populates="document")
+    chunks: Mapped[list[DocumentChunkORM]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
 
 
 class DocumentChunkORM(UUIDPrimaryKeyMixin, Base):
@@ -120,10 +135,22 @@ class PresentationORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     current_storyline_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
 
     project: Mapped[ProjectORM] = relationship(back_populates="presentations")
-    briefs: Mapped[list[PresentationBriefORM]] = relationship(back_populates="presentation")
-    storylines: Mapped[list[StorylineORM]] = relationship(back_populates="presentation")
-    slides: Mapped[list[SlideORM]] = relationship(back_populates="presentation")
-    review_issues: Mapped[list[ReviewIssueORM]] = relationship(back_populates="presentation")
+    briefs: Mapped[list[PresentationBriefORM]] = relationship(
+        back_populates="presentation",
+        cascade="all, delete-orphan",
+    )
+    storylines: Mapped[list[StorylineORM]] = relationship(
+        back_populates="presentation",
+        cascade="all, delete-orphan",
+    )
+    slides: Mapped[list[SlideORM]] = relationship(
+        back_populates="presentation",
+        cascade="all, delete-orphan",
+    )
+    review_issues: Mapped[list[ReviewIssueORM]] = relationship(
+        back_populates="presentation",
+        cascade="all, delete-orphan",
+    )
 
 
 class PresentationBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
