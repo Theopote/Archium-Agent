@@ -111,8 +111,16 @@ class VisualEditService:
             note=resolved.value,
         )
 
-        if resolved == VisualEditIntent.LOCK_ELEMENT:
-            return self._apply_lock_element(slide, current_intent, current_plan, params or {})
+        if resolved in {VisualEditIntent.LOCK_ELEMENT, VisualEditIntent.UNLOCK_ELEMENT}:
+            locked = resolved == VisualEditIntent.LOCK_ELEMENT
+            return self._apply_element_lock_state(
+                slide,
+                current_intent,
+                current_plan,
+                params or {},
+                locked=locked,
+                edit_intent=resolved,
+            )
 
         updated_intent = self._mutate_intent(current_intent, slide, resolved, params or {})
         replanned = self._replan(
@@ -157,15 +165,19 @@ class VisualEditService:
             message="已恢复到上一版视觉状态。",
         )
 
-    def _apply_lock_element(
+    def _apply_element_lock_state(
         self,
         slide: object,
-        intent: VisualIntent | None,
+        visual_intent: VisualIntent | None,
         plan: LayoutPlan | None,
         params: dict[str, object],
+        *,
+        locked: bool,
+        edit_intent: VisualEditIntent,
     ) -> VisualEditResult:
         if plan is None:
-            raise WorkflowError("当前页面尚无版式，无法锁定元素。")
+            action = "锁定" if locked else "解锁"
+            raise WorkflowError(f"当前页面尚无版式，无法{action}元素。")
         element_id = str(params.get("element_id") or plan.hero_element_id or "")
         if not element_id:
             hero = next(
@@ -179,15 +191,16 @@ class VisualEditService:
             element_id = hero.id if hero is not None else plan.elements[0].id
 
         updated_elements = []
-        locked = False
+        changed = False
         for element in plan.elements:
             if element.id == element_id:
-                updated_elements.append(element.model_copy(update={"locked": True}))
-                locked = True
+                updated_elements.append(element.model_copy(update={"locked": locked}))
+                changed = True
             else:
                 updated_elements.append(element)
-        if not locked:
-            raise WorkflowError(f"未找到可锁定的元素：{element_id}")
+        if not changed:
+            action = "锁定" if locked else "解锁"
+            raise WorkflowError(f"未找到可{action}的元素：{element_id}")
 
         updated_plan = plan.model_copy(
             update={
@@ -201,7 +214,7 @@ class VisualEditService:
         self._presentations.save_slide(slide)  # type: ignore[arg-type]
         self._invalidate_preview_cache(slide.presentation_id, saved_plan)  # type: ignore[attr-defined]
 
-        design = self._resolve_design_system(slide, intent)  # type: ignore[arg-type]
+        design = self._resolve_design_system(slide, visual_intent)  # type: ignore[arg-type]
         validation = None
         if design is not None:
             validation = LayoutValidationService().validate(
@@ -210,13 +223,30 @@ class VisualEditService:
                 require_source=True,
                 drawing_hero=saved_plan.layout_family == LayoutFamily.DRAWING_FOCUS,
             )
+        verb = "锁定" if locked else "解锁"
         return VisualEditResult(
             slide_id=slide.id,  # type: ignore[attr-defined]
-            intent=VisualEditIntent.LOCK_ELEMENT,
-            visual_intent=intent,
+            intent=edit_intent,
+            visual_intent=visual_intent,
             layout_plan=saved_plan,
             validation=validation,
-            message=f"已锁定元素 `{element_id}`。",
+            message=f"已{verb}元素 `{element_id}`。",
+        )
+
+    def _apply_lock_element(
+        self,
+        slide: object,
+        visual_intent: VisualIntent | None,
+        plan: LayoutPlan | None,
+        params: dict[str, object],
+    ) -> VisualEditResult:
+        return self._apply_element_lock_state(
+            slide,
+            visual_intent,
+            plan,
+            params,
+            locked=True,
+            edit_intent=VisualEditIntent.LOCK_ELEMENT,
         )
 
     def _mutate_intent(

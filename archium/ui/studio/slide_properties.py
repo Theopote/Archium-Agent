@@ -132,6 +132,24 @@ def _render_element_properties(*, slide_snapshot: SlideVisualSnapshot, advanced:
                 st.rerun()
             except Exception as exc:
                 st.error(format_user_error(exc))
+    else:
+        if st.button(
+            "解锁此元素",
+            use_container_width=True,
+            key=f"studio_unlock_element_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            try:
+                with get_session() as session:
+                    apply_slide_visual_edit(
+                        session,
+                        slide_snapshot.slide.id,
+                        intent="unlock_element",
+                        params={"element_id": element.id},
+                    )
+                st.success("已解锁元素。")
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
 
     if advanced:
         st.caption(f"元素 ID：`{element.id}` · style `{element.style_token or '—'}`")

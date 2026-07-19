@@ -15,11 +15,30 @@ from archium.ui.studio_service import (
     add_studio_slide,
     delete_studio_slide,
     get_selected_slide_snapshot,
+    reorder_studio_slide,
 )
 
 
 def _set_selected_slide(index: int) -> None:
     st.session_state.studio_selected_slide_index = index
+
+
+def _move_slide(context: StudioPresentationContext, from_index: int, to_index: int) -> None:
+    try:
+        with get_session() as session:
+            reorder_studio_slide(
+                session,
+                context.presentation.id,
+                from_index=from_index,
+                to_index=to_index,
+            )
+        st.session_state.studio_selected_slide_index = to_index
+        st.success(f"已将 P{from_index + 1} 移动到 P{to_index + 1}。")
+        st.rerun()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
 
 
 def render_slide_navigator(*, context: StudioPresentationContext) -> int:
@@ -72,6 +91,40 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
                 st.error(format_user_error(exc))
             except Exception as exc:
                 st.error(format_user_error(exc))
+
+    reorder_cols = st.columns([1, 1, 2])
+    with reorder_cols[0]:
+        if st.button(
+            "上移",
+            key=f"studio_move_up_{context.presentation.id}",
+            use_container_width=True,
+            disabled=selected_index <= 0,
+        ):
+            _move_slide(context, selected_index, selected_index - 1)
+    with reorder_cols[1]:
+        if st.button(
+            "下移",
+            key=f"studio_move_down_{context.presentation.id}",
+            use_container_width=True,
+            disabled=selected_index >= len(slides) - 1,
+        ):
+            _move_slide(context, selected_index, selected_index + 1)
+    with reorder_cols[2]:
+        target_options = list(range(len(slides)))
+        move_to = st.selectbox(
+            "移到位置",
+            options=target_options,
+            index=selected_index,
+            format_func=lambda value: f"P{value + 1}",
+            key=f"studio_move_to_{context.presentation.id}",
+            label_visibility="collapsed",
+        )
+        if move_to != selected_index and st.button(
+            "确认移动",
+            key=f"studio_move_confirm_{context.presentation.id}",
+            use_container_width=True,
+        ):
+            _move_slide(context, selected_index, move_to)
 
     nav_cols = st.columns([1, 2, 1])
     with nav_cols[0]:

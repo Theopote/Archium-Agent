@@ -8,6 +8,11 @@ import streamlit as st
 
 from archium.infrastructure.database.session import get_session
 from archium.ui.label_map import STATUS_LABELS, entity_label
+from archium.ui.studio.onboarding_panel import (
+    render_studio_import_panel,
+    render_studio_no_presentation_hint,
+    render_studio_onboarding,
+)
 from archium.ui.studio_service import (
     StudioPresentationContext,
     list_studio_presentations,
@@ -48,13 +53,13 @@ def render_studio_selection(
     )
     st.session_state.studio_advanced_mode = advanced
 
-    selector_cols = st.columns([1, 1, 1.2])
     with get_session() as session:
         projects = list_studio_projects(session)
     if not projects:
-        st.info("还没有项目。请先到「项目工作台」创建项目并生成汇报。")
+        render_studio_onboarding()
         return None
 
+    selector_cols = st.columns([1, 1, 1.2])
     project_labels = {str(project.id): project.name for project in projects}
     project_options = list(project_labels.keys())
     default_project_index = 0
@@ -79,7 +84,9 @@ def render_studio_selection(
     with get_session() as session:
         presentations = list_studio_presentations(session, project_id)
     if not presentations:
-        st.warning("该项目还没有汇报。请先在「项目工作台」生成 Brief → Storyline → 页面内容。")
+        with selector_cols[1]:
+            st.caption("当前项目尚无汇报")
+        render_studio_no_presentation_hint(project_id=project_id)
         return None
 
     presentation_labels = {
@@ -125,4 +132,6 @@ def render_studio_selection(
         st.metric("版式就绪", f"{context.layout_ready_count}/{context.slide_count or 0}")
         st.metric("预览就绪", f"{context.preview_ready_count}/{context.slide_count or 0}")
         st.caption(STATUS_LABELS.get(readiness, readiness))
+
+    render_studio_import_panel(project_id=project_id, expanded=False)
     return context

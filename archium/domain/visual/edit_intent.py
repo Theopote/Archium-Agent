@@ -16,6 +16,7 @@ class VisualEditIntent(StrEnum):
     SET_HERO_ASSET = "set_hero_asset"
     REMOVE_ASSET = "remove_asset"
     LOCK_ELEMENT = "lock_element"
+    UNLOCK_ELEMENT = "unlock_element"
     RESTORE_PREVIOUS = "restore_previous"
 
 
@@ -27,6 +28,7 @@ INTENT_USER_LABELS: dict[VisualEditIntent, str] = {
     VisualEditIntent.SET_HERO_ASSET: "设置主图素材",
     VisualEditIntent.REMOVE_ASSET: "移除素材",
     VisualEditIntent.LOCK_ELEMENT: "锁定元素",
+    VisualEditIntent.UNLOCK_ELEMENT: "解锁元素",
     VisualEditIntent.RESTORE_PREVIOUS: "撤销上一步",
 }
 
@@ -40,6 +42,7 @@ _NL_RULES: list[tuple[VisualEditIntent, tuple[str, ...]]] = [
     ),
     (VisualEditIntent.SET_HERO_ASSET, ("设置主图", "设为主图", "set hero", "hero asset")),
     (VisualEditIntent.REMOVE_ASSET, ("移除素材", "删除素材", "remove asset")),
+    (VisualEditIntent.UNLOCK_ELEMENT, ("解锁", "unlock element", "unlock")),
     (VisualEditIntent.LOCK_ELEMENT, ("锁定", "lock element", "lock")),
     (VisualEditIntent.CHANGE_LAYOUT, ("切换版式", "换版式", "change layout", "版式", "layout")),
 ]
@@ -77,7 +80,7 @@ def parse_natural_language(text: str) -> tuple[VisualEditIntent | None, dict[str
                 family = _parse_layout_family(normalized)
                 if family is not None:
                     params["layout_family"] = family
-            if intent == VisualEditIntent.LOCK_ELEMENT:
+            if intent in {VisualEditIntent.LOCK_ELEMENT, VisualEditIntent.UNLOCK_ELEMENT}:
                 element_id = _parse_element_id(normalized)
                 if element_id is not None:
                     params["element_id"] = element_id

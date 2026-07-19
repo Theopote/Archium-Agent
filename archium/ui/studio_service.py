@@ -27,9 +27,16 @@ from archium.ui.visual_service import (
     get_presentation_visual_snapshot,
     presentation_has_visual_layout,
 )
+from archium.application.ingestion_service import ImportItemResult
+from archium.config.settings import Settings
+from archium.domain.enums import ProjectType
+from archium.domain.project import Project
 from archium.ui.workspace_service import (
+    ProjectOverview,
     _resolve_runtime_settings,
+    create_project,
     get_project_overview,
+    import_uploaded_file,
     list_project_presentations,
     list_projects,
 )
@@ -54,6 +61,42 @@ def list_studio_projects(session: Session) -> list[Project]:
 
 def list_studio_presentations(session: Session, project_id: UUID) -> list[Presentation]:
     return list_project_presentations(session, project_id)
+
+
+def create_studio_project(
+    session: Session,
+    *,
+    name: str,
+    project_type: ProjectType,
+    description: str = "",
+) -> Project:
+    return create_project(
+        session,
+        name=name,
+        project_type=project_type,
+        description=description,
+    )
+
+
+def get_studio_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:
+    return get_project_overview(session, project_id)
+
+
+def import_studio_file(
+    session: Session,
+    project_id: UUID,
+    *,
+    filename: str,
+    data: bytes,
+    settings: Settings | None = None,
+) -> ImportItemResult:
+    return import_uploaded_file(
+        session,
+        project_id,
+        filename=filename,
+        data=data,
+        settings=settings,
+    )
 
 
 def load_studio_context(
@@ -233,6 +276,49 @@ def delete_studio_slide(session: Session, slide_id: UUID) -> None:
     if len(remaining) <= 1:
         raise WorkflowError("至少保留一页，无法删除。")
     presentations.delete_slide(slide_id)
+
+
+def reorder_studio_slide(
+    session: Session,
+    presentation_id: UUID,
+    *,
+    from_index: int,
+    to_index: int,
+) -> None:
+    """Move one slide from ``from_index`` to ``to_index`` (0-based list positions)."""
+    presentations = PresentationRepository(session)
+    slides = presentations.list_slides(presentation_id)
+    if not slides:
+        raise WorkflowError("当前汇报没有页面。")
+    if from_index == to_index:
+        return
+
+    start = max(0, min(from_index, len(slides) - 1))
+    end = max(0, min(to_index, len(slides) - 1))
+    reordered = list(slides)
+    moving = reordered.pop(start)
+    reordered.insert(end, moving)
+    for order, slide in enumerate(reordered):
+        if slide.order == order:
+            continue
+        presentations.save_slide(
+            slide.model_copy(
+                update={
+                    "order": order,
+                    "logical_key": build_slide_logical_key(slide.chapter_id, order),
+                }
+            )
+        )
+
+
+def apply_slide_edit_command(session: Session, command: object) -> object:
+    """Execute one unified SlideEditCommand."""
+    from archium.application.visual.slide_edit_execution_service import SlideEditExecutionService
+    from archium.domain.visual.slide_edit_command import SlideEditCommand
+
+    if not isinstance(command, SlideEditCommand):
+        raise WorkflowError("无效的编辑命令。")
+    return SlideEditExecutionService().execute(session, command)
 
 
 def analyze_slide_content_adaptation(

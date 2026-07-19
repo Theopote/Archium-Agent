@@ -65,6 +65,38 @@ def test_add_studio_slide_appends_after_index(db_session: Session, seeded_presen
     assert new_slide.title == "新页面"
 
 
+def test_reorder_studio_slide_moves_to_end(db_session: Session, seeded_presentation) -> None:
+    from archium.ui.studio_service import add_studio_slide, reorder_studio_slide
+
+    presentation, slide = seeded_presentation
+    second = add_studio_slide(db_session, presentation.id, after_index=0)
+    db_session.commit()
+    reorder_studio_slide(
+        db_session,
+        presentation.id,
+        from_index=0,
+        to_index=1,
+    )
+    slides = PresentationRepository(db_session).list_slides(presentation.id)
+    assert [item.id for item in slides] == [second.id, slide.id]
+    assert slides[0].order == 0
+    assert slides[1].order == 1
+
+
+def test_reorder_studio_slide_noop_same_index(db_session: Session, seeded_presentation) -> None:
+    from archium.ui.studio_service import reorder_studio_slide
+
+    presentation, slide = seeded_presentation
+    reorder_studio_slide(
+        db_session,
+        presentation.id,
+        from_index=0,
+        to_index=0,
+    )
+    slides = PresentationRepository(db_session).list_slides(presentation.id)
+    assert slides[0].id == slide.id
+
+
 def test_delete_studio_slide_blocks_last_page(db_session: Session, seeded_presentation) -> None:
     _presentation, slide = seeded_presentation
     with pytest.raises(WorkflowError, match="至少保留一页"):

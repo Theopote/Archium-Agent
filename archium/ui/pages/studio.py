@@ -5,6 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
+from archium.ui.studio.human_review_panel import render_human_review_panel
 from archium.ui.studio.ai_edit_panel import render_ai_edit_panel
 from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
 from archium.ui.studio.export_panel import render_export_panel
@@ -77,6 +78,11 @@ def render() -> None:
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
         st.divider()
         render_ai_edit_panel(slide_snapshot=slide_snapshot)
+        st.divider()
+        render_human_review_panel(
+            presentation_id=context.presentation.id,
+            slide_snapshot=slide_snapshot,
+        )
 
     st.divider()
     render_history_panel(context=context, advanced=advanced, slide_snapshot=slide_snapshot)
