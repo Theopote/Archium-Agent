@@ -87,7 +87,7 @@ class TestOperationDecomposition:
 
         # First operation should be lock
         assert isinstance(operations[0], LockOperation)
-        assert operations[0].target_element_id == drawing_id
+        assert operations[0].target_element_id == str(drawing_id)
 
         # Subsequent operations should include moving the caption
         op_types = {type(op).__name__ for op in operations[1:]}
@@ -244,7 +244,7 @@ class TestOperationDecomposition:
 
         # Check execution order: locks first
         assert isinstance(operations[0], LockOperation)
-        assert operations[0].target_element_id == drawing_id
+        assert operations[0].target_element_id == str(drawing_id)
 
         # Remaining operations handle move and text reduction
         remaining_op_types = [type(op).__name__ for op in operations[1:]]

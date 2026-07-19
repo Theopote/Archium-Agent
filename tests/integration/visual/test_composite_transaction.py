@@ -40,7 +40,7 @@ from archium.infrastructure.layout.generators.base import LayoutContentBundle, L
 from archium.infrastructure.layout.layout_solver import LayoutSolver
 from sqlalchemy.orm import Session
 
-CAPTION_TEXT = "规划说明包含三项核心结论与实施路径"
+CAPTION_TEXT = "总平面确立院落轴线与核心公服节点，并串联开放空间与慢行系统。"
 
 
 @dataclass(frozen=True)
@@ -174,6 +174,11 @@ def drawing_focus_slide(db_session: Session) -> DrawingFocusFixture:
         )
     )
     plan = _build_valid_drawing_focus_plan(slide=slide, intent=intent, design=design)
+    unlocked_elements = [
+        element.model_copy(update={"locked": False}) if element.id == "hero" else element
+        for element in plan.elements
+    ]
+    plan = plan.model_copy(update={"elements": unlocked_elements})
     _validate_plan(plan, design)
     saved_plan = LayoutPlanRepository(db_session).save(plan)
     slide.visual_intent_id = intent.id

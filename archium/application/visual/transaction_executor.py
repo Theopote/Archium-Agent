@@ -598,8 +598,6 @@ class TransactionExecutor:
             )
             updated_elements.append(element.model_copy(update={"text_content": new_text}))
             changed = True
-            if target_id is not None:
-                break
 
         if not changed:
             raise WorkflowError("未找到可缩减文字的元素")

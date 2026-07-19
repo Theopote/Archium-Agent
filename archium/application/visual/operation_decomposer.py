@@ -239,8 +239,8 @@ class OperationDecomposer:
                 elem2_id = self._resolve_element_name(targets[1], slide_snapshot)
                 if elem1_id is None or elem2_id is None:
                     raise WorkflowError("无法解析 swap 目标元素")
-                first = layout_plan.element_by_id(str(elem1_id))
-                second = layout_plan.element_by_id(str(elem2_id))
+                first = layout_plan.element_by_id(elem1_id)
+                second = layout_plan.element_by_id(elem2_id)
                 if first is None or second is None:
                     raise WorkflowError("无法解析 swap 目标元素")
                 multi_step_ops.append(SwapOperation(elem1_id, elem2_id))
@@ -261,34 +261,25 @@ class OperationDecomposer:
         self,
         name: str | UUID | None,
         slide_snapshot: SlideSnapshot,
-    ) -> UUID | None:
+    ) -> str | None:
         """
-        Resolve element name to UUID.
+        Resolve element name to a layout element id string.
 
         Args:
-            name: Element name (Chinese or English) or UUID
+            name: Element name (Chinese or English), UUID, or element id
             slide_snapshot: Current slide state
 
         Returns:
-            Element UUID if found, None otherwise
+            Element id if found, None otherwise
         """
         if name is None:
             return None
 
-        # Already a UUID
         if isinstance(name, UUID):
-            return name
+            return str(name)
 
-        # Try to parse as UUID string
-        try:
-            return UUID(name)
-        except (ValueError, AttributeError):
-            pass
-
-        # Normalize name for matching
         normalized = name.strip().lower()
 
-        # Common element name mappings (Chinese to role)
         name_mappings = {
             "图纸": "drawing",
             "主图": "hero",
@@ -301,7 +292,6 @@ class OperationDecomposer:
             "图表": "chart",
         }
 
-        # Map Chinese name to English role
         role = name_mappings.get(normalized, normalized)
 
         layout_plan = slide_snapshot.layout_plan
@@ -310,10 +300,7 @@ class OperationDecomposer:
 
         for element in layout_plan.elements:
             if element.id.lower() == normalized:
-                try:
-                    return UUID(element.id)
-                except ValueError:
-                    return None
+                return element.id
 
         if role in {"drawing", "hero", "hero_visual", "main_visual"}:
             for candidate_role in (
@@ -322,13 +309,12 @@ class OperationDecomposer:
             ):
                 for element in layout_plan.elements:
                     if element.role == candidate_role:
-                        return UUID(element.id)
+                        return element.id
 
-        # Search for element by role or label
         for element in layout_plan.elements:
             if element.role and element.role.value.lower() == role:
-                return UUID(element.id)
+                return element.id
             if role == "text" and element.content_type == LayoutContentType.TEXT:
-                return UUID(element.id)
+                return element.id
 
         return None
