@@ -21,6 +21,11 @@ from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.error_handlers import format_user_error
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
+from archium.ui.label_map import (
+    brief_storyline_pair,
+    content_pipeline_chain,
+    entity_label,
+)
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.rag_preview_panel import render_rag_preview_panel
 from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
@@ -235,7 +240,7 @@ def _render_generation_form(project_id: UUID) -> None:
         return
 
     st.caption(
-        "生成 SlideSpec 后，可直接在本页「导出 PPTX」。"
+        f"生成{entity_label('SlideSpec')}后，可直接在本页「导出 PPTX」。"
         "若尚未运行视觉编排，导出时会提示是否先生成版式。"
     )
     if not settings.llm_configured:
@@ -276,13 +281,16 @@ def _render_generation_form(project_id: UUID) -> None:
                 help="导出 Marp Markdown 后，通过 marp --images 生成逐页 PNG 预览。",
             )
             review_col1, review_col2, review_col3 = st.columns(3)
-            require_brief_review = review_col1.checkbox("Brief 生成后暂停审核", value=True)
+            require_brief_review = review_col1.checkbox(
+                f"{entity_label('PresentationBrief')} 生成后暂停审核",
+                value=True,
+            )
             require_storyline_review = review_col2.checkbox(
-                "Storyline 生成后暂停审核",
+                f"{entity_label('Storyline')} 生成后暂停审核",
                 value=True,
             )
             require_slides_review = review_col3.checkbox(
-                "SlideSpec 生成后暂停审核",
+                f"{entity_label('SlideSpec')} 生成后暂停审核",
                 value=False,
             )
         submitted = st.form_submit_button("运行汇报管线", use_container_width=True)
@@ -328,7 +336,7 @@ def _render_generation_form(project_id: UUID) -> None:
         render_workflow_progress_panel(project_id, job_id=job.job_id)
         return
 
-    with st.spinner("正在运行 Brief → Storyline → SlideSpec 工作流…"):
+    with st.spinner(f"正在运行 {content_pipeline_chain()} 工作流…"):
         try:
             with get_session() as session:
                 result = run_presentation_workflow(
@@ -347,7 +355,9 @@ def _render_generation_form(project_id: UUID) -> None:
             return
 
     if result.awaiting_review:
-        st.warning("工作流已暂停，请切换到「审核」标签页继续处理 Brief / Storyline。")
+        st.warning(
+            f"工作流已暂停，请切换到「审核」标签页继续处理 {brief_storyline_pair()}。"
+        )
     elif result.succeeded:
         st.success(f"汇报已生成，共 {len(result.slides)} 页。")
     else:

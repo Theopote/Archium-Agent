@@ -1,22 +1,29 @@
-"""User-facing labels for domain terms in Presentation Studio."""
+"""User-facing labels for domain terms across Archium UI."""
 
 from __future__ import annotations
 
 ENTITY_LABELS: dict[str, str] = {
+    "ProjectMission": "我们对任务的理解",
+    "KnowledgeGap": "还需要确认的信息",
+    "DeliverablePlan": "计划生成的成果",
+    "PresentationBrief": "汇报要求",
+    "Storyline": "汇报结构",
     "SlideSpec": "页面内容",
-    "LayoutPlan": "页面版式",
-    "VisualIntent": "页面视觉意图",
     "ArtDirection": "视觉方向",
-    "DesignSystem": "设计规范",
-    "PresentationBrief": "汇报简报",
-    "Storyline": "叙事结构",
-    "DeckCompositionPlan": "整套节奏规划",
-    "Deck QA": "整套一致性",
-    "Visual Critic": "视觉质量评估",
+    "VisualIntent": "本页表达重点",
+    "LayoutPlan": "页面版式",
     "LayoutFamily": "版式类型",
     "LayoutElement": "版式元素",
+    "ValidationIssue": "页面问题",
+    "Visual Critic": "视觉检查",
+    "Deck QA": "整套一致性检查",
+    "WorkflowRun": "生成任务",
+    "Revision": "历史版本",
+    "DesignSystem": "设计规范",
+    "DeckCompositionPlan": "整套节奏规划",
     "AssetBoard": "素材板",
     "Citation": "引用来源",
+    "PresentationSpec": "导出规格",
 }
 
 FIELD_LABELS: dict[str, str] = {
@@ -56,3 +63,39 @@ def field_label(name: str, *, advanced: bool = False) -> str:
     if advanced:
         return name
     return FIELD_LABELS.get(name, name)
+
+
+def content_pipeline_chain(*, advanced: bool = False) -> str:
+    """User-facing label for Brief → Storyline → SlideSpec pipeline."""
+    return " → ".join(
+        [
+            entity_label("PresentationBrief", advanced=advanced),
+            entity_label("Storyline", advanced=advanced),
+            entity_label("SlideSpec", advanced=advanced),
+        ]
+    )
+
+
+def brief_storyline_pair(*, advanced: bool = False) -> str:
+    """User-facing label for Brief + Storyline pair."""
+    return f"{entity_label('PresentationBrief', advanced=advanced)} / {entity_label('Storyline', advanced=advanced)}"
+
+
+def revision_history_label(entity: str, *, advanced: bool = False) -> str:
+    """User-facing revision history title for an entity."""
+    return f"{entity_label(entity, advanced=advanced)}{entity_label('Revision', advanced=advanced)}"
+
+
+def regenerate_label(entity: str, *, advanced: bool = False) -> str:
+    """User-facing regenerate action label."""
+    return f"重新生成{entity_label(entity, advanced=advanced)}"
+
+
+def regenerate_success_label(entity: str, *, advanced: bool = False) -> str:
+    """User-facing regenerate success message."""
+    return f"{entity_label(entity, advanced=advanced)}已重新生成。"
+
+
+def regenerate_failure_label(entity: str, *, advanced: bool = False) -> str:
+    """User-facing regenerate failure message."""
+    return f"重新生成{entity_label(entity, advanced=advanced)}失败：{{error}}"

@@ -16,10 +16,10 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.RETRIEVE_CONTEXT.value: "检索项目上下文（RAG）",
     WorkflowStep.EXTRACT_FACTS.value: "抽取结构化指标",
     WorkflowStep.VALIDATE_FACTS.value: "校验指标一致性",
-    WorkflowStep.BRIEF.value: "生成汇报简报",
-    WorkflowStep.REVIEW_BRIEF.value: "等待汇报简报审核",
-    WorkflowStep.STORYLINE.value: "正在梳理叙事结构…",
-    WorkflowStep.REVIEW_STORYLINE.value: "等待叙事结构审核",
+    WorkflowStep.BRIEF.value: "生成汇报要求",
+    WorkflowStep.REVIEW_BRIEF.value: "等待汇报要求审核",
+    WorkflowStep.STORYLINE.value: "正在梳理汇报结构…",
+    WorkflowStep.REVIEW_STORYLINE.value: "等待汇报结构审核",
     WorkflowStep.SLIDES.value: "正在生成页面内容…",
     WorkflowStep.REVIEW_SLIDES.value: "等待页面内容审核",
     WorkflowStep.RESOLVE_CITATIONS.value: "解析引用与出处",
@@ -63,7 +63,7 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.VISUAL_APPLY_SAFE_FALLBACK.value: "应用安全回退版式",
     WorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value: "等待版式审核",
     WorkflowStep.VISUAL_RENDER.value: "渲染 PPTX",
-    WorkflowStep.VISUAL_CRITIQUE.value: "整套一致性检查",
+    WorkflowStep.VISUAL_CRITIQUE.value: "视觉检查与整套一致性",
     WorkflowStep.VISUAL_FINALIZE.value: "完成视觉编排",
 }
 
