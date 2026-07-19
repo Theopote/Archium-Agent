@@ -149,12 +149,12 @@ def assert_mission_expectations(
             if ws.selected:
                 assert ws.title not in bridge.request.required_sections
     elif execution_plans is not None and not expectations.get("presentation_deliverable_required"):
-        # Non-PPT plans must stay typed and unsupported — never a silent PresentationRequest.
-        assert all(
-            (item.supported and item.is_presentation) or not item.supported
-            for item in execution_plans
-        )
+        # Non-PPT plans must never get a silent PresentationRequest.
+        assert all(item.presentation_request is None for item in execution_plans)
         non_ppt = [item for item in execution_plans if not item.is_presentation]
         assert non_ppt
-        assert all(not item.supported for item in non_ppt)
-        assert all(item.presentation_request is None for item in non_ppt)
+        for item in non_ppt:
+            if item.supported:
+                assert item.request_kind in {"question_list", "work_plan"}
+            else:
+                assert item.message

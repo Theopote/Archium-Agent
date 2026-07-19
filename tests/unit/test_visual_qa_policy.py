@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from archium.application.visual_qa_policy import (
     CONFIDENCE_EMIT_FORMAL,
     CONFIDENCE_EMIT_SUSPECTED,
@@ -57,7 +59,7 @@ def test_decide_check_issue_suppresses_low_confidence() -> None:
     assert decision.requires_confirmation is False
 
 
-def test_uncalibrated_rule_emits_suspected_even_at_high_confidence() -> None:
+def test_uncalibrated_rule_emits_suspected_even_at_high_confidence(tmp_path: Path) -> None:
     check = VisualQACheck(
         check_name="north_arrow",
         passed=False,
@@ -67,6 +69,7 @@ def test_uncalibrated_rule_emits_suspected_even_at_high_confidence() -> None:
     decision = decide_check_issue(
         check,
         rule_code=ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW,
+        calibration_report_path=tmp_path / "missing_calibration_report.json",
     )
     assert decision.emit is True
     assert decision.requires_confirmation is True
