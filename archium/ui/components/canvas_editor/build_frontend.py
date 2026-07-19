@@ -49,7 +49,10 @@ def build_canvas_editor(*, component_root: Path | None = None, install: bool = T
 
     if install:
         if (frontend / "package-lock.json").is_file():
-            _run_npm(["ci"], cwd=frontend)
+            try:
+                _run_npm(["ci"], cwd=frontend)
+            except subprocess.CalledProcessError:
+                _run_npm(["install"], cwd=frontend)
         else:
             _run_npm(["install"], cwd=frontend)
     _run_npm(["run", "build"], cwd=frontend)
