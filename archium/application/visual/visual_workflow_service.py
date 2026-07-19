@@ -144,6 +144,9 @@ class VisualWorkflowService:
             )
         )
 
+        if self._settings.workflow_checkpoint_commit_enabled:
+            self._session.commit()
+
         initial_state = initial_visual_workflow_state(
             project_id=str(project_id),
             presentation_id=str(presentation_id),
@@ -173,6 +176,12 @@ class VisualWorkflowService:
         if refreshed is None:
             raise WorkflowError(f"Workflow run {workflow_run.id} disappeared after execution")
         return self._to_result(refreshed, final_state)
+
+    def result_from_run(self, workflow_run_id: UUID) -> VisualWorkflowResult:
+        run = self._workflow_runs.get_by_id(workflow_run_id)
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} not found")
+        return self._to_result(run, run.state)
 
     def continue_after_art_direction_approval(
         self,

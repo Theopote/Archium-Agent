@@ -9,6 +9,11 @@ import streamlit as st
 from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.ui.background_workflow_runner import (
+    PlanningJobAction,
+    background_workflows_enabled,
+    submit_planning_job,
+)
 from archium.ui.clarification_panel import render_clarification_panel, render_known_unknown_panel
 from archium.ui.deliverable_panel import render_deliverable_panel
 from archium.ui.error_handlers import format_user_error
@@ -27,6 +32,10 @@ from archium.ui.planning_service import (
     start_planning,
     start_presentation_from_planning,
 )
+from archium.ui.workflow_progress_panel import (
+    render_workflow_progress_panel,
+    set_active_job_id,
+)
 from archium.ui.workspace_service import list_projects
 from archium.ui.workstream_panel import render_workstream_panel
 
@@ -38,6 +47,62 @@ STEP_LABELS = [
     "5. 选择成果",
     "6. 开始执行",
 ]
+
+
+def _apply_planning_result(result: object) -> None:
+    from archium.application.planning_workflow_service import PlanningWorkflowResult
+
+    if not isinstance(result, PlanningWorkflowResult):
+        return
+    st.session_state.planning_session_id = str(result.planning_session.id)
+    st.session_state.planning_workflow_run_id = str(result.workflow_run.id)
+    if result.mission is not None:
+        st.session_state.planning_mission_id = str(result.mission.id)
+
+
+def _apply_presentation_bridge_result(result: object) -> None:
+    from archium.application.workflow_models import WorkflowRunResult
+
+    if isinstance(result, WorkflowRunResult):
+        st.session_state.last_presentation_result = result
+        st.session_state.last_workflow_result = result
+
+
+def _launch_planning_job(
+    project_id: UUID,
+    action: PlanningJobAction,
+    *,
+    settings,
+    task_description: str | None = None,
+    workflow_run_id: UUID | None = None,
+    on_complete,
+    success_message: str | None = None,
+    awaiting_review_message: str | None = None,
+    **export_kwargs,
+) -> bool:
+    """Start a background planning job. Returns True if background mode was used."""
+    if not background_workflows_enabled(settings):
+        return False
+    job = submit_planning_job(
+        project_id,
+        action,
+        settings=settings,
+        task_description=task_description,
+        workflow_run_id=workflow_run_id,
+        **export_kwargs,
+    )
+    set_active_job_id(project_id, job.job_id, scope="planning")
+    st.info("已在后台运行规划工作流，下方将实时显示进度。")
+    render_workflow_progress_panel(
+        project_id,
+        scope="planning",
+        job_id=job.job_id,
+        result_session_key=None,
+        on_complete=on_complete,
+        success_message=success_message,
+        awaiting_review_message=awaiting_review_message,
+    )
+    return True
 
 
 def _init_state() -> None:
@@ -168,6 +233,22 @@ def _render_describe(project_id: UUID) -> None:
         if not task.strip():
             st.error("请先描述任务。")
             return
+
+        def _on_start_complete(result: object) -> None:
+            _apply_planning_result(result)
+            st.session_state.mission_step = 2
+
+        if _launch_planning_job(
+            project_id,
+            PlanningJobAction.START,
+            settings=settings,
+            task_description=task,
+            on_complete=_on_start_complete,
+            success_message="已生成任务理解。请核对并回答关键问题。",
+            awaiting_review_message="已生成任务理解，但存在可修复问题。请先编辑后再继续。",
+        ):
+            return
+
         with st.spinner("正在理解任务并识别知识缺口…"):
             try:
                 with get_session() as session:
@@ -188,7 +269,7 @@ def _render_describe(project_id: UUID) -> None:
                 st.error(format_user_error(exc))
 
 
-def _render_mission(snapshot: PlanningSnapshot) -> None:
+def _render_mission(snapshot: PlanningSnapshot, project_id: UUID) -> None:
     if snapshot.mission is None:
         st.info("请先在第 1 步描述并分析任务。")
         return
@@ -210,6 +291,30 @@ def _render_mission(snapshot: PlanningSnapshot) -> None:
             type="primary",
             use_container_width=True,
         ):
+            run_id = UUID(st.session_state.planning_workflow_run_id)
+
+            def _on_correction_complete(result: object) -> None:
+                _apply_planning_result(result)
+                from archium.application.planning_workflow_service import PlanningWorkflowResult
+
+                if isinstance(result, PlanningWorkflowResult):
+                    gate = result.review_gate
+                    if gate == "clarification":
+                        st.session_state.mission_step = 3
+                    else:
+                        st.session_state.mission_step = 2
+
+            if _launch_planning_job(
+                project_id,
+                PlanningJobAction.CONTINUE_MISSION_CORRECTION,
+                settings=get_ui_effective_settings(),
+                workflow_run_id=run_id,
+                on_complete=_on_correction_complete,
+                success_message="校验通过，请继续下一步。",
+                awaiting_review_message="仍有待修复问题，请继续编辑后重试。",
+            ):
+                return
+
             with st.spinner("正在重新校验任务理解…"):
                 try:
                     with get_session() as session:
@@ -242,6 +347,22 @@ def _render_mission(snapshot: PlanningSnapshot) -> None:
     if snapshot.review_gate == "mission_approval" and st.session_state.planning_workflow_run_id:
         st.info("澄清已完成。请确认任务理解无误后批准，再进入工作路径与成果规划。")
         if st.button("批准任务理解并继续规划", type="primary", use_container_width=True):
+            run_id = UUID(st.session_state.planning_workflow_run_id)
+
+            def _on_approve_complete(result: object) -> None:
+                _apply_planning_result(result)
+                st.session_state.mission_step = 4
+
+            if _launch_planning_job(
+                project_id,
+                PlanningJobAction.APPROVE_MISSION,
+                settings=get_ui_effective_settings(),
+                workflow_run_id=run_id,
+                on_complete=_on_approve_complete,
+                success_message="任务理解已批准，已生成工作路径与成果计划。",
+            ):
+                return
+
             with st.spinner("正在批准任务理解并生成工作路径与成果计划…"):
                 try:
                     with get_session() as session:
@@ -288,6 +409,22 @@ def _render_questions(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         use_container_width=True,
         disabled=not can_continue or not st.session_state.planning_workflow_run_id,
     ):
+        run_id = UUID(st.session_state.planning_workflow_run_id)
+
+        def _on_clarification_complete(result: object) -> None:
+            _apply_planning_result(result)
+            st.session_state.mission_step = 2
+
+        if _launch_planning_job(
+            project_id,
+            PlanningJobAction.CONTINUE_CLARIFICATION,
+            settings=get_ui_effective_settings(),
+            workflow_run_id=run_id,
+            on_complete=_on_clarification_complete,
+            success_message="已修订任务理解，请确认并批准后再继续规划。",
+        ):
+            return
+
         with st.spinner("正在修订任务理解…"):
             try:
                 with get_session() as session:
@@ -485,6 +622,30 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
     require_storyline = st.checkbox("Storyline 生成后暂停审核", value=True)
 
     if st.button("批准成果计划并生成汇报", type="primary", use_container_width=True):
+        run_id = UUID(st.session_state.planning_workflow_run_id)
+        settings = get_ui_effective_settings()
+        export_kwargs = {
+            "export_json": export_json,
+            "export_marp": export_marp,
+            "require_brief_review": require_brief,
+            "require_storyline_review": require_storyline,
+        }
+
+        def _on_presentation_complete(result: object) -> None:
+            _apply_presentation_bridge_result(result)
+
+        if _launch_planning_job(
+            project_id,
+            PlanningJobAction.START_PRESENTATION,
+            settings=settings,
+            workflow_run_id=run_id,
+            on_complete=_on_presentation_complete,
+            success_message="汇报管线已启动并完成当前阶段。",
+            awaiting_review_message="汇报工作流已暂停审核。请到「项目工作台」继续审核 Brief / Storyline。",
+            **export_kwargs,
+        ):
+            return
+
         with st.spinner("正在批准规划并启动 Brief → Storyline → SlideSpec…"):
             try:
                 with get_session() as session:
@@ -531,6 +692,14 @@ def render() -> None:
     snapshot = _load_snapshot(project_id)
     _sync_step_from_snapshot(snapshot)
 
+    render_workflow_progress_panel(
+        project_id,
+        scope="planning",
+        on_complete=_apply_planning_result,
+        result_session_key=None,
+        rerun_on_complete=False,
+    )
+
     if snapshot.workflow_run is not None:
         gate = snapshot.review_gate or "—"
         st.caption(
@@ -552,7 +721,7 @@ def render() -> None:
     elif step == 2:
         # Reload after edits / navigation
         snapshot = _load_snapshot(project_id)
-        _render_mission(snapshot)
+        _render_mission(snapshot, project_id)
     elif step == 3:
         snapshot = _load_snapshot(project_id)
         _render_questions(snapshot, project_id)

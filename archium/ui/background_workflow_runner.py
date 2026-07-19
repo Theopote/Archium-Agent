@@ -28,6 +28,19 @@ class BackgroundJobStatus(StrEnum):
     FAILED = "failed"
 
 
+class PlanningJobAction(StrEnum):
+    START = "start"
+    CONTINUE_MISSION_CORRECTION = "continue_mission_correction"
+    APPROVE_MISSION = "approve_mission"
+    CONTINUE_CLARIFICATION = "continue_clarification"
+    START_PRESENTATION = "start_presentation"
+
+
+class VisualJobAction(StrEnum):
+    RUN = "run"
+    CONTINUE_LAYOUT_REVIEW = "continue_layout_review"
+
+
 @dataclass
 class BackgroundWorkflowJob:
     """In-process background workflow job tracked for Streamlit polling."""
@@ -35,16 +48,17 @@ class BackgroundWorkflowJob:
     job_id: str
     project_id: UUID
     workflow_run_id: UUID | None = None
+    presentation_id: UUID | None = None
     status: BackgroundJobStatus = BackgroundJobStatus.PENDING
     error: str | None = None
-    result: WorkflowRunResult | None = None
+    result: Any | None = None
     kind: str = "presentation"
+    action: str | None = None
     _thread: threading.Thread | None = field(default=None, repr=False)
 
 
 _REGISTRY: dict[str, BackgroundWorkflowJob] = {}
 _LOCK = threading.Lock()
-
 
 def _resolve_settings(settings: Settings | None) -> Settings:
     if settings is not None:
@@ -74,8 +88,76 @@ def _create_presentation_service(session, llm, settings: Settings):
     )
 
 
+def _create_planning_service(session, settings: Settings):
+    from archium.application.planning_workflow_service import PlanningWorkflowService
+
+    llm = create_llm_provider(settings)
+    return PlanningWorkflowService(
+        session,
+        llm,
+        settings=settings,
+        checkpointer_manager=get_workflow_checkpointer_manager(settings),
+    )
+
+
+def _create_visual_service(session, settings: Settings, *, use_llm: bool):
+    from archium.application.visual.visual_workflow_service import VisualWorkflowService
+
+    llm = create_llm_provider(settings) if use_llm and settings.llm_configured else None
+    return VisualWorkflowService(
+        session,
+        llm=llm,
+        settings=settings,
+        checkpointer_manager=get_workflow_checkpointer_manager(settings),
+    )
+
+
 def _set_job_status(job: BackgroundWorkflowJob, status: BackgroundJobStatus) -> None:
     job.status = status
+
+
+def _set_planning_job_result(job: BackgroundWorkflowJob, result) -> None:
+    from archium.application.planning_workflow_service import PlanningWorkflowResult
+
+    if not isinstance(result, PlanningWorkflowResult):
+        raise TypeError("expected PlanningWorkflowResult")
+    job.result = result
+    job.workflow_run_id = result.workflow_run.id
+    if result.awaiting_review:
+        _set_job_status(job, BackgroundJobStatus.AWAITING_REVIEW)
+    elif result.succeeded:
+        _set_job_status(job, BackgroundJobStatus.COMPLETED)
+    else:
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+        job.error = "; ".join(result.errors) or "规划工作流完成但存在错误"
+
+
+def _set_visual_job_result(job: BackgroundWorkflowJob, result) -> None:
+    from archium.application.visual.visual_workflow_service import VisualWorkflowResult
+
+    if not isinstance(result, VisualWorkflowResult):
+        raise TypeError("expected VisualWorkflowResult")
+    job.result = result
+    job.workflow_run_id = result.workflow_run.id
+    if result.awaiting_review:
+        _set_job_status(job, BackgroundJobStatus.AWAITING_REVIEW)
+    elif result.succeeded:
+        _set_job_status(job, BackgroundJobStatus.COMPLETED)
+    else:
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+        job.error = "; ".join(result.errors) or "视觉编排未完成"
+
+
+def _set_presentation_job_result(job: BackgroundWorkflowJob, result: WorkflowRunResult) -> None:
+    job.result = result
+    job.workflow_run_id = result.workflow_run.id
+    if result.awaiting_review:
+        _set_job_status(job, BackgroundJobStatus.AWAITING_REVIEW)
+    elif result.succeeded:
+        _set_job_status(job, BackgroundJobStatus.COMPLETED)
+    else:
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+        job.error = "; ".join(result.errors) or "工作流完成但存在错误"
 
 
 def _run_presentation_job(
@@ -94,14 +176,7 @@ def _run_presentation_job(
                 workflow_run = service.prepare_run(job.project_id, request, **export_kwargs)
                 job.workflow_run_id = workflow_run.id
                 result = service.execute_prepared(workflow_run.id)
-                job.result = result
-                if result.awaiting_review:
-                    _set_job_status(job, BackgroundJobStatus.AWAITING_REVIEW)
-                elif result.succeeded:
-                    _set_job_status(job, BackgroundJobStatus.COMPLETED)
-                else:
-                    _set_job_status(job, BackgroundJobStatus.FAILED)
-                    job.error = "; ".join(result.errors) or "工作流完成但存在错误"
+                _set_presentation_job_result(job, result)
             finally:
                 service.close()
     except WorkflowError as exc:
@@ -124,14 +199,7 @@ def _run_continue_job(job: BackgroundWorkflowJob, *, settings: Settings) -> None
             service = _create_presentation_service(session, llm, settings)
             try:
                 result = service.continue_after_review(job.workflow_run_id)
-                job.result = result
-                if result.awaiting_review:
-                    _set_job_status(job, BackgroundJobStatus.AWAITING_REVIEW)
-                elif result.succeeded:
-                    _set_job_status(job, BackgroundJobStatus.COMPLETED)
-                else:
-                    _set_job_status(job, BackgroundJobStatus.FAILED)
-                    job.error = "; ".join(result.errors) or "工作流继续执行时出现错误"
+                _set_presentation_job_result(job, result)
             finally:
                 service.close()
     except WorkflowError as exc:
@@ -193,6 +261,7 @@ def submit_continue_after_review(
         job_id=str(uuid4()),
         project_id=project_id,
         workflow_run_id=workflow_run_id,
+        kind="presentation",
     )
     start_background_thread(
         job,
@@ -201,22 +270,224 @@ def submit_continue_after_review(
     return job
 
 
-def find_running_workflow_run_id(project_id: UUID) -> UUID | None:
+def _run_planning_job(
+    job: BackgroundWorkflowJob,
+    *,
+    action: PlanningJobAction,
+    settings: Settings,
+    task_description: str | None = None,
+    workflow_run_id: UUID | None = None,
+    export_kwargs: dict[str, Any] | None = None,
+) -> None:
+    _set_job_status(job, BackgroundJobStatus.RUNNING)
+    if workflow_run_id is not None:
+        job.workflow_run_id = workflow_run_id
+    try:
+        with get_session() as session:
+            service = _create_planning_service(session, settings)
+            try:
+                if action == PlanningJobAction.START:
+                    if not task_description:
+                        raise WorkflowError("任务描述不能为空")
+                    result = service.run(job.project_id, task_description)
+                    _set_planning_job_result(job, result)
+                elif action == PlanningJobAction.CONTINUE_MISSION_CORRECTION:
+                    result = service.continue_after_mission_correction(workflow_run_id)  # type: ignore[arg-type]
+                    _set_planning_job_result(job, result)
+                elif action == PlanningJobAction.APPROVE_MISSION:
+                    result = service.approve_mission_and_continue(workflow_run_id)  # type: ignore[arg-type]
+                    _set_planning_job_result(job, result)
+                elif action == PlanningJobAction.CONTINUE_CLARIFICATION:
+                    result = service.continue_after_clarification(workflow_run_id)  # type: ignore[arg-type]
+                    _set_planning_job_result(job, result)
+                elif action == PlanningJobAction.START_PRESENTATION:
+                    from archium.ui.planning_service import start_presentation_from_planning
+
+                    result = start_presentation_from_planning(
+                        session,
+                        job.project_id,
+                        workflow_run_id,  # type: ignore[arg-type]
+                        settings=settings,
+                        **(export_kwargs or {}),
+                    )
+                    _set_presentation_job_result(job, result)
+                    job.kind = "planning_presentation"
+                else:
+                    raise WorkflowError(f"Unknown planning action: {action}")
+            finally:
+                service.close()
+    except WorkflowError as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+    except Exception as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+
+
+def submit_planning_job(
+    project_id: UUID,
+    action: PlanningJobAction,
+    *,
+    settings: Settings | None = None,
+    task_description: str | None = None,
+    workflow_run_id: UUID | None = None,
+    **export_kwargs: Any,
+) -> BackgroundWorkflowJob:
+    """Run a planning workflow action in a background thread."""
+    resolved = _resolve_settings(settings)
+    job = BackgroundWorkflowJob(
+        job_id=str(uuid4()),
+        project_id=project_id,
+        workflow_run_id=workflow_run_id,
+        kind="planning",
+        action=action.value,
+    )
+    start_background_thread(
+        job,
+        lambda: _run_planning_job(
+            job,
+            action=action,
+            settings=resolved,
+            task_description=task_description,
+            workflow_run_id=workflow_run_id,
+            export_kwargs=export_kwargs,
+        ),
+    )
+    return job
+
+
+def _run_visual_job(
+    job: BackgroundWorkflowJob,
+    *,
+    action: VisualJobAction,
+    settings: Settings,
+    presentation_id: UUID,
+    run_kwargs: dict[str, Any],
+    workflow_run_id: UUID | None = None,
+    allow_invalid_layout_export: bool = False,
+) -> None:
+    _set_job_status(job, BackgroundJobStatus.RUNNING)
+    job.presentation_id = presentation_id
+    if workflow_run_id is not None:
+        job.workflow_run_id = workflow_run_id
+    use_llm = bool(run_kwargs.get("use_llm", False))
+    try:
+        with get_session() as session:
+            service = _create_visual_service(session, settings, use_llm=use_llm)
+            try:
+                if action == VisualJobAction.RUN:
+                    result = service.run(job.project_id, presentation_id, **run_kwargs)
+                    _set_visual_job_result(job, result)
+                elif action == VisualJobAction.CONTINUE_LAYOUT_REVIEW:
+                    result = service.continue_after_layout_review(
+                        workflow_run_id,  # type: ignore[arg-type]
+                        allow_invalid_layout_export=allow_invalid_layout_export,
+                    )
+                    _set_visual_job_result(job, result)
+                else:
+                    raise WorkflowError(f"Unknown visual action: {action}")
+            finally:
+                service.close()
+    except WorkflowError as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+    except Exception as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+
+
+def submit_visual_job(
+    project_id: UUID,
+    presentation_id: UUID,
+    action: VisualJobAction,
+    *,
+    settings: Settings | None = None,
+    workflow_run_id: UUID | None = None,
+    allow_invalid_layout_export: bool = False,
+    **run_kwargs: Any,
+) -> BackgroundWorkflowJob:
+    """Run a visual composition workflow action in a background thread."""
+    resolved = _resolve_settings(settings)
+    job = BackgroundWorkflowJob(
+        job_id=str(uuid4()),
+        project_id=project_id,
+        presentation_id=presentation_id,
+        workflow_run_id=workflow_run_id,
+        kind="visual",
+        action=action.value,
+    )
+    start_background_thread(
+        job,
+        lambda: _run_visual_job(
+            job,
+            action=action,
+            settings=resolved,
+            presentation_id=presentation_id,
+            run_kwargs=run_kwargs,
+            workflow_run_id=workflow_run_id,
+            allow_invalid_layout_export=allow_invalid_layout_export,
+        ),
+    )
+    return job
+
+
+def find_running_workflow_run_id(
+    project_id: UUID,
+    *,
+    workflow_kind: str | None = None,
+    presentation_id: UUID | None = None,
+) -> UUID | None:
     """Return the newest in-flight workflow run for a project (browser refresh recovery)."""
     with get_session() as session:
         runs = WorkflowRunRepository(session).list_by_project(project_id)
     for run in runs:
-        if run.status == WorkflowStatus.RUNNING:
-            return run.id
+        if run.status != WorkflowStatus.RUNNING:
+            continue
+        kind = run.state.get("workflow_kind")
+        if workflow_kind == "planning" and kind != "planning":
+            continue
+        if workflow_kind == "visual" and kind != "visual_composition":
+            continue
+        if workflow_kind == "presentation" and kind in {"planning", "visual_composition"}:
+            continue
+        if presentation_id is not None and run.presentation_id != presentation_id:
+            continue
+        return run.id
     return None
 
 
-def load_workflow_result(workflow_run_id: UUID, *, settings: Settings | None = None) -> WorkflowRunResult:
-    """Load a WorkflowRunResult from persisted DB state."""
+def load_workflow_result(
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> WorkflowRunResult:
+    """Load a presentation WorkflowRunResult from persisted DB state."""
     resolved = _resolve_settings(settings)
     with get_session() as session:
         llm = create_llm_provider(resolved)
         service = _create_presentation_service(session, llm, resolved)
+        try:
+            return service.result_from_run(workflow_run_id)
+        finally:
+            service.close()
+
+
+def load_planning_result(workflow_run_id: UUID, *, settings: Settings | None = None):
+    """Load a planning workflow result from persisted DB state."""
+    resolved = _resolve_settings(settings)
+    with get_session() as session:
+        service = _create_planning_service(session, resolved)
+        try:
+            return service.result_from_run(workflow_run_id)
+        finally:
+            service.close()
+
+
+def load_visual_result(workflow_run_id: UUID, *, settings: Settings | None = None):
+    """Load a visual workflow result from persisted DB state."""
+    resolved = _resolve_settings(settings)
+    with get_session() as session:
+        service = _create_visual_service(session, resolved, use_llm=False)
         try:
             return service.result_from_run(workflow_run_id)
         finally:

@@ -21,6 +21,11 @@ from archium.domain.visual.preferences import VisualPreferences
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.art_direction_panel import render_art_direction_panel
+from archium.ui.background_workflow_runner import (
+    VisualJobAction,
+    background_workflows_enabled,
+    submit_visual_job,
+)
 from archium.ui.error_handlers import format_user_error
 from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -30,6 +35,10 @@ from archium.ui.visual_service import (
     continue_visual_after_layout_review,
     get_presentation_visual_snapshot,
     run_visual_workflow,
+)
+from archium.ui.workflow_progress_panel import (
+    render_workflow_progress_panel,
+    set_active_job_id,
 )
 from archium.ui.workspace_service import list_project_presentations, list_projects
 
@@ -224,6 +233,52 @@ def _render_preferences_form() -> tuple[VisualPreferences, dict[str, object]]:
     return preferences, options
 
 
+def _apply_visual_result(result: object) -> None:
+    from archium.application.visual.visual_workflow_service import VisualWorkflowResult
+
+    if isinstance(result, VisualWorkflowResult):
+        st.session_state.last_visual_workflow_result = result
+        st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
+
+
+def _launch_visual_job(
+    project_id: UUID,
+    presentation_id: UUID,
+    action: VisualJobAction,
+    *,
+    settings,
+    workflow_run_id: UUID | None = None,
+    allow_invalid_layout_export: bool = False,
+    run_kwargs: dict[str, object] | None = None,
+    success_message: str | None = None,
+    awaiting_review_message: str | None = None,
+) -> bool:
+    if not background_workflows_enabled(settings):
+        return False
+    job = submit_visual_job(
+        project_id,
+        presentation_id,
+        action,
+        settings=settings,
+        workflow_run_id=workflow_run_id,
+        allow_invalid_layout_export=allow_invalid_layout_export,
+        **(run_kwargs or {}),
+    )
+    set_active_job_id(project_id, job.job_id, scope="visual", presentation_id=presentation_id)
+    st.info("已在后台运行视觉编排，下方将实时显示进度。")
+    render_workflow_progress_panel(
+        project_id,
+        scope="visual",
+        presentation_id=presentation_id,
+        job_id=job.job_id,
+        result_session_key="last_visual_workflow_result",
+        on_complete=_apply_visual_result,
+        success_message=success_message,
+        awaiting_review_message=awaiting_review_message,
+    )
+    return True
+
+
 def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
     preferences, options = _render_preferences_form()
     settings = get_ui_effective_settings()
@@ -231,6 +286,24 @@ def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
         st.caption("当前未配置 API Key，将自动回退到规则生成。")
 
     if st.button("生成视觉编排", type="primary", use_container_width=True):
+        run_kwargs = {
+            "preferences": preferences,
+            "require_art_direction_review": bool(options["require_art_direction_review"]),
+            "use_llm": bool(options["use_llm"]),
+            "export_pptx": bool(options["export_pptx"]),
+            "export_layout_instructions": True,
+            "candidate_count": int(cast(int, options["candidate_count"])),
+        }
+        if _launch_visual_job(
+            project_id,
+            presentation_id,
+            VisualJobAction.RUN,
+            settings=settings,
+            run_kwargs=run_kwargs,
+            success_message="视觉编排完成。",
+            awaiting_review_message="视觉编排已暂停，请审核视觉方向或版式后继续。",
+        ):
+            return
         try:
             with (
                 st.spinner("正在生成视觉方向与版式…"),
@@ -248,8 +321,7 @@ def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
                     export_pptx=bool(options["export_pptx"]),
                     candidate_count=int(cast(int, options["candidate_count"])),
                 )
-            st.session_state.last_visual_workflow_result = result
-            st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
+            _apply_visual_result(result)
             if result.awaiting_review:
                 if result.review_gate == "layout_review":
                     st.warning(
@@ -270,7 +342,7 @@ def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
             st.error(format_user_error(exc))
 
 
-def _render_result_summary() -> None:
+def _render_result_summary(project_id: UUID, presentation_id: UUID) -> None:
     result = st.session_state.last_visual_workflow_result
     if result is None:
         return
@@ -307,6 +379,17 @@ def _render_result_summary() -> None:
             "可先在「单页视觉」重排，再继续（仍不会导出无效 PPTX）。"
         )
         if st.button("继续工作流（跳过无效 PPTX）", type="primary", use_container_width=True):
+            settings = get_ui_effective_settings()
+            if _launch_visual_job(
+                project_id,
+                presentation_id,
+                VisualJobAction.CONTINUE_LAYOUT_REVIEW,
+                settings=settings,
+                workflow_run_id=result.workflow_run.id,
+                allow_invalid_layout_export=True,
+                success_message="工作流已继续。",
+            ):
+                return
             try:
                 with get_session() as session:
                     continued = continue_visual_after_layout_review(
@@ -314,7 +397,7 @@ def _render_result_summary() -> None:
                         result.workflow_run.id,
                         allow_invalid_layout_export=True,
                     )
-                st.session_state.last_visual_workflow_result = continued
+                _apply_visual_result(continued)
                 st.rerun()
             except Exception as exc:
                 st.error(format_user_error(exc))
@@ -373,7 +456,7 @@ def _render_quality_reports(result: VisualWorkflowResult) -> None:
             st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
-def _render_composition_tabs(presentation_id: UUID) -> None:
+def _render_composition_tabs(project_id: UUID, presentation_id: UUID) -> None:
     result = st.session_state.last_visual_workflow_result
     with get_session() as session:
         snapshot = get_presentation_visual_snapshot(
@@ -427,7 +510,7 @@ def _render_composition_tabs(presentation_id: UUID) -> None:
                     render_slide_visual_panel(snapshot=item)
 
     with tab_preview:
-        _render_result_summary()
+        _render_result_summary(project_id, presentation_id)
         if snapshot.design_system is not None:
             st.caption(
                 f"DesignSystem：{snapshot.design_system.name} · "
@@ -493,6 +576,14 @@ def render() -> None:
         return
 
     st.divider()
+    render_workflow_progress_panel(
+        project_id,
+        scope="visual",
+        presentation_id=presentation_id,
+        result_session_key="last_visual_workflow_result",
+        on_complete=_apply_visual_result,
+        rerun_on_complete=False,
+    )
     _render_run_section(project_id, presentation_id)
     st.divider()
-    _render_composition_tabs(presentation_id)
+    _render_composition_tabs(project_id, presentation_id)

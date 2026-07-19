@@ -166,6 +166,9 @@ class PlanningWorkflowService:
         planning_session.touch()
         planning_session = self._planning_sessions.update(planning_session)
 
+        if self._settings.workflow_checkpoint_commit_enabled:
+            self._session.commit()
+
         initial_state = initial_planning_state(
             project_id=str(project_id),
             workflow_run_id=str(workflow_run.id),
@@ -444,6 +447,12 @@ class PlanningWorkflowService:
 
     def get_run(self, workflow_run_id: UUID) -> WorkflowRun | None:
         return self._workflow_runs.get_by_id(workflow_run_id)
+
+    def result_from_run(self, workflow_run_id: UUID) -> PlanningWorkflowResult:
+        run = self._workflow_runs.get_by_id(workflow_run_id)
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} not found")
+        return self._to_result(run, run.state)
 
     def get_session(self, planning_session_id: UUID) -> PlanningSession | None:
         return self._planning_sessions.get_by_id(planning_session_id)
