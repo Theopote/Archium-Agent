@@ -6,6 +6,7 @@ import streamlit as st
 
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.ui.studio.ai_edit_panel import render_ai_edit_panel
+from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
 from archium.ui.studio.export_panel import render_export_panel
 from archium.ui.studio.history_panel import render_history_panel
 from archium.ui.studio.project_sidebar import render_studio_selection
@@ -67,10 +68,12 @@ def render() -> None:
     with right_col:
         render_slide_properties(slide_snapshot=slide_snapshot, advanced=advanced)
         st.divider()
-        render_ai_edit_panel(disabled=True)
+        render_content_adaptation_panel(slide_snapshot=slide_snapshot)
+        st.divider()
+        render_ai_edit_panel(slide_snapshot=slide_snapshot)
 
     st.divider()
-    render_history_panel(context=context, advanced=advanced)
+    render_history_panel(context=context, advanced=advanced, slide_snapshot=slide_snapshot)
 
     render_workflow_progress_panel(
         context.project.id,

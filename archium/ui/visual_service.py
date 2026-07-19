@@ -12,18 +12,18 @@ from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.slide_preview_service import map_preview_pngs_by_order
+from archium.application.visual.visual_intent_presets import apply_visual_intent_preset
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.visual.visual_workflow_service import (
     VisualWorkflowResult,
     VisualWorkflowService,
 )
 from archium.config.settings import Settings
-from archium.domain.enums import ApprovalStatus
 from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualContentType
+from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.validation import LayoutValidationReport
@@ -367,16 +367,6 @@ def select_layout_candidate(
     return plan
 
 
-_PRESET_FAMILY: dict[str, LayoutFamily] = {
-    "drawing_focus": LayoutFamily.DRAWING_FOCUS,
-    "evidence_board": LayoutFamily.EVIDENCE_BOARD,
-    "hero": LayoutFamily.HERO,
-    "textual_argument": LayoutFamily.TEXTUAL_ARGUMENT,
-    "strategy_cards": LayoutFamily.STRATEGY_CARDS,
-    "comparative_matrix": LayoutFamily.COMPARATIVE_MATRIX,
-}
-
-
 def replan_slide(
     session: Session,
     *,
@@ -410,7 +400,7 @@ def replan_slide(
         slide.visual_intent_id = intent.id
         presentations.save_slide(slide)
 
-    intent = _apply_preset(intent, preset)
+    intent = apply_visual_intent_preset(intent, preset)
     intent = intents.save(intent)
 
     presentation = presentations.get_presentation(slide.presentation_id)
@@ -467,32 +457,3 @@ def replan_slide(
         validation=validation,
     )
 
-
-def _apply_preset(intent: VisualIntent, preset: str | None) -> VisualIntent:
-    if not preset:
-        return intent
-    updates: dict[str, object] = {}
-    if preset == "reduce_text":
-        updates["density_level"] = DensityLevel.SPACIOUS
-        updates["composition_strategy"] = "减少文字，突出主信息"
-    elif preset == "enlarge_hero":
-        updates["composition_strategy"] = "放大主图，压缩辅助文字"
-        updates["density_level"] = DensityLevel.SPACIOUS
-    elif preset == "more_whitespace":
-        updates["density_level"] = DensityLevel.SPACIOUS
-        updates["composition_strategy"] = "增加留白，降低信息密度"
-    elif preset == "drawing_focus":
-        updates["preferred_layout_families"] = [LayoutFamily.DRAWING_FOCUS]
-        updates["dominant_content_type"] = VisualContentType.SITE_PLAN
-        updates["image_treatment"] = "drawing_contain"
-        updates["composition_strategy"] = "图纸优先"
-    elif preset in _PRESET_FAMILY:
-        family = _PRESET_FAMILY[preset]
-        updates["preferred_layout_families"] = [family]
-        updates["composition_strategy"] = f"切换到 {family.value}"
-    if not updates:
-        return intent
-    updated = intent.model_copy(update={**updates, "version": intent.version + 1})
-    updated.approval_status = ApprovalStatus.PENDING
-    updated.touch()
-    return updated

@@ -12,6 +12,7 @@ from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.render import RenderResult
+from archium.exceptions import WorkflowError
 from archium.ui.visual_service import (
     PresentationVisualSnapshot,
     SlideVisualSnapshot,
@@ -138,6 +139,70 @@ def export_presentation_from_studio(
         presentation_id,
         settings=settings,  # type: ignore[arg-type]
     )
+
+
+def apply_slide_visual_edit(
+    session: Session,
+    slide_id: UUID,
+    *,
+    text: str | None = None,
+    intent: str | None = None,
+    params: dict[str, object] | None = None,
+) -> object:
+    """Apply NL or preset visual edit intent for the current slide."""
+    from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.domain.visual.edit_intent import intent_from_preset
+
+    service = VisualEditService(session, settings=_resolve_runtime_settings(None))
+    if text:
+        return service.apply_text(slide_id, text)
+    resolved = intent_from_preset(intent or "")
+    if resolved is None:
+        raise WorkflowError(f"Unsupported visual edit intent: {intent}")
+    return service.apply_intent(slide_id, resolved, params=params or {})
+
+
+def restore_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+    from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.domain.visual.edit_intent import VisualEditIntent
+
+    service = VisualEditService(session, settings=_resolve_runtime_settings(None))
+    return service.apply_intent(slide_id, VisualEditIntent.RESTORE_PREVIOUS)
+
+
+def apply_slide_content_adaptation(
+    session: Session,
+    slide_id: UUID,
+    *,
+    text: str | None = None,
+    action: str | None = None,
+) -> object:
+    from archium.application.content_adaptation_service import ContentAdaptationService
+    from archium.domain.content_adaptation import (
+        action_from_value,
+        parse_content_adaptation_text,
+    )
+
+    service = ContentAdaptationService(session)
+    if text:
+        resolved = parse_content_adaptation_text(text)
+        if resolved is None:
+            raise WorkflowError("无法识别内容适配意图。")
+        return service.apply(slide_id, resolved)
+    resolved = action_from_value(action or "")
+    if resolved is None:
+        raise WorkflowError(f"Unsupported content adaptation: {action}")
+    return service.apply(slide_id, resolved)
+
+
+def count_visual_revisions(session: Session, slide_id: UUID) -> int:
+    from archium.application.visual.visual_history_service import VisualHistoryService
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    slide = PresentationRepository(session).get_slide(slide_id)
+    if slide is None:
+        return 0
+    return len(VisualHistoryService(session).list_slide_visual_revisions(slide))
 
 
 def studio_readiness_label(context: StudioPresentationContext) -> str:

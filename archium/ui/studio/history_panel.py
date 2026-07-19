@@ -4,12 +4,23 @@ from __future__ import annotations
 
 import streamlit as st
 
+from archium.infrastructure.database.session import get_session
 from archium.ui.label_map import STATUS_LABELS, entity_label
 from archium.ui.slide_history_panel import render_slide_history_panel
-from archium.ui.studio_service import StudioPresentationContext, studio_readiness_label
+from archium.ui.studio_service import (
+    StudioPresentationContext,
+    count_visual_revisions,
+    studio_readiness_label,
+)
+from archium.ui.visual_service import SlideVisualSnapshot
 
 
-def render_history_panel(*, context: StudioPresentationContext, advanced: bool) -> None:
+def render_history_panel(
+    *,
+    context: StudioPresentationContext,
+    advanced: bool,
+    slide_snapshot: SlideVisualSnapshot | None = None,
+) -> None:
     """Render workflow status, deck QA summary, and revision history."""
     st.markdown("**状态与版本**")
     readiness = studio_readiness_label(context)
@@ -37,6 +48,11 @@ def render_history_panel(*, context: StudioPresentationContext, advanced: bool) 
             f"最近编排：{result.workflow_run.status.value} · "
             f"意图 {len(result.visual_intent_ids)} · 版式 {len(result.layout_plan_ids)}"
         )
+
+    if slide_snapshot is not None:
+        with get_session() as session:
+            revision_count = count_visual_revisions(session, slide_snapshot.slide.id)
+        st.caption(f"当前页视觉修订：{revision_count} 条（可在 AI 编辑中撤销上一步）")
 
     with st.expander("页面内容修订历史", expanded=False):
         slides = [item.slide for item in context.snapshot.slides]
