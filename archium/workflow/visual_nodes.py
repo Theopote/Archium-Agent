@@ -17,6 +17,9 @@ from archium.application.visual.asset_reference import (
     content_refs_from_plan,
 )
 from archium.application.visual.deck_composition_service import DeckCompositionPlanningService
+from archium.application.visual.enhanced_deck_composition_service import (
+    EnhancedDeckCompositionPlanningService,
+)
 from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_locked import preserve_locked_elements
 from archium.application.visual.layout_planning_service import (
@@ -102,7 +105,7 @@ class VisualWorkflowRuntime:
             llm_model=getattr(settings, "visual_critic_llm_model", None),
         )
         self.deck_qa_service = DeckQAService()
-        self.deck_composition_service = DeckCompositionPlanningService()
+        self.deck_composition_service = EnhancedDeckCompositionPlanningService()
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
             settings, session=session
         )
