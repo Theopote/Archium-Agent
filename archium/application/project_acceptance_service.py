@@ -24,6 +24,7 @@ from archium.domain.enums import AssetType, VisualType, WorkflowStatus
 from archium.domain.project_acceptance import (
     REAL_PROJECT_MIN_ASSETS,
     REAL_PROJECT_MIN_SLIDES,
+    HumanMetricsSource,
     RealProjectAcceptanceMetrics,
     RealProjectAcceptanceRecord,
     RealProjectScenario,
@@ -137,28 +138,52 @@ class ProjectAcceptanceService:
 
         min_slides = int(manifest.expectations.get("min_slides", REAL_PROJECT_MIN_SLIDES))
         min_assets = int(manifest.expectations.get("min_assets", REAL_PROJECT_MIN_ASSETS))
-        derived = derive_acceptance_human_metrics(
-            slide_count=len(slides),
-            critical_layout_page_count=critical_count,
-            error_layout_page_count=error_count,
-            validation_reports=validation_reports,
-            first_generation_seconds=elapsed,
-        )
         stored_reviews = load_presentation_reviews(
             self._session,
             presentation.id,
             settings=self._settings,
         )
         review_values = list(stored_reviews.values())
-        if review_values:
+        manual_reviews = [review for review in review_values if review.is_manual_review()]
+
+        human_metrics_source = HumanMetricsSource.NONE
+        human_rehearsal_passed = False
+        major_edit_page_ratio: float | None = None
+        minor_edit_page_ratio: float | None = None
+        exported_page_ratio: float | None = None
+        average_human_visual_score: float | None = None
+        user_edit_minutes: float | None = None
+
+        if manual_reviews:
             derived = derive_acceptance_human_metrics_from_reviews(
                 review_values,
                 slide_count=len(slides),
-                fallback=derived,
+                fallback=derive_acceptance_human_metrics(
+                    slide_count=len(slides),
+                    critical_layout_page_count=critical_count,
+                    error_layout_page_count=error_count,
+                    validation_reports=validation_reports,
+                    first_generation_seconds=elapsed,
+                ),
             )
-            notes_suffix = "human metrics from Studio reviews"
+            human_metrics_source = HumanMetricsSource.STUDIO_MANUAL
+            major_edit_page_ratio = derived["major_edit_page_ratio"]
+            minor_edit_page_ratio = derived["minor_edit_page_ratio"]
+            exported_page_ratio = derived["exported_page_ratio"]
+            average_human_visual_score = derived["average_human_visual_score"]
+            user_edit_minutes = derived["user_edit_minutes"]
+            human_rehearsal_passed = (
+                exported_page_ratio is not None
+                and exported_page_ratio >= 0.8
+                and (average_human_visual_score or 0.0) >= 3.5
+            )
+            notes_suffix = "human metrics from Studio manual reviews"
         else:
-            notes_suffix = "human metrics derived from layout validation (rehearsal baseline)"
+            human_metrics_source = HumanMetricsSource.LAYOUT_QA_DERIVED
+            notes_suffix = (
+                "automated pipeline only; human rehearsal fields pending live session"
+            )
+
         metrics = RealProjectAcceptanceMetrics(
             first_generation_seconds=elapsed,
             generation_succeeded=content_ok and visual_ok,
@@ -170,11 +195,11 @@ class ProjectAcceptanceService:
             drawing_crop_issue_count=crop_count,
             export_acceptable=critical_count == 0,
             real_asset_utilization_rate=asset_utilization,
-            major_edit_page_ratio=derived["major_edit_page_ratio"],
-            minor_edit_page_ratio=derived["minor_edit_page_ratio"],
-            exported_page_ratio=derived["exported_page_ratio"],
-            average_human_visual_score=derived["average_human_visual_score"],
-            user_edit_minutes=derived["user_edit_minutes"],
+            major_edit_page_ratio=major_edit_page_ratio,
+            minor_edit_page_ratio=minor_edit_page_ratio,
+            exported_page_ratio=exported_page_ratio,
+            average_human_visual_score=average_human_visual_score,
+            user_edit_minutes=user_edit_minutes,
         )
         notes = (
             f"slides>={min_slides}: {metrics.slide_count >= min_slides}; "
@@ -187,6 +212,8 @@ class ProjectAcceptanceService:
             title=manifest.title,
             run_at=datetime.now(UTC),
             metrics=metrics,
+            human_metrics_source=human_metrics_source,
+            human_rehearsal_passed=human_rehearsal_passed,
             notes=notes,
         )
 

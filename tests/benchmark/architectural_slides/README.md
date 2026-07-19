@@ -88,6 +88,8 @@ python scripts/build_architectural_benchmark_report.py
 
 当前状态：**30 页 layout 规则质量已通过；人工视觉质量验收未通过**（`manual_human_accepted_count=0`，`human_quality_gate_passed=false`）。占位评审在报告中显示为 **待人工评审**，不会展示 4.0 占位分。
 
+汇总见 [`docs/QUALITY_GATE_STATUS.md`](../../docs/QUALITY_GATE_STATUS.md)。
+
 ## 人工评分
 
 ### 三轮验收流程（推荐）

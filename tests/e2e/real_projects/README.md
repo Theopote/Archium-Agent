@@ -27,7 +27,15 @@ python scripts/run_real_project_acceptance.py --update
 
 Records are stored under `records/<project_id>/acceptance_record.json`.
 
-Automated metrics exclude wall-clock timing from baseline diffs. Manual fields (`major_edit_page_ratio`, `user_edit_minutes`, etc.) remain `null` until a live rehearsal session fills them in.
+Each record includes:
+
+- **Automated metrics** — pipeline success, slide/asset counts, layout validation
+- **`human_metrics_source`** — `none` | `layout_qa_derived` | `studio_manual`
+- **`human_rehearsal_passed`** — `true` only after live Studio manual reviews
+
+Manual fields (`major_edit_page_ratio`, `average_human_visual_score`, `user_edit_minutes`, etc.) remain **`null`** until a live rehearsal session with `source=manual` Studio reviews. Layout-derived scores are **not** written into acceptance records.
+
+See also: `docs/QUALITY_GATE_STATUS.md`
 
 ## Drop-in real files
 

@@ -55,8 +55,9 @@ def test_real_project_acceptance_case(
     record = RealProjectAcceptanceRecord.model_validate_json(
         summary.record_path.read_text(encoding="utf-8")
     )
-    assert record.metrics.average_human_visual_score is not None
-    assert record.metrics.exported_page_ratio is not None
+    assert record.human_metrics_source != "studio_manual"
+    assert record.human_rehearsal_passed is False
+    assert record.metrics.average_human_visual_score is None
 
 
 def test_update_env_documented() -> None:

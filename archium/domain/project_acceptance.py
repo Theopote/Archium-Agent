@@ -24,6 +24,14 @@ class RealProjectScenario(StrEnum):
     INTERNAL_DESIGN_REVIEW = "internal_design_review"
 
 
+class HumanMetricsSource(StrEnum):
+    """Provenance of optional human rehearsal fields on acceptance records."""
+
+    NONE = "none"
+    LAYOUT_QA_DERIVED = "layout_qa_derived"
+    STUDIO_MANUAL = "studio_manual"
+
+
 class RealProjectAcceptanceMetrics(DomainModel):
     """Automated and manual metrics recorded for one acceptance run."""
 
@@ -51,6 +59,9 @@ class RealProjectAcceptanceMetrics(DomainModel):
             and self.asset_count >= REAL_PROJECT_MIN_ASSETS
         )
 
+    def has_manual_human_metrics(self) -> bool:
+        return self.average_human_visual_score is not None
+
 
 class RealProjectAcceptanceRecord(DomainModel):
     """Persisted acceptance record for one real-project scenario."""
@@ -60,4 +71,6 @@ class RealProjectAcceptanceRecord(DomainModel):
     title: str = Field(min_length=1)
     run_at: datetime
     metrics: RealProjectAcceptanceMetrics
+    human_metrics_source: HumanMetricsSource = HumanMetricsSource.NONE
+    human_rehearsal_passed: bool = False
     notes: str = ""

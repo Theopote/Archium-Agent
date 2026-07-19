@@ -2,9 +2,9 @@
   "project_id": "project_004_government_client",
   "scenario": "government_client_decision",
   "title": "政府决策汇报：城市更新片区规划",
-  "run_at": "2026-07-19T06:05:36.510959Z",
+  "run_at": "2026-07-19T17:10:25.661761Z",
   "metrics": {
-    "first_generation_seconds": 0.722,
+    "first_generation_seconds": 0.707,
     "generation_succeeded": true,
     "slide_count": 20,
     "asset_count": 10,
@@ -14,11 +14,13 @@
     "drawing_crop_issue_count": 0,
     "export_acceptable": true,
     "real_asset_utilization_rate": 1.0,
-    "major_edit_page_ratio": 0.0,
-    "minor_edit_page_ratio": 1.0,
-    "exported_page_ratio": 1.0,
-    "average_human_visual_score": 4.99,
-    "user_edit_minutes": 2.4
+    "major_edit_page_ratio": null,
+    "minor_edit_page_ratio": null,
+    "exported_page_ratio": null,
+    "average_human_visual_score": null,
+    "user_edit_minutes": null
   },
-  "notes": "slides>=20: True; assets>=10: True; human metrics derived from layout validation (rehearsal baseline)"
+  "human_metrics_source": "layout_qa_derived",
+  "human_rehearsal_passed": false,
+  "notes": "slides>=20: True; assets>=10: True; automated pipeline only; human rehearsal fields pending live session"
 }
