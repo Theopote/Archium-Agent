@@ -6,16 +6,28 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
+from sqlalchemy.orm import Session
+
+from archium.application.planning_workflow_service import (
+    PlanningWorkflowResult,
+    PlanningWorkflowService,
+)
 from archium.application.presentation_models import PresentationRequest
+from archium.application.presentation_workflow_service import PresentationWorkflowService
+from archium.application.visual.visual_workflow_service import (
+    VisualWorkflowResult,
+    VisualWorkflowService,
+)
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import WorkflowRunRepository
 from archium.infrastructure.database.session import get_session
+from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 
@@ -77,9 +89,9 @@ def _resolve_settings(settings: Settings | None) -> Settings:
     return get_effective_settings()
 
 
-def _create_presentation_service(session, llm, settings: Settings):
-    from archium.application.presentation_workflow_service import PresentationWorkflowService
-
+def _create_presentation_service(
+    session: Session, llm: LLMProvider, settings: Settings
+) -> PresentationWorkflowService:
     return PresentationWorkflowService(
         session,
         llm,
@@ -88,9 +100,7 @@ def _create_presentation_service(session, llm, settings: Settings):
     )
 
 
-def _create_planning_service(session, settings: Settings):
-    from archium.application.planning_workflow_service import PlanningWorkflowService
-
+def _create_planning_service(session: Session, settings: Settings) -> PlanningWorkflowService:
     llm = create_llm_provider(settings)
     return PlanningWorkflowService(
         session,
@@ -100,9 +110,9 @@ def _create_planning_service(session, settings: Settings):
     )
 
 
-def _create_visual_service(session, settings: Settings, *, use_llm: bool):
-    from archium.application.visual.visual_workflow_service import VisualWorkflowService
-
+def _create_visual_service(
+    session: Session, settings: Settings, *, use_llm: bool
+) -> VisualWorkflowService:
     llm = create_llm_provider(settings) if use_llm and settings.llm_configured else None
     return VisualWorkflowService(
         session,
@@ -116,9 +126,7 @@ def _set_job_status(job: BackgroundWorkflowJob, status: BackgroundJobStatus) -> 
     job.status = status
 
 
-def _set_planning_job_result(job: BackgroundWorkflowJob, result) -> None:
-    from archium.application.planning_workflow_service import PlanningWorkflowResult
-
+def _set_planning_job_result(job: BackgroundWorkflowJob, result: PlanningWorkflowResult) -> None:
     if not isinstance(result, PlanningWorkflowResult):
         raise TypeError("expected PlanningWorkflowResult")
     job.result = result
@@ -132,9 +140,7 @@ def _set_planning_job_result(job: BackgroundWorkflowJob, result) -> None:
         job.error = "; ".join(result.errors) or "规划工作流完成但存在错误"
 
 
-def _set_visual_job_result(job: BackgroundWorkflowJob, result) -> None:
-    from archium.application.visual.visual_workflow_service import VisualWorkflowResult
-
+def _set_visual_job_result(job: BackgroundWorkflowJob, result: VisualWorkflowResult) -> None:
     if not isinstance(result, VisualWorkflowResult):
         raise TypeError("expected VisualWorkflowResult")
     job.result = result
@@ -292,25 +298,33 @@ def _run_planning_job(
                     result = service.run(job.project_id, task_description)
                     _set_planning_job_result(job, result)
                 elif action == PlanningJobAction.CONTINUE_MISSION_CORRECTION:
-                    result = service.continue_after_mission_correction(workflow_run_id)  # type: ignore[arg-type]
+                    if workflow_run_id is None:
+                        raise WorkflowError("缺少 workflow_run_id")
+                    result = service.continue_after_mission_correction(workflow_run_id)
                     _set_planning_job_result(job, result)
                 elif action == PlanningJobAction.APPROVE_MISSION:
-                    result = service.approve_mission_and_continue(workflow_run_id)  # type: ignore[arg-type]
+                    if workflow_run_id is None:
+                        raise WorkflowError("缺少 workflow_run_id")
+                    result = service.approve_mission_and_continue(workflow_run_id)
                     _set_planning_job_result(job, result)
                 elif action == PlanningJobAction.CONTINUE_CLARIFICATION:
-                    result = service.continue_after_clarification(workflow_run_id)  # type: ignore[arg-type]
+                    if workflow_run_id is None:
+                        raise WorkflowError("缺少 workflow_run_id")
+                    result = service.continue_after_clarification(workflow_run_id)
                     _set_planning_job_result(job, result)
                 elif action == PlanningJobAction.START_PRESENTATION:
+                    if workflow_run_id is None:
+                        raise WorkflowError("缺少 workflow_run_id")
                     from archium.ui.planning_service import start_presentation_from_planning
 
-                    result = start_presentation_from_planning(
+                    presentation_result = start_presentation_from_planning(
                         session,
                         job.project_id,
-                        workflow_run_id,  # type: ignore[arg-type]
+                        workflow_run_id,
                         settings=settings,
                         **(export_kwargs or {}),
                     )
-                    _set_presentation_job_result(job, result)
+                    _set_presentation_job_result(job, presentation_result)
                     job.kind = "planning_presentation"
                 else:
                     raise WorkflowError(f"Unknown planning action: {action}")
@@ -379,8 +393,10 @@ def _run_visual_job(
                     result = service.run(job.project_id, presentation_id, **run_kwargs)
                     _set_visual_job_result(job, result)
                 elif action == VisualJobAction.CONTINUE_LAYOUT_REVIEW:
+                    if workflow_run_id is None:
+                        raise WorkflowError("缺少 workflow_run_id")
                     result = service.continue_after_layout_review(
-                        workflow_run_id,  # type: ignore[arg-type]
+                        workflow_run_id,
                         allow_invalid_layout_export=allow_invalid_layout_export,
                     )
                     _set_visual_job_result(job, result)
@@ -467,29 +483,33 @@ def load_workflow_result(
         llm = create_llm_provider(resolved)
         service = _create_presentation_service(session, llm, resolved)
         try:
-            return service.result_from_run(workflow_run_id)
+            return cast(WorkflowRunResult, service.result_from_run(workflow_run_id))
         finally:
             service.close()
 
 
-def load_planning_result(workflow_run_id: UUID, *, settings: Settings | None = None):
+def load_planning_result(
+    workflow_run_id: UUID, *, settings: Settings | None = None
+) -> PlanningWorkflowResult:
     """Load a planning workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
     with get_session(scoped=False) as session:
         service = _create_planning_service(session, resolved)
         try:
-            return service.result_from_run(workflow_run_id)
+            return cast(PlanningWorkflowResult, service.result_from_run(workflow_run_id))
         finally:
             service.close()
 
 
-def load_visual_result(workflow_run_id: UUID, *, settings: Settings | None = None):
+def load_visual_result(
+    workflow_run_id: UUID, *, settings: Settings | None = None
+) -> VisualWorkflowResult:
     """Load a visual workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
     with get_session(scoped=False) as session:
         service = _create_visual_service(session, resolved, use_llm=False)
         try:
-            return service.result_from_run(workflow_run_id)
+            return cast(VisualWorkflowResult, service.result_from_run(workflow_run_id))
         finally:
             service.close()
 

@@ -8,7 +8,11 @@ import pytest
 from archium.application.ingestion_service import IngestionService
 from archium.domain.enums import ProcessingStatus, ProjectType
 from archium.domain.project import Project
-from archium.infrastructure.database.repositories import DocumentRepository, FactRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    DocumentRepository,
+    FactRepository,
+    ProjectRepository,
+)
 from docx import Document
 from sqlalchemy.orm import Session
 

@@ -8,7 +8,10 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.asset_board_service import AssetBoardRow, AssetBoardService
-from archium.application.asset_provenance import format_asset_option_label, format_asset_vision_summary
+from archium.application.asset_provenance import (
+    format_asset_option_label,
+    format_asset_vision_summary,
+)
 from archium.config.settings import get_settings
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError

@@ -12,8 +12,8 @@ from archium.application.deliverable_planning_service import DeliverablePlanning
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.mission_validation_service import MissionValidationService
 from archium.application.project_mission_service import ProjectMissionService
-from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
+from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, QuestionStatus, WorkflowStatus, WorkflowStep
 from archium.exceptions import WorkflowError

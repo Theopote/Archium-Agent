@@ -154,7 +154,7 @@ class AssetVisionRagService:
         try:
             image = load_asset_image(asset)
             report = analyze_image(asset.id, asset.path, image)
-            drawing_type = report.drawing_type
+            drawing_type = report.drawing_type or "unknown"
         except Exception:
             drawing_type = "unknown"
 

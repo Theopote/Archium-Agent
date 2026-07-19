@@ -17,14 +17,22 @@ Do not edit them manually.
 | `APP_NAME` | `Archium` | No | Application display name. |
 | `ENVIRONMENT` | `development` | No | Runtime environment label (development, staging, production). |
 | `LOG_LEVEL` | `INFO` | No | Root logger level. |
+| `STREAMLIT_BACKGROUND_WORKFLOWS_ENABLED` | `true` | No | Run LangGraph presentation workflows in a background thread from Streamlit. |
 
 ## Storage paths {#storage}
 
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
 | `DATABASE_PATH` | `data/database/archium.db` | No | SQLite database file path, relative to project root unless absolute. |
-| `DATABASE_URL` | `*(unset)*` | No | Optional SQLAlchemy URL override. When unset, database_path is used. |
+| `DATABASE_URL` | `*(unset)*` | No | Optional SQLAlchemy URL override. When unset, database_path is used. Set to postgresql+psycopg://user:pass@host:5432/dbname for multi-user deployments. |
+| `DATABASE_POOL_SIZE` | `5` | No | PostgreSQL connection pool size (ignored for SQLite). |
+| `DATABASE_MAX_OVERFLOW` | `10` | No | PostgreSQL pool overflow connections beyond pool_size. |
+| `DATABASE_POOL_RECYCLE_SECONDS` | `3600` | No | Recycle PostgreSQL connections after this many seconds (0 = disabled). |
+| `DATABASE_POOL_PRE_PING` | `true` | No | Ping PostgreSQL connections before checkout to drop stale connections. |
+| `DATABASE_SQLITE_BUSY_TIMEOUT_MS` | `30000` | No | SQLite busy timeout in milliseconds (WAL + busy_timeout reduce 'database is locked'). |
+| `DATABASE_SQLITE_WAL_ENABLED` | `true` | No | Enable SQLite WAL journal mode for better concurrent read/write behavior. |
 | `WORKFLOW_CHECKPOINT_PATH` | `data/database/workflow_checkpoints.db` | No | LangGraph SqliteSaver checkpoint database path. |
+| `WORKFLOW_CHECKPOINT_COMMIT_ENABLED` | `true` | No | Commit the SQLAlchemy session after each workflow checkpoint so Streamlit and other clients can poll WorkflowRun progress. |
 | `PROJECT_STORAGE_PATH` | `data/projects` | No | Uploaded project documents and assets root directory. |
 | `OUTPUT_PATH` | `data/outputs` | No | Generated presentation export output directory. |
 | `CHROMA_PATH` | `data/chroma` | No | Chroma vector index storage directory. |

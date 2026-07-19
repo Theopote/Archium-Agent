@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.asset_vision_rag_service import AssetVisionRagResult, AssetVisionRagService
 from archium.application.retrieval_service import RetrievalService, create_retrieval_service
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
@@ -335,10 +336,8 @@ class IngestionService:
         assets: list[Asset],
         *,
         base_chunk_index: int,
-    ):
+    ) -> AssetVisionRagResult:
         try:
-            from archium.application.asset_vision_rag_service import AssetVisionRagService
-
             return AssetVisionRagService(self._session, settings=self._settings).process_document_assets(
                 project_id,
                 document,
@@ -347,8 +346,6 @@ class IngestionService:
             )
         except Exception as exc:
             logger.warning("Asset vision RAG failed for %s: %s", document.filename, exc)
-            from archium.application.asset_vision_rag_service import AssetVisionRagResult
-
             return AssetVisionRagResult(assets=assets, chunks=[])
 
     def _index_chunks(

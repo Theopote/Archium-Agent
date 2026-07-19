@@ -9,6 +9,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.asset_vision_rag_service import (
+    AssetVisionBackfillResult,
+    AssetVisionBackfillService,
+)
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.export_service import PresentationExportService
@@ -169,9 +173,7 @@ def backfill_project_asset_vision(
     project_id: UUID,
     *,
     settings: Settings | None = None,
-):
-    from archium.application.asset_vision_rag_service import AssetVisionBackfillService
-
+) -> AssetVisionBackfillResult:
     resolved = _resolve_runtime_settings(settings)
     return AssetVisionBackfillService(session, settings=resolved).backfill_project(project_id)
 

@@ -8,6 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
+from archium.config.settings import Settings
 from archium.domain.visual.enums import (
     DecorationLevel,
     DensityLevel,
@@ -246,7 +247,7 @@ def _launch_visual_job(
     presentation_id: UUID,
     action: VisualJobAction,
     *,
-    settings,
+    settings: Settings,
     workflow_run_id: UUID | None = None,
     allow_invalid_layout_export: bool = False,
     run_kwargs: dict[str, object] | None = None,

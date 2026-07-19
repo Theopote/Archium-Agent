@@ -165,8 +165,10 @@ def _apply_job_completion(
     if job.status == BackgroundJobStatus.AWAITING_REVIEW:
         st.warning(awaiting_review_message or _default_awaiting_message(scope))
     elif job.status == BackgroundJobStatus.COMPLETED:
+        message: str | None
         if callable(success_message):
-            message = success_message(result)
+            raw = success_message(result)
+            message = raw if isinstance(raw, str) else None
         elif success_message:
             message = success_message
         else:

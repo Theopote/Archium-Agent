@@ -41,7 +41,12 @@ def pipeline_mock_selector(request: LLMRequest) -> str | None:
         return FULL_DECK_STORYLINE_JSON if full_deck else STORYLINE_JSON
     if "SlidePlan JSON" in user_prompt:
         return FULL_DECK_SLIDE_PLAN_JSON if full_deck else SLIDE_PLAN_JSON
-    if "FactExtraction" in user_prompt or "ProjectFact JSON" in user_prompt:
+    if (
+        "FactExtraction" in user_prompt
+        or "ProjectFact JSON" in user_prompt
+        or "结构化事实 JSON" in user_prompt
+        or "ProjectFact" in request.system_prompt
+    ):
         return FACT_EXTRACTION_JSON
     if "BriefAlignment JSON" in user_prompt:
         return BRIEF_ALIGNMENT_MISMATCH_JSON

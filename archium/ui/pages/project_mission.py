@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
 from uuid import UUID
 
 import streamlit as st
 
+from archium.config.settings import Settings
 from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
@@ -72,13 +75,13 @@ def _launch_planning_job(
     project_id: UUID,
     action: PlanningJobAction,
     *,
-    settings,
+    settings: Settings,
     task_description: str | None = None,
     workflow_run_id: UUID | None = None,
-    on_complete,
+    on_complete: Callable[[object], None],
     success_message: str | None = None,
     awaiting_review_message: str | None = None,
-    **export_kwargs,
+    export_kwargs: dict[str, Any] | None = None,
 ) -> bool:
     """Start a background planning job. Returns True if background mode was used."""
     if not background_workflows_enabled(settings):
@@ -89,7 +92,7 @@ def _launch_planning_job(
         settings=settings,
         task_description=task_description,
         workflow_run_id=workflow_run_id,
-        **export_kwargs,
+        **(export_kwargs or {}),
     )
     set_active_job_id(project_id, job.job_id, scope="planning")
     st.info("已在后台运行规划工作流，下方将实时显示进度。")
@@ -642,7 +645,7 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             on_complete=_on_presentation_complete,
             success_message="汇报管线已启动并完成当前阶段。",
             awaiting_review_message="汇报工作流已暂停审核。请到「项目工作台」继续审核 Brief / Storyline。",
-            **export_kwargs,
+            export_kwargs=export_kwargs,
         ):
             return
 

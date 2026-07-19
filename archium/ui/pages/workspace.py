@@ -13,25 +13,26 @@ from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_asset_metadata_panel
-from archium.ui.chunk_panel import render_chunk_panel
-from archium.ui.components import render_file_downloads
-from archium.ui.error_handlers import format_user_error
-from archium.ui.fact_ledger_panel import render_fact_ledger_panel
-from archium.ui.rag_preview_panel import render_rag_preview_panel
-from archium.ui.llm_settings import get_ui_effective_settings
-from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
-from archium.ui.review_panel import render_review_panel
 from archium.ui.background_workflow_runner import (
     background_workflows_enabled,
     submit_presentation_workflow,
 )
-from archium.ui.workflow_progress_panel import (
-    render_workflow_progress_panel,
-    set_active_job_id,
-)
+from archium.ui.chunk_panel import render_chunk_panel
+from archium.ui.components import render_file_downloads
+from archium.ui.error_handlers import format_user_error
+from archium.ui.fact_ledger_panel import render_fact_ledger_panel
+from archium.ui.llm_settings import get_ui_effective_settings
+from archium.ui.rag_preview_panel import render_rag_preview_panel
+from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
+from archium.ui.review_panel import render_review_panel
+from archium.ui.visual_service import (
     export_presentation_pptx_from_layout_plans,
     generate_visual_and_export_pptx,
     presentation_has_visual_layout,
+)
+from archium.ui.workflow_progress_panel import (
+    render_workflow_progress_panel,
+    set_active_job_id,
 )
 from archium.ui.workspace_service import (
     backfill_project_asset_vision,
@@ -212,11 +213,13 @@ def _render_documents(project_id: UUID) -> None:
         if st.button("补建图档语义索引", key=f"backfill_vision_{project_id}"):
             try:
                 with get_session() as session:
-                    result = backfill_project_asset_vision(session, project_id, settings=settings)
-                if result.chunks_created:
+                    backfill_result = backfill_project_asset_vision(
+                        session, project_id, settings=settings
+                    )
+                if backfill_result.chunks_created:
                     st.success(
-                        f"已补建 {result.chunks_created} 个图档语义片段"
-                        f"（处理 {result.assets_processed} 个素材）。"
+                        f"已补建 {backfill_result.chunks_created} 个图档语义片段"
+                        f"（处理 {backfill_result.assets_processed} 个素材）。"
                     )
                 else:
                     st.info("没有需要补建的图档素材，或功能已关闭。")

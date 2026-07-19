@@ -15,7 +15,11 @@ from archium.domain.asset import Asset
 from archium.domain.document import SourceDocument
 from archium.domain.enums import AssetType, DocumentType, ProcessingStatus
 from archium.domain.project import Project
-from archium.infrastructure.database.repositories import AssetRepository, DocumentRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    AssetRepository,
+    DocumentRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 from archium.infrastructure.llm.asset_schemas import AssetVisionCaptionDraft
 from sqlalchemy.orm import Session
