@@ -5,19 +5,18 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.domain.visual import (
     CRITIC_HERO_WEAK,
     CRITIC_PAGE_REPETITION,
     CRITIC_READING_ORDER_AWKWARD,
+    LayoutContentType,
     LayoutElement,
     LayoutElementRole,
     LayoutFamily,
     LayoutPlan,
     VisualCriticReport,
 )
-from archium.domain.visual.enums import LayoutContentType
 
 
 def _plan(*elements: LayoutElement, family: LayoutFamily = LayoutFamily.HERO) -> LayoutPlan:

@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from archium.application.visual.asset_reference import AssetReferenceContext
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.domain.enums import AssetType
 from archium.domain.visual import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,
@@ -19,14 +20,16 @@ from archium.domain.visual import (
     LAYOUT_TEXT_OVERFLOW,
     LAYOUT_UNRESOLVED_ASSET_PATH,
     LAYOUT_UNSUPPORTED_IMAGE_FORMAT,
+    CropPolicy,
+    ImageFit,
+    LayoutContentType,
     LayoutElement,
     LayoutElementRole,
     LayoutFamily,
+    LayoutIssueSeverity,
     LayoutPlan,
     default_presentation_design_system,
 )
-from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutContentType, LayoutIssueSeverity
-from archium.domain.enums import AssetType
 
 
 def _base_plan(*elements: LayoutElement, family: LayoutFamily = LayoutFamily.HERO) -> LayoutPlan:

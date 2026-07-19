@@ -359,9 +359,9 @@ class VisualCriticService:
         for index, left in enumerate(ordered):
             for right in ordered[index + 1 :]:
                 pairs += 1
-                if left.y - right.y > 0.35:
-                    inversions += 1
-                elif abs(left.y - right.y) <= 0.15 and left.x - right.x > 0.5:
+                if left.y - right.y > 0.35 or (
+                    abs(left.y - right.y) <= 0.15 and left.x - right.x > 0.5
+                ):
                     inversions += 1
         if pairs == 0:
             return 1.0
