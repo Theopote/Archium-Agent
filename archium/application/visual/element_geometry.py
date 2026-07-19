@@ -36,6 +36,31 @@ def normalize_position(position: str) -> str:
     raise WorkflowError(f"无法识别目标位置：{position}")
 
 
+def _content_safe_rect(layout_plan: LayoutPlan) -> tuple[float, float, float, float]:
+    """Approximate the presentation safe area using standard 16:9 margins."""
+    margin_x = layout_plan.page_width * 0.07
+    margin_y = layout_plan.page_height * 0.08
+    return margin_x, margin_y, layout_plan.page_width - (2 * margin_x), layout_plan.page_height - (2 * margin_y)
+
+
+def _assert_within_safe_area(
+    layout_plan: LayoutPlan,
+    *,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+) -> None:
+    safe_x, safe_y, safe_w, safe_h = _content_safe_rect(layout_plan)
+    if (
+        x < safe_x
+        or y < safe_y
+        or x + width > safe_x + safe_w
+        or y + height > safe_y + safe_h
+    ):
+        raise WorkflowError("移动后元素会超出安全区域，无法执行")
+
+
 def compute_element_placement(
     element: LayoutElement,
     layout_plan: LayoutPlan,
@@ -46,10 +71,10 @@ def compute_element_placement(
 ) -> tuple[float, float, float, float]:
     """Return x, y, width, height for moving an element to a page region."""
     canonical = normalize_position(position)
-    margin = min(layout_plan.page_width, layout_plan.page_height) * 0.05
     width = element.width
     height = element.height
-    edge_margin = max(margin, layout_plan.page_width * 0.08)
+    safe_x, safe_y, safe_w, safe_h = _content_safe_rect(layout_plan)
+    margin = min(layout_plan.page_width, layout_plan.page_height) * 0.05
 
     if canonical == "absolute":
         if absolute_x is None or absolute_y is None:
@@ -57,20 +82,20 @@ def compute_element_placement(
         x = absolute_x
         y = absolute_y
     elif canonical == "right":
-        x = layout_plan.page_width - width - edge_margin
+        x = safe_x + safe_w - width
         y = element.y
     elif canonical == "left":
-        x = margin
+        x = safe_x
         y = element.y
     elif canonical == "top":
         x = element.x
-        y = margin
+        y = safe_y
     elif canonical == "bottom":
         x = element.x
-        y = layout_plan.page_height - height - margin
+        y = safe_y + safe_h - height
     elif canonical == "center":
-        x = (layout_plan.page_width - width) / 2
-        y = (layout_plan.page_height - height) / 2
+        x = safe_x + (safe_w - width) / 2
+        y = safe_y + (safe_h - height) / 2
     else:
         raise WorkflowError(f"Unsupported placement: {canonical}")
 
@@ -81,6 +106,14 @@ def compute_element_placement(
         or y + height > layout_plan.page_height
     ):
         raise WorkflowError("移动后元素会超出页面边界，无法执行")
+
+    _assert_within_safe_area(
+        layout_plan,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+    )
 
     return x, y, width, height
 

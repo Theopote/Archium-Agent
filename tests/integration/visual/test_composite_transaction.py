@@ -6,15 +6,18 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import pytest
+from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.operation_decomposer import OperationDecomposer
 from archium.application.visual.transaction_executor import TransactionExecutor
 from archium.application.visual.visual_edit_service import VisualEditService
 from archium.application.visual.visual_history_service import VisualHistoryService
-from archium.domain.enums import ApprovalStatus, SlideType
+from archium.domain.citation import Citation
+from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
-from archium.domain.slide import SlideSpec
+from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual.defaults import default_presentation_design_system
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import (
     LayoutContentType,
@@ -33,7 +36,11 @@ from archium.infrastructure.database.visual_repositories import (
     LayoutPlanRepository,
     VisualIntentRepository,
 )
+from archium.infrastructure.layout.generators.base import LayoutContentBundle, LayoutGeneratorContext
+from archium.infrastructure.layout.layout_solver import LayoutSolver
 from sqlalchemy.orm import Session
+
+CAPTION_TEXT = "规划说明包含三项核心结论与实施路径"
 
 
 @dataclass(frozen=True)
@@ -41,8 +48,19 @@ class DrawingFocusFixture:
     slide: SlideSpec
     layout_plan: LayoutPlan
     visual_intent: VisualIntent
-    drawing_id: UUID
-    caption_id: UUID
+    design: DesignSystem
+    hero_element_id: str
+    caption_element_id: str
+
+
+def _validate_plan(plan: LayoutPlan, design: DesignSystem) -> None:
+    report = LayoutValidationService().validate(
+        plan,
+        design,
+        require_source=True,
+        drawing_hero=plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+    )
+    assert report.valid, [issue.message for issue in report.issues]
 
 
 def _reload_plan(db_session: Session, slide: SlideSpec) -> LayoutPlan:
@@ -58,10 +76,40 @@ def _reload_slide(db_session: Session, slide_id: UUID) -> SlideSpec:
     return slide
 
 
+def _build_valid_drawing_focus_plan(
+    *,
+    slide: SlideSpec,
+    intent: VisualIntent,
+    design: DesignSystem,
+) -> LayoutPlan:
+    plan = LayoutSolver().generate(
+        LayoutFamily.DRAWING_FOCUS,
+        LayoutGeneratorContext(
+            slide=slide,
+            visual_intent=intent,
+            art_direction=None,
+            design_system=design,
+            content=LayoutContentBundle(
+                title=slide.title,
+                message=CAPTION_TEXT,
+                captions=[CAPTION_TEXT],
+                source_text="来源：测试任务书",
+                hero_asset_ref="assets/site-plan.png",
+            ),
+            variant="full_canvas",
+        ),
+    )
+    return plan.model_copy(
+        update={
+            "slide_id": slide.id,
+            "design_system_id": design.id,
+            "visual_intent_id": intent.id,
+        }
+    )
+
+
 @pytest.fixture
 def drawing_focus_slide(db_session: Session) -> DrawingFocusFixture:
-    drawing_id = uuid4()
-    caption_id = uuid4()
     project = ProjectRepository(db_session).create(Project(name="Composite transaction"))
     presentations = PresentationRepository(db_session)
     presentation = presentations.create_presentation(
@@ -96,8 +144,22 @@ def drawing_focus_slide(db_session: Session) -> DrawingFocusFixture:
             chapter_id="ch1",
             order=0,
             title="图纸焦点页",
-            message="第一行说明\n第二行说明\n第三行说明",
+            message=CAPTION_TEXT,
             slide_type=SlideType.CONTENT,
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PLAN,
+                    description="总平面图",
+                    preferred_asset_ids=[uuid4()],
+                )
+            ],
+            source_citations=[
+                Citation(
+                    document_id=uuid4(),
+                    document_name="任务书.pdf",
+                    page_number=1,
+                )
+            ],
         )
     )
     intent = VisualIntentRepository(db_session).save(
@@ -111,50 +173,31 @@ def drawing_focus_slide(db_session: Session) -> DrawingFocusFixture:
             preferred_layout_families=[LayoutFamily.DRAWING_FOCUS],
         )
     )
-    raw_plan = LayoutPlan(
-        slide_id=slide.id,
-        layout_family=LayoutFamily.DRAWING_FOCUS,
-        layout_variant="default",
-        page_width=10,
-        page_height=5.625,
-        hero_element_id=str(drawing_id),
-        reading_order=[str(drawing_id), str(caption_id)],
-        elements=[
-            LayoutElement(
-                id=str(drawing_id),
-                role=LayoutElementRole.HERO_VISUAL,
-                content_type=LayoutContentType.DRAWING,
-                content_ref="assets/site-plan.png",
-                x=0.7,
-                y=1.0,
-                width=3.5,
-                height=2.5,
-            ),
-            LayoutElement(
-                id=str(caption_id),
-                role=LayoutElementRole.CAPTION,
-                content_type=LayoutContentType.TEXT,
-                text_content="第一行说明\n第二行说明\n第三行说明",
-                x=0.7,
-                y=4.2,
-                width=3.0,
-                height=0.45,
-            ),
-        ],
-        design_system_id=design.id,
-        visual_intent_id=intent.id,
-    )
-    plan = LayoutPlanRepository(db_session).save(raw_plan)
+    plan = _build_valid_drawing_focus_plan(slide=slide, intent=intent, design=design)
+    _validate_plan(plan, design)
+    saved_plan = LayoutPlanRepository(db_session).save(plan)
     slide.visual_intent_id = intent.id
-    slide.layout_plan_id = plan.id
+    slide.layout_plan_id = saved_plan.id
     presentations.save_slide(slide)
     db_session.commit()
+
+    hero = next(
+        element
+        for element in saved_plan.elements
+        if element.role == LayoutElementRole.HERO_VISUAL
+    )
+    caption = next(
+        element
+        for element in saved_plan.elements
+        if element.role == LayoutElementRole.CAPTION
+    )
     return DrawingFocusFixture(
         slide=slide,
-        layout_plan=plan,
+        layout_plan=saved_plan,
         visual_intent=intent,
-        drawing_id=drawing_id,
-        caption_id=caption_id,
+        design=design,
+        hero_element_id=hero.id,
+        caption_element_id=caption.id,
     )
 
 
@@ -167,7 +210,7 @@ def _full_composite_intent() -> ParsedIntent:
             "multi_step_operations": [
                 {"operation": "move_to", "targets": ["说明", "右边"]},
             ],
-            "reduce_lines": 2,
+            "reduce_lines": 1,
             "reduce_text_element": "说明",
         },
         modifiers=[
@@ -187,27 +230,20 @@ def _full_composite_intent() -> ParsedIntent:
     )
 
 
-def test_composite_transaction_commits_in_database(
+def test_fixture_plan_is_valid_under_design_system(
+    drawing_focus_slide: DrawingFocusFixture,
+) -> None:
+    _validate_plan(drawing_focus_slide.layout_plan, drawing_focus_slide.design)
+
+
+def test_composite_transaction_commits_with_design_validation(
     db_session: Session,
     drawing_focus_slide: DrawingFocusFixture,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     service = VisualEditService(db_session)
     baseline = drawing_focus_slide.layout_plan
-    original_builder = service._build_transaction_execution_context
-
-    def _context_without_blocking_validation(slide: object, *, candidate_count: int):
-        context = original_builder(slide, candidate_count=candidate_count)
-        from archium.application.visual.transaction_executor import TransactionExecutionContext
-
-        return TransactionExecutionContext(
-            replan_layout_change=context.replan_layout_change,
-            validate_layout=lambda _plan: None,
-            replan_current_intent=context.replan_current_intent,
-            resolve_asset_ref=context.resolve_asset_ref,
-        )
-
-    monkeypatch.setattr(service, "_build_transaction_execution_context", _context_without_blocking_validation)
+    baseline_caption = baseline.element_by_id(drawing_focus_slide.caption_element_id)
+    assert baseline_caption is not None
 
     result = service._apply_composite_operation(
         drawing_focus_slide.slide.id,
@@ -216,25 +252,31 @@ def test_composite_transaction_commits_in_database(
     )
 
     assert "复合操作" in result.message
+    assert result.validation is not None
+    assert result.validation.valid is True
+
     slide = _reload_slide(db_session, drawing_focus_slide.slide.id)
     plan = _reload_plan(db_session, slide)
-    drawing = plan.element_by_id(str(drawing_focus_slide.drawing_id))
-    caption = plan.element_by_id(str(drawing_focus_slide.caption_id))
+    _validate_plan(plan, drawing_focus_slide.design)
+
+    drawing = plan.element_by_id(drawing_focus_slide.hero_element_id)
+    caption = plan.element_by_id(drawing_focus_slide.caption_element_id)
     assert drawing is not None and caption is not None
     assert drawing.locked is True
-    assert drawing.x == baseline.elements[0].x
-    assert drawing.y == baseline.elements[0].y
-    assert caption.x > baseline.element_by_id(str(drawing_focus_slide.caption_id)).x
-    assert "第三行说明" not in (caption.text_content or "")
+    assert drawing.x == baseline.element_by_id(drawing_focus_slide.hero_element_id).x
+    assert drawing.y == baseline.element_by_id(drawing_focus_slide.hero_element_id).y
+    assert caption.x > baseline_caption.x
+    assert len(caption.text_content or "") < len(baseline_caption.text_content or "")
 
 
-def test_composite_transaction_rolls_back_on_failure(
+def test_composite_transaction_rolls_back_on_failure_with_design_validation(
     db_session: Session,
     drawing_focus_slide: DrawingFocusFixture,
 ) -> None:
     fixture = drawing_focus_slide
     slide = _reload_slide(db_session, fixture.slide.id)
     baseline = _reload_plan(db_session, slide)
+    _validate_plan(baseline, fixture.design)
     service = VisualEditService(db_session)
 
     decomposer = OperationDecomposer()
@@ -247,14 +289,6 @@ def test_composite_transaction_rolls_back_on_failure(
     operations = decomposer.decompose(_full_composite_intent(), snapshot)
     failing_ops = operations + [ReduceTextOperation(uuid4(), reduce_lines=1)]
     execution_context = service._build_transaction_execution_context(slide, candidate_count=1)
-    from archium.application.visual.transaction_executor import TransactionExecutionContext
-
-    execution_context = TransactionExecutionContext(
-        replan_layout_change=execution_context.replan_layout_change,
-        validate_layout=lambda _plan: None,
-        replan_current_intent=execution_context.replan_current_intent,
-        resolve_asset_ref=execution_context.resolve_asset_ref,
-    )
     executor = TransactionExecutor(db_session, VisualHistoryService(db_session))
     tx_result = executor.execute_transaction(
         operations=failing_ops,
@@ -268,9 +302,10 @@ def test_composite_transaction_rolls_back_on_failure(
 
     assert tx_result.success is False
     restored = _reload_plan(db_session, slide)
-    drawing = restored.element_by_id(str(fixture.drawing_id))
-    caption = restored.element_by_id(str(fixture.caption_id))
-    baseline_caption = baseline.element_by_id(str(fixture.caption_id))
+    _validate_plan(restored, fixture.design)
+    drawing = restored.element_by_id(fixture.hero_element_id)
+    caption = restored.element_by_id(fixture.caption_element_id)
+    baseline_caption = baseline.element_by_id(fixture.caption_element_id)
     assert drawing is not None and caption is not None and baseline_caption is not None
     assert drawing.locked is False
     assert caption.x == baseline_caption.x

@@ -7,6 +7,10 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+
+def _element_id(value: str | UUID) -> str:
+    return str(value)
+
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
 
@@ -41,7 +45,7 @@ class AtomicOperation:
     """
 
     operation_type: OperationType
-    target_element_id: UUID | None
+    target_element_id: str | None
     params: dict[str, Any]
 
     @property
@@ -83,9 +87,9 @@ class AtomicOperation:
 class LockOperation(AtomicOperation):
     """Lock an element to prevent modifications."""
 
-    def __init__(self, element_id: UUID):
+    def __init__(self, element_id: str | UUID):
         object.__setattr__(self, "operation_type", OperationType.LOCK)
-        object.__setattr__(self, "target_element_id", element_id)
+        object.__setattr__(self, "target_element_id", _element_id(element_id))
         object.__setattr__(self, "params", {})
 
 
@@ -93,9 +97,9 @@ class LockOperation(AtomicOperation):
 class UnlockOperation(AtomicOperation):
     """Unlock an element to allow modifications."""
 
-    def __init__(self, element_id: UUID):
+    def __init__(self, element_id: str | UUID):
         object.__setattr__(self, "operation_type", OperationType.UNLOCK)
-        object.__setattr__(self, "target_element_id", element_id)
+        object.__setattr__(self, "target_element_id", _element_id(element_id))
         object.__setattr__(self, "params", {})
 
 
@@ -103,9 +107,9 @@ class UnlockOperation(AtomicOperation):
 class MoveOperation(AtomicOperation):
     """Move an element to a new position."""
 
-    def __init__(self, element_id: UUID, position: str, preserve_size: bool = True):
+    def __init__(self, element_id: str | UUID, position: str, preserve_size: bool = True):
         object.__setattr__(self, "operation_type", OperationType.MOVE)
-        object.__setattr__(self, "target_element_id", element_id)
+        object.__setattr__(self, "target_element_id", _element_id(element_id))
         object.__setattr__(self, "params", {
             "position": position,
             "preserve_size": preserve_size,
@@ -116,13 +120,13 @@ class MoveOperation(AtomicOperation):
 class SwapOperation(AtomicOperation):
     """Swap the positions of two elements in one atomic layout update."""
 
-    def __init__(self, first_element_id: UUID, second_element_id: UUID):
+    def __init__(self, first_element_id: str | UUID, second_element_id: str | UUID):
         object.__setattr__(self, "operation_type", OperationType.SWAP)
-        object.__setattr__(self, "target_element_id", first_element_id)
+        object.__setattr__(self, "target_element_id", _element_id(first_element_id))
         object.__setattr__(
             self,
             "params",
-            {"second_element_id": str(second_element_id)},
+            {"second_element_id": _element_id(second_element_id)},
         )
 
 
@@ -130,9 +134,9 @@ class SwapOperation(AtomicOperation):
 class ResizeOperation(AtomicOperation):
     """Resize an element."""
 
-    def __init__(self, element_id: UUID, scale_factor: float):
+    def __init__(self, element_id: str | UUID, scale_factor: float):
         object.__setattr__(self, "operation_type", OperationType.RESIZE)
-        object.__setattr__(self, "target_element_id", element_id)
+        object.__setattr__(self, "target_element_id", _element_id(element_id))
         object.__setattr__(self, "params", {"scale_factor": scale_factor})
 
 
@@ -150,9 +154,13 @@ class ChangeLayoutOperation(AtomicOperation):
 class ReduceTextOperation(AtomicOperation):
     """Reduce text content in an element."""
 
-    def __init__(self, element_id: UUID | None, reduce_lines: int | None = None):
+    def __init__(self, element_id: str | UUID | None, reduce_lines: int | None = None):
         object.__setattr__(self, "operation_type", OperationType.REDUCE_TEXT)
-        object.__setattr__(self, "target_element_id", element_id)
+        object.__setattr__(
+            self,
+            "target_element_id",
+            _element_id(element_id) if element_id is not None else None,
+        )
         params = {}
         if reduce_lines is not None:
             params["reduce_lines"] = reduce_lines

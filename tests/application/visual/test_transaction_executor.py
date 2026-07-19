@@ -148,8 +148,8 @@ def test_move_element_to_right() -> None:
         slide_id=uuid4(),
         layout_family=LayoutFamily.DRAWING_FOCUS,
         layout_variant="default",
-        page_width=720,
-        page_height=540,
+        page_width=10,
+        page_height=5.625,
         design_system_id=uuid4(),
         visual_intent_id=uuid4(),
         elements=[
@@ -157,10 +157,10 @@ def test_move_element_to_right() -> None:
                 id=caption_id,
                 role=LayoutElementRole.CAPTION,
                 content_type=LayoutContentType.TEXT,
-                x=100,
-                y=450,
-                width=200,
-                height=80,
+                x=0.7,
+                y=4.2,
+                width=3.0,
+                height=0.45,
                 text_content="说明文字",
             )
         ],
@@ -177,7 +177,7 @@ def test_move_element_to_right() -> None:
         presentations_repo=_FakePresentationsRepo(slide),
     )
     assert result.success is True
-    assert repo.plan.elements[0].x > 100
+    assert repo.plan.elements[0].x > 0.7
 
 
 def test_reduce_text_missing_target_raises() -> None:
