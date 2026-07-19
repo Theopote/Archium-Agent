@@ -6,8 +6,8 @@ import os
 
 import pytest
 from archium.domain.visual.benchmark import (
-    ArchitecturalSlideCategory,
     HUMAN_REVIEW_PASS_THRESHOLD,
+    ArchitecturalSlideCategory,
     HumanVisualReview,
 )
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutElementRole, LayoutFamily
@@ -26,6 +26,10 @@ from tests.benchmark.architectural_slides.case_catalog import CASE_CATALOG
 from tests.benchmark.architectural_slides.case_registry import (
     BENCHMARK_CASE_IDS,
     get_case_definition,
+)
+from tests.benchmark.architectural_slides.summary_validator import (
+    BENCHMARK_RULE_PASS_RATE_THRESHOLD,
+    assert_committed_benchmark_reports_valid,
 )
 
 pytestmark = pytest.mark.architectural_benchmark
@@ -68,9 +72,14 @@ def test_architectural_benchmark_case(case_id: str) -> None:
     assert_or_update_case_baseline(result)
 
 
-def test_benchmark_rule_pass_rate_meets_eighty_percent() -> None:
-    passed = sum(1 for case_id in BENCHMARK_CASE_IDS if build_benchmark_case(case_id).rule_score.passed)
-    assert passed / len(BENCHMARK_CASE_IDS) >= 0.8
+def test_benchmark_rule_pass_rate_meets_threshold() -> None:
+    passed = sum(
+        1 for case_id in BENCHMARK_CASE_IDS if build_benchmark_case(case_id).rule_score.passed
+    )
+    rate = passed / len(BENCHMARK_CASE_IDS)
+    assert rate + 1e-9 >= BENCHMARK_RULE_PASS_RATE_THRESHOLD, (
+        f"layout rule pass rate {rate:.3f} below {BENCHMARK_RULE_PASS_RATE_THRESHOLD}"
+    )
 
 
 _CATEGORY_MINIMUMS: dict[ArchitecturalSlideCategory, int] = {
@@ -92,30 +101,35 @@ def test_benchmark_category_minimums() -> None:
         )
 
 
-def test_benchmark_human_review_meets_threshold() -> None:
+def test_benchmark_human_review_scaffold_not_marked_accepted() -> None:
     strict = os.environ.get(STRICT_HUMAN_REVIEW_ENV) == "1"
-    scores: list[float] = []
     for case_id in BENCHMARK_CASE_IDS:
         path = case_dir(case_id) / "human_review.json"
         review = HumanVisualReview.model_validate_json(path.read_text(encoding="utf-8"))
-        assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD), (
-            f"{case_id} human review below {HUMAN_REVIEW_PASS_THRESHOLD}: "
-            f"{review.weighted_score()}"
-        )
-        assert review.accepted, f"{case_id} human review not accepted"
-        if strict:
-            assert not human_review_is_placeholder(review), (
-                f"{case_id} still uses placeholder human review; "
-                f"regenerate with {UPDATE_ENV}=1"
+        if human_review_is_placeholder(review):
+            assert not review.accepted, (
+                f"{case_id} scaffold human review must not set accepted=true "
+                f"(source={review.source.value})"
             )
-        scores.append(review.weighted_score())
-    assert sum(scores) / len(scores) >= HUMAN_REVIEW_PASS_THRESHOLD
+            if strict:
+                pytest.fail(
+                    f"{case_id} still uses placeholder human review; "
+                    "replace with manual review before quality acceptance"
+                )
+            continue
+        assert review.is_manual_review(), f"{case_id} human review must be manual"
+        assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD)
+        assert review.accepted, f"{case_id} manual human review not accepted"
+
+
+def test_benchmark_summary_report_is_current_and_consistent() -> None:
+    assert_committed_benchmark_reports_valid()
 
 
 def test_default_human_review_template_passes_threshold() -> None:
     review = default_human_review("case_001_site_plan")
     assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD)
-    assert review.accepted
+    assert not review.accepted
     assert human_review_is_placeholder(review)
 
 

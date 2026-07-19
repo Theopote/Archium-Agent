@@ -36,16 +36,24 @@ def build_benchmark_summary(*, update: bool = False) -> dict[str, Any]:
                 "layout_score": summary.layout_score,
                 "has_critical": summary.has_critical,
                 "human_weighted_score": human.weighted_score() if human else None,
+                "human_review_source": human.source.value if human else None,
+                "human_accepted_for_delivery": (
+                    bool(human.accepted and human.is_manual_review()) if human else False
+                ),
                 "human_accepted": human.accepted if human else None,
                 "major_problems": human.major_problems if human else [],
             }
         )
     passed_count = sum(1 for item in cases if item["rule_passed"])
+    manual_accepted_count = sum(
+        1 for item in cases if item["human_accepted_for_delivery"]
+    )
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "case_count": len(cases),
         "rule_passed_count": passed_count,
         "rule_pass_rate": round(passed_count / len(cases), 3) if cases else 0.0,
+        "manual_human_accepted_count": manual_accepted_count,
         "cases": cases,
     }
 
@@ -74,6 +82,8 @@ def _render_html(summary: dict[str, Any]) -> str:
             f"<td>{'通过' if item['rule_passed'] else '未通过'}</td>"
             f"<td>{item['layout_score']}</td>"
             f"<td>{item['human_weighted_score'] if item['human_weighted_score'] is not None else '—'}</td>"
+            f"<td>{escape(str(item.get('human_review_source') or '—'))}</td>"
+            f"<td>{'是' if item.get('human_accepted_for_delivery') else '否'}</td>"
             f"<td>{', '.join(escape(p) for p in item['major_problems']) or '—'}</td>"
             "</tr>"
         )
@@ -89,7 +99,7 @@ def _render_html(summary: dict[str, Any]) -> str:
         f"({summary['rule_pass_rate']:.1%})</p>"
         "<table><thead><tr>"
         "<th>Case</th><th>标题</th><th>页面类型</th><th>LayoutFamily</th>"
-        "<th>预览</th><th>规则</th><th>规则分</th><th>人工分</th><th>主要问题</th>"
+        "<th>预览</th><th>规则</th><th>规则分</th><th>人工分</th><th>评审来源</th><th>可交付</th><th>主要问题</th>"
         "</tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table></body></html>"

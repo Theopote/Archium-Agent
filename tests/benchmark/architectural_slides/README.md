@@ -52,18 +52,41 @@ pytest tests/benchmark/architectural_slides -v -m architectural_benchmark
 ## 更新基线
 
 ```bash
-UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1 pytest tests/benchmark/architectural_slides -v
 python scripts/update_architectural_benchmark_baselines.py
+```
+
+该脚本会：
+
+1. 更新各 case 的 layout / validation / preview 等 artifact
+2. **自动重新生成** `reports/benchmark-summary.json` 与 `benchmark-report.html`
+3. **不会覆盖** 已有 `human_review.json`（缺失时写入占位模板）
+
+也可使用 pytest 更新：
+
+```bash
+UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1 pytest tests/benchmark/architectural_slides -v
 ```
 
 ## 报告
 
 ```bash
-python scripts/render_architectural_benchmark.py
 python scripts/build_architectural_benchmark_report.py
 ```
 
 输出：`tests/benchmark/architectural_slides/reports/benchmark-report.html` 与 `benchmark-summary.json`
+
+### CI 质量门禁（P0）
+
+`test_benchmark_summary_report_is_current_and_consistent` 会检查：
+
+- `benchmark-summary.json` / `benchmark-report.html` 存在
+- summary 生成时间不早于各 case artifact
+- `case_count` 与 30 个 case 目录一致
+- 每个 case 的 `rule_passed` / `layout_score` 与 live build 及 summary 一致
+- `rule_pass_rate >= 1.0`（正式 layout 规则门槛）
+- **占位/派生人工评审不得 `accepted=true`**（仅 `source=manual` 可标记可交付）
+
+当前状态：**30 页数量 + layout 规则质量已通过；人工视觉质量验收未通过**（`manual_human_accepted_count=0`，待真实 `human_review.json`）。
 
 ## 人工评分
 

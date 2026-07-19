@@ -22,6 +22,7 @@ from tests.golden.visual.composition.artifacts import (
 UPDATE_ENV = "UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES"
 STRICT_HUMAN_REVIEW_ENV = "STRICT_BENCHMARK_HUMAN_REVIEW"
 BENCHMARK_ROOT = Path(__file__).resolve().parent
+BENCHMARK_REPORTS_DIR = BENCHMARK_ROOT / "reports"
 
 
 def case_dir(case_id: str) -> Path:
@@ -111,7 +112,6 @@ def default_human_review(case_id: str) -> HumanVisualReview:
     if review.passes_threshold():
         return review.model_copy(
             update={
-                "accepted": True,
                 "reviewer_notes": "规则层已通过；占位人工评分满足 3.5 门槛，待真实评审替换。",
             }
         )
@@ -221,6 +221,7 @@ def assert_or_update_case_baseline(result: BenchmarkCaseResult) -> None:
         "validation_report.json",
         "score_baseline.json",
         "deck_qa_report.json",
+        "layout_qa_review.json",
         "human_review.json",
         "notes.md",
         "preview.png",

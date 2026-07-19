@@ -61,6 +61,9 @@ jobs:
       - name: Pytest
         run: pytest -m "not smoke" --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
 
+      - name: Architectural slide benchmark quality gate
+        run: pytest tests/benchmark/architectural_slides -v -m architectural_benchmark
+
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
