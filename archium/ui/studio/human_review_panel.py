@@ -17,6 +17,7 @@ from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_PASS_THRESHOLD,
     HumanVisualReview,
 )
+from archium.infrastructure.database.session import get_session
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.visual_service import SlideVisualSnapshot
 
@@ -49,21 +50,25 @@ def get_stored_human_review(
                 return HumanVisualReview.model_validate(payload)
             except Exception:
                 pass
-    return load_slide_review(
-        presentation_id,
-        slide_id,
-        settings=get_ui_effective_settings(),
-    )
+    with get_session() as session:
+        return load_slide_review(
+            session,
+            presentation_id,
+            slide_id,
+            settings=get_ui_effective_settings(),
+        )
 
 
 def store_human_review(review: HumanVisualReview, *, presentation_id: UUID, slide_id: UUID) -> Path:
     settings = get_ui_effective_settings()
-    path = save_slide_review(
-        presentation_id,
-        slide_id,
-        review,
-        settings=settings,
-    )
+    with get_session() as session:
+        path = save_slide_review(
+            session,
+            presentation_id,
+            slide_id,
+            review,
+            settings=settings,
+        )
     key = _reviews_key(presentation_id)
     store = dict(st.session_state.get(key) or {})
     store[str(slide_id)] = review.model_dump(mode="json")

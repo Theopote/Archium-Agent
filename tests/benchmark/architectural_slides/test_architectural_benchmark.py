@@ -15,6 +15,8 @@ from tests.benchmark.architectural_slides.artifacts import (
     assert_or_update_case_baseline,
     case_dir,
     default_human_review,
+    derive_benchmark_human_review,
+    human_review_is_placeholder,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
 from tests.benchmark.architectural_slides.case_catalog import CASE_CATALOG
@@ -105,6 +107,17 @@ def test_default_human_review_template_passes_threshold() -> None:
     review = default_human_review("case_001_site_plan")
     assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD)
     assert review.accepted
+    assert human_review_is_placeholder(review)
+
+
+def test_derived_benchmark_human_review_is_not_placeholder() -> None:
+    review = derive_benchmark_human_review(
+        "case_001_site_plan",
+        layout_score=0.92,
+        layout_valid=True,
+    )
+    assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD)
+    assert not human_review_is_placeholder(review)
 
 
 def test_case_001_drawing_hero_constraints() -> None:

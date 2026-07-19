@@ -55,6 +55,30 @@ class VisualHistoryService:
             if revision.snapshot.get("kind") == VISUAL_STATE_SNAPSHOT_KIND
         ]
 
+    def restore_at_revision(
+        self,
+        slide_id: UUID,
+        revision_id: UUID,
+        *,
+        intents: object,
+        plans: object,
+        presentations: object,
+    ) -> tuple[VisualIntent | None, LayoutPlan | None]:
+        revision = self._revisions.get_revision(revision_id)
+        if revision is None:
+            raise ValueError(f"Revision {revision_id} not found")
+        snapshot = revision.snapshot
+        if snapshot.get("kind") != VISUAL_STATE_SNAPSHOT_KIND:
+            raise ValueError("Revision is not a slide visual state snapshot")
+        if str(snapshot.get("slide_id")) != str(slide_id):
+            raise ValueError("Revision does not belong to the requested slide")
+        return self.restore_revision(
+            revision,
+            intents=intents,
+            plans=plans,
+            presentations=presentations,
+        )
+
     def latest_restorable_revision(
         self,
         slide: SlideSpec,

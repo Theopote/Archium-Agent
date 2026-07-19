@@ -4,6 +4,30 @@ from __future__ import annotations
 
 from typing import Any
 
+from archium.domain.visual.benchmark import HumanVisualReview
+
+
+def derive_acceptance_human_metrics_from_reviews(
+    reviews: list[HumanVisualReview],
+    *,
+    slide_count: int,
+    fallback: dict[str, float],
+) -> dict[str, float]:
+    """Prefer stored Studio human reviews when available."""
+    if not reviews or slide_count <= 0:
+        return fallback
+    scores = [review.weighted_score() for review in reviews]
+    accepted = sum(1 for review in reviews if review.accepted)
+    major_pages = sum(1 for review in reviews if review.major_problems)
+    minor_pages = sum(1 for review in reviews if review.minor_problems and not review.major_problems)
+    return {
+        "major_edit_page_ratio": round(min(1.0, major_pages / slide_count), 3),
+        "minor_edit_page_ratio": round(min(1.0, minor_pages / slide_count), 3),
+        "exported_page_ratio": round(min(1.0, accepted / slide_count), 3),
+        "average_human_visual_score": round(sum(scores) / len(scores), 2),
+        "user_edit_minutes": fallback.get("user_edit_minutes", 0.0),
+    }
+
 
 def derive_acceptance_human_metrics(
     *,

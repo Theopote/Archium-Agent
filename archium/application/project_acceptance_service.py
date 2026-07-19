@@ -10,7 +10,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.project_acceptance_metrics import derive_acceptance_human_metrics
+from archium.application.project_acceptance_metrics import (
+    derive_acceptance_human_metrics,
+    derive_acceptance_human_metrics_from_reviews,
+)
+from archium.application.studio_human_review_store import load_presentation_reviews
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.visual.visual_workflow_service import VisualWorkflowService
 from archium.config.settings import Settings
@@ -132,6 +136,21 @@ class ProjectAcceptanceService:
             validation_reports=validation_reports,
             first_generation_seconds=elapsed,
         )
+        stored_reviews = load_presentation_reviews(
+            self._session,
+            presentation.id,
+            settings=self._settings,
+        )
+        review_values = list(stored_reviews.values())
+        if review_values:
+            derived = derive_acceptance_human_metrics_from_reviews(
+                review_values,
+                slide_count=len(slides),
+                fallback=derived,
+            )
+            notes_suffix = "human metrics from Studio reviews"
+        else:
+            notes_suffix = "human metrics derived from layout validation (rehearsal baseline)"
         metrics = RealProjectAcceptanceMetrics(
             first_generation_seconds=elapsed,
             generation_succeeded=content_ok and visual_ok,
@@ -152,7 +171,7 @@ class ProjectAcceptanceService:
         notes = (
             f"slides>={min_slides}: {metrics.slide_count >= min_slides}; "
             f"assets>={min_assets}: {metrics.asset_count >= min_assets}; "
-            "human metrics derived from layout validation (rehearsal baseline)"
+            f"{notes_suffix}"
         )
         return RealProjectAcceptanceRecord(
             project_id=manifest.project_id,

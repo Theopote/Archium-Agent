@@ -191,6 +191,18 @@ class SlideHistoryService:
             return None
         return self.diff_revisions(previous.id, revision.id)
 
+    def restore_at_revision(self, revision_id: UUID) -> SlideSpec:
+        revision = self._require_revision(revision_id)
+        if revision.entity_type != RevisionEntityType.SLIDE:
+            raise WorkflowError("所选修订不是页面内容版本。")
+        slide = self._get_slide(revision.entity_id) if revision.entity_id else None
+        if slide is None:
+            raise WorkflowError("无法定位要恢复的页面。")
+        restored = snapshot_to_slide(revision.snapshot, slide)
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        return PresentationRepository(self._session).save_slide(restored)
+
     def find_restorable_revision(self, slide: SlideSpec) -> EntityRevision | None:
         """Return the revision snapshot to restore for multi-step content undo."""
         revisions = [

@@ -7,6 +7,10 @@ import streamlit as st
 from archium.infrastructure.database.session import get_session
 from archium.ui.label_map import STATUS_LABELS, entity_label
 from archium.ui.studio.deck_repair_panel import render_deck_repair_panel
+from archium.ui.studio.revision_restore_panel import (
+    render_content_revision_panel,
+    render_visual_revision_panel,
+)
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.studio_service import (
     StudioPresentationContext,
@@ -54,7 +58,9 @@ def render_history_panel(
     if slide_snapshot is not None:
         with get_session() as session:
             revision_count = count_visual_revisions(session, slide_snapshot.slide.id)
-        st.caption(f"当前页视觉修订：{revision_count} 条（AI 编辑可多次撤销；内容适配见右侧面板）")
+        st.caption(f"当前页视觉修订：{revision_count} 条（可逐步撤销或恢复到任意版本）")
+        render_visual_revision_panel(slide_snapshot=slide_snapshot)
+        render_content_revision_panel(slide_snapshot=slide_snapshot)
 
     with st.expander("页面内容修订历史", expanded=False):
         slides = [item.slide for item in context.snapshot.slides]

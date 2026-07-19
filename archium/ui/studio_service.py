@@ -403,6 +403,43 @@ def apply_deck_repair_suggestion(session: Session, suggestion: DeckRepairSuggest
     )
 
 
+def restore_slide_visual_at_revision(
+    session: Session,
+    slide_id: UUID,
+    revision_id: UUID,
+) -> object:
+    from archium.application.visual.visual_edit_service import VisualEditService
+
+    service = VisualEditService(session, settings=_resolve_runtime_settings(None))
+    return service.restore_at_revision(slide_id, revision_id)
+
+
+def restore_slide_content_at_revision(
+    session: Session,
+    slide_id: UUID,
+    revision_id: UUID,
+) -> object:
+    from archium.application.content_adaptation_service import ContentAdaptationService
+
+    return ContentAdaptationService(session).restore_at_revision(slide_id, revision_id)
+
+
+def list_slide_visual_revisions(session: Session, slide_id: UUID) -> list[object]:
+    from archium.application.visual.visual_history_service import VisualHistoryService
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    slide = PresentationRepository(session).get_slide(slide_id)
+    if slide is None:
+        return []
+    return VisualHistoryService(session).list_slide_visual_revisions(slide)
+
+
+def list_slide_content_revisions(session: Session, slide_id: UUID) -> list[object]:
+    from archium.application.content_adaptation_service import ContentAdaptationService
+
+    return ContentAdaptationService(session).list_content_revisions(slide_id)
+
+
 def count_visual_revisions(session: Session, slide_id: UUID) -> int:
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.infrastructure.database.repositories import PresentationRepository

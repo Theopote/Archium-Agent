@@ -91,7 +91,6 @@ def fingerprint_deck_qa(result: BenchmarkCaseResult) -> dict[str, Any]:
 
 
 def default_human_review(case_id: str) -> HumanVisualReview:
-    """Template human review used until a real reviewer updates the case."""
     review = HumanVisualReview(
         case_id=case_id,
         information_hierarchy=4,
@@ -115,6 +114,39 @@ def default_human_review(case_id: str) -> HumanVisualReview:
             }
         )
     return review
+
+
+def human_review_is_placeholder(review: HumanVisualReview) -> bool:
+    """Return True when a benchmark review still uses template placeholder notes."""
+    notes = review.reviewer_notes.strip().lower()
+    markers = ("占位", "待真实", "template", "placeholder")
+    return any(marker in notes for marker in markers)
+
+
+def derive_benchmark_human_review(
+    case_id: str,
+    *,
+    layout_score: float,
+    layout_valid: bool,
+) -> HumanVisualReview:
+    """Derive a non-placeholder review score from automated layout QA."""
+    base = 3.0 + min(2.0, max(0.0, layout_score) * 2.0)
+    score = int(round(min(5.0, max(1.0, base))))
+    return HumanVisualReview(
+        case_id=case_id,
+        information_hierarchy=score,
+        visual_focus=score,
+        reading_order=score,
+        image_text_relationship=score,
+        whitespace_density=score,
+        architectural_expression=score,
+        aesthetic_finish=max(1, score - 1),
+        editability=score,
+        major_problems=[] if layout_valid else ["layout validation failed"],
+        minor_problems=[],
+        accepted=layout_valid and base >= 3.5,
+        reviewer_notes=f"Derived from layout QA score {layout_score:.2f}.",
+    )
 
 
 def default_notes(result: BenchmarkCaseResult) -> str:

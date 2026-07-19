@@ -144,6 +144,45 @@ class VisualEditService:
         self._invalidate_preview_cache(slide.presentation_id, replanned.layout_plan)
         return replanned
 
+    def restore_at_revision(self, slide_id: UUID, revision_id: UUID) -> VisualEditResult:
+        slide = self._require_slide(slide_id)
+        current_intent = self._load_intent(slide)
+        current_plan = self._load_plan(slide)
+        self._history.record_state(
+            slide=slide,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+            change_source=RevisionSource.MANUAL_EDIT,
+            note="before_restore_at_revision",
+        )
+        intent, plan = self._history.restore_at_revision(
+            slide_id,
+            revision_id,
+            intents=self._intents,
+            plans=self._plans,
+            presentations=self._presentations,
+        )
+        validation = None
+        design = self._resolve_design_system(slide, intent)
+        if plan is not None and design is not None:
+            validation = LayoutValidationService().validate(
+                plan,
+                design,
+                require_source=True,
+                drawing_hero=plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+            )
+        if plan is not None:
+            self._invalidate_preview_cache(slide.presentation_id, plan)
+        return VisualEditResult(
+            slide_id=slide.id,
+            intent=VisualEditIntent.RESTORE_PREVIOUS,
+            visual_intent=intent,
+            layout_plan=plan,
+            validation=validation,
+            restored=True,
+            message="已恢复到所选视觉版本。",
+        )
+
     def restore_previous(self, slide_id: UUID) -> VisualEditResult:
         slide = self._require_slide(slide_id)
         current_intent = self._load_intent(slide)

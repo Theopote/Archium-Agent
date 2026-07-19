@@ -1,4 +1,4 @@
-"""Persist Presentation Studio human visual reviews to JSON files."""
+"""Persist Presentation Studio human visual reviews to DB and JSON."""
 
 from __future__ import annotations
 
@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 from uuid import UUID
 
+from sqlalchemy.orm import Session
+
+from archium.application.human_visual_review_service import HumanVisualReviewService
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.benchmark import HumanVisualReview
 
@@ -15,7 +18,7 @@ def _reviews_path(presentation_id: UUID, *, settings: Settings | None = None) ->
     return resolved.output_path / "studio-reviews" / f"{presentation_id}.json"
 
 
-def load_presentation_reviews(
+def _load_json_reviews(
     presentation_id: UUID,
     *,
     settings: Settings | None = None,
@@ -39,28 +42,62 @@ def load_presentation_reviews(
     return reviews
 
 
+def _write_json_reviews(
+    presentation_id: UUID,
+    store: dict[str, HumanVisualReview],
+    *,
+    settings: Settings | None = None,
+) -> Path:
+    path = _reviews_path(presentation_id, settings=settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        key: value.model_dump(mode="json")
+        for key, value in store.items()
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
+def load_presentation_reviews(
+    session: Session | None,
+    presentation_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> dict[str, HumanVisualReview]:
+    if session is not None:
+        db_reviews = HumanVisualReviewService(session).load_for_presentation(presentation_id)
+        if db_reviews:
+            return {review.case_id: review for review in db_reviews}
+    return _load_json_reviews(presentation_id, settings=settings)
+
+
 def load_slide_review(
+    session: Session | None,
     presentation_id: UUID,
     slide_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> HumanVisualReview | None:
-    return load_presentation_reviews(presentation_id, settings=settings).get(str(slide_id))
+    if session is not None:
+        review = HumanVisualReviewService(session).load_for_slide(presentation_id, slide_id)
+        if review is not None:
+            return review
+    return _load_json_reviews(presentation_id, settings=settings).get(str(slide_id))
 
 
 def save_slide_review(
+    session: Session,
     presentation_id: UUID,
     slide_id: UUID,
     review: HumanVisualReview,
     *,
     settings: Settings | None = None,
 ) -> Path:
-    path = _reviews_path(presentation_id, settings=settings)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    store = {
-        str(key): value.model_dump(mode="json")
-        for key, value in load_presentation_reviews(presentation_id, settings=settings).items()
-    }
-    store[str(slide_id)] = review.model_dump(mode="json")
-    path.write_text(json.dumps(store, ensure_ascii=False, indent=2), encoding="utf-8")
-    return path
+    HumanVisualReviewService(session).save(
+        presentation_id=presentation_id,
+        slide_id=slide_id,
+        review=review,
+    )
+    store = _load_json_reviews(presentation_id, settings=settings)
+    store[str(slide_id)] = review
+    return _write_json_reviews(presentation_id, store, settings=settings)

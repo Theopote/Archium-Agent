@@ -23,7 +23,8 @@ from archium.domain.content_adaptation import (
     ContentAdaptationSuggestion,
     suggest_content_adaptations,
 )
-from archium.domain.enums import RevisionSource, SlideStatus, SlideType
+from archium.domain.enums import RevisionEntityType, RevisionSource, SlideStatus, SlideType
+from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_split import SlideSplitPlan
 from archium.domain.visual.edit_intent import VisualEditIntent
@@ -99,6 +100,36 @@ class ContentAdaptationService:
             result = self._replan_affected_slides(result)
 
         return result
+
+    def restore_at_revision(
+        self,
+        slide_id: UUID,
+        revision_id: UUID,
+        *,
+        replan_visual: bool = True,
+    ) -> ContentAdaptationResult:
+        restored = self._history.restore_at_revision(revision_id)
+        if restored.id != slide_id:
+            raise WorkflowError("修订版本与当前页面不匹配。")
+        result = ContentAdaptationResult(
+            slide=restored,
+            action=ContentAdaptationAction.SHORTEN,
+            message="已恢复到所选内容版本。",
+        )
+        if replan_visual:
+            result = self._replan_affected_slides(result)
+        return result
+
+    def list_content_revisions(self, slide_id: UUID) -> list[EntityRevision]:
+        slide = self._presentations.get_slide(slide_id)
+        if slide is None:
+            return []
+        return [
+            revision
+            for revision in self._history.list_revisions(slide_id)
+            if revision.entity_type == RevisionEntityType.SLIDE
+            and (revision.note or "").startswith("content:")
+        ]
 
     def restore_previous(
         self,
