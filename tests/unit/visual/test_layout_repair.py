@@ -444,7 +444,7 @@ class TestLayoutRepairService:
                 height=1.0,
                 fit_mode=ImageFit.CONTAIN,
                 crop_policy=CropPolicy.FORBIDDEN,
-                locked=True,
+                locked=False,
             ),
             family=LayoutFamily.DRAWING_FOCUS,
         )
@@ -459,6 +459,42 @@ class TestLayoutRepairService:
         assert not LayoutValidationService().validate(
             repaired, design, drawing_hero=True
         ).issues_for(LAYOUT_HERO_NOT_DOMINANT)
+
+    def test_locked_hero_skips_enlarge_repair(self) -> None:
+        design = default_presentation_design_system()
+        plan = _plan(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="标题",
+                x=0.7,
+                y=0.45,
+                width=8,
+                height=0.5,
+                style_token="title",
+            ),
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                x=0.7,
+                y=1.2,
+                width=2.0,
+                height=1.0,
+                fit_mode=ImageFit.CONTAIN,
+                crop_policy=CropPolicy.FORBIDDEN,
+                locked=True,
+            ),
+            family=LayoutFamily.DRAWING_FOCUS,
+        )
+        report = LayoutValidationService().validate(plan, design, drawing_hero=True)
+        before = plan.element_by_id("hero")
+        assert before is not None
+        repaired = LayoutRepairService().repair(plan, report, design).plan
+        hero = repaired.element_by_id("hero")
+        assert hero is not None
+        assert hero.area == before.area
 
     def test_repairs_inconsistent_alignment(self) -> None:
         design = default_presentation_design_system()
@@ -595,7 +631,7 @@ class TestLayoutRepairContracts:
                 height=1.0,
                 fit_mode=ImageFit.CONTAIN,
                 crop_policy=CropPolicy.FORBIDDEN,
-                locked=True,
+                locked=False,
             ),
             LayoutElement(
                 id="body",

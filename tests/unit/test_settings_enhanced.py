@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
-
 from archium.config.settings import Settings
+from pydantic import ValidationError
 
 
 def test_settings_defaults() -> None:

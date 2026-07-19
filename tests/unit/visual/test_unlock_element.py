@@ -5,13 +5,13 @@ from __future__ import annotations
 from uuid import uuid4
 
 from archium.application.visual.visual_edit_service import VisualEditService
-from archium.domain.enums import RevisionSource, SlideType
+from archium.domain.enums import SlideType
+from archium.domain.presentation import Presentation
+from archium.domain.project import Project
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
-from archium.domain.presentation import Presentation
-from archium.domain.project import Project
 from sqlalchemy.orm import Session
 
 

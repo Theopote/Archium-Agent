@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 from archium.application.slide_diff import (
     slide_to_snapshot,
     snapshot_content_fingerprint,
@@ -9,7 +11,6 @@ from archium.application.slide_diff import (
 )
 from archium.domain.enums import SlideStatus, SlideType
 from archium.domain.slide import SlideSpec
-from uuid import uuid4
 
 
 def test_snapshot_to_slide_restores_content_fields() -> None:

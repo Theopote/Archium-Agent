@@ -5,8 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.visual.visual_edit_service import VisualEditService
 from archium.domain.enums import SlideType
 from archium.domain.presentation import Presentation
@@ -17,6 +15,7 @@ from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, La
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.visual_repositories import LayoutPlanRepository
+from sqlalchemy.orm import Session
 
 
 def _seed_slide_with_title_and_hero(db_session: Session) -> tuple[SlideSpec, LayoutPlan]:

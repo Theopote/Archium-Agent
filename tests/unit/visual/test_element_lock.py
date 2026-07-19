@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import pytest
-
 from archium.domain.visual.element_lock import (
     ElementEditOperation,
-    ElementLockScope,
     ElementLockedError,
+    ElementLockScope,
     assert_element_editable,
     effective_lock_scopes,
     element_is_editable,

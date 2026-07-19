@@ -7,18 +7,17 @@ from uuid import UUID
 import streamlit as st
 
 from archium.config.settings import Settings
-from archium.domain.enums import ProjectType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.error_handlers import format_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
+from archium.ui.pages.workspace import PROJECT_TYPE_LABELS
 from archium.ui.studio_service import (
     create_studio_project,
     get_studio_project_overview,
     import_studio_file,
 )
-from archium.ui.pages.workspace import PROJECT_TYPE_LABELS
 
 
 def render_studio_onboarding() -> None:

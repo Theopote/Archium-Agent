@@ -5,8 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
-
 from archium.domain.visual.benchmark import HumanVisualReview
 from archium.exceptions import (
     ArchiumError,
@@ -15,6 +13,7 @@ from archium.exceptions import (
     LLMProviderError,
     ProjectNotFoundError,
 )
+from pydantic import ValidationError
 
 
 def test_archium_error_base() -> None:

@@ -22,7 +22,7 @@ from archium.ui.visual_service import SlideVisualSnapshot
 def _revision_label(revision: object) -> str:
     note = getattr(revision, "note", None) or ""
     number = getattr(revision, "revision_number", "?")
-    source = change_source_label(getattr(revision, "change_source"))
+    source = change_source_label(revision.change_source)
     created = getattr(revision, "created_at", None)
     time_label = created.strftime("%m-%d %H:%M") if created is not None else "—"
     return f"#{number} · {source} · {note or '修订'} · {time_label}"

@@ -27,6 +27,7 @@ from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_split import SlideSplitPlan
+from archium.domain.studio_errors import StudioAssetReferenceError
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.element_lock import ElementLockedError
 from archium.domain.visual.validation import LayoutValidationReport
@@ -285,7 +286,7 @@ class ContentAdaptationService:
                 else:
                     self._visual_edits.apply_intent(slide_id, VisualEditIntent.REDUCE_TEXT)
                 replanned.append(slide_id)
-            except ElementLockedError:
+            except (ElementLockedError, StudioAssetReferenceError):
                 raise
             except WorkflowError:
                 continue

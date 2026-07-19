@@ -2,21 +2,12 @@
 
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.benchmark import (
+    HUMAN_REVIEW_PASS_THRESHOLD,
     ArchitecturalSlideCategory,
     BenchmarkCaseDefinition,
     BenchmarkRuleScore,
-    HUMAN_REVIEW_PASS_THRESHOLD,
     HumanVisualReview,
     HumanVisualReviewSource,
-)
-from archium.domain.visual.deck_composition import (
-    DeckCompositionPlan,
-    PacingRole,
-    SectionCompositionPlan,
-    SlideCompositionDirective,
-    VisualIntensity,
-    density_to_score,
-    intensity_to_score,
 )
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
@@ -28,6 +19,15 @@ from archium.domain.visual.critic import (
     VisualCriticDimensions,
     VisualCriticFinding,
     VisualCriticReport,
+)
+from archium.domain.visual.deck_composition import (
+    DeckCompositionPlan,
+    PacingRole,
+    SectionCompositionPlan,
+    SlideCompositionDirective,
+    VisualIntensity,
+    density_to_score,
+    intensity_to_score,
 )
 from archium.domain.visual.deck_qa import (
     DECK_CHROME_INCONSISTENT,

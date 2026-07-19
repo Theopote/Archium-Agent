@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.domain.content_adaptation import ContentAdaptationAction
 from archium.domain.enums import ApprovalStatus, SlideType
@@ -13,6 +11,7 @@ from archium.domain.project import Project
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture

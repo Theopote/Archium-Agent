@@ -6,12 +6,12 @@ import streamlit as st
 
 from archium.infrastructure.database.session import get_session
 from archium.ui.label_map import STATUS_LABELS, entity_label
+from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.studio.deck_repair_panel import render_deck_repair_panel
 from archium.ui.studio.revision_restore_panel import (
     render_content_revision_panel,
     render_visual_revision_panel,
 )
-from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.studio_service import (
     StudioPresentationContext,
     count_visual_revisions,

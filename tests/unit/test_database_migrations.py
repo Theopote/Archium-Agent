@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import text
-
 from archium.exceptions import ConfigurationError
 from archium.infrastructure.database.migrations import (
     check_migrations_on_startup,
@@ -13,6 +11,7 @@ from archium.infrastructure.database.migrations import (
     has_pending_migrations,
 )
 from archium.infrastructure.database.session import init_database
+from sqlalchemy import text
 
 
 def test_get_head_revision() -> None:

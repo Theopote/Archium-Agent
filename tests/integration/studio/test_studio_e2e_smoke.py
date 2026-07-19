@@ -5,8 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.application.visual.visual_edit_service import VisualEditService
 from archium.domain.content_adaptation import ContentAdaptationAction
@@ -24,6 +22,7 @@ from archium.ui.studio_service import (
     count_visual_revisions,
     reorder_studio_slide,
 )
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture

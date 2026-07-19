@@ -7,6 +7,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.asset_reference import (
+    AssetReferenceResolver,
+    build_asset_reference_context,
+    content_refs_from_plan,
+)
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.visual_history_service import VisualHistoryService
@@ -258,6 +263,11 @@ class VisualEditService:
                 content_ref = str(params.get("content_ref") or params.get("asset_id") or "")
                 if not content_ref.strip():
                     raise WorkflowError("请指定素材引用。")
+                content_ref = self._validate_asset_binding(
+                    slide,  # type: ignore[arg-type]
+                    content_ref=content_ref,
+                    element=element,
+                )
                 updated_elements.append(element.model_copy(update={"content_ref": content_ref}))
             changed = True
         if not changed:
@@ -278,11 +288,13 @@ class VisualEditService:
         design = self._resolve_design_system(slide, visual_intent)  # type: ignore[arg-type]
         validation = None
         if design is not None:
+            asset_context = self._asset_context_for_plan(slide, saved_plan)  # type: ignore[arg-type]
             validation = LayoutValidationService().validate(
                 saved_plan,
                 design,
                 require_source=True,
                 drawing_hero=saved_plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+                asset_context=asset_context,
             )
         message = (
             "已更新元素文字。"
@@ -408,6 +420,13 @@ class VisualEditService:
                 asset_id = self._default_hero_asset_id(slide)  # type: ignore[arg-type]
             if asset_id is None:
                 raise WorkflowError("请指定主图素材，或先在页面内容中绑定素材。")
+            plan = self._load_plan(slide)  # type: ignore[arg-type]
+            hero_element = self._resolve_hero_element(plan) if plan is not None else None
+            self._validate_asset_binding(
+                slide,  # type: ignore[arg-type]
+                content_ref=str(asset_id),
+                element=hero_element,
+            )
             return apply_hero_asset(intent, UUID(str(asset_id)))
         if edit_intent == VisualEditIntent.REMOVE_ASSET:
             return remove_primary_asset(intent)
@@ -568,6 +587,35 @@ class VisualEditService:
             if asset_id is not None:
                 return asset_id
         return None
+
+    def _project_id_for_slide(self, slide) -> UUID:
+        presentation = self._presentations.get_presentation(slide.presentation_id)
+        if presentation is None:
+            raise WorkflowError("无法解析当前页面所属项目。")
+        return presentation.project_id
+
+    def _validate_asset_binding(
+        self,
+        slide,
+        *,
+        content_ref: str,
+        element: LayoutElement | None,
+    ) -> str:
+        resolver = AssetReferenceResolver(self._session, settings=self._settings)
+        resolved = resolver.resolve(
+            project_id=self._project_id_for_slide(slide),
+            content_ref=content_ref,
+            element=element,
+        )
+        return resolved.ref
+
+    def _asset_context_for_plan(self, slide, plan: LayoutPlan):
+        return build_asset_reference_context(
+            self._session,
+            project_id=self._project_id_for_slide(slide),
+            content_refs=content_refs_from_plan(plan),
+            settings=self._settings,
+        )
 
     def _invalidate_preview_cache(self, presentation_id: UUID, plan: LayoutPlan | None) -> None:
         if plan is None:

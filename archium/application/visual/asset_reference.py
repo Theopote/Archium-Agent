@@ -9,10 +9,20 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.config.settings import Settings
-from archium.domain.enums import AssetType
-from archium.domain.visual.layout import LayoutPlan
-from archium.infrastructure.database.repositories import AssetRepository
+from archium.config.settings import Settings, get_settings
+from archium.domain.asset import Asset
+from archium.domain.enums import AssetType, ProcessingStatus
+from archium.domain.studio_errors import (
+    STUDIO_ASSET_FILE_MISSING,
+    STUDIO_ASSET_NOT_FOUND,
+    STUDIO_ASSET_PROJECT_MISMATCH,
+    STUDIO_ASSET_TYPE_INCOMPATIBLE,
+    STUDIO_DRAWING_REPLACED_BY_PHOTO,
+    StudioAssetReferenceError,
+)
+from archium.domain.visual.enums import LayoutContentType
+from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.infrastructure.database.repositories import AssetRepository, DocumentRepository
 
 # Formats pptxgen / LayoutPlan render path can place reliably.
 SUPPORTED_LAYOUT_IMAGE_EXTENSIONS = frozenset(
@@ -22,6 +32,181 @@ SUPPORTED_LAYOUT_IMAGE_EXTENSIONS = frozenset(
 TECHNICAL_DRAWING_ASSET_TYPES = frozenset(
     {AssetType.DRAWING.value, AssetType.DIAGRAM.value}
 )
+_COMPATIBLE_ASSET_TYPES: dict[LayoutContentType, frozenset[AssetType]] = {
+    LayoutContentType.IMAGE: frozenset(
+        {
+            AssetType.IMAGE,
+            AssetType.PHOTO,
+            AssetType.DRAWING,
+            AssetType.DIAGRAM,
+            AssetType.OTHER,
+        }
+    ),
+    LayoutContentType.DRAWING: frozenset({AssetType.DRAWING, AssetType.DIAGRAM}),
+    LayoutContentType.CHART: frozenset({AssetType.CHART, AssetType.IMAGE}),
+}
+
+
+@dataclass(frozen=True)
+class ResolvedAssetReference:
+    """A project-scoped asset reference ready for LayoutPlan binding."""
+
+    asset: Asset
+    ref: str
+    resolved_path: Path
+
+
+class AssetReferenceResolver:
+    """Resolve and validate project asset references for Studio edits."""
+
+    def __init__(
+        self,
+        session: Session,
+        *,
+        settings: Settings | None = None,
+    ) -> None:
+        self._session = session
+        self._settings = settings or get_settings()
+        self._assets = AssetRepository(session)
+        self._documents = DocumentRepository(session)
+
+    def resolve(
+        self,
+        *,
+        project_id: UUID,
+        content_ref: str,
+        element: LayoutElement | None = None,
+    ) -> ResolvedAssetReference:
+        return assert_studio_asset_reference(
+            self._session,
+            project_id=project_id,
+            content_ref=content_ref,
+            element=element,
+            settings=self._settings,
+        )
+
+    def resolve_storage_path(self, asset: Asset, *, project_id: UUID) -> Path:
+        return resolve_asset_storage_path(asset, project_id=project_id, settings=self._settings)
+
+
+def resolve_asset_storage_path(
+    asset: Asset,
+    *,
+    project_id: UUID,
+    settings: Settings,
+) -> Path:
+    path = Path(asset.path)
+    if not path.is_absolute():
+        path = settings.project_storage_path / str(project_id) / path
+    return path
+
+
+def assert_studio_asset_reference(
+    session: Session,
+    *,
+    project_id: UUID,
+    content_ref: str,
+    element: LayoutElement | None = None,
+    settings: Settings | None = None,
+) -> ResolvedAssetReference:
+    """Validate asset integrity before binding to a layout element."""
+    resolved_settings = settings or get_settings()
+    ref = str(content_ref).strip()
+    if not ref:
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_NOT_FOUND,
+            "请指定有效的项目素材。",
+        )
+
+    try:
+        asset_id = UUID(ref)
+    except ValueError as exc:
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_NOT_FOUND,
+            f"素材引用 `{ref}` 不是有效的项目素材 ID。",
+        ) from exc
+
+    normalized_ref = str(asset_id)
+    repo = AssetRepository(session)
+    asset = repo.get_by_id(asset_id)
+    if asset is None:
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_NOT_FOUND,
+            f"素材 `{normalized_ref[:8]}…` 不存在。",
+        )
+
+    if asset.project_id != project_id:
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_PROJECT_MISMATCH,
+            f"素材 `{asset.filename}` 不属于当前项目，无法绑定。",
+        )
+
+    if not _asset_is_ready(session, asset):
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_FILE_MISSING,
+            f"素材 `{asset.filename}` 尚未处理完成，请稍后再试。",
+        )
+
+    storage_path = resolve_asset_storage_path(
+        asset,
+        project_id=project_id,
+        settings=resolved_settings,
+    )
+    if not storage_path.is_file():
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_FILE_MISSING,
+            f"素材 `{asset.filename}` 的文件缺失或路径无效。",
+        )
+
+    if not is_supported_layout_image_path(storage_path):
+        suffix = storage_path.suffix.lower() or "(none)"
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_TYPE_INCOMPATIBLE,
+            f"素材 `{asset.filename}` 的格式 {suffix} 不受支持，请使用 png/jpg/jpeg/webp/gif。",
+        )
+
+    if element is not None and element.content_type in _COMPATIBLE_ASSET_TYPES:
+        _assert_asset_compatible_with_element(asset, element)
+
+    return ResolvedAssetReference(
+        asset=asset,
+        ref=normalized_ref,
+        resolved_path=storage_path.resolve(),
+    )
+
+
+def _asset_is_ready(session: Session, asset: Asset) -> bool:
+    if asset.document_id is None:
+        return True
+    document = DocumentRepository(session).get_document(asset.document_id)
+    if document is None:
+        return True
+    return document.processing_status == ProcessingStatus.COMPLETED
+
+
+def _assert_asset_compatible_with_element(asset: Asset, element: LayoutElement) -> None:
+    allowed = _COMPATIBLE_ASSET_TYPES.get(element.content_type)
+    if allowed is None:
+        return
+
+    asset_type = asset.asset_type
+    if element.content_type == LayoutContentType.DRAWING and asset_type in {
+        AssetType.PHOTO,
+        AssetType.IMAGE,
+    }:
+        raise StudioAssetReferenceError(
+            STUDIO_DRAWING_REPLACED_BY_PHOTO,
+            f"元素 `{element.id}` 需要技术图纸，不能用照片 `{asset.filename}` 替换。",
+        )
+
+    if asset_type not in allowed:
+        raise StudioAssetReferenceError(
+            STUDIO_ASSET_TYPE_INCOMPATIBLE,
+            (
+                f"素材 `{asset.filename}`（{asset_type.value}）"
+                f"不适合元素 `{element.id}`（{element.content_type.value}）。"
+            ),
+        )
 
 
 @dataclass(frozen=True)

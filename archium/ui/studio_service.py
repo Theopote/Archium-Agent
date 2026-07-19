@@ -8,13 +8,15 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.content_adaptation_service import ContentAdaptationService
+from archium.application.ingestion_service import ImportItemResult
 from archium.application.visual.slide_preview_service import SlidePreviewService
+from archium.config.settings import Settings
+from archium.domain.content_adaptation import ContentAdaptationSuggestion
+from archium.domain.enums import ProjectType, SlideStatus, SlideType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.render import RenderResult
-from archium.application.content_adaptation_service import ContentAdaptationService
-from archium.domain.content_adaptation import ContentAdaptationSuggestion
-from archium.domain.enums import SlideStatus, SlideType
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.exceptions import WorkflowError
@@ -27,10 +29,6 @@ from archium.ui.visual_service import (
     get_presentation_visual_snapshot,
     presentation_has_visual_layout,
 )
-from archium.application.ingestion_service import ImportItemResult
-from archium.config.settings import Settings
-from archium.domain.enums import ProjectType
-from archium.domain.project import Project
 from archium.ui.workspace_service import (
     ProjectOverview,
     _resolve_runtime_settings,

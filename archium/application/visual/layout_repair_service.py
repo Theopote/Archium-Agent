@@ -16,6 +16,7 @@ from archium.domain.visual.enums import (
     OverflowPolicy,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.text_style import (
     clamp_font_size_override,
     next_larger_token,
     resolve_text_style,

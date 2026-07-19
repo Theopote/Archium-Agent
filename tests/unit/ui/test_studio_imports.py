@@ -23,7 +23,6 @@ def test_studio_modules_import() -> None:
         apply_deck_repair_suggestion,
         apply_slide_edit_command,
         create_studio_project,
-        import_studio_file,
         reorder_studio_slide,
     )
 

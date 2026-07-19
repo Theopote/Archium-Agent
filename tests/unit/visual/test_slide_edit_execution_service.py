@@ -5,11 +5,10 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.visual.slide_edit_execution_service import SlideEditExecutionService
 from archium.domain.visual.slide_edit_command import SlideEditCommand, SlideEditScope
 from archium.exceptions import WorkflowError
+from sqlalchemy.orm import Session
 
 
 def test_execute_rejects_unknown_scope(db_session: Session) -> None:

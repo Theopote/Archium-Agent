@@ -4,20 +4,19 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
-
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.application.visual.visual_edit_service import VisualEditService
+from archium.application.visual.visual_history_service import VisualHistoryService
 from archium.domain.content_adaptation import ContentAdaptationAction
 from archium.domain.enums import ApprovalStatus, SlideType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec
-from archium.application.visual.visual_history_service import VisualHistoryService
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
+from sqlalchemy.orm import Session
 
 
 def _seed_slide(db_session: Session) -> SlideSpec:

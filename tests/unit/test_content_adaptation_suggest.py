@@ -10,12 +10,12 @@ from archium.domain.content_adaptation import (
 )
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.enums import LayoutIssueSeverity
 from archium.domain.visual.validation import (
     LAYOUT_TEXT_OVERFLOW,
     LayoutValidationIssue,
     LayoutValidationReport,
 )
-from archium.domain.visual.enums import LayoutIssueSeverity
 
 
 def _slide(**overrides: object) -> SlideSpec:
