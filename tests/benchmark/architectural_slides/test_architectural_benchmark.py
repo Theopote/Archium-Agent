@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import pytest
-from archium.domain.visual.benchmark import ArchitecturalSlideCategory
+from archium.domain.visual.benchmark import (
+    ArchitecturalSlideCategory,
+    HUMAN_REVIEW_PASS_THRESHOLD,
+    HumanVisualReview,
+)
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutElementRole, LayoutFamily
 
 from tests.benchmark.architectural_slides.artifacts import (
     UPDATE_ENV,
     assert_or_update_case_baseline,
+    case_dir,
+    default_human_review,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
 from tests.benchmark.architectural_slides.case_catalog import CASE_CATALOG
@@ -60,6 +66,45 @@ def test_architectural_benchmark_case(case_id: str) -> None:
 def test_benchmark_rule_pass_rate_meets_eighty_percent() -> None:
     passed = sum(1 for case_id in BENCHMARK_CASE_IDS if build_benchmark_case(case_id).rule_score.passed)
     assert passed / len(BENCHMARK_CASE_IDS) >= 0.8
+
+
+_CATEGORY_MINIMUMS: dict[ArchitecturalSlideCategory, int] = {
+    ArchitecturalSlideCategory.DRAWING: 10,
+    ArchitecturalSlideCategory.PHOTO_ANALYSIS: 8,
+    ArchitecturalSlideCategory.CASE_COMPARISON: 5,
+    ArchitecturalSlideCategory.DATA_METRICS: 4,
+    ArchitecturalSlideCategory.TEXT_NARRATIVE: 3,
+}
+
+
+def test_benchmark_category_minimums() -> None:
+    counts: dict[ArchitecturalSlideCategory, int] = dict.fromkeys(ArchitecturalSlideCategory, 0)
+    for entry in CASE_CATALOG:
+        counts[entry.definition.category] += 1
+    for category, minimum in _CATEGORY_MINIMUMS.items():
+        assert counts[category] >= minimum, (
+            f"{category.value} has {counts[category]} cases, expected at least {minimum}"
+        )
+
+
+def test_benchmark_human_review_meets_threshold() -> None:
+    scores: list[float] = []
+    for case_id in BENCHMARK_CASE_IDS:
+        path = case_dir(case_id) / "human_review.json"
+        review = HumanVisualReview.model_validate_json(path.read_text(encoding="utf-8"))
+        assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD), (
+            f"{case_id} human review below {HUMAN_REVIEW_PASS_THRESHOLD}: "
+            f"{review.weighted_score()}"
+        )
+        assert review.accepted, f"{case_id} human review not accepted"
+        scores.append(review.weighted_score())
+    assert sum(scores) / len(scores) >= HUMAN_REVIEW_PASS_THRESHOLD
+
+
+def test_default_human_review_template_passes_threshold() -> None:
+    review = default_human_review("case_001_site_plan")
+    assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD)
+    assert review.accepted
 
 
 def test_case_001_drawing_hero_constraints() -> None:

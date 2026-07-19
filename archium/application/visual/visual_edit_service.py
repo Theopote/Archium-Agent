@@ -265,17 +265,19 @@ class VisualEditService:
         art, design = self._resolve_art_and_design(slide, intent)  # type: ignore[arg-type]
         llm = create_llm_provider(self._settings) if self._use_llm else None
         planner = LayoutPlanningService(self._session, llm=llm)
+        current_plan = self._load_plan(slide)
         candidates = planner.generate_candidates(
             slide=slide,  # type: ignore[arg-type]
             visual_intent_id=intent.id,
             art_direction_id=art.id if art else None,
             design_system_id=design.id,
             candidate_count=candidate_count,
+            previous_layout_plan=current_plan,
         )
         saved_candidates: list[LayoutPlan] = []
         for plan, _report in candidates:
             saved_candidates.append(self._plans.save(plan))
-        best = planner.select_best(candidates)
+        best = planner.select_best(candidates, previous_layout_plan=current_plan)
         best = self._plans.save(best)
         slide.layout_plan_id = best.id  # type: ignore[attr-defined]
         self._presentations.save_slide(slide)  # type: ignore[arg-type]

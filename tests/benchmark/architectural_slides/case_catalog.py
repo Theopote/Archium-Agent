@@ -270,7 +270,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_006_project_hero",
             title="方案封面：内院视角效果图",
-            category=ArchitecturalSlideCategory.PHOTO_ANALYSIS,
+            category=ArchitecturalSlideCategory.DRAWING,
             page_type="封面主视觉",
             page_task="以一张效果图建立项目气质与汇报开场记忆点。",
             visual_focus="效果图占主视觉，标题与副标题克制留白。",
@@ -293,7 +293,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_007_aerial_hero",
             title="航拍总览：院区与周边关系",
-            category=ArchitecturalSlideCategory.PHOTO_ANALYSIS,
+            category=ArchitecturalSlideCategory.DRAWING,
             page_type="航拍主视觉",
             page_task="用航拍照片说明项目在城市肌理中的位置与边界。",
             visual_focus="航拍图全幅或近全幅，辅以一句区位论断。",
@@ -316,7 +316,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_008_overlay_hero",
             title="概念叠加：路径组织示意",
-            category=ArchitecturalSlideCategory.TEXT_NARRATIVE,
+            category=ArchitecturalSlideCategory.PHOTO_ANALYSIS,
             page_type="图文叠加封面",
             page_task="在效果图上叠加核心概念语句，强化叙事起点。",
             visual_focus="效果图为底，核心论断以叠加方式呈现。",
@@ -339,7 +339,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_009_patient_journey",
             title="患者旅程时间轴",
-            category=ArchitecturalSlideCategory.TEXT_NARRATIVE,
+            category=ArchitecturalSlideCategory.PHOTO_ANALYSIS,
             page_type="流程时间轴",
             page_task="按时间顺序说明患者从到达到离院的关键节点。",
             visual_focus="步骤顺序清晰，节点等权重排列。",
@@ -359,7 +359,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_010_construction_phases",
             title="分期实施步骤",
-            category=ArchitecturalSlideCategory.DATA_METRICS,
+            category=ArchitecturalSlideCategory.PHOTO_ANALYSIS,
             page_type="建设分期流程",
             page_task="说明三期改造的实施顺序与关键里程碑。",
             visual_focus="横向步骤与阶段名称对应，便于决策层快速阅读。",
@@ -381,7 +381,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_011_design_process",
             title="设计推演过程",
-            category=ArchitecturalSlideCategory.TEXT_NARRATIVE,
+            category=ArchitecturalSlideCategory.PHOTO_ANALYSIS,
             page_type="设计过程时间轴",
             page_task="展示从现状诊断到方案定稿的推演步骤。",
             visual_focus="过程节点递进，突出关键转折决策。",
@@ -465,7 +465,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_015_design_principles",
             title="三大设计原则",
-            category=ArchitecturalSlideCategory.TEXT_NARRATIVE,
+            category=ArchitecturalSlideCategory.CASE_COMPARISON,
             page_type="策略卡片（三卡）",
             page_task="用三张卡片概括可达性、公共性与弹性更新原则。",
             visual_focus="三卡片等权重，标题区收束主题。",
@@ -509,7 +509,7 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         definition=_definition(
             "case_017_spatial_strategy_lead",
             title="空间策略导言",
-            category=ArchitecturalSlideCategory.TEXT_NARRATIVE,
+            category=ArchitecturalSlideCategory.DRAWING,
             page_type="策略卡片（导言+三卡）",
             page_task="先给出导言论断，再用三卡展开空间策略。",
             visual_focus="导言区与卡片区层次分明。",

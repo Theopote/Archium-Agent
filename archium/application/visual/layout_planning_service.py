@@ -11,6 +11,7 @@ from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
 )
+from archium.application.visual.layout_locked import preserve_locked_elements
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.config.settings import Settings, get_settings
 from archium.domain.slide import SlideSpec
@@ -106,6 +107,7 @@ class LayoutPlanningService:
         candidate_count: int = 3,
         project_id: UUID | None = None,
         deck_directive: SlideCompositionDirective | None = None,
+        previous_layout_plan: LayoutPlan | None = None,
     ) -> list[tuple[LayoutPlan, LayoutValidationReport]]:
         self._warnings.clear()
         intent = self._intents.get(visual_intent_id)
@@ -145,6 +147,7 @@ class LayoutPlanningService:
                 variant=variant,
             )
             plan = self._solver.generate(family, context)
+            plan = preserve_locked_elements(plan, previous_layout_plan)
             asset_context = None
             if project_id is not None:
                 asset_context = build_asset_reference_context(

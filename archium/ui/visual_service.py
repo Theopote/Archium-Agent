@@ -428,17 +428,24 @@ def replan_slide(
 
     llm = create_llm_provider(resolved) if use_llm and resolved.llm_configured else None
     planner = LayoutPlanningService(session, llm=llm)
+    previous_plan = None
+    if slide.layout_plan_id is not None:
+        previous_plan = plans.get(slide.layout_plan_id)
+    if previous_plan is None:
+        listed = plans.list_by_slide(slide.id)
+        previous_plan = listed[0] if listed else None
     candidates = planner.generate_candidates(
         slide=slide,
         visual_intent_id=intent.id,
         art_direction_id=art.id if art else None,
         design_system_id=design.id,
         candidate_count=candidate_count,
+        previous_layout_plan=previous_plan,
     )
     saved_candidates: list[LayoutPlan] = []
     for plan, _report in candidates:
         saved_candidates.append(plans.save(plan))
-    best = planner.select_best(candidates)
+    best = planner.select_best(candidates, previous_layout_plan=previous_plan)
     best = plans.save(best)
     slide.layout_plan_id = best.id
     presentations.save_slide(slide)

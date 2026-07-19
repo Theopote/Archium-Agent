@@ -9,6 +9,7 @@ from archium.ui.studio.ai_edit_panel import render_ai_edit_panel
 from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
 from archium.ui.studio.export_panel import render_export_panel
 from archium.ui.studio.history_panel import render_history_panel
+from archium.ui.studio.layout_candidates_panel import render_layout_candidates_panel
 from archium.ui.studio.project_sidebar import render_studio_selection
 from archium.ui.studio.slide_canvas import render_slide_canvas
 from archium.ui.studio.slide_navigator import render_slide_navigator
@@ -67,6 +68,8 @@ def render() -> None:
 
     with right_col:
         render_slide_properties(slide_snapshot=slide_snapshot, advanced=advanced)
+        st.divider()
+        render_layout_candidates_panel(slide_snapshot=slide_snapshot, advanced=advanced)
         st.divider()
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
         st.divider()

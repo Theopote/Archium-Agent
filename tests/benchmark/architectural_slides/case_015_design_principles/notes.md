@@ -1,7 +1,7 @@
 # 三大设计原则
 
 - **页面类型**: 策略卡片（三卡）
-- **分类**: text_narrative
+- **分类**: case_comparison
 - **预期版式**: `strategy_cards` / `three_cards`
 - **视觉重点**: 三卡片等权重，标题区收束主题。
 

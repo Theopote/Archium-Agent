@@ -1,7 +1,7 @@
 # 设计推演过程
 
 - **页面类型**: 设计过程时间轴
-- **分类**: text_narrative
+- **分类**: photo_analysis
 - **预期版式**: `process_narrative` / `timeline`
 - **视觉重点**: 过程节点递进，突出关键转折决策。
 

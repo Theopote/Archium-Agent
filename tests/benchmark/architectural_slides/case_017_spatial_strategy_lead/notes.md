@@ -1,7 +1,7 @@
 # 空间策略导言
 
 - **页面类型**: 策略卡片（导言+三卡）
-- **分类**: text_narrative
+- **分类**: drawing
 - **预期版式**: `strategy_cards` / `cards_with_lead`
 - **视觉重点**: 导言区与卡片区层次分明。
 

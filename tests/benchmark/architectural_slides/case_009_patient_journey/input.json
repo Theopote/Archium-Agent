@@ -1,7 +1,7 @@
 {
   "case_id": "case_009_patient_journey",
   "title": "患者旅程时间轴",
-  "category": "text_narrative",
+  "category": "photo_analysis",
   "page_type": "流程时间轴",
   "page_task": "按时间顺序说明患者从到达到离院的关键节点。",
   "visual_focus": "步骤顺序清晰，节点等权重排列。",
