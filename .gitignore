@@ -37,4 +37,13 @@ data/database/*.db-shm
 data/projects/
 data/chroma/
 data/outputs/
-outp
+output/
+
+# Logs
+*.log
+alerts.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
