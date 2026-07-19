@@ -12,7 +12,7 @@ from archium.ui.studio.history_panel import render_history_panel
 from archium.ui.studio.human_review_panel import render_human_review_panel
 from archium.ui.studio.layout_candidates_panel import render_layout_candidates_panel
 from archium.ui.studio.project_sidebar import render_studio_selection
-from archium.ui.studio.slide_canvas import render_slide_canvas
+from archium.ui.studio.slide_canvas_enhanced import render_slide_canvas
 from archium.ui.studio.slide_navigator import render_slide_navigator
 from archium.ui.studio.slide_properties import render_slide_properties
 from archium.ui.studio_service import get_selected_slide_snapshot
@@ -68,7 +68,11 @@ def render() -> None:
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
 
     with center_col:
-        render_slide_canvas(slide_snapshot=slide_snapshot, advanced=advanced)
+        render_slide_canvas(
+            slide_snapshot=slide_snapshot,
+            advanced=advanced,
+            use_interactive_canvas=True,
+        )
 
     with right_col:
         render_slide_properties(
