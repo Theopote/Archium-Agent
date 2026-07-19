@@ -8,7 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.asset_board_service import AssetBoardRow, AssetBoardService
-from archium.application.asset_provenance import format_asset_option_label
+from archium.application.asset_provenance import format_asset_option_label, format_asset_vision_summary
 from archium.config.settings import get_settings
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError
@@ -206,3 +206,20 @@ def _render_asset_preview(project_id: UUID, selected: AssetBoardRow, assets: lis
         return
     if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
         st.image(str(path), caption=asset.filename, use_container_width=True)
+    vision_summary = format_asset_vision_summary(asset)
+    if vision_summary:
+        source = asset.metadata.get("vision_source", "caption")
+        st.markdown("**图档理解**")
+        st.caption(f"来源：{source}")
+        st.write(vision_summary)
+        elements = []
+        vision = asset.metadata.get("vision_caption")
+        if isinstance(vision, dict):
+            spatial = vision.get("spatial_elements") or []
+            if isinstance(spatial, list) and spatial:
+                elements.append("空间要素：" + "、".join(str(item) for item in spatial[:6]))
+            metrics = vision.get("metrics_visible") or []
+            if isinstance(metrics, list) and metrics:
+                elements.append("可见指标：" + "、".join(str(item) for item in metrics[:6]))
+        for line in elements:
+            st.caption(line)

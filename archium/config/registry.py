@@ -81,6 +81,7 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "asset_vision_rag_enabled": ConfigDomain.RETRIEVAL,
     "asset_vision_llm_enabled": ConfigDomain.RETRIEVAL,
     "asset_vision_llm_model": ConfigDomain.RETRIEVAL,
+    "retrieval_keyword_boost_enabled": ConfigDomain.RETRIEVAL,
     "chunk_context_max_chars": ConfigDomain.RETRIEVAL,
     "embedding_chunking_enabled": ConfigDomain.CHUNKING,
     "embedding_chunk_min_segment_chars": ConfigDomain.CHUNKING,

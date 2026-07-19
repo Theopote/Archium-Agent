@@ -12,7 +12,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import AssetType
-from archium.infrastructure.database.repositories import AssetRepository
+from archium.infrastructure.database.repositories import AssetRepository, DocumentRepository
 from archium.infrastructure.llm.asset_schemas import AssetVisionCaptionDraft
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.factory import create_llm_provider
@@ -217,6 +217,103 @@ class AssetVisionRagService:
             tags.add("drawing")
         asset.tags = sorted(tags)
         return self._assets.update(asset)
+
+
+@dataclass(frozen=True)
+class AssetVisionBackfillResult:
+    assets_processed: int
+    chunks_created: int
+
+
+class AssetVisionBackfillService:
+    """Backfill vision captions + RAG chunks for assets imported before P2."""
+
+    def __init__(
+        self,
+        session: Session,
+        *,
+        llm: LLMProvider | None = None,
+        settings: Settings | None = None,
+    ) -> None:
+        self._session = session
+        self._settings = settings or get_settings()
+        self._assets = AssetRepository(session)
+        self._documents = DocumentRepository(session)
+        self._vision = AssetVisionRagService(session, llm=llm, settings=self._settings)
+
+    def backfill_project(self, project_id: UUID) -> AssetVisionBackfillResult:
+        if not self._settings.asset_vision_rag_enabled:
+            return AssetVisionBackfillResult(assets_processed=0, chunks_created=0)
+
+        from archium.application.fact_extraction_service import FactExtractionService
+        from archium.application.retrieval_service import create_retrieval_service
+
+        assets_processed = 0
+        chunks_created = 0
+        assets_by_document: dict[UUID, list[Asset]] = {}
+        for asset in self._assets.list_by_project(project_id):
+            if asset.document_id is None:
+                continue
+            assets_by_document.setdefault(asset.document_id, []).append(asset)
+
+        retrieval = create_retrieval_service(self._session, self._settings)
+        fact_extractor = FactExtractionService(self._session, settings=self._settings)
+
+        for document_id, document_assets in assets_by_document.items():
+            document = self._documents.get_document(document_id)
+            if document is None:
+                continue
+            existing_ids = self._existing_caption_asset_ids(document_id)
+            pending = [
+                asset
+                for asset in document_assets
+                if str(asset.id) not in existing_ids and self._vision._should_index_asset(asset)
+            ]
+            if not pending:
+                continue
+            base_index = self._next_chunk_index(document_id)
+            result = self._vision.process_document_assets(
+                project_id,
+                document,
+                pending,
+                base_chunk_index=base_index,
+            )
+            saved: list[DocumentChunk] = []
+            for chunk in result.chunks:
+                saved.append(self._documents.create_chunk(chunk))
+            if saved:
+                fact_extractor.extract_from_document(
+                    project_id,
+                    document_name=document.filename,
+                    chunks=saved,
+                )
+                retrieval.index_chunks(project_id, saved, document_name=document.filename)
+            assets_processed += len(pending)
+            chunks_created += len(saved)
+
+        if chunks_created:
+            logger.info(
+                "Backfilled %d asset caption chunk(s) for project %s",
+                chunks_created,
+                project_id,
+            )
+        return AssetVisionBackfillResult(
+            assets_processed=assets_processed,
+            chunks_created=chunks_created,
+        )
+
+    def _existing_caption_asset_ids(self, document_id: UUID) -> set[str]:
+        return {
+            str(chunk.metadata.get("asset_id"))
+            for chunk in self._documents.list_chunks(document_id)
+            if chunk.content_type == "asset_caption" and chunk.metadata.get("asset_id")
+        }
+
+    def _next_chunk_index(self, document_id: UUID) -> int:
+        chunks = self._documents.list_chunks(document_id)
+        if not chunks:
+            return 0
+        return max(chunk.chunk_index for chunk in chunks) + 1
 
 
 def build_asset_caption_chunk_text(

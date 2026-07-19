@@ -60,6 +60,7 @@ Do not edit them manually.
 | `ASSET_VISION_RAG_ENABLED` | `true` | No | When true, generate heuristic or LLM vision captions for drawing/image assets at ingest and index them as searchable RAG chunks. |
 | `ASSET_VISION_LLM_ENABLED` | `false` | No | When true and LLM is configured, use multimodal vision to caption drawing assets at ingest (falls back to heuristic caption when unavailable). |
 | `ASSET_VISION_LLM_MODEL` | `*(unset)*` | No | Optional vision-capable model override for asset captioning at ingest. |
+| `RETRIEVAL_KEYWORD_BOOST_ENABLED` | `true` | No | When true, rerank vector hits with keyword overlap (helps metrics, drawing captions, and proper nouns that pure embeddings may miss). |
 | `CHUNK_CONTEXT_MAX_CHARS` | `600` | No | Maximum characters injected per retrieved chunk into LLM context. |
 
 ## Document chunking {#chunking}

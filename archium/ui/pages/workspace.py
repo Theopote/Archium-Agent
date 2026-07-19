@@ -26,6 +26,7 @@ from archium.ui.visual_service import (
     presentation_has_visual_layout,
 )
 from archium.ui.workspace_service import (
+    backfill_project_asset_vision,
     build_presentation_request,
     create_project,
     export_presentation_pptx_legacy,
@@ -185,8 +186,35 @@ def _render_documents(project_id: UUID) -> None:
                 st.warning(f"{result.source_path.name}: 已存在相同文件，已跳过")
             else:
                 chunk_count = len(result.chunks)
-                st.success(f"{result.source_path.name}: 导入成功（{chunk_count} 个片段）")
+                asset_captions = sum(
+                    1 for chunk in result.chunks if chunk.content_type == "asset_caption"
+                )
+                detail = f"{chunk_count} 个片段"
+                if asset_captions:
+                    detail += f"（含 {asset_captions} 个图档语义索引）"
+                st.success(f"{result.source_path.name}: 导入成功（{detail}）")
         st.rerun()
+
+    settings = get_ui_effective_settings()
+    if settings.asset_vision_rag_enabled:
+        st.caption(
+            "图档语义索引：导入时会为图纸/大图生成可检索描述并写入向量库。"
+            "历史项目可点击下方按钮补建。"
+        )
+        if st.button("补建图档语义索引", key=f"backfill_vision_{project_id}"):
+            try:
+                with get_session() as session:
+                    result = backfill_project_asset_vision(session, project_id, settings=settings)
+                if result.chunks_created:
+                    st.success(
+                        f"已补建 {result.chunks_created} 个图档语义片段"
+                        f"（处理 {result.assets_processed} 个素材）。"
+                    )
+                else:
+                    st.info("没有需要补建的图档素材，或功能已关闭。")
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
 
 
 def _render_generation_form(project_id: UUID) -> None:

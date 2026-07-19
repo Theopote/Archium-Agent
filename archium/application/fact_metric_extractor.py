@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from archium.domain.document import DocumentChunk
-from archium.domain.fact_ledger import STANDARD_FACT_KEY_MAP
+from archium.domain.fact_ledger import STANDARD_FACT_KEY_MAP, STANDARD_FACT_KEYS
 
 _RULE_CONFIDENCE = 0.92
 
@@ -87,6 +87,26 @@ _METRIC_PATTERNS: tuple[_MetricPattern, ...] = (
     ),
 )
 
+_TABLE_LABEL_TO_KEY: dict[str, str] = {
+    definition.label: definition.key for definition in STANDARD_FACT_KEYS
+}
+_TABLE_LABEL_TO_KEY.update(
+    {
+        "FAR": "plot_ratio",
+        "容积率(FAR)": "plot_ratio",
+        "用地": "site_area",
+        "建筑面积(GFA)": "building_area",
+        "绿地率/绿化率": "green_ratio",
+        "绿化率": "green_ratio",
+        "床位数": "bed_count",
+        "停车位": "parking_count",
+        "停车位数": "parking_count",
+    }
+)
+_TABLE_VALUE_PATTERN = re.compile(
+    r"^([0-9]+(?:\.[0-9]+)?)\s*(平方米|㎡|m2|m²|公顷|ha|亩|米|m|M|%|％|张|个|床|位|层)?$"
+)
+
 
 def extract_metrics_from_chunks(chunks: list[DocumentChunk]) -> list[ExtractedMetric]:
     """Scan chunk text for standard architectural metrics."""
@@ -95,6 +115,10 @@ def extract_metrics_from_chunks(chunks: list[DocumentChunk]) -> list[ExtractedMe
         text = chunk.content.strip()
         if not text:
             continue
+        for line in text.splitlines():
+            table_metric = _extract_table_row_metric(line.strip(), chunk)
+            if table_metric is not None:
+                _store_metric(found, table_metric)
         for item in _METRIC_PATTERNS:
             match = item.pattern.search(text)
             if match is None:
@@ -120,10 +144,48 @@ def extract_metrics_from_chunks(chunks: list[DocumentChunk]) -> list[ExtractedMe
                 chunk_id=chunk.id,
                 quote=quote,
             )
-            existing = found.get(item.key)
-            if existing is None or metric.confidence >= existing.confidence:
-                found[item.key] = metric
+            _store_metric(found, metric)
     return list(found.values())
+
+
+def _store_metric(found: dict[str, ExtractedMetric], metric: ExtractedMetric) -> None:
+    existing = found.get(metric.key)
+    if existing is None or metric.confidence >= existing.confidence:
+        found[metric.key] = metric
+
+
+def _extract_table_row_metric(line: str, chunk: DocumentChunk) -> ExtractedMetric | None:
+    if "|" not in line and "\t" not in line:
+        return None
+    separator = "|" if "|" in line else "\t"
+    parts = [part.strip() for part in line.split(separator) if part.strip()]
+    if len(parts) < 2:
+        return None
+    label = parts[0]
+    key = _TABLE_LABEL_TO_KEY.get(label)
+    if key is None:
+        for candidate, candidate_key in _TABLE_LABEL_TO_KEY.items():
+            if candidate in label:
+                key = candidate_key
+                label = candidate
+                break
+    if key is None:
+        return None
+    value_text = parts[1]
+    match = _TABLE_VALUE_PATTERN.match(value_text.replace(",", ""))
+    if match is None:
+        return None
+    definition = STANDARD_FACT_KEY_MAP.get(key)
+    return ExtractedMetric(
+        key=key,
+        label=definition.label if definition else label,
+        value=match.group(1),
+        unit=_normalize_unit(match.group(2)),
+        category=definition.category if definition else "general",
+        confidence=_RULE_CONFIDENCE,
+        chunk_id=chunk.id,
+        quote=line,
+    )
 
 
 def _quote_window(text: str, start: int, end: int, *, radius: int = 48) -> str:

@@ -145,6 +145,13 @@ class Settings(BaseSettings):
         default=None,
         description="Optional vision-capable model override for asset captioning at ingest.",
     )
+    retrieval_keyword_boost_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, rerank vector hits with keyword overlap (helps metrics, drawing captions, "
+            "and proper nouns that pure embeddings may miss)."
+        ),
+    )
     chunk_context_max_chars: int = Field(
         default=600,
         ge=100,

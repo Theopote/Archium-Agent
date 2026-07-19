@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.retrieval_hybrid import rerank_retrieved_chunks
 from archium.config.settings import Settings, get_settings
 from archium.domain.document import DocumentChunk
 from archium.infrastructure.database.repositories import DocumentRepository
@@ -89,7 +90,9 @@ class RetrievalService:
         chunks = self._documents.get_chunks_by_ids(chunk_ids)
         if not chunks:
             return self._fallback_chunks(project_id, limit)
-        return chunks
+        if self._settings.retrieval_keyword_boost_enabled:
+            chunks = rerank_retrieved_chunks(chunks, hits, query)
+        return chunks[:limit]
 
     def search(
         self,

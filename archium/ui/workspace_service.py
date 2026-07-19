@@ -163,6 +163,18 @@ def import_uploaded_file(
         temp_path.unlink(missing_ok=True)
 
 
+def backfill_project_asset_vision(
+    session: Session,
+    project_id: UUID,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.asset_vision_rag_service import AssetVisionBackfillService
+
+    resolved = _resolve_runtime_settings(settings)
+    return AssetVisionBackfillService(session, settings=resolved).backfill_project(project_id)
+
+
 def build_presentation_request(
     *,
     title: str,

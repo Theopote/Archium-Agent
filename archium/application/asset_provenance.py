@@ -34,7 +34,24 @@ def format_asset_provenance(
 
 def format_asset_option_label(asset: Asset) -> str:
     """Label for select boxes in the Asset Board."""
+    drawing_type = asset.metadata.get("drawing_type")
+    type_hint = f" · {drawing_type}" if isinstance(drawing_type, str) and drawing_type else ""
     if is_web_import_asset(asset):
         provider = str(asset.metadata.get("provider") or "web").strip()
-        return f"{asset.filename} · 网络/{provider}"
-    return asset.filename
+        return f"{asset.filename} · 网络/{provider}{type_hint}"
+    if asset.metadata.get("vision_source"):
+        source = str(asset.metadata.get("vision_source"))
+        return f"{asset.filename}{type_hint} · {source}"
+    return f"{asset.filename}{type_hint}"
+
+
+def format_asset_vision_summary(asset: Asset) -> str | None:
+    """Short vision caption for Asset Board detail."""
+    vision = asset.metadata.get("vision_caption")
+    if isinstance(vision, dict):
+        summary = vision.get("summary")
+        if isinstance(summary, str) and summary.strip():
+            return summary.strip()
+    if asset.description:
+        return asset.description.strip()
+    return None
