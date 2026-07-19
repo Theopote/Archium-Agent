@@ -1,0 +1,15 @@
+{
+  "title": "城市更新医疗综合体方案",
+  "message": "以开放内院串联门诊、急救与科研，重塑院区公共性。",
+  "chapter_id": "opening",
+  "order": 6,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "rendering",
+      "description": "内院效果图",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

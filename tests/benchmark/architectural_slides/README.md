@@ -1,6 +1,6 @@
 # Architectural Slide Visual Benchmark
 
-真实建筑汇报页面的视觉质量基准库（第一阶段：5 个示例 Case，目标扩展至 30 页）。
+真实建筑汇报页面的视觉质量基准库（**30 页**）。
 
 ## 目录结构
 
@@ -21,15 +21,25 @@
 | `human_review.json` | 人工 9 维评分模板 |
 | `notes.md` | 问题与修复记录 |
 
-## 当前 Case（5/30）
+## Case 目录
 
-| Case | 分类 | 页面类型 | LayoutFamily |
-|------|------|----------|--------------|
-| `case_001_site_plan` | A1 图纸 | 单张总平面主导页 | `drawing_focus` |
-| `case_002_site_photos` | A2 照片 | 四张现场问题照片 | `evidence_board` |
-| `case_003_case_comparison` | A3 案例 | 三案例横向比较 | `comparative_matrix` |
-| `case_004_economic_metrics` | A4 数据 | 经济技术指标 | `metric_dashboard` |
-| `case_005_design_concept` | A5 文字 | 设计理念 | `textual_argument` |
+Case 定义集中在 `case_catalog.py`（30 条 `CaseCatalogEntry`），`case_registry.py` 负责通用构建逻辑。
+
+| 范围 | 分类 | LayoutFamily 覆盖 |
+|------|------|-------------------|
+| `case_001`–`005` | A1–A5 各 1 页 | 图纸 / 照片 / 案例 / 数据 / 文字 |
+| `case_006`–`008` | A2/A5 | `hero`（3 variants） |
+| `case_009`–`011` | A4/A5 | `process_narrative` |
+| `case_012`–`014` | A1 | `analytical_diagram` |
+| `case_015`–`017` | A4/A5 | `strategy_cards` |
+| `case_018`–`020` | A1/A2/A3 | `hybrid_canvas` |
+| `case_021`–`022` | A1 | `drawing_focus`（补充 variant） |
+| `case_023`–`024` | A2 | `evidence_board`（补充 variant） |
+| `case_025`–`026` | A3 | `comparative_matrix`（补充 variant） |
+| `case_027`–`028` | A4 | `metric_dashboard`（补充 variant） |
+| `case_029`–`030` | A5 | `textual_argument`（补充 variant） |
+
+每个 LayoutFamily 至少 3 个 Case；A1–A5 五类均有覆盖。
 
 ## 运行
 

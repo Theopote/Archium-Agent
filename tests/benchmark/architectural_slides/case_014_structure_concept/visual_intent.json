@@ -1,0 +1,13 @@
+{
+  "communication_goal": "让受众理解：采用模数化柱网支撑大跨候诊空间，兼顾后期科室调整弹性。",
+  "dominant_content_type": "analytical_diagram",
+  "density_level": "spacious",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "analytical_diagram",
+    "drawing_focus"
+  ],
+  "composition_strategy": "以 analytical_diagram 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}

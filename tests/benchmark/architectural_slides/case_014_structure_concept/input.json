@@ -1,0 +1,17 @@
+{
+  "case_id": "case_014_structure_concept",
+  "title": "结构概念分析",
+  "category": "drawing",
+  "page_type": "结构概念图",
+  "page_task": "说明大跨门诊区结构概念与模数关系。",
+  "visual_focus": "结构概念图清晰，避免过多文字干扰。",
+  "expected_layout_family": "analytical_diagram",
+  "allowed_layout_variants": [
+    "diagram_focus",
+    "diagram_with_callouts"
+  ],
+  "layout_variant": "diagram_focus",
+  "assets": [
+    "assets/c0140001-0001-4001-8001-000000000001.png"
+  ]
+}

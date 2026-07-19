@@ -1,0 +1,16 @@
+{
+  "case_id": "case_015_design_principles",
+  "title": "三大设计原则",
+  "category": "text_narrative",
+  "page_type": "策略卡片（三卡）",
+  "page_task": "用三张卡片概括可达性、公共性与弹性更新原则。",
+  "visual_focus": "三卡片等权重，标题区收束主题。",
+  "expected_layout_family": "strategy_cards",
+  "allowed_layout_variants": [
+    "three_cards",
+    "cards_with_lead",
+    "four_cards"
+  ],
+  "layout_variant": "three_cards",
+  "assets": []
+}

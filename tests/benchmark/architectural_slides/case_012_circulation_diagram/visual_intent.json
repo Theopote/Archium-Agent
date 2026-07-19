@@ -1,0 +1,13 @@
+{
+  "communication_goal": "让受众理解：急救、门诊与后勤流线分层组织，避免地面层交叉混行。",
+  "dominant_content_type": "analytical_diagram",
+  "density_level": "spacious",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "analytical_diagram",
+    "drawing_focus"
+  ],
+  "composition_strategy": "以 analytical_diagram 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}

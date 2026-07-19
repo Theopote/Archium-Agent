@@ -1,0 +1,15 @@
+{
+  "title": "院区与周边城市关系",
+  "message": "项目紧邻轨道交通与主干路，需通过立体流线消解城市界面压力。",
+  "chapter_id": "context",
+  "order": 7,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "航拍总览",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

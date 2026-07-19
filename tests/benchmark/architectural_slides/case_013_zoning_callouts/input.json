@@ -1,0 +1,17 @@
+{
+  "case_id": "case_013_zoning_callouts",
+  "title": "功能分区与标注",
+  "category": "drawing",
+  "page_type": "分区分析图",
+  "page_task": "展示功能分区结构并用标注解释各分区关系。",
+  "visual_focus": "分区图为主，标注点引导阅读顺序。",
+  "expected_layout_family": "analytical_diagram",
+  "allowed_layout_variants": [
+    "diagram_with_callouts",
+    "diagram_focus"
+  ],
+  "layout_variant": "diagram_with_callouts",
+  "assets": [
+    "assets/c0130001-0001-4001-8001-000000000001.png"
+  ]
+}

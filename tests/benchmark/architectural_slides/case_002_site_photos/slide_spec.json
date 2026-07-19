@@ -12,22 +12,22 @@
   "visual_requirements": [
     {
       "type": "site_photo",
-      "description": "现场问题照片 1",
+      "description": "入口混行",
       "asset_count": 1
     },
     {
       "type": "site_photo",
-      "description": "现场问题照片 2",
+      "description": "停车占道",
       "asset_count": 1
     },
     {
       "type": "site_photo",
-      "description": "现场问题照片 3",
+      "description": "景观缺失",
       "asset_count": 1
     },
     {
       "type": "site_photo",
-      "description": "现场问题照片 4",
+      "description": "导向不清",
       "asset_count": 1
     }
   ],

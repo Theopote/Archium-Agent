@@ -1,0 +1,13 @@
+{
+  "title": "设计原则",
+  "message": "方案以患者体验、城市界面与分期弹性作为三条并行原则。",
+  "chapter_id": "principles",
+  "order": 15,
+  "key_points": [
+    "可达性优先",
+    "公共性重建",
+    "弹性更新"
+  ],
+  "visual_requirements": [],
+  "source_count": 1
+}

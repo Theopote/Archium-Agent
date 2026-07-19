@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：患者路径不是附属流线，而是组织建筑体量的第一原则。",
+  "dominant_content_type": "mixed",
+  "density_level": "spacious",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "hero"
+  ],
+  "composition_strategy": "以 hero 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}

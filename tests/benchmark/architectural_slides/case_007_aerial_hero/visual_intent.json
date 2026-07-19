@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：项目紧邻轨道交通与主干路，需通过立体流线消解城市界面压力。",
+  "dominant_content_type": "hero_image",
+  "density_level": "spacious",
+  "continuity_role": "evidence",
+  "preferred_layout_families": [
+    "hero"
+  ],
+  "composition_strategy": "以 evidence_board 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}

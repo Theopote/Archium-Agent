@@ -1,0 +1,18 @@
+{
+  "case_id": "case_008_overlay_hero",
+  "title": "概念叠加：路径组织示意",
+  "category": "text_narrative",
+  "page_type": "图文叠加封面",
+  "page_task": "在效果图上叠加核心概念语句，强化叙事起点。",
+  "visual_focus": "效果图为底，核心论断以叠加方式呈现。",
+  "expected_layout_family": "hero",
+  "allowed_layout_variants": [
+    "overlay",
+    "split",
+    "full_bleed"
+  ],
+  "layout_variant": "overlay",
+  "assets": [
+    "assets/c0080001-0001-4001-8001-000000000001.png"
+  ]
+}

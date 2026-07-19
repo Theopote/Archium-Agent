@@ -1,0 +1,15 @@
+{
+  "title": "以路径组织空间",
+  "message": "患者路径不是附属流线，而是组织建筑体量的第一原则。",
+  "chapter_id": "concept_open",
+  "order": 8,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "rendering",
+      "description": "路径组织效果图",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

@@ -1,0 +1,17 @@
+{
+  "case_id": "case_012_circulation_diagram",
+  "title": "流线分析图",
+  "category": "drawing",
+  "page_type": "分析图主导页",
+  "page_task": "用分析图说明主要人流与车流动线关系。",
+  "visual_focus": "分析图居中放大，图例与结论简短。",
+  "expected_layout_family": "analytical_diagram",
+  "allowed_layout_variants": [
+    "diagram_focus",
+    "diagram_with_callouts"
+  ],
+  "layout_variant": "diagram_focus",
+  "assets": [
+    "assets/c0120001-0001-4001-8001-000000000001.png"
+  ]
+}

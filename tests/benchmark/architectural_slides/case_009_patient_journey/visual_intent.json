@@ -1,0 +1,13 @@
+{
+  "communication_goal": "让受众理解：通过分层到达与分区候诊，缩短交叉流线并提升导向清晰度。",
+  "dominant_content_type": "text_argument",
+  "density_level": "compact",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "textual_argument",
+    "strategy_cards"
+  ],
+  "composition_strategy": "以 textual_argument 表达主信息",
+  "has_hero_asset": false,
+  "supporting_asset_count": 0
+}

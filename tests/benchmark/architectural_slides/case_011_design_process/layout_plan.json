@@ -1,0 +1,169 @@
+{
+  "layout_family": "process_narrative",
+  "layout_variant": "timeline",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": null,
+  "reading_order": [
+    "title",
+    "lead",
+    "step_0",
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "arrow_0",
+    "arrow_1",
+    "arrow_2",
+    "arrow_3",
+    "summary",
+    "source"
+  ],
+  "balance_strategy": "sequential_steps",
+  "whitespace_ratio": 0.4044,
+  "elements": [
+    {
+      "id": "arrow_0",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 2.32,
+      "y": 2.324,
+      "w": 0.125,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "arrow_1",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 4.065,
+      "y": 2.324,
+      "w": 0.125,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "arrow_2",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 5.81,
+      "y": 2.324,
+      "w": 0.125,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "arrow_3",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 7.555,
+      "y": 2.324,
+      "w": 0.125,
+      "h": 0.28,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.942,
+      "w": 8.6,
+      "h": 0.32,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_0",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 1.345,
+      "w": 1.62,
+      "h": 2.798,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_1",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 2.445,
+      "y": 1.345,
+      "w": 1.62,
+      "h": 2.798,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_2",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 4.19,
+      "y": 1.345,
+      "w": 1.62,
+      "h": 2.798,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_3",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 5.935,
+      "y": 1.345,
+      "w": 1.62,
+      "h": 2.798,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "step_4",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 7.68,
+      "y": 1.345,
+      "w": 1.62,
+      "h": 2.798,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "summary",
+      "role": "caption",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.185,
+      "w": 8.6,
+      "h": 0.32,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.45,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

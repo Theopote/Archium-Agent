@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from archium.domain.visual.benchmark import ArchitecturalSlideCategory
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutElementRole, LayoutFamily
 
 from tests.benchmark.architectural_slides.artifacts import (
@@ -10,12 +11,29 @@ from tests.benchmark.architectural_slides.artifacts import (
     assert_or_update_case_baseline,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
+from tests.benchmark.architectural_slides.case_catalog import CASE_CATALOG
 from tests.benchmark.architectural_slides.case_registry import (
     BENCHMARK_CASE_IDS,
     get_case_definition,
 )
 
 pytestmark = pytest.mark.architectural_benchmark
+
+
+def test_benchmark_catalog_has_thirty_cases() -> None:
+    assert len(CASE_CATALOG) == 30
+    assert len(BENCHMARK_CASE_IDS) == 30
+    assert len(set(BENCHMARK_CASE_IDS)) == 30
+
+
+def test_benchmark_covers_all_layout_families() -> None:
+    families = {entry.definition.expected_layout_family for entry in CASE_CATALOG}
+    assert families == set(LayoutFamily)
+
+
+def test_benchmark_covers_all_categories() -> None:
+    categories = {entry.definition.category for entry in CASE_CATALOG}
+    assert categories == set(ArchitecturalSlideCategory)
 
 
 @pytest.mark.parametrize("case_id", BENCHMARK_CASE_IDS)

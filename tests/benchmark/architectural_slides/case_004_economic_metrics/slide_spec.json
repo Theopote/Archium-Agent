@@ -7,7 +7,7 @@
   "visual_requirements": [
     {
       "type": "chart",
-      "description": "指标趋势图",
+      "description": "指标趋势",
       "asset_count": 1
     }
   ],

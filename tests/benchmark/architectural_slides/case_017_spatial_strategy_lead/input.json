@@ -1,0 +1,16 @@
+{
+  "case_id": "case_017_spatial_strategy_lead",
+  "title": "空间策略导言",
+  "category": "text_narrative",
+  "page_type": "策略卡片（导言+三卡）",
+  "page_task": "先给出导言论断，再用三卡展开空间策略。",
+  "visual_focus": "导言区与卡片区层次分明。",
+  "expected_layout_family": "strategy_cards",
+  "allowed_layout_variants": [
+    "cards_with_lead",
+    "three_cards",
+    "four_cards"
+  ],
+  "layout_variant": "cards_with_lead",
+  "assets": []
+}

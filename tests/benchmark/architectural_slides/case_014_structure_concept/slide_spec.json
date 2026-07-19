@@ -1,0 +1,15 @@
+{
+  "title": "门诊区结构概念",
+  "message": "采用模数化柱网支撑大跨候诊空间，兼顾后期科室调整弹性。",
+  "chapter_id": "structure",
+  "order": 14,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "diagram",
+      "description": "结构概念图",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

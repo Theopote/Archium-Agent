@@ -1,0 +1,18 @@
+{
+  "case_id": "case_006_project_hero",
+  "title": "方案封面：内院视角效果图",
+  "category": "photo_analysis",
+  "page_type": "封面主视觉",
+  "page_task": "以一张效果图建立项目气质与汇报开场记忆点。",
+  "visual_focus": "效果图占主视觉，标题与副标题克制留白。",
+  "expected_layout_family": "hero",
+  "allowed_layout_variants": [
+    "split",
+    "full_bleed",
+    "overlay"
+  ],
+  "layout_variant": "split",
+  "assets": [
+    "assets/c0060001-0001-4001-8001-000000000001.png"
+  ]
+}

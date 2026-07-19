@@ -1,0 +1,14 @@
+{
+  "title": "可持续设计策略",
+  "message": "通过被动式设计与运维策略组合，降低全生命周期能耗。",
+  "chapter_id": "sustainability",
+  "order": 16,
+  "key_points": [
+    "被动式通风",
+    "雨水回用",
+    "本地材料",
+    "立体绿化"
+  ],
+  "visual_requirements": [],
+  "source_count": 1
+}

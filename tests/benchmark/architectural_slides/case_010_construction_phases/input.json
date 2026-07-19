@@ -1,0 +1,19 @@
+{
+  "case_id": "case_010_construction_phases",
+  "title": "分期实施步骤",
+  "category": "data_metrics",
+  "page_type": "建设分期流程",
+  "page_task": "说明三期改造的实施顺序与关键里程碑。",
+  "visual_focus": "横向步骤与阶段名称对应，便于决策层快速阅读。",
+  "expected_layout_family": "process_narrative",
+  "allowed_layout_variants": [
+    "steps_horizontal",
+    "timeline"
+  ],
+  "layout_variant": "steps_horizontal",
+  "assets": [
+    "assets/c0100001-0001-4001-8001-000000000001.png",
+    "assets/c0100002-0001-4001-8001-000000000002.png",
+    "assets/c0100003-0001-4001-8001-000000000003.png"
+  ]
+}

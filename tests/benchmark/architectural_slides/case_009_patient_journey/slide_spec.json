@@ -1,0 +1,15 @@
+{
+  "title": "患者旅程：到达至离院",
+  "message": "通过分层到达与分区候诊，缩短交叉流线并提升导向清晰度。",
+  "chapter_id": "patient_flow",
+  "order": 9,
+  "key_points": [
+    "到达分流",
+    "分区候诊",
+    "串联诊疗",
+    "无障碍离院",
+    "家属短停"
+  ],
+  "visual_requirements": [],
+  "source_count": 1
+}

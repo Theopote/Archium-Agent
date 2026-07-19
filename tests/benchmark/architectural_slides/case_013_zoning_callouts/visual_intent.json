@@ -1,0 +1,13 @@
+{
+  "communication_goal": "让受众理解：公共界面沿内院展开，后勤与科研布置于外围安静界面。",
+  "dominant_content_type": "analytical_diagram",
+  "density_level": "balanced",
+  "continuity_role": "explanation",
+  "preferred_layout_families": [
+    "analytical_diagram",
+    "drawing_focus"
+  ],
+  "composition_strategy": "以 analytical_diagram 表达主信息",
+  "has_hero_asset": true,
+  "supporting_asset_count": 0
+}

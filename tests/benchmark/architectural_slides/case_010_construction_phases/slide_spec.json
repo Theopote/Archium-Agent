@@ -1,0 +1,30 @@
+{
+  "title": "分期实施与运维过渡",
+  "message": "一期保障急诊不停运，二期完成门诊更新，三期整合科研与后勤。",
+  "chapter_id": "phasing",
+  "order": 10,
+  "key_points": [
+    "一期：急诊独立",
+    "二期：门诊更新",
+    "三期：科研整合",
+    "全程运维过渡"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "一期围挡",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "二期门诊",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "三期整合",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

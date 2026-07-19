@@ -1,0 +1,15 @@
+{
+  "title": "院区主要流线分析",
+  "message": "急救、门诊与后勤流线分层组织，避免地面层交叉混行。",
+  "chapter_id": "circulation",
+  "order": 12,
+  "key_points": [],
+  "visual_requirements": [
+    {
+      "type": "diagram",
+      "description": "流线分析图",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}

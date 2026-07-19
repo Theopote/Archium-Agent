@@ -1,0 +1,15 @@
+{
+  "title": "从诊断到方案的设计推演",
+  "message": "先解决可达性与公共性，再优化科室效率与科研配套。",
+  "chapter_id": "design_process",
+  "order": 11,
+  "key_points": [
+    "现状诊断",
+    "策略框架",
+    "空间原型",
+    "指标校核",
+    "方案定稿"
+  ],
+  "visual_requirements": [],
+  "source_count": 1
+}

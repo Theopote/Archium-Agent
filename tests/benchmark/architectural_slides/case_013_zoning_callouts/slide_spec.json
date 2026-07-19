@@ -1,0 +1,20 @@
+{
+  "title": "功能分区与公共界面",
+  "message": "公共界面沿内院展开，后勤与科研布置于外围安静界面。",
+  "chapter_id": "zoning",
+  "order": 13,
+  "key_points": [
+    "门诊公共带",
+    "内院开放面",
+    "后勤外置",
+    "科研安静区"
+  ],
+  "visual_requirements": [
+    {
+      "type": "diagram",
+      "description": "功能分区图",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1
+}
