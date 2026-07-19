@@ -418,6 +418,13 @@ def test_swap_missing_element_raises() -> None:
     assert isinstance(result.error, WorkflowError)
 
 
+def test_empty_operation_list_commits_successfully() -> None:
+    plan = _sample_plan()
+    result, _ = _execute(plan=plan, operations=[])
+    assert result.success is True
+    assert result.executed_operations == []
+
+
 def test_lock_and_unlock_roundtrip() -> None:
     plan = _sample_plan()
     element_id = plan.elements[0].id
