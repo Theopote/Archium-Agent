@@ -381,7 +381,7 @@ class TestE2EBenchmarkServiceEndToEnd:
         full_benchmark_case: E2EBenchmarkCase,
         always_valid_layouts: None,
     ) -> None:
-        """Marked e2e: content planning + VisualWorkflowService."""
+        """Legacy e2e smoke; nightly passed=True gate lives in test_e2e_quality_gate.py."""
         result = benchmark_service_with_llm.run_case(full_benchmark_case)
         assert result.execution_mode == "full"
         assert result.actual_slide_count >= 1

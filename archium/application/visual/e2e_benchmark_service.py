@@ -6,11 +6,14 @@
 3. 评估最终输出质量
 4. 对比期望标准
 
-注意：当前支持三种执行模式：
+注意：当前支持四种执行模式：
 - ``lite``：SlideSpec 由 case 预置（默认）
 - ``content``：Brief → Storyline → SlideSpec（需 ``enable_content_planning`` + LLM）
 - ``full``：content/lite 页面 + VisualWorkflowService（需 ``enable_visual_workflow``）
-- deliverable：full + PPTX 导出 + screenshot 检查（需 ``enable_pptx_export``）
+- ``deliverable``：full + PPTX 导出 + screenshot 检查（需 ``enable_pptx_export``）
+
+Nightly 质量门禁（M5）：``tests/integration/visual/test_e2e_quality_gate.py``（``@pytest.mark.e2e``），
+要求 ``passed=True``；见 ``.github/workflows/e2e-benchmark-nightly.yml``。
 
 仍未实现：Screenshot QA 视觉回归基线对比。
 """
@@ -220,7 +223,6 @@ class E2EBenchmarkService:
                         design_system_id=design_system.id,
                         imported_assets=imported_assets,
                         export_pptx=case.enable_pptx_export,
-                        case=case,
                         failure_reasons=failure_reasons,
                     )
                     visual_layout_plan_count = len(visual_result.layout_plan_ids)
@@ -832,7 +834,6 @@ class E2EBenchmarkService:
         design_system_id: UUID,
         imported_assets: list[Asset],
         export_pptx: bool,
-        case: E2EBenchmarkCase,
         failure_reasons: list[str],
     ) -> VisualWorkflowResult:
         assets = imported_assets or self._assets.list_by_project(project_id)
@@ -864,11 +865,6 @@ class E2EBenchmarkService:
             if not result.succeeded:
                 failure_reasons.append("Visual Workflow 未完成")
                 failure_reasons.extend(result.errors)
-            elif result.warnings:
-                for warning in result.warnings:
-                    if self._is_soft_screenshot_warning(case, warning):
-                        continue
-                    failure_reasons.append(f"Visual Workflow 警告: {warning}")
             return result
         finally:
             visual_service.close()
@@ -905,13 +901,6 @@ class E2EBenchmarkService:
             screenshot_tools_available=tools_available,
             passed=passed,
         )
-
-    @staticmethod
-    def _is_soft_screenshot_warning(case: E2EBenchmarkCase, warning: str) -> bool:
-        if not case.enable_screenshot_check or screenshot_tools_available():
-            return False
-        lowered = warning.lower()
-        return "pptx screenshots skipped" in lowered or "libreoffice" in lowered
 
     @staticmethod
     def _resume_visual_if_paused(

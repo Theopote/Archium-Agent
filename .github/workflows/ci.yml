@@ -59,7 +59,7 @@ jobs:
         run: mypy archium --python-version ${{ matrix.python-version }}
 
       - name: Pytest
-        run: pytest -m "not smoke" --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
+        run: pytest -m "not smoke and not e2e" --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
 
       - name: E2E Benchmark Service Integration Tests
         run: pytest tests/integration/visual/test_e2e_benchmark_service.py -v -m "not e2e"

@@ -110,7 +110,7 @@ markers = [
     "architectural_benchmark: Architectural slide visual benchmark cases (LayoutPlan + PNG baselines)",
     "real_project_acceptance: Five desensitized real-project end-to-end acceptance scenarios",
     "windows_smoke: Windows real-machine smoke (PptxGen, checkpoint, Unicode paths; windows-smoke.yml)",
-    "e2e: End-to-end benchmark tests (E2EBenchmarkService full workflow)",
+    "e2e: End-to-end benchmark tests (E2EBenchmarkService full workflow; nightly quality gate)",
     "integration: Integration tests requiring full service interaction",
 ]
 
