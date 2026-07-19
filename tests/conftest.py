@@ -56,3 +56,14 @@ def db_session(test_settings: Settings) -> Generator[Session, None, None]:
         session.close()
         Base.metadata.drop_all(engine)
         engine.dispose()
+
+
+@pytest.fixture
+def tmp_sqlite_engine(tmp_path: Path):
+    """Provide a temporary SQLite engine for testing."""
+    from sqlalchemy import create_engine
+
+    db_path = tmp_path / "test.db"
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    yield engine
+    engine.dispose()

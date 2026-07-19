@@ -198,15 +198,33 @@ def get_session(
 
 
 def init_database(engine: Engine | None = None) -> None:
-    """Create all database tables and apply pending schema migrations."""
+    """Initialize database schema.
+
+    For new databases: creates all tables and applies migrations.
+    For existing databases: validates migrations are up to date.
+
+    Raises ConfigurationError if existing database has pending migrations.
+    """
     import archium.infrastructure.database.models  # noqa: F401
 
     target = engine or get_engine()
-    Base.metadata.create_all(target)
-    if engine is None:
-        from archium.infrastructure.database.migrations import run_pending_migrations
 
-        run_pending_migrations()
+    # Import here to avoid circular dependency
+    from archium.infrastructure.database.migrations import (
+        check_migrations_on_startup,
+        get_current_revision,
+    )
+
+    # Check if database is brand new (no alembic_version table)
+    current_revision = get_current_revision()
+
+    if current_revision is None:
+        # Brand new database - create all tables then run migrations
+        Base.metadata.create_all(target)
+
+    # For both new and existing databases, validate migrations
+    if engine is None:
+        check_migrations_on_startup()
 
 
 def reset_engine_cache() -> None:

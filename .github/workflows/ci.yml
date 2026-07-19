@@ -59,7 +59,17 @@ jobs:
         run: mypy archium --python-version ${{ matrix.python-version }}
 
       - name: Pytest
-        run: pytest -m "not smoke" --cov=archium --cov-report=term-missing --cov-fail-under=65
+        run: pytest -m "not smoke" --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-archium
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: PptxGen smoke test
         run: pytest tests/smoke/test_pptxgen_render.py -v
