@@ -37,7 +37,7 @@ def scene_preset_preferences(key: str) -> VisualPreferences:
     if key == "design_competition":
         return VisualPreferences(
             density=DensityLevel.SPACIOUS,
-            visual_emphasis=VisualEmphasis.IMAGE,
+            visual_emphasis=VisualEmphasis.IMAGE_LED,
             formality=FormalityLevel.PROFESSIONAL,
             decoration_level=DecorationLevel.MEDIUM,
             whitespace_preference=WhitespacePreference.GENEROUS,
@@ -47,7 +47,7 @@ def scene_preset_preferences(key: str) -> VisualPreferences:
     if key == "technical_report":
         return VisualPreferences(
             density=DensityLevel.COMPACT,
-            visual_emphasis=VisualEmphasis.TEXT,
+            visual_emphasis=VisualEmphasis.TEXT_LED,
             formality=FormalityLevel.FORMAL,
             decoration_level=DecorationLevel.LOW,
             whitespace_preference=WhitespacePreference.TIGHT,
