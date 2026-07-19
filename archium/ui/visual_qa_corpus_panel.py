@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import streamlit as st
 
@@ -73,17 +74,17 @@ def render_visual_qa_corpus_panel() -> None:
 
 
 def _render_progress(progress: dict[str, object]) -> None:
-    current = progress["current"]  # type: ignore[index]
-    targets = progress["targets"]  # type: ignore[index]
-    total_current = progress["total_current"]  # type: ignore[index]
-    total_target = progress["total_target"]  # type: ignore[index]
+    current = cast(dict[str, int], progress["current"])
+    targets = cast(dict[str, int], progress["targets"])
+    total_current = cast(int, progress["total_current"])
+    total_target = cast(int, progress["total_target"])
 
     st.progress(min(1.0, total_current / max(total_target, 1)))
     st.markdown(f"**总进度：{total_current} / {total_target}**")
 
     cols = st.columns(3)
-    for index, (category, target) in enumerate(targets.items()):  # type: ignore[union-attr]
-        count = current.get(category, 0)  # type: ignore[union-attr]
+    for index, (category, target) in enumerate(targets.items()):
+        count = current.get(category, 0)
         label = _CATEGORY_LABELS.get(category, category)
         cols[index % 3].metric(label, f"{count}/{target}")
 
@@ -116,7 +117,7 @@ def _render_calibration_summary(report: dict[str, object]) -> None:
         st.dataframe(rows, use_container_width=True, hide_index=True)
 
     eligible = report.get("formal_emit_eligible_rule_codes", [])
-    if eligible:
+    if isinstance(eligible, list) and eligible:
         st.markdown("**可发正式问题的规则：** " + ", ".join(str(code) for code in eligible))
 
 

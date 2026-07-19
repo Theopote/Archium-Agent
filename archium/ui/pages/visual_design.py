@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 import streamlit as st
 
+from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.domain.visual.enums import (
     DecorationLevel,
     DensityLevel,
@@ -211,7 +213,7 @@ def _render_preferences_form() -> tuple[VisualPreferences, dict[str, object]]:
         drawing_display_mode=drawing_mode,
         presentation_context=context,
     )
-    options = {
+    options: dict[str, object] = {
         "require_art_direction_review": require_review,
         "use_llm": use_llm,
         "export_pptx": export_pptx,
@@ -242,7 +244,7 @@ def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
                     ),
                     use_llm=bool(options["use_llm"]),
                     export_pptx=bool(options["export_pptx"]),
-                    candidate_count=int(options["candidate_count"]),
+                    candidate_count=int(cast(int, options["candidate_count"])),
                 )
             st.session_state.last_visual_workflow_result = result
             st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
@@ -316,7 +318,7 @@ def _render_result_summary() -> None:
                 st.error(format_user_error(exc))
 
 
-def _render_quality_reports(result) -> None:  # noqa: ANN001
+def _render_quality_reports(result: VisualWorkflowResult) -> None:
     """Show Deck QA + Visual Critic from the last workflow run (read-only)."""
     deck = result.deck_qa_report if isinstance(result.deck_qa_report, dict) else None
     critics = list(result.visual_critic_reports or [])

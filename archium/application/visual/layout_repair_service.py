@@ -10,6 +10,7 @@ from archium.domain.visual.enums import (
     CropPolicy,
     ImageFit,
     LayoutElementRole,
+    LayoutFamily,
     LayoutValidationStatus,
     OverflowPolicy,
 )
@@ -697,7 +698,7 @@ class LayoutRepairService:
         )
 
     @staticmethod
-    def _next_layout_variant(family, current: str) -> str:
+    def _next_layout_variant(family: LayoutFamily, current: str) -> str:
         variants = list(get_layout_family_registry().get(family).supported_variants)
         if len(variants) < 2:
             return current

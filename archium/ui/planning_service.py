@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_executors import ArtifactOutput
 from archium.application.deliverable_planning_service import DeliverablePlanningService
 from archium.application.fact_ledger_service import FactLedgerService
 from archium.application.mission_clarification_service import (
@@ -492,7 +493,7 @@ def generate_question_list_artifact(
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
-):
+) -> ArtifactOutput:
     """Execute QuestionListExecutor against the mission bundle and write MD/JSON."""
     from archium.application.artifact_executors import (
         QuestionListExecutor,
@@ -536,7 +537,7 @@ def generate_work_plan_artifact(
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
-):
+) -> ArtifactOutput:
     """Execute WorkPlanExecutor and write MD/JSON work outline."""
     from archium.application.artifact_executors import (
         WorkPlanExecutor,

@@ -28,6 +28,7 @@ from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
 from archium.domain.visual.enums import LayoutValidationStatus
+from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
@@ -127,7 +128,7 @@ class VisualWorkflowNodes:
         self._runtime.workflow_runs.update(run)
 
     def _asset_context_for_plan(
-        self, state: VisualWorkflowState, plan
+        self, state: VisualWorkflowState, plan: LayoutPlan
     ) -> AssetReferenceContext | None:
         project_id_raw = state.get("project_id")
         if not project_id_raw:
@@ -719,7 +720,7 @@ class VisualWorkflowNodes:
         candidate_ids: list[str],
         design: object,
         state: VisualWorkflowState,
-    ):
+    ) -> LayoutPlan | None:
         from archium.domain.visual.design_system import DesignSystem
 
         assert isinstance(design, DesignSystem)
@@ -1030,8 +1031,8 @@ class VisualWorkflowNodes:
                     ),
                 )
                 deck_payload = deck_report.model_dump(mode="json")
-                for finding in deck_report.findings:
-                    warnings.append(f"DeckQA {finding.rule_code}: {finding.message}")
+                for deck_finding in deck_report.findings:
+                    warnings.append(f"DeckQA {deck_finding.rule_code}: {deck_finding.message}")
                 deck_path = output_dir / "deck_qa_report.json"
                 deck_path.write_text(
                     json.dumps(deck_payload, ensure_ascii=False, indent=2),
@@ -1064,8 +1065,8 @@ class VisualWorkflowNodes:
 
     @staticmethod
     def _map_slide_preview_pngs(
-        plans: list, render_paths: list[str]
-    ) -> dict[str, Path]:
+        plans: list[LayoutPlan], render_paths: list[str]
+    ) -> dict[str, str | Path]:
         """Map layout_plan_id → slide_NN.png by render order when previews exist."""
         previews = sorted(
             [
@@ -1089,7 +1090,7 @@ class VisualWorkflowNodes:
                 ],
                 key=lambda path: path.name,
             )
-        mapping: dict[str, Path] = {}
+        mapping: dict[str, str | Path] = {}
         for plan, png in zip(plans, previews, strict=False):
             mapping[str(plan.id)] = png
             mapping[str(plan.slide_id)] = png

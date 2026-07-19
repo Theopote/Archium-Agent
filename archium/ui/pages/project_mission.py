@@ -137,7 +137,7 @@ def _render_step_nav() -> int:
         label_visibility="collapsed",
     )
     st.session_state.mission_step = step
-    return step
+    return int(step)
 
 
 def _render_describe(project_id: UUID) -> None:
@@ -429,7 +429,7 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                     if cached.json_path:
                         st.caption(f"JSON：{cached.json_path}")
 
-    selected_presentations = [
+    selected_presentations: list[object] = [
         item
         for item in execution_plans
         if item.get("supported")
@@ -512,10 +512,10 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             except Exception as exc:
                 st.error(format_user_error(exc))
 
-    result = st.session_state.get("last_presentation_result")
-    if result is not None and result.brief is not None:
+    last_result = st.session_state.get("last_presentation_result")
+    if last_result is not None and last_result.brief is not None:
         st.caption(
-            f"最近结果：{result.brief.title} · 状态 {result.workflow_run.status.value}"
+            f"最近结果：{last_result.brief.title} · 状态 {last_result.workflow_run.status.value}"
         )
 
 

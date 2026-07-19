@@ -100,7 +100,7 @@ def render_art_direction_panel(
         )
 
     if save_clicked or approve_clicked or approve_continue:
-        updates = {
+        updates: dict[str, object] = {
             "concept_name": concept_name,
             "rationale": rationale,
             "visual_tone": _lines_to_list(visual_tone),
