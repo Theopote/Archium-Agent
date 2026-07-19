@@ -122,6 +122,18 @@ class VisualEditService:
                 edit_intent=resolved,
             )
 
+        if resolved in {
+            VisualEditIntent.UPDATE_ELEMENT_TEXT,
+            VisualEditIntent.SET_ELEMENT_ASSET,
+        }:
+            return self._apply_element_direct_edit(
+                slide,
+                current_intent,
+                current_plan,
+                resolved,
+                params or {},
+            )
+
         updated_intent = self._mutate_intent(current_intent, slide, resolved, params or {})
         replanned = self._replan(
             slide,
@@ -134,7 +146,13 @@ class VisualEditService:
 
     def restore_previous(self, slide_id: UUID) -> VisualEditResult:
         slide = self._require_slide(slide_id)
-        revision = self._history.latest_restorable_revision(slide)
+        current_intent = self._load_intent(slide)
+        current_plan = self._load_plan(slide)
+        revision = self._history.latest_restorable_revision(
+            slide,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+        )
         if revision is None:
             raise WorkflowError("没有可恢复的视觉修订。")
 
@@ -163,6 +181,75 @@ class VisualEditService:
             validation=validation,
             restored=True,
             message="已恢复到上一版视觉状态。",
+        )
+
+    def _apply_element_direct_edit(
+        self,
+        slide: object,
+        visual_intent: VisualIntent | None,
+        plan: LayoutPlan | None,
+        edit_intent: VisualEditIntent,
+        params: dict[str, object],
+    ) -> VisualEditResult:
+        if plan is None:
+            raise WorkflowError("当前页面尚无版式，无法直接编辑元素。")
+        element_id = str(params.get("element_id") or "")
+        if not element_id:
+            raise WorkflowError("请指定要编辑的元素。")
+
+        updated_elements = []
+        changed = False
+        for element in plan.elements:
+            if element.id != element_id:
+                updated_elements.append(element)
+                continue
+            if edit_intent == VisualEditIntent.UPDATE_ELEMENT_TEXT:
+                text = str(params.get("text") or "")
+                if not text.strip():
+                    raise WorkflowError("文字内容不能为空。")
+                updated_elements.append(element.model_copy(update={"text_content": text}))
+            elif edit_intent == VisualEditIntent.SET_ELEMENT_ASSET:
+                content_ref = str(params.get("content_ref") or params.get("asset_id") or "")
+                if not content_ref.strip():
+                    raise WorkflowError("请指定素材引用。")
+                updated_elements.append(element.model_copy(update={"content_ref": content_ref}))
+            changed = True
+        if not changed:
+            raise WorkflowError(f"未找到元素：{element_id}")
+
+        updated_plan = plan.model_copy(
+            update={
+                "elements": updated_elements,
+                "version": plan.version + 1,
+            }
+        )
+        updated_plan.touch()
+        saved_plan = self._plans.save(updated_plan)
+        slide.layout_plan_id = saved_plan.id  # type: ignore[attr-defined]
+        self._presentations.save_slide(slide)  # type: ignore[arg-type]
+        self._invalidate_preview_cache(slide.presentation_id, saved_plan)  # type: ignore[attr-defined]
+
+        design = self._resolve_design_system(slide, visual_intent)  # type: ignore[arg-type]
+        validation = None
+        if design is not None:
+            validation = LayoutValidationService().validate(
+                saved_plan,
+                design,
+                require_source=True,
+                drawing_hero=saved_plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+            )
+        message = (
+            "已更新元素文字。"
+            if edit_intent == VisualEditIntent.UPDATE_ELEMENT_TEXT
+            else "已更新元素素材。"
+        )
+        return VisualEditResult(
+            slide_id=slide.id,  # type: ignore[attr-defined]
+            intent=edit_intent,
+            visual_intent=visual_intent,
+            layout_plan=saved_plan,
+            validation=validation,
+            message=message,
         )
 
     def _apply_element_lock_state(

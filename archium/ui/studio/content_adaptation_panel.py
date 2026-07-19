@@ -18,6 +18,7 @@ from archium.ui.error_handlers import format_user_error
 from archium.ui.studio_service import (
     analyze_slide_content_adaptation,
     apply_slide_content_adaptation,
+    restore_slide_content_adaptation,
 )
 from archium.ui.visual_service import SlideVisualSnapshot
 
@@ -84,6 +85,13 @@ def render_content_adaptation_panel(*, slide_snapshot: SlideVisualSnapshot | Non
         ):
             _run_adaptation(slide_id=slide_id, action=action.value)
 
+    if st.button(
+        "撤销内容修改",
+        use_container_width=True,
+        key=f"studio_undo_content_{slide_id}",
+    ):
+        _run_restore(slide_id=slide_id)
+
 
 def _load_suggestions(slide_snapshot: SlideVisualSnapshot) -> list[ContentAdaptationSuggestion]:
     try:
@@ -103,6 +111,19 @@ def _run_adaptation(*, slide_id: UUID, action: str) -> None:
         with st.spinner("正在适配页面内容并更新版式…"), get_session() as session:
             result = apply_slide_content_adaptation(session, slide_id, action=action)
         message = getattr(result, "message", None) or "内容适配已完成。"
+        st.success(message)
+        st.rerun()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
+def _run_restore(*, slide_id: UUID) -> None:
+    try:
+        with st.spinner("正在撤销内容修改…"), get_session() as session:
+            result = restore_slide_content_adaptation(session, slide_id)
+        message = getattr(result, "message", None) or "已撤销内容修改。"
         st.success(message)
         st.rerun()
     except WorkflowError as exc:

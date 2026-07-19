@@ -100,6 +100,25 @@ class ContentAdaptationService:
 
         return result
 
+    def restore_previous(
+        self,
+        slide_id: UUID,
+        *,
+        replan_visual: bool = True,
+    ) -> ContentAdaptationResult:
+        slide = self._presentations.get_slide(slide_id)
+        if slide is None:
+            raise WorkflowError(f"页面 {slide_id} 不存在")
+        restored = self._history.restore_previous(slide_id)
+        result = ContentAdaptationResult(
+            slide=restored,
+            action=ContentAdaptationAction.SHORTEN,
+            message="已撤销上一步内容修改。",
+        )
+        if replan_visual:
+            result = self._replan_affected_slides(result)
+        return result
+
     def _apply_shorten(self, slide: SlideSpec) -> ContentAdaptationResult:
         updated = deepcopy(slide)
         message = shorten_repetitive_expression(updated.message)

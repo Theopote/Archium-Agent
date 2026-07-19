@@ -354,6 +354,12 @@ def apply_slide_visual_edit(
     return service.apply_intent(slide_id, resolved, params=params or {})
 
 
+def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
+    from archium.application.content_adaptation_service import ContentAdaptationService
+
+    return ContentAdaptationService(session).restore_previous(slide_id)
+
+
 def restore_slide_visual_edit(session: Session, slide_id: UUID) -> object:
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.domain.visual.edit_intent import VisualEditIntent

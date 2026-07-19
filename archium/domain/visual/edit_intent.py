@@ -17,6 +17,8 @@ class VisualEditIntent(StrEnum):
     REMOVE_ASSET = "remove_asset"
     LOCK_ELEMENT = "lock_element"
     UNLOCK_ELEMENT = "unlock_element"
+    UPDATE_ELEMENT_TEXT = "update_element_text"
+    SET_ELEMENT_ASSET = "set_element_asset"
     RESTORE_PREVIOUS = "restore_previous"
 
 
@@ -29,6 +31,8 @@ INTENT_USER_LABELS: dict[VisualEditIntent, str] = {
     VisualEditIntent.REMOVE_ASSET: "移除素材",
     VisualEditIntent.LOCK_ELEMENT: "锁定元素",
     VisualEditIntent.UNLOCK_ELEMENT: "解锁元素",
+    VisualEditIntent.UPDATE_ELEMENT_TEXT: "更新元素文字",
+    VisualEditIntent.SET_ELEMENT_ASSET: "设置元素素材",
     VisualEditIntent.RESTORE_PREVIOUS: "撤销上一步",
 }
 

@@ -55,9 +55,26 @@ class VisualHistoryService:
             if revision.snapshot.get("kind") == VISUAL_STATE_SNAPSHOT_KIND
         ]
 
-    def latest_restorable_revision(self, slide: SlideSpec) -> EntityRevision | None:
+    def latest_restorable_revision(
+        self,
+        slide: SlideSpec,
+        *,
+        visual_intent: VisualIntent | None = None,
+        layout_plan: LayoutPlan | None = None,
+    ) -> EntityRevision | None:
         revisions = self.list_slide_visual_revisions(slide)
-        return revisions[0] if revisions else None
+        if not revisions:
+            return None
+        current = self._build_snapshot(
+            slide=slide,
+            visual_intent=visual_intent,
+            layout_plan=layout_plan,
+        )
+        for index, revision in enumerate(revisions):
+            if self._visual_snapshot_matches(revision.snapshot, current):
+                next_index = index + 1
+                return revisions[next_index] if next_index < len(revisions) else None
+        return revisions[0]
 
     def restore_revision(
         self,
@@ -89,6 +106,13 @@ class VisualHistoryService:
             slide.layout_plan_id = plan.id
         presentations.save_slide(slide)  # type: ignore[attr-defined]
         return intent, plan
+
+    @staticmethod
+    def _visual_snapshot_matches(stored: dict[str, object], current: dict[str, object]) -> bool:
+        return (
+            stored.get("visual_intent") == current.get("visual_intent")
+            and stored.get("layout_plan") == current.get("layout_plan")
+        )
 
     @staticmethod
     def _build_snapshot(

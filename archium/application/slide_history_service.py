@@ -11,13 +11,15 @@ from archium.application.slide_diff import (
     change_source_label,
     diff_snapshots,
     slide_to_snapshot,
+    snapshot_content_fingerprint,
     snapshot_label,
+    snapshot_to_slide,
 )
 from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.revision import EntityRevision, SlideLineageOption
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideDiffResult, SlideRevision
-from archium.exceptions import SlideRevisionNotFoundError
+from archium.exceptions import SlideRevisionNotFoundError, WorkflowError
 
 
 class SlideHistoryService:
@@ -188,6 +190,34 @@ class SlideHistoryService:
         if previous is None:
             return None
         return self.diff_revisions(previous.id, revision.id)
+
+    def find_restorable_revision(self, slide: SlideSpec) -> EntityRevision | None:
+        """Return the revision snapshot to restore for multi-step content undo."""
+        revisions = [
+            revision
+            for revision in self.list_revisions(slide.id)
+            if revision.entity_type == RevisionEntityType.SLIDE
+        ]
+        if not revisions:
+            return None
+        current = snapshot_content_fingerprint(slide_to_snapshot(slide))
+        for index, revision in enumerate(revisions):
+            if snapshot_content_fingerprint(revision.snapshot) == current:
+                next_index = index + 1
+                return revisions[next_index] if next_index < len(revisions) else None
+        return revisions[0]
+
+    def restore_previous(self, slide_id: UUID) -> SlideSpec:
+        slide = self._get_slide(slide_id)
+        if slide is None:
+            raise WorkflowError("页面不存在。")
+        revision = self.find_restorable_revision(slide)
+        if revision is None:
+            raise WorkflowError("没有可撤销的内容修订。")
+        restored = snapshot_to_slide(revision.snapshot, slide)
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        return PresentationRepository(self._session).save_slide(restored)
 
     def _require_revision(self, revision_id: UUID) -> EntityRevision:
         revision = self._revisions.get_revision(revision_id)

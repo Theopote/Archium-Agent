@@ -54,7 +54,7 @@ def render_history_panel(
     if slide_snapshot is not None:
         with get_session() as session:
             revision_count = count_visual_revisions(session, slide_snapshot.slide.id)
-        st.caption(f"当前页视觉修订：{revision_count} 条（可在 AI 编辑中撤销上一步）")
+        st.caption(f"当前页视觉修订：{revision_count} 条（AI 编辑可多次撤销；内容适配见右侧面板）")
 
     with st.expander("页面内容修订历史", expanded=False):
         slides = [item.slide for item in context.snapshot.slides]

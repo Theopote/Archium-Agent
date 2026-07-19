@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import streamlit as st
 
+from archium.application.asset_board_service import AssetBoardService
 from archium.domain.visual.enums import LayoutContentType
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -13,7 +16,12 @@ from archium.ui.studio.element_labels import CONTENT_TYPE_LABELS, ROLE_LABELS, f
 from archium.ui.studio_service import SlideVisualSnapshot, apply_slide_visual_edit
 
 
-def render_slide_properties(*, slide_snapshot: SlideVisualSnapshot | None, advanced: bool) -> None:
+def render_slide_properties(
+    *,
+    slide_snapshot: SlideVisualSnapshot | None,
+    advanced: bool,
+    project_id: UUID | None = None,
+) -> None:
     """Render user-language slide and element properties."""
     st.markdown("**页面属性**")
     if slide_snapshot is None:
@@ -53,7 +61,11 @@ def render_slide_properties(*, slide_snapshot: SlideVisualSnapshot | None, advan
                     for issue in validation.issues[:6]:
                         st.write(f"- {issue.severity.value} · {issue.message}")
 
-        _render_element_properties(slide_snapshot=slide_snapshot, advanced=advanced)
+        _render_element_properties(
+            slide_snapshot=slide_snapshot,
+            advanced=advanced,
+            project_id=project_id,
+        )
 
     if slide_snapshot.visual_critic is not None:
         critic = slide_snapshot.visual_critic
@@ -63,7 +75,12 @@ def render_slide_properties(*, slide_snapshot: SlideVisualSnapshot | None, advan
         st.write(f"评分：{score_label}")
 
 
-def _render_element_properties(*, slide_snapshot: SlideVisualSnapshot, advanced: bool) -> None:
+def _render_element_properties(
+    *,
+    slide_snapshot: SlideVisualSnapshot,
+    advanced: bool,
+    project_id: UUID | None,
+) -> None:
     plan = slide_snapshot.layout_plan
     if plan is None or not plan.elements:
         return
@@ -99,14 +116,63 @@ def _render_element_properties(*, slide_snapshot: SlideVisualSnapshot, advanced:
     st.write(f"尺寸：{element.width:.2f} × {element.height:.2f}")
     st.write(f"锁定：{'是' if element.locked else '否'}")
 
-    if element.content_type == LayoutContentType.TEXT and element.text_content:
-        st.text_area(
+    if element.content_type == LayoutContentType.TEXT:
+        edited_text = st.text_area(
             "文字内容",
-            value=element.text_content,
+            value=element.text_content or "",
             height=80,
-            disabled=True,
             key=f"studio_element_text_{slide_snapshot.slide.id}_{element.id}",
         )
+        if st.button(
+            "保存文字",
+            use_container_width=True,
+            key=f"studio_save_element_text_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            try:
+                with get_session() as session:
+                    apply_slide_visual_edit(
+                        session,
+                        slide_snapshot.slide.id,
+                        intent="update_element_text",
+                        params={"element_id": element.id, "text": edited_text},
+                    )
+                st.success("已更新元素文字。")
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
+    elif element.content_type == LayoutContentType.IMAGE and project_id is not None:
+        with get_session() as session:
+            assets = AssetBoardService(session).list_project_assets(project_id)
+        asset_options = {str(asset.id): asset.filename for asset in assets}
+        if asset_options:
+            selected_asset = st.selectbox(
+                "绑定素材",
+                options=list(asset_options.keys()),
+                format_func=lambda value: asset_options[value],
+                key=f"studio_element_asset_{slide_snapshot.slide.id}_{element.id}",
+            )
+            if st.button(
+                "应用素材",
+                use_container_width=True,
+                key=f"studio_apply_element_asset_{slide_snapshot.slide.id}_{element.id}",
+            ):
+                try:
+                    with get_session() as session:
+                        apply_slide_visual_edit(
+                            session,
+                            slide_snapshot.slide.id,
+                            intent="set_element_asset",
+                            params={
+                                "element_id": element.id,
+                                "content_ref": selected_asset,
+                            },
+                        )
+                    st.success("已更新元素素材。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
+        elif element.content_ref:
+            st.write(f"素材引用：`{element.content_ref}`")
     elif element.content_ref:
         st.write(f"素材引用：`{element.content_ref}`")
         if element.fit_mode is not None:

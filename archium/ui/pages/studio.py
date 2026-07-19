@@ -71,7 +71,11 @@ def render() -> None:
         render_slide_canvas(slide_snapshot=slide_snapshot, advanced=advanced)
 
     with right_col:
-        render_slide_properties(slide_snapshot=slide_snapshot, advanced=advanced)
+        render_slide_properties(
+            slide_snapshot=slide_snapshot,
+            advanced=advanced,
+            project_id=context.project.id,
+        )
         st.divider()
         render_layout_candidates_panel(slide_snapshot=slide_snapshot, advanced=advanced)
         st.divider()

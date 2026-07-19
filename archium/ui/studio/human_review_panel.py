@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import UUID
 
 import streamlit as st
 
+from archium.application.studio_human_review_store import (
+    load_slide_review,
+    save_slide_review,
+)
 from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
     HUMAN_REVIEW_PASS_THRESHOLD,
     HumanVisualReview,
 )
+from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.visual_service import SlideVisualSnapshot
 
 REVIEW_DIMENSION_LABELS: dict[str, str] = {
@@ -35,23 +41,34 @@ def get_stored_human_review(
     presentation_id: UUID,
     slide_id: UUID,
 ) -> HumanVisualReview | None:
-    store = st.session_state.get(_reviews_key(presentation_id), {})
-    if not isinstance(store, dict):
-        return None
-    payload = store.get(str(slide_id))
-    if not isinstance(payload, dict):
-        return None
-    try:
-        return HumanVisualReview.model_validate(payload)
-    except Exception:
-        return None
+    cached = st.session_state.get(_reviews_key(presentation_id), {})
+    if isinstance(cached, dict):
+        payload = cached.get(str(slide_id))
+        if isinstance(payload, dict):
+            try:
+                return HumanVisualReview.model_validate(payload)
+            except Exception:
+                pass
+    return load_slide_review(
+        presentation_id,
+        slide_id,
+        settings=get_ui_effective_settings(),
+    )
 
 
-def store_human_review(review: HumanVisualReview, *, presentation_id: UUID, slide_id: UUID) -> None:
+def store_human_review(review: HumanVisualReview, *, presentation_id: UUID, slide_id: UUID) -> Path:
+    settings = get_ui_effective_settings()
+    path = save_slide_review(
+        presentation_id,
+        slide_id,
+        review,
+        settings=settings,
+    )
     key = _reviews_key(presentation_id)
     store = dict(st.session_state.get(key) or {})
     store[str(slide_id)] = review.model_dump(mode="json")
     st.session_state[key] = store
+    return path
 
 
 def render_human_review_panel(
@@ -126,5 +143,6 @@ def render_human_review_panel(
         use_container_width=True,
         key=f"studio_save_human_review_{slide.id}",
     ):
-        store_human_review(preview, presentation_id=presentation_id, slide_id=slide.id)
-        st.success("已保存人工评审。")
+        path = store_human_review(preview, presentation_id=presentation_id, slide_id=slide.id)
+        st.success(f"已保存人工评审（{path}）。")
+        st.rerun()

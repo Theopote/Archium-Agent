@@ -5,7 +5,7 @@ from __future__ import annotations
 import difflib
 from uuid import UUID
 
-from archium.domain.enums import RevisionSource
+from archium.domain.enums import RevisionSource, SlideStatus, SlideType
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideDiffResult, SlideFieldChange
 
@@ -23,7 +23,6 @@ _TRACKED_FIELDS: tuple[tuple[str, str], ...] = (
 
 
 def slide_to_snapshot(slide: SlideSpec) -> dict[str, object]:
-    """Serialize a slide into a JSON-safe snapshot dict."""
     return {
         "id": str(slide.id),
         "lineage_id": str(slide.lineage_id),
@@ -40,6 +39,36 @@ def slide_to_snapshot(slide: SlideSpec) -> dict[str, object]:
         "status": slide.status.value,
         "version": slide.version,
     }
+
+
+def snapshot_content_fingerprint(snapshot: dict[str, object]) -> tuple[object, ...]:
+    """Compare slide content snapshots ignoring version/id churn."""
+    return (
+        snapshot.get("title"),
+        snapshot.get("message"),
+        tuple(snapshot.get("key_points") or []),
+        snapshot.get("speaker_notes"),
+        snapshot.get("slide_type"),
+        snapshot.get("status"),
+    )
+
+
+def snapshot_to_slide(snapshot: dict[str, object], slide: SlideSpec) -> SlideSpec:
+    """Rebuild a SlideSpec from a stored snapshot, preserving identity fields."""
+    return slide.model_copy(
+        update={
+            "title": str(snapshot.get("title") or slide.title),
+            "message": str(snapshot.get("message") or slide.message),
+            "chapter_id": str(snapshot.get("chapter_id") or slide.chapter_id),
+            "order": int(snapshot.get("order", slide.order)),
+            "slide_type": SlideType(str(snapshot.get("slide_type", slide.slide_type.value))),
+            "layout_id": snapshot.get("layout_id"),  # type: ignore[arg-type]
+            "key_points": [str(item) for item in list(snapshot.get("key_points") or [])],
+            "speaker_notes": snapshot.get("speaker_notes"),  # type: ignore[arg-type]
+            "status": SlideStatus(str(snapshot.get("status", slide.status.value))),
+            "version": slide.version + 1,
+        }
+    )
 
 
 def snapshot_label(snapshot: dict[str, object], *, prefix: str) -> str:
