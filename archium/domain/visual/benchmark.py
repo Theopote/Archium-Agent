@@ -9,7 +9,6 @@ from typing import Self
 from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel
-from archium.domain.visual.enums import LayoutFamily
 
 HUMAN_REVIEW_MIN_SCORE = 1
 HUMAN_REVIEW_MAX_SCORE = 5
@@ -30,6 +29,7 @@ HUMAN_REVIEW_WEIGHTS: dict[str, float] = {
     "editability": 0.10,
 }
 
+from archium.domain.visual.enums import LayoutFamily  # noqa: E402
 
 class HumanVisualReviewSource(StrEnum):
     """Provenance for a visual review record."""

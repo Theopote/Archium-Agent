@@ -2,6 +2,9 @@
 
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.benchmark import (
+    HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD,
+    HUMAN_REVIEW_FORMAL_MIN_ACCEPTED,
+    HUMAN_REVIEW_FORMAL_TOTAL_CASES,
     HUMAN_REVIEW_PASS_THRESHOLD,
     ArchitecturalSlideCategory,
     BenchmarkCaseDefinition,

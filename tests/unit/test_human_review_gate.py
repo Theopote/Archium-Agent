@@ -65,3 +65,14 @@ def test_human_gate_fails_when_accepted_page_has_major_problem() -> None:
     result = evaluate_benchmark_human_gate(reviews, total_cases=30, min_accepted=24)
     assert result.passed is False
     assert result.has_major_problem_on_accepted is True
+
+
+def test_formal_threshold_constants_import_after_visual_package() -> None:
+    """Regression: constants must exist before LayoutFamily import side-effects."""
+    import archium.domain.visual  # noqa: F401
+
+    from archium.application.human_review_gate import HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD
+    from archium.domain.visual.benchmark import HUMAN_REVIEW_FORMAL_MIN_ACCEPTED
+
+    assert HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD == 3.8
+    assert HUMAN_REVIEW_FORMAL_MIN_ACCEPTED == 24
