@@ -128,21 +128,25 @@ class ImageNode(BaseRenderNode):
     asset_unresolved: bool = False
 
 
+DrawingType = Literal[
+    "site_plan",
+    "floor_plan",
+    "elevation",
+    "section",
+    "detail",
+    "diagram",
+    "heritage_map",
+    "circulation_plan",
+]
+DrawingFitMode = Literal["contain", "safe_crop"]
+
+
 class DrawingNode(BaseRenderNode):
     node_type: Literal["drawing"] = "drawing"
     asset_id: UUID | None = None
     asset_path: str = ""
-    drawing_type: Literal[
-        "site_plan",
-        "floor_plan",
-        "elevation",
-        "section",
-        "detail",
-        "diagram",
-        "heritage_map",
-        "circulation_plan",
-    ] = "site_plan"
-    fit_mode: Literal["contain", "safe_crop"] = "contain"
+    drawing_type: DrawingType = "site_plan"
+    fit_mode: DrawingFitMode = "contain"
     crop_allowed: bool = False
     preserve_aspect_ratio: bool = True
     preserve_annotations: bool = True

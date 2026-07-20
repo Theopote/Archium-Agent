@@ -52,6 +52,4 @@ def is_project_presentation_role(semantic_role: str) -> bool:
         return True
     if role in _REFERENCE_SEMANTIC_ROLES:
         return False
-    if role.startswith("reference"):
-        return False
-    return True
+    return not role.startswith("reference")

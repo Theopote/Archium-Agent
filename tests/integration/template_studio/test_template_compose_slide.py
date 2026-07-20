@@ -79,7 +79,7 @@ def test_compose_slide_from_template_and_switch_candidate(
     presentation.current_storyline_id = storyline.id
     presentations.update_presentation(presentation)
 
-    design = DesignSystemRepository(db_session).save(default_presentation_design_system())
+    DesignSystemRepository(db_session).save(default_presentation_design_system())
     slide = presentations.save_slide(
         SlideSpec(
             presentation_id=presentation.id,

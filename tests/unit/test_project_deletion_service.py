@@ -191,7 +191,7 @@ def test_deleting_projects_are_hidden_from_default_list(
     db_session: Session,
 ) -> None:
     repo = ProjectRepository(db_session)
-    visible = repo.create(Project(name="可见"))
+    repo.create(Project(name="可见"))
     deleting = repo.create(Project(name="删除中"))
     deleting.mark_deleting()
     repo.update(deleting)

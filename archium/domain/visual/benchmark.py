@@ -335,9 +335,10 @@ class EditabilityReview(DomainModel):
 
     @model_validator(mode="after")
     def _enforce_pass_consistency(self) -> Self:
-        if self.is_manual_review() and self.passed:
-            if self.major_problems or not self.passes_threshold():
-                object.__setattr__(self, "passed", False)
+        if self.is_manual_review() and self.passed and (
+            self.major_problems or not self.passes_threshold()
+        ):
+            object.__setattr__(self, "passed", False)
         return self
 
 
@@ -388,9 +389,10 @@ class HumanLayoutReview(DomainModel):
 
     @model_validator(mode="after")
     def _enforce_geometry_consistency(self) -> Self:
-        if self.is_manual_review() and self.accepted_for_geometry:
-            if self.major_problems or not self.passes_threshold():
-                self.accepted_for_geometry = False
+        if self.is_manual_review() and self.accepted_for_geometry and (
+            self.major_problems or not self.passes_threshold()
+        ):
+            self.accepted_for_geometry = False
         return self
 
 

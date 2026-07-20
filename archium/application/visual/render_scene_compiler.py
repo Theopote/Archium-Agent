@@ -15,6 +15,8 @@ from archium.domain.visual.render_scene import (
     BackgroundStyle,
     BoxSpacing,
     DrawingNode,
+    DrawingFitMode,
+    DrawingType,
     FontAsset,
     ImageNode,
     RenderScene,
@@ -28,7 +30,7 @@ from archium.domain.visual.text_style import resolve_text_style
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
 
-_VISUAL_REQ_TO_DRAWING_TYPE: dict[str, DrawingNode.__annotations__["drawing_type"]] = {
+_VISUAL_REQ_TO_DRAWING_TYPE: dict[str, DrawingType] = {
     "site_plan": "site_plan",
     "floor_plan": "floor_plan",
     "elevation": "elevation",
@@ -143,7 +145,7 @@ class RenderSceneCompiler:
         self,
         slide: SlideSpec,
         visual_intent: VisualIntent | None,
-    ) -> DrawingNode.__annotations__["drawing_type"]:
+    ) -> DrawingType:
         for req in slide.visual_requirements:
             mapped = _VISUAL_REQ_TO_DRAWING_TYPE.get(req.type.value)
             if mapped:
@@ -176,7 +178,7 @@ class RenderSceneCompiler:
 
     def _drawing_semantic_role(
         self,
-        drawing_type: DrawingNode.__annotations__["drawing_type"],
+        drawing_type: DrawingType,
     ) -> str:
         return drawing_type
 
@@ -186,7 +188,7 @@ class RenderSceneCompiler:
         *,
         design_system: DesignSystem,
         bundle: SlideContentBundle,
-        drawing_type: DrawingNode.__annotations__["drawing_type"],
+        drawing_type: DrawingType,
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
     ) -> list[TextNode | ImageNode | DrawingNode | ShapeNode]:
@@ -312,13 +314,13 @@ class RenderSceneCompiler:
         self,
         element: LayoutElement,
         bundle: SlideContentBundle,
-        drawing_type: DrawingNode.__annotations__["drawing_type"],
+        drawing_type: DrawingType,
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
     ) -> list[DrawingNode]:
         path, unresolved = self._resolve_asset_path(element, bundle, warnings)
         origin = self._resolve_asset_origin(element, bundle)
-        fit_mode: DrawingNode.__annotations__["fit_mode"] = "contain"
+        fit_mode: DrawingFitMode = "contain"
         if element.fit_mode is not None and element.fit_mode.value == "cover":
             warnings.append(f"DRAWING_COVER_MODE_FORBIDDEN:{element.id}")
             fit_mode = "contain"

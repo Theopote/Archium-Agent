@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass, field
 from typing import Literal
 from uuid import UUID
@@ -398,10 +399,8 @@ def select_layout_candidate(
             else "layout candidate switch"
         ),
     )
-    try:
+    with contextlib.suppress(Exception):
         StudioSceneService(session).ensure_scene_for_slide(slide.id, force_recompile=True)
-    except Exception:
-        pass
     return plan
 
 
@@ -444,13 +443,11 @@ def apply_template_to_slide(
         change_source=RevisionSource.MANUAL_EDIT,
         note=f"apply template {result.template.name}",
     )
-    try:
+    with contextlib.suppress(Exception):
         StudioSceneService(session, settings=resolved).ensure_scene_for_slide(
             slide.id,
             force_recompile=True,
         )
-    except Exception:
-        pass
 
     snapshot = get_presentation_visual_snapshot(session, slide.presentation_id)
     for index, item in enumerate(snapshot.slides):

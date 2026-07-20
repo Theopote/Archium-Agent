@@ -247,7 +247,6 @@ def write_case_artifacts(result: BenchmarkCaseResult) -> Path:
     legacy_preview = directory / "preview.png"
     if legacy_preview != wireframe:
         shutil.copy(wireframe, legacy_preview)
-    asset_count = len(asset_paths)
     from tests.benchmark.architectural_slides.render_pipeline import (
         render_benchmark_visual_artifacts,
     )
