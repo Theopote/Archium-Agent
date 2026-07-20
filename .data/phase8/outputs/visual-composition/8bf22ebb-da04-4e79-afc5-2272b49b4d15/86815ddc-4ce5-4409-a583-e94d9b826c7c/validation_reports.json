@@ -1,0 +1,542 @@
+[
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "91d39f31-6c93-484e-902d-62f7a3db57c3",
+    "slide_id": "3f01a443-9afc-478a-823d-53a2404d7eff"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "d5b8edaa-99a1-47b9-a851-85697a1a0599",
+    "slide_id": "c3d39d85-9015-4b6a-a172-a5b7a34bbb56"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "3fe7da32-c63f-4e34-92b6-873bed6c1335",
+    "slide_id": "0044c8b4-1178-46f6-b7c5-32a1c62c15aa"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "8ed5ef1e-144f-457c-84b2-6030fbee9d70",
+    "slide_id": "666458d1-be4c-45ed-9277-2234e7859cac"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "d8aa2685-fafa-43e5-94aa-810017d95e17",
+    "slide_id": "208f02c3-3ced-401a-8324-f84b61336cb4"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "ee3679ff-b859-41ff-ad3c-41918d064456",
+    "slide_id": "c2626091-d227-415d-9ecb-0283fd2ba4b2"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "ef249771-bf44-47f2-b840-7438f9ae0197",
+    "slide_id": "12b00574-ee9b-4de2-82dd-c059998b1b52"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "93b12929-b818-485a-9e46-89819fa03f01",
+    "slide_id": "6e97cd95-72ab-4c6d-994c-e20009e8fc2a"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "5a3b87d5-d878-4024-a0a2-f4584aa87a99",
+    "slide_id": "9d21a59a-bbb9-4875-8059-a4e67f06542e"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "9f13740c-b85d-46de-9788-fa37def5403b",
+    "slide_id": "87c9c3de-1586-4b28-8ea0-8d4a2035da36"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "744fe365-562d-42a4-8f81-47c106986488",
+    "slide_id": "0195ab11-acfa-49a7-afd9-d9038c0d2976"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "d53a81c1-71a3-4696-82fd-4ff6531e5f8e",
+    "slide_id": "8ab40322-bbba-417d-96cf-6629668c1c12"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "074eda53-976a-42ce-b100-07fabb0afb6f",
+    "slide_id": "acd498e2-5b76-4478-aa6d-5e40766c3a1e"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "8878c3ba-983e-44f9-b805-6963fafe82bf",
+    "slide_id": "93154c5f-bf40-4e88-8f42-8b704fb6a0fe"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "25a2b457-8b20-48f3-9342-524e2db61013",
+    "slide_id": "51de85b6-b813-4255-84ea-667476a5c1da"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "6d89cdb8-bfa4-4057-ad7e-2483c7b34809",
+    "slide_id": "171030db-e1fb-406d-b212-2cd6a39f7268"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "15d1aa76-3bc0-49f1-bb5d-c36e840bfbed",
+    "slide_id": "521e68b5-23f1-4dd1-9321-d00ba47f75fe"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "35565cca-cabb-4266-926b-6d9022643cce",
+    "slide_id": "54f9ef58-ac36-4282-bce6-50b9a7f482f5"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "53849f9b-810a-4b00-b9fb-05d6544b8905",
+    "slide_id": "90db8fce-f846-454c-b347-16dca2cf78c8"
+  },
+  {
+    "issues": [
+      {
+        "rule_code": "LAYOUT.MISSING_SOURCE",
+        "severity": "warning",
+        "element_ids": [],
+        "message": "Layout is missing a visible source element.",
+        "suggestion": "Add a source citation on the page.",
+        "auto_repairable": false
+      }
+    ],
+    "score": 0.995,
+    "layout_score": {
+      "score_kind": "layout_quality",
+      "validity_score": 1.0,
+      "readability_score": 1.0,
+      "hierarchy_score": 1.0,
+      "alignment_score": 1.0,
+      "whitespace_score": 1.0,
+      "asset_usage_score": 1.0,
+      "consistency_score": 0.95,
+      "total_score": 0.995
+    },
+    "valid": true,
+    "layout_plan_id": "49efd2e5-caf5-4042-b600-1a93e73b788e",
+    "slide_id": "cc065e27-a7cb-4c34-ae21-92771bb465a4"
+  }
+]

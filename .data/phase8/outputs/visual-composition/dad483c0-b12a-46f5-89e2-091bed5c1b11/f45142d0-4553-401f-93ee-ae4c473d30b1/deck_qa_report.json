@@ -1,0 +1,142 @@
+{
+  "score_kind": "deck_consistency",
+  "method": "deck_heuristic_v0",
+  "slide_count": 20,
+  "dimensions": {
+    "layout_variety": 0.0,
+    "footer_consistency": 1.0,
+    "typography_consistency": 1.0,
+    "section_transition": 1.0,
+    "image_scale_consistency": 0.629,
+    "chrome_consistency": 1.0,
+    "palette_consistency": 1.0
+  },
+  "findings": [
+    {
+      "rule_code": "DECK.REPEATED_LAYOUT_FAMILY",
+      "severity": "warning",
+      "message": "20 consecutive slides share the same LayoutFamily.",
+      "suggestion": "Alternate families/variants for adjacent content pages.",
+      "slide_ids": [
+        "a47fc320-b04d-4b57-985c-faaa35547d81",
+        "871931fa-b7c6-415f-9756-0c3cc1d205bd",
+        "ac2d6879-45ca-436e-b884-28eb85a079bb",
+        "a69e9c7a-9471-4916-af8e-4ba826055ce4",
+        "cc68f24e-6cf2-4b03-9b1d-f608dabc04ba",
+        "13730292-169b-4d3c-8d8c-39aca3fc4936",
+        "37f4f11d-b465-457e-9bab-2034fe5d1e08",
+        "5c49696c-4a03-4248-bc91-89884f8fd319",
+        "2ef5f1ba-8b4b-4301-8ac8-aff43c5f9405",
+        "6847d696-bc06-45bd-a31b-d0c7673a5ed3",
+        "abcc879b-bda9-4ced-bee9-37b584485933",
+        "998710c5-0f2d-4f6f-a0ea-a934e89a1e66",
+        "1b2e375b-8e97-436c-b402-7ff1a5df97e4",
+        "7226b006-ea4b-47d0-9f3e-3614b567acfc",
+        "881feec7-5f2a-4edd-b11d-13aa72552da4",
+        "93d02f40-080c-491f-a11a-b593664682a5",
+        "3c60fd39-b368-43d2-a381-a12b5fdaad88",
+        "80dbc264-40b2-4f54-88d4-acbc9b629919",
+        "93a6ea19-b56f-4021-930a-b91d67eb7882",
+        "999d7247-a1b1-4831-bca6-34d82811a982"
+      ],
+      "evidence": {
+        "consecutive_same_family": 20,
+        "family": "hero"
+      }
+    },
+    {
+      "rule_code": "DECK.IMAGE_SCALE_INCONSISTENT",
+      "severity": "warning",
+      "message": "Hero visual widths vary sharply across slides.",
+      "suggestion": "Keep hero scale closer across content pages for a unified deck feel.",
+      "slide_ids": [
+        "a47fc320-b04d-4b57-985c-faaa35547d81",
+        "871931fa-b7c6-415f-9756-0c3cc1d205bd",
+        "ac2d6879-45ca-436e-b884-28eb85a079bb",
+        "a69e9c7a-9471-4916-af8e-4ba826055ce4",
+        "cc68f24e-6cf2-4b03-9b1d-f608dabc04ba",
+        "13730292-169b-4d3c-8d8c-39aca3fc4936",
+        "37f4f11d-b465-457e-9bab-2034fe5d1e08",
+        "5c49696c-4a03-4248-bc91-89884f8fd319",
+        "2ef5f1ba-8b4b-4301-8ac8-aff43c5f9405",
+        "6847d696-bc06-45bd-a31b-d0c7673a5ed3",
+        "abcc879b-bda9-4ced-bee9-37b584485933",
+        "998710c5-0f2d-4f6f-a0ea-a934e89a1e66",
+        "1b2e375b-8e97-436c-b402-7ff1a5df97e4",
+        "7226b006-ea4b-47d0-9f3e-3614b567acfc",
+        "881feec7-5f2a-4edd-b11d-13aa72552da4",
+        "93d02f40-080c-491f-a11a-b593664682a5",
+        "3c60fd39-b368-43d2-a381-a12b5fdaad88",
+        "80dbc264-40b2-4f54-88d4-acbc9b629919",
+        "93a6ea19-b56f-4021-930a-b91d67eb7882",
+        "999d7247-a1b1-4831-bca6-34d82811a982"
+      ],
+      "evidence": {
+        "width_ratio_span": 0.371,
+        "ratios": [
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489,
+          0.86,
+          0.489
+        ]
+      }
+    },
+    {
+      "rule_code": "DECK.COMPOSITION_FAMILY_DEVIATION",
+      "severity": "warning",
+      "message": "实际版式与 DeckCompositionPlan 推荐 family 偏差较多",
+      "suggestion": "检查 select_layouts 是否遵循 slide directive 的 preferred families",
+      "slide_ids": [
+        "a47fc320-b04d-4b57-985c-faaa35547d81",
+        "871931fa-b7c6-415f-9756-0c3cc1d205bd",
+        "ac2d6879-45ca-436e-b884-28eb85a079bb",
+        "a69e9c7a-9471-4916-af8e-4ba826055ce4",
+        "cc68f24e-6cf2-4b03-9b1d-f608dabc04ba",
+        "13730292-169b-4d3c-8d8c-39aca3fc4936",
+        "37f4f11d-b465-457e-9bab-2034fe5d1e08",
+        "5c49696c-4a03-4248-bc91-89884f8fd319",
+        "2ef5f1ba-8b4b-4301-8ac8-aff43c5f9405",
+        "6847d696-bc06-45bd-a31b-d0c7673a5ed3",
+        "abcc879b-bda9-4ced-bee9-37b584485933",
+        "998710c5-0f2d-4f6f-a0ea-a934e89a1e66",
+        "1b2e375b-8e97-436c-b402-7ff1a5df97e4",
+        "7226b006-ea4b-47d0-9f3e-3614b567acfc",
+        "881feec7-5f2a-4edd-b11d-13aa72552da4",
+        "93d02f40-080c-491f-a11a-b593664682a5",
+        "3c60fd39-b368-43d2-a381-a12b5fdaad88",
+        "80dbc264-40b2-4f54-88d4-acbc9b629919",
+        "93a6ea19-b56f-4021-930a-b91d67eb7882",
+        "999d7247-a1b1-4831-bca6-34d82811a982"
+      ],
+      "evidence": {
+        "deviation_count": 20
+      }
+    }
+  ],
+  "total_score": 0.804,
+  "notes": [
+    "ArtDirection palette_strategy noted: 暖白背景、炭灰正文、低饱和强调色；避免高饱和装饰色。",
+    "Deck composition deviations: 1 finding(s)."
+  ],
+  "finding_codes": [
+    "DECK.COMPOSITION_FAMILY_DEVIATION",
+    "DECK.IMAGE_SCALE_INCONSISTENT",
+    "DECK.REPEATED_LAYOUT_FAMILY"
+  ]
+}

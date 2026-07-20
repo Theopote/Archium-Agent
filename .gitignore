@@ -30,6 +30,9 @@ tests/smoke/artifacts/*
 !tests/smoke/artifacts/README.md
 !tests/smoke/artifacts/.gitkeep
 
+# Phase 8 real-project RenderScene deliverable dumps (regenerate via scripts/run_phase8_real_projects.py)
+tests/e2e/real_projects/*/outputs/
+
 # Layer 2 sanitized real project files (keep directory structure only)
 tests/golden/fixtures/files/**
 !tests/golden/fixtures/files/.gitkeep

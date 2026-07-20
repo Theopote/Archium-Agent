@@ -14,3 +14,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "phase7_acceptance: Phase 7 cultural village and renovation acceptance scaffolds",
     )
+    config.addinivalue_line(
+        "markers",
+        "phase8_artifacts: Phase 8 real-project RenderScene deliverable artifact pipelines",
+    )
