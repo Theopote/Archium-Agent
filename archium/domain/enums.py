@@ -61,6 +61,45 @@ class VerificationStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class InformationOrigin(StrEnum):
+    """Provenance of a knowledge item or claim."""
+
+    USER_UPLOAD = "user_upload"
+    USER_CONFIRMED = "user_confirmed"
+    PUBLIC_RESEARCH = "public_research"
+    SYSTEM_INFERENCE = "system_inference"
+    REFERENCE_CASE = "reference_case"
+
+
+class InformationReliability(StrEnum):
+    """Confidence tier for a knowledge item used in generation gating."""
+
+    CONFIRMED = "confirmed"
+    HIGH_CONFIDENCE = "high_confidence"
+    UNVERIFIED = "unverified"
+    INFERENCE = "inference"
+    CONFLICTING = "conflicting"
+
+
+class DocumentPurpose(StrEnum):
+    """Role of an imported document in project knowledge."""
+
+    PROJECT_MATERIAL = "project_material"
+    REFERENCE_CASE = "reference_case"
+    REFERENCE_STYLE = "reference_style"
+    POLICY = "policy"
+    PUBLIC_RESEARCH = "public_research"
+
+
+class KnowledgeItemStatus(StrEnum):
+    """Lifecycle status for a project knowledge item."""
+
+    ACTIVE = "active"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+    SUPERSEDED = "superseded"
+
+
 class PresentationType(StrEnum):
     CONCEPT = "concept"
     SCHEMATIC = "schematic"

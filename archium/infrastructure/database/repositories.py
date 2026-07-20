@@ -12,6 +12,7 @@ from archium.domain.asset import Asset
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProjectStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
+from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
@@ -29,6 +30,7 @@ from archium.infrastructure.database.models import (
     PresentationBriefORM,
     PresentationORM,
     ProjectFactORM,
+    ProjectKnowledgeItemORM,
     ProjectORM,
     ReviewIssueORM,
     SlideORM,
@@ -464,6 +466,61 @@ class FactRepository:
             return True
         except SQLAlchemyError as exc:
             _handle_error("delete fact", exc)
+            raise
+
+
+class ProjectKnowledgeRepository:
+    """CRUD operations for project knowledge items."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, item: ProjectKnowledgeItem) -> ProjectKnowledgeItem:
+        try:
+            orm = mappers.project_knowledge_item_to_orm(item)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.project_knowledge_item_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create knowledge item", exc)
+            raise
+
+    def get_by_id(self, item_id: UUID) -> ProjectKnowledgeItem | None:
+        orm = self._session.get(ProjectKnowledgeItemORM, item_id)
+        return mappers.project_knowledge_item_to_domain(orm) if orm else None
+
+    def list_by_project(self, project_id: UUID) -> list[ProjectKnowledgeItem]:
+        stmt = (
+            select(ProjectKnowledgeItemORM)
+            .where(ProjectKnowledgeItemORM.project_id == project_id)
+            .order_by(ProjectKnowledgeItemORM.created_at.desc())
+        )
+        return [mappers.project_knowledge_item_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def update(self, item: ProjectKnowledgeItem) -> ProjectKnowledgeItem:
+        try:
+            orm = self._session.get(ProjectKnowledgeItemORM, item.id)
+            if orm is None:
+                raise RepositoryError(f"Knowledge item {item.id} not found")
+            mappers.project_knowledge_item_to_orm(item, orm)
+            self._session.flush()
+            return mappers.project_knowledge_item_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update knowledge item", exc)
+            raise
+
+    def delete(self, item_id: UUID) -> bool:
+        try:
+            orm = self._session.get(ProjectKnowledgeItemORM, item_id)
+            if orm is None:
+                return False
+            self._session.delete(orm)
+            self._session.flush()
+            return True
+        except SQLAlchemyError as exc:
+            _handle_error("delete knowledge item", exc)
             raise
 
 

@@ -47,6 +47,10 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    knowledge_items: Mapped[list[ProjectKnowledgeItemORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
     assets: Mapped[list[AssetORM]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
@@ -120,6 +124,28 @@ class ProjectFactORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     project: Mapped[ProjectORM] = relationship(back_populates="facts")
+
+
+class ProjectKnowledgeItemORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "project_knowledge_items"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    statement: Mapped[str] = mapped_column(Text, nullable=False)
+    origin: Mapped[str] = mapped_column(String(40), nullable=False)
+    reliability: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_citations_json: Mapped[list[dict[str, object]]] = mapped_column(
+        "source_citations", JSON, default=list
+    )
+    applies_to_current_project: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    requires_user_confirmation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    conflict_group: Mapped[str | None] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
+    category: Mapped[str] = mapped_column(String(100), nullable=False, default="general")
+    linked_fact_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+
+    project: Mapped[ProjectORM] = relationship(back_populates="knowledge_items")
 
 
 class PresentationORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):

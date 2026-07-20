@@ -21,6 +21,7 @@ from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.error_handlers import format_user_error
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
+from archium.ui.knowledge_panel import render_knowledge_panel
 from archium.ui.label_map import (
     brief_storyline_pair,
     content_pipeline_chain,
@@ -652,6 +653,8 @@ def render() -> None:
         _render_documents(project_id)
         st.divider()
         render_chunk_panel(project_id)
+        st.divider()
+        render_knowledge_panel(project_id)
         st.divider()
         render_fact_ledger_panel(project_id)
         st.divider()

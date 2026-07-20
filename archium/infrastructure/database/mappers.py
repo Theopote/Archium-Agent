@@ -11,6 +11,9 @@ from archium.domain.enums import (
     ApprovalStatus,
     AssetType,
     DocumentType,
+    InformationOrigin,
+    InformationReliability,
+    KnowledgeItemStatus,
     PlanningSessionStatus,
     PresentationStatus,
     PresentationType,
@@ -30,6 +33,7 @@ from archium.domain.enums import (
     WorkflowStatus,
 )
 from archium.domain.fact import FactValue, ProjectFact
+from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.memory import UserPreference
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import (
@@ -54,6 +58,7 @@ from archium.infrastructure.database.models import (
     PresentationBriefORM,
     PresentationORM,
     ProjectFactORM,
+    ProjectKnowledgeItemORM,
     ProjectORM,
     ReviewIssueORM,
     SlideORM,
@@ -72,6 +77,14 @@ def citations_to_json(citations: list[Citation]) -> list[dict[str, object]]:
 
 def citations_from_json(data: list[dict[str, object]]) -> list[Citation]:
     return [Citation.model_validate(item) for item in data]
+
+
+def source_citations_to_json(citations: list[SourceCitation]) -> list[dict[str, object]]:
+    return [c.model_dump(mode="json") for c in citations]
+
+
+def source_citations_from_json(data: list[dict[str, object]]) -> list[SourceCitation]:
+    return [SourceCitation.model_validate(item) for item in data]
 
 
 def visual_requirements_to_json(items: list[VisualRequirement]) -> list[dict[str, object]]:
@@ -222,6 +235,49 @@ def project_fact_to_orm(domain: ProjectFact, orm: ProjectFactORM | None = None) 
     target.verification_status = domain.verification_status.value
     target.conflict_group = domain.conflict_group
     target.source_citations_json = citations_to_json(domain.source_citations)
+    target.created_at = domain.created_at
+    target.updated_at = domain.updated_at
+    return target
+
+
+# ── ProjectKnowledgeItem ───────────────────────────────────────
+
+
+def project_knowledge_item_to_domain(orm: ProjectKnowledgeItemORM) -> ProjectKnowledgeItem:
+    return ProjectKnowledgeItem(
+        id=orm.id,
+        project_id=orm.project_id,
+        statement=orm.statement,
+        origin=InformationOrigin(orm.origin),
+        reliability=InformationReliability(orm.reliability),
+        source_citations=source_citations_from_json(orm.source_citations_json),
+        applies_to_current_project=orm.applies_to_current_project,
+        requires_user_confirmation=orm.requires_user_confirmation,
+        conflict_group=orm.conflict_group,
+        status=KnowledgeItemStatus(orm.status),
+        category=orm.category,
+        linked_fact_id=orm.linked_fact_id,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def project_knowledge_item_to_orm(
+    domain: ProjectKnowledgeItem,
+    orm: ProjectKnowledgeItemORM | None = None,
+) -> ProjectKnowledgeItemORM:
+    target = orm or ProjectKnowledgeItemORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.statement = domain.statement
+    target.origin = domain.origin.value
+    target.reliability = domain.reliability.value
+    target.source_citations_json = source_citations_to_json(domain.source_citations)
+    target.applies_to_current_project = domain.applies_to_current_project
+    target.requires_user_confirmation = domain.requires_user_confirmation
+    target.conflict_group = domain.conflict_group
+    target.status = domain.status.value
+    target.category = domain.category
+    target.linked_fact_id = domain.linked_fact_id
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

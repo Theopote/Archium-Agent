@@ -9,6 +9,10 @@ from sqlalchemy.orm import Session
 
 from archium.agents.citations import citation_from_draft, enrich_slide_citations
 from archium.application.chunk_models import ProjectContextBundle
+from archium.application.knowledge_isolation import (
+    filter_generation_facts,
+    is_reference_document,
+)
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings
 from archium.domain.citation import Citation
@@ -118,9 +122,19 @@ def build_project_context_bundle(
             document_names[chunk.document_id] = document.filename
 
     all_facts = facts_repo.list_by_project(project_id)
-    active_facts = [
-        fact for fact in all_facts if fact.verification_status != VerificationStatus.REJECTED
-    ]
+    reference_doc_ids = {
+        str(doc.id)
+        for doc in documents.list_by_project(project_id)
+        if _is_reference_document_metadata(doc.metadata)
+    }
+    active_facts = filter_generation_facts(
+        [
+            fact
+            for fact in all_facts
+            if fact.verification_status != VerificationStatus.REJECTED
+        ],
+        reference_document_ids=reference_doc_ids or None,
+    )
     query_keys = match_fact_keys_from_query(query or "")
     ranked_facts = rank_facts_for_context(active_facts, query=query, limit=30)
     max_chars = resolved_settings.chunk_context_max_chars
@@ -177,13 +191,22 @@ def build_project_context_bundle(
 
 def _format_fact_line(fact: ProjectFact) -> str:
     unit_suffix = f" {fact.unit}" if fact.unit else ""
-    status = "已确认" if fact.is_confirmed else fact.verification_status.value
+    if fact.is_confirmed:
+        status = "已确认"
+    elif fact.verification_status == VerificationStatus.INFERRED:
+        status = "推测"
+    else:
+        status = fact.verification_status.value
     source = _fact_source_hint(fact)
     conflict = f" · 冲突组={fact.conflict_group}" if fact.conflict_group else ""
     return (
         f"- [{status}] {fact.label}: {fact.value}{unit_suffix}{source}{conflict} "
         f"(confidence={fact.confidence:.2f})"
     )
+
+
+def _is_reference_document_metadata(metadata: dict[str, object]) -> bool:
+    return is_reference_document(metadata)
 
 
 def _fact_source_hint(fact: ProjectFact) -> str:
