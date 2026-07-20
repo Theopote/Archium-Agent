@@ -23,10 +23,10 @@ from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import (
 )
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from pptx import Presentation
+from tests.smoke.artifact_publish import publish_smoke_artifact
 
 pytestmark = pytest.mark.smoke
 
-_ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
 _PPTXGEN_DIR = (
     Path(__file__).resolve().parents[2]
     / "archium"
@@ -123,7 +123,5 @@ def test_layout_plan_smoke_render_preserves_text(tmp_path: Path) -> None:
     assert abs(title_shape.left / 914400 - 0.7) < 0.05
     assert abs(title_shape.top / 914400 - 0.45) < 0.05
 
-    _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    artifact = _ARTIFACT_DIR / "layout_plan_smoke.editable.pptx"
-    artifact.write_bytes(rendered.read_bytes())
+    publish_smoke_artifact(rendered, "layout_plan_smoke.editable.pptx")
     assert (_PPTXGEN_DIR / "render-plan.mjs").exists()

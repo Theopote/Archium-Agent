@@ -10,11 +10,11 @@ import pytest
 from archium.config.settings import Settings
 from archium.infrastructure.renderers.marp_cli import MarpCliRunner
 from pptx import Presentation
+from tests.smoke.artifact_publish import publish_smoke_artifact
 
 pytestmark = [pytest.mark.smoke, pytest.mark.marp_smoke]
 
 _MARKDOWN_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "marp" / "smoke-presentation.md"
-_ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
 _EXPECTED_SLIDES = 2
 
 
@@ -60,14 +60,10 @@ def test_marp_smoke_exports_pptx_pdf_and_png(tmp_path: Path) -> None:
     finally:
         pdf_document.close()
 
-    _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    artifact_pptx = _ARTIFACT_DIR / "marp_smoke.presentation.pptx"
-    artifact_pdf = _ARTIFACT_DIR / "marp_smoke.presentation.pdf"
-    artifact_pptx.write_bytes(pptx_path.read_bytes())
-    artifact_pdf.write_bytes(pdf_path.read_bytes())
+    publish_smoke_artifact(pptx_path, "marp_smoke.presentation.pptx")
+    publish_smoke_artifact(pdf_path, "marp_smoke.presentation.pdf")
     for index, image in enumerate(images, start=1):
-        target = _ARTIFACT_DIR / f"marp_smoke.presentation.{index}.png"
-        target.write_bytes(image.read_bytes())
+        publish_smoke_artifact(image, f"marp_smoke.presentation.{index}.png")
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not installed")

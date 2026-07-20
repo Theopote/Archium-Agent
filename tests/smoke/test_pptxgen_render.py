@@ -9,11 +9,11 @@ import pytest
 from archium.config.settings import Settings
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from pptx import Presentation
+from tests.smoke.artifact_publish import publish_smoke_artifact
 
 pytestmark = pytest.mark.smoke
 
 _SPEC_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "pptxgen" / "smoke.spec.json"
-_ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
 _PPTXGEN_DIR = (
     Path(__file__).resolve().parents[2]
     / "archium"
@@ -63,10 +63,7 @@ def test_pptxgen_smoke_render_and_reopen(tmp_path: Path) -> None:
     second_notes = presentation.slides[1].notes_slide.notes_text_frame.text
     assert "中文路径" in second_notes
 
-    _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    artifact_path = _ARTIFACT_DIR / "pptxgen_smoke.editable.pptx"
-    artifact_path.write_bytes(rendered.read_bytes())
-    assert artifact_path.stat().st_size > 500
+    publish_smoke_artifact(rendered, "pptxgen_smoke.editable.pptx")
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not installed")

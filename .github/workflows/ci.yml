@@ -84,6 +84,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: PptxGen smoke test
+        env:
+          ARCHIUM_SMOKE_ARTIFACT_DIR: tests/smoke/artifacts
         run: pytest tests/smoke/test_pptxgen_render.py -v
 
       - name: Upload golden case artifacts
@@ -131,6 +133,8 @@ jobs:
         run: marp --version
 
       - name: Marp export smoke test
+        env:
+          ARCHIUM_SMOKE_ARTIFACT_DIR: tests/smoke/artifacts
         run: pytest tests/smoke/test_marp_export.py -v
 
       - name: Golden visual regression

@@ -14,6 +14,7 @@ build/
 .ruff_cache/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 
 # Node
@@ -23,6 +24,11 @@ node_modules/
 tests/golden/artifacts/*
 !tests/golden/artifacts/README.md
 !tests/golden/artifacts/.gitkeep
+
+# Smoke test CI artifacts (uploaded by GitHub Actions, not versioned)
+tests/smoke/artifacts/*
+!tests/smoke/artifacts/README.md
+!tests/smoke/artifacts/.gitkeep
 
 # Layer 2 sanitized real project files (keep directory structure only)
 tests/golden/fixtures/files/**
