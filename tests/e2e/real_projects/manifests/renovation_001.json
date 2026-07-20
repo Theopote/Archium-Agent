@@ -1,0 +1,48 @@
+{
+  "id": "renovation_001",
+  "scenario": "existing_renovation",
+  "name": "既有建筑改造：工业厂房转创意办公",
+  "project": {
+    "name": "工业厂房创意办公改造",
+    "project_type": "urban_renewal"
+  },
+  "facts": [
+    {"key": "gfa", "label": "改造后建面", "value": "3.1 万㎡"},
+    {"key": "phase", "label": "分期", "value": "三期"},
+    {"key": "site_alias", "label": "案例化名", "value": "东华文创园（脱敏）"}
+  ],
+  "files": [
+    {"relative_path": "renovation_001/documents/改造任务书.docx", "required": true},
+    {"relative_path": "renovation_001/documents/现状调研报告.pdf", "required": true},
+    {"relative_path": "renovation_001/documents/结构检测摘要.pdf", "required": true},
+    {"relative_path": "renovation_001/documents/参考汇报版式.pptx", "required": true},
+    {"relative_path": "renovation_001/data/改造面积指标.xlsx", "required": true},
+    {"relative_path": "renovation_001/assets/01_factory_aerial.png", "required": true, "label": "厂区航拍"},
+    {"relative_path": "renovation_001/assets/02_facade_before.png", "required": true, "label": "改造前面貌"},
+    {"relative_path": "renovation_001/assets/03_structure_existing.png", "required": true, "label": "结构现状"},
+    {"relative_path": "renovation_001/assets/04_floor_plan_before.png", "required": true, "label": "改造前平面"},
+    {"relative_path": "renovation_001/assets/05_floor_plan_after.png", "required": true, "label": "改造后平面"},
+    {"relative_path": "renovation_001/assets/06_public_realm.png", "required": true, "label": "公共界面"},
+    {"relative_path": "renovation_001/assets/07_circulation_diagram.png", "required": true, "label": "人流组织"},
+    {"relative_path": "renovation_001/assets/08_phasing_diagram.png", "required": true, "label": "分期示意"},
+    {"relative_path": "renovation_001/assets/09_section_renovation.png", "required": true, "label": "改造剖面"},
+    {"relative_path": "renovation_001/assets/10_ground_activation.png", "required": true, "label": "首层活化"},
+    {"relative_path": "renovation_001/assets/11_roof_intervention.png", "required": true, "label": "屋顶加建示意"}
+  ],
+  "request": {
+    "title": "工业厂房创意办公改造汇报",
+    "audience": "业主与运营方",
+    "purpose": "确认改造策略、分期与结构保留原则",
+    "duration_minutes": 35,
+    "target_slide_count": 20,
+    "core_message": "保留结构骨架，重建公共界面与功能弹性",
+    "required_sections": ["厂区现状", "问题诊断", "改造策略", "分期实施", "总结决策"],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 20,
+    "min_assets": 10,
+    "workflow_status": "completed",
+    "export_presentation_spec": true
+  }
+}

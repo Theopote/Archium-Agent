@@ -1,5 +1,5 @@
 {
-  "manifest_ref": "../manifests/project_002_renovation.json",
-  "input_document_count": 4,
-  "notes": "复用 project_002 脱敏 manifest；人工指标须由 Studio 评审会话填写。"
+  "manifest_ref": "../manifests/renovation_001.json",
+  "input_document_count": 5,
+  "notes": "脱敏资料见 files/renovation_001/；人工指标须由 Studio 评审会话填写。"
 }

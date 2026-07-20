@@ -56,3 +56,13 @@ Reference them from each manifest `files[]` entry (same pattern as Layer 2 fixtu
 | `files/cultural_village_001/assets/` | 11 PNG site/diagram assets |
 
 Regenerate stubs: `python scripts/materialize_cultural_village_files.py`
+
+### Phase 7 — renovation_001
+
+| Path | Contents |
+|------|----------|
+| `files/renovation_001/documents/` | 任务书 DOCX + 调研/结构 PDF + 参考 PPTX |
+| `files/renovation_001/data/` | 改造面积指标 XLSX |
+| `files/renovation_001/assets/` | 11 PNG 厂区/平面/分期素材 |
+
+Regenerate stubs: `python scripts/materialize_renovation_files.py`

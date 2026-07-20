@@ -39,9 +39,10 @@ def test_cultural_village_manifest_is_loadable() -> None:
     assert loaded.manifest.expectations.get("requires_cultural_narrative") is True
 
 
-def test_renovation_manifest_reuses_existing_renovation_case() -> None:
+def test_renovation_manifest_uses_phase7_drop_in_files() -> None:
     bundle = load_phase7_project("renovation_001")
     assert bundle.profile.scenario == RealProjectScenario.EXISTING_RENOVATION
     manifest_path = resolve_input_manifest_path(bundle)
     loaded = load_manifest(manifest_path)
-    assert loaded.manifest.project_id == "project_002_renovation"
+    assert loaded.manifest.project_id == "renovation_001"
+    assert len(loaded.raw.get("files", [])) >= 16
