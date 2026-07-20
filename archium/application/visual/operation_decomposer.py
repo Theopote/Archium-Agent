@@ -22,7 +22,7 @@ from archium.domain.visual.atomic_operation import (
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.nlp_parser import ModifierType, ParsedIntent
-from archium.domain.visual.slide import SlideSnapshot
+from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.exceptions import WorkflowError
 
 
@@ -40,7 +40,7 @@ class OperationDecomposer:
     def decompose(
         self,
         parsed_intent: ParsedIntent,
-        slide_snapshot: SlideSnapshot,
+        slide_snapshot: SlideEditSnapshot,
     ) -> list[AtomicOperation]:
         """
         Decompose a parsed intent into atomic operations.
@@ -104,7 +104,7 @@ class OperationDecomposer:
     def _extract_lock_operations(
         self,
         modifiers: list,
-        slide_snapshot: SlideSnapshot,
+        slide_snapshot: SlideEditSnapshot,
     ) -> list[AtomicOperation]:
         """Extract lock operations from constraint modifiers."""
         lock_ops: list[AtomicOperation] = []
@@ -128,7 +128,7 @@ class OperationDecomposer:
         self,
         intent: VisualEditIntent,
         params: dict,
-        slide_snapshot: SlideSnapshot,
+        slide_snapshot: SlideEditSnapshot,
     ) -> AtomicOperation | None:
         """Create the main operation from the intent."""
         # Special handling for restore (not a regular operation)
@@ -206,7 +206,7 @@ class OperationDecomposer:
     def _extract_multi_step_operations(
         self,
         params: dict,
-        slide_snapshot: SlideSnapshot,
+        slide_snapshot: SlideEditSnapshot,
     ) -> list[AtomicOperation]:
         """Extract additional operations from multi_step_operations parameter."""
         multi_step_ops: list[AtomicOperation] = []
@@ -260,7 +260,7 @@ class OperationDecomposer:
     def _resolve_element_name(
         self,
         name: str | UUID | None,
-        slide_snapshot: SlideSnapshot,
+        slide_snapshot: SlideEditSnapshot,
     ) -> str | None:
         """
         Resolve element name to a layout element id string.

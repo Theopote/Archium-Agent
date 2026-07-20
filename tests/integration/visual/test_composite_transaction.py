@@ -27,7 +27,7 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
-from archium.domain.visual.slide import SlideSnapshot
+from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.domain.visual.atomic_operation import ReduceTextOperation, SwapOperation
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
@@ -285,7 +285,7 @@ def test_composite_transaction_rolls_back_on_failure_with_design_validation(
     service = VisualEditService(db_session)
 
     decomposer = OperationDecomposer()
-    snapshot = SlideSnapshot(
+    snapshot = SlideEditSnapshot(
         slide_id=slide.id,
         presentation_id=slide.presentation_id,
         visual_intent=fixture.visual_intent,
@@ -352,7 +352,7 @@ def test_swap_operation_exchanges_element_positions() -> None:
             ),
         ],
     )
-    snapshot = SlideSnapshot(
+    snapshot = SlideEditSnapshot(
         slide_id=plan.slide_id,
         presentation_id=uuid4(),
         visual_intent=None,

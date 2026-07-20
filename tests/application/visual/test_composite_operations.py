@@ -22,7 +22,7 @@ class TestOperationDecomposition:
         """Test: '保持图纸不动，把说明放右边'"""
         # Arrange
         from archium.application.visual.operation_decomposer import OperationDecomposer
-        from archium.domain.visual.slide import SlideSnapshot
+        from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
         from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
         # Create mock slide snapshot
@@ -56,7 +56,7 @@ class TestOperationDecomposition:
             ],
         )
 
-        slide_snapshot = SlideSnapshot(
+        slide_snapshot = SlideEditSnapshot(
             slide_id=uuid4(),
             presentation_id=uuid4(),
             visual_intent=None,
@@ -97,7 +97,7 @@ class TestOperationDecomposition:
     def test_decompose_move_and_reduce_text(self):
         """Test: '把说明放右边并减少两行文字'"""
         from archium.application.visual.operation_decomposer import OperationDecomposer
-        from archium.domain.visual.slide import SlideSnapshot
+        from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
         from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
         caption_id = uuid4()
@@ -122,7 +122,7 @@ class TestOperationDecomposition:
             ],
         )
 
-        slide_snapshot = SlideSnapshot(
+        slide_snapshot = SlideEditSnapshot(
             slide_id=uuid4(),
             presentation_id=uuid4(),
             visual_intent=None,
@@ -167,7 +167,7 @@ class TestOperationDecomposition:
     def test_decompose_full_composite(self):
         """Test: '保持图纸不动，把说明放右边并减少两行文字'"""
         from archium.application.visual.operation_decomposer import OperationDecomposer
-        from archium.domain.visual.slide import SlideSnapshot
+        from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
         from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
         drawing_id = uuid4()
@@ -200,7 +200,7 @@ class TestOperationDecomposition:
             ],
         )
 
-        slide_snapshot = SlideSnapshot(
+        slide_snapshot = SlideEditSnapshot(
             slide_id=uuid4(),
             presentation_id=uuid4(),
             visual_intent=None,
@@ -260,7 +260,7 @@ class TestOperationDecomposition:
 def test_decompose_swap_produces_two_absolute_moves() -> None:
     """Swap should decompose into two absolute move operations."""
     from archium.application.visual.operation_decomposer import OperationDecomposer
-    from archium.domain.visual.slide import SlideSnapshot
+    from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
     from archium.domain.visual.layout import LayoutPlan, LayoutElement
 
     left_id = uuid4()
@@ -309,7 +309,7 @@ def test_decompose_swap_produces_two_absolute_moves() -> None:
     )
     operations = OperationDecomposer().decompose(
         parsed,
-        SlideSnapshot(
+        SlideEditSnapshot(
             slide_id=layout_plan.slide_id,
             presentation_id=uuid4(),
             visual_intent=None,

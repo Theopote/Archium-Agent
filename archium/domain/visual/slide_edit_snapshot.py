@@ -1,4 +1,4 @@
-"""Slide-related domain models for visual editing."""
+"""Immutable visual-edit state snapshot (distinct from ``archium.domain.slide.SlideSpec``)."""
 
 from __future__ import annotations
 
@@ -10,12 +10,11 @@ from archium.domain.visual.visual_intent import VisualIntent
 
 
 @dataclass(frozen=True)
-class SlideSnapshot:
+class SlideEditSnapshot:
     """
-    Immutable snapshot of a slide's visual state.
+    Immutable snapshot of a slide's visual state for composite edit transactions.
 
-    Used for operation decomposition and transaction execution.
-    Contains all visual-related state needed to execute operations.
+    Used for operation decomposition and :class:`TransactionExecutor` checkpoints.
     """
 
     slide_id: UUID
@@ -25,10 +24,8 @@ class SlideSnapshot:
 
     @property
     def has_layout_plan(self) -> bool:
-        """Check if this snapshot has a layout plan."""
         return self.layout_plan is not None
 
     @property
     def has_visual_intent(self) -> bool:
-        """Check if this snapshot has a visual intent."""
         return self.visual_intent is not None

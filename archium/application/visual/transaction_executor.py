@@ -13,6 +13,15 @@ from archium.application.visual.element_geometry import (
     compute_element_placement,
     reduce_text_content,
 )
+from archium.application.visual.transaction_immutability import (
+    bumped_layout_plan,
+    restored_from_snapshot,
+)
+from archium.application.visual.transaction_repository_protocols import (
+    LayoutPlanRepositoryProtocol,
+    PresentationRepositoryProtocol,
+    VisualIntentRepositoryProtocol,
+)
 from archium.application.visual.visual_history_service import VisualHistoryService
 from archium.application.visual.visual_intent_presets import (
     apply_hero_asset,
@@ -25,7 +34,7 @@ from archium.domain.visual.atomic_operation import AtomicOperation, OperationTyp
 from archium.domain.visual.element_lock import ElementEditOperation, assert_element_editable
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.slide import SlideSnapshot
+from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
 
@@ -91,11 +100,11 @@ class TransactionExecutor:
         self,
         operations: list[AtomicOperation],
         slide_id: UUID,
-        slide_snapshot: SlideSnapshot,
+        slide_snapshot: SlideEditSnapshot,
         *,
-        intents_repo: Any,
-        plans_repo: Any,
-        presentations_repo: Any,
+        intents_repo: VisualIntentRepositoryProtocol,
+        plans_repo: LayoutPlanRepositoryProtocol,
+        presentations_repo: PresentationRepositoryProtocol,
         execution_context: TransactionExecutionContext | None = None,
     ) -> TransactionResult:
         """
@@ -237,8 +246,8 @@ class TransactionExecutor:
         slide: SlideSpec,
         visual_intent: VisualIntent | None,
         layout_plan: LayoutPlan | None,
-        intents_repo: Any,
-        plans_repo: Any,
+        intents_repo: VisualIntentRepositoryProtocol,
+        plans_repo: LayoutPlanRepositoryProtocol,
         execution_context: TransactionExecutionContext | None,
     ) -> tuple[VisualIntent | None, LayoutPlan | None]:
         """Execute a single atomic operation."""
@@ -354,7 +363,7 @@ class TransactionExecutor:
         operation: AtomicOperation,
         *,
         locked: bool,
-        plans_repo: Any,
+        plans_repo: LayoutPlanRepositoryProtocol,
     ) -> LayoutPlan:
         if layout_plan is None:
             action = "lock" if locked else "unlock"
@@ -377,14 +386,7 @@ class TransactionExecutor:
             action = "锁定" if locked else "解锁"
             raise WorkflowError(f"未找到可{action}的元素：{target_id}")
 
-        updated_plan = layout_plan.model_copy(
-            update={
-                "elements": updated_elements,
-                "version": layout_plan.version + 1,
-            }
-        )
-        updated_plan.touch()
-        return plans_repo.save(updated_plan)
+        return plans_repo.save(bumped_layout_plan(layout_plan, elements=updated_elements))
 
     @staticmethod
     def _assert_no_element_overlap(
@@ -450,11 +452,7 @@ class TransactionExecutor:
         if not changed:
             raise WorkflowError(f"未找到可移动的元素：{target_id}")
 
-        updated_plan = layout_plan.model_copy(
-            update={"elements": updated_elements, "version": layout_plan.version + 1}
-        )
-        updated_plan.touch()
-        return updated_plan
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
 
     def _swap_elements(
         self,
@@ -503,11 +501,7 @@ class TransactionExecutor:
             else:
                 updated_elements.append(element)
 
-        updated_plan = layout_plan.model_copy(
-            update={"elements": updated_elements, "version": layout_plan.version + 1}
-        )
-        updated_plan.touch()
-        return updated_plan
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
 
     def _resize_element(
         self,
@@ -557,11 +551,7 @@ class TransactionExecutor:
         if not changed:
             raise WorkflowError(f"未找到可缩放的元素：{target_id}")
 
-        updated_plan = layout_plan.model_copy(
-            update={"elements": updated_elements, "version": layout_plan.version + 1}
-        )
-        updated_plan.touch()
-        return updated_plan
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
 
     def _reduce_text(
         self,
@@ -569,8 +559,8 @@ class TransactionExecutor:
         layout_plan: LayoutPlan | None,
         operation: AtomicOperation,
         *,
-        intents_repo: Any,
-        plans_repo: Any,
+        intents_repo: VisualIntentRepositoryProtocol,
+        plans_repo: LayoutPlanRepositoryProtocol,
     ) -> tuple[VisualIntent | None, LayoutPlan | None]:
         if layout_plan is None:
             raise WorkflowError("Cannot reduce text: no layout plan")
@@ -602,11 +592,7 @@ class TransactionExecutor:
         if not changed:
             raise WorkflowError("未找到可缩减文字的元素")
 
-        updated_plan = layout_plan.model_copy(
-            update={"elements": updated_elements, "version": layout_plan.version + 1}
-        )
-        updated_plan.touch()
-        saved_plan = plans_repo.save(updated_plan)
+        saved_plan = plans_repo.save(bumped_layout_plan(layout_plan, elements=updated_elements))
 
         if visual_intent is not None:
             visual_intent = apply_visual_intent_preset(visual_intent, "reduce_text")
@@ -642,11 +628,7 @@ class TransactionExecutor:
         if not changed:
             raise WorkflowError(f"未找到可更新文字的元素：{target_id}")
 
-        updated_plan = layout_plan.model_copy(
-            update={"elements": updated_elements, "version": layout_plan.version + 1}
-        )
-        updated_plan.touch()
-        return updated_plan
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
 
     def _set_element_asset(
         self,
@@ -684,11 +666,7 @@ class TransactionExecutor:
         if not changed:
             raise WorkflowError(f"未找到可替换素材的元素：{target_id}")
 
-        updated_plan = layout_plan.model_copy(
-            update={"elements": updated_elements, "version": layout_plan.version + 1}
-        )
-        updated_plan.touch()
-        return updated_plan
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
 
     def _apply_intent_asset_change(
         self,
@@ -698,8 +676,8 @@ class TransactionExecutor:
         operation: AtomicOperation,
         *,
         execution_context: TransactionExecutionContext | None,
-        intents_repo: Any,
-        plans_repo: Any,
+        intents_repo: VisualIntentRepositoryProtocol,
+        plans_repo: LayoutPlanRepositoryProtocol,
     ) -> tuple[VisualIntent | None, LayoutPlan | None]:
         if visual_intent is None:
             raise WorkflowError("Asset operations require visual intent")
@@ -774,14 +752,7 @@ class TransactionExecutor:
                 )
             )
 
-        updated_plan = layout_plan.model_copy(
-            update={
-                "elements": updated_elements,
-                "version": layout_plan.version + 1,
-            }
-        )
-        updated_plan.touch()
-        return updated_plan
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
 
     def _increase_whitespace(self, layout_plan: LayoutPlan) -> LayoutPlan:
         updated_elements: list[LayoutElement] = []
@@ -805,14 +776,7 @@ class TransactionExecutor:
                 )
             )
 
-        updated_plan = layout_plan.model_copy(
-            update={
-                "elements": updated_elements,
-                "version": layout_plan.version + 1,
-            }
-        )
-        updated_plan.touch()
-        return updated_plan
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
 
     @staticmethod
     def _resolve_hero_element(layout_plan: LayoutPlan) -> LayoutElement | None:
@@ -830,8 +794,8 @@ class TransactionExecutor:
     def _restore_from_checkpoints(
         self,
         checkpoints: list[Checkpoint],
-        intents_repo: Any,
-        plans_repo: Any,
+        intents_repo: VisualIntentRepositoryProtocol,
+        plans_repo: LayoutPlanRepositoryProtocol,
     ) -> None:
         """Restore state from checkpoints (application-level rollback)."""
         if not checkpoints:
@@ -866,7 +830,7 @@ class TransactionExecutor:
     def _restore_visual_intent(
         self,
         snapshot: dict[str, Any],
-        intents_repo: Any,
+        intents_repo: VisualIntentRepositoryProtocol,
     ) -> VisualIntent | None:
         """Restore visual intent from snapshot."""
         intent_id = UUID(snapshot["id"])
@@ -874,13 +838,12 @@ class TransactionExecutor:
         if current is None:
             return None
         restored = VisualIntent.model_validate(snapshot)
-        restored.touch()
-        return restored
+        return restored_from_snapshot(restored)
 
     def _restore_layout_plan(
         self,
         snapshot: dict[str, Any],
-        plans_repo: Any,
+        plans_repo: LayoutPlanRepositoryProtocol,
     ) -> LayoutPlan | None:
         """Restore layout plan from snapshot."""
         plan_id = UUID(snapshot["id"])
@@ -888,5 +851,4 @@ class TransactionExecutor:
         if current is None:
             return None
         restored = LayoutPlan.model_validate(snapshot)
-        restored.touch()
-        return restored
+        return restored_from_snapshot(restored)

@@ -42,7 +42,7 @@ from archium.domain.visual.element_lock import (
 )
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.slide import SlideSnapshot
+from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -305,8 +305,7 @@ class VisualEditService:
         )
 
         # Build slide snapshot for decomposition
-        from archium.domain.visual.slide import SlideSnapshot
-        slide_snapshot = SlideSnapshot(
+        slide_snapshot = SlideEditSnapshot(
             slide_id=slide.id,
             presentation_id=slide.presentation_id,
             visual_intent=current_intent,
