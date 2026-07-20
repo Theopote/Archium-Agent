@@ -62,6 +62,33 @@ def load_manifest(path: Path) -> LoadedRealProjectCase:
     return LoadedRealProjectCase(manifest=manifest, request=request, raw=payload)
 
 
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff"}
+_DOCUMENT_SUFFIXES = {".docx", ".pdf", ".xlsx", ".pptx", ".doc", ".xls", ".ppt"}
+
+
+def resolve_manifest_files(payload: dict[str, Any]) -> list[Path]:
+    """Resolve drop-in files under tests/e2e/real_projects/files/."""
+    files_dir = Path(__file__).resolve().parent / "files"
+    paths: list[Path] = []
+    for entry in payload.get("files", []):
+        relative = Path(str(entry["relative_path"]))
+        resolved = (files_dir / relative).resolve()
+        if resolved.is_file():
+            paths.append(resolved)
+        elif bool(entry.get("required", False)):
+            msg = f"Required real-project file missing: {resolved}"
+            raise FileNotFoundError(msg)
+    return paths
+
+
+def _paths_include_images(paths: list[Path]) -> bool:
+    return any(path.suffix.lower() in _IMAGE_SUFFIXES for path in paths)
+
+
+def _paths_include_documents(paths: list[Path]) -> bool:
+    return any(path.suffix.lower() in _DOCUMENT_SUFFIXES for path in paths)
+
+
 def materialize_inline_assets(payload: dict[str, Any], scratch_dir: Path) -> list[Path]:
     """Create placeholder PNG assets declared in inline_assets."""
     base_dir = resolve_fixture_scratch_dir(payload, scratch_dir)
@@ -113,15 +140,13 @@ def seed_real_project_case(
         )
     )
 
-    imported_paths: list[Path] = materialize_inline_fallbacks(payload, scratch_dir)
-    imported_paths.extend(materialize_inline_assets(payload, scratch_dir))
-
-    files_dir = Path(__file__).resolve().parent / "files"
-    for entry in payload.get("files", []):
-        relative = Path(str(entry["relative_path"]))
-        resolved = (files_dir / relative).resolve()
-        if resolved.is_file():
-            imported_paths.append(resolved)
+    file_paths = resolve_manifest_files(payload)
+    imported_paths: list[Path] = []
+    if not file_paths or not _paths_include_documents(file_paths):
+        imported_paths.extend(materialize_inline_fallbacks(payload, scratch_dir))
+    if not file_paths or not _paths_include_images(file_paths):
+        imported_paths.extend(materialize_inline_assets(payload, scratch_dir))
+    imported_paths.extend(file_paths)
 
     if len(imported_paths) < int(loaded.manifest.expectations.get("min_assets", 10)):
         msg = (

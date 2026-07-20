@@ -46,3 +46,13 @@ tests/e2e/real_projects/files/<project_id>/...
 ```
 
 Reference them from each manifest `files[]` entry (same pattern as Layer 2 fixture acceptance).
+
+### Phase 7 — cultural_village_001
+
+| Path | Contents |
+|------|----------|
+| `files/cultural_village_001/documents/` | DOCX + PDF + reference PPTX |
+| `files/cultural_village_001/data/` | Village metrics XLSX |
+| `files/cultural_village_001/assets/` | 11 PNG site/diagram assets |
+
+Regenerate stubs: `python scripts/materialize_cultural_village_files.py`

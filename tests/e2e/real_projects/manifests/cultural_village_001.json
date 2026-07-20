@@ -6,22 +6,28 @@
     "name": "江南古村文化保护与文旅活化",
     "project_type": "culture"
   },
-  "inline_docx": {
-    "filename": "村落调研纪要.docx",
-    "paragraphs": [
-      "村落以水系与宗祠维系社区认同，历史街巷格局完整。",
-      "旅游旺季人流对居民生活造成干扰，需分区引导。",
-      "部分传统民居结构老化，需分级修缮与功能更新。"
-    ]
-  },
-  "inline_assets": [
-    {"filename": "village_aerial.png", "label": "村落航拍", "visual_type": "site_photo"},
-    {"filename": "alley_photo.png", "label": "历史街巷", "visual_type": "site_photo"},
-    {"filename": "temple_plan.png", "label": "宗祠平面", "visual_type": "floor_plan"}
-  ],
   "facts": [
     {"key": "heritage_level", "label": "文保等级", "value": "省级历史文化名村"},
-    {"key": "households", "label": "常住户数", "value": "186 户"}
+    {"key": "households", "label": "常住户数", "value": "186 户"},
+    {"key": "village_alias", "label": "案例化名", "value": "砚溪村（脱敏）"}
+  ],
+  "files": [
+    {"relative_path": "cultural_village_001/documents/村落调研纪要.docx", "required": true},
+    {"relative_path": "cultural_village_001/documents/文化价值研究摘要.pdf", "required": true},
+    {"relative_path": "cultural_village_001/documents/文保划定说明.pdf", "required": true},
+    {"relative_path": "cultural_village_001/documents/参考汇报版式.pptx", "required": true},
+    {"relative_path": "cultural_village_001/data/村落基础指标.xlsx", "required": true},
+    {"relative_path": "cultural_village_001/assets/01_village_aerial.png", "required": true, "label": "村落航拍"},
+    {"relative_path": "cultural_village_001/assets/02_historic_alley.png", "required": true, "label": "历史街巷"},
+    {"relative_path": "cultural_village_001/assets/03_ancestral_hall_plan.png", "required": true, "label": "宗祠平面"},
+    {"relative_path": "cultural_village_001/assets/04_water_network_plan.png", "required": true, "label": "水系格局"},
+    {"relative_path": "cultural_village_001/assets/05_courtyard_life.png", "required": true, "label": "院落生活场景"},
+    {"relative_path": "cultural_village_001/assets/06_heritage_elements.png", "required": true, "label": "文保要素分布"},
+    {"relative_path": "cultural_village_001/assets/07_tourism_circulation.png", "required": true, "label": "旅游流线组织"},
+    {"relative_path": "cultural_village_001/assets/08_repair_node_detail.png", "required": true, "label": "修缮节点示意"},
+    {"relative_path": "cultural_village_001/assets/09_activation_strategy_plan.png", "required": true, "label": "活化策略平面"},
+    {"relative_path": "cultural_village_001/assets/10_phasing_diagram.png", "required": true, "label": "分期实施示意"},
+    {"relative_path": "cultural_village_001/assets/11_street_section.png", "required": true, "label": "街巷断面示意"}
   ],
   "request": {
     "title": "文化名村保护与活化方案汇报",

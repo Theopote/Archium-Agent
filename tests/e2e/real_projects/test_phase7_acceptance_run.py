@@ -57,9 +57,8 @@ def test_phase7_automated_pipeline_does_not_fill_manual_metrics(
 
     assert summary.succeeded
     assert summary.slide_count >= REAL_PROJECT_MIN_SLIDES
-    if project_id == "renovation_001":
-        assert summary.slide_count >= min_slides
-        assert summary.asset_count >= min_assets
+    assert summary.slide_count >= min_slides
+    assert summary.asset_count >= min_assets
 
     record = summary.record
     assert record.human_metrics_source != HumanMetricsSource.STUDIO_MANUAL
