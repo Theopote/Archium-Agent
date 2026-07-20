@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from archium.application.outline_service import apply_audience_mode, infer_audience_mode, merge_template_with_storyline
+from uuid import uuid4
+
+from archium.application.outline_service import (
+    apply_audience_mode,
+    infer_audience_mode,
+    merge_template_with_storyline,
+)
 from archium.application.outline_templates import (
     cultural_village_outline_sections,
     detect_scenario_template,
@@ -11,7 +17,6 @@ from archium.application.outline_templates import (
 from archium.domain.enums import ApprovalStatus, OutlineAudienceMode
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
-from uuid import uuid4
 
 
 def _sample_brief(*, audience: str = "政府主管部门", purpose: str = "文化名村保护提升") -> PresentationBrief:

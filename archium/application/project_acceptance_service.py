@@ -31,7 +31,12 @@ from archium.domain.project_acceptance import (
 )
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual.validation import LAYOUT_DRAWING_CROPPED
-from archium.infrastructure.database.repositories import AssetRepository, DocumentRepository, PresentationRepository, ReviewRepository
+from archium.infrastructure.database.repositories import (
+    AssetRepository,
+    DocumentRepository,
+    PresentationRepository,
+    ReviewRepository,
+)
 from archium.infrastructure.llm.base import LLMProvider
 
 

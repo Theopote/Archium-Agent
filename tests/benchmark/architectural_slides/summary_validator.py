@@ -15,7 +15,6 @@ from tests.benchmark.architectural_slides.artifacts import (
     materialized_benchmark_case_ids,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
-from tests.benchmark.architectural_slides.case_registry import BENCHMARK_CASE_IDS
 from tests.benchmark.architectural_slides.report_builder import build_benchmark_summary
 
 BENCHMARK_REPORTS_DIR = BENCHMARK_ROOT / "reports"

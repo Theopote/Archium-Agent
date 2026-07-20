@@ -9,14 +9,17 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from archium.domain.asset import Asset
+from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProjectStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
-from archium.domain.project_knowledge import ProjectKnowledgeItem
-from archium.domain.planning_session import PlanningSession
 from archium.domain.outline import OutlinePlan
+from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
+from archium.domain.project_knowledge import ProjectKnowledgeItem
+from archium.domain.reference_style import ReferenceStyleProfile
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
@@ -114,8 +117,7 @@ class ProjectRepository:
             _handle_error("delete project", exc)
             raise
 
-    def save_cultural_narrative(self, plan: "CulturalNarrativePlan") -> "CulturalNarrativePlan":
-        from archium.domain.cultural_narrative import CulturalNarrativePlan
+    def save_cultural_narrative(self, plan: CulturalNarrativePlan) -> CulturalNarrativePlan:
 
         try:
             orm = self._session.get(CulturalNarrativePlanORM, plan.id)
@@ -130,12 +132,11 @@ class ProjectRepository:
             _handle_error("save cultural narrative", exc)
             raise
 
-    def get_cultural_narrative(self, plan_id: UUID) -> "CulturalNarrativePlan | None":
+    def get_cultural_narrative(self, plan_id: UUID) -> CulturalNarrativePlan | None:
         orm = self._session.get(CulturalNarrativePlanORM, plan_id)
         return mappers.cultural_narrative_plan_to_domain(orm) if orm else None
 
-    def list_cultural_narratives(self, project_id: UUID) -> list["CulturalNarrativePlan"]:
-        from archium.domain.cultural_narrative import CulturalNarrativePlan
+    def list_cultural_narratives(self, project_id: UUID) -> list[CulturalNarrativePlan]:
 
         stmt = (
             select(CulturalNarrativePlanORM)
@@ -157,8 +158,7 @@ class ProjectRepository:
             _handle_error("set current cultural narrative", exc)
             raise
 
-    def save_renovation_issue_map(self, plan: "RenovationIssueMap") -> "RenovationIssueMap":
-        from archium.domain.renovation_issue import RenovationIssueMap
+    def save_renovation_issue_map(self, plan: RenovationIssueMap) -> RenovationIssueMap:
 
         try:
             orm = self._session.get(RenovationIssueMapORM, plan.id)
@@ -173,11 +173,11 @@ class ProjectRepository:
             _handle_error("save renovation issue map", exc)
             raise
 
-    def get_renovation_issue_map(self, plan_id: UUID) -> "RenovationIssueMap | None":
+    def get_renovation_issue_map(self, plan_id: UUID) -> RenovationIssueMap | None:
         orm = self._session.get(RenovationIssueMapORM, plan_id)
         return mappers.renovation_issue_map_to_domain(orm) if orm else None
 
-    def list_renovation_issue_maps(self, project_id: UUID) -> list["RenovationIssueMap"]:
+    def list_renovation_issue_maps(self, project_id: UUID) -> list[RenovationIssueMap]:
         stmt = (
             select(RenovationIssueMapORM)
             .where(RenovationIssueMapORM.project_id == project_id)
@@ -199,9 +199,8 @@ class ProjectRepository:
             raise
 
     def save_reference_style_profile(
-        self, profile: "ReferenceStyleProfile"
-    ) -> "ReferenceStyleProfile":
-        from archium.domain.reference_style import ReferenceStyleProfile
+        self, profile: ReferenceStyleProfile
+    ) -> ReferenceStyleProfile:
 
         try:
             orm = self._session.get(ReferenceStyleProfileORM, profile.id)
@@ -216,11 +215,11 @@ class ProjectRepository:
             _handle_error("save reference style profile", exc)
             raise
 
-    def get_reference_style_profile(self, profile_id: UUID) -> "ReferenceStyleProfile | None":
+    def get_reference_style_profile(self, profile_id: UUID) -> ReferenceStyleProfile | None:
         orm = self._session.get(ReferenceStyleProfileORM, profile_id)
         return mappers.reference_style_profile_to_domain(orm) if orm else None
 
-    def list_reference_style_profiles(self, project_id: UUID) -> list["ReferenceStyleProfile"]:
+    def list_reference_style_profiles(self, project_id: UUID) -> list[ReferenceStyleProfile]:
         stmt = (
             select(ReferenceStyleProfileORM)
             .where(ReferenceStyleProfileORM.project_id == project_id)

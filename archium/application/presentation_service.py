@@ -15,11 +15,11 @@ from archium.agents.renovation_issue_planner import RenovationIssueMapPlanner
 from archium.agents.slide_planner import SlidePlanner
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
-from archium.domain.outline import OutlinePlan
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.outline import OutlinePlan
+from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
-from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository

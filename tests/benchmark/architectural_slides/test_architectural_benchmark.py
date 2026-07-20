@@ -37,7 +37,10 @@ pytestmark = [pytest.mark.benchmark, pytest.mark.architectural_benchmark]
 
 
 def test_benchmark_catalog_has_thirty_formal_cases_and_four_edge_entries() -> None:
-    from tests.benchmark.architectural_slides.case_catalog import EDGE_CASE_CATALOG, FULL_CASE_CATALOG
+    from tests.benchmark.architectural_slides.case_catalog import (
+        EDGE_CASE_CATALOG,
+        FULL_CASE_CATALOG,
+    )
     from tests.benchmark.architectural_slides.case_registry import (
         ALL_BENCHMARK_CASE_IDS,
         EDGE_BENCHMARK_CASE_IDS,

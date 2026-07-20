@@ -5,9 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pytest
-
 from archium.domain.visual.benchmark import BenchmarkRenderManifest
+
 from tests.benchmark.architectural_slides.render_manifest import (
     SCENE_JSON_NAME,
     SCENE_PREVIEW_NAME,

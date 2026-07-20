@@ -9,8 +9,8 @@ from archium.application.reference_style_service import (
     profile_from_draft,
     validate_reference_style_profile,
 )
-from archium.domain.enums import DocumentPurpose
 from archium.domain.document import SourceDocument
+from archium.domain.enums import DocumentPurpose
 from archium.domain.presentation import PresentationBrief
 from archium.infrastructure.llm.presentation_schemas import ReferenceStyleProfileDraft
 
@@ -68,8 +68,8 @@ def test_profile_fallback_from_brief() -> None:
 
 def test_list_reference_style_documents_filters_purpose(db_session) -> None:
     from archium.application.reference_style_service import list_reference_style_documents
-    from archium.infrastructure.database.repositories import DocumentRepository, ProjectRepository
     from archium.domain.project import Project
+    from archium.infrastructure.database.repositories import DocumentRepository, ProjectRepository
 
     project = ProjectRepository(db_session).create(Project(name="Style Test"))
     repo = DocumentRepository(db_session)

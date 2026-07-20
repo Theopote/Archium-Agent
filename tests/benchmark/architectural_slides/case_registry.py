@@ -16,8 +16,8 @@ from tests.benchmark.architectural_slides.case_catalog import (
     CASE_003_IMAGES,
     CASE_004_CHART,
     CASE_CATALOG,
-    CaseCatalogEntry,
     EDGE_CASE_CATALOG,
+    CaseCatalogEntry,
     get_catalog_entry,
 )
 

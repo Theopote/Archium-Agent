@@ -16,12 +16,13 @@ from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.infrastructure.renderers.png_renderer import PngRenderer
 from archium.infrastructure.renderers.pptx_renderer import PptxRenderer, maybe_export_scene_pptx
-from archium.infrastructure.renderers.renderer_conformance import assert_renderer_conformance
 from archium.infrastructure.renderers.pptx_screenshot import (
     export_pptx_slide_pngs,
     screenshot_tools_available,
 )
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
+from archium.infrastructure.renderers.renderer_conformance import assert_renderer_conformance
+
 from tests.benchmark.architectural_slides.render_manifest import (
     FINAL_RENDER_NAME,
     PPTX_RENDER_NAME,
@@ -203,7 +204,7 @@ def render_benchmark_visual_artifacts(
     rendered_at = datetime.now(UTC)
     notes: list[str] = [
         "RenderScene compiled from LayoutPlan with resolved text and assets.",
-        f"scene_preview.png rendered via png_renderer.",
+        "scene_preview.png rendered via png_renderer.",
     ]
 
     if pptx_path is None or not pptx_path.is_file():

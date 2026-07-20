@@ -39,6 +39,16 @@ _VISUAL_REQ_TO_DRAWING_TYPE: dict[str, DrawingNode.__annotations__["drawing_type
     "circulation_plan": "circulation_plan",
 }
 
+_VALID_ORIGINS = frozenset(
+    {
+        "project_upload",
+        "public_research",
+        "reference_case",
+        "ai_generated",
+        "stock_image",
+    }
+)
+
 
 class RenderSceneCompiler:
     """Translate planning artifacts into a unified RenderScene."""
@@ -145,6 +155,31 @@ class RenderSceneCompiler:
                 return mapped
         return "site_plan"
 
+    def _resolve_asset_origin(self, element: LayoutElement, bundle: SlideContentBundle) -> str:
+        if not element.content_ref:
+            return "project_upload"
+        origin = bundle.asset_origins.get(element.content_ref, "project_upload")
+        if origin in _VALID_ORIGINS:
+            return origin
+        return "project_upload"
+
+    def _image_semantic_role(self, element: LayoutElement, origin: str) -> str:
+        if origin in {"reference_case", "public_research"}:
+            return "reference_case_photo"
+        if element.role == LayoutElementRole.HERO_VISUAL:
+            return "project_photo"
+        if element.role == LayoutElementRole.CAPTION:
+            return "caption"
+        if element.role == LayoutElementRole.METRIC:
+            return "metric"
+        return element.role.value
+
+    def _drawing_semantic_role(
+        self,
+        drawing_type: DrawingNode.__annotations__["drawing_type"],
+    ) -> str:
+        return drawing_type
+
     def _compile_element(
         self,
         element: LayoutElement,
@@ -206,10 +241,13 @@ class RenderSceneCompiler:
             )
 
         font_family = typography.font_family_latin or typography.font_family
+        semantic = "metric" if element.role == LayoutElementRole.METRIC else element.role.value
+        if element.role == LayoutElementRole.SOURCE:
+            semantic = "citation"
         nodes.append(
             TextNode(
                 id=element.id,
-                semantic_role=element.role.value,
+                semantic_role=semantic,
                 source_layout_element_id=element.id,
                 x=element.x,
                 y=element.y,
@@ -240,6 +278,7 @@ class RenderSceneCompiler:
         warnings: list[str],
     ) -> list[ImageNode]:
         path, unresolved = self._resolve_asset_path(element, bundle, warnings)
+        origin = self._resolve_asset_origin(element, bundle)
         fit = "cover"
         if element.fit_mode is not None:
             fit = "contain" if element.fit_mode.value == "contain" else "cover"
@@ -248,13 +287,13 @@ class RenderSceneCompiler:
                 SceneAssetReference(
                     asset_path=path,
                     content_ref=element.content_ref,
-                    origin="project_upload",
+                    origin=origin,
                 )
             )
         return [
             ImageNode(
                 id=element.id,
-                semantic_role=element.role.value,
+                semantic_role=self._image_semantic_role(element, origin),
                 source_layout_element_id=element.id,
                 x=element.x,
                 y=element.y,
@@ -263,6 +302,7 @@ class RenderSceneCompiler:
                 z_index=element.z_index,
                 locked=element.locked,
                 asset_path=path or "",
+                asset_origin=origin,  # type: ignore[arg-type]
                 fit_mode=fit,  # type: ignore[arg-type]
                 asset_unresolved=unresolved,
             )
@@ -277,6 +317,7 @@ class RenderSceneCompiler:
         warnings: list[str],
     ) -> list[DrawingNode]:
         path, unresolved = self._resolve_asset_path(element, bundle, warnings)
+        origin = self._resolve_asset_origin(element, bundle)
         fit_mode: DrawingNode.__annotations__["fit_mode"] = "contain"
         if element.fit_mode is not None and element.fit_mode.value == "cover":
             warnings.append(f"DRAWING_COVER_MODE_FORBIDDEN:{element.id}")
@@ -286,13 +327,13 @@ class RenderSceneCompiler:
                 SceneAssetReference(
                     asset_path=path,
                     content_ref=element.content_ref,
-                    origin="project_upload",
+                    origin=origin,
                 )
             )
         return [
             DrawingNode(
                 id=element.id,
-                semantic_role=element.role.value,
+                semantic_role=self._drawing_semantic_role(drawing_type),
                 source_layout_element_id=element.id,
                 x=element.x,
                 y=element.y,

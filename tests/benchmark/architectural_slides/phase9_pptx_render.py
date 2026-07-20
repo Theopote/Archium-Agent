@@ -13,6 +13,7 @@ from archium.infrastructure.renderers.pptx_screenshot import (
     export_pptx_slide_pngs,
     screenshot_tools_available,
 )
+
 from tests.benchmark.architectural_slides.render_manifest import (
     FINAL_RENDER_NAME,
     PPTX_RENDER_NAME,

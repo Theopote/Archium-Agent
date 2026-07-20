@@ -10,7 +10,6 @@ from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel,
 from archium.domain.enums import ApprovalStatus, InformationOrigin
 from archium.domain.project_knowledge import SourceCitation
 
-
 CULTURAL_NARRATIVE_LOGICAL_KEY = "project-cultural-narrative"
 
 

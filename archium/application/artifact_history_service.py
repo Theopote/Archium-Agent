@@ -7,11 +7,14 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.artifact_snapshots import brief_to_snapshot, storyline_to_snapshot
-from archium.domain.outline import OutlinePlan
 from archium.application.revision_service import RevisionService
 from archium.application.slide_diff import change_source_label
+from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import RevisionEntityType, RevisionSource
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.reference_style import ReferenceStyleProfile
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.revision import EntityRevision
 
 
@@ -156,7 +159,6 @@ class OutlineHistoryService:
         note: str | None = None,
     ) -> EntityRevision:
         from archium.application.artifact_snapshots import outline_to_snapshot
-        from archium.domain.outline import OutlinePlan as OutlinePlanModel
 
         return self._revisions.record(
             entity_type=RevisionEntityType.OUTLINE,
@@ -170,7 +172,7 @@ class OutlineHistoryService:
 
     def archive_before_regeneration(
         self,
-        outline: OutlinePlanModel,
+        outline: OutlinePlan,
         *,
         note: str = "重新生成前归档",
     ) -> EntityRevision:
@@ -216,7 +218,7 @@ class CulturalNarrativeHistoryService:
 
     def record_snapshot(
         self,
-        plan: "CulturalNarrativePlan",
+        plan: CulturalNarrativePlan,
         change_source: RevisionSource,
         *,
         note: str | None = None,
@@ -235,7 +237,7 @@ class CulturalNarrativeHistoryService:
 
     def archive_before_regeneration(
         self,
-        plan: "CulturalNarrativePlan",
+        plan: CulturalNarrativePlan,
         *,
         note: str = "重新生成前归档",
     ) -> EntityRevision:
@@ -268,7 +270,7 @@ class RenovationIssueMapHistoryService:
 
     def record_snapshot(
         self,
-        plan: "RenovationIssueMap",
+        plan: RenovationIssueMap,
         change_source: RevisionSource,
         *,
         note: str | None = None,
@@ -287,7 +289,7 @@ class RenovationIssueMapHistoryService:
 
     def archive_before_regeneration(
         self,
-        plan: "RenovationIssueMap",
+        plan: RenovationIssueMap,
         *,
         note: str = "重新生成前归档",
     ) -> EntityRevision:
@@ -320,7 +322,7 @@ class ReferenceStyleProfileHistoryService:
 
     def record_snapshot(
         self,
-        profile: "ReferenceStyleProfile",
+        profile: ReferenceStyleProfile,
         change_source: RevisionSource,
         *,
         note: str | None = None,
@@ -339,7 +341,7 @@ class ReferenceStyleProfileHistoryService:
 
     def archive_before_regeneration(
         self,
-        profile: "ReferenceStyleProfile",
+        profile: ReferenceStyleProfile,
         *,
         note: str = "重新生成前归档",
     ) -> EntityRevision:

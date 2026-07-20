@@ -202,8 +202,14 @@ def benchmark_root(root: Path | None = None) -> Path:
 def list_benchmark_cases(*, root: Path | None = None) -> list[BenchmarkCaseSummary]:
     from tests.benchmark.architectural_slides.render_manifest import (
         final_render_path as case_final_render_path,
+    )
+    from tests.benchmark.architectural_slides.render_manifest import (
         pptx_render_path as case_pptx_render_path,
+    )
+    from tests.benchmark.architectural_slides.render_manifest import (
         scene_preview_path as case_scene_preview_path,
+    )
+    from tests.benchmark.architectural_slides.render_manifest import (
         wireframe_path as case_wireframe_path,
     )
 

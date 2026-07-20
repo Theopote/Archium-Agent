@@ -15,8 +15,8 @@ from archium.application.visual.asset_reference import (
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
 from archium.config.settings import Settings, get_settings
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.defaults import default_presentation_design_system
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.visual_intent import VisualIntent
@@ -104,6 +104,7 @@ class StudioSceneService:
         )
         return SlideContentBundle(
             asset_paths=dict(context.resolved_paths),
+            asset_origins=dict(context.asset_origins),
             page_number=slide.order + 1,
             speaker_notes=slide.speaker_notes or None,
         )

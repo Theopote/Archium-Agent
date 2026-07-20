@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -175,10 +176,8 @@ class PptxStructureExtractor:
                                 font_name = run.font.name
                                 all_fonts[run.font.name] += 1
                             if run.font.size is not None:
-                                try:
+                                with contextlib.suppress(Exception):
                                     font_size_pt = float(run.font.size.pt)
-                                except Exception:
-                                    pass
                             try:
                                 if run.font.color is not None and run.font.color.rgb is not None:
                                     hex_color = _rgb_to_hex(run.font.color.rgb)
@@ -200,10 +199,9 @@ class PptxStructureExtractor:
                 # Skip tiny decorative marks.
                 if width < 0.15 or height < 0.12:
                     continue
-                if not has_text and not is_picture:
+                if not has_text and not is_picture and width * height < 0.4:
                     # Keep larger shapes as decoration candidates.
-                    if width * height < 0.4:
-                        continue
+                    continue
 
                 role = _infer_slot_role(
                     has_text=bool(text),

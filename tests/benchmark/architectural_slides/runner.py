@@ -15,7 +15,9 @@ from tests.benchmark.architectural_slides.artifacts import (
     write_case_artifacts,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
-from tests.benchmark.architectural_slides.case_registry import ALL_BENCHMARK_CASE_IDS, BENCHMARK_CASE_IDS
+from tests.benchmark.architectural_slides.case_registry import (
+    ALL_BENCHMARK_CASE_IDS,
+)
 
 
 @dataclass(frozen=True)

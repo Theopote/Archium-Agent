@@ -9,7 +9,6 @@ from archium.agents._helpers import build_project_context_bundle, build_retrieva
 from archium.agents.citations import enrich_slide_citations
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.domain.enums import ApprovalStatus, WorkflowStep
-from archium.domain.outline import OutlinePlan
 from archium.domain.slide import SlideSpec
 from archium.workflow.nodes.base import WorkflowNodeBase
 from archium.workflow.state import PresentationWorkflowState

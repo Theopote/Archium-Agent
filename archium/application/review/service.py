@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from archium.application.review.architectural import ArchitecturalReviewer
 from archium.application.review.content import ContentReviewer
 from archium.application.review.evidence import EvidenceReviewer
 from archium.application.review.layout import LayoutReviewer
+from archium.application.review.scene_render_qa import PostRenderReviewer, SceneSemanticReviewer
 from archium.application.review.slide_semantic import SlideSemanticReviewer
 from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
@@ -18,6 +20,7 @@ from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.render_scene import RenderScene
 from archium.infrastructure.llm.base import LLMProvider
 
 
@@ -37,6 +40,8 @@ class AutomatedReviewService:
         self._architectural = ArchitecturalReviewer(session, llm=llm, settings=resolved_settings)
         self._layout = LayoutReviewer(session, llm=llm, settings=resolved_settings)
         self._semantic = SlideSemanticReviewer(session, llm=llm, settings=resolved_settings)
+        self._scene_semantic = SceneSemanticReviewer(session, llm=llm, settings=resolved_settings)
+        self._post_render = PostRenderReviewer(session, llm=llm, settings=resolved_settings)
 
     def run_content_review(
         self,
@@ -123,6 +128,42 @@ class AutomatedReviewService:
             context_bundle=context_bundle,
             renovation_issue_map=renovation_issue_map,
             reference_style_profile=reference_style_profile,
+        )
+
+    def run_scene_semantic_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        scenes: list[RenderScene],
+        *,
+        project_id: UUID | None = None,
+        pptx_paths_by_slide: dict[UUID, Path] | None = None,
+    ) -> list[ReviewIssue]:
+        return self._scene_semantic.run(
+            presentation_id,
+            slides,
+            scenes,
+            project_id=project_id,
+            pptx_paths_by_slide=pptx_paths_by_slide,
+        )
+
+    def run_post_render_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        screenshots: list[tuple[UUID, Path]],
+        *,
+        project_id: UUID | None = None,
+        scenes_by_slide: dict[UUID, RenderScene] | None = None,
+        pptx_screenshots: dict[UUID, Path] | None = None,
+    ) -> list[ReviewIssue]:
+        return self._post_render.run(
+            presentation_id,
+            slides,
+            screenshots,
+            project_id=project_id,
+            scenes_by_slide=scenes_by_slide,
+            pptx_screenshots=pptx_screenshots,
         )
 
     def run_professional_review(

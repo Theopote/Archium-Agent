@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
-
 from archium.application.architectural_benchmark_review_store import load_case_review
 from archium.application.human_review_gate import evaluate_phase9_human_gate
 from archium.domain.visual.benchmark import (
@@ -14,6 +11,7 @@ from archium.domain.visual.benchmark import (
     HumanVisualReviewSource,
     ReviewValidity,
 )
+
 from tests.benchmark.architectural_slides.artifacts import (
     case_dir,
     materialized_benchmark_case_ids,

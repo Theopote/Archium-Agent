@@ -6,13 +6,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-
 from archium.domain.visual.benchmark import (
     BenchmarkRenderManifest,
     HumanVisualReview,
     HumanVisualReviewSource,
     ReviewValidity,
 )
+
 from tests.benchmark.architectural_slides.artifacts import case_dir, materialized_benchmark_case_ids
 from tests.benchmark.architectural_slides.render_manifest import (
     SCENE_JSON_NAME,

@@ -4,10 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pptx import Presentation
-from pptx.util import Inches, Pt
-from sqlalchemy.orm import Session
-
 from archium.application.visual.template_studio_service import TemplateStudioService
 from archium.config.settings import Settings
 from archium.domain.visual.architectural_template import (
@@ -18,6 +14,9 @@ from archium.domain.visual.architectural_template import (
 )
 from archium.domain.visual.enums import DesignSystemSource
 from archium.infrastructure.database.visual_repositories import DesignSystemRepository
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from sqlalchemy.orm import Session
 
 
 def _write_sample_pptx(path: Path) -> Path:

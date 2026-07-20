@@ -9,7 +9,17 @@ from archium.domain.review import ReviewIssue
 
 def export_blocking_open_issues(issues: list[ReviewIssue]) -> list[ReviewIssue]:
     """Return open review issues that should block formal export."""
+    from archium.domain.review_rules import ReviewRuleCode
+
     asset_load_rules = asset_load_rule_codes()
+    scene_block_rules = frozenset(
+        {
+            ReviewRuleCode.SEMANTIC_IMAGE_NOT_RENDERED,
+            ReviewRuleCode.SEMANTIC_AI_IMAGE_PRESENTED_AS_REAL_PROJECT,
+            ReviewRuleCode.POST_RENDER_BLANK_PAGE,
+            ReviewRuleCode.POST_RENDER_ALL_PAGES_IDENTICAL,
+        }
+    )
     blocking: list[ReviewIssue] = []
     for issue in issues:
         if issue.status != ReviewStatus.OPEN:
@@ -18,6 +28,9 @@ def export_blocking_open_issues(issues: list[ReviewIssue]) -> list[ReviewIssue]:
             blocking.append(issue)
             continue
         if issue.severity == ReviewSeverity.HIGH and issue.rule_code in asset_load_rules:
+            blocking.append(issue)
+            continue
+        if issue.severity == ReviewSeverity.HIGH and issue.rule_code in scene_block_rules:
             blocking.append(issue)
     return blocking
 

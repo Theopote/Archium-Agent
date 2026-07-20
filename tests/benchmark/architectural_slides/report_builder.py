@@ -11,7 +11,11 @@ from typing import Any, cast
 from archium.application.human_review_gate import evaluate_benchmark_human_gate
 from archium.domain.visual.benchmark import HumanVisualReview
 
-from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir, materialized_benchmark_case_ids
+from tests.benchmark.architectural_slides.artifacts import (
+    BENCHMARK_ROOT,
+    case_dir,
+    materialized_benchmark_case_ids,
+)
 from tests.benchmark.architectural_slides.case_registry import get_case_definition
 from tests.benchmark.architectural_slides.human_review_summary import human_review_summary_fields
 from tests.benchmark.architectural_slides.render_manifest import (

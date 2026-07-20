@@ -19,12 +19,10 @@ from archium.ui.background_workflow_runner import (
 )
 from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
+from archium.ui.cultural_narrative_panel import render_cultural_narrative_panel
 from archium.ui.error_handlers import format_user_error
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
-from archium.ui.cultural_narrative_panel import render_cultural_narrative_panel
 from archium.ui.knowledge_panel import render_knowledge_panel
-from archium.ui.reference_style_panel import render_reference_style_panel
-from archium.ui.renovation_issue_panel import render_renovation_issue_panel
 from archium.ui.label_map import (
     brief_storyline_pair,
     content_pipeline_chain,
@@ -32,6 +30,8 @@ from archium.ui.label_map import (
 )
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.rag_preview_panel import render_rag_preview_panel
+from archium.ui.reference_style_panel import render_reference_style_panel
+from archium.ui.renovation_issue_panel import render_renovation_issue_panel
 from archium.ui.review_analytics_panel import render_project_review_quality_dashboard
 from archium.ui.review_panel import render_review_panel
 from archium.ui.visual_service import (

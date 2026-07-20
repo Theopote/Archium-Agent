@@ -3,11 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import uuid4
-
-from pptx import Presentation
-from pptx.util import Inches, Pt
-from sqlalchemy.orm import Session
 
 from archium.application.visual.template_composition_service import TemplateCompositionService
 from archium.application.visual.template_studio_service import TemplateStudioService
@@ -17,7 +12,11 @@ from archium.domain.presentation import Presentation as DomainPresentation
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.architectural_template import TemplatePageType, TemplateSlot, TemplateSlotRole
+from archium.domain.visual.architectural_template import (
+    TemplatePageType,
+    TemplateSlot,
+    TemplateSlotRole,
+)
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualContentType
 from archium.domain.visual.visual_intent import VisualIntent
@@ -27,6 +26,9 @@ from archium.infrastructure.database.visual_repositories import (
     VisualIntentRepository,
 )
 from archium.ui.visual_service import apply_template_to_slide, select_layout_candidate
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from sqlalchemy.orm import Session
 
 
 def _write_pptx(path: Path) -> Path:

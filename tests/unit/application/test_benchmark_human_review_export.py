@@ -6,8 +6,6 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pytest
-
 from archium.application.architectural_benchmark_review_store import (
     build_human_review_export,
     export_human_review_bundle,
@@ -17,7 +15,6 @@ from archium.application.architectural_benchmark_review_store import (
     save_case_review,
 )
 from archium.domain.visual.benchmark import (
-    BenchmarkHumanReviewExport,
     HumanVisualReview,
     HumanVisualReviewSource,
 )

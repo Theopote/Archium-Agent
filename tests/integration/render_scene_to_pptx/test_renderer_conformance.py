@@ -6,18 +6,18 @@ import shutil
 from pathlib import Path
 
 import pytest
-
 from archium.config.settings import Settings
 from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from archium.infrastructure.renderers.renderer_conformance import assert_renderer_conformance
+from pptx import Presentation
+
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
 from tests.benchmark.architectural_slides.fixtures import ensure_case_assets
 from tests.benchmark.architectural_slides.render_pipeline import (
     build_slide_content_bundle,
     compile_and_render_scene,
 )
-from pptx import Presentation
 
 
 def _pptx_available() -> bool:

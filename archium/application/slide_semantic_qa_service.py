@@ -5,7 +5,10 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
-from archium.application.knowledge_isolation import document_purpose_from_metadata, is_reference_document
+from archium.application.knowledge_isolation import (
+    document_purpose_from_metadata,
+    is_reference_document,
+)
 from archium.application.renovation_issue_service import is_renovation_scenario
 from archium.domain.asset import Asset
 from archium.domain.document import SourceDocument
@@ -87,10 +90,7 @@ def _text_supports_visual(slide: SlideSpec, description: str) -> bool:
         return True
     if message_tokens & description_tokens:
         return True
-    for point in slide.key_points:
-        if _tokenize(point) & description_tokens:
-            return True
-    return False
+    return any(_tokenize(point) & description_tokens for point in slide.key_points)
 
 
 def _has_metric_without_unit(text: str) -> bool:
@@ -327,22 +327,25 @@ def run_slide_semantic_qa(
                 )
             )
 
-        if renovation_mode and _STRATEGY_PATTERN.search(slide_text):
-            if not _TARGET_PATTERN.search(slide_text):
-                findings.append(
-                    SlideSemanticFinding(
-                        check_code=SlideSemanticCheckCode.STRATEGY_WITHOUT_TARGET,
-                        slide_order=slide.order,
-                        slide_id=slide.id,
-                        severity="medium",
-                        title="策略缺少明确对象",
-                        description=(
-                            f"第 {slide.order + 1} 页提出改造/策略方向，"
-                            "但未指明具体空间、部位或楼栋。"
-                        ),
-                        suggestion="补充策略作用范围，如楼层、区域或构造部位。",
-                    )
+        if (
+            renovation_mode
+            and _STRATEGY_PATTERN.search(slide_text)
+            and not _TARGET_PATTERN.search(slide_text)
+        ):
+            findings.append(
+                SlideSemanticFinding(
+                    check_code=SlideSemanticCheckCode.STRATEGY_WITHOUT_TARGET,
+                    slide_order=slide.order,
+                    slide_id=slide.id,
+                    severity="medium",
+                    title="策略缺少明确对象",
+                    description=(
+                        f"第 {slide.order + 1} 页提出改造/策略方向，"
+                        "但未指明具体空间、部位或楼栋。"
+                    ),
+                    suggestion="补充策略作用范围，如楼层、区域或构造部位。",
                 )
+            )
 
         if _NUMBER_PATTERN.search(slide.message) and _has_metric_without_unit(slide.message):
             findings.append(

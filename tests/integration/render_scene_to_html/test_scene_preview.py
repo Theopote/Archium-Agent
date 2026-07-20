@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.infrastructure.renderers.html_renderer import HtmlRenderer
 from archium.infrastructure.renderers.png_renderer import PngRenderer
+
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
 from tests.benchmark.architectural_slides.fixtures import ensure_case_assets
 from tests.benchmark.architectural_slides.render_pipeline import compile_and_render_scene

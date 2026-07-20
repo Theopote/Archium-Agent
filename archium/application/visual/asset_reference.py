@@ -216,11 +216,62 @@ class AssetReferenceContext:
     ``known_asset_ids`` — asset IDs that exist in the project catalog.
     ``resolved_paths`` — refs that resolve to an existing file on disk.
     ``asset_types`` — ref → ``AssetType`` value for catalogued assets.
+    ``asset_origins`` — ref → RenderScene asset_origin value.
     """
 
     known_asset_ids: frozenset[str]
     resolved_paths: dict[str, str]
     asset_types: dict[str, str] = field(default_factory=dict)
+    asset_origins: dict[str, str] = field(default_factory=dict)
+
+
+_VALID_ASSET_ORIGINS = frozenset(
+    {
+        "project_upload",
+        "public_research",
+        "reference_case",
+        "ai_generated",
+        "stock_image",
+    }
+)
+
+
+def infer_asset_origin(asset: Asset) -> str:
+    """Map asset metadata/tags to RenderScene ``asset_origin`` values."""
+    metadata = asset.metadata or {}
+    raw = metadata.get("origin") or metadata.get("asset_origin")
+    if isinstance(raw, str) and raw.strip().lower() in _VALID_ASSET_ORIGINS:
+        return raw.strip().lower()
+
+    tags = {tag.strip().lower() for tag in (asset.tags or []) if tag.strip()}
+    if tags & {"ai_generated", "ai", "generated"}:
+        return "ai_generated"
+    if tags & {"stock", "stock_image", "stock-photo"}:
+        return "stock_image"
+    if tags & {"reference", "reference_case", "reference_style"}:
+        return "reference_case"
+    if tags & {"public_research", "research"}:
+        return "public_research"
+
+    purpose = metadata.get("purpose") or metadata.get("document_purpose")
+    if isinstance(purpose, str):
+        purpose_l = purpose.strip().lower()
+        if purpose_l in {"reference_case", "reference_style"}:
+            return "reference_case"
+        if purpose_l in {"public_research", "research"}:
+            return "public_research"
+        if purpose_l in {"ai_generated", "generated"}:
+            return "ai_generated"
+        if purpose_l in {"stock", "stock_image"}:
+            return "stock_image"
+
+    if metadata.get("is_ai") is True or metadata.get("ai_generated") is True:
+        return "ai_generated"
+    if metadata.get("is_stock") is True:
+        return "stock_image"
+    if metadata.get("is_reference") is True:
+        return "reference_case"
+    return "project_upload"
 
 
 def is_supported_layout_image_path(path: str | Path) -> bool:
@@ -256,12 +307,14 @@ def build_asset_reference_context(
             known_asset_ids=frozenset(),
             resolved_paths={},
             asset_types={},
+            asset_origins={},
         )
 
     repo = AssetRepository(session)
     known: set[str] = set()
     resolved: dict[str, str] = {}
     asset_types: dict[str, str] = {}
+    asset_origins: dict[str, str] = {}
     for ref in dict.fromkeys(refs):
         try:
             asset_id = UUID(ref)
@@ -276,6 +329,7 @@ def build_asset_reference_context(
             if hasattr(asset.asset_type, "value")
             else str(asset.asset_type)
         )
+        asset_origins[ref] = infer_asset_origin(asset)
         path = Path(asset.path)
         if not path.is_absolute():
             path = settings.project_storage_path / str(project_id) / path
@@ -285,6 +339,7 @@ def build_asset_reference_context(
         known_asset_ids=frozenset(known),
         resolved_paths=resolved,
         asset_types=asset_types,
+        asset_origins=asset_origins,
     )
 
 

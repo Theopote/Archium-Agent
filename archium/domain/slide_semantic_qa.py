@@ -25,6 +25,11 @@ class SlideSemanticCheckCode:
     METRIC_WITHOUT_UNIT = "SEMANTIC.METRIC_WITHOUT_UNIT"
     EXTERNAL_FACT_WITHOUT_CITATION = "SEMANTIC.EXTERNAL_FACT_WITHOUT_CITATION"
 
+    # Plan aliases (same string values as canonical codes).
+    BEFORE_AFTER_UNPAIRED = BEFORE_AFTER_MISMATCH
+    PROJECT_PHOTO_WITHOUT_SOURCE = PROJECT_ASSET_WITHOUT_SOURCE
+    CAPTION_MISSING = VISUAL_WITHOUT_CAPTION
+
 
 class SlideSemanticFinding(DomainModel):
     """One explainable semantic QA finding for a slide."""

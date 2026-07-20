@@ -8,8 +8,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from archium.application.project_acceptance_service import ProjectAcceptanceService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.domain.project_acceptance import RealProjectAcceptanceRecord
@@ -22,6 +20,8 @@ from archium.infrastructure.renderers.pptx_screenshot import (
     screenshot_tools_available,
 )
 from archium.ui.visual_service import export_presentation_pptx_from_layout_plans
+from sqlalchemy.orm import Session
+
 from tests.e2e.real_projects.loader import seed_real_project_case
 from tests.e2e.real_projects.phase7_loader import (
     load_phase7_project,

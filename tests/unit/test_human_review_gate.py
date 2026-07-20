@@ -83,7 +83,6 @@ def test_phase9_gate_requires_all_thirty_completed() -> None:
 def test_formal_threshold_constants_import_after_visual_package() -> None:
     """Regression: constants must exist before LayoutFamily import side-effects."""
     import archium.domain.visual  # noqa: F401
-
     from archium.application.human_review_gate import HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD
     from archium.domain.visual.benchmark import HUMAN_REVIEW_FORMAL_MIN_ACCEPTED
 

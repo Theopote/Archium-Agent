@@ -9,7 +9,11 @@ from pathlib import Path
 from typing import Any, cast
 
 from archium.application.visual.benchmark_service import BenchmarkCaseResult
-from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource, EditabilityReview
+from archium.domain.visual.benchmark import (
+    EditabilityReview,
+    HumanVisualReview,
+    HumanVisualReviewSource,
+)
 
 from tests.benchmark.architectural_slides.fixtures import ensure_case_assets
 from tests.golden.visual.composition.artifacts import (

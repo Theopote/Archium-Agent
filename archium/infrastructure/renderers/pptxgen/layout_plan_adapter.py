@@ -18,6 +18,7 @@ class SlideContentBundle:
     """Resolved binary/text content keyed by LayoutElement.content_ref / role."""
 
     asset_paths: dict[str, str] = field(default_factory=dict)
+    asset_origins: dict[str, str] = field(default_factory=dict)
     page_number: int | None = None
     speaker_notes: str | None = None
 

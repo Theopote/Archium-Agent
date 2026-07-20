@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy.orm import Session
-
 from archium.application.visual.template_studio_service import TemplateStudioService
 from archium.config.settings import Settings
+from sqlalchemy.orm import Session
 
 _FIXTURE = (
     Path(__file__).resolve().parents[2]

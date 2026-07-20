@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pptx import Presentation
-from pptx.util import Inches, Pt
-
 from archium.domain.visual.architectural_template import TemplatePageType, TemplateSlotRole
 from archium.infrastructure.template.pptx_structure_extractor import PptxStructureExtractor
+from pptx import Presentation
+from pptx.util import Inches, Pt
 
 
 def _write_sample_pptx(path: Path) -> Path:

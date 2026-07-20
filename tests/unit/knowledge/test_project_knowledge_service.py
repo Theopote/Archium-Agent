@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.domain.enums import (
     DocumentPurpose,
@@ -14,7 +12,11 @@ from archium.domain.enums import (
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.domain.project_knowledge import SourceCitation
-from archium.infrastructure.database.repositories import DocumentRepository, FactRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    DocumentRepository,
+    FactRepository,
+    ProjectRepository,
+)
 from sqlalchemy.orm import Session
 
 

@@ -6,9 +6,9 @@ import streamlit as st
 
 from archium.ui.app_navigation import get_app_page
 from archium.ui.product_flow import (
+    primary_stages,
     product_flow_chain,
     product_flow_home_steps,
-    primary_stages,
 )
 
 

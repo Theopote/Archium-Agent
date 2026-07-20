@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.outline import OutlinePlan
+from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
-from archium.domain.presentation import PresentationBrief, Storyline
-from archium.domain.outline import OutlinePlan
 
 
 def brief_to_snapshot(brief: PresentationBrief) -> dict[str, object]:

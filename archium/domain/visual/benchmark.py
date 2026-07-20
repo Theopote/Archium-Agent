@@ -51,6 +51,7 @@ VISUAL_REVIEW_WEIGHTS: dict[str, float] = {
 
 from archium.domain.visual.enums import LayoutFamily  # noqa: E402
 
+
 class HumanVisualReviewSource(StrEnum):
     """Provenance for a visual review record."""
 

@@ -6,7 +6,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-
 from archium.domain.slide import SlideSpec
 from archium.domain.visual import (
     LayoutElement,
@@ -19,6 +18,7 @@ from archium.domain.visual.enums import LayoutContentType
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import (
     PptxLayoutPlanAdapter,
 )
+
 from tests.benchmark.architectural_slides.render_pipeline import (
     build_slide_content_bundle,
     render_benchmark_visual_artifacts,

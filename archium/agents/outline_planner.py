@@ -13,20 +13,20 @@ from archium.agents._helpers import (
 )
 from archium.application.artifact_history_service import OutlineHistoryService
 from archium.application.artifact_lineage import apply_outline_lineage
+from archium.application.cultural_narrative_service import format_narrative_for_prompt
 from archium.application.outline_service import (
     infer_audience_mode,
     merge_template_with_storyline,
     outline_from_draft,
 )
 from archium.application.outline_templates import detect_scenario_template, template_sections
-from archium.application.cultural_narrative_service import format_narrative_for_prompt
 from archium.application.renovation_issue_service import format_issue_map_for_prompt
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
-from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.enums import OutlineAudienceMode, RevisionSource
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import OutlinePlanDraft

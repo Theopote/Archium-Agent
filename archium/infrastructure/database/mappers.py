@@ -6,6 +6,10 @@ from uuid import UUID
 
 from archium.domain.asset import Asset
 from archium.domain.citation import Citation
+from archium.domain.cultural_narrative import (
+    CULTURAL_NARRATIVE_LOGICAL_KEY,
+    CulturalNarrativePlan,
+)
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
@@ -34,16 +38,9 @@ from archium.domain.enums import (
     WorkflowStatus,
 )
 from archium.domain.fact import FactValue, ProjectFact
-from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.memory import UserPreference
-from archium.domain.planning_session import PlanningSession
-from archium.domain.cultural_narrative import (
-    CULTURAL_NARRATIVE_LOGICAL_KEY,
-    CulturalNarrativePlan,
-)
-from archium.domain.reference_style import REFERENCE_STYLE_PROFILE_LOGICAL_KEY, ReferenceStyleProfile
-from archium.domain.renovation_issue import RENOVATION_ISSUE_MAP_LOGICAL_KEY, RenovationIssueMap
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
+from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
     STORYLINE_LOGICAL_KEY,
@@ -53,6 +50,12 @@ from archium.domain.presentation import (
     Storyline,
 )
 from archium.domain.project import Project
+from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
+from archium.domain.reference_style import (
+    REFERENCE_STYLE_PROFILE_LOGICAL_KEY,
+    ReferenceStyleProfile,
+)
+from archium.domain.renovation_issue import RENOVATION_ISSUE_MAP_LOGICAL_KEY, RenovationIssueMap
 from archium.domain.review import ReviewIssue
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logical_key

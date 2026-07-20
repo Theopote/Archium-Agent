@@ -462,7 +462,10 @@ def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.infrastructure.database.repositories import PresentationRepository
-    from archium.infrastructure.database.visual_repositories import LayoutPlanRepository, VisualIntentRepository
+    from archium.infrastructure.database.visual_repositories import (
+        LayoutPlanRepository,
+        VisualIntentRepository,
+    )
     from archium.ui.studio.undo_stack import push_visual_redo_revision
 
     presentations = PresentationRepository(session)

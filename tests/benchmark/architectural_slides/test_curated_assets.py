@@ -8,7 +8,6 @@ from uuid import UUID
 from tests.benchmark.architectural_slides.curated_assets import (
     count_case_asset_provenance,
     ensure_case_assets,
-    is_curated_asset,
     load_curated_manifest,
 )
 

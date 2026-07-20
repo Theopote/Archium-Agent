@@ -145,6 +145,38 @@ def test_apply_element_move_rejects_locked_element(
         service.apply_element_move(slide.id, "caption", x=8.0, y=4.5)
 
 
+def test_apply_element_move_rejects_drawing_element(
+    db_session: Session,
+    slide_with_plan: tuple[SlideSpec, LayoutPlan],
+) -> None:
+    slide, plan = slide_with_plan
+    drawing_plan = plan.model_copy(
+        update={
+            "elements": [
+                element.model_copy(
+                    update={
+                        "content_type": LayoutContentType.DRAWING,
+                        "locked": False,
+                    }
+                )
+                if element.id == "hero"
+                else element
+                for element in plan.elements
+            ],
+            "version": plan.version + 1,
+        }
+    )
+    drawing_plan.touch()
+    LayoutPlanRepository(db_session).save(drawing_plan)
+    slide.layout_plan_id = drawing_plan.id
+    PresentationRepository(db_session).save_slide(slide)
+    db_session.commit()
+
+    service = VisualEditService(db_session)
+    with pytest.raises(WorkflowError, match="图纸元素"):
+        service.apply_element_move(slide.id, "hero", x=2.0, y=2.0)
+
+
 def test_restore_previous_after_move_returns_prior_position(
     db_session: Session,
     slide_with_plan: tuple[SlideSpec, LayoutPlan],

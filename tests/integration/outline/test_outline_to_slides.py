@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from archium.application.outline_service import merge_template_with_storyline
 from archium.application.presentation_service import PresentationService
 from archium.domain.enums import ApprovalStatus
@@ -10,7 +11,6 @@ from archium.domain.project import Project
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
-import pytest
 
 from tests.fixtures.mock_llm import pipeline_mock_selector
 

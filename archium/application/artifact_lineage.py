@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from archium.domain.cultural_narrative import CULTURAL_NARRATIVE_LOGICAL_KEY, CulturalNarrativePlan
-from archium.domain.renovation_issue import RENOVATION_ISSUE_MAP_LOGICAL_KEY, RenovationIssueMap
-from archium.domain.reference_style import REFERENCE_STYLE_PROFILE_LOGICAL_KEY, ReferenceStyleProfile
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
@@ -12,6 +10,11 @@ from archium.domain.presentation import (
     PresentationBrief,
     Storyline,
 )
+from archium.domain.reference_style import (
+    REFERENCE_STYLE_PROFILE_LOGICAL_KEY,
+    ReferenceStyleProfile,
+)
+from archium.domain.renovation_issue import RENOVATION_ISSUE_MAP_LOGICAL_KEY, RenovationIssueMap
 
 
 def apply_brief_lineage(

@@ -9,7 +9,6 @@ from pydantic import Field
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.enums import ApprovalStatus
 
-
 REFERENCE_STYLE_PROFILE_LOGICAL_KEY = "project-reference-style-profile"
 
 
