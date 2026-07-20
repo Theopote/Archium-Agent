@@ -1,0 +1,36 @@
+---
+description: Repository hygiene — CI artifacts, docs discipline, deployment priority
+alwaysApply: true
+---
+
+# Repository hygiene
+
+## CI artifacts (never commit)
+
+Do not add or commit:
+
+- `coverage.xml`, `.coverage`, `htmlcov/`
+- `tests/smoke/artifacts/*` (except this README)
+- Runtime outputs under `data/`, `output/`, `tests/golden/artifacts/`
+
+Smoke and benchmark binaries (`.pptx`, `.pdf`, screenshots) belong in GitHub Actions
+artifacts unless they are an explicitly reviewed golden baseline under
+`tests/golden/` or `tests/benchmark/`.
+
+## Documentation discipline
+
+Per task, prefer **at most one** of each:
+
+- Update an existing formal design/architecture doc
+- Update `CHANGELOG.md`
+- Update a single implementation status file (e.g. `docs/QUALITY_GATE_STATUS.md`)
+
+Do **not** create new `COMPLETE_*`, `FINAL_*`, `SESSION_SUMMARY_*`, or duplicate
+`*_SUMMARY.md` files for every feature. Session notes belong under
+`.dev-notes/docs-history/`, not `docs/`.
+
+## Deployment scope
+
+Docker, install packages, and cross-platform deployment work are **deferred** until
+product quality gates are met (human visual review, real-project acceptance, visual E2E).
+Do not expand deployment docs or scripts unless explicitly requested.
