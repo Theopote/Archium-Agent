@@ -1057,3 +1057,13 @@ class VisualEditService:
         )
         if cache_path.is_file():
             cache_path.unlink()
+        try:
+            from archium.application.visual.studio_scene_service import StudioSceneService
+
+            StudioSceneService(self._session, settings=self._settings).refresh_after_layout_edit(
+                presentation_id=presentation_id,
+                plan=plan,
+            )
+        except Exception:
+            # Scene refresh must not block layout edits; Studio will fall back to wireframe.
+            return

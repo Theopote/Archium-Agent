@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.application.ingestion_service import ImportItemResult
 from archium.application.visual.slide_preview_service import SlidePreviewService
+from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings
 from archium.domain.content_adaptation import ContentAdaptationSuggestion
 from archium.domain.enums import ProjectType, SlideStatus, SlideType
@@ -125,6 +126,25 @@ def load_studio_context(
         preview_paths=preview_paths,
     )
     settings = _resolve_runtime_settings(None)
+    scene_service = StudioSceneService(session, settings=settings)
+    scene_preview_by_index: dict[int, str | None] = {}
+    enriched_with_scenes: list[SlideVisualSnapshot] = []
+    for index, item in enumerate(snapshot.slides):
+        scene_result = None
+        if item.layout_plan is not None:
+            try:
+                scene_result = scene_service.ensure_scene_for_slide(item.slide.id)
+            except Exception:
+                scene_result = None
+        if scene_result is not None:
+            scene_preview_by_index[index] = str(scene_result.preview_path)
+            enriched_with_scenes.append(
+                replace(item, render_scene=scene_result.scene)
+            )
+        else:
+            enriched_with_scenes.append(item)
+    snapshot = replace(snapshot, slides=enriched_with_scenes)
+
     preview_service = SlidePreviewService(settings)
     existing_preview_by_index = {
         index: item.preview_image for index, item in enumerate(snapshot.slides)
@@ -135,6 +155,7 @@ def load_studio_context(
         existing_preview_by_index=existing_preview_by_index,
         render_paths=list(preview_paths or []),
         workflow_output_dir=workflow_output_dir,
+        scene_preview_by_index=scene_preview_by_index,
     )
     enriched_slides: list[SlideVisualSnapshot] = []
     for item, resolution in zip(snapshot.slides, resolutions, strict=True):

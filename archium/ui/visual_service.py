@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.slide_preview_service import map_preview_pngs_by_order
+from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.application.visual.visual_intent_presets import apply_visual_intent_preset
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.visual.visual_workflow_service import (
@@ -26,6 +28,7 @@ from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
+from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
@@ -38,6 +41,7 @@ from archium.infrastructure.database.visual_repositories import (
 )
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
+from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
 from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -52,7 +56,8 @@ class SlideVisualSnapshot:
     validation: LayoutValidationReport | None = None
     visual_critic: dict | None = None
     preview_image: str | None = None
-    preview_kind: Literal["screenshot", "wireframe"] | None = None
+    preview_kind: Literal["scene", "screenshot", "wireframe"] | None = None
+    render_scene: RenderScene | None = None
 
 
 @dataclass
@@ -161,7 +166,7 @@ def export_presentation_pptx_from_layout_plans(
     *,
     settings: Settings | None = None,
 ) -> RenderResult:
-    """Export editable PPTX from saved LayoutPlans (no template re-layout)."""
+    """Export editable PPTX from RenderScene compiled from saved LayoutPlans."""
     resolved = _resolve_runtime_settings(settings)
     presentations = PresentationRepository(session)
     presentation = presentations.get_presentation(presentation_id)
@@ -179,33 +184,32 @@ def export_presentation_pptx_from_layout_plans(
     if brief is None:
         raise WorkflowError("Brief is required before export")
 
-    slides = presentations.list_slides(presentation_id)
-    snapshot = get_presentation_visual_snapshot(session, presentation_id)
-    design = snapshot.design_system
-    if design is None:
-        from archium.domain.visual.defaults import default_presentation_design_system
-
-        design = default_presentation_design_system()
-
-    layout_plans: list[LayoutPlan] = []
-    for item in snapshot.slides:
-        if item.layout_plan is None:
-            raise WorkflowError(
-                f"第 {item.slide.order + 1} 页缺少 LayoutPlan，请先运行视觉编排。"
-            )
-        layout_plans.append(item.layout_plan)
-
-    renderer = PptxGenPresentationRenderer(resolved, session=session)
-    output_dir = renderer.output_dir(presentation_id, version=brief.version)
-    _, pptx_path = renderer.render_and_export_pptx_from_layout_plans(
-        title=brief.title,
-        plans=layout_plans,
-        design_system=design,
-        output_dir=output_dir,
-        slides=slides,
-        project_id=presentation.project_id,
+    scene_service = StudioSceneService(session, settings=resolved)
+    scene_results = scene_service.ensure_scenes_for_presentation(
+        presentation_id,
+        force_recompile=True,
     )
-    return RenderResult(editable_pptx_path=pptx_path)
+    if not scene_results:
+        raise WorkflowError("无法为当前汇报编译 RenderScene，请先完成视觉编排。")
+
+    slides = presentations.list_slides(presentation_id)
+    slides_by_id = {slide.id: slide for slide in slides}
+    ordered_scenes: list[tuple[RenderScene, str | None]] = []
+    for result in scene_results:
+        slide = slides_by_id.get(result.scene.slide_id)
+        notes = slide.speaker_notes if slide is not None else None
+        ordered_scenes.append((result.scene, notes or None))
+
+    renderer = PptxRenderer(resolved)
+    legacy = PptxGenPresentationRenderer(resolved, session=session)
+    output_dir = legacy.output_dir(presentation_id, version=brief.version)
+    pptx_path = output_dir / "presentation.pptx"
+    rendered = renderer.export_presentation(
+        title=brief.title,
+        scenes=ordered_scenes,
+        output_path=pptx_path,
+    )
+    return RenderResult(editable_pptx_path=rendered)
 
 
 def generate_visual_and_export_pptx(

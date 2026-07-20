@@ -23,7 +23,15 @@ interface Element {
 
 type CanvasEvent =
   | { type: "select"; elementId: string | null }
-  | { type: "move"; elementId: string; x: number; y: number };
+  | { type: "move"; elementId: string; x: number; y: number }
+  | {
+      type: "resize";
+      elementId: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
 
 const ROLE_COLORS: Record<string, { border: string; background: string; label: string }> = {
   HERO_VISUAL: {
@@ -59,6 +67,12 @@ const CanvasEditor: React.FC = () => {
   const [hoverElementId, setHoverElementId] = useState<string | null>(null);
   const [dragElementId, setDragElementId] = useState<string | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
+  const [resizePreview, setResizePreview] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -67,6 +81,15 @@ const CanvasEditor: React.FC = () => {
     startClientX: number;
     startClientY: number;
     moved: boolean;
+  } | null>(null);
+  const resizeStateRef = useRef<{
+    elementId: string;
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    currentWidth: number;
+    currentHeight: number;
   } | null>(null);
 
   const args = (window as any).streamlitArgs;
@@ -132,6 +155,22 @@ const CanvasEditor: React.FC = () => {
     if (!containerRef.current) return;
 
     const { x, y } = percentFromClient(event.clientX, event.clientY);
+    const activeResize = resizeStateRef.current;
+    if (activeResize) {
+      const nextWidth = Math.max(4, Math.min(100 - activeResize.startX, x - activeResize.startX));
+      const nextHeight = Math.max(4, Math.min(100 - activeResize.startY, y - activeResize.startY));
+      activeResize.currentWidth = nextWidth;
+      activeResize.currentHeight = nextHeight;
+      setDragElementId(activeResize.elementId);
+      setResizePreview({
+        x: activeResize.startX,
+        y: activeResize.startY,
+        width: nextWidth,
+        height: nextHeight,
+      });
+      return;
+    }
+
     const activeDrag = dragStateRef.current;
 
     if (activeDrag) {
@@ -181,6 +220,53 @@ const CanvasEditor: React.FC = () => {
     emitEvent({ type: "select", elementId: activeDrag.elementId });
   };
 
+  const finishResize = () => {
+    const activeResize = resizeStateRef.current;
+    resizeStateRef.current = null;
+    setDragElementId(null);
+    setResizePreview(null);
+    if (!activeResize) return;
+    emitEvent({
+      type: "resize",
+      elementId: activeResize.elementId,
+      x: activeResize.startX,
+      y: activeResize.startY,
+      width: activeResize.currentWidth,
+      height: activeResize.currentHeight,
+    });
+  };
+
+  const handleResizeMouseDown = (
+    element: Element,
+    event: React.MouseEvent<HTMLDivElement>,
+  ) => {
+    event.stopPropagation();
+    if (element.locked) {
+      emitEvent({ type: "select", elementId: element.id });
+      return;
+    }
+    resizeStateRef.current = {
+      elementId: element.id,
+      startX: element.x,
+      startY: element.y,
+      startWidth: element.width,
+      startHeight: element.height,
+      currentWidth: element.width,
+      currentHeight: element.height,
+    };
+    setResizePreview({
+      x: element.x,
+      y: element.y,
+      width: element.width,
+      height: element.height,
+    });
+    const onMouseUp = () => {
+      window.removeEventListener("mouseup", onMouseUp);
+      finishResize();
+    };
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
   const handleElementMouseDown = (
     element: Element,
     event: React.MouseEvent<HTMLDivElement>,
@@ -213,15 +299,18 @@ const CanvasEditor: React.FC = () => {
   const renderElementBox = (element: Element, isHovered: boolean, isSelected: boolean) => {
     const roleColor = ROLE_COLORS[element.role] || ROLE_COLORS.DECORATION;
     const isDragging = dragElementId === element.id && dragPreview !== null;
-    const displayX = isDragging ? dragPreview.x : element.x;
-    const displayY = isDragging ? dragPreview.y : element.y;
+    const isResizing = dragElementId === element.id && resizePreview !== null;
+    const displayX = isResizing ? resizePreview.x : isDragging ? dragPreview.x : element.x;
+    const displayY = isResizing ? resizePreview.y : isDragging ? dragPreview.y : element.y;
+    const displayWidth = isResizing ? resizePreview.width : element.width;
+    const displayHeight = isResizing ? resizePreview.height : element.height;
 
     let border = roleColor.border;
     let background = roleColor.background;
     let borderWidth = "2px";
     let zIndex = 1;
 
-    if (isSelected || isDragging) {
+    if (isSelected || isDragging || isResizing) {
       border = "#175cd3";
       background = "rgba(23, 92, 211, 0.15)";
       borderWidth = "3px";
@@ -236,13 +325,13 @@ const CanvasEditor: React.FC = () => {
       position: "absolute",
       left: `${displayX}%`,
       top: `${displayY}%`,
-      width: `${element.width}%`,
-      height: `${element.height}%`,
+      width: `${displayWidth}%`,
+      height: `${displayHeight}%`,
       border: `${borderWidth} solid ${border}`,
       background: background,
       borderRadius: "4px",
-      cursor: element.locked ? "not-allowed" : isDragging ? "grabbing" : "grab",
-      transition: isDragging ? "none" : "all 0.15s ease",
+      cursor: element.locked ? "not-allowed" : isDragging || isResizing ? "grabbing" : "grab",
+      transition: isDragging || isResizing ? "none" : "all 0.15s ease",
       zIndex: zIndex,
       pointerEvents: "auto",
     };
@@ -254,7 +343,7 @@ const CanvasEditor: React.FC = () => {
         onMouseDown={(event) => handleElementMouseDown(element, event)}
         title={`${roleColor.label}: ${element.id}${element.locked ? " (锁定)" : ""}`}
       >
-        {showLabels && (isSelected || isHovered || isDragging) && (
+        {showLabels && (isSelected || isHovered || isDragging || isResizing) && (
           <div
             style={{
               position: "absolute",
@@ -273,6 +362,24 @@ const CanvasEditor: React.FC = () => {
             {roleColor.label} · {element.id}
             {element.locked && " 🔒"}
           </div>
+        )}
+        {isSelected && !element.locked && (
+          <div
+            onMouseDown={(event) => handleResizeMouseDown(element, event)}
+            style={{
+              position: "absolute",
+              right: "-6px",
+              bottom: "-6px",
+              width: "12px",
+              height: "12px",
+              borderRadius: "2px",
+              background: "#175cd3",
+              border: "2px solid white",
+              cursor: "nwse-resize",
+              zIndex: 4,
+            }}
+            title="拖拽调整尺寸"
+          />
         )}
       </div>
     );

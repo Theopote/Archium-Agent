@@ -61,6 +61,23 @@ def test_map_preview_pngs_by_order_sorts_slide_files() -> None:
     assert mapping[1].endswith("slide_02.png")
 
 
+def test_resolve_previews_prefers_scene_over_screenshot(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    screenshot = tmp_path / "slide_01.png"
+    screenshot.write_bytes(b"png")
+    scene = tmp_path / "scene_preview.png"
+    scene.write_bytes(b"scene")
+    service = SlidePreviewService(settings)
+    resolutions = service.resolve_previews(
+        presentation_id=uuid4(),
+        layout_plans=[_sample_plan()],
+        render_paths=[str(screenshot)],
+        scene_preview_by_index={0: str(scene)},
+    )
+    assert resolutions[0].kind == "scene"
+    assert resolutions[0].path == str(scene)
+
+
 def test_resolve_previews_prefers_screenshot_over_wireframe(tmp_path: Path) -> None:
     settings = Settings(_env_file=None, output_path=tmp_path)
     screenshot = tmp_path / "slide_01.png"

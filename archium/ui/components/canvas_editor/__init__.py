@@ -31,7 +31,16 @@ class CanvasMoveEvent(TypedDict):
     y: float
 
 
-CanvasEditorEvent = str | CanvasSelectEvent | CanvasMoveEvent | None
+class CanvasResizeEvent(TypedDict):
+    type: Literal["resize"]
+    elementId: str
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+CanvasEditorEvent = str | CanvasSelectEvent | CanvasMoveEvent | CanvasResizeEvent | None
 
 
 def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
@@ -52,6 +61,27 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
                     elementId=str(element_id),
                     x=float(x),
                     y=float(y),
+                )
+        if event_type == "resize":
+            element_id = value.get("elementId")
+            x = value.get("x")
+            y = value.get("y")
+            width = value.get("width")
+            height = value.get("height")
+            if (
+                element_id is not None
+                and x is not None
+                and y is not None
+                and width is not None
+                and height is not None
+            ):
+                return CanvasResizeEvent(
+                    type="resize",
+                    elementId=str(element_id),
+                    x=float(x),
+                    y=float(y),
+                    width=float(width),
+                    height=float(height),
                 )
         if event_type == "select":
             element_id = value.get("elementId")

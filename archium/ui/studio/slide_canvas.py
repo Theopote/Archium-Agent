@@ -21,11 +21,13 @@ _SEVERITY_COLORS = {
 
 
 def _preview_caption(kind: str | None) -> str:
+    if kind == "scene":
+        return "RenderScene 真实预览（Studio Canvas 视觉真相源）"
     if kind == "screenshot":
         return "PPTX 截图预览（来自最近一次视觉编排导出）"
     if kind == "wireframe":
-        return "版式线框预览（由 LayoutPlan 几何自动生成）"
-    return "暂无预览。生成版式后将显示线框；导出 PPTX 后可显示截图。"
+        return "版式线框预览（由 LayoutPlan 几何自动生成；无 RenderScene 时的降级）"
+    return "暂无预览。生成版式后将编译 RenderScene；必要时可降级为线框。"
 
 
 def _render_validation_overlay(

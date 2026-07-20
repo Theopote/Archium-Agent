@@ -42,6 +42,10 @@ class PptxRenderer:
             title=title or "Archium Slide",
             scenes=[(scene, speaker_notes)],
         )
+        return self.export_deck(deck, output_path)
+
+    def export_deck(self, deck: dict[str, Any], output_path: Path) -> Path:
+        """Write a pre-built instruction deck to PPTX."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory() as tmp:
             deck_path = Path(tmp) / "render_scene.deck.json"
@@ -50,6 +54,16 @@ class PptxRenderer:
                 encoding="utf-8",
             )
             return self._cli.render_layout_instructions(deck_path, output_path)
+
+    def export_presentation(
+        self,
+        *,
+        title: str,
+        scenes: list[tuple[RenderScene, str | None]],
+        output_path: Path,
+    ) -> Path:
+        deck = self.build_instruction_deck(title=title, scenes=scenes)
+        return self.export_deck(deck, output_path)
 
     def font_fallbacks(self, scene: RenderScene) -> list[str]:
         return self._adapter.font_fallbacks(scene)

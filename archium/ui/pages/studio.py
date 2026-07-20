@@ -68,6 +68,9 @@ def render() -> None:
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
 
     with center_col:
+        from archium.ui.studio.undo_toolbar import render_undo_toolbar
+
+        render_undo_toolbar(slide_snapshot=slide_snapshot)
         render_slide_canvas(
             slide_snapshot=slide_snapshot,
             advanced=advanced,

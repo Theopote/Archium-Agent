@@ -161,7 +161,9 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
             preview_path = item.preview_image
             if preview_path and Path(preview_path).is_file():
                 st.image(preview_path, use_container_width=True)
-                if item.preview_kind == "wireframe":
+                if item.preview_kind == "scene":
+                    st.caption("场景预览")
+                elif item.preview_kind == "wireframe":
                     st.caption("版式线框")
                 elif item.preview_kind == "screenshot":
                     st.caption("截图预览")
