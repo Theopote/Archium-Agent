@@ -11,13 +11,20 @@ from typing import Any, cast
 from archium.application.human_review_gate import evaluate_benchmark_human_gate
 from archium.domain.visual.benchmark import HumanVisualReview
 
-from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir
+from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir, materialized_benchmark_case_ids
 from tests.benchmark.architectural_slides.case_registry import get_case_definition
 from tests.benchmark.architectural_slides.human_review_summary import human_review_summary_fields
 from tests.benchmark.architectural_slides.runner import run_all_cases
 
 
-def build_benchmark_summary(*, update: bool = False) -> dict[str, Any]:
+def build_benchmark_summary(
+    *,
+    update: bool = False,
+    from_disk_only: bool = False,
+    root: Path | None = None,
+) -> dict[str, Any]:
+    if from_disk_only:
+        return _build_benchmark_summary_from_disk(root=root)
     summaries = run_all_cases(update=update)
     cases: list[dict[str, Any]] = []
     for summary in summaries:
@@ -80,8 +87,99 @@ def build_benchmark_summary(*, update: bool = False) -> dict[str, Any]:
     }
 
 
-def write_benchmark_report(output_dir: Path, *, update: bool = False) -> tuple[Path, Path]:
-    summary = build_benchmark_summary(update=update)
+def _build_benchmark_summary_from_disk(*, root: Path | None = None) -> dict[str, Any]:
+    """Refresh summary from committed case folders without re-running layout builds."""
+    base = root or BENCHMARK_ROOT
+    cases: list[dict[str, Any]] = []
+    manual_reviews: list[HumanVisualReview] = []
+    for case_id in materialized_benchmark_case_ids(root=base):
+        definition = get_case_definition(case_id)
+        directory = case_dir(case_id) if root is None else base / case_id
+        rule_fields = _rule_fields_from_baseline(directory)
+        human_payload = _read_optional_json(directory / "human_review.json")
+        human = HumanVisualReview.model_validate(human_payload) if human_payload else None
+        human_fields = human_review_summary_fields(human)
+        if human is not None and human.is_manual_review():
+            manual_reviews.append(human)
+        preview_path = directory / "preview.png"
+        preview_png = (
+            str(preview_path.relative_to(base)) if preview_path.is_file() else ""
+        )
+        cases.append(
+            {
+                "case_id": case_id,
+                "title": definition.title,
+                "category": definition.category.value,
+                "page_type": definition.page_type,
+                "layout_family": definition.expected_layout_family.value,
+                "layout_variant": definition.layout_variant,
+                "preview_png": preview_png,
+                **rule_fields,
+                **human_fields,
+            }
+        )
+    human_gate = evaluate_benchmark_human_gate(manual_reviews)
+    passed_count = sum(1 for item in cases if item["rule_passed"])
+    manual_accepted_count = sum(
+        1 for item in cases if item["human_accepted_for_delivery"]
+    )
+    manual_review_count = sum(
+        1 for item in cases if item.get("human_review_source") == "manual"
+    )
+    placeholder_review_count = sum(
+        1
+        for item in cases
+        if item.get("human_review_source") in {"placeholder", "layout_qa_derived"}
+    )
+    return {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "case_count": len(cases),
+        "rule_passed_count": passed_count,
+        "rule_pass_rate": round(passed_count / len(cases), 3) if cases else 0.0,
+        "manual_human_review_count": manual_review_count,
+        "manual_human_accepted_count": manual_accepted_count,
+        "placeholder_human_review_count": placeholder_review_count,
+        "human_average_weighted_score": human_gate.average_weighted_score,
+        "human_quality_gate_passed": human_gate.passed,
+        "human_quality_gate_reasons": human_gate.reasons,
+        "cases": cases,
+    }
+
+
+def _rule_fields_from_baseline(directory: Path) -> dict[str, Any]:
+    score_payload = _read_optional_json(directory / "score_baseline.json")
+    if score_payload is None:
+        return {
+            "rule_passed": False,
+            "layout_score": None,
+            "has_critical": None,
+        }
+    raw_score = score_payload.get("score")
+    layout_score = float(raw_score) if isinstance(raw_score, (int, float)) else None
+    valid = score_payload.get("valid")
+    has_critical = score_payload.get("has_critical")
+    rule_passed = False
+    if isinstance(valid, bool) and isinstance(has_critical, bool):
+        rule_passed = valid and not has_critical
+    return {
+        "rule_passed": rule_passed,
+        "layout_score": layout_score,
+        "has_critical": has_critical if isinstance(has_critical, bool) else None,
+    }
+
+
+def write_benchmark_report(
+    output_dir: Path,
+    *,
+    update: bool = False,
+    from_disk_only: bool = False,
+    root: Path | None = None,
+) -> tuple[Path, Path]:
+    summary = build_benchmark_summary(
+        update=update,
+        from_disk_only=from_disk_only,
+        root=root or output_dir.parent,
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / "benchmark-summary.json"
     html_path = output_dir / "benchmark-report.html"

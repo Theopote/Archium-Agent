@@ -20,6 +20,7 @@ from tests.benchmark.architectural_slides.artifacts import (
     default_human_review,
     derive_benchmark_human_review,
     human_review_is_placeholder,
+    materialized_benchmark_case_ids,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
 from tests.benchmark.architectural_slides.case_catalog import CASE_CATALOG
@@ -35,10 +36,13 @@ from tests.benchmark.architectural_slides.summary_validator import (
 pytestmark = [pytest.mark.benchmark, pytest.mark.architectural_benchmark]
 
 
-def test_benchmark_catalog_has_thirty_cases() -> None:
-    assert len(CASE_CATALOG) == 30
-    assert len(BENCHMARK_CASE_IDS) == 30
-    assert len(set(BENCHMARK_CASE_IDS)) == 30
+def test_benchmark_catalog_has_thirty_materialized_cases_and_four_edge_entries() -> None:
+    assert len(CASE_CATALOG) == 34
+    assert len(BENCHMARK_CASE_IDS) == 34
+    assert len(set(BENCHMARK_CASE_IDS)) == 34
+    assert len(materialized_benchmark_case_ids()) == 30
+    edge_ids = [case_id for case_id in BENCHMARK_CASE_IDS if case_id.startswith("edge_")]
+    assert len(edge_ids) == 4
 
 
 def test_benchmark_covers_all_layout_families() -> None:
@@ -51,7 +55,7 @@ def test_benchmark_covers_all_categories() -> None:
     assert categories == set(ArchitecturalSlideCategory)
 
 
-@pytest.mark.parametrize("case_id", BENCHMARK_CASE_IDS)
+@pytest.mark.parametrize("case_id", materialized_benchmark_case_ids())
 def test_architectural_benchmark_case(case_id: str) -> None:
     result = build_benchmark_case(case_id)
     definition = get_case_definition(case_id)
@@ -73,10 +77,11 @@ def test_architectural_benchmark_case(case_id: str) -> None:
 
 
 def test_benchmark_rule_pass_rate_meets_threshold() -> None:
+    materialized = materialized_benchmark_case_ids()
     passed = sum(
-        1 for case_id in BENCHMARK_CASE_IDS if build_benchmark_case(case_id).rule_score.passed
+        1 for case_id in materialized if build_benchmark_case(case_id).rule_score.passed
     )
-    rate = passed / len(BENCHMARK_CASE_IDS)
+    rate = passed / len(materialized)
     assert rate + 1e-9 >= BENCHMARK_RULE_PASS_RATE_THRESHOLD, (
         f"layout rule pass rate {rate:.3f} below {BENCHMARK_RULE_PASS_RATE_THRESHOLD}"
     )
@@ -103,7 +108,7 @@ def test_benchmark_category_minimums() -> None:
 
 def test_benchmark_human_review_scaffold_not_marked_accepted() -> None:
     strict = os.environ.get(STRICT_HUMAN_REVIEW_ENV) == "1"
-    for case_id in BENCHMARK_CASE_IDS:
+    for case_id in materialized_benchmark_case_ids():
         path = case_dir(case_id) / "human_review.json"
         review = HumanVisualReview.model_validate_json(path.read_text(encoding="utf-8"))
         if human_review_is_placeholder(review):

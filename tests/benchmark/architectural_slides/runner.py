@@ -11,6 +11,7 @@ from tests.benchmark.architectural_slides.artifacts import (
     BENCHMARK_ROOT,
     assert_or_update_case_baseline,
     case_dir,
+    materialized_benchmark_case_ids,
     write_case_artifacts,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
@@ -51,7 +52,8 @@ def run_all_cases(
     service: BenchmarkService | None = None,
     update: bool = False,
 ) -> list[BenchmarkRunSummary]:
-    return [run_case(case_id, service=service, update=update) for case_id in BENCHMARK_CASE_IDS]
+    case_ids = BENCHMARK_CASE_IDS if update else materialized_benchmark_case_ids()
+    return [run_case(case_id, service=service, update=update) for case_id in case_ids]
 
 
 def load_case_result(case_id: str, *, service: BenchmarkService | None = None) -> BenchmarkCaseResult:

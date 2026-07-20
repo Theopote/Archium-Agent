@@ -227,7 +227,12 @@ def regenerate_benchmark_report(*, root: Path | None = None) -> tuple[Path, Path
     from tests.benchmark.architectural_slides.report_builder import write_benchmark_report
 
     base = benchmark_root(root)
-    return write_benchmark_report(base / "reports", update=False)
+    return write_benchmark_report(
+        base / "reports",
+        update=False,
+        from_disk_only=True,
+        root=base,
+    )
 
 
 def build_human_review_export(

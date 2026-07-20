@@ -1,12 +1,19 @@
 {
-  "generated_at": "2026-07-19T08:04:10.680462+00:00",
+  "generated_at": "2026-07-20T14:02:48.364949+00:00",
   "case_count": 30,
   "rule_passed_count": 30,
   "rule_pass_rate": 1.0,
-  "manual_human_review_count": 0,
-  "manual_human_accepted_count": 0,
-  "placeholder_human_review_count": 30,
+  "manual_human_review_count": 2,
+  "manual_human_accepted_count": 2,
+  "placeholder_human_review_count": 28,
+  "human_average_weighted_score": 3.4,
   "human_quality_gate_passed": false,
+  "human_quality_gate_reasons": [
+    "manual reviews 2 < required 24/30",
+    "average score 3.40 < threshold 3.80",
+    "accepted pages 2 < required 24/30",
+    "accepted page has major_problems"
+  ],
   "cases": [
     {
       "case_id": "case_001_site_plan",
@@ -19,14 +26,16 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "待人工评审",
-      "human_review_source": "placeholder",
-      "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "reviewer": null,
-      "reviewed_at": null,
-      "major_problems": []
+      "human_weighted_score": 3.75,
+      "human_score_label": "3.75",
+      "human_review_source": "manual",
+      "human_accepted_for_delivery": true,
+      "human_accepted": true,
+      "reviewer": "Theopote",
+      "reviewed_at": "2026-07-20T13:52:17.306971+00:00",
+      "major_problems": [
+        "对齐关系不好，页面最底下两个小卡片右侧没有和上面的卡片对齐"
+      ]
     },
     {
       "case_id": "case_002_site_photos",
@@ -39,14 +48,16 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "待人工评审",
-      "human_review_source": "placeholder",
-      "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "reviewer": null,
-      "reviewed_at": null,
-      "major_problems": []
+      "human_weighted_score": 3.05,
+      "human_score_label": "3.05",
+      "human_review_source": "manual",
+      "human_accepted_for_delivery": true,
+      "human_accepted": true,
+      "reviewer": "Theopote",
+      "reviewed_at": "2026-07-20T13:58:36.352344+00:00",
+      "major_problems": [
+        "现在只能看到展位框和文字，看不到图片"
+      ]
     },
     {
       "case_id": "case_003_case_comparison",

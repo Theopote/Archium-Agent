@@ -29,6 +29,18 @@ def case_dir(case_id: str) -> Path:
     return BENCHMARK_ROOT / case_id
 
 
+def materialized_benchmark_case_ids(*, root: Path | None = None) -> tuple[str, ...]:
+    """Case folders with committed on-disk baselines (excludes catalog-only edge cases)."""
+    base = root or BENCHMARK_ROOT
+    return tuple(
+        sorted(
+            path.name
+            for path in base.glob("case_*")
+            if path.is_dir() and (path / "input.json").is_file()
+        )
+    )
+
+
 def fingerprint_slide_spec(result: BenchmarkCaseResult) -> dict[str, Any]:
     slide = result.slide
     return {

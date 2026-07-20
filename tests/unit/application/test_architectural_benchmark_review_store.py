@@ -190,6 +190,57 @@ def test_review_progress_by_category_counts_manual_reviews(tmp_path: Path) -> No
     assert breakdown["drawing"]["manual_accepted_count"] == 1
 
 
+def test_regenerate_benchmark_report_uses_disk_only_summary(tmp_path: Path) -> None:
+    from archium.application.architectural_benchmark_review_store import regenerate_benchmark_report
+
+    case_dir = tmp_path / "case_001_site_plan"
+    case_dir.mkdir()
+    (case_dir / "input.json").write_text(
+        json.dumps(
+            {
+                "case_id": "case_001_site_plan",
+                "title": "Demo",
+                "category": "drawing",
+                "page_type": "demo",
+                "page_task": "demo",
+                "visual_focus": "demo",
+                "expected_layout_family": "drawing_focus",
+                "allowed_layout_variants": ["drawing_only"],
+                "layout_variant": "drawing_only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (case_dir / "score_baseline.json").write_text(
+        json.dumps({"score": 0.95, "valid": True, "has_critical": False}),
+        encoding="utf-8",
+    )
+    (case_dir / "human_review.json").write_text(
+        json.dumps(
+            {
+                "case_id": "case_001_site_plan",
+                "source": "placeholder",
+                "information_hierarchy": 4,
+                "visual_focus": 4,
+                "reading_order": 4,
+                "image_text_relationship": 4,
+                "whitespace_density": 4,
+                "architectural_expression": 4,
+                "aesthetic_finish": 4,
+                "editability": 4,
+                "accepted": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    html_path, json_path = regenerate_benchmark_report(root=tmp_path)
+    assert html_path.is_file()
+    assert json_path.is_file()
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert summary["case_count"] == 1
+
+
 def test_save_and_load_manual_review_round_trip(tmp_path: Path) -> None:
     case_dir = tmp_path / "case_demo"
     case_dir.mkdir()

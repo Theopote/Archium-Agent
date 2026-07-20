@@ -12,6 +12,7 @@ from archium.domain.visual.benchmark import HumanVisualReview
 from tests.benchmark.architectural_slides.artifacts import (
     BENCHMARK_ROOT,
     human_review_is_placeholder,
+    materialized_benchmark_case_ids,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
 from tests.benchmark.architectural_slides.case_registry import BENCHMARK_CASE_IDS
@@ -41,7 +42,7 @@ def load_committed_summary(path: Path = BENCHMARK_SUMMARY_PATH) -> dict[str, Any
 
 def latest_case_artifact_mtime() -> float:
     mtimes: list[float] = []
-    for case_id in BENCHMARK_CASE_IDS:
+    for case_id in materialized_benchmark_case_ids():
         directory = BENCHMARK_ROOT / case_id
         for name in _CASE_ARTIFACT_NAMES:
             path = directory / name
@@ -72,7 +73,7 @@ def assert_summary_fresh(summary: dict[str, Any], *, tolerance_seconds: float = 
 
 
 def assert_human_reviews_not_scaffold_accepted() -> None:
-    for case_id in BENCHMARK_CASE_IDS:
+    for case_id in materialized_benchmark_case_ids():
         path = BENCHMARK_ROOT / case_id / "human_review.json"
         review = HumanVisualReview.model_validate_json(path.read_text(encoding="utf-8"))
         if human_review_is_placeholder(review) and review.accepted:
@@ -108,21 +109,22 @@ def assert_committed_benchmark_reports_valid(
         msg = f"Missing benchmark report HTML: {report_path}"
         raise AssertionError(msg)
     summary = load_committed_summary(summary_path)
+    materialized_ids = materialized_benchmark_case_ids()
     case_dirs = sorted(
         path.name
         for path in BENCHMARK_ROOT.iterdir()
         if path.is_dir() and path.name.startswith("case_")
     )
-    if summary.get("case_count") != len(BENCHMARK_CASE_IDS):
+    if summary.get("case_count") != len(materialized_ids):
         msg = (
             f"summary case_count={summary.get('case_count')} "
-            f"!= registry {len(BENCHMARK_CASE_IDS)}"
+            f"!= materialized baselines {len(materialized_ids)}"
         )
         raise AssertionError(msg)
-    if len(case_dirs) != len(BENCHMARK_CASE_IDS):
+    if len(case_dirs) != len(materialized_ids):
         msg = (
             f"benchmark directories={len(case_dirs)} "
-            f"!= registry {len(BENCHMARK_CASE_IDS)}"
+            f"!= materialized baselines {len(materialized_ids)}"
         )
         raise AssertionError(msg)
     assert_summary_fresh(summary)
@@ -163,7 +165,7 @@ def _compare_summary_payloads(actual: dict[str, Any], expected: dict[str, Any]) 
         "human_review_source",
         "human_accepted_for_delivery",
     )
-    for case_id in BENCHMARK_CASE_IDS:
+    for case_id in materialized_benchmark_case_ids():
         row = actual_cases[case_id]
         live = expected_cases[case_id]
         for field in compare_fields:
