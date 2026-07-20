@@ -219,6 +219,34 @@ class SlideHistoryService:
                 return revisions[next_index] if next_index < len(revisions) else None
         return revisions[0]
 
+    def revision_id_matching_current(self, slide: SlideSpec) -> UUID | None:
+        revisions = [
+            revision
+            for revision in self.list_revisions(slide.id)
+            if revision.entity_type == RevisionEntityType.SLIDE
+        ]
+        if not revisions:
+            return None
+        current = snapshot_content_fingerprint(slide_to_snapshot(slide))
+        for revision in revisions:
+            if snapshot_content_fingerprint(revision.snapshot) == current:
+                return revision.id
+        return None
+
+    def count_available_undo_steps(self, slide: SlideSpec) -> int:
+        revisions = [
+            revision
+            for revision in self.list_revisions(slide.id)
+            if revision.entity_type == RevisionEntityType.SLIDE
+        ]
+        if not revisions:
+            return 0
+        current = snapshot_content_fingerprint(slide_to_snapshot(slide))
+        for index, revision in enumerate(revisions):
+            if snapshot_content_fingerprint(revision.snapshot) == current:
+                return max(0, len(revisions) - index - 1)
+        return 0
+
     def restore_previous(self, slide_id: UUID) -> SlideSpec:
         slide = self._get_slide(slide_id)
         if slide is None:

@@ -364,6 +364,101 @@ class VisualEditService:
             message="已移动元素位置。",
         )
 
+    def apply_element_resize(
+        self,
+        slide_id: UUID,
+        element_id: str,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        candidate_count: int = 3,
+    ) -> VisualEditResult:
+        """Resize one layout element to absolute page bounds."""
+        slide = self._require_slide(slide_id)
+        current_intent = self._load_intent(slide)
+        current_plan = self._load_plan(slide)
+        if current_plan is None:
+            raise WorkflowError("当前页面尚无版式，无法缩放元素。")
+
+        self._history.record_state(
+            slide=slide,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+            change_source=RevisionSource.MANUAL_EDIT,
+            note=VisualEditIntent.RESIZE_ELEMENT.value,
+        )
+
+        slide_snapshot = SlideEditSnapshot(
+            slide_id=slide.id,
+            presentation_id=slide.presentation_id,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+        )
+        operation = AtomicOperation(
+            operation_type=OperationType.RESIZE,
+            target_element_id=element_id,
+            params={
+                "mode": "absolute",
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+            },
+        )
+        execution_context = self._build_transaction_execution_context(
+            slide,
+            candidate_count=candidate_count,
+        )
+        result = self._transaction_executor.execute_transaction(
+            operations=[operation],
+            slide_id=slide_id,
+            slide_snapshot=slide_snapshot,
+            intents_repo=self._intents,
+            plans_repo=self._plans,
+            presentations_repo=self._presentations,
+            execution_context=execution_context,
+        )
+        if not result.success:
+            error_msg = "缩放元素失败"
+            if result.error:
+                error_msg = f"{error_msg}: {result.error}"
+            raise WorkflowError(error_msg)
+
+        slide = self._require_slide(slide_id)
+        updated_intent = self._load_intent(slide)
+        updated_plan = self._load_plan(slide)
+        validation = None
+        design = self._resolve_design_system(slide, updated_intent)
+        if updated_plan is not None and design is not None:
+            asset_context = self._asset_context_for_plan(slide, updated_plan)
+            validation = LayoutValidationService().validate(
+                updated_plan,
+                design,
+                require_source=True,
+                drawing_hero=updated_plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+                asset_context=asset_context,
+            )
+        if updated_plan is not None:
+            self._invalidate_preview_cache(slide.presentation_id, updated_plan)
+        return VisualEditResult(
+            slide_id=slide.id,
+            intent=VisualEditIntent.RESIZE_ELEMENT,
+            visual_intent=updated_intent,
+            layout_plan=updated_plan,
+            validation=validation,
+            message="已更新元素尺寸。",
+        )
+
+    def count_undo_steps(self, slide_id: UUID) -> int:
+        slide = self._require_slide(slide_id)
+        return self._history.count_available_undo_steps(
+            slide,
+            visual_intent=self._load_intent(slide),
+            layout_plan=self._load_plan(slide),
+        )
+
     def _apply_composite_operation(
         self,
         slide_id: UUID,

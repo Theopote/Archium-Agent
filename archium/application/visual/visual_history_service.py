@@ -151,6 +151,46 @@ class VisualHistoryService:
                 return revisions[next_index] if next_index < len(revisions) else None
         return revisions[0]
 
+    def revision_id_matching_current(
+        self,
+        slide: SlideSpec,
+        *,
+        visual_intent: VisualIntent | None = None,
+        layout_plan: LayoutPlan | None = None,
+    ) -> UUID | None:
+        revisions = self.list_slide_visual_revisions(slide)
+        if not revisions:
+            return None
+        current = self._build_snapshot(
+            slide=slide,
+            visual_intent=visual_intent,
+            layout_plan=layout_plan,
+        )
+        for revision in revisions:
+            if self._visual_snapshot_matches(revision.snapshot, current):
+                return revision.id
+        return None
+
+    def count_available_undo_steps(
+        self,
+        slide: SlideSpec,
+        *,
+        visual_intent: VisualIntent | None = None,
+        layout_plan: LayoutPlan | None = None,
+    ) -> int:
+        revisions = self.list_slide_visual_revisions(slide)
+        if not revisions:
+            return 0
+        current = self._build_snapshot(
+            slide=slide,
+            visual_intent=visual_intent,
+            layout_plan=layout_plan,
+        )
+        for index, revision in enumerate(revisions):
+            if self._visual_snapshot_matches(revision.snapshot, current):
+                return max(0, len(revisions) - index - 1)
+        return 0
+
     def restore_revision(
         self,
         revision: EntityRevision,

@@ -343,7 +343,9 @@ def apply_slide_visual_edit(
     """Apply NL or preset visual edit intent for the current slide."""
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.domain.visual.edit_intent import intent_from_preset
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
+    clear_visual_redo_stack(slide_id)
     service = VisualEditService(session, settings=_resolve_runtime_settings(None))
     if text:
         return service.apply_text(slide_id, text)
@@ -363,7 +365,9 @@ def apply_slide_element_move(
 ) -> object:
     """Move a layout element via canvas drag or property panel."""
     from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
+    clear_visual_redo_stack(slide_id)
     return VisualEditService(session, settings=_resolve_runtime_settings(None)).apply_element_move(
         slide_id,
         element_id,
@@ -372,18 +376,102 @@ def apply_slide_element_move(
     )
 
 
-def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
-    from archium.application.content_adaptation_service import ContentAdaptationService
+def apply_slide_element_resize(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+) -> object:
+    """Resize a layout element via canvas handles."""
+    from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
-    return ContentAdaptationService(session).restore_previous(slide_id)
+    clear_visual_redo_stack(slide_id)
+    return VisualEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).apply_element_resize(
+        slide_id,
+        element_id,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+    )
+
+
+def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
+    return undo_slide_content_adaptation(session, slide_id)
+
+
+def undo_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
+    from archium.application.content_adaptation_service import ContentAdaptationService
+    from archium.application.slide_history_service import SlideHistoryService
+    from archium.infrastructure.database.repositories import PresentationRepository
+    from archium.ui.studio.undo_stack import push_content_redo_revision
+
+    presentations = PresentationRepository(session)
+    slide = presentations.get_slide(slide_id)
+    if slide is None:
+        raise WorkflowError("页面不存在。")
+    redo_revision_id = SlideHistoryService(session).revision_id_matching_current(slide)
+    result = ContentAdaptationService(session).restore_previous(slide_id)
+    if redo_revision_id is not None:
+        push_content_redo_revision(slide_id, redo_revision_id)
+    return result
+
+
+def redo_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
+    from archium.ui.studio.undo_stack import pop_content_redo_revision
+
+    revision_id = pop_content_redo_revision(slide_id)
+    if revision_id is None:
+        raise WorkflowError("没有可重做的内容修改。")
+    return restore_slide_content_at_revision(session, slide_id, revision_id)
 
 
 def restore_slide_visual_edit(session: Session, slide_id: UUID) -> object:
-    from archium.application.visual.visual_edit_service import VisualEditService
-    from archium.domain.visual.edit_intent import VisualEditIntent
+    return undo_slide_visual_edit(session, slide_id)
 
+
+def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+    from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.application.visual.visual_history_service import VisualHistoryService
+    from archium.infrastructure.database.repositories import PresentationRepository
+    from archium.infrastructure.database.visual_repositories import LayoutPlanRepository, VisualIntentRepository
+    from archium.ui.studio.undo_stack import push_visual_redo_revision
+
+    presentations = PresentationRepository(session)
+    slide = presentations.get_slide(slide_id)
+    if slide is None:
+        raise WorkflowError("页面不存在。")
+    history = VisualHistoryService(session)
+    intents = VisualIntentRepository(session)
+    plans = LayoutPlanRepository(session)
+    intent = intents.get(slide.visual_intent_id) if slide.visual_intent_id else None
+    plan = plans.get(slide.layout_plan_id) if slide.layout_plan_id else None
+    redo_revision_id = history.revision_id_matching_current(
+        slide,
+        visual_intent=intent,
+        layout_plan=plan,
+    )
     service = VisualEditService(session, settings=_resolve_runtime_settings(None))
-    return service.apply_intent(slide_id, VisualEditIntent.RESTORE_PREVIOUS)
+    result = service.restore_previous(slide_id)
+    if redo_revision_id is not None:
+        push_visual_redo_revision(slide_id, redo_revision_id)
+    return result
+
+
+def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+    from archium.ui.studio.undo_stack import pop_visual_redo_revision
+
+    revision_id = pop_visual_redo_revision(slide_id)
+    if revision_id is None:
+        raise WorkflowError("没有可重做的视觉修改。")
+    return restore_slide_visual_at_revision(session, slide_id, revision_id)
 
 
 def apply_slide_content_adaptation(
@@ -398,7 +486,9 @@ def apply_slide_content_adaptation(
         action_from_value,
         parse_content_adaptation_text,
     )
+    from archium.ui.studio.undo_stack import clear_content_redo_stack
 
+    clear_content_redo_stack(slide_id)
     service = ContentAdaptationService(session)
     if text:
         resolved = parse_content_adaptation_text(text)
@@ -466,6 +556,24 @@ def count_visual_revisions(session: Session, slide_id: UUID) -> int:
     if slide is None:
         return 0
     return len(VisualHistoryService(session).list_slide_visual_revisions(slide))
+
+
+def count_visual_undo_steps(session: Session, slide_id: UUID) -> int:
+    from archium.application.visual.visual_edit_service import VisualEditService
+
+    return VisualEditService(session, settings=_resolve_runtime_settings(None)).count_undo_steps(
+        slide_id
+    )
+
+
+def count_content_undo_steps(session: Session, slide_id: UUID) -> int:
+    from archium.application.slide_history_service import SlideHistoryService
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    slide = PresentationRepository(session).get_slide(slide_id)
+    if slide is None:
+        return 0
+    return SlideHistoryService(session).count_available_undo_steps(slide)
 
 
 def studio_readiness_label(context: StudioPresentationContext) -> str:

@@ -539,6 +539,9 @@ class TransactionExecutor:
         element_id = operation.target_element_id
         if not element_id:
             raise WorkflowError("Resize operation requires target_element_id")
+        if operation.params.get("mode") == "absolute":
+            return self._resize_element_absolute(layout_plan, operation)
+
         scale_factor = float(operation.params.get("scale_factor", 1.0))
         if scale_factor <= 0:
             raise WorkflowError("Resize scale_factor must be positive")
@@ -564,6 +567,61 @@ class TransactionExecutor:
                 or new_y + new_height > layout_plan.page_height
             ):
                 raise WorkflowError("缩放后元素会超出页面边界，无法执行")
+            updated_elements.append(
+                element.model_copy(
+                    update={
+                        "x": new_x,
+                        "y": new_y,
+                        "width": new_width,
+                        "height": new_height,
+                    }
+                )
+            )
+            changed = True
+
+        if not changed:
+            raise WorkflowError(f"未找到可缩放的元素：{target_id}")
+
+        return bumped_layout_plan(layout_plan, elements=updated_elements)
+
+    def _resize_element_absolute(
+        self,
+        layout_plan: LayoutPlan,
+        operation: AtomicOperation,
+    ) -> LayoutPlan:
+        element_id = operation.target_element_id
+        if not element_id:
+            raise WorkflowError("Resize operation requires target_element_id")
+        target_id = str(element_id)
+        new_x = float(operation.params["x"])
+        new_y = float(operation.params["y"])
+        new_width = float(operation.params["width"])
+        new_height = float(operation.params["height"])
+        if new_width <= 0 or new_height <= 0:
+            raise WorkflowError("Resize width/height must be positive")
+
+        updated_elements: list[LayoutElement] = []
+        changed = False
+        for element in layout_plan.elements:
+            if element.id != target_id:
+                updated_elements.append(element)
+                continue
+            assert_element_editable(element, ElementEditOperation.REPAIR_GEOMETRY)
+            if (
+                new_x < 0
+                or new_y < 0
+                or new_x + new_width > layout_plan.page_width
+                or new_y + new_height > layout_plan.page_height
+            ):
+                raise WorkflowError("缩放后元素会超出页面边界，无法执行")
+            self._assert_no_element_overlap(
+                layout_plan,
+                target_id=target_id,
+                x=new_x,
+                y=new_y,
+                width=new_width,
+                height=new_height,
+            )
             updated_elements.append(
                 element.model_copy(
                     update={
