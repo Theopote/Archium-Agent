@@ -127,7 +127,7 @@ def _render_delete_confirmation(project_id: UUID) -> None:
                     result = ProjectDeletionService(session).delete_project(project_id)
                 st.success("✅ 项目已删除")
                 if result.warnings:
-                    for warning in result.warnings:
+                    for _warning in result.warnings:
                         st.warning("部分关联资源未能清理，项目记录已删除。")
                 st.session_state.deleting_project_id = None
                 st.session_state.selected_project_id = None

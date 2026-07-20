@@ -7,6 +7,7 @@ from archium.domain.visual.benchmark import (
     HumanVisualReview,
     HumanVisualReviewSource,
 )
+
 from tests.benchmark.architectural_slides.human_review_summary import human_review_summary_fields
 
 

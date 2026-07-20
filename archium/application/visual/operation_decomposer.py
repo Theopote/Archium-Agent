@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from uuid import UUID
 
 from archium.domain.visual.atomic_operation import (
@@ -12,12 +11,11 @@ from archium.domain.visual.atomic_operation import (
     IncreaseWhitespaceOperation,
     LockOperation,
     MoveOperation,
+    OperationType,
     ReduceTextOperation,
-    ResizeOperation,
     SwapOperation,
     UnlockOperation,
     intent_to_operation_type,
-    OperationType,
 )
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily

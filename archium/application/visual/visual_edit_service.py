@@ -12,7 +12,9 @@ from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
 )
-from archium.application.visual.composite_operation_policy import assert_composite_operations_supported
+from archium.application.visual.composite_operation_policy import (
+    assert_composite_operations_supported,
+)
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.operation_decomposer import OperationDecomposer
@@ -35,12 +37,12 @@ from archium.domain.visual.edit_intent import (
     intent_from_preset,
     parse_natural_language,
 )
-from archium.domain.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.element_lock import (
     ElementEditOperation,
     assert_element_editable,
 )
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
+from archium.domain.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
@@ -337,7 +339,7 @@ class VisualEditService:
         )
 
         if not result.success:
-            error_msg = f"操作失败"
+            error_msg = "操作失败"
             if result.error_at_step is not None:
                 error_msg += f" (第{result.error_at_step + 1}步)"
             if result.error:

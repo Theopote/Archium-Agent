@@ -124,7 +124,7 @@ def test_studio_service_chain_smoke(db_session: Session, studio_seed) -> None:
     content = ContentAdaptationService(db_session)
     original = PresentationRepository(db_session).get_slide(slide.id)
     assert original is not None
-    original_points = list(original.key_points)
+    list(original.key_points)
     content.apply(slide.id, ContentAdaptationAction.CONVERT_TO_BULLETS, replan_visual=False)
     changed = PresentationRepository(db_session).get_slide(slide.id)
     assert changed is not None

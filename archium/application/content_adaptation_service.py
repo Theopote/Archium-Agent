@@ -377,10 +377,7 @@ class ContentAdaptationService:
             prev_char = text[truncate_pos - 1] if truncate_pos > 0 else ""
 
             # 如果当前字符是数字、字母、百分号、货币符号，继续向前
-            if char.isalnum() or char in "%$€¥万亿":
-                truncate_pos -= 1
-            # 如果前一个字符是数字，当前是单位，继续向前
-            elif prev_char.isdigit() and char in "个件台套份次":
+            if char.isalnum() or char in "%$€¥万亿" or prev_char.isdigit() and char in "个件台套份次":
                 truncate_pos -= 1
             else:
                 break

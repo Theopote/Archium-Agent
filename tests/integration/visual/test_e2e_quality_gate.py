@@ -11,20 +11,18 @@ import shutil
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.visual.e2e_benchmark_service import (
     E2E_DELIVERABLE_NOTES,
     E2EBenchmarkService,
 )
 from archium.infrastructure.llm import MockLLMProvider
 from archium.infrastructure.renderers.pptx_screenshot import screenshot_tools_available
-
+from sqlalchemy.orm import Session
 from tests.fixtures.mock_llm import pipeline_mock_selector
 from tests.golden.fixtures.loader import materialize_inline_docx
 from tests.integration.visual.e2e_quality_gate_cases import (
-    E2E_QUALITY_GATE_CASES,
     E2E_QUALITY_GATE_CASE_ID,
+    E2E_QUALITY_GATE_CASES,
     E2E_QUALITY_GATE_MIN_PASS_RATE,
     QUALITY_GATE_PROJECT_PROPOSAL,
 )

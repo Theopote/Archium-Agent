@@ -9,8 +9,8 @@ from archium.application.visual.composite_operation_policy import (
 from archium.domain.visual.atomic_operation import (
     LockOperation,
     MoveOperation,
-    ReduceTextOperation,
     OperationType,
+    ReduceTextOperation,
 )
 
 

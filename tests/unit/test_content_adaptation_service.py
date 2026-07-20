@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.domain.content_adaptation import ContentAdaptationAction
 from archium.domain.enums import ApprovalStatus, SlideType

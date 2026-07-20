@@ -1,7 +1,8 @@
 """Standalone demo for Canvas Editor component."""
 
+
 import streamlit as st
-from pathlib import Path
+
 
 # Mock LayoutPlan for demo purposes
 class MockElement:

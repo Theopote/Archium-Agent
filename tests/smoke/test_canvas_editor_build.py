@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from archium.ui.components.canvas_editor import (
     canvas_editor_available,
     is_canvas_editor_built,

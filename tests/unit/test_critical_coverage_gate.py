@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from scripts.ci_critical_coverage_gate import CRITICAL_MODULE_FLOORS, evaluate
 
 pytestmark = pytest.mark.unit

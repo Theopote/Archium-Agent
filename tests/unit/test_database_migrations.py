@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-
 from pathlib import Path
 
 import pytest
@@ -24,7 +23,7 @@ def isolated_migration_engine(tmp_path: Path, monkeypatch) -> Iterator[Engine]:
     """Point migration helpers at an isolated on-disk SQLite database."""
     import archium.infrastructure.database.session as session_module
     from archium.config.settings import Settings, reset_settings
-    from archium.infrastructure.database.session import create_engine_from_settings, reset_engine_cache
+    from archium.infrastructure.database.session import create_engine_from_settings
 
     base = tmp_path / "migration-test"
     base.mkdir()

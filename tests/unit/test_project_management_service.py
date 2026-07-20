@@ -5,12 +5,11 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.project_management_service import ProjectManagementService
 from archium.domain.project import Project
 from archium.exceptions import ProjectNotFoundError, ValidationError, WorkflowError
 from archium.infrastructure.database.repositories import ProjectRepository
+from sqlalchemy.orm import Session
 
 
 def test_create_project(db_session: Session) -> None:

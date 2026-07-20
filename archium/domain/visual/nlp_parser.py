@@ -8,7 +8,6 @@ from enum import StrEnum
 from typing import Any
 
 from archium.domain.visual.edit_intent import VisualEditIntent
-from archium.domain.visual.enums import LayoutFamily
 
 
 class ModifierType(StrEnum):

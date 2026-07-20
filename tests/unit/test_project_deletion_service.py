@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.project_deletion_service import ProjectDeletionService
 from archium.config.settings import Settings
 from archium.domain.presentation import Presentation

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 from uuid import UUID
 
@@ -57,10 +58,8 @@ class DeckRepairService:
             family = finding.evidence.get("expected_family")
             params: dict[str, object] = {}
             if isinstance(family, str):
-                try:
+                with contextlib.suppress(ValueError):
                     params["layout_family"] = LayoutFamily(family)
-                except ValueError:
-                    pass
             return [
                 _visual_suggestion(
                     finding=finding,

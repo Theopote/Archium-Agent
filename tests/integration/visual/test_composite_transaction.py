@@ -16,6 +16,7 @@ from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec, VisualRequirement
+from archium.domain.visual.atomic_operation import ReduceTextOperation, SwapOperation
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.edit_intent import VisualEditIntent
@@ -29,14 +30,16 @@ from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
 from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.domain.visual.atomic_operation import ReduceTextOperation, SwapOperation
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.visual_repositories import (
     DesignSystemRepository,
     LayoutPlanRepository,
     VisualIntentRepository,
 )
-from archium.infrastructure.layout.generators.base import LayoutContentBundle, LayoutGeneratorContext
+from archium.infrastructure.layout.generators.base import (
+    LayoutContentBundle,
+    LayoutGeneratorContext,
+)
 from archium.infrastructure.layout.layout_solver import LayoutSolver
 from sqlalchemy.orm import Session
 

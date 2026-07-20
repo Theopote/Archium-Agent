@@ -11,9 +11,10 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
-from archium.domain._base import DomainModel
-from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from pydantic import Field
+
+from archium.domain._base import DomainModel
+from archium.domain.visual.enums import LayoutFamily
 
 E2EExecutionMode = Literal["lite", "content", "full"]
 

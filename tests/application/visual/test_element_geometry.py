@@ -2,8 +2,6 @@
 
 from uuid import uuid4
 
-import pytest
-
 from archium.application.visual.element_geometry import (
     compute_element_placement,
     normalize_position,
@@ -11,7 +9,6 @@ from archium.application.visual.element_geometry import (
 )
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.exceptions import WorkflowError
 
 
 def test_normalize_position_accepts_chinese() -> None:

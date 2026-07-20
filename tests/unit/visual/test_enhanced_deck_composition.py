@@ -1,20 +1,18 @@
 """Tests for Enhanced Deck Composition Service."""
 
-import pytest
 from uuid import uuid4
 
+import pytest
 from archium.application.visual.enhanced_deck_composition_service import (
-    EnhancedDeckCompositionService,
     FeedbackSemanticParser,
-    VisualIntensityAnalyzer,
     PatternRecognizer,
-    DeckQAAnalyzer,
+    VisualIntensityAnalyzer,
 )
 from archium.domain.visual.deck_composition import (
-    SlideCompositionDirective,
-    VisualIntensity,
     DensityLevel,
     PacingRole,
+    SlideCompositionDirective,
+    VisualIntensity,
 )
 from archium.domain.visual.enums import LayoutFamily
 

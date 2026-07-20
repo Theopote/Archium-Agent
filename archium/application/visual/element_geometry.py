@@ -74,7 +74,7 @@ def compute_element_placement(
     width = element.width
     height = element.height
     safe_x, safe_y, safe_w, safe_h = _content_safe_rect(layout_plan)
-    margin = min(layout_plan.page_width, layout_plan.page_height) * 0.05
+    min(layout_plan.page_width, layout_plan.page_height) * 0.05
 
     if canonical == "absolute":
         if absolute_x is None or absolute_y is None:
@@ -134,7 +134,7 @@ def reduce_text_content(text: str, *, reduce_lines: int | None = None) -> str:
     if len(lines) > drop_count:
         candidate = "\n".join(lines[:-drop_count])
     elif len(lines) == 1:
-        limit = max(len(lines[0]) - drop_count * 12, 20)
+        max(len(lines[0]) - drop_count * 12, 20)
         candidate = lines[0]
     else:
         candidate = lines[0]

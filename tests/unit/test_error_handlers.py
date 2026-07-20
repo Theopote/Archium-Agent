@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from archium.exceptions import ConfigurationError, ProjectNotFoundError, ValidationError, WorkflowError
+from archium.exceptions import (
+    ConfigurationError,
+    ProjectNotFoundError,
+    ValidationError,
+    WorkflowError,
+)
 from archium.ui.error_handlers import GENERIC_USER_ERROR, format_user_error, report_user_error
 
 

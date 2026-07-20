@@ -158,9 +158,8 @@ def render_export_panel(
             use_container_width=True,
             disabled=replan_disabled,
             key="studio_top_replan",
-        ):
-            if slide_snapshot is not None:
-                run_studio_replan(slide_snapshot.slide.id)
+        ) and slide_snapshot is not None:
+            run_studio_replan(slide_snapshot.slide.id)
 
     with col_check:
         if st.button("检查问题", use_container_width=True, key="studio_top_check_issues"):

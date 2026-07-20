@@ -16,11 +16,10 @@ from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
 )
-from archium.application.visual.deck_composition_service import DeckCompositionPlanningService
+from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.enhanced_deck_composition_service import (
     EnhancedDeckCompositionService,
 )
-from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_locked import preserve_locked_elements
 from archium.application.visual.layout_planning_service import (
     LayoutPlanningService,

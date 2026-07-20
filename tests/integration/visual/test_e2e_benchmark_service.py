@@ -7,8 +7,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.visual.e2e_benchmark_service import (
     E2E_CONTENT_NOTES,
     E2E_DELIVERABLE_NOTES,
@@ -16,14 +14,14 @@ from archium.application.visual.e2e_benchmark_service import (
     E2E_LITE_NOTES,
     E2EBenchmarkService,
 )
-from archium.infrastructure.llm import MockLLMProvider
 from archium.domain.visual.e2e_benchmark import (
     E2EBenchmarkCase,
     E2EContentExpectation,
     E2EExpectedOutcomes,
     E2EHeroAssetExpectation,
 )
-
+from archium.infrastructure.llm import MockLLMProvider
+from sqlalchemy.orm import Session
 from tests.fixtures.mock_llm import pipeline_mock_selector
 from tests.golden.fixtures.loader import materialize_inline_docx
 

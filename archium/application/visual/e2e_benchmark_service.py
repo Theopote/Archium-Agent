@@ -42,6 +42,7 @@ from archium.application.visual.visual_workflow_service import (
     VisualWorkflowResult,
     VisualWorkflowService,
 )
+from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.enums import ApprovalStatus, SlideType
 from archium.domain.presentation import Presentation
@@ -64,7 +65,6 @@ from archium.domain.visual.e2e_benchmark import (
     E2EQualityMetrics,
 )
 from archium.domain.visual.enums import LayoutFamily
-from archium.config.settings import Settings, get_settings
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     AssetRepository,
@@ -393,7 +393,7 @@ class E2EBenchmarkService:
 
         # 按难度统计
         difficulty_stats: dict[str, list[bool]] = {}
-        for case, result in zip(cases, results):
+        for case, result in zip(cases, results, strict=False):
             if case.difficulty not in difficulty_stats:
                 difficulty_stats[case.difficulty] = []
             difficulty_stats[case.difficulty].append(result.passed)
@@ -651,7 +651,7 @@ class E2EBenchmarkService:
     ) -> list[dict[str, Any]]:
         """构建每页的详细信息"""
         details = []
-        for slide, plan, report in zip(slides, plans, reports):
+        for slide, plan, report in zip(slides, plans, reports, strict=False):
             details.append({
                 "slide_order": slide.order,
                 "title": slide.title,
