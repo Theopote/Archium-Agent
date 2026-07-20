@@ -1,4 +1,21 @@
-"""Compile LayoutPlan + content into a renderer-neutral RenderScene."""
+"""Compile LayoutPlan + content into a renderer-neutral RenderScene.
+
+**V1 degradations (intentional, not full structured edit):**
+
+- ``CHART`` → ``ImageNode`` (may be a rasterized chart asset; not ``ChartNode``)
+- ``TABLE`` / ``METRIC`` → ``TextNode`` (tabular data as text; not ``TableNode``)
+
+**Style application (honest):**
+
+- Scene tokens/colors come from ``DesignSystem`` only.
+- ``art_direction`` and ``reference_style`` are accepted for API stability but
+  **not applied** (discarded until Phase 3+ style overlays).
+- Do not claim Reference Style / ArtDirection visual overlays are applied in
+  RenderScene compilation.
+
+Phase 0–2 only requires Text / Image / Drawing / Shape. Do not describe V1 as
+a complete editable chart/table scene model.
+"""
 
 from __future__ import annotations
 
@@ -53,7 +70,11 @@ _VALID_ORIGINS = frozenset(
 
 
 class RenderSceneCompiler:
-    """Translate planning artifacts into a unified RenderScene."""
+    """Translate planning artifacts into a unified RenderScene (V1 minimal nodes).
+
+    Applies ``DesignSystem`` only. ``art_direction`` / ``reference_style`` are
+    API placeholders until Phase 3+ style overlays.
+    """
 
     def compile(
         self,
@@ -67,7 +88,9 @@ class RenderSceneCompiler:
         reference_style: ReferenceStyleProfile | None = None,
         presentation_id: UUID | None = None,
     ) -> RenderScene:
-        del art_direction, reference_style  # reserved for Phase 3+ style overlays
+        # Phase 3+: apply ArtDirection / ReferenceStyleProfile overlays onto theme
+        # tokens and node styles. Until then only DesignSystem affects the scene.
+        _ = art_direction, reference_style
         bundle = content_bundle or SlideContentBundle()
         warnings: list[str] = []
         asset_manifest: list[SceneAssetReference] = []
@@ -196,12 +219,14 @@ class RenderSceneCompiler:
         if element.content_type == LayoutContentType.DRAWING:
             nodes = list(self._compile_drawing(element, bundle, drawing_type, asset_manifest, warnings))
         elif element.content_type in {LayoutContentType.IMAGE, LayoutContentType.CHART}:
+            # V1: CHART has no ChartNode — bind as ImageNode (often a raster asset).
             nodes = list(self._compile_image(element, bundle, asset_manifest, warnings))
         elif element.content_type in {
             LayoutContentType.TEXT,
             LayoutContentType.METRIC,
             LayoutContentType.TABLE,
         }:
+            # V1: TABLE has no TableNode — emit TextNode (not an editable grid).
             nodes = list(self._compile_text(element, design_system, bundle))
         elif element.content_type == LayoutContentType.SHAPE:
             nodes = list(self._compile_shape(element, design_system))

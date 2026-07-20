@@ -1,4 +1,13 @@
-"""RenderScene — unified final visual scene for all renderers."""
+"""RenderScene — unified final visual scene for all renderers.
+
+**Scope (V1):** minimal node loop for Phase 0–2 — ``Text`` / ``Image`` /
+``Drawing`` / ``Shape`` only. This is **not** a Presenton-class full scene
+model: there is no ``TableNode``, ``ChartNode``, ``GroupNode``,
+``ContainerNode``, ``IconNode``, or ``LineNode`` yet.
+
+Do **not** claim “完整 RenderScene 已完成” or “完整可编辑图表/表格已完成”.
+Accurate status: **RenderScene V1 最小节点闭环完成**.
+"""
 
 from __future__ import annotations
 
@@ -238,7 +247,11 @@ RenderNode = Annotated[
 
 
 class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
-    """Unified visual scene — single source of truth for all renderers."""
+    """Unified visual scene — single source of truth for all renderers (V1).
+
+    V1 supports Text / Image / Drawing / Shape only. Charts and tables from
+    LayoutPlan are degraded by the compiler (see ``RenderSceneCompiler``).
+    """
 
     schema_version: int = Field(default=1, ge=1)
     slide_id: UUID

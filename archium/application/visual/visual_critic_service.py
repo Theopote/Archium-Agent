@@ -8,7 +8,7 @@ from __future__ import annotations
 import statistics
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -455,7 +455,7 @@ class VisualCriticService:
                 rgb.thumbnail((160, 90))
                 pixels: list[tuple[int, int, int]]
                 if hasattr(rgb, "get_flattened_data"):
-                    pixels = list(rgb.get_flattened_data())
+                    pixels = cast(list[tuple[int, int, int]], list(rgb.get_flattened_data()))
                 else:
                     pixels = list(rgb.getdata())
         except OSError:

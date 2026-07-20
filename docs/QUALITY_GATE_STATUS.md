@@ -22,6 +22,28 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | Runtime DBs / Phase 8 dumps not on main | **Remediated** | `.data/` removed from Git index; `.gitignore` covers `.data/`, `data/`, `output/`, `*.db`, `*.sqlite`, `*.sqlite3` |
 | Real-project run outputs | **CI artifacts / reviewed goldens only** | Do not commit full phase8/Studio run trees |
 
+## RenderScene scope (honest — V1 only)
+
+| Claim | Status |
+|------|--------|
+| RenderScene V1 最小节点闭环（Text / Image / Drawing / Shape） | **Done** (Phase 0–2 requirement) |
+| 完整 RenderScene / Presenton 式全节点模型 | **Not done** — no TableNode / ChartNode / GroupNode / ContainerNode / IconNode / LineNode |
+| 完整可编辑图表 | **Not done** — compiler maps `CHART` → `ImageNode`（可栅格化） |
+| 完整可编辑表格 | **Not done** — compiler maps `TABLE` → `TextNode` |
+
+**对外口径：** RenderScene V1 最小节点闭环完成。不得对外宣称「完整 RenderScene 已完成」或「完整可编辑图表和表格已完成」。
+
+## Reference Style / ArtDirection → RenderScene (honest)
+
+| Claim | Status |
+|------|--------|
+| ReferenceStyleProfile / ArtDirection 领域结构与 UI/服务存在 | **Yes** |
+| Template Studio / 上游可影响 LayoutPlan 生成 | **Partial**（规划侧，非 Scene 编译） |
+| `RenderSceneCompiler` 应用 ReferenceStyle / ArtDirection 视觉覆盖 | **Not passed** — 参数保留但未使用；Scene 仅应用 `DesignSystem` |
+| 用户上传模板风格差异反映到 RenderScene | **Not passed**（经编译器路径） |
+
+**对外口径：** 参考风格结构存在；**RenderScene 风格落地未通过**。不得把「Reference Style / Template Studio 已接入」说成 Scene 已吃到参考风格。
+
 ## Architectural Slide Benchmark (30 cases)
 
 | Gate | Status | Evidence |
