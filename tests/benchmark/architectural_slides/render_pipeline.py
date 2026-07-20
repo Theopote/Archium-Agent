@@ -132,7 +132,7 @@ def render_benchmark_visual_artifacts(
                 "final_render.png not produced."
             )
 
-    asset_count, placeholder_count = count_assets(case_dir)
+    asset_count, curated_count, placeholder_count = count_assets(case_dir)
     pptx_ok = pptx_path is not None and pptx_path.is_file()
     render_valid = (
         pptx_ok
@@ -147,9 +147,11 @@ def render_benchmark_visual_artifacts(
         )
     if placeholder_count > 0:
         notes.append(
-            "Assets are placeholder diagrams; visual human review remains blocked "
-            "until curated real assets replace placeholders."
+            "Some assets remain placeholder diagrams; visual human review stays blocked "
+            "until all case assets are curated."
         )
+    elif curated_count > 0:
+        notes.append("All mapped assets are curated PNGs from the benchmark asset pool.")
 
     manifest = BenchmarkRenderManifest(
         render_source="pptx_screenshot" if final_render is not None else "pptx_only",
@@ -158,7 +160,7 @@ def render_benchmark_visual_artifacts(
         rendered_at=rendered_at,
         renderer=renderer or ("pptxgenjs" if pptx_ok else ""),
         asset_count=asset_count,
-        real_asset_count=max(0, asset_count - placeholder_count),
+        real_asset_count=curated_count,
         placeholder_asset_count=placeholder_count,
         font_fallbacks=[],
         missing_assets=list(build.missing_content_refs),

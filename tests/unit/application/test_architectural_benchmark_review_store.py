@@ -10,12 +10,15 @@ import pytest
 from archium.application.architectural_benchmark_review_store import (
     list_benchmark_cases,
     list_case_review_statuses,
+    load_case_layout_review,
     load_case_review,
     review_progress,
     review_progress_by_category,
+    save_case_layout_review,
     save_case_review,
 )
 from archium.domain.visual.benchmark import (
+    HumanLayoutReview,
     HumanVisualReview,
     HumanVisualReviewSource,
 )
@@ -296,6 +299,45 @@ def test_save_case_review_blocked_without_final_render(tmp_path: Path) -> None:
     )
     with pytest.raises(WorkflowError, match="final_render"):
         save_case_review(review, root=tmp_path)
+
+
+def test_save_case_layout_review_round_trip(tmp_path: Path) -> None:
+    case_dir = tmp_path / "case_demo"
+    case_dir.mkdir()
+    (case_dir / "wireframe.png").write_bytes(b"png")
+    (case_dir / "input.json").write_text(
+        json.dumps(
+            {
+                "case_id": "case_demo",
+                "title": "Demo",
+                "category": "drawing",
+                "page_type": "demo",
+                "page_task": "demo",
+                "visual_focus": "demo",
+                "expected_layout_family": "drawing_focus",
+                "allowed_layout_variants": ["drawing_only"],
+                "layout_variant": "drawing_only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    review = HumanLayoutReview(
+        case_id="case_demo",
+        source=HumanVisualReviewSource.MANUAL,
+        information_hierarchy=5,
+        reading_order=4,
+        whitespace_density=4,
+        spatial_balance=4,
+        layout_clarity=5,
+        accepted_for_geometry=True,
+        reviewer="Reviewer A",
+        reviewed_at=datetime.now(UTC),
+    )
+    path = save_case_layout_review(review, root=tmp_path)
+    loaded = load_case_layout_review("case_demo", root=tmp_path)
+    assert path.name == "human_layout_review.json"
+    assert loaded is not None
+    assert loaded.accepted_for_geometry is True
 
 
 def test_save_and_load_manual_review_round_trip(tmp_path: Path) -> None:

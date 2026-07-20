@@ -100,19 +100,17 @@ def visual_review_eligibility(
     return (not blockers, manifest, blockers)
 
 
-def count_assets(case_dir: Path) -> tuple[int, int]:
-    assets_dir = case_dir / "assets"
-    if not assets_dir.is_dir():
-        return 0, 0
-    files = [path for path in assets_dir.iterdir() if path.is_file()]
-    # Benchmark fixtures currently generate deterministic placeholder PNGs only.
-    return len(files), len(files)
+def count_assets(case_dir: Path) -> tuple[int, int, int]:
+    """Return (total, curated_real, placeholder) asset counts."""
+    from tests.benchmark.architectural_slides.curated_assets import count_case_asset_provenance
+
+    return count_case_asset_provenance(case_dir)
 
 
 def bootstrap_case_render_artifacts(case_dir: Path) -> dict[str, Any]:
     """Ensure wireframe alias + pending manifest exist for one case folder."""
     ensure_wireframe_alias(case_dir)
-    asset_count, placeholder_count = count_assets(case_dir)
+    asset_count, curated_count, placeholder_count = count_assets(case_dir)
     manifest_path = render_manifest_path(case_dir)
     if not manifest_path.is_file():
         write_pending_render_manifest(

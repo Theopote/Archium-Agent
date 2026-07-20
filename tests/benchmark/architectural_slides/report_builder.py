@@ -14,6 +14,7 @@ from archium.domain.visual.benchmark import HumanVisualReview
 from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir, materialized_benchmark_case_ids
 from tests.benchmark.architectural_slides.case_registry import get_case_definition
 from tests.benchmark.architectural_slides.human_review_summary import human_review_summary_fields
+from tests.benchmark.architectural_slides.review_paths import read_visual_review_payload
 from tests.benchmark.architectural_slides.runner import run_all_cases
 
 
@@ -30,7 +31,7 @@ def build_benchmark_summary(
     for summary in summaries:
         definition = get_case_definition(summary.case_id)
         directory = case_dir(summary.case_id)
-        human_payload = _read_optional_json(directory / "human_review.json")
+        human_payload = read_visual_review_payload(directory)
         human = HumanVisualReview.model_validate(human_payload) if human_payload else None
         human_fields = human_review_summary_fields(human)
         cases.append(
@@ -65,7 +66,7 @@ def build_benchmark_summary(
     manual_reviews: list[HumanVisualReview] = []
     for summary in summaries:
         directory = case_dir(summary.case_id)
-        human_payload = _read_optional_json(directory / "human_review.json")
+        human_payload = read_visual_review_payload(directory)
         if human_payload is None:
             continue
         review = HumanVisualReview.model_validate(human_payload)
@@ -96,7 +97,7 @@ def _build_benchmark_summary_from_disk(*, root: Path | None = None) -> dict[str,
         definition = get_case_definition(case_id)
         directory = case_dir(case_id) if root is None else base / case_id
         rule_fields = _rule_fields_from_baseline(directory)
-        human_payload = _read_optional_json(directory / "human_review.json")
+        human_payload = read_visual_review_payload(directory)
         human = HumanVisualReview.model_validate(human_payload) if human_payload else None
         human_fields = human_review_summary_fields(human)
         if human is not None and human.is_manual_review():

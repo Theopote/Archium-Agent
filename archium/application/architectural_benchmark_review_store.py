@@ -15,6 +15,7 @@ from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_PENDING_LABEL,
     BenchmarkHumanReviewExport,
     BenchmarkPendingCase,
+    HumanLayoutReview,
     HumanVisualReview,
     HumanVisualReviewSource,
 )
@@ -25,6 +26,9 @@ DEFAULT_BENCHMARK_ROOT = (
     _PROJECT_ROOT / "tests" / "benchmark" / "architectural_slides"
 )
 DEFAULT_REPORTS_DIR = DEFAULT_BENCHMARK_ROOT / "reports"
+HUMAN_VISUAL_REVIEW_FILE = "human_visual_review.json"
+HUMAN_LAYOUT_REVIEW_FILE = "human_layout_review.json"
+LEGACY_HUMAN_REVIEW_FILE = "human_review.json"
 
 
 @dataclass(frozen=True)
@@ -41,6 +45,7 @@ class BenchmarkCaseSummary:
     wireframe_path: Path
     final_render_path: Path
     human_review_path: Path
+    layout_review_path: Path
     layout_score: float | None
     rule_passed: bool | None
 
@@ -177,7 +182,8 @@ def list_benchmark_cases(*, root: Path | None = None) -> list[BenchmarkCaseSumma
                 preview_path=case_wireframe_path(directory),
                 wireframe_path=case_wireframe_path(directory),
                 final_render_path=case_final_render_path(directory),
-                human_review_path=directory / "human_review.json",
+                human_review_path=_visual_review_path(directory),
+                layout_review_path=directory / HUMAN_LAYOUT_REVIEW_FILE,
                 layout_score=layout_score,
                 rule_passed=rule_passed,
             )
@@ -185,13 +191,35 @@ def list_benchmark_cases(*, root: Path | None = None) -> list[BenchmarkCaseSumma
     return summaries
 
 
-def load_case_review(case_id: str, *, root: Path | None = None) -> HumanVisualReview | None:
-    path = benchmark_root(root) / case_id / "human_review.json"
+def _visual_review_path(case_dir: Path) -> Path:
+    primary = case_dir / HUMAN_VISUAL_REVIEW_FILE
+    if primary.is_file():
+        return primary
+    return case_dir / LEGACY_HUMAN_REVIEW_FILE
+
+
+def _read_review_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
-    return HumanVisualReview.model_validate(
-        json.loads(path.read_text(encoding="utf-8"))
-    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else None
+
+
+def load_case_review(case_id: str, *, root: Path | None = None) -> HumanVisualReview | None:
+    case_dir = benchmark_root(root) / case_id
+    for name in (HUMAN_VISUAL_REVIEW_FILE, LEGACY_HUMAN_REVIEW_FILE):
+        payload = _read_review_json(case_dir / name)
+        if payload is not None:
+            return HumanVisualReview.model_validate(payload)
+    return None
+
+
+def load_case_layout_review(case_id: str, *, root: Path | None = None) -> HumanLayoutReview | None:
+    path = benchmark_root(root) / case_id / HUMAN_LAYOUT_REVIEW_FILE
+    payload = _read_review_json(path)
+    if payload is None:
+        return None
+    return HumanLayoutReview.model_validate(payload)
 
 
 def save_case_review(
@@ -222,7 +250,39 @@ def save_case_review(
         raise WorkflowError("综合分未达交付阈值，不可标记为可交付。")
     if review.reviewed_at is None:
         review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
-    path = case_directory / "human_review.json"
+    path = case_directory / HUMAN_VISUAL_REVIEW_FILE
+    path.write_text(
+        json.dumps(review.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def save_case_layout_review(
+    review: HumanLayoutReview,
+    *,
+    root: Path | None = None,
+) -> Path:
+    if review.source != HumanVisualReviewSource.MANUAL:
+        msg = "Benchmark layout reviews saved from the UI must use source=manual"
+        raise ValueError(msg)
+    if not review.reviewer.strip():
+        raise WorkflowError("请填写评审人姓名后再保存几何评审。")
+    case_directory = benchmark_root(root) / review.case_id
+    if not case_directory.is_dir():
+        msg = f"Unknown benchmark case directory: {review.case_id}"
+        raise ValueError(msg)
+    wireframe = case_directory / "wireframe.png"
+    legacy = case_directory / "preview.png"
+    if not wireframe.is_file() and not legacy.is_file():
+        raise WorkflowError("缺少 wireframe.png，无法保存 Layout Geometry 评审。")
+    if review.accepted_for_geometry and review.major_problems:
+        raise WorkflowError("存在 major_problems 时不可标记几何版式通过。")
+    if review.accepted_for_geometry and not review.passes_threshold():
+        raise WorkflowError("几何综合分未达阈值，不可标记为通过。")
+    if review.reviewed_at is None:
+        review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
+    path = case_directory / HUMAN_LAYOUT_REVIEW_FILE
     path.write_text(
         json.dumps(review.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

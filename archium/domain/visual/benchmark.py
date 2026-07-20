@@ -18,6 +18,8 @@ HUMAN_REVIEW_FORMAL_MIN_ACCEPTED = 24
 HUMAN_REVIEW_FORMAL_TOTAL_CASES = 30
 HUMAN_REVIEW_PENDING_LABEL = "待人工评审"
 HUMAN_REVIEW_INVALIDATED_LABEL = "已作废（需重评）"
+LAYOUT_REVIEW_PENDING_LABEL = "待几何评审"
+LAYOUT_REVIEW_PASS_THRESHOLD = 3.5
 BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER = (
     "人工视觉评审须基于 final_render.png（PPTX 最终渲染），"
     "不能使用 LayoutPlan 线框图 wireframe.png。"
@@ -222,6 +224,59 @@ class BenchmarkRenderManifest(DomainModel):
         if self.missing_assets:
             blockers.append(f"missing_assets={len(self.missing_assets)}")
         return blockers
+
+
+class HumanLayoutReview(DomainModel):
+    """Manual layout-geometry review against wireframe.png (not final render)."""
+
+    case_id: str = Field(min_length=1)
+    source: HumanVisualReviewSource = HumanVisualReviewSource.MANUAL
+    information_hierarchy: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    reading_order: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    whitespace_density: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    spatial_balance: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    layout_clarity: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    major_problems: list[str] = Field(default_factory=list)
+    minor_problems: list[str] = Field(default_factory=list)
+    accepted_for_geometry: bool = False
+    reviewer: str = ""
+    reviewed_at: datetime | None = None
+    reviewer_notes: str = ""
+
+    def weighted_score(self) -> float:
+        weights = {
+            "information_hierarchy": 0.25,
+            "reading_order": 0.25,
+            "whitespace_density": 0.20,
+            "spatial_balance": 0.15,
+            "layout_clarity": 0.15,
+        }
+        total = sum(getattr(self, field) * weight for field, weight in weights.items())
+        return round(total, 3)
+
+    def passes_threshold(self, threshold: float = LAYOUT_REVIEW_PASS_THRESHOLD) -> bool:
+        return self.weighted_score() >= threshold
+
+    def human_score_label(self) -> str:
+        if self.is_scaffold_review():
+            return LAYOUT_REVIEW_PENDING_LABEL
+        return f"{self.weighted_score():.2f}"
+
+    def is_manual_review(self) -> bool:
+        return self.source == HumanVisualReviewSource.MANUAL
+
+    def is_scaffold_review(self) -> bool:
+        return self.source in {
+            HumanVisualReviewSource.PLACEHOLDER,
+            HumanVisualReviewSource.LAYOUT_QA_DERIVED,
+        }
+
+    @model_validator(mode="after")
+    def _enforce_geometry_consistency(self) -> Self:
+        if self.is_manual_review() and self.accepted_for_geometry:
+            if self.major_problems or not self.passes_threshold():
+                self.accepted_for_geometry = False
+        return self
 
 
 class BenchmarkPendingCase(DomainModel):

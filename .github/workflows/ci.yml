@@ -199,6 +199,59 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  architectural-benchmark-render:
+    name: architectural benchmark render pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[full,dev]"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: archium/infrastructure/renderers/pptxgen/package-lock.json
+
+      - name: Install PptxGenJS dependencies
+        working-directory: archium/infrastructure/renderers/pptxgen
+        run: npm ci
+
+      - name: Install screenshot tools (LibreOffice + Poppler)
+        run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils fonts-noto-cjk
+
+      - name: Materialize curated benchmark assets
+        run: python scripts/materialize_benchmark_curated_assets.py --force --sync-cases
+
+      - name: Render architectural benchmark visuals
+        run: python scripts/render_architectural_benchmark_visuals.py --case case_001_site_plan --case case_002_site_photos
+
+      - name: Render pipeline tests
+        run: pytest tests/benchmark/architectural_slides/test_render_pipeline.py -v
+
+      - name: Upload benchmark render artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architectural-benchmark-render-sample
+          path: |
+            tests/benchmark/architectural_slides/case_001_site_plan/output.pptx
+            tests/benchmark/architectural_slides/case_001_site_plan/final_render.png
+            tests/benchmark/architectural_slides/case_001_site_plan/render_manifest.json
+            tests/benchmark/architectural_slides/case_002_site_photos/output.pptx
+            tests/benchmark/architectural_slides/case_002_site_photos/final_render.png
+            tests/benchmark/architectural_slides/case_002_site_photos/render_manifest.json
+          if-no-files-found: ignore
+          retention-days: 14
+
   migration-smoke:
     name: alembic migration smoke
     runs-on: ubuntu-latest

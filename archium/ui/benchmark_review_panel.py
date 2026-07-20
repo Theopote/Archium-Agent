@@ -16,10 +16,12 @@ from archium.application.architectural_benchmark_review_store import (
     import_human_review_bundle,
     list_benchmark_cases,
     list_case_review_statuses,
+    load_case_layout_review,
     load_case_review,
     regenerate_benchmark_report,
     review_progress,
     review_progress_by_category,
+    save_case_layout_review,
     save_case_review,
 )
 from archium.domain.visual.benchmark import (
@@ -31,6 +33,8 @@ from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_MIN_SCORE,
     HUMAN_REVIEW_PASS_THRESHOLD,
     HUMAN_REVIEW_PENDING_LABEL,
+    LAYOUT_REVIEW_PASS_THRESHOLD,
+    HumanLayoutReview,
     HumanVisualReview,
     HumanVisualReviewSource,
 )
@@ -39,6 +43,14 @@ from archium.ui.studio.human_review_panel import REVIEW_DIMENSION_LABELS
 _SESSION_REVIEWER_KEY = "benchmark_default_reviewer"
 _SESSION_AUTO_REGEN_KEY = "benchmark_auto_regen_report"
 _SESSION_SELECTED_CASE_KEY = "benchmark_review_selected_case"
+
+LAYOUT_REVIEW_DIMENSION_LABELS: dict[str, str] = {
+    "information_hierarchy": "信息层级（几何）",
+    "reading_order": "阅读顺序",
+    "whitespace_density": "留白与密度",
+    "spatial_balance": "空间平衡",
+    "layout_clarity": "版式清晰度",
+}
 
 
 def render_benchmark_review_panel() -> None:
@@ -102,6 +114,7 @@ def render_benchmark_review_panel() -> None:
     )
     selected = next(case for case in filtered if case.case_id == selected_id)
     existing = load_case_review(selected_id)
+    existing_layout = load_case_layout_review(selected_id)
     selected_index = case_ids.index(selected_id)
 
     nav_cols = st.columns([1, 2, 1])
@@ -128,8 +141,8 @@ def render_benchmark_review_panel() -> None:
         st.rerun()
 
     preview_col, form_col = st.columns([1.1, 1])
-    _render_case_preview(preview_col, selected, existing)
-    _handle_review_form(form_col, selected, existing, case_ids, selected_index)
+    _render_case_preview(preview_col, selected, existing, existing_layout)
+    _handle_review_form(form_col, selected, existing, existing_layout, case_ids, selected_index)
 
 
 def _render_progress_header(progress: dict[str, int]) -> None:
@@ -318,6 +331,7 @@ def _render_case_preview(
     column: st.delta_generator.DeltaGenerator,
     case: BenchmarkCaseSummary,
     review: HumanVisualReview | None,
+    layout_review: HumanLayoutReview | None,
 ) -> None:
     from tests.benchmark.architectural_slides.render_manifest import (
         load_render_manifest,
@@ -389,6 +403,11 @@ def _render_case_preview(
             column.caption(
                 f"Layout 规则分 {case.layout_score:.3f} · {rule_label}"
             )
+        if layout_review is not None and layout_review.is_manual_review():
+            column.markdown(
+                f"**几何评审：** {layout_review.human_score_label()} / 5"
+                f"{' · 通过' if layout_review.accepted_for_geometry else ''}"
+            )
         if review is None:
             column.markdown(f"**人工评分：** {HUMAN_REVIEW_PENDING_LABEL}")
             return
@@ -412,123 +431,215 @@ def _handle_review_form(
     column: st.delta_generator.DeltaGenerator,
     case: BenchmarkCaseSummary,
     existing: HumanVisualReview | None,
+    existing_layout: HumanLayoutReview | None,
     case_ids: list[str],
     selected_index: int,
 ) -> None:
     from tests.benchmark.architectural_slides.render_manifest import visual_review_eligibility
 
     with column:
-        eligible, _, blockers = visual_review_eligibility(case.preview_path.parent)
-        is_manual = existing is not None and existing.is_manual_review()
-        if existing is not None and existing.is_invalidated():
-            st.info(
-                "本条人工评分已作废（基于线框预览）。"
-                "待 `final_render.png` 就绪后可重新填写并保存。"
-            )
-        elif existing is not None and existing.is_scaffold_review():
-            st.warning("当前为占位评审。请填写下方表单并保存，以替换为真实 manual 评审。")
-        if not eligible:
-            st.error(
-                BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER
-                + "（" + "；".join(blockers) + "）"
-            )
-            st.caption("下方表单仅供预览；保存按钮已禁用。")
+        with st.expander("Layout Geometry 评审（wireframe）", expanded=True):
+            _render_layout_review_form(case, existing_layout, case_ids, selected_index)
+        with st.expander("Rendered Visual 评审（final_render）", expanded=False):
+            _render_visual_review_form(case, existing, case_ids, selected_index)
 
-        defaults = {
-            field: getattr(existing, field, 4)
-            for field in REVIEW_DIMENSION_LABELS
-        }
-        scores: dict[str, int] = {}
-        for field, label in REVIEW_DIMENSION_LABELS.items():
-            scores[field] = st.slider(
-                label,
-                min_value=HUMAN_REVIEW_MIN_SCORE,
-                max_value=HUMAN_REVIEW_MAX_SCORE,
-                value=int(defaults[field]),
-                key=f"benchmark_human_review_{case.case_id}_{field}",
-            )
 
-        default_reviewer = ""
-        if is_manual and existing is not None:
-            default_reviewer = existing.reviewer
-        elif st.session_state.get(_SESSION_REVIEWER_KEY):
-            default_reviewer = str(st.session_state[_SESSION_REVIEWER_KEY])
+def _render_layout_review_form(
+    case: BenchmarkCaseSummary,
+    existing: HumanLayoutReview | None,
+    case_ids: list[str],
+    selected_index: int,
+) -> None:
+    is_manual = existing is not None and existing.is_manual_review()
+    defaults = {field: getattr(existing, field, 4) for field in LAYOUT_REVIEW_DIMENSION_LABELS}
+    scores: dict[str, int] = {}
+    for field, label in LAYOUT_REVIEW_DIMENSION_LABELS.items():
+        scores[field] = st.slider(
+            label,
+            min_value=HUMAN_REVIEW_MIN_SCORE,
+            max_value=HUMAN_REVIEW_MAX_SCORE,
+            value=int(defaults[field]),
+            key=f"benchmark_layout_review_{case.case_id}_{field}",
+        )
+    default_reviewer = ""
+    if is_manual and existing is not None:
+        default_reviewer = existing.reviewer
+    elif st.session_state.get(_SESSION_REVIEWER_KEY):
+        default_reviewer = str(st.session_state[_SESSION_REVIEWER_KEY])
+    reviewer = st.text_input(
+        "评审人",
+        value=default_reviewer,
+        key=f"benchmark_layout_reviewer_{case.case_id}",
+    )
+    major = st.text_area(
+        "主要问题（每行一条）",
+        value="\n".join(existing.major_problems if existing else []),
+        height=60,
+        key=f"benchmark_layout_major_{case.case_id}",
+    )
+    accepted_default = (
+        bool(existing.accepted_for_geometry) if is_manual and existing is not None else False
+    )
+    accepted = st.checkbox(
+        "几何版式通过",
+        value=accepted_default,
+        key=f"benchmark_layout_accept_{case.case_id}",
+    )
+    notes = st.text_input(
+        "评审备注",
+        value=existing.reviewer_notes if is_manual and existing is not None else "",
+        key=f"benchmark_layout_notes_{case.case_id}",
+    )
+    preview = HumanLayoutReview(
+        case_id=case.case_id,
+        source=HumanVisualReviewSource.MANUAL,
+        information_hierarchy=scores["information_hierarchy"],
+        reading_order=scores["reading_order"],
+        whitespace_density=scores["whitespace_density"],
+        spatial_balance=scores["spatial_balance"],
+        layout_clarity=scores["layout_clarity"],
+        major_problems=[line.strip() for line in major.splitlines() if line.strip()],
+        accepted_for_geometry=accepted,
+        reviewer=reviewer.strip(),
+        reviewed_at=datetime.now(UTC),
+        reviewer_notes=notes.strip(),
+    )
+    st.caption(
+        f"几何综合 {preview.weighted_score():.2f} / 5 · "
+        f"{'通过' if preview.passes_threshold() else '未达'} 阈值 {LAYOUT_REVIEW_PASS_THRESHOLD}"
+    )
+    if st.button(
+        "保存几何评审",
+        type="secondary",
+        use_container_width=True,
+        key=f"benchmark_save_layout_review_{case.case_id}",
+    ):
+        saved_path = save_case_layout_review(preview)
+        if preview.reviewer:
+            st.session_state[_SESSION_REVIEWER_KEY] = preview.reviewer
+        st.success(f"已保存至 `{saved_path.name}`")
+        st.rerun()
 
-        reviewer = st.text_input(
-            "评审人",
-            value=default_reviewer,
-            placeholder="真实姓名或工号（保存后会记住，供后续 case 复用）",
-            key=f"benchmark_human_reviewer_{case.case_id}",
+
+def _render_visual_review_form(
+    case: BenchmarkCaseSummary,
+    existing: HumanVisualReview | None,
+    case_ids: list[str],
+    selected_index: int,
+) -> None:
+    from tests.benchmark.architectural_slides.render_manifest import visual_review_eligibility
+
+    eligible, _, blockers = visual_review_eligibility(case.preview_path.parent)
+    is_manual = existing is not None and existing.is_manual_review()
+    if existing is not None and existing.is_invalidated():
+        st.info(
+            "本条视觉评分已作废（基于线框预览）。"
+            "待 `final_render.png` 就绪且素材非占位后可重新保存。"
         )
-        major = st.text_area(
-            "主要问题（每行一条）",
-            value="\n".join(existing.major_problems if existing else []),
-            height=72,
-            key=f"benchmark_human_major_{case.case_id}",
+    elif existing is not None and existing.is_scaffold_review():
+        st.warning("当前为占位视觉评审。")
+    if not eligible:
+        st.error(
+            BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER
+            + "（" + "；".join(blockers) + "）"
         )
-        minor = st.text_area(
-            "次要问题（每行一条）",
-            value="\n".join(existing.minor_problems if existing else []),
-            height=72,
-            key=f"benchmark_human_minor_{case.case_id}",
-        )
-        accepted_default = bool(existing.accepted) if is_manual and existing is not None else False
-        accepted = st.checkbox(
-            "本页可接受交付",
-            value=accepted_default,
-            key=f"benchmark_human_accept_{case.case_id}",
-        )
-        notes = st.text_input(
-            "评审备注",
-            value=existing.reviewer_notes if is_manual and existing is not None else "",
-            key=f"benchmark_human_notes_{case.case_id}",
+        st.caption("视觉评审保存已禁用；可先完成上方几何评审。")
+
+    defaults = {
+        field: getattr(existing, field, 4)
+        for field in REVIEW_DIMENSION_LABELS
+    }
+    scores: dict[str, int] = {}
+    for field, label in REVIEW_DIMENSION_LABELS.items():
+        scores[field] = st.slider(
+            label,
+            min_value=HUMAN_REVIEW_MIN_SCORE,
+            max_value=HUMAN_REVIEW_MAX_SCORE,
+            value=int(defaults[field]),
+            key=f"benchmark_human_review_{case.case_id}_{field}",
         )
 
-        preview = HumanVisualReview(
-            case_id=case.case_id,
-            source=HumanVisualReviewSource.MANUAL,
-            information_hierarchy=scores["information_hierarchy"],
-            visual_focus=scores["visual_focus"],
-            reading_order=scores["reading_order"],
-            image_text_relationship=scores["image_text_relationship"],
-            whitespace_density=scores["whitespace_density"],
-            architectural_expression=scores["architectural_expression"],
-            aesthetic_finish=scores["aesthetic_finish"],
-            editability=scores["editability"],
-            major_problems=[line.strip() for line in major.splitlines() if line.strip()],
-            minor_problems=[line.strip() for line in minor.splitlines() if line.strip()],
-            accepted=accepted,
-            reviewer=reviewer.strip(),
-            reviewed_at=datetime.now(UTC),
-            reviewer_notes=notes.strip(),
-        )
-        st.caption(
-            f"综合评分 {preview.weighted_score():.2f} / 5 · "
-            f"{'通过' if preview.passes_threshold() else '未达'} "
-            f"交付阈值 {HUMAN_REVIEW_PASS_THRESHOLD}"
-        )
+    default_reviewer = ""
+    if is_manual and existing is not None:
+        default_reviewer = existing.reviewer
+    elif st.session_state.get(_SESSION_REVIEWER_KEY):
+        default_reviewer = str(st.session_state[_SESSION_REVIEWER_KEY])
 
-        save_cols = st.columns(2)
-        save_clicked = save_cols[0].button(
-            "保存人工评审",
-            type="primary",
-            use_container_width=True,
-            disabled=not eligible,
-            key=f"benchmark_save_human_review_{case.case_id}",
+    reviewer = st.text_input(
+        "评审人",
+        value=default_reviewer,
+        placeholder="真实姓名或工号（保存后会记住，供后续 case 复用）",
+        key=f"benchmark_human_reviewer_{case.case_id}",
+    )
+    major = st.text_area(
+        "主要问题（每行一条）",
+        value="\n".join(existing.major_problems if existing else []),
+        height=72,
+        key=f"benchmark_human_major_{case.case_id}",
+    )
+    minor = st.text_area(
+        "次要问题（每行一条）",
+        value="\n".join(existing.minor_problems if existing else []),
+        height=72,
+        key=f"benchmark_human_minor_{case.case_id}",
+    )
+    accepted_default = bool(existing.accepted) if is_manual and existing is not None else False
+    accepted = st.checkbox(
+        "本页可接受交付",
+        value=accepted_default,
+        key=f"benchmark_human_accept_{case.case_id}",
+    )
+    notes = st.text_input(
+        "评审备注",
+        value=existing.reviewer_notes if is_manual and existing is not None else "",
+        key=f"benchmark_human_notes_{case.case_id}",
+    )
+
+    preview = HumanVisualReview(
+        case_id=case.case_id,
+        source=HumanVisualReviewSource.MANUAL,
+        information_hierarchy=scores["information_hierarchy"],
+        visual_focus=scores["visual_focus"],
+        reading_order=scores["reading_order"],
+        image_text_relationship=scores["image_text_relationship"],
+        whitespace_density=scores["whitespace_density"],
+        architectural_expression=scores["architectural_expression"],
+        aesthetic_finish=scores["aesthetic_finish"],
+        editability=scores["editability"],
+        major_problems=[line.strip() for line in major.splitlines() if line.strip()],
+        minor_problems=[line.strip() for line in minor.splitlines() if line.strip()],
+        accepted=accepted,
+        reviewer=reviewer.strip(),
+        reviewed_at=datetime.now(UTC),
+        reviewer_notes=notes.strip(),
+    )
+    st.caption(
+        f"综合评分 {preview.weighted_score():.2f} / 5 · "
+        f"{'通过' if preview.passes_threshold() else '未达'} "
+        f"交付阈值 {HUMAN_REVIEW_PASS_THRESHOLD}"
+    )
+
+    save_cols = st.columns(2)
+    save_clicked = save_cols[0].button(
+        "保存视觉评审",
+        type="primary",
+        use_container_width=True,
+        disabled=not eligible,
+        key=f"benchmark_save_human_review_{case.case_id}",
+    )
+    save_next_clicked = save_cols[1].button(
+        "保存并下一页",
+        use_container_width=True,
+        disabled=not eligible,
+        key=f"benchmark_save_next_human_review_{case.case_id}",
+    )
+    if save_clicked or save_next_clicked:
+        _persist_review(
+            preview,
+            advance=save_next_clicked,
+            case_ids=case_ids,
+            selected_index=selected_index,
         )
-        save_next_clicked = save_cols[1].button(
-            "保存并下一页",
-            use_container_width=True,
-            disabled=not eligible,
-            key=f"benchmark_save_next_human_review_{case.case_id}",
-        )
-        if save_clicked or save_next_clicked:
-            _persist_review(
-                preview,
-                advance=save_next_clicked,
-                case_ids=case_ids,
-                selected_index=selected_index,
-            )
 
 
 def _persist_review(
