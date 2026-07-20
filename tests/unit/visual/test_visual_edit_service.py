@@ -137,3 +137,12 @@ def test_apply_intent_unsupported_raises(
     service = VisualEditService(db_session)
     with pytest.raises(WorkflowError, match="Unsupported"):
         service.apply_intent(slide_with_visual.id, "not-a-real-intent")
+
+
+def test_apply_text_unrecognized_raises(
+    db_session: Session,
+    slide_with_visual: SlideSpec,
+) -> None:
+    service = VisualEditService(db_session)
+    with pytest.raises(WorkflowError, match="无法识别"):
+        service.apply_text(slide_with_visual.id, "随便说点什么没有意图")

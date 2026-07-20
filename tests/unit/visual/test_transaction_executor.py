@@ -418,6 +418,38 @@ def test_swap_missing_element_raises() -> None:
     assert isinstance(result.error, WorkflowError)
 
 
+def test_resize_invalid_scale_raises() -> None:
+    caption_id = str(uuid4())
+    plan = LayoutPlan(
+        id=uuid4(),
+        slide_id=uuid4(),
+        layout_family=LayoutFamily.DRAWING_FOCUS,
+        layout_variant="default",
+        page_width=10,
+        page_height=5.625,
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+        elements=[
+            LayoutElement(
+                id=caption_id,
+                role=LayoutElementRole.CAPTION,
+                content_type=LayoutContentType.TEXT,
+                x=1,
+                y=4,
+                width=2,
+                height=0.5,
+                text_content="说明",
+            )
+        ],
+    )
+    result, _ = _execute(
+        plan=plan,
+        operations=[ResizeOperation(caption_id, scale_factor=0)],
+    )
+    assert result.success is False
+    assert isinstance(result.error, WorkflowError)
+
+
 def test_empty_operation_list_commits_successfully() -> None:
     plan = _sample_plan()
     result, _ = _execute(plan=plan, operations=[])
