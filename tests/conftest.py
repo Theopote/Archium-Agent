@@ -46,6 +46,8 @@ def test_settings(tmp_path: Path) -> Settings:
 @pytest.fixture
 def db_session(test_settings: Settings) -> Generator[Session, None, None]:
     """Provide an isolated SQLite session for repository tests."""
+    import archium.infrastructure.database.models  # noqa: F401
+
     engine = create_engine_from_settings(test_settings)
     Base.metadata.create_all(engine)
     session = Session(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
