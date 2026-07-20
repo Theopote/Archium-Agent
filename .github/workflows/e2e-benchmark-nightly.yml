@@ -1,7 +1,9 @@
 name: E2E Benchmark Nightly
 
-# Full E2EBenchmarkService quality gate (content → visual workflow → PPTX → screenshots).
-# Requires passed=True; not run on every PR (see ci.yml for wiring-only tests).
+# Two explicit gates:
+# - Pipeline Gate: deliverable chain (PPTX + screenshot count); validation may be bypassed.
+# - Quality Gate: real LayoutValidationService scoring; no validation monkeypatch.
+# PR CI runs integration tests with -m "integration and not e2e" only.
 
 on:
   schedule:
@@ -14,8 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  e2e-benchmark-quality-gate:
-    name: e2e benchmark quality gate
+  e2e-pipeline-gate:
+    name: E2E Pipeline Gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -46,16 +48,38 @@ jobs:
       - name: Install screenshot tools (LibreOffice + Poppler)
         run: sudo apt-get install -y libreoffice poppler-utils
 
-      - name: E2E Benchmark quality gate
-        run: pytest tests/integration/visual/test_e2e_quality_gate.py -v -m e2e
+      - name: Run E2E Pipeline Gate
+        run: pytest tests/integration/visual/test_e2e_pipeline_gate.py -v -m e2e_pipeline
 
-      - name: Upload E2E benchmark artifacts
+      - name: Upload pipeline gate artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-benchmark-nightly
+          name: e2e-pipeline-gate
           path: |
             output/visual-composition/**/*
             data/output/**/*
           if-no-files-found: ignore
           retention-days: 7
+
+  e2e-quality-gate:
+    name: E2E Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[full,dev]"
+
+      - name: Install fonts for layout text measurement
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-liberation
+
+      - name: Run E2E Quality Gate
+        run: pytest tests/integration/visual/test_e2e_quality_gate.py -v -m e2e_quality

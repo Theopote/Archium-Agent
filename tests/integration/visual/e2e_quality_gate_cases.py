@@ -1,9 +1,9 @@
 """E2E Benchmark quality gate case definitions (M5).
 
-Canonical nightly gate: content planning → visual workflow → PPTX → screenshots.
-Workflow layout gate uses ``always_valid_layouts`` in tests so PPTX export is not
-blocked by stricter in-workflow validation (``require_source=True``); post-hoc
-layout quality is asserted separately in ``test_quality_gate_posthoc_layout_quality``.
+Nightly gates (see ``test_e2e_pipeline_gate.py`` and ``test_e2e_quality_gate.py``):
+
+- **Pipeline Gate** (``e2e_pipeline``): deliverable chain runs with validation bypass.
+- **Quality Gate** (``e2e_quality``): real ``LayoutValidationService`` scoring only.
 """
 
 from __future__ import annotations

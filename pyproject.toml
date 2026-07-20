@@ -106,7 +106,9 @@ filterwarnings = [
 markers = [
     "unit: Fast isolated tests (tests/unit, tests/application); CI job: pytest -m unit",
     "integration: Service wiring tests (tests/integration); CI job: pytest -m \"integration and not e2e\"",
-    "e2e: Full workflow quality gates (nightly); CI job: pytest -m e2e",
+    "e2e: Full workflow gates (nightly); excluded from PR integration via \"not e2e\"",
+    "e2e_pipeline: Nightly deliverable pipeline gate; may bypass in-workflow layout validation",
+    "e2e_quality: Nightly layout quality gate; real LayoutValidationService only",
     "benchmark: Architectural slide benchmark suite (tests/benchmark); CI job: pytest -m benchmark",
     "smoke: Toolchain smoke tests (tests/smoke); CI jobs run pytest -m smoke",
     "marp_smoke: Marp CLI export smoke tests",

@@ -12,10 +12,16 @@
 - ``full``：content/lite 页面 + VisualWorkflowService（需 ``enable_visual_workflow``）
 - ``deliverable``：full + PPTX 导出 + screenshot 检查（需 ``enable_pptx_export``）
 
-Nightly 质量门禁（M5）：``tests/integration/visual/test_e2e_quality_gate.py``（``@pytest.mark.e2e``），
-要求 ``passed=True``；见 ``.github/workflows/e2e-benchmark-nightly.yml``。
+Nightly gates (M5):
 
-仍未实现：Screenshot QA 视觉回归基线对比。
+- **E2E Pipeline Gate** (``test_e2e_pipeline_gate.py``, ``@pytest.mark.e2e_pipeline``):
+  deliverable chain with optional validation bypass; requires ``passed=True``.
+- **E2E Quality Gate** (``test_e2e_quality_gate.py``, ``@pytest.mark.e2e_quality``):
+  real ``LayoutValidationService`` scoring (no validation monkeypatch).
+
+See ``.github/workflows/e2e-benchmark-nightly.yml``.
+
+仍未实现：Screenshot QA 视觉回归基线对比（Pipeline Gate 仅检查 screenshot 数量）。
 """
 
 from __future__ import annotations
