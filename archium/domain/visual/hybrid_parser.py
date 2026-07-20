@@ -84,17 +84,15 @@ class HybridIntentParser:
 
         normalized = text.lower().strip()
 
+        constraint_words = ("但", "不要", "只", "保持", "but", "except", "keep", "don't")
+        if sum(1 for word in constraint_words if word in normalized) > 1:
+            return True
+
         # 启发式：检测复杂性指标
         complexity_indicators = [
-            # 多个条件
-            len([word for word in ["但", "不要", "只", "保持", "but", "except", "keep", "don't"] if word in normalized]) > 1,
-            # 长指令（超过20字符中文或40字符英文）
             len(text) > 40,
-            # 多个逗号或句号
             text.count("，") + text.count("。") + text.count(",") + text.count(".") > 2,
-            # 包含"和"或"并且"表示多个操作
             "和" in normalized or "并且" in normalized or " and " in normalized,
-            # 包含比较或序列
             any(word in normalized for word in ["比", "更", "先", "然后", "接着", "first", "then", "more", "less"]),
         ]
 

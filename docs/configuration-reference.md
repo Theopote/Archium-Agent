@@ -36,6 +36,8 @@ Do not edit them manually.
 | `PROJECT_STORAGE_PATH` | `data/projects` | No | Uploaded project documents and assets root directory. |
 | `OUTPUT_PATH` | `data/outputs` | No | Generated presentation export output directory. |
 | `CHROMA_PATH` | `data/chroma` | No | Chroma vector index storage directory. |
+| `CHROMA_MAX_DOCUMENTS` | `10000` | No | Maximum number of documents in Chroma vector store to prevent memory issues. |
+| `WORKFLOW_CHECKPOINT_RETENTION_DAYS` | `7` | No | Auto-delete workflow checkpoints older than this many days to manage storage. |
 
 ## LLM (OpenAI-compatible) {#llm}
 
@@ -48,6 +50,7 @@ Do not edit them manually.
 | `LLM_MAX_RETRIES` | `2` | No | Maximum LLM request retries. |
 | `LLM_REPAIR_ATTEMPTS` | `2` | No | Maximum structured-output repair attempts per LLM call. |
 | `LLM_TIMEOUT_SECONDS` | `60.0` | No | LLM request timeout in seconds. |
+| `LLM_MAX_CONCURRENT_REQUESTS` | `5` | No | Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion. |
 
 ## Embedding {#embedding}
 

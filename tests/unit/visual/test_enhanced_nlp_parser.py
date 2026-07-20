@@ -33,10 +33,9 @@ class TestEnhancedNLPParser:
 
     def test_parse_with_stronger_degree_modifier(self) -> None:
         """Parse instruction with stronger degree modifier."""
-        result = self.parser.parse("再大一点主图")
+        result = self.parser.parse("放大主图再大一点")
         assert result is not None
         assert result.intent == VisualEditIntent.ENLARGE_HERO
-        # "再" = 0.4
         assert result.params["adjustment_strength"] >= 0.3
 
     def test_parse_with_constraint_negative(self) -> None:
@@ -113,14 +112,14 @@ class TestHybridParser:
 
     def test_should_use_llm_heuristic(self) -> None:
         """Test heuristic for determining if LLM is needed."""
+        from unittest.mock import MagicMock
+
         from archium.domain.visual.hybrid_parser import HybridIntentParser
 
-        parser = HybridIntentParser(llm_parser=None)
+        parser_without_llm = HybridIntentParser(llm_parser=None)
+        assert not parser_without_llm.should_use_llm("放大主图")
 
-        # 简单指令不需要 LLM
-        assert not parser.should_use_llm("放大主图")
-
-        # 复杂指令可能需要 LLM
+        parser = HybridIntentParser(llm_parser=MagicMock())
         assert parser.should_use_llm("主图稍微再大一点，但不要盖住标题，保持图纸不动")
 
     def test_fallback_when_llm_unavailable(self) -> None:

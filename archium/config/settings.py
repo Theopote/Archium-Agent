@@ -530,6 +530,11 @@ class Settings(BaseSettings):
         return bool(self.effective_embedding_api_key and self.embedding_model)
 
     @property
+    def retrieval_configured(self) -> bool:
+        """Return True when retrieval is enabled with a usable embedding backend."""
+        return self.retrieval_enabled and self.embedding_configured
+
+    @property
     def resolved_pptxgen_script_path(self) -> Path:
         """Return the Node render script path for editable PPTX export."""
         if self.pptxgen_script_path is not None:
@@ -556,4 +561,6 @@ def get_settings() -> Settings:
 
 def reset_settings() -> None:
     """Clear cached settings (for tests)."""
-    get_settings.cache_clear()
+    cache_clear = getattr(get_settings, "cache_clear", None)
+    if callable(cache_clear):
+        cache_clear()

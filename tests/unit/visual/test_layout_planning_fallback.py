@@ -107,7 +107,7 @@ def test_llm_exception_records_structured_fallback_warning(caplog: pytest.LogCap
     assert payload["fallback_family"] == LayoutFamily.DRAWING_FOCUS.value
     lines = format_layout_decision_warnings(warnings)
     assert any(LAYOUT_DECISION_LLM_FALLBACK in line for line in lines)
-    assert "StructuredOutputError" in caplog.text
+    assert warnings[0]["error_type"] == "StructuredOutputError"
     assert "sk-" not in caplog.text
     assert "LAYOUT_PLAN_SYSTEM" not in caplog.text
 

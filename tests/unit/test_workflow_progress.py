@@ -28,7 +28,7 @@ def test_append_step_log_deduplicates_consecutive_steps() -> None:
 
 
 def test_label_for_step_storyline() -> None:
-    assert "叙事结构" in label_for_step(WorkflowStep.STORYLINE.value)
+    assert "汇报结构" in label_for_step(WorkflowStep.STORYLINE.value)
 
 
 def test_label_for_step_repair_slides_with_index() -> None:

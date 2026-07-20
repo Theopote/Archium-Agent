@@ -223,14 +223,16 @@ def init_database(engine: Engine | None = None) -> None:
         Base.metadata.create_all(target)
 
     # For both new and existing databases, validate migrations
-    if engine is None:
+    if engine is None or current_revision is None:
         check_migrations_on_startup()
 
 
 def reset_engine_cache() -> None:
     """Clear cached engine and session factories (for tests)."""
     global _scoped_session_factory, _session_factory
-    get_engine.cache_clear()
+    cache_clear = getattr(get_engine, "cache_clear", None)
+    if callable(cache_clear):
+        cache_clear()
     if _scoped_session_factory is not None:
         with suppress(Exception):
             _scoped_session_factory.remove()
