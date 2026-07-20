@@ -1,0 +1,11 @@
+{
+  "project_id": "cultural_village_001",
+  "status": "pending_confirmation",
+  "title": "文化名村保护与活化汇报",
+  "thesis": "",
+  "audience": "文旅局与镇政府",
+  "purpose": "确认文化叙事、空间保护与分期活化策略",
+  "target_slide_count": 22,
+  "sections": [],
+  "notes": "大纲须在 SlideSpec 生成前由建筑师确认；运行验收流水线后可导出已批准版本覆盖本文件。"
+}

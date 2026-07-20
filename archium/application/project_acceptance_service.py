@@ -31,7 +31,7 @@ from archium.domain.project_acceptance import (
 )
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual.validation import LAYOUT_DRAWING_CROPPED
-from archium.infrastructure.database.repositories import AssetRepository, PresentationRepository
+from archium.infrastructure.database.repositories import AssetRepository, DocumentRepository, PresentationRepository, ReviewRepository
 from archium.infrastructure.llm.base import LLMProvider
 
 
@@ -91,6 +91,7 @@ class ProjectAcceptanceService:
                 ),
                 require_brief_review=False,
                 require_storyline_review=False,
+                require_outline_review=False,
                 require_slides_review=False,
             )
             content_ok = content_result.workflow_run.status == WorkflowStatus.COMPLETED
@@ -135,6 +136,13 @@ class ProjectAcceptanceService:
         )
         critical_count, error_count, crop_count = _summarize_layout_issues(validation_reports)
         asset_utilization = _asset_utilization_rate(slides, assets)
+        input_document_count = len(
+            DocumentRepository(self._session).list_by_project(project.id)
+        )
+        fact_errors, citation_errors, image_errors = _count_review_issue_buckets(
+            self._session,
+            presentation.id,
+        )
 
         min_slides = int(manifest.expectations.get("min_slides", REAL_PROJECT_MIN_SLIDES))
         min_assets = int(manifest.expectations.get("min_assets", REAL_PROJECT_MIN_ASSETS))
@@ -195,6 +203,13 @@ class ProjectAcceptanceService:
             drawing_crop_issue_count=crop_count,
             export_acceptable=critical_count == 0,
             real_asset_utilization_rate=asset_utilization,
+            input_document_count=input_document_count,
+            fact_error_count=fact_errors,
+            citation_error_count=citation_errors,
+            image_usage_error_count=image_errors,
+            deliverable_ready=(
+                content_ok and visual_ok and critical_count == 0 and crop_count == 0
+            ),
             major_edit_page_ratio=major_edit_page_ratio,
             minor_edit_page_ratio=minor_edit_page_ratio,
             exported_page_ratio=exported_page_ratio,
@@ -242,6 +257,37 @@ _ASSET_VISUAL_TYPES: dict[AssetType, VisualType] = {
     AssetType.IMAGE: VisualType.SITE_PHOTO,
     AssetType.CHART: VisualType.CHART,
 }
+
+
+def _count_review_issue_buckets(
+    session: Session,
+    presentation_id: UUID,
+) -> tuple[int, int, int]:
+    """Count automated review issues by fact / citation / image buckets."""
+    issues = ReviewRepository(session).list_by_presentation(presentation_id)
+    fact_errors = 0
+    citation_errors = 0
+    image_errors = 0
+    for issue in issues:
+        code = issue.rule_code.upper()
+        if code.startswith("CONTENT.") or code.startswith("ARCH."):
+            fact_errors += 1
+        elif code.startswith("EVIDENCE.") or "CITATION" in code or code.startswith(
+            "SEMANTIC.EXTERNAL_FACT"
+        ) or code.startswith("SEMANTIC.ISSUE_WITHOUT_EVIDENCE"):
+            citation_errors += 1
+        elif (
+            code.startswith("VISUAL.")
+            or code.startswith("SEMANTIC.REFERENCE")
+            or code.startswith("SEMANTIC.DRAWING")
+            or code.startswith("SEMANTIC.PROJECT_ASSET")
+            or code.startswith("SEMANTIC.TEXT_NOT_EXPLAINING")
+            or code.startswith("SEMANTIC.VISUAL_WITHOUT")
+            or code.startswith("SEMANTIC.BEFORE_AFTER")
+            or code.startswith("SEMANTIC.TOO_MANY_EQUAL")
+        ):
+            image_errors += 1
+    return fact_errors, citation_errors, image_errors
 
 
 def _attach_project_assets(

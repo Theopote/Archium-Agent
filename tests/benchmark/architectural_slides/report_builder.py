@@ -8,6 +8,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, cast
 
+from archium.application.human_review_gate import evaluate_benchmark_human_gate
 from archium.domain.visual.benchmark import HumanVisualReview
 
 from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir
@@ -54,6 +55,16 @@ def build_benchmark_summary(*, update: bool = False) -> dict[str, Any]:
         for item in cases
         if item.get("human_review_source") in {"placeholder", "layout_qa_derived"}
     )
+    manual_reviews: list[HumanVisualReview] = []
+    for summary in summaries:
+        directory = case_dir(summary.case_id)
+        human_payload = _read_optional_json(directory / "human_review.json")
+        if human_payload is None:
+            continue
+        review = HumanVisualReview.model_validate(human_payload)
+        if review.is_manual_review():
+            manual_reviews.append(review)
+    human_gate = evaluate_benchmark_human_gate(manual_reviews)
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "case_count": len(cases),
@@ -62,7 +73,9 @@ def build_benchmark_summary(*, update: bool = False) -> dict[str, Any]:
         "manual_human_review_count": manual_review_count,
         "manual_human_accepted_count": manual_accepted_count,
         "placeholder_human_review_count": placeholder_review_count,
-        "human_quality_gate_passed": manual_accepted_count == len(cases) and len(cases) > 0,
+        "human_average_weighted_score": human_gate.average_weighted_score,
+        "human_quality_gate_passed": human_gate.passed,
+        "human_quality_gate_reasons": human_gate.reasons,
         "cases": cases,
     }
 

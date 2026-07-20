@@ -10,3 +10,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "real_project_acceptance: Five real-project end-to-end acceptance scenarios",
     )
+    config.addinivalue_line(
+        "markers",
+        "phase7_acceptance: Phase 7 cultural village and renovation acceptance scaffolds",
+    )

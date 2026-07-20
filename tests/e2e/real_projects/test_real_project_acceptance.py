@@ -23,7 +23,13 @@ def test_real_project_manifests_cover_five_scenarios() -> None:
     paths = list_manifest_paths()
     assert len(paths) == 5
     scenarios = {load_manifest(path).manifest.scenario for path in paths}
-    assert scenarios == set(RealProjectScenario)
+    assert scenarios == {
+        RealProjectScenario.NEW_BUILDING,
+        RealProjectScenario.EXISTING_RENOVATION,
+        RealProjectScenario.HOSPITAL_SCHOOL_ANALYSIS,
+        RealProjectScenario.GOVERNMENT_CLIENT_DECISION,
+        RealProjectScenario.INTERNAL_DESIGN_REVIEW,
+    }
 
 
 @pytest.mark.parametrize(

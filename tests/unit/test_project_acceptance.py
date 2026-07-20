@@ -43,7 +43,15 @@ def test_record_round_trip() -> None:
             error_layout_page_count=0,
             drawing_crop_issue_count=0,
             export_acceptable=True,
+            fact_error_count=1,
+            citation_error_count=2,
+            image_usage_error_count=3,
+            deliverable_ready=False,
+            top_dissatisfactions=["主图偏小"],
+            top_satisfactions=["故事线清晰"],
         ),
     )
     restored = RealProjectAcceptanceRecord.model_validate(record.model_dump(mode="json"))
     assert restored.project_id == record.project_id
+    assert restored.metrics.fact_error_count == 1
+    assert restored.metrics.top_satisfactions == ["故事线清晰"]

@@ -1,0 +1,21 @@
+{
+  "id": "cultural_village_001",
+  "scenario": "cultural_village",
+  "name": "文化名村保护与活化汇报",
+  "project_type": "culture",
+  "workflow_phase": "phase_7_acceptance",
+  "target_slide_count": 22,
+  "description": "以村落文化叙事、空间资产与活化策略为主线的真实项目验收脚手架。",
+  "required_pipeline_stages": [
+    "ingest",
+    "research",
+    "outline_confirmation",
+    "slides",
+    "deck_composition",
+    "layout",
+    "pptx_export",
+    "studio_edit",
+    "human_review",
+    "final_acceptance"
+  ]
+}

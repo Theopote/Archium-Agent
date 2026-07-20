@@ -1,0 +1,43 @@
+{
+  "id": "cultural_village_001",
+  "scenario": "cultural_village",
+  "name": "江南古村文化保护与文旅活化",
+  "project": {
+    "name": "江南古村文化保护与文旅活化",
+    "project_type": "culture"
+  },
+  "inline_docx": {
+    "filename": "村落调研纪要.docx",
+    "paragraphs": [
+      "村落以水系与宗祠维系社区认同，历史街巷格局完整。",
+      "旅游旺季人流对居民生活造成干扰，需分区引导。",
+      "部分传统民居结构老化，需分级修缮与功能更新。"
+    ]
+  },
+  "inline_assets": [
+    {"filename": "village_aerial.png", "label": "村落航拍", "visual_type": "site_photo"},
+    {"filename": "alley_photo.png", "label": "历史街巷", "visual_type": "site_photo"},
+    {"filename": "temple_plan.png", "label": "宗祠平面", "visual_type": "floor_plan"}
+  ],
+  "facts": [
+    {"key": "heritage_level", "label": "文保等级", "value": "省级历史文化名村"},
+    {"key": "households", "label": "常住户数", "value": "186 户"}
+  ],
+  "request": {
+    "title": "文化名村保护与活化方案汇报",
+    "audience": "文旅局与镇政府",
+    "purpose": "确认文化叙事、空间保护与分期活化策略",
+    "duration_minutes": 30,
+    "target_slide_count": 22,
+    "core_message": "以真实村落故事串联保护底线与可持续活化",
+    "required_sections": ["村落背景", "文化叙事", "现状问题", "保护策略", "活化路径", "分期实施"],
+    "presentation_type": "client_review"
+  },
+  "expectations": {
+    "min_slides": 20,
+    "min_assets": 10,
+    "workflow_status": "completed",
+    "export_presentation_spec": true,
+    "requires_cultural_narrative": true
+  }
+}

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
 
@@ -22,6 +22,7 @@ class RealProjectScenario(StrEnum):
     HOSPITAL_SCHOOL_ANALYSIS = "hospital_school_analysis"
     GOVERNMENT_CLIENT_DECISION = "government_client_decision"
     INTERNAL_DESIGN_REVIEW = "internal_design_review"
+    CULTURAL_VILLAGE = "cultural_village"
 
 
 class HumanMetricsSource(StrEnum):
@@ -51,6 +52,21 @@ class RealProjectAcceptanceMetrics(DomainModel):
     exported_page_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
     average_human_visual_score: float | None = Field(default=None, ge=1.0, le=5.0)
     user_edit_minutes: float | None = Field(default=None, ge=0.0)
+    # Phase 7 extended fields — manual session / final sign-off.
+    input_document_count: int | None = Field(default=None, ge=0)
+    modified_page_count: int | None = Field(default=None, ge=0)
+    unmodified_page_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
+    fact_error_count: int | None = Field(default=None, ge=0)
+    citation_error_count: int | None = Field(default=None, ge=0)
+    image_usage_error_count: int | None = Field(default=None, ge=0)
+    deliverable_ready: bool | None = None
+    top_dissatisfactions: list[str] = Field(default_factory=list)
+    top_satisfactions: list[str] = Field(default_factory=list)
+
+    @field_validator("top_dissatisfactions", "top_satisfactions")
+    @classmethod
+    def _limit_top_five(cls, value: list[str]) -> list[str]:
+        return value[:5]
 
     def meets_automated_scope(self) -> bool:
         """Return True when slide/asset counts match sprint minimum scope."""
@@ -73,4 +89,28 @@ class RealProjectAcceptanceRecord(DomainModel):
     metrics: RealProjectAcceptanceMetrics
     human_metrics_source: HumanMetricsSource = HumanMetricsSource.NONE
     human_rehearsal_passed: bool = False
+    notes: str = ""
+
+
+class Phase7ProjectProfile(DomainModel):
+    """On-disk profile for Phase 7 real-project acceptance folders."""
+
+    id: str = Field(min_length=1)
+    scenario: RealProjectScenario
+    name: str = Field(min_length=1)
+    project_type: str = Field(min_length=1)
+    workflow_phase: str = Field(default="phase_7_acceptance", min_length=1)
+    target_slide_count: int = Field(ge=1)
+    required_pipeline_stages: list[str] = Field(min_length=1)
+    description: str = ""
+
+
+class Phase7HumanReviewBundle(DomainModel):
+    """Deck-level manual review export for Phase 7 folders."""
+
+    project_id: str = Field(min_length=1)
+    source: str = Field(default="manual")
+    reviews: list[dict[str, object]] = Field(default_factory=list)
+    reviewer: str = ""
+    reviewed_at: datetime | None = None
     notes: str = ""

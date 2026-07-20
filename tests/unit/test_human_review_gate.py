@@ -1,0 +1,67 @@
+"""Unit tests for formal human review gate."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from archium.application.human_review_gate import evaluate_benchmark_human_gate
+from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource
+
+
+def _manual_review(
+    *,
+    case_id: str,
+    accepted: bool,
+    score: int = 4,
+    major: list[str] | None = None,
+) -> HumanVisualReview:
+    return HumanVisualReview(
+        case_id=case_id,
+        source=HumanVisualReviewSource.MANUAL,
+        information_hierarchy=score,
+        visual_focus=score,
+        reading_order=score,
+        image_text_relationship=score,
+        whitespace_density=score,
+        architectural_expression=score,
+        aesthetic_finish=score,
+        editability=score,
+        major_problems=major or [],
+        accepted=accepted,
+        reviewer="architect_a",
+        reviewed_at=datetime.now(UTC),
+        reviewer_notes="manual session",
+    )
+
+
+def test_human_gate_fails_without_enough_manual_reviews() -> None:
+    reviews = [_manual_review(case_id="case_001", accepted=True)]
+    result = evaluate_benchmark_human_gate(reviews, total_cases=30, min_accepted=24)
+    assert result.passed is False
+    assert any("manual reviews" in reason for reason in result.reasons)
+
+
+def test_human_gate_passes_with_strong_manual_batch() -> None:
+    reviews = [
+        _manual_review(case_id=f"case_{index:03d}", accepted=True, score=4)
+        for index in range(1, 25)
+    ]
+    result = evaluate_benchmark_human_gate(reviews, total_cases=30, min_accepted=24)
+    assert result.passed is True
+    assert result.average_weighted_score is not None
+    assert result.average_weighted_score >= 3.8
+
+
+def test_human_gate_fails_when_accepted_page_has_major_problem() -> None:
+    reviews = [
+        _manual_review(
+            case_id=f"case_{index:03d}",
+            accepted=True,
+            score=4,
+            major=["drawing cropped"] if index == 1 else [],
+        )
+        for index in range(1, 25)
+    ]
+    result = evaluate_benchmark_human_gate(reviews, total_cases=30, min_accepted=24)
+    assert result.passed is False
+    assert result.has_major_problem_on_accepted is True

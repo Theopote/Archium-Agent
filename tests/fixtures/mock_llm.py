@@ -30,7 +30,11 @@ from tests.fixtures.mock_presentation_responses import (
 
 def _wants_full_deck(request: LLMRequest) -> bool:
     haystack = request.user_prompt
-    if "目标页数: 20" in haystack or "请生成约 20 页" in haystack:
+    match = re.search(r"目标页数:\s*(\d+)", haystack)
+    if match and int(match.group(1)) >= 15:
+        return True
+    match = re.search(r"请生成约\s*(\d+)\s*页", haystack)
+    if match and int(match.group(1)) >= 15:
         return True
     match = re.search(r'"target_slide_count"\s*:\s*(\d+)', haystack)
     if match and int(match.group(1)) >= 15:

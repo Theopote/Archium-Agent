@@ -1,0 +1,5 @@
+{
+  "manifest_ref": "../manifests/cultural_village_001.json",
+  "input_document_count": 6,
+  "notes": "脱敏资料由 inline_manifest 或 files/ 目录补充；人工评审前不得自动填写 human_review.json。"
+}

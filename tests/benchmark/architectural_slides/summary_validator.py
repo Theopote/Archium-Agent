@@ -139,7 +139,9 @@ def _compare_summary_payloads(actual: dict[str, Any], expected: dict[str, Any]) 
         "manual_human_review_count",
         "manual_human_accepted_count",
         "placeholder_human_review_count",
+        "human_average_weighted_score",
         "human_quality_gate_passed",
+        "human_quality_gate_reasons",
     )
     for key in keys:
         if actual.get(key) != expected.get(key):
