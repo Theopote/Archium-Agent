@@ -17,21 +17,36 @@ from tests.benchmark.architectural_slides.case_catalog import (
     CASE_004_CHART,
     CASE_CATALOG,
     CaseCatalogEntry,
+    EDGE_CASE_CATALOG,
     get_catalog_entry,
 )
 
 BENCHMARK_CASE_DEFINITIONS: tuple[BenchmarkCaseDefinition, ...] = tuple(
     entry.definition for entry in CASE_CATALOG
 )
+EDGE_BENCHMARK_CASE_DEFINITIONS: tuple[BenchmarkCaseDefinition, ...] = tuple(
+    entry.definition for entry in EDGE_CASE_CATALOG
+)
 BENCHMARK_CASE_IDS: tuple[str, ...] = tuple(item.case_id for item in BENCHMARK_CASE_DEFINITIONS)
+EDGE_BENCHMARK_CASE_IDS: tuple[str, ...] = tuple(
+    item.case_id for item in EDGE_BENCHMARK_CASE_DEFINITIONS
+)
+ALL_BENCHMARK_CASE_IDS: tuple[str, ...] = BENCHMARK_CASE_IDS + EDGE_BENCHMARK_CASE_IDS
 
 _DEFINITION_BY_ID: dict[str, BenchmarkCaseDefinition] = {
     item.case_id: item for item in BENCHMARK_CASE_DEFINITIONS
 }
+_EDGE_DEFINITION_BY_ID: dict[str, BenchmarkCaseDefinition] = {
+    item.case_id: item for item in EDGE_BENCHMARK_CASE_DEFINITIONS
+}
+_ALL_DEFINITION_BY_ID: dict[str, BenchmarkCaseDefinition] = {
+    **_DEFINITION_BY_ID,
+    **_EDGE_DEFINITION_BY_ID,
+}
 
 
 def get_case_definition(case_id: str) -> BenchmarkCaseDefinition:
-    definition = _DEFINITION_BY_ID.get(case_id)
+    definition = _ALL_DEFINITION_BY_ID.get(case_id)
     if definition is None:
         msg = f"Unknown architectural benchmark case: {case_id}"
         raise ValueError(msg)
@@ -103,8 +118,11 @@ def _default_design() -> DesignSystem:
 
 
 __all__ = [
+    "ALL_BENCHMARK_CASE_IDS",
     "BENCHMARK_CASE_DEFINITIONS",
     "BENCHMARK_CASE_IDS",
+    "EDGE_BENCHMARK_CASE_DEFINITIONS",
+    "EDGE_BENCHMARK_CASE_IDS",
     "CASE_001_HERO",
     "CASE_002_PHOTOS",
     "CASE_003_IMAGES",

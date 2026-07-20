@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-20T14:02:48.364949+00:00",
+  "generated_at": "2026-07-20T14:10:12.578072+00:00",
   "case_count": 30,
   "rule_passed_count": 30,
   "rule_pass_rate": 1.0,
-  "manual_human_review_count": 2,
-  "manual_human_accepted_count": 2,
-  "placeholder_human_review_count": 28,
-  "human_average_weighted_score": 3.4,
+  "manual_human_review_count": 7,
+  "manual_human_accepted_count": 6,
+  "placeholder_human_review_count": 23,
+  "human_average_weighted_score": 3.064,
   "human_quality_gate_passed": false,
   "human_quality_gate_reasons": [
-    "manual reviews 2 < required 24/30",
-    "average score 3.40 < threshold 3.80",
-    "accepted pages 2 < required 24/30",
+    "manual reviews 7 < required 24/30",
+    "average score 3.06 < threshold 3.80",
+    "accepted pages 6 < required 24/30",
     "accepted page has major_problems"
   ],
   "cases": [
@@ -70,14 +70,18 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "待人工评审",
-      "human_review_source": "placeholder",
-      "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "reviewer": null,
-      "reviewed_at": null,
-      "major_problems": []
+      "human_weighted_score": 3.0,
+      "human_score_label": "3.00",
+      "human_review_source": "manual",
+      "human_accepted_for_delivery": true,
+      "human_accepted": true,
+      "reviewer": "Theopote",
+      "reviewed_at": "2026-07-20T14:06:57.029850+00:00",
+      "major_problems": [
+        "不能编辑",
+        "看不到示意图",
+        "看不到颜色"
+      ]
     },
     {
       "case_id": "case_004_economic_metrics",
@@ -90,14 +94,17 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "待人工评审",
-      "human_review_source": "placeholder",
-      "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "reviewer": null,
-      "reviewed_at": null,
-      "major_problems": []
+      "human_weighted_score": 2.9,
+      "human_score_label": "2.90",
+      "human_review_source": "manual",
+      "human_accepted_for_delivery": true,
+      "human_accepted": true,
+      "reviewer": "Theopote",
+      "reviewed_at": "2026-07-20T14:08:02.224496+00:00",
+      "major_problems": [
+        "不够对称，",
+        "排版左侧太重，右侧太轻"
+      ]
     },
     {
       "case_id": "case_005_design_concept",
@@ -110,14 +117,16 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "待人工评审",
-      "human_review_source": "placeholder",
-      "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "reviewer": null,
-      "reviewed_at": null,
-      "major_problems": []
+      "human_weighted_score": 2.1,
+      "human_score_label": "2.10",
+      "human_review_source": "manual",
+      "human_accepted_for_delivery": true,
+      "human_accepted": true,
+      "reviewer": "Theopote",
+      "reviewed_at": "2026-07-20T14:09:08.543716+00:00",
+      "major_problems": [
+        "排版没有重点"
+      ]
     },
     {
       "case_id": "case_006_project_hero",
@@ -130,14 +139,17 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "待人工评审",
-      "human_review_source": "placeholder",
-      "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "reviewer": null,
-      "reviewed_at": null,
-      "major_problems": []
+      "human_weighted_score": 2.65,
+      "human_score_label": "2.65",
+      "human_review_source": "manual",
+      "human_accepted_for_delivery": true,
+      "human_accepted": true,
+      "reviewer": "Theopote",
+      "reviewed_at": "2026-07-20T14:09:59.341474+00:00",
+      "major_problems": [
+        "中点不突出",
+        "留白太生硬"
+      ]
     },
     {
       "case_id": "case_007_aerial_hero",
@@ -150,13 +162,13 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "待人工评审",
-      "human_review_source": "placeholder",
+      "human_weighted_score": 4.0,
+      "human_score_label": "4.00",
+      "human_review_source": "manual",
       "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "reviewer": null,
-      "reviewed_at": null,
+      "human_accepted": false,
+      "reviewer": "Theopote",
+      "reviewed_at": "2026-07-20T14:10:03.007213+00:00",
       "major_problems": []
     },
     {

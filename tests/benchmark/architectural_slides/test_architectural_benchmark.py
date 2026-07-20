@@ -36,13 +36,21 @@ from tests.benchmark.architectural_slides.summary_validator import (
 pytestmark = [pytest.mark.benchmark, pytest.mark.architectural_benchmark]
 
 
-def test_benchmark_catalog_has_thirty_materialized_cases_and_four_edge_entries() -> None:
-    assert len(CASE_CATALOG) == 34
-    assert len(BENCHMARK_CASE_IDS) == 34
-    assert len(set(BENCHMARK_CASE_IDS)) == 34
+def test_benchmark_catalog_has_thirty_formal_cases_and_four_edge_entries() -> None:
+    from tests.benchmark.architectural_slides.case_catalog import EDGE_CASE_CATALOG, FULL_CASE_CATALOG
+    from tests.benchmark.architectural_slides.case_registry import (
+        ALL_BENCHMARK_CASE_IDS,
+        EDGE_BENCHMARK_CASE_IDS,
+    )
+
+    assert len(CASE_CATALOG) == 30
+    assert len(BENCHMARK_CASE_IDS) == 30
+    assert len(set(BENCHMARK_CASE_IDS)) == 30
+    assert len(FULL_CASE_CATALOG) == 34
+    assert len(ALL_BENCHMARK_CASE_IDS) == 34
     assert len(materialized_benchmark_case_ids()) == 30
-    edge_ids = [case_id for case_id in BENCHMARK_CASE_IDS if case_id.startswith("edge_")]
-    assert len(edge_ids) == 4
+    assert len(EDGE_CASE_CATALOG) == 4
+    assert len(EDGE_BENCHMARK_CASE_IDS) == 4
 
 
 def test_benchmark_covers_all_layout_families() -> None:

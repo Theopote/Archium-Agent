@@ -108,7 +108,7 @@ def _definition(
     )
 
 
-CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
+FULL_CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
     CaseCatalogEntry(
         definition=_definition(
             "case_001_site_plan",
@@ -983,7 +983,18 @@ CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
     ),
 )
 
-_CATALOG_BY_ID: dict[str, CaseCatalogEntry] = {item.definition.case_id: item for item in CASE_CATALOG}
+FORMAL_CASE_CATALOG: tuple[CaseCatalogEntry, ...] = tuple(
+    entry for entry in FULL_CASE_CATALOG if entry.definition.case_id.startswith("case_")
+)
+EDGE_CASE_CATALOG: tuple[CaseCatalogEntry, ...] = tuple(
+    entry for entry in FULL_CASE_CATALOG if entry.definition.case_id.startswith("edge_")
+)
+# Human-review and quality-gate scope: committed 30-page benchmark only.
+CASE_CATALOG = FORMAL_CASE_CATALOG
+
+_CATALOG_BY_ID: dict[str, CaseCatalogEntry] = {
+    item.definition.case_id: item for item in FULL_CASE_CATALOG
+}
 
 
 def get_catalog_entry(case_id: str) -> CaseCatalogEntry:

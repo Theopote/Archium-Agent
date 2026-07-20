@@ -15,7 +15,7 @@ from tests.benchmark.architectural_slides.artifacts import (
     write_case_artifacts,
 )
 from tests.benchmark.architectural_slides.case_builders import build_benchmark_case
-from tests.benchmark.architectural_slides.case_registry import BENCHMARK_CASE_IDS
+from tests.benchmark.architectural_slides.case_registry import ALL_BENCHMARK_CASE_IDS, BENCHMARK_CASE_IDS
 
 
 @dataclass(frozen=True)
@@ -52,7 +52,7 @@ def run_all_cases(
     service: BenchmarkService | None = None,
     update: bool = False,
 ) -> list[BenchmarkRunSummary]:
-    case_ids = BENCHMARK_CASE_IDS if update else materialized_benchmark_case_ids()
+    case_ids = ALL_BENCHMARK_CASE_IDS if update else materialized_benchmark_case_ids()
     return [run_case(case_id, service=service, update=update) for case_id in case_ids]
 
 

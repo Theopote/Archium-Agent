@@ -14,4 +14,4 @@ from tests.benchmark.architectural_slides.report_builder import write_benchmark_
 def _regenerate_benchmark_reports_after_baseline_update() -> None:
     yield
     if os.environ.get(UPDATE_ENV) == "1":
-        write_benchmark_report(BENCHMARK_REPORTS_DIR, update=False)
+        write_benchmark_report(BENCHMARK_REPORTS_DIR, update=False, from_disk_only=True)

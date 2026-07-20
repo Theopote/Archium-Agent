@@ -172,12 +172,13 @@ def write_benchmark_report(
     output_dir: Path,
     *,
     update: bool = False,
-    from_disk_only: bool = False,
+    from_disk_only: bool | None = None,
     root: Path | None = None,
 ) -> tuple[Path, Path]:
+    disk_only = not update if from_disk_only is None else from_disk_only
     summary = build_benchmark_summary(
         update=update,
-        from_disk_only=from_disk_only,
+        from_disk_only=disk_only,
         root=root or output_dir.parent,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
