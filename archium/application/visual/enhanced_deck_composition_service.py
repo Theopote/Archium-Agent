@@ -11,6 +11,7 @@ This module extends the base DeckCompositionPlanningService with:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from pydantic import BaseModel
@@ -34,6 +35,9 @@ from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.llm.base import LLMRequest
 from archium.logging import get_logger
+
+if TYPE_CHECKING:
+    from archium.infrastructure.llm.base import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -114,7 +118,7 @@ class DeckQAAnalyzer:
         affected_indices = set()
 
         for finding in report.findings:
-            desc = f"{finding.dimension}: {finding.message}"
+            desc = f"{finding.rule_code}: {finding.message}"
             if finding.severity == LayoutIssueSeverity.CRITICAL:
                 critical.append(desc)
             elif finding.severity == LayoutIssueSeverity.ERROR:
@@ -137,7 +141,7 @@ class DeckQAAnalyzer:
 class FeedbackSemanticParser:
     """Parse user feedback into structured intent using LLM."""
 
-    def __init__(self, llm_provider=None):
+    def __init__(self, llm_provider: LLMProvider | None = None) -> None:
         self._llm = llm_provider
 
     def parse(self, feedback: str) -> FeedbackIntent:
@@ -204,6 +208,8 @@ class FeedbackSemanticParser:
 
     def _parse_with_llm(self, feedback: str) -> FeedbackIntent:
         """Use LLM to understand feedback semantics."""
+        if self._llm is None:
+            return self._parse_with_keywords(feedback)
         prompt = f"""解析用户对演示文稿的反馈，返回 JSON：
 
 反馈: "{feedback}"
@@ -254,7 +260,7 @@ class VisualIntensityAnalyzer:
 
         # Calculate smoothness (inverse of total variation)
         gradient = np.diff(scores)
-        total_variation = np.sum(np.abs(gradient))
+        total_variation = float(np.sum(np.abs(gradient)))
         smoothness = 1.0 / (1.0 + total_variation)
 
         # Calculate variance
@@ -368,7 +374,7 @@ class PatternRecognizer:
 class EnhancedDeckCompositionService(DeckCompositionPlanningService):
     """Enhanced deck composition planning with multi-dimensional analysis."""
 
-    def __init__(self, llm_provider=None):
+    def __init__(self, llm_provider: LLMProvider | None = None) -> None:
         super().__init__()
         self._llm = llm_provider
         self._feedback_parser = FeedbackSemanticParser(llm_provider)

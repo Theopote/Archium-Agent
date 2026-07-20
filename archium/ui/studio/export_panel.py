@@ -8,6 +8,7 @@ import streamlit as st
 
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.config.settings import Settings
+from archium.domain.render import RenderResult
 from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.scene_presets import (
     SCENE_PRESET_DESCRIPTIONS,
@@ -174,12 +175,12 @@ def render_export_panel(
         ):
             try:
                 with st.spinner("正在导出 PPTX…"), get_session() as session:
-                    result = export_presentation_from_studio(
+                    pptx_export_result: RenderResult = export_presentation_from_studio(
                         session,
                         presentation_id,
                         settings=settings,
                     )
-                path = result.editable_pptx_path
+                path = pptx_export_result.editable_pptx_path
                 if path:
                     st.success("PPTX 导出完成。")
                     st.code(path, language=None)
@@ -199,21 +200,21 @@ def render_export_panel(
         ):
             try:
                 with st.spinner("正在导出 PDF…"), get_session() as session:
-                    result = export_presentation_pdf_from_studio(
+                    pdf_export_result: RenderResult = export_presentation_pdf_from_studio(
                         session,
                         presentation_id,
                         settings=settings,
                     )
-                pdf_path = result.pdf_path
+                pdf_path = pdf_export_result.pdf_path
                 if pdf_path:
                     st.success("PDF 导出完成。")
                     st.code(pdf_path, language=None)
-                elif result.editable_pptx_path:
+                elif pdf_export_result.editable_pptx_path:
                     st.warning("PPTX 已导出，但未检测到 LibreOffice，无法生成 PDF。")
-                    st.code(result.editable_pptx_path, language=None)
+                    st.code(pdf_export_result.editable_pptx_path, language=None)
                 else:
                     st.warning("导出未完成。")
-                for warning in result.warnings:
+                for warning in pdf_export_result.warnings:
                     st.caption(warning)
             except WorkflowError as exc:
                 st.error(format_user_error(exc))

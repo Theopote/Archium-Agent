@@ -17,6 +17,7 @@ from archium.domain.enums import ProjectType, SlideStatus, SlideType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.domain.render import RenderResult
+from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.exceptions import WorkflowError
@@ -422,7 +423,7 @@ def restore_slide_content_at_revision(
     return ContentAdaptationService(session).restore_at_revision(slide_id, revision_id)
 
 
-def list_slide_visual_revisions(session: Session, slide_id: UUID) -> list[object]:
+def list_slide_visual_revisions(session: Session, slide_id: UUID) -> list[EntityRevision]:
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.infrastructure.database.repositories import PresentationRepository
 
@@ -432,7 +433,7 @@ def list_slide_visual_revisions(session: Session, slide_id: UUID) -> list[object
     return VisualHistoryService(session).list_slide_visual_revisions(slide)
 
 
-def list_slide_content_revisions(session: Session, slide_id: UUID) -> list[object]:
+def list_slide_content_revisions(session: Session, slide_id: UUID) -> list[EntityRevision]:
     from archium.application.content_adaptation_service import ContentAdaptationService
 
     return ContentAdaptationService(session).list_content_revisions(slide_id)

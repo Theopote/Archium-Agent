@@ -88,7 +88,7 @@ def maybe_export_pptx(
 
     if shutil.which("node") is None:
         return None
-    runner = PptxGenCliRunner(Settings(_env_file=None))
+    runner = PptxGenCliRunner(Settings())
     if not runner.is_available() or not runner.layout_plan_script_path.exists():
         return None
     deck = PptxLayoutPlanAdapter().render_deck(

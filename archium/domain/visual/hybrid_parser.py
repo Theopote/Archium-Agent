@@ -8,6 +8,7 @@ from archium.domain.visual.nlp_parser import EnhancedNLPParser, ParsedIntent
 
 if TYPE_CHECKING:
     from archium.domain.visual.llm_parser import LLMIntentParser
+    from archium.infrastructure.llm.base import LLMProvider
 
 
 class HybridIntentParser:
@@ -101,7 +102,7 @@ class HybridIntentParser:
 
 
 def create_hybrid_parser(
-    llm_provider=None,
+    llm_provider: LLMProvider | None = None,
     *,
     use_llm: bool = True,
 ) -> HybridIntentParser:

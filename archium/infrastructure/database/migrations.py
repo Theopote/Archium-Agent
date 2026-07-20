@@ -49,7 +49,7 @@ def get_current_revision() -> str | None:
         return row[0] if row else None
 
 
-def get_head_revision() -> str:
+def get_head_revision() -> str | None:
     """Get the latest revision from migration scripts."""
     config = get_alembic_config()
     script = ScriptDirectory.from_config(config)

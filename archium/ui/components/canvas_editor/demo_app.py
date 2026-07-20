@@ -6,7 +6,16 @@ import streamlit as st
 
 # Mock LayoutPlan for demo purposes
 class MockElement:
-    def __init__(self, id: str, x: float, y: float, width: float, height: float, role: str, locked: bool = False):
+    def __init__(
+        self,
+        id: str,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        role: str,
+        locked: bool = False,
+    ) -> None:
         self.id = id
         self.x = x
         self.y = y
@@ -17,7 +26,7 @@ class MockElement:
         self.text_content = f"Sample text for {id}"
 
 class MockLayoutPlan:
-    def __init__(self):
+    def __init__(self) -> None:
         self.page_width = 10.0
         self.page_height = 5.625
         self.elements = [
@@ -79,7 +88,7 @@ try:
 
     selected_element_id = canvas_editor(
         image_url=image_url,
-        layout_plan=layout_plan,
+        layout_plan=layout_plan,  # type: ignore[arg-type]
         selected_element_id=st.session_state.selected_element,
         show_labels=show_labels,
         show_all_borders=show_all_borders,

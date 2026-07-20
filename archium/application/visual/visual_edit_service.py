@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.visual.asset_reference import (
+    AssetReferenceContext,
     AssetReferenceResolver,
     build_asset_reference_context,
     content_refs_from_plan,
@@ -32,6 +33,9 @@ from archium.application.visual.visual_intent_presets import (
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
+from archium.domain.slide import SlideSpec
+from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.edit_intent import (
     VisualEditIntent,
     intent_from_preset,
@@ -44,6 +48,7 @@ from archium.domain.visual.element_lock import (
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
 from archium.domain.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.nlp_parser import ParsedIntent
 from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
@@ -282,7 +287,7 @@ class VisualEditService:
     def _apply_composite_operation(
         self,
         slide_id: UUID,
-        parsed_intent: object,  # ParsedIntent from nlp_parser
+        parsed_intent: ParsedIntent,
         candidate_count: int = 3,
     ) -> VisualEditResult:
         """
@@ -376,12 +381,12 @@ class VisualEditService:
 
     def _build_transaction_execution_context(
         self,
-        slide: object,
+        slide: SlideSpec,
         *,
         candidate_count: int,
     ) -> TransactionExecutionContext:
         def replan_layout_change(
-            target_slide: object,
+            target_slide: SlideSpec,
             intent: VisualIntent,
             current_plan: LayoutPlan,
             layout_family: LayoutFamily,
@@ -390,14 +395,14 @@ class VisualEditService:
                 raise WorkflowError(f"版式族「{layout_family.value}」尚未实现，无法切换。")
             updated_intent = apply_layout_family_preference(intent, layout_family)
             updated_intent = self._intents.save(updated_intent)
-            target_slide.visual_intent_id = updated_intent.id  # type: ignore[attr-defined]
-            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+            target_slide.visual_intent_id = updated_intent.id
+            self._presentations.save_slide(target_slide)
 
             llm = create_llm_provider(self._settings) if self._use_llm else None
             planner = LayoutPlanningService(self._session, llm=llm)
-            art, design = self._resolve_art_and_design(target_slide, updated_intent)  # type: ignore[arg-type]
+            art, design = self._resolve_art_and_design(target_slide, updated_intent)
             candidates = planner.generate_candidates(
-                slide=target_slide,  # type: ignore[arg-type]
+                slide=target_slide,
                 visual_intent_id=updated_intent.id,
                 art_direction_id=art.id if art else None,
                 design_system_id=design.id,
@@ -406,12 +411,12 @@ class VisualEditService:
             )
             best = planner.select_best(candidates, previous_layout_plan=current_plan)
             saved_plan = self._plans.save(best)
-            target_slide.layout_plan_id = saved_plan.id  # type: ignore[attr-defined]
-            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+            target_slide.layout_plan_id = saved_plan.id
+            self._presentations.save_slide(target_slide)
             return updated_intent, saved_plan
 
         def validate_layout(plan: LayoutPlan) -> None:
-            design = self._resolve_design_system(slide, None)  # type: ignore[arg-type]
+            design = self._resolve_design_system(slide, None)
             if design is None:
                 return
             report = LayoutValidationService().validate(
@@ -433,19 +438,19 @@ class VisualEditService:
                 raise WorkflowError(f"版式校验失败: {blocking}")
 
         def replan_current_intent(
-            target_slide: object,
+            target_slide: SlideSpec,
             intent: VisualIntent,
             current_plan: LayoutPlan,
         ) -> tuple[VisualIntent, LayoutPlan]:
             intent = self._intents.save(intent)
-            target_slide.visual_intent_id = intent.id  # type: ignore[attr-defined]
-            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+            target_slide.visual_intent_id = intent.id
+            self._presentations.save_slide(target_slide)
 
             llm = create_llm_provider(self._settings) if self._use_llm else None
             planner = LayoutPlanningService(self._session, llm=llm)
-            art, design = self._resolve_art_and_design(target_slide, intent)  # type: ignore[arg-type]
+            art, design = self._resolve_art_and_design(target_slide, intent)
             candidates = planner.generate_candidates(
-                slide=target_slide,  # type: ignore[arg-type]
+                slide=target_slide,
                 visual_intent_id=intent.id,
                 art_direction_id=art.id if art else None,
                 design_system_id=design.id,
@@ -454,13 +459,13 @@ class VisualEditService:
             )
             best = planner.select_best(candidates, previous_layout_plan=current_plan)
             saved_plan = self._plans.save(best)
-            target_slide.layout_plan_id = saved_plan.id  # type: ignore[attr-defined]
-            self._presentations.save_slide(target_slide)  # type: ignore[arg-type]
+            target_slide.layout_plan_id = saved_plan.id
+            self._presentations.save_slide(target_slide)
             return intent, saved_plan
 
         def resolve_asset_ref(content_ref: str, element: LayoutElement | None) -> str:
             return self._validate_asset_binding(
-                slide,  # type: ignore[arg-type]
+                slide,
                 content_ref=content_ref,
                 element=element,
             )
@@ -474,7 +479,7 @@ class VisualEditService:
 
     def _apply_element_direct_edit(
         self,
-        slide: object,
+        slide: SlideSpec,
         visual_intent: VisualIntent | None,
         plan: LayoutPlan | None,
         edit_intent: VisualEditIntent,
@@ -504,7 +509,7 @@ class VisualEditService:
                 if not content_ref.strip():
                     raise WorkflowError("请指定素材引用。")
                 content_ref = self._validate_asset_binding(
-                    slide,  # type: ignore[arg-type]
+                    slide,
                     content_ref=content_ref,
                     element=element,
                 )
@@ -521,14 +526,14 @@ class VisualEditService:
         )
         updated_plan.touch()
         saved_plan = self._plans.save(updated_plan)
-        slide.layout_plan_id = saved_plan.id  # type: ignore[attr-defined]
-        self._presentations.save_slide(slide)  # type: ignore[arg-type]
-        self._invalidate_preview_cache(slide.presentation_id, saved_plan)  # type: ignore[attr-defined]
+        slide.layout_plan_id = saved_plan.id
+        self._presentations.save_slide(slide)
+        self._invalidate_preview_cache(slide.presentation_id, saved_plan)
 
-        design = self._resolve_design_system(slide, visual_intent)  # type: ignore[arg-type]
+        design = self._resolve_design_system(slide, visual_intent)
         validation = None
         if design is not None:
-            asset_context = self._asset_context_for_plan(slide, saved_plan)  # type: ignore[arg-type]
+            asset_context = self._asset_context_for_plan(slide, saved_plan)
             validation = LayoutValidationService().validate(
                 saved_plan,
                 design,
@@ -542,7 +547,7 @@ class VisualEditService:
             else "已更新元素素材。"
         )
         return VisualEditResult(
-            slide_id=slide.id,  # type: ignore[attr-defined]
+            slide_id=slide.id,
             intent=edit_intent,
             visual_intent=visual_intent,
             layout_plan=saved_plan,
@@ -552,7 +557,7 @@ class VisualEditService:
 
     def _apply_element_lock_state(
         self,
-        slide: object,
+        slide: SlideSpec,
         visual_intent: VisualIntent | None,
         plan: LayoutPlan | None,
         params: dict[str, object],
@@ -595,11 +600,11 @@ class VisualEditService:
         )
         updated_plan.touch()
         saved_plan = self._plans.save(updated_plan)
-        slide.layout_plan_id = saved_plan.id  # type: ignore[attr-defined]
-        self._presentations.save_slide(slide)  # type: ignore[arg-type]
-        self._invalidate_preview_cache(slide.presentation_id, saved_plan)  # type: ignore[attr-defined]
+        slide.layout_plan_id = saved_plan.id
+        self._presentations.save_slide(slide)
+        self._invalidate_preview_cache(slide.presentation_id, saved_plan)
 
-        design = self._resolve_design_system(slide, visual_intent)  # type: ignore[arg-type]
+        design = self._resolve_design_system(slide, visual_intent)
         validation = None
         if design is not None:
             validation = LayoutValidationService().validate(
@@ -610,7 +615,7 @@ class VisualEditService:
             )
         verb = "锁定" if locked else "解锁"
         return VisualEditResult(
-            slide_id=slide.id,  # type: ignore[attr-defined]
+            slide_id=slide.id,
             intent=edit_intent,
             visual_intent=visual_intent,
             layout_plan=saved_plan,
@@ -620,7 +625,7 @@ class VisualEditService:
 
     def _apply_lock_element(
         self,
-        slide: object,
+        slide: SlideSpec,
         visual_intent: VisualIntent | None,
         plan: LayoutPlan | None,
         params: dict[str, object],
@@ -637,7 +642,7 @@ class VisualEditService:
     def _mutate_intent(
         self,
         intent: VisualIntent,
-        slide: object,
+        slide: SlideSpec,
         edit_intent: VisualEditIntent,
         params: dict[str, object],
     ) -> VisualIntent:
@@ -657,13 +662,13 @@ class VisualEditService:
         if edit_intent == VisualEditIntent.SET_HERO_ASSET:
             asset_id = params.get("asset_id")
             if asset_id is None:
-                asset_id = self._default_hero_asset_id(slide)  # type: ignore[arg-type]
+                asset_id = self._default_hero_asset_id(slide)
             if asset_id is None:
                 raise WorkflowError("请指定主图素材，或先在页面内容中绑定素材。")
-            plan = self._load_plan(slide)  # type: ignore[arg-type]
+            plan = self._load_plan(slide)
             hero_element = self._resolve_hero_element(plan) if plan is not None else None
             self._validate_asset_binding(
-                slide,  # type: ignore[arg-type]
+                slide,
                 content_ref=str(asset_id),
                 element=hero_element,
             )
@@ -719,22 +724,22 @@ class VisualEditService:
 
     def _replan(
         self,
-        slide: object,
+        slide: SlideSpec,
         intent: VisualIntent,
         *,
         candidate_count: int,
         edit_intent: VisualEditIntent,
     ) -> VisualEditResult:
         intent = self._intents.save(intent)
-        slide.visual_intent_id = intent.id  # type: ignore[attr-defined]
-        self._presentations.save_slide(slide)  # type: ignore[arg-type]
+        slide.visual_intent_id = intent.id
+        self._presentations.save_slide(slide)
 
-        art, design = self._resolve_art_and_design(slide, intent)  # type: ignore[arg-type]
+        art, design = self._resolve_art_and_design(slide, intent)
         llm = create_llm_provider(self._settings) if self._use_llm else None
         planner = LayoutPlanningService(self._session, llm=llm)
         current_plan = self._load_plan(slide)
         candidates = planner.generate_candidates(
-            slide=slide,  # type: ignore[arg-type]
+            slide=slide,
             visual_intent_id=intent.id,
             art_direction_id=art.id if art else None,
             design_system_id=design.id,
@@ -746,8 +751,8 @@ class VisualEditService:
             saved_candidates.append(self._plans.save(plan))
         best = planner.select_best(candidates, previous_layout_plan=current_plan)
         best = self._plans.save(best)
-        slide.layout_plan_id = best.id  # type: ignore[attr-defined]
-        self._presentations.save_slide(slide)  # type: ignore[arg-type]
+        slide.layout_plan_id = best.id
+        self._presentations.save_slide(slide)
 
         validation = LayoutValidationService().validate(
             best,
@@ -756,7 +761,7 @@ class VisualEditService:
             drawing_hero=best.layout_family == LayoutFamily.DRAWING_FOCUS,
         )
         return VisualEditResult(
-            slide_id=slide.id,  # type: ignore[attr-defined]
+            slide_id=slide.id,
             intent=edit_intent,
             visual_intent=intent,
             layout_plan=best,
@@ -764,13 +769,13 @@ class VisualEditService:
             message="已应用修改并重新生成版式。",
         )
 
-    def _require_slide(self, slide_id: UUID):
+    def _require_slide(self, slide_id: UUID) -> SlideSpec:
         slide = self._presentations.get_slide(slide_id)
         if slide is None:
             raise WorkflowError(f"页面 {slide_id} 不存在")
         return slide
 
-    def _load_intent(self, slide) -> VisualIntent:
+    def _load_intent(self, slide: SlideSpec) -> VisualIntent:
         intent = None
         if slide.visual_intent_id is not None:
             intent = self._intents.get(slide.visual_intent_id)
@@ -786,13 +791,17 @@ class VisualEditService:
             self._presentations.save_slide(slide)
         return intent
 
-    def _load_plan(self, slide) -> LayoutPlan | None:
+    def _load_plan(self, slide: SlideSpec) -> LayoutPlan | None:
         if slide.layout_plan_id is None:
             listed = self._plans.list_by_slide(slide.id)
             return listed[0] if listed else None
         return self._plans.get(slide.layout_plan_id)
 
-    def _resolve_art_and_design(self, slide, intent: VisualIntent):
+    def _resolve_art_and_design(
+        self,
+        slide: SlideSpec,
+        intent: VisualIntent,
+    ) -> tuple[ArtDirection | None, DesignSystem]:
         presentation = self._presentations.get_presentation(slide.presentation_id)
         art = None
         design = None
@@ -816,19 +825,23 @@ class VisualEditService:
             design = self._design_repo.save(default_presentation_design_system())
         return art, design
 
-    def _resolve_design_system(self, slide, intent: VisualIntent | None):
+    def _resolve_design_system(
+        self,
+        slide: SlideSpec,
+        intent: VisualIntent | None,
+    ) -> DesignSystem:
         _, design = self._resolve_art_and_design(slide, intent or self._load_intent(slide))
         return design
 
     @staticmethod
-    def _default_hero_asset_id(slide) -> UUID | None:
+    def _default_hero_asset_id(slide: SlideSpec) -> UUID | None:
         for requirement in slide.visual_requirements:
             asset_id = requirement.primary_asset_id
             if asset_id is not None:
                 return asset_id
         return None
 
-    def _project_id_for_slide(self, slide) -> UUID:
+    def _project_id_for_slide(self, slide: SlideSpec) -> UUID:
         presentation = self._presentations.get_presentation(slide.presentation_id)
         if presentation is None:
             raise WorkflowError("无法解析当前页面所属项目。")
@@ -836,7 +849,7 @@ class VisualEditService:
 
     def _validate_asset_binding(
         self,
-        slide,
+        slide: SlideSpec,
         *,
         content_ref: str,
         element: LayoutElement | None,
@@ -849,7 +862,11 @@ class VisualEditService:
         )
         return resolved.ref
 
-    def _asset_context_for_plan(self, slide, plan: LayoutPlan):
+    def _asset_context_for_plan(
+        self,
+        slide: SlideSpec,
+        plan: LayoutPlan,
+    ) -> AssetReferenceContext:
         return build_asset_reference_context(
             self._session,
             project_id=self._project_id_for_slide(slide),

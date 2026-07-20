@@ -88,13 +88,16 @@ def _render_element_properties(
     st.divider()
     st.markdown("**元素属性**")
     element_ids = [element.id for element in plan.elements]
-    selected_id = st.session_state.get("studio_selected_element_id")
-    if selected_id not in element_ids:
-        selected_id = element_ids[0]
+    selected_raw = st.session_state.get("studio_selected_element_id")
+    selected_id: str = (
+        selected_raw
+        if isinstance(selected_raw, str) and selected_raw in element_ids
+        else element_ids[0]
+    )
 
-    selected_id = st.selectbox(
+    selected_from_ui = st.selectbox(
         "选择元素",
-        options=element_ids,
+        options=element_ids,  # type: ignore[arg-type]
         index=element_ids.index(selected_id),
         format_func=lambda value: format_element_label(
             element_id=value,
@@ -102,9 +105,11 @@ def _render_element_properties(
         ),
         key=f"studio_element_select_{slide_snapshot.slide.id}",
     )
-    st.session_state.studio_selected_element_id = selected_id
+    if not isinstance(selected_from_ui, str):
+        return
+    st.session_state.studio_selected_element_id = selected_from_ui
 
-    element = plan.element_by_id(selected_id)
+    element = plan.element_by_id(selected_from_ui)
     if element is None:
         return
 

@@ -7,6 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.slide_diff import change_source_label
+from archium.domain.revision import EntityRevision
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -19,11 +20,11 @@ from archium.ui.studio_service import (
 from archium.ui.visual_service import SlideVisualSnapshot
 
 
-def _revision_label(revision: object) -> str:
-    note = getattr(revision, "note", None) or ""
-    number = getattr(revision, "revision_number", "?")
+def _revision_label(revision: EntityRevision) -> str:
+    note = revision.note or ""
+    number = revision.revision_number
     source = change_source_label(revision.change_source)
-    created = getattr(revision, "created_at", None)
+    created = revision.created_at
     time_label = created.strftime("%m-%d %H:%M") if created is not None else "—"
     return f"#{number} · {source} · {note or '修订'} · {time_label}"
 

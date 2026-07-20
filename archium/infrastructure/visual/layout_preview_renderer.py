@@ -46,9 +46,9 @@ def render_layout_preview_png(plan: LayoutPlan, output_path: Path) -> Path:
             LayoutContentType.DRAWING,
             LayoutContentType.CHART,
         }:
-            draw.rectangle([x0, y0, x1, y1], outline=color, width=2, fill=(220, 228, 236))
+            draw.rectangle((x0, y0, x1, y1), outline=color, width=2, fill=(220, 228, 236))
         else:
-            draw.rectangle([x0, y0, x1, y1], outline=color, width=2)
+            draw.rectangle((x0, y0, x1, y1), outline=color, width=2)
         label = element.id
         if font is not None and x1 - x0 > 24 and y1 - y0 > 12:
             draw.text((x0 + 3, y0 + 2), label, fill=color, font=font)

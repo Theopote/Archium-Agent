@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -12,6 +12,9 @@ from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
 from archium.infrastructure.llm.base import LLMRequest
+
+if TYPE_CHECKING:
+    from archium.infrastructure.llm.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +100,7 @@ class LLMIntentParser:
 
 返回 JSON 格式的解析结果。"""
 
-    def __init__(self, llm_provider) -> None:
+    def __init__(self, llm_provider: LLMProvider) -> None:
         """
         Initialize LLM parser.
 
@@ -231,4 +234,4 @@ class LLMIntentParser:
             type_counts[modifier.type] = type_counts.get(modifier.type, 0) + 1
 
         # 返回最常见的类型
-        return max(type_counts, key=type_counts.get) if type_counts else None
+        return max(type_counts, key=lambda modifier_type: type_counts[modifier_type])

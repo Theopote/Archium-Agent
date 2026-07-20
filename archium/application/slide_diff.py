@@ -43,10 +43,13 @@ def slide_to_snapshot(slide: SlideSpec) -> dict[str, object]:
 
 def snapshot_content_fingerprint(snapshot: dict[str, object]) -> tuple[object, ...]:
     """Compare slide content snapshots ignoring version/id churn."""
+    key_points = snapshot.get("key_points")
+    normalized_key_points: tuple[object, ...]
+    normalized_key_points = tuple(key_points) if isinstance(key_points, list) else ()
     return (
         snapshot.get("title"),
         snapshot.get("message"),
-        tuple(snapshot.get("key_points") or []),
+        normalized_key_points,
         snapshot.get("speaker_notes"),
         snapshot.get("slide_type"),
         snapshot.get("status"),
@@ -55,16 +58,26 @@ def snapshot_content_fingerprint(snapshot: dict[str, object]) -> tuple[object, .
 
 def snapshot_to_slide(snapshot: dict[str, object], slide: SlideSpec) -> SlideSpec:
     """Rebuild a SlideSpec from a stored snapshot, preserving identity fields."""
+    layout_id_raw = snapshot.get("layout_id")
+    layout_id = str(layout_id_raw) if layout_id_raw is not None else slide.layout_id
+    key_points_raw = snapshot.get("key_points")
+    key_points = [str(item) for item in key_points_raw] if isinstance(key_points_raw, list) else []
+    speaker_notes_raw = snapshot.get("speaker_notes")
+    speaker_notes = (
+        str(speaker_notes_raw) if speaker_notes_raw is not None else slide.speaker_notes
+    )
+    order_raw = snapshot.get("order", slide.order)
+    order = int(order_raw) if isinstance(order_raw, int) else slide.order
     return slide.model_copy(
         update={
             "title": str(snapshot.get("title") or slide.title),
             "message": str(snapshot.get("message") or slide.message),
             "chapter_id": str(snapshot.get("chapter_id") or slide.chapter_id),
-            "order": int(snapshot.get("order", slide.order)),
+            "order": order,
             "slide_type": SlideType(str(snapshot.get("slide_type", slide.slide_type.value))),
-            "layout_id": snapshot.get("layout_id"),  # type: ignore[arg-type]
-            "key_points": [str(item) for item in list(snapshot.get("key_points") or [])],
-            "speaker_notes": snapshot.get("speaker_notes"),  # type: ignore[arg-type]
+            "layout_id": layout_id,
+            "key_points": key_points,
+            "speaker_notes": speaker_notes,
             "status": SlideStatus(str(snapshot.get("status", slide.status.value))),
             "version": slide.version + 1,
         }

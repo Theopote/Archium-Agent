@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from archium.application.visual.benchmark_service import BenchmarkCaseResult
 from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource
@@ -252,4 +252,4 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))

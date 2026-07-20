@@ -319,7 +319,7 @@ def _handle_review_form(
             height=72,
             key=f"benchmark_human_minor_{case.case_id}",
         )
-        accepted_default = bool(existing.accepted if is_manual else False)
+        accepted_default = bool(existing.accepted) if is_manual and existing is not None else False
         accepted = st.checkbox(
             "本页可接受交付",
             value=accepted_default,
@@ -327,14 +327,21 @@ def _handle_review_form(
         )
         notes = st.text_input(
             "评审备注",
-            value=existing.reviewer_notes if is_manual else "",
+            value=existing.reviewer_notes if is_manual and existing is not None else "",
             key=f"benchmark_human_notes_{case.case_id}",
         )
 
         preview = HumanVisualReview(
             case_id=case.case_id,
             source=HumanVisualReviewSource.MANUAL,
-            **scores,
+            information_hierarchy=scores["information_hierarchy"],
+            visual_focus=scores["visual_focus"],
+            reading_order=scores["reading_order"],
+            image_text_relationship=scores["image_text_relationship"],
+            whitespace_density=scores["whitespace_density"],
+            architectural_expression=scores["architectural_expression"],
+            aesthetic_finish=scores["aesthetic_finish"],
+            editability=scores["editability"],
             major_problems=[line.strip() for line in major.splitlines() if line.strip()],
             minor_problems=[line.strip() for line in minor.splitlines() if line.strip()],
             accepted=accepted,

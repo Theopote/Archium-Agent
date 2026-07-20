@@ -8,6 +8,7 @@ from archium.application.visual.benchmark_service import (
 )
 from archium.domain.slide import VisualRequirement
 from archium.domain.visual.benchmark import BenchmarkCaseDefinition
+from archium.domain.visual.design_system import DesignSystem
 
 from tests.benchmark.architectural_slides.case_catalog import (
     CASE_001_HERO,
@@ -95,7 +96,7 @@ def _slide_content(entry: CaseCatalogEntry) -> BenchmarkSlideContent | None:
     )
 
 
-def _default_design():
+def _default_design() -> DesignSystem:
     from archium.domain.visual import default_presentation_design_system
 
     return default_presentation_design_system()

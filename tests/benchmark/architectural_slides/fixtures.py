@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import UUID
 
+from archium.domain.enums import VisualType
 from archium.infrastructure.renderers.diagram_generator import generate_fallback_diagram
 
 from tests.benchmark.architectural_slides.case_catalog import get_catalog_entry
@@ -19,7 +21,12 @@ def ensure_case_assets(case_id: str, assets_dir: Path) -> list[str]:
     return rel_paths
 
 
-def _write_asset(assets_dir: Path, asset_id, visual_type, description: str) -> str:
+def _write_asset(
+    assets_dir: Path,
+    asset_id: str | UUID,
+    visual_type: VisualType,
+    description: str,
+) -> str:
     filename = f"{asset_id}.png"
     output_path = assets_dir / filename
     if not output_path.exists():

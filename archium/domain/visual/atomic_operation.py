@@ -181,7 +181,7 @@ class EnlargeHeroOperation(AtomicOperation):
 class IncreaseWhitespaceOperation(AtomicOperation):
     """Increase whitespace in the layout."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         object.__setattr__(self, "operation_type", OperationType.INCREASE_WHITESPACE)
         object.__setattr__(self, "target_element_id", None)
         object.__setattr__(self, "params", {})

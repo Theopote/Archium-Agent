@@ -6,7 +6,7 @@ import json
 from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from archium.domain.visual.benchmark import HumanVisualReview
 
@@ -123,4 +123,4 @@ def _render_html(summary: dict[str, Any]) -> str:
 def _read_optional_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))

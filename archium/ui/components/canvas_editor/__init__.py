@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from archium.domain.visual.layout import LayoutPlan
 from archium.ui.components.canvas_editor.runtime import (
@@ -53,7 +53,7 @@ def canvas_editor(
         key=key,
         default=None,
     )
-    return component_value
+    return cast(str | None, component_value)
 
 
 def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:

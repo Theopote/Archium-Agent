@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import shutil
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from archium.config.settings import Settings, get_settings
+from archium.domain.presentation import Presentation
 from archium.exceptions import ProjectNotFoundError, WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.vector.chroma_store import ChromaVectorStore
@@ -99,15 +101,13 @@ class ProjectDeletionService:
 
     def _delete_presentation_outputs(
         self,
-        presentations: list[object],
+        presentations: Sequence[Presentation],
         warnings: list[str],
     ) -> list[str]:
         removed: list[str] = []
         preview_root = self._settings.output_path / "studio-previews"
         for presentation in presentations:
-            presentation_id = getattr(presentation, "id", None)
-            if presentation_id is None:
-                continue
+            presentation_id = presentation.id
             preview_dir = preview_root / str(presentation_id)
             if not preview_dir.exists():
                 continue

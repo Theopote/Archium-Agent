@@ -36,8 +36,7 @@ class DeckRepairService:
         return _dedupe_suggestions(suggestions)
 
     def suggest_from_finding(self, finding: DeckQAFinding) -> list[DeckRepairSuggestion]:
-        slide_ids = [_parse_slide_id(value) for value in finding.slide_ids]
-        slide_ids = [item for item in slide_ids if item is not None]
+        slide_ids = _resolved_slide_ids(finding)
         if not slide_ids:
             return []
 
@@ -93,6 +92,15 @@ class DeckRepairService:
                 reason=finding.suggestion or finding.message,
             )
         ]
+
+
+def _resolved_slide_ids(finding: DeckQAFinding) -> list[UUID]:
+    resolved: list[UUID] = []
+    for value in finding.slide_ids:
+        slide_id = _parse_slide_id(value)
+        if slide_id is not None:
+            resolved.append(slide_id)
+    return resolved
 
 
 def _visual_suggestion(
