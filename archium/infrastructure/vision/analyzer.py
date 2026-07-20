@@ -405,7 +405,7 @@ def _legend_score(region: Image.Image) -> tuple[float, int]:
     significant = [count for count in counts.values() if count >= max(20, (sample.size[0] * sample.size[1]) // 200)]
     patch_count = len(significant)
     edge = ImageOps.grayscale(sample).filter(ImageFilter.FIND_EDGES)
-    box_lines = sum(1 for value in edge.getdata() if value > 50) / max(sample.size[0] * sample.size[1], 1)
+    box_lines = sum(1 for value in list(edge.getdata()) if value > 50) / max(sample.size[0] * sample.size[1], 1)
     score = min(1.0, patch_count / 6 + box_lines * 2)
     return score, patch_count
 

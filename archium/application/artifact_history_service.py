@@ -307,7 +307,7 @@ class RenovationIssueMapHistoryService:
         source = change_source_label(revision.change_source)
         return f"修订 #{revision.revision_number} · {source} · {summary}"
 
-    def _get_plan(self, plan_id: UUID):
+    def _get_plan(self, plan_id: UUID) -> RenovationIssueMap | None:
         from archium.infrastructure.database.repositories import ProjectRepository
 
         return ProjectRepository(self._session).get_renovation_issue_map(plan_id)
@@ -359,7 +359,7 @@ class ReferenceStyleProfileHistoryService:
         source = change_source_label(revision.change_source)
         return f"修订 #{revision.revision_number} · {source} · {name}"
 
-    def _get_profile(self, profile_id: UUID):
+    def _get_profile(self, profile_id: UUID) -> ReferenceStyleProfile | None:
         from archium.infrastructure.database.repositories import ProjectRepository
 
         return ProjectRepository(self._session).get_reference_style_profile(profile_id)
