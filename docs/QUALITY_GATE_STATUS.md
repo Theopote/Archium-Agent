@@ -70,7 +70,7 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 
 **What automation does not prove:** information hierarchy, aesthetic finish, architect willingness to deliver, editability in practice.
 
-**How to complete:** use Settings →「建筑幻灯片基准 · 人工视觉评审」or edit each case's `human_review.json` with `"source": "manual"`, `"reviewer"`, `"reviewed_at"`, and real scores.
+**How to complete:** use Settings →「建筑幻灯片基准 · 人工视觉评审」or edit each case's `human_review.json` with `"source": "manual"`, `"reviewer"`, `"reviewed_at"`, and real scores. UI defaults to `pptx_render.png` preview; visual score submit is disabled unless that preview mode is active.
 
 ## Real Project Acceptance (5 scenarios)
 

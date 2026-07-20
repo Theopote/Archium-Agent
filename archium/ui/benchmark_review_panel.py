@@ -49,6 +49,18 @@ _SESSION_REVIEWER_KEY = "benchmark_default_reviewer"
 _SESSION_AUTO_REGEN_KEY = "benchmark_auto_regen_report"
 _SESSION_SELECTED_CASE_KEY = "benchmark_review_selected_case"
 _SESSION_NAV_PENDING_KEY = "benchmark_review_nav_pending"
+_SESSION_PREVIEW_MODE_KEY = "benchmark_review_preview_mode"
+
+_PREVIEW_PPTX_RENDER = "PPTX 最终截图"
+_PREVIEW_SCENE = "Scene 预览"
+_PREVIEW_WIREFRAME = "Layout 线框"
+_PREVIEW_PPTX_FILE = "PPTX 文件"
+_PREVIEW_MODES = (
+    _PREVIEW_PPTX_RENDER,
+    _PREVIEW_SCENE,
+    _PREVIEW_WIREFRAME,
+    _PREVIEW_PPTX_FILE,
+)
 
 LAYOUT_REVIEW_DIMENSION_LABELS: dict[str, str] = {
     "information_hierarchy": "信息层级（几何）",
@@ -79,8 +91,8 @@ EDITABILITY_REVIEW_DIMENSION_LABELS: dict[str, str] = {
 def render_benchmark_review_panel() -> None:
     st.markdown("### 建筑幻灯片基准 · 双层人工评审")
     st.caption(
-        "Layout Geometry Benchmark：基于 `wireframe.png` 评价几何、留白与阅读顺序。"
-        "Rendered Visual Benchmark：基于 `pptx_render.png`（须 render_valid）评价真实视觉质量。"
+        "Rendered Visual Benchmark：默认预览与评分对象均为 `pptx_render.png`（须 render_valid）。"
+        "Layout Geometry Benchmark：基于 `wireframe.png` 评价几何（与视觉评分分离）。"
         "PPTX 可编辑性单独在 `editability_review.json` 记录。"
     )
     st.warning(
@@ -360,6 +372,16 @@ def _filter_cases(
     return filtered
 
 
+def _preview_mode_key(case_id: str) -> str:
+    return f"{_SESSION_PREVIEW_MODE_KEY}_{case_id}"
+
+
+def _is_pptx_render_preview_active(case_id: str) -> bool:
+    return st.session_state.get(_preview_mode_key(case_id), _PREVIEW_PPTX_RENDER) == (
+        _PREVIEW_PPTX_RENDER
+    )
+
+
 def _render_case_preview(
     column: st.delta_generator.DeltaGenerator,
     case: BenchmarkCaseSummary,
@@ -375,64 +397,80 @@ def _render_case_preview(
     with column:
         case_dir = case.preview_path.parent
         eligible, _, blockers = visual_review_eligibility(case_dir)
-        wireframe_tab, scene_tab, pptx_render_tab, pptx_tab = column.tabs(
-            [
-                "Layout 线框 (wireframe)",
-                "Scene 预览 (scene_preview)",
-                "PPTX 截图 (pptx_render)",
-                "PPTX 文件",
-            ]
+
+        st.info("**当前视觉评分对象：`pptx_render.png`**（Rendered Visual Benchmark）")
+        preview_mode = st.radio(
+            "预览切换",
+            options=list(_PREVIEW_MODES),
+            horizontal=True,
+            key=_preview_mode_key(case.case_id),
+            help=(
+                "视觉评分仅在「PPTX 最终截图」预览下可提交。"
+                "Layout 线框仅用于几何评审，不得作为视觉打分依据。"
+            ),
         )
-        with wireframe_tab:
+
+        if preview_mode == _PREVIEW_PPTX_RENDER:
+            review_image = visual_review_image_path(case_dir)
+            if review_image is not None and review_image.name == "pptx_render.png":
+                st.image(
+                    str(review_image),
+                    caption=f"{case.title} · PPTX 最终截图（pptx_render.png）",
+                    use_container_width=True,
+                )
+            elif review_image is not None:
+                st.warning(
+                    f"优先需要 `pptx_render.png`；当前仅有 `{review_image.name}`，"
+                    "视觉评分仍须等待正式 PPTX 截图。"
+                )
+                st.image(
+                    str(review_image),
+                    caption=f"{case.title} · 备用预览（{review_image.name}）",
+                    use_container_width=True,
+                )
+            else:
+                st.info(
+                    "尚无 `pptx_render.png`。"
+                    "若已导出 PPTX，可安装 LibreOffice + pdftoppm 生成截图，"
+                    "或直接打开 output.pptx 进行视觉检查。"
+                )
+        elif preview_mode == _PREVIEW_SCENE:
+            st.caption("Scene 预览仅供对照，不是视觉评分对象。")
+            if case.scene_preview_path.is_file():
+                st.image(
+                    str(case.scene_preview_path),
+                    caption=f"{case.title} · RenderScene 预览（scene_preview.png）",
+                    use_container_width=True,
+                )
+            else:
+                st.info("尚无 `scene_preview.png`。请先运行 RenderScene 渲染管线。")
+        elif preview_mode == _PREVIEW_WIREFRAME:
+            st.caption("Layout 线框仅用于几何评审，不是视觉评分对象。")
             if case.wireframe_path.is_file():
-                wireframe_tab.image(
+                st.image(
                     str(case.wireframe_path),
                     caption=f"{case.title} · 几何线框（Layout Geometry Benchmark）",
                     use_container_width=True,
                 )
             else:
-                wireframe_tab.warning(f"缺少线框图：{case.wireframe_path}")
-        with scene_tab:
-            if case.scene_preview_path.is_file():
-                scene_tab.image(
-                    str(case.scene_preview_path),
-                    caption=f"{case.title} · RenderScene 真实预览",
-                    use_container_width=True,
-                )
-            else:
-                scene_tab.info("尚无 `scene_preview.png`。请先运行 RenderScene 渲染管线。")
-        with pptx_render_tab:
-            review_image = visual_review_image_path(case_dir)
-            if review_image is not None and review_image.name == "pptx_render.png":
-                pptx_render_tab.image(
-                    str(review_image),
-                    caption=f"{case.title} · PPTX 截图",
-                    use_container_width=True,
-                )
-            elif review_image is not None:
-                pptx_render_tab.image(
-                    str(review_image),
-                    caption=f"{case.title} · 渲染预览（{review_image.name}）",
-                    use_container_width=True,
-                )
-            else:
-                pptx_render_tab.info(
-                    "尚无 `pptx_render.png`。"
-                    "若已导出 PPTX，可安装 LibreOffice + pdftoppm 生成截图，"
-                    "或直接打开 output.pptx 进行视觉检查。"
-                )
-        pptx_path = case_dir / "output.pptx"
-        with pptx_tab:
+                st.warning(f"缺少线框图：{case.wireframe_path}")
+        else:
+            pptx_path = case_dir / "output.pptx"
+            st.caption("PPTX 文件用于可编辑性检查；视觉美学请看 pptx_render.png。")
             if pptx_path.is_file():
-                pptx_tab.caption(
-                    f"RenderScene 驱动的可编辑 PPTX：`{pptx_path.name}`"
-                )
-                pptx_tab.markdown(f"[在本机打开 PPTX]({pptx_path.as_uri()})")
+                st.caption(f"RenderScene 驱动的可编辑 PPTX：`{pptx_path.name}`")
+                st.markdown(f"[在本机打开 PPTX]({pptx_path.as_uri()})")
             else:
-                pptx_tab.warning(
+                st.warning(
                     "尚未生成 `output.pptx`。运行 benchmark 渲染管线或 "
                     "`python scripts/render_architectural_benchmark_visuals.py`。"
                 )
+
+        if preview_mode != _PREVIEW_PPTX_RENDER:
+            st.warning(
+                "当前预览不是 PPTX 最终截图 — 视觉评分提交已禁用。"
+                "请切回「PPTX 最终截图」后再打视觉分。"
+            )
 
         manifest = load_render_manifest(case_dir)
         if manifest is not None:
@@ -492,10 +530,10 @@ def _handle_review_form(
     selected_index: int,
 ) -> None:
     with column:
-        with st.expander("Layout Geometry 评审（wireframe）", expanded=True):
-            _render_layout_review_form(case, existing_layout, case_ids, selected_index)
-        with st.expander("Rendered Visual 评审（scene / pptx 截图）", expanded=False):
+        with st.expander("Rendered Visual 评审（pptx_render.png）", expanded=True):
             _render_visual_review_form(case, existing, case_ids, selected_index)
+        with st.expander("Layout Geometry 评审（wireframe）", expanded=False):
+            _render_layout_review_form(case, existing_layout, case_ids, selected_index)
         with st.expander("PPTX 可编辑性评审（output.pptx）", expanded=False):
             _render_editability_review_form(case, existing_editability, case_ids, selected_index)
 
@@ -590,7 +628,17 @@ def _render_visual_review_form(
     from tests.benchmark.architectural_slides.render_manifest import visual_review_eligibility
 
     eligible, _, blockers = visual_review_eligibility(case.preview_path.parent)
+    pptx_preview_active = _is_pptx_render_preview_active(case.case_id)
+    can_submit_visual = eligible and pptx_preview_active
     is_manual = existing is not None and existing.is_manual_review()
+
+    st.markdown("**当前视觉评分对象：`pptx_render.png`**")
+    if not pptx_preview_active:
+        st.warning(
+            "左侧预览未停留在「PPTX 最终截图」— 视觉评分提交已禁用。"
+            "请先切换到 PPTX 最终截图再保存视觉分。"
+        )
+
     if existing is not None and existing.is_invalidated():
         st.info(
             "本条视觉评分已作废（基于线框预览，validity=invalid_render_artifact）。"
@@ -603,7 +651,7 @@ def _render_visual_review_form(
             BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER
             + "（" + "；".join(blockers) + "）"
         )
-        st.caption("视觉评审保存已禁用；可先完成上方几何评审。")
+        st.caption("视觉评审保存已禁用；可先完成几何评审（基于线框）。")
 
     defaults = {
         field: getattr(existing, field, 4)
@@ -688,13 +736,13 @@ def _render_visual_review_form(
         "保存视觉评审",
         type="primary",
         use_container_width=True,
-        disabled=not eligible,
+        disabled=not can_submit_visual,
         key=f"benchmark_save_human_review_{case.case_id}",
     )
     save_next_clicked = save_cols[1].button(
         "保存并下一页",
         use_container_width=True,
-        disabled=not eligible,
+        disabled=not can_submit_visual,
         key=f"benchmark_save_next_human_review_{case.case_id}",
     )
     if save_clicked or save_next_clicked:
