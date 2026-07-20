@@ -11,7 +11,9 @@ Do not add or commit:
 
 - `coverage.xml`, `.coverage`, `htmlcov/`
 - `tests/smoke/artifacts/*` (except this README)
-- Runtime outputs under `data/`, `output/`, `tests/golden/artifacts/`
+- Runtime outputs under `.data/`, `data/`, `data/output/`, `output/`, `tests/golden/artifacts/`
+- SQLite / Chroma DBs: `*.db`, `*.sqlite`, `*.sqlite3` (and `-wal`/`-shm`)
+- Phase 8 / real-project run directories (PPTX, PNG previews, workflow JSON, studio reviews)
 
 Smoke and benchmark binaries (`.pptx`, `.pdf`, screenshots) belong in GitHub Actions
 artifacts unless they are an explicitly reviewed golden baseline under

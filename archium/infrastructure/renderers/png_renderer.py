@@ -91,7 +91,7 @@ class PngRenderer:
         bold = weight >= 600
         for name in (family, *_FONT_CANDIDATES):
             try:
-                font = ImageFont.truetype(name, px)
+                font: object = ImageFont.truetype(name, px)
                 self._font_cache[key] = font
                 return font
             except OSError:

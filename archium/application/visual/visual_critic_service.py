@@ -453,6 +453,7 @@ class VisualCriticService:
             with Image.open(path) as image:
                 rgb = image.convert("RGB")
                 rgb.thumbnail((160, 90))
+                pixels: list[tuple[int, int, int]]
                 if hasattr(rgb, "get_flattened_data"):
                     pixels = list(rgb.get_flattened_data())
                 else:

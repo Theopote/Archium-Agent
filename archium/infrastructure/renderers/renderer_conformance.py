@@ -68,7 +68,7 @@ def snapshot_from_html(scene: RenderScene) -> RendererSnapshot:
 def snapshot_from_pptx(path: Path) -> RendererSnapshot:
     from pptx import Presentation
 
-    presentation = Presentation(path)
+    presentation = Presentation(str(path))
     texts: list[str] = []
     image_count = 0
     for slide in presentation.slides:

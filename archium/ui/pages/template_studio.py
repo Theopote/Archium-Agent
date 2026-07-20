@@ -9,6 +9,7 @@ import streamlit as st
 
 from archium.application.visual.template_studio_service import TemplateStudioService
 from archium.domain.visual.architectural_template import (
+    ArchitecturalTemplateLayout,
     TemplatePageType,
     TemplateSlot,
     TemplateSlotRole,
@@ -86,7 +87,7 @@ def _render_template_list() -> None:
     st.session_state.template_studio_selected_id = str(options[choice])
 
 
-def _render_slot_overlay(layout) -> None:
+def _render_slot_overlay(layout: ArchitecturalTemplateLayout) -> None:
     if layout.preview_image_path and Path(layout.preview_image_path).is_file():
         st.image(layout.preview_image_path, use_container_width=True)
     else:

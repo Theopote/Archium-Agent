@@ -65,7 +65,7 @@ def ensure_case_assets(case_id: str, assets_dir: Path) -> list[str]:
         rel_paths.append(
             _write_asset(
                 assets_dir,
-                asset.asset_id,
+                str(asset.asset_id),
                 asset.visual_type,
                 asset.placeholder_label,
             )

@@ -37,17 +37,22 @@ tests/e2e/real_projects/*/outputs/
 tests/golden/fixtures/files/**
 !tests/golden/fixtures/files/.gitkeep
 
-# Data (runtime)
+# Data / runtime (never commit — use CI artifacts or reviewed goldens)
+.data/
+data/output/
+data/outputs/
+data/projects/
+data/chroma/
+data/tmp/
 data/database/*.db
 data/database/*.db-wal
 data/database/*.db-shm
+output/
+*.db
+*.sqlite
+*.sqlite3
 *.db-wal
 *.db-shm
-data/projects/
-data/chroma/
-data/outputs/
-data/tmp/
-output/
 
 # Logs
 *.log

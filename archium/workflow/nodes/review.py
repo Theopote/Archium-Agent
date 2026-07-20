@@ -387,6 +387,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
 
         brief = state.get("brief")
         storyline = state.get("storyline")
+        outline = state.get("outline")
         slides = self._load_slides_for_export(state)
 
         if brief is not None and brief.approval_status != ApprovalStatus.APPROVED:
@@ -395,7 +396,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
         elif storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:
             gate = "storyline"
             step = WorkflowStep.REVIEW_STORYLINE.value
-        elif state.get("require_outline_review") and state.get("outline") is not None and state["outline"].approval_status != ApprovalStatus.APPROVED:
+        elif state.get("require_outline_review") and outline is not None and outline.approval_status != ApprovalStatus.APPROVED:
             gate = "outline"
             step = WorkflowStep.REVIEW_OUTLINE.value
         elif slides and state.get("require_slides_review") and not slides_are_approved(slides):

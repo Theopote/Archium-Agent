@@ -7,6 +7,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 from uuid import UUID, uuid4
 
 from PIL import Image
@@ -182,7 +183,9 @@ class TemplateStudioService:
             try:
                 with Image.open(png) as image:
                     check = check_dominant_colors(image)
-                for item in check.evidence.get("dominant_colors", []):
+                for item in cast(
+                    list[object], check.evidence.get("dominant_colors", [])
+                ):
                     if isinstance(item, dict) and isinstance(item.get("hex"), str):
                         colors.append(str(item["hex"]))
             except Exception:

@@ -192,19 +192,20 @@ class RenderSceneCompiler:
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
     ) -> list[TextNode | ImageNode | DrawingNode | ShapeNode]:
+        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
         if element.content_type == LayoutContentType.DRAWING:
-            return self._compile_drawing(element, bundle, drawing_type, asset_manifest, warnings)
-        if element.content_type in {LayoutContentType.IMAGE, LayoutContentType.CHART}:
-            return self._compile_image(element, bundle, asset_manifest, warnings)
-        if element.content_type in {
+            nodes = list(self._compile_drawing(element, bundle, drawing_type, asset_manifest, warnings))
+        elif element.content_type in {LayoutContentType.IMAGE, LayoutContentType.CHART}:
+            nodes = list(self._compile_image(element, bundle, asset_manifest, warnings))
+        elif element.content_type in {
             LayoutContentType.TEXT,
             LayoutContentType.METRIC,
             LayoutContentType.TABLE,
         }:
-            return self._compile_text(element, design_system, bundle)
-        if element.content_type == LayoutContentType.SHAPE:
-            return self._compile_shape(element, design_system)
-        return []
+            nodes = list(self._compile_text(element, design_system, bundle))
+        elif element.content_type == LayoutContentType.SHAPE:
+            nodes = list(self._compile_shape(element, design_system))
+        return nodes
 
     def _compile_text(
         self,

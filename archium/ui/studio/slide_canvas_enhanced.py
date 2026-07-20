@@ -23,9 +23,9 @@ def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | N
         return "none", None, None, None, None, None
     if isinstance(event, str):
         return "select", event, None, None, None, None
-    if event.get("type") == "move":
+    if event["type"] == "move":
         return "move", str(event["elementId"]), float(event["x"]), float(event["y"]), None, None
-    if event.get("type") == "resize":
+    if event["type"] == "resize":
         return (
             "resize",
             str(event["elementId"]),
@@ -34,7 +34,7 @@ def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | N
             float(event["width"]),
             float(event["height"]),
         )
-    if event.get("type") == "editText":
+    if event["type"] == "editText":
         return "editText", str(event["elementId"]), None, None, None, None
     return "select", event.get("elementId"), None, None, None, None
 

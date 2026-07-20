@@ -55,8 +55,8 @@ def build_reference_style_context(
             break
 
     if not chunks:
-        lines = [f"- {doc.filename}（已标记为参考风格，待解析内容）" for doc in style_docs[:8]]
-        return "\n".join(lines), [str(doc.id) for doc in style_docs]
+        pending_lines = [f"- {doc.filename}（已标记为参考风格，待解析内容）" for doc in style_docs[:8]]
+        return "\n".join(pending_lines), [str(doc.id) for doc in style_docs]
 
     lines: list[str] = []
     for chunk in chunks:

@@ -24,6 +24,7 @@ from archium.config.llm_config import get_effective_settings
 from archium.config.settings import Settings
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import PresentationType, ProjectType
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.render import RenderResult
@@ -328,7 +329,7 @@ def regenerate_outline_plan(
     *,
     workflow_run_id: UUID | None = None,
     settings: Settings | None = None,
-):
+) -> OutlinePlan:
     from archium.application.regeneration_service import RegenerationService
 
     resolved_settings = _resolve_runtime_settings(settings)

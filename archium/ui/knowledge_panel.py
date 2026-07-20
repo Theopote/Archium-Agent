@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.domain.enums import DocumentPurpose, InformationOrigin, InformationReliability
-from archium.domain.project_knowledge import SourceCitation
+from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.infrastructure.database.repositories import DocumentRepository
 from archium.infrastructure.database.session import get_session
 
@@ -128,7 +128,7 @@ def render_knowledge_panel(project_id: UUID) -> None:
             st.rerun()
 
 
-def _render_item_row(item, *, service_available: bool) -> None:
+def _render_item_row(item: ProjectKnowledgeItem, *, service_available: bool) -> None:
     origin = ORIGIN_LABELS.get(item.origin, item.origin.value)
     reliability = RELIABILITY_LABELS.get(item.reliability, item.reliability.value)
     st.markdown(f"**{item.statement}**")

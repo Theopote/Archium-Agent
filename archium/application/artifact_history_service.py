@@ -203,7 +203,7 @@ class OutlineHistoryService:
         source = change_source_label(revision.change_source)
         return f"修订 #{revision.revision_number} · {source} · {title}"
 
-    def _get_outline(self, outline_id: UUID):
+    def _get_outline(self, outline_id: UUID) -> OutlinePlan | None:
         from archium.infrastructure.database.repositories import PresentationRepository
 
         return PresentationRepository(self._session).get_outline(outline_id)
@@ -255,7 +255,7 @@ class CulturalNarrativeHistoryService:
         source = change_source_label(revision.change_source)
         return f"修订 #{revision.revision_number} · {source} · {story}"
 
-    def _get_plan(self, plan_id: UUID):
+    def _get_plan(self, plan_id: UUID) -> CulturalNarrativePlan | None:
         from archium.infrastructure.database.repositories import ProjectRepository
 
         return ProjectRepository(self._session).get_cultural_narrative(plan_id)

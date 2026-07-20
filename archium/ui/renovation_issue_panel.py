@@ -55,16 +55,16 @@ def render_renovation_issue_panel(project_id: UUID) -> None:
     if plan.issues:
         with st.expander("问题与证据关联"):
             evidence_by_id = {item.id: item for item in plan.evidence_items}
-            for issue in plan.issues:
+            for renovation_issue in plan.issues:
                 refs = [
                     evidence_by_id[eid].description[:50]
-                    for eid in issue.linked_evidence_ids
+                    for eid in renovation_issue.linked_evidence_ids
                     if eid in evidence_by_id
                 ]
                 ref_text = f"（证据：{'; '.join(refs)}）" if refs else ""
                 st.markdown(
-                    f"- **[{issue.category}]** {issue.problem_statement} "
-                    f"_{issue.severity}_{ref_text}"
+                    f"- **[{renovation_issue.category}]** {renovation_issue.problem_statement} "
+                    f"_{renovation_issue.severity}_{ref_text}"
                 )
 
     if plan.strategies:

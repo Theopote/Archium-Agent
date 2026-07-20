@@ -15,6 +15,13 @@ This document states what is **proven by automation** vs what still requires **h
 
 Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolver`).
 
+## P0 repository hygiene (2026-07-21)
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Runtime DBs / Phase 8 dumps not on main | **Remediated** | `.data/` removed from Git index; `.gitignore` covers `.data/`, `data/`, `output/`, `*.db`, `*.sqlite`, `*.sqlite3` |
+| Real-project run outputs | **CI artifacts / reviewed goldens only** | Do not commit full phase8/Studio run trees |
+
 ## Architectural Slide Benchmark (30 cases)
 
 | Gate | Status | Evidence |

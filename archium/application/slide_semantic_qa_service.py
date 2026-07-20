@@ -144,8 +144,8 @@ def run_slide_semantic_qa(
             if requirement.type == VisualType.TEXT_ONLY or not requirement.required:
                 continue
 
-            asset_id = requirement.primary_asset_id
-            asset = assets_by_id.get(asset_id) if asset_id is not None else None
+            primary_asset_id = requirement.primary_asset_id
+            asset = assets_by_id.get(primary_asset_id) if primary_asset_id is not None else None
 
             if asset is not None and _is_reference_asset(asset, documents_by_id):
                 findings.append(

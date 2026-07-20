@@ -349,7 +349,7 @@ def classify_drawing(image: Image.Image) -> tuple[str, float, dict[str, object]]
     gray = ImageOps.grayscale(image)
     stdev = ImageStat.Stat(gray).stddev[0]
     edge = gray.filter(ImageFilter.FIND_EDGES)
-    edge_ratio = sum(1 for value in edge.getdata() if value > 35) / max(width * height, 1)
+    edge_ratio = sum(1 for value in list(edge.getdata()) if value > 35) / max(width * height, 1)
 
     sample = image.copy()
     sample.thumbnail((128, 128))
@@ -389,11 +389,11 @@ def _corner_symbol_score(region: Image.Image) -> float:
     if width < 8 or height < 8:
         return 0.0
     edges = region.filter(ImageFilter.FIND_EDGES)
-    edge_ratio = sum(1 for value in edges.getdata() if value > 45) / max(width * height, 1)
-    dark_ratio = sum(1 for value in region.getdata() if value < 120) / max(width * height, 1)
+    edge_ratio = sum(1 for value in list(edges.getdata()) if value > 45) / max(width * height, 1)
+    dark_ratio = sum(1 for value in list(region.getdata()) if value < 120) / max(width * height, 1)
     upper_focus = region.crop((0, 0, width, max(1, height // 2)))
     upper_edges = upper_focus.filter(ImageFilter.FIND_EDGES)
-    upper_ratio = sum(1 for value in upper_edges.getdata() if value > 45) / max(width * max(1, height // 2), 1)
+    upper_ratio = sum(1 for value in list(upper_edges.getdata()) if value > 45) / max(width * max(1, height // 2), 1)
     return min(1.0, edge_ratio * 4 + dark_ratio * 0.8 + upper_ratio * 2)
 
 

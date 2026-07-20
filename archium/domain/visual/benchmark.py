@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from typing import Self
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
@@ -266,7 +266,7 @@ class BenchmarkRenderManifest(DomainModel):
     pptx_screenshot_generated: bool = False
     pptx_screenshot_reused: bool = False
     pptx_screenshot_source_hash: str = ""
-    render_attempt_id: UUID | None = Field(default_factory=uuid4)
+    render_attempt_id: UUID | None = None
 
     def scene_preview_valid(self) -> bool:
         """Return True when a RenderScene preview is ready for Phase 1–2 review."""
@@ -331,7 +331,7 @@ class EditabilityReview(DomainModel):
             "selection_ease": 0.075,
             "modification_ease": 0.075,
         }
-        total = sum(getattr(self, field) * weight for field, weight in weights.items())
+        total: float = sum(getattr(self, field) * weight for field, weight in weights.items())
         return round(total, 3)
 
     def passes_threshold(self, threshold: float = HUMAN_REVIEW_PASS_THRESHOLD) -> bool:
@@ -374,7 +374,7 @@ class HumanLayoutReview(DomainModel):
             "spatial_balance": 0.15,
             "layout_clarity": 0.15,
         }
-        total = sum(getattr(self, field) * weight for field, weight in weights.items())
+        total: float = sum(getattr(self, field) * weight for field, weight in weights.items())
         return round(total, 3)
 
     def passes_threshold(self, threshold: float = LAYOUT_REVIEW_PASS_THRESHOLD) -> bool:
