@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from archium.domain._base import model_to_dict
+from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.models import (
+    ArchitecturalTemplateORM,
     ArtDirectionORM,
     DesignSystemORM,
     LayoutPlanORM,
@@ -119,3 +121,25 @@ def render_scene_to_orm(
 
 def render_scene_to_domain(orm: RenderSceneORM) -> RenderScene:
     return RenderScene.model_validate(orm.payload_json)
+
+
+def architectural_template_to_orm(
+    domain: ArchitecturalTemplate,
+    target: ArchitecturalTemplateORM | None = None,
+) -> ArchitecturalTemplateORM:
+    orm = target or ArchitecturalTemplateORM(id=domain.id)
+    orm.id = domain.id
+    orm.name = domain.name
+    orm.project_id = domain.project_id
+    orm.design_system_id = domain.design_system_id
+    orm.status = domain.status.value
+    orm.version = domain.version
+    orm.source_pptx_path = domain.source_pptx_path
+    orm.payload_json = model_to_dict(domain)
+    orm.created_at = domain.created_at
+    orm.updated_at = domain.updated_at
+    return orm
+
+
+def architectural_template_to_domain(orm: ArchitecturalTemplateORM) -> ArchitecturalTemplate:
+    return ArchitecturalTemplate.model_validate(orm.payload_json)

@@ -856,6 +856,22 @@ class RenderSceneORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
 
 
+class ArchitecturalTemplateORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "architectural_templates"
+    __table_args__ = (
+        Index("ix_architectural_templates_project_id", "project_id"),
+        Index("ix_architectural_templates_status", "status"),
+    )
+
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    project_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    design_system_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    source_pptx_path: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
 class DeliverablePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "deliverable_plans"
     __table_args__ = (

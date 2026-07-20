@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
@@ -16,6 +17,7 @@ from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import visual_mappers
 from archium.infrastructure.database.models import (
+    ArchitecturalTemplateORM,
     ArtDirectionORM,
     DesignSystemORM,
     LayoutPlanORM,
@@ -187,3 +189,44 @@ class RenderSceneRepository:
             .order_by(RenderSceneORM.updated_at.desc())
         )
         return [visual_mappers.render_scene_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class ArchitecturalTemplateRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def save(self, template: ArchitecturalTemplate) -> ArchitecturalTemplate:
+        try:
+            orm = self._session.get(ArchitecturalTemplateORM, template.id)
+            if orm is None:
+                orm = visual_mappers.architectural_template_to_orm(template)
+                self._session.add(orm)
+            else:
+                visual_mappers.architectural_template_to_orm(template, orm)
+            self._session.flush()
+            return visual_mappers.architectural_template_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save architectural template", exc)
+            raise
+
+    def get(self, template_id: UUID) -> ArchitecturalTemplate | None:
+        orm = self._session.get(ArchitecturalTemplateORM, template_id)
+        return visual_mappers.architectural_template_to_domain(orm) if orm else None
+
+    def list_all(self) -> list[ArchitecturalTemplate]:
+        stmt = select(ArchitecturalTemplateORM).order_by(ArchitecturalTemplateORM.updated_at.desc())
+        return [
+            visual_mappers.architectural_template_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
+    def list_by_project(self, project_id: UUID) -> list[ArchitecturalTemplate]:
+        stmt = (
+            select(ArchitecturalTemplateORM)
+            .where(ArchitecturalTemplateORM.project_id == project_id)
+            .order_by(ArchitecturalTemplateORM.updated_at.desc())
+        )
+        return [
+            visual_mappers.architectural_template_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
