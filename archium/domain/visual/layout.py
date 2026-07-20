@@ -89,6 +89,8 @@ class LayoutPlan(IdentifiedModel, VersionedModel, TimestampedModel):
     design_system_id: UUID
     visual_intent_id: UUID
     validation_status: LayoutValidationStatus = LayoutValidationStatus.PENDING
+    source_template_id: UUID | None = None
+    source_template_layout_id: str | None = None
 
     @model_validator(mode="after")
     def _validate_elements(self) -> LayoutPlan:

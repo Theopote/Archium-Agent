@@ -17,7 +17,11 @@ from archium.ui.layout_family_ui import (
     layout_family_implemented,
 )
 from archium.ui.studio.slide_actions import run_studio_replan, show_studio_validation_feedback
-from archium.ui.visual_service import SlideVisualSnapshot, select_layout_candidate
+from archium.ui.visual_service import (
+    SlideVisualSnapshot,
+    apply_template_to_slide,
+    select_layout_candidate,
+)
 
 
 def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None, advanced: bool) -> None:
@@ -41,6 +45,8 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
                 for issue in validation.issues[:8]:
                     st.write(f"- {issue.severity.value} · {issue.message}")
 
+    _render_template_match_controls(slide_snapshot)
+
     action_cols = st.columns(2)
     with action_cols[0]:
         if st.button(
@@ -59,17 +65,19 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
 
     candidates = slide_snapshot.candidates
     if not candidates:
-        st.caption("暂无候选版式。点击「重新排版」生成多个方案。")
+        st.caption("暂无候选版式。点击「重新排版」或「用模板生成候选」。")
         return
 
     current_id = plan.id if plan is not None else None
     selectable: dict[str, LayoutPlan] = {}
     for candidate in candidates:
-        if layout_family_implemented(candidate.layout_family):
+        if candidate.source_template_id is not None or layout_family_implemented(
+            candidate.layout_family
+        ):
             selectable[str(candidate.id)] = candidate
 
     if not selectable:
-        st.warning("当前候选版式均尚未实现导出，请尝试重新排版。")
+        st.warning("当前候选版式均尚未实现导出，请尝试重新排版或使用模板。")
         return
 
     selected = st.selectbox(
@@ -93,6 +101,7 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
                     slide_id=slide_id,
                     layout_plan_id=UUID(selected),
                 )
+                session.commit()
             st.success("已切换版式。")
             st.rerun()
         except (WorkflowError, ValueError) as exc:
@@ -103,15 +112,62 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
         st.caption(f"{unimplemented} 个候选属于「即将支持」版式类型，已从列表隐藏。")
 
     if advanced and plan is not None:
+        extra = ""
+        if plan.source_template_id is not None:
+            extra = f" · 模板 {plan.source_template_layout_id or plan.source_template_id}"
         st.caption(
             f"{entity_label('LayoutPlan', advanced=True)} · "
             f"{format_layout_family_label(plan.layout_family)} · "
-            f"变体 {plan.layout_variant}"
+            f"变体 {plan.layout_variant}{extra}"
         )
+
+
+def _render_template_match_controls(slide_snapshot: SlideVisualSnapshot) -> None:
+    from archium.application.visual.template_composition_service import TemplateCompositionService
+
+    slide_id = slide_snapshot.slide.id
+    with get_session() as session:
+        templates = TemplateCompositionService(session).list_published_templates()
+    if not templates:
+        st.caption("尚无可用 ArchitecturalTemplate。请先在「模板工作室」发布模板。")
+        return
+
+    options = {f"{item.name} · {item.status.value}": item.id for item in templates}
+    label = st.selectbox(
+        "建筑模板",
+        options=list(options.keys()),
+        key=f"studio_template_select_{slide_id}",
+    )
+    if st.button(
+        "用模板生成候选",
+        use_container_width=True,
+        type="primary",
+        key=f"studio_apply_template_{slide_id}",
+    ):
+        try:
+            with st.spinner("正在匹配模板并填充内容…"), get_session() as session:
+                apply_template_to_slide(
+                    session,
+                    slide_id=slide_id,
+                    template_id=options[label],
+                    candidate_count=3,
+                )
+                session.commit()
+            st.success("已按模板生成候选版式并选中推荐方案。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(format_user_error(exc))
+        except Exception as exc:  # noqa: BLE001
+            st.error(format_user_error(exc))
 
 
 def _candidate_label(plan: LayoutPlan, *, current_id: UUID | None) -> str:
     family_label = format_layout_family_label(plan.layout_family, show_availability=False)
-    availability = layout_family_availability_status(plan.layout_family)
+    if plan.source_template_id is not None:
+        availability = "模板"
+        variant = plan.layout_variant
+    else:
+        availability = layout_family_availability_status(plan.layout_family)
+        variant = plan.layout_variant
     suffix = "（当前）" if current_id is not None and plan.id == current_id else ""
-    return f"{family_label} · {plan.layout_variant} · {availability}{suffix}"
+    return f"{family_label} · {variant} · {availability}{suffix}"

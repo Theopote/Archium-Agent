@@ -352,9 +352,13 @@ def select_layout_candidate(
     layout_plan_id: UUID,
 ) -> LayoutPlan:
     from archium.application.visual.layout_locked import preserve_locked_elements
+    from archium.application.visual.studio_scene_service import StudioSceneService
+    from archium.application.visual.visual_history_service import VisualHistoryService
+    from archium.domain.enums import RevisionSource
 
     presentations = PresentationRepository(session)
     plans = LayoutPlanRepository(session)
+    intents = VisualIntentRepository(session)
     slide = presentations.get_slide(slide_id)
     plan = plans.get(layout_plan_id)
     if slide is None:
@@ -363,7 +367,8 @@ def select_layout_candidate(
         raise ValueError(f"LayoutPlan {layout_plan_id} not found")
     if plan.slide_id != slide_id:
         raise ValueError("LayoutPlan does not belong to this slide")
-    if not get_layout_family_registry().get(plan.layout_family).implemented:
+    template_backed = plan.source_template_id is not None
+    if not template_backed and not get_layout_family_registry().get(plan.layout_family).implemented:
         raise WorkflowError(
             f"版式族「{plan.layout_family.value}」尚未实现 generator，暂不可选用。"
             "请在界面中选择已可用版式，或等待后续版本支持。"
@@ -377,7 +382,93 @@ def select_layout_candidate(
         plan = merged
     slide.layout_plan_id = plan.id
     presentations.save_slide(slide)
+
+    intent = (
+        intents.get(slide.visual_intent_id)
+        if slide.visual_intent_id is not None
+        else intents.get_by_slide(slide.id)
+    )
+    VisualHistoryService(session).record_state(
+        slide=slide,
+        visual_intent=intent,
+        layout_plan=plan,
+        change_source=RevisionSource.MANUAL_EDIT,
+        note=(
+            "template layout switch"
+            if template_backed
+            else "layout candidate switch"
+        ),
+    )
+    try:
+        StudioSceneService(session).ensure_scene_for_slide(slide.id, force_recompile=True)
+    except Exception:
+        pass
     return plan
+
+
+def apply_template_to_slide(
+    session: Session,
+    *,
+    slide_id: UUID,
+    template_id: UUID,
+    candidate_count: int = 3,
+    settings: Settings | None = None,
+) -> SlideVisualSnapshot:
+    """Match a published template to the slide, fill content, and select the best plan."""
+    from archium.application.visual.studio_scene_service import StudioSceneService
+    from archium.application.visual.template_composition_service import TemplateCompositionService
+    from archium.application.visual.visual_history_service import VisualHistoryService
+    from archium.domain.enums import RevisionSource
+
+    resolved = _resolve_runtime_settings(settings)
+    composition = TemplateCompositionService(session, settings=resolved)
+    result = composition.generate_candidates_for_slide(
+        slide_id=slide_id,
+        template_id=template_id,
+        candidate_count=candidate_count,
+        select_best=True,
+    )
+    presentations = PresentationRepository(session)
+    intents = VisualIntentRepository(session)
+    slide = presentations.get_slide(slide_id)
+    if slide is None:
+        raise WorkflowError(f"页面不存在：{slide_id}")
+    intent = (
+        intents.get(slide.visual_intent_id)
+        if slide.visual_intent_id is not None
+        else intents.get_by_slide(slide.id)
+    )
+    VisualHistoryService(session).record_state(
+        slide=slide,
+        visual_intent=intent,
+        layout_plan=result.selected_plan,
+        change_source=RevisionSource.MANUAL_EDIT,
+        note=f"apply template {result.template.name}",
+    )
+    try:
+        StudioSceneService(session, settings=resolved).ensure_scene_for_slide(
+            slide.id,
+            force_recompile=True,
+        )
+    except Exception:
+        pass
+
+    snapshot = get_presentation_visual_snapshot(session, slide.presentation_id)
+    for index, item in enumerate(snapshot.slides):
+        if item.slide.id == slide_id:
+            snapshot.slides[index] = SlideVisualSnapshot(
+                slide=item.slide,
+                visual_intent=item.visual_intent,
+                layout_plan=result.selected_plan or item.layout_plan,
+                candidates=result.layout_plans or item.candidates,
+                validation=item.validation,
+                visual_critic=item.visual_critic,
+                preview_image=item.preview_image,
+                preview_kind=item.preview_kind,
+                render_scene=item.render_scene,
+            )
+            return snapshot.slides[index]
+    raise WorkflowError(f"页面快照缺失：{slide_id}")
 
 
 def replan_slide(

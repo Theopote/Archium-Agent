@@ -356,14 +356,26 @@ class TemplateStudioService:
             raise WorkflowError("模板没有页面，无法发布。")
         if not any(layout.slots for layout in template.layouts):
             raise WorkflowError("至少需要一个页面完成槽位标注后才能发布。")
+        reference_style_id = template.reference_style_profile_id
+        if reference_style_id is None and template.project_id is not None:
+            reference_style_id = self._current_reference_style_id(template.project_id)
         return self._save(
             template.model_copy(
                 update={
                     "status": TemplateStatus.PUBLISHED,
                     "version": template.version + 1,
+                    "reference_style_profile_id": reference_style_id,
                 }
             )
         )
+
+    def _current_reference_style_id(self, project_id: UUID) -> UUID | None:
+        from archium.infrastructure.database.models import ProjectORM
+
+        orm = self._session.get(ProjectORM, project_id)
+        if orm is None:
+            return None
+        return orm.current_reference_style_profile_id
 
     def _layout_plan_from_template_page(
         self,
