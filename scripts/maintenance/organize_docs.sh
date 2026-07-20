@@ -11,19 +11,19 @@ echo ""
 
 # 创建目标目录
 echo "创建目录结构..."
-mkdir -p docs/sessions/2026-07-19
+mkdir -p .dev-notes/docs-history/sessions/2026-07-19
 mkdir -p docs/analysis
 mkdir -p docs/implementation
 mkdir -p docs/delivery
 mkdir -p docs/architecture
 mkdir -p docs/guides
 
-# 会话工作总结（今天的工作记录）
+# 会话工作总结（历史工作记录，应归档到 .dev-notes）
 echo "整理会话总结..."
-mv -v 2026-07-19-work-summary.md docs/sessions/2026-07-19/ 2>/dev/null || true
-mv -v WORK_SUMMARY_2026-07-19_SESSION_RESUMED.md docs/sessions/2026-07-19/ 2>/dev/null || true
-mv -v SESSION_SUMMARY_E2E_FIX_COMPLETE.md docs/sessions/2026-07-19/ 2>/dev/null || true
-mv -v SESSION_INTEGRATION_FIXES_COMPLETE.md docs/sessions/2026-07-19/ 2>/dev/null || true
+mv -v 2026-07-19-work-summary.md .dev-notes/docs-history/sessions/2026-07-19/ 2>/dev/null || true
+mv -v WORK_SUMMARY_2026-07-19_SESSION_RESUMED.md .dev-notes/docs-history/sessions/2026-07-19/ 2>/dev/null || true
+mv -v SESSION_SUMMARY_E2E_FIX_COMPLETE.md .dev-notes/docs-history/sessions/2026-07-19/ 2>/dev/null || true
+mv -v SESSION_INTEGRATION_FIXES_COMPLETE.md .dev-notes/docs-history/sessions/2026-07-19/ 2>/dev/null || true
 
 # E2E Benchmark 相关
 echo "整理 E2E Benchmark 文档..."

@@ -76,7 +76,7 @@ echo "- 创建分类目录：sessions, analysis, implementation, delivery, archi
 echo "- 添加 organize_docs.sh 自动整理脚本"
 echo ""
 echo "目录结构："
-echo "- docs/sessions/2026-07-19/ - 今天的会话记录"
+echo "- docs/sessions/2026-07-19/ - 历史会话记录（建议后续归档到 .dev-notes）"
 echo "- docs/analysis/ - 问题分析文档"
 echo "- docs/implementation/ - 实现和修复文档"
 echo "- docs/delivery/ - 交付和总结文档"
