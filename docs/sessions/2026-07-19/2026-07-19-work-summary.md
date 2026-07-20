@@ -3,6 +3,7 @@
 > INTERNAL DEV-NOTES ARCHIVE
 > 本文件为会话过程记录快照，可能包含历史路径、统计或已过时的判断。
 > 如需现行结构/产品入口，请以 `README.md` 和 `docs/visual/**` 等正式文档为准。
+> 建议后续迁移到 `.dev-notes/docs-history/sessions/2026-07-19/2026-07-19-work-summary.md`。
 
 ## 今日完成的工作
 

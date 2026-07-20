@@ -3,6 +3,7 @@
 > INTERNAL DEV-NOTES ARCHIVE
 > 本文件为阶段性交付快照，可能包含已过时的路径、统计或状态结论。
 > 如需最新信息请以 `README.md` 与 `docs/` 专题文档为准。
+> 建议后续迁移到 `.dev-notes/docs-history/COMPLETE_DELIVERY_SUMMARY.md`。
 
 **项目**: Archium Agent  
 **日期**: 2026-07-20  

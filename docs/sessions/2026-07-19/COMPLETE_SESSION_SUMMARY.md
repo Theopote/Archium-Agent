@@ -3,6 +3,7 @@
 > INTERNAL DEV-NOTES ARCHIVE
 > 本文件为阶段性交付/会话记录快照，可能包含过时的文件路径、行数与统计结论。
 > 如需现行结构/产品入口，请以 `README.md` 和 `docs/visual/**` 等正式文档为准。
+> 建议后续迁移到 `.dev-notes/docs-history/sessions/2026-07-19/COMPLETE_SESSION_SUMMARY.md`。
 
 ## 会话概览
 

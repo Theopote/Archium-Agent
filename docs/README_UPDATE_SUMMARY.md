@@ -3,6 +3,7 @@
 > INTERNAL DEV-NOTES ARCHIVE
 > 本文件为阶段性交付总结快照，可能包含已变更的链接与内容细节。
 > 请以仓库 `README.md` 与 `docs/` 下当前专题文档为准。
+> 建议后续迁移到 `.dev-notes/docs-history/README_UPDATE_SUMMARY.md`。
 
 **更新日期**: 2026-07-20  
 **更新内容**: 添加 Docker 部署选项和优化文档链接

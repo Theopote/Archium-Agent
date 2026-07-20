@@ -3,6 +3,7 @@
 > INTERNAL DEV-NOTES ARCHIVE
 > 本文件为会话/交付过程记录快照，可能包含已过时路径、行数和结论判断。
 > 如需现行结构与使用方式，请以 `README.md` 与 `docs/` 下正式专题文档为准。
+> 建议后续迁移到 `.dev-notes/docs-history/SESSION_SUMMARY_2026-07-20.md`。
 
 **日期**: 2026-07-20  
 **持续时间**: 完整工作会话  
