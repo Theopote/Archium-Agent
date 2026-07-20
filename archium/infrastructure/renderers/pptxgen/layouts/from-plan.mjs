@@ -176,14 +176,20 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme) {
  */
 function renderShapeElement(pres, page, element, slideInstruction) {
   const colors = slideInstruction.theme_tokens?.colors ?? {};
-  const fill = _stripHash(colors.surface || colors.light || "F4F6F8");
+  const fill = _stripHash(
+    element.fill_color || colors.surface || colors.light || "F4F6F8",
+  );
+  const lineColor = _stripHash(
+    element.stroke_color || colors.border || colors.muted_text || "D9D5CF",
+  );
+  const lineWidth = Number(element.stroke_width) || 0;
   page.addShape(pres.shapes.RECTANGLE, {
     x: Number(element.x) || 0,
     y: Number(element.y) || 0,
     w: Number(element.w) || 1,
     h: Number(element.h) || 0.3,
     fill: { color: fill },
-    line: { width: 0 },
+    line: { color: lineColor, width: lineWidth },
   });
 }
 

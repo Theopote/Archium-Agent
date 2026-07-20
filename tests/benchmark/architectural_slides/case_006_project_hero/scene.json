@@ -1,12 +1,12 @@
 {
-  "created_at": "2026-07-20T15:24:31.203913Z",
-  "updated_at": "2026-07-20T15:24:31.203913Z",
+  "created_at": "2026-07-20T15:27:31.437191Z",
+  "updated_at": "2026-07-20T15:27:31.437191Z",
   "version": 1,
-  "id": "6084b1fd-825d-4087-85b2-b3280799cbbe",
+  "id": "72c10c31-0baa-4670-b35f-db356c605a07",
   "schema_version": 1,
-  "slide_id": "d9b8aab7-597a-415f-ae1c-6acce36c7612",
+  "slide_id": "a96d563e-33b8-4740-ba6f-a65d82bd62bc",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "c2402875-bbdb-49f2-b766-52aa943759b8",
+  "layout_plan_id": "c31c5acc-8b42-4cd4-96ad-bd6acd7ee040",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {

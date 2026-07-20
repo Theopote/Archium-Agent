@@ -135,5 +135,5 @@ def test_render_benchmark_visual_artifacts_exports_pptx(case_id: str, tmp_path: 
     else:
         pytest.skip("Node/PptxGenJS unavailable in this environment")
     if manifest.render_valid:
-        assert manifest.renderer == "png_renderer"
+        assert manifest.renderer in {"png_renderer", "png_renderer+pptxgenjs"}
         assert manifest.render_source in {"html", "pptx_screenshot"}

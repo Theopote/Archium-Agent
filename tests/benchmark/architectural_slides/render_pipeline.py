@@ -15,6 +15,8 @@ from archium.domain.visual.benchmark import BenchmarkRenderManifest
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.infrastructure.renderers.png_renderer import PngRenderer
+from archium.infrastructure.renderers.pptx_renderer import PptxRenderer, maybe_export_scene_pptx
+from archium.infrastructure.renderers.renderer_conformance import assert_renderer_conformance
 from archium.infrastructure.renderers.pptx_screenshot import (
     export_pptx_slide_pngs,
     screenshot_tools_available,
@@ -27,7 +29,6 @@ from tests.benchmark.architectural_slides.render_manifest import (
     count_assets,
     write_render_manifest,
 )
-from tests.golden.visual.composition.artifacts import maybe_export_pptx
 
 PPTX_NAME = "output.pptx"
 _RENDER_TMP_DIR = "_render_tmp"
@@ -116,24 +117,42 @@ def compile_and_render_scene(
     )
 
 
+def export_benchmark_pptx_from_scene(
+    scene: RenderScene,
+    case_dir: Path,
+    *,
+    title: str,
+    speaker_notes: str | None = None,
+) -> tuple[Path | None, list[str]]:
+    """Export editable PPTX from RenderScene."""
+    pptx_path = case_dir / PPTX_NAME
+    exported = maybe_export_scene_pptx(
+        scene,
+        pptx_path,
+        title=title,
+        speaker_notes=speaker_notes,
+    )
+    fallbacks = PptxRenderer().font_fallbacks(scene) if exported else []
+    return exported, fallbacks
+
+
 def export_benchmark_pptx(
     result: BenchmarkCaseResult,
     case_dir: Path,
     *,
+    scene: RenderScene,
     assets_dir: Path | None = None,
-) -> tuple[Path | None, SlideContentBundleBuildResult]:
-    """Export a content-complete PPTX for one benchmark case."""
+) -> tuple[Path | None, SlideContentBundleBuildResult, list[str]]:
+    """Export a content-complete PPTX for one benchmark case from RenderScene."""
     assets = assets_dir or (case_dir / "assets")
     build = build_slide_content_bundle(result.plan, assets, result.slide)
-    pptx_path = case_dir / PPTX_NAME
-    exported = maybe_export_pptx(
-        result.plan,
-        result.design_system,
-        pptx_path,
+    pptx_path, fallbacks = export_benchmark_pptx_from_scene(
+        scene,
+        case_dir,
         title=result.slide.title,
-        content_bundle=build.bundle,
+        speaker_notes=result.slide.speaker_notes or None,
     )
-    return exported, build
+    return pptx_path, build, fallbacks
 
 
 def export_benchmark_final_render(
@@ -164,19 +183,36 @@ def render_benchmark_visual_artifacts(
 ) -> BenchmarkRenderManifest:
     """Export RenderScene preview, PPTX, and optional final-render PNG."""
     scene_render = compile_and_render_scene(result, case_dir)
-    pptx_path, build = export_benchmark_pptx(result, case_dir)
+    pptx_path, build, font_fallbacks = export_benchmark_pptx(
+        result,
+        case_dir,
+        scene=scene_render.scene,
+    )
+    conformance_issues: list[str] = []
+    if pptx_path is not None and pptx_path.is_file():
+        conformance = assert_renderer_conformance(
+            scene_render.scene,
+            pptx_path=pptx_path,
+        )
+        conformance_issues = conformance.issues
+
     final_render = None
-    renderer = "png_renderer"
+    renderer = "png_renderer+pptxgenjs"
     rendered_at = datetime.now(UTC)
     notes: list[str] = [
         "RenderScene compiled from LayoutPlan with resolved text and assets.",
-        f"scene_preview.png rendered via {renderer}.",
+        f"scene_preview.png rendered via png_renderer.",
     ]
 
     if pptx_path is None or not pptx_path.is_file():
         notes.append("PPTX export skipped (Node/PptxGenJS unavailable).")
+        renderer = "png_renderer"
     else:
-        notes.append("PPTX exported with LayoutPlan text styles and resolved asset paths.")
+        notes.append("PPTX exported from RenderScene via render-plan.mjs.")
+        if font_fallbacks:
+            notes.append(f"Font fallbacks recorded: {', '.join(font_fallbacks)}.")
+        if conformance_issues:
+            notes.append("Renderer conformance: " + "; ".join(conformance_issues[:3]))
         final_render = export_benchmark_final_render(pptx_path, case_dir)
         if final_render is not None:
             notes.append("final_render.png rasterized from output.pptx.")
@@ -193,6 +229,7 @@ def render_benchmark_visual_artifacts(
         and not build.missing_content_refs
         and not scene_render.unresolved_nodes
         and placeholder_count == 0
+        and not conformance_issues
     )
     if build.missing_content_refs:
         notes.append(
@@ -230,7 +267,7 @@ def render_benchmark_visual_artifacts(
         asset_count=asset_count,
         real_asset_count=curated_count,
         placeholder_asset_count=placeholder_count,
-        font_fallbacks=[],
+        font_fallbacks=font_fallbacks,
         missing_assets=list(build.missing_content_refs),
         render_valid=render_valid,
         notes=" ".join(notes),

@@ -4,15 +4,15 @@
   "image_path": "final_render.png",
   "scene_path": "scene.json",
   "scene_preview_path": "scene_preview.png",
-  "scene_id": "b0c0d995-fd31-4cd9-ab2f-0b252d3670b0",
-  "scene_hash": "3eaa0959de591879fecd3347fcbfb353bc4387b108c52d253d005d2295706b27",
-  "rendered_at": "2026-07-20T15:24:30.911436Z",
-  "renderer": "png_renderer",
+  "scene_id": "5368a020-8e6d-4bcd-9158-d62fab8d0447",
+  "scene_hash": "e26a2c75a61e701e4f876deccd9342dbcf6926866365f7ff8ef415dddd366a2c",
+  "rendered_at": "2026-07-20T15:27:31.136850Z",
+  "renderer": "png_renderer+pptxgenjs",
   "asset_count": 1,
   "real_asset_count": 1,
   "placeholder_asset_count": 0,
   "font_fallbacks": [],
   "missing_assets": [],
   "render_valid": true,
-  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported with LayoutPlan text styles and resolved asset paths. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. All mapped assets are curated PNGs from the benchmark asset pool."
+  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. All mapped assets are curated PNGs from the benchmark asset pool."
 }
