@@ -13,6 +13,8 @@ from archium.domain.visual.benchmark import BenchmarkRenderManifest
 RENDER_MANIFEST_NAME = "render_manifest.json"
 WIREFRAME_NAME = "wireframe.png"
 FINAL_RENDER_NAME = "final_render.png"
+SCENE_JSON_NAME = "scene.json"
+SCENE_PREVIEW_NAME = "scene_preview.png"
 LEGACY_PREVIEW_NAME = "preview.png"
 
 

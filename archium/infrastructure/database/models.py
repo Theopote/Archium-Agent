@@ -839,6 +839,23 @@ class LayoutPlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
 
 
+class RenderSceneORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "render_scenes"
+    __table_args__ = (
+        Index("ix_render_scenes_slide_id", "slide_id"),
+        Index("ix_render_scenes_layout_plan_id", "layout_plan_id"),
+    )
+
+    slide_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("slides.id", ondelete="CASCADE"), nullable=False
+    )
+    layout_plan_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    scene_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
 class DeliverablePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "deliverable_plans"
     __table_args__ = (

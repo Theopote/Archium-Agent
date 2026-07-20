@@ -126,9 +126,14 @@ def test_render_benchmark_visual_artifacts_exports_pptx(case_id: str, tmp_path: 
     case_dir.mkdir()
     ensure_case_assets(case_id, case_dir / "assets")
     manifest = render_benchmark_visual_artifacts(result, case_dir)
+    assert (case_dir / "scene.json").is_file()
+    assert (case_dir / "scene_preview.png").is_file()
+    assert manifest.scene_hash
     pptx = case_dir / "output.pptx"
     if pptx.is_file():
-        assert manifest.renderer in {"pptxgenjs", "libreoffice+pdftoppm"}
         assert manifest.missing_assets == []
     else:
         pytest.skip("Node/PptxGenJS unavailable in this environment")
+    if manifest.render_valid:
+        assert manifest.renderer == "png_renderer"
+        assert manifest.render_source in {"html", "pptx_screenshot"}

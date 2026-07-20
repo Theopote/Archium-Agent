@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import visual_mappers
@@ -18,6 +19,7 @@ from archium.infrastructure.database.models import (
     ArtDirectionORM,
     DesignSystemORM,
     LayoutPlanORM,
+    RenderSceneORM,
     VisualIntentORM,
 )
 
@@ -145,3 +147,43 @@ class LayoutPlanRepository:
             .order_by(LayoutPlanORM.updated_at.desc())
         )
         return [visual_mappers.layout_plan_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class RenderSceneRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def save(self, scene: RenderScene) -> RenderScene:
+        try:
+            orm = self._session.get(RenderSceneORM, scene.id)
+            if orm is None:
+                orm = visual_mappers.render_scene_to_orm(scene)
+                self._session.add(orm)
+            else:
+                visual_mappers.render_scene_to_orm(scene, orm)
+            self._session.flush()
+            return visual_mappers.render_scene_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save render scene", exc)
+            raise
+
+    def get(self, scene_id: UUID) -> RenderScene | None:
+        orm = self._session.get(RenderSceneORM, scene_id)
+        return visual_mappers.render_scene_to_domain(orm) if orm else None
+
+    def get_by_layout_plan(self, layout_plan_id: UUID) -> RenderScene | None:
+        stmt = (
+            select(RenderSceneORM)
+            .where(RenderSceneORM.layout_plan_id == layout_plan_id)
+            .order_by(RenderSceneORM.updated_at.desc())
+        )
+        orm = self._session.scalars(stmt).first()
+        return visual_mappers.render_scene_to_domain(orm) if orm else None
+
+    def list_by_slide(self, slide_id: UUID) -> list[RenderScene]:
+        stmt = (
+            select(RenderSceneORM)
+            .where(RenderSceneORM.slide_id == slide_id)
+            .order_by(RenderSceneORM.updated_at.desc())
+        )
+        return [visual_mappers.render_scene_to_domain(row) for row in self._session.scalars(stmt)]

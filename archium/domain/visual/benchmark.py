@@ -196,6 +196,10 @@ class BenchmarkRenderManifest(DomainModel):
     render_source: str = "pending"
     pptx_path: str = "output.pptx"
     image_path: str = "final_render.png"
+    scene_path: str = "scene.json"
+    scene_preview_path: str = "scene_preview.png"
+    scene_id: str | None = None
+    scene_hash: str = ""
     rendered_at: datetime | None = None
     renderer: str = ""
     asset_count: int = Field(ge=0, default=0)
@@ -205,6 +209,15 @@ class BenchmarkRenderManifest(DomainModel):
     missing_assets: list[str] = Field(default_factory=list)
     render_valid: bool = False
     notes: str = ""
+
+    def scene_preview_valid(self) -> bool:
+        """Return True when a RenderScene preview is ready for Phase 1–2 review."""
+        return (
+            self.render_valid
+            and self.placeholder_asset_count == 0
+            and not self.missing_assets
+            and bool(self.scene_hash)
+        )
 
     def visual_review_eligible(self) -> bool:
         return (

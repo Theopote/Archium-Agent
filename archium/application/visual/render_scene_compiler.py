@@ -1,0 +1,354 @@
+"""Compile LayoutPlan + content into a renderer-neutral RenderScene."""
+
+from __future__ import annotations
+
+from uuid import UUID, uuid4
+
+from archium.application.visual.asset_reference import is_supported_layout_image_path
+from archium.domain.reference_style import ReferenceStyleProfile
+from archium.domain.slide import SlideSpec
+from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
+from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.render_scene import (
+    BackgroundStyle,
+    BoxSpacing,
+    DrawingNode,
+    FontAsset,
+    ImageNode,
+    RenderScene,
+    SceneAssetReference,
+    ShapeNode,
+    TextNode,
+    TextParagraph,
+    ThemeTokens,
+)
+from archium.domain.visual.text_style import resolve_text_style
+from archium.domain.visual.visual_intent import VisualIntent
+from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
+
+_VISUAL_REQ_TO_DRAWING_TYPE: dict[str, DrawingNode.__annotations__["drawing_type"]] = {
+    "site_plan": "site_plan",
+    "floor_plan": "floor_plan",
+    "elevation": "elevation",
+    "section": "section",
+    "detail": "detail",
+    "diagram": "diagram",
+    "heritage_map": "heritage_map",
+    "circulation_plan": "circulation_plan",
+}
+
+
+class RenderSceneCompiler:
+    """Translate planning artifacts into a unified RenderScene."""
+
+    def compile(
+        self,
+        *,
+        slide: SlideSpec,
+        layout_plan: LayoutPlan,
+        design_system: DesignSystem,
+        content_bundle: SlideContentBundle | None = None,
+        visual_intent: VisualIntent | None = None,
+        art_direction: ArtDirection | None = None,
+        reference_style: ReferenceStyleProfile | None = None,
+        presentation_id: UUID | None = None,
+    ) -> RenderScene:
+        del art_direction, reference_style  # reserved for Phase 3+ style overlays
+        bundle = content_bundle or SlideContentBundle()
+        warnings: list[str] = []
+        asset_manifest: list[SceneAssetReference] = []
+        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
+        drawing_type = self._infer_drawing_type(slide, visual_intent)
+
+        bg_color = design_system.colors.resolve("background")
+        for element in sorted(layout_plan.elements, key=lambda el: el.z_index):
+            compiled = self._compile_element(
+                element,
+                design_system=design_system,
+                bundle=bundle,
+                drawing_type=drawing_type,
+                asset_manifest=asset_manifest,
+                warnings=warnings,
+            )
+            nodes.extend(compiled)
+
+        theme = ThemeTokens(
+            colors={
+                name: design_system.colors.resolve(name)
+                for name in (
+                    "background",
+                    "surface",
+                    "primary_text",
+                    "secondary_text",
+                    "muted_text",
+                    "primary",
+                    "secondary",
+                    "accent",
+                    "border",
+                )
+            },
+            typography={
+                name: getattr(design_system.typography, name).model_dump()
+                for name in (
+                    "display",
+                    "title",
+                    "subtitle",
+                    "heading",
+                    "body",
+                    "caption",
+                    "metric",
+                    "footnote",
+                    "source",
+                )
+            },
+            spacing=design_system.spacing.model_dump(),
+        )
+        font_assets = [
+            FontAsset(family=design_system.typography.title.font_family),
+            FontAsset(
+                family=design_system.typography.title.font_family_latin
+                or design_system.typography.title.font_family
+            ),
+        ]
+
+        return RenderScene(
+            slide_id=layout_plan.slide_id,
+            presentation_id=presentation_id or slide.presentation_id,
+            layout_plan_id=layout_plan.id,
+            page_width=layout_plan.page_width,
+            page_height=layout_plan.page_height,
+            background=BackgroundStyle(color=bg_color),
+            nodes=nodes,
+            theme_tokens=theme,
+            font_assets=font_assets,
+            asset_manifest=asset_manifest,
+            source_layout_family=layout_plan.layout_family.value,
+            source_layout_variant=layout_plan.layout_variant,
+            warnings=warnings,
+        )
+
+    def _infer_drawing_type(
+        self,
+        slide: SlideSpec,
+        visual_intent: VisualIntent | None,
+    ) -> DrawingNode.__annotations__["drawing_type"]:
+        for req in slide.visual_requirements:
+            mapped = _VISUAL_REQ_TO_DRAWING_TYPE.get(req.type.value)
+            if mapped:
+                return mapped
+        if visual_intent is not None:
+            dominant = visual_intent.dominant_content_type.value
+            mapped = _VISUAL_REQ_TO_DRAWING_TYPE.get(dominant)
+            if mapped:
+                return mapped
+        return "site_plan"
+
+    def _compile_element(
+        self,
+        element: LayoutElement,
+        *,
+        design_system: DesignSystem,
+        bundle: SlideContentBundle,
+        drawing_type: DrawingNode.__annotations__["drawing_type"],
+        asset_manifest: list[SceneAssetReference],
+        warnings: list[str],
+    ) -> list[TextNode | ImageNode | DrawingNode | ShapeNode]:
+        if element.content_type == LayoutContentType.DRAWING:
+            return self._compile_drawing(element, bundle, drawing_type, asset_manifest, warnings)
+        if element.content_type in {LayoutContentType.IMAGE, LayoutContentType.CHART}:
+            return self._compile_image(element, bundle, asset_manifest, warnings)
+        if element.content_type in {
+            LayoutContentType.TEXT,
+            LayoutContentType.METRIC,
+            LayoutContentType.TABLE,
+        }:
+            return self._compile_text(element, design_system, bundle)
+        if element.content_type == LayoutContentType.SHAPE:
+            return self._compile_shape(element, design_system)
+        return []
+
+    def _compile_text(
+        self,
+        element: LayoutElement,
+        design_system: DesignSystem,
+        bundle: SlideContentBundle,
+    ) -> list[TextNode | ShapeNode]:
+        typography = resolve_text_style(element, design_system.typography)
+        color = design_system.colors.resolve(typography.color_token)
+        text = (element.text_content or "").strip()
+        if not text and element.role == LayoutElementRole.PAGE_NUMBER and bundle.page_number:
+            text = str(bundle.page_number)
+        if not text:
+            return []
+
+        nodes: list[TextNode | ShapeNode] = []
+        if element.role == LayoutElementRole.METRIC:
+            surface = design_system.colors.resolve("surface")
+            border = design_system.colors.resolve("border")
+            nodes.append(
+                ShapeNode(
+                    id=f"{element.id}__card",
+                    semantic_role="metric_card",
+                    source_layout_element_id=element.id,
+                    x=element.x,
+                    y=element.y,
+                    width=element.width,
+                    height=element.height,
+                    z_index=max(0, element.z_index - 1),
+                    shape_kind="card",
+                    fill_color=surface,
+                    stroke_color=border,
+                    stroke_width=1,
+                    corner_radius=4 / 96,
+                )
+            )
+
+        font_family = typography.font_family_latin or typography.font_family
+        nodes.append(
+            TextNode(
+                id=element.id,
+                semantic_role=element.role.value,
+                source_layout_element_id=element.id,
+                x=element.x,
+                y=element.y,
+                width=element.width,
+                height=element.height,
+                z_index=element.z_index,
+                locked=element.locked,
+                lock_scopes=[scope.value for scope in element.lock_scopes],
+                text=text,
+                paragraphs=[TextParagraph(text=text, alignment=element.alignment)],
+                font_family=font_family,
+                font_size=typography.font_size,
+                font_weight=typography.font_weight,
+                color=color,
+                alignment=element.alignment or typography.alignment,
+                line_height=typography.line_height,
+                letter_spacing=typography.letter_spacing,
+                padding=BoxSpacing(left=4 / 96, right=4 / 96, top=2 / 96, bottom=2 / 96),
+            )
+        )
+        return nodes
+
+    def _compile_image(
+        self,
+        element: LayoutElement,
+        bundle: SlideContentBundle,
+        asset_manifest: list[SceneAssetReference],
+        warnings: list[str],
+    ) -> list[ImageNode]:
+        path, unresolved = self._resolve_asset_path(element, bundle, warnings)
+        fit = "cover"
+        if element.fit_mode is not None:
+            fit = "contain" if element.fit_mode.value == "contain" else "cover"
+        if path and not unresolved:
+            asset_manifest.append(
+                SceneAssetReference(
+                    asset_path=path,
+                    content_ref=element.content_ref,
+                    origin="project_upload",
+                )
+            )
+        return [
+            ImageNode(
+                id=element.id,
+                semantic_role=element.role.value,
+                source_layout_element_id=element.id,
+                x=element.x,
+                y=element.y,
+                width=element.width,
+                height=element.height,
+                z_index=element.z_index,
+                locked=element.locked,
+                asset_path=path or "",
+                fit_mode=fit,  # type: ignore[arg-type]
+                asset_unresolved=unresolved,
+            )
+        ]
+
+    def _compile_drawing(
+        self,
+        element: LayoutElement,
+        bundle: SlideContentBundle,
+        drawing_type: DrawingNode.__annotations__["drawing_type"],
+        asset_manifest: list[SceneAssetReference],
+        warnings: list[str],
+    ) -> list[DrawingNode]:
+        path, unresolved = self._resolve_asset_path(element, bundle, warnings)
+        fit_mode: DrawingNode.__annotations__["fit_mode"] = "contain"
+        if element.fit_mode is not None and element.fit_mode.value == "cover":
+            warnings.append(f"DRAWING_COVER_MODE_FORBIDDEN:{element.id}")
+            fit_mode = "contain"
+        if path and not unresolved:
+            asset_manifest.append(
+                SceneAssetReference(
+                    asset_path=path,
+                    content_ref=element.content_ref,
+                    origin="project_upload",
+                )
+            )
+        return [
+            DrawingNode(
+                id=element.id,
+                semantic_role=element.role.value,
+                source_layout_element_id=element.id,
+                x=element.x,
+                y=element.y,
+                width=element.width,
+                height=element.height,
+                z_index=element.z_index,
+                locked=element.locked,
+                lock_scopes=[scope.value for scope in element.lock_scopes],
+                asset_path=path or "",
+                drawing_type=drawing_type,
+                fit_mode=fit_mode,
+                crop_allowed=False,
+                asset_unresolved=unresolved,
+            )
+        ]
+
+    def _compile_shape(
+        self,
+        element: LayoutElement,
+        design_system: DesignSystem,
+    ) -> list[ShapeNode]:
+        return [
+            ShapeNode(
+                id=element.id,
+                semantic_role=element.role.value,
+                source_layout_element_id=element.id,
+                x=element.x,
+                y=element.y,
+                width=element.width,
+                height=element.height,
+                z_index=element.z_index,
+                shape_kind="rectangle",
+                fill_color=design_system.colors.resolve("surface"),
+                stroke_color=design_system.colors.resolve("border"),
+                stroke_width=1,
+            )
+        ]
+
+    def _resolve_asset_path(
+        self,
+        element: LayoutElement,
+        bundle: SlideContentBundle,
+        warnings: list[str],
+    ) -> tuple[str | None, bool]:
+        if not element.content_ref:
+            warnings.append(f"MISSING_ASSET_REFERENCE:{element.id}")
+            return None, True
+        path = bundle.asset_paths.get(element.content_ref)
+        if not path:
+            warnings.append(f"UNRESOLVED_ASSET:{element.content_ref}")
+            return None, True
+        if not is_supported_layout_image_path(path):
+            warnings.append(f"UNSUPPORTED_FORMAT:{element.content_ref}")
+            return path, True
+        return path, False
+
+
+def new_render_scene_id() -> UUID:
+    return uuid4()
