@@ -82,12 +82,12 @@ def render_studio_import_panel(*, project_id: UUID, expanded: bool = False) -> N
 def render_studio_no_presentation_hint(*, project_id: UUID) -> None:
     """Guide user when project exists but has no presentation yet."""
     render_studio_import_panel(project_id=project_id, expanded=True)
-    st.warning("该项目还没有汇报内容。请导入资料后，到项目工作台或项目任务生成页面内容。")
+    st.warning("该项目还没有汇报内容。请导入资料后，到「大纲」或「生成」产出页面内容。")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link(get_app_page("project-mission"), label="前往项目任务", icon="🧭")
+        st.page_link(get_app_page("outline"), label="前往大纲", icon="🧭")
     with link_cols[1]:
-        st.page_link(get_app_page("workspace"), label="前往项目工作台", icon="📁")
+        st.page_link(get_app_page("generate"), label="前往生成", icon="⚡")
 
 
 def _run_import(project_id: UUID, uploads: list, *, settings: Settings) -> None:

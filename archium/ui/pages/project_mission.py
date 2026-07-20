@@ -62,9 +62,9 @@ def _render_post_presentation_links() -> None:
     st.markdown("**下一步**")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link(get_app_page("workspace"), label="到项目工作台审核内容", icon="📁")
+        st.page_link(get_app_page("generate"), label="到「生成」产出页面内容", icon="⚡")
     with link_cols[1]:
-        st.page_link(get_app_page("studio"), label="到汇报工作室生成版式", icon="🎬")
+        st.page_link(get_app_page("edit"), label="到「编辑」调整版式", icon="🎬")
 
 
 def _apply_planning_result(result: object) -> None:
@@ -141,7 +141,7 @@ def _project_selector() -> UUID | None:
     with get_session() as session:
         projects = list_projects(session)
     if not projects:
-        st.info("还没有项目。请先到「项目工作台」创建项目并导入资料。")
+        st.info("还没有项目。请先到「资料」阶段创建项目并导入资料。")
         return None
 
     labels = {str(p.id): p.name for p in projects}

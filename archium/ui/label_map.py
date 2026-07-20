@@ -78,6 +78,13 @@ def content_pipeline_chain(*, advanced: bool = False) -> str:
     )
 
 
+def product_flow_chain() -> str:
+    """Primary product stages: 资料 → 大纲 → 生成 → 编辑 → 交付."""
+    from archium.ui.product_flow import product_flow_chain as _chain
+
+    return _chain()
+
+
 def brief_storyline_pair(*, advanced: bool = False) -> str:
     """User-facing label for Brief + Storyline pair."""
     return f"{entity_label('PresentationBrief', advanced=advanced)} / {entity_label('Storyline', advanced=advanced)}"

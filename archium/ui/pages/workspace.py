@@ -640,10 +640,12 @@ def _render_history(project_id: UUID) -> None:
 def render() -> None:
     _init_session_state()
     st.markdown("### 项目工作台")
-    st.caption("管理项目资料，运行结构化汇报生成管线")
+    st.caption("管理项目资料，运行结构化汇报生成管线（进阶入口；日常请走主流程五阶段）")
+    from archium.ui.product_flow import product_flow_chain
+
     st.info(
-        "推荐先走「项目任务」：自由描述任务 → 澄清 → 工作路径 → 成果 → 再进入汇报主链。"
-        f"直接填写{entity_label('PresentationBrief')}仍可作为快捷路径。"
+        f"推荐主流程：{product_flow_chain()}。"
+        f"本页仍可作为快捷路径直接填写{entity_label('PresentationBrief')}并生成。"
     )
 
     _render_create_project()
@@ -658,34 +660,68 @@ def render() -> None:
     )
 
     with tab_materials:
-        _render_documents(project_id)
-        st.divider()
-        render_chunk_panel(project_id)
-        st.divider()
-        render_knowledge_panel(project_id)
-        st.divider()
-        render_cultural_narrative_panel(project_id)
-        st.divider()
-        render_renovation_issue_panel(project_id)
-        st.divider()
-        render_reference_style_panel(project_id)
-        st.divider()
-        render_fact_ledger_panel(project_id)
-        st.divider()
-        render_rag_preview_panel(project_id)
-        st.divider()
-        render_asset_metadata_panel(project_id)
+        render_materials_stage(project_id)
 
     with tab_generate:
-        _render_generation_form(project_id)
-        _render_last_result()
-        st.divider()
-        _render_pptx_export_section(project_id)
+        render_generate_stage(project_id, include_export=True)
 
     with tab_review:
-        render_project_review_quality_dashboard(project_id)
-        st.divider()
-        _render_review_section(project_id)
+        render_review_stage(project_id)
 
     with tab_history:
         _render_history(project_id)
+
+
+def ensure_workspace_session() -> None:
+    """Initialize session keys shared by workspace and product-flow stages."""
+    _init_session_state()
+
+
+def render_project_picker(*, allow_create: bool = True) -> UUID | None:
+    """Shared project create + select controls for product-flow stages."""
+    ensure_workspace_session()
+    if allow_create:
+        _render_create_project()
+    return _render_project_selector()
+
+
+def render_materials_stage(project_id: UUID) -> None:
+    """资料阶段：上传、知识、事实、素材与参考风格。"""
+    _render_overview(project_id)
+    _render_documents(project_id)
+    st.divider()
+    render_chunk_panel(project_id)
+    st.divider()
+    render_knowledge_panel(project_id)
+    st.divider()
+    render_cultural_narrative_panel(project_id)
+    st.divider()
+    render_renovation_issue_panel(project_id)
+    st.divider()
+    render_reference_style_panel(project_id)
+    st.divider()
+    render_fact_ledger_panel(project_id)
+    st.divider()
+    render_rag_preview_panel(project_id)
+    st.divider()
+    render_asset_metadata_panel(project_id)
+
+
+def render_generate_stage(project_id: UUID, *, include_export: bool = False) -> None:
+    """生成阶段：内容管线与最近结果。
+
+    ``include_export`` is True for the advanced workspace page; the primary
+    「交付」stage owns export in the five-stage flow.
+    """
+    _render_generation_form(project_id)
+    _render_last_result()
+    if include_export:
+        st.divider()
+        _render_pptx_export_section(project_id)
+
+
+def render_review_stage(project_id: UUID) -> None:
+    """质量审核区块，供交付阶段与工作台复用。"""
+    render_project_review_quality_dashboard(project_id)
+    st.divider()
+    _render_review_section(project_id)

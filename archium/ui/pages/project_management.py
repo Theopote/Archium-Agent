@@ -49,7 +49,7 @@ def _render_project_card(project: Project, index: int) -> None:
 
             if st.button("📂 打开", key=f"open_{project.id}", use_container_width=True, type="primary"):
                 st.session_state.selected_project_id = str(project.id)
-                st.switch_page(get_app_page("workspace"))
+                st.switch_page(get_app_page("materials"))
 
         st.divider()
 
@@ -237,6 +237,6 @@ def render() -> None:
     with link_cols[0]:
         st.page_link(get_app_page("home"), label="返回首页", icon="🏠")
     with link_cols[1]:
-        st.page_link(get_app_page("project-mission"), label="开始新任务", icon="🧭")
+        st.page_link(get_app_page("outline"), label="开始大纲 / 任务", icon="🧭")
     with link_cols[2]:
-        st.page_link(get_app_page("workspace"), label="进入工作台", icon="📁")
+        st.page_link(get_app_page("materials"), label="进入资料", icon="📁")
