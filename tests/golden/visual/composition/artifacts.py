@@ -82,6 +82,7 @@ def maybe_export_pptx(
     output_path: Path,
     *,
     title: str,
+    content_bundle: SlideContentBundle | None = None,
 ) -> Path | None:
     """Export PPTX via PptxGenJS when Node runtime is available; else return None."""
     import tempfile
@@ -91,9 +92,10 @@ def maybe_export_pptx(
     runner = PptxGenCliRunner(Settings())
     if not runner.is_available() or not runner.layout_plan_script_path.exists():
         return None
+    bundle = content_bundle or SlideContentBundle(page_number=1)
     deck = PptxLayoutPlanAdapter().render_deck(
         title=title,
-        slides=[(plan, design, SlideContentBundle(page_number=1))],
+        slides=[(plan, design, bundle)],
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:

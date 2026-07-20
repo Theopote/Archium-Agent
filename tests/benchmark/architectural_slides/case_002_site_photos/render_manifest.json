@@ -1,14 +1,14 @@
 {
-  "render_source": "pending",
+  "render_source": "pptx_only",
   "pptx_path": "output.pptx",
   "image_path": "final_render.png",
   "rendered_at": null,
-  "renderer": "",
+  "renderer": "pptxgenjs",
   "asset_count": 4,
   "real_asset_count": 0,
   "placeholder_asset_count": 4,
   "font_fallbacks": [],
   "missing_assets": [],
   "render_valid": false,
-  "notes": "Benchmark assets are placeholder diagrams; final_render.png and real assets are required before visual review."
+  "notes": "PPTX exported with LayoutPlan text styles and resolved asset paths. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. Assets are placeholder diagrams; visual human review remains blocked until curated real assets replace placeholders."
 }

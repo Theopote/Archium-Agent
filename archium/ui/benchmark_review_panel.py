@@ -327,7 +327,9 @@ def _render_case_preview(
     with column:
         case_dir = case.preview_path.parent
         eligible, _, blockers = visual_review_eligibility(case_dir)
-        wireframe_tab, render_tab = column.tabs(["Layout 线框 (wireframe)", "最终渲染 (final_render)"])
+        wireframe_tab, render_tab, pptx_tab = column.tabs(
+            ["Layout 线框 (wireframe)", "最终渲染 (final_render)", "PPTX (output.pptx)"]
+        )
         with wireframe_tab:
             if case.wireframe_path.is_file():
                 wireframe_tab.image(
@@ -347,14 +349,27 @@ def _render_case_preview(
             else:
                 render_tab.info(
                     "尚无 `final_render.png`。"
-                    "需通过完整 SlideSpec + 真实素材 + DesignSystem 导出 PPTX 并渲染后，"
-                    "才可进行人工视觉评审。"
+                    "完整内容 PPTX 已导出时，需 LibreOffice + pdftoppm 渲染截图，"
+                    "或在本机打开 `output.pptx` 进行视觉检查。"
+                )
+        pptx_path = case_dir / "output.pptx"
+        with pptx_tab:
+            if pptx_path.is_file():
+                pptx_tab.caption(
+                    f"完整内容 PPTX（含 LayoutPlan 文本样式与素材路径）：`{pptx_path.name}`"
+                )
+                pptx_tab.markdown(f"[在本机打开 PPTX]({pptx_path.as_uri()})")
+            else:
+                pptx_tab.warning(
+                    "尚未生成 `output.pptx`。运行 "
+                    "`python scripts/render_architectural_benchmark_visuals.py`。"
                 )
 
         manifest = load_render_manifest(case_dir)
         if manifest is not None:
             column.caption(
                 f"render_valid={manifest.render_valid} · "
+                f"renderer={manifest.renderer or '—'} · "
                 f"placeholder_assets={manifest.placeholder_asset_count} · "
                 f"missing_assets={len(manifest.missing_assets)}"
             )

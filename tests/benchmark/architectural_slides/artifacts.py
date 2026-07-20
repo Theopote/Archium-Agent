@@ -15,7 +15,6 @@ from tests.benchmark.architectural_slides.fixtures import ensure_case_assets
 from tests.golden.visual.composition.artifacts import (
     fingerprint_plan,
     fingerprint_report,
-    maybe_export_pptx,
     render_layout_preview_png,
     score_baseline,
 )
@@ -209,25 +208,11 @@ def write_case_artifacts(result: BenchmarkCaseResult) -> Path:
     if legacy_preview != wireframe:
         shutil.copy(wireframe, legacy_preview)
     asset_count = len(asset_paths)
-    from tests.benchmark.architectural_slides.render_manifest import (
-        write_pending_render_manifest,
+    from tests.benchmark.architectural_slides.render_pipeline import (
+        render_benchmark_visual_artifacts,
     )
 
-    write_pending_render_manifest(
-        directory,
-        asset_count=asset_count,
-        placeholder_asset_count=asset_count,
-        notes=(
-            "Benchmark assets are placeholder diagrams; "
-            "final_render.png and real assets are required before visual review."
-        ),
-    )
-    maybe_export_pptx(
-        result.plan,
-        result.design_system,
-        directory / "output.pptx",
-        title=result.slide.title,
-    )
+    render_benchmark_visual_artifacts(result, directory)
     return directory
 
 
