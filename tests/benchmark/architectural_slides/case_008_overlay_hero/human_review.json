@@ -1,6 +1,6 @@
 {
   "case_id": "case_008_overlay_hero",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 4,
@@ -13,8 +13,9 @@
     "还是看不到图片"
   ],
   "minor_problems": [],
-  "accepted": true,
+  "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T14:15:51.172833Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }

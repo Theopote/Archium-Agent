@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Any, cast
 
@@ -202,7 +203,25 @@ def write_case_artifacts(result: BenchmarkCaseResult) -> Path:
             default_human_review(result.definition.case_id).model_dump(mode="json"),
         )
     (directory / "notes.md").write_text(default_notes(result), encoding="utf-8")
-    render_layout_preview_png(result.plan, directory / "preview.png")
+    wireframe = directory / "wireframe.png"
+    render_layout_preview_png(result.plan, wireframe)
+    legacy_preview = directory / "preview.png"
+    if legacy_preview != wireframe:
+        shutil.copy(wireframe, legacy_preview)
+    asset_count = len(asset_paths)
+    from tests.benchmark.architectural_slides.render_manifest import (
+        write_pending_render_manifest,
+    )
+
+    write_pending_render_manifest(
+        directory,
+        asset_count=asset_count,
+        placeholder_asset_count=asset_count,
+        notes=(
+            "Benchmark assets are placeholder diagrams; "
+            "final_render.png and real assets are required before visual review."
+        ),
+    )
     maybe_export_pptx(
         result.plan,
         result.design_system,
@@ -230,7 +249,9 @@ def assert_or_update_case_baseline(result: BenchmarkCaseResult) -> None:
         "layout_qa_review.json",
         "human_review.json",
         "notes.md",
+        "wireframe.png",
         "preview.png",
+        "render_manifest.json",
     )
     for name in required:
         path = directory / name

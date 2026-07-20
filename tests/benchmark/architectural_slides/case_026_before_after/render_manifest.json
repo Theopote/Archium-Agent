@@ -1,0 +1,14 @@
+{
+  "render_source": "pending",
+  "pptx_path": "output.pptx",
+  "image_path": "final_render.png",
+  "rendered_at": null,
+  "renderer": "",
+  "asset_count": 2,
+  "real_asset_count": 0,
+  "placeholder_asset_count": 2,
+  "font_fallbacks": [],
+  "missing_assets": [],
+  "render_valid": false,
+  "notes": "Benchmark assets are placeholder diagrams; final_render.png and real assets are required before visual review."
+}

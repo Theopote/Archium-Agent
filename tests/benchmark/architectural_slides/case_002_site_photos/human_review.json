@@ -1,6 +1,6 @@
 {
   "case_id": "case_002_site_photos",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 4,
@@ -13,8 +13,9 @@
     "现在只能看到展位框和文字，看不到图片"
   ],
   "minor_problems": [],
-  "accepted": true,
+  "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T13:58:36.352344Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }

@@ -241,6 +241,63 @@ def test_regenerate_benchmark_report_uses_disk_only_summary(tmp_path: Path) -> N
     assert summary["case_count"] == 1
 
 
+def _seed_visual_review_ready(case_dir: Path) -> None:
+    from archium.domain.visual.benchmark import BenchmarkRenderManifest
+    from tests.benchmark.architectural_slides.render_manifest import write_render_manifest
+
+    (case_dir / "final_render.png").write_bytes(b"png")
+    write_render_manifest(
+        case_dir,
+        BenchmarkRenderManifest(
+            render_source="pptx_screenshot",
+            render_valid=True,
+            asset_count=1,
+            real_asset_count=1,
+            placeholder_asset_count=0,
+            rendered_at=datetime.now(UTC),
+            renderer="test",
+        ),
+    )
+
+
+def test_save_case_review_blocked_without_final_render(tmp_path: Path) -> None:
+    case_dir = tmp_path / "case_demo"
+    case_dir.mkdir()
+    (case_dir / "input.json").write_text(
+        json.dumps(
+            {
+                "case_id": "case_demo",
+                "title": "Demo",
+                "category": "drawing",
+                "page_type": "demo",
+                "page_task": "demo",
+                "visual_focus": "demo",
+                "expected_layout_family": "drawing_focus",
+                "allowed_layout_variants": ["drawing_only"],
+                "layout_variant": "drawing_only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    review = HumanVisualReview(
+        case_id="case_demo",
+        source=HumanVisualReviewSource.MANUAL,
+        information_hierarchy=5,
+        visual_focus=4,
+        reading_order=4,
+        image_text_relationship=4,
+        whitespace_density=4,
+        architectural_expression=4,
+        aesthetic_finish=4,
+        editability=5,
+        accepted=True,
+        reviewer="Reviewer A",
+        reviewed_at=datetime.now(UTC),
+    )
+    with pytest.raises(WorkflowError, match="final_render"):
+        save_case_review(review, root=tmp_path)
+
+
 def test_save_and_load_manual_review_round_trip(tmp_path: Path) -> None:
     case_dir = tmp_path / "case_demo"
     case_dir.mkdir()
@@ -260,6 +317,7 @@ def test_save_and_load_manual_review_round_trip(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
+    _seed_visual_review_ready(case_dir)
     review = HumanVisualReview(
         case_id="case_demo",
         source=HumanVisualReviewSource.MANUAL,

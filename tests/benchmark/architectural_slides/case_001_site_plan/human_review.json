@@ -1,6 +1,6 @@
 {
   "case_id": "case_001_site_plan",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 5,
@@ -15,8 +15,9 @@
   "minor_problems": [
     "现在页面只要框框，没有内容"
   ],
-  "accepted": true,
+  "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T13:52:17.306971Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }

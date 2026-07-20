@@ -21,12 +21,15 @@ def human_review_summary_fields(review: HumanVisualReview | None) -> dict[str, A
         }
 
     manual = review.is_manual_review()
+    invalidated = review.is_invalidated()
     return {
         "human_weighted_score": review.reportable_weighted_score(),
         "human_score_label": review.human_score_label(),
         "human_review_source": review.source.value,
         "human_accepted_for_delivery": bool(manual and review.accepted),
         "human_accepted": review.accepted if manual else None,
+        "human_invalidated": invalidated,
+        "invalidation_reason": review.invalidation_reason if invalidated else None,
         "reviewer": review.reviewer or None,
         "reviewed_at": review.reviewed_at.isoformat() if review.reviewed_at else None,
         "major_problems": review.major_problems if manual else [],

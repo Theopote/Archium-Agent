@@ -1,6 +1,6 @@
 {
   "case_id": "case_005_design_concept",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 2,
   "reading_order": 4,
@@ -15,8 +15,9 @@
   "minor_problems": [
     "看不到示意图"
   ],
-  "accepted": true,
+  "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T14:09:08.543716Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }

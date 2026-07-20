@@ -10,6 +10,8 @@ from typing import Any
 
 from archium.application.human_review_gate import evaluate_benchmark_human_gate
 from archium.domain.visual.benchmark import (
+    BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER,
+    HUMAN_REVIEW_INVALIDATED_LABEL,
     HUMAN_REVIEW_PENDING_LABEL,
     BenchmarkHumanReviewExport,
     BenchmarkPendingCase,
@@ -36,6 +38,8 @@ class BenchmarkCaseSummary:
     layout_family: str
     layout_variant: str
     preview_path: Path
+    wireframe_path: Path
+    final_render_path: Path
     human_review_path: Path
     layout_score: float | None
     rule_passed: bool | None
@@ -71,8 +75,15 @@ def list_case_review_statuses(*, root: Path | None = None) -> list[CaseReviewSta
     statuses: list[CaseReviewStatus] = []
     for case in list_benchmark_cases(root=root):
         review = load_case_review(case.case_id, root=root)
-        pending = review is None or review.is_scaffold_review()
+        pending = (
+            review is None
+            or review.is_scaffold_review()
+            or review.is_invalidated()
+        )
         if pending:
+            label = HUMAN_REVIEW_PENDING_LABEL
+            if review is not None and review.is_invalidated():
+                label = HUMAN_REVIEW_INVALIDATED_LABEL
             statuses.append(
                 CaseReviewStatus(
                     case_id=case.case_id,
@@ -80,7 +91,7 @@ def list_case_review_statuses(*, root: Path | None = None) -> list[CaseReviewSta
                     category=case.category,
                     page_type=case.page_type,
                     rule_passed=case.rule_passed,
-                    human_score_label=HUMAN_REVIEW_PENDING_LABEL,
+                    human_score_label=label,
                     passes_threshold=None,
                     accepted_for_delivery=False,
                     reviewer=None,
@@ -131,6 +142,11 @@ def benchmark_root(root: Path | None = None) -> Path:
 
 
 def list_benchmark_cases(*, root: Path | None = None) -> list[BenchmarkCaseSummary]:
+    from tests.benchmark.architectural_slides.render_manifest import (
+        final_render_path as case_final_render_path,
+        wireframe_path as case_wireframe_path,
+    )
+
     base = benchmark_root(root)
     summaries: list[BenchmarkCaseSummary] = []
     for directory in sorted(base.glob("case_*")):
@@ -158,7 +174,9 @@ def list_benchmark_cases(*, root: Path | None = None) -> list[BenchmarkCaseSumma
                 category=str(payload["category"]),
                 layout_family=str(payload["expected_layout_family"]),
                 layout_variant=str(payload["layout_variant"]),
-                preview_path=directory / "preview.png",
+                preview_path=case_wireframe_path(directory),
+                wireframe_path=case_wireframe_path(directory),
+                final_render_path=case_final_render_path(directory),
                 human_review_path=directory / "human_review.json",
                 layout_score=layout_score,
                 rule_passed=rule_passed,
@@ -186,12 +204,25 @@ def save_case_review(
         raise ValueError(msg)
     if not review.reviewer.strip():
         raise WorkflowError("请填写评审人姓名后再保存人工评审。")
-    if review.reviewed_at is None:
-        review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
-    path = benchmark_root(root) / review.case_id / "human_review.json"
-    if not path.parent.is_dir():
+    case_directory = benchmark_root(root) / review.case_id
+    if not case_directory.is_dir():
         msg = f"Unknown benchmark case directory: {review.case_id}"
         raise ValueError(msg)
+    from tests.benchmark.architectural_slides.render_manifest import visual_review_eligibility
+
+    eligible, _, blockers = visual_review_eligibility(case_directory)
+    if not eligible:
+        detail = "；".join(blockers) if blockers else "final render unavailable"
+        raise WorkflowError(
+            f"{BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER}（{detail}）"
+        )
+    if review.accepted and review.major_problems:
+        raise WorkflowError("存在 major_problems 时不可标记为可交付。")
+    if review.accepted and not review.passes_threshold():
+        raise WorkflowError("综合分未达交付阈值，不可标记为可交付。")
+    if review.reviewed_at is None:
+        review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
+    path = case_directory / "human_review.json"
     path.write_text(
         json.dumps(review.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -209,7 +240,7 @@ def review_progress(*, root: Path | None = None) -> dict[str, int]:
         if review is None:
             placeholder += 1
             continue
-        if review.is_scaffold_review():
+        if review.is_scaffold_review() or review.is_invalidated():
             placeholder += 1
             continue
         manual_total += 1

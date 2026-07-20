@@ -1,6 +1,6 @@
 {
   "case_id": "case_006_project_hero",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 3,
   "reading_order": 3,
@@ -14,8 +14,9 @@
     "留白太生硬"
   ],
   "minor_problems": [],
-  "accepted": true,
+  "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T14:09:59.341474Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }

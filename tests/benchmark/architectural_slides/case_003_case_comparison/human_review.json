@@ -1,6 +1,6 @@
 {
   "case_id": "case_003_case_comparison",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 4,
@@ -15,8 +15,9 @@
     "看不到颜色"
   ],
   "minor_problems": [],
-  "accepted": true,
+  "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T14:06:57.029850Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }

@@ -1,6 +1,6 @@
 {
   "case_id": "case_023_survey_photo_grid",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 4,
@@ -11,8 +11,9 @@
   "editability": 4,
   "major_problems": [],
   "minor_problems": [],
-  "accepted": true,
+  "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T14:17:56.920000Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }

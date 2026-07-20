@@ -23,8 +23,10 @@ from archium.application.architectural_benchmark_review_store import (
     save_case_review,
 )
 from archium.domain.visual.benchmark import (
+    BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER,
     HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD,
     HUMAN_REVIEW_FORMAL_MIN_ACCEPTED,
+    HUMAN_REVIEW_INVALIDATED_LABEL,
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
     HUMAN_REVIEW_PASS_THRESHOLD,
@@ -42,8 +44,13 @@ _SESSION_SELECTED_CASE_KEY = "benchmark_review_selected_case"
 def render_benchmark_review_panel() -> None:
     st.markdown("### 建筑幻灯片基准 · 人工视觉评审")
     st.caption(
-        "逐项查看 `preview.png` 并填写 9 维评分。保存后写入各 case 的 `human_review.json`（`source=manual`）。"
-        "占位评审在报告中显示为「待人工评审」，不会计入可交付统计。"
+        "Layout Geometry Benchmark 使用 `wireframe.png`（LayoutPlan 线框，仅评价几何与留白）。"
+        "Rendered Visual Benchmark 须基于 `final_render.png`（PPTX 最终渲染）填写 9 维视觉评分。"
+        "当前 30 页若仅有线框预览，视觉评审入口将禁用。"
+    )
+    st.warning(
+        "此前基于 `preview.png` / 线框图的人工评分已作废，不可用于验收统计。"
+        "请等待 `final_render.png` + `render_manifest.json` 就绪后重新评审。"
     )
 
     progress = review_progress()
@@ -312,11 +319,50 @@ def _render_case_preview(
     case: BenchmarkCaseSummary,
     review: HumanVisualReview | None,
 ) -> None:
+    from tests.benchmark.architectural_slides.render_manifest import (
+        load_render_manifest,
+        visual_review_eligibility,
+    )
+
     with column:
-        if case.preview_path.is_file():
-            column.image(str(case.preview_path), caption=case.title, use_container_width=True)
-        else:
-            column.warning(f"缺少预览图：{case.preview_path}")
+        case_dir = case.preview_path.parent
+        eligible, _, blockers = visual_review_eligibility(case_dir)
+        wireframe_tab, render_tab = column.tabs(["Layout 线框 (wireframe)", "最终渲染 (final_render)"])
+        with wireframe_tab:
+            if case.wireframe_path.is_file():
+                wireframe_tab.image(
+                    str(case.wireframe_path),
+                    caption=f"{case.title} · 几何线框（不可用于视觉验收）",
+                    use_container_width=True,
+                )
+            else:
+                wireframe_tab.warning(f"缺少线框图：{case.wireframe_path}")
+        with render_tab:
+            if case.final_render_path.is_file():
+                render_tab.image(
+                    str(case.final_render_path),
+                    caption=f"{case.title} · 最终渲染",
+                    use_container_width=True,
+                )
+            else:
+                render_tab.info(
+                    "尚无 `final_render.png`。"
+                    "需通过完整 SlideSpec + 真实素材 + DesignSystem 导出 PPTX 并渲染后，"
+                    "才可进行人工视觉评审。"
+                )
+
+        manifest = load_render_manifest(case_dir)
+        if manifest is not None:
+            column.caption(
+                f"render_valid={manifest.render_valid} · "
+                f"placeholder_assets={manifest.placeholder_asset_count} · "
+                f"missing_assets={len(manifest.missing_assets)}"
+            )
+        if not eligible:
+            column.error(
+                BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER
+                + "（" + "；".join(blockers) + "）"
+            )
 
         column.markdown(f"**页面类型：** {case.page_type}")
         column.markdown(f"**分类：** {case.category}")
@@ -330,6 +376,11 @@ def _render_case_preview(
             )
         if review is None:
             column.markdown(f"**人工评分：** {HUMAN_REVIEW_PENDING_LABEL}")
+            return
+        if review.is_invalidated():
+            column.markdown(f"**人工评分：** {HUMAN_REVIEW_INVALIDATED_LABEL}")
+            if review.invalidation_reason:
+                column.caption(review.invalidation_reason)
             return
         if review.is_scaffold_review():
             column.markdown(f"**人工评分：** {HUMAN_REVIEW_PENDING_LABEL}")
@@ -349,10 +400,24 @@ def _handle_review_form(
     case_ids: list[str],
     selected_index: int,
 ) -> None:
+    from tests.benchmark.architectural_slides.render_manifest import visual_review_eligibility
+
     with column:
+        eligible, _, blockers = visual_review_eligibility(case.preview_path.parent)
         is_manual = existing is not None and existing.is_manual_review()
-        if existing is not None and existing.is_scaffold_review():
+        if existing is not None and existing.is_invalidated():
+            st.info(
+                "本条人工评分已作废（基于线框预览）。"
+                "待 `final_render.png` 就绪后可重新填写并保存。"
+            )
+        elif existing is not None and existing.is_scaffold_review():
             st.warning("当前为占位评审。请填写下方表单并保存，以替换为真实 manual 评审。")
+        if not eligible:
+            st.error(
+                BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER
+                + "（" + "；".join(blockers) + "）"
+            )
+            st.caption("下方表单仅供预览；保存按钮已禁用。")
 
         defaults = {
             field: getattr(existing, field, 4)
@@ -433,11 +498,13 @@ def _handle_review_form(
             "保存人工评审",
             type="primary",
             use_container_width=True,
+            disabled=not eligible,
             key=f"benchmark_save_human_review_{case.case_id}",
         )
         save_next_clicked = save_cols[1].button(
             "保存并下一页",
             use_container_width=True,
+            disabled=not eligible,
             key=f"benchmark_save_next_human_review_{case.case_id}",
         )
         if save_clicked or save_next_clicked:

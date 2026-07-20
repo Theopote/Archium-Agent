@@ -76,6 +76,9 @@ def assert_human_reviews_not_scaffold_accepted() -> None:
     for case_id in materialized_benchmark_case_ids():
         path = BENCHMARK_ROOT / case_id / "human_review.json"
         review = HumanVisualReview.model_validate_json(path.read_text(encoding="utf-8"))
+        if review.is_invalidated():
+            assert not review.accepted, f"{case_id} invalidated review must not be accepted"
+            continue
         if human_review_is_placeholder(review) and review.accepted:
             msg = (
                 f"{case_id} human_review.json marks scaffold review as accepted=true "

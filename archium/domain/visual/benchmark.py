@@ -17,6 +17,14 @@ HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD = 3.8
 HUMAN_REVIEW_FORMAL_MIN_ACCEPTED = 24
 HUMAN_REVIEW_FORMAL_TOTAL_CASES = 30
 HUMAN_REVIEW_PENDING_LABEL = "待人工评审"
+HUMAN_REVIEW_INVALIDATED_LABEL = "已作废（需重评）"
+BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER = (
+    "人工视觉评审须基于 final_render.png（PPTX 最终渲染），"
+    "不能使用 LayoutPlan 线框图 wireframe.png。"
+)
+DEFAULT_INVALIDATION_REASON_WIREFRAME = (
+    "Reviewed against wireframe preview rather than final rendered slide"
+)
 
 HUMAN_REVIEW_WEIGHTS: dict[str, float] = {
     "information_hierarchy": 0.15,
@@ -37,6 +45,7 @@ class HumanVisualReviewSource(StrEnum):
     MANUAL = "manual"
     PLACEHOLDER = "placeholder"
     LAYOUT_QA_DERIVED = "layout_qa_derived"
+    INVALIDATED = "invalidated"
 
 
 _DERIVED_REVIEW_NOTE_MARKERS = (
@@ -98,6 +107,7 @@ class HumanVisualReview(DomainModel):
     reviewer: str = ""
     reviewed_at: datetime | None = None
     reviewer_notes: str = ""
+    invalidation_reason: str = ""
 
     @field_validator(
         "information_hierarchy",
@@ -128,15 +138,29 @@ class HumanVisualReview(DomainModel):
 
     def human_score_label(self) -> str:
         """User-facing score text; scaffold reviews must not show placeholder numbers."""
+        if self.is_invalidated():
+            return HUMAN_REVIEW_INVALIDATED_LABEL
         if self.is_scaffold_review():
             return HUMAN_REVIEW_PENDING_LABEL
         return f"{self.weighted_score():.2f}"
 
     def reportable_weighted_score(self) -> float | None:
         """Return weighted score only for real manual reviews."""
-        if self.is_scaffold_review():
+        if self.is_scaffold_review() or self.is_invalidated():
             return None
         return self.weighted_score()
+
+    @model_validator(mode="after")
+    def _enforce_review_consistency(self) -> Self:
+        if self.is_invalidated():
+            if self.accepted:
+                self.accepted = False
+            if not self.invalidation_reason.strip():
+                self.invalidation_reason = DEFAULT_INVALIDATION_REASON_WIREFRAME
+        elif self.is_manual_review() and self.accepted:
+            if self.major_problems or not self.passes_threshold():
+                self.accepted = False
+        return self
 
     @model_validator(mode="after")
     def _infer_source_from_notes(self) -> Self:
@@ -153,12 +177,51 @@ class HumanVisualReview(DomainModel):
     def is_manual_review(self) -> bool:
         return self.source == HumanVisualReviewSource.MANUAL
 
+    def is_invalidated(self) -> bool:
+        return self.source == HumanVisualReviewSource.INVALIDATED
+
     def is_scaffold_review(self) -> bool:
         """Return True for placeholder templates and layout-QA-derived stand-ins."""
         return self.source in {
             HumanVisualReviewSource.PLACEHOLDER,
             HumanVisualReviewSource.LAYOUT_QA_DERIVED,
         }
+
+
+class BenchmarkRenderManifest(DomainModel):
+    """Tracks whether a case has a valid final-render preview for visual review."""
+
+    render_source: str = "pending"
+    pptx_path: str = "output.pptx"
+    image_path: str = "final_render.png"
+    rendered_at: datetime | None = None
+    renderer: str = ""
+    asset_count: int = Field(ge=0, default=0)
+    real_asset_count: int = Field(ge=0, default=0)
+    placeholder_asset_count: int = Field(ge=0, default=0)
+    font_fallbacks: list[str] = Field(default_factory=list)
+    missing_assets: list[str] = Field(default_factory=list)
+    render_valid: bool = False
+    notes: str = ""
+
+    def visual_review_eligible(self) -> bool:
+        return (
+            self.render_valid
+            and self.placeholder_asset_count == 0
+            and not self.missing_assets
+        )
+
+    def eligibility_blockers(self) -> list[str]:
+        blockers: list[str] = []
+        if not self.render_valid:
+            blockers.append("render_valid=false")
+        if self.placeholder_asset_count > 0:
+            blockers.append(
+                f"placeholder_asset_count={self.placeholder_asset_count} > 0"
+            )
+        if self.missing_assets:
+            blockers.append(f"missing_assets={len(self.missing_assets)}")
+        return blockers
 
 
 class BenchmarkPendingCase(DomainModel):

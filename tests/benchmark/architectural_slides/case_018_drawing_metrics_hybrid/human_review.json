@@ -1,6 +1,6 @@
 {
   "case_id": "case_018_drawing_metrics_hybrid",
-  "source": "manual",
+  "source": "invalidated",
   "information_hierarchy": 4,
   "visual_focus": 2,
   "reading_order": 2,
@@ -14,5 +14,6 @@
   "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T14:17:19.776687Z",
-  "reviewer_notes": ""
+  "reviewer_notes": "[invalidated] wireframe preview is not a valid visual review carrier.",
+  "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide"
 }
