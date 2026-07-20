@@ -29,10 +29,11 @@ def _seed_rendered_case(case_dir: Path) -> None:
     (case_dir / SCENE_PREVIEW_NAME).write_bytes(b"png")
     (case_dir / SCENE_JSON_NAME).write_text("{}", encoding="utf-8")
     (case_dir / "output.pptx").write_bytes(b"pptx")
+    (case_dir / "pptx_render.png").write_bytes(b"png")
     write_render_manifest(
         case_dir,
         BenchmarkRenderManifest(
-            render_source="html",
+            render_source="pptx_screenshot",
             render_valid=True,
             scene_hash="abc123",
             asset_count=1,

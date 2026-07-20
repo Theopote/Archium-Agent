@@ -1,20 +1,18 @@
 {
-  "render_source": "html",
+  "render_source": "pptx_screenshot",
   "pptx_path": "output.pptx",
   "image_path": "pptx_render.png",
   "scene_path": "scene.json",
   "scene_preview_path": "scene_preview.png",
-  "scene_id": "979b91d1-8716-4619-b7b4-68a3fc034989",
-  "scene_hash": "61e09137024f350f22a08a2da3e25c7498054dd691b7e23aafe084e44603d166",
-  "rendered_at": "2026-07-20T16:43:23.048845Z",
+  "scene_id": "67d45cd7-8676-4dfe-9d07-1396aeef1d22",
+  "scene_hash": "58e5cb8580fa93f1b662277b52845c450b71f97955dd8cef14e08f9035d74bd9",
+  "rendered_at": "2026-07-20T17:02:01.225550Z",
   "renderer": "png_renderer+pptxgenjs",
   "asset_count": 2,
   "real_asset_count": 2,
   "placeholder_asset_count": 0,
   "font_fallbacks": [],
-  "missing_assets": [
-    "case_2"
-  ],
-  "render_valid": false,
-  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Renderer conformance: pptx: text mismatch (ref=['方案 A / 方案 B 比较', '案例 1\\n· 实施强度\\n· 公共性\\n· 改造成本', '案例 2\\n· 实施强度\\n· 公共性\\n· 改造成本', '案例 3\\n· 实施强度\\n· 公共性\\n· 改造成本', '方案 A 保留更多现状结构；方案 B 重建公共内院但实施强度更高。', '方案比选.pdf p.6'], got=['方案 A / 方案 B 比较', '案例 1\\n· 实施强度\\n· 公共性\\n· 改造成本', '案例 2\\n· 实施强度\\n· 公共性\\n· 改造成本', '素材缺失/路径未解析', '案例 3\\n· 实施强度\\n· 公共性\\n· 改造成本', '方案 A 保留更多现状结构；方案 B 重建公共内院但实施强度更高。', '方案比选.pdf p.6']) Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. Unresolved content_ref paths: case_2 Unresolved scene nodes: case_image_2 All mapped assets are curated PNGs from the benchmark asset pool."
+  "missing_assets": [],
+  "render_valid": true,
+  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. pptx_render.png rasterized from output.pptx. All mapped assets are curated PNGs from the benchmark asset pool. pptx_render.png rasterized from output.pptx via screenshot tools. pptx_render.png reused."
 }

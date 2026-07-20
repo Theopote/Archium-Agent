@@ -36,10 +36,11 @@ def test_valid_manifest_and_scene_preview_allows_visual_review(tmp_path: Path) -
     (case_dir / SCENE_PREVIEW_NAME).write_bytes(b"png")
     (case_dir / SCENE_JSON_NAME).write_text("{}", encoding="utf-8")
     (case_dir / "output.pptx").write_bytes(b"pptx")
+    (case_dir / "pptx_render.png").write_bytes(b"png")
     write_render_manifest(
         case_dir,
         BenchmarkRenderManifest(
-            render_source="html",
+            render_source="pptx_screenshot",
             render_valid=True,
             scene_hash="deadbeef",
             asset_count=2,
@@ -55,6 +56,29 @@ def test_valid_manifest_and_scene_preview_allows_visual_review(tmp_path: Path) -
     edit_ok, edit_blockers = editability_review_eligibility(case_dir)
     assert edit_ok is True
     assert edit_blockers == []
+
+
+def test_missing_pptx_render_blocks_visual_review(tmp_path: Path) -> None:
+    case_dir = tmp_path / "case_demo"
+    case_dir.mkdir()
+    (case_dir / SCENE_PREVIEW_NAME).write_bytes(b"png")
+    (case_dir / "output.pptx").write_bytes(b"pptx")
+    write_render_manifest(
+        case_dir,
+        BenchmarkRenderManifest(
+            render_source="html",
+            render_valid=True,
+            scene_hash="deadbeef",
+            asset_count=1,
+            real_asset_count=1,
+            placeholder_asset_count=0,
+            rendered_at=datetime.now(UTC),
+            renderer="test",
+        ),
+    )
+    eligible, _, blockers = visual_review_eligibility(case_dir)
+    assert eligible is False
+    assert any("pptx_render.png" in item for item in blockers)
 
 
 def test_placeholder_assets_block_visual_review(tmp_path: Path) -> None:

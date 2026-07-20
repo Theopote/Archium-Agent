@@ -41,13 +41,17 @@ class ComparativeMatrixLayoutGenerator(LayoutGenerator):
 
         insight = context.content.insight or context.content.message
         insight_h = 0.55
-        cases = 3
         refs = list(context.content.supporting_asset_refs)
         if context.content.hero_asset_ref:
             refs = [context.content.hero_asset_ref, *refs]
-        while len(refs) < cases:
-            refs.append(f"case_{len(refs)}")
-        refs = refs[:cases]
+        # Prefer real assets only — do not invent placeholder content_ref values that
+        # make render_valid=false when curated assets are already present.
+        if refs:
+            cases = min(3, len(refs))
+            refs = refs[:cases]
+        else:
+            cases = 3
+            refs = [f"case_{index}" for index in range(cases)]
 
         labels = context.content.case_labels[:cases]
         while len(labels) < cases:

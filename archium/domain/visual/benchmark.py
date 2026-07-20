@@ -21,8 +21,8 @@ HUMAN_REVIEW_INVALIDATED_LABEL = "已作废（需重评）"
 LAYOUT_REVIEW_PENDING_LABEL = "待几何评审"
 LAYOUT_REVIEW_PASS_THRESHOLD = 3.5
 BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER = (
-    "人工视觉评审须基于 RenderScene 真实渲染（scene_preview.png 或 pptx_render.png），"
-    "不能使用 LayoutPlan 线框图 wireframe.png。"
+    "人工视觉评审须基于 pptx_render.png（PPTX 真实截图），"
+    "且 render_valid=true；不能使用 LayoutPlan 线框图 wireframe.png。"
 )
 DEFAULT_INVALIDATION_REASON_WIREFRAME = (
     "Reviewed against wireframe preview rather than final rendered slide"

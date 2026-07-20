@@ -1,12 +1,12 @@
 {
-  "created_at": "2026-07-20T16:45:05.786130Z",
-  "updated_at": "2026-07-20T16:45:05.786130Z",
+  "created_at": "2026-07-20T17:01:08.556956Z",
+  "updated_at": "2026-07-20T17:01:08.556956Z",
   "version": 1,
-  "id": "7dcf9730-510f-4538-878e-2044f6a60b37",
+  "id": "d86d2ea3-6821-4ad4-8680-c9fec3ba789b",
   "schema_version": 1,
-  "slide_id": "1b0b556b-cc72-42ce-9a58-cb797c728d15",
+  "slide_id": "c8eb3d27-e8dc-4f6f-bcfb-6260deb06d56",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "e4966dc3-e762-4d82-8c59-8019c5e369de",
+  "layout_plan_id": "500d8125-a64c-4452-8cd9-e7d9932a9902",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -351,7 +351,7 @@
     {
       "id": "chart",
       "node_type": "image",
-      "semantic_role": "body_text",
+      "semantic_role": "supporting_visual",
       "source_layout_element_id": "chart",
       "x": 0.7,
       "y": 3.459916666666667,
@@ -365,16 +365,16 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "",
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_028_energy_metrics_chart\\assets\\c0280001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
-      "fit_mode": "cover",
+      "fit_mode": "contain",
       "crop": null,
       "focus_point": null,
       "corner_radius": 0.0,
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": true
+      "asset_unresolved": false
     },
     {
       "id": "source",
@@ -554,10 +554,15 @@
       "style": "normal"
     }
   ],
-  "asset_manifest": [],
+  "asset_manifest": [
+    {
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_028_energy_metrics_chart\\assets\\c0280001-0001-4001-8001-000000000001.png",
+      "origin": "project_upload",
+      "content_ref": "c0280001-0001-4001-8001-000000000001"
+    }
+  ],
   "source_layout_family": "metric_dashboard",
   "source_layout_variant": "metric_with_chart",
-  "warnings": [
-    "MISSING_ASSET_REFERENCE:chart"
-  ]
+  "warnings": []
 }

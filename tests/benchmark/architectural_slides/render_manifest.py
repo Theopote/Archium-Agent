@@ -134,7 +134,7 @@ def ensure_pptx_render_alias(case_dir: Path) -> Path | None:
 def visual_review_eligibility(
     case_dir: Path,
 ) -> tuple[bool, BenchmarkRenderManifest | None, list[str]]:
-    """Return whether Rendered Visual human review may proceed."""
+    """Return whether Rendered Visual human review may proceed (Phase 9 gates)."""
     manifest = load_render_manifest(case_dir)
     blockers: list[str] = []
     if manifest is None:
@@ -146,7 +146,10 @@ def visual_review_eligibility(
     pptx_path = case_dir / "output.pptx"
     if not pptx_path.is_file():
         blockers.append("缺少 output.pptx")
+    if not pptx_render_path(case_dir).is_file():
+        blockers.append(f"缺少 {PPTX_RENDER_NAME}")
     return (not blockers, manifest, blockers)
+
 
 
 def editability_review_eligibility(case_dir: Path) -> tuple[bool, list[str]]:

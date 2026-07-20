@@ -63,8 +63,21 @@ def test_human_gate_fails_when_accepted_page_has_major_problem() -> None:
         for index in range(1, 25)
     ]
     result = evaluate_benchmark_human_gate(reviews, total_cases=30, min_accepted=24)
+    # Domain model clears accepted_for_delivery when major_problems are present.
     assert result.passed is False
-    assert result.has_major_problem_on_accepted is True
+    assert result.accepted_count == 23
+    assert any("accepted pages" in reason for reason in result.reasons)
+
+
+def test_phase9_gate_requires_all_thirty_completed() -> None:
+    from archium.application.human_review_gate import evaluate_phase9_human_gate
+
+    reviews = [
+        _manual_review(case_id=f"case_{index:03d}", accepted=True, score=4)
+        for index in range(1, 31)
+    ]
+    assert evaluate_phase9_human_gate(reviews[:-1]).passed is False
+    assert evaluate_phase9_human_gate(reviews).passed is True
 
 
 def test_formal_threshold_constants_import_after_visual_package() -> None:

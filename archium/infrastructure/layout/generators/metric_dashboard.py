@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from archium.domain.visual.enums import (
     ConstraintPriority,
+    CropPolicy,
+    ImageFit,
     LayoutConstraintType,
     LayoutContentType,
     LayoutElementRole,
@@ -108,11 +110,15 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
             )
 
         if chart_area is not None:
+            chart_ref = context.content.hero_asset_ref
+            if chart_ref is None and context.content.supporting_asset_refs:
+                chart_ref = context.content.supporting_asset_refs[0]
             elements.append(
                 LayoutElement(
                     id="chart",
-                    role=LayoutElementRole.BODY_TEXT,
+                    role=LayoutElementRole.SUPPORTING_VISUAL,
                     content_type=LayoutContentType.CHART,
+                    content_ref=chart_ref,
                     text_content=context.content.insight
                     or context.content.message
                     or "指标趋势示意",
@@ -120,6 +126,8 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
                     y=chart_area.y,
                     width=chart_area.width,
                     height=chart_area.height,
+                    fit_mode=ImageFit.CONTAIN if chart_ref else None,
+                    crop_policy=CropPolicy.FORBIDDEN if chart_ref else None,
                     style_token="body",
                 )
             )

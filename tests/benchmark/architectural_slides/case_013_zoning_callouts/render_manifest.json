@@ -1,12 +1,12 @@
 {
-  "render_source": "html",
+  "render_source": "pptx_screenshot",
   "pptx_path": "output.pptx",
   "image_path": "pptx_render.png",
   "scene_path": "scene.json",
   "scene_preview_path": "scene_preview.png",
   "scene_id": "6b9adffc-deb9-4c56-bc31-b27093ff031b",
   "scene_hash": "021b02f100493a36b060d7cf7c1bb2d643efd86a6883ac9d8e169452606b866a",
-  "rendered_at": "2026-07-20T16:43:20.174279Z",
+  "rendered_at": "2026-07-20T17:02:01.212982Z",
   "renderer": "png_renderer+pptxgenjs",
   "asset_count": 1,
   "real_asset_count": 1,
@@ -14,5 +14,5 @@
   "font_fallbacks": [],
   "missing_assets": [],
   "render_valid": true,
-  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. All mapped assets are curated PNGs from the benchmark asset pool."
+  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. All mapped assets are curated PNGs from the benchmark asset pool. pptx_render.png rasterized from output.pptx via screenshot tools. pptx_render.png reused."
 }

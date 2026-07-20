@@ -77,7 +77,7 @@ def render_benchmark_review_panel() -> None:
     st.markdown("### 建筑幻灯片基准 · 双层人工评审")
     st.caption(
         "Layout Geometry Benchmark：基于 `wireframe.png` 评价几何、留白与阅读顺序。"
-        "Rendered Visual Benchmark：基于 `scene_preview.png` / `pptx_render.png` 评价真实视觉质量。"
+        "Rendered Visual Benchmark：基于 `pptx_render.png`（须 render_valid）评价真实视觉质量。"
         "PPTX 可编辑性单独在 `editability_review.json` 记录。"
     )
     st.warning(
