@@ -20,8 +20,10 @@ from archium.application.outline_service import (
 )
 from archium.application.outline_templates import detect_scenario_template, template_sections
 from archium.application.cultural_narrative_service import format_narrative_for_prompt
+from archium.application.renovation_issue_service import format_issue_map_for_prompt
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.enums import OutlineAudienceMode, RevisionSource
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
@@ -57,6 +59,7 @@ class OutlinePlanner:
         storyline: Storyline,
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
+        renovation_issue_map: RenovationIssueMap | None = None,
         version: int | None = None,
         audience_mode: OutlineAudienceMode | None = None,
     ) -> OutlinePlan:
@@ -105,6 +108,9 @@ class OutlinePlanner:
                     template_hint=template_hint,
                     narrative_json=format_narrative_for_prompt(cultural_narrative)
                     if cultural_narrative is not None
+                    else None,
+                    issue_map_json=format_issue_map_for_prompt(renovation_issue_map)
+                    if renovation_issue_map is not None
                     else None,
                 ),
                 temperature=0.35,

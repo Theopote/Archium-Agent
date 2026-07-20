@@ -14,10 +14,13 @@ from archium.agents._helpers import (
 )
 from archium.application.artifact_history_service import StorylineHistoryService
 from archium.application.artifact_lineage import apply_storyline_lineage
+from archium.application.cultural_narrative_service import format_narrative_for_prompt
+from archium.application.renovation_issue_service import format_issue_map_for_prompt
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import StorylineDraft
@@ -46,6 +49,7 @@ class NarrativeArchitect:
         brief: PresentationBrief,
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
+        renovation_issue_map: RenovationIssueMap | None = None,
         version: int | None = None,
     ) -> Storyline:
         previous_storylines = self._presentations.list_storylines(brief.presentation_id)
@@ -70,6 +74,9 @@ class NarrativeArchitect:
                     brief_json=to_json(brief),
                     narrative_json=format_narrative_for_prompt(cultural_narrative)
                     if cultural_narrative is not None
+                    else None,
+                    issue_map_json=format_issue_map_for_prompt(renovation_issue_map)
+                    if renovation_issue_map is not None
                     else None,
                 ),
                 temperature=0.4,

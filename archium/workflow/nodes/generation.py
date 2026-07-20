@@ -111,6 +111,58 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 "current_step": WorkflowStep.CULTURAL_NARRATIVE.value,
             }
 
+    def generate_renovation_issue_map(
+        self, state: PresentationWorkflowState
+    ) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value}
+
+        existing = state.get("renovation_issue_map")
+        if existing is not None:
+            from archium.infrastructure.database.repositories import ProjectRepository
+
+            refreshed = ProjectRepository(self._runtime.session).get_renovation_issue_map(existing.id)
+            if refreshed is not None:
+                return {
+                    "renovation_issue_map": refreshed,
+                    "current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value,
+                }
+
+        brief = state.get("brief")
+        if brief is None:
+            return {"current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            issue_map = self._runtime.presentation_service.generate_renovation_issue_map(
+                project_id,
+                brief,
+            )
+            next_state: PresentationWorkflowState = {
+                "current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value,
+            }
+            if issue_map is not None:
+                from archium.infrastructure.database.repositories import ProjectRepository
+
+                issue_map.approve()
+                issue_map = ProjectRepository(self._runtime.session).save_renovation_issue_map(issue_map)
+                next_state["renovation_issue_map"] = issue_map
+
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info(
+                "Renovation issue map step completed for presentation %s",
+                state["presentation_id"],
+            )
+            return next_state
+        except Exception as exc:
+            logger.exception("Renovation issue map generation failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value,
+            }
+
     def generate_storyline(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
@@ -135,6 +187,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 project_id,
                 brief,
                 cultural_narrative=state.get("cultural_narrative"),
+                renovation_issue_map=state.get("renovation_issue_map"),
             )
             if state.get("require_storyline_review"):
                 storyline.approval_status = ApprovalStatus.PENDING
@@ -183,6 +236,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 brief,
                 storyline,
                 cultural_narrative=state.get("cultural_narrative"),
+                renovation_issue_map=state.get("renovation_issue_map"),
             )
             if state.get("require_outline_review"):
                 outline.approval_status = ApprovalStatus.PENDING

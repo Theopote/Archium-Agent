@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from archium.domain.cultural_narrative import CULTURAL_NARRATIVE_LOGICAL_KEY, CulturalNarrativePlan
+from archium.domain.renovation_issue import RENOVATION_ISSUE_MAP_LOGICAL_KEY, RenovationIssueMap
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
@@ -53,6 +54,18 @@ def apply_cultural_narrative_lineage(
     previous: CulturalNarrativePlan | None,
 ) -> CulturalNarrativePlan:
     plan.logical_key = CULTURAL_NARRATIVE_LOGICAL_KEY
+    if previous is None:
+        return plan
+    plan.lineage_id = previous.lineage_id
+    plan.version = previous.version + 1
+    return plan
+
+
+def apply_renovation_issue_map_lineage(
+    plan: RenovationIssueMap,
+    previous: RenovationIssueMap | None,
+) -> RenovationIssueMap:
+    plan.logical_key = RENOVATION_ISSUE_MAP_LOGICAL_KEY
     if previous is None:
         return plan
     plan.lineage_id = previous.lineage_id

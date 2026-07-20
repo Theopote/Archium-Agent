@@ -109,6 +109,68 @@ CULTURAL_NARRATIVE_JSON = """\
   "unsupported_claims": []
 }"""
 
+RENOVATION_ISSUE_MAP_JSON = """\
+{
+  "building_summary": "老院区需要通过交通重组与公共空间提升改善使用体验",
+  "condition_overview": "现状交通组织混乱，公共空间品质不足",
+  "evidence_items": [
+    {
+      "id": "ev1",
+      "description": "主入口人车混行，高峰时段拥堵",
+      "evidence_type": "observation",
+      "location": "主入口",
+      "origin": "user_upload"
+    },
+    {
+      "id": "ev2",
+      "description": "内院公共空间缺乏休憩与导向设施",
+      "evidence_type": "photo",
+      "location": "内院",
+      "origin": "user_upload"
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue1",
+      "category": "circulation",
+      "problem_statement": "交通流线交叉导致通行效率低",
+      "severity": "high",
+      "impact": "影响日常运营与急救通道",
+      "linked_evidence_ids": ["ev1"],
+      "origin": "user_upload"
+    },
+    {
+      "id": "issue2",
+      "category": "space",
+      "problem_statement": "公共空间缺乏识别性与停留品质",
+      "severity": "medium",
+      "linked_evidence_ids": ["ev2"],
+      "origin": "user_upload"
+    }
+  ],
+  "strategies": [
+    {
+      "id": "str1",
+      "title": "交通重组",
+      "approach": "分离人车流线并优化落客区",
+      "category": "strategy",
+      "linked_issue_ids": ["issue1"],
+      "phasing": "phase_1",
+      "origin": "user_upload"
+    },
+    {
+      "id": "str2",
+      "title": "公共空间提升",
+      "approach": "增加休憩节点与导视系统",
+      "category": "strategy",
+      "linked_issue_ids": ["issue2"],
+      "phasing": "phase_1",
+      "origin": "user_upload"
+    }
+  ],
+  "unsupported_claims": []
+}"""
+
 PROFESSIONAL_REVIEW_JSON = """\
 {
   "issues": [

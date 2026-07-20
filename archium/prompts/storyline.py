@@ -38,13 +38,18 @@ def build_storyline_user_prompt(
     project_context: str,
     brief_json: str,
     narrative_json: str | None = None,
+    issue_map_json: str | None = None,
 ) -> str:
     narrative_block = ""
     if narrative_json:
         narrative_block = f"\n【文化叙事计划】\n{narrative_json}\n"
+    issue_map_block = ""
+    if issue_map_json:
+        issue_map_block = f"\n【改造问题图】\n{issue_map_json}\n"
     return (
         "请根据 PresentationBrief 生成 Storyline JSON。\n\n"
         f"【项目资料】\n{project_context}\n\n"
         f"【PresentationBrief】\n{brief_json}"
         f"{narrative_block}"
+        f"{issue_map_block}"
     )

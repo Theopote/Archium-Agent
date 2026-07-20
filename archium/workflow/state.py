@@ -11,6 +11,7 @@ from archium.domain.enums import WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.outline import OutlinePlan
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
@@ -34,6 +35,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     fact_validation_issues: Annotated[list[str], operator.add]
     brief: PresentationBrief | None
     cultural_narrative: CulturalNarrativePlan | None
+    renovation_issue_map: RenovationIssueMap | None
     storyline: Storyline | None
     outline: OutlinePlan | None
     slides: list[SlideSpec]
@@ -103,6 +105,7 @@ def initial_workflow_state(
         "fact_validation_issues": [],
         "brief": None,
         "cultural_narrative": None,
+        "renovation_issue_map": None,
         "storyline": None,
         "outline": None,
         "slides": [],

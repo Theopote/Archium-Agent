@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.outline import OutlinePlan
 
@@ -102,5 +103,21 @@ def cultural_narrative_to_snapshot(plan: CulturalNarrativePlan) -> dict[str, obj
         "characters_count": len(plan.characters),
         "places_count": len(plan.places),
         "communication_themes": [theme.theme for theme in plan.communication_themes],
+        "unsupported_claims": list(plan.unsupported_claims),
+    }
+
+
+def renovation_issue_map_to_snapshot(plan: RenovationIssueMap) -> dict[str, object]:
+    return {
+        "id": str(plan.id),
+        "lineage_id": str(plan.lineage_id),
+        "logical_key": plan.logical_key,
+        "project_id": str(plan.project_id),
+        "building_summary": plan.building_summary,
+        "approval_status": plan.approval_status.value,
+        "version": plan.version,
+        "evidence_count": len(plan.evidence_items),
+        "issue_count": len(plan.issues),
+        "strategy_count": len(plan.strategies),
         "unsupported_claims": list(plan.unsupported_claims),
     }

@@ -48,6 +48,7 @@ def build_outline_plan_user_prompt(
     audience_mode: str,
     template_hint: str | None = None,
     narrative_json: str | None = None,
+    issue_map_json: str | None = None,
 ) -> str:
     template_block = ""
     if template_hint:
@@ -55,6 +56,9 @@ def build_outline_plan_user_prompt(
     narrative_block = ""
     if narrative_json:
         narrative_block = f"\n【文化叙事计划】\n{narrative_json}\n"
+    issue_map_block = ""
+    if issue_map_json:
+        issue_map_block = f"\n【改造问题图】\n{issue_map_json}\n"
     return (
         f"请生成约 {target_slide_count} 页对应的 OutlinePlan JSON。\n"
         f"受众模式：{audience_mode}\n\n"
@@ -62,7 +66,8 @@ def build_outline_plan_user_prompt(
         f"【PresentationBrief】\n{brief_json}\n\n"
         f"【Storyline】\n{storyline_json}\n"
         f"{template_block}"
-        f"{narrative_block}\n"
+        f"{narrative_block}"
+        f"{issue_map_block}\n"
         "章节 category 建议使用：intro/context/heritage/culture/problem/strategy/"
         "technical/implementation/decision/general。"
     )

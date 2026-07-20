@@ -127,6 +127,45 @@ class CulturalNarrativePlanDraft(BaseModel):
     unsupported_claims: list[str] = Field(default_factory=list)
 
 
+class RenovationEvidenceDraft(BaseModel):
+    id: str
+    description: str
+    evidence_type: str = "observation"
+    location: str | None = None
+    origin: str = "user_upload"
+    asset_refs: list[str] = Field(default_factory=list)
+
+
+class RenovationIssueDraft(BaseModel):
+    id: str
+    category: str
+    problem_statement: str
+    severity: str = "medium"
+    impact: str | None = None
+    linked_evidence_ids: list[str] = Field(default_factory=list)
+    origin: str = "user_upload"
+
+
+class RenovationStrategyDraft(BaseModel):
+    id: str
+    title: str
+    approach: str
+    category: str = "strategy"
+    linked_issue_ids: list[str] = Field(default_factory=list)
+    phasing: str | None = None
+    scope_note: str | None = None
+    origin: str = "user_upload"
+
+
+class RenovationIssueMapDraft(BaseModel):
+    building_summary: str
+    condition_overview: str | None = None
+    evidence_items: list[RenovationEvidenceDraft] = Field(default_factory=list)
+    issues: list[RenovationIssueDraft] = Field(default_factory=list)
+    strategies: list[RenovationStrategyDraft] = Field(default_factory=list)
+    unsupported_claims: list[str] = Field(default_factory=list)
+
+
 class CitationDraft(BaseModel):
     document_name: str
     page_number: int | None = None

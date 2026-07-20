@@ -10,11 +10,13 @@ from archium.agents.brief_builder import BriefBuilder
 from archium.agents.cultural_narrative_planner import CulturalNarrativePlanner
 from archium.agents.narrative_architect import NarrativeArchitect
 from archium.agents.outline_planner import OutlinePlanner
+from archium.agents.renovation_issue_planner import RenovationIssueMapPlanner
 from archium.agents.slide_planner import SlidePlanner
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.outline import OutlinePlan
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.exceptions import ProjectNotFoundError
@@ -46,6 +48,7 @@ class PresentationService:
         self._projects = ProjectRepository(session)
         self._brief_builder = BriefBuilder(session, llm, settings=self._settings)
         self._cultural_narrative = CulturalNarrativePlanner(session, llm, settings=self._settings)
+        self._renovation_issue_map = RenovationIssueMapPlanner(session, llm, settings=self._settings)
         self._narrative = NarrativeArchitect(session, llm, settings=self._settings)
         self._outline = OutlinePlanner(session, llm, settings=self._settings)
         self._slide_planner = SlidePlanner(session, llm, settings=self._settings)
@@ -79,14 +82,27 @@ class PresentationService:
     ) -> CulturalNarrativePlan | None:
         return self._cultural_narrative.generate(project_id, brief)
 
+    def generate_renovation_issue_map(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+    ) -> RenovationIssueMap | None:
+        return self._renovation_issue_map.generate(project_id, brief)
+
     def generate_storyline(
         self,
         project_id: UUID,
         brief: PresentationBrief,
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
+        renovation_issue_map: RenovationIssueMap | None = None,
     ) -> Storyline:
-        return self._narrative.generate(project_id, brief, cultural_narrative=cultural_narrative)
+        return self._narrative.generate(
+            project_id,
+            brief,
+            cultural_narrative=cultural_narrative,
+            renovation_issue_map=renovation_issue_map,
+        )
 
     def generate_outline_plan(
         self,
@@ -95,12 +111,14 @@ class PresentationService:
         storyline: Storyline,
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
+        renovation_issue_map: RenovationIssueMap | None = None,
     ) -> OutlinePlan:
         return self._outline.generate(
             project_id,
             brief,
             storyline,
             cultural_narrative=cultural_narrative,
+            renovation_issue_map=renovation_issue_map,
         )
 
     def generate_slide_plan(

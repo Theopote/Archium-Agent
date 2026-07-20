@@ -35,6 +35,7 @@ from archium.infrastructure.database.models import (
     ProjectFactORM,
     ProjectKnowledgeItemORM,
     ProjectORM,
+    RenovationIssueMapORM,
     ReviewIssueORM,
     SlideORM,
     SlideRevisionORM,
@@ -153,6 +154,47 @@ class ProjectRepository:
             raise
         except SQLAlchemyError as exc:
             _handle_error("set current cultural narrative", exc)
+            raise
+
+    def save_renovation_issue_map(self, plan: "RenovationIssueMap") -> "RenovationIssueMap":
+        from archium.domain.renovation_issue import RenovationIssueMap
+
+        try:
+            orm = self._session.get(RenovationIssueMapORM, plan.id)
+            if orm is None:
+                orm = mappers.renovation_issue_map_to_orm(plan)
+                self._session.add(orm)
+            else:
+                mappers.renovation_issue_map_to_orm(plan, orm)
+            self._session.flush()
+            return mappers.renovation_issue_map_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save renovation issue map", exc)
+            raise
+
+    def get_renovation_issue_map(self, plan_id: UUID) -> "RenovationIssueMap | None":
+        orm = self._session.get(RenovationIssueMapORM, plan_id)
+        return mappers.renovation_issue_map_to_domain(orm) if orm else None
+
+    def list_renovation_issue_maps(self, project_id: UUID) -> list["RenovationIssueMap"]:
+        stmt = (
+            select(RenovationIssueMapORM)
+            .where(RenovationIssueMapORM.project_id == project_id)
+            .order_by(RenovationIssueMapORM.version.desc())
+        )
+        return [mappers.renovation_issue_map_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def set_current_renovation_issue_map(self, project_id: UUID, plan_id: UUID) -> None:
+        try:
+            orm = self._session.get(ProjectORM, project_id)
+            if orm is None:
+                raise RepositoryError(f"Project {project_id} not found")
+            orm.current_renovation_issue_map_id = plan_id
+            self._session.flush()
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("set current renovation issue map", exc)
             raise
 
 
