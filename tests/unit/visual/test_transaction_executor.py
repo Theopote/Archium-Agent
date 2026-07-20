@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 from archium.application.visual.transaction_executor import (
@@ -57,14 +58,25 @@ class _FakePresentationsRepo:
         return self.slide if self.slide.id == slide_id else None
 
 
+@dataclass
+class _HistoryRecord:
+    note: str | None
+    visual_intent: object | None
+    layout_plan: object | None
+
+
 class _FakeHistory:
     def __init__(self) -> None:
-        self.records: list[str] = []
+        self.records: list[_HistoryRecord] = []
 
     def record_state(self, **kwargs):  # noqa: ANN003
-        note = kwargs.get("note")
-        if note:
-            self.records.append(str(note))
+        self.records.append(
+            _HistoryRecord(
+                note=kwargs.get("note"),
+                visual_intent=kwargs.get("visual_intent"),
+                layout_plan=kwargs.get("layout_plan"),
+            )
+        )
         return None
 
 
@@ -523,3 +535,35 @@ def test_successful_transaction_records_history() -> None:
     )
     assert result.success is True
     assert history.records
+
+
+def test_transaction_records_distinct_per_step_snapshots() -> None:
+    plan = _sample_plan()
+    hero_id = plan.elements[0].id
+    history = _FakeHistory()
+    slide = type(
+        "Slide",
+        (),
+        {"id": plan.slide_id, "layout_plan_id": plan.id, "visual_intent_id": plan.visual_intent_id},
+    )()
+    executor = TransactionExecutor(_TrackingSession(), history)
+    result = executor.execute_transaction(
+        operations=[
+            LockOperation(UUID(hero_id)),
+            UnlockOperation(UUID(hero_id)),
+        ],
+        slide_id=slide.id,
+        slide_snapshot=None,
+        intents_repo=_FakeIntentsRepo(),
+        plans_repo=_FakePlansRepo(plan),
+        presentations_repo=_FakePresentationsRepo(slide),
+    )
+    assert result.success is True
+    assert len(history.records) == 2
+
+    first_plan = history.records[0].layout_plan
+    second_plan = history.records[1].layout_plan
+    assert first_plan is not None
+    assert second_plan is not None
+    assert first_plan.elements[0].locked is True
+    assert second_plan.elements[0].locked is False

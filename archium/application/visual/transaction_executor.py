@@ -66,6 +66,15 @@ class Checkpoint:
     operation_index: int
 
 
+@dataclass(frozen=True)
+class _ExecutedStepState:
+    """Post-operation state captured for per-step revision history."""
+
+    operation: AtomicOperation
+    visual_intent: VisualIntent | None
+    layout_plan: LayoutPlan | None
+
+
 @dataclass
 class TransactionResult:
     """Result of a transaction execution."""
@@ -131,6 +140,7 @@ class TransactionExecutor:
         revision_chain_id = uuid4()
         checkpoints: list[Checkpoint] = []
         executed: list[AtomicOperation] = []
+        step_states: list[_ExecutedStepState] = []
         slide: SlideSpec | None = None
 
         try:
@@ -172,18 +182,33 @@ class TransactionExecutor:
                     execution_context.validate_layout(layout_plan)
 
                 executed.append(operation)
+                step_states.append(
+                    _ExecutedStepState(
+                        operation=operation,
+                        visual_intent=(
+                            visual_intent.model_copy(deep=True)
+                            if visual_intent is not None
+                            else None
+                        ),
+                        layout_plan=(
+                            layout_plan.model_copy(deep=True)
+                            if layout_plan is not None
+                            else None
+                        ),
+                    )
+                )
 
             self._session.commit()
 
-            for i, operation in enumerate(executed):
+            for i, step in enumerate(step_states):
                 self._history.record_state(
                     slide=slide,
-                    visual_intent=visual_intent,
-                    layout_plan=layout_plan,
+                    visual_intent=step.visual_intent,
+                    layout_plan=step.layout_plan,
                     change_source=RevisionSource.MANUAL_EDIT,
                     note=(
-                        f"Transaction {revision_chain_id} step {i + 1}/{len(executed)}: "
-                        f"{operation.operation_type}"
+                        f"Transaction {revision_chain_id} step {i + 1}/{len(step_states)}: "
+                        f"{step.operation.operation_type}"
                     ),
                 )
 
