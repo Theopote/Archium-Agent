@@ -36,6 +36,7 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
     current_cultural_narrative_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_renovation_issue_map_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    current_reference_style_profile_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
 
     documents: Mapped[list[SourceDocumentORM]] = relationship(
         back_populates="project",
@@ -66,6 +67,10 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
     )
     renovation_issue_maps: Mapped[list[RenovationIssueMapORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    reference_style_profiles: Mapped[list[ReferenceStyleProfileORM]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
     )
@@ -312,6 +317,23 @@ class RenovationIssueMapORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     project: Mapped[ProjectORM] = relationship(back_populates="renovation_issue_maps")
+
+
+class ReferenceStyleProfileORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "reference_style_profiles"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, default=dict)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    logical_key: Mapped[str] = mapped_column(
+        String(200), nullable=False, default="project-reference-style-profile"
+    )
+
+    project: Mapped[ProjectORM] = relationship(back_populates="reference_style_profiles")
 
 
 class SlideORM(UUIDPrimaryKeyMixin, Base):

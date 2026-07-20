@@ -10,12 +10,14 @@ from archium.agents.brief_builder import BriefBuilder
 from archium.agents.cultural_narrative_planner import CulturalNarrativePlanner
 from archium.agents.narrative_architect import NarrativeArchitect
 from archium.agents.outline_planner import OutlinePlanner
+from archium.agents.reference_style_profiler import ReferenceStyleProfiler
 from archium.agents.renovation_issue_planner import RenovationIssueMapPlanner
 from archium.agents.slide_planner import SlidePlanner
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.outline import OutlinePlan
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
@@ -49,6 +51,7 @@ class PresentationService:
         self._brief_builder = BriefBuilder(session, llm, settings=self._settings)
         self._cultural_narrative = CulturalNarrativePlanner(session, llm, settings=self._settings)
         self._renovation_issue_map = RenovationIssueMapPlanner(session, llm, settings=self._settings)
+        self._reference_style = ReferenceStyleProfiler(session, llm, settings=self._settings)
         self._narrative = NarrativeArchitect(session, llm, settings=self._settings)
         self._outline = OutlinePlanner(session, llm, settings=self._settings)
         self._slide_planner = SlidePlanner(session, llm, settings=self._settings)
@@ -88,6 +91,13 @@ class PresentationService:
         brief: PresentationBrief,
     ) -> RenovationIssueMap | None:
         return self._renovation_issue_map.generate(project_id, brief)
+
+    def generate_reference_style_profile(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+    ) -> ReferenceStyleProfile | None:
+        return self._reference_style.generate(project_id, brief)
 
     def generate_storyline(
         self,

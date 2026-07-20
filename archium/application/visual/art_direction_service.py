@@ -6,8 +6,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.reference_style_service import format_reference_style_for_prompt
 from archium.domain.enums import ApprovalStatus
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.preferences import VisualPreferences
@@ -48,6 +50,7 @@ class ArtDirectionService:
         user_preferences: VisualPreferences | None = None,
         brief: PresentationBrief | None = None,
         storyline: Storyline | None = None,
+        reference_style_profile: ReferenceStyleProfile | None = None,
         use_llm: bool = True,
     ) -> ArtDirection:
         design_system_id = self._ensure_design_system(design_system_id)
@@ -64,6 +67,11 @@ class ArtDirectionService:
                         preferences=preferences,
                         deliverable_id=deliverable_id,
                         mission_id=str(mission_id) if mission_id else None,
+                        reference_style_json=format_reference_style_for_prompt(
+                            reference_style_profile
+                        )
+                        if reference_style_profile is not None
+                        else None,
                     ),
                     temperature=0.4,
                 ),

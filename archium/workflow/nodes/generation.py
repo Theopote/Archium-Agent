@@ -163,6 +163,62 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 "current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value,
             }
 
+    def generate_reference_style_profile(
+        self, state: PresentationWorkflowState
+    ) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value}
+
+        existing = state.get("reference_style_profile")
+        if existing is not None:
+            from archium.infrastructure.database.repositories import ProjectRepository
+
+            refreshed = ProjectRepository(self._runtime.session).get_reference_style_profile(
+                existing.id
+            )
+            if refreshed is not None:
+                return {
+                    "reference_style_profile": refreshed,
+                    "current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value,
+                }
+
+        brief = state.get("brief")
+        if brief is None:
+            return {"current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            profile = self._runtime.presentation_service.generate_reference_style_profile(
+                project_id,
+                brief,
+            )
+            next_state: PresentationWorkflowState = {
+                "current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value,
+            }
+            if profile is not None:
+                from archium.infrastructure.database.repositories import ProjectRepository
+
+                profile.approve()
+                profile = ProjectRepository(self._runtime.session).save_reference_style_profile(
+                    profile
+                )
+                next_state["reference_style_profile"] = profile
+
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info(
+                "Reference style profile step completed for presentation %s",
+                state["presentation_id"],
+            )
+            return next_state
+        except Exception as exc:
+            logger.exception("Reference style profile generation failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value,
+            }
+
     def generate_storyline(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):

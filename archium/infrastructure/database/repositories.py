@@ -35,6 +35,7 @@ from archium.infrastructure.database.models import (
     ProjectFactORM,
     ProjectKnowledgeItemORM,
     ProjectORM,
+    ReferenceStyleProfileORM,
     RenovationIssueMapORM,
     ReviewIssueORM,
     SlideORM,
@@ -195,6 +196,51 @@ class ProjectRepository:
             raise
         except SQLAlchemyError as exc:
             _handle_error("set current renovation issue map", exc)
+            raise
+
+    def save_reference_style_profile(
+        self, profile: "ReferenceStyleProfile"
+    ) -> "ReferenceStyleProfile":
+        from archium.domain.reference_style import ReferenceStyleProfile
+
+        try:
+            orm = self._session.get(ReferenceStyleProfileORM, profile.id)
+            if orm is None:
+                orm = mappers.reference_style_profile_to_orm(profile)
+                self._session.add(orm)
+            else:
+                mappers.reference_style_profile_to_orm(profile, orm)
+            self._session.flush()
+            return mappers.reference_style_profile_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save reference style profile", exc)
+            raise
+
+    def get_reference_style_profile(self, profile_id: UUID) -> "ReferenceStyleProfile | None":
+        orm = self._session.get(ReferenceStyleProfileORM, profile_id)
+        return mappers.reference_style_profile_to_domain(orm) if orm else None
+
+    def list_reference_style_profiles(self, project_id: UUID) -> list["ReferenceStyleProfile"]:
+        stmt = (
+            select(ReferenceStyleProfileORM)
+            .where(ReferenceStyleProfileORM.project_id == project_id)
+            .order_by(ReferenceStyleProfileORM.version.desc())
+        )
+        return [
+            mappers.reference_style_profile_to_domain(row) for row in self._session.scalars(stmt)
+        ]
+
+    def set_current_reference_style_profile(self, project_id: UUID, profile_id: UUID) -> None:
+        try:
+            orm = self._session.get(ProjectORM, project_id)
+            if orm is None:
+                raise RepositoryError(f"Project {project_id} not found")
+            orm.current_reference_style_profile_id = profile_id
+            self._session.flush()
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("set current reference style profile", exc)
             raise
 
 

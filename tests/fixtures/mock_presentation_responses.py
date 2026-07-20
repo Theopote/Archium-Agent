@@ -171,6 +171,42 @@ RENOVATION_ISSUE_MAP_JSON = """\
   "unsupported_claims": []
 }"""
 
+REFERENCE_STYLE_PROFILE_JSON = """\
+{
+  "style_name": "克制专业汇报风",
+  "source_document_ids": [],
+  "mood_keywords": ["克制", "专业", "清晰"],
+  "color_cues": [
+    {
+      "id": "c1",
+      "name": "暖白背景",
+      "description": "大面积留白，浅暖白底",
+      "usage": "background"
+    }
+  ],
+  "typography_cues": [
+    {
+      "id": "t1",
+      "role": "title",
+      "description": "标题字号明显大于正文，字重中等"
+    }
+  ],
+  "layout_cues": [
+    {
+      "id": "l1",
+      "pattern": "left_image_right_text",
+      "description": "图文左右分栏，图片占约一半宽度"
+    }
+  ],
+  "image_treatment": "现场照片统一色温，避免高饱和滤镜",
+  "graphic_elements": ["细线分隔", "编号标注"],
+  "pacing_density": "balanced",
+  "do_rules": ["保持信息层级", "图纸与照片分区处理"],
+  "dont_rules": ["旅游宣传册式装饰", "金色渐变"],
+  "adaptation_notes": ["借鉴版式节奏，不复制参考案例项目内容"],
+  "unsupported_observations": []
+}"""
+
 PROFESSIONAL_REVIEW_JSON = """\
 {
   "issues": [

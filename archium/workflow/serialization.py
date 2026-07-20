@@ -9,6 +9,7 @@ from archium.domain.enums import WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.outline import OutlinePlan
 from archium.domain.review import ReviewIssue
@@ -64,6 +65,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
     brief = state.get("brief")
     cultural_narrative = state.get("cultural_narrative")
     renovation_issue_map = state.get("renovation_issue_map")
+    reference_style_profile = state.get("reference_style_profile")
     storyline = state.get("storyline")
     outline = state.get("outline")
     presentation = state.get("presentation")
@@ -122,6 +124,8 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         payload["cultural_narrative"] = cultural_narrative.model_dump(mode="json")
     if renovation_issue_map is not None:
         payload["renovation_issue_map"] = renovation_issue_map.model_dump(mode="json")
+    if reference_style_profile is not None:
+        payload["reference_style_profile"] = reference_style_profile.model_dump(mode="json")
     if storyline is not None:
         payload["storyline"] = storyline.model_dump(mode="json")
     if outline is not None:
@@ -177,6 +181,14 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
                 issue_map
                 if isinstance(issue_map, RenovationIssueMap)
                 else RenovationIssueMap.model_validate(issue_map)
+            )
+    if "reference_style_profile" in state_data:
+        profile = state_data["reference_style_profile"]
+        if profile is not None:
+            restored["reference_style_profile"] = (
+                profile
+                if isinstance(profile, ReferenceStyleProfile)
+                else ReferenceStyleProfile.model_validate(profile)
             )
     if "storyline" in state_data:
         storyline = state_data["storyline"]

@@ -52,9 +52,13 @@ def build_art_direction_user_prompt(
     preferences: VisualPreferences,
     deliverable_id: str | None = None,
     mission_id: str | None = None,
+    reference_style_json: str | None = None,
 ) -> str:
     brief_text = brief.model_dump_json() if brief is not None else "（无 Brief）"
     storyline_text = storyline.model_dump_json() if storyline is not None else "（无 Storyline）"
+    style_block = ""
+    if reference_style_json:
+        style_block = f"\n【参考风格提炼】\n{reference_style_json}\n"
     return (
         "请为以下建筑汇报成果生成 ArtDirection JSON。\n\n"
         f"【deliverable_id】{deliverable_id or 'n/a'}\n"
@@ -62,4 +66,5 @@ def build_art_direction_user_prompt(
         f"【用户视觉偏好】\n{preferences.model_dump_json()}\n\n"
         f"【PresentationBrief】\n{brief_text}\n\n"
         f"【Storyline】\n{storyline_text}\n"
+        f"{style_block}"
     )

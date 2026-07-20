@@ -166,6 +166,41 @@ class RenovationIssueMapDraft(BaseModel):
     unsupported_claims: list[str] = Field(default_factory=list)
 
 
+class StyleColorCueDraft(BaseModel):
+    id: str
+    name: str
+    description: str
+    usage: str = "accent"
+
+
+class StyleTypographyCueDraft(BaseModel):
+    id: str
+    role: str
+    description: str
+
+
+class StyleLayoutCueDraft(BaseModel):
+    id: str
+    pattern: str
+    description: str
+
+
+class ReferenceStyleProfileDraft(BaseModel):
+    style_name: str
+    source_document_ids: list[str] = Field(default_factory=list)
+    mood_keywords: list[str] = Field(default_factory=list)
+    color_cues: list[StyleColorCueDraft] = Field(default_factory=list)
+    typography_cues: list[StyleTypographyCueDraft] = Field(default_factory=list)
+    layout_cues: list[StyleLayoutCueDraft] = Field(default_factory=list)
+    image_treatment: str = ""
+    graphic_elements: list[str] = Field(default_factory=list)
+    pacing_density: str = "balanced"
+    do_rules: list[str] = Field(default_factory=list)
+    dont_rules: list[str] = Field(default_factory=list)
+    adaptation_notes: list[str] = Field(default_factory=list)
+    unsupported_observations: list[str] = Field(default_factory=list)
+
+
 class CitationDraft(BaseModel):
     document_name: str
     page_number: int | None = None

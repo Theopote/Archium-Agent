@@ -24,6 +24,7 @@ from tests.fixtures.mock_presentation_responses import (
     STORYLINE_JSON,
     CULTURAL_NARRATIVE_JSON,
     RENOVATION_ISSUE_MAP_JSON,
+    REFERENCE_STYLE_PROFILE_JSON,
 )
 
 
@@ -49,6 +50,8 @@ def pipeline_mock_selector(request: LLMRequest) -> str | None:
         return CULTURAL_NARRATIVE_JSON
     if "RenovationIssueMap JSON" in user_prompt:
         return RENOVATION_ISSUE_MAP_JSON
+    if "ReferenceStyleProfile JSON" in user_prompt:
+        return REFERENCE_STYLE_PROFILE_JSON
     if "SlidePlan JSON" in user_prompt:
         return FULL_DECK_SLIDE_PLAN_JSON if full_deck else SLIDE_PLAN_JSON
     if (

@@ -119,6 +119,7 @@ class PresentationWorkflowGraph:
         builder.add_node("generate_brief", self._nodes.generate_brief)
         builder.add_node("generate_cultural_narrative", self._nodes.generate_cultural_narrative)
         builder.add_node("generate_renovation_issue_map", self._nodes.generate_renovation_issue_map)
+        builder.add_node("generate_reference_style_profile", self._nodes.generate_reference_style_profile)
         builder.add_node("generate_storyline", self._nodes.generate_storyline)
         builder.add_node("generate_outline", self._nodes.generate_outline)
         builder.add_node("generate_slides", self._nodes.generate_slides)
@@ -172,7 +173,8 @@ class PresentationWorkflowGraph:
             },
         )
         builder.add_edge("generate_cultural_narrative", "generate_renovation_issue_map")
-        builder.add_edge("generate_renovation_issue_map", "generate_storyline")
+        builder.add_edge("generate_renovation_issue_map", "generate_reference_style_profile")
+        builder.add_edge("generate_reference_style_profile", "generate_storyline")
         builder.add_conditional_edges(
             "generate_storyline",
             _route_after_storyline,
@@ -221,6 +223,7 @@ class PresentationWorkflowGraph:
             {
                 "generate_cultural_narrative": "generate_cultural_narrative",
                 "generate_renovation_issue_map": "generate_renovation_issue_map",
+                "generate_reference_style_profile": "generate_reference_style_profile",
                 "generate_storyline": "generate_storyline",
                 "generate_outline": "generate_outline",
                 "generate_slides": "generate_slides",

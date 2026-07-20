@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.outline import OutlinePlan
@@ -104,6 +105,23 @@ def cultural_narrative_to_snapshot(plan: CulturalNarrativePlan) -> dict[str, obj
         "places_count": len(plan.places),
         "communication_themes": [theme.theme for theme in plan.communication_themes],
         "unsupported_claims": list(plan.unsupported_claims),
+    }
+
+
+def reference_style_profile_to_snapshot(profile: ReferenceStyleProfile) -> dict[str, object]:
+    return {
+        "id": str(profile.id),
+        "lineage_id": str(profile.lineage_id),
+        "logical_key": profile.logical_key,
+        "project_id": str(profile.project_id),
+        "style_name": profile.style_name,
+        "approval_status": profile.approval_status.value,
+        "version": profile.version,
+        "source_document_count": len(profile.source_document_ids),
+        "color_cue_count": len(profile.color_cues),
+        "layout_cue_count": len(profile.layout_cues),
+        "do_rules": list(profile.do_rules),
+        "dont_rules": list(profile.dont_rules),
     }
 
 

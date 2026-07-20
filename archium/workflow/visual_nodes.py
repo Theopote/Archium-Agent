@@ -287,6 +287,12 @@ class VisualWorkflowNodes:
         try:
             preferences = state.get("preferences") or VisualPreferences()
             design_system_id = UUID(state["design_system_id"])
+            from archium.infrastructure.database.repositories import ProjectRepository
+
+            profiles = ProjectRepository(self._runtime.session).list_reference_style_profiles(
+                UUID(state["project_id"])
+            )
+            reference_style_profile = profiles[0] if profiles else None
             art = self._runtime.art_direction_service.generate(
                 project_id=UUID(state["project_id"]),
                 presentation_id=UUID(state["presentation_id"]),
@@ -294,6 +300,7 @@ class VisualWorkflowNodes:
                 user_preferences=preferences,
                 brief=state.get("brief"),
                 storyline=state.get("storyline"),
+                reference_style_profile=reference_style_profile,
                 use_llm=bool(state.get("use_llm", False)),
             )
             if not state.get("require_art_direction_review", True):

@@ -309,3 +309,55 @@ class RenovationIssueMapHistoryService:
         from archium.infrastructure.database.repositories import ProjectRepository
 
         return ProjectRepository(self._session).get_renovation_issue_map(plan_id)
+
+
+class ReferenceStyleProfileHistoryService:
+    """Reference style profile facade over the unified revision service."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._revisions = RevisionService(session)
+
+    def record_snapshot(
+        self,
+        profile: "ReferenceStyleProfile",
+        change_source: RevisionSource,
+        *,
+        note: str | None = None,
+    ) -> EntityRevision:
+        from archium.application.artifact_snapshots import reference_style_profile_to_snapshot
+
+        return self._revisions.record(
+            entity_type=RevisionEntityType.REFERENCE_STYLE_PROFILE,
+            entity_id=profile.id,
+            lineage_id=profile.lineage_id,
+            presentation_id=None,
+            change_source=change_source,
+            snapshot=reference_style_profile_to_snapshot(profile),
+            note=note,
+        )
+
+    def archive_before_regeneration(
+        self,
+        profile: "ReferenceStyleProfile",
+        *,
+        note: str = "重新生成前归档",
+    ) -> EntityRevision:
+        return self.record_snapshot(profile, RevisionSource.REGENERATION, note=note)
+
+    def list_revisions(self, profile_id: UUID) -> list[EntityRevision]:
+        profile = self._get_profile(profile_id)
+        if profile is None:
+            return []
+        return self._revisions.list_by_lineage(profile.lineage_id)
+
+    @staticmethod
+    def revision_label(revision: EntityRevision) -> str:
+        name = str(revision.snapshot.get("style_name", "参考风格"))[:40]
+        source = change_source_label(revision.change_source)
+        return f"修订 #{revision.revision_number} · {source} · {name}"
+
+    def _get_profile(self, profile_id: UUID):
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        return ProjectRepository(self._session).get_reference_style_profile(profile_id)
