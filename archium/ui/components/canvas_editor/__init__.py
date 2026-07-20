@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Literal, TypedDict
 
 from archium.domain.visual.layout import LayoutPlan
 from archium.ui.components.canvas_editor.runtime import (
@@ -17,6 +17,46 @@ from archium.ui.components.canvas_editor.runtime import (
 _BUILD_EXPORTS = frozenset(
     {"build_canvas_editor", "canvas_editor_build_dir", "is_canvas_editor_built"}
 )
+
+
+class CanvasSelectEvent(TypedDict):
+    type: Literal["select"]
+    elementId: str | None
+
+
+class CanvasMoveEvent(TypedDict):
+    type: Literal["move"]
+    elementId: str
+    x: float
+    y: float
+
+
+CanvasEditorEvent = str | CanvasSelectEvent | CanvasMoveEvent | None
+
+
+def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
+    """Normalize legacy string selections and structured canvas events."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        event_type = value.get("type")
+        if event_type == "move":
+            element_id = value.get("elementId")
+            x = value.get("x")
+            y = value.get("y")
+            if element_id is not None and x is not None and y is not None:
+                return CanvasMoveEvent(
+                    type="move",
+                    elementId=str(element_id),
+                    x=float(x),
+                    y=float(y),
+                )
+        if event_type == "select":
+            element_id = value.get("elementId")
+            return CanvasSelectEvent(type="select", elementId=str(element_id) if element_id else None)
+    return None
 
 
 def __getattr__(name: str) -> Any:
@@ -35,7 +75,7 @@ def canvas_editor(
     show_labels: bool = True,
     show_all_borders: bool = True,
     key: str | None = None,
-) -> str | None:
+) -> CanvasEditorEvent:
     """
     Render an interactive canvas editor for slide elements.
 
@@ -53,7 +93,7 @@ def canvas_editor(
         key=key,
         default=None,
     )
-    return cast(str | None, component_value)
+    return parse_canvas_editor_event(component_value)
 
 
 def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
@@ -80,6 +120,9 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
 
 __all__ = [
     "CanvasEditorUnavailableError",
+    "CanvasEditorEvent",
+    "CanvasMoveEvent",
+    "CanvasSelectEvent",
     "build_canvas_editor",
     "canvas_editor",
     "canvas_editor_available",
@@ -87,5 +130,6 @@ __all__ = [
     "canvas_editor_release_mode",
     "canvas_editor_unavailable_reason",
     "is_canvas_editor_built",
+    "parse_canvas_editor_event",
     "reset_canvas_editor_component_cache",
 ]

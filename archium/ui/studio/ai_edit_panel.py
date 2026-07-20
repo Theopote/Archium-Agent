@@ -25,7 +25,7 @@ def render_ai_edit_panel(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
         return
 
     slide_id = slide_snapshot.slide.id
-    st.caption("支持 8 种高频修改：版式、留白、主图、锁定与撤销。")
+    st.caption("支持 9 种高频修改：版式、留白、主图、锁定/解锁与撤销。")
 
     text = st.text_area(
         "描述你想做的修改",
@@ -52,11 +52,14 @@ def render_ai_edit_panel(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
         ],
         [
             VisualEditIntent.LOCK_ELEMENT,
+            VisualEditIntent.UNLOCK_ELEMENT,
+        ],
+        [
             VisualEditIntent.RESTORE_PREVIOUS,
         ],
     ]
     for row in preset_rows:
-        cols = st.columns(2)
+        cols = st.columns(len(row))
         for column, intent in zip(cols, row, strict=True):
             label = INTENT_USER_LABELS[intent]
             if column.button(

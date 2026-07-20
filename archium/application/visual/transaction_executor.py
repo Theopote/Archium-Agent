@@ -199,15 +199,16 @@ class TransactionExecutor:
                     )
                 )
 
-            for i, step in enumerate(step_states):
+            if step_states:
+                final_step = step_states[-1]
                 self._history.record_state(
                     slide=slide,
-                    visual_intent=step.visual_intent,
-                    layout_plan=step.layout_plan,
+                    visual_intent=final_step.visual_intent,
+                    layout_plan=final_step.layout_plan,
                     change_source=RevisionSource.MANUAL_EDIT,
                     note=(
-                        f"Transaction {revision_chain_id} step {i + 1}/{len(step_states)}: "
-                        f"{step.operation.operation_type}"
+                        f"Transaction {revision_chain_id} complete "
+                        f"({len(step_states)} step(s))"
                     ),
                 )
 

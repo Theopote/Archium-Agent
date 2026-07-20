@@ -16,6 +16,57 @@ from archium.domain.visual.visual_intent import VisualIntent
 VISUAL_STATE_SNAPSHOT_KIND = "slide_visual_state"
 
 
+def visual_snapshot_fingerprint(snapshot: dict[str, object]) -> tuple[object, ...]:
+    """Compare visual snapshots ignoring version and timestamp churn."""
+    intent = snapshot.get("visual_intent")
+    plan = snapshot.get("layout_plan")
+    intent_fp = _intent_fingerprint(intent) if isinstance(intent, dict) else None
+    plan_fp = _plan_fingerprint(plan) if isinstance(plan, dict) else None
+    return (intent_fp, plan_fp)
+
+
+def _intent_fingerprint(intent: dict[str, object]) -> tuple[object, ...]:
+    return (
+        intent.get("layout_family"),
+        intent.get("layout_variant"),
+        intent.get("density_level"),
+        intent.get("whitespace_ratio"),
+        intent.get("dominant_content_type"),
+        intent.get("visual_priority"),
+        intent.get("hero_asset_ref"),
+        intent.get("content_refs"),
+    )
+
+
+def _plan_fingerprint(plan: dict[str, object]) -> tuple[object, ...]:
+    elements: list[tuple[object, ...]] = []
+    raw_elements = plan.get("elements")
+    if isinstance(raw_elements, list):
+        for element in raw_elements:
+            if not isinstance(element, dict):
+                continue
+            elements.append(
+                (
+                    element.get("id"),
+                    element.get("role"),
+                    element.get("x"),
+                    element.get("y"),
+                    element.get("width"),
+                    element.get("height"),
+                    element.get("locked"),
+                    element.get("text_content"),
+                    element.get("content_ref"),
+                )
+            )
+    return (
+        plan.get("layout_family"),
+        plan.get("layout_variant"),
+        plan.get("hero_element_id"),
+        plan.get("whitespace_ratio"),
+        tuple(elements),
+    )
+
+
 class VisualHistoryService:
     """Record and restore combined VisualIntent + LayoutPlan snapshots."""
 
@@ -133,10 +184,7 @@ class VisualHistoryService:
 
     @staticmethod
     def _visual_snapshot_matches(stored: dict[str, object], current: dict[str, object]) -> bool:
-        return (
-            stored.get("visual_intent") == current.get("visual_intent")
-            and stored.get("layout_plan") == current.get("layout_plan")
-        )
+        return visual_snapshot_fingerprint(stored) == visual_snapshot_fingerprint(current)
 
     @staticmethod
     def _build_snapshot(

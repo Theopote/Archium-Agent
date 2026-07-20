@@ -13,6 +13,20 @@ from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.studio.element_labels import format_element_label
 from archium.ui.visual_service import SlideVisualSnapshot
 
+
+def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | None, float | None]:
+    """Return event kind, element id, and optional move coordinates in percent."""
+    from archium.ui.components.canvas_editor import parse_canvas_editor_event as _parse
+
+    event = _parse(value)
+    if event is None:
+        return "none", None, None, None
+    if isinstance(event, str):
+        return "select", event, None, None
+    if event.get("type") == "move":
+        return "move", str(event["elementId"]), float(event["x"]), float(event["y"])
+    return "select", event.get("elementId"), None, None
+
 _SEVERITY_COLORS = {
     LayoutIssueSeverity.CRITICAL: "#b42318",
     LayoutIssueSeverity.ERROR: "#d92d20",
@@ -173,6 +187,38 @@ def _render_static_or_empty_state(
     )
 
 
+def _handle_canvas_move(
+    *,
+    slide_id: object,
+    plan: LayoutPlan,
+    element_id: str,
+    x_percent: float,
+    y_percent: float,
+) -> None:
+    from archium.application.visual.element_geometry import layout_coords_from_percent
+    from archium.exceptions import WorkflowError
+    from archium.infrastructure.database.session import get_session
+    from archium.ui.error_handlers import format_user_error
+    from archium.ui.studio_service import apply_slide_element_move
+
+    x, y = layout_coords_from_percent(plan, x_percent=x_percent, y_percent=y_percent)
+    try:
+        with st.spinner("正在保存元素位置…"), get_session() as session:
+            apply_slide_element_move(
+                session,
+                slide_id,  # type: ignore[arg-type]
+                element_id=element_id,
+                x=x,
+                y=y,
+            )
+        st.success("已更新元素位置。")
+        st.rerun()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
 def _render_interactive_canvas(
     *,
     slide_snapshot: SlideVisualSnapshot,
@@ -187,7 +233,7 @@ def _render_interactive_canvas(
     )
 
     try:
-        clicked_element_id = canvas_editor(
+        canvas_event = canvas_editor(
             image_url=preview_path,
             layout_plan=plan,
             selected_element_id=selected_element_id,
@@ -203,8 +249,19 @@ def _render_interactive_canvas(
         st.warning(f"交互式画布加载失败，已切换为静态预览：{exc}")
         return False
 
-    if clicked_element_id != selected_element_id:
-        st.session_state["studio_selected_element_id"] = clicked_element_id
+    event_kind, element_id, x_percent, y_percent = parse_canvas_editor_event(canvas_event)
+    if event_kind == "move" and element_id and x_percent is not None and y_percent is not None:
+        _handle_canvas_move(
+            slide_id=slide_snapshot.slide.id,
+            plan=plan,
+            element_id=element_id,
+            x_percent=x_percent,
+            y_percent=y_percent,
+        )
+        return True
+
+    if event_kind == "select" and element_id != selected_element_id:
+        st.session_state["studio_selected_element_id"] = element_id
         st.rerun()
 
     st.caption(_preview_caption(slide_snapshot.preview_kind))

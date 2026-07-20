@@ -353,6 +353,25 @@ def apply_slide_visual_edit(
     return service.apply_intent(slide_id, resolved, params=params or {})
 
 
+def apply_slide_element_move(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    x: float,
+    y: float,
+) -> object:
+    """Move a layout element via canvas drag or property panel."""
+    from archium.application.visual.visual_edit_service import VisualEditService
+
+    return VisualEditService(session, settings=_resolve_runtime_settings(None)).apply_element_move(
+        slide_id,
+        element_id,
+        x=x,
+        y=y,
+    )
+
+
 def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
     from archium.application.content_adaptation_service import ContentAdaptationService
 

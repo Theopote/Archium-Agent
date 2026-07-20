@@ -61,6 +61,18 @@ def _assert_within_safe_area(
         raise WorkflowError("移动后元素会超出安全区域，无法执行")
 
 
+def layout_coords_from_percent(
+    layout_plan: LayoutPlan,
+    *,
+    x_percent: float,
+    y_percent: float,
+) -> tuple[float, float]:
+    """Convert canvas overlay percentages to layout-plan coordinates."""
+    page_width = float(layout_plan.page_width or 10.0)
+    page_height = float(layout_plan.page_height or 5.625)
+    return (x_percent / 100.0) * page_width, (y_percent / 100.0) * page_height
+
+
 def compute_element_placement(
     element: LayoutElement,
     layout_plan: LayoutPlan,

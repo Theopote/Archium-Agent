@@ -23,6 +23,7 @@ from archium.application.visual.transaction_executor import (
     TransactionExecutionContext,
     TransactionExecutor,
 )
+from archium.domain.visual.atomic_operation import AtomicOperation, OperationType
 from archium.application.visual.visual_history_service import VisualHistoryService
 from archium.application.visual.visual_intent_presets import (
     apply_hero_asset,
@@ -282,6 +283,85 @@ class VisualEditService:
             validation=validation,
             restored=True,
             message="已恢复到上一版视觉状态。",
+        )
+
+    def apply_element_move(
+        self,
+        slide_id: UUID,
+        element_id: str,
+        *,
+        x: float,
+        y: float,
+        candidate_count: int = 3,
+    ) -> VisualEditResult:
+        """Move one layout element to absolute page coordinates."""
+        slide = self._require_slide(slide_id)
+        current_intent = self._load_intent(slide)
+        current_plan = self._load_plan(slide)
+        if current_plan is None:
+            raise WorkflowError("当前页面尚无版式，无法移动元素。")
+
+        self._history.record_state(
+            slide=slide,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+            change_source=RevisionSource.MANUAL_EDIT,
+            note=VisualEditIntent.MOVE_ELEMENT.value,
+        )
+
+        slide_snapshot = SlideEditSnapshot(
+            slide_id=slide.id,
+            presentation_id=slide.presentation_id,
+            visual_intent=current_intent,
+            layout_plan=current_plan,
+        )
+        operation = AtomicOperation(
+            operation_type=OperationType.MOVE,
+            target_element_id=element_id,
+            params={"position": "absolute", "x": x, "y": y, "preserve_size": True},
+        )
+        execution_context = self._build_transaction_execution_context(
+            slide,
+            candidate_count=candidate_count,
+        )
+        result = self._transaction_executor.execute_transaction(
+            operations=[operation],
+            slide_id=slide_id,
+            slide_snapshot=slide_snapshot,
+            intents_repo=self._intents,
+            plans_repo=self._plans,
+            presentations_repo=self._presentations,
+            execution_context=execution_context,
+        )
+        if not result.success:
+            error_msg = "移动元素失败"
+            if result.error:
+                error_msg = f"{error_msg}: {result.error}"
+            raise WorkflowError(error_msg)
+
+        slide = self._require_slide(slide_id)
+        updated_intent = self._load_intent(slide)
+        updated_plan = self._load_plan(slide)
+        validation = None
+        design = self._resolve_design_system(slide, updated_intent)
+        if updated_plan is not None and design is not None:
+            asset_context = self._asset_context_for_plan(slide, updated_plan)
+            validation = LayoutValidationService().validate(
+                updated_plan,
+                design,
+                require_source=True,
+                drawing_hero=updated_plan.layout_family == LayoutFamily.DRAWING_FOCUS,
+                asset_context=asset_context,
+            )
+        if updated_plan is not None:
+            self._invalidate_preview_cache(slide.presentation_id, updated_plan)
+        return VisualEditResult(
+            slide_id=slide.id,
+            intent=VisualEditIntent.MOVE_ELEMENT,
+            visual_intent=updated_intent,
+            layout_plan=updated_plan,
+            validation=validation,
+            message="已移动元素位置。",
         )
 
     def _apply_composite_operation(

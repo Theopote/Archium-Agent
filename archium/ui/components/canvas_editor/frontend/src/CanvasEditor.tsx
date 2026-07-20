@@ -6,21 +6,24 @@ import { Streamlit, withStreamlitConnection } from "streamlit-component-lib";
  *
  * Features:
  * - Click to select elements
+ * - Drag unlocked elements to reposition
  * - Hover to highlight elements
- * - Visual element boundaries
- * - Color-coded element types
  */
 
 interface Element {
   id: string;
-  x: number;  // percentage (0-100)
-  y: number;  // percentage (0-100)
-  width: number;  // percentage (0-100)
-  height: number;  // percentage (0-100)
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   role: string;
   locked?: boolean;
   text_content?: string;
 }
+
+type CanvasEvent =
+  | { type: "select"; elementId: string | null }
+  | { type: "move"; elementId: string; x: number; y: number };
 
 const ROLE_COLORS: Record<string, { border: string; background: string; label: string }> = {
   HERO_VISUAL: {
@@ -50,13 +53,22 @@ const ROLE_COLORS: Record<string, { border: string; background: string; label: s
   },
 };
 
+const DRAG_THRESHOLD_PX = 4;
+
 const CanvasEditor: React.FC = () => {
   const [hoverElementId, setHoverElementId] = useState<string | null>(null);
+  const [dragElementId, setDragElementId] = useState<string | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const dragStateRef = useRef<{
+    elementId: string;
+    startClientX: number;
+    startClientY: number;
+    moved: boolean;
+  } | null>(null);
 
-  // Get props from Streamlit
   const args = (window as any).streamlitArgs;
   const imageUrl: string = args?.imageUrl || "";
   const elements: Element[] = args?.elements || [];
@@ -64,7 +76,6 @@ const CanvasEditor: React.FC = () => {
   const showLabels: boolean = args?.showLabels ?? true;
   const showAllBorders: boolean = args?.showAllBorders ?? true;
 
-  // Measure container size
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -80,28 +91,29 @@ const CanvasEditor: React.FC = () => {
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
-  // Notify Streamlit of component height
   useEffect(() => {
     if (imageRef.current) {
-      const height = imageRef.current.offsetHeight + 40; // Add padding
+      const height = imageRef.current.offsetHeight + 40;
       Streamlit.setFrameHeight(height);
     }
-  }, [containerSize]);
+  }, [containerSize, dragElementId]);
 
-  // Handle element click
-  const handleElementClick = (elementId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    Streamlit.setComponentValue(elementId);
+  const emitEvent = (event: CanvasEvent) => {
+    Streamlit.setComponentValue(event);
   };
 
-  // Handle canvas click (deselect)
-  const handleCanvasClick = () => {
-    Streamlit.setComponentValue(null);
+  const percentFromClient = (clientX: number, clientY: number) => {
+    if (!containerRef.current) {
+      return { x: 0, y: 0 };
+    }
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * 100,
+      y: ((clientY - rect.top) / rect.height) * 100,
+    };
   };
 
-  // Find element at position
   const findElementAtPosition = (x: number, y: number): string | null => {
-    // Check from top to bottom (reverse order for z-index)
     for (let i = elements.length - 1; i >= 0; i--) {
       const element = elements[i];
       if (
@@ -116,28 +128,100 @@ const CanvasEditor: React.FC = () => {
     return null;
   };
 
-  // Handle mouse move for hover
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 100;
-    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    const { x, y } = percentFromClient(event.clientX, event.clientY);
+    const activeDrag = dragStateRef.current;
+
+    if (activeDrag) {
+      const deltaX = event.clientX - activeDrag.startClientX;
+      const deltaY = event.clientY - activeDrag.startClientY;
+      if (Math.abs(deltaX) > DRAG_THRESHOLD_PX || Math.abs(deltaY) > DRAG_THRESHOLD_PX) {
+        activeDrag.moved = true;
+      }
+      const element = elements.find((item) => item.id === activeDrag.elementId);
+      if (element) {
+        const previewX = Math.max(0, Math.min(100 - element.width, x - element.width / 2));
+        const previewY = Math.max(0, Math.min(100 - element.height, y - element.height / 2));
+        setDragElementId(activeDrag.elementId);
+        setDragPreview({ x: previewX, y: previewY });
+      }
+      return;
+    }
 
     const elementId = findElementAtPosition(x, y);
     setHoverElementId(elementId);
   };
 
-  // Render element boundary box
+  const finishDrag = (event: MouseEvent) => {
+    const activeDrag = dragStateRef.current;
+    dragStateRef.current = null;
+    setDragElementId(null);
+    setDragPreview(null);
+
+    if (!activeDrag) return;
+
+    if (activeDrag.moved) {
+      const { x, y } = percentFromClient(event.clientX, event.clientY);
+      const element = elements.find((item) => item.id === activeDrag.elementId);
+      if (element) {
+        const nextX = Math.max(0, Math.min(100 - element.width, x - element.width / 2));
+        const nextY = Math.max(0, Math.min(100 - element.height, y - element.height / 2));
+        emitEvent({
+          type: "move",
+          elementId: activeDrag.elementId,
+          x: nextX,
+          y: nextY,
+        });
+      }
+      return;
+    }
+
+    emitEvent({ type: "select", elementId: activeDrag.elementId });
+  };
+
+  const handleElementMouseDown = (
+    element: Element,
+    event: React.MouseEvent<HTMLDivElement>,
+  ) => {
+    event.stopPropagation();
+    if (element.locked) {
+      emitEvent({ type: "select", elementId: element.id });
+      return;
+    }
+
+    dragStateRef.current = {
+      elementId: element.id,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      moved: false,
+    };
+
+    const onMouseUp = (mouseupEvent: MouseEvent) => {
+      window.removeEventListener("mouseup", onMouseUp);
+      finishDrag(mouseupEvent);
+    };
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const handleCanvasClick = () => {
+    if (dragStateRef.current) return;
+    emitEvent({ type: "select", elementId: null });
+  };
+
   const renderElementBox = (element: Element, isHovered: boolean, isSelected: boolean) => {
     const roleColor = ROLE_COLORS[element.role] || ROLE_COLORS.DECORATION;
+    const isDragging = dragElementId === element.id && dragPreview !== null;
+    const displayX = isDragging ? dragPreview.x : element.x;
+    const displayY = isDragging ? dragPreview.y : element.y;
 
     let border = roleColor.border;
     let background = roleColor.background;
     let borderWidth = "2px";
     let zIndex = 1;
 
-    if (isSelected) {
+    if (isSelected || isDragging) {
       border = "#175cd3";
       background = "rgba(23, 92, 211, 0.15)";
       borderWidth = "3px";
@@ -150,15 +234,15 @@ const CanvasEditor: React.FC = () => {
 
     const style: React.CSSProperties = {
       position: "absolute",
-      left: `${element.x}%`,
-      top: `${element.y}%`,
+      left: `${displayX}%`,
+      top: `${displayY}%`,
       width: `${element.width}%`,
       height: `${element.height}%`,
       border: `${borderWidth} solid ${border}`,
       background: background,
       borderRadius: "4px",
-      cursor: element.locked ? "not-allowed" : "pointer",
-      transition: "all 0.15s ease",
+      cursor: element.locked ? "not-allowed" : isDragging ? "grabbing" : "grab",
+      transition: isDragging ? "none" : "all 0.15s ease",
       zIndex: zIndex,
       pointerEvents: "auto",
     };
@@ -167,10 +251,10 @@ const CanvasEditor: React.FC = () => {
       <div
         key={element.id}
         style={style}
-        onClick={(e) => handleElementClick(element.id, e)}
+        onMouseDown={(event) => handleElementMouseDown(element, event)}
         title={`${roleColor.label}: ${element.id}${element.locked ? " (锁定)" : ""}`}
       >
-        {showLabels && (isSelected || isHovered) && (
+        {showLabels && (isSelected || isHovered || isDragging) && (
           <div
             style={{
               position: "absolute",
@@ -205,13 +289,16 @@ const CanvasEditor: React.FC = () => {
           overflow: "hidden",
           borderRadius: "8px",
           border: "1px solid #e4e4e7",
-          cursor: "default",
+          cursor: dragElementId ? "grabbing" : "default",
         }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoverElementId(null)}
+        onMouseLeave={() => {
+          if (!dragStateRef.current) {
+            setHoverElementId(null);
+          }
+        }}
         onClick={handleCanvasClick}
       >
-        {/* Background image */}
         {imageUrl && (
           <img
             ref={imageRef}
@@ -229,7 +316,6 @@ const CanvasEditor: React.FC = () => {
           />
         )}
 
-        {/* Element overlay layer */}
         <div
           style={{
             position: "absolute",
@@ -243,16 +329,14 @@ const CanvasEditor: React.FC = () => {
           {elements.map((element) => {
             const isSelected = element.id === selectedId;
             const isHovered = element.id === hoverElementId;
-            const shouldShow = showAllBorders || isSelected || isHovered;
-
+            const shouldShow =
+              showAllBorders || isSelected || isHovered || dragElementId === element.id;
             if (!shouldShow) return null;
-
             return renderElementBox(element, isHovered, isSelected);
           })}
         </div>
 
-        {/* Info overlay */}
-        {hoverElementId && !selectedId && (
+        {hoverElementId && !selectedId && !dragElementId && (
           <div
             style={{
               position: "absolute",
@@ -266,12 +350,11 @@ const CanvasEditor: React.FC = () => {
               pointerEvents: "none",
             }}
           >
-            点击选择元素
+            点击选择，拖拽移动
           </div>
         )}
       </div>
 
-      {/* Legend */}
       {showAllBorders && (
         <div
           style={{
