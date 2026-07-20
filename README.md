@@ -6,7 +6,6 @@
 
 Archium（阿基姆）是一款面向建筑师、规划师、设计院和建筑事务所的**智能汇报生产工具**。
 
-本仓库以 **[MIT License](LICENSE)** 开源。欢迎 Star、Issue 与 PR——贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 它的目标不是简单地「让 AI 写一个 PPT」，而是：
 
