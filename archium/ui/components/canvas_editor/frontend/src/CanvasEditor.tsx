@@ -18,6 +18,7 @@ interface Element {
   height: number;
   role: string;
   locked?: boolean;
+  content_type?: string;
   text_content?: string;
 }
 
@@ -31,7 +32,8 @@ type CanvasEvent =
       y: number;
       width: number;
       height: number;
-    };
+    }
+  | { type: "editText"; elementId: string };
 
 const ROLE_COLORS: Record<string, { border: string; background: string; label: string }> = {
   HERO_VISUAL: {
@@ -296,6 +298,15 @@ const CanvasEditor: React.FC = () => {
     emitEvent({ type: "select", elementId: null });
   };
 
+  const handleElementDoubleClick = (
+    element: Element,
+    event: React.MouseEvent<HTMLDivElement>,
+  ) => {
+    event.stopPropagation();
+    event.preventDefault();
+    emitEvent({ type: "editText", elementId: element.id });
+  };
+
   const renderElementBox = (element: Element, isHovered: boolean, isSelected: boolean) => {
     const roleColor = ROLE_COLORS[element.role] || ROLE_COLORS.DECORATION;
     const isDragging = dragElementId === element.id && dragPreview !== null;
@@ -336,12 +347,19 @@ const CanvasEditor: React.FC = () => {
       pointerEvents: "auto",
     };
 
+    const lockHint = element.locked
+      ? element.content_type === "drawing"
+        ? " (图纸锁定)"
+        : " (锁定)"
+      : "";
+
     return (
       <div
         key={element.id}
         style={style}
         onMouseDown={(event) => handleElementMouseDown(element, event)}
-        title={`${roleColor.label}: ${element.id}${element.locked ? " (锁定)" : ""}`}
+        onDoubleClick={(event) => handleElementDoubleClick(element, event)}
+        title={`${roleColor.label}: ${element.id}${lockHint}`}
       >
         {showLabels && (isSelected || isHovered || isDragging || isResizing) && (
           <div

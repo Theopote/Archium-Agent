@@ -40,7 +40,14 @@ class CanvasResizeEvent(TypedDict):
     height: float
 
 
-CanvasEditorEvent = str | CanvasSelectEvent | CanvasMoveEvent | CanvasResizeEvent | None
+class CanvasEditTextEvent(TypedDict):
+    type: Literal["editText"]
+    elementId: str
+
+
+CanvasEditorEvent = (
+    str | CanvasSelectEvent | CanvasMoveEvent | CanvasResizeEvent | CanvasEditTextEvent | None
+)
 
 
 def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
@@ -83,6 +90,10 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
                     width=float(width),
                     height=float(height),
                 )
+        if event_type == "editText":
+            element_id = value.get("elementId")
+            if element_id is not None:
+                return CanvasEditTextEvent(type="editText", elementId=str(element_id))
         if event_type == "select":
             element_id = value.get("elementId")
             return CanvasSelectEvent(type="select", elementId=str(element_id) if element_id else None)
@@ -128,11 +139,18 @@ def canvas_editor(
 
 def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
     """Convert LayoutPlan elements to component format."""
+    from archium.domain.visual.element_lock import canvas_geometry_locked
+
     page_width = float(layout_plan.page_width or 10.0)
     page_height = float(layout_plan.page_height or 5.625)
 
     elements: list[dict[str, Any]] = []
     for element in layout_plan.elements:
+        content_type = (
+            element.content_type.value
+            if hasattr(element.content_type, "value")
+            else str(element.content_type)
+        )
         elements.append(
             {
                 "id": element.id,
@@ -141,7 +159,8 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
                 "width": (element.width / page_width) * 100,
                 "height": (element.height / page_height) * 100,
                 "role": element.role.value if hasattr(element.role, "value") else str(element.role),
-                "locked": element.locked,
+                "locked": canvas_geometry_locked(element),
+                "content_type": content_type,
                 "text_content": element.text_content or "",
             }
         )
@@ -151,6 +170,7 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
 __all__ = [
     "CanvasEditorUnavailableError",
     "CanvasEditorEvent",
+    "CanvasEditTextEvent",
     "CanvasMoveEvent",
     "CanvasSelectEvent",
     "build_canvas_editor",

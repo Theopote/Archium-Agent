@@ -8,18 +8,26 @@ from archium.domain.visual.element_lock import (
     ElementLockedError,
     ElementLockScope,
     assert_element_editable,
+    canvas_geometry_locked,
     effective_lock_scopes,
     element_is_editable,
+    is_drawing_element,
 )
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement
 
 
-def _element(*, locked: bool = False, lock_scopes: list[ElementLockScope] | None = None) -> LayoutElement:
+def _element(
+    *,
+    locked: bool = False,
+    lock_scopes: list[ElementLockScope] | None = None,
+    content_type: LayoutContentType = LayoutContentType.TEXT,
+    role: LayoutElementRole = LayoutElementRole.TITLE,
+) -> LayoutElement:
     return LayoutElement(
         id="title",
-        role=LayoutElementRole.TITLE,
-        content_type=LayoutContentType.TEXT,
+        role=role,
+        content_type=content_type,
         text_content="标题",
         x=1.0,
         y=1.0,
@@ -62,3 +70,23 @@ def test_partial_lock_scopes_only_block_matching_operations() -> None:
 def test_lock_toggle_always_allowed() -> None:
     element = _element(locked=True)
     assert_element_editable(element, ElementEditOperation.LOCK_TOGGLE)
+
+
+def test_drawing_element_blocks_move_and_resize_even_when_unlocked() -> None:
+    element = _element(
+        locked=False,
+        content_type=LayoutContentType.DRAWING,
+        role=LayoutElementRole.HERO_VISUAL,
+    )
+    assert is_drawing_element(element)
+    assert canvas_geometry_locked(element)
+    assert_element_editable(element, ElementEditOperation.UPDATE_TEXT)
+    with pytest.raises(ElementLockedError, match="图纸元素"):
+        assert_element_editable(element, ElementEditOperation.MOVE)
+    with pytest.raises(ElementLockedError, match="图纸元素"):
+        assert_element_editable(element, ElementEditOperation.RESIZE)
+
+
+def test_content_lock_does_not_lock_canvas_geometry() -> None:
+    element = _element(locked=True, lock_scopes=[ElementLockScope.CONTENT])
+    assert canvas_geometry_locked(element) is False

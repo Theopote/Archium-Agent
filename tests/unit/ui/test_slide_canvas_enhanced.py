@@ -95,3 +95,15 @@ def test_parse_canvas_editor_event_supports_legacy_string_select() -> None:
     assert y_percent is None
     assert width_percent is None
     assert height_percent is None
+
+
+def test_parse_canvas_editor_event_supports_edit_text() -> None:
+    kind, element_id, x_percent, y_percent, width_percent, height_percent = parse_canvas_editor_event(
+        {"type": "editText", "elementId": "title"}
+    )
+    assert kind == "editText"
+    assert element_id == "title"
+    assert x_percent is None
+    assert y_percent is None
+    assert width_percent is None
+    assert height_percent is None

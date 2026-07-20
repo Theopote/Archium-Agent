@@ -32,6 +32,8 @@ class ElementEditOperation(StrEnum):
     CHANGE_LAYOUT = "change_layout"
     REPLAN = "replan"
     REPAIR_GEOMETRY = "repair_geometry"
+    MOVE = "move"
+    RESIZE = "resize"
     REPAIR_STYLE = "repair_style"
     LOCK_TOGGLE = "lock_toggle"
 
@@ -58,6 +60,8 @@ _OPERATION_SCOPES: dict[ElementEditOperation, frozenset[ElementLockScope]] = {
     ElementEditOperation.REPAIR_GEOMETRY: frozenset(
         {ElementLockScope.POSITION, ElementLockScope.SIZE}
     ),
+    ElementEditOperation.MOVE: frozenset({ElementLockScope.POSITION}),
+    ElementEditOperation.RESIZE: frozenset({ElementLockScope.POSITION, ElementLockScope.SIZE}),
     ElementEditOperation.REPAIR_STYLE: frozenset({ElementLockScope.STYLE}),
     ElementEditOperation.LOCK_TOGGLE: frozenset(),
 }
@@ -79,13 +83,38 @@ _OPERATION_LABELS: dict[ElementEditOperation, str] = {
     ElementEditOperation.CHANGE_LAYOUT: "切换版式",
     ElementEditOperation.REPLAN: "重新排版",
     ElementEditOperation.REPAIR_GEOMETRY: "几何修复",
+    ElementEditOperation.MOVE: "移动",
+    ElementEditOperation.RESIZE: "缩放",
     ElementEditOperation.REPAIR_STYLE: "样式修复",
     ElementEditOperation.LOCK_TOGGLE: "锁定/解锁",
 }
 
+_CANVAS_GEOMETRY_OPS = frozenset(
+    {
+        ElementEditOperation.MOVE,
+        ElementEditOperation.RESIZE,
+    }
+)
+
 
 class ElementLockedError(WorkflowError):
     """Raised when an edit violates element lock scopes."""
+
+
+def is_drawing_element(element: LayoutElement) -> bool:
+    """Return True when the element is a drawing node (geometry is always fixed)."""
+    content_type = getattr(element, "content_type", None)
+    value = getattr(content_type, "value", content_type)
+    return value == "drawing"
+
+
+def canvas_geometry_locked(element: LayoutElement) -> bool:
+    """Return True when Studio canvas must treat the element as immovable."""
+    if is_drawing_element(element):
+        return True
+    return not element_is_editable(element, ElementEditOperation.MOVE) or not element_is_editable(
+        element, ElementEditOperation.RESIZE
+    )
 
 
 def effective_lock_scopes(element: LayoutElement) -> frozenset[ElementLockScope]:
@@ -110,9 +139,15 @@ def element_is_editable(element: LayoutElement, operation: ElementEditOperation)
 
 
 def assert_element_editable(element: LayoutElement, operation: ElementEditOperation) -> None:
-    """Raise when ``operation`` is blocked by the element's active lock scopes."""
+    """Raise when ``operation`` is blocked by drawing rules or active lock scopes."""
     if operation == ElementEditOperation.LOCK_TOGGLE:
         return
+
+    if operation in _CANVAS_GEOMETRY_OPS and is_drawing_element(element):
+        operation_text = _OPERATION_LABELS.get(operation, operation.value)
+        raise ElementLockedError(
+            f"图纸元素 `{element.id}` 位置与尺寸已固定，无法{operation_text}。"
+        )
 
     locked = effective_lock_scopes(element)
     if not locked:

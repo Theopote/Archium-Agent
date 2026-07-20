@@ -7,6 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.asset_board_service import AssetBoardService
+from archium.domain.visual.element_lock import canvas_geometry_locked, is_drawing_element
 from archium.domain.visual.enums import LayoutContentType
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -121,16 +122,30 @@ def _render_element_properties(
     st.write(f"尺寸：{element.width:.2f} × {element.height:.2f}")
     st.write(f"锁定：{'是' if element.locked else '否'}")
 
+    if is_drawing_element(element) or canvas_geometry_locked(element):
+        if is_drawing_element(element):
+            st.info("图纸元素位置与尺寸已固定，画布上不可拖拽或缩放。")
+        elif element.locked:
+            st.caption("此元素已锁定几何，画布上不可拖拽或缩放。")
+
+    focus_text = st.session_state.get("studio_focus_text_edit") == element.id
+    if focus_text and element.content_type == LayoutContentType.TEXT:
+        st.info("请在下方编辑文字，保存后将写入版式并刷新预览。")
+    elif focus_text and element.content_type != LayoutContentType.TEXT:
+        st.caption("当前元素不是文字类型；请在属性栏选择文字元素进行改字。")
+        st.session_state.pop("studio_focus_text_edit", None)
+
     if element.content_type == LayoutContentType.TEXT:
         edited_text = st.text_area(
             "文字内容",
             value=element.text_content or "",
-            height=80,
+            height=100 if focus_text else 80,
             key=f"studio_element_text_{slide_snapshot.slide.id}_{element.id}",
         )
         if st.button(
             "保存文字",
             use_container_width=True,
+            type="primary" if focus_text else "secondary",
             key=f"studio_save_element_text_{slide_snapshot.slide.id}_{element.id}",
         ):
             try:
@@ -141,43 +156,60 @@ def _render_element_properties(
                         intent="update_element_text",
                         params={"element_id": element.id, "text": edited_text},
                     )
+                st.session_state.pop("studio_focus_text_edit", None)
                 st.success("已更新元素文字。")
                 st.rerun()
             except Exception as exc:
                 st.error(format_user_error(exc))
-    elif element.content_type == LayoutContentType.IMAGE and project_id is not None:
-        with get_session() as session:
-            assets = AssetBoardService(session).list_project_assets(project_id)
-        asset_options = {str(asset.id): asset.filename for asset in assets}
-        if asset_options:
-            selected_asset = st.selectbox(
-                "绑定素材",
-                options=list(asset_options.keys()),
-                format_func=lambda value: asset_options[value],
-                key=f"studio_element_asset_{slide_snapshot.slide.id}_{element.id}",
-            )
-            if st.button(
-                "应用素材",
-                use_container_width=True,
-                key=f"studio_apply_element_asset_{slide_snapshot.slide.id}_{element.id}",
-            ):
-                try:
-                    with get_session() as session:
-                        apply_slide_visual_edit(
-                            session,
-                            slide_snapshot.slide.id,
-                            intent="set_element_asset",
-                            params={
-                                "element_id": element.id,
-                                "content_ref": selected_asset,
-                            },
-                        )
-                    st.success("已更新元素素材。")
-                    st.rerun()
-                except Exception as exc:
-                    st.error(format_user_error(exc))
-        elif element.content_ref:
-            st.write(f"素材引用：`{element.content_ref}`")
+    elif element.content_type in {LayoutContentType.IMAGE, LayoutContentType.DRAWING}:
+        if element.content_ref:
+            st.write(f"当前素材：`{element.content_ref}`")
+        if element.fit_mode is not None:
+            st.write(f"适配方式：`{element.fit_mode.value}`")
+        if element.crop_policy is not None:
+            st.write(f"裁切策略：`{element.crop_policy.value}`")
+
+        if project_id is not None and element.content_type == LayoutContentType.IMAGE:
+            with get_session() as session:
+                assets = AssetBoardService(session).list_project_assets(project_id)
+            asset_options = {str(asset.id): asset.filename for asset in assets}
+            if asset_options:
+                current_ref = str(element.content_ref) if element.content_ref else None
+                default_index = 0
+                option_keys = list(asset_options.keys())
+                if current_ref in asset_options:
+                    default_index = option_keys.index(current_ref)
+                selected_asset = st.selectbox(
+                    "更换素材",
+                    options=option_keys,
+                    index=default_index,
+                    format_func=lambda value: asset_options[value],
+                    key=f"studio_element_asset_{slide_snapshot.slide.id}_{element.id}",
+                )
+                if st.button(
+                    "应用素材",
+                    use_container_width=True,
+                    key=f"studio_apply_element_asset_{slide_snapshot.slide.id}_{element.id}",
+                ):
+                    try:
+                        with get_session() as session:
+                            apply_slide_visual_edit(
+                                session,
+                                slide_snapshot.slide.id,
+                                intent="set_element_asset",
+                                params={
+                                    "element_id": element.id,
+                                    "content_ref": selected_asset,
+                                },
+                            )
+                        st.success("已更新元素素材。")
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(format_user_error(exc))
+            else:
+                st.caption("项目暂无可用素材，请先在资料阶段上传。")
+        elif element.content_type == LayoutContentType.DRAWING:
+            st.caption("图纸素材由版式生成绑定；最小可编辑阶段仅锁定几何，不支持直接换图。")
     elif element.content_ref:
         st.write(f"素材引用：`{element.content_ref}`")
         if element.fit_mode is not None:

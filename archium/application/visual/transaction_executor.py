@@ -456,7 +456,7 @@ class TransactionExecutor:
             if element.id != target_id:
                 updated_elements.append(element)
                 continue
-            assert_element_editable(element, ElementEditOperation.REPAIR_GEOMETRY)
+            assert_element_editable(element, ElementEditOperation.MOVE)
             x, y, width, height = compute_element_placement(
                 element,
                 layout_plan,
@@ -553,7 +553,7 @@ class TransactionExecutor:
             if element.id != target_id:
                 updated_elements.append(element)
                 continue
-            assert_element_editable(element, ElementEditOperation.REPAIR_GEOMETRY)
+            assert_element_editable(element, ElementEditOperation.RESIZE)
             new_width = element.width * scale_factor
             new_height = element.height * scale_factor
             center_x = element.x + element.width / 2
@@ -606,7 +606,7 @@ class TransactionExecutor:
             if element.id != target_id:
                 updated_elements.append(element)
                 continue
-            assert_element_editable(element, ElementEditOperation.REPAIR_GEOMETRY)
+            assert_element_editable(element, ElementEditOperation.RESIZE)
             if (
                 new_x < 0
                 or new_y < 0

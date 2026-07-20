@@ -34,6 +34,8 @@ def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | N
             float(event["width"]),
             float(event["height"]),
         )
+    if event.get("type") == "editText":
+        return "editText", str(event["elementId"]), None, None, None, None
     return "select", event.get("elementId"), None, None, None, None
 
 _SEVERITY_COLORS = {
@@ -333,6 +335,11 @@ def _render_interactive_canvas(
             height_percent=height_percent,
         )
         return True
+
+    if event_kind == "editText" and element_id:
+        st.session_state["studio_selected_element_id"] = element_id
+        st.session_state["studio_focus_text_edit"] = element_id
+        st.rerun()
 
     if event_kind == "select" and element_id != selected_element_id:
         st.session_state["studio_selected_element_id"] = element_id
