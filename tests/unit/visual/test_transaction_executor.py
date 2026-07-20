@@ -418,6 +418,41 @@ def test_swap_missing_element_raises() -> None:
     assert isinstance(result.error, WorkflowError)
 
 
+def test_move_missing_element_raises() -> None:
+    plan = _sample_plan()
+    result, _ = _execute(plan=plan, operations=[MoveOperation(uuid4(), "right")])
+    assert result.success is False
+    assert isinstance(result.error, WorkflowError)
+
+
+def test_lock_without_layout_plan_raises() -> None:
+    plan = _sample_plan()
+    slide = type(
+        "Slide",
+        (),
+        {"id": plan.slide_id, "layout_plan_id": None, "visual_intent_id": None},
+    )()
+
+    class _EmptyPlansRepo:
+        def get(self, _plan_id):  # noqa: ANN001
+            return None
+
+        def save(self, plan: LayoutPlan) -> LayoutPlan:
+            return plan
+
+    executor = TransactionExecutor(_TrackingSession(), _FakeHistory())
+    result = executor.execute_transaction(
+        operations=[LockOperation(UUID(plan.elements[0].id))],
+        slide_id=slide.id,
+        slide_snapshot=None,
+        intents_repo=_FakeIntentsRepo(),
+        plans_repo=_EmptyPlansRepo(),
+        presentations_repo=_FakePresentationsRepo(slide),
+    )
+    assert result.success is False
+    assert isinstance(result.error, WorkflowError)
+
+
 def test_resize_invalid_scale_raises() -> None:
     caption_id = str(uuid4())
     plan = LayoutPlan(
