@@ -59,6 +59,58 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 "current_step": WorkflowStep.BRIEF.value,
             }
 
+    def generate_cultural_narrative(
+        self, state: PresentationWorkflowState
+    ) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.CULTURAL_NARRATIVE.value}
+
+        existing = state.get("cultural_narrative")
+        if existing is not None:
+            from archium.infrastructure.database.repositories import ProjectRepository
+
+            refreshed = ProjectRepository(self._runtime.session).get_cultural_narrative(existing.id)
+            if refreshed is not None:
+                return {
+                    "cultural_narrative": refreshed,
+                    "current_step": WorkflowStep.CULTURAL_NARRATIVE.value,
+                }
+
+        brief = state.get("brief")
+        if brief is None:
+            return {"current_step": WorkflowStep.CULTURAL_NARRATIVE.value}
+
+        try:
+            project_id = UUID(state["project_id"])
+            narrative = self._runtime.presentation_service.generate_cultural_narrative(
+                project_id,
+                brief,
+            )
+            next_state: PresentationWorkflowState = {
+                "current_step": WorkflowStep.CULTURAL_NARRATIVE.value,
+            }
+            if narrative is not None:
+                from archium.infrastructure.database.repositories import ProjectRepository
+
+                narrative.approve()
+                narrative = ProjectRepository(self._runtime.session).save_cultural_narrative(narrative)
+                next_state["cultural_narrative"] = narrative
+
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info(
+                "Cultural narrative step completed for presentation %s",
+                state["presentation_id"],
+            )
+            return next_state
+        except Exception as exc:
+            logger.exception("Cultural narrative generation failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.CULTURAL_NARRATIVE.value,
+            }
+
     def generate_storyline(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
@@ -79,7 +131,11 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
         try:
             project_id = UUID(state["project_id"])
-            storyline = self._runtime.presentation_service.generate_storyline(project_id, brief)
+            storyline = self._runtime.presentation_service.generate_storyline(
+                project_id,
+                brief,
+                cultural_narrative=state.get("cultural_narrative"),
+            )
             if state.get("require_storyline_review"):
                 storyline.approval_status = ApprovalStatus.PENDING
             else:
@@ -126,6 +182,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 project_id,
                 brief,
                 storyline,
+                cultural_narrative=state.get("cultural_narrative"),
             )
             if state.get("require_outline_review"):
                 outline.approval_status = ApprovalStatus.PENDING

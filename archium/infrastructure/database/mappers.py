@@ -37,6 +37,10 @@ from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.memory import UserPreference
 from archium.domain.planning_session import PlanningSession
+from archium.domain.cultural_narrative import (
+    CULTURAL_NARRATIVE_LOGICAL_KEY,
+    CulturalNarrativePlan,
+)
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
@@ -55,6 +59,7 @@ from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
     AssetORM,
     ChapterORM,
+    CulturalNarrativePlanORM,
     DocumentChunkORM,
     OutlinePlanORM,
     PlanningSessionORM,
@@ -482,6 +487,63 @@ def outline_plan_to_orm(domain: OutlinePlan, orm: OutlinePlanORM | None = None) 
     target.target_slide_count = domain.target_slide_count
     target.audience_mode = domain.audience_mode.value
     target.sections_json = _outline_sections_to_json(domain.sections)
+    target.version = domain.version
+    target.approval_status = domain.approval_status.value
+    target.lineage_id = domain.lineage_id
+    target.logical_key = domain.logical_key
+    target.created_at = domain.created_at
+    target.updated_at = domain.updated_at
+    return target
+
+
+    return target
+
+
+# ── CulturalNarrativePlan ─────────────────────────────────────
+
+
+def _cultural_narrative_payload_from_domain(plan: CulturalNarrativePlan) -> dict[str, object]:
+    data = plan.model_dump(mode="json")
+    for key in (
+        "id",
+        "project_id",
+        "version",
+        "approval_status",
+        "lineage_id",
+        "logical_key",
+        "created_at",
+        "updated_at",
+    ):
+        data.pop(key, None)
+    return data
+
+
+def cultural_narrative_plan_to_domain(orm: CulturalNarrativePlanORM) -> CulturalNarrativePlan:
+    payload = dict(orm.payload_json or {})
+    lineage_id = orm.lineage_id or orm.id
+    logical_key = orm.logical_key or CULTURAL_NARRATIVE_LOGICAL_KEY
+    return CulturalNarrativePlan.model_validate(
+        {
+            **payload,
+            "id": orm.id,
+            "project_id": orm.project_id,
+            "version": orm.version,
+            "approval_status": orm.approval_status,
+            "lineage_id": lineage_id,
+            "logical_key": logical_key,
+            "created_at": orm.created_at,
+            "updated_at": orm.updated_at,
+        }
+    )
+
+
+def cultural_narrative_plan_to_orm(
+    domain: CulturalNarrativePlan,
+    orm: CulturalNarrativePlanORM | None = None,
+) -> CulturalNarrativePlanORM:
+    target = orm or CulturalNarrativePlanORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.payload_json = _cultural_narrative_payload_from_domain(domain)
     target.version = domain.version
     target.approval_status = domain.approval_status.value
     target.lineage_id = domain.lineage_id

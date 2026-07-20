@@ -19,7 +19,9 @@ from archium.application.outline_service import (
     outline_from_draft,
 )
 from archium.application.outline_templates import detect_scenario_template, template_sections
+from archium.application.cultural_narrative_service import format_narrative_for_prompt
 from archium.config.settings import Settings, get_settings
+from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import OutlineAudienceMode, RevisionSource
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
@@ -54,6 +56,7 @@ class OutlinePlanner:
         brief: PresentationBrief,
         storyline: Storyline,
         *,
+        cultural_narrative: CulturalNarrativePlan | None = None,
         version: int | None = None,
         audience_mode: OutlineAudienceMode | None = None,
     ) -> OutlinePlan:
@@ -100,6 +103,9 @@ class OutlinePlanner:
                     target_slide_count=brief.target_slide_count,
                     audience_mode=mode.value,
                     template_hint=template_hint,
+                    narrative_json=format_narrative_for_prompt(cultural_narrative)
+                    if cultural_narrative is not None
+                    else None,
                 ),
                 temperature=0.35,
             ),

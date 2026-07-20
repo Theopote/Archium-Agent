@@ -26,6 +26,7 @@ from archium.exceptions import RepositoryError
 from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
     AssetORM,
+    CulturalNarrativePlanORM,
     DocumentChunkORM,
     OutlinePlanORM,
     PlanningSessionORM,
@@ -109,6 +110,49 @@ class ProjectRepository:
             return True
         except SQLAlchemyError as exc:
             _handle_error("delete project", exc)
+            raise
+
+    def save_cultural_narrative(self, plan: "CulturalNarrativePlan") -> "CulturalNarrativePlan":
+        from archium.domain.cultural_narrative import CulturalNarrativePlan
+
+        try:
+            orm = self._session.get(CulturalNarrativePlanORM, plan.id)
+            if orm is None:
+                orm = mappers.cultural_narrative_plan_to_orm(plan)
+                self._session.add(orm)
+            else:
+                mappers.cultural_narrative_plan_to_orm(plan, orm)
+            self._session.flush()
+            return mappers.cultural_narrative_plan_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save cultural narrative", exc)
+            raise
+
+    def get_cultural_narrative(self, plan_id: UUID) -> "CulturalNarrativePlan | None":
+        orm = self._session.get(CulturalNarrativePlanORM, plan_id)
+        return mappers.cultural_narrative_plan_to_domain(orm) if orm else None
+
+    def list_cultural_narratives(self, project_id: UUID) -> list["CulturalNarrativePlan"]:
+        from archium.domain.cultural_narrative import CulturalNarrativePlan
+
+        stmt = (
+            select(CulturalNarrativePlanORM)
+            .where(CulturalNarrativePlanORM.project_id == project_id)
+            .order_by(CulturalNarrativePlanORM.version.desc())
+        )
+        return [mappers.cultural_narrative_plan_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def set_current_cultural_narrative(self, project_id: UUID, plan_id: UUID) -> None:
+        try:
+            orm = self._session.get(ProjectORM, project_id)
+            if orm is None:
+                raise RepositoryError(f"Project {project_id} not found")
+            orm.current_cultural_narrative_id = plan_id
+            self._session.flush()
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("set current cultural narrative", exc)
             raise
 
 

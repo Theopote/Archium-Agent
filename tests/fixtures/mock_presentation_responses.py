@@ -43,6 +43,72 @@ STORYLINE_JSON = """\
   ]
 }"""
 
+CULTURAL_NARRATIVE_JSON = """\
+{
+  "central_story": "这座古村以水系与宗祠维系社区认同，今天需要在保护真实性前提下开展文旅传播",
+  "identity_keywords": ["水乡", "宗祠", "非遗"],
+  "historical_timeline": [
+    {
+      "id": "evt1",
+      "year_or_period": "明代",
+      "event": "建村并形成水系格局",
+      "origin": "user_upload",
+      "is_legend": false
+    }
+  ],
+  "characters": [
+    {
+      "id": "char1",
+      "name": "族长",
+      "role": "社区领袖",
+      "significance": "主持祭祀与公共事务",
+      "origin": "user_upload",
+      "is_legend": false
+    }
+  ],
+  "places": [
+    {
+      "id": "place1",
+      "name": "宗祠前广场",
+      "significance": "节庆与公共集会核心空间",
+      "space_type": "public_space",
+      "asset_refs": []
+    }
+  ],
+  "rituals": [
+    {
+      "id": "ritual1",
+      "name": "清明祭祖",
+      "description": "宗族集体祭祀活动",
+      "season": "清明",
+      "origin": "user_upload",
+      "is_legend": false
+    }
+  ],
+  "architectural_symbols": [
+    {
+      "id": "sym1",
+      "name": "宗祠",
+      "building_type": "traditional",
+      "cultural_meaning": "宗族认同与精神中心",
+      "asset_refs": []
+    }
+  ],
+  "emotional_arc": ["认知", "共鸣", "认同"],
+  "visitor_storyline": ["到达", "体验", "理解", "带走记忆"],
+  "communication_themes": [
+    {
+      "id": "theme1",
+      "theme": "活态传承的水乡生活",
+      "linked_characters": ["char1"],
+      "linked_places": ["place1"],
+      "linked_rituals": ["ritual1"],
+      "linked_buildings": ["sym1"]
+    }
+  ],
+  "unsupported_claims": []
+}"""
+
 PROFESSIONAL_REVIEW_JSON = """\
 {
   "issues": [

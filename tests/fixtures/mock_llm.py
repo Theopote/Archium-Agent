@@ -22,6 +22,7 @@ from tests.fixtures.mock_presentation_responses import (
     SLIDE_REPAIR_JSON,
     SLIDE_SPLIT_JSON,
     STORYLINE_JSON,
+    CULTURAL_NARRATIVE_JSON,
 )
 
 
@@ -43,6 +44,8 @@ def pipeline_mock_selector(request: LLMRequest) -> str | None:
         return FULL_DECK_BRIEF_JSON if full_deck else BRIEF_JSON
     if "生成 Storyline JSON" in user_prompt:
         return FULL_DECK_STORYLINE_JSON if full_deck else STORYLINE_JSON
+    if "CulturalNarrativePlan JSON" in user_prompt:
+        return CULTURAL_NARRATIVE_JSON
     if "SlidePlan JSON" in user_prompt:
         return FULL_DECK_SLIDE_PLAN_JSON if full_deck else SLIDE_PLAN_JSON
     if (

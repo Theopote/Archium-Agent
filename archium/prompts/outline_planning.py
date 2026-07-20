@@ -47,17 +47,22 @@ def build_outline_plan_user_prompt(
     target_slide_count: int,
     audience_mode: str,
     template_hint: str | None = None,
+    narrative_json: str | None = None,
 ) -> str:
     template_block = ""
     if template_hint:
         template_block = f"\n【建议章节结构参考】\n{template_hint}\n"
+    narrative_block = ""
+    if narrative_json:
+        narrative_block = f"\n【文化叙事计划】\n{narrative_json}\n"
     return (
         f"请生成约 {target_slide_count} 页对应的 OutlinePlan JSON。\n"
         f"受众模式：{audience_mode}\n\n"
         f"【项目资料】\n{project_context}\n\n"
         f"【PresentationBrief】\n{brief_json}\n\n"
         f"【Storyline】\n{storyline_json}\n"
-        f"{template_block}\n"
+        f"{template_block}"
+        f"{narrative_block}\n"
         "章节 category 建议使用：intro/context/heritage/culture/problem/strategy/"
         "technical/implementation/decision/general。"
     )

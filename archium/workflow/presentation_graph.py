@@ -69,7 +69,7 @@ def _route_after_pause(state: PresentationWorkflowState) -> str:
         return "finalize"
     gate = state.get("review_gate")
     if gate == "brief":
-        return "generate_storyline"
+        return "generate_cultural_narrative"
     if gate == "storyline":
         return "generate_outline"
     if gate == "outline":
@@ -117,6 +117,7 @@ class PresentationWorkflowGraph:
         builder.add_node("extract_facts", self._nodes.extract_facts)
         builder.add_node("validate_facts", self._nodes.validate_facts)
         builder.add_node("generate_brief", self._nodes.generate_brief)
+        builder.add_node("generate_cultural_narrative", self._nodes.generate_cultural_narrative)
         builder.add_node("generate_storyline", self._nodes.generate_storyline)
         builder.add_node("generate_outline", self._nodes.generate_outline)
         builder.add_node("generate_slides", self._nodes.generate_slides)
@@ -163,8 +164,13 @@ class PresentationWorkflowGraph:
         builder.add_conditional_edges(
             "generate_brief",
             _route_after_brief,
-            {"continue": "generate_storyline", "pause_for_review": "pause_for_review", "finalize": "finalize"},
+            {
+                "continue": "generate_cultural_narrative",
+                "pause_for_review": "pause_for_review",
+                "finalize": "finalize",
+            },
         )
+        builder.add_edge("generate_cultural_narrative", "generate_storyline")
         builder.add_conditional_edges(
             "generate_storyline",
             _route_after_storyline,
@@ -211,6 +217,7 @@ class PresentationWorkflowGraph:
             "pause_for_review",
             _route_after_pause,
             {
+                "generate_cultural_narrative": "generate_cultural_narrative",
                 "generate_storyline": "generate_storyline",
                 "generate_outline": "generate_outline",
                 "generate_slides": "generate_slides",

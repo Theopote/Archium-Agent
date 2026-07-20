@@ -62,6 +62,71 @@ class OutlinePlanDraft(BaseModel):
     sections: list[OutlineSectionDraft] = Field(default_factory=list)
 
 
+class NarrativeEventDraft(BaseModel):
+    id: str
+    year_or_period: str
+    event: str
+    origin: str = "user_upload"
+    is_legend: bool = False
+
+
+class CulturalCharacterDraft(BaseModel):
+    id: str
+    name: str
+    role: str
+    significance: str
+    origin: str = "user_upload"
+    is_legend: bool = False
+
+
+class CulturalPlaceDraft(BaseModel):
+    id: str
+    name: str
+    significance: str
+    space_type: str = "public_space"
+    asset_refs: list[str] = Field(default_factory=list)
+
+
+class CulturalRitualDraft(BaseModel):
+    id: str
+    name: str
+    description: str
+    season: str | None = None
+    origin: str = "user_upload"
+    is_legend: bool = False
+
+
+class ArchitecturalSymbolDraft(BaseModel):
+    id: str
+    name: str
+    building_type: str = "traditional"
+    cultural_meaning: str
+    asset_refs: list[str] = Field(default_factory=list)
+
+
+class CommunicationThemeDraft(BaseModel):
+    id: str
+    theme: str
+    linked_characters: list[str] = Field(default_factory=list)
+    linked_places: list[str] = Field(default_factory=list)
+    linked_rituals: list[str] = Field(default_factory=list)
+    linked_buildings: list[str] = Field(default_factory=list)
+
+
+class CulturalNarrativePlanDraft(BaseModel):
+    central_story: str
+    identity_keywords: list[str] = Field(default_factory=list)
+    historical_timeline: list[NarrativeEventDraft] = Field(default_factory=list)
+    characters: list[CulturalCharacterDraft] = Field(default_factory=list)
+    places: list[CulturalPlaceDraft] = Field(default_factory=list)
+    rituals: list[CulturalRitualDraft] = Field(default_factory=list)
+    architectural_symbols: list[ArchitecturalSymbolDraft] = Field(default_factory=list)
+    emotional_arc: list[str] = Field(default_factory=list)
+    visitor_storyline: list[str] = Field(default_factory=list)
+    communication_themes: list[CommunicationThemeDraft] = Field(default_factory=list)
+    unsupported_claims: list[str] = Field(default_factory=list)
+
+
 class CitationDraft(BaseModel):
     document_name: str
     page_number: int | None = None

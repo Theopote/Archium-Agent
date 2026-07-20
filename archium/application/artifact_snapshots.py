@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.outline import OutlinePlan
 
@@ -84,4 +85,22 @@ def outline_to_snapshot(outline: OutlinePlan) -> dict[str, object]:
             }
             for section in outline.sections
         ],
+    }
+
+
+def cultural_narrative_to_snapshot(plan: CulturalNarrativePlan) -> dict[str, object]:
+    return {
+        "id": str(plan.id),
+        "lineage_id": str(plan.lineage_id),
+        "logical_key": plan.logical_key,
+        "project_id": str(plan.project_id),
+        "central_story": plan.central_story,
+        "identity_keywords": list(plan.identity_keywords),
+        "approval_status": plan.approval_status.value,
+        "version": plan.version,
+        "historical_timeline_count": len(plan.historical_timeline),
+        "characters_count": len(plan.characters),
+        "places_count": len(plan.places),
+        "communication_themes": [theme.theme for theme in plan.communication_themes],
+        "unsupported_claims": list(plan.unsupported_claims),
     }

@@ -205,3 +205,55 @@ class OutlineHistoryService:
         from archium.infrastructure.database.repositories import PresentationRepository
 
         return PresentationRepository(self._session).get_outline(outline_id)
+
+
+class CulturalNarrativeHistoryService:
+    """Cultural narrative facade over the unified revision service."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._revisions = RevisionService(session)
+
+    def record_snapshot(
+        self,
+        plan: "CulturalNarrativePlan",
+        change_source: RevisionSource,
+        *,
+        note: str | None = None,
+    ) -> EntityRevision:
+        from archium.application.artifact_snapshots import cultural_narrative_to_snapshot
+
+        return self._revisions.record(
+            entity_type=RevisionEntityType.CULTURAL_NARRATIVE,
+            entity_id=plan.id,
+            lineage_id=plan.lineage_id,
+            presentation_id=None,
+            change_source=change_source,
+            snapshot=cultural_narrative_to_snapshot(plan),
+            note=note,
+        )
+
+    def archive_before_regeneration(
+        self,
+        plan: "CulturalNarrativePlan",
+        *,
+        note: str = "重新生成前归档",
+    ) -> EntityRevision:
+        return self.record_snapshot(plan, RevisionSource.REGENERATION, note=note)
+
+    def list_revisions(self, plan_id: UUID) -> list[EntityRevision]:
+        plan = self._get_plan(plan_id)
+        if plan is None:
+            return []
+        return self._revisions.list_by_lineage(plan.lineage_id)
+
+    @staticmethod
+    def revision_label(revision: EntityRevision) -> str:
+        story = str(revision.snapshot.get("central_story", "文化叙事"))[:40]
+        source = change_source_label(revision.change_source)
+        return f"修订 #{revision.revision_number} · {source} · {story}"
+
+    def _get_plan(self, plan_id: UUID):
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        return ProjectRepository(self._session).get_cultural_narrative(plan_id)

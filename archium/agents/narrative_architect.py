@@ -15,6 +15,7 @@ from archium.agents._helpers import (
 from archium.application.artifact_history_service import StorylineHistoryService
 from archium.application.artifact_lineage import apply_storyline_lineage
 from archium.config.settings import Settings, get_settings
+from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -44,6 +45,7 @@ class NarrativeArchitect:
         project_id: UUID,
         brief: PresentationBrief,
         *,
+        cultural_narrative: CulturalNarrativePlan | None = None,
         version: int | None = None,
     ) -> Storyline:
         previous_storylines = self._presentations.list_storylines(brief.presentation_id)
@@ -66,6 +68,9 @@ class NarrativeArchitect:
                 user_prompt=build_storyline_user_prompt(
                     project_context=project_context,
                     brief_json=to_json(brief),
+                    narrative_json=format_narrative_for_prompt(cultural_narrative)
+                    if cultural_narrative is not None
+                    else None,
                 ),
                 temperature=0.4,
             ),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from archium.domain.cultural_narrative import CULTURAL_NARRATIVE_LOGICAL_KEY, CulturalNarrativePlan
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
@@ -45,3 +46,15 @@ def apply_outline_lineage(
     outline.lineage_id = previous.lineage_id
     outline.version = previous.version + 1
     return outline
+
+
+def apply_cultural_narrative_lineage(
+    plan: CulturalNarrativePlan,
+    previous: CulturalNarrativePlan | None,
+) -> CulturalNarrativePlan:
+    plan.logical_key = CULTURAL_NARRATIVE_LOGICAL_KEY
+    if previous is None:
+        return plan
+    plan.lineage_id = previous.lineage_id
+    plan.version = previous.version + 1
+    return plan

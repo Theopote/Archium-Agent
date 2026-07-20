@@ -8,6 +8,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.outline import OutlinePlan
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
@@ -60,6 +61,7 @@ def request_from_dict(data: dict[str, Any]) -> PresentationRequest:
 def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
     """Convert graph state to a JSON-safe checkpoint dict."""
     brief = state.get("brief")
+    cultural_narrative = state.get("cultural_narrative")
     storyline = state.get("storyline")
     outline = state.get("outline")
     presentation = state.get("presentation")
@@ -114,6 +116,8 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         payload["presentation"] = presentation.model_dump(mode="json")
     if brief is not None:
         payload["brief"] = brief.model_dump(mode="json")
+    if cultural_narrative is not None:
+        payload["cultural_narrative"] = cultural_narrative.model_dump(mode="json")
     if storyline is not None:
         payload["storyline"] = storyline.model_dump(mode="json")
     if outline is not None:
@@ -153,6 +157,14 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
         if brief is not None:
             restored["brief"] = (
                 brief if isinstance(brief, PresentationBrief) else PresentationBrief.model_validate(brief)
+            )
+    if "cultural_narrative" in state_data:
+        narrative = state_data["cultural_narrative"]
+        if narrative is not None:
+            restored["cultural_narrative"] = (
+                narrative
+                if isinstance(narrative, CulturalNarrativePlan)
+                else CulturalNarrativePlan.model_validate(narrative)
             )
     if "storyline" in state_data:
         storyline = state_data["storyline"]

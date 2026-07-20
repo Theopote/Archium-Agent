@@ -34,6 +34,7 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     location: Mapped[str | None] = mapped_column(String(500))
     client: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    current_cultural_narrative_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
 
     documents: Mapped[list[SourceDocumentORM]] = relationship(
         back_populates="project",
@@ -56,6 +57,10 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
     )
     missions: Mapped[list[ProjectMissionORM]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    cultural_narratives: Mapped[list[CulturalNarrativePlanORM]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
     )
@@ -268,6 +273,23 @@ class OutlinePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="presentation-outline")
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="outlines")
+
+
+class CulturalNarrativePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "cultural_narrative_plans"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, default=dict)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    logical_key: Mapped[str] = mapped_column(
+        String(200), nullable=False, default="project-cultural-narrative"
+    )
+
+    project: Mapped[ProjectORM] = relationship(back_populates="cultural_narratives")
 
 
 class SlideORM(UUIDPrimaryKeyMixin, Base):
