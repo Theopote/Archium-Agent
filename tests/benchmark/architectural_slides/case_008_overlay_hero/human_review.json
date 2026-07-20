@@ -1,16 +1,20 @@
 {
   "case_id": "case_008_overlay_hero",
-  "source": "placeholder",
+  "source": "manual",
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 4,
-  "image_text_relationship": 4,
-  "whitespace_density": 4,
+  "image_text_relationship": 2,
+  "whitespace_density": 2,
   "architectural_expression": 4,
   "aesthetic_finish": 4,
   "editability": 4,
-  "major_problems": [],
+  "major_problems": [
+    "还是看不到图片"
+  ],
   "minor_problems": [],
-  "accepted": false,
-  "reviewer_notes": "占位模板；分数不可用于验收，待真实人工评审替换。"
+  "accepted": true,
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T14:15:51.172833Z",
+  "reviewer_notes": ""
 }

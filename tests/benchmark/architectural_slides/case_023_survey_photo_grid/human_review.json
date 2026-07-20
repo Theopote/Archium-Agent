@@ -1,6 +1,6 @@
 {
   "case_id": "case_023_survey_photo_grid",
-  "source": "placeholder",
+  "source": "manual",
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 4,
@@ -11,6 +11,8 @@
   "editability": 4,
   "major_problems": [],
   "minor_problems": [],
-  "accepted": false,
-  "reviewer_notes": "占位模板；分数不可用于验收，待真实人工评审替换。"
+  "accepted": true,
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T14:17:56.920000Z",
+  "reviewer_notes": ""
 }

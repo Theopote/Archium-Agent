@@ -1,16 +1,18 @@
 {
   "case_id": "case_019_photo_text_hybrid",
-  "source": "placeholder",
+  "source": "manual",
   "information_hierarchy": 4,
   "visual_focus": 4,
-  "reading_order": 4,
+  "reading_order": 3,
   "image_text_relationship": 4,
   "whitespace_density": 4,
   "architectural_expression": 4,
   "aesthetic_finish": 4,
-  "editability": 4,
+  "editability": 1,
   "major_problems": [],
   "minor_problems": [],
   "accepted": false,
-  "reviewer_notes": "占位模板；分数不可用于验收，待真实人工评审替换。"
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T14:17:27.503026Z",
+  "reviewer_notes": ""
 }
