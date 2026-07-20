@@ -281,7 +281,7 @@ def _render_generation_form(project_id: UUID) -> None:
                 value=export_marp,
                 help="导出 Marp Markdown 后，通过 marp --images 生成逐页 PNG 预览。",
             )
-            review_col1, review_col2, review_col3 = st.columns(3)
+            review_col1, review_col2, review_col3, review_col4 = st.columns(4)
             require_brief_review = review_col1.checkbox(
                 f"{entity_label('PresentationBrief')} 生成后暂停审核",
                 value=True,
@@ -290,7 +290,11 @@ def _render_generation_form(project_id: UUID) -> None:
                 f"{entity_label('Storyline')} 生成后暂停审核",
                 value=True,
             )
-            require_slides_review = review_col3.checkbox(
+            require_outline_review = review_col3.checkbox(
+                f"{entity_label('OutlinePlan')} 生成后暂停审核",
+                value=True,
+            )
+            require_slides_review = review_col4.checkbox(
                 f"{entity_label('SlideSpec')} 生成后暂停审核",
                 value=False,
             )
@@ -322,6 +326,7 @@ def _render_generation_form(project_id: UUID) -> None:
         "export_preview_images": export_preview_images and export_marp,
         "require_brief_review": require_brief_review,
         "require_storyline_review": require_storyline_review,
+        "require_outline_review": require_outline_review,
         "require_slides_review": require_slides_review,
     }
 

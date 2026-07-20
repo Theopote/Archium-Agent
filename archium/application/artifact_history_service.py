@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.artifact_snapshots import brief_to_snapshot, storyline_to_snapshot
+from archium.domain.outline import OutlinePlan
 from archium.application.revision_service import RevisionService
 from archium.application.slide_diff import change_source_label
 from archium.domain.enums import RevisionEntityType, RevisionSource
@@ -138,3 +139,69 @@ class StorylineHistoryService:
         from archium.infrastructure.database.repositories import PresentationRepository
 
         return PresentationRepository(self._session).get_storyline(storyline_id)
+
+
+class OutlineHistoryService:
+    """Outline-specific facade over the unified revision service."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._revisions = RevisionService(session)
+
+    def record_snapshot(
+        self,
+        outline: OutlinePlan,
+        change_source: RevisionSource,
+        *,
+        note: str | None = None,
+    ) -> EntityRevision:
+        from archium.application.artifact_snapshots import outline_to_snapshot
+        from archium.domain.outline import OutlinePlan as OutlinePlanModel
+
+        return self._revisions.record(
+            entity_type=RevisionEntityType.OUTLINE,
+            entity_id=outline.id,
+            lineage_id=outline.lineage_id,
+            presentation_id=outline.presentation_id,
+            change_source=change_source,
+            snapshot=outline_to_snapshot(outline),
+            note=note,
+        )
+
+    def archive_before_regeneration(
+        self,
+        outline: OutlinePlanModel,
+        *,
+        note: str = "重新生成前归档",
+    ) -> EntityRevision:
+        return self.record_snapshot(
+            outline,
+            RevisionSource.REGENERATION,
+            note=note,
+        )
+
+    def list_revisions(self, outline_id: UUID) -> list[EntityRevision]:
+        outline = self._get_outline(outline_id)
+        if outline is None:
+            return []
+        return self.list_revisions_by_lineage(outline.lineage_id)
+
+    def list_revisions_by_lineage(self, lineage_id: UUID) -> list[EntityRevision]:
+        return self._revisions.list_by_lineage(lineage_id)
+
+    def list_presentation_revisions(self, presentation_id: UUID) -> list[EntityRevision]:
+        return self._revisions.list_by_presentation(
+            presentation_id,
+            entity_type=RevisionEntityType.OUTLINE,
+        )
+
+    @staticmethod
+    def revision_label(revision: EntityRevision) -> str:
+        title = str(revision.snapshot.get("title", "Outline"))[:40]
+        source = change_source_label(revision.change_source)
+        return f"修订 #{revision.revision_number} · {source} · {title}"
+
+    def _get_outline(self, outline_id: UUID):
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        return PresentationRepository(self._session).get_outline(outline_id)

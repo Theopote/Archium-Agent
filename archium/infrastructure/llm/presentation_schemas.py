@@ -38,6 +38,30 @@ class StorylineDraft(BaseModel):
     chapters: list[ChapterDraft] = Field(default_factory=list)
 
 
+class OutlineSectionDraft(BaseModel):
+    id: str
+    title: str
+    purpose: str
+    key_message: str
+    estimated_slide_count: int = Field(default=1, ge=0)
+    evidence_requirements: list[str] = Field(default_factory=list)
+    required_assets: list[str] = Field(default_factory=list)
+    required: bool = True
+    expanded: bool = True
+    order: int = Field(ge=0)
+    category: str = "general"
+
+
+class OutlinePlanDraft(BaseModel):
+    title: str
+    thesis: str
+    audience: str
+    purpose: str
+    target_slide_count: int = Field(default=20, ge=1, le=200)
+    audience_mode: str = "government"
+    sections: list[OutlineSectionDraft] = Field(default_factory=list)
+
+
 class CitationDraft(BaseModel):
     document_name: str
     page_number: int | None = None

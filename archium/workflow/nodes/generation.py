@@ -9,6 +9,7 @@ from archium.agents._helpers import build_project_context_bundle, build_retrieva
 from archium.agents.citations import enrich_slide_citations
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.domain.enums import ApprovalStatus, WorkflowStep
+from archium.domain.outline import OutlinePlan
 from archium.domain.slide import SlideSpec
 from archium.workflow.nodes.base import WorkflowNodeBase
 from archium.workflow.state import PresentationWorkflowState
@@ -100,6 +101,53 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 "current_step": WorkflowStep.STORYLINE.value,
             }
 
+    def generate_outline(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
+        logger = self._logger(state)
+        if state.get("errors"):
+            return {"current_step": WorkflowStep.OUTLINE.value}
+
+        existing = state.get("outline")
+        if existing is not None:
+            refreshed = self._presentations.get_outline(existing.id)
+            if refreshed is not None:
+                return {"outline": refreshed, "current_step": WorkflowStep.OUTLINE.value}
+
+        brief = state.get("brief")
+        storyline = state.get("storyline")
+        if brief is None or storyline is None:
+            return {
+                "errors": ["Cannot generate outline without brief and storyline"],
+                "current_step": WorkflowStep.OUTLINE.value,
+            }
+
+        try:
+            project_id = UUID(state["project_id"])
+            outline = self._runtime.presentation_service.generate_outline_plan(
+                project_id,
+                brief,
+                storyline,
+            )
+            if state.get("require_outline_review"):
+                outline.approval_status = ApprovalStatus.PENDING
+            else:
+                outline.approve()
+            outline = self._presentations.save_outline(outline)
+
+            next_state: PresentationWorkflowState = {
+                "outline": outline,
+                "current_step": WorkflowStep.OUTLINE.value,
+            }
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info("Outline generated for presentation %s", state["presentation_id"])
+            return next_state
+        except Exception as exc:
+            logger.exception("Outline generation failed: %s", exc)
+            return {
+                "errors": [str(exc)],
+                "current_step": WorkflowStep.OUTLINE.value,
+            }
+
     def generate_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
@@ -114,9 +162,15 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
         brief = state.get("brief")
         storyline = state.get("storyline")
+        outline = state.get("outline")
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot generate slides without brief and storyline"],
+                "current_step": WorkflowStep.SLIDES.value,
+            }
+        if outline is None or outline.approval_status != ApprovalStatus.APPROVED:
+            return {
+                "errors": ["Cannot generate slides without an approved outline plan"],
                 "current_step": WorkflowStep.SLIDES.value,
             }
 
@@ -126,6 +180,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 project_id,
                 brief,
                 storyline,
+                outline=outline,
             )
             reviewed_slides: list[SlideSpec] = []
             for slide in slides:

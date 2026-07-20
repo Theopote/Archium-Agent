@@ -159,6 +159,7 @@ class PresentationORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text)
     current_brief_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_storyline_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    current_outline_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
 
     project: Mapped[ProjectORM] = relationship(back_populates="presentations")
     briefs: Mapped[list[PresentationBriefORM]] = relationship(
@@ -166,6 +167,10 @@ class PresentationORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
     )
     storylines: Mapped[list[StorylineORM]] = relationship(
+        back_populates="presentation",
+        cascade="all, delete-orphan",
+    )
+    outlines: Mapped[list[OutlinePlanORM]] = relationship(
         back_populates="presentation",
         cascade="all, delete-orphan",
     )
@@ -242,6 +247,27 @@ class ChapterORM(UUIDPrimaryKeyMixin, Base):
     estimated_slide_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     storyline: Mapped[StorylineORM] = relationship(back_populates="chapters")
+
+
+class OutlinePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "outline_plans"
+
+    presentation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    thesis: Mapped[str] = mapped_column(Text, nullable=False)
+    audience: Mapped[str] = mapped_column(String(500), nullable=False)
+    purpose: Mapped[str] = mapped_column(Text, nullable=False)
+    target_slide_count: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    audience_mode: Mapped[str] = mapped_column(String(40), nullable=False, default="government")
+    sections_json: Mapped[list[dict[str, object]]] = mapped_column("sections", JSON, default=list)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="presentation-outline")
+
+    presentation: Mapped[PresentationORM] = relationship(back_populates="outlines")
 
 
 class SlideORM(UUIDPrimaryKeyMixin, Base):

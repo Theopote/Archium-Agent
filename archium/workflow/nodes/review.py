@@ -301,12 +301,19 @@ class ReviewNodesMixin(WorkflowNodeBase):
             if refreshed_brief is not None:
                 updates["brief"] = refreshed_brief
 
-        if gate in {"storyline", "slides"}:
+        if gate in {"storyline", "outline", "slides"}:
             storyline = state.get("storyline")
             if storyline is not None:
                 refreshed_storyline = self._presentations.get_storyline(storyline.id)
                 if refreshed_storyline is not None:
                     updates["storyline"] = refreshed_storyline
+
+        if gate in {"outline", "slides"}:
+            outline = state.get("outline")
+            if outline is not None:
+                refreshed_outline = self._presentations.get_outline(outline.id)
+                if refreshed_outline is not None:
+                    updates["outline"] = refreshed_outline
 
         if gate == "slides":
             updates["slides"] = self._presentations.list_slides(presentation_id)
@@ -329,6 +336,15 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 refreshed_storyline is not None
                 and refreshed_storyline.approval_status == ApprovalStatus.APPROVED
             )
+        if gate == "outline":
+            outline = state.get("outline")
+            if outline is None:
+                return False
+            refreshed_outline = self._presentations.get_outline(outline.id)
+            return (
+                refreshed_outline is not None
+                and refreshed_outline.approval_status == ApprovalStatus.APPROVED
+            )
         if gate == "slides":
             slides = self._presentations.list_slides(UUID(state["presentation_id"]))
             return bool(slides) and slides_are_approved(slides)
@@ -339,6 +355,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
         review_steps = {
             WorkflowStep.REVIEW_BRIEF.value,
             WorkflowStep.REVIEW_STORYLINE.value,
+            WorkflowStep.REVIEW_OUTLINE.value,
             WorkflowStep.REVIEW_SLIDES.value,
         }
 
@@ -350,7 +367,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 existing_step = run.state.get("current_step")
                 if (
                     isinstance(existing_gate, str)
-                    and existing_gate in {"brief", "storyline", "slides"}
+                    and existing_gate in {"brief", "storyline", "outline", "slides"}
                     and isinstance(existing_step, str)
                     and existing_step in review_steps
                     and self._gate_ready_to_continue(state, existing_gate)
@@ -376,6 +393,9 @@ class ReviewNodesMixin(WorkflowNodeBase):
         elif storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:
             gate = "storyline"
             step = WorkflowStep.REVIEW_STORYLINE.value
+        elif state.get("require_outline_review") and state.get("outline") is not None and state["outline"].approval_status != ApprovalStatus.APPROVED:
+            gate = "outline"
+            step = WorkflowStep.REVIEW_OUTLINE.value
         elif slides and state.get("require_slides_review") and not slides_are_approved(slides):
             gate = "slides"
             step = WorkflowStep.REVIEW_SLIDES.value

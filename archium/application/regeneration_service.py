@@ -12,6 +12,7 @@ from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.workflow import WorkflowRun
@@ -57,6 +58,7 @@ class RegenerationService:
 
         presentation.current_brief_id = brief.id
         presentation.current_storyline_id = None
+        presentation.current_outline_id = None
         self._presentations.update_presentation(presentation)
         self._archive_and_delete_slides(presentation_id)
         self._pause_for_review(
@@ -66,6 +68,7 @@ class RegenerationService:
             step=WorkflowStep.REVIEW_BRIEF,
             brief=brief,
             storyline=None,
+            outline=None,
             slides=[],
         )
         return brief
@@ -88,6 +91,7 @@ class RegenerationService:
 
         presentation = context.presentation
         presentation.current_storyline_id = storyline.id
+        presentation.current_outline_id = None
         self._presentations.update_presentation(presentation)
         self._archive_and_delete_slides(presentation_id)
         self._pause_for_review(
@@ -97,9 +101,48 @@ class RegenerationService:
             step=WorkflowStep.REVIEW_STORYLINE,
             brief=context.brief,
             storyline=storyline,
+            outline=None,
             slides=[],
         )
         return storyline
+
+    def regenerate_outline_plan(
+        self,
+        presentation_id: UUID,
+        *,
+        workflow_run_id: UUID | None = None,
+    ) -> OutlinePlan:
+        context = self._review.get_review_context(presentation_id, workflow_run_id=workflow_run_id)
+        if context is None or context.brief is None or context.storyline is None:
+            raise WorkflowError("Cannot regenerate outline without brief and storyline")
+        if context.brief.approval_status != ApprovalStatus.APPROVED:
+            raise WorkflowError("Brief must be approved before regenerating outline")
+        if context.storyline.approval_status != ApprovalStatus.APPROVED:
+            raise WorkflowError("Storyline must be approved before regenerating outline")
+
+        outline = self._pipeline.generate_outline_plan(
+            context.presentation.project_id,
+            context.brief,
+            context.storyline,
+        )
+        outline.approval_status = ApprovalStatus.PENDING
+        outline = self._presentations.save_outline(outline)
+
+        presentation = context.presentation
+        presentation.current_outline_id = outline.id
+        self._presentations.update_presentation(presentation)
+        self._archive_and_delete_slides(presentation_id)
+        self._pause_for_review(
+            presentation_id,
+            workflow_run_id=workflow_run_id,
+            gate="outline",
+            step=WorkflowStep.REVIEW_OUTLINE,
+            brief=context.brief,
+            storyline=context.storyline,
+            outline=outline,
+            slides=[],
+        )
+        return outline
 
     def regenerate_slide_plan(
         self,
@@ -115,12 +158,17 @@ class RegenerationService:
             raise WorkflowError("Brief must be approved before regenerating slides")
         if context.storyline.approval_status != ApprovalStatus.APPROVED:
             raise WorkflowError("Storyline must be approved before regenerating slides")
+        if context.outline is None:
+            raise WorkflowError("Outline plan is missing")
+        if context.outline.approval_status != ApprovalStatus.APPROVED:
+            raise WorkflowError("Outline plan must be approved before regenerating slides")
 
         self._archive_and_delete_slides(presentation_id, slides=context.slides)
         slides = self._pipeline.generate_slide_plan(
             context.presentation.project_id,
             context.brief,
             context.storyline,
+            outline=context.outline,
         )
         saved: list[SlideSpec] = []
         for slide in slides:
@@ -137,6 +185,7 @@ class RegenerationService:
             step=WorkflowStep.REVIEW_SLIDES,
             brief=context.brief,
             storyline=context.storyline,
+            outline=context.outline,
             slides=saved,
         )
         return saved
@@ -175,6 +224,7 @@ class RegenerationService:
         step: WorkflowStep,
         brief: PresentationBrief | None,
         storyline: Storyline | None,
+        outline: OutlinePlan | None,
         slides: list[SlideSpec],
     ) -> None:
         run = self._resolve_workflow_run(presentation_id, workflow_run_id)
@@ -192,6 +242,7 @@ class RegenerationService:
             "presentation": presentation,
             "brief": brief,
             "storyline": storyline,
+            "outline": outline,
             "slides": slides,
             "current_step": step.value,
             "review_gate": gate,
@@ -202,6 +253,7 @@ class RegenerationService:
             "export_preview_images": run.state.get("export_preview_images", False),
             "require_brief_review": run.state.get("require_brief_review", False),
             "require_storyline_review": run.state.get("require_storyline_review", False),
+            "require_outline_review": run.state.get("require_outline_review", True),
             "require_slides_review": run.state.get("require_slides_review", False),
             "errors": [],
         }

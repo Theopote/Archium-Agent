@@ -100,6 +100,18 @@ class KnowledgeItemStatus(StrEnum):
     SUPERSEDED = "superseded"
 
 
+class OutlineAudienceMode(StrEnum):
+    """Audience profile affecting outline structure and emphasis."""
+
+    GOVERNMENT = "government"
+    CLIENT = "client"
+    EXPERT_REVIEW = "expert_review"
+    COMMUNITY = "community"
+    INVESTOR = "investor"
+    CULTURE_TOURISM = "culture_tourism"
+    INTERNAL_DESIGN = "internal_design"
+
+
 class PresentationType(StrEnum):
     CONCEPT = "concept"
     SCHEMATIC = "schematic"
@@ -181,6 +193,7 @@ class SlideRepairSource(StrEnum):
 class RevisionEntityType(StrEnum):
     BRIEF = "brief"
     STORYLINE = "storyline"
+    OUTLINE = "outline"
     SLIDE = "slide"
     ASSET_ASSIGNMENT = "asset_assignment"
     PRESENTATION_THEME = "presentation_theme"
@@ -512,6 +525,8 @@ class WorkflowStep(StrEnum):
     REVIEW_BRIEF = "review_brief"
     STORYLINE = "storyline"
     REVIEW_STORYLINE = "review_storyline"
+    OUTLINE = "outline"
+    REVIEW_OUTLINE = "review_outline"
     REVIEW_SLIDES = "review_slides"
     SLIDES = "slides"
     RESOLVE_CITATIONS = "resolve_citations"

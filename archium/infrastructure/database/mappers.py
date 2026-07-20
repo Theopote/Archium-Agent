@@ -14,6 +14,7 @@ from archium.domain.enums import (
     InformationOrigin,
     InformationReliability,
     KnowledgeItemStatus,
+    OutlineAudienceMode,
     PlanningSessionStatus,
     PresentationStatus,
     PresentationType,
@@ -36,6 +37,7 @@ from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.memory import UserPreference
 from archium.domain.planning_session import PlanningSession
+from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
     STORYLINE_LOGICAL_KEY,
@@ -54,6 +56,7 @@ from archium.infrastructure.database.models import (
     AssetORM,
     ChapterORM,
     DocumentChunkORM,
+    OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
     PresentationORM,
@@ -295,6 +298,7 @@ def presentation_to_domain(orm: PresentationORM) -> Presentation:
         description=orm.description,
         current_brief_id=orm.current_brief_id,
         current_storyline_id=orm.current_storyline_id,
+        current_outline_id=orm.current_outline_id,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -310,6 +314,7 @@ def presentation_to_orm(
     target.description = domain.description
     target.current_brief_id = domain.current_brief_id
     target.current_storyline_id = domain.current_storyline_id
+    target.current_outline_id = domain.current_outline_id
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target
@@ -431,6 +436,58 @@ def storyline_to_orm(domain: Storyline, orm: StorylineORM | None = None) -> Stor
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     target.chapters = [chapter_to_orm(ch, domain.id) for ch in domain.chapters]
+    return target
+
+
+# ── OutlinePlan ────────────────────────────────────────────────
+
+
+def _outline_sections_to_json(sections: list[OutlineSection]) -> list[dict[str, object]]:
+    return [section.model_dump(mode="json") for section in sections]
+
+
+def _outline_sections_from_json(data: list[dict[str, object]]) -> list[OutlineSection]:
+    return [OutlineSection.model_validate(item) for item in data]
+
+
+def outline_plan_to_domain(orm: OutlinePlanORM) -> OutlinePlan:
+    lineage_id = orm.lineage_id or orm.id
+    logical_key = orm.logical_key or OUTLINE_LOGICAL_KEY
+    return OutlinePlan(
+        id=orm.id,
+        presentation_id=orm.presentation_id,
+        lineage_id=lineage_id,
+        logical_key=logical_key,
+        title=orm.title,
+        thesis=orm.thesis,
+        audience=orm.audience,
+        purpose=orm.purpose,
+        target_slide_count=orm.target_slide_count,
+        audience_mode=OutlineAudienceMode(orm.audience_mode),
+        sections=_outline_sections_from_json(orm.sections_json),
+        version=orm.version,
+        approval_status=ApprovalStatus(orm.approval_status),
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def outline_plan_to_orm(domain: OutlinePlan, orm: OutlinePlanORM | None = None) -> OutlinePlanORM:
+    target = orm or OutlinePlanORM(id=domain.id)
+    target.presentation_id = domain.presentation_id
+    target.title = domain.title
+    target.thesis = domain.thesis
+    target.audience = domain.audience
+    target.purpose = domain.purpose
+    target.target_slide_count = domain.target_slide_count
+    target.audience_mode = domain.audience_mode.value
+    target.sections_json = _outline_sections_to_json(domain.sections)
+    target.version = domain.version
+    target.approval_status = domain.approval_status.value
+    target.lineage_id = domain.lineage_id
+    target.logical_key = domain.logical_key
+    target.created_at = domain.created_at
+    target.updated_at = domain.updated_at
     return target
 
 

@@ -10,6 +10,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.outline import OutlinePlan
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 
@@ -32,6 +33,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     fact_validation_issues: Annotated[list[str], operator.add]
     brief: PresentationBrief | None
     storyline: Storyline | None
+    outline: OutlinePlan | None
     slides: list[SlideSpec]
     review_issues: list[ReviewIssue]
     matched_asset_count: int
@@ -55,6 +57,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     render_warnings: Annotated[list[str], operator.add]
     require_brief_review: bool
     require_storyline_review: bool
+    require_outline_review: bool
     require_slides_review: bool
     review_gate: str | None
     slide_review_issues: list[str]
@@ -78,6 +81,7 @@ def initial_workflow_state(
     export_preview_images: bool = True,
     require_brief_review: bool = False,
     require_storyline_review: bool = False,
+    require_outline_review: bool = True,
     require_slides_review: bool = False,
 ) -> PresentationWorkflowState:
     """Build the initial graph state for a new workflow run."""
@@ -97,6 +101,7 @@ def initial_workflow_state(
         "fact_validation_issues": [],
         "brief": None,
         "storyline": None,
+        "outline": None,
         "slides": [],
         "review_issues": [],
         "matched_asset_count": 0,
@@ -120,6 +125,7 @@ def initial_workflow_state(
         "render_warnings": [],
         "require_brief_review": require_brief_review,
         "require_storyline_review": require_storyline_review,
+        "require_outline_review": require_outline_review,
         "require_slides_review": require_slides_review,
         "review_gate": None,
         "slide_review_issues": [],

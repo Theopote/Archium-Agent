@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
@@ -44,6 +45,32 @@ class StorylineUpdate:
 
 
 @dataclass(frozen=True)
+class OutlineSectionUpdate:
+    id: str
+    title: str
+    purpose: str
+    key_message: str
+    order: int
+    estimated_slide_count: int = 1
+    evidence_requirements: list[str] = field(default_factory=list)
+    required_assets: list[str] = field(default_factory=list)
+    required: bool = True
+    expanded: bool = True
+    category: str = "general"
+
+
+@dataclass(frozen=True)
+class OutlineUpdate:
+    title: str
+    thesis: str
+    audience: str
+    purpose: str
+    target_slide_count: int = 20
+    audience_mode: str = "government"
+    sections: list[OutlineSectionUpdate] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class SlideUpdate:
     chapter_id: str
     order: int
@@ -60,6 +87,7 @@ class PresentationReviewContext:
     presentation: Presentation
     brief: PresentationBrief | None
     storyline: Storyline | None
+    outline: OutlinePlan | None
     slides: list[SlideSpec] = field(default_factory=list)
     review_issues: list[ReviewIssue] = field(default_factory=list)
     workflow_run: WorkflowRun | None = None

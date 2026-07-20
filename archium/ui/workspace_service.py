@@ -235,6 +235,7 @@ def run_presentation_workflow(
     export_preview_images: bool | None = None,
     require_brief_review: bool = False,
     require_storyline_review: bool = False,
+    require_outline_review: bool = True,
     require_slides_review: bool = False,
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
@@ -258,6 +259,7 @@ def run_presentation_workflow(
         export_preview_images=resolved_preview_images,
         require_brief_review=require_brief_review,
         require_storyline_review=require_storyline_review,
+        require_outline_review=require_outline_review,
         require_slides_review=require_slides_review,
     )
 
@@ -316,6 +318,23 @@ def regenerate_storyline(
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_storyline(
+            presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+
+
+def regenerate_outline_plan(
+    presentation_id: UUID,
+    *,
+    workflow_run_id: UUID | None = None,
+    settings: Settings | None = None,
+):
+    from archium.application.regeneration_service import RegenerationService
+
+    resolved_settings = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(resolved_settings)
+    with get_session() as session:
+        return RegenerationService(session, llm, settings=resolved_settings).regenerate_outline_plan(
             presentation_id,
             workflow_run_id=workflow_run_id,
         )

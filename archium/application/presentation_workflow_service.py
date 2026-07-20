@@ -88,6 +88,7 @@ class PresentationWorkflowService:
         export_preview_images: bool | None = None,
         require_brief_review: bool = False,
         require_storyline_review: bool = False,
+        require_outline_review: bool = True,
         require_slides_review: bool = False,
     ) -> WorkflowRunResult:
         workflow_run = self.prepare_run(
@@ -102,6 +103,7 @@ class PresentationWorkflowService:
             export_preview_images=export_preview_images,
             require_brief_review=require_brief_review,
             require_storyline_review=require_storyline_review,
+            require_outline_review=require_outline_review,
             require_slides_review=require_slides_review,
         )
         return self.execute_prepared(workflow_run.id)
@@ -120,6 +122,7 @@ class PresentationWorkflowService:
         export_preview_images: bool | None = None,
         require_brief_review: bool = False,
         require_storyline_review: bool = False,
+        require_outline_review: bool = True,
         require_slides_review: bool = False,
     ) -> WorkflowRun:
         """Create presentation + WorkflowRun records without invoking the graph."""
@@ -152,6 +155,7 @@ class PresentationWorkflowService:
                     "export_preview_images": resolved_preview_images,
                     "require_brief_review": require_brief_review,
                     "require_storyline_review": require_storyline_review,
+                    "require_outline_review": require_outline_review,
                     "require_slides_review": require_slides_review,
                 },
             )
@@ -375,5 +379,6 @@ class PresentationWorkflowService:
             export_preview_images=bool(run.state.get("export_preview_images", False)),
             require_brief_review=bool(run.state.get("require_brief_review", False)),
             require_storyline_review=bool(run.state.get("require_storyline_review", False)),
+            require_outline_review=bool(run.state.get("require_outline_review", True)),
             require_slides_review=bool(run.state.get("require_slides_review", False)),
         )

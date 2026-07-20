@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.outline import OutlinePlan
 
 
 def brief_to_snapshot(brief: PresentationBrief) -> dict[str, object]:
@@ -49,5 +50,38 @@ def storyline_to_snapshot(storyline: Storyline) -> dict[str, object]:
                 "estimated_slide_count": chapter.estimated_slide_count,
             }
             for chapter in storyline.chapters
+        ],
+    }
+
+
+def outline_to_snapshot(outline: OutlinePlan) -> dict[str, object]:
+    return {
+        "id": str(outline.id),
+        "lineage_id": str(outline.lineage_id),
+        "logical_key": outline.logical_key,
+        "presentation_id": str(outline.presentation_id),
+        "title": outline.title,
+        "thesis": outline.thesis,
+        "audience": outline.audience,
+        "purpose": outline.purpose,
+        "target_slide_count": outline.target_slide_count,
+        "audience_mode": outline.audience_mode.value,
+        "approval_status": outline.approval_status.value,
+        "version": outline.version,
+        "sections": [
+            {
+                "id": section.id,
+                "title": section.title,
+                "purpose": section.purpose,
+                "key_message": section.key_message,
+                "estimated_slide_count": section.estimated_slide_count,
+                "evidence_requirements": list(section.evidence_requirements),
+                "required_assets": list(section.required_assets),
+                "required": section.required,
+                "expanded": section.expanded,
+                "order": section.order,
+                "category": section.category,
+            }
+            for section in outline.sections
         ],
     }

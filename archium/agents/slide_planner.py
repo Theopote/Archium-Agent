@@ -16,6 +16,7 @@ from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -45,6 +46,7 @@ class SlidePlanner:
         brief: PresentationBrief,
         storyline: Storyline,
         *,
+        outline: OutlinePlan | None = None,
         version: int = 1,
         replace_existing: bool = True,
     ) -> list[SlideSpec]:
@@ -70,6 +72,7 @@ class SlidePlanner:
                     brief_json=to_json(brief),
                     storyline_json=to_json(storyline),
                     target_slide_count=brief.target_slide_count,
+                    outline_json=to_json(outline) if outline is not None else None,
                 ),
                 temperature=0.5,
             ),

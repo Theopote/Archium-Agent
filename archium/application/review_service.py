@@ -8,11 +8,14 @@ from sqlalchemy.orm import Session
 
 from archium.application.artifact_history_service import (
     BriefHistoryService,
+    OutlineHistoryService,
     StorylineHistoryService,
 )
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
+    OutlineSectionUpdate,
+    OutlineUpdate,
     PresentationReviewContext,
     SlideUpdate,
     StorylineUpdate,
@@ -20,11 +23,13 @@ from archium.application.review_models import (
 from archium.application.slide_history_service import SlideHistoryService
 from archium.domain.enums import (
     ApprovalStatus,
+    OutlineAudienceMode,
     RevisionSource,
     SlideStatus,
     SlideType,
     WorkflowStatus,
 )
+from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
@@ -53,6 +58,7 @@ class PresentationReviewService:
         self._history = SlideHistoryService(session)
         self._brief_history = BriefHistoryService(session)
         self._storyline_history = StorylineHistoryService(session)
+        self._outline_history = OutlineHistoryService(session)
 
     def get_review_context(
         self,
@@ -80,6 +86,13 @@ class PresentationReviewService:
 
         slides = self._presentations.list_slides(presentation_id)
 
+        outline = None
+        if presentation.current_outline_id is not None:
+            outline = self._presentations.get_outline(presentation.current_outline_id)
+        if outline is None:
+            outlines = self._presentations.list_outlines(presentation_id)
+            outline = outlines[0] if outlines else None
+
         review_issues = self._reviews.list_by_presentation(presentation_id)
 
         workflow_run = None
@@ -96,6 +109,7 @@ class PresentationReviewService:
             presentation=presentation,
             brief=brief,
             storyline=storyline,
+            outline=outline,
             slides=slides,
             review_issues=review_issues,
             workflow_run=workflow_run,
@@ -172,6 +186,34 @@ class PresentationReviewService:
         storyline.reject()
         return self._presentations.save_storyline(storyline)
 
+    def update_outline(self, outline_id: UUID, update: OutlineUpdate) -> OutlinePlan:
+        outline = self._require_outline(outline_id)
+        self._outline_history.record_snapshot(outline, RevisionSource.MANUAL_EDIT)
+        try:
+            audience_mode = OutlineAudienceMode(update.audience_mode)
+        except ValueError:
+            audience_mode = OutlineAudienceMode.GOVERNMENT
+        outline.title = update.title.strip()
+        outline.thesis = update.thesis.strip()
+        outline.audience = update.audience.strip()
+        outline.purpose = update.purpose.strip()
+        outline.target_slide_count = update.target_slide_count
+        outline.audience_mode = audience_mode
+        outline.sections = [_outline_section_from_update(item) for item in update.sections]
+        outline.approval_status = ApprovalStatus.DRAFT
+        outline.touch()
+        return self._presentations.save_outline(outline)
+
+    def approve_outline(self, outline_id: UUID) -> OutlinePlan:
+        outline = self._require_outline(outline_id)
+        outline.approve()
+        return self._presentations.save_outline(outline)
+
+    def reject_outline(self, outline_id: UUID) -> OutlinePlan:
+        outline = self._require_outline(outline_id)
+        outline.reject()
+        return self._presentations.save_outline(outline)
+
     def update_slide(self, slide_id: UUID, update: SlideUpdate) -> SlideSpec:
         slide = self._require_slide(slide_id)
         self._history.record_snapshot(slide, RevisionSource.MANUAL_EDIT)
@@ -230,6 +272,11 @@ class PresentationReviewService:
                 raise WorkflowError("Storyline is missing for review continuation")
             if context.storyline.approval_status != ApprovalStatus.APPROVED:
                 raise WorkflowError("Storyline must be approved before continuing")
+        elif gate == "outline":
+            if context.outline is None:
+                raise WorkflowError("Outline plan is missing for review continuation")
+            if context.outline.approval_status != ApprovalStatus.APPROVED:
+                raise WorkflowError("Outline plan must be approved before continuing")
         elif gate == "slides":
             if not context.slides:
                 raise WorkflowError("Slide plan is missing for review continuation")
@@ -252,6 +299,12 @@ class PresentationReviewService:
             raise WorkflowError(f"Storyline {storyline_id} not found")
         return storyline
 
+    def _require_outline(self, outline_id: UUID) -> OutlinePlan:
+        outline = self._presentations.get_outline(outline_id)
+        if outline is None:
+            raise WorkflowError(f"Outline plan {outline_id} not found")
+        return outline
+
     def _require_slide(self, slide_id: UUID) -> SlideSpec:
         slide = self._presentations.get_slide(slide_id)
         if slide is None:
@@ -273,6 +326,22 @@ def _chapter_from_update(update: ChapterUpdate) -> Chapter:
         key_message=update.key_message.strip(),
         order=update.order,
         estimated_slide_count=update.estimated_slide_count,
+    )
+
+
+def _outline_section_from_update(update: OutlineSectionUpdate) -> OutlineSection:
+    return OutlineSection(
+        id=update.id.strip(),
+        title=update.title.strip(),
+        purpose=update.purpose.strip(),
+        key_message=update.key_message.strip(),
+        order=update.order,
+        estimated_slide_count=update.estimated_slide_count,
+        evidence_requirements=list(update.evidence_requirements),
+        required_assets=list(update.required_assets),
+        required=update.required,
+        expanded=update.expanded,
+        category=update.category.strip() or "general",
     )
 
 

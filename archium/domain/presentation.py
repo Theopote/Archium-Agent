@@ -22,6 +22,7 @@ class Presentation(IdentifiedModel, TimestampedModel):
     description: str | None = None
     current_brief_id: UUID | None = None
     current_storyline_id: UUID | None = None
+    current_outline_id: UUID | None = None
 
     def touch(self) -> None:
         TimestampedModel.touch(self)

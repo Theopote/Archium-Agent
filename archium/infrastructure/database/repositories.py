@@ -14,6 +14,7 @@ from archium.domain.enums import ProjectStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.domain.planning_session import PlanningSession
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
@@ -26,6 +27,7 @@ from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
     AssetORM,
     DocumentChunkORM,
+    OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
     PresentationORM,
@@ -362,6 +364,32 @@ class PresentationRepository:
             .order_by(StorylineORM.version.desc())
         )
         return [mappers.storyline_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def save_outline(self, outline: OutlinePlan) -> OutlinePlan:
+        try:
+            orm = self._session.get(OutlinePlanORM, outline.id)
+            if orm is None:
+                orm = mappers.outline_plan_to_orm(outline)
+                self._session.add(orm)
+            else:
+                mappers.outline_plan_to_orm(outline, orm)
+            self._session.flush()
+            return mappers.outline_plan_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save outline", exc)
+            raise
+
+    def get_outline(self, outline_id: UUID) -> OutlinePlan | None:
+        orm = self._session.get(OutlinePlanORM, outline_id)
+        return mappers.outline_plan_to_domain(orm) if orm else None
+
+    def list_outlines(self, presentation_id: UUID) -> list[OutlinePlan]:
+        stmt = (
+            select(OutlinePlanORM)
+            .where(OutlinePlanORM.presentation_id == presentation_id)
+            .order_by(OutlinePlanORM.version.desc())
+        )
+        return [mappers.outline_plan_to_domain(row) for row in self._session.scalars(stmt)]
 
     def delete_slide(self, slide_id: UUID) -> None:
         """Delete one slide and renumber remaining slides in the presentation."""

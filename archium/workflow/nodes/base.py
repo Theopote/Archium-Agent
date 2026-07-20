@@ -103,6 +103,16 @@ class WorkflowNodeBase:
                 ):
                     return True
 
+        if state.get("require_outline_review"):
+            outline = state.get("outline")
+            if outline is not None:
+                refreshed_outline = self._presentations.get_outline(outline.id)
+                if (
+                    refreshed_outline is not None
+                    and refreshed_outline.approval_status != ApprovalStatus.APPROVED
+                ):
+                    return True
+
         if state.get("require_slides_review"):
             slides = self._load_slides_for_export(state)
             if slides and not slides_are_approved(slides):

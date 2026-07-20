@@ -8,6 +8,7 @@ ENTITY_LABELS: dict[str, str] = {
     "DeliverablePlan": "计划生成的成果",
     "PresentationBrief": "汇报要求",
     "Storyline": "汇报结构",
+    "OutlinePlan": "汇报大纲",
     "SlideSpec": "页面内容",
     "ArtDirection": "视觉方向",
     "VisualIntent": "本页表达重点",

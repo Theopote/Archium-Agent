@@ -58,12 +58,20 @@ def build_slide_plan_user_prompt(
     brief_json: str,
     storyline_json: str,
     target_slide_count: int,
+    outline_json: str | None = None,
 ) -> str:
+    outline_block = ""
+    if outline_json:
+        outline_block = (
+            f"\n【已确认 OutlinePlan — 必须遵循章节顺序与 key_message】\n{outline_json}\n"
+            "不得跳过 required=true 且 expanded=true 的章节；页数应接近 OutlinePlan 的 estimated_slide_count 总和。\n"
+        )
     return (
         f"请生成约 {target_slide_count} 页的 SlidePlan JSON。\n\n"
         f"【项目资料】\n{project_context}\n\n"
         f"【PresentationBrief】\n{brief_json}\n\n"
-        f"【Storyline】\n{storyline_json}\n\n"
+        f"【Storyline】\n{storyline_json}\n"
+        f"{outline_block}\n"
         "数值页请优先使用 slide_type=data 或 visual_requirements 中的 chart/table；"
         "key_points 使用 `标签：数值` 或 `列1|列2|列3` 格式。"
     )

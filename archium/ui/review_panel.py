@@ -8,9 +8,12 @@ import pandas as pd
 import streamlit as st
 
 from archium.application.automated_review_service import export_blocking_open_issues
+from archium.application.outline_service import apply_audience_mode
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
+    OutlineSectionUpdate,
+    OutlineUpdate,
     SlideUpdate,
     StorylineUpdate,
     parse_multiline_items,
@@ -19,6 +22,7 @@ from archium.application.review_service import PresentationReviewService
 from archium.config import get_settings
 from archium.domain.enums import (
     ApprovalStatus,
+    OutlineAudienceMode,
     ReviewCategory,
     ReviewLayer,
     ReviewSeverity,
@@ -52,6 +56,7 @@ from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
 from archium.ui.workspace_service import (
     regenerate_brief,
+    regenerate_outline_plan,
     regenerate_slide_plan,
     regenerate_storyline,
     resume_workflow,
@@ -61,8 +66,20 @@ FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
 
 _BRIEF_LABEL = entity_label("PresentationBrief")
 _STORYLINE_LABEL = entity_label("Storyline")
+_OUTLINE_LABEL = entity_label("OutlinePlan")
 _SLIDE_LABEL = entity_label("SlideSpec")
 _ASSET_BOARD_LABEL = entity_label("AssetBoard")
+
+AUDIENCE_MODE_LABELS = {
+    OutlineAudienceMode.GOVERNMENT: "政府主管部门",
+    OutlineAudienceMode.CLIENT: "建设单位/甲方",
+    OutlineAudienceMode.EXPERT_REVIEW: "专家评审",
+    OutlineAudienceMode.COMMUNITY: "社区居民",
+    OutlineAudienceMode.INVESTOR: "投资人",
+    OutlineAudienceMode.CULTURE_TOURISM: "文旅运营方",
+    OutlineAudienceMode.INTERNAL_DESIGN: "设计团队内部评审",
+}
+
 
 APPROVAL_LABELS = {
     ApprovalStatus.DRAFT: "草稿",
@@ -270,9 +287,10 @@ def _render_regenerate_actions(
     workflow_run_id: UUID | None,
     brief_status: ApprovalStatus | None,
     storyline_status: ApprovalStatus | None,
+    outline_status: ApprovalStatus | None,
     slides_need_revision: bool,
 ) -> None:
-    cols = st.columns(3)
+    cols = st.columns(4)
     if brief_status == ApprovalStatus.REJECTED and cols[0].button(
         regenerate_label("PresentationBrief"),
         key=f"regen_brief_{presentation_id}",
@@ -297,7 +315,19 @@ def _render_regenerate_actions(
         except Exception as exc:
             st.error(regenerate_failure_label("Storyline").format(error=exc))
 
-    if slides_need_revision and cols[2].button(
+    if outline_status == ApprovalStatus.REJECTED and cols[2].button(
+        regenerate_label("OutlinePlan"),
+        key=f"regen_outline_{presentation_id}",
+        use_container_width=True,
+    ):
+        try:
+            regenerate_outline_plan(presentation_id, workflow_run_id=workflow_run_id)
+            st.success(f"{regenerate_success_label('OutlinePlan')}请审核后继续。")
+            st.rerun()
+        except Exception as exc:
+            st.error(regenerate_failure_label("OutlinePlan").format(error=exc))
+
+    if slides_need_revision and cols[3].button(
         regenerate_label("SlideSpec"),
         key=f"regen_slides_{presentation_id}",
         use_container_width=True,
@@ -471,6 +501,125 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
         st.rerun()
 
     render_storyline_history_panel(storyline_id=storyline.id)
+
+
+def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
+    with get_session() as session:
+        review_service = PresentationReviewService(session)
+        context = review_service.get_review_context(
+            context_presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+    if context is None or context.outline is None:
+        st.caption(f"当前没有可编辑的 {_OUTLINE_LABEL}。")
+        return
+
+    outline = context.outline
+    st.markdown(
+        f"**{_OUTLINE_LABEL} 审核** · 状态：{_approval_badge(outline.approval_status)} · "
+        f"预计 {outline.estimated_slide_total} 页"
+    )
+
+    with st.form(f"outline_meta_{outline.id}"):
+        thesis = st.text_area("总体论点", value=outline.thesis)
+        audience_mode = st.selectbox(
+            "受众模式",
+            options=list(AUDIENCE_MODE_LABELS.keys()),
+            format_func=lambda m: AUDIENCE_MODE_LABELS[m],
+            index=list(AUDIENCE_MODE_LABELS.keys()).index(outline.audience_mode),
+        )
+        meta_submit = st.form_submit_button("保存大纲元信息", use_container_width=True)
+
+    section_rows = [
+        {
+            "id": section.id,
+            "title": section.title,
+            "purpose": section.purpose,
+            "key_message": section.key_message,
+            "order": section.order,
+            "estimated_slide_count": section.estimated_slide_count,
+            "required": section.required,
+            "expanded": section.expanded,
+            "category": section.category,
+        }
+        for section in sorted(outline.sections, key=lambda item: item.order)
+    ]
+    edited = st.data_editor(
+        pd.DataFrame(section_rows),
+        num_rows="dynamic",
+        use_container_width=True,
+        key=f"outline_sections_{outline.id}",
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+    save_clicked = col1.button(f"保存 {_OUTLINE_LABEL}", key=f"save_outline_{outline.id}", use_container_width=True)
+    approve_clicked = col2.button(f"批准 {_OUTLINE_LABEL}", key=f"approve_outline_{outline.id}", use_container_width=True)
+    reject_clicked = col3.button(f"驳回 {_OUTLINE_LABEL}", key=f"reject_outline_{outline.id}", use_container_width=True)
+    reorder_clicked = col4.button("按受众重排", key=f"reorder_outline_{outline.id}", use_container_width=True)
+
+    if meta_submit or save_clicked or approve_clicked or reject_clicked or reorder_clicked:
+        sections = [
+            OutlineSectionUpdate(
+                id=str(row["id"]),
+                title=str(row["title"]),
+                purpose=str(row["purpose"]),
+                key_message=str(row["key_message"]),
+                order=int(row["order"]),
+                estimated_slide_count=int(row["estimated_slide_count"]),
+                required=bool(row.get("required", True)),
+                expanded=bool(row.get("expanded", True)),
+                category=str(row.get("category", "general")),
+            )
+            for row in edited.to_dict(orient="records")
+            if str(row.get("id", "")).strip()
+        ]
+        update = OutlineUpdate(
+            title=outline.title,
+            thesis=thesis,
+            audience=outline.audience,
+            purpose=outline.purpose,
+            target_slide_count=outline.target_slide_count,
+            audience_mode=audience_mode.value,
+            sections=sections,
+        )
+        with get_session() as session:
+            review_service = PresentationReviewService(session)
+            saved = review_service.update_outline(outline.id, update)
+            if reorder_clicked:
+                saved = apply_audience_mode(saved, audience_mode)
+                review_service.update_outline(
+                    saved.id,
+                    OutlineUpdate(
+                        title=saved.title,
+                        thesis=saved.thesis,
+                        audience=saved.audience,
+                        purpose=saved.purpose,
+                        target_slide_count=saved.target_slide_count,
+                        audience_mode=saved.audience_mode.value,
+                        sections=[
+                            OutlineSectionUpdate(
+                                id=s.id,
+                                title=s.title,
+                                purpose=s.purpose,
+                                key_message=s.key_message,
+                                order=s.order,
+                                estimated_slide_count=s.estimated_slide_count,
+                                evidence_requirements=list(s.evidence_requirements),
+                                required_assets=list(s.required_assets),
+                                required=s.required,
+                                expanded=s.expanded,
+                                category=s.category,
+                            )
+                            for s in saved.sections
+                        ],
+                    ),
+                )
+            if approve_clicked:
+                review_service.approve_outline(outline.id)
+            elif reject_clicked:
+                review_service.reject_outline(outline.id)
+        st.success(f"{_OUTLINE_LABEL} 已更新。")
+        st.rerun()
 
 
 def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
@@ -737,17 +886,20 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         workflow_run_id=workflow_run_id,
         brief_status=context.brief.approval_status if context.brief else None,
         storyline_status=context.storyline.approval_status if context.storyline else None,
+        outline_status=context.outline.approval_status if context.outline else None,
         slides_need_revision=slides_need_revision
         or (context.slides_pending_review and context.review_gate == "slides"),
     )
 
-    tab_brief, tab_storyline, tab_slides, tab_assets, tab_quality = st.tabs(
-        [_BRIEF_LABEL, _STORYLINE_LABEL, _SLIDE_LABEL, _ASSET_BOARD_LABEL, "质量审核"]
+    tab_brief, tab_storyline, tab_outline, tab_slides, tab_assets, tab_quality = st.tabs(
+        [_BRIEF_LABEL, _STORYLINE_LABEL, _OUTLINE_LABEL, _SLIDE_LABEL, _ASSET_BOARD_LABEL, "质量审核"]
     )
     with tab_brief:
         _render_brief_editor(presentation_id, workflow_run_id)
     with tab_storyline:
         _render_storyline_editor(presentation_id, workflow_run_id)
+    with tab_outline:
+        _render_outline_editor(presentation_id, workflow_run_id)
     with tab_slides:
         _render_slides_editor(presentation_id, workflow_run_id)
     with tab_assets:

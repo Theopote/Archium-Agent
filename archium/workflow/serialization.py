@@ -8,6 +8,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.domain.enums import WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.outline import OutlinePlan
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.workflow.state import PresentationWorkflowState
@@ -60,6 +61,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
     """Convert graph state to a JSON-safe checkpoint dict."""
     brief = state.get("brief")
     storyline = state.get("storyline")
+    outline = state.get("outline")
     presentation = state.get("presentation")
     slides = state.get("slides", [])
     request = state.get("request")
@@ -78,6 +80,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "export_preview_images": state.get("export_preview_images", False),
         "require_brief_review": state.get("require_brief_review", False),
         "require_storyline_review": state.get("require_storyline_review", False),
+        "require_outline_review": state.get("require_outline_review", True),
         "require_slides_review": state.get("require_slides_review", False),
         "review_gate": state.get("review_gate"),
         "source_document_count": state.get("source_document_count", 0),
@@ -113,6 +116,8 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         payload["brief"] = brief.model_dump(mode="json")
     if storyline is not None:
         payload["storyline"] = storyline.model_dump(mode="json")
+    if outline is not None:
+        payload["outline"] = outline.model_dump(mode="json")
     if slides:
         payload["slides"] = [slide.model_dump(mode="json") for slide in slides]
     project_facts = state.get("project_facts", [])
@@ -156,6 +161,12 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
                 storyline
                 if isinstance(storyline, Storyline)
                 else Storyline.model_validate(storyline)
+            )
+    if "outline" in state_data:
+        outline = state_data["outline"]
+        if outline is not None:
+            restored["outline"] = (
+                outline if isinstance(outline, OutlinePlan) else OutlinePlan.model_validate(outline)
             )
     if "slides" in state_data:
         slides = state_data["slides"]

@@ -44,6 +44,16 @@ def _route_after_storyline(state: PresentationWorkflowState) -> str:
     return "continue"
 
 
+def _route_after_outline(state: PresentationWorkflowState) -> str:
+    if state.get("errors"):
+        return "finalize"
+    if state.get("require_outline_review"):
+        outline = state.get("outline")
+        if outline is not None and outline.approval_status != ApprovalStatus.APPROVED:
+            return "pause_for_review"
+    return "continue"
+
+
 def _route_after_slides(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
@@ -61,6 +71,8 @@ def _route_after_pause(state: PresentationWorkflowState) -> str:
     if gate == "brief":
         return "generate_storyline"
     if gate == "storyline":
+        return "generate_outline"
+    if gate == "outline":
         return "generate_slides"
     if gate == "slides":
         return "export_json"
@@ -106,6 +118,7 @@ class PresentationWorkflowGraph:
         builder.add_node("validate_facts", self._nodes.validate_facts)
         builder.add_node("generate_brief", self._nodes.generate_brief)
         builder.add_node("generate_storyline", self._nodes.generate_storyline)
+        builder.add_node("generate_outline", self._nodes.generate_outline)
         builder.add_node("generate_slides", self._nodes.generate_slides)
         builder.add_node("resolve_citations", self._nodes.resolve_citations)
         builder.add_node("match_assets", self._nodes.match_assets)
@@ -155,6 +168,11 @@ class PresentationWorkflowGraph:
         builder.add_conditional_edges(
             "generate_storyline",
             _route_after_storyline,
+            {"continue": "generate_outline", "pause_for_review": "pause_for_review", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "generate_outline",
+            _route_after_outline,
             {"continue": "generate_slides", "pause_for_review": "pause_for_review", "finalize": "finalize"},
         )
         builder.add_edge("generate_slides", "resolve_citations")
@@ -194,6 +212,7 @@ class PresentationWorkflowGraph:
             _route_after_pause,
             {
                 "generate_storyline": "generate_storyline",
+                "generate_outline": "generate_outline",
                 "generate_slides": "generate_slides",
                 "export_json": "export_json",
                 "finalize": "finalize",

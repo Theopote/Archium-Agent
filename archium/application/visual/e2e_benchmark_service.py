@@ -827,7 +827,12 @@ class E2EBenchmarkService:
         presentation = presentation_service.create_presentation(project_id, request)
         brief = presentation_service.generate_brief(project_id, presentation.id, request)
         storyline = presentation_service.generate_storyline(project_id, brief)
-        slides = presentation_service.generate_slide_plan(project_id, brief, storyline)
+        outline = presentation_service.generate_outline_plan(project_id, brief, storyline)
+        outline.approve()
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        outline = PresentationRepository(self._session).save_outline(outline)
+        slides = presentation_service.generate_slide_plan(project_id, brief, storyline, outline=outline)
         if not slides:
             raise WorkflowError("内容规划未生成任何 SlideSpec")
         return presentation, slides

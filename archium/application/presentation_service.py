@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 
 from archium.agents.brief_builder import BriefBuilder
 from archium.agents.narrative_architect import NarrativeArchitect
+from archium.agents.outline_planner import OutlinePlanner
 from archium.agents.slide_planner import SlidePlanner
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.exceptions import ProjectNotFoundError
@@ -42,6 +44,7 @@ class PresentationService:
         self._projects = ProjectRepository(session)
         self._brief_builder = BriefBuilder(session, llm, settings=self._settings)
         self._narrative = NarrativeArchitect(session, llm, settings=self._settings)
+        self._outline = OutlinePlanner(session, llm, settings=self._settings)
         self._slide_planner = SlidePlanner(session, llm, settings=self._settings)
         self._renderer = renderer or JsonPresentationRenderer(self._settings)
         self._marp_renderer = marp_renderer or MarpPresentationRenderer(self._settings)
@@ -73,10 +76,19 @@ class PresentationService:
     ) -> Storyline:
         return self._narrative.generate(project_id, brief)
 
+    def generate_outline_plan(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+        storyline: Storyline,
+    ) -> OutlinePlan:
+        return self._outline.generate(project_id, brief, storyline)
+
     def generate_slide_plan(
         self,
         project_id: UUID,
         brief: PresentationBrief,
         storyline: Storyline,
+        outline: OutlinePlan | None = None,
     ) -> list[SlideSpec]:
-        return self._slide_planner.generate(project_id, brief, storyline)
+        return self._slide_planner.generate(project_id, brief, storyline, outline=outline)
