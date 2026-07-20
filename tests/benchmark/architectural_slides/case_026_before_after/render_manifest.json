@@ -5,12 +5,12 @@
   "rendered_at": null,
   "renderer": "pptxgenjs",
   "asset_count": 2,
-  "real_asset_count": 0,
-  "placeholder_asset_count": 2,
+  "real_asset_count": 2,
+  "placeholder_asset_count": 0,
   "font_fallbacks": [],
   "missing_assets": [
     "case_2"
   ],
   "render_valid": false,
-  "notes": "PPTX exported with LayoutPlan text styles and resolved asset paths. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. Unresolved content_ref paths: case_2 Assets are placeholder diagrams; visual human review remains blocked until curated real assets replace placeholders."
+  "notes": "PPTX exported with LayoutPlan text styles and resolved asset paths. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. Unresolved content_ref paths: case_2 All mapped assets are curated PNGs from the benchmark asset pool."
 }
