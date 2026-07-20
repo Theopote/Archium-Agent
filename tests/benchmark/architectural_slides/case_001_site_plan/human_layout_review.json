@@ -1,0 +1,18 @@
+{
+  "case_id": "case_001_site_plan",
+  "source": "manual",
+  "information_hierarchy": 4,
+  "reading_order": 4,
+  "whitespace_density": 3,
+  "spatial_balance": 2,
+  "layout_clarity": 3,
+  "major_problems": [
+    "容积率、绿地率、改造范围应该在一个卡片上；",
+    "最上面的标题文字太大了"
+  ],
+  "minor_problems": [],
+  "accepted_for_geometry": false,
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T17:08:30.737658Z",
+  "reviewer_notes": ""
+}

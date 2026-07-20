@@ -1,0 +1,19 @@
+{
+  "case_id": "case_004_economic_metrics",
+  "source": "manual",
+  "information_hierarchy": 2,
+  "reading_order": 2,
+  "whitespace_density": 2,
+  "spatial_balance": 2,
+  "layout_clarity": 3,
+  "major_problems": [
+    "文字信息应该放在一个面板上",
+    "文字太大了",
+    "图片太小了"
+  ],
+  "minor_problems": [],
+  "accepted_for_geometry": false,
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T17:18:39.724271Z",
+  "reviewer_notes": ""
+}

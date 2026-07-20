@@ -1,6 +1,6 @@
 {
   "case_id": "case_003_case_comparison",
-  "source": "placeholder",
+  "source": "manual",
   "text_editable": 4,
   "image_replaceable": 4,
   "layer_independence": 4,
@@ -9,11 +9,14 @@
   "not_flattened": 4,
   "selection_ease": 4,
   "modification_ease": 4,
-  "major_problems": [],
+  "major_problems": [
+    "主要的小标题文字应该有背景色",
+    "不同的字体颜色和大小应该有变化来表达不同的信息"
+  ],
   "minor_problems": [],
-  "review_completed": false,
+  "review_completed": true,
   "passed": false,
-  "reviewer": "",
-  "reviewed_at": null,
-  "reviewer_notes": "占位模板；须基于 output.pptx 真实打开后填写 manual 评审。"
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T17:17:40.828726Z",
+  "reviewer_notes": ""
 }

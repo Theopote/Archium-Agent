@@ -1,19 +1,21 @@
 {
   "case_id": "case_001_site_plan",
-  "source": "placeholder",
-  "text_editable": 4,
-  "image_replaceable": 4,
-  "layer_independence": 4,
+  "source": "manual",
+  "text_editable": 5,
+  "image_replaceable": 5,
+  "layer_independence": 5,
   "chart_editable": 4,
-  "font_usability": 4,
+  "font_usability": 5,
   "not_flattened": 4,
-  "selection_ease": 4,
+  "selection_ease": 5,
   "modification_ease": 4,
-  "major_problems": [],
+  "major_problems": [
+    "主要内容占比太矮了，标题占用高度太高了"
+  ],
   "minor_problems": [],
-  "review_completed": false,
+  "review_completed": true,
   "passed": false,
-  "reviewer": "",
-  "reviewed_at": null,
-  "reviewer_notes": "占位模板；须基于 output.pptx 真实打开后填写 manual 评审。"
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T17:12:10.792039Z",
+  "reviewer_notes": ""
 }

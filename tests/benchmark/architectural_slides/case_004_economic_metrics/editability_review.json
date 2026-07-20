@@ -1,6 +1,6 @@
 {
   "case_id": "case_004_economic_metrics",
-  "source": "placeholder",
+  "source": "manual",
   "text_editable": 4,
   "image_replaceable": 4,
   "layer_independence": 4,
@@ -11,9 +11,9 @@
   "modification_ease": 4,
   "major_problems": [],
   "minor_problems": [],
-  "review_completed": false,
+  "review_completed": true,
   "passed": false,
-  "reviewer": "",
-  "reviewed_at": null,
-  "reviewer_notes": "占位模板；须基于 output.pptx 真实打开后填写 manual 评审。"
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T17:19:06.387066Z",
+  "reviewer_notes": ""
 }

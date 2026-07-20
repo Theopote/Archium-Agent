@@ -41,11 +41,13 @@ from archium.domain.visual.benchmark import (
     HumanVisualReview,
     HumanVisualReviewSource,
 )
+from archium.exceptions import WorkflowError
 from archium.ui.studio.human_review_panel import REVIEW_DIMENSION_LABELS
 
 _SESSION_REVIEWER_KEY = "benchmark_default_reviewer"
 _SESSION_AUTO_REGEN_KEY = "benchmark_auto_regen_report"
 _SESSION_SELECTED_CASE_KEY = "benchmark_review_selected_case"
+_SESSION_NAV_PENDING_KEY = "benchmark_review_nav_pending"
 
 LAYOUT_REVIEW_DIMENSION_LABELS: dict[str, str] = {
     "information_hierarchy": "信息层级（几何）",
@@ -115,7 +117,7 @@ def render_benchmark_review_panel() -> None:
     if filter_cols[2].button("从第一个待评审开始", use_container_width=True):
         pending_ids = [status.case_id for status in statuses if status.pending]
         if pending_ids:
-            st.session_state[_SESSION_SELECTED_CASE_KEY] = pending_ids[0]
+            _queue_case_selection(pending_ids[0])
             st.rerun()
         st.info("当前没有待评审 case。")
 
@@ -125,6 +127,7 @@ def render_benchmark_review_panel() -> None:
         return
 
     case_ids = [case.case_id for case in filtered]
+    _apply_pending_case_selection(case_ids)
     labels = {case.case_id: f"{case.case_id} · {case.title}" for case in filtered}
     selected_id = st.selectbox(
         "选择 Case",
@@ -145,7 +148,7 @@ def render_benchmark_review_panel() -> None:
         use_container_width=True,
         key="benchmark_review_prev_case",
     ):
-        st.session_state[_SESSION_SELECTED_CASE_KEY] = case_ids[selected_index - 1]
+        _queue_case_selection(case_ids[selected_index - 1])
         st.rerun()
     nav_cols[1].caption(
         f"当前 {selected_index + 1} / {len(case_ids)} · "
@@ -158,7 +161,7 @@ def render_benchmark_review_panel() -> None:
         use_container_width=True,
         key="benchmark_review_next_case",
     ):
-        st.session_state[_SESSION_SELECTED_CASE_KEY] = case_ids[selected_index + 1]
+        _queue_case_selection(case_ids[selected_index + 1])
         st.rerun()
 
     preview_col, form_col = st.columns([1.1, 1])
@@ -566,7 +569,11 @@ def _render_layout_review_form(
         use_container_width=True,
         key=f"benchmark_save_layout_review_{case.case_id}",
     ):
-        saved_path = save_case_layout_review(preview)
+        try:
+            saved_path = save_case_layout_review(preview)
+        except WorkflowError as exc:
+            st.error(str(exc))
+            return
         if preview.reviewer:
             st.session_state[_SESSION_REVIEWER_KEY] = preview.reviewer
         st.success(f"已保存至 `{saved_path.name}`")
@@ -690,12 +697,15 @@ def _render_visual_review_form(
         key=f"benchmark_save_next_human_review_{case.case_id}",
     )
     if save_clicked or save_next_clicked:
-        _persist_review(
-            preview,
-            advance=save_next_clicked,
-            case_ids=case_ids,
-            selected_index=selected_index,
-        )
+        try:
+            _persist_review(
+                preview,
+                advance=save_next_clicked,
+                case_ids=case_ids,
+                selected_index=selected_index,
+            )
+        except WorkflowError as exc:
+            st.error(str(exc))
 
 
 def _render_editability_review_form(
@@ -751,6 +761,7 @@ def _render_editability_review_form(
         value=existing.reviewer_notes if is_manual and existing is not None else "",
         key=f"benchmark_editability_notes_{case.case_id}",
     )
+    major_problems = [line.strip() for line in major.splitlines() if line.strip()]
     preview = EditabilityReview(
         case_id=case.case_id,
         source=HumanVisualReviewSource.MANUAL,
@@ -762,7 +773,7 @@ def _render_editability_review_form(
         not_flattened=scores["not_flattened"],
         selection_ease=scores["selection_ease"],
         modification_ease=scores["modification_ease"],
-        major_problems=[line.strip() for line in major.splitlines() if line.strip()],
+        major_problems=major_problems,
         review_completed=True,
         passed=passed,
         reviewer=reviewer.strip(),
@@ -773,6 +784,11 @@ def _render_editability_review_form(
         f"可编辑性综合 {preview.weighted_score():.2f} / 5 · "
         f"{'通过' if preview.passes_threshold() else '未达'} 阈值 {HUMAN_REVIEW_PASS_THRESHOLD}"
     )
+    if passed and not preview.passed:
+        st.warning(
+            "存在主要问题或综合分未达阈值时，不能标记可编辑性通过；"
+            "保存时将记录为未通过。"
+        )
     if st.button(
         "保存可编辑性评审",
         type="secondary",
@@ -780,7 +796,11 @@ def _render_editability_review_form(
         disabled=not eligible,
         key=f"benchmark_save_editability_{case.case_id}",
     ):
-        saved_path = save_case_editability_review(preview)
+        try:
+            saved_path = save_case_editability_review(preview)
+        except WorkflowError as exc:
+            st.error(str(exc))
+            return
         if preview.reviewer:
             st.session_state[_SESSION_REVIEWER_KEY] = preview.reviewer
         st.success(f"已保存至 `{saved_path.name}`")
@@ -802,5 +822,22 @@ def _persist_review(
             regenerate_benchmark_report()
     st.success(f"已保存至 `{saved_path.relative_to(saved_path.parents[2])}`")
     if advance and selected_index < len(case_ids) - 1:
-        st.session_state[_SESSION_SELECTED_CASE_KEY] = case_ids[selected_index + 1]
+        _queue_case_selection(case_ids[selected_index + 1])
     st.rerun()
+
+
+def _queue_case_selection(case_id: str) -> None:
+    """Queue a case change for the next run (must not touch the selectbox key mid-run)."""
+    st.session_state[_SESSION_NAV_PENDING_KEY] = case_id
+
+
+def _apply_pending_case_selection(valid_ids: list[str]) -> None:
+    """Apply queued navigation before the selectbox widget is instantiated."""
+    if not valid_ids:
+        return
+    pending = st.session_state.pop(_SESSION_NAV_PENDING_KEY, None)
+    if pending is not None and pending in valid_ids:
+        st.session_state[_SESSION_SELECTED_CASE_KEY] = pending
+    current = st.session_state.get(_SESSION_SELECTED_CASE_KEY)
+    if current not in valid_ids:
+        st.session_state[_SESSION_SELECTED_CASE_KEY] = valid_ids[0]

@@ -1,0 +1,18 @@
+{
+  "case_id": "case_002_site_photos",
+  "source": "manual",
+  "information_hierarchy": 5,
+  "reading_order": 5,
+  "whitespace_density": 3,
+  "spatial_balance": 3,
+  "layout_clarity": 5,
+  "major_problems": [
+    "最上面的标题字体太大了；",
+    "版面的四周留白太多了"
+  ],
+  "minor_problems": [],
+  "accepted_for_geometry": false,
+  "reviewer": "Theopote",
+  "reviewed_at": "2026-07-20T17:15:00.285938Z",
+  "reviewer_notes": ""
+}

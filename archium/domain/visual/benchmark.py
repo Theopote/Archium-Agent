@@ -332,6 +332,13 @@ class EditabilityReview(DomainModel):
     def is_manual_review(self) -> bool:
         return self.source == HumanVisualReviewSource.MANUAL
 
+    @model_validator(mode="after")
+    def _enforce_pass_consistency(self) -> Self:
+        if self.is_manual_review() and self.passed:
+            if self.major_problems or not self.passes_threshold():
+                object.__setattr__(self, "passed", False)
+        return self
+
 
 class HumanLayoutReview(DomainModel):
     """Manual layout-geometry review against wireframe.png (not final render)."""
