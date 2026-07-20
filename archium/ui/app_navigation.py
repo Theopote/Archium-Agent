@@ -18,6 +18,7 @@ def build_app_pages() -> list[Any]:
         project_mission,
         settings,
         studio,
+        template_studio,
         visual_design,
         workspace,
     )
@@ -37,6 +38,12 @@ def build_app_pages() -> list[Any]:
             url_path="project-mission",
         ),
         st.Page(studio.render, title="汇报工作室", icon="🎬", url_path="studio"),
+        st.Page(
+            template_studio.render,
+            title="模板工作室",
+            icon="🧩",
+            url_path="template-studio",
+        ),
         st.Page(workspace.render, title="项目工作台", icon="📂", url_path="workspace"),
         st.Page(
             visual_design.render,
@@ -59,10 +66,11 @@ def build_app_pages() -> list[Any]:
             "project-management": pages[1],
             "project-mission": pages[2],
             "studio": pages[3],
-            "workspace": pages[4],
-            "visual-design": pages[5],
-            "settings": pages[6],
-            "command-center": pages[7],
+            "template-studio": pages[4],
+            "workspace": pages[5],
+            "visual-design": pages[6],
+            "settings": pages[7],
+            "command-center": pages[8],
         }
     )
     return pages

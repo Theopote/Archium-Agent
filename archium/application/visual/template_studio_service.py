@@ -25,7 +25,7 @@ from archium.domain.visual.architectural_template import (
     TemplateStatus,
 )
 from archium.domain.visual.defaults import default_presentation_design_system
-from archium.domain.visual.design_system import ColorSystem, DesignSystem, TextStyleToken
+from archium.domain.visual.design_system import DesignSystem, TextStyleToken
 from archium.domain.visual.enums import (
     DesignSystemSource,
     LayoutContentType,
@@ -457,15 +457,15 @@ class TemplateStudioService:
                 }
             )
 
-        color_map = dict(base.colors.tokens)
+        color_updates: dict[str, str] = {}
         if colors:
-            color_map["background"] = colors[0]
+            color_updates["background"] = colors[0]
         if len(colors) > 1:
-            color_map["primary_text"] = colors[1]
+            color_updates["primary_text"] = colors[1]
         if len(colors) > 2:
-            color_map["accent"] = colors[2]
+            color_updates["accent"] = colors[2]
         if len(colors) > 3:
-            color_map["primary"] = colors[3]
+            color_updates["primary"] = colors[3]
         return base.model_copy(
             update={
                 "id": uuid4(),
@@ -484,7 +484,7 @@ class TemplateStudioService:
                         "source": restyle(base.typography.source),
                     }
                 ),
-                "colors": ColorSystem(tokens=color_map),
+                "colors": base.colors.model_copy(update=color_updates),
                 "source_type": DesignSystemSource.IMPORTED,
                 "source_reference": source_reference,
                 "approval_status": ApprovalStatus.DRAFT,
