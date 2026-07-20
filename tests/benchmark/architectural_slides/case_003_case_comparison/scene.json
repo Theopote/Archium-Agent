@@ -1,0 +1,507 @@
+{
+  "created_at": "2026-07-20T16:43:17.523513Z",
+  "updated_at": "2026-07-20T16:43:17.523513Z",
+  "version": 1,
+  "id": "fb23d6ad-14c5-4ca3-af0d-d9c407853682",
+  "schema_version": 1,
+  "slide_id": "1dcafaa4-751a-4e14-99a9-d839c95d0b10",
+  "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "layout_plan_id": "010f21b0-d4c5-47a4-990f-5ba9373f39a4",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "background": {
+    "color": "#F7F6F3",
+    "image_asset_path": null
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "node_type": "text",
+      "semantic_role": "title",
+      "source_layout_element_id": "title",
+      "x": 0.7,
+      "y": 0.45,
+      "width": 8.600000000000001,
+      "height": 0.6575,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "三座医疗更新案例横向比较",
+      "paragraphs": [
+        {
+          "text": "三座医疗更新案例横向比较",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 34.0,
+      "font_weight": 700,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 45.9,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "case_image_0",
+      "node_type": "image",
+      "semantic_role": "supporting_visual",
+      "source_layout_element_id": "case_image_0",
+      "x": 0.7,
+      "y": 1.1908333333333332,
+      "width": 2.7833333333333337,
+      "height": 1.6046250000000006,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_003_case_comparison\\assets\\c0030001-0001-4001-8001-000000000001.png",
+      "asset_origin": "project_upload",
+      "fit_mode": "cover",
+      "crop": null,
+      "focus_point": null,
+      "corner_radius": 0.0,
+      "border": null,
+      "shadow": null,
+      "caption_node_id": null,
+      "asset_unresolved": false
+    },
+    {
+      "id": "case_text_0",
+      "node_type": "text",
+      "semantic_role": "body_text",
+      "source_layout_element_id": "case_text_0",
+      "x": 0.7,
+      "y": 2.8371250000000003,
+      "width": 2.7833333333333337,
+      "height": 1.3128750000000002,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "案例 1\n· 空间策略\n· 运营模式\n· 公众可达性",
+      "paragraphs": [
+        {
+          "text": "案例 1\n· 空间策略\n· 运营模式\n· 公众可达性",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 16.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 21.6,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "case_image_1",
+      "node_type": "image",
+      "semantic_role": "supporting_visual",
+      "source_layout_element_id": "case_image_1",
+      "x": 3.6083333333333334,
+      "y": 1.1908333333333332,
+      "width": 2.7833333333333337,
+      "height": 1.6046250000000006,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_003_case_comparison\\assets\\c0030002-0001-4001-8001-000000000002.png",
+      "asset_origin": "project_upload",
+      "fit_mode": "cover",
+      "crop": null,
+      "focus_point": null,
+      "corner_radius": 0.0,
+      "border": null,
+      "shadow": null,
+      "caption_node_id": null,
+      "asset_unresolved": false
+    },
+    {
+      "id": "case_text_1",
+      "node_type": "text",
+      "semantic_role": "body_text",
+      "source_layout_element_id": "case_text_1",
+      "x": 3.6083333333333334,
+      "y": 2.8371250000000003,
+      "width": 2.7833333333333337,
+      "height": 1.3128750000000002,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "案例 2\n· 空间策略\n· 运营模式\n· 公众可达性",
+      "paragraphs": [
+        {
+          "text": "案例 2\n· 空间策略\n· 运营模式\n· 公众可达性",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 16.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 21.6,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "case_image_2",
+      "node_type": "image",
+      "semantic_role": "supporting_visual",
+      "source_layout_element_id": "case_image_2",
+      "x": 6.5166666666666675,
+      "y": 1.1908333333333332,
+      "width": 2.7833333333333337,
+      "height": 1.6046250000000006,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_003_case_comparison\\assets\\c0030003-0001-4001-8001-000000000003.png",
+      "asset_origin": "project_upload",
+      "fit_mode": "cover",
+      "crop": null,
+      "focus_point": null,
+      "corner_radius": 0.0,
+      "border": null,
+      "shadow": null,
+      "caption_node_id": null,
+      "asset_unresolved": false
+    },
+    {
+      "id": "case_text_2",
+      "node_type": "text",
+      "semantic_role": "body_text",
+      "source_layout_element_id": "case_text_2",
+      "x": 6.5166666666666675,
+      "y": 2.8371250000000003,
+      "width": 2.7833333333333337,
+      "height": 1.3128750000000002,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "案例 3\n· 空间策略\n· 运营模式\n· 公众可达性",
+      "paragraphs": [
+        {
+          "text": "案例 3\n· 空间策略\n· 运营模式\n· 公众可达性",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 16.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 21.6,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "insight",
+      "node_type": "text",
+      "semantic_role": "lead_statement",
+      "source_layout_element_id": "insight",
+      "x": 0.7,
+      "y": 4.275,
+      "width": 8.600000000000001,
+      "height": 0.55,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "应优先重建公共性与可达性，而非单纯增加面积。",
+      "paragraphs": [
+        {
+          "text": "应优先重建公共性与可达性，而非单纯增加面积。",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 18.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#4A4A4A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 24.3,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "source",
+      "node_type": "text",
+      "semantic_role": "source",
+      "source_layout_element_id": "source",
+      "x": 0.7,
+      "y": 4.955,
+      "width": 6.0200000000000005,
+      "height": 0.22,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "案例研究汇编.pdf p.12",
+      "paragraphs": [
+        {
+          "text": "案例研究汇编.pdf p.12",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 8.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#777777",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 10.8,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    }
+  ],
+  "theme_tokens": {
+    "colors": {
+      "background": "#F7F6F3",
+      "surface": "#FFFFFF",
+      "primary_text": "#1A1A1A",
+      "secondary_text": "#4A4A4A",
+      "muted_text": "#777777",
+      "primary": "#2C3E50",
+      "secondary": "#5B6770",
+      "accent": "#8B4513",
+      "border": "#D9D5CF"
+    },
+    "typography": {
+      "display": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 38.0,
+        "font_weight": 700,
+        "line_height": 51.3,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "title": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 34.0,
+        "font_weight": 700,
+        "line_height": 45.9,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "subtitle": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 18.0,
+        "font_weight": 400,
+        "line_height": 24.3,
+        "letter_spacing": 0,
+        "color_token": "secondary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "heading": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 24.0,
+        "font_weight": 700,
+        "line_height": 32.4,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "body": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 16.0,
+        "font_weight": 400,
+        "line_height": 21.6,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": null
+      },
+      "caption": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 12.0,
+        "font_weight": 400,
+        "line_height": 16.2,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 3
+      },
+      "metric": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 22.0,
+        "font_weight": 700,
+        "line_height": 29.7,
+        "letter_spacing": 0,
+        "color_token": "primary",
+        "alignment": "center",
+        "max_lines": null
+      },
+      "footnote": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 9.0,
+        "font_weight": 400,
+        "line_height": 12.15,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      },
+      "source": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 8.0,
+        "font_weight": 400,
+        "line_height": 10.8,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      }
+    },
+    "spacing": {
+      "xs": 0.041666666666666664,
+      "sm": 0.08333333333333333,
+      "md": 0.125,
+      "lg": 0.16666666666666666,
+      "xl": 0.25,
+      "xxl": 0.3333333333333333
+    }
+  },
+  "font_assets": [
+    {
+      "family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "asset_manifest": [
+    {
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_003_case_comparison\\assets\\c0030001-0001-4001-8001-000000000001.png",
+      "origin": "project_upload",
+      "content_ref": "c0030001-0001-4001-8001-000000000001"
+    },
+    {
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_003_case_comparison\\assets\\c0030002-0001-4001-8001-000000000002.png",
+      "origin": "project_upload",
+      "content_ref": "c0030002-0001-4001-8001-000000000002"
+    },
+    {
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_003_case_comparison\\assets\\c0030003-0001-4001-8001-000000000003.png",
+      "origin": "project_upload",
+      "content_ref": "c0030003-0001-4001-8001-000000000003"
+    }
+  ],
+  "source_layout_family": "comparative_matrix",
+  "source_layout_variant": "matrix_with_insight",
+  "warnings": []
+}

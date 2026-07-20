@@ -1,0 +1,363 @@
+{
+  "created_at": "2026-07-20T16:43:20.425560Z",
+  "updated_at": "2026-07-20T16:43:20.425560Z",
+  "version": 1,
+  "id": "bc17c6ca-a44e-474e-869f-8a7a9c709f16",
+  "schema_version": 1,
+  "slide_id": "9ee6ee39-4a18-413f-ae42-406460f88f85",
+  "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "layout_plan_id": "7859a5a5-505b-4396-b236-a085ac21fde7",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "background": {
+    "color": "#F7F6F3",
+    "image_asset_path": null
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "node_type": "text",
+      "semantic_role": "title",
+      "source_layout_element_id": "title",
+      "x": 0.7,
+      "y": 0.45,
+      "width": 8.600000000000001,
+      "height": 0.6575,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "设计原则",
+      "paragraphs": [
+        {
+          "text": "设计原则",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 34.0,
+      "font_weight": 700,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 45.9,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "card_0",
+      "node_type": "text",
+      "semantic_role": "body_text",
+      "source_layout_element_id": "card_0",
+      "x": 0.7,
+      "y": 1.2325,
+      "width": 2.7833333333333337,
+      "height": 3.5091666666666668,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "可达性优先",
+      "paragraphs": [
+        {
+          "text": "可达性优先",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 16.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 21.6,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "card_1",
+      "node_type": "text",
+      "semantic_role": "body_text",
+      "source_layout_element_id": "card_1",
+      "x": 3.6083333333333334,
+      "y": 1.2325,
+      "width": 2.7833333333333337,
+      "height": 3.5091666666666668,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "公共性重建",
+      "paragraphs": [
+        {
+          "text": "公共性重建",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 16.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 21.6,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "card_2",
+      "node_type": "text",
+      "semantic_role": "body_text",
+      "source_layout_element_id": "card_2",
+      "x": 6.5166666666666675,
+      "y": 1.2325,
+      "width": 2.7833333333333337,
+      "height": 3.5091666666666668,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "弹性更新",
+      "paragraphs": [
+        {
+          "text": "弹性更新",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 16.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 21.6,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "source",
+      "node_type": "text",
+      "semantic_role": "source",
+      "source_layout_element_id": "source",
+      "x": 0.7,
+      "y": 4.955,
+      "width": 5.160000000000001,
+      "height": 0.22,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "方案说明书.pdf p.4",
+      "paragraphs": [
+        {
+          "text": "方案说明书.pdf p.4",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 8.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#777777",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 10.8,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    }
+  ],
+  "theme_tokens": {
+    "colors": {
+      "background": "#F7F6F3",
+      "surface": "#FFFFFF",
+      "primary_text": "#1A1A1A",
+      "secondary_text": "#4A4A4A",
+      "muted_text": "#777777",
+      "primary": "#2C3E50",
+      "secondary": "#5B6770",
+      "accent": "#8B4513",
+      "border": "#D9D5CF"
+    },
+    "typography": {
+      "display": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 38.0,
+        "font_weight": 700,
+        "line_height": 51.3,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "title": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 34.0,
+        "font_weight": 700,
+        "line_height": 45.9,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "subtitle": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 18.0,
+        "font_weight": 400,
+        "line_height": 24.3,
+        "letter_spacing": 0,
+        "color_token": "secondary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "heading": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 24.0,
+        "font_weight": 700,
+        "line_height": 32.4,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "body": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 16.0,
+        "font_weight": 400,
+        "line_height": 21.6,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": null
+      },
+      "caption": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 12.0,
+        "font_weight": 400,
+        "line_height": 16.2,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 3
+      },
+      "metric": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 22.0,
+        "font_weight": 700,
+        "line_height": 29.7,
+        "letter_spacing": 0,
+        "color_token": "primary",
+        "alignment": "center",
+        "max_lines": null
+      },
+      "footnote": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 9.0,
+        "font_weight": 400,
+        "line_height": 12.15,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      },
+      "source": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 8.0,
+        "font_weight": 400,
+        "line_height": 10.8,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      }
+    },
+    "spacing": {
+      "xs": 0.041666666666666664,
+      "sm": 0.08333333333333333,
+      "md": 0.125,
+      "lg": 0.16666666666666666,
+      "xl": 0.25,
+      "xxl": 0.3333333333333333
+    }
+  },
+  "font_assets": [
+    {
+      "family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "asset_manifest": [],
+  "source_layout_family": "strategy_cards",
+  "source_layout_variant": "three_cards",
+  "warnings": []
+}

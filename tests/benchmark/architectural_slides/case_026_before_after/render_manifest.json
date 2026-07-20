@@ -1,9 +1,13 @@
 {
-  "render_source": "pptx_only",
+  "render_source": "html",
   "pptx_path": "output.pptx",
-  "image_path": "final_render.png",
-  "rendered_at": null,
-  "renderer": "pptxgenjs",
+  "image_path": "pptx_render.png",
+  "scene_path": "scene.json",
+  "scene_preview_path": "scene_preview.png",
+  "scene_id": "0eb807be-653e-4234-b605-b19f7866a027",
+  "scene_hash": "15b051475193eb59ea8c4098d5c9026706eee331981f9ad69b70c782664a3653",
+  "rendered_at": "2026-07-20T16:43:23.281450Z",
+  "renderer": "png_renderer+pptxgenjs",
   "asset_count": 2,
   "real_asset_count": 2,
   "placeholder_asset_count": 0,
@@ -12,5 +16,5 @@
     "case_2"
   ],
   "render_valid": false,
-  "notes": "PPTX exported with LayoutPlan text styles and resolved asset paths. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. Unresolved content_ref paths: case_2 All mapped assets are curated PNGs from the benchmark asset pool."
+  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Renderer conformance: pptx: text mismatch (ref=['入口空间：改造前后', '案例 1\\n· 比较维度 1\\n· 比较维度 2\\n· 比较维度 3', '案例 2\\n· 比较维度 1\\n· 比较维度 2\\n· 比较维度 3', '案例 3\\n· 比较维度 1\\n· 比较维度 2\\n· 比较维度 3', '改造后入口由混行变为分层到达，公共界面显著开放。', '效果对比.pdf p.2'], got=['入口空间：改造前后', '案例 1\\n· 比较维度 1\\n· 比较维度 2\\n· 比较维度 3', '案例 2\\n· 比较维度 1\\n· 比较维度 2\\n· 比较维度 3', '素材缺失/路径未解析', '案例 3\\n· 比较维度 1\\n· 比较维度 2\\n· 比较维度 3', '改造后入口由混行变为分层到达，公共界面显著开放。', '效果对比.pdf p.2']) Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. Unresolved content_ref paths: case_2 Unresolved scene nodes: case_image_2 All mapped assets are curated PNGs from the benchmark asset pool."
 }

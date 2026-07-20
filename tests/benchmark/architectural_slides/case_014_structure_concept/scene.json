@@ -1,0 +1,276 @@
+{
+  "created_at": "2026-07-20T16:43:20.212399Z",
+  "updated_at": "2026-07-20T16:43:20.212399Z",
+  "version": 1,
+  "id": "63d5450d-9182-4084-b147-45b603982607",
+  "schema_version": 1,
+  "slide_id": "03c97abb-666f-4620-89f1-1347b44f84d2",
+  "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "layout_plan_id": "076e705c-f43d-42f1-8859-a5e9770804e1",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "background": {
+    "color": "#F7F6F3",
+    "image_asset_path": null
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "node_type": "text",
+      "semantic_role": "title",
+      "source_layout_element_id": "title",
+      "x": 0.7,
+      "y": 0.45,
+      "width": 8.600000000000001,
+      "height": 0.6575,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "门诊区结构概念",
+      "paragraphs": [
+        {
+          "text": "门诊区结构概念",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 34.0,
+      "font_weight": 700,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 45.9,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "hero",
+      "node_type": "drawing",
+      "semantic_role": "hero_visual",
+      "source_layout_element_id": "hero",
+      "x": 0.7,
+      "y": 1.1908333333333332,
+      "width": 8.600000000000001,
+      "height": 3.354166666666667,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": true,
+      "lock_scopes": [],
+      "group_id": null,
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_014_structure_concept\\assets\\c0140001-0001-4001-8001-000000000001.png",
+      "drawing_type": "diagram",
+      "fit_mode": "contain",
+      "crop_allowed": false,
+      "preserve_aspect_ratio": true,
+      "preserve_annotations": true,
+      "background_cleanup": false,
+      "line_enhancement": false,
+      "scale_label": null,
+      "north_arrow_visible": false,
+      "asset_unresolved": false
+    },
+    {
+      "id": "source",
+      "node_type": "text",
+      "semantic_role": "source",
+      "source_layout_element_id": "source",
+      "x": 0.7,
+      "y": 4.955,
+      "width": 6.0200000000000005,
+      "height": 0.22,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "结构方案.pdf p.6",
+      "paragraphs": [
+        {
+          "text": "结构方案.pdf p.6",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 8.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#777777",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 10.8,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    }
+  ],
+  "theme_tokens": {
+    "colors": {
+      "background": "#F7F6F3",
+      "surface": "#FFFFFF",
+      "primary_text": "#1A1A1A",
+      "secondary_text": "#4A4A4A",
+      "muted_text": "#777777",
+      "primary": "#2C3E50",
+      "secondary": "#5B6770",
+      "accent": "#8B4513",
+      "border": "#D9D5CF"
+    },
+    "typography": {
+      "display": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 38.0,
+        "font_weight": 700,
+        "line_height": 51.3,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "title": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 34.0,
+        "font_weight": 700,
+        "line_height": 45.9,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "subtitle": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 18.0,
+        "font_weight": 400,
+        "line_height": 24.3,
+        "letter_spacing": 0,
+        "color_token": "secondary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "heading": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 24.0,
+        "font_weight": 700,
+        "line_height": 32.4,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "body": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 16.0,
+        "font_weight": 400,
+        "line_height": 21.6,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": null
+      },
+      "caption": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 12.0,
+        "font_weight": 400,
+        "line_height": 16.2,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 3
+      },
+      "metric": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 22.0,
+        "font_weight": 700,
+        "line_height": 29.7,
+        "letter_spacing": 0,
+        "color_token": "primary",
+        "alignment": "center",
+        "max_lines": null
+      },
+      "footnote": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 9.0,
+        "font_weight": 400,
+        "line_height": 12.15,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      },
+      "source": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 8.0,
+        "font_weight": 400,
+        "line_height": 10.8,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      }
+    },
+    "spacing": {
+      "xs": 0.041666666666666664,
+      "sm": 0.08333333333333333,
+      "md": 0.125,
+      "lg": 0.16666666666666666,
+      "xl": 0.25,
+      "xxl": 0.3333333333333333
+    }
+  },
+  "font_assets": [
+    {
+      "family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "asset_manifest": [
+    {
+      "asset_id": null,
+      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_014_structure_concept\\assets\\c0140001-0001-4001-8001-000000000001.png",
+      "origin": "project_upload",
+      "content_ref": "c0140001-0001-4001-8001-000000000001"
+    }
+  ],
+  "source_layout_family": "analytical_diagram",
+  "source_layout_variant": "diagram_focus",
+  "warnings": []
+}

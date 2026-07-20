@@ -1,14 +1,18 @@
 {
-  "render_source": "pptx_only",
+  "render_source": "html",
   "pptx_path": "output.pptx",
-  "image_path": "final_render.png",
-  "rendered_at": null,
-  "renderer": "pptxgenjs",
+  "image_path": "pptx_render.png",
+  "scene_path": "scene.json",
+  "scene_preview_path": "scene_preview.png",
+  "scene_id": "0b9f6b72-69e7-4e94-b760-b9eaa85ec42b",
+  "scene_hash": "3fdb59283df85996d10b760055c77b8e319255705a8c4c316eb9a0c2ff8e1b67",
+  "rendered_at": "2026-07-20T16:43:20.799224Z",
+  "renderer": "png_renderer+pptxgenjs",
   "asset_count": 0,
   "real_asset_count": 0,
   "placeholder_asset_count": 0,
   "font_fallbacks": [],
   "missing_assets": [],
-  "render_valid": false,
-  "notes": "PPTX exported with LayoutPlan text styles and resolved asset paths. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced."
+  "render_valid": true,
+  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced."
 }

@@ -1,14 +1,18 @@
 {
-  "render_source": "pptx_only",
+  "render_source": "html",
   "pptx_path": "output.pptx",
-  "image_path": "final_render.png",
-  "rendered_at": null,
-  "renderer": "pptxgenjs",
+  "image_path": "pptx_render.png",
+  "scene_path": "scene.json",
+  "scene_preview_path": "scene_preview.png",
+  "scene_id": "1c99413b-3e57-4a50-8881-af5570297d4a",
+  "scene_hash": "f22553ed5ff7c33fdc8a8e2419c5eba62db90904893f12d03e1cc239955fba09",
+  "rendered_at": "2026-07-20T16:43:23.742131Z",
+  "renderer": "png_renderer+pptxgenjs",
   "asset_count": 1,
   "real_asset_count": 1,
   "placeholder_asset_count": 0,
   "font_fallbacks": [],
   "missing_assets": [],
   "render_valid": false,
-  "notes": "PPTX exported with LayoutPlan text styles and resolved asset paths. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. All mapped assets are curated PNGs from the benchmark asset pool."
+  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Renderer conformance: pptx: text mismatch (ref=['能耗与碳排指标', '被动式设计结合机电优化，预计运营能耗下降 22%。', '电耗 -22%', '水耗 -15%', '碳排 -18%', '绿建三星', '绿色专篇.pdf p.14'], got=['能耗与碳排指标', '被动式设计结合机电优化，预计运营能耗下降 22%。', '电耗 -22%', '水耗 -15%', '碳排 -18%', '绿建三星', '素材缺失/路径未解析', '绿色专篇.pdf p.14']) Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. Unresolved scene nodes: chart All mapped assets are curated PNGs from the benchmark asset pool."
 }

@@ -1,0 +1,322 @@
+{
+  "created_at": "2026-07-20T16:43:23.786937Z",
+  "updated_at": "2026-07-20T16:43:23.786937Z",
+  "version": 1,
+  "id": "b24cf899-ef5d-4c7a-8f99-9c3160f4ec0f",
+  "schema_version": 1,
+  "slide_id": "5c21bcd7-0e4e-4468-ae10-fb77e9cffbb8",
+  "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "layout_plan_id": "25600d64-f15b-46f2-8df3-426a948b1eb7",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "background": {
+    "color": "#F7F6F3",
+    "image_asset_path": null
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "node_type": "text",
+      "semantic_role": "title",
+      "source_layout_element_id": "title",
+      "x": 0.7,
+      "y": 0.45,
+      "width": 8.600000000000001,
+      "height": 0.6575,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "设计理念",
+      "paragraphs": [
+        {
+          "text": "设计理念",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 34.0,
+      "font_weight": 700,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 45.9,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "lead",
+      "node_type": "text",
+      "semantic_role": "lead_statement",
+      "source_layout_element_id": "lead",
+      "x": 0.7,
+      "y": 1.2325,
+      "width": 8.600000000000001,
+      "height": 1.2282083333333333,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "“建筑应首先服务患者路径，而非反过来让路径适应建筑。”",
+      "paragraphs": [
+        {
+          "text": "“建筑应首先服务患者路径，而非反过来让路径适应建筑。”",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 18.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#4A4A4A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 24.3,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "body",
+      "node_type": "text",
+      "semantic_role": "body_text",
+      "source_layout_element_id": "body",
+      "x": 0.7,
+      "y": 2.5857083333333333,
+      "width": 8.600000000000001,
+      "height": 2.1559583333333334,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "· 路径优先\n· 公共性\n· 分期弹性",
+      "paragraphs": [
+        {
+          "text": "· 路径优先\n· 公共性\n· 分期弹性",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 16.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#1A1A1A",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 21.6,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    },
+    {
+      "id": "source",
+      "node_type": "text",
+      "semantic_role": "source",
+      "source_layout_element_id": "source",
+      "x": 0.7,
+      "y": 4.955,
+      "width": 6.0200000000000005,
+      "height": 0.22,
+      "rotation": 0.0,
+      "opacity": 1.0,
+      "z_index": 0,
+      "visible": true,
+      "locked": false,
+      "lock_scopes": [],
+      "group_id": null,
+      "text": "方案说明书.pdf p.2",
+      "paragraphs": [
+        {
+          "text": "方案说明书.pdf p.2",
+          "alignment": "left"
+        }
+      ],
+      "font_family": "Arial",
+      "font_size": 8.0,
+      "font_weight": 400,
+      "font_style": "normal",
+      "color": "#777777",
+      "alignment": "left",
+      "vertical_alignment": "top",
+      "line_height": 10.8,
+      "letter_spacing": 0.0,
+      "padding": {
+        "top": 0.020833333333333332,
+        "right": 0.041666666666666664,
+        "bottom": 0.020833333333333332,
+        "left": 0.041666666666666664
+      },
+      "overflow_policy": "shrink",
+      "minimum_font_size": 8.0
+    }
+  ],
+  "theme_tokens": {
+    "colors": {
+      "background": "#F7F6F3",
+      "surface": "#FFFFFF",
+      "primary_text": "#1A1A1A",
+      "secondary_text": "#4A4A4A",
+      "muted_text": "#777777",
+      "primary": "#2C3E50",
+      "secondary": "#5B6770",
+      "accent": "#8B4513",
+      "border": "#D9D5CF"
+    },
+    "typography": {
+      "display": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 38.0,
+        "font_weight": 700,
+        "line_height": 51.3,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "title": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 34.0,
+        "font_weight": 700,
+        "line_height": 45.9,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "subtitle": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 18.0,
+        "font_weight": 400,
+        "line_height": 24.3,
+        "letter_spacing": 0,
+        "color_token": "secondary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "heading": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 24.0,
+        "font_weight": 700,
+        "line_height": 32.4,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": 2
+      },
+      "body": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 16.0,
+        "font_weight": 400,
+        "line_height": 21.6,
+        "letter_spacing": 0,
+        "color_token": "primary_text",
+        "alignment": "left",
+        "max_lines": null
+      },
+      "caption": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 12.0,
+        "font_weight": 400,
+        "line_height": 16.2,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 3
+      },
+      "metric": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 22.0,
+        "font_weight": 700,
+        "line_height": 29.7,
+        "letter_spacing": 0,
+        "color_token": "primary",
+        "alignment": "center",
+        "max_lines": null
+      },
+      "footnote": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 9.0,
+        "font_weight": 400,
+        "line_height": 12.15,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      },
+      "source": {
+        "font_family": "Microsoft YaHei",
+        "font_family_latin": "Arial",
+        "font_size": 8.0,
+        "font_weight": 400,
+        "line_height": 10.8,
+        "letter_spacing": 0,
+        "color_token": "muted_text",
+        "alignment": "left",
+        "max_lines": 1
+      }
+    },
+    "spacing": {
+      "xs": 0.041666666666666664,
+      "sm": 0.08333333333333333,
+      "md": 0.125,
+      "lg": 0.16666666666666666,
+      "xl": 0.25,
+      "xxl": 0.3333333333333333
+    }
+  },
+  "font_assets": [
+    {
+      "family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "asset_manifest": [],
+  "source_layout_family": "textual_argument",
+  "source_layout_variant": "quote_argument",
+  "warnings": []
+}
