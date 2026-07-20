@@ -27,5 +27,5 @@ def test_execute_visual_intent_requires_existing_slide(db_session: Session) -> N
         scope=SlideEditScope.VISUAL,
         action="reduce_text",
     )
-    with pytest.raises(Exception):
+    with pytest.raises(WorkflowError):
         SlideEditExecutionService().execute(db_session, command)

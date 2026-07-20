@@ -7,12 +7,12 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from archium.domain.visual.edit_intent import VisualEditIntent
+from archium.domain.visual.enums import LayoutFamily
+
 
 def _element_id(value: str | UUID) -> str:
     return str(value)
-
-from archium.domain.visual.edit_intent import VisualEditIntent
-from archium.domain.visual.enums import LayoutFamily
 
 
 class OperationType(StrEnum):

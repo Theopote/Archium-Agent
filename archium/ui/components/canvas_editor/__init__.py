@@ -5,11 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from archium.domain.visual.layout import LayoutPlan
-from archium.ui.components.canvas_editor.build_frontend import (
-    build_canvas_editor,
-    canvas_editor_build_dir,
-    is_canvas_editor_built,
-)
 from archium.ui.components.canvas_editor.runtime import (
     CanvasEditorUnavailableError,
     canvas_editor_available,
@@ -18,6 +13,18 @@ from archium.ui.components.canvas_editor.runtime import (
     get_canvas_editor_component,
     reset_canvas_editor_component_cache,
 )
+
+_BUILD_EXPORTS = frozenset(
+    {"build_canvas_editor", "canvas_editor_build_dir", "is_canvas_editor_built"}
+)
+
+
+def __getattr__(name: str) -> Any:
+    if name in _BUILD_EXPORTS:
+        from archium.ui.components.canvas_editor import build_frontend as _build_frontend
+
+        return getattr(_build_frontend, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def canvas_editor(

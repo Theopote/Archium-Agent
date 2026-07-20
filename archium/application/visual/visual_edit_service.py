@@ -318,7 +318,7 @@ class VisualEditService:
         try:
             operations = self._decomposer.decompose(parsed_intent, slide_snapshot)
         except Exception as e:
-            raise WorkflowError(f"无法分解复合操作: {str(e)}")
+            raise WorkflowError(f"无法分解复合操作: {str(e)}") from e
 
         assert_composite_operations_supported(operations)
 

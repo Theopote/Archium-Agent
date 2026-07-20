@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Streamlit,
-  StreamlitComponentBase,
-  withStreamlitConnection,
-} from "streamlit-component-lib";
+import { Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 
 /**
  * Canvas Editor Component for Archium Studio
@@ -24,14 +20,6 @@ interface Element {
   role: string;
   locked?: boolean;
   text_content?: string;
-}
-
-interface CanvasEditorProps {
-  imageUrl: string;
-  elements: Element[];
-  selectedId: string | null;
-  showLabels: boolean;
-  showAllBorders: boolean;
 }
 
 const ROLE_COLORS: Record<string, { border: string; background: string; label: string }> = {

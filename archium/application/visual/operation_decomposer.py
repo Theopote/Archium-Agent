@@ -136,8 +136,8 @@ class OperationDecomposer:
         # Map intent to operation type
         try:
             op_type = intent_to_operation_type(intent)
-        except ValueError:
-            raise WorkflowError(f"Cannot map intent {intent} to operation")
+        except ValueError as exc:
+            raise WorkflowError(f"Cannot map intent {intent} to operation") from exc
 
         # Build operation based on type
         if op_type == OperationType.CHANGE_LAYOUT:

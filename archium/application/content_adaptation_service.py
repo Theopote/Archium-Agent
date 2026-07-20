@@ -472,9 +472,8 @@ class ContentAdaptationService:
             score += 5.0
         if re.search(r'\d+倍', point):  # 倍数
             score += 5.0
-        if re.search(r'增长|降低|提升|减少|提高', point):  # 变化动词
-            if re.search(r'\d+', point):  # 有数字支撑
-                score += 3.0
+        if re.search(r'增长|降低|提升|减少|提高', point) and re.search(r'\d+', point):
+            score += 3.0
 
         # 5. 长度因素（强烈惩罚过长文本）
         # 理想长度：8-35字符

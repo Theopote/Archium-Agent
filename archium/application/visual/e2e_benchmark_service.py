@@ -889,9 +889,8 @@ class E2EBenchmarkService:
         passed = True
         if case.enable_pptx_export and not pptx_exported:
             passed = False
-        if case.enable_screenshot_check and tools_available:
-            if screenshot_count < slide_count:
-                passed = False
+        if case.enable_screenshot_check and tools_available and screenshot_count < slide_count:
+            passed = False
 
         return E2EDeliverableResult(
             pptx_exported=pptx_exported,
