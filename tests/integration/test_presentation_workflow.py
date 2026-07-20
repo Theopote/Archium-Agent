@@ -110,7 +110,11 @@ def test_workflow_run_persists_artifacts(
     db_session: Session,
     mock_llm: MockLLMProvider,
 ) -> None:
-    result = workflow_service.run(project_with_context.id, request_payload)
+    result = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        require_outline_review=False,
+    )
 
     assert result.succeeded
     assert result.workflow_run.status == WorkflowStatus.COMPLETED
@@ -137,7 +141,11 @@ def test_workflow_run_exports_json(
     project_with_context: Project,
     request_payload: PresentationRequest,
 ) -> None:
-    result = workflow_service.run(project_with_context.id, request_payload)
+    result = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        require_outline_review=False,
+    )
 
     assert result.json_path is not None
     assert result.json_path.exists()
@@ -155,6 +163,7 @@ def test_workflow_run_exports_marp(
         project_with_context.id,
         request_payload,
         export_marp=True,
+        require_outline_review=False,
     )
 
     assert result.succeeded
@@ -170,7 +179,11 @@ def test_workflow_resume_completed_run_is_idempotent(
     request_payload: PresentationRequest,
     mock_llm: MockLLMProvider,
 ) -> None:
-    first = workflow_service.run(project_with_context.id, request_payload)
+    first = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        require_outline_review=False,
+    )
     call_count = len(mock_llm.calls)
 
     second = workflow_service.resume(first.workflow_run.id)

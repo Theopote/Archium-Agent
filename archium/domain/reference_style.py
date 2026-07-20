@@ -43,6 +43,7 @@ class ReferenceStyleProfile(IdentifiedModel, VersionedModel, TimestampedModel):
 
     project_id: UUID
     lineage_id: UUID = Field(default_factory=uuid4)
+    logical_key: str = Field(default=REFERENCE_STYLE_PROFILE_LOGICAL_KEY, max_length=200)
     style_name: str = Field(min_length=1)
     source_document_ids: list[str] = Field(default_factory=list)
     mood_keywords: list[str] = Field(default_factory=list)

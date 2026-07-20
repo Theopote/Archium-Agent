@@ -88,6 +88,7 @@ class CulturalNarrativePlan(IdentifiedModel, VersionedModel, TimestampedModel):
 
     project_id: UUID
     lineage_id: UUID = Field(default_factory=uuid4)
+    logical_key: str = Field(default=CULTURAL_NARRATIVE_LOGICAL_KEY, max_length=200)
     central_story: str = Field(min_length=1)
     identity_keywords: list[str] = Field(default_factory=list)
     historical_timeline: list[NarrativeEvent] = Field(default_factory=list)

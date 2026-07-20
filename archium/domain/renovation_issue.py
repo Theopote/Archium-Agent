@@ -57,6 +57,7 @@ class RenovationIssueMap(IdentifiedModel, VersionedModel, TimestampedModel):
 
     project_id: UUID
     lineage_id: UUID = Field(default_factory=uuid4)
+    logical_key: str = Field(default=RENOVATION_ISSUE_MAP_LOGICAL_KEY, max_length=200)
     building_summary: str = Field(min_length=1)
     condition_overview: str | None = None
     evidence_items: list[RenovationEvidence] = Field(default_factory=list)
