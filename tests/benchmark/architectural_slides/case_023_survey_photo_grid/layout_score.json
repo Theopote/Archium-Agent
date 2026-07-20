@@ -1,0 +1,8 @@
+{
+  "benchmark": "layout_geometry",
+  "case_id": "case_023_survey_photo_grid",
+  "layout_score": 1.0,
+  "layout_valid": true,
+  "has_critical": false,
+  "passed": true
+}

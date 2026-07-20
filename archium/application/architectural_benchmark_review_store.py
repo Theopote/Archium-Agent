@@ -15,6 +15,7 @@ from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_PENDING_LABEL,
     BenchmarkHumanReviewExport,
     BenchmarkPendingCase,
+    EditabilityReview,
     HumanLayoutReview,
     HumanVisualReview,
     HumanVisualReviewSource,
@@ -28,6 +29,7 @@ DEFAULT_BENCHMARK_ROOT = (
 DEFAULT_REPORTS_DIR = DEFAULT_BENCHMARK_ROOT / "reports"
 HUMAN_VISUAL_REVIEW_FILE = "human_visual_review.json"
 HUMAN_LAYOUT_REVIEW_FILE = "human_layout_review.json"
+EDITABILITY_REVIEW_FILE = "editability_review.json"
 LEGACY_HUMAN_REVIEW_FILE = "human_review.json"
 
 
@@ -43,9 +45,12 @@ class BenchmarkCaseSummary:
     layout_variant: str
     preview_path: Path
     wireframe_path: Path
+    scene_preview_path: Path
+    pptx_render_path: Path
     final_render_path: Path
     human_review_path: Path
     layout_review_path: Path
+    editability_review_path: Path
     layout_score: float | None
     rule_passed: bool | None
 
@@ -114,12 +119,60 @@ def list_case_review_statuses(*, root: Path | None = None) -> list[CaseReviewSta
                 rule_passed=case.rule_passed,
                 human_score_label=review.human_score_label(),
                 passes_threshold=review.passes_threshold(),
-                accepted_for_delivery=bool(review.accepted),
+                accepted_for_delivery=bool(review.accepted_for_delivery),
                 reviewer=review.reviewer or None,
                 pending=False,
             )
         )
     return statuses
+
+
+def load_case_editability_review(
+    case_id: str,
+    *,
+    root: Path | None = None,
+) -> EditabilityReview | None:
+    path = benchmark_root(root) / case_id / EDITABILITY_REVIEW_FILE
+    payload = _read_review_json(path)
+    if payload is None:
+        return None
+    return EditabilityReview.model_validate(payload)
+
+
+def save_case_editability_review(
+    review: EditabilityReview,
+    *,
+    root: Path | None = None,
+) -> Path:
+    if review.source != HumanVisualReviewSource.MANUAL:
+        msg = "Benchmark editability reviews saved from the UI must use source=manual"
+        raise ValueError(msg)
+    if not review.reviewer.strip():
+        raise WorkflowError("请填写评审人姓名后再保存可编辑性评审。")
+    case_directory = benchmark_root(root) / review.case_id
+    if not case_directory.is_dir():
+        msg = f"Unknown benchmark case directory: {review.case_id}"
+        raise ValueError(msg)
+    from tests.benchmark.architectural_slides.render_manifest import editability_review_eligibility
+
+    eligible, blockers = editability_review_eligibility(case_directory)
+    if not eligible:
+        detail = "；".join(blockers) if blockers else "PPTX unavailable"
+        raise WorkflowError(f"可编辑性评审须基于 RenderScene 导出的 output.pptx。（{detail}）")
+    if review.passed and review.major_problems:
+        raise WorkflowError("存在 major_problems 时不可标记可编辑性通过。")
+    if review.passed and not review.passes_threshold():
+        raise WorkflowError("可编辑性综合分未达阈值，不可标记为通过。")
+    if review.reviewed_at is None:
+        review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
+    if review.review_completed is False and review.reviewed_at is not None:
+        review = review.model_copy(update={"review_completed": True})
+    path = case_directory / EDITABILITY_REVIEW_FILE
+    path.write_text(
+        json.dumps(review.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 def benchmark_report_paths(*, root: Path | None = None) -> tuple[Path, Path]:
@@ -149,6 +202,8 @@ def benchmark_root(root: Path | None = None) -> Path:
 def list_benchmark_cases(*, root: Path | None = None) -> list[BenchmarkCaseSummary]:
     from tests.benchmark.architectural_slides.render_manifest import (
         final_render_path as case_final_render_path,
+        pptx_render_path as case_pptx_render_path,
+        scene_preview_path as case_scene_preview_path,
         wireframe_path as case_wireframe_path,
     )
 
@@ -181,9 +236,12 @@ def list_benchmark_cases(*, root: Path | None = None) -> list[BenchmarkCaseSumma
                 layout_variant=str(payload["layout_variant"]),
                 preview_path=case_wireframe_path(directory),
                 wireframe_path=case_wireframe_path(directory),
+                scene_preview_path=case_scene_preview_path(directory),
+                pptx_render_path=case_pptx_render_path(directory),
                 final_render_path=case_final_render_path(directory),
                 human_review_path=_visual_review_path(directory),
                 layout_review_path=directory / HUMAN_LAYOUT_REVIEW_FILE,
+                editability_review_path=directory / EDITABILITY_REVIEW_FILE,
                 layout_score=layout_score,
                 rule_passed=rule_passed,
             )
@@ -244,12 +302,18 @@ def save_case_review(
         raise WorkflowError(
             f"{BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER}（{detail}）"
         )
-    if review.accepted and review.major_problems:
+    if review.accepted_for_delivery and review.major_problems:
         raise WorkflowError("存在 major_problems 时不可标记为可交付。")
-    if review.accepted and not review.passes_threshold():
+    if review.accepted_for_delivery and not review.passes_threshold():
         raise WorkflowError("综合分未达交付阈值，不可标记为可交付。")
     if review.reviewed_at is None:
         review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
+    review = review.model_copy(
+        update={
+            "review_completed": True,
+            "accepted": review.accepted_for_delivery,
+        }
+    )
     path = case_directory / HUMAN_VISUAL_REVIEW_FILE
     path.write_text(
         json.dumps(review.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
@@ -304,7 +368,7 @@ def review_progress(*, root: Path | None = None) -> dict[str, int]:
             placeholder += 1
             continue
         manual_total += 1
-        if review.accepted:
+        if review.accepted_for_delivery:
             manual_accepted += 1
     return {
         "case_count": len(cases),

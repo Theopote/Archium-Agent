@@ -38,7 +38,7 @@ def evaluate_benchmark_human_gate(
 ) -> HumanReviewGateResult:
     """Apply WP I formal benchmark criteria to manual reviews only."""
     manual = [review for review in reviews if review.is_manual_review()]
-    accepted = [review for review in manual if review.accepted]
+    accepted = [review for review in manual if review.accepted_for_delivery]
     reasons: list[str] = []
 
     if len(manual) < min_accepted:
@@ -63,7 +63,7 @@ def evaluate_benchmark_human_gate(
         )
 
     major_on_accepted = any(
-        review.accepted and review.major_problems for review in manual
+        review.accepted_for_delivery and review.major_problems for review in manual
     )
     if major_on_accepted:
         reasons.append("accepted page has major_problems")

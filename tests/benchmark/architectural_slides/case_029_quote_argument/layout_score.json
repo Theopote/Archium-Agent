@@ -1,0 +1,8 @@
+{
+  "benchmark": "layout_geometry",
+  "case_id": "case_029_quote_argument",
+  "layout_score": 1.0,
+  "layout_valid": true,
+  "has_critical": false,
+  "passed": true
+}

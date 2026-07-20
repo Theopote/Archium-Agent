@@ -13,6 +13,9 @@
     "现在只能看到展位框和文字，看不到图片"
   ],
   "minor_problems": [],
+  "review_completed": true,
+  "accepted_for_delivery": false,
+  "validity": "invalid_render_artifact",
   "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T13:58:36.352344Z",

@@ -30,6 +30,9 @@ _CASE_ARTIFACT_NAMES = (
     "score_baseline.json",
     "deck_qa_report.json",
     "layout_plan.json",
+    "render_manifest.json",
+    "human_review.json",
+    "layout_score.json",
 )
 
 
@@ -163,10 +166,15 @@ def _compare_summary_payloads(actual: dict[str, Any], expected: dict[str, Any]) 
         "rule_passed",
         "layout_score",
         "has_critical",
+        "render_valid",
+        "render_source",
+        "preview_png",
         "human_weighted_score",
         "human_score_label",
         "human_review_source",
+        "human_review_validity",
         "human_accepted_for_delivery",
+        "human_invalidated",
     )
     for case_id in materialized_benchmark_case_ids():
         row = actual_cases[case_id]

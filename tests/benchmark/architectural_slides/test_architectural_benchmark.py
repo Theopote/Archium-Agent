@@ -120,9 +120,8 @@ def test_benchmark_human_review_scaffold_not_marked_accepted() -> None:
         path = case_dir(case_id) / "human_review.json"
         review = HumanVisualReview.model_validate_json(path.read_text(encoding="utf-8"))
         if review.is_invalidated():
-            assert not review.accepted, (
-                f"{case_id} invalidated human review must not set accepted=true"
-            )
+            assert not review.accepted_for_delivery
+            assert review.validity.value == "invalid_render_artifact"
             continue
         if human_review_is_placeholder(review):
             assert not review.accepted, (
@@ -137,7 +136,7 @@ def test_benchmark_human_review_scaffold_not_marked_accepted() -> None:
             continue
         assert review.is_manual_review(), f"{case_id} human review must be manual"
         assert review.passes_threshold(HUMAN_REVIEW_PASS_THRESHOLD)
-        assert review.accepted, f"{case_id} manual human review not accepted"
+        assert review.accepted_for_delivery, f"{case_id} manual human review not accepted for delivery"
 
 
 def test_benchmark_summary_report_is_current_and_consistent() -> None:

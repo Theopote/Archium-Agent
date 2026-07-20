@@ -246,14 +246,21 @@ def test_regenerate_benchmark_report_uses_disk_only_summary(tmp_path: Path) -> N
 
 def _seed_visual_review_ready(case_dir: Path) -> None:
     from archium.domain.visual.benchmark import BenchmarkRenderManifest
-    from tests.benchmark.architectural_slides.render_manifest import write_render_manifest
+    from tests.benchmark.architectural_slides.render_manifest import (
+        SCENE_JSON_NAME,
+        SCENE_PREVIEW_NAME,
+        write_render_manifest,
+    )
 
-    (case_dir / "final_render.png").write_bytes(b"png")
+    (case_dir / SCENE_PREVIEW_NAME).write_bytes(b"png")
+    (case_dir / SCENE_JSON_NAME).write_text("{}", encoding="utf-8")
+    (case_dir / "output.pptx").write_bytes(b"pptx")
     write_render_manifest(
         case_dir,
         BenchmarkRenderManifest(
-            render_source="pptx_screenshot",
+            render_source="html",
             render_valid=True,
+            scene_hash="abc123",
             asset_count=1,
             real_asset_count=1,
             placeholder_asset_count=0,
@@ -297,7 +304,7 @@ def test_save_case_review_blocked_without_final_render(tmp_path: Path) -> None:
         reviewer="Reviewer A",
         reviewed_at=datetime.now(UTC),
     )
-    with pytest.raises(WorkflowError, match="final_render"):
+    with pytest.raises(WorkflowError, match="RenderScene|scene_preview|final_render"):
         save_case_review(review, root=tmp_path)
 
 
@@ -371,7 +378,7 @@ def test_save_and_load_manual_review_round_trip(tmp_path: Path) -> None:
         architectural_expression=4,
         aesthetic_finish=4,
         editability=5,
-        accepted=True,
+        accepted_for_delivery=True,
         reviewer="Reviewer A",
         reviewed_at=datetime.now(UTC),
         reviewer_notes="Manual review complete.",
@@ -381,6 +388,7 @@ def test_save_and_load_manual_review_round_trip(tmp_path: Path) -> None:
     loaded = load_case_review("case_demo", root=tmp_path)
     assert loaded is not None
     assert loaded.source == HumanVisualReviewSource.MANUAL
+    assert loaded.accepted_for_delivery is True
     assert loaded.accepted is True
     progress = review_progress(root=tmp_path)
     assert progress["manual_accepted_count"] == 1

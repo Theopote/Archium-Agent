@@ -15,6 +15,9 @@
   "minor_problems": [
     "看不到示意图"
   ],
+  "review_completed": true,
+  "accepted_for_delivery": false,
+  "validity": "invalid_render_artifact",
   "accepted": false,
   "reviewer": "Theopote",
   "reviewed_at": "2026-07-20T14:09:08.543716Z",

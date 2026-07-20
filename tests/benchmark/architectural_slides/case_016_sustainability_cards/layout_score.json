@@ -1,0 +1,8 @@
+{
+  "benchmark": "layout_geometry",
+  "case_id": "case_016_sustainability_cards",
+  "layout_score": 0.955,
+  "layout_valid": true,
+  "has_critical": false,
+  "passed": true
+}

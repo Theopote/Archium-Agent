@@ -21,7 +21,7 @@ HUMAN_REVIEW_INVALIDATED_LABEL = "已作废（需重评）"
 LAYOUT_REVIEW_PENDING_LABEL = "待几何评审"
 LAYOUT_REVIEW_PASS_THRESHOLD = 3.5
 BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER = (
-    "人工视觉评审须基于 final_render.png（PPTX 最终渲染），"
+    "人工视觉评审须基于 RenderScene 真实渲染（scene_preview.png 或 pptx_render.png），"
     "不能使用 LayoutPlan 线框图 wireframe.png。"
 )
 DEFAULT_INVALIDATION_REASON_WIREFRAME = (
@@ -39,6 +39,16 @@ HUMAN_REVIEW_WEIGHTS: dict[str, float] = {
     "editability": 0.10,
 }
 
+VISUAL_REVIEW_WEIGHTS: dict[str, float] = {
+    "information_hierarchy": 0.17,
+    "visual_focus": 0.17,
+    "reading_order": 0.11,
+    "image_text_relationship": 0.17,
+    "whitespace_density": 0.11,
+    "architectural_expression": 0.17,
+    "aesthetic_finish": 0.10,
+}
+
 from archium.domain.visual.enums import LayoutFamily  # noqa: E402
 
 class HumanVisualReviewSource(StrEnum):
@@ -48,6 +58,14 @@ class HumanVisualReviewSource(StrEnum):
     PLACEHOLDER = "placeholder"
     LAYOUT_QA_DERIVED = "layout_qa_derived"
     INVALIDATED = "invalidated"
+
+
+class ReviewValidity(StrEnum):
+    """Whether a stored review may count toward delivery gates."""
+
+    VALID = "valid"
+    INVALID_RENDER_ARTIFACT = "invalid_render_artifact"
+    SUPERSEDED = "superseded"
 
 
 _DERIVED_REVIEW_NOTE_MARKERS = (
@@ -105,6 +123,9 @@ class HumanVisualReview(DomainModel):
     editability: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
     major_problems: list[str] = Field(default_factory=list)
     minor_problems: list[str] = Field(default_factory=list)
+    review_completed: bool = False
+    accepted_for_delivery: bool = False
+    validity: ReviewValidity = ReviewValidity.VALID
     accepted: bool = False
     reviewer: str = ""
     reviewed_at: datetime | None = None
@@ -131,8 +152,10 @@ class HumanVisualReview(DomainModel):
     def weighted_score(self) -> float:
         """Return the weighted average human score (1–5 scale)."""
         total = 0.0
-        for field_name, weight in HUMAN_REVIEW_WEIGHTS.items():
-            total += getattr(self, field_name) * weight
+        weights = VISUAL_REVIEW_WEIGHTS if self.is_manual_review() else HUMAN_REVIEW_WEIGHTS
+        for field_name, weight in weights.items():
+            if hasattr(self, field_name):
+                total += getattr(self, field_name) * weight
         return round(total, 3)
 
     def passes_threshold(self, threshold: float = HUMAN_REVIEW_PASS_THRESHOLD) -> bool:
@@ -153,15 +176,39 @@ class HumanVisualReview(DomainModel):
         return self.weighted_score()
 
     @model_validator(mode="after")
+    def _infer_invalidated_validity(self) -> Self:
+        if self.source == HumanVisualReviewSource.INVALIDATED and self.validity == ReviewValidity.VALID:
+            object.__setattr__(self, "validity", ReviewValidity.INVALID_RENDER_ARTIFACT)
+        return self
+
+    @model_validator(mode="after")
     def _enforce_review_consistency(self) -> Self:
-        if self.is_invalidated():
-            if self.accepted:
-                self.accepted = False
+        if self.is_invalidated() or self.validity == ReviewValidity.INVALID_RENDER_ARTIFACT:
+            object.__setattr__(self, "accepted_for_delivery", False)
+            object.__setattr__(self, "accepted", False)
             if not self.invalidation_reason.strip():
-                self.invalidation_reason = DEFAULT_INVALIDATION_REASON_WIREFRAME
-        elif self.is_manual_review() and self.accepted:
-            if self.major_problems or not self.passes_threshold():
-                self.accepted = False
+                object.__setattr__(
+                    self,
+                    "invalidation_reason",
+                    DEFAULT_INVALIDATION_REASON_WIREFRAME,
+                )
+            return self
+        if self.is_manual_review():
+            if not self.review_completed and self.reviewed_at is not None:
+                object.__setattr__(self, "review_completed", True)
+            accepted_for_delivery = self.accepted_for_delivery
+            accepted = self.accepted
+            if self.accepted and not accepted_for_delivery:
+                accepted_for_delivery = True
+            if accepted_for_delivery and not accepted:
+                accepted = True
+            if accepted_for_delivery and (self.major_problems or not self.passes_threshold()):
+                accepted_for_delivery = False
+                accepted = False
+            if accepted_for_delivery != self.accepted_for_delivery:
+                object.__setattr__(self, "accepted_for_delivery", accepted_for_delivery)
+            if accepted != self.accepted:
+                object.__setattr__(self, "accepted", accepted)
         return self
 
     @model_validator(mode="after")
@@ -180,7 +227,10 @@ class HumanVisualReview(DomainModel):
         return self.source == HumanVisualReviewSource.MANUAL
 
     def is_invalidated(self) -> bool:
-        return self.source == HumanVisualReviewSource.INVALIDATED
+        return (
+            self.source == HumanVisualReviewSource.INVALIDATED
+            or self.validity == ReviewValidity.INVALID_RENDER_ARTIFACT
+        )
 
     def is_scaffold_review(self) -> bool:
         """Return True for placeholder templates and layout-QA-derived stand-ins."""
@@ -195,7 +245,7 @@ class BenchmarkRenderManifest(DomainModel):
 
     render_source: str = "pending"
     pptx_path: str = "output.pptx"
-    image_path: str = "final_render.png"
+    image_path: str = "pptx_render.png"
     scene_path: str = "scene.json"
     scene_preview_path: str = "scene_preview.png"
     scene_id: str | None = None
@@ -236,7 +286,51 @@ class BenchmarkRenderManifest(DomainModel):
             )
         if self.missing_assets:
             blockers.append(f"missing_assets={len(self.missing_assets)}")
+        if not self.scene_hash:
+            blockers.append("scene_hash missing")
         return blockers
+
+
+class EditabilityReview(DomainModel):
+    """Manual PPTX editability review — separate from visual aesthetics."""
+
+    case_id: str = Field(min_length=1)
+    source: HumanVisualReviewSource = HumanVisualReviewSource.MANUAL
+    text_editable: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    image_replaceable: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    layer_independence: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    chart_editable: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    font_usability: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    not_flattened: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    selection_ease: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    modification_ease: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    major_problems: list[str] = Field(default_factory=list)
+    minor_problems: list[str] = Field(default_factory=list)
+    review_completed: bool = False
+    passed: bool = False
+    reviewer: str = ""
+    reviewed_at: datetime | None = None
+    reviewer_notes: str = ""
+
+    def weighted_score(self) -> float:
+        weights = {
+            "text_editable": 0.20,
+            "image_replaceable": 0.15,
+            "layer_independence": 0.15,
+            "chart_editable": 0.10,
+            "font_usability": 0.10,
+            "not_flattened": 0.15,
+            "selection_ease": 0.075,
+            "modification_ease": 0.075,
+        }
+        total = sum(getattr(self, field) * weight for field, weight in weights.items())
+        return round(total, 3)
+
+    def passes_threshold(self, threshold: float = HUMAN_REVIEW_PASS_THRESHOLD) -> bool:
+        return self.weighted_score() >= threshold
+
+    def is_manual_review(self) -> bool:
+        return self.source == HumanVisualReviewSource.MANUAL
 
 
 class HumanLayoutReview(DomainModel):

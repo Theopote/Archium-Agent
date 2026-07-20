@@ -16,11 +16,13 @@ from archium.application.architectural_benchmark_review_store import (
     import_human_review_bundle,
     list_benchmark_cases,
     list_case_review_statuses,
+    load_case_editability_review,
     load_case_layout_review,
     load_case_review,
     regenerate_benchmark_report,
     review_progress,
     review_progress_by_category,
+    save_case_editability_review,
     save_case_layout_review,
     save_case_review,
 )
@@ -34,6 +36,7 @@ from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_PASS_THRESHOLD,
     HUMAN_REVIEW_PENDING_LABEL,
     LAYOUT_REVIEW_PASS_THRESHOLD,
+    EditabilityReview,
     HumanLayoutReview,
     HumanVisualReview,
     HumanVisualReviewSource,
@@ -52,17 +55,34 @@ LAYOUT_REVIEW_DIMENSION_LABELS: dict[str, str] = {
     "layout_clarity": "版式清晰度",
 }
 
+VISUAL_REVIEW_DIMENSION_LABELS: dict[str, str] = {
+    key: label
+    for key, label in REVIEW_DIMENSION_LABELS.items()
+    if key != "editability"
+}
+
+EDITABILITY_REVIEW_DIMENSION_LABELS: dict[str, str] = {
+    "text_editable": "文字可编辑",
+    "image_replaceable": "图片可替换",
+    "layer_independence": "图层独立",
+    "chart_editable": "图表可编辑",
+    "font_usability": "字体可用",
+    "not_flattened": "非整页扁平",
+    "selection_ease": "元素易选中",
+    "modification_ease": "修改容易",
+}
+
 
 def render_benchmark_review_panel() -> None:
-    st.markdown("### 建筑幻灯片基准 · 人工视觉评审")
+    st.markdown("### 建筑幻灯片基准 · 双层人工评审")
     st.caption(
-        "Layout Geometry Benchmark 使用 `wireframe.png`（LayoutPlan 线框，仅评价几何与留白）。"
-        "Rendered Visual Benchmark 须基于 `final_render.png`（PPTX 最终渲染）填写 9 维视觉评分。"
-        "当前 30 页若仅有线框预览，视觉评审入口将禁用。"
+        "Layout Geometry Benchmark：基于 `wireframe.png` 评价几何、留白与阅读顺序。"
+        "Rendered Visual Benchmark：基于 `scene_preview.png` / `pptx_render.png` 评价真实视觉质量。"
+        "PPTX 可编辑性单独在 `editability_review.json` 记录。"
     )
     st.warning(
-        "此前基于 `preview.png` / 线框图的人工评分已作废，不可用于验收统计。"
-        "请等待 `final_render.png` + `render_manifest.json` 就绪后重新评审。"
+        "此前基于线框 `preview.png` / `wireframe.png` 的视觉评分已作废（validity=invalid_render_artifact），"
+        "不得计入交付统计。须在 `render_valid=true` 且存在真实渲染产物后重新评审。"
     )
 
     progress = review_progress()
@@ -115,6 +135,7 @@ def render_benchmark_review_panel() -> None:
     selected = next(case for case in filtered if case.case_id == selected_id)
     existing = load_case_review(selected_id)
     existing_layout = load_case_layout_review(selected_id)
+    existing_editability = load_case_editability_review(selected_id)
     selected_index = case_ids.index(selected_id)
 
     nav_cols = st.columns([1, 2, 1])
@@ -142,7 +163,15 @@ def render_benchmark_review_panel() -> None:
 
     preview_col, form_col = st.columns([1.1, 1])
     _render_case_preview(preview_col, selected, existing, existing_layout)
-    _handle_review_form(form_col, selected, existing, existing_layout, case_ids, selected_index)
+    _handle_review_form(
+        form_col,
+        selected,
+        existing,
+        existing_layout,
+        existing_editability,
+        case_ids,
+        selected_index,
+    )
 
 
 def _render_progress_header(progress: dict[str, int]) -> None:
@@ -336,46 +365,68 @@ def _render_case_preview(
     from tests.benchmark.architectural_slides.render_manifest import (
         load_render_manifest,
         visual_review_eligibility,
+        visual_review_image_path,
     )
 
     with column:
         case_dir = case.preview_path.parent
         eligible, _, blockers = visual_review_eligibility(case_dir)
-        wireframe_tab, render_tab, pptx_tab = column.tabs(
-            ["Layout 线框 (wireframe)", "最终渲染 (final_render)", "PPTX (output.pptx)"]
+        wireframe_tab, scene_tab, pptx_render_tab, pptx_tab = column.tabs(
+            [
+                "Layout 线框 (wireframe)",
+                "Scene 预览 (scene_preview)",
+                "PPTX 截图 (pptx_render)",
+                "PPTX 文件",
+            ]
         )
         with wireframe_tab:
             if case.wireframe_path.is_file():
                 wireframe_tab.image(
                     str(case.wireframe_path),
-                    caption=f"{case.title} · 几何线框（不可用于视觉验收）",
+                    caption=f"{case.title} · 几何线框（Layout Geometry Benchmark）",
                     use_container_width=True,
                 )
             else:
                 wireframe_tab.warning(f"缺少线框图：{case.wireframe_path}")
-        with render_tab:
-            if case.final_render_path.is_file():
-                render_tab.image(
-                    str(case.final_render_path),
-                    caption=f"{case.title} · 最终渲染",
+        with scene_tab:
+            if case.scene_preview_path.is_file():
+                scene_tab.image(
+                    str(case.scene_preview_path),
+                    caption=f"{case.title} · RenderScene 真实预览",
                     use_container_width=True,
                 )
             else:
-                render_tab.info(
-                    "尚无 `final_render.png`。"
-                    "完整内容 PPTX 已导出时，需 LibreOffice + pdftoppm 渲染截图，"
-                    "或在本机打开 `output.pptx` 进行视觉检查。"
+                scene_tab.info("尚无 `scene_preview.png`。请先运行 RenderScene 渲染管线。")
+        with pptx_render_tab:
+            review_image = visual_review_image_path(case_dir)
+            if review_image is not None and review_image.name == "pptx_render.png":
+                pptx_render_tab.image(
+                    str(review_image),
+                    caption=f"{case.title} · PPTX 截图",
+                    use_container_width=True,
+                )
+            elif review_image is not None:
+                pptx_render_tab.image(
+                    str(review_image),
+                    caption=f"{case.title} · 渲染预览（{review_image.name}）",
+                    use_container_width=True,
+                )
+            else:
+                pptx_render_tab.info(
+                    "尚无 `pptx_render.png`。"
+                    "若已导出 PPTX，可安装 LibreOffice + pdftoppm 生成截图，"
+                    "或直接打开 output.pptx 进行视觉检查。"
                 )
         pptx_path = case_dir / "output.pptx"
         with pptx_tab:
             if pptx_path.is_file():
                 pptx_tab.caption(
-                    f"完整内容 PPTX（含 LayoutPlan 文本样式与素材路径）：`{pptx_path.name}`"
+                    f"RenderScene 驱动的可编辑 PPTX：`{pptx_path.name}`"
                 )
                 pptx_tab.markdown(f"[在本机打开 PPTX]({pptx_path.as_uri()})")
             else:
                 pptx_tab.warning(
-                    "尚未生成 `output.pptx`。运行 "
+                    "尚未生成 `output.pptx`。运行 benchmark 渲染管线或 "
                     "`python scripts/render_architectural_benchmark_visuals.py`。"
                 )
 
@@ -432,16 +483,17 @@ def _handle_review_form(
     case: BenchmarkCaseSummary,
     existing: HumanVisualReview | None,
     existing_layout: HumanLayoutReview | None,
+    existing_editability: EditabilityReview | None,
     case_ids: list[str],
     selected_index: int,
 ) -> None:
-    from tests.benchmark.architectural_slides.render_manifest import visual_review_eligibility
-
     with column:
         with st.expander("Layout Geometry 评审（wireframe）", expanded=True):
             _render_layout_review_form(case, existing_layout, case_ids, selected_index)
-        with st.expander("Rendered Visual 评审（final_render）", expanded=False):
+        with st.expander("Rendered Visual 评审（scene / pptx 截图）", expanded=False):
             _render_visual_review_form(case, existing, case_ids, selected_index)
+        with st.expander("PPTX 可编辑性评审（output.pptx）", expanded=False):
+            _render_editability_review_form(case, existing_editability, case_ids, selected_index)
 
 
 def _render_layout_review_form(
@@ -533,8 +585,8 @@ def _render_visual_review_form(
     is_manual = existing is not None and existing.is_manual_review()
     if existing is not None and existing.is_invalidated():
         st.info(
-            "本条视觉评分已作废（基于线框预览）。"
-            "待 `final_render.png` 就绪且素材非占位后可重新保存。"
+            "本条视觉评分已作废（基于线框预览，validity=invalid_render_artifact）。"
+            "待 `render_valid=true` 且真实渲染产物就绪后可重新保存。"
         )
     elif existing is not None and existing.is_scaffold_review():
         st.warning("当前为占位视觉评审。")
@@ -547,10 +599,10 @@ def _render_visual_review_form(
 
     defaults = {
         field: getattr(existing, field, 4)
-        for field in REVIEW_DIMENSION_LABELS
+        for field in VISUAL_REVIEW_DIMENSION_LABELS
     }
     scores: dict[str, int] = {}
-    for field, label in REVIEW_DIMENSION_LABELS.items():
+    for field, label in VISUAL_REVIEW_DIMENSION_LABELS.items():
         scores[field] = st.slider(
             label,
             min_value=HUMAN_REVIEW_MIN_SCORE,
@@ -583,8 +635,10 @@ def _render_visual_review_form(
         height=72,
         key=f"benchmark_human_minor_{case.case_id}",
     )
-    accepted_default = bool(existing.accepted) if is_manual and existing is not None else False
-    accepted = st.checkbox(
+    accepted_default = (
+        bool(existing.accepted_for_delivery) if is_manual and existing is not None else False
+    )
+    accepted_for_delivery = st.checkbox(
         "本页可接受交付",
         value=accepted_default,
         key=f"benchmark_human_accept_{case.case_id}",
@@ -605,10 +659,12 @@ def _render_visual_review_form(
         whitespace_density=scores["whitespace_density"],
         architectural_expression=scores["architectural_expression"],
         aesthetic_finish=scores["aesthetic_finish"],
-        editability=scores["editability"],
+        editability=existing.editability if existing is not None else 4,
         major_problems=[line.strip() for line in major.splitlines() if line.strip()],
         minor_problems=[line.strip() for line in minor.splitlines() if line.strip()],
-        accepted=accepted,
+        review_completed=True,
+        accepted_for_delivery=accepted_for_delivery,
+        accepted=accepted_for_delivery,
         reviewer=reviewer.strip(),
         reviewed_at=datetime.now(UTC),
         reviewer_notes=notes.strip(),
@@ -640,6 +696,95 @@ def _render_visual_review_form(
             case_ids=case_ids,
             selected_index=selected_index,
         )
+
+
+def _render_editability_review_form(
+    case: BenchmarkCaseSummary,
+    existing: EditabilityReview | None,
+    case_ids: list[str],
+    selected_index: int,
+) -> None:
+    from tests.benchmark.architectural_slides.render_manifest import editability_review_eligibility
+
+    eligible, blockers = editability_review_eligibility(case.preview_path.parent)
+    is_manual = existing is not None and existing.is_manual_review()
+    if not eligible:
+        st.error("可编辑性评审须基于 RenderScene 导出的 output.pptx。（" + "；".join(blockers) + "）")
+
+    defaults = {
+        field: getattr(existing, field, 4)
+        for field in EDITABILITY_REVIEW_DIMENSION_LABELS
+    }
+    scores: dict[str, int] = {}
+    for field, label in EDITABILITY_REVIEW_DIMENSION_LABELS.items():
+        scores[field] = st.slider(
+            label,
+            min_value=HUMAN_REVIEW_MIN_SCORE,
+            max_value=HUMAN_REVIEW_MAX_SCORE,
+            value=int(defaults[field]),
+            key=f"benchmark_editability_{case.case_id}_{field}",
+        )
+    default_reviewer = ""
+    if is_manual and existing is not None:
+        default_reviewer = existing.reviewer
+    elif st.session_state.get(_SESSION_REVIEWER_KEY):
+        default_reviewer = str(st.session_state[_SESSION_REVIEWER_KEY])
+    reviewer = st.text_input(
+        "评审人",
+        value=default_reviewer,
+        key=f"benchmark_editability_reviewer_{case.case_id}",
+    )
+    major = st.text_area(
+        "主要问题（每行一条）",
+        value="\n".join(existing.major_problems if existing else []),
+        height=60,
+        key=f"benchmark_editability_major_{case.case_id}",
+    )
+    passed_default = bool(existing.passed) if is_manual and existing is not None else False
+    passed = st.checkbox(
+        "PPTX 可编辑性通过",
+        value=passed_default,
+        key=f"benchmark_editability_pass_{case.case_id}",
+    )
+    notes = st.text_input(
+        "评审备注",
+        value=existing.reviewer_notes if is_manual and existing is not None else "",
+        key=f"benchmark_editability_notes_{case.case_id}",
+    )
+    preview = EditabilityReview(
+        case_id=case.case_id,
+        source=HumanVisualReviewSource.MANUAL,
+        text_editable=scores["text_editable"],
+        image_replaceable=scores["image_replaceable"],
+        layer_independence=scores["layer_independence"],
+        chart_editable=scores["chart_editable"],
+        font_usability=scores["font_usability"],
+        not_flattened=scores["not_flattened"],
+        selection_ease=scores["selection_ease"],
+        modification_ease=scores["modification_ease"],
+        major_problems=[line.strip() for line in major.splitlines() if line.strip()],
+        review_completed=True,
+        passed=passed,
+        reviewer=reviewer.strip(),
+        reviewed_at=datetime.now(UTC),
+        reviewer_notes=notes.strip(),
+    )
+    st.caption(
+        f"可编辑性综合 {preview.weighted_score():.2f} / 5 · "
+        f"{'通过' if preview.passes_threshold() else '未达'} 阈值 {HUMAN_REVIEW_PASS_THRESHOLD}"
+    )
+    if st.button(
+        "保存可编辑性评审",
+        type="secondary",
+        use_container_width=True,
+        disabled=not eligible,
+        key=f"benchmark_save_editability_{case.case_id}",
+    ):
+        saved_path = save_case_editability_review(preview)
+        if preview.reviewer:
+            st.session_state[_SESSION_REVIEWER_KEY] = preview.reviewer
+        st.success(f"已保存至 `{saved_path.name}`")
+        st.rerun()
 
 
 def _persist_review(

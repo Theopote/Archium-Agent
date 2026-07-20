@@ -17,6 +17,7 @@ from archium.domain.visual.benchmark import (  # noqa: E402
     DEFAULT_INVALIDATION_REASON_WIREFRAME,
     HumanVisualReview,
     HumanVisualReviewSource,
+    ReviewValidity,
 )
 from tests.benchmark.architectural_slides.artifacts import (  # noqa: E402
     BENCHMARK_ROOT,
@@ -25,17 +26,26 @@ from tests.benchmark.architectural_slides.artifacts import (  # noqa: E402
 from tests.benchmark.architectural_slides.render_manifest import (  # noqa: E402
     bootstrap_case_render_artifacts,
 )
+from tests.benchmark.architectural_slides.review_paths import (  # noqa: E402
+    LEGACY_HUMAN_REVIEW_FILE,
+    visual_review_json_path,
+)
 
 
 def invalidate_review(path: Path, *, dry_run: bool) -> bool:
     if not path.is_file():
         return False
     review = HumanVisualReview.model_validate_json(path.read_text(encoding="utf-8"))
-    if review.source != HumanVisualReviewSource.MANUAL:
+    if review.is_invalidated():
+        return False
+    if review.is_scaffold_review():
         return False
     invalidated = review.model_copy(
         update={
             "source": HumanVisualReviewSource.INVALIDATED,
+            "validity": ReviewValidity.INVALID_RENDER_ARTIFACT,
+            "review_completed": True,
+            "accepted_for_delivery": False,
             "accepted": False,
             "invalidation_reason": DEFAULT_INVALIDATION_REASON_WIREFRAME,
             "reviewer_notes": (
@@ -68,7 +78,8 @@ def main(argv: list[str] | None = None) -> int:
     bootstrapped = 0
     for case_id in materialized_benchmark_case_ids(root=args.root):
         case_dir = args.root / case_id
-        if invalidate_review(case_dir / "human_review.json", dry_run=args.dry_run):
+        review_path = visual_review_json_path(case_dir) or (case_dir / LEGACY_HUMAN_REVIEW_FILE)
+        if invalidate_review(review_path, dry_run=args.dry_run):
             invalidated += 1
             print(f"{'would invalidate' if args.dry_run else 'invalidated'} {case_id}")
         bootstrap_case_render_artifacts(case_dir)

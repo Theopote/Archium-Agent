@@ -1,0 +1,8 @@
+{
+  "benchmark": "layout_geometry",
+  "case_id": "case_014_structure_concept",
+  "layout_score": 1.0,
+  "layout_valid": true,
+  "has_critical": false,
+  "passed": true
+}

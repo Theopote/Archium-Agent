@@ -24,9 +24,11 @@ from archium.infrastructure.renderers.pptx_screenshot import (
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
 from tests.benchmark.architectural_slides.render_manifest import (
     FINAL_RENDER_NAME,
+    PPTX_RENDER_NAME,
     SCENE_JSON_NAME,
     SCENE_PREVIEW_NAME,
     count_assets,
+    ensure_pptx_render_alias,
     write_render_manifest,
 )
 
@@ -215,12 +217,14 @@ def render_benchmark_visual_artifacts(
             notes.append("Renderer conformance: " + "; ".join(conformance_issues[:3]))
         final_render = export_benchmark_final_render(pptx_path, case_dir)
         if final_render is not None:
-            notes.append("final_render.png rasterized from output.pptx.")
+            notes.append("pptx_render.png rasterized from output.pptx.")
         elif not screenshot_tools_available():
             notes.append(
                 "Screenshot tools unavailable (LibreOffice + pdftoppm); "
                 "final_render.png not produced."
             )
+
+    pptx_render = ensure_pptx_render_alias(case_dir)
 
     asset_count, curated_count, placeholder_count = count_assets(case_dir)
     scene_ok = scene_render.scene_preview_path.is_file()
@@ -251,13 +255,13 @@ def render_benchmark_visual_artifacts(
         notes.append("All mapped assets are curated PNGs from the benchmark asset pool.")
 
     render_source = "html" if scene_ok else "pending"
-    if final_render is not None:
+    if pptx_render is not None:
         render_source = "pptx_screenshot"
 
     manifest = BenchmarkRenderManifest(
         render_source=render_source,
         pptx_path=PPTX_NAME,
-        image_path=FINAL_RENDER_NAME,
+        image_path=PPTX_RENDER_NAME,
         scene_path=SCENE_JSON_NAME,
         scene_preview_path=SCENE_PREVIEW_NAME,
         scene_id=str(scene_render.scene.id),

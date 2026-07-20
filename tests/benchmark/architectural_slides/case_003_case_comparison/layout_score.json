@@ -1,0 +1,8 @@
+{
+  "benchmark": "layout_geometry",
+  "case_id": "case_003_case_comparison",
+  "layout_score": 1.0,
+  "layout_valid": true,
+  "has_critical": false,
+  "passed": true
+}

@@ -1,0 +1,19 @@
+{
+  "case_id": "case_030_two_column_policy",
+  "source": "placeholder",
+  "text_editable": 4,
+  "image_replaceable": 4,
+  "layer_independence": 4,
+  "chart_editable": 4,
+  "font_usability": 4,
+  "not_flattened": 4,
+  "selection_ease": 4,
+  "modification_ease": 4,
+  "major_problems": [],
+  "minor_problems": [],
+  "review_completed": false,
+  "passed": false,
+  "reviewer": "",
+  "reviewed_at": null,
+  "reviewer_notes": "占位模板；须基于 output.pptx 真实打开后填写 manual 评审。"
+}

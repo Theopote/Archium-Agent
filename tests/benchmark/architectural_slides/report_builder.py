@@ -14,8 +14,35 @@ from archium.domain.visual.benchmark import HumanVisualReview
 from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir, materialized_benchmark_case_ids
 from tests.benchmark.architectural_slides.case_registry import get_case_definition
 from tests.benchmark.architectural_slides.human_review_summary import human_review_summary_fields
+from tests.benchmark.architectural_slides.render_manifest import (
+    load_render_manifest,
+    scene_preview_path,
+    wireframe_path,
+)
 from tests.benchmark.architectural_slides.review_paths import read_visual_review_payload
 from tests.benchmark.architectural_slides.runner import run_all_cases
+
+
+def _preview_relative_path(directory: Path, base: Path) -> str:
+    scene = scene_preview_path(directory)
+    if scene.is_file():
+        return str(scene.relative_to(base))
+    wire = wireframe_path(directory)
+    if wire.is_file():
+        return str(wire.relative_to(base))
+    legacy = directory / "preview.png"
+    return str(legacy.relative_to(base)) if legacy.is_file() else ""
+
+
+def _render_fields_from_manifest(directory: Path) -> dict[str, Any]:
+    manifest = load_render_manifest(directory)
+    if manifest is None:
+        return {"render_valid": False, "render_source": "pending", "scene_hash": ""}
+    return {
+        "render_valid": manifest.render_valid,
+        "render_source": manifest.render_source,
+        "scene_hash": manifest.scene_hash,
+    }
 
 
 def build_benchmark_summary(
@@ -42,10 +69,11 @@ def build_benchmark_summary(
                 "page_type": definition.page_type,
                 "layout_family": definition.expected_layout_family.value,
                 "layout_variant": definition.layout_variant,
-                "preview_png": str((directory / "preview.png").relative_to(BENCHMARK_ROOT)),
+                "preview_png": _preview_relative_path(directory, BENCHMARK_ROOT),
                 "rule_passed": summary.passed,
                 "layout_score": summary.layout_score,
                 "has_critical": summary.has_critical,
+                **_render_fields_from_manifest(directory),
                 **human_fields,
             }
         )
@@ -102,10 +130,7 @@ def _build_benchmark_summary_from_disk(*, root: Path | None = None) -> dict[str,
         human_fields = human_review_summary_fields(human)
         if human is not None and human.is_manual_review():
             manual_reviews.append(human)
-        preview_path = directory / "preview.png"
-        preview_png = (
-            str(preview_path.relative_to(base)) if preview_path.is_file() else ""
-        )
+        preview_png = _preview_relative_path(directory, base)
         cases.append(
             {
                 "case_id": case_id,
@@ -115,6 +140,7 @@ def _build_benchmark_summary_from_disk(*, root: Path | None = None) -> dict[str,
                 "layout_family": definition.expected_layout_family.value,
                 "layout_variant": definition.layout_variant,
                 "preview_png": preview_png,
+                **_render_fields_from_manifest(directory),
                 **rule_fields,
                 **human_fields,
             }
@@ -203,6 +229,7 @@ def _render_html(summary: dict[str, Any]) -> str:
             f"<td><img src=\"{preview}\" alt=\"preview\" width=\"180\" /></td>"
             f"<td>{'通过' if item['rule_passed'] else '未通过'}</td>"
             f"<td>{item['layout_score']}</td>"
+            f"<td>{'有效' if item.get('render_valid') else '无效'}</td>"
             f"<td>{escape(str(item.get('human_score_label') or '—'))}</td>"
             f"<td>{escape(str(item.get('human_review_source') or '—'))}</td>"
             f"<td>{'是' if item.get('human_accepted_for_delivery') else '否'}</td>"
@@ -226,7 +253,7 @@ def _render_html(summary: dict[str, Any]) -> str:
         f"{'通过' if summary.get('human_quality_gate_passed') else '未通过（需真实 manual 评审）'}</p>"
         "<table><thead><tr>"
         "<th>Case</th><th>标题</th><th>页面类型</th><th>LayoutFamily</th>"
-        "<th>预览</th><th>规则</th><th>规则分</th><th>人工分</th><th>评审来源</th><th>可交付</th><th>主要问题</th>"
+        "<th>预览</th><th>规则</th><th>规则分</th><th>渲染</th><th>人工分</th><th>评审来源</th><th>可交付</th><th>主要问题</th>"
         "</tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table></body></html>"

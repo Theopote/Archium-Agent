@@ -1,0 +1,8 @@
+{
+  "benchmark": "layout_geometry",
+  "case_id": "case_027_metric_cards_only",
+  "layout_score": 1.0,
+  "layout_valid": true,
+  "has_critical": false,
+  "passed": true
+}

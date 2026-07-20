@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from archium.application.visual.benchmark_service import BenchmarkCaseResult
-from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource
+from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource, EditabilityReview
 
 from tests.benchmark.architectural_slides.fixtures import ensure_case_assets
 from tests.golden.visual.composition.artifacts import (
@@ -104,6 +104,35 @@ def fingerprint_deck_qa(result: BenchmarkCaseResult) -> dict[str, Any]:
     }
 
 
+def default_editability_review(case_id: str) -> EditabilityReview:
+    return EditabilityReview(
+        case_id=case_id,
+        source=HumanVisualReviewSource.PLACEHOLDER,
+        text_editable=4,
+        image_replaceable=4,
+        layer_independence=4,
+        chart_editable=4,
+        font_usability=4,
+        not_flattened=4,
+        selection_ease=4,
+        modification_ease=4,
+        passed=False,
+        reviewer_notes="占位模板；须基于 output.pptx 真实打开后填写 manual 评审。",
+    )
+
+
+def layout_score_payload(result: BenchmarkCaseResult) -> dict[str, Any]:
+    baseline = score_baseline(result.report)
+    return {
+        "benchmark": "layout_geometry",
+        "case_id": result.definition.case_id,
+        "layout_score": baseline.get("score"),
+        "layout_valid": baseline.get("valid"),
+        "has_critical": baseline.get("has_critical"),
+        "passed": result.rule_score.passed,
+    }
+
+
 def default_human_review(case_id: str) -> HumanVisualReview:
     review = HumanVisualReview(
         case_id=case_id,
@@ -185,6 +214,7 @@ def write_case_artifacts(result: BenchmarkCaseResult) -> Path:
     _write_json(directory / "layout_plan.json", fingerprint_plan(result.plan))
     _write_json(directory / "validation_report.json", fingerprint_report(result.report))
     _write_json(directory / "score_baseline.json", score_baseline(result.report))
+    _write_json(directory / "layout_score.json", layout_score_payload(result))
     _write_json(directory / "deck_qa_report.json", fingerprint_deck_qa(result))
     derived_review = derive_benchmark_human_review(
         result.definition.case_id,
@@ -200,6 +230,12 @@ def write_case_artifacts(result: BenchmarkCaseResult) -> Path:
         _write_json(
             review_path,
             default_human_review(result.definition.case_id).model_dump(mode="json"),
+        )
+    editability_path = directory / "editability_review.json"
+    if not editability_path.exists():
+        _write_json(
+            editability_path,
+            default_editability_review(result.definition.case_id).model_dump(mode="json"),
         )
     (directory / "notes.md").write_text(default_notes(result), encoding="utf-8")
     wireframe = directory / "wireframe.png"
