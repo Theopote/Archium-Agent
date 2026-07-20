@@ -163,6 +163,8 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 brief=state.get("brief"),
                 storyline=state.get("storyline"),
                 context_bundle=state.get("context_bundle"),
+                renovation_issue_map=state.get("renovation_issue_map"),
+                reference_style_profile=state.get("reference_style_profile"),
             )
             next_state = cast(
                 PresentationWorkflowState,

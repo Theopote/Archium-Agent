@@ -136,9 +136,12 @@ def test_layout_review_flags_missing_visual_asset(
         [slide],
     )
 
-    assert len(issues) == 1
-    assert issues[0].category == ReviewCategory.VISUAL
-    assert issues[0].reviewer_layer == ReviewLayer.LAYOUT
+    layout_issues = [
+        issue for issue in issues if issue.rule_code == ReviewRuleCode.LAYOUT_MISSING_ASSET
+    ]
+    assert len(layout_issues) == 1
+    assert layout_issues[0].category == ReviewCategory.VISUAL
+    assert layout_issues[0].reviewer_layer == ReviewLayer.LAYOUT
 
 
 def test_critical_export_block_messages() -> None:

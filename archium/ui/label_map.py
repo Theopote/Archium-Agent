@@ -18,6 +18,7 @@ ENTITY_LABELS: dict[str, str] = {
     "ValidationIssue": "页面问题",
     "Visual Critic": "视觉检查",
     "Deck QA": "整套一致性检查",
+    "ArchitectureSlideSemanticQA": "页面语义检查",
     "WorkflowRun": "生成任务",
     "Revision": "历史版本",
     "DesignSystem": "设计规范",

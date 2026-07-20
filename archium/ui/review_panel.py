@@ -136,6 +136,7 @@ LAYER_LABELS = {
     ReviewLayer.EVIDENCE: "证据层",
     ReviewLayer.ARCHITECTURAL: "建筑专业层",
     ReviewLayer.LAYOUT: "版面层",
+    ReviewLayer.SEMANTIC: "语义层",
 }
 
 STATUS_LABELS = {
@@ -763,6 +764,7 @@ def _render_review_issues_panel(
             ReviewLayer.EVIDENCE,
             ReviewLayer.ARCHITECTURAL,
             ReviewLayer.LAYOUT,
+            ReviewLayer.SEMANTIC,
         )
     ]
     selected_layer_label = st.selectbox(

@@ -459,6 +459,7 @@ class ReviewLayer(StrEnum):
     EVIDENCE = "evidence"
     ARCHITECTURAL = "architectural"
     LAYOUT = "layout"
+    SEMANTIC = "semantic"
 
 
 class ReviewCategory(StrEnum):

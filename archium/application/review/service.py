@@ -11,8 +11,11 @@ from archium.application.review.architectural import ArchitecturalReviewer
 from archium.application.review.content import ContentReviewer
 from archium.application.review.evidence import EvidenceReviewer
 from archium.application.review.layout import LayoutReviewer
+from archium.application.review.slide_semantic import SlideSemanticReviewer
 from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.reference_style import ReferenceStyleProfile
+from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.llm.base import LLMProvider
@@ -33,6 +36,7 @@ class AutomatedReviewService:
         self._evidence = EvidenceReviewer(session, llm=llm, settings=resolved_settings)
         self._architectural = ArchitecturalReviewer(session, llm=llm, settings=resolved_settings)
         self._layout = LayoutReviewer(session, llm=llm, settings=resolved_settings)
+        self._semantic = SlideSemanticReviewer(session, llm=llm, settings=resolved_settings)
 
     def run_content_review(
         self,
@@ -76,14 +80,49 @@ class AutomatedReviewService:
         brief: PresentationBrief | None = None,
         storyline: Storyline | None = None,
         context_bundle: ProjectContextBundle | None = None,
+        renovation_issue_map: RenovationIssueMap | None = None,
+        reference_style_profile: ReferenceStyleProfile | None = None,
     ) -> list[ReviewIssue]:
-        return self._layout.run(
+        issues = self._layout.run(
             presentation_id,
             slides,
             project_id=project_id,
             brief=brief,
             storyline=storyline,
             context_bundle=context_bundle,
+        )
+        issues.extend(
+            self._semantic.run(
+                presentation_id,
+                slides,
+                project_id=project_id,
+                brief=brief,
+                context_bundle=context_bundle,
+                renovation_issue_map=renovation_issue_map,
+                reference_style_profile=reference_style_profile,
+            )
+        )
+        return issues
+
+    def run_slide_semantic_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        project_id: UUID | None = None,
+        brief: PresentationBrief | None = None,
+        context_bundle: ProjectContextBundle | None = None,
+        renovation_issue_map: RenovationIssueMap | None = None,
+        reference_style_profile: ReferenceStyleProfile | None = None,
+    ) -> list[ReviewIssue]:
+        return self._semantic.run(
+            presentation_id,
+            slides,
+            project_id=project_id,
+            brief=brief,
+            context_bundle=context_bundle,
+            renovation_issue_map=renovation_issue_map,
+            reference_style_profile=reference_style_profile,
         )
 
     def run_professional_review(
