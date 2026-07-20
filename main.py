@@ -5,7 +5,7 @@ This is NOT the v0.2 product entry point. Use ``archium`` or
 ``streamlit run app.py`` for the project workspace.
 
 Natural-language router for v0.1 tools: file organization and quick Marp PPT.
-Requires ``pip install -e ".[legacy]"`` for legacy CLI extras.
+Requires ``pip install -e ".[llm]"`` at minimum (``.[full]`` includes LLM deps).
 """
 
 from __future__ import annotations

@@ -34,7 +34,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[full,legacy,dev]"
+        run: pip install -e ".[full,dev]"
 
       - uses: actions/setup-node@v4
         with:

@@ -10,10 +10,10 @@ This module extends the base DeckCompositionPlanningService with:
 
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import numpy as np
 from pydantic import BaseModel
 
 # Import base service
@@ -259,12 +259,13 @@ class VisualIntensityAnalyzer:
             )
 
         # Calculate smoothness (inverse of total variation)
-        gradient = np.diff(scores)
-        total_variation = float(np.sum(np.abs(gradient)))
+        total_variation = sum(
+            abs(scores[i + 1] - scores[i]) for i in range(len(scores) - 1)
+        )
         smoothness = 1.0 / (1.0 + total_variation)
 
-        # Calculate variance
-        variance = float(np.var(scores))
+        # Calculate variance (population variance, matching former np.var default)
+        variance = float(statistics.pvariance(scores))
 
         # Find monotonic spans (flat regions)
         monotonic_spans = []

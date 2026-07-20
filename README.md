@@ -59,7 +59,7 @@ archium                            # 启动项目工作台（Streamlit UI）
 | 等价主路径 | `streamlit run app.py` | 与 `archium` 相同，适合已有 Streamlit 工作流的用户 |
 | Legacy（高级） | `archium-legacy` 或 `python main.py` | v0.1 实验 CLI（文件整理 / 快速 PPT），**不是**主产品 |
 
-开发者额外依赖：`pip install -e ".[full,legacy,dev]"`。Legacy CLI 需 `[legacy]` extra；详见下文「Legacy 入口」。
+开发者额外依赖：`pip install -e ".[full,dev]"`。Legacy CLI 与主产品共用 `[full]`（至少需 `[llm]`）；详见下文「Legacy 入口」。
 
 **不再新增 Stage。** 当前冲刺是 [v0.2 Alpha Validation Sprint](docs/v0.2-alpha-validation-sprint.md)——用三个真实建筑 Golden Case 证明主链可用，而非继续扩展功能列表。Beta 范围冻结见 [docs/v0.2-beta-backlog.md](docs/v0.2-beta-backlog.md)。
 
@@ -310,7 +310,7 @@ docker-compose up -d
 | **CI matrix** | 3.11、3.12（Ubuntu） |
 | **mypy** | `python_version = 3.11`（与最低支持版本对齐） |
 
-> **依赖说明：** optional extras 互不嵌套自引用。开发者安装 `pip install -e ".[full,legacy,dev]"`；普通用户安装 `pip install -e ".[full]"` 即可。模块化 extras（`ui`、`documents` 等）仍可按需单独组合。
+> **依赖说明：** optional extras 互不嵌套自引用。开发者安装 `pip install -e ".[full,dev]"`；普通用户安装 `pip install -e ".[full]"` 即可。模块化 extras（`ui`、`documents` 等）仍可按需单独组合。
 
 PptxGenJS 原生 PPTX 还需 Node.js 20+，在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`。
 
@@ -320,7 +320,7 @@ PptxGenJS 原生 PPTX 还需 Node.js 20+，在 `archium/infrastructure/renderers
 # Windows
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -e ".[full,legacy,dev]"
+pip install -e ".[full,dev]"
 copy .env.example .env
 ```
 
@@ -328,7 +328,7 @@ copy .env.example .env
 # macOS / Linux
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[full,legacy,dev]"
+pip install -e ".[full,dev]"
 cp .env.example .env
 ```
 
@@ -416,7 +416,7 @@ streamlit run app.py
 
 ### Legacy 入口（高级 / 实验）
 
-v0.1 自然语言 CLI，**不是** v0.2 主产品。
+v0.1 自然语言 CLI，**不是** v0.2 主产品。需 `pip install -e ".[full]"`（或至少 `[llm]`；PPT 导出另需 Marp CLI）。
 
 ```bash
 archium-legacy
@@ -466,7 +466,7 @@ alembic upgrade head
 本地等价命令：
 
 ```bash
-pip install -e ".[full,legacy,dev]"
+pip install -e ".[full,dev]"
 ruff check archium tests
 mypy archium
 pytest --cov=archium --cov-report=term-missing

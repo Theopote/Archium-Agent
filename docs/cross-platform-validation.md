@@ -88,7 +88,7 @@ Windows smoke verifies checkpoint DB deletion after workflow on real Windows pat
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -e ".[full,legacy,dev]"
+pip install -e ".[full,dev]"
 cd archium/infrastructure/renderers/pptxgen; npm install; cd ../../../../
 pytest tests/golden -v
 pytest tests/smoke/test_windows_platform.py -v

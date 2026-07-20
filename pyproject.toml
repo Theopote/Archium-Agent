@@ -55,6 +55,7 @@ documents = [
 workflow = [
     "langgraph>=0.2",
     "langgraph-checkpoint-sqlite>=2.0",
+    "langchain-core>=0.3",
 ]
 vector = ["chromadb>=0.5"]
 llm = ["openai>=1.0.0"]
@@ -69,6 +70,7 @@ full = [
     "Pillow>=10.0",
     "langgraph>=0.2",
     "langgraph-checkpoint-sqlite>=2.0",
+    "langchain-core>=0.3",
     "chromadb>=0.5",
     "openai>=1.0.0",
     "psycopg[binary]>=3.1",

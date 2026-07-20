@@ -56,7 +56,7 @@ Python **3.11** not installed on this dev machine; validated via CI matrix confi
 pip install -e ".[full]"
 
 # Developers / CI
-pip install -e ".[full,legacy,dev]"
+pip install -e ".[full,dev]"
 ```
 
 ## Remaining risks (not closed this round)
