@@ -8,8 +8,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from archium.application.human_review_gate import evaluate_benchmark_human_gate
 from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_PENDING_LABEL,
+    BenchmarkHumanReviewExport,
+    BenchmarkPendingCase,
     HumanVisualReview,
     HumanVisualReviewSource,
 )
@@ -36,6 +39,16 @@ class BenchmarkCaseSummary:
     human_review_path: Path
     layout_score: float | None
     rule_passed: bool | None
+
+
+@dataclass(frozen=True)
+class HumanReviewImportResult:
+    """Outcome of importing a benchmark human-review export bundle."""
+
+    imported_count: int
+    skipped_count: int
+    rejected_count: int
+    paths: list[Path]
 
 
 @dataclass(frozen=True)
@@ -215,6 +228,132 @@ def regenerate_benchmark_report(*, root: Path | None = None) -> tuple[Path, Path
 
     base = benchmark_root(root)
     return write_benchmark_report(base / "reports", update=False)
+
+
+def build_human_review_export(
+    *,
+    root: Path | None = None,
+    include_pending_cases: bool = True,
+) -> BenchmarkHumanReviewExport:
+    """Collect manual reviews and optional pending-case queue for export."""
+    cases = list_benchmark_cases(root=root)
+    manual_reviews: list[HumanVisualReview] = []
+    pending_cases: list[BenchmarkPendingCase] = []
+    base = benchmark_root(root)
+
+    for case in cases:
+        review = load_case_review(case.case_id, root=root)
+        if review is not None and review.is_manual_review():
+            manual_reviews.append(review)
+            continue
+        if include_pending_cases:
+            preview_rel = ""
+            if case.preview_path.is_file():
+                try:
+                    preview_rel = str(case.preview_path.relative_to(base))
+                except ValueError:
+                    preview_rel = case.preview_path.name
+            pending_cases.append(
+                BenchmarkPendingCase(
+                    case_id=case.case_id,
+                    title=case.title,
+                    category=case.category,
+                    page_type=case.page_type,
+                    preview_png=preview_rel,
+                )
+            )
+
+    gate = evaluate_benchmark_human_gate(manual_reviews)
+    return BenchmarkHumanReviewExport(
+        exported_at=datetime.now(UTC),
+        case_count=len(cases),
+        manual_review_count=len(manual_reviews),
+        pending_count=len(pending_cases),
+        reviews=manual_reviews,
+        pending_cases=pending_cases,
+        human_quality_gate_passed=gate.passed,
+        human_average_weighted_score=gate.average_weighted_score,
+        human_quality_gate_reasons=gate.reasons,
+    )
+
+
+def export_human_review_bundle(
+    output_path: Path,
+    *,
+    root: Path | None = None,
+    include_pending_cases: bool = True,
+) -> Path:
+    """Write consolidated manual-review JSON for backup or offline handoff."""
+    bundle = build_human_review_export(
+        root=root,
+        include_pending_cases=include_pending_cases,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(bundle.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return output_path
+
+
+def default_human_review_export_path(*, root: Path | None = None) -> Path:
+    return benchmark_root(root) / "reports" / "human_reviews_export.json"
+
+
+def parse_human_review_import_payload(payload: object) -> list[HumanVisualReview]:
+    """Accept export bundle or a plain list of review records."""
+    if isinstance(payload, list):
+        return [HumanVisualReview.model_validate(item) for item in payload]
+    if not isinstance(payload, dict):
+        msg = "Import payload must be a JSON object or array"
+        raise ValueError(msg)
+    if "reviews" in payload:
+        bundle = BenchmarkHumanReviewExport.model_validate(payload)
+        return list(bundle.reviews)
+    msg = "Import payload missing 'reviews' array"
+    raise ValueError(msg)
+
+
+def import_human_review_bundle(
+    source_path: Path,
+    *,
+    root: Path | None = None,
+    skip_existing_manual: bool = False,
+) -> HumanReviewImportResult:
+    """Apply manual reviews from an export bundle onto per-case human_review.json files."""
+    payload = json.loads(source_path.read_text(encoding="utf-8"))
+    reviews = parse_human_review_import_payload(payload)
+    known_ids = {case.case_id for case in list_benchmark_cases(root=root)}
+    imported_paths: list[Path] = []
+    skipped = 0
+    rejected = 0
+
+    for review in reviews:
+        if not review.is_manual_review():
+            rejected += 1
+            continue
+        if review.case_id not in known_ids:
+            rejected += 1
+            continue
+        if not review.reviewer.strip():
+            rejected += 1
+            continue
+        existing = load_case_review(review.case_id, root=root)
+        if (
+            skip_existing_manual
+            and existing is not None
+            and existing.is_manual_review()
+        ):
+            skipped += 1
+            continue
+        imported_paths.append(save_case_review(review, root=root))
+
+    return HumanReviewImportResult(
+        imported_count=len(imported_paths),
+        skipped_count=skipped,
+        rejected_count=rejected,
+        paths=imported_paths,
+    )
 
 
 def _read_optional_json(path: Path) -> dict[str, Any] | None:

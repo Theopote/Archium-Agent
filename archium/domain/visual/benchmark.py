@@ -161,6 +161,31 @@ class HumanVisualReview(DomainModel):
         }
 
 
+class BenchmarkPendingCase(DomainModel):
+    """Case awaiting manual review — metadata only, no scores."""
+
+    case_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    page_type: str = Field(min_length=1)
+    preview_png: str = ""
+
+
+class BenchmarkHumanReviewExport(DomainModel):
+    """Deck-level export bundle for benchmark manual reviews (backup / offline handoff)."""
+
+    bundle_version: int = 1
+    exported_at: datetime
+    case_count: int = Field(ge=0)
+    manual_review_count: int = Field(ge=0)
+    pending_count: int = Field(ge=0)
+    reviews: list[HumanVisualReview] = Field(default_factory=list)
+    pending_cases: list[BenchmarkPendingCase] = Field(default_factory=list)
+    human_quality_gate_passed: bool = False
+    human_average_weighted_score: float | None = None
+    human_quality_gate_reasons: list[str] = Field(default_factory=list)
+
+
 class BenchmarkRuleScore(DomainModel):
     """Automated rule-based score for a benchmark case."""
 

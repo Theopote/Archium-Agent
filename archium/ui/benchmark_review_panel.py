@@ -9,7 +9,11 @@ import streamlit as st
 from archium.application.architectural_benchmark_review_store import (
     BenchmarkCaseSummary,
     CaseReviewStatus,
+    build_human_review_export,
     benchmark_report_paths,
+    default_human_review_export_path,
+    export_human_review_bundle,
+    import_human_review_bundle,
     list_benchmark_cases,
     list_case_review_statuses,
     load_case_review,
@@ -19,6 +23,8 @@ from archium.application.architectural_benchmark_review_store import (
     save_case_review,
 )
 from archium.domain.visual.benchmark import (
+    HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD,
+    HUMAN_REVIEW_FORMAL_MIN_ACCEPTED,
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
     HUMAN_REVIEW_PASS_THRESHOLD,
@@ -123,35 +129,43 @@ def _render_progress_header(progress: dict[str, int]) -> None:
     case_count = max(progress["case_count"], 1)
     review_ratio = progress["manual_review_count"] / case_count
     accepted_ratio = progress["manual_accepted_count"] / case_count
+    export_bundle = build_human_review_export()
 
     metric_cols = st.columns(5)
     metric_cols[0].metric("Case 总数", progress["case_count"])
     metric_cols[1].metric("已人工评审", progress["manual_review_count"])
     metric_cols[2].metric("可交付（人工）", progress["manual_accepted_count"])
     metric_cols[3].metric("待评审", progress["placeholder_count"])
-    gate_passed = (
-        progress["case_count"] > 0
-        and progress["manual_accepted_count"] == progress["case_count"]
-    )
+    gate_label = "通过" if export_bundle.human_quality_gate_passed else "未通过"
+    avg = export_bundle.human_average_weighted_score
     metric_cols[4].metric(
-        "人工质量门禁",
-        "通过" if gate_passed and progress["case_count"] > 0 else "未通过",
+        "正式人工门禁",
+        gate_label,
+        delta=f"均分 {avg:.2f}" if avg is not None else None,
     )
+
+    st.caption(
+        f"正式门槛：≥{HUMAN_REVIEW_FORMAL_MIN_ACCEPTED}/30 页 accepted · "
+        f"均分 ≥ {HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD}"
+    )
+    if export_bundle.human_quality_gate_reasons:
+        st.caption("；".join(export_bundle.human_quality_gate_reasons))
 
     st.caption(f"评审进度 {progress['manual_review_count']} / {progress['case_count']}")
     st.progress(min(1.0, review_ratio))
     st.caption(f"可交付进度 {progress['manual_accepted_count']} / {progress['case_count']}")
     st.progress(min(1.0, accepted_ratio))
 
-    if progress["manual_accepted_count"] == 0:
+    if progress["manual_review_count"] == 0:
         st.info(
-            "当前尚无真实人工评审通过页。"
-            "在 `manual_human_accepted_count > 0` 之前，不能宣称 Benchmark 人工质量全面通过。"
+            "当前尚无真实人工评审。"
+            "保存 `source=manual` 评审后可导出集中 JSON，或从离线评审文件导入。"
         )
 
 
 def _render_report_links() -> None:
     html_path, json_path = benchmark_report_paths()
+    export_path = default_human_review_export_path()
     link_cols = st.columns([1, 1, 2])
     if html_path.is_file():
         link_cols[0].markdown(f"[打开 HTML 报告]({html_path.as_uri()})")
@@ -164,6 +178,65 @@ def _render_report_links() -> None:
         value=bool(st.session_state.get(_SESSION_AUTO_REGEN_KEY, True)),
         key=_SESSION_AUTO_REGEN_KEY,
     )
+    _render_export_import_panel(export_path)
+
+
+def _render_export_import_panel(default_export_path: Path) -> None:
+    import json
+
+    with st.expander("导出 / 导入人工评审", expanded=False):
+        bundle = build_human_review_export()
+        payload = json.dumps(bundle.model_dump(mode="json"), ensure_ascii=False, indent=2)
+        st.download_button(
+            "下载集中评审 JSON",
+            data=payload,
+            file_name=default_export_path.name,
+            mime="application/json",
+            use_container_width=True,
+        )
+        if st.button("写入 reports/human_reviews_export.json", use_container_width=True):
+            path = export_human_review_bundle(default_export_path)
+            st.success(f"已写入 `{path}`")
+        st.caption(
+            f"含 {bundle.manual_review_count} 条 manual 评审 · "
+            f"{bundle.pending_count} 个待评审 case 元数据"
+        )
+
+        uploaded = st.file_uploader(
+            "导入评审 JSON（bundle 或 reviews 数组）",
+            type=["json"],
+            key="benchmark_human_review_import",
+        )
+        skip_existing = st.checkbox(
+            "跳过已有 manual 评审的 case",
+            value=False,
+            key="benchmark_import_skip_existing",
+        )
+        if uploaded is not None and st.button("执行导入", key="benchmark_run_import"):
+            import tempfile
+
+            with tempfile.NamedTemporaryFile("wb", suffix=".json", delete=False) as tmp:
+                tmp.write(uploaded.getvalue())
+                tmp_path = Path(tmp.name)
+            try:
+                result = import_human_review_bundle(
+                    tmp_path,
+                    skip_existing_manual=skip_existing,
+                )
+            finally:
+                tmp_path.unlink(missing_ok=True)
+            if result.imported_count == 0:
+                st.warning(
+                    f"未导入任何评审（跳过 {result.skipped_count}，拒绝 {result.rejected_count}）。"
+                )
+            else:
+                if st.session_state.get(_SESSION_AUTO_REGEN_KEY, True):
+                    regenerate_benchmark_report()
+                st.success(
+                    f"已导入 {result.imported_count} 条评审"
+                    f"（跳过 {result.skipped_count}，拒绝 {result.rejected_count}）。"
+                )
+                st.rerun()
 
 
 def _render_overview_table(statuses: list[CaseReviewStatus]) -> None:

@@ -1,0 +1,226 @@
+{
+  "bundle_version": 1,
+  "exported_at": "2026-07-20T13:39:24.545863Z",
+  "case_count": 30,
+  "manual_review_count": 0,
+  "pending_count": 30,
+  "reviews": [],
+  "pending_cases": [
+    {
+      "case_id": "case_001_site_plan",
+      "title": "院区总平面与指标",
+      "category": "drawing",
+      "page_type": "单张总平面主导页",
+      "preview_png": "case_001_site_plan\\preview.png"
+    },
+    {
+      "case_id": "case_002_site_photos",
+      "title": "老院区交通与环境问题",
+      "category": "photo_analysis",
+      "page_type": "四张现场问题照片",
+      "preview_png": "case_002_site_photos\\preview.png"
+    },
+    {
+      "case_id": "case_003_case_comparison",
+      "title": "国内外三座医疗更新案例比较",
+      "category": "case_comparison",
+      "page_type": "三案例横向比较",
+      "preview_png": "case_003_case_comparison\\preview.png"
+    },
+    {
+      "case_id": "case_004_economic_metrics",
+      "title": "经济技术指标一览",
+      "category": "data_metrics",
+      "page_type": "经济技术指标",
+      "preview_png": "case_004_economic_metrics\\preview.png"
+    },
+    {
+      "case_id": "case_005_design_concept",
+      "title": "设计理念：以患者路径组织空间",
+      "category": "text_narrative",
+      "page_type": "设计理念",
+      "preview_png": "case_005_design_concept\\preview.png"
+    },
+    {
+      "case_id": "case_006_project_hero",
+      "title": "方案封面：内院视角效果图",
+      "category": "drawing",
+      "page_type": "封面主视觉",
+      "preview_png": "case_006_project_hero\\preview.png"
+    },
+    {
+      "case_id": "case_007_aerial_hero",
+      "title": "航拍总览：院区与周边关系",
+      "category": "drawing",
+      "page_type": "航拍主视觉",
+      "preview_png": "case_007_aerial_hero\\preview.png"
+    },
+    {
+      "case_id": "case_008_overlay_hero",
+      "title": "概念叠加：路径组织示意",
+      "category": "photo_analysis",
+      "page_type": "图文叠加封面",
+      "preview_png": "case_008_overlay_hero\\preview.png"
+    },
+    {
+      "case_id": "case_009_patient_journey",
+      "title": "患者旅程时间轴",
+      "category": "photo_analysis",
+      "page_type": "流程时间轴",
+      "preview_png": "case_009_patient_journey\\preview.png"
+    },
+    {
+      "case_id": "case_010_construction_phases",
+      "title": "分期实施步骤",
+      "category": "photo_analysis",
+      "page_type": "建设分期流程",
+      "preview_png": "case_010_construction_phases\\preview.png"
+    },
+    {
+      "case_id": "case_011_design_process",
+      "title": "设计推演过程",
+      "category": "photo_analysis",
+      "page_type": "设计过程时间轴",
+      "preview_png": "case_011_design_process\\preview.png"
+    },
+    {
+      "case_id": "case_012_circulation_diagram",
+      "title": "流线分析图",
+      "category": "drawing",
+      "page_type": "分析图主导页",
+      "preview_png": "case_012_circulation_diagram\\preview.png"
+    },
+    {
+      "case_id": "case_013_zoning_callouts",
+      "title": "功能分区与标注",
+      "category": "drawing",
+      "page_type": "分区分析图",
+      "preview_png": "case_013_zoning_callouts\\preview.png"
+    },
+    {
+      "case_id": "case_014_structure_concept",
+      "title": "结构概念分析",
+      "category": "drawing",
+      "page_type": "结构概念图",
+      "preview_png": "case_014_structure_concept\\preview.png"
+    },
+    {
+      "case_id": "case_015_design_principles",
+      "title": "三大设计原则",
+      "category": "case_comparison",
+      "page_type": "策略卡片（三卡）",
+      "preview_png": "case_015_design_principles\\preview.png"
+    },
+    {
+      "case_id": "case_016_sustainability_cards",
+      "title": "四项可持续策略",
+      "category": "data_metrics",
+      "page_type": "策略卡片（四卡）",
+      "preview_png": "case_016_sustainability_cards\\preview.png"
+    },
+    {
+      "case_id": "case_017_spatial_strategy_lead",
+      "title": "空间策略导言",
+      "category": "drawing",
+      "page_type": "策略卡片（导言+三卡）",
+      "preview_png": "case_017_spatial_strategy_lead\\preview.png"
+    },
+    {
+      "case_id": "case_018_drawing_metrics_hybrid",
+      "title": "总平面与指标综合页",
+      "category": "drawing",
+      "page_type": "混合画布：图纸+指标",
+      "preview_png": "case_018_drawing_metrics_hybrid\\preview.png"
+    },
+    {
+      "case_id": "case_019_photo_text_hybrid",
+      "title": "现场问题与策略回应",
+      "category": "photo_analysis",
+      "page_type": "混合画布：照片+文字",
+      "preview_png": "case_019_photo_text_hybrid\\preview.png"
+    },
+    {
+      "case_id": "case_020_synthesis_canvas",
+      "title": "方案综合解读页",
+      "category": "case_comparison",
+      "page_type": "混合画布：多元素综合",
+      "preview_png": "case_020_synthesis_canvas\\preview.png"
+    },
+    {
+      "case_id": "case_021_floor_plan_full",
+      "title": "门诊层平面全幅",
+      "category": "drawing",
+      "page_type": "单张平面主导页",
+      "preview_png": "case_021_floor_plan_full\\preview.png"
+    },
+    {
+      "case_id": "case_022_section_annotations",
+      "title": "剖面与竖向关系",
+      "category": "drawing",
+      "page_type": "剖面标注页",
+      "preview_png": "case_022_section_annotations\\preview.png"
+    },
+    {
+      "case_id": "case_023_survey_photo_grid",
+      "title": "踏勘照片九宫格",
+      "category": "photo_analysis",
+      "page_type": "多张照片网格",
+      "preview_png": "case_023_survey_photo_grid\\preview.png"
+    },
+    {
+      "case_id": "case_024_renovation_journey",
+      "title": "改造历程照片叙事",
+      "category": "photo_analysis",
+      "page_type": "历程照片叙事",
+      "preview_png": "case_024_renovation_journey\\preview.png"
+    },
+    {
+      "case_id": "case_025_scheme_columns",
+      "title": "两套方案等列比较",
+      "category": "case_comparison",
+      "page_type": "双方案等列比较",
+      "preview_png": "case_025_scheme_columns\\preview.png"
+    },
+    {
+      "case_id": "case_026_before_after",
+      "title": "改造前后对比",
+      "category": "case_comparison",
+      "page_type": "前后对比",
+      "preview_png": "case_026_before_after\\preview.png"
+    },
+    {
+      "case_id": "case_027_metric_cards_only",
+      "title": "核心指标卡片",
+      "category": "data_metrics",
+      "page_type": "纯指标卡片",
+      "preview_png": "case_027_metric_cards_only\\preview.png"
+    },
+    {
+      "case_id": "case_028_energy_metrics_chart",
+      "title": "能耗指标与趋势",
+      "category": "data_metrics",
+      "page_type": "指标+趋势图",
+      "preview_png": "case_028_energy_metrics_chart\\preview.png"
+    },
+    {
+      "case_id": "case_029_quote_argument",
+      "title": "引用式理念陈述",
+      "category": "text_narrative",
+      "page_type": "引用体文字页",
+      "preview_png": "case_029_quote_argument\\preview.png"
+    },
+    {
+      "case_id": "case_030_two_column_policy",
+      "title": "政策响应双栏论述",
+      "category": "text_narrative",
+      "page_type": "双栏文字页",
+      "preview_png": "case_030_two_column_policy\\preview.png"
+    }
+  ],
+  "human_quality_gate_passed": false,
+  "human_average_weighted_score": null,
+  "human_quality_gate_reasons": [
+    "manual reviews 0 < required 24/30",
+    "accepted pages 0 < required 24/30"
+  ]
+}
