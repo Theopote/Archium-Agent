@@ -8,12 +8,14 @@ import sys
 from pathlib import Path
 
 import pytest
-from archium.ui.components.canvas_editor import (
-    canvas_editor_available,
+from archium.ui.components.canvas_editor.build_frontend import (
+    build_canvas_editor,
     is_canvas_editor_built,
+)
+from archium.ui.components.canvas_editor.runtime import (
+    canvas_editor_available,
     reset_canvas_editor_component_cache,
 )
-from archium.ui.components.canvas_editor.build_frontend import build_canvas_editor
 
 pytestmark = [pytest.mark.smoke, pytest.mark.streamlit_smoke]
 
@@ -33,8 +35,7 @@ def test_canvas_editor_build_script_entrypoint() -> None:
     result = subprocess.run(
         [
             sys.executable,
-            "-m",
-            "archium.ui.components.canvas_editor.build_frontend",
+            str(_COMPONENT_ROOT / "build_frontend.py"),
             "--skip-install",
         ],
         cwd=_PROJECT_ROOT,
