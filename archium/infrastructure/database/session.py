@@ -216,15 +216,14 @@ def init_database(engine: Engine | None = None) -> None:
     )
 
     # Check if database is brand new (no alembic_version table)
-    current_revision = get_current_revision()
+    current_revision = get_current_revision(target)
 
     if current_revision is None:
         # Brand new database - create all tables then run migrations
         Base.metadata.create_all(target)
 
-    # For both new and existing databases, validate migrations
-    if engine is None or current_revision is None:
-        check_migrations_on_startup()
+    # Validate and apply migrations on the target database
+    check_migrations_on_startup(engine=target)
 
 
 def reset_engine_cache() -> None:

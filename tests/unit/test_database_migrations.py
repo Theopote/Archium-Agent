@@ -97,7 +97,67 @@ def test_check_migrations_on_startup_with_pending_raises(isolated_migration_engi
         conn.commit()
 
     with pytest.raises(ConfigurationError, match="pending migrations"):
-        check_migrations_on_startup()
+        check_migrations_on_startup(isolated_migration_engine)
+
+
+def test_init_database_initializes_custom_engine_when_global_is_migrated(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """init_database(custom_engine) must set up the passed engine, not consult global revision only."""
+    from archium.config.settings import Settings, reset_settings
+    from archium.infrastructure.database.session import (
+        create_engine_from_settings,
+        get_engine,
+        init_database,
+        reset_engine_cache,
+    )
+
+    def _settings(base: Path) -> Settings:
+        return Settings(
+            _env_file=None,
+            database_path=base / "archium.db",
+            workflow_checkpoint_path=base / "workflow.db",
+            project_storage_path=base / "projects",
+            output_path=base / "outputs",
+            chroma_path=base / "chroma",
+        )
+
+    global_base = tmp_path / "global"
+    fresh_base = tmp_path / "fresh"
+    global_base.mkdir()
+    fresh_base.mkdir()
+
+    global_settings = _settings(global_base)
+    fresh_settings = _settings(fresh_base)
+
+    reset_engine_cache()
+    reset_settings()
+    monkeypatch.setattr("archium.config.settings.get_settings", lambda: global_settings)
+
+    global_engine = get_engine()
+    init_database(global_engine)
+    assert get_current_revision(global_engine) is not None
+
+    fresh_engine = create_engine_from_settings(fresh_settings)
+    assert get_current_revision(fresh_engine) is None
+
+    # Do not patch get_engine to fresh_engine — reproduces the historical bug.
+    init_database(fresh_engine)
+
+    with fresh_engine.connect() as conn:
+        result = conn.execute(
+            text(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='user_preferences'"
+            )
+        )
+        assert result.fetchone() is not None
+
+    reset_engine_cache()
+
+
+def test_get_current_revision_accepts_explicit_engine(isolated_migration_engine: Engine) -> None:
+    assert get_current_revision(isolated_migration_engine) is None
 
 
 def test_migration_idempotency(isolated_migration_engine: Engine) -> None:

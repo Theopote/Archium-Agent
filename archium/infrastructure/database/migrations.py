@@ -7,6 +7,7 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from sqlalchemy.engine import Engine
 
 from archium.exceptions import ConfigurationError
 from archium.logging import get_logger
@@ -24,19 +25,19 @@ def get_alembic_config() -> Config:
     return Config(str(config_path))
 
 
-def get_current_revision() -> str | None:
+def get_current_revision(engine: Engine | None = None) -> str | None:
     """Get the current database revision."""
     from sqlalchemy import text
 
     from archium.infrastructure.database.session import get_engine
 
-    engine = get_engine()
-    with engine.connect() as conn:
+    target = engine or get_engine()
+    with target.connect() as conn:
         # Check if alembic_version table exists
         result = conn.execute(
             text(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"
-                if engine.dialect.name == "sqlite"
+                if target.dialect.name == "sqlite"
                 else "SELECT tablename FROM pg_tables WHERE tablename='alembic_version'"
             )
         )
@@ -56,9 +57,9 @@ def get_head_revision() -> str | None:
     return script.get_current_head()
 
 
-def has_pending_migrations() -> bool:
+def has_pending_migrations(engine: Engine | None = None) -> bool:
     """Check if there are pending migrations."""
-    current = get_current_revision()
+    current = get_current_revision(engine)
     head = get_head_revision()
 
     if current is None:
@@ -67,7 +68,16 @@ def has_pending_migrations() -> bool:
     return current != head
 
 
-def run_pending_migrations() -> None:
+def _configure_alembic_for_engine(config: Config, engine: Engine | None) -> None:
+    if engine is None:
+        return
+    config.set_main_option(
+        "sqlalchemy.url",
+        engine.url.render_as_string(hide_password=False),
+    )
+
+
+def run_pending_migrations(engine: Engine | None = None) -> None:
     """Apply pending Alembic migrations up to head."""
     try:
         config = get_alembic_config()
@@ -75,7 +85,9 @@ def run_pending_migrations() -> None:
         logger.warning("Cannot load Alembic config: %s", e)
         return
 
-    current = get_current_revision()
+    _configure_alembic_for_engine(config, engine)
+
+    current = get_current_revision(engine)
     head = get_head_revision()
 
     if current is None:
@@ -90,17 +102,17 @@ def run_pending_migrations() -> None:
     logger.info("Database migrations completed successfully")
 
 
-def check_migrations_on_startup() -> None:
+def check_migrations_on_startup(engine: Engine | None = None) -> None:
     """Check for pending migrations on application startup.
 
     Raises ConfigurationError if migrations need to be applied manually.
     This prevents accidental schema drift in production environments.
     """
-    if not has_pending_migrations():
+    if not has_pending_migrations(engine):
         logger.debug("Database schema is up to date")
         return
 
-    current = get_current_revision()
+    current = get_current_revision(engine)
     head = get_head_revision()
 
     if current is None:
@@ -110,7 +122,7 @@ def check_migrations_on_startup() -> None:
             "Current: None, Head: %s",
             head,
         )
-        run_pending_migrations()
+        run_pending_migrations(engine)
         return
 
     # Database exists but has pending migrations
