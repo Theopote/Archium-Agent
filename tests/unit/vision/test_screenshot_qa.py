@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from PIL import Image
-
 from archium.application.visual.post_render_qa_service import run_post_render_qa
 from archium.domain.visual.scene_qa import PostRenderCheckCode
 from archium.infrastructure.vision.screenshot_qa import (
@@ -14,6 +12,7 @@ from archium.infrastructure.vision.screenshot_qa import (
     average_hash,
     hash_distance,
 )
+from PIL import Image
 
 
 def test_blank_page_detected() -> None:

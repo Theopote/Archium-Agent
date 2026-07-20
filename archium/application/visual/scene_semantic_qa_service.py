@@ -247,9 +247,12 @@ def _check_caption_missing(scene: RenderScene, *, slide_order: int) -> list[Slid
     for node in scene.nodes:
         if not isinstance(node, ImageNode):
             continue
-        if node.semantic_role not in {"project_photo", "hero_visual"} and "hero" not in node.id:
-            if node.semantic_role != "project_photo":
-                continue
+        if (
+            node.semantic_role not in {"project_photo", "hero_visual"}
+            and "hero" not in node.id
+            and node.semantic_role != "project_photo"
+        ):
+            continue
         has_caption = bool(node.caption_node_id) or bool(caption_ids)
         if not has_caption:
             findings.append(
