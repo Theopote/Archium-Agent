@@ -14,5 +14,10 @@
   "font_fallbacks": [],
   "missing_assets": [],
   "render_valid": true,
-  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. Screenshot tools unavailable (LibreOffice + pdftoppm); final_render.png not produced. pptx_render.png rasterized from output.pptx via screenshot tools. pptx_render.png reused."
+  "notes": "normalized_portable_uris=true",
+  "screenshot_tools_available": false,
+  "pptx_screenshot_generated": false,
+  "pptx_screenshot_reused": false,
+  "pptx_screenshot_source_hash": "39ae1da56e431afb18e1ada48efd8f1a299817d030c8380bbbaed2818c098666",
+  "render_attempt_id": "7fc8d8f2-426d-41bc-bfa5-4322297264f0"
 }

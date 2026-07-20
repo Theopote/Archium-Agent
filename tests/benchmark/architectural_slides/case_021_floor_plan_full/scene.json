@@ -72,7 +72,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_021_floor_plan_full\\assets\\c0210001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_021_floor_plan_full/assets/c0210001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_021_floor_plan_full/assets/c0210001-0001-4001-8001-000000000001.png",
       "drawing_type": "floor_plan",
       "fit_mode": "contain",
       "crop_allowed": false,
@@ -306,7 +307,8 @@
   "asset_manifest": [
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_021_floor_plan_full\\assets\\c0210001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_021_floor_plan_full/assets/c0210001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_021_floor_plan_full/assets/c0210001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0210001-0001-4001-8001-000000000001"
     }

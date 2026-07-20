@@ -7,7 +7,14 @@ import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
+from archium.application.visual.asset_path_resolver import (
+    AssetPathResolveContext,
+    AssetPathResolver,
+    benchmark_asset_uri,
+    scene_has_machine_absolute_paths,
+)
 from archium.application.visual.benchmark_service import BenchmarkCaseResult
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
 from archium.domain.slide import SlideSpec
@@ -30,6 +37,7 @@ from tests.benchmark.architectural_slides.render_manifest import (
     SCENE_PREVIEW_NAME,
     count_assets,
     ensure_pptx_render_alias,
+    write_pptx_render_sidecar,
     write_render_manifest,
 )
 
@@ -53,12 +61,31 @@ class SceneRenderResult:
     unresolved_nodes: tuple[str, ...]
 
 
+def _case_id_from_assets_dir(assets_dir: Path, case_dir: Path | None = None) -> str:
+    if case_dir is not None:
+        return case_dir.name
+    return assets_dir.parent.name
+
+
+def _resolve_ctx(case_dir: Path, assets_dir: Path | None = None) -> AssetPathResolveContext:
+    assets = assets_dir or (case_dir / "assets")
+    return AssetPathResolveContext(
+        case_dir=case_dir,
+        case_id=case_dir.name,
+        assets_dir=assets,
+        benchmark_root=case_dir.parent,
+    )
+
+
 def build_slide_content_bundle(
     plan: LayoutPlan,
     assets_dir: Path,
     slide: SlideSpec,
+    *,
+    case_id: str | None = None,
 ) -> SlideContentBundleBuildResult:
-    """Map LayoutPlan content_ref values to on-disk asset paths for PPTX export."""
+    """Map LayoutPlan content_ref values to portable benchmark asset URIs."""
+    resolved_case_id = case_id or _case_id_from_assets_dir(assets_dir)
     asset_paths: dict[str, str] = {}
     missing: list[str] = []
     for element in plan.elements:
@@ -66,7 +93,10 @@ def build_slide_content_bundle(
             continue
         asset_file = assets_dir / f"{element.content_ref}.png"
         if asset_file.is_file():
-            asset_paths[element.content_ref] = str(asset_file.resolve())
+            asset_paths[element.content_ref] = benchmark_asset_uri(
+                resolved_case_id,
+                f"assets/{element.content_ref}.png",
+            )
         else:
             missing.append(element.content_ref)
     bundle = SlideContentBundle(
@@ -89,7 +119,12 @@ def compile_and_render_scene(
 ) -> SceneRenderResult:
     """Compile RenderScene and write scene.json + scene_preview.png."""
     assets = assets_dir or (case_dir / "assets")
-    build = build_slide_content_bundle(result.plan, assets, result.slide)
+    build = build_slide_content_bundle(
+        result.plan,
+        assets,
+        result.slide,
+        case_id=case_dir.name,
+    )
     compiler = RenderSceneCompiler()
     scene = compiler.compile(
         slide=result.slide,
@@ -98,13 +133,18 @@ def compile_and_render_scene(
         content_bundle=build.bundle,
         visual_intent=result.intent,
     )
+    resolver = AssetPathResolver()
+    ctx = _resolve_ctx(case_dir, assets)
+    scene = resolver.portableize_scene(scene, ctx)
+
     scene_path = case_dir / SCENE_JSON_NAME
     scene_path.write_text(
         json.dumps(scene.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     preview_path = case_dir / SCENE_PREVIEW_NAME
-    PngRenderer().render(scene, preview_path)
+    render_scene = resolver.resolve_scene(scene, ctx)
+    PngRenderer().render(render_scene, preview_path)
 
     unresolved = tuple(
         node.id
@@ -127,15 +167,16 @@ def export_benchmark_pptx_from_scene(
     title: str,
     speaker_notes: str | None = None,
 ) -> tuple[Path | None, list[str]]:
-    """Export editable PPTX from RenderScene."""
+    """Export editable PPTX from RenderScene (resolves portable URIs first)."""
     pptx_path = case_dir / PPTX_NAME
+    render_scene = AssetPathResolver().resolve_scene(scene, _resolve_ctx(case_dir))
     exported = maybe_export_scene_pptx(
-        scene,
+        render_scene,
         pptx_path,
         title=title,
         speaker_notes=speaker_notes,
     )
-    fallbacks = PptxRenderer().font_fallbacks(scene) if exported else []
+    fallbacks = PptxRenderer().font_fallbacks(render_scene) if exported else []
     return exported, fallbacks
 
 
@@ -148,7 +189,12 @@ def export_benchmark_pptx(
 ) -> tuple[Path | None, SlideContentBundleBuildResult, list[str]]:
     """Export a content-complete PPTX for one benchmark case from RenderScene."""
     assets = assets_dir or (case_dir / "assets")
-    build = build_slide_content_bundle(result.plan, assets, result.slide)
+    build = build_slide_content_bundle(
+        result.plan,
+        assets,
+        result.slide,
+        case_id=case_dir.name,
+    )
     pptx_path, fallbacks = export_benchmark_pptx_from_scene(
         scene,
         case_dir,
@@ -185,6 +231,7 @@ def render_benchmark_visual_artifacts(
     case_dir: Path,
 ) -> BenchmarkRenderManifest:
     """Export RenderScene preview, PPTX, and optional final-render PNG."""
+    render_attempt_id = uuid4()
     scene_render = compile_and_render_scene(result, case_dir)
     pptx_path, build, font_fallbacks = export_benchmark_pptx(
         result,
@@ -193,71 +240,71 @@ def render_benchmark_visual_artifacts(
     )
     conformance_issues: list[str] = []
     if pptx_path is not None and pptx_path.is_file():
-        conformance = assert_renderer_conformance(
+        render_scene = AssetPathResolver().resolve_scene(
             scene_render.scene,
+            _resolve_ctx(case_dir),
+        )
+        conformance = assert_renderer_conformance(
+            render_scene,
             pptx_path=pptx_path,
         )
         conformance_issues = conformance.issues
 
+    tools_available = screenshot_tools_available()
+    pptx_screenshot_generated = False
+    pptx_screenshot_reused = False
     final_render = None
     renderer = "png_renderer+pptxgenjs"
     rendered_at = datetime.now(UTC)
-    notes: list[str] = [
-        "RenderScene compiled from LayoutPlan with resolved text and assets.",
-        "scene_preview.png rendered via png_renderer.",
-    ]
 
     if pptx_path is None or not pptx_path.is_file():
-        notes.append("PPTX export skipped (Node/PptxGenJS unavailable).")
         renderer = "png_renderer"
     else:
-        notes.append("PPTX exported from RenderScene via render-plan.mjs.")
-        if font_fallbacks:
-            notes.append(f"Font fallbacks recorded: {', '.join(font_fallbacks)}.")
-        if conformance_issues:
-            notes.append("Renderer conformance: " + "; ".join(conformance_issues[:3]))
         final_render = export_benchmark_final_render(pptx_path, case_dir)
         if final_render is not None:
-            notes.append("pptx_render.png rasterized from output.pptx.")
-        elif not screenshot_tools_available():
-            notes.append(
-                "Screenshot tools unavailable (LibreOffice + pdftoppm); "
-                "final_render.png not produced."
-            )
+            pptx_screenshot_generated = True
 
+    existing_pptx_render = (case_dir / PPTX_RENDER_NAME).is_file()
     pptx_render = ensure_pptx_render_alias(case_dir)
+    if pptx_render is not None:
+        if pptx_screenshot_generated:
+            pass
+        elif existing_pptx_render and final_render is None:
+            pptx_screenshot_reused = True
+        elif final_render is not None:
+            pptx_screenshot_generated = True
 
     asset_count, curated_count, placeholder_count = count_assets(case_dir)
     scene_ok = scene_render.scene_preview_path.is_file()
+    absolute_paths = scene_has_machine_absolute_paths(scene_render.scene)
     render_valid = (
         scene_ok
         and not build.missing_content_refs
         and not scene_render.unresolved_nodes
         and placeholder_count == 0
         and not conformance_issues
+        and not absolute_paths
     )
-    if build.missing_content_refs:
-        notes.append(
-            "Unresolved content_ref paths: "
-            + ", ".join(build.missing_content_refs[:5])
-            + (" …" if len(build.missing_content_refs) > 5 else "")
-        )
-    if scene_render.unresolved_nodes:
-        notes.append(
-            "Unresolved scene nodes: "
-            + ", ".join(scene_render.unresolved_nodes[:5])
-        )
-    if placeholder_count > 0:
-        notes.append(
-            "Some assets remain placeholder diagrams; scene preview stays invalid "
-            "until all case assets are curated."
-        )
-    elif curated_count > 0:
-        notes.append("All mapped assets are curated PNGs from the benchmark asset pool.")
 
     render_source = "html" if scene_ok else "pending"
-    if pptx_render is not None:
+    if pptx_render is not None and (pptx_screenshot_generated or pptx_screenshot_reused):
         render_source = "pptx_screenshot"
+
+    scene_hash = scene_render.scene_hash
+    if pptx_render is not None:
+        write_pptx_render_sidecar(case_dir, scene_hash=scene_hash)
+
+    # Structured evidence only — notes is a short non-authoritative summary.
+    evidence_bits: list[str] = []
+    if not tools_available:
+        evidence_bits.append("screenshot_tools_available=false")
+    if pptx_screenshot_generated:
+        evidence_bits.append("pptx_screenshot_generated=true")
+    if pptx_screenshot_reused:
+        evidence_bits.append("pptx_screenshot_reused=true")
+    if absolute_paths:
+        evidence_bits.append("non_portable_asset_paths=true")
+        render_valid = False
 
     manifest = BenchmarkRenderManifest(
         render_source=render_source,
@@ -266,7 +313,7 @@ def render_benchmark_visual_artifacts(
         scene_path=SCENE_JSON_NAME,
         scene_preview_path=SCENE_PREVIEW_NAME,
         scene_id=str(scene_render.scene.id),
-        scene_hash=scene_render.scene_hash,
+        scene_hash=scene_hash,
         rendered_at=rendered_at,
         renderer=renderer if scene_ok else "",
         asset_count=asset_count,
@@ -275,7 +322,12 @@ def render_benchmark_visual_artifacts(
         font_fallbacks=font_fallbacks,
         missing_assets=list(build.missing_content_refs),
         render_valid=render_valid,
-        notes=" ".join(notes),
+        notes="; ".join(evidence_bits),
+        screenshot_tools_available=tools_available,
+        pptx_screenshot_generated=pptx_screenshot_generated,
+        pptx_screenshot_reused=pptx_screenshot_reused,
+        pptx_screenshot_source_hash=scene_hash if pptx_render is not None else "",
+        render_attempt_id=render_attempt_id,
     )
     write_render_manifest(case_dir, manifest)
     return manifest

@@ -251,7 +251,21 @@ class StudioSceneService:
         path = self.preview_cache_path(presentation_id, scene)
         if path.is_file():
             return path
-        return self._canvas.render_preview(scene, path)
+        from archium.application.visual.asset_path_resolver import (
+            AssetPathResolveContext,
+            AssetPathResolver,
+        )
+
+        presentation = self._presentations.get_presentation(presentation_id)
+        project_id = presentation.project_id if presentation is not None else None
+        render_scene = AssetPathResolver().resolve_scene(
+            scene,
+            AssetPathResolveContext(
+                project_id=project_id,
+                project_storage_root=self._settings.project_storage_path,
+            ),
+        )
+        return self._canvas.render_preview(render_scene, path)
 
     def _resolve_design_system(
         self,

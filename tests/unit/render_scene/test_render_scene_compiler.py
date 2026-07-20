@@ -89,7 +89,9 @@ def test_compiler_populates_title_and_drawing(tmp_path: Path) -> None:
     assert title.font_size == design.typography.title.font_size
     assert isinstance(hero, DrawingNode)
     assert hero.fit_mode == "contain"
-    assert hero.asset_path == str(asset_file.resolve())
+    assert hero.asset_path == str(asset_file.resolve()) or hero.storage_uri == str(
+        asset_file.resolve()
+    )
     assert hero.drawing_type == "site_plan"
     assert scene.background.color == design.colors.resolve("background")
     assert scene.warnings == []

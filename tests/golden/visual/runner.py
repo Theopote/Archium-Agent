@@ -54,6 +54,7 @@ def run_visual_baseline_case(
             export_preview_images=True,
             require_brief_review=False,
             require_storyline_review=False,
+            require_outline_review=False,
             require_slides_review=False,
         )
     finally:

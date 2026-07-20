@@ -30,23 +30,40 @@ def test_run_gate_writes_report_and_fails_on_empty_root(tmp_path: Path) -> None:
 
 
 def test_check_case_artifacts_passes_minimal_files(tmp_path: Path) -> None:
+    from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, compute_scene_hash
+    from tests.benchmark.architectural_slides.render_manifest import (
+        write_pptx_render_sidecar,
+        write_render_manifest,
+    )
+    from archium.domain.visual.benchmark import BenchmarkRenderManifest
+
     case_dir = tmp_path / "case_001_demo"
     case_dir.mkdir()
     (case_dir / "output.pptx").write_bytes(b"PK" + b"0" * 100)
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[],
+    )
+    scene_hash = compute_scene_hash(scene)
     (case_dir / "scene.json").write_text(
-        json.dumps(
-            {
-                "id": str(uuid4()),
-                "slide_id": str(uuid4()),
-                "layout_plan_id": str(uuid4()),
-                "page_width": 10,
-                "page_height": 5.625,
-                "background": {"color": "#FFFFFF"},
-                "nodes": [],
-            }
-        ),
+        json.dumps(scene.model_dump(mode="json")),
         encoding="utf-8",
     )
     (case_dir / "pptx_render.png").write_bytes(b"\x89PNG" + b"0" * 64)
+    write_pptx_render_sidecar(case_dir, scene_hash=scene_hash)
+    write_render_manifest(
+        case_dir,
+        BenchmarkRenderManifest(
+            render_source="pptx_screenshot",
+            render_valid=True,
+            scene_id=str(scene.id),
+            scene_hash=scene_hash,
+            pptx_screenshot_source_hash=scene_hash,
+        ),
+    )
     errors = _check_case_artifacts("case_001_demo", case_dir)
     assert errors == []

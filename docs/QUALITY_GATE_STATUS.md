@@ -1,8 +1,19 @@
 # Quality Gate Status (honest snapshot)
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 This document states what is **proven by automation** vs what still requires **human rehearsal** or **real project delivery**.
+
+## P0 portability / provenance (2026-07-21)
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| RenderScene portable asset URIs | **Enforced** | `storage_uri` / `benchmark://` / `storage://` / `project://`; no machine absolutes in persisted scenes |
+| Scene ↔ Manifest identity | **Enforced** | `validate_scene_manifest_consistency`: `scene_id`, `scene_hash`, pptx_render sidecar |
+| Structured render evidence | **Enforced** | `screenshot_tools_available`, `pptx_screenshot_generated`, `pptx_screenshot_reused`, `pptx_screenshot_source_hash`, `render_attempt_id` |
+| Human visual review on inconsistent artifacts | **Blocked** | consistency failure ⇒ treat `render_valid=false` |
+
+Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolver`).
 
 ## Architectural Slide Benchmark (30 cases)
 

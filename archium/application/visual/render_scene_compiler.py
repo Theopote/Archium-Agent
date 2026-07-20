@@ -287,6 +287,7 @@ class RenderSceneCompiler:
         if path and not unresolved:
             asset_manifest.append(
                 SceneAssetReference(
+                    storage_uri=path,
                     asset_path=path,
                     content_ref=element.content_ref,
                     origin=origin,
@@ -303,6 +304,7 @@ class RenderSceneCompiler:
                 height=element.height,
                 z_index=element.z_index,
                 locked=element.locked,
+                storage_uri=path or "",
                 asset_path=path or "",
                 asset_origin=origin,  # type: ignore[arg-type]
                 fit_mode=fit,  # type: ignore[arg-type]
@@ -327,6 +329,7 @@ class RenderSceneCompiler:
         if path and not unresolved:
             asset_manifest.append(
                 SceneAssetReference(
+                    storage_uri=path,
                     asset_path=path,
                     content_ref=element.content_ref,
                     origin=origin,
@@ -344,6 +347,7 @@ class RenderSceneCompiler:
                 z_index=element.z_index,
                 locked=element.locked,
                 lock_scopes=[scope.value for scope in element.lock_scopes],
+                storage_uri=path or "",
                 asset_path=path or "",
                 drawing_type=drawing_type,
                 fit_mode=fit_mode,

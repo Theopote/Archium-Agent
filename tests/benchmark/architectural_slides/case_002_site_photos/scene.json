@@ -113,7 +113,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -182,7 +183,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020002-0001-4001-8001-000000000002.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -251,7 +253,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020003-0001-4001-8001-000000000003.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -320,7 +323,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020004-0001-4001-8001-000000000004.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -553,25 +557,29 @@
   "asset_manifest": [
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0020001-0001-4001-8001-000000000001"
     },
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020002-0001-4001-8001-000000000002.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
       "origin": "project_upload",
       "content_ref": "c0020002-0001-4001-8001-000000000002"
     },
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020003-0001-4001-8001-000000000003.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
       "origin": "project_upload",
       "content_ref": "c0020003-0001-4001-8001-000000000003"
     },
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_002_site_photos\\assets\\c0020004-0001-4001-8001-000000000004.png",
+      "storage_uri": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
+      "asset_path": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
       "origin": "project_upload",
       "content_ref": "c0020004-0001-4001-8001-000000000004"
     }

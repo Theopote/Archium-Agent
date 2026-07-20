@@ -5,7 +5,7 @@
   "scene_path": "scene.json",
   "scene_preview_path": "scene_preview.png",
   "scene_id": "d86d2ea3-6821-4ad4-8680-c9fec3ba789b",
-  "scene_hash": "b534f126a89fc8a9762a5398eab3d2dd5302fbf544d1088370053e0fe33fb754",
+  "scene_hash": "d8625bf3c2c569425b360aa22ef18af13cb6b62e5f5deaa8c490e453ef4712b7",
   "rendered_at": "2026-07-20T17:02:01.227551Z",
   "renderer": "png_renderer+pptxgenjs",
   "asset_count": 1,
@@ -14,5 +14,10 @@
   "font_fallbacks": [],
   "missing_assets": [],
   "render_valid": true,
-  "notes": "RenderScene compiled from LayoutPlan with resolved text and assets. scene_preview.png rendered via png_renderer. PPTX exported from RenderScene via render-plan.mjs. pptx_render.png rasterized from output.pptx. All mapped assets are curated PNGs from the benchmark asset pool. pptx_render.png rasterized from output.pptx via screenshot tools. pptx_render.png reused."
+  "notes": "normalized_portable_uris=true",
+  "screenshot_tools_available": false,
+  "pptx_screenshot_generated": false,
+  "pptx_screenshot_reused": false,
+  "pptx_screenshot_source_hash": "d8625bf3c2c569425b360aa22ef18af13cb6b62e5f5deaa8c490e453ef4712b7",
+  "render_attempt_id": "d01323d7-afb0-432d-8257-302eb8d609fb"
 }

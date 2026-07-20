@@ -31,7 +31,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_007_aerial_hero\\assets\\c0070001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_007_aerial_hero/assets/c0070001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_007_aerial_hero/assets/c0070001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -264,7 +265,8 @@
   "asset_manifest": [
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_007_aerial_hero\\assets\\c0070001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_007_aerial_hero/assets/c0070001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_007_aerial_hero/assets/c0070001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0070001-0001-4001-8001-000000000001"
     }

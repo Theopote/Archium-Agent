@@ -66,12 +66,19 @@ def test_build_slide_content_bundle_maps_assets(tmp_path: Path) -> None:
     assert build.bundle.page_number == 3
     assert build.bundle.speaker_notes == "notes"
     assert asset_id in build.bundle.asset_paths
+    assert build.bundle.asset_paths[asset_id].startswith("benchmark://")
 
 
-def test_pptx_adapter_receives_resolved_asset_paths(tmp_path: Path) -> None:
+def test_pptx_adapter_receives_portable_asset_uris(tmp_path: Path) -> None:
+    from archium.application.visual.asset_path_resolver import (
+        AssetPathResolveContext,
+        AssetPathResolver,
+    )
+
     asset_id = str(uuid4())
-    assets_dir = tmp_path / "assets"
-    assets_dir.mkdir()
+    case_dir = tmp_path / "case_demo"
+    assets_dir = case_dir / "assets"
+    assets_dir.mkdir(parents=True)
     asset_file = assets_dir / f"{asset_id}.png"
     asset_file.write_bytes(
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -109,11 +116,21 @@ def test_pptx_adapter_receives_resolved_asset_paths(tmp_path: Path) -> None:
         chapter_id="ch1",
         order=1,
     )
-    build = build_slide_content_bundle(plan, assets_dir, slide)
+    build = build_slide_content_bundle(plan, assets_dir, slide, case_id=case_dir.name)
     instruction = PptxLayoutPlanAdapter().render_slide(plan, design, build.bundle)
     hero = next(item for item in instruction.elements if item["id"] == "hero")
-    assert hero["path"] == str(asset_file.resolve())
+    assert hero["path"].startswith(f"benchmark://{case_dir.name}/assets/")
     assert "asset_unresolved" not in hero
+    resolved = AssetPathResolver().resolve(
+        hero["path"],
+        AssetPathResolveContext(
+            case_dir=case_dir,
+            case_id=case_dir.name,
+            assets_dir=assets_dir,
+        ),
+    )
+    assert resolved is not None
+    assert resolved.resolve() == asset_file.resolve()
 
 
 @pytest.mark.parametrize("case_id", ["case_001_site_plan", "case_002_site_photos"])
@@ -137,3 +154,10 @@ def test_render_benchmark_visual_artifacts_exports_pptx(case_id: str, tmp_path: 
     if manifest.render_valid:
         assert manifest.renderer in {"png_renderer", "png_renderer+pptxgenjs"}
         assert manifest.render_source in {"html", "pptx_screenshot"}
+        assert manifest.scene_id
+        assert not manifest.notes or "Screenshot tools unavailable" not in manifest.notes or (
+            not manifest.pptx_screenshot_generated
+        )
+        # Structured evidence must not contradict itself.
+        if not manifest.screenshot_tools_available:
+            assert not manifest.pptx_screenshot_generated

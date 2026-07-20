@@ -39,6 +39,7 @@ from tests.benchmark.architectural_slides.render_manifest import (  # noqa: E402
     SCENE_JSON_NAME,
     final_render_path,
     pptx_render_path,
+    validate_scene_manifest_consistency,
     visual_review_image_path,
 )
 
@@ -78,6 +79,9 @@ def _check_case_artifacts(case_id: str, case_dir: Path) -> list[str]:
             f"{case_id}: missing non-empty screenshot "
             f"(need pptx_render.png or final_render.png)"
         )
+
+    for blocker in validate_scene_manifest_consistency(case_dir):
+        errors.append(f"{case_id}: {blocker}")
     return errors
 
 
@@ -101,6 +105,21 @@ def _scene_qa_errors(
     if scene is None:
         return [f"{case_id}: scene.json could not be parsed"], []
 
+    from archium.application.visual.asset_path_resolver import (
+        AssetPathResolveContext,
+        AssetPathResolver,
+    )
+
+    render_scene = AssetPathResolver().resolve_scene(
+        scene,
+        AssetPathResolveContext(
+            case_dir=case_dir,
+            case_id=case_id,
+            assets_dir=case_dir / "assets",
+            benchmark_root=case_dir.parent,
+        ),
+    )
+
     pptx = _pptx_path(case_dir)
     pptx_map = {scene.slide_id: pptx} if pptx.is_file() else None
     # Also run conformance explicitly when PPTX exists (feeds SCENE_PPTX_NODE_MISMATCH).
@@ -108,7 +127,7 @@ def _scene_qa_errors(
     errors: list[str] = []
 
     if pptx.is_file():
-        conformance = assert_renderer_conformance(scene, pptx_path=pptx)
+        conformance = assert_renderer_conformance(render_scene, pptx_path=pptx)
         if not conformance.passed:
             errors.append(
                 f"{case_id}: Scene/PPTX mismatch — " + "; ".join(conformance.issues[:3])

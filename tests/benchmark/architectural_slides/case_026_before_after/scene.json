@@ -72,7 +72,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_026_before_after\\assets\\c0260001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_026_before_after/assets/c0260001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_026_before_after/assets/c0260001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -141,7 +142,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_026_before_after\\assets\\c0260002-0001-4001-8001-000000000002.png",
+      "storage_uri": "benchmark://case_026_before_after/assets/c0260002-0001-4001-8001-000000000002.png",
+      "asset_path": "benchmark://case_026_before_after/assets/c0260002-0001-4001-8001-000000000002.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -415,13 +417,15 @@
   "asset_manifest": [
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_026_before_after\\assets\\c0260001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_026_before_after/assets/c0260001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_026_before_after/assets/c0260001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0260001-0001-4001-8001-000000000001"
     },
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_026_before_after\\assets\\c0260002-0001-4001-8001-000000000002.png",
+      "storage_uri": "benchmark://case_026_before_after/assets/c0260002-0001-4001-8001-000000000002.png",
+      "asset_path": "benchmark://case_026_before_after/assets/c0260002-0001-4001-8001-000000000002.png",
       "origin": "project_upload",
       "content_ref": "c0260002-0001-4001-8001-000000000002"
     }

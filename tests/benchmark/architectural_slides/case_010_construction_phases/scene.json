@@ -113,7 +113,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_010_construction_phases\\assets\\c0100001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_010_construction_phases/assets/c0100001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_010_construction_phases/assets/c0100001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -204,7 +205,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_010_construction_phases\\assets\\c0100002-0001-4001-8001-000000000002.png",
+      "storage_uri": "benchmark://case_010_construction_phases/assets/c0100002-0001-4001-8001-000000000002.png",
+      "asset_path": "benchmark://case_010_construction_phases/assets/c0100002-0001-4001-8001-000000000002.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -295,7 +297,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_010_construction_phases\\assets\\c0100003-0001-4001-8001-000000000003.png",
+      "storage_uri": "benchmark://case_010_construction_phases/assets/c0100003-0001-4001-8001-000000000003.png",
+      "asset_path": "benchmark://case_010_construction_phases/assets/c0100003-0001-4001-8001-000000000003.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -632,19 +635,22 @@
   "asset_manifest": [
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_010_construction_phases\\assets\\c0100001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_010_construction_phases/assets/c0100001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_010_construction_phases/assets/c0100001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0100001-0001-4001-8001-000000000001"
     },
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_010_construction_phases\\assets\\c0100002-0001-4001-8001-000000000002.png",
+      "storage_uri": "benchmark://case_010_construction_phases/assets/c0100002-0001-4001-8001-000000000002.png",
+      "asset_path": "benchmark://case_010_construction_phases/assets/c0100002-0001-4001-8001-000000000002.png",
       "origin": "project_upload",
       "content_ref": "c0100002-0001-4001-8001-000000000002"
     },
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_010_construction_phases\\assets\\c0100003-0001-4001-8001-000000000003.png",
+      "storage_uri": "benchmark://case_010_construction_phases/assets/c0100003-0001-4001-8001-000000000003.png",
+      "asset_path": "benchmark://case_010_construction_phases/assets/c0100003-0001-4001-8001-000000000003.png",
       "origin": "project_upload",
       "content_ref": "c0100003-0001-4001-8001-000000000003"
     }

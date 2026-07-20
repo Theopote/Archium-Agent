@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -65,10 +65,33 @@ class FontAsset(DomainModel):
 
 
 class SceneAssetReference(DomainModel):
+    """Persisted asset pointer — ``storage_uri`` only; resolve at render time."""
+
     asset_id: UUID | None = None
-    asset_path: str
+    storage_uri: str = ""
+    asset_path: str = ""
     origin: str = "project_upload"
     content_ref: str | None = None
+    resolved_path: str | None = Field(default=None, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_storage_uri(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        uri = str(data.get("storage_uri") or data.get("asset_path") or "").strip()
+        payload = dict(data)
+        payload["storage_uri"] = uri
+        payload["asset_path"] = uri
+        return payload
+
+    @model_validator(mode="after")
+    def _sync_path_fields(self) -> Self:
+        uri = (self.storage_uri or self.asset_path or "").strip()
+        if self.storage_uri != uri or self.asset_path != uri:
+            object.__setattr__(self, "storage_uri", uri)
+            object.__setattr__(self, "asset_path", uri)
+        return self
 
 
 class BaseRenderNode(DomainModel):
@@ -110,6 +133,7 @@ class TextNode(BaseRenderNode):
 class ImageNode(BaseRenderNode):
     node_type: Literal["image"] = "image"
     asset_id: UUID | None = None
+    storage_uri: str = ""
     asset_path: str = ""
     asset_origin: Literal[
         "project_upload",
@@ -126,6 +150,26 @@ class ImageNode(BaseRenderNode):
     shadow: ShadowStyle | None = None
     caption_node_id: str | None = None
     asset_unresolved: bool = False
+    resolved_path: str | None = Field(default=None, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_storage_uri(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        uri = str(data.get("storage_uri") or data.get("asset_path") or "").strip()
+        payload = dict(data)
+        payload["storage_uri"] = uri
+        payload["asset_path"] = uri
+        return payload
+
+    @model_validator(mode="after")
+    def _sync_path_fields(self) -> Self:
+        uri = (self.storage_uri or self.asset_path or "").strip()
+        if self.storage_uri != uri or self.asset_path != uri:
+            object.__setattr__(self, "storage_uri", uri)
+            object.__setattr__(self, "asset_path", uri)
+        return self
 
 
 DrawingType = Literal[
@@ -144,6 +188,7 @@ DrawingFitMode = Literal["contain", "safe_crop"]
 class DrawingNode(BaseRenderNode):
     node_type: Literal["drawing"] = "drawing"
     asset_id: UUID | None = None
+    storage_uri: str = ""
     asset_path: str = ""
     drawing_type: DrawingType = "site_plan"
     fit_mode: DrawingFitMode = "contain"
@@ -155,6 +200,26 @@ class DrawingNode(BaseRenderNode):
     scale_label: str | None = None
     north_arrow_visible: bool = False
     asset_unresolved: bool = False
+    resolved_path: str | None = Field(default=None, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_storage_uri(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        uri = str(data.get("storage_uri") or data.get("asset_path") or "").strip()
+        payload = dict(data)
+        payload["storage_uri"] = uri
+        payload["asset_path"] = uri
+        return payload
+
+    @model_validator(mode="after")
+    def _sync_path_fields(self) -> Self:
+        uri = (self.storage_uri or self.asset_path or "").strip()
+        if self.storage_uri != uri or self.asset_path != uri:
+            object.__setattr__(self, "storage_uri", uri)
+            object.__setattr__(self, "asset_path", uri)
+        return self
 
 
 class ShapeNode(BaseRenderNode):
@@ -207,7 +272,12 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
         return None
 
     def scene_hash_input(self) -> str:
-        """Stable serialization input for content hashing."""
+        """Stable serialization input for content hashing.
+
+        Excludes timestamps and runtime-only ``resolved_path`` (Field exclude=True).
+        Persisted asset fields must be portable ``storage_uri`` values so the hash
+        is machine-independent.
+        """
         return self.model_dump_json(exclude={"created_at", "updated_at"})
 
 

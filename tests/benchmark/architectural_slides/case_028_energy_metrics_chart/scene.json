@@ -365,7 +365,8 @@
       "lock_scopes": [],
       "group_id": null,
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_028_energy_metrics_chart\\assets\\c0280001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_028_energy_metrics_chart/assets/c0280001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_028_energy_metrics_chart/assets/c0280001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "contain",
       "crop": null,
@@ -557,7 +558,8 @@
   "asset_manifest": [
     {
       "asset_id": null,
-      "asset_path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\tests\\benchmark\\architectural_slides\\case_028_energy_metrics_chart\\assets\\c0280001-0001-4001-8001-000000000001.png",
+      "storage_uri": "benchmark://case_028_energy_metrics_chart/assets/c0280001-0001-4001-8001-000000000001.png",
+      "asset_path": "benchmark://case_028_energy_metrics_chart/assets/c0280001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0280001-0001-4001-8001-000000000001"
     }

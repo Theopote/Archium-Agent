@@ -214,7 +214,8 @@ class AssetReferenceContext:
     """Inputs for LAYOUT.* asset integrity checks.
 
     ``known_asset_ids`` — asset IDs that exist in the project catalog.
-    ``resolved_paths`` — refs that resolve to an existing file on disk.
+    ``resolved_paths`` — refs → portable storage URIs (persistable).
+    ``absolute_paths`` — refs → host filesystem paths (runtime only).
     ``asset_types`` — ref → ``AssetType`` value for catalogued assets.
     ``asset_origins`` — ref → RenderScene asset_origin value.
     """
@@ -223,6 +224,7 @@ class AssetReferenceContext:
     resolved_paths: dict[str, str]
     asset_types: dict[str, str] = field(default_factory=dict)
     asset_origins: dict[str, str] = field(default_factory=dict)
+    absolute_paths: dict[str, str] = field(default_factory=dict)
 
 
 _VALID_ASSET_ORIGINS = frozenset(
@@ -276,6 +278,14 @@ def infer_asset_origin(asset: Asset) -> str:
 
 def is_supported_layout_image_path(path: str | Path) -> bool:
     """Return True when the file extension is accepted by the layout PPTX renderer."""
+    from archium.application.visual.asset_path_resolver import (
+        asset_uri_suffix,
+        is_portable_storage_uri,
+    )
+
+    text = str(path)
+    if is_portable_storage_uri(text):
+        return asset_uri_suffix(text) in SUPPORTED_LAYOUT_IMAGE_EXTENSIONS
     return Path(path).suffix.lower() in SUPPORTED_LAYOUT_IMAGE_EXTENSIONS
 
 
@@ -293,7 +303,16 @@ def build_asset_reference_context(
     content_refs: Iterable[str | None],
     settings: Settings,
 ) -> AssetReferenceContext:
-    """Look up referenced assets and resolve storage paths that exist on disk."""
+    """Look up referenced assets and build portable storage URIs.
+
+    Absolute filesystem paths are kept in ``absolute_paths`` for runtime
+    resolution only — they must not be persisted into RenderScene JSON.
+    """
+    from archium.application.visual.asset_path_resolver import (
+        project_asset_uri,
+        storage_asset_uri,
+    )
+
     refs: list[str] = []
     for raw in content_refs:
         if raw is None:
@@ -308,13 +327,16 @@ def build_asset_reference_context(
             resolved_paths={},
             asset_types={},
             asset_origins={},
+            absolute_paths={},
         )
 
     repo = AssetRepository(session)
     known: set[str] = set()
     resolved: dict[str, str] = {}
+    absolute: dict[str, str] = {}
     asset_types: dict[str, str] = {}
     asset_origins: dict[str, str] = {}
+    project_root = settings.project_storage_path / str(project_id)
     for ref in dict.fromkeys(refs):
         try:
             asset_id = UUID(ref)
@@ -332,14 +354,22 @@ def build_asset_reference_context(
         asset_origins[ref] = infer_asset_origin(asset)
         path = Path(asset.path)
         if not path.is_absolute():
-            path = settings.project_storage_path / str(project_id) / path
+            path = project_root / path
         if path.is_file():
-            resolved[ref] = str(path.resolve())
+            absolute[ref] = str(path.resolve())
+            try:
+                relative = path.resolve().relative_to(project_root.resolve())
+                resolved[ref] = storage_asset_uri(project_id, relative.as_posix())
+            except (OSError, ValueError):
+                resolved[ref] = project_asset_uri(ref)
+        else:
+            resolved[ref] = project_asset_uri(ref)
     return AssetReferenceContext(
         known_asset_ids=frozenset(known),
         resolved_paths=resolved,
         asset_types=asset_types,
         asset_origins=asset_origins,
+        absolute_paths=absolute,
     )
 
 

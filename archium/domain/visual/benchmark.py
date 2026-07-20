@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from typing import Self
+from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator, model_validator
 
@@ -260,6 +261,12 @@ class BenchmarkRenderManifest(DomainModel):
     missing_assets: list[str] = Field(default_factory=list)
     render_valid: bool = False
     notes: str = ""
+    # Structured evidence — do not rely on ``notes`` for acceptance state.
+    screenshot_tools_available: bool = False
+    pptx_screenshot_generated: bool = False
+    pptx_screenshot_reused: bool = False
+    pptx_screenshot_source_hash: str = ""
+    render_attempt_id: UUID | None = Field(default_factory=uuid4)
 
     def scene_preview_valid(self) -> bool:
         """Return True when a RenderScene preview is ready for Phase 1–2 review."""

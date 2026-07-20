@@ -6,13 +6,21 @@ import json
 import shutil
 from pathlib import Path
 from typing import Any, Literal
+from uuid import uuid4
 
+from archium.application.visual.asset_path_resolver import (
+    AssetPathResolveContext,
+    AssetPathResolver,
+    scene_has_machine_absolute_paths,
+)
 from archium.domain.visual.benchmark import BenchmarkRenderManifest
+from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 
 RENDER_MANIFEST_NAME = "render_manifest.json"
 WIREFRAME_NAME = "wireframe.png"
 FINAL_RENDER_NAME = "final_render.png"
 PPTX_RENDER_NAME = "pptx_render.png"
+PPTX_RENDER_SIDECAR_NAME = "pptx_render.meta.json"
 SCENE_JSON_NAME = "scene.json"
 SCENE_PREVIEW_NAME = "scene_preview.png"
 LEGACY_PREVIEW_NAME = "preview.png"
@@ -48,6 +56,10 @@ def pptx_render_path(case_dir: Path) -> Path:
     return case_dir / PPTX_RENDER_NAME
 
 
+def pptx_render_sidecar_path(case_dir: Path) -> Path:
+    return case_dir / PPTX_RENDER_SIDECAR_NAME
+
+
 def final_render_path(case_dir: Path) -> Path:
     return case_dir / FINAL_RENDER_NAME
 
@@ -80,6 +92,98 @@ def write_render_manifest(case_dir: Path, manifest: BenchmarkRenderManifest) -> 
     return path
 
 
+def write_pptx_render_sidecar(case_dir: Path, *, scene_hash: str) -> Path:
+    """Write scene_hash sidecar next to pptx_render.png for provenance checks."""
+    path = pptx_render_sidecar_path(case_dir)
+    path.write_text(
+        json.dumps({"scene_hash": scene_hash}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def load_pptx_render_sidecar(case_dir: Path) -> dict[str, Any] | None:
+    path = pptx_render_sidecar_path(case_dir)
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def load_case_scene(case_dir: Path) -> RenderScene | None:
+    path = case_dir / SCENE_JSON_NAME
+    if not path.is_file():
+        return None
+    try:
+        return RenderScene.model_validate_json(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def validate_scene_manifest_consistency(case_dir: Path) -> list[str]:
+    """Forced identity / portability checks between scene.json and render_manifest.
+
+    Any failure means render_valid must be treated as false and human review blocked.
+    """
+    blockers: list[str] = []
+    manifest = load_render_manifest(case_dir)
+    scene = load_case_scene(case_dir)
+    if manifest is None:
+        blockers.append("缺少 render_manifest.json")
+        return blockers
+    if scene is None:
+        blockers.append("缺少或无法解析 scene.json")
+        return blockers
+
+    if not manifest.scene_id:
+        blockers.append("manifest.scene_id missing")
+    elif str(scene.id) != manifest.scene_id:
+        blockers.append(
+            f"scene_id mismatch: scene={scene.id} manifest={manifest.scene_id}"
+        )
+
+    expected_hash = compute_scene_hash(scene)
+    if not manifest.scene_hash:
+        blockers.append("manifest.scene_hash missing")
+    elif manifest.scene_hash != expected_hash:
+        blockers.append(
+            "scene_hash mismatch: "
+            f"recomputed={expected_hash[:12]}… manifest={manifest.scene_hash[:12]}…"
+        )
+
+    absolute = scene_has_machine_absolute_paths(scene)
+    if absolute:
+        blockers.append(f"non-portable asset paths ({len(absolute)})")
+
+    pptx_png = pptx_render_path(case_dir)
+    if pptx_png.is_file():
+        sidecar = load_pptx_render_sidecar(case_dir)
+        if sidecar is None:
+            blockers.append(f"缺少 {PPTX_RENDER_SIDECAR_NAME}")
+        else:
+            sidecar_hash = str(sidecar.get("scene_hash") or "")
+            if not sidecar_hash:
+                blockers.append("pptx_render sidecar scene_hash missing")
+            elif manifest.scene_hash and sidecar_hash != manifest.scene_hash:
+                blockers.append(
+                    "pptx_render sidecar scene_hash mismatch vs manifest.scene_hash"
+                )
+            if (
+                manifest.pptx_screenshot_source_hash
+                and sidecar_hash
+                and sidecar_hash != manifest.pptx_screenshot_source_hash
+            ):
+                blockers.append(
+                    "pptx_render sidecar scene_hash mismatch vs "
+                    "manifest.pptx_screenshot_source_hash"
+                )
+
+    return blockers
+
+
 def write_pending_render_manifest(
     case_dir: Path,
     *,
@@ -102,6 +206,11 @@ def write_pending_render_manifest(
         render_valid=False,
         notes=notes
         or "Final render not yet produced; visual human review is blocked.",
+        screenshot_tools_available=False,
+        pptx_screenshot_generated=False,
+        pptx_screenshot_reused=False,
+        pptx_screenshot_source_hash="",
+        render_attempt_id=uuid4(),
     )
     return write_render_manifest(case_dir, manifest)
 
@@ -130,6 +239,80 @@ def ensure_pptx_render_alias(case_dir: Path) -> Path | None:
     return None
 
 
+def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
+    """Rewrite absolute asset paths in scene.json and resync manifest identity fields.
+
+    Does not regenerate PNG/PPTX pixels — only repairs provenance metadata so
+    consistency gates can pass after the portable-URI policy landed.
+    """
+    scene = load_case_scene(case_dir)
+    if scene is None:
+        return {"ok": False, "error": "scene.json missing or invalid"}
+
+    resolver = AssetPathResolver()
+    ctx = AssetPathResolveContext(
+        case_dir=case_dir,
+        case_id=case_dir.name,
+        assets_dir=case_dir / "assets",
+        benchmark_root=case_dir.parent,
+    )
+    portable = resolver.portableize_scene(scene, ctx)
+    scene_hash = compute_scene_hash(portable)
+    scene_path = case_dir / SCENE_JSON_NAME
+    scene_path.write_text(
+        json.dumps(portable.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    manifest = load_render_manifest(case_dir)
+    absolute_left = scene_has_machine_absolute_paths(portable)
+    pptx_png = pptx_render_path(case_dir)
+    if pptx_png.is_file():
+        write_pptx_render_sidecar(case_dir, scene_hash=scene_hash)
+
+    if manifest is None:
+        return {
+            "ok": not absolute_left,
+            "scene_id": str(portable.id),
+            "scene_hash": scene_hash,
+            "absolute_paths_remaining": len(absolute_left),
+            "manifest_updated": False,
+        }
+
+    consistency_ok = not absolute_left
+    render_valid = bool(manifest.render_valid) and consistency_ok
+    updated = manifest.model_copy(
+        update={
+            "scene_id": str(portable.id),
+            "scene_hash": scene_hash,
+            "pptx_screenshot_source_hash": (
+                scene_hash if pptx_png.is_file() else manifest.pptx_screenshot_source_hash
+            ),
+            "render_valid": render_valid,
+            "notes": (
+                "normalized_portable_uris=true"
+                + ("; absolute_paths_remaining" if absolute_left else "")
+            ),
+        }
+    )
+    write_render_manifest(case_dir, updated)
+    blockers = validate_scene_manifest_consistency(case_dir)
+    if blockers:
+        updated = updated.model_copy(update={"render_valid": False})
+        write_render_manifest(case_dir, updated)
+        consistency_ok = False
+
+    return {
+        "ok": consistency_ok and not blockers,
+        "scene_id": str(portable.id),
+        "scene_hash": scene_hash,
+        "absolute_paths_remaining": len(absolute_left),
+        "manifest_updated": True,
+        "blockers": blockers,
+        "render_valid": updated.render_valid,
+    }
+
+
 def visual_review_eligibility(
     case_dir: Path,
 ) -> tuple[bool, BenchmarkRenderManifest | None, list[str]]:
@@ -147,8 +330,12 @@ def visual_review_eligibility(
         blockers.append("缺少 output.pptx")
     if not pptx_render_path(case_dir).is_file():
         blockers.append(f"缺少 {PPTX_RENDER_NAME}")
+    consistency = validate_scene_manifest_consistency(case_dir)
+    if consistency:
+        blockers.extend(consistency)
+        if manifest is not None and manifest.render_valid:
+            blockers.append("render_valid overridden by consistency failure")
     return (not blockers, manifest, blockers)
-
 
 
 def editability_review_eligibility(case_dir: Path) -> tuple[bool, list[str]]:
@@ -197,7 +384,7 @@ def count_assets(case_dir: Path) -> tuple[int, int, int]:
 def bootstrap_case_render_artifacts(case_dir: Path) -> dict[str, Any]:
     """Ensure wireframe alias + pending manifest exist for one case folder."""
     ensure_wireframe_alias(case_dir)
-    asset_count, curated_count, placeholder_count = count_assets(case_dir)
+    asset_count, _curated_count, placeholder_count = count_assets(case_dir)
     manifest_path = render_manifest_path(case_dir)
     if not manifest_path.is_file():
         write_pending_render_manifest(
