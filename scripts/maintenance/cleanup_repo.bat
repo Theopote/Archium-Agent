@@ -101,7 +101,7 @@ echo    git commit -m "chore: 整理根目录文档结构以提升项目专业�
 echo.
 echo 清理后的根目录将只保留核心文档：
 echo - README.md
-echo - QUICK_START.md
+echo - docs/guides/nlp-quickstart.md
 echo - CONTRIBUTING.md
 echo - CODE_OF_CONDUCT.md
 echo - SECURITY.md

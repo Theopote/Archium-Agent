@@ -93,7 +93,7 @@ mv -v 第二阶段优化总结.md docs/delivery/ 2>/dev/null || true
 echo ""
 echo "保留在根目录的文档："
 echo "  - README.md (项目主文档)"
-echo "  - QUICK_START.md (快速开始)"
+echo "  - docs/guides/nlp-quickstart.md (NLP 快速入门)"
 echo "  - CODE_OF_CONDUCT.md (行为准则)"
 echo "  - CONTRIBUTING.md (贡献指南)"
 echo "  - SECURITY.md (安全政策)"

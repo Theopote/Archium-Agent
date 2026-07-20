@@ -39,6 +39,8 @@ docker-compose up -d               # 启动服务
 
 **详细指南：** [Docker 快速启动](docs/deployment/docker-quickstart.md) · [5分钟快速测试](DOCKER_QUICK_TEST.md)
 
+**NLP 子功能快速入门：** [`docs/guides/nlp-quickstart.md`](docs/guides/nlp-quickstart.md)
+
 ### 📦 传统部署
 
 **v0.2 主路径**：安装 → 配置 → `archium`（或等价的 `streamlit run app.py`）。

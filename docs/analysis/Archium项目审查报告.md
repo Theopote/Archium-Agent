@@ -1,5 +1,9 @@
 # Archium 项目优化建议报告
 
+> INTERNAL DEV-NOTES ARCHIVE
+> 本文件为阶段性交付/审查过程记录，结论与引用可能随代码更新而过时。
+> 如需现行架构/规范，请以 `README.md`、`docs/architecture/**` 与代码注释为准。
+
 ## 项目概览
 
 **项目名称**: Archium Agent (阿基姆)  
