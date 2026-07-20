@@ -49,10 +49,13 @@ def is_machine_absolute_path(value: str) -> bool:
         return False
     if _WINDOWS_ABS.match(text) or _UNC_ABS.match(text):
         return True
+    # POSIX absolute paths must count even when evaluated on Windows (CI / Docker).
+    if text.startswith("/"):
+        return True
     try:
         return Path(text).is_absolute()
     except (OSError, ValueError):
-        return text.startswith("/")
+        return False
 
 
 def benchmark_asset_uri(case_id: str, relative_path: str) -> str:

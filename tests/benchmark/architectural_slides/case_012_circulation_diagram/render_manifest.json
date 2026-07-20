@@ -17,7 +17,7 @@
   "notes": "normalized_portable_uris=true",
   "screenshot_tools_available": false,
   "pptx_screenshot_generated": false,
-  "pptx_screenshot_reused": false,
+  "pptx_screenshot_reused": true,
   "pptx_screenshot_source_hash": "c017707ee52360004e95c933d9fb110d360aa0f2dab3fb7c5f532911a085536b",
   "render_attempt_id": "04589c19-1419-4cf9-9a05-ff1d473bef98"
 }

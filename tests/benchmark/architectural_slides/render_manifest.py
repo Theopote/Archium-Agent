@@ -281,12 +281,19 @@ def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
 
     consistency_ok = not absolute_left
     render_valid = bool(manifest.render_valid) and consistency_ok
+    pptx_exists = pptx_png.is_file()
     updated = manifest.model_copy(
         update={
             "scene_id": str(portable.id),
             "scene_hash": scene_hash,
-            "pptx_screenshot_source_hash": (
-                scene_hash if pptx_png.is_file() else manifest.pptx_screenshot_source_hash
+            "pptx_screenshot_source_hash": scene_hash if pptx_exists else "",
+            "pptx_screenshot_generated": (
+                manifest.pptx_screenshot_generated if pptx_exists else False
+            ),
+            "pptx_screenshot_reused": (
+                True
+                if pptx_exists and not manifest.pptx_screenshot_generated
+                else manifest.pptx_screenshot_reused
             ),
             "render_valid": render_valid,
             "notes": (
