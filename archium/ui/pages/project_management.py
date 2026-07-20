@@ -115,9 +115,11 @@ def _render_delete_confirmation(project_id: UUID) -> None:
     - 项目记录及数据库中的关联数据（汇报、幻灯片、布局方案、任务与修订等）
     - 项目上传的文档与素材文件
     - 项目向量检索索引
-    - 相关 Studio 预览缓存
+    - 相关导出与 Studio 输出（预览、Marp/PPTX、视觉合成、审阅记录等）
     """)
-    st.caption("删除由应用层统一执行，数据库外键级联与应用存储清理一并处理。")
+    st.caption(
+        "删除由应用层分阶段执行：先标记并隔离项目文件，数据库记录删除成功后再清理向量与输出缓存。"
+    )
 
     col1, col2 = st.columns(2)
     with col1:

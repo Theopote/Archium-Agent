@@ -64,10 +64,21 @@ class ProjectRepository:
         orm = self._session.get(ProjectORM, project_id)
         return mappers.project_to_domain(orm) if orm else None
 
-    def list_all(self, *, status: ProjectStatus | None = None) -> list[Project]:
+    def list_all(
+        self,
+        *,
+        status: ProjectStatus | None = None,
+        include_hidden: bool = False,
+    ) -> list[Project]:
         stmt = select(ProjectORM).order_by(ProjectORM.updated_at.desc())
         if status is not None:
             stmt = stmt.where(ProjectORM.status == status.value)
+        elif not include_hidden:
+            stmt = stmt.where(
+                ProjectORM.status.not_in(
+                    (ProjectStatus.DELETING.value, ProjectStatus.DELETED.value)
+                )
+            )
         return [mappers.project_to_domain(row) for row in self._session.scalars(stmt)]
 
     def update(self, project: Project) -> Project:

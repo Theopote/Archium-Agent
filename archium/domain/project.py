@@ -25,6 +25,11 @@ class Project(IdentifiedModel, TimestampedModel):
         self.status = ProjectStatus.ARCHIVED
         self.touch()
 
+    def mark_deleting(self) -> None:
+        """Mark the project as mid-deletion (hidden from normal listings)."""
+        self.status = ProjectStatus.DELETING
+        self.touch()
+
     def touch(self) -> None:
         """Update the modification timestamp."""
         TimestampedModel.touch(self)

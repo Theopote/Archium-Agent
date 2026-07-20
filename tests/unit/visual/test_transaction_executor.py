@@ -66,10 +66,15 @@ class _HistoryRecord:
 
 
 class _FakeHistory:
-    def __init__(self) -> None:
+    def __init__(self, *, fail_on_call: int | None = None) -> None:
         self.records: list[_HistoryRecord] = []
+        self._call_count = 0
+        self._fail_on_call = fail_on_call
 
     def record_state(self, **kwargs):  # noqa: ANN003
+        self._call_count += 1
+        if self._fail_on_call == self._call_count:
+            raise RuntimeError("history persist failed")
         self.records.append(
             _HistoryRecord(
                 note=kwargs.get("note"),
@@ -84,12 +89,20 @@ class _TrackingSession:
     def __init__(self) -> None:
         self.commits = 0
         self.rollbacks = 0
+        self.flushes = 0
+        self.events: list[str] = []
 
     def commit(self) -> None:
         self.commits += 1
+        self.events.append("commit")
 
     def rollback(self) -> None:
         self.rollbacks += 1
+        self.events.append("rollback")
+
+    def flush(self) -> None:
+        self.flushes += 1
+        self.events.append("flush")
 
 
 def _sample_plan(*, locked: bool = False, hero_id: str | None = None) -> LayoutPlan:
@@ -567,3 +580,51 @@ def test_transaction_records_distinct_per_step_snapshots() -> None:
     assert second_plan is not None
     assert first_plan.elements[0].locked is True
     assert second_plan.elements[0].locked is False
+
+
+def test_transaction_records_history_before_commit() -> None:
+    plan = _sample_plan()
+    session = _TrackingSession()
+    history = _FakeHistory()
+    slide = type(
+        "Slide",
+        (),
+        {"id": plan.slide_id, "layout_plan_id": plan.id, "visual_intent_id": plan.visual_intent_id},
+    )()
+    executor = TransactionExecutor(session, history)
+    result = executor.execute_transaction(
+        operations=[IncreaseWhitespaceOperation()],
+        slide_id=slide.id,
+        slide_snapshot=None,
+        intents_repo=_FakeIntentsRepo(),
+        plans_repo=_FakePlansRepo(plan),
+        presentations_repo=_FakePresentationsRepo(slide),
+    )
+    assert result.success is True
+    assert history.records
+    assert session.events.index("flush") < session.events.index("commit")
+
+
+def test_history_failure_does_not_leave_committed_mutation() -> None:
+    plan = _sample_plan()
+    original_locked = plan.elements[0].locked
+    session = _TrackingSession()
+    history = _FakeHistory(fail_on_call=1)
+    slide = type(
+        "Slide",
+        (),
+        {"id": plan.slide_id, "layout_plan_id": plan.id, "visual_intent_id": plan.visual_intent_id},
+    )()
+    repo = _FakePlansRepo(plan)
+    executor = TransactionExecutor(session, history)
+    result = executor.execute_transaction(
+        operations=[LockOperation(UUID(plan.elements[0].id))],
+        slide_id=slide.id,
+        slide_snapshot=None,
+        intents_repo=_FakeIntentsRepo(),
+        plans_repo=repo,
+        presentations_repo=_FakePresentationsRepo(slide),
+    )
+    assert result.success is False
+    assert history.records == []
+    assert repo.plan.elements[0].locked is original_locked

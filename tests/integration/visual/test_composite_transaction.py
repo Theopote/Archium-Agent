@@ -399,6 +399,9 @@ def test_swap_operation_exchanges_element_positions() -> None:
         def rollback(self) -> None:
             return None
 
+        def flush(self) -> None:
+            return None
+
     plans = _Plans(plan)
     executor = TransactionExecutor(_Session(), type("H", (), {"record_state": lambda *a, **k: None})())  # type: ignore[arg-type]
     result = executor.execute_transaction(

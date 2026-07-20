@@ -32,6 +32,7 @@ class ProjectStage(StrEnum):
 class ProjectStatus(StrEnum):
     ACTIVE = "active"
     ARCHIVED = "archived"
+    DELETING = "deleting"
     DELETED = "deleted"
 
 

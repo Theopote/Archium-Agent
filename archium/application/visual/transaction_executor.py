@@ -135,7 +135,8 @@ class TransactionExecutor:
             - All operations execute within a database transaction
             - Each operation creates a checkpoint before execution
             - On failure, all operations are rolled back
-            - Revision chain tracks the complete operation sequence
+            - Revision history is recorded before commit so data and revisions
+              share the same atomic boundary
         """
         revision_chain_id = uuid4()
         checkpoints: list[Checkpoint] = []
@@ -198,8 +199,6 @@ class TransactionExecutor:
                     )
                 )
 
-            self._session.commit()
-
             for i, step in enumerate(step_states):
                 self._history.record_state(
                     slide=slide,
@@ -211,6 +210,9 @@ class TransactionExecutor:
                         f"{step.operation.operation_type}"
                     ),
                 )
+
+            self._session.flush()
+            self._session.commit()
 
             return TransactionResult(
                 success=True,
