@@ -124,7 +124,8 @@ def test_workflow_run_persists_artifacts(
     assert len(pres_repo.list_briefs(result.presentation.id)) == 1
     assert len(pres_repo.list_storylines(result.presentation.id)) == 1
     assert len(pres_repo.list_slides(result.presentation.id)) == 4
-    assert len(mock_llm.calls) == 3
+    # ingestion fact extraction + brief + storyline + slide plan
+    assert len(mock_llm.calls) == 4
 
     workflow_runs = WorkflowRunRepository(db_session).list_by_presentation(result.presentation.id)
     assert len(workflow_runs) == 1
