@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from archium.application.visual.scene_fonts import (
+    CJK_FALLBACK_CHAIN,
+    LATIN_FALLBACK_CHAIN,
+    text_has_cjk,
+)
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -11,15 +16,9 @@ from archium.domain.visual.render_scene import (
     ShapeNode,
     TextNode,
 )
+from archium.infrastructure.layout.font_resolver import load_truetype_font
 
 DEFAULT_DPI = 96
-_FONT_CANDIDATES = (
-    "Microsoft YaHei",
-    "PingFang SC",
-    "Noto Sans SC",
-    "Arial",
-    "DejaVu Sans",
-)
 
 
 class PngRenderer:
@@ -80,29 +79,40 @@ class PngRenderer:
             )
         return (248, 248, 246)
 
-    def _load_font(self, family: str, size_pt: float, weight: int) -> object:
+    def _font_candidates(self, node: TextNode) -> tuple[str, ...]:
+        primary = node.font_family
+        cjk = node.font_family_cjk or primary
+        latin = node.font_family_latin or primary
+        if text_has_cjk(node.text):
+            chain = (primary, cjk, *CJK_FALLBACK_CHAIN, latin, *LATIN_FALLBACK_CHAIN)
+        else:
+            chain = (primary, latin, *LATIN_FALLBACK_CHAIN, cjk, *CJK_FALLBACK_CHAIN)
+        seen: list[str] = []
+        for name in chain:
+            if name and name not in seen:
+                seen.append(name)
+        return tuple(seen)
+
+    def _load_font(self, node: TextNode, size_pt: float) -> object:
         from PIL import ImageFont
 
         px = max(8, int(round(size_pt * self._dpi / 72)))
-        key = (family, px, weight)
+        bold = node.font_weight >= 600
+        key = (node.font_family, px, node.font_weight, node.font_family_cjk, node.text[:8])
         cached = self._font_cache.get(key)
         if cached is not None:
             return cached
-        bold = weight >= 600
-        for name in (family, *_FONT_CANDIDATES):
+        for name in self._font_candidates(node):
+            loaded = load_truetype_font(name, bold=bold, size_px=px)
+            if loaded is not None:
+                self._font_cache[key] = loaded
+                return loaded
             try:
                 font: object = ImageFont.truetype(name, px)
                 self._font_cache[key] = font
                 return font
             except OSError:
                 continue
-            if bold:
-                try:
-                    font = ImageFont.truetype(f"{name} Bold", px)
-                    self._font_cache[key] = font
-                    return font
-                except OSError:
-                    continue
         font = ImageFont.load_default()
         self._font_cache[key] = font
         return font
@@ -116,7 +126,7 @@ class PngRenderer:
 
     def _draw_text(self, draw: object, node: TextNode) -> None:
         box = self._box(node)
-        font = self._load_font(node.font_family, node.font_size, node.font_weight)
+        font = self._load_font(node, node.font_size)
         color = self._parse_color(node.color)
         pad_x = self._px(node.padding.left)
         pad_y = self._px(node.padding.top)
@@ -125,7 +135,8 @@ class PngRenderer:
             node.text,
             fill=color,
             font=font,
-            spacing=int(round(node.line_height * self._dpi / 72)) - int(node.font_size * self._dpi / 72),
+            spacing=int(round(node.line_height * self._dpi / 72))
+            - int(node.font_size * self._dpi / 72),
         )
 
     def _paste_image(
@@ -168,7 +179,7 @@ class PngRenderer:
         new_w = max(1, int(src_w * scale))
         new_h = max(1, int(src_h * scale))
         resized = asset.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        left = (new_w - target_w) // 2
-        top = (new_h - target_h) // 2
+        left = max(0, (new_w - target_w) // 2)
+        top = max(0, (new_h - target_h) // 2)
         cropped = resized.crop((left, top, left + target_w, top + target_h))
         canvas.paste(cropped, (box[0], box[1]), cropped)  # type: ignore[attr-defined]

@@ -37,7 +37,9 @@
           "alignment": "left"
         }
       ],
-      "font_family": "Arial",
+      "font_family": "Microsoft YaHei",
+      "font_family_cjk": "Microsoft YaHei",
+      "font_family_latin": "Arial",
       "font_size": 34.0,
       "font_weight": 700,
       "font_style": "normal",
@@ -108,7 +110,9 @@
           "alignment": "left"
         }
       ],
-      "font_family": "Arial",
+      "font_family": "Microsoft YaHei",
+      "font_family_cjk": "Microsoft YaHei",
+      "font_family_latin": "Arial",
       "font_size": 12.0,
       "font_weight": 400,
       "font_style": "normal",
@@ -149,7 +153,9 @@
           "alignment": "left"
         }
       ],
-      "font_family": "Arial",
+      "font_family": "Microsoft YaHei",
+      "font_family_cjk": "Microsoft YaHei",
+      "font_family_latin": "Arial",
       "font_size": 12.0,
       "font_weight": 400,
       "font_style": "normal",
@@ -190,7 +196,9 @@
           "alignment": "left"
         }
       ],
-      "font_family": "Arial",
+      "font_family": "Microsoft YaHei",
+      "font_family_cjk": "Microsoft YaHei",
+      "font_family_latin": "Arial",
       "font_size": 12.0,
       "font_weight": 400,
       "font_style": "normal",
@@ -231,7 +239,9 @@
           "alignment": "left"
         }
       ],
-      "font_family": "Arial",
+      "font_family": "Microsoft YaHei",
+      "font_family_cjk": "Microsoft YaHei",
+      "font_family_latin": "Arial",
       "font_size": 12.0,
       "font_weight": 400,
       "font_style": "normal",
@@ -272,7 +282,9 @@
           "alignment": "left"
         }
       ],
-      "font_family": "Arial",
+      "font_family": "Microsoft YaHei",
+      "font_family_cjk": "Microsoft YaHei",
+      "font_family_latin": "Arial",
       "font_size": 8.0,
       "font_weight": 400,
       "font_style": "normal",
@@ -416,15 +428,165 @@
   "font_assets": [
     {
       "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
       "path": null,
-      "weight": 400,
-      "style": "normal"
+      "weight": 700,
+      "style": "normal",
+      "role": "display",
+      "script": "cjk"
     },
     {
       "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 700,
+      "style": "normal",
+      "role": "display",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "path": null,
+      "weight": 700,
+      "style": "normal",
+      "role": "title",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 700,
+      "style": "normal",
+      "role": "title",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
       "path": null,
       "weight": 400,
-      "style": "normal"
+      "style": "normal",
+      "role": "subtitle",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "subtitle",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "path": null,
+      "weight": 700,
+      "style": "normal",
+      "role": "heading",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 700,
+      "style": "normal",
+      "role": "heading",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "body",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "body",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "caption",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "caption",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "path": null,
+      "weight": 700,
+      "style": "normal",
+      "role": "metric",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 700,
+      "style": "normal",
+      "role": "metric",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "footnote",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "footnote",
+      "script": "latin"
+    },
+    {
+      "family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "source",
+      "script": "cjk"
+    },
+    {
+      "family": "Arial",
+      "resolved_family": "Arial",
+      "path": null,
+      "weight": 400,
+      "style": "normal",
+      "role": "source",
+      "script": "latin"
     }
   ],
   "asset_manifest": [

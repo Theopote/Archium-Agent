@@ -6,6 +6,10 @@ import html
 from pathlib import Path
 from urllib.parse import quote
 
+from archium.application.visual.scene_fonts import (
+    DEFAULT_CJK_FONT,
+    css_font_stack,
+)
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -43,7 +47,7 @@ class HtmlRenderer:
     height: {height_px}px;
     background: {bg};
     overflow: hidden;
-    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif;
   }}
   .node {{ position: absolute; overflow: hidden; }}
   .text-node {{
@@ -103,7 +107,12 @@ class HtmlRenderer:
         align = html.escape(node.alignment)
         color = html.escape(node.color)
         weight = node.font_weight
-        family = html.escape(node.font_family)
+        stack = css_font_stack(
+            primary=node.font_family,
+            cjk=node.font_family_cjk or DEFAULT_CJK_FONT,
+            latin=node.font_family_latin or node.font_family,
+        )
+        family = html.escape(stack)
         text = html.escape(node.text)
         pad = node.padding
         padding = (
@@ -113,7 +122,7 @@ class HtmlRenderer:
         return (
             f'<div class="node text-node" id="{html.escape(node.id)}" '
             f'style="{self._box_style(node)}{padding}'
-            f"font-family:{family},sans-serif;font-size:{size_px}px;"
+            f"font-family:{family};font-size:{size_px}px;"
             f"font-weight:{weight};line-height:{line_px}px;color:{color};"
             f'text-align:{align};">{text}</div>'
         )

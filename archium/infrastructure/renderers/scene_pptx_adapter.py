@@ -5,6 +5,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from archium.application.visual.scene_fonts import (
+    DEFAULT_CJK_FONT,
+    detect_font_fallbacks,
+    text_has_cjk,
+)
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -13,18 +18,6 @@ from archium.domain.visual.render_scene import (
     TextNode,
 )
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import RenderedSlideInstruction
-
-_KNOWN_PPTX_FONTS = frozenset(
-    {
-        "Microsoft YaHei",
-        "PingFang SC",
-        "SimHei",
-        "Arial",
-        "Calibri",
-        "Times New Roman",
-        "Helvetica",
-    }
-)
 
 
 class RenderScenePptxAdapter:
@@ -84,16 +77,8 @@ class RenderScenePptxAdapter:
         }
 
     def font_fallbacks(self, scene: RenderScene) -> list[str]:
-        """Return font families requested by the scene that may need fallback."""
-        fallbacks: list[str] = []
-        for node in scene.nodes:
-            if not isinstance(node, TextNode):
-                continue
-            cjk = self._cjk_font(node, scene)
-            for family in {node.font_family, cjk}:
-                if family and family not in _KNOWN_PPTX_FONTS and family not in fallbacks:
-                    fallbacks.append(family)
-        return fallbacks
+        """Return recorded font substitutions (CJK-on-Latin, missing files)."""
+        return detect_font_fallbacks(scene)
 
     def _node_instruction(self, node: object, scene: RenderScene) -> dict[str, Any]:
         if isinstance(node, TextNode):
@@ -108,6 +93,12 @@ class RenderScenePptxAdapter:
 
     def _text_instruction(self, node: TextNode, scene: RenderScene) -> dict[str, Any]:
         content_type = "metric" if node.semantic_role == "metric" else "text"
+        cjk = node.font_family_cjk or self._cjk_font(node, scene)
+        latin = node.font_family_latin or node.font_family
+        # Prefer resolved CJK primary for CJK text so PPTX matches PNG/HTML.
+        primary = node.font_family
+        if text_has_cjk(node.text):
+            primary = cjk
         return {
             "id": node.id,
             "role": node.semantic_role or "body_text",
@@ -119,8 +110,8 @@ class RenderScenePptxAdapter:
             "z_index": node.z_index,
             "alignment": node.alignment,
             "text": node.text,
-            "font_family": node.font_family,
-            "font_family_cjk": self._cjk_font(node, scene),
+            "font_family": latin if not text_has_cjk(node.text) else primary,
+            "font_family_cjk": cjk or DEFAULT_CJK_FONT,
             "font_size": node.font_size,
             "font_weight": node.font_weight,
             "color": node.color.lstrip("#"),
@@ -188,20 +179,24 @@ class RenderScenePptxAdapter:
 
     @staticmethod
     def _cjk_font(node: TextNode, scene: RenderScene) -> str:
+        if node.font_family_cjk:
+            return node.font_family_cjk
         role = node.semantic_role or "body"
         token_name = {
             "title": "title",
             "subtitle": "subtitle",
             "caption": "caption",
             "source": "source",
+            "citation": "source",
             "metric": "metric",
             "body_text": "body",
             "lead_statement": "body",
             "page_number": "footnote",
+            "heading": "heading",
         }.get(role, "body")
         token = scene.theme_tokens.typography.get(token_name, {})
         if isinstance(token, dict):
             family = token.get("font_family")
             if isinstance(family, str) and family:
                 return family
-        return "Microsoft YaHei"
+        return DEFAULT_CJK_FONT

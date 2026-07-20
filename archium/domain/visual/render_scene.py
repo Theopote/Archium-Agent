@@ -67,10 +67,15 @@ class ThemeTokens(DomainModel):
 
 
 class FontAsset(DomainModel):
+    """A font referenced by the scene (portable — no host filesystem paths)."""
+
     family: str
+    resolved_family: str | None = None
     path: str | None = None
     weight: int = 400
     style: str = "normal"
+    role: str = ""
+    script: str = ""  # cjk | latin | mixed
 
 
 class SceneAssetReference(DomainModel):
@@ -126,6 +131,8 @@ class TextNode(BaseRenderNode):
     text: str
     paragraphs: list[TextParagraph] = Field(default_factory=list)
     font_family: str
+    font_family_cjk: str = ""
+    font_family_latin: str = ""
     font_size: float = Field(gt=0)
     font_weight: int = Field(default=400, ge=100, le=900)
     font_style: str = "normal"

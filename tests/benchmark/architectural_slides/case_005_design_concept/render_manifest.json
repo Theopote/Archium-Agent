@@ -5,7 +5,7 @@
   "scene_path": "scene.json",
   "scene_preview_path": "scene_preview.png",
   "scene_id": "f892a3eb-2c19-4141-b0fb-4af8c6559d21",
-  "scene_hash": "1289122ac0b3aa54f6bf3ea889e30fdd706a4e709aa3e0bac7b34e9e90f3b973",
+  "scene_hash": "e4c26033904a59b815e1ecc76f2ae1340a9eedc471033cbf9e326193f2b17e85",
   "rendered_at": "2026-07-20T17:02:01.206987Z",
   "renderer": "png_renderer+pptxgenjs",
   "asset_count": 0,
@@ -18,6 +18,6 @@
   "screenshot_tools_available": false,
   "pptx_screenshot_generated": false,
   "pptx_screenshot_reused": true,
-  "pptx_screenshot_source_hash": "1289122ac0b3aa54f6bf3ea889e30fdd706a4e709aa3e0bac7b34e9e90f3b973",
+  "pptx_screenshot_source_hash": "e4c26033904a59b815e1ecc76f2ae1340a9eedc471033cbf9e326193f2b17e85",
   "render_attempt_id": "db27595d-7e84-43db-9a41-524ccd668972"
 }

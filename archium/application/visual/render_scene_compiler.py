@@ -22,6 +22,10 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from archium.application.visual.asset_reference import is_supported_layout_image_path
+from archium.application.visual.scene_fonts import (
+    collect_font_assets,
+    resolve_text_fonts,
+)
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -34,7 +38,6 @@ from archium.domain.visual.render_scene import (
     DrawingFitMode,
     DrawingNode,
     DrawingType,
-    FontAsset,
     ImageNode,
     RenderScene,
     SceneAssetReference,
@@ -140,13 +143,10 @@ class RenderSceneCompiler:
             },
             spacing=design_system.spacing.model_dump(),
         )
-        font_assets = [
-            FontAsset(family=design_system.typography.title.font_family),
-            FontAsset(
-                family=design_system.typography.title.font_family_latin
-                or design_system.typography.title.font_family
-            ),
-        ]
+        font_assets = collect_font_assets(
+            design_system,
+            [n for n in nodes if isinstance(n, TextNode)],
+        )
 
         return RenderScene(
             slide_id=layout_plan.slide_id,
@@ -227,7 +227,7 @@ class RenderSceneCompiler:
             LayoutContentType.TABLE,
         }:
             # V1: TABLE has no TableNode — emit TextNode (not an editable grid).
-            nodes = list(self._compile_text(element, design_system, bundle))
+            nodes = list(self._compile_text(element, design_system, bundle, warnings))
         elif element.content_type == LayoutContentType.SHAPE:
             nodes = list(self._compile_shape(element, design_system))
         return nodes
@@ -237,6 +237,7 @@ class RenderSceneCompiler:
         element: LayoutElement,
         design_system: DesignSystem,
         bundle: SlideContentBundle,
+        warnings: list[str],
     ) -> list[TextNode | ShapeNode]:
         typography = resolve_text_style(element, design_system.typography)
         color = design_system.colors.resolve(typography.color_token)
@@ -272,6 +273,14 @@ class RenderSceneCompiler:
         semantic = "metric" if element.role == LayoutElementRole.METRIC else element.role.value
         if element.role == LayoutElementRole.SOURCE:
             semantic = "citation"
+        cjk_family = typography.font_family
+        latin_family = typography.font_family_latin or typography.font_family
+        resolved = resolve_text_fonts(
+            text,
+            cjk_family=cjk_family,
+            latin_family=latin_family,
+            bold=typography.font_weight >= 600,
+        )
         nodes.append(
             TextNode(
                 id=element.id,
@@ -286,7 +295,9 @@ class RenderSceneCompiler:
                 lock_scopes=[scope.value for scope in element.lock_scopes],
                 text=text,
                 paragraphs=[TextParagraph(text=text, alignment=element.alignment)],
-                font_family=font_family,
+                font_family=resolved.primary,
+                font_family_cjk=resolved.cjk,
+                font_family_latin=resolved.latin,
                 font_size=typography.font_size,
                 font_weight=typography.font_weight,
                 color=color,

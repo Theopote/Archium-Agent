@@ -44,6 +44,16 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 
 **对外口径：** 参考风格结构存在；**RenderScene 风格落地未通过**。不得把「Reference Style / Template Studio 已接入」说成 Scene 已吃到参考风格。
 
+## Font system (2026-07-21)
+
+| Claim | Status |
+|------|--------|
+| 中文节点存 resolved CJK family（默认 Microsoft YaHei） | **Enforced** via `scene_fonts.resolve_text_fonts` |
+| `font_assets` 覆盖全部 typography roles | **Enforced** (`display`…`source`) |
+| HTML / PNG / PPTX 共用 fallback chain | **Enforced** (`CJK_FALLBACK_CHAIN` / `LATIN_FALLBACK_CHAIN`) |
+| `font_fallbacks` 识别 Arial→CJK 隐式替换 | **Enforced** via `detect_font_fallbacks` |
+| 本机字体路径写入 Scene | **Forbidden**（仅 manifest 记录运行时替换） |
+
 ## Architectural Slide Benchmark (30 cases)
 
 | Gate | Status | Evidence |

@@ -13,6 +13,7 @@ from archium.application.visual.asset_path_resolver import (
     AssetPathResolver,
     scene_has_machine_absolute_paths,
 )
+from archium.application.visual.scene_fonts import detect_font_fallbacks, repair_scene_fonts
 from archium.domain.visual.benchmark import BenchmarkRenderManifest
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 
@@ -257,6 +258,7 @@ def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
         benchmark_root=case_dir.parent,
     )
     portable = resolver.portableize_scene(scene, ctx)
+    portable = repair_scene_fonts(portable)
     scene_hash = compute_scene_hash(portable)
     scene_path = case_dir / SCENE_JSON_NAME
     scene_path.write_text(
@@ -282,10 +284,12 @@ def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
     consistency_ok = not absolute_left
     render_valid = bool(manifest.render_valid) and consistency_ok
     pptx_exists = pptx_png.is_file()
+    font_fallbacks = detect_font_fallbacks(portable)
     updated = manifest.model_copy(
         update={
             "scene_id": str(portable.id),
             "scene_hash": scene_hash,
+            "font_fallbacks": font_fallbacks,
             "pptx_screenshot_source_hash": scene_hash if pptx_exists else "",
             "pptx_screenshot_generated": (
                 manifest.pptx_screenshot_generated if pptx_exists else False
