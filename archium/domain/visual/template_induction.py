@@ -169,6 +169,49 @@ class OutlineTemplateCompatibility(DomainModel):
         "free_composition",
         "manual_required",
     ] = "free_composition"
+    # Phase 6: populated when template_editing route executes scene generation.
+    edit_scene_status: Literal["pending", "generated", "skipped", "failed"] = "pending"
+    edit_scene_relative_path: str = ""
+
+
+class TemplateEditingPageResult(DomainModel):
+    """One co-plan page executed through reference-slide editing."""
+
+    slide_id: str = Field(min_length=1)
+    section_id: str = ""
+    schema_id: str | None = None
+    representative_slide_id: str | None = None
+    layout_id: str | None = None
+    status: Literal["generated", "skipped", "failed"]
+    edit_scene_relative_path: str = ""
+    node_count: int = Field(default=0, ge=0)
+    stripped_text_count: int = Field(default=0, ge=0)
+    stripped_asset_count: int = Field(default=0, ge=0)
+    warnings: list[str] = Field(default_factory=list)
+    error: str = ""
+
+
+class OutlineTemplateEditingBatch(DomainModel):
+    """Batch result for co-plan ``template_editing`` scene generation."""
+
+    co_plan_id: str = ""
+    outline_id: str = ""
+    induction_id: str = ""
+    template_id: str = ""
+    page_results: list[TemplateEditingPageResult] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+    @property
+    def generated_count(self) -> int:
+        return sum(1 for page in self.page_results if page.status == "generated")
+
+    @property
+    def skipped_count(self) -> int:
+        return sum(1 for page in self.page_results if page.status == "skipped")
+
+    @property
+    def failed_count(self) -> int:
+        return sum(1 for page in self.page_results if page.status == "failed")
 
 
 class SchemaAffinityScore(DomainModel):

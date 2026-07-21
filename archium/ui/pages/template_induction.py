@@ -571,8 +571,9 @@ def _render_co_plan() -> None:
     st.markdown("#### Outline–Template 协同规划（Phase 5 · 实验性）")
     st.caption(
         "将大纲章节映射到已归纳 Schema：模板亲和 / 兼容检查 / "
-        "未匹配模板页暴露 / Free Composition fallback。实验性功能；"
-        "在至少一套真实模板正式发布前，不得用于真实交付物生成。"
+        "未匹配模板页暴露 / Free Composition fallback。"
+        "可对 ``template_editing`` 路由执行参考页编辑式 Scene 生成（Phase 6 骨架）。"
+        "实验性功能；在至少一套真实模板正式发布前，不得用于真实交付物生成。"
     )
     scenario = st.radio(
         "示例大纲",
@@ -581,16 +582,11 @@ def _render_co_plan() -> None:
         key="induction_co_plan_scenario",
     )
     if not st.button("生成协同规划", key="induction_run_co_plan", use_container_width=True):
-        existing = workspace / "outline_template_co_plan.json"
-        if existing.is_file():
-            import json
-
-            from archium.domain.visual.template_induction import OutlineTemplateCoPlan
-
-            co_plan = OutlineTemplateCoPlan.model_validate(
-                json.loads(existing.read_text(encoding="utf-8"))
-            )
-            _show_co_plan(co_plan)
+        service = TemplateInductionService()
+        co_plan = service.load_co_plan(workspace)
+        if co_plan is not None:
+            _show_co_plan(co_plan, workspace=workspace)
+            _render_template_editing_panel(workspace, co_plan)
         return
 
     from uuid import uuid4
@@ -632,10 +628,82 @@ def _render_co_plan() -> None:
         f"自由构图 {len(co_plan.free_composition_page_ids)} · "
         f"需人工 {len(co_plan.manual_required_page_ids)}"
     )
-    _show_co_plan(co_plan)
+    _show_co_plan(co_plan, workspace=workspace)
+    _render_template_editing_panel(workspace, co_plan)
 
 
-def _show_co_plan(co_plan: OutlineTemplateCoPlan) -> None:
+def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPlan) -> None:
+    from archium.application.visual.template_induction_service import TemplateInductionService
+    from archium.domain.visual.template_induction import OutlineTemplateEditingBatch
+
+    if not co_plan.template_editing_page_ids:
+        return
+
+    st.markdown("##### 模板编辑路由（Phase 6 · 骨架）")
+    st.caption(
+        f"{len(co_plan.template_editing_page_ids)} 页路由为 template_editing，"
+        "将参考页结构复制为 RenderScene 并剥离 reference 内容。"
+    )
+    service = TemplateInductionService()
+    existing_batch = service.load_template_editing_batch(workspace)
+    if existing_batch is not None:
+        st.info(
+            f"已有编辑批次：生成 {existing_batch.generated_count} · "
+            f"跳过 {existing_batch.skipped_count} · "
+            f"失败 {existing_batch.failed_count}"
+        )
+
+    if st.button("执行 template_editing 路由", key="induction_run_template_editing"):
+        outline = service.load_outline_plan(workspace)
+        if outline is None:
+            st.error("缺少 outline_plan.json，请重新生成协同规划。")
+            return
+        try:
+            presentation, induction = service.load_workspace(workspace)
+            template = service.load_architectural_template(workspace)
+            if template is None:
+                st.error("缺少 architectural_template.json，请先 materialize 归纳模板。")
+                return
+            batch, updated = service.execute_co_plan_template_editing(
+                induction,
+                outline,
+                co_plan,
+                presentation,
+                template=template,
+                workspace=workspace,
+            )
+        except Exception as exc:  # noqa: BLE001
+            st.error(format_user_error(exc))
+            return
+        st.success(
+            f"模板编辑完成：生成 {batch.generated_count} · "
+            f"跳过 {batch.skipped_count} · 失败 {batch.failed_count}"
+        )
+        _show_co_plan(updated, workspace=workspace)
+        _show_template_editing_batch(batch)
+
+
+def _show_template_editing_batch(batch: OutlineTemplateEditingBatch) -> None:
+    rows = []
+    for page in batch.page_results[:40]:
+        rows.append(
+            {
+                "page": page.slide_id,
+                "status": page.status,
+                "nodes": page.node_count,
+                "stripped_text": page.stripped_text_count,
+                "stripped_asset": page.stripped_asset_count,
+                "scene": page.edit_scene_relative_path or "",
+                "error": page.error[:80] if page.error else "",
+            }
+        )
+    if rows:
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+    for warning in batch.warnings:
+        st.warning(warning)
+
+
+def _show_co_plan(co_plan: OutlineTemplateCoPlan, *, workspace: Path | None = None) -> None:
     for warning in co_plan.warnings:
         st.warning(warning)
     c1, c2, c3, c4 = st.columns(4)
@@ -657,11 +725,18 @@ def _show_co_plan(co_plan: OutlineTemplateCoPlan) -> None:
                 "content": page.inferred_content_type.value,
                 "affinity": page.template_affinity,
                 "mode": page.fallback_mode,
+                "edit": page.edit_scene_status,
                 "schema": (page.schema_id or "")[:8],
             }
         )
     if rows:
         st.dataframe(rows, use_container_width=True, hide_index=True)
+    if workspace is not None:
+        scenes_dir = workspace / "co_plan_scenes"
+        if scenes_dir.is_dir():
+            scene_count = sum(1 for _ in scenes_dir.rglob("render_scene.json"))
+            if scene_count:
+                st.caption(f"已写入 {scene_count} 个 RenderScene 至 co_plan_scenes/")
 
 
 def render() -> None:
@@ -670,7 +745,7 @@ def render() -> None:
         "从参考 PPTX 归纳功能页、内容聚类与建筑内容 Schema，"
         "并支持 Outline–Template 协同规划（实验性）。"
         "Phase 4 可开发测试；正式发布需通过发布门且完成 Phase 3.5 人工复核。"
-        "Phase 6 参考页编辑式生成暂缓。"
+        "Phase 6 参考页编辑式生成已接 Co-plan template_editing 路由（骨架）。"
     )
     _render_upload()
     st.divider()

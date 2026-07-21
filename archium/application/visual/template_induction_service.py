@@ -26,9 +26,13 @@ from archium.application.visual.induction_cluster_editor import rebuild_clusters
 from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )
+from archium.application.visual.outline_template_editing_service import (
+    OutlineTemplateEditingService,
+)
 from archium.application.visual.reference_slide_clusterer import ReferenceSlideClusterer
 from archium.application.visual.representative_slide_selector import RepresentativeSlideSelector
 from archium.config.settings import Settings, get_settings
+from archium.domain.asset import Asset
 from archium.domain.outline import OutlinePlan
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
@@ -36,10 +40,12 @@ from archium.domain.visual.architectural_content_schema import (
     SchemaReviewOverride,
 )
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.reference_slide import ReferencePresentation
 from archium.domain.visual.template_induction import (
     InductionReviewOverride,
     OutlineTemplateCoPlan,
+    OutlineTemplateEditingBatch,
     TemplateInductionResult,
     TemplateInductionStatus,
 )
@@ -85,6 +91,7 @@ class TemplateInductionService:
         schema_extractor: ArchitecturalContentSchemaExtractor | None = None,
         publish_gate: ArchitecturalContentSchemaPublishGate | None = None,
         co_planner: OutlineTemplateCoPlanningService | None = None,
+        template_editor: OutlineTemplateEditingService | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._parser = parser or ReferencePptxParser()
@@ -94,6 +101,7 @@ class TemplateInductionService:
         self._schema_extractor = schema_extractor or ArchitecturalContentSchemaExtractor()
         self._publish_gate = publish_gate or ArchitecturalContentSchemaPublishGate()
         self._co_planner = co_planner or OutlineTemplateCoPlanningService()
+        self._template_editor = template_editor or OutlineTemplateEditingService()
 
     def workspace_root(self, induction_id: UUID | str) -> Path:
         path = self._settings.output_path / "template-induction" / str(induction_id)
@@ -571,7 +579,83 @@ class TemplateInductionService:
                 json.dumps(co_plan.model_dump(mode="json"), ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+            outline_path = workspace / "outline_plan.json"
+            outline_path.write_text(
+                json.dumps(outline.model_dump(mode="json"), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
         return co_plan
+
+    def load_outline_plan(self, workspace: Path) -> OutlinePlan | None:
+        path = workspace / "outline_plan.json"
+        if not path.is_file():
+            return None
+        return OutlinePlan.model_validate(json.loads(path.read_text(encoding="utf-8")))
+
+    def load_co_plan(self, workspace: Path) -> OutlineTemplateCoPlan | None:
+        path = workspace / "outline_template_co_plan.json"
+        if not path.is_file():
+            return None
+        return OutlineTemplateCoPlan.model_validate(
+            json.loads(path.read_text(encoding="utf-8"))
+        )
+
+    def load_template_editing_batch(
+        self, workspace: Path
+    ) -> OutlineTemplateEditingBatch | None:
+        path = workspace / "outline_template_editing_batch.json"
+        if not path.is_file():
+            return None
+        return OutlineTemplateEditingBatch.model_validate(
+            json.loads(path.read_text(encoding="utf-8"))
+        )
+
+    def execute_co_plan_template_editing(
+        self,
+        induction: TemplateInductionResult,
+        outline: OutlinePlan,
+        co_plan: OutlineTemplateCoPlan,
+        presentation: ReferencePresentation,
+        *,
+        schemas: list[ArchitecturalContentSchema] | None = None,
+        template: ArchitecturalTemplate | None = None,
+        assets: list[Asset] | None = None,
+        design_system: DesignSystem | None = None,
+        workspace: Path | None = None,
+    ) -> tuple[OutlineTemplateEditingBatch, OutlineTemplateCoPlan]:
+        """Phase 6: materialize RenderScenes for co-plan ``template_editing`` pages."""
+        schema_list = schemas or [
+            ArchitecturalContentSchema.model_validate(item)
+            for item in induction.content_schemas
+        ]
+        arch_template = template
+        if arch_template is None and workspace is not None:
+            arch_template = self.load_architectural_template(workspace)
+        if arch_template is None:
+            raise WorkflowError(
+                "缺少 architectural_template.json，请先 materialize 归纳模板后再执行 template_editing。"
+            )
+
+        batch, updated_co_plan = self._template_editor.execute(
+            co_plan=co_plan,
+            outline=outline,
+            presentation=presentation,
+            schemas=schema_list,
+            template=arch_template,
+            assets=assets,
+            design_system=design_system,
+            workspace=workspace,
+        )
+        if workspace is not None:
+            self.export_artifacts(
+                workspace,
+                presentation,
+                induction,
+                schemas=schema_list,
+                co_plan=updated_co_plan,
+                editing_batch=batch,
+            )
+        return batch, updated_co_plan
 
     def export_artifacts(
         self,
@@ -582,6 +666,7 @@ class TemplateInductionService:
         schemas: list[ArchitecturalContentSchema] | None = None,
         publish_report: SchemaPublishReport | None = None,
         co_plan: OutlineTemplateCoPlan | None = None,
+        editing_batch: OutlineTemplateEditingBatch | None = None,
     ) -> dict[str, Path]:
         slides_dir = workspace / "slides"
         slides_dir.mkdir(parents=True, exist_ok=True)
@@ -681,6 +766,10 @@ class TemplateInductionService:
             "slides_dir": slides_dir,
         }
 
+        outline_path = workspace / "outline_plan.json"
+        if outline_path.is_file():
+            paths["outline_plan"] = outline_path
+
         if co_plan is not None:
             co_plan_path = workspace / "outline_template_co_plan.json"
             co_plan_path.write_text(
@@ -688,6 +777,14 @@ class TemplateInductionService:
                 encoding="utf-8",
             )
             paths["outline_template_co_plan"] = co_plan_path
+
+        if editing_batch is not None:
+            batch_path = workspace / "outline_template_editing_batch.json"
+            batch_path.write_text(
+                json.dumps(editing_batch.model_dump(mode="json"), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            paths["outline_template_editing_batch"] = batch_path
 
         template_path = workspace / "architectural_template.json"
         if template_path.is_file():
