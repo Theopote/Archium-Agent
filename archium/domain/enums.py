@@ -165,6 +165,7 @@ class RevisionSource(StrEnum):
     MANUAL_EDIT = "manual_edit"
     REGENERATION = "regeneration"
     AUTO_REPAIR = "auto_repair"
+    AI_PROPOSAL = "ai_proposal"
     CLARIFICATION = "clarification"
     APPROVAL = "approval"
     IMPORT = "import"
@@ -208,6 +209,7 @@ class RevisionEntityType(StrEnum):
     ART_DIRECTION = "art_direction"
     VISUAL_INTENT = "visual_intent"
     LAYOUT_PLAN = "layout_plan"
+    RENDER_SCENE = "render_scene"
     HUMAN_VISUAL_REVIEW = "human_visual_review"
 
 

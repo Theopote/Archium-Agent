@@ -88,7 +88,19 @@ def render() -> None:
         st.divider()
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
         st.divider()
-        render_ai_edit_panel(slide_snapshot=slide_snapshot)
+        render_ai_edit_panel(
+            slide_snapshot=slide_snapshot,
+            presentation_id=context.presentation.id,
+        )
+        st.divider()
+        from archium.ui.llm_settings import get_ui_effective_settings
+        from archium.ui.studio.proposal_compare_panel import render_proposal_compare_panel
+
+        render_proposal_compare_panel(
+            slide_snapshot=slide_snapshot,
+            presentation_id=context.presentation.id,
+            settings=get_ui_effective_settings(),
+        )
         st.divider()
         render_human_review_panel(
             presentation_id=context.presentation.id,

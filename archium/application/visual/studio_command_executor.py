@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from archium.application.visual.scene_repair_service import SceneRepairService
@@ -14,11 +14,22 @@ from archium.domain.visual.page_quality import (
     QualityIssue,
     QualityIssueSource,
 )
-from archium.domain.visual.render_scene import RenderScene, TextNode, compute_scene_hash
+from archium.domain.visual.reference_slide import REFERENCE_TEMPLATE_ASSET_ORIGIN
+from archium.domain.visual.render_scene import (
+    BaseRenderNode,
+    DrawingNode,
+    ImageNode,
+    RenderScene,
+    SceneAssetReference,
+    TextNode,
+    compute_scene_hash,
+)
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction
 from archium.domain.visual.studio_command import (
     FixOverflowCommand,
+    ReplaceAssetCommand,
+    ReplaceDrawingCommand,
     RewriteTextCommand,
     ScenePatchAction,
     StudioCommand,
@@ -31,6 +42,9 @@ class StudioExecutionContext:
 
     presentation_id: UUID
     slide_order: int = 0
+    forbidden_asset_origins: frozenset[str] = field(
+        default_factory=lambda: frozenset({REFERENCE_TEMPLATE_ASSET_ORIGIN})
+    )
 
 
 @dataclass(frozen=True)
@@ -46,13 +60,23 @@ class CommandExecutionResult:
 
 
 _CONTENT_LOCK_SCOPES = frozenset({"content", "all"})
+_ASSET_LOCK_SCOPES = frozenset({"asset", "all"})
 
 
-def node_content_locked(node: TextNode) -> bool:
+def node_content_locked(node: BaseRenderNode) -> bool:
     """Return True when text content on a render node must not be mutated."""
+    return _node_has_lock_scope(node, _CONTENT_LOCK_SCOPES)
+
+
+def node_asset_locked(node: BaseRenderNode) -> bool:
+    """Return True when asset binding on a render node must not be mutated."""
+    return _node_has_lock_scope(node, _ASSET_LOCK_SCOPES)
+
+
+def _node_has_lock_scope(node: BaseRenderNode, scopes: frozenset[str]) -> bool:
     if node.locked:
         return True
-    return bool(_CONTENT_LOCK_SCOPES & set(node.lock_scopes))
+    return bool(scopes & set(node.lock_scopes))
 
 
 class StudioCommandExecutor:
@@ -72,6 +96,10 @@ class StudioCommandExecutor:
             return self._execute_rewrite_text(scene, command, base_hash)
         if isinstance(command, FixOverflowCommand):
             return self._execute_fix_overflow(scene, command, context, base_hash)
+        if isinstance(command, ReplaceAssetCommand):
+            return self._execute_replace_asset(scene, command, context, base_hash)
+        if isinstance(command, ReplaceDrawingCommand):
+            return self._execute_replace_drawing(scene, command, context, base_hash)
         return CommandExecutionResult(
             success=False,
             base_scene_hash=base_hash,
@@ -214,6 +242,236 @@ class StudioCommandExecutor:
             skipped_actions=tuple(skipped),
         )
 
+    def _execute_replace_asset(
+        self,
+        scene: RenderScene,
+        command: ReplaceAssetCommand,
+        context: StudioExecutionContext,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        origin_issue = _validate_asset_origin(
+            command.asset_origin,
+            forbidden=context.forbidden_asset_origins,
+        )
+        if origin_issue is not None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(origin_issue,),
+            )
+
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if not isinstance(node, ImageNode):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.NODE_NOT_IMAGE",
+                        message=f"node `{command.node_id}` is not an image node",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+        if node_asset_locked(node):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="replace_asset",
+                node_id=command.node_id,
+                lock_kind="asset",
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert isinstance(target, ImageNode)
+        before_uri = target.storage_uri or target.asset_path
+        uri = command.storage_uri.strip()
+        target.asset_id = command.asset_id
+        target.storage_uri = uri
+        target.asset_path = uri
+        target.asset_origin = command.asset_origin
+        target.asset_unresolved = False
+        _upsert_asset_manifest(
+            patched,
+            asset_id=command.asset_id,
+            storage_uri=uri,
+            origin=command.asset_origin,
+        )
+
+        action = ScenePatchAction(
+            scene_id=scene.slide_id,
+            node_id=command.node_id,
+            action_type="replace_asset",
+            property_name="storage_uri",
+            before_value=before_uri or None,
+            after_value=uri,
+            after_asset_id=command.asset_id,
+            reason=command.reason or "replace image asset",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_replace_drawing(
+        self,
+        scene: RenderScene,
+        command: ReplaceDrawingCommand,
+        context: StudioExecutionContext,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        origin_issue = _validate_asset_origin(
+            "project_upload",
+            forbidden=context.forbidden_asset_origins,
+        )
+        if origin_issue is not None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(origin_issue,),
+            )
+
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if not isinstance(node, DrawingNode):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.NODE_NOT_DRAWING",
+                        message=f"node `{command.node_id}` is not a drawing node",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+        if node_asset_locked(node):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="replace_drawing",
+                node_id=command.node_id,
+                lock_kind="asset",
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert isinstance(target, DrawingNode)
+        before_uri = target.storage_uri or target.asset_path
+        uri = command.storage_uri.strip()
+        target.asset_id = command.asset_id
+        target.storage_uri = uri
+        target.asset_path = uri
+        target.fit_mode = "contain"
+        target.preserve_aspect_ratio = command.preserve_aspect_ratio
+        target.preserve_annotations = command.preserve_annotations
+        target.asset_unresolved = False
+        if command.drawing_type is not None:
+            target.drawing_type = command.drawing_type
+        _upsert_asset_manifest(
+            patched,
+            asset_id=command.asset_id,
+            storage_uri=uri,
+            origin="project_upload",
+        )
+
+        action = ScenePatchAction(
+            scene_id=scene.slide_id,
+            node_id=command.node_id,
+            action_type="replace_drawing",
+            property_name="storage_uri",
+            before_value=before_uri or None,
+            after_value=uri,
+            after_asset_id=command.asset_id,
+            reason=command.reason or "replace drawing asset",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+
+def _node_not_found(base_hash: str, node_id: str) -> CommandExecutionResult:
+    return CommandExecutionResult(
+        success=False,
+        base_scene_hash=base_hash,
+        issues=(
+            _issue(
+                code="STUDIO.NODE_NOT_FOUND",
+                message=f"node `{node_id}` not found",
+                evidence=[node_id],
+            ),
+        ),
+    )
+
+
+def _locked_result(
+    *,
+    base_hash: str,
+    command_type: str,
+    node_id: str,
+    lock_kind: str,
+) -> CommandExecutionResult:
+    return CommandExecutionResult(
+        success=False,
+        base_scene_hash=base_hash,
+        skipped_actions=(f"{command_type}:{node_id}:locked",),
+        issues=(
+            _issue(
+                code="STUDIO.NODE_LOCKED",
+                message=f"node `{node_id}` is locked for {lock_kind} edits",
+                evidence=[node_id],
+            ),
+        ),
+    )
+
+
+def _validate_asset_origin(
+    origin: str,
+    *,
+    forbidden: frozenset[str],
+) -> QualityIssue | None:
+    if origin in forbidden:
+        return _issue(
+            code="STUDIO.FORBIDDEN_ASSET_ORIGIN",
+            message=f"asset origin `{origin}` is not allowed on project slides",
+            severity=IssueSeverity.BLOCKER,
+            category=IssueCategory.ARCHITECTURAL,
+            evidence=[origin],
+        )
+    return None
+
+
+def _upsert_asset_manifest(
+    scene: RenderScene,
+    *,
+    asset_id: UUID,
+    storage_uri: str,
+    origin: str,
+) -> None:
+    uri = storage_uri.strip()
+    for ref in scene.asset_manifest:
+        if ref.asset_id == asset_id or ref.storage_uri == uri:
+            ref.storage_uri = uri
+            ref.asset_path = uri
+            ref.origin = origin
+            ref.asset_id = asset_id
+            return
+    scene.asset_manifest.append(
+        SceneAssetReference(
+            asset_id=asset_id,
+            storage_uri=uri,
+            asset_path=uri,
+            origin=origin,
+        )
+    )
+
 
 def _resolve_target_node_ids(command: FixOverflowCommand) -> set[str]:
     if command.node_ids:
@@ -278,12 +536,13 @@ def _issue(
     code: str,
     message: str,
     severity: IssueSeverity = IssueSeverity.MAJOR,
+    category: IssueCategory = IssueCategory.DELIVERY_EDITABILITY,
     evidence: list[str] | None = None,
 ) -> QualityIssue:
     return QualityIssue(
         code=code,
         severity=severity,
-        category=IssueCategory.DELIVERY_EDITABILITY,
+        category=category,
         message=message,
         evidence=evidence or [],
         source=QualityIssueSource.AUTO,

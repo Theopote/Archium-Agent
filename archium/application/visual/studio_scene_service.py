@@ -75,6 +75,10 @@ class StudioSceneService:
         digest = compute_scene_hash(scene)[:16]
         return cache_dir / f"{scene.layout_plan_id}_{digest}.png"
 
+    def render_scene_preview(self, presentation_id: UUID, scene: RenderScene) -> Path:
+        """Render or reuse a PNG preview for an arbitrary RenderScene."""
+        return self._ensure_preview(presentation_id, scene)
+
     def invalidate_preview_cache(
         self,
         presentation_id: UUID,

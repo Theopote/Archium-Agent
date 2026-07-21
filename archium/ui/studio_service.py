@@ -353,6 +353,44 @@ def analyze_slide_content_adaptation(
     )
 
 
+def create_slide_scene_proposal_from_text(
+    session: Session,
+    slide_id: UUID,
+    text: str,
+) -> object:
+    """Parse NL text into Studio commands and return a SceneChangeProposal."""
+    from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
+    from archium.ui.llm_settings import get_ui_effective_settings
+
+    settings = _resolve_runtime_settings(None)
+    return StudioNLProposalService(
+        session,
+        settings=settings,
+        use_llm=settings.llm_configured,
+    ).create_proposal_from_text(slide_id, text)
+
+
+def create_slide_scene_proposal_from_intent(
+    session: Session,
+    slide_id: UUID,
+    intent: object,
+    *,
+    params: dict[str, object] | None = None,
+) -> object:
+    """Map a preset visual intent to Studio commands and return a SceneChangeProposal."""
+    from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
+    from archium.domain.visual.edit_intent import VisualEditIntent
+
+    if not isinstance(intent, VisualEditIntent):
+        raise WorkflowError("无效的 Scene 提案意图。")
+    settings = _resolve_runtime_settings(None)
+    return StudioNLProposalService(
+        session,
+        settings=settings,
+        use_llm=settings.llm_configured,
+    ).create_proposal_from_intent(slide_id, intent, params=params)
+
+
 def apply_slide_visual_edit(
     session: Session,
     slide_id: UUID,

@@ -8,6 +8,15 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import DomainModel, new_uuid
+from archium.domain.visual.render_scene import DrawingType
+
+ImageAssetOrigin = Literal[
+    "project_upload",
+    "public_research",
+    "reference_case",
+    "ai_generated",
+    "stock_image",
+]
 
 
 class StudioCommandBase(DomainModel):
@@ -40,8 +49,33 @@ class FixOverflowCommand(StudioCommandBase):
     allow_shrink_policy: bool = True
 
 
+class ReplaceAssetCommand(StudioCommandBase):
+    """Replace the bound asset on an ImageNode."""
+
+    command_type: Literal["replace_asset"] = "replace_asset"
+    node_id: str = Field(min_length=1)
+    asset_id: UUID
+    storage_uri: str = Field(min_length=1)
+    asset_origin: ImageAssetOrigin = "project_upload"
+
+
+class ReplaceDrawingCommand(StudioCommandBase):
+    """Replace the bound asset on a DrawingNode (always contain fit)."""
+
+    command_type: Literal["replace_drawing"] = "replace_drawing"
+    node_id: str = Field(min_length=1)
+    asset_id: UUID
+    storage_uri: str = Field(min_length=1)
+    drawing_type: DrawingType | None = None
+    preserve_aspect_ratio: bool = True
+    preserve_annotations: bool = True
+
+
 StudioCommand = Annotated[
-    RewriteTextCommand | FixOverflowCommand,
+    RewriteTextCommand
+    | FixOverflowCommand
+    | ReplaceAssetCommand
+    | ReplaceDrawingCommand,
     Field(discriminator="command_type"),
 ]
 
@@ -56,4 +90,5 @@ class ScenePatchAction(DomainModel):
     property_name: str = ""
     before_value: str | None = None
     after_value: str | None = None
+    after_asset_id: UUID | None = None
     reason: str = ""
