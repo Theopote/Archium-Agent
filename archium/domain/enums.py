@@ -454,6 +454,22 @@ class AssetType(StrEnum):
     OTHER = "other"
 
 
+class PipelineRole(StrEnum):
+    """Logical pipeline roles — annotation vocabulary, not runtime Agent classes.
+
+    See ``docs/architecture/pipeline-roles.md``. Services and workflow nodes
+    implement these roles; do not add one Agent class per role.
+    """
+
+    RESEARCH = "research"
+    NARRATIVE = "narrative"
+    ARCHITECTURE = "architecture"
+    COMPOSITION = "composition"
+    LAYOUT = "layout"
+    RENDER = "render"
+    CRITIC = "critic"
+
+
 class ReviewLayer(StrEnum):
     CONTENT = "content"
     EVIDENCE = "evidence"

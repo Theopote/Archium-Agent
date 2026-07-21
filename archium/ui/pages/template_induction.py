@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from archium.application.visual.template_induction_service import TemplateInductionService
+from archium.domain.enums import PipelineRole
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
     FunctionalSlideType,
@@ -16,6 +17,7 @@ from archium.domain.visual.template_induction import (
 )
 from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import format_user_error
+from archium.ui.pipeline_role_ui import role_button_label, role_caption
 
 
 def _selected_workspace() -> Path | None:
@@ -48,7 +50,13 @@ def _render_upload() -> None:
         key="induction_pptx",
     )
     name = st.text_input("归纳名称", value="", placeholder="例如：院区改造参考模板")
-    if st.button("开始归纳", type="primary", disabled=uploaded is None, use_container_width=True):
+    role_caption(PipelineRole.ARCHITECTURE)
+    if st.button(
+        role_button_label("开始归纳", PipelineRole.ARCHITECTURE),
+        type="primary",
+        disabled=uploaded is None,
+        use_container_width=True,
+    ):
         if uploaded is None:
             return
         from archium.config.settings import get_settings
@@ -108,7 +116,11 @@ def _render_phase35_signoff(service, workspace, presentation, induction) -> None
             key="phase35_run_ref",
         )
         notes = st.text_area("备注", value=signoff.notes if signoff else "", key="phase35_notes")
-        if st.button("保存签署", key="phase35_save_signoff"):
+        role_caption(PipelineRole.CRITIC)
+        if st.button(
+            role_button_label("保存签署", PipelineRole.CRITIC),
+            key="phase35_save_signoff",
+        ):
             if not reviewer.strip():
                 st.error("请填写复核人")
             else:
@@ -509,9 +521,17 @@ def _render_review() -> None:
                 label = "通过" if ok else "未通过"
                 st.write(f"- `{sid}` · {label}")
 
+    role_caption(PipelineRole.ARCHITECTURE, PipelineRole.RENDER)
     col_a, col_b = st.columns(2)
-    save_clicked = col_a.button("保存修正", type="primary", use_container_width=True)
-    publish_clicked = col_b.button("正式发布模板（需 PASS）", use_container_width=True)
+    save_clicked = col_a.button(
+        role_button_label("保存修正", PipelineRole.ARCHITECTURE),
+        type="primary",
+        use_container_width=True,
+    )
+    publish_clicked = col_b.button(
+        role_button_label("正式发布模板（需 PASS）", PipelineRole.ARCHITECTURE, PipelineRole.RENDER),
+        use_container_width=True,
+    )
 
     if save_clicked:
         overrides: list[InductionReviewOverride] = []
@@ -622,7 +642,12 @@ def _render_co_plan() -> None:
         horizontal=True,
         key="induction_co_plan_scenario",
     )
-    if not st.button("生成协同规划", key="induction_run_co_plan", use_container_width=True):
+    role_caption(PipelineRole.COMPOSITION, PipelineRole.ARCHITECTURE)
+    if not st.button(
+        role_button_label("生成协同规划", PipelineRole.COMPOSITION, PipelineRole.ARCHITECTURE),
+        key="induction_run_co_plan",
+        use_container_width=True,
+    ):
         service = TemplateInductionService()
         co_plan = service.load_co_plan(workspace)
         if co_plan is not None:
@@ -694,7 +719,11 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
             f"失败 {existing_batch.failed_count}"
         )
 
-    if st.button("执行 template_editing 路由", key="induction_run_template_editing"):
+    role_caption(PipelineRole.LAYOUT, PipelineRole.RENDER)
+    if st.button(
+        role_button_label("执行 template_editing 路由", PipelineRole.LAYOUT, PipelineRole.RENDER),
+        key="induction_run_template_editing",
+    ):
         outline = service.load_outline_plan(workspace)
         if outline is None:
             st.error("缺少 outline_plan.json，请重新生成协同规划。")

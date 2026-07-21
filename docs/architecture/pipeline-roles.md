@@ -222,9 +222,11 @@ Induction 轨与 PPTAgent 最接近的是 **Architecture + Layout + Render** 的
 | `human_review` | Critic（人工） |
 | `final_acceptance` | Critic（门禁） |
 
+E2E `project_profile.json` 含 `stage_pipeline_roles` 与 `required_pipeline_roles`；代码映射见 `archium/domain/pipeline_role_mapping.py`。
+
 ## 已知缺口（刻意不假装已完成）
 
-1. **无 `PipelineRole` 枚举**——角色仅本文档 + 工程师约定；`WorkflowStep` / `ReviewLayer` 是另一套粒度。
+1. **`PipelineRole` 枚举已落地**（`archium/domain/enums.py`）——仅作标注词汇；运行时仍以 Service / Workflow 为准。阶段映射见 `archium/domain/pipeline_role_mapping.py`。
 2. **Architecture 分散**——renovation planner、schema induction、architectural reviewer 三处；尚未有单一 `ArchitectureService` facade。
 3. **Narrative ↔ Composition 弱耦合**——deck composition 在 visual graph；outline 在 presentation graph；靠 `SlideSpec` / co-plan 衔接。
 4. **Critic 权限分裂**——内容/版面 review 可触发 repair；visual critic 只读——需在 UI 上区分「阻断项」与「建议项」。

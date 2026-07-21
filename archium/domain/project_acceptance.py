@@ -5,9 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.enums import PipelineRole
+from archium.domain.pipeline_role_mapping import (
+    default_stage_pipeline_roles,
+    pipeline_roles_for_e2e_stages,
+)
 
 REAL_PROJECT_MIN_SLIDES = 15
 REAL_PROJECT_MAX_SLIDES = 30
@@ -102,7 +107,25 @@ class Phase7ProjectProfile(DomainModel):
     workflow_phase: str = Field(default="phase_7_acceptance", min_length=1)
     target_slide_count: int = Field(ge=1)
     required_pipeline_stages: list[str] = Field(min_length=1)
+    stage_pipeline_roles: dict[str, PipelineRole] = Field(default_factory=dict)
+    required_pipeline_roles: list[PipelineRole] = Field(default_factory=list)
     description: str = ""
+
+    @model_validator(mode="after")
+    def _normalize_pipeline_roles(self) -> Phase7ProjectProfile:
+        stages = [s.strip().lower() for s in self.required_pipeline_stages if s.strip()]
+        roles_map = dict(self.stage_pipeline_roles) if self.stage_pipeline_roles else {}
+        if not roles_map:
+            roles_map = default_stage_pipeline_roles(stages)
+        else:
+            roles_map = {k.strip().lower(): v for k, v in roles_map.items()}
+        unique_roles = pipeline_roles_for_e2e_stages(stages)
+        if not unique_roles:
+            unique_roles = list(dict.fromkeys(roles_map.values()))
+        object.__setattr__(self, "required_pipeline_stages", stages)
+        object.__setattr__(self, "stage_pipeline_roles", roles_map)
+        object.__setattr__(self, "required_pipeline_roles", unique_roles)
+        return self
 
 
 class Phase7HumanReviewBundle(DomainModel):

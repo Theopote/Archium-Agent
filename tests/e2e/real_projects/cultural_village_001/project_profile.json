@@ -17,5 +17,25 @@
     "studio_edit",
     "human_review",
     "final_acceptance"
+  ],
+  "stage_pipeline_roles": {
+    "ingest": "research",
+    "research": "research",
+    "outline_confirmation": "narrative",
+    "slides": "narrative",
+    "deck_composition": "composition",
+    "layout": "layout",
+    "pptx_export": "render",
+    "studio_edit": "render",
+    "human_review": "critic",
+    "final_acceptance": "critic"
+  },
+  "required_pipeline_roles": [
+    "research",
+    "narrative",
+    "composition",
+    "layout",
+    "render",
+    "critic"
   ]
 }
