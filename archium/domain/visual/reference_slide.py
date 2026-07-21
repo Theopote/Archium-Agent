@@ -65,6 +65,8 @@ class ReferenceElement(DomainModel):
     likely_background_or_decoration: bool = False
     asset_id: str | None = None
     source_shape_name: str = ""
+    # Picture accessibility description (cNvPr/@descr) — often empty on photos.
+    alt_text: str = ""
     parse_ok: bool = True
     parse_warning: str = ""
 

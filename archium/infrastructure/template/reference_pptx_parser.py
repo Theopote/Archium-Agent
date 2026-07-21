@@ -25,6 +25,7 @@ from archium.domain.visual.reference_slide import (
     ReferencePresentation,
     ReferenceSlideSnapshot,
 )
+from archium.application.visual.drawing_inference_service import DrawingInferenceService
 from archium.infrastructure.renderers.pptx_screenshot import (
     export_pptx_slide_pngs,
     screenshot_tools_available,
@@ -135,8 +136,8 @@ def _infer_element_type(
     if shape_type == MSO_SHAPE_TYPE.CHART:
         return ReferenceElementType.CHART
     if is_picture:
-        if any(token in text for token in ("平面", "总图", "剖面", "立面", "drawing")):
-            return ReferenceElementType.DRAWING
+        # Picture shapes almost never have a text frame. Drawing vs photo is
+        # decided later by DrawingInferenceService (neighbors / name / alt / title).
         return ReferenceElementType.IMAGE
     if has_text and text.strip():
         return ReferenceElementType.TEXT
@@ -145,6 +146,19 @@ def _infer_element_type(
     if not has_text:
         return ReferenceElementType.DECORATION
     return ReferenceElementType.SHAPE
+
+
+def _picture_alt_text(shape: object) -> str:
+    """Read OOXML cNvPr descr/title — the usual home for picture alt text."""
+    with contextlib.suppress(Exception):
+        c_nv_pr = shape._element.nvPicPr.cNvPr  # type: ignore[attr-defined]
+        descr = (c_nv_pr.get("descr") or "").strip()
+        if descr:
+            return descr
+        title = (c_nv_pr.get("title") or "").strip()
+        if title:
+            return title
+    return ""
 
 
 def _infer_semantic_role(
@@ -182,6 +196,9 @@ def _infer_semantic_role(
 
 class ReferencePptxParser:
     """Parse a reference PPTX into portable ReferencePresentation snapshots."""
+
+    def __init__(self, *, drawing_inference: DrawingInferenceService | None = None) -> None:
+        self._drawing_inference = drawing_inference or DrawingInferenceService()
 
     def parse(
         self,
@@ -349,6 +366,19 @@ class ReferencePptxParser:
             if shape_name:
                 shape_name_pages.setdefault(shape_name, set()).add(index)
 
+        # Notes (needed before drawing inference).
+        notes = ""
+        with contextlib.suppress(Exception):
+            notes_slide = getattr(slide, "notes_slide", None)
+            if notes_slide is not None and notes_slide.notes_text_frame is not None:
+                notes = (notes_slide.notes_text_frame.text or "").strip()
+
+        # Promote bare Picture shapes to DRAWING using neighborhood cues.
+        self._drawing_inference.refine_slide_elements(
+            elements,
+            slide_notes=notes,
+        )
+
         image_count = sum(
             1
             for e in elements
@@ -376,13 +406,6 @@ class ReferencePptxParser:
             chart_count=chart_count,
             table_count=table_count,
         )
-
-        # Notes
-        notes = ""
-        with contextlib.suppress(Exception):
-            notes_slide = getattr(slide, "notes_slide", None)
-            if notes_slide is not None and notes_slide.notes_text_frame is not None:
-                notes = (notes_slide.notes_text_frame.text or "").strip()
 
         return ReferenceSlideSnapshot(
             slide_index=index,
@@ -483,10 +506,12 @@ class ReferencePptxParser:
             font_size_pt=font_size_pt,
         )
         shape_name = getattr(shape, "name", "") or ""
+        alt_text = _picture_alt_text(shape) if is_picture else ""
         element_id = f"s{slide_index + 1:03d}_e{z_index + 1:03d}"
 
         asset: ReferenceAsset | None = None
         asset_id: str | None = None
+        style_notes: list[str] = []
         if is_picture:
             asset_id = f"refimg_{slide_index + 1:03d}_{z_index + 1:03d}"
             blob_hash = ""
@@ -504,6 +529,8 @@ class ReferencePptxParser:
                 content_hash=blob_hash,
                 notes="reference_template_only",
             )
+            if alt_text:
+                style_notes.append(f"alt:{alt_text}")
 
         element = ReferenceElement(
             id=element_id,
@@ -516,10 +543,12 @@ class ReferencePptxParser:
             text=text,
             font_name=font_name,
             font_size_pt=font_size_pt,
+            style_notes=style_notes,
             semantic_role=role,
             likely_background_or_decoration=element_type == ReferenceElementType.DECORATION,
             asset_id=asset_id,
             source_shape_name=shape_name,
+            alt_text=alt_text,
             parse_ok=True,
         )
         return element, asset, texts, fonts, colors

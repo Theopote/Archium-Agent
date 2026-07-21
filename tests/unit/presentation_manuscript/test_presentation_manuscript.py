@@ -11,7 +11,6 @@ from archium.application.presentation_manuscript_service import (
     PresentationManuscriptService,
     outline_plan_from_manuscript,
 )
-from archium.domain.citation import Citation
 from archium.domain.enums import (
     InformationOrigin,
     InformationReliability,
@@ -109,6 +108,65 @@ def test_manuscript_facts_are_traceable(db_session) -> None:
     assert fact.citation_ids
     assert manuscript.citations
     assert manuscript.citations[0].citation.document_id == doc_id
+
+
+def test_manuscript_rejects_citations_without_document_id(db_session) -> None:
+    """Non-empty but document-less source_citations must not enter verified_facts."""
+    project_id = uuid4()
+    invalid = ProjectKnowledgeItem(
+        project_id=project_id,
+        statement="外部网页提到容积率约 2.0",
+        origin=InformationOrigin.PUBLIC_RESEARCH,
+        reliability=InformationReliability.UNVERIFIED,
+        source_citations=[
+            SourceCitation(url="https://example.com/report", source_title="网页摘录")
+        ],
+        status=KnowledgeItemStatus.ACTIVE,
+    )
+    upload_without_doc = ProjectKnowledgeItem(
+        project_id=project_id,
+        statement="用户粘贴但未绑定文档的指标",
+        origin=InformationOrigin.USER_UPLOAD,
+        reliability=InformationReliability.UNVERIFIED,
+        source_citations=[
+            SourceCitation(url="https://example.com/note", source_title="无文档")
+        ],
+        status=KnowledgeItemStatus.ACTIVE,
+    )
+    manuscript = PresentationManuscriptService(db_session).build_from_knowledge(
+        project_id=project_id,
+        title="无效引用手稿",
+        project_summary="测试",
+        narrative_thesis="不得收录不可追溯事实",
+        knowledge_items=[invalid, upload_without_doc],
+        presentation_id=uuid4(),
+    )
+    assert manuscript.verified_facts == []
+    assert any("有效可追溯引用" in msg for msg in manuscript.missing_information)
+
+
+def test_manuscript_allows_user_confirmed_without_document_citation(db_session) -> None:
+    project_id = uuid4()
+    confirmed = ProjectKnowledgeItem(
+        project_id=project_id,
+        statement="业主确认一期投资上限 8.5 亿",
+        origin=InformationOrigin.USER_CONFIRMED,
+        reliability=InformationReliability.CONFIRMED,
+        source_citations=[],
+        status=KnowledgeItemStatus.CONFIRMED,
+    )
+    manuscript = PresentationManuscriptService(db_session).build_from_knowledge(
+        project_id=project_id,
+        title="人工确认手稿",
+        project_summary="测试",
+        narrative_thesis="人工确认可收录",
+        knowledge_items=[confirmed],
+        presentation_id=uuid4(),
+    )
+    assert len(manuscript.verified_facts) == 1
+    assert manuscript.verified_facts[0].statement.startswith("业主确认")
+    assert manuscript.verified_facts[0].verified is True
+    assert manuscript.verified_facts[0].citation_ids == []
 
 
 def test_outline_reads_manuscript() -> None:

@@ -134,9 +134,6 @@ class PresentationManuscriptService:
             safe_citation_ids: list[str] = []
             for source in item.source_citations:
                 if source.document_id is None:
-                    missing.append(
-                        f"知识条目缺少可追溯文档引用：{item.statement[:80]}"
-                    )
                     continue
                 citation_id = str(uuid4())
                 safe_citation_ids.append(citation_id)
@@ -148,14 +145,21 @@ class PresentationManuscriptService:
                     )
                 )
 
-            if not safe_citation_ids and not item.source_citations:
-                missing.append(f"知识条目无来源：{item.statement[:80]}")
+            # Traceability gate: valid document Citation, OR explicit user confirmation.
+            # Non-empty but document-less source_citations must NOT enter verified_facts.
+            user_confirmed = (
+                item.origin == InformationOrigin.USER_CONFIRMED
+                or item.status == KnowledgeItemStatus.CONFIRMED
+            )
+            if not safe_citation_ids and not user_confirmed:
+                missing.append(
+                    f"知识条目缺少有效可追溯引用：{item.statement[:80]}"
+                )
                 continue
 
-            verified = (
-                item.status == KnowledgeItemStatus.CONFIRMED
-                or item.origin
-                in {InformationOrigin.USER_UPLOAD, InformationOrigin.USER_CONFIRMED}
+            verified = user_confirmed or (
+                bool(safe_citation_ids)
+                and item.origin == InformationOrigin.USER_UPLOAD
             )
             fact = ManuscriptFact(
                 statement=item.statement,

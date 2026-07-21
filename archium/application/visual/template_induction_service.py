@@ -32,6 +32,8 @@ class TemplateInductionRunResult:
     presentation: ReferencePresentation
     workspace: Path
     artifact_paths: dict[str, Path]
+    screenshot_count: int = 0
+    screenshot_tools_available: bool = False
 
 
 class TemplateInductionService:
@@ -64,7 +66,10 @@ class TemplateInductionService:
         name: str | None = None,
         induction_id: UUID | None = None,
         capture_screenshots: bool = True,
+        require_screenshots: bool = False,
     ) -> TemplateInductionRunResult:
+        from archium.infrastructure.renderers.pptx_screenshot import screenshot_tools_available
+
         source = Path(pptx_path)
         if not source.is_file():
             raise WorkflowError(f"参考 PPTX 不存在：{source}")
@@ -77,6 +82,7 @@ class TemplateInductionService:
         stored = workspace / "source.pptx"
         shutil.copy2(source, stored)
 
+        tools_ok = screenshot_tools_available()
         presentation = self._parser.parse(
             stored,
             workspace_dir=workspace,
@@ -85,6 +91,24 @@ class TemplateInductionService:
         )
         # Ensure slide_count matches PPTX slides even if some pages failed soft.
         presentation.slide_count = len(presentation.slides)
+
+        screenshot_count = self._count_slide_screenshots(workspace, presentation)
+        if capture_screenshots:
+            presentation.warnings.extend(
+                self._screenshot_gap_warnings(
+                    presentation,
+                    workspace=workspace,
+                    tools_available=tools_ok,
+                    screenshot_count=screenshot_count,
+                )
+            )
+        if require_screenshots:
+            self._require_complete_screenshots(
+                presentation,
+                workspace=workspace,
+                tools_available=tools_ok,
+                screenshot_count=screenshot_count,
+            )
 
         classifications = self._classifier.classify_all(presentation.slides)
         clusters = self._clusterer.cluster(presentation.slides, classifications)
@@ -116,7 +140,80 @@ class TemplateInductionService:
             presentation=presentation,
             workspace=workspace,
             artifact_paths=artifact_paths,
+            screenshot_count=screenshot_count,
+            screenshot_tools_available=tools_ok,
         )
+
+    @staticmethod
+    def _count_slide_screenshots(
+        workspace: Path, presentation: ReferencePresentation
+    ) -> int:
+        count = 0
+        for slide in presentation.slides:
+            if not slide.image_path:
+                continue
+            if (workspace / slide.image_path).is_file():
+                count += 1
+        return count
+
+    @staticmethod
+    def _screenshot_gap_warnings(
+        presentation: ReferencePresentation,
+        *,
+        workspace: Path,
+        tools_available: bool,
+        screenshot_count: int,
+    ) -> list[str]:
+        warnings: list[str] = []
+        if not tools_available:
+            warnings.append(
+                "截图工具不可用（需 LibreOffice+pdftoppm 或 Windows PowerPoint）；"
+                "页面 PNG 未生成，Review UI 将无预览图。"
+            )
+            return warnings
+        missing = [
+            slide.slide_id
+            for slide in presentation.slides
+            if not slide.image_path or not (workspace / slide.image_path).is_file()
+        ]
+        if missing:
+            warnings.append(
+                f"截图工具可用但缺失 {len(missing)}/{len(presentation.slides)} 页 PNG："
+                + ", ".join(missing[:8])
+            )
+        elif screenshot_count != presentation.slide_count:
+            warnings.append(
+                f"截图数量与页数不一致：png={screenshot_count} slides={presentation.slide_count}"
+            )
+        return warnings
+
+    @staticmethod
+    def _require_complete_screenshots(
+        presentation: ReferencePresentation,
+        *,
+        workspace: Path,
+        tools_available: bool,
+        screenshot_count: int,
+    ) -> None:
+        if not tools_available:
+            raise WorkflowError(
+                "require_screenshots=True 但截图工具不可用"
+                "（需要 LibreOffice+pdftoppm 或 Windows PowerPoint）。"
+            )
+        missing = [
+            slide.slide_id
+            for slide in presentation.slides
+            if not slide.image_path or not (workspace / slide.image_path).is_file()
+        ]
+        if missing:
+            raise WorkflowError(
+                "页面截图不完整，无法满足验收："
+                + ", ".join(missing[:12])
+            )
+        if screenshot_count != presentation.slide_count:
+            raise WorkflowError(
+                f"截图数量与页数不一致：png={screenshot_count} slides={presentation.slide_count}"
+            )
 
     def apply_overrides(
         self,

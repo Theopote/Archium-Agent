@@ -18,3 +18,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "phase8_artifacts: Phase 8 real-project RenderScene deliverable artifact pipelines",
     )
+    config.addinivalue_line(
+        "markers",
+        "requires_libreoffice: Needs LibreOffice+pdftoppm or Windows PowerPoint for PPTX screenshots",
+    )
