@@ -54,7 +54,12 @@ def test_workflow_completes_with_retrieval_disabled(
     mock_llm = MockLLMProvider(selector=pipeline_mock_selector)
     service = PresentationWorkflowService(db_session, mock_llm, settings=settings)
 
-    result = service.run(project.id, request_payload, export_marp=False)
+    result = service.run(
+        project.id,
+        request_payload,
+        export_marp=False,
+        require_outline_review=False,
+    )
 
     assert result.succeeded
     assert result.workflow_run.status == WorkflowStatus.COMPLETED
@@ -100,7 +105,12 @@ def test_database_path_consistent_across_working_directories(
             Project(name="CWD Test Project", project_type=ProjectType.HEALTHCARE)
         )
         service = PresentationWorkflowService(session, mock_llm, settings=cwd_settings)
-        result = service.run(project.id, request_payload, export_marp=False)
+        result = service.run(
+            project.id,
+            request_payload,
+            export_marp=False,
+            require_outline_review=False,
+        )
         assert result.succeeded
 
     assert db_file.exists()

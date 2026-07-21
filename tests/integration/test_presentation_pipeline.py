@@ -114,7 +114,11 @@ def test_regenerate_slide_plan_replaces_slides(
 ) -> None:
     workflow = PresentationWorkflowService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
     try:
-        first = workflow.run(project_with_context.id, request_payload)
+        first = workflow.run(
+            project_with_context.id,
+            request_payload,
+            require_outline_review=False,
+        )
     finally:
         workflow.close()
     assert first.brief and first.storyline

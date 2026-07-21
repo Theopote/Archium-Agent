@@ -55,7 +55,7 @@
     "workflow_status": "completed",
     "export_presentation_spec": true,
     "spec_layouts_any": ["title", "content_bullets", "content_message"],
-    "review_layers": ["content", "evidence"],
+    "review_layers": ["evidence"],
     "required_section_keywords": ["院区现状", "改造策略", "分期实施"]
   }
 }

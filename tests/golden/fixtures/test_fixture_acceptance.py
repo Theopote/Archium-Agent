@@ -49,6 +49,7 @@ def test_fixture_acceptance_workflow(
             export_presentation_spec=case.export_presentation_spec,
             require_brief_review=False,
             require_storyline_review=False,
+            require_outline_review=False,
             require_slides_review=False,
         )
     finally:

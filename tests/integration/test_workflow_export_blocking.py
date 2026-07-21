@@ -102,6 +102,7 @@ def test_workflow_blocks_export_on_critical_review(
             request_payload,
             require_brief_review=False,
             require_storyline_review=False,
+            require_outline_review=False,
             require_slides_review=False,
             export_marp=False,
         )

@@ -109,7 +109,12 @@ def test_workflow_checkpoint_cleanup_after_run(
         core_message="Close checkpoint DB after workflow",
     )
     try:
-        result = service.run(project.id, payload, export_marp=False)
+        result = service.run(
+            project.id,
+            payload,
+            export_marp=False,
+            require_outline_review=False,
+        )
         assert result.workflow_run.status == WorkflowStatus.COMPLETED
         assert checkpoint_path.exists()
     finally:
@@ -171,6 +176,7 @@ def test_golden_case_a_json_export_on_windows(
             export_marp=False,
             require_brief_review=False,
             require_storyline_review=False,
+            require_outline_review=False,
             require_slides_review=False,
         )
     finally:
