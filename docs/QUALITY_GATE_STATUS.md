@@ -25,7 +25,17 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | Real-project run outputs | **CI artifacts / reviewed goldens only** | Do not commit full phase8/Studio run trees |
 | Architectural Benchmark binaries are Goldens | **Governed (P1)** | See `tests/benchmark/architectural_slides/README.md` § Golden 二进制治理；`test_golden_binary_budget.py`；render script requires `--write-goldens` |
 
-## RenderScene scope (honest — V1 only)
+## P2 asset fields — `storage_uri` vs `asset_path` (not blocking)
+
+| Claim | Status |
+|------|--------|
+| Portable URI（`benchmark://` / `storage://` / `project://`）替代本机绝对路径 | **Done** |
+| `resolved_path` 仅运行时、不写入 JSON | **Done** (`Field(exclude=True)`) |
+| `storage_uri` 与 `asset_path` 持久化同一 URI | **Accepted debt (P2)** — `asset_path` 名已误导（实为 URI 别名） |
+| Schema v2：废弃持久化 `asset_path`，只存 `storage_uri`；renderer 收已 resolve Scene | **Planned** — 非当前阻塞；见 `RenderScene` / `ImageNode` 注释 |
+
+**对外口径：** 可移植 URI 已落地；字段重复是命名/schema 债，不回退为绝对路径问题。
+
 
 | Claim | Status |
 |------|--------|

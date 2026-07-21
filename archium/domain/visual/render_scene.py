@@ -79,11 +79,22 @@ class FontAsset(DomainModel):
 
 
 class SceneAssetReference(DomainModel):
-    """Persisted asset pointer — ``storage_uri`` only; resolve at render time."""
+    """Persisted asset pointer — portable URI; resolve at render time.
+
+    P2 (schema v2 plan): persist ``storage_uri`` only; drop mirrored
+    ``asset_path`` from JSON. ``resolved_path`` stays runtime-only (exclude=True).
+    Until then ``asset_path`` is kept as a same-URI alias for backward readers.
+    """
 
     asset_id: UUID | None = None
     storage_uri: str = ""
-    asset_path: str = ""
+    asset_path: str = Field(
+        default="",
+        description=(
+            "Deprecated alias of storage_uri (often a URI, not a filesystem path). "
+            "Remove from persistence in RenderScene schema_version >= 2."
+        ),
+    )
     origin: str = "project_upload"
     content_ref: str | None = None
     resolved_path: str | None = Field(default=None, exclude=True)
@@ -150,7 +161,13 @@ class ImageNode(BaseRenderNode):
     node_type: Literal["image"] = "image"
     asset_id: UUID | None = None
     storage_uri: str = ""
-    asset_path: str = ""
+    asset_path: str = Field(
+        default="",
+        description=(
+            "Deprecated alias of storage_uri (portable URI, not a host path). "
+            "Schema v2: stop persisting; renderers use resolved Scene only."
+        ),
+    )
     asset_origin: Literal[
         "project_upload",
         "public_research",
@@ -205,7 +222,13 @@ class DrawingNode(BaseRenderNode):
     node_type: Literal["drawing"] = "drawing"
     asset_id: UUID | None = None
     storage_uri: str = ""
-    asset_path: str = ""
+    asset_path: str = Field(
+        default="",
+        description=(
+            "Deprecated alias of storage_uri (portable URI, not a host path). "
+            "Schema v2: stop persisting; renderers use resolved Scene only."
+        ),
+    )
     drawing_type: DrawingType = "site_plan"
     fit_mode: DrawingFitMode = "contain"
     crop_allowed: bool = False
@@ -258,6 +281,10 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
 
     V1 supports Text / Image / Drawing / Shape only. Charts and tables from
     LayoutPlan are degraded by the compiler (see ``RenderSceneCompiler``).
+
+    schema_version 1: ``storage_uri`` + mirrored ``asset_path`` (same URI).
+    Planned schema_version 2 (P2): persist ``storage_uri`` only; drop
+    ``asset_path`` from dump; keep ``resolved_path`` runtime-only.
     """
 
     schema_version: int = Field(default=1, ge=1)
