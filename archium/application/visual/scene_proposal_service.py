@@ -319,6 +319,18 @@ class SceneProposalService:
                 proposal_id=proposal.proposal_id,
                 accepted_action_ids=[action.action_id for action in proposal.patch_actions],
             )
+        else:
+            accepted_ids = set(resolved_decision.accepted_action_ids)
+            if not resolved_decision.rejected_action_ids:
+                resolved_decision = resolved_decision.model_copy(
+                    update={
+                        "rejected_action_ids": [
+                            action.action_id
+                            for action in proposal.patch_actions
+                            if action.action_id not in accepted_ids
+                        ],
+                    }
+                )
         updated = proposal.model_copy(
             update={
                 "status": final_status,

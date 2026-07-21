@@ -179,6 +179,7 @@ def _render_change_list(proposal: SceneChangeProposal) -> None:
         st.caption("无结构化 patch 记录。")
         return
     selected_ids = _selected_action_ids(proposal)
+    st.caption(f"已选 {len(selected_ids)} / {len(proposal.patch_actions)} 项修改")
     for action in proposal.patch_actions:
         action_key = str(action.action_id)
         checked = st.checkbox(
@@ -241,6 +242,7 @@ def _render_decision_buttons(
     settings: Settings,
 ) -> None:
     slide = slide_snapshot.slide
+    selected_count = len(_selected_action_ids(proposal))
     accept_col, partial_col, reject_col, clear_col = st.columns(4)
     if accept_col.button(
         "接受全部",
@@ -250,8 +252,9 @@ def _render_decision_buttons(
     ):
         _accept_proposal(proposal, slide_snapshot, settings)
     if partial_col.button(
-        "接受选中",
+        "接受选中修改",
         use_container_width=True,
+        disabled=selected_count == 0,
         key=f"studio_partial_accept_proposal_{proposal.proposal_id}",
     ):
         _accept_proposal(
@@ -310,9 +313,15 @@ def _accept_proposal(
                 ]
                 if not accepted_action_ids:
                     raise WorkflowError("请至少勾选一项要接受的修改。")
+                rejected_action_ids = [
+                    action.action_id
+                    for action in proposal.patch_actions
+                    if str(action.action_id) not in selected_ids
+                ]
                 decision = ProposalDecision(
                     proposal_id=proposal.proposal_id,
                     accepted_action_ids=accepted_action_ids,
+                    rejected_action_ids=rejected_action_ids,
                 )
             result = service.accept_proposal(
                 proposal,
