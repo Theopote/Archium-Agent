@@ -53,6 +53,16 @@ def render() -> None:
     if context is None:
         return
 
+    from archium.ui.page_status_board_panel import render_page_status_board
+
+    with st.expander("逐页状态板", expanded=False):
+        render_page_status_board(
+            presentation_id=context.presentation.id,
+            project_id=context.project.id,
+            compact=False,
+            key_prefix=f"studio_page_status_{context.presentation.id}",
+        )
+
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
 

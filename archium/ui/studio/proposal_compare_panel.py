@@ -112,6 +112,13 @@ def render_proposal_compare_panel(
         st.warning("部分命令未能应用，请查看下方命令执行结果。")
 
     st.caption(f"提案状态：{proposal.status.value}")
+    if proposal.preservation is not None:
+        st.caption(
+            f"保护规则：{proposal.preservation.interaction_rule} · "
+            + " / ".join(proposal.preservation.captions())
+        )
+    elif proposal.reasons:
+        st.caption(" · ".join(proposal.reasons[:3]))
     _render_command_results(proposal)
     _render_before_after_previews(proposal, settings)
     _render_change_list(proposal)

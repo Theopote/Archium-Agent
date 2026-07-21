@@ -160,6 +160,9 @@ def _scene_change_proposal_payload(proposal: SceneChangeProposal) -> dict[str, o
             for layer, items in proposal.qa_after_by_layer.items()
         },
         "decision": model_to_dict(proposal.decision) if proposal.decision is not None else None,
+        "preservation": (
+            model_to_dict(proposal.preservation) if proposal.preservation is not None else None
+        ),
     }
 
 
@@ -199,6 +202,14 @@ def scene_change_proposal_to_domain(
         if isinstance(decision_payload, dict)
         else None
     )
+    preservation_payload = payload.get("preservation")
+    preservation = None
+    if isinstance(preservation_payload, dict):
+        from archium.domain.visual.partial_edit_preservation import (
+            PartialEditPreservationReport,
+        )
+
+        preservation = PartialEditPreservationReport.model_validate(preservation_payload)
     return SceneChangeProposal(
         proposal_id=orm.id,
         presentation_id=orm.presentation_id,
@@ -220,6 +231,7 @@ def scene_change_proposal_to_domain(
         qa_after=payload.get("qa_after") or [],
         qa_before_by_layer=payload.get("qa_before_by_layer") or {},
         qa_after_by_layer=payload.get("qa_after_by_layer") or {},
+        preservation=preservation,
         status=ProposalStatus(orm.status),
         decision=decision,
         decided_at=orm.decided_at,

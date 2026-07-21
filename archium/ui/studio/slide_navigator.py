@@ -50,6 +50,12 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
         return 0
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
+    focus_slide_id = st.session_state.pop("studio_focus_slide_id", None)
+    if focus_slide_id:
+        for index, item in enumerate(slides):
+            if str(item.slide.id) == str(focus_slide_id):
+                selected_index = index
+                break
     selected_index = max(0, min(selected_index, len(slides) - 1))
 
     manage_cols = st.columns(2)

@@ -34,6 +34,8 @@ _BLOCKING_SLIDE_STATUSES = frozenset(
     }
 )
 
+_SKIPPED_SLIDE_STATUSES = frozenset({SlideDeliveryStatus.SKIPPED})
+
 
 class DeckDeliveryReport(DomainModel):
     """Aggregated delivery view for a presentation deck."""
@@ -83,6 +85,8 @@ def aggregate_deck_delivery(
     blocking = 0
     for slide in slides:
         status = slide.delivery_status
+        if status in _SKIPPED_SLIDE_STATUSES:
+            continue
         if status == SlideDeliveryStatus.READY:
             ready += 1
             deliverable += 1

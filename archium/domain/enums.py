@@ -178,6 +178,7 @@ class SlideDeliveryStatus(StrEnum):
     ASSET_MISSING = "asset_missing"
     RENDER_FAILED = "render_failed"
     SCHEMA_BLOCKED = "schema_blocked"
+    SKIPPED = "skipped"
 
 
 class DeckDeliveryStatus(StrEnum):

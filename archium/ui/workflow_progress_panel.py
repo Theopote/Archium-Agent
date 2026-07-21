@@ -205,6 +205,43 @@ def _render_progress_body(workflow_run_id: UUID) -> None:
         for error in snapshot.errors[-3:]:
             st.caption(f"⚠ {error}")
 
+    presentation_id = _presentation_id_from_run_state(run.state or {})
+    if presentation_id is not None:
+        from archium.application.page_status_board_service import PageStatusBoardService
+        from archium.ui.page_status_board_panel import render_page_status_board
+
+        project_id = _project_id_from_run(run)
+        with get_session() as session:
+            board = PageStatusBoardService(session).build_board(
+                presentation_id,
+                workflow_step=snapshot.current_step,
+            )
+        needs_attention = board.attention_count > 0
+
+        st.markdown("**逐页真实状态**")
+        st.caption("不再只显示「正在生成…」— 每页可重试、换模板、重绑素材、打开 Studio 或跳过。")
+        render_page_status_board(
+            presentation_id=presentation_id,
+            project_id=project_id,
+            workflow_run_id=run.id,
+            workflow_step=snapshot.current_step,
+            compact=True,
+            key_prefix=f"wf_page_status_compact_{run.id}",
+        )
+        with st.expander(
+            "逐页操作（重试 / 换模板 / 重绑素材 / Studio / 跳过）",
+            expanded=needs_attention,
+        ):
+            render_page_status_board(
+                presentation_id=presentation_id,
+                project_id=project_id,
+                workflow_run_id=run.id,
+                workflow_step=snapshot.current_step,
+                compact=False,
+                title="",
+                key_prefix=f"wf_page_status_actions_{run.id}",
+            )
+
     log_entries = snapshot.step_log[-12:]
     if log_entries:
         st.markdown("**执行日志**")
@@ -214,6 +251,31 @@ def _render_progress_body(workflow_run_id: UUID) -> None:
                 st.caption(format_step_log_entry(entry))
     elif snapshot.current_step_label:
         st.caption(snapshot.current_step_label)
+
+
+def _presentation_id_from_run_state(state: dict[str, Any]) -> UUID | None:
+    raw = state.get("presentation_id")
+    if raw is None and state.get("presentation") is not None:
+        presentation = state.get("presentation")
+        raw = getattr(presentation, "id", None) or (
+            presentation.get("id") if isinstance(presentation, dict) else None
+        )
+    if raw is None:
+        return None
+    try:
+        return UUID(str(raw))
+    except ValueError:
+        return None
+
+
+def _project_id_from_run(run: object) -> UUID | None:
+    project_id = getattr(run, "project_id", None)
+    if project_id is None:
+        return None
+    try:
+        return UUID(str(project_id))
+    except ValueError:
+        return None
 
 
 def _poll_once(

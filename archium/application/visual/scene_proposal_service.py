@@ -8,6 +8,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.visual.drawing_readability_service import parse_geometry_token
+from archium.application.visual.partial_edit_preservation import (
+    assert_partial_edit_preservation,
+)
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_deterministic_qa_service import (
     ProposalSceneQAResult,
@@ -29,6 +32,7 @@ from archium.domain._base import utc_now
 from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
+from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -154,6 +158,13 @@ class SceneProposalService:
                 "；".join(failure_messages) or "所有 Studio 命令均未能应用到 Scene。"
             )
 
+        preservation = assert_partial_edit_preservation(
+            base_scene,
+            candidate,
+            commands=successful_commands or commands,
+            patch_actions=applied_actions,
+        )
+
         qa_before_result = self._qa_for_scene(
             base_scene,
             presentation_id,
@@ -165,6 +176,9 @@ class SceneProposalService:
             slide_order,
         )
         proposal_reasons = list(reasons or [])
+        if PARTIAL_EDIT_INTERACTION_RULE not in proposal_reasons:
+            proposal_reasons.insert(0, PARTIAL_EDIT_INTERACTION_RULE)
+        proposal_reasons.extend(preservation.captions())
         proposal_reasons.extend(action.reason for action in applied_actions if action.reason)
         status = (
             ProposalStatus.READY_WITH_WARNINGS
@@ -194,6 +208,7 @@ class SceneProposalService:
             qa_after_by_layer={
                 layer: list(items) for layer, items in qa_after_result.layers.items()
             },
+            preservation=preservation,
             status=status,
         )
 
@@ -272,6 +287,26 @@ class SceneProposalService:
             decision,
             slide_order=slide.order,
         )
+        accepted_commands = resolve_accepted_commands(proposal, decision)
+        accepted_action_ids = (
+            set(decision.accepted_action_ids)
+            if decision is not None and decision.accepted_action_ids
+            else {action.action_id for action in proposal.patch_actions}
+        )
+        accepted_actions = [
+            action
+            for action in proposal.patch_actions
+            if action.action_id in accepted_action_ids
+        ]
+        # Re-assert preservation on the scene that will be committed.
+        assert_partial_edit_preservation(
+            proposal.base_scene,
+            accepted_scene,
+            commands=accepted_commands,
+            patch_actions=accepted_actions,
+            slide_before=slide,
+            slide_after=slide,
+        )
         accepted_qa = self._qa_for_scene(
             accepted_scene,
             proposal.presentation_id,
@@ -285,7 +320,6 @@ class SceneProposalService:
 
         saved = self._persist_scene(slide, accepted_scene)
         parent_revision_id = proposal.base_revision_id
-        accepted_commands = resolve_accepted_commands(proposal, decision)
         _, scene_revision = self._scene_history.record_scene(
             slide=slide,
             scene=saved,

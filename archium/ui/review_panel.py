@@ -57,6 +57,7 @@ from archium.ui.label_map import (
     regenerate_label,
     regenerate_success_label,
 )
+from archium.ui.page_status_board_panel import render_page_status_board
 from archium.ui.review_analytics_panel import REPAIR_STRATEGY_LABELS, render_rule_code_stats
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
@@ -1056,6 +1057,18 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         slides_need_revision=slides_need_revision
         or (context.slides_pending_review and context.review_gate == "slides"),
     )
+
+    if context.slides:
+        step = None
+        if context.workflow_run is not None:
+            step = (context.workflow_run.state or {}).get("current_step")
+        render_page_status_board(
+            presentation_id=presentation_id,
+            project_id=context.presentation.project_id,
+            workflow_run_id=workflow_run_id,
+            workflow_step=str(step) if step else None,
+            key_prefix=f"review_page_status_{presentation_id}",
+        )
 
     tab_labels = [_BRIEF_LABEL, _STORYLINE_LABEL, _OUTLINE_LABEL, _SLIDE_LABEL, _ASSET_BOARD_LABEL, "质量审核"]
     if context.manuscript is not None:

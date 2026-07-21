@@ -10,6 +10,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.visual.edit_intent import VisualEditIntent, parse_natural_language
 from archium.domain.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.nlp_parser import ParsedIntent
+from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
 from archium.domain.visual.render_scene import RenderScene, TextNode
 from archium.domain.visual.studio_command import (
     FixOverflowCommand,
@@ -18,6 +19,16 @@ from archium.domain.visual.studio_command import (
     StudioCommand,
 )
 from archium.infrastructure.llm.factory import create_llm_provider
+
+_ONLY_MENTIONED_PATTERNS: tuple[str, ...] = (
+    "只修改我提到的部分",
+    "只改我提到的",
+    "不要改其他",
+    "其余保持不变",
+    "其他保持不变",
+    "only modify what i mentioned",
+    "only change what i mentioned",
+)
 
 _NODE_ALIASES: dict[str, str] = {
     "标题": "title",
@@ -109,14 +120,16 @@ class StudioNLCommandPlanner:
             slide_id=slide_id,
         )
         if rewrite_plan is not None:
-            return rewrite_plan
+            return self._stamp_partial_edit_rule(rewrite_plan)
 
         if any(keyword in normalized.lower() for keyword in _OVERFLOW_KEYWORDS):
-            return self._overflow_plan(
-                scene=scene,
-                presentation_id=presentation_id,
-                slide_id=slide_id,
-                reason="修复文本溢出",
+            return self._stamp_partial_edit_rule(
+                self._overflow_plan(
+                    scene=scene,
+                    presentation_id=presentation_id,
+                    slide_id=slide_id,
+                    reason="修复文本溢出",
+                )
             )
 
         drawing_plan = self._plan_drawing_readability_keywords(
@@ -126,7 +139,7 @@ class StudioNLCommandPlanner:
             slide_id=slide_id,
         )
         if drawing_plan is not None:
-            return drawing_plan
+            return self._stamp_partial_edit_rule(drawing_plan)
 
         parsed = self._hybrid_parser.parse(normalized)
         if parsed is None:
@@ -140,13 +153,15 @@ class StudioNLCommandPlanner:
                         "可尝试：「标题改为…」「把正文改成…」「修复文字溢出」「减少文字」。"
                     ),
                 )
-            return self._plan_intent(
-                intent,
-                params,
-                scene=scene,
-                presentation_id=presentation_id,
-                slide_id=slide_id,
-                confidence=0.75,
+            return self._stamp_partial_edit_rule(
+                self._plan_intent(
+                    intent,
+                    params,
+                    scene=scene,
+                    presentation_id=presentation_id,
+                    slide_id=slide_id,
+                    confidence=0.75,
+                )
             )
 
         if self._is_composite(parsed):
@@ -159,13 +174,15 @@ class StudioNLCommandPlanner:
                 uses_layout_fallback=True,
             )
 
-        return self._plan_intent(
-            parsed.intent,
-            parsed.params,
-            scene=scene,
-            presentation_id=presentation_id,
-            slide_id=slide_id,
-            confidence=parsed.confidence,
+        return self._stamp_partial_edit_rule(
+            self._plan_intent(
+                parsed.intent,
+                parsed.params,
+                scene=scene,
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                confidence=parsed.confidence,
+            )
         )
 
     def plan_intent(
@@ -177,13 +194,32 @@ class StudioNLCommandPlanner:
         slide_id: UUID,
         params: dict[str, object] | None = None,
     ) -> StudioCommandPlan:
-        return self._plan_intent(
-            intent,
-            params or {},
-            scene=scene,
-            presentation_id=presentation_id,
-            slide_id=slide_id,
-            confidence=1.0,
+        return self._stamp_partial_edit_rule(
+            self._plan_intent(
+                intent,
+                params or {},
+                scene=scene,
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                confidence=1.0,
+            )
+        )
+
+    @staticmethod
+    def _stamp_partial_edit_rule(plan: StudioCommandPlan) -> StudioCommandPlan:
+        """Always advertise the system-level partial-edit contract on successful plans."""
+        if not plan.commands:
+            return plan
+        reasons = list(plan.reasons)
+        if PARTIAL_EDIT_INTERACTION_RULE not in reasons:
+            reasons.insert(0, PARTIAL_EDIT_INTERACTION_RULE)
+        return StudioCommandPlan(
+            commands=plan.commands,
+            reasons=tuple(reasons),
+            parsed_intent=plan.parsed_intent,
+            confidence=plan.confidence,
+            unsupported_reason=plan.unsupported_reason,
+            uses_layout_fallback=plan.uses_layout_fallback,
         )
 
     def _plan_rewrite_patterns(

@@ -11,6 +11,7 @@ from pydantic import Field
 
 from archium.domain._base import DomainModel, TimestampedModel, new_uuid, utc_now
 from archium.domain.visual.page_quality import QualityIssue
+from archium.domain.visual.partial_edit_preservation import PartialEditPreservationReport
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
 
@@ -83,6 +84,9 @@ class SceneChangeProposal(DomainModel):
     qa_after: list[QualityIssue] = Field(default_factory=list)
     qa_before_by_layer: dict[str, list[QualityIssue]] = Field(default_factory=dict)
     qa_after_by_layer: dict[str, list[QualityIssue]] = Field(default_factory=dict)
+
+    # System-level partial-edit contract audit (「只修改我提到的部分」).
+    preservation: PartialEditPreservationReport | None = None
 
     status: ProposalStatus = ProposalStatus.READY
     decision: ProposalDecision | None = None

@@ -38,7 +38,9 @@ def render_ai_edit_panel(
         return
 
     st.caption(
-        "Scene 提案模式：自然语言会先解析为结构化命令，再生成 Before/After 对比。"
+        "Scene 提案模式：自然语言 → StudioCommand → Before/After → 接受后写入 Revision。"
+        "系统规则：**只修改我提到的部分**"
+        "（未指定节点 / 锁定节点 / 素材身份 / 页面事实 / 引用保持不变）。"
         "支持：改写标题/正文、修复文字溢出、减少文字、提高图纸可读性。"
     )
 
