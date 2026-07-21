@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from archium.application.architectural_benchmark_review_store import (
@@ -246,26 +247,62 @@ def test_regenerate_benchmark_report_uses_disk_only_summary(tmp_path: Path) -> N
 
 def _seed_visual_review_ready(case_dir: Path) -> None:
     from archium.domain.visual.benchmark import BenchmarkRenderManifest
+    from archium.domain.visual.render_scene import (
+        BackgroundStyle,
+        RenderScene,
+        compute_scene_hash,
+    )
     from tests.benchmark.architectural_slides.render_manifest import (
         SCENE_JSON_NAME,
         SCENE_PREVIEW_NAME,
+        sha256_file,
+        write_pptx_render_sidecar,
+        write_pptx_sidecar,
         write_render_manifest,
     )
 
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[],
+    )
+    (case_dir / SCENE_JSON_NAME).write_text(
+        json.dumps(scene.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     (case_dir / SCENE_PREVIEW_NAME).write_bytes(b"png")
-    (case_dir / SCENE_JSON_NAME).write_text("{}", encoding="utf-8")
-    (case_dir / "output.pptx").write_bytes(b"pptx")
+    scene_hash = compute_scene_hash(scene)
+
+    from pptx import Presentation
+
+    pptx_path = case_dir / "output.pptx"
+    Presentation().save(str(pptx_path))
+    pptx_hash = sha256_file(pptx_path)
+    (case_dir / "pptx_render.png").write_bytes(b"png")
+    write_pptx_sidecar(case_dir, scene_hash=scene_hash, pptx_content_hash=pptx_hash)
+    write_pptx_render_sidecar(case_dir, scene_hash=scene_hash, pptx_content_hash=pptx_hash)
     write_render_manifest(
         case_dir,
         BenchmarkRenderManifest(
-            render_source="html",
+            render_source="pptx_screenshot",
             render_valid=True,
-            scene_hash="abc123",
-            asset_count=1,
-            real_asset_count=1,
+            scene_id=str(scene.id),
+            scene_hash=scene_hash,
+            asset_count=0,
+            real_asset_count=0,
             placeholder_asset_count=0,
             rendered_at=datetime.now(UTC),
             renderer="test",
+            screenshot_tools_available=True,
+            pptx_screenshot_generated=True,
+            pptx_screenshot_reused=False,
+            pptx_screenshot_source_hash=scene_hash,
+            pptx_content_hash=pptx_hash,
+            post_render_qa_passed=True,
+            post_render_qa_issues=[],
         ),
     )
 
