@@ -9,6 +9,7 @@ import streamlit as st
 
 from archium.application.visual.scene_proposal_service import (
     count_issues_by_severity,
+    summarize_command_result,
     summarize_patch_action,
 )
 from archium.application.visual.studio_scene_service import StudioSceneService
@@ -83,12 +84,29 @@ def render_proposal_compare_panel(
 
     if proposal.status == ProposalStatus.SUPERSEDED:
         st.warning("该提案已过期（页面在提案生成后被修改）。")
+    elif proposal.status == ProposalStatus.READY_WITH_WARNINGS:
+        st.warning("部分命令未能应用，请查看下方命令执行结果。")
 
     st.caption(f"提案状态：{proposal.status.value}")
+    _render_command_results(proposal)
     _render_before_after_previews(proposal, settings)
     _render_change_list(proposal)
     _render_qa_diff(proposal)
     _render_decision_buttons(proposal, slide_snapshot, settings)
+
+
+def _render_command_results(proposal: SceneChangeProposal) -> None:
+    if not proposal.command_results:
+        return
+    st.markdown("**命令执行结果**")
+    for result in proposal.command_results:
+        summary = summarize_command_result(proposal, result)
+        if result.status == "failed":
+            st.error(summary)
+        elif result.status == "skipped":
+            st.caption(summary)
+        else:
+            st.markdown(f"- {summary}")
 
 
 def _render_before_after_previews(

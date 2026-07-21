@@ -33,6 +33,7 @@ from archium.domain.visual.render_scene import (
     compute_scene_hash,
 )
 from archium.domain.visual.scene_change_proposal import (
+    CommandProposalResult,
     ProposalDecision,
     ProposalQAComparison,
     ProposalStatus,
@@ -84,28 +85,71 @@ class SceneProposalService:
         qa_before = self._qa_for_scene(base_scene, presentation_id, slide_order)
         candidate = base_scene.model_copy(deep=True)
         applied_actions: list[ScenePatchAction] = []
-        issues: list[str] = []
+        command_results: list[CommandProposalResult] = []
+        successful_commands: list[StudioCommand] = []
+        failed_commands: list[StudioCommand] = []
 
         for command in commands:
             result = self._executor.execute(candidate, command, context)
-            if not result.success or result.candidate_scene is None:
-                issues.append(
-                    result.issues[0].message if result.issues else f"{command.command_type} failed"
-                )
-                continue
-            candidate = result.candidate_scene
+            stamped_actions: list[ScenePatchAction] = []
             for action in result.applied_actions:
                 stamped = action
                 if action.command_id is None:
                     stamped = action.model_copy(update={"command_id": command.command_id})
-                applied_actions.append(stamped)
+                stamped_actions.append(stamped)
 
-        if issues and not applied_actions:
-            raise WorkflowError("；".join(issues))
+            if not result.success or result.candidate_scene is None:
+                command_results.append(
+                    CommandProposalResult(
+                        command_id=command.command_id,
+                        status="failed",
+                        issues=list(result.issues),
+                    )
+                )
+                failed_commands.append(command)
+                continue
+
+            candidate = result.candidate_scene
+            applied_actions.extend(stamped_actions)
+
+            if stamped_actions:
+                command_results.append(
+                    CommandProposalResult(
+                        command_id=command.command_id,
+                        status="applied",
+                        action_ids=[action.action_id for action in stamped_actions],
+                        issues=list(result.issues),
+                    )
+                )
+                successful_commands.append(command)
+            else:
+                command_results.append(
+                    CommandProposalResult(
+                        command_id=command.command_id,
+                        status="skipped",
+                        issues=list(result.issues),
+                    )
+                )
+
+        if failed_commands and not applied_actions:
+            failure_messages = [
+                issue.message
+                for entry in command_results
+                if entry.status == "failed"
+                for issue in entry.issues
+            ]
+            raise WorkflowError(
+                "；".join(failure_messages) or "所有 Studio 命令均未能应用到 Scene。"
+            )
 
         qa_after = self._qa_for_scene(candidate, presentation_id, slide_order)
         proposal_reasons = list(reasons or [])
         proposal_reasons.extend(action.reason for action in applied_actions if action.reason)
+        status = (
+            ProposalStatus.READY_WITH_WARNINGS
+            if failed_commands
+            else ProposalStatus.READY
+        )
 
         return SceneChangeProposal(
             presentation_id=presentation_id,
@@ -114,12 +158,16 @@ class SceneProposalService:
             base_scene_hash=compute_scene_hash(base_scene),
             base_scene=base_scene,
             proposed_scene=candidate,
-            commands=commands,
+            commands=list(successful_commands),
+            requested_commands=list(commands),
+            successful_commands=list(successful_commands),
+            failed_commands=list(failed_commands),
+            command_results=command_results,
             patch_actions=applied_actions,
             reasons=_dedupe_strings(proposal_reasons),
             qa_before=qa_before,
             qa_after=qa_after,
-            status=ProposalStatus.READY,
+            status=status,
         )
 
     def qa_comparison(self, proposal: SceneChangeProposal) -> ProposalQAComparison:
@@ -167,12 +215,13 @@ class SceneProposalService:
 
         saved = self._persist_scene(slide, accepted_scene)
         parent_revision_id = proposal.base_revision_id
+        accepted_commands = resolve_accepted_commands(proposal, decision)
         _, scene_revision = self._scene_history.record_scene(
             slide=slide,
             scene=saved,
             change_source=RevisionSource.AI_PROPOSAL,
             scene_revision_source="ai_proposal",
-            commands=proposal.commands,
+            commands=accepted_commands,
             parent_revision_id=parent_revision_id,
             note=decision.notes if decision is not None else None,
         )
@@ -295,6 +344,52 @@ def apply_patch_actions(
     return scene
 
 
+def resolve_accepted_commands(
+    proposal: SceneChangeProposal,
+    decision: ProposalDecision | None,
+) -> list[StudioCommand]:
+    """Return only the commands whose patch actions were fully accepted."""
+    effective_commands = (
+        proposal.successful_commands
+        if proposal.successful_commands
+        else proposal.commands
+    )
+    if decision is None or not decision.accepted_action_ids:
+        return list(effective_commands)
+
+    accepted_action_ids = set(decision.accepted_action_ids)
+    selected_actions = [
+        action for action in proposal.patch_actions if action.action_id in accepted_action_ids
+    ]
+    if len(selected_actions) == len(proposal.patch_actions):
+        return list(effective_commands)
+
+    actions_by_command: dict[UUID, list[ScenePatchAction]] = {}
+    for action in proposal.patch_actions:
+        if action.command_id is not None:
+            actions_by_command.setdefault(action.command_id, []).append(action)
+
+    accepted_command_ids: set[UUID] = set()
+    for command in effective_commands:
+        command_actions = actions_by_command.get(command.command_id, [])
+        if not command_actions:
+            continue
+        selected_command_actions = [
+            action for action in command_actions if action.action_id in accepted_action_ids
+        ]
+        if (
+            selected_command_actions
+            and len(selected_command_actions) == len(command_actions)
+        ):
+            accepted_command_ids.add(command.command_id)
+
+    return [
+        command
+        for command in effective_commands
+        if command.command_id in accepted_command_ids
+    ]
+
+
 def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
     node = scene.node_by_id(action.node_id)
     if node is None:
@@ -413,6 +508,40 @@ def summarize_patch_action(action: ScenePatchAction) -> str:
     if action.action_type == "set_overflow_shrink":
         return f"文本 `{action.node_id}` 改为自动缩小"
     return action.reason or action.action_type
+
+
+def summarize_command_type(command: StudioCommand) -> str:
+    """Human-readable label for a Studio command."""
+    labels = {
+        "rewrite_text": "改写文本",
+        "fix_overflow": "修复溢出",
+        "replace_asset": "替换图片",
+        "replace_drawing": "替换图纸",
+        "increase_drawing_readability": "提高图纸可读性",
+    }
+    return labels.get(command.command_type, command.command_type)
+
+
+def summarize_command_result(
+    proposal: SceneChangeProposal,
+    result: CommandProposalResult,
+) -> str:
+    """Human-readable summary for a per-command proposal outcome."""
+    command = next(
+        (
+            item
+            for item in proposal.requested_commands
+            if item.command_id == result.command_id
+        ),
+        None,
+    )
+    label = summarize_command_type(command) if command is not None else result.command_id.hex[:8]
+    if result.status == "applied":
+        return f"{label}：已应用（{len(result.action_ids)} 项改动）"
+    if result.status == "skipped":
+        return f"{label}：已跳过（Scene 无需变更）"
+    issue = result.issues[0].message if result.issues else "命令执行失败"
+    return f"{label}：失败 — {issue}"
 
 
 def count_issues_by_severity(issues: list[QualityIssue], severity: IssueSeverity) -> int:

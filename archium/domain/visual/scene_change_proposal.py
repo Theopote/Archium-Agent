@@ -18,10 +18,23 @@ from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
 class ProposalStatus(StrEnum):
     DRAFT = "draft"
     READY = "ready"
+    READY_WITH_WARNINGS = "ready_with_warnings"
     ACCEPTED = "accepted"
     PARTIALLY_ACCEPTED = "partially_accepted"
     REJECTED = "rejected"
     SUPERSEDED = "superseded"
+
+
+CommandProposalStatus = Literal["applied", "skipped", "failed"]
+
+
+class CommandProposalResult(DomainModel):
+    """Per-command outcome when building a SceneChangeProposal."""
+
+    command_id: UUID
+    status: CommandProposalStatus
+    action_ids: list[UUID] = Field(default_factory=list)
+    issues: list[QualityIssue] = Field(default_factory=list)
 
 
 SceneRevisionSource = Literal[
@@ -44,7 +57,14 @@ class SceneChangeProposal(DomainModel):
     base_scene: RenderScene
     proposed_scene: RenderScene
 
-    commands: list[StudioCommand] = Field(default_factory=list)
+    commands: list[StudioCommand] = Field(
+        default_factory=list,
+        description="Successfully applied commands (alias of successful_commands).",
+    )
+    requested_commands: list[StudioCommand] = Field(default_factory=list)
+    successful_commands: list[StudioCommand] = Field(default_factory=list)
+    failed_commands: list[StudioCommand] = Field(default_factory=list)
+    command_results: list[CommandProposalResult] = Field(default_factory=list)
     patch_actions: list[ScenePatchAction] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
 

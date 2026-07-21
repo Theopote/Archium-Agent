@@ -8,6 +8,7 @@ from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 from archium.application.visual.scene_proposal_service import (
     SceneProposalService,
     apply_patch_actions,
+    resolve_accepted_commands,
 )
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue, QualityIssueSource
 from archium.domain.visual.render_scene import (
@@ -21,6 +22,7 @@ from archium.domain.visual.render_scene import (
 from archium.domain.visual.scene_change_proposal import ProposalStatus
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.studio_command import (
+    IncreaseDrawingReadabilityCommand,
     ReplaceAssetCommand,
     ReplaceDrawingCommand,
     RewriteTextCommand,
@@ -36,6 +38,7 @@ def _text_node(
     width: float = 2.0,
     height: float = 0.4,
     overflow: str = "error",
+    locked: bool = False,
 ) -> TextNode:
     return TextNode(
         id=node_id,
@@ -50,6 +53,7 @@ def _text_node(
         color="#000000",
         line_height=1.2,
         overflow_policy=overflow,
+        locked=locked,
     )
 
 
@@ -460,3 +464,184 @@ def test_apply_patch_actions_replace_asset_uses_after_payload() -> None:
     assert isinstance(photo, ImageNode)
     assert photo.asset_origin == "reference_case"
     assert any(ref.asset_id == new_id for ref in patched.asset_manifest)
+
+
+def test_resolve_accepted_commands_returns_only_selected_commands() -> None:
+    old_id = uuid4()
+    new_id = uuid4()
+    scene = _mixed_scene(
+        _text_node(node_id="title", text="旧标题"),
+        _image_node(node_id="photo_1", asset_id=old_id),
+        _drawing_node(node_id="site_plan", asset_id=uuid4()),
+    )
+    scene.nodes[2].width = 3.0  # type: ignore[union-attr]
+    scene.nodes[2].height = 2.0  # type: ignore[union-attr]
+    presentation_id = uuid4()
+    service = _proposal_service()
+
+    rewrite_cmd = RewriteTextCommand(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        node_id="title",
+        new_text="新标题",
+    )
+    replace_cmd = ReplaceAssetCommand(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        node_id="photo_1",
+        asset_id=new_id,
+        storage_uri="project://site/photo-02.png",
+    )
+    enlarge_cmd = IncreaseDrawingReadabilityCommand(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        node_id="site_plan",
+        target_min_area_ratio=0.45,
+    )
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[rewrite_cmd, replace_cmd, enlarge_cmd],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    from archium.domain.visual.scene_change_proposal import ProposalDecision
+
+    enlarge_actions = [
+        action
+        for action in proposal.patch_actions
+        if action.command_id == enlarge_cmd.command_id
+    ]
+    assert enlarge_actions
+
+    accepted_commands = resolve_accepted_commands(
+        proposal,
+        ProposalDecision(
+            proposal_id=proposal.proposal_id,
+            accepted_action_ids=[action.action_id for action in enlarge_actions],
+        ),
+    )
+    assert len(accepted_commands) == 1
+    assert accepted_commands[0].command_id == enlarge_cmd.command_id
+
+
+def test_resolve_accepted_commands_returns_all_when_fully_accepted() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    service = _proposal_service()
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    from archium.domain.visual.scene_change_proposal import ProposalDecision
+
+    accepted_commands = resolve_accepted_commands(
+        proposal,
+        ProposalDecision(
+            proposal_id=proposal.proposal_id,
+            accepted_action_ids=[action.action_id for action in proposal.patch_actions],
+        ),
+    )
+    assert len(accepted_commands) == len(proposal.commands)
+
+
+def test_resolve_accepted_commands_returns_all_when_no_decision() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    service = _proposal_service()
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    assert resolve_accepted_commands(proposal, None) == proposal.commands
+
+
+def test_create_proposal_records_failed_commands_with_warnings() -> None:
+    scene = _mixed_scene(
+        _text_node(node_id="title", text="旧标题", locked=True),
+        _text_node(node_id="body", text="旧正文"),
+    )
+    presentation_id = uuid4()
+    service = _proposal_service()
+
+    locked_rewrite = RewriteTextCommand(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        node_id="title",
+        new_text="新标题",
+    )
+    body_rewrite = RewriteTextCommand(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        node_id="body",
+        new_text="新正文",
+    )
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[locked_rewrite, body_rewrite],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+
+    assert proposal.status == ProposalStatus.READY_WITH_WARNINGS
+    assert len(proposal.requested_commands) == 2
+    assert len(proposal.successful_commands) == 1
+    assert len(proposal.failed_commands) == 1
+    assert proposal.commands == proposal.successful_commands
+    assert proposal.failed_commands[0].command_id == locked_rewrite.command_id
+    assert proposal.proposed_scene.node_by_id("body").text == "新正文"  # type: ignore[union-attr]
+    assert proposal.proposed_scene.node_by_id("title").text == "旧标题"  # type: ignore[union-attr]
+
+    failed_result = next(
+        result for result in proposal.command_results if result.status == "failed"
+    )
+    assert failed_result.command_id == locked_rewrite.command_id
+    assert failed_result.issues
+    assert failed_result.action_ids == []
+
+    applied_result = next(
+        result for result in proposal.command_results if result.status == "applied"
+    )
+    assert applied_result.command_id == body_rewrite.command_id
+    assert applied_result.action_ids
+
+
+def test_create_proposal_raises_when_all_commands_fail() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧标题", locked=True))
+    presentation_id = uuid4()
+    service = _proposal_service()
+    try:
+        service.create_proposal(
+            base_scene=scene,
+            commands=[
+                RewriteTextCommand(
+                    presentation_id=presentation_id,
+                    slide_id=scene.slide_id,
+                    node_id="title",
+                    new_text="新标题",
+                )
+            ],
+            presentation_id=presentation_id,
+            slide_id=scene.slide_id,
+        )
+        raised = False
+    except WorkflowError:
+        raised = True
+    assert raised
