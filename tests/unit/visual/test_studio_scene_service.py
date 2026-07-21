@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
+from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, SlideType
@@ -189,3 +190,54 @@ def test_studio_scene_refresh_after_layout_edit(db_session: Session, tmp_path: P
     assert refreshed.reused is False
     assert refreshed.scene_hash != first.scene_hash
     assert refreshed.preview_path.is_file()
+
+
+def test_ensure_scene_runs_repair_before_preview(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _presentation, slide, _plan = _seed_slide_with_plan(db_session)
+    settings = Settings(_env_file=None, output_path=tmp_path, scene_repair_enabled=True)
+    service = StudioSceneService(db_session, settings=settings)
+    calls: list[int] = []
+    original = SceneRepairService.repair_deck
+
+    def _tracking(self, presentation_id, scenes, **kwargs):
+        calls.append(len(scenes))
+        return original(self, presentation_id, scenes, **kwargs)
+
+    monkeypatch.setattr(SceneRepairService, "repair_deck", _tracking)
+    result = service.ensure_scene_for_slide(slide.id)
+    assert result is not None
+    assert calls == [1]
+
+    calls.clear()
+    second = service.ensure_scene_for_slide(slide.id)
+    assert second is not None
+    assert second.reused is True
+    assert calls == [1]
+
+
+def test_ensure_scene_skips_repair_when_disabled(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _presentation, slide, _plan = _seed_slide_with_plan(db_session)
+    settings = Settings(
+        _env_file=None,
+        output_path=tmp_path,
+        scene_repair_enabled=False,
+    )
+    service = StudioSceneService(db_session, settings=settings)
+    calls: list[int] = []
+
+    def _tracking(self, presentation_id, scenes, **kwargs):
+        calls.append(1)
+        return SceneRepairService.repair_deck(self, presentation_id, scenes, **kwargs)
+
+    monkeypatch.setattr(SceneRepairService, "repair_deck", _tracking)
+    result = service.ensure_scene_for_slide(slide.id)
+    assert result is not None
+    assert calls == []
