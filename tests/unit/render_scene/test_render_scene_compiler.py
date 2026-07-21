@@ -138,3 +138,126 @@ def test_compiler_warns_on_missing_asset() -> None:
     assert hero is not None
     assert getattr(hero, "asset_unresolved", False) is True
     assert any("UNRESOLVED_ASSET" in warning for warning in scene.warnings)
+
+
+def test_reference_style_and_art_direction_do_not_affect_compiled_scene() -> None:
+    """P1 contract: ReferenceStyle / ArtDirection are API placeholders only.
+
+    When Phase 3+ applies style overlays, this test must be replaced with
+    assertions that cues change theme tokens / typography — do not delete the
+    honesty gap without implementing overlays.
+    """
+    from archium.domain.reference_style import (
+        ReferenceStyleProfile,
+        StyleColorCue,
+        StyleLayoutCue,
+        StyleTypographyCue,
+    )
+    from archium.domain.visual.art_direction import ArtDirection
+
+    design = default_presentation_design_system()
+    slide_id = uuid4()
+    plan = LayoutPlan(
+        slide_id=slide_id,
+        layout_family=LayoutFamily.HERO,
+        layout_variant="title_only",
+        page_width=10,
+        page_height=5.625,
+        design_system_id=design.id,
+        visual_intent_id=uuid4(),
+        reading_order=["title"],
+        elements=[
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="风格应被忽略",
+                x=0.7,
+                y=0.45,
+                width=8.6,
+                height=0.657,
+                style_token="title",
+            ),
+        ],
+    )
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        title="风格应被忽略",
+        message="msg",
+        chapter_id="cover",
+        order=1,
+    )
+    project_id = uuid4()
+    reference_style = ReferenceStyleProfile(
+        project_id=project_id,
+        style_name="neon-brutalist",
+        mood_keywords=["neon", "dense"],
+        color_cues=[
+            StyleColorCue(
+                id="bg",
+                name="hot-pink",
+                description="#FF00AA must become background if applied",
+                usage="background",
+            )
+        ],
+        typography_cues=[
+            StyleTypographyCue(
+                id="display",
+                role="title",
+                description="Use Comic Sans at 72pt if applied",
+            )
+        ],
+        layout_cues=[
+            StyleLayoutCue(
+                id="grid",
+                pattern="asymmetric-bleed",
+                description="Full-bleed hero if applied",
+            )
+        ],
+    )
+    art_direction = ArtDirection(
+        project_id=project_id,
+        concept_name="ignored-concept",
+        rationale="Must not change scene until Phase 3+",
+        palette_strategy="neon pink background",
+        typography_strategy="oversized display",
+        grid_strategy="asymmetric",
+        image_strategy="full bleed",
+        drawing_strategy="heavy line",
+        diagram_strategy="bold",
+        annotation_strategy="callouts",
+        cover_strategy="hero",
+        section_strategy="divider",
+        content_strategy="dense",
+        closing_strategy="summary",
+        pacing_strategy="fast",
+        visual_tone=["neon"],
+        emotional_keywords=["loud"],
+    )
+
+    baseline = RenderSceneCompiler().compile(
+        slide=slide,
+        layout_plan=plan,
+        design_system=design,
+    )
+    styled = RenderSceneCompiler().compile(
+        slide=slide,
+        layout_plan=plan,
+        design_system=design,
+        art_direction=art_direction,
+        reference_style=reference_style,
+    )
+
+    assert styled.background.color == baseline.background.color == design.colors.resolve(
+        "background"
+    )
+    assert styled.theme_tokens.model_dump() == baseline.theme_tokens.model_dump()
+    base_title = baseline.node_by_id("title")
+    styled_title = styled.node_by_id("title")
+    assert isinstance(base_title, TextNode)
+    assert isinstance(styled_title, TextNode)
+    assert styled_title.font_family == base_title.font_family
+    assert styled_title.font_size == base_title.font_size
+    assert styled_title.color == base_title.color
+    assert "#FF00AA" not in (styled.background.color or "").upper()
+    assert "Comic" not in (styled_title.font_family or "")

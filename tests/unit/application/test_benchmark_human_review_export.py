@@ -42,7 +42,71 @@ def _seed_case(root: Path, case_id: str, *, title: str = "Demo") -> Path:
         encoding="utf-8",
     )
     (case_dir / "preview.png").write_bytes(b"png")
+    _seed_visual_review_ready(case_dir)
     return case_dir
+
+
+def _seed_visual_review_ready(case_dir: Path) -> None:
+    """Seed minimal same-generation render artifacts so the case passes eligibility."""
+    from archium.domain.visual.benchmark import BenchmarkRenderManifest
+    from archium.domain.visual.render_scene import (
+        BackgroundStyle,
+        RenderScene,
+        compute_scene_hash,
+    )
+    from tests.benchmark.architectural_slides.render_manifest import (
+        SCENE_JSON_NAME,
+        SCENE_PREVIEW_NAME,
+        sha256_file,
+        write_pptx_render_sidecar,
+        write_pptx_sidecar,
+        write_render_manifest,
+    )
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[],
+    )
+    (case_dir / SCENE_JSON_NAME).write_text(
+        json.dumps(scene.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (case_dir / SCENE_PREVIEW_NAME).write_bytes(b"png")
+    scene_hash = compute_scene_hash(scene)
+
+    from pptx import Presentation
+
+    pptx_path = case_dir / "output.pptx"
+    Presentation().save(str(pptx_path))
+    pptx_hash = sha256_file(pptx_path)
+    (case_dir / "pptx_render.png").write_bytes(b"png")
+    write_pptx_sidecar(case_dir, scene_hash=scene_hash, pptx_content_hash=pptx_hash)
+    write_pptx_render_sidecar(case_dir, scene_hash=scene_hash, pptx_content_hash=pptx_hash)
+    write_render_manifest(
+        case_dir,
+        BenchmarkRenderManifest(
+            render_source="pptx_screenshot",
+            render_valid=True,
+            scene_id=str(scene.id),
+            scene_hash=scene_hash,
+            asset_count=0,
+            real_asset_count=0,
+            placeholder_asset_count=0,
+            rendered_at=datetime.now(UTC),
+            renderer="test",
+            screenshot_tools_available=True,
+            pptx_screenshot_generated=True,
+            pptx_screenshot_reused=False,
+            pptx_screenshot_source_hash=scene_hash,
+            pptx_content_hash=pptx_hash,
+            post_render_qa_passed=True,
+            post_render_qa_issues=[],
+        ),
+    )
 
 
 def _manual_review(case_id: str, *, accepted: bool = True) -> HumanVisualReview:
