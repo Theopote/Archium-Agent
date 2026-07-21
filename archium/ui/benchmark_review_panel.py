@@ -105,6 +105,12 @@ def render_benchmark_review_panel() -> None:
         "Layout Geometry Benchmark：基于 `wireframe.png` 评价几何（与视觉评分分离）。"
         "PPTX 可编辑性单独在 `editability_review.json` 记录。"
     )
+    st.info(
+        "**低视觉密度页**（展位框 + 单字体/单色文字、几乎无建筑图）："
+        "不要按「颜色/字体丰富度」或「缺建筑图」机械扣分。"
+        "改看结构清晰、可读性、叙述顺序、可编辑性；用问题清单 + `PASS`/`NEEDS_REVIEW`，"
+        "避免 1–5 分细抠导致评审偏差。"
+    )
     st.warning(
         "此前基于线框 `preview.png` / `wireframe.png` 的视觉评分已作废（validity=invalid_render_artifact），"
         "不得计入交付统计。须在 `render_valid=true` 且存在真实渲染产物后重新评审。"

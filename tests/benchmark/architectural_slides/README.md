@@ -190,6 +190,19 @@ python scripts/build_architectural_benchmark_report.py
 
 设置页「建筑幻灯片基准」默认即为异常复核表单；1–5 滑条折叠在「实验性评分」中且不计入正式门禁。
 
+### 低视觉密度页（展位 + 单字体/单色文字）
+
+若页面以说明文字/展位框为主、几乎无建筑图或现场图，**不要**按「颜色丰富度」「字体层次」或「缺建筑图」机械扣分。
+
+评审重点：
+
+- 结构是否清晰（标题 / 正文 / 强调可辨）
+- 可读性与留白是否合理
+- 叙述顺序是否连贯
+- 文本槽位是否可编辑
+
+结论用问题清单 + `PASS` / `NEEDS_REVIEW`，避免在该类页上细抠 1–5 分导致评审偏差。口径见 `docs/QUALITY_GATE_STATUS.md` § Human review variance control。
+
 ### 旧字段
 
 `human_review.json` 中的 1–5 维分可保留为实验数据（`scoring_mode=experimental`）。

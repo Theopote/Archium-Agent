@@ -323,7 +323,7 @@ def _render_checklist_md(report: dict) -> str:
         lines.extend(["", "## 待复核页", ""])
         for sid in report["low_confidence_slides"]:
             lines.append(f"- `{sid}`")
-    lines.extend(["", "## 人工逐项确认", "", "| ID | 项目 | 自动 | 人工结论 | 备注 |", "|----|------|------|----------|------|"])
+    lines.extend(["", _LOW_VISUAL_DENSITY_RUBRIC_MD, "", "## 人工逐项确认", "", "| ID | 项目 | 自动 | 人工结论 | 备注 |", "|----|------|------|----------|------|"])
     for item in report["human_review_checklist"]:
         lines.append(
             f"| {item['id']} | {item['item']} | {item['auto']} | ☐ PASS / ☐ REVIEW | |"
@@ -340,6 +340,27 @@ def _render_checklist_md(report: dict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+_LOW_VISUAL_DENSITY_RUBRIC_MD = """## 低视觉密度页评审口径（本批次必用）
+
+适用对象：以展位/说明文字为主，几乎无建筑图纸或现场图，字体/颜色变化很少的页面。
+
+评审原则：
+
+- 不因“没有建筑图”自动扣分；先判断该页是否本来就是说明/目录/流程页。
+- 弱化主观美学项（颜色丰富度、字体层次），改看信息结构与可读性。
+- 优先判定 `PASS` / `REVIEW`，避免在该类页上做细粒度主观分差。
+
+人工快速判定（建议）：
+
+| 维度 | PASS 条件 | REVIEW 触发 |
+|------|-----------|-------------|
+| 结构清晰 | 标题、正文、强调层级可辨识 | 标题/正文混在一起，读者难以抓主线 |
+| 可读性 | 正文密度可接受，行距和留白基本可读 | 文字过密、拥挤、明显难读 |
+| 逻辑顺序 | 叙述顺序连贯（背景→问题→措施等） | 叙述跳跃、前后关系不清 |
+| 编辑友好 | 文本槽位可替换，非大面积锁定/背景覆盖 | 主要信息位难改或需重做版面 |
+| 与页面功能匹配 | 作为说明页/目录页目标明确 | 页功能与内容不匹配 |"""
 
 
 def main() -> int:

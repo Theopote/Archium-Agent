@@ -75,3 +75,13 @@ py scripts/run_phase35_reference_validation.py --source "C:\Users\navib\Desktop\
 2. Connected-components clustering yields many **singleton** content clusters on real deck (expected REVIEW, not BLOCKED).
 3. Representative selector still picks low-editability singletons when no better member exists — human should re-pick in UI.
 4. Full 76- or 205-page runs not executed (time/artifact size); sprint used 28–35 page subset.
+
+## Low-visual-density human review rubric (variance control)
+
+When benchmark or reference-deck pages are **booth/text-heavy** (single font/color, few drawings/photos):
+
+- Do **not** penalize “no architectural drawing” if the page is explanatory by design.
+- De-emphasize aesthetic micro-scoring; prioritize structure, readability, narrative order, editability.
+- Use `PASS` / `NEEDS_REVIEW` + problem checklist — not fragile 1–5 spread on such pages.
+
+Synced to: `docs/QUALITY_GATE_STATUS.md` § Human review variance control; benchmark UI info banner; Phase 3.5 checklist generator.
