@@ -67,7 +67,7 @@ def test_phase9_reused_screenshots_block_formal_visual_review() -> None:
 
 
 def test_phase9_formal_gate_not_passed_until_manual_reviews_complete() -> None:
-    """Invalidated/placeholder reviews must not satisfy Phase 9 formal gate."""
+    """Placeholder reviews must not satisfy Phase 9 formal gate."""
     reviews: list[HumanVisualReview] = []
     for case_id in materialized_benchmark_case_ids():
         review = load_case_review(case_id)
@@ -75,12 +75,14 @@ def test_phase9_formal_gate_not_passed_until_manual_reviews_complete() -> None:
             reviews.append(review)
     result = evaluate_phase9_human_gate(reviews)
     assert result.passed is False
-    assert result.completed_valid_count == 0
-    assert any("completed valid reviews" in reason for reason in result.reasons)
+    assert result.completed_valid_count < HUMAN_REVIEW_FORMAL_TOTAL_CASES
+    assert any("completed valid exception reviews" in reason for reason in result.reasons)
 
 
 def test_phase9_gate_requires_thirty_valid_manual_reviews() -> None:
     from datetime import UTC, datetime
+
+    from archium.domain.visual.page_quality import ReportingReady
 
     reviews = [
         HumanVisualReview(
@@ -96,6 +98,7 @@ def test_phase9_gate_requires_thirty_valid_manual_reviews() -> None:
             editability=4,
             review_completed=True,
             accepted_for_delivery=True,
+            reporting_ready=ReportingReady.READY,
             validity=ReviewValidity.VALID,
             reviewer="tester",
             reviewed_at=datetime.now(UTC),

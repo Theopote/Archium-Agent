@@ -14,15 +14,16 @@ from archium.domain._base import DomainModel
 HUMAN_REVIEW_MIN_SCORE = 1
 HUMAN_REVIEW_MAX_SCORE = 5
 HUMAN_REVIEW_PASS_THRESHOLD = 3.5
-HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD = 3.8
+HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD = 3.8  # experimental archive only — not a formal gate
 HUMAN_REVIEW_FORMAL_MIN_ACCEPTED = 24
 HUMAN_REVIEW_FORMAL_TOTAL_CASES = 30
-HUMAN_REVIEW_PENDING_LABEL = "待人工评审"
+HUMAN_REVIEW_FORMAL_MIN_EXCEPTION_REVIEWS = 3  # pilot exception reviews before deck gate
+HUMAN_REVIEW_PENDING_LABEL = "待人工复核"
 HUMAN_REVIEW_INVALIDATED_LABEL = "已作废（需重评）"
 LAYOUT_REVIEW_PENDING_LABEL = "待几何评审"
 LAYOUT_REVIEW_PASS_THRESHOLD = 3.5
 BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER = (
-    "正式人工视觉评审须基于本轮重新生成的 pptx_render.png"
+    "正式人工异常复核须基于本轮重新生成的 pptx_render.png"
     "（output.pptx → PowerPoint/LibreOffice → 截图），"
     "且 render_valid=true、pptx_screenshot_generated=true；"
     "复用截图（pptx_screenshot_reused=true）仅可用于开发快速检查，"
@@ -54,6 +55,17 @@ VISUAL_REVIEW_WEIGHTS: dict[str, float] = {
 }
 
 from archium.domain.visual.enums import LayoutFamily  # noqa: E402
+from archium.domain.visual.page_quality import (  # noqa: E402
+    PageQualityStatus,
+    QualityIssue,
+    ReportingReady,
+    ScoringMode,
+    derive_page_quality_status,
+    issues_from_free_text,
+)
+from archium.domain.visual.quality_issue_catalog import (  # noqa: E402
+    HUMAN_CHECKLIST_BY_CODE,
+)
 
 
 class HumanVisualReviewSource(StrEnum):
@@ -112,20 +124,33 @@ class BenchmarkCaseDefinition(DomainModel):
 
 
 class HumanVisualReview(DomainModel):
-    """Manual visual quality review for one benchmark slide."""
+    """Human exception review for one benchmark slide.
+
+    Formal gate uses coded issues + reporting_ready / page_quality_status.
+    Legacy 1–5 dimension scores are ``scoring_mode=experimental`` only.
+    """
 
     case_id: str = Field(min_length=1)
     source: HumanVisualReviewSource = HumanVisualReviewSource.MANUAL
-    information_hierarchy: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
-    visual_focus: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
-    reading_order: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
-    image_text_relationship: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
-    whitespace_density: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    # --- Experimental 1–5 archive (not formal gate) ---
+    information_hierarchy: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4)
+    visual_focus: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4)
+    reading_order: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4)
+    image_text_relationship: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4)
+    whitespace_density: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4)
     architectural_expression: int = Field(
-        ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE
+        ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4
     )
-    aesthetic_finish: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
-    editability: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE)
+    aesthetic_finish: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4)
+    editability: int = Field(ge=HUMAN_REVIEW_MIN_SCORE, le=HUMAN_REVIEW_MAX_SCORE, default=4)
+    scoring_mode: ScoringMode = ScoringMode.EXPERIMENTAL
+    # --- Problem-driven formal fields ---
+    selected_issue_codes: list[str] = Field(default_factory=list)
+    quality_issues: list[QualityIssue] = Field(default_factory=list)
+    page_quality_status: PageQualityStatus | None = None
+    worst_problem: str = ""
+    system_missed: str = ""
+    reporting_ready: ReportingReady = ReportingReady.UNSPECIFIED
     major_problems: list[str] = Field(default_factory=list)
     minor_problems: list[str] = Field(default_factory=list)
     review_completed: bool = False
@@ -154,8 +179,62 @@ class HumanVisualReview(DomainModel):
             raise ValueError(msg)
         return value
 
+    def collect_quality_issues(self) -> list[QualityIssue]:
+        """Merge checklist codes, structured issues, and legacy free-text lists."""
+        from archium.domain.visual.page_quality import (
+            IssueSeverity,
+            QualityIssueSource,
+        )
+
+        merged: list[QualityIssue] = list(self.quality_issues)
+        seen = {issue.code for issue in merged}
+        for code in self.selected_issue_codes:
+            if code in seen:
+                continue
+            entry = HUMAN_CHECKLIST_BY_CODE.get(code)
+            if entry is None:
+                merged.append(
+                    QualityIssue(
+                        code=code,
+                        severity=IssueSeverity.MAJOR,
+                        message=code,
+                        source=QualityIssueSource.HUMAN,
+                    )
+                )
+            else:
+                merged.append(
+                    QualityIssue(
+                        code=entry.code,
+                        severity=entry.severity,
+                        category=entry.category,
+                        message=entry.label_zh,
+                        source=QualityIssueSource.HUMAN,
+                    )
+                )
+            seen.add(code)
+        for issue in issues_from_free_text(
+            major_problems=self.major_problems,
+            minor_problems=self.minor_problems,
+        ):
+            if issue.code not in seen:
+                merged.append(issue)
+                seen.add(issue.code)
+        return merged
+
+    def derived_page_quality_status(self) -> PageQualityStatus:
+        if self.page_quality_status is not None:
+            return self.page_quality_status
+        return derive_page_quality_status(self.collect_quality_issues())
+
+    def has_blocker_issues(self) -> bool:
+        from archium.domain.visual.page_quality import IssueSeverity
+
+        return any(
+            issue.severity == IssueSeverity.BLOCKER for issue in self.collect_quality_issues()
+        )
+
     def weighted_score(self) -> float:
-        """Return the weighted average human score (1–5 scale)."""
+        """Experimental weighted average — not used by formal gates."""
         total = 0.0
         weights = VISUAL_REVIEW_WEIGHTS if self.is_manual_review() else HUMAN_REVIEW_WEIGHTS
         for field_name, weight in weights.items():
@@ -164,26 +243,49 @@ class HumanVisualReview(DomainModel):
         return round(total, 3)
 
     def passes_threshold(self, threshold: float = HUMAN_REVIEW_PASS_THRESHOLD) -> bool:
+        """Legacy score helper — formal delivery uses issue status instead."""
         return self.weighted_score() >= threshold
 
     def human_score_label(self) -> str:
-        """User-facing score text; scaffold reviews must not show placeholder numbers."""
+        """User-facing status; prefer problem-driven status over experimental scores."""
         if self.is_invalidated():
             return HUMAN_REVIEW_INVALIDATED_LABEL
         if self.is_scaffold_review():
             return HUMAN_REVIEW_PENDING_LABEL
-        return f"{self.weighted_score():.2f}"
+        if self.is_manual_review() and (
+            self.selected_issue_codes
+            or self.quality_issues
+            or self.reporting_ready != ReportingReady.UNSPECIFIED
+            or self.review_completed
+        ):
+            return self.derived_page_quality_status().value
+        return HUMAN_REVIEW_PENDING_LABEL
 
     def reportable_weighted_score(self) -> float | None:
-        """Return weighted score only for real manual reviews."""
+        """Experimental only — never drives formal gates."""
         if self.is_scaffold_review() or self.is_invalidated():
             return None
-        return self.weighted_score()
+        if self.scoring_mode != ScoringMode.EXPERIMENTAL:
+            return self.weighted_score()
+        return None
 
     @model_validator(mode="after")
     def _infer_invalidated_validity(self) -> Self:
         if self.source == HumanVisualReviewSource.INVALIDATED and self.validity == ReviewValidity.VALID:
             object.__setattr__(self, "validity", ReviewValidity.INVALID_RENDER_ARTIFACT)
+        return self
+
+    @model_validator(mode="after")
+    def _sync_page_quality_status(self) -> Self:
+        if self.is_scaffold_review() or self.is_invalidated():
+            return self
+        if not self.is_manual_review():
+            return self
+        status = derive_page_quality_status(self.collect_quality_issues())
+        if self.reporting_ready == ReportingReady.DO_NOT_USE:
+            status = PageQualityStatus.BLOCKED
+        object.__setattr__(self, "page_quality_status", status)
+        object.__setattr__(self, "scoring_mode", ScoringMode.EXPERIMENTAL)
         return self
 
     @model_validator(mode="after")
@@ -207,7 +309,15 @@ class HumanVisualReview(DomainModel):
                 accepted_for_delivery = True
             if accepted_for_delivery and not accepted:
                 accepted = True
-            if accepted_for_delivery and (self.major_problems or not self.passes_threshold()):
+            # Problem-driven: blockers / majors / do_not_use clear acceptance.
+            status = self.page_quality_status or self.derived_page_quality_status()
+            blocks_accept = (
+                status in {PageQualityStatus.BLOCKED, PageQualityStatus.NEEDS_REVIEW}
+                or self.has_blocker_issues()
+                or bool(self.major_problems)
+                or self.reporting_ready == ReportingReady.DO_NOT_USE
+            )
+            if accepted_for_delivery and blocks_accept:
                 accepted_for_delivery = False
                 accepted = False
             if accepted_for_delivery != self.accepted_for_delivery:
@@ -230,6 +340,15 @@ class HumanVisualReview(DomainModel):
 
     def is_manual_review(self) -> bool:
         return self.source == HumanVisualReviewSource.MANUAL
+
+    def is_exception_review(self) -> bool:
+        """True when this record is a completed problem-driven human exception review."""
+        return (
+            self.is_manual_review()
+            and self.review_completed
+            and not self.is_invalidated()
+            and self.validity == ReviewValidity.VALID
+        )
 
     def is_invalidated(self) -> bool:
         return (
@@ -444,8 +563,10 @@ class BenchmarkHumanReviewExport(DomainModel):
     reviews: list[HumanVisualReview] = Field(default_factory=list)
     pending_cases: list[BenchmarkPendingCase] = Field(default_factory=list)
     human_quality_gate_passed: bool = False
-    human_average_weighted_score: float | None = None
+    human_average_weighted_score: float | None = None  # experimental only; non-gating
     human_quality_gate_reasons: list[str] = Field(default_factory=list)
+    page_quality_status_counts: dict[str, int] = Field(default_factory=dict)
+    formal_gate_mode: str = "problem_driven"
 
 
 class BenchmarkRuleScore(DomainModel):

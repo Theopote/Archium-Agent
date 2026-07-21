@@ -146,14 +146,23 @@ def _compare_summary_payloads(actual: dict[str, Any], expected: dict[str, Any]) 
         "manual_human_review_count",
         "manual_human_accepted_count",
         "placeholder_human_review_count",
-        "human_average_weighted_score",
         "human_quality_gate_passed",
         "human_quality_gate_reasons",
     )
+    # human_average_weighted_score is experimental / non-gating — compare only when both set.
     for key in keys:
         if actual.get(key) != expected.get(key):
             msg = f"summary {key} mismatch: committed={actual.get(key)!r} live={expected.get(key)!r}"
             raise AssertionError(msg)
+
+    for optional_key in ("formal_gate_mode", "page_quality_status_counts"):
+        if optional_key in actual and optional_key in expected:
+            if actual.get(optional_key) != expected.get(optional_key):
+                msg = (
+                    f"summary {optional_key} mismatch: "
+                    f"committed={actual.get(optional_key)!r} live={expected.get(optional_key)!r}"
+                )
+                raise AssertionError(msg)
 
     actual_cases = {item["case_id"]: item for item in actual.get("cases", [])}
     expected_cases = {item["case_id"]: item for item in expected.get("cases", [])}

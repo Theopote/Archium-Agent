@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-07-21T03:55:39.984360+00:00",
+  "generated_at": "2026-07-21T03:59:32.243005+00:00",
   "case_count": 30,
   "rule_passed_count": 30,
   "rule_pass_rate": 1.0,
-  "manual_human_review_count": 0,
+  "manual_human_review_count": 1,
   "manual_human_accepted_count": 0,
   "placeholder_human_review_count": 0,
-  "human_average_weighted_score": null,
+  "human_average_weighted_score": 3.84,
   "human_quality_gate_passed": false,
   "human_quality_gate_reasons": [
-    "manual reviews 0 < required 24/30",
+    "manual reviews 1 < required 24/30",
     "accepted pages 0 < required 24/30"
   ],
   "cases": [
@@ -27,18 +27,20 @@
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": null,
-      "human_score_label": "已作废（需重评）",
-      "human_review_source": "invalidated",
-      "human_review_validity": "invalid_render_artifact",
+      "human_weighted_score": 3.84,
+      "human_score_label": "3.84",
+      "human_review_source": "manual",
+      "human_review_validity": "valid",
       "human_review_completed": true,
       "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "human_invalidated": true,
-      "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
+      "human_accepted": false,
+      "human_invalidated": false,
+      "invalidation_reason": null,
       "reviewer": "Theopote",
-      "reviewed_at": "2026-07-20T13:52:17.306971+00:00",
-      "major_problems": []
+      "reviewed_at": "2026-07-21T03:59:32.151716+00:00",
+      "major_problems": [
+        "页面上下边空白太多了"
+      ]
     },
     {
       "case_id": "case_002_site_photos",

@@ -29,8 +29,8 @@ from archium.application.architectural_benchmark_review_store import (
 )
 from archium.domain.visual.benchmark import (
     BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER,
-    HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD,
     HUMAN_REVIEW_FORMAL_MIN_ACCEPTED,
+    HUMAN_REVIEW_FORMAL_MIN_EXCEPTION_REVIEWS,
     HUMAN_REVIEW_INVALIDATED_LABEL,
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
@@ -41,6 +41,16 @@ from archium.domain.visual.benchmark import (
     HumanLayoutReview,
     HumanVisualReview,
     HumanVisualReviewSource,
+)
+from archium.domain.visual.page_quality import (
+    PageQualityStatus,
+    ReportingReady,
+    ScoringMode,
+)
+from archium.domain.visual.quality_issue_catalog import (
+    CATEGORY_LABELS_ZH,
+    HUMAN_CHECKLIST_BY_CODE,
+    checklist_grouped,
 )
 from archium.exceptions import WorkflowError
 from archium.ui.studio.human_review_panel import REVIEW_DIMENSION_LABELS
@@ -195,36 +205,44 @@ def _render_progress_header(progress: dict[str, int]) -> None:
     review_ratio = progress["manual_review_count"] / case_count
     accepted_ratio = progress["manual_accepted_count"] / case_count
     export_bundle = build_human_review_export()
+    status_counts = export_bundle.page_quality_status_counts or {}
 
     metric_cols = st.columns(5)
     metric_cols[0].metric("Case 总数", progress["case_count"])
-    metric_cols[1].metric("已人工评审", progress["manual_review_count"])
-    metric_cols[2].metric("可交付（人工）", progress["manual_accepted_count"])
-    metric_cols[3].metric("待评审", progress["placeholder_count"])
+    metric_cols[1].metric("异常复核", progress["manual_review_count"])
+    metric_cols[2].metric("可交付", progress["manual_accepted_count"])
+    metric_cols[3].metric("待复核", progress["placeholder_count"])
     gate_label = "通过" if export_bundle.human_quality_gate_passed else "未通过"
-    avg = export_bundle.human_average_weighted_score
-    metric_cols[4].metric(
-        "正式人工门禁",
-        gate_label,
-        delta=f"均分 {avg:.2f}" if avg is not None else None,
-    )
+    metric_cols[4].metric("正式门禁（问题驱动）", gate_label)
 
     st.caption(
-        f"正式门槛：≥{HUMAN_REVIEW_FORMAL_MIN_ACCEPTED}/30 页 accepted · "
-        f"均分 ≥ {HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD}"
+        f"正式门槛：问题驱动 PASS/WARNING/REVIEW/BLOCKED · "
+        f"至少 {HUMAN_REVIEW_FORMAL_MIN_EXCEPTION_REVIEWS} 页异常复核 · "
+        f"全量时 ≥{HUMAN_REVIEW_FORMAL_MIN_ACCEPTED}/30 可交付。"
+        " 1–5 综合分已停用，不计入门禁。"
     )
+    if status_counts:
+        st.caption(
+            "状态分布："
+            + " · ".join(f"{key}={status_counts.get(key, 0)}" for key in (
+                PageQualityStatus.PASS.value,
+                PageQualityStatus.PASS_WITH_WARNINGS.value,
+                PageQualityStatus.NEEDS_REVIEW.value,
+                PageQualityStatus.BLOCKED.value,
+            ))
+        )
     if export_bundle.human_quality_gate_reasons:
         st.caption("；".join(export_bundle.human_quality_gate_reasons))
 
-    st.caption(f"评审进度 {progress['manual_review_count']} / {progress['case_count']}")
+    st.caption(f"复核进度 {progress['manual_review_count']} / {progress['case_count']}")
     st.progress(min(1.0, review_ratio))
     st.caption(f"可交付进度 {progress['manual_accepted_count']} / {progress['case_count']}")
     st.progress(min(1.0, accepted_ratio))
 
     if progress["manual_review_count"] == 0:
         st.info(
-            "当前尚无真实人工评审。"
-            "保存 `source=manual` 评审后可导出集中 JSON，或从离线评审文件导入。"
+            "当前尚无人工异常复核。"
+            "请查看 pptx_render.png，勾选具体问题清单并填写「可否汇报」，无需 1–5 打分。"
         )
 
 
@@ -641,40 +659,44 @@ def _render_visual_review_form(
     can_submit_visual = eligible and pptx_preview_active
     is_manual = existing is not None and existing.is_manual_review()
 
-    st.markdown("**当前视觉评分对象：`pptx_render.png`**")
+    st.markdown("**人工异常复核（问题驱动）· 对象：`pptx_render.png`**")
+    st.caption("不要求 1–5 打分。勾选具体问题，或说明系统遗漏；由问题严重等级决定状态。")
     if not pptx_preview_active:
         st.warning(
-            "左侧预览未停留在「PPTX 最终截图」— 视觉评分提交已禁用。"
-            "请先切换到 PPTX 最终截图再保存视觉分。"
+            "左侧预览未停留在「PPTX 最终截图」— 异常复核提交已禁用。"
+            "请先切换到 PPTX 最终截图。"
         )
 
     if existing is not None and existing.is_invalidated():
         st.info(
-            "本条视觉评分已作废（基于线框预览，validity=invalid_render_artifact）。"
+            "本条复核已作废（基于线框预览，validity=invalid_render_artifact）。"
             "待 `render_valid=true` 且真实渲染产物就绪后可重新保存。"
         )
     elif existing is not None and existing.is_scaffold_review():
-        st.warning("当前为占位视觉评审。")
+        st.warning("当前为占位记录，请完成真实异常复核。")
     if not eligible:
         st.error(
             BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER
             + "（" + "；".join(blockers) + "）"
         )
-        st.caption("视觉评审保存已禁用；可先完成几何评审（基于线框）。")
+        st.caption("异常复核保存已禁用；可先完成几何评审（基于线框）。")
 
-    defaults = {
-        field: getattr(existing, field, 4)
-        for field in VISUAL_REVIEW_DIMENSION_LABELS
-    }
-    scores: dict[str, int] = {}
-    for field, label in VISUAL_REVIEW_DIMENSION_LABELS.items():
-        scores[field] = st.slider(
-            label,
-            min_value=HUMAN_REVIEW_MIN_SCORE,
-            max_value=HUMAN_REVIEW_MAX_SCORE,
-            value=int(defaults[field]),
-            key=f"benchmark_human_review_{case.case_id}_{field}",
-        )
+    existing_codes = set(existing.selected_issue_codes) if is_manual and existing else set()
+    selected_codes: list[str] = []
+    for category, entries in checklist_grouped().items():
+        with st.expander(CATEGORY_LABELS_ZH[category], expanded=category.value.startswith("A")):
+            for entry in entries:
+                checked = st.checkbox(
+                    f"{'⛔ ' if entry.veto else ''}"
+                    f"{'🔴 ' if entry.severity.value == 'blocker' else ''}"
+                    f"{'🟠 ' if entry.severity.value == 'major' else ''}"
+                    f"{entry.label_zh}",
+                    value=entry.code in existing_codes,
+                    key=f"benchmark_issue_{case.case_id}_{entry.code}",
+                    help=f"{entry.code} · {entry.severity.value}",
+                )
+                if checked:
+                    selected_codes.append(entry.code)
 
     default_reviewer = ""
     if is_manual and existing is not None:
@@ -683,50 +705,80 @@ def _render_visual_review_form(
         default_reviewer = str(st.session_state[_SESSION_REVIEWER_KEY])
 
     reviewer = st.text_input(
-        "评审人",
+        "复核人",
         value=default_reviewer,
-        placeholder="真实姓名或工号（保存后会记住，供后续 case 复用）",
+        placeholder="真实姓名或工号",
         key=f"benchmark_human_reviewer_{case.case_id}",
     )
-    major = st.text_area(
-        "主要问题（每行一条）",
-        value="\n".join(existing.major_problems if existing else []),
-        height=72,
-        key=f"benchmark_human_major_{case.case_id}",
+    worst_problem = st.text_area(
+        "你看到的最严重问题是什么？",
+        value=existing.worst_problem if is_manual and existing else "",
+        height=68,
+        key=f"benchmark_worst_{case.case_id}",
     )
-    minor = st.text_area(
-        "次要问题（每行一条）",
-        value="\n".join(existing.minor_problems if existing else []),
-        height=72,
-        key=f"benchmark_human_minor_{case.case_id}",
+    system_missed = st.text_area(
+        "系统遗漏了什么？（未知问题 / 误报）",
+        value=existing.system_missed if is_manual and existing else "",
+        height=68,
+        key=f"benchmark_missed_{case.case_id}",
+    )
+    ready_options = {
+        ReportingReady.READY: "可直接使用",
+        ReportingReady.FIXABLE: "修改后可用",
+        ReportingReady.DO_NOT_USE: "不建议使用",
+        ReportingReady.UNSPECIFIED: "未指定",
+    }
+    default_ready = (
+        existing.reporting_ready
+        if is_manual and existing is not None
+        else ReportingReady.UNSPECIFIED
+    )
+    reporting_ready = st.radio(
+        "假如明天向甲方汇报，这页是否可用？",
+        options=list(ready_options.keys()),
+        format_func=lambda key: ready_options[key],
+        index=list(ready_options.keys()).index(default_ready),
+        key=f"benchmark_reporting_ready_{case.case_id}",
+        horizontal=True,
     )
     accepted_default = (
         bool(existing.accepted_for_delivery) if is_manual and existing is not None else False
     )
     accepted_for_delivery = st.checkbox(
-        "本页可接受交付",
+        "本页可接受交付（无 Blocker / 无未解决 Major）",
         value=accepted_default,
         key=f"benchmark_human_accept_{case.case_id}",
     )
     notes = st.text_input(
-        "评审备注",
+        "复核备注",
         value=existing.reviewer_notes if is_manual and existing is not None else "",
         key=f"benchmark_human_notes_{case.case_id}",
     )
 
+    # Keep legacy free-text majors from checklist messages for export compatibility.
+    major_labels = [
+        HUMAN_CHECKLIST_BY_CODE[code].label_zh
+        for code in selected_codes
+        if code in HUMAN_CHECKLIST_BY_CODE
+        and HUMAN_CHECKLIST_BY_CODE[code].severity.value in {"blocker", "major"}
+    ]
+    minor_labels = [
+        HUMAN_CHECKLIST_BY_CODE[code].label_zh
+        for code in selected_codes
+        if code in HUMAN_CHECKLIST_BY_CODE
+        and HUMAN_CHECKLIST_BY_CODE[code].severity.value == "minor"
+    ]
+
     preview = HumanVisualReview(
         case_id=case.case_id,
         source=HumanVisualReviewSource.MANUAL,
-        information_hierarchy=scores["information_hierarchy"],
-        visual_focus=scores["visual_focus"],
-        reading_order=scores["reading_order"],
-        image_text_relationship=scores["image_text_relationship"],
-        whitespace_density=scores["whitespace_density"],
-        architectural_expression=scores["architectural_expression"],
-        aesthetic_finish=scores["aesthetic_finish"],
-        editability=existing.editability if existing is not None else 4,
-        major_problems=[line.strip() for line in major.splitlines() if line.strip()],
-        minor_problems=[line.strip() for line in minor.splitlines() if line.strip()],
+        scoring_mode=ScoringMode.EXPERIMENTAL,
+        selected_issue_codes=selected_codes,
+        worst_problem=worst_problem.strip(),
+        system_missed=system_missed.strip(),
+        reporting_ready=reporting_ready,
+        major_problems=major_labels,
+        minor_problems=minor_labels,
         review_completed=True,
         accepted_for_delivery=accepted_for_delivery,
         accepted=accepted_for_delivery,
@@ -734,15 +786,29 @@ def _render_visual_review_form(
         reviewed_at=datetime.now(UTC),
         reviewer_notes=notes.strip(),
     )
-    st.caption(
-        f"综合评分 {preview.weighted_score():.2f} / 5 · "
-        f"{'通过' if preview.passes_threshold() else '未达'} "
-        f"交付阈值 {HUMAN_REVIEW_PASS_THRESHOLD}"
-    )
+    status = preview.derived_page_quality_status()
+    st.info(f"推导状态：**{status.value}**（由 Blocker / Major / Minor 决定，非平均分）")
+
+    with st.expander("实验性 1–5 评分（不计入正式门禁）", expanded=False):
+        st.caption("仅供研究对照；保存时写入 JSON 但不参与 PASS/BLOCKED 判定。")
+        scores: dict[str, int] = {}
+        defaults = {
+            field: getattr(existing, field, 4) if existing is not None else 4
+            for field in VISUAL_REVIEW_DIMENSION_LABELS
+        }
+        for field, label in VISUAL_REVIEW_DIMENSION_LABELS.items():
+            scores[field] = st.slider(
+                label,
+                min_value=HUMAN_REVIEW_MIN_SCORE,
+                max_value=HUMAN_REVIEW_MAX_SCORE,
+                value=int(defaults[field]),
+                key=f"benchmark_exp_score_{case.case_id}_{field}",
+            )
+        preview = preview.model_copy(update=scores)
 
     save_cols = st.columns(2)
     save_clicked = save_cols[0].button(
-        "保存视觉评审",
+        "保存异常复核",
         type="primary",
         use_container_width=True,
         disabled=not can_submit_visual,

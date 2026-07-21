@@ -176,41 +176,23 @@ python scripts/build_architectural_benchmark_report.py
 - `rule_pass_rate >= 1.0`（正式 layout 规则门槛）
 - **占位/派生人工评审不得 `accepted=true`**（仅 `source=manual` 可标记可交付）
 
-当前状态：**30 页 layout 规则质量已通过；人工视觉质量验收未通过**（`manual_human_accepted_count=0`，`human_quality_gate_passed=false`）。占位评审在报告中显示为 **待人工评审**，不会展示 4.0 占位分。
+当前状态：**30 页 layout 规则质量已通过；正式人工门禁为问题驱动且尚未通过**（需异常复核，非 1–5 均分）。
 
-## 人工评分
+## 人工异常复核（问题驱动；非 1–5 打分）
 
-### 三轮验收流程（推荐）
+正式门禁已改为 **PASS / PASS_WITH_WARNINGS / NEEDS_REVIEW / BLOCKED**，由 Blocker / Major / Minor 问题决定，**不再使用均分 ≥ 3.8**。
 
-1. **第一轮**：项目作者逐页真实审阅 30 页（设置 → 建筑幻灯片基准 · 人工视觉评审）
-2. **第二轮**：另请一位建筑师复核其中 10 页
-3. **第三轮**：争议页修改后复评
+### 推荐流程
 
-正式视觉评分对象为 **`pptx_render.png`**，且须 `pptx_screenshot_generated=true`。
+1. 自动规则与 provenance 检查全部 30 页
+2. 人工抽查代表页（试点：`case_001` / `case_002` / `case_006`）— **查看**截图、勾选问题清单、填写「可否汇报」
+3. 用人工反馈校准自动漏报/误报；不必逐页填 1–5 分
 
-### 必填字段（`source=manual`）
+设置页「建筑幻灯片基准」默认即为异常复核表单；1–5 滑条折叠在「实验性评分」中且不计入正式门禁。
 
-| 字段 | 说明 |
-|------|------|
-| `reviewer` | 评审人 |
-| `reviewed_at` | 评审时间（ISO 8601） |
-| `source` | 必须为 `manual` |
-| 9 维分数 | `information_hierarchy` … `editability`（1–5） |
-| `major_problems` / `minor_problems` | 问题列表 |
-| `accepted` | 是否可交付（仅 manual 可设为 true） |
-| `reviewer_notes` | 评审备注 |
+### 旧字段
 
-在 Streamlit **设置** 页「建筑幻灯片基准 · 人工视觉评审」面板中查看 `pptx_render.png` 并保存；或直接编辑各 Case 的 `human_review.json`。加权门槛默认 **3.5/5**。
-
-**设置页评审面板：** 总览 / 筛选 / 导航 / 评审人记忆 / 保存后可选刷新报告。
-
-使用 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` 时**不会覆盖**已有 `human_review.json`；缺失时写入占位模板。
-
-严格模式（CI 可选）：
-
-```bash
-STRICT_BENCHMARK_HUMAN_REVIEW=1 pytest tests/benchmark/architectural_slides -v
-```
+`human_review.json` 中的 1–5 维分可保留为实验数据（`scoring_mode=experimental`）。
 
 ## 与 V1–V7 Golden 的区别
 

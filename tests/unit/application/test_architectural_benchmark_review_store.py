@@ -145,7 +145,7 @@ def test_list_case_review_statuses_marks_placeholder_pending(tmp_path: Path) -> 
     statuses = list_case_review_statuses(root=tmp_path)
     assert len(statuses) == 1
     assert statuses[0].pending is True
-    assert statuses[0].human_score_label == "待人工评审"
+    assert statuses[0].human_score_label == "待人工复核"
 
 
 def test_review_progress_by_category_counts_manual_reviews(tmp_path: Path) -> None:

@@ -18,10 +18,17 @@ def human_review_summary_fields(review: HumanVisualReview | None) -> dict[str, A
             "reviewer": None,
             "reviewed_at": None,
             "major_problems": [],
+            "page_quality_status": None,
+            "reporting_ready": None,
+            "selected_issue_codes": [],
+            "scoring_mode": None,
         }
 
     manual = review.is_manual_review()
     invalidated = review.is_invalidated()
+    status = None
+    if manual and not invalidated and not review.is_scaffold_review():
+        status = review.derived_page_quality_status().value
     return {
         "human_weighted_score": review.reportable_weighted_score(),
         "human_score_label": review.human_score_label(),
@@ -35,4 +42,8 @@ def human_review_summary_fields(review: HumanVisualReview | None) -> dict[str, A
         "reviewer": review.reviewer or None,
         "reviewed_at": review.reviewed_at.isoformat() if review.reviewed_at else None,
         "major_problems": review.major_problems if manual else [],
+        "page_quality_status": status,
+        "reporting_ready": review.reporting_ready.value if manual else None,
+        "selected_issue_codes": list(review.selected_issue_codes) if manual else [],
+        "scoring_mode": review.scoring_mode.value if manual else None,
     }

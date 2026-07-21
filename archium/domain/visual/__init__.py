@@ -4,6 +4,7 @@ from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD,
     HUMAN_REVIEW_FORMAL_MIN_ACCEPTED,
+    HUMAN_REVIEW_FORMAL_MIN_EXCEPTION_REVIEWS,
     HUMAN_REVIEW_FORMAL_TOTAL_CASES,
     HUMAN_REVIEW_PASS_THRESHOLD,
     ArchitecturalSlideCategory,
@@ -11,6 +12,15 @@ from archium.domain.visual.benchmark import (
     BenchmarkRuleScore,
     HumanVisualReview,
     HumanVisualReviewSource,
+)
+from archium.domain.visual.page_quality import (
+    IssueCategory,
+    IssueSeverity,
+    PageQualityStatus,
+    QualityIssue,
+    ReportingReady,
+    ScoringMode,
+    derive_page_quality_status,
 )
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
@@ -161,10 +171,18 @@ __all__ = [
     "BenchmarkRuleScore",
     "HUMAN_REVIEW_FORMAL_AVERAGE_THRESHOLD",
     "HUMAN_REVIEW_FORMAL_MIN_ACCEPTED",
+    "HUMAN_REVIEW_FORMAL_MIN_EXCEPTION_REVIEWS",
     "HUMAN_REVIEW_FORMAL_TOTAL_CASES",
     "HUMAN_REVIEW_PASS_THRESHOLD",
     "HumanVisualReview",
     "HumanVisualReviewSource",
+    "IssueCategory",
+    "IssueSeverity",
+    "PageQualityStatus",
+    "QualityIssue",
+    "ReportingReady",
+    "ScoringMode",
+    "derive_page_quality_status",
     "AssetVisualRole",
     "ChartStyleSystem",
     "ColorSystem",

@@ -308,16 +308,23 @@ def save_case_review(
         raise WorkflowError(
             f"{BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER}（{detail}）"
         )
+    if review.accepted_for_delivery and (
+        review.has_blocker_issues()
+        or review.derived_page_quality_status().value
+        in {"BLOCKED", "NEEDS_REVIEW"}
+        or review.reporting_ready.value == "do_not_use"
+    ):
+        raise WorkflowError("存在 Blocker / NEEDS_REVIEW / 不可汇报 时不可标记为可交付。")
     if review.accepted_for_delivery and review.major_problems:
         raise WorkflowError("存在 major_problems 时不可标记为可交付。")
-    if review.accepted_for_delivery and not review.passes_threshold():
-        raise WorkflowError("综合分未达交付阈值，不可标记为可交付。")
+    # Legacy score threshold retired — problem-driven status is the formal gate.
     if review.reviewed_at is None:
         review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
     review = review.model_copy(
         update={
             "review_completed": True,
             "accepted": review.accepted_for_delivery,
+            "scoring_mode": review.scoring_mode,
         }
     )
     path = case_directory / HUMAN_VISUAL_REVIEW_FILE
@@ -440,6 +447,8 @@ def build_human_review_export(
         human_quality_gate_passed=gate.passed,
         human_average_weighted_score=gate.average_weighted_score,
         human_quality_gate_reasons=gate.reasons,
+        page_quality_status_counts=gate.page_quality_status_counts or {},
+        formal_gate_mode="problem_driven",
     )
 
 

@@ -87,11 +87,22 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 
 Formal gate already **requires** `pptx_screenshot_generated=true` (item 2 done in code).
 
+### Formal human gate mode (2026-07-21)
+
+| Claim | Status |
+|------|--------|
+| 1–5 综合分 / 均分 ≥ 3.8 作为正式门禁 | **Retired** — experimental archive only |
+| 问题驱动 `PASS` / `PASS_WITH_WARNINGS` / `NEEDS_REVIEW` / `BLOCKED` | **In force** |
+| 人工异常复核（清单 + 可否汇报，非打分） | **UI default** — Settings 基准面板 |
+| 人工查看价值 | **保留** — 抽查、发现未知问题、校准自动规则 |
+
+**原则：** 人工判断仍然重要，但人工打分并不重要。
+
 ### Next steps — only these three
 
 1. **Regenerate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens  
 2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)  
-3. **Pilot human review on 3 pages**, then expand to 30
+3. **Pilot human exception review on 3 pages** (checklist + reporting_ready), then expand to 30
 
 ### Pilot trio (do first)
 
@@ -105,10 +116,10 @@ Each pilot page must simultaneously satisfy:
 
 - Fresh PPTX screenshot (`pptx_screenshot_generated=true`) — **done for pilot trio on this machine**
 - Scene / PPTX / screenshot hash consistency — **pilot trio eligible**
-- Manual visual review passed (`source=manual`) — **still required (human)**
+- Human exception review (`source=manual`, problem checklist + reporting_ready) — **still required**
 - PPTX editability review passed — **still required (human)**
 
-Only then expand formal review / screenshot regen to all 30 pages.
+Only then expand exception review / screenshot regen to all 30 pages.
 
 ```bash
 # Regenerate pilot screenshots into Goldens (PowerPoint available on this host)
@@ -126,11 +137,12 @@ Then Settings →「建筑幻灯片基准 · 人工视觉评审」for those thre
 |------|--------|----------|
 | Layout rule quality | **Passed** | `rule_pass_rate = 1.0` (30/30) |
 | Provenance chain scene → PPTX → screenshot | **In place** | hashes + sidecars |
-| Manual human visual review | **Not started** | `manual_human_review_count = 0`; pilot trio unlocked for scoring after fresh shots |
+| Manual human exception review | **Not started** | no score averages; checklist + reporting_ready |
 | Manual delivery acceptance | **Not started** | `manual_human_accepted_count = 0` |
 | Placeholder reviews | 30 | `source=placeholder` in each `human_review.json` |
-| Fresh PPTX screenshot for formal scoring | **Partial** | pilot 3: `generated=true`; remaining 27 still typically `reused=true` |
-| Human quality gate | **Failed** | `human_quality_gate_passed = false` |
+| Fresh PPTX screenshot for formal review | **Partial** | pilot 3: `generated=true`; remaining 27 still typically `reused=true` |
+| Formal human gate (problem-driven) | **Failed** | needs ≥3 exception reviews; `human_quality_gate_passed = false` |
+| Formal 1–5 average ≥ 3.8 | **Retired** | experimental only |
 
 Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 
@@ -138,7 +150,7 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 
 **What automation does not prove:** Office-true fonts/overflow/layout, information hierarchy, aesthetic finish, architect willingness to deliver.
 
-**How to complete:** follow **Next steps — only these three** (pilot 3 → then 30). Visual score submit stays disabled unless preview is `pptx_render.png` **and** `pptx_screenshot_generated=true`.
+**How to complete:** follow **Next steps** (pilot 3 → then 30). Exception review submit stays disabled unless preview is `pptx_render.png` **and** `pptx_screenshot_generated=true`. Do **not** fill formal 1–5 averages.
 
 ## Phase 8 local runs ≠ formal real-project acceptance (honest)
 

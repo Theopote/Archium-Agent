@@ -173,7 +173,15 @@ def test_export_and_import_round_trip(tmp_path: Path) -> None:
     assert payload["manual_review_count"] == 1
 
     # Simulate fresh tree without manual review on case_a
-    (tmp_path / "case_a" / "human_review.json").unlink()
+    from archium.application.architectural_benchmark_review_store import (
+        HUMAN_VISUAL_REVIEW_FILE,
+        LEGACY_HUMAN_REVIEW_FILE,
+    )
+
+    for name in (HUMAN_VISUAL_REVIEW_FILE, LEGACY_HUMAN_REVIEW_FILE):
+        path = tmp_path / "case_a" / name
+        if path.is_file():
+            path.unlink()
     result = import_human_review_bundle(export_path, root=tmp_path)
     assert result.imported_count == 1
     loaded = load_case_review("case_a", root=tmp_path)

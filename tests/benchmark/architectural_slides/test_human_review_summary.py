@@ -30,8 +30,10 @@ def test_placeholder_review_summary_shows_pending_label() -> None:
     assert fields["human_accepted_for_delivery"] is False
 
 
-def test_manual_review_summary_includes_score_and_reviewer() -> None:
+def test_manual_review_summary_includes_status_and_reviewer() -> None:
     from datetime import UTC, datetime
+
+    from archium.domain.visual.page_quality import PageQualityStatus, ReportingReady
 
     review = HumanVisualReview(
         case_id="case_demo",
@@ -44,12 +46,16 @@ def test_manual_review_summary_includes_score_and_reviewer() -> None:
         architectural_expression=5,
         aesthetic_finish=5,
         editability=5,
+        reporting_ready=ReportingReady.READY,
+        review_completed=True,
         reviewer="张工",
         reviewed_at=datetime(2026, 3, 19, 12, 0, tzinfo=UTC),
         accepted=True,
     )
     fields = human_review_summary_fields(review)
-    assert fields["human_weighted_score"] == 5.0
-    assert fields["human_score_label"] == "5.00"
+    # Formal path is problem-driven; experimental scores are not reportable for gates.
+    assert fields["human_weighted_score"] is None
+    assert fields["human_score_label"] == PageQualityStatus.PASS.value
+    assert fields["page_quality_status"] == PageQualityStatus.PASS.value
     assert fields["reviewer"] == "张工"
     assert fields["human_accepted_for_delivery"] is True

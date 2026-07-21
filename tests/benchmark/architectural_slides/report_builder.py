@@ -116,6 +116,8 @@ def build_benchmark_summary(
         "human_average_weighted_score": human_gate.average_weighted_score,
         "human_quality_gate_passed": human_gate.passed,
         "human_quality_gate_reasons": human_gate.reasons,
+        "page_quality_status_counts": human_gate.page_quality_status_counts or {},
+        "formal_gate_mode": "problem_driven",
         "cases": cases,
     }
 
@@ -173,6 +175,8 @@ def _build_benchmark_summary_from_disk(*, root: Path | None = None) -> dict[str,
         "human_average_weighted_score": human_gate.average_weighted_score,
         "human_quality_gate_passed": human_gate.passed,
         "human_quality_gate_reasons": human_gate.reasons,
+        "page_quality_status_counts": human_gate.page_quality_status_counts or {},
+        "formal_gate_mode": "problem_driven",
         "cases": cases,
     }
 
@@ -250,14 +254,15 @@ def _render_html(summary: dict[str, Any]) -> str:
         f"<p>生成时间: {escape(str(summary['generated_at']))}</p>"
         f"<p>规则通过: {summary['rule_passed_count']}/{summary['case_count']} "
         f"({summary['rule_pass_rate']:.1%})</p>"
-        f"<p>人工评审: {summary.get('manual_human_review_count', 0)}/{summary['case_count']} · "
+        f"<p>人工异常复核: {summary.get('manual_human_review_count', 0)}/{summary['case_count']} · "
         f"可交付: {summary.get('manual_human_accepted_count', 0)}/{summary['case_count']} · "
-        f"占位: {summary.get('placeholder_human_review_count', 0)}</p>"
-        f"<p>人工质量门禁: "
-        f"{'通过' if summary.get('human_quality_gate_passed') else '未通过（需真实 manual 评审）'}</p>"
+        f"占位: {summary.get('placeholder_human_review_count', 0)} · "
+        f"模式: {escape(str(summary.get('formal_gate_mode', 'problem_driven')))}</p>"
+        f"<p>人工质量门禁（问题驱动）: "
+        f"{'通过' if summary.get('human_quality_gate_passed') else '未通过（需异常复核）'}</p>"
         "<table><thead><tr>"
         "<th>Case</th><th>标题</th><th>页面类型</th><th>LayoutFamily</th>"
-        "<th>预览</th><th>规则</th><th>规则分</th><th>渲染</th><th>人工分</th><th>评审来源</th><th>可交付</th><th>主要问题</th>"
+        "<th>预览</th><th>规则</th><th>规则分</th><th>渲染</th><th>状态</th><th>评审来源</th><th>可交付</th><th>主要问题</th>"
         "</tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table></body></html>"
