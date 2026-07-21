@@ -259,7 +259,13 @@ class StudioCommandExecutor:
             apply_mode=SceneRepairApplyMode.ALL_REPAIRABLE,
         )
         applied = [
-            _patch_from_repair_action(action, scene, base_hash)
+            _patch_from_repair_action(
+                action,
+                base_scene=scene,
+                repaired_scene=repair_result.scene,
+                base_scene_hash=base_hash,
+                command_id=command.command_id,
+            )
             for action in repair_result.actions
         ]
         return CommandExecutionResult(
@@ -697,16 +703,51 @@ def _is_locked_text_node(scene: RenderScene, node_id: str) -> bool:
 
 def _patch_from_repair_action(
     action: SceneRepairAction,
-    scene: RenderScene,
+    *,
+    base_scene: RenderScene,
+    repaired_scene: RenderScene,
     base_scene_hash: str,
+    command_id: UUID | None = None,
 ) -> ScenePatchAction:
+    before_node = base_scene.node_by_id(action.node_id)
+    after_node = repaired_scene.node_by_id(action.node_id)
+    before_value: str | None = None
+    after_value: str | None = None
+    before_payload: dict[str, object] = {}
+    after_payload: dict[str, object] = {}
+
+    if action.action_type == "shorten_text":
+        if isinstance(before_node, TextNode):
+            before_value = before_node.text
+        if isinstance(after_node, TextNode):
+            after_value = after_node.text
+    elif action.action_type == "set_overflow_shrink":
+        if isinstance(before_node, TextNode):
+            before_value = before_node.overflow_policy
+        after_value = "shrink"
+    elif action.action_type == "bump_font_size":
+        if isinstance(before_node, TextNode):
+            before_value = str(before_node.font_size)
+        if isinstance(after_node, TextNode):
+            after_value = str(after_node.font_size)
+    elif action.action_type == "set_fit_mode_contain":
+        if isinstance(before_node, (DrawingNode, ImageNode)):
+            before_value = before_node.fit_mode
+        after_value = "contain"
+    else:
+        after_value = action.reason
+
     return build_patch_action(
-        scene,
+        repaired_scene,
         base_scene_hash=base_scene_hash,
+        command_id=command_id,
         node_id=action.node_id,
         action_type=action.action_type,
         property_name=_property_for_repair_action(action.action_type),
-        after_value=action.reason,
+        before_value=before_value,
+        after_value=after_value,
+        before_payload=before_payload,
+        after_payload=after_payload,
         reason=action.reason,
     )
 

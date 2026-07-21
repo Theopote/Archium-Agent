@@ -538,6 +538,11 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
     if action.action_type == "set_overflow_shrink" and isinstance(node, TextNode):
         node.overflow_policy = "shrink"
         return
+    if action.action_type == "set_fit_mode_contain" and isinstance(
+        node, (DrawingNode, ImageNode)
+    ):
+        node.fit_mode = "contain"
+        return
     if action.action_type == "bump_font_size" and isinstance(node, TextNode):
         with contextlib.suppress(TypeError, ValueError):
             node.font_size = max(node.font_size, float(action.after_value or node.font_size))

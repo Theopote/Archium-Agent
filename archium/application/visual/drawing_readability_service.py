@@ -11,6 +11,7 @@ from archium.domain.visual.render_scene import (
     RenderScene,
     ShapeNode,
     TextNode,
+    replace_text_node_content,
 )
 from archium.domain.visual.studio_command import (
     IncreaseDrawingReadabilityCommand,
@@ -195,9 +196,7 @@ def _compress_overlapping_body_text(
         if not applied or shortened == node.text:
             continue
         before = node.text
-        node.text = shortened
-        if node.paragraphs:
-            node.paragraphs[0].text = shortened
+        replace_text_node_content(node, shortened)
         actions.append(
             build_patch_action(
                 source_scene,
@@ -272,7 +271,8 @@ def _rects_overlap(
 
 
 def _geometry_token(node: DrawingNode) -> str:
-    return f"{node.x:.4f},{node.y:.4f},{node.width:.4f},{node.height:.4f}"
+    # Full float precision so Patch Replay matches command-executed geometry.
+    return f"{node.x},{node.y},{node.width},{node.height}"
 
 
 def parse_geometry_token(token: str) -> tuple[float, float, float, float]:

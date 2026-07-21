@@ -15,7 +15,7 @@ from uuid import UUID
 from archium.application.slide_repair_policy import smart_shorten_text
 from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
-from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderScene, TextNode
+from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderScene, TextNode, replace_text_node_content
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import (
     SceneRepairAction,
@@ -202,9 +202,7 @@ class SceneRepairService:
             limit = max(8, capacity)
             shortened, applied, reason = smart_shorten_text(node.text or "", limit)
             if applied and shortened != node.text:
-                node.text = shortened
-                if node.paragraphs:
-                    node.paragraphs[0].text = shortened
+                replace_text_node_content(node, shortened)
                 return SceneRepairAction(
                     scene_id=scene.slide_id,
                     node_id=node_id,
