@@ -100,6 +100,7 @@ def test_workflow_pauses_for_brief_review(
         request_payload,
         require_brief_review=True,
         require_storyline_review=False,
+        require_outline_review=False,
         export_marp=False,
     )
 
@@ -132,6 +133,7 @@ def test_workflow_pauses_for_storyline_review(
         request_payload,
         require_brief_review=False,
         require_storyline_review=True,
+        require_outline_review=False,
         export_marp=False,
     )
 
@@ -163,6 +165,7 @@ def test_workflow_pauses_for_slides_review(
         require_brief_review=False,
         require_storyline_review=False,
         require_slides_review=True,
+        require_outline_review=False,
         export_marp=False,
     )
 
@@ -199,6 +202,7 @@ def test_regenerate_slide_plan_after_revision(
         require_brief_review=False,
         require_storyline_review=False,
         require_slides_review=True,
+        require_outline_review=False,
         export_marp=False,
     )
 
