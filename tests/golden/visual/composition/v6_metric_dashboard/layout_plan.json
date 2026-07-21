@@ -20,7 +20,7 @@
   "elements": [
     {
       "id": "chart",
-      "role": "body_text",
+      "role": "supporting_visual",
       "content_type": "chart",
       "x": 0.7,
       "y": 3.46,
