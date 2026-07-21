@@ -9,6 +9,7 @@ from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )
 from archium.application.visual.reference_slide_editing_service import ReferenceSlideEditingService
+from archium.application.visual.semantic_content_plan import build_slide_spec_from_outline_page
 from archium.domain.asset import Asset
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.slide import SlideSpec
@@ -16,7 +17,11 @@ from archium.domain.visual.architectural_content_schema import ArchitecturalCont
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.reference_slide import ReferencePresentation, ReferenceSlideSnapshot
+from archium.domain.visual.reference_slide import (
+    ReferencePresentation,
+    ReferenceElementType,
+    ReferenceSlideSnapshot,
+)
 from archium.domain.visual.template_induction import (
     OutlineTemplateCoPlan,
     OutlineTemplateCompatibility,
@@ -113,10 +118,11 @@ class OutlineTemplateEditingService:
                 updated_pages.append(self._apply_page_status(page, result))
                 continue
 
-            slide_spec = self._slide_spec_for_page(
+            slide_spec = build_slide_spec_from_outline_page(
                 outline=outline,
                 section=section,
                 page=page,
+                slide_type_resolver=OutlineTemplateCoPlanningService._slide_type_for_functional,
             )
             try:
                 edit_result = self._editor.generate_scene(
@@ -151,6 +157,15 @@ class OutlineTemplateEditingService:
                     encoding="utf-8",
                 )
 
+            semantic_active = any(
+                w == "semantic_content_contract active" for w in edit_result.warnings
+            )
+            expected_slots = sum(
+                1
+                for el in reference_slide.iter_elements()
+                if el.element_type == ReferenceElementType.IMAGE
+            )
+
             result = TemplateEditingPageResult(
                 slide_id=page.slide_id,
                 section_id=page.section_id,
@@ -162,6 +177,8 @@ class OutlineTemplateEditingService:
                 node_count=len(edit_result.scene.nodes),
                 stripped_text_count=edit_result.stripped_text_count,
                 stripped_asset_count=edit_result.stripped_asset_count,
+                semantic_contract_active=semantic_active,
+                expected_image_slots=expected_slots,
                 warnings=list(edit_result.warnings),
             )
             page_results.append(result)
@@ -192,32 +209,18 @@ class OutlineTemplateEditingService:
 
         return batch, updated_co_plan
 
+    @staticmethod
     def _slide_spec_for_page(
-        self,
         *,
         outline: OutlinePlan,
         section: OutlineSection,
         page: OutlineTemplateCompatibility,
     ) -> SlideSpec:
-        message = (section.key_message or section.purpose or section.title).strip()
-        if page.page_role == "overflow" and section.purpose.strip():
-            message = section.purpose.strip()
-        key_points = [
-            item.strip()
-            for item in [*section.evidence_requirements, section.key_message]
-            if item and item.strip()
-        ][:5]
-        return SlideSpec(
-            presentation_id=outline.presentation_id,
-            chapter_id=section.id,
-            order=page.planned_page_index,
-            title=section.title,
-            message=message,
-            key_points=key_points,
-            slide_type=OutlineTemplateCoPlanningService._slide_type_for_functional(
-                page.inferred_functional_type,
-                page.inferred_content_type,
-            ),
+        return build_slide_spec_from_outline_page(
+            outline=outline,
+            section=section,
+            page=page,
+            slide_type_resolver=OutlineTemplateCoPlanningService._slide_type_for_functional,
         )
 
     @staticmethod

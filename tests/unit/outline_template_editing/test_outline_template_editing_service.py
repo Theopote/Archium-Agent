@@ -16,6 +16,7 @@ from archium.application.visual.outline_template_co_planning_service import (
 from archium.application.visual.outline_template_editing_service import (
     OutlineTemplateEditingService,
 )
+from archium.application.visual.semantic_content_plan import schema_uses_semantic_contract
 from archium.application.visual.template_induction_service import TemplateInductionService
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
@@ -81,6 +82,12 @@ def test_execute_generates_scenes_for_template_editing_pages(tmp_path: Path) -> 
     assert batch.failed_count == 0
     generated_pages = [p for p in updated.page_plans if p.edit_scene_status == "generated"]
     assert generated_pages
+    generated_results = [r for r in batch.page_results if r.status == "generated"]
+    schema_by_id = {schema.id: schema for schema in schemas}
+    for result in generated_results:
+        schema = schema_by_id.get(result.schema_id or "")
+        if schema is not None and schema_uses_semantic_contract(schema):
+            assert result.semantic_contract_active
     for page in generated_pages:
         assert page.edit_scene_relative_path
         scene_path = (tmp_path / "edit_out") / page.edit_scene_relative_path
@@ -210,3 +217,125 @@ def test_execute_skips_when_reference_slide_missing() -> None:
     )
     assert batch.skipped_count == 1
     assert updated.page_plans[0].edit_scene_status == "skipped"
+
+
+def test_execute_marks_semantic_contract_for_strategy_schema() -> None:
+    from archium.domain.outline import OutlineSection
+    from archium.domain.visual.architectural_content_schema import ContentRequirement, ContentRole
+    from archium.domain.visual.architectural_template import (
+        ArchitecturalTemplate,
+        ArchitecturalTemplateLayout,
+        TemplatePageType,
+        TemplateStatus,
+    )
+    from archium.domain.visual.reference_slide import (
+        REFERENCE_TEMPLATE_ASSET_ORIGIN,
+        ReferenceAsset,
+        ReferenceElement,
+        ReferenceElementType,
+        ReferencePresentation,
+        ReferenceSlideSnapshot,
+    )
+    from archium.domain.visual.template_induction import (
+        ArchitecturalContentType,
+        FunctionalSlideType,
+        OutlineTemplateCompatibility,
+        OutlineTemplateCoPlan,
+    )
+
+    schema = ArchitecturalContentSchema(
+        name="content/strategy",
+        cluster_id="c1",
+        representative_slide_id="slide_001",
+        content_type=ArchitecturalContentType.STRATEGY,
+        functional_type=FunctionalSlideType.CONTENT,
+        page_purpose="提出策略",
+        central_claim=ContentRequirement(role=ContentRole.CENTRAL_CLAIM, required=True, max_count=1),
+        evidence_items=[
+            ContentRequirement(role=ContentRole.EVIDENCE, required=True, min_count=1, max_count=3),
+        ],
+    )
+    layout = ArchitecturalTemplateLayout(
+        name="strategy",
+        page_index=0,
+        page_type=TemplatePageType.TEXT_ARGUMENT,
+        content_schema_id=schema.id,
+        representative_slide_id="slide_001",
+        cluster_id="c1",
+    )
+    template = ArchitecturalTemplate(
+        id=uuid4(),
+        name="t",
+        layouts=[layout],
+        content_schemas=[schema],
+        status=TemplateStatus.PUBLISHED,
+    )
+    reference_slide = ReferenceSlideSnapshot(
+        slide_index=0,
+        slide_id="slide_001",
+        elements=[
+            ReferenceElement(
+                id="title_1",
+                element_type=ReferenceElementType.TEXT,
+                x=0.5,
+                y=0.3,
+                width=8,
+                height=0.6,
+                text="参考标题",
+                semantic_role="title",
+            ),
+            ReferenceElement(
+                id="body_1",
+                element_type=ReferenceElementType.TEXT,
+                x=0.5,
+                y=1.0,
+                width=8,
+                height=1.0,
+                text="参考判断",
+                semantic_role="body",
+            ),
+        ],
+        text_content=["参考标题", "参考判断"],
+    )
+    outline = OutlinePlan(
+        presentation_id=uuid4(),
+        title="t",
+        thesis="t",
+        audience="a",
+        purpose="p",
+        sections=[
+            OutlineSection(
+                id="strategy",
+                title="策略",
+                purpose="说明策略方向",
+                key_message="以慢行优先组织空间",
+                order=0,
+                category="strategy",
+                evidence_requirements=["保留历史街巷肌理"],
+            )
+        ],
+    )
+    page = OutlineTemplateCompatibility(
+        slide_id="strategy__p01",
+        section_id="strategy",
+        section_title="策略",
+        schema_id=schema.id,
+        representative_slide_id="slide_001",
+        preferred_layout_id=layout.id,
+        fallback_mode="template_editing",
+        template_affinity=0.9,
+    )
+    co_plan = OutlineTemplateCoPlan(
+        outline_id=str(outline.id),
+        page_plans=[page],
+        template_editing_page_ids=[page.slide_id],
+    )
+    batch, _ = OutlineTemplateEditingService().execute(
+        co_plan=co_plan,
+        outline=outline,
+        presentation=ReferencePresentation(name="ref", slides=[reference_slide]),
+        schemas=[schema],
+        template=template,
+    )
+    assert batch.generated_count == 1
+    assert batch.page_results[0].semantic_contract_active

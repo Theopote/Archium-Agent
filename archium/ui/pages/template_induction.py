@@ -731,6 +731,7 @@ def _show_template_editing_batch(batch: OutlineTemplateEditingBatch) -> None:
             {
                 "page": page.slide_id,
                 "status": page.status,
+                "semantic": page.semantic_contract_active,
                 "nodes": page.node_count,
                 "stripped_text": page.stripped_text_count,
                 "stripped_asset": page.stripped_asset_count,

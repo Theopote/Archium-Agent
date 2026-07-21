@@ -206,6 +206,8 @@ class TemplateEditingPageResult(DomainModel):
     node_count: int = Field(default=0, ge=0)
     stripped_text_count: int = Field(default=0, ge=0)
     stripped_asset_count: int = Field(default=0, ge=0)
+    semantic_contract_active: bool = False
+    expected_image_slots: int = Field(default=0, ge=0)
     warnings: list[str] = Field(default_factory=list)
     error: str = ""
 

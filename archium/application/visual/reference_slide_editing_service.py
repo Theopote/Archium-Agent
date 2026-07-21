@@ -13,6 +13,13 @@ from archium.application.visual.scene_fonts import (
     resolve_text_fonts,
     typography_role_for_semantic,
 )
+from archium.application.visual.semantic_content_plan import (
+    SemanticContentPlan,
+    SemanticFillState,
+    build_semantic_content_plan,
+    normalize_text_role_for_schema,
+    replacement_text_for_role,
+)
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
@@ -98,11 +105,25 @@ class ReferenceSlideEditingService:
 
         layout = self._resolve_layout(template, layout_id, content_schema)
         asset_pool = self._project_asset_pool(assets, content_schema)
+        content_plan = build_semantic_content_plan(content_schema, slide_spec)
+        fill_state = SemanticFillState()
         photo_idx = 0
         drawing_idx = 0
-        body_idx = 0
 
         ref_assets_by_id = {asset.id: asset for asset in reference_slide.image_assets}
+        image_slot_count = sum(
+            1
+            for el in reference_slide.iter_elements()
+            if el.element_type == ReferenceElementType.IMAGE
+        )
+        if content_plan.uses_semantic_contract:
+            warnings.append("semantic_content_contract active")
+            expected_images = content_plan.expected_image_slot_count()
+            if expected_images and image_slot_count != expected_images:
+                warnings.append(
+                    "image slot count "
+                    f"({image_slot_count}) vs semantic contract ({expected_images})"
+                )
 
         for element in sorted(reference_slide.iter_elements(), key=lambda el: el.z_index):
             if element.element_type == ReferenceElementType.GROUP:
@@ -124,13 +145,18 @@ class ReferenceSlideEditingService:
                 element.element_type == ReferenceElementType.PLACEHOLDER and element.text
             ):
                 role = self._resolve_text_role(element)
-                replacement = self._replacement_text(
-                    role=role,
-                    slide_spec=slide_spec,
-                    body_idx=body_idx,
+                role = normalize_text_role_for_schema(
+                    role,
+                    schema=content_schema,
+                    plan=content_plan,
+                    state=fill_state,
                 )
-                if role in {"body", "evidence", "interpretation", "lead_statement"} and replacement:
-                    body_idx += 1
+                replacement = replacement_text_for_role(
+                    role,
+                    plan=content_plan,
+                    slide_spec=slide_spec,
+                    state=fill_state,
+                )
                 if element.text.strip() and element.text.strip() != replacement.strip():
                     stripped_text += 1
                 text_nodes = self._text_nodes(
@@ -146,7 +172,11 @@ class ReferenceSlideEditingService:
                         semantic_role=role,
                         reference_text=element.text,
                         replacement_text=replacement,
-                        reason="strip reference text and bind SlideSpec content",
+                        reason=(
+                            "semantic contract fill"
+                            if content_plan.uses_semantic_contract
+                            else "strip reference text and bind SlideSpec content"
+                        ),
                     )
                 )
                 continue
@@ -172,6 +202,7 @@ class ReferenceSlideEditingService:
                     pool=asset_pool,
                     photo_idx=photo_idx,
                     drawing_idx=drawing_idx,
+                    plan=content_plan,
                 )
                 if element.element_type == ReferenceElementType.IMAGE:
                     photo_idx = pool_idx
@@ -231,7 +262,11 @@ class ReferenceSlideEditingService:
                             visual_role=visual_role,
                             asset_id=project_asset.id,
                             storage_uri=uri,
-                            reason="bind project asset to reference image slot",
+                            reason=(
+                                "semantic visual_evidence bind"
+                                if content_plan.uses_semantic_contract
+                                else "bind project asset to reference image slot"
+                            ),
                         )
                     )
                 else:
@@ -397,38 +432,6 @@ class ReferenceSlideEditingService:
             return ContentRole.CAPTION.value
         return ContentRole.BODY.value
 
-    def _replacement_text(
-        self,
-        *,
-        role: str,
-        slide_spec: SlideSpec,
-        body_idx: int,
-    ) -> str:
-        if role in {"title", ContentRole.TITLE.value}:
-            return slide_spec.title
-        if role in {"subtitle"}:
-            return slide_spec.key_points[0] if slide_spec.key_points else slide_spec.message
-        if role in {"metric", ContentRole.METRIC.value}:
-            return slide_spec.key_points[0] if slide_spec.key_points else slide_spec.message
-        if role in {"caption", ContentRole.CAPTION.value}:
-            return (slide_spec.speaker_notes or "").strip()
-        if role in {"source", ContentRole.SOURCE.value}:
-            if slide_spec.source_citations:
-                cite = slide_spec.source_citations[0]
-                page = f", p.{cite.page_number}" if cite.page_number else ""
-                return f"{cite.document_name}{page}"
-            return ""
-        if role in {
-            "central_claim",
-            ContentRole.CENTRAL_CLAIM.value,
-            "lead_statement",
-            ContentRole.LEAD_STATEMENT.value,
-        }:
-            return slide_spec.message
-        if slide_spec.key_points and body_idx < len(slide_spec.key_points):
-            return slide_spec.key_points[body_idx]
-        return slide_spec.message
-
     def _typography_for_role(
         self,
         role: str,
@@ -514,7 +517,9 @@ class ReferenceSlideEditingService:
         pool: dict[str, list[Asset]],
         photo_idx: int,
         drawing_idx: int,
+        plan: SemanticContentPlan | None = None,
     ) -> tuple[Asset | None, str, int]:
+        plan = plan or SemanticContentPlan()
         if element.element_type == ReferenceElementType.DRAWING:
             assets = pool["drawing"]
             idx = drawing_idx
@@ -522,7 +527,10 @@ class ReferenceSlideEditingService:
         else:
             assets = pool["photo"]
             idx = photo_idx
-            visual_role = "hero_image" if idx == 0 else "supporting_image"
+            if plan.visual_evidence_roles and idx < len(plan.visual_evidence_roles):
+                visual_role = plan.visual_evidence_roles[idx]
+            else:
+                visual_role = "hero_image" if idx == 0 else "supporting_image"
         if not assets:
             return None, visual_role, idx
         chosen = assets[idx % len(assets)]
