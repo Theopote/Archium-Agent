@@ -381,15 +381,25 @@ Outline–Template co-planning (rule-driven V1) — **not** edit-based generatio
 | Artifact `outline_template_co_plan.json` | **Done** | `TemplateInductionService.co_plan_outline` |
 | Review UI co-plan panel | **Done** | `template_induction.py` |
 | Reference slide ranking (WP I) | **Done (V1)** | `ReferenceSlideMatcher` in co-plan when template has schemas |
-| Reference slide edit-based generation | **Not in this round** | Phase 6 |
+| Reference slide edit-based generation | **Skeleton (V1)** | `ReferenceSlideEditingService.generate_scene` — structure copy + strip + fill; not production-ready |
 
-**对外口径：** 大纲可与归纳 Schema 做亲和映射并暴露未匹配模板页；**不得**宣称参考页编辑式生成、Scene Repair 或 Deck Coherence QA 已完成。
+**对外口径：** 大纲可与归纳 Schema 做亲和映射并暴露未匹配模板页；**不得**宣称参考页编辑式生成已生产可用、Scene Repair 或 Deck Coherence QA 已完成。
 
-Tests: `tests/unit/outline_template_co_planning/`.
+Tests: `tests/unit/outline_template_co_planning/`, `tests/unit/reference_slide_matcher/`, `tests/unit/reference_slide_editing/`.
 
 ## Template Induction Phase 6
 
-**阶段状态：`HOLD`**
+**阶段状态：`SKELETON / EXPERIMENTAL`**
 
-Reference slide edit-based generation — **暂缓**，待 Phase 4 正式通过（五项门槛 + 真实模板发布）后再启动。
+Reference slide edit-based generation — **骨架已落地**，可开发与单测；**正式接入生成管线仍暂缓**，待 Phase 4 正式通过（五项门槛 + 真实模板发布）后再推进完整实现。
+
+| 项目 | 状态 |
+|------|------|
+| `ReferenceEditAction` 模型 | **Done (skeleton)** |
+| `ReferenceSlideEditingService.generate_scene` | **Done (skeleton)** — 参考结构 → RenderScene；剥离 reference 文本/素材；绑定 SlideSpec + 项目 Asset |
+| 参考素材泄漏防护 | **Done (skeleton)** — `remove_reference_asset` 动作 + 场景内无 `reference_template` URI |
+| Co-plan / Studio 接线 | **Not yet** — 仅独立服务 + 单测 |
+| 全路径 RenderScene 渲染验收 | **Not proven** |
+
+**不得**对外宣称「参考页编辑式生成已完成」或「可安全改写任意参考 slot」。
 
