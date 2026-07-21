@@ -11,7 +11,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
@@ -73,6 +73,16 @@ def main() -> int:
         default="",
         help="Optional outline_plan.json path (defaults to workspace/outline_plan.json or synthetic)",
     )
+    parser.add_argument(
+        "--presentation-id",
+        default="",
+        help="Bind outline to this presentation UUID before template_editing (enables DB context)",
+    )
+    parser.add_argument(
+        "--use-db-context",
+        action="store_true",
+        help="Open DB session and auto-resolve manuscript/storyline/assets from outline.presentation_id",
+    )
     args = parser.parse_args()
 
     workspace = _resolve_workspace(args.workspace)
@@ -119,14 +129,43 @@ def main() -> int:
         )
         print(f"Co-plan created: {co_plan.template_editing_page_ids}")
 
-    batch, updated = service.execute_co_plan_template_editing(
-        induction,
-        outline,
-        co_plan,
-        presentation,
-        template=template,
-        workspace=workspace,
-    )
+    if args.presentation_id:
+        presentation_id = UUID(args.presentation_id)
+        outline = service.bind_outline_to_presentation(workspace, presentation_id)
+        print(f"Bound outline to presentation_id={presentation_id}")
+
+    def _run_editing(session=None):  # type: ignore[no-untyped-def]
+        return service.execute_co_plan_template_editing(
+            induction,
+            outline,
+            co_plan,
+            presentation,
+            template=template,
+            workspace=workspace,
+            session=session,
+        )
+
+    if args.use_db_context:
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            bundle = service.resolve_template_editing_context(session, outline)
+            if bundle is None:
+                print(
+                    "Warning: no DB context resolved for "
+                    f"presentation_id={outline.presentation_id}",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    "DB context: "
+                    f"assets={len(bundle.assets)} "
+                    f"manuscript={'yes' if bundle.manuscript else 'no'} "
+                    f"storyline={'yes' if bundle.storyline else 'no'}"
+                )
+            batch, updated = _run_editing(session)
+    else:
+        batch, updated = _run_editing()
 
     summary = {
         "workspace": str(workspace),

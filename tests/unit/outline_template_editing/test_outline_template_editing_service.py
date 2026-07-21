@@ -498,3 +498,74 @@ def test_execute_passes_slide_generation_context_when_session_provided(
     assert editor.calls[0]["generation_context"].slide_spec.title == "策略"
     assert batch.page_results[0].warnings
     assert any("slide_generation_context active" in w for w in batch.page_results[0].warnings)
+
+
+def test_resolve_template_editing_context_loads_project_bundle(db_session, tmp_path: Path) -> None:
+    from archium.application.presentation_manuscript_service import PresentationManuscriptService
+    from archium.application.visual.template_induction_service import TemplateInductionService
+    from archium.domain.enums import ProjectType
+    from archium.domain.outline import OutlineSection
+    from archium.domain.presentation import Presentation
+    from archium.domain.project import Project
+    from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
+
+    project = ProjectRepository(db_session).create(
+        Project(name="Phase6 项目", project_type=ProjectType.HEALTHCARE)
+    )
+    presentation = PresentationRepository(db_session).create_presentation(
+        Presentation(project_id=project.id, title="Phase6 汇报")
+    )
+    manuscript = PresentationManuscriptService(db_session).save(
+        PresentationManuscript(
+            project_id=project.id,
+            presentation_id=presentation.id,
+            title="手稿",
+            project_summary="院区更新",
+            narrative_thesis="慢行优先",
+            sections=[
+                ManuscriptSection(
+                    id="strategy",
+                    title="策略",
+                    purpose="说明策略",
+                    argument="慢行优先",
+                    key_points=["保留街巷"],
+                    fact_ids=[],
+                    order=0,
+                )
+            ],
+        )
+    )
+    outline = OutlinePlan(
+        presentation_id=presentation.id,
+        title="汇报",
+        thesis="t",
+        audience="a",
+        purpose="p",
+        sections=[
+            OutlineSection(
+                id="strategy",
+                title="策略",
+                purpose="说明策略",
+                key_message="慢行优先",
+                order=0,
+            )
+        ],
+    )
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "outline_plan.json").write_text(
+        json.dumps(outline.model_dump(mode="json"), ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    service = TemplateInductionService()
+    bundle = service.resolve_template_editing_context(db_session, outline)
+    assert bundle is not None
+    assert bundle.project_id == project.id
+    assert bundle.manuscript is not None
+    assert bundle.manuscript.id == manuscript.id
+
+    rebound = service.bind_outline_to_presentation(workspace, presentation.id)
+    assert rebound.presentation_id == presentation.id
+    saved = json.loads((workspace / "outline_plan.json").read_text(encoding="utf-8"))
+    assert saved["presentation_id"] == str(presentation.id)

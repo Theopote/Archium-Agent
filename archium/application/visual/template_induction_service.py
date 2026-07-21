@@ -68,6 +68,16 @@ class TemplateInductionRunResult:
     publish_report: SchemaPublishReport | None = None
 
 
+@dataclass(frozen=True)
+class TemplateEditingContextBundle:
+    """Project-scoped inputs for Phase 6 per-page SlideGenerationContext."""
+
+    project_id: UUID
+    manuscript: PresentationManuscript | None = None
+    storyline: Storyline | None = None
+    assets: tuple[Asset, ...] = ()
+
+
 class TemplateInductionService:
     """Phase 0–5 induction: parse → classify → cluster → schema → co-plan → publish gate."""
 
@@ -634,6 +644,50 @@ class TemplateInductionService:
             json.loads(path.read_text(encoding="utf-8"))
         )
 
+    def resolve_template_editing_context(
+        self,
+        session: Session,
+        outline: OutlinePlan,
+    ) -> TemplateEditingContextBundle | None:
+        """Load manuscript/storyline/assets when outline.presentation_id exists in DB."""
+        from archium.application.review_service import PresentationReviewService
+        from archium.infrastructure.database.repositories import (
+            AssetRepository,
+            PresentationRepository,
+        )
+
+        presentation = PresentationRepository(session).get_presentation(outline.presentation_id)
+        if presentation is None:
+            return None
+
+        review_context = PresentationReviewService(session).get_review_context(
+            outline.presentation_id
+        )
+        assets = AssetRepository(session).list_by_project(presentation.project_id)
+        return TemplateEditingContextBundle(
+            project_id=presentation.project_id,
+            manuscript=review_context.manuscript if review_context else None,
+            storyline=review_context.storyline if review_context else None,
+            assets=tuple(assets),
+        )
+
+    def bind_outline_to_presentation(
+        self,
+        workspace: Path,
+        presentation_id: UUID,
+    ) -> OutlinePlan:
+        """Persist presentation_id on workspace outline_plan.json for Phase 6 context."""
+        outline = self.load_outline_plan(workspace)
+        if outline is None:
+            raise WorkflowError("缺少 outline_plan.json，请先生成协同规划。")
+        updated = outline.model_copy(update={"presentation_id": presentation_id})
+        path = workspace / "outline_plan.json"
+        path.write_text(
+            json.dumps(updated.model_dump(mode="json"), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return updated
+
     def execute_co_plan_template_editing(
         self,
         induction: TemplateInductionResult,
@@ -664,13 +718,23 @@ class TemplateInductionService:
                 "缺少 architectural_template.json，请先 materialize 归纳模板后再执行 template_editing。"
             )
 
+        resolved_assets = list(assets) if assets is not None else None
+        if session is not None:
+            bundle = self.resolve_template_editing_context(session, outline)
+            if bundle is not None:
+                project_id = project_id or bundle.project_id
+                manuscript = manuscript or bundle.manuscript
+                storyline = storyline or bundle.storyline
+                if resolved_assets is None:
+                    resolved_assets = list(bundle.assets)
+
         batch, updated_co_plan = self._template_editor.execute(
             co_plan=co_plan,
             outline=outline,
             presentation=presentation,
             schemas=schema_list,
             template=arch_template,
-            assets=assets,
+            assets=resolved_assets,
             design_system=design_system,
             workspace=workspace,
             session=session,

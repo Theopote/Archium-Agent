@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import UUID
 
 import streamlit as st
 
@@ -18,6 +19,70 @@ from archium.domain.visual.template_induction import (
 from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import format_user_error
 from archium.ui.pipeline_role_ui import role_button_label, role_caption
+
+
+def _render_presentation_binding_selector(*, key_prefix: str = "induction") -> UUID | None:
+    """Optional project/presentation binding for Phase 6 SlideGenerationContext."""
+    from archium.infrastructure.database.session import get_session
+    from archium.ui.workspace_service import list_project_presentations, list_projects
+
+    with get_session() as session:
+        projects = list_projects(session)
+    if not projects:
+        st.caption("未找到项目，Phase 6 将仅使用 outline 内容填充。")
+        return None
+
+    labels = {str(project.id): project.name for project in projects}
+    project_options = list(labels.keys())
+    selected_project = st.selectbox(
+        "关联项目（可选）",
+        options=project_options,
+        format_func=lambda value: labels[value],
+        key=f"{key_prefix}_context_project",
+    )
+    project_id = UUID(selected_project)
+
+    with get_session() as session:
+        presentations = list_project_presentations(session, project_id)
+    if not presentations:
+        st.caption("该项目尚无汇报，无法启用页面级上下文。")
+        return None
+
+    presentation_labels = {
+        str(item.id): f"{item.title} · {item.status.value}" for item in presentations
+    }
+    presentation_options = list(presentation_labels.keys())
+    selected_presentation = st.selectbox(
+        "关联汇报（可选）",
+        options=presentation_options,
+        format_func=lambda value: presentation_labels[value],
+        key=f"{key_prefix}_context_presentation",
+    )
+    return UUID(selected_presentation)
+
+
+def _describe_template_editing_context(workspace: Path) -> str:
+    from archium.application.visual.template_induction_service import TemplateInductionService
+    from archium.infrastructure.database.session import get_session
+
+    service = TemplateInductionService()
+    outline = service.load_outline_plan(workspace)
+    if outline is None:
+        return "页面上下文：缺少 outline_plan.json"
+
+    with get_session() as session:
+        bundle = service.resolve_template_editing_context(session, outline)
+    if bundle is None:
+        return (
+            "页面上下文：outline 未关联数据库汇报 "
+            f"（presentation_id={outline.presentation_id}）"
+        )
+    manuscript_note = "有" if bundle.manuscript is not None else "无"
+    storyline_note = "有" if bundle.storyline is not None else "无"
+    return (
+        f"页面上下文：项目资产 {len(bundle.assets)} · "
+        f"手稿 {manuscript_note} · 叙事线 {storyline_note}"
+    )
 
 
 def _selected_workspace() -> Path | None:
@@ -642,6 +707,7 @@ def _render_co_plan() -> None:
         horizontal=True,
         key="induction_co_plan_scenario",
     )
+    bound_presentation_id = _render_presentation_binding_selector(key_prefix="induction_co_plan")
     role_caption(PipelineRole.COMPOSITION, PipelineRole.ARCHITECTURE)
     if not st.button(
         role_button_label("生成协同规划", PipelineRole.COMPOSITION, PipelineRole.ARCHITECTURE),
@@ -676,7 +742,7 @@ def _render_co_plan() -> None:
         else cultural_village_outline_sections()
     )
     outline = OutlinePlan(
-        presentation_id=uuid4(),
+        presentation_id=bound_presentation_id or uuid4(),
         title=scenario,
         thesis="以证据支持汇报决策",
         audience="主管部门",
@@ -710,6 +776,8 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
         f"{len(co_plan.template_editing_page_ids)} 页路由为 template_editing，"
         "将参考页结构复制为 RenderScene 并剥离 reference 内容。"
     )
+    st.caption(_describe_template_editing_context(workspace))
+    bound_presentation_id = _render_presentation_binding_selector(key_prefix="induction_phase6")
     service = TemplateInductionService()
     existing_batch = service.load_template_editing_batch(workspace)
     if existing_batch is not None:
@@ -734,14 +802,20 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
             if template is None:
                 st.error("缺少 architectural_template.json，请先 materialize 归纳模板。")
                 return
-            batch, updated = service.execute_co_plan_template_editing(
-                induction,
-                outline,
-                co_plan,
-                presentation,
-                template=template,
-                workspace=workspace,
-            )
+            if bound_presentation_id is not None:
+                outline = service.bind_outline_to_presentation(workspace, bound_presentation_id)
+            from archium.infrastructure.database.session import get_session
+
+            with get_session() as session:
+                batch, updated = service.execute_co_plan_template_editing(
+                    induction,
+                    outline,
+                    co_plan,
+                    presentation,
+                    template=template,
+                    workspace=workspace,
+                    session=session,
+                )
         except Exception as exc:  # noqa: BLE001
             st.error(format_user_error(exc))
             return
