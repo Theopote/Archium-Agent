@@ -24,7 +24,10 @@ from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_generation_context import SlideGenerationContext
-from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema, ContentRole
+from archium.domain.visual.architectural_content_schema import (
+    ArchitecturalContentSchema,
+    ContentRole,
+)
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.design_system import DesignSystem, TextStyleToken
 from archium.domain.visual.reference_slide import (
@@ -53,6 +56,7 @@ from archium.domain.visual.render_scene import (
     TextParagraph,
     ThemeTokens,
 )
+
 _DRAWING_ASSET_TYPES = frozenset(
     {AssetType.DRAWING, AssetType.DIAGRAM, AssetType.CHART}
 )

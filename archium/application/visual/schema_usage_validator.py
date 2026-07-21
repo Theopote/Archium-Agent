@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
-    ContentRole,
     UsageCondition,
 )
 from archium.domain.visual.template_induction import (

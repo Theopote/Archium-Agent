@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.review.architectural import ArchitecturalReviewer
 from archium.application.review.content import ContentReviewer
-from archium.application.review.evidence import EvidenceReviewer
 from archium.application.review.deck_coherence import DeckCoherenceReviewer
+from archium.application.review.evidence import EvidenceReviewer
 from archium.application.review.layout import LayoutReviewer
 from archium.application.review.scene_render_qa import PostRenderReviewer, SceneSemanticReviewer
 from archium.application.review.slide_semantic import SlideSemanticReviewer

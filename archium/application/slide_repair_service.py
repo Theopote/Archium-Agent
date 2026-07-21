@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from archium.agents._helpers import sanitize_slide_message
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.application.slide_context_prompt import format_slide_generation_context
+from archium.application.slide_diff import slide_to_snapshot
 from archium.application.slide_generation_context_service import SlideGenerationContextService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_repair_policy import (

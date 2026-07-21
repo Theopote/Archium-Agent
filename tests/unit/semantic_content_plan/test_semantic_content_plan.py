@@ -12,10 +12,10 @@ from archium.application.visual.semantic_content_plan import (
 )
 from archium.domain.citation import Citation
 from archium.domain.fact import ProjectFact
+from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation_manuscript import ManuscriptFact
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_generation_context import SlideGenerationContext
-from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,

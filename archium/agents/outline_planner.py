@@ -11,7 +11,6 @@ from archium.agents._helpers import (
     resolve_design_context_text,
     to_json,
 )
-from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.application.artifact_history_service import OutlineHistoryService
 from archium.application.artifact_lineage import apply_outline_lineage
 from archium.application.cultural_narrative_service import format_narrative_for_prompt
@@ -27,6 +26,7 @@ from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import OutlineAudienceMode, RevisionSource
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest

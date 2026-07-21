@@ -5,10 +5,6 @@ from __future__ import annotations
 from pydantic import Field, computed_field
 
 from archium.domain._base import DomainModel
-from archium.domain.outline import OutlinePlan
-from archium.domain.presentation import Storyline
-from archium.domain.presentation_manuscript import PresentationManuscript
-from archium.domain.slide import SlideSpec
 from archium.domain.visual.enums import LayoutIssueSeverity
 
 DECK_DUPLICATE_MESSAGE = "DECK.DUPLICATE_MESSAGE"

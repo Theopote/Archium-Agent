@@ -25,13 +25,13 @@ from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.reference_slide import (
-    ReferencePresentation,
     ReferenceElementType,
+    ReferencePresentation,
     ReferenceSlideSnapshot,
 )
 from archium.domain.visual.template_induction import (
-    OutlineTemplateCoPlan,
     OutlineTemplateCompatibility,
+    OutlineTemplateCoPlan,
     OutlineTemplateEditingBatch,
     TemplateEditingPageResult,
 )

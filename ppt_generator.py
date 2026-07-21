@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 
 from archium.infrastructure.llm import LLMRequest, get_llm_provider

@@ -10,11 +10,11 @@ from archium.application.visual.architectural_content_schema_extractor import (
 from archium.application.visual.architectural_content_schema_publish_gate import (
     ArchitecturalContentSchemaPublishGate,
 )
+from archium.application.visual.template_induction_service import TemplateInductionService
 from archium.domain.visual.architectural_content_schema import (
     SchemaReviewOverride,
     SchemaTestFillResult,
 )
-from archium.application.visual.template_induction_service import TemplateInductionService
 from archium.domain.visual.template_induction import ArchitecturalContentType
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 

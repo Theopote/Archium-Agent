@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -13,15 +14,15 @@ from sqlalchemy.orm import Session
 from archium.application.visual.architectural_content_schema_extractor import (
     ArchitecturalContentSchemaExtractor,
 )
-from archium.application.visual.induction_architectural_template_publisher import (
-    InductionArchitecturalTemplatePublisher,
-    InductionTemplatePublishResult,
-)
 from archium.application.visual.architectural_content_schema_publish_gate import (
     ArchitecturalContentSchemaPublishGate,
 )
 from archium.application.visual.asset_path_resolver import is_machine_absolute_path
 from archium.application.visual.functional_slide_classifier import FunctionalSlideClassifier
+from archium.application.visual.induction_architectural_template_publisher import (
+    InductionArchitecturalTemplatePublisher,
+    InductionTemplatePublishResult,
+)
 from archium.application.visual.induction_cluster_editor import rebuild_clusters
 from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
@@ -31,7 +32,9 @@ from archium.application.visual.outline_template_editing_service import (
 )
 from archium.application.visual.reference_slide_clusterer import ReferenceSlideClusterer
 from archium.application.visual.representative_slide_selector import RepresentativeSlideSelector
-from archium.application.visual.visual_layout_pattern_classifier import VisualLayoutPatternClassifier
+from archium.application.visual.visual_layout_pattern_classifier import (
+    VisualLayoutPatternClassifier,
+)
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.outline import OutlinePlan
@@ -544,7 +547,7 @@ class TemplateInductionService:
         workspace: Path | None = None,
         presentation: ReferencePresentation | None = None,
     ) -> TemplateInductionResult:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from archium.domain.visual.template_induction import Phase35HumanSignoff
 
@@ -553,7 +556,7 @@ class TemplateInductionService:
             reviewer=reviewer.strip(),
             notes=notes.strip(),
             run_reference=run_reference.strip(),
-            signed_at=datetime.now(timezone.utc),
+            signed_at=datetime.now(UTC),
         )
         induction.touch()
         if workspace is not None and presentation is not None:

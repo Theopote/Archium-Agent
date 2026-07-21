@@ -10,10 +10,9 @@ from archium.config.settings import Settings
 from archium.domain.enums import PresentationType
 from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
-from archium.infrastructure.database.repositories import ProjectRepository, PresentationRepository
+from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
-
 from tests.fixtures.mock_llm import pipeline_mock_selector
 
 

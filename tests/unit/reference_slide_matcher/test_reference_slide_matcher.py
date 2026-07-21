@@ -27,6 +27,7 @@ from archium.domain.visual.template_induction import (
     FunctionalSlideType,
     TemplateInductionStatus,
 )
+
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 

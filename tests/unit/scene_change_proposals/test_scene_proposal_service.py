@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 from archium.application.visual.scene_proposal_service import (
     SceneProposalService,
     apply_patch_actions,
 )
-from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue, QualityIssueSource
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.domain.visual.scene_change_proposal import ProposalStatus
-from archium.domain.visual.studio_command import RewriteTextCommand
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
+from archium.domain.visual.studio_command import RewriteTextCommand
 from archium.exceptions import WorkflowError
 
 

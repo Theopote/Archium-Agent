@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.visual.studio_nl_command_planner import (
     StudioNLCommandPlanner,
     resolve_render_node_id,

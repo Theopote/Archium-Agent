@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.application.visual.functional_slide_classifier import FunctionalSlideClassifier
 from archium.application.visual.reference_slide_clusterer import (
     _LAYOUT_MISMATCH_PENALTY,

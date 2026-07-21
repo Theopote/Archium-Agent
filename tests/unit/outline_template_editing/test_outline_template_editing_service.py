@@ -26,9 +26,9 @@ from archium.domain.presentation_manuscript import (
     PresentationManuscript,
 )
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
-from archium.domain.visual.template_induction import TemplateInductionStatus
 from archium.domain.visual.reference_slide_editing import ReferenceSlideEditResult
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene
+from archium.domain.visual.template_induction import TemplateInductionStatus
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 
@@ -235,8 +235,6 @@ def test_execute_marks_semantic_contract_for_strategy_schema() -> None:
         TemplateStatus,
     )
     from archium.domain.visual.reference_slide import (
-        REFERENCE_TEMPLATE_ASSET_ORIGIN,
-        ReferenceAsset,
         ReferenceElement,
         ReferenceElementType,
         ReferencePresentation,
@@ -507,7 +505,10 @@ def test_resolve_template_editing_context_loads_project_bundle(db_session, tmp_p
     from archium.domain.outline import OutlineSection
     from archium.domain.presentation import Presentation
     from archium.domain.project import Project
-    from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
+    from archium.infrastructure.database.repositories import (
+        PresentationRepository,
+        ProjectRepository,
+    )
 
     project = ProjectRepository(db_session).create(
         Project(name="Phase6 项目", project_type=ProjectType.HEALTHCARE)

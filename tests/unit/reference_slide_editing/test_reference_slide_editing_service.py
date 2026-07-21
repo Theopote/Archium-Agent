@@ -8,9 +8,9 @@ from archium.application.visual.reference_slide_editing_service import Reference
 from archium.domain.asset import Asset
 from archium.domain.citation import Citation
 from archium.domain.enums import AssetType
+from archium.domain.presentation_manuscript import ManuscriptFact
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_generation_context import SlideGenerationContext
-from archium.domain.presentation_manuscript import ManuscriptFact
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,

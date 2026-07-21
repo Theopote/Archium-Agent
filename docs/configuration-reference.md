@@ -51,6 +51,7 @@ Do not edit them manually.
 | `LLM_REPAIR_ATTEMPTS` | `2` | No | Maximum structured-output repair attempts per LLM call. |
 | `LLM_TIMEOUT_SECONDS` | `60.0` | No | LLM request timeout in seconds. |
 | `LLM_MAX_CONCURRENT_REQUESTS` | `5` | No | Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion. |
+| `SLIDE_PER_PAGE_GENERATION` | `true` | No | When true, SlidePlanner invokes the LLM once per page with SlideGenerationContext instead of one batch SlidePlan call. |
 
 ## Embedding {#embedding}
 
@@ -104,6 +105,8 @@ Do not edit them manually.
 | `VISUAL_CRITIC_LLM_ENABLED` | `false` | No | When true and LLM is configured, enrich Visual Critic with multimodal vision on slide PNGs (soft-fail; never blocks PPTX). |
 | `VISUAL_CRITIC_LLM_MODEL` | `*(unset)*` | No | Optional vision-capable model override for Visual Critic LLM path. |
 | `VISUAL_PPTX_SCREENSHOTS_ENABLED` | `true` | No | When true, attempt PPTX→PNG screenshots (LibreOffice + pdftoppm) after export for Visual Critic. Soft-skips when tools are missing. |
+| `INDUCTION_SCREENSHOT_CLUSTERING_ENABLED` | `true` | No | When true, blend deterministic screenshot fingerprints into reference slide clustering when per-slide PNGs exist. |
+| `INDUCTION_SCREENSHOT_CLUSTERING_WEIGHT` | `0.35` | No | Weight of screenshot distance vs structural embedding distance. |
 
 ## repair.* — Automated slide repair {#repair}
 
@@ -111,6 +114,8 @@ Do not edit them manually.
 |----------------------|---------|:-------------------:|-------------|
 | `SLIDE_REPAIR_ENABLED` | `false` | No | When true and LLM is available, auto-repair slide-level CRITICAL/HIGH review issues. |
 | `SLIDE_REPAIR_MAX_ROUNDS` | `2` | No | Maximum automated repair → four-layer re-review cycles per workflow run. |
+| `SCENE_REPAIR_ENABLED` | `true` | No | When true, compile RenderScenes after render and run deterministic scene repair. |
+| `SCENE_REPAIR_MAX_ROUNDS` | `2` | No | Maximum semantic QA → RenderScene repair rounds in visual workflow. |
 
 ## render.* — Marp & PptxGenJS export {#render}
 

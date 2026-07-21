@@ -11,6 +11,7 @@ from archium.domain.pipeline_role_mapping import (
     pipeline_roles_for_e2e_stages,
 )
 from archium.domain.project_acceptance import Phase7ProjectProfile
+
 from tests.e2e.real_projects.phase7_loader import load_phase7_project
 
 

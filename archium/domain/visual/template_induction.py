@@ -275,8 +275,8 @@ class OutlineTemplateCoPlan(IdentifiedModel, TimestampedModel):
     template_editing_page_ids: list[str] = Field(default_factory=list)
     manual_required_page_ids: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
-    capacity_warnings: list["CoPlanCapacityWarning"] = Field(default_factory=list)
-    rhythm_flags: list["CoPlanRhythmFlag"] = Field(default_factory=list)
+    capacity_warnings: list[CoPlanCapacityWarning] = Field(default_factory=list)
+    rhythm_flags: list[CoPlanRhythmFlag] = Field(default_factory=list)
     planning_method: str = "rule_driven_outline_template_v1"
 
     @property

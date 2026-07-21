@@ -360,7 +360,6 @@ def create_slide_scene_proposal_from_text(
 ) -> object:
     """Parse NL text into Studio commands and return a SceneChangeProposal."""
     from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
-    from archium.ui.llm_settings import get_ui_effective_settings
 
     settings = _resolve_runtime_settings(None)
     return StudioNLProposalService(

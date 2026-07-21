@@ -213,7 +213,7 @@ class InductionArchitecturalTemplatePublisher:
         *,
         induction: TemplateInductionResult,
         presentation: ReferencePresentation,
-        schemas: list[ArchitecticalContentSchema],
+        schemas: list[ArchitecturalContentSchema],
         workspace: Path,
         source_pptx: Path | None = None,
         project_id: UUID | None = None,

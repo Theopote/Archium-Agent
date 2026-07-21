@@ -31,6 +31,7 @@ from archium.domain.enums import (
     SlideType,
 )
 from archium.domain.presentation_manuscript import ManuscriptStatus
+from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import repair_strategy_for_rule
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError

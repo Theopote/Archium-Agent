@@ -15,8 +15,8 @@ from archium.domain.visual.architectural_content_schema import SchemaTestFillRes
 from archium.domain.visual.template_induction import Phase35HumanSignoff, TemplateInductionStatus
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 from tests.unit.visual.test_architectural_content_schema import (
-    _PassThroughTestFill,
     _gate_with_pass_fill,
+    _PassThroughTestFill,
 )
 
 

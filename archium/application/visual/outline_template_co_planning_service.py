@@ -15,21 +15,21 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from archium.application.visual.semantic_content_plan import (
-    expected_text_evidence_count,
-    expand_visual_evidence_roles,
-)
 from archium.application.visual.reference_slide_matcher import ReferenceSlideMatcher
+from archium.application.visual.semantic_content_plan import (
+    expand_visual_evidence_roles,
+    expected_text_evidence_count,
+)
+from archium.domain.enums import SlideType
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.slide import SlideSpec
-from archium.domain.enums import SlideType
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
-from archium.domain.visual.reference_slide_matching import DeckContext
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
     ArchitecturalTemplateLayout,
     TemplatePageType,
 )
+from archium.domain.visual.reference_slide_matching import DeckContext
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
     CoPlanCapacityWarning,

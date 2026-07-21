@@ -14,6 +14,7 @@ from archium.domain.visual.template_induction import (
     FunctionalSlideType,
     InductionReviewOverride,
     OutlineTemplateCoPlan,
+    OutlineTemplateEditingBatch,
     VisualLayoutPattern,
 )
 from archium.exceptions import WorkflowError
@@ -766,7 +767,6 @@ def _render_co_plan() -> None:
 
 def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPlan) -> None:
     from archium.application.visual.template_induction_service import TemplateInductionService
-    from archium.domain.visual.template_induction import OutlineTemplateEditingBatch
 
     if not co_plan.template_editing_page_ids:
         return

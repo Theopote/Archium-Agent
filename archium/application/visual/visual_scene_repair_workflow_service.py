@@ -9,18 +9,17 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.visual.render_scene_compiler import RenderSceneCompiler
-from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
 )
+from archium.application.visual.render_scene_compiler import RenderSceneCompiler
+from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
-from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.database.visual_repositories import (
     RenderSceneRepository,

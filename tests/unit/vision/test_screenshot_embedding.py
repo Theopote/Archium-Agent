@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.infrastructure.vision.screenshot_embedding import (
     compute_screenshot_embedding_from_image,
     screenshot_embedding_available,

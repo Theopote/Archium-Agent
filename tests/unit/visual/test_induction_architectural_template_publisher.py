@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.application.visual.architectural_content_schema_publish_gate import (
     ArchitecturalContentSchemaPublishGate,
 )
@@ -21,8 +20,8 @@ from archium.domain.visual.template_induction import (
 from archium.exceptions import WorkflowError
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 from tests.unit.visual.test_architectural_content_schema import (
-    _PassThroughTestFill,
     _gate_with_pass_fill,
+    _PassThroughTestFill,
 )
 
 

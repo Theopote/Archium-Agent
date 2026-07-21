@@ -12,13 +12,13 @@ from archium.agents._helpers import (
     build_retrieval_query_from_request,
     resolve_design_context_text,
 )
-from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.application.artifact_history_service import BriefHistoryService
 from archium.application.artifact_lineage import apply_brief_lineage
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import BriefDraft
