@@ -62,13 +62,19 @@ def _issue_key(issue: QualityIssue) -> tuple[str, tuple[str, ...]]:
 
 
 def _category_for_code(code: str) -> IssueCategory:
+    if code.startswith("RENDER."):
+        return IssueCategory.LAYOUT_VISUAL
+    if code.startswith("ASSET.") or code.startswith("LAYOUT.UNRESOLVED"):
+        return IssueCategory.DELIVERY_EDITABILITY
+    if code.startswith("DRAWING."):
+        return IssueCategory.ARCHITECTURAL
     if code in {
         SceneSemanticCheckCode.AI_IMAGE_PRESENTED_AS_REAL_PROJECT,
         SceneSemanticCheckCode.STOCK_IMAGE_PRESENTED_AS_PROJECT,
     }:
         return IssueCategory.IMAGE_TEXT
-    if code.startswith("SEMANTIC.DRAWING"):
+    if code.startswith("SEMANTIC.DRAWING") or code.startswith("DRAWING."):
         return IssueCategory.ARCHITECTURAL
-    if code.startswith("LAYOUT."):
+    if code.startswith("LAYOUT.") or code.startswith("POST_RENDER."):
         return IssueCategory.LAYOUT_VISUAL
     return IssueCategory.DELIVERY_EDITABILITY

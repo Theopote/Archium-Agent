@@ -9,12 +9,15 @@ from sqlalchemy.orm import Session
 
 from archium.application.visual.drawing_readability_service import parse_geometry_token
 from archium.application.visual.scene_history_service import SceneHistoryService
+from archium.application.visual.scene_deterministic_qa_service import (
+    ProposalSceneQAResult,
+    run_proposal_scene_qa,
+)
 from archium.application.visual.scene_proposal_qa import (
     compare_proposal_qa,
-    findings_to_quality_issues,
     proposal_introduces_blocker,
 )
-from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
+from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.studio_command_executor import (
     StudioCommandExecutor,
     StudioExecutionContext,
@@ -31,6 +34,7 @@ from archium.domain.visual.render_scene import (
     RenderScene,
     TextNode,
     compute_scene_hash,
+    replace_text_node_content,
 )
 from archium.domain.visual.scene_change_proposal import (
     CommandProposalResult,
@@ -58,7 +62,9 @@ class SceneProposalService:
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
-        self._executor = executor or StudioCommandExecutor()
+        self._executor = executor or StudioCommandExecutor(
+            asset_validator=AssetBindingValidator(session, settings=self._settings),
+        )
         self._scenes = RenderSceneRepository(session)
         self._presentations = PresentationRepository(session)
         self._scene_history = SceneHistoryService(session)
@@ -81,8 +87,8 @@ class SceneProposalService:
         context = StudioExecutionContext(
             presentation_id=presentation_id,
             slide_order=slide_order,
+            project_id=self._project_id_for_presentation(presentation_id),
         )
-        qa_before = self._qa_for_scene(base_scene, presentation_id, slide_order)
         candidate = base_scene.model_copy(deep=True)
         applied_actions: list[ScenePatchAction] = []
         command_results: list[CommandProposalResult] = []
@@ -142,7 +148,16 @@ class SceneProposalService:
                 "；".join(failure_messages) or "所有 Studio 命令均未能应用到 Scene。"
             )
 
-        qa_after = self._qa_for_scene(candidate, presentation_id, slide_order)
+        qa_before_result = self._qa_for_scene(
+            base_scene,
+            presentation_id,
+            slide_order,
+        )
+        qa_after_result = self._qa_for_scene(
+            candidate,
+            presentation_id,
+            slide_order,
+        )
         proposal_reasons = list(reasons or [])
         proposal_reasons.extend(action.reason for action in applied_actions if action.reason)
         status = (
@@ -165,8 +180,14 @@ class SceneProposalService:
             command_results=command_results,
             patch_actions=applied_actions,
             reasons=_dedupe_strings(proposal_reasons),
-            qa_before=qa_before,
-            qa_after=qa_after,
+            qa_before=list(qa_before_result.issues),
+            qa_after=list(qa_after_result.issues),
+            qa_before_by_layer={
+                layer: list(items) for layer, items in qa_before_result.layers.items()
+            },
+            qa_after_by_layer={
+                layer: list(items) for layer, items in qa_after_result.layers.items()
+            },
             status=status,
         )
 
@@ -205,13 +226,16 @@ class SceneProposalService:
             decision,
             slide_order=slide.order,
         )
-        comparison = compare_proposal_qa(proposal.qa_before, self._qa_issues_for_scene(
+        accepted_qa = self._qa_for_scene(
             accepted_scene,
             proposal.presentation_id,
             slide.order,
-        ))
+        )
+        comparison = compare_proposal_qa(proposal.qa_before, list(accepted_qa.issues))
         if proposal_introduces_blocker(comparison):
             raise WorkflowError("不能接受会引入新的 Blocker 级质量问题的修改。")
+        if not accepted_qa.preview_render_success:
+            raise WorkflowError("不能接受预览渲染失败的 Scene 修改。")
 
         saved = self._persist_scene(slide, accepted_scene)
         parent_revision_id = proposal.base_revision_id
@@ -262,6 +286,7 @@ class SceneProposalService:
         context = StudioExecutionContext(
             presentation_id=proposal.presentation_id,
             slide_order=slide_order,
+            project_id=self._project_id_for_presentation(proposal.presentation_id),
         )
         fallback_actions: list[ScenePatchAction] = []
 
@@ -308,29 +333,24 @@ class SceneProposalService:
             )
         return self._scenes.save(payload)
 
+    def _project_id_for_presentation(self, presentation_id: UUID) -> UUID | None:
+        if self._presentations is None:
+            return None
+        presentation = self._presentations.get_presentation(presentation_id)
+        return presentation.project_id if presentation is not None else None
+
     def _qa_for_scene(
         self,
         scene: RenderScene,
         presentation_id: UUID,
         slide_order: int,
-    ) -> list[QualityIssue]:
-        return self._qa_issues_for_scene(scene, presentation_id, slide_order)
-
-    def _qa_issues_for_scene(
-        self,
-        scene: RenderScene,
-        presentation_id: UUID,
-        slide_order: int,
-    ) -> list[QualityIssue]:
-        report = run_scene_semantic_qa(
+    ) -> ProposalSceneQAResult:
+        return run_proposal_scene_qa(
             presentation_id,
-            [scene],
-            slide_orders={scene.slide_id: slide_order},
+            scene,
+            slide_order=slide_order,
+            studio_scene=self._studio_scene,
         )
-        slide_findings = [
-            finding for finding in report.findings if finding.slide_id == scene.slide_id
-        ]
-        return findings_to_quality_issues(slide_findings)
 
 
 def apply_patch_actions(
@@ -396,9 +416,7 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
         return
     if action.action_type == "rewrite_text" and isinstance(node, TextNode):
         if action.after_value is not None:
-            node.text = action.after_value
-            if node.paragraphs:
-                node.paragraphs[0].text = action.after_value
+            replace_text_node_content(node, action.after_value)
         return
     if action.action_type in {"replace_asset", "replace_drawing"} and isinstance(
         node, (ImageNode, DrawingNode)
@@ -430,9 +448,7 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
         return
     if action.action_type == "shorten_text" and isinstance(node, TextNode):
         if action.after_value is not None:
-            node.text = action.after_value
-            if node.paragraphs:
-                node.paragraphs[0].text = action.after_value
+            replace_text_node_content(node, action.after_value)
         return
     if action.action_type == "set_overflow_shrink" and isinstance(node, TextNode):
         node.overflow_policy = "shrink"

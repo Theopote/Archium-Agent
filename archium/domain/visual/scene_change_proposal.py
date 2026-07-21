@@ -70,6 +70,8 @@ class SceneChangeProposal(DomainModel):
 
     qa_before: list[QualityIssue] = Field(default_factory=list)
     qa_after: list[QualityIssue] = Field(default_factory=list)
+    qa_before_by_layer: dict[str, list[QualityIssue]] = Field(default_factory=dict)
+    qa_after_by_layer: dict[str, list[QualityIssue]] = Field(default_factory=dict)
 
     status: ProposalStatus = ProposalStatus.READY
     created_at: datetime = Field(default_factory=utc_now)

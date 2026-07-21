@@ -5,10 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.drawing_readability_service import increase_drawing_readability
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
+from archium.application.visual.asset_path_resolver import AssetPathResolveContext
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
+from archium.domain.studio_errors import StudioAssetReferenceError
 from archium.domain.visual.page_quality import (
     IssueCategory,
     IssueSeverity,
@@ -24,6 +27,7 @@ from archium.domain.visual.render_scene import (
     SceneAssetReference,
     TextNode,
     compute_scene_hash,
+    replace_text_node_content,
 )
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction
@@ -45,6 +49,9 @@ class StudioExecutionContext:
 
     presentation_id: UUID
     slide_order: int = 0
+    project_id: UUID | None = None
+    asset_resolve_context: AssetPathResolveContext | None = None
+    validate_asset_bindings: bool = True
     forbidden_asset_origins: frozenset[str] = field(
         default_factory=lambda: frozenset({REFERENCE_TEMPLATE_ASSET_ORIGIN})
     )
@@ -91,8 +98,14 @@ def _node_has_lock_scope(node: BaseRenderNode, scopes: frozenset[str]) -> bool:
 class StudioCommandExecutor:
     """Apply structured Studio commands and return candidate scenes."""
 
-    def __init__(self, *, scene_repair: SceneRepairService | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        scene_repair: SceneRepairService | None = None,
+        asset_validator: AssetBindingValidator | None = None,
+    ) -> None:
         self._scene_repair = scene_repair or SceneRepairService()
+        self._asset_validator = asset_validator or AssetBindingValidator()
 
     def execute(
         self,
@@ -172,9 +185,7 @@ class StudioCommandExecutor:
         target = patched.node_by_id(command.node_id)
         assert isinstance(target, TextNode)
         before_text = target.text
-        target.text = command.new_text
-        if target.paragraphs:
-            target.paragraphs[0].text = command.new_text
+        replace_text_node_content(target, command.new_text)
 
         action = build_patch_action(
             scene,
@@ -296,6 +307,20 @@ class StudioCommandExecutor:
                 lock_kind="asset",
             )
 
+        binding_issue = self._validate_asset_binding(
+            context=context,
+            asset_id=command.asset_id,
+            storage_uri=command.storage_uri,
+            asset_origin=command.asset_origin,
+            expected_kind="image",
+        )
+        if binding_issue is not None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(binding_issue,),
+            )
+
         patched = scene.model_copy(deep=True)
         target = patched.node_by_id(command.node_id)
         assert isinstance(target, ImageNode)
@@ -379,6 +404,20 @@ class StudioCommandExecutor:
                 command_type="replace_drawing",
                 node_id=command.node_id,
                 lock_kind="asset",
+            )
+
+        binding_issue = self._validate_asset_binding(
+            context=context,
+            asset_id=command.asset_id,
+            storage_uri=command.storage_uri,
+            asset_origin="project_upload",
+            expected_kind="drawing",
+        )
+        if binding_issue is not None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(binding_issue,),
             )
 
         patched = scene.model_copy(deep=True)
@@ -505,6 +544,40 @@ class StudioCommandExecutor:
             candidate_scene=result.scene,
             applied_actions=result.actions,
         )
+
+    def _validate_asset_binding(
+        self,
+        *,
+        context: StudioExecutionContext,
+        asset_id: UUID,
+        storage_uri: str,
+        asset_origin: str,
+        expected_kind: str,
+    ) -> QualityIssue | None:
+        if not context.validate_asset_bindings:
+            return None
+        require_resolvable = (
+            context.project_id is not None or context.asset_resolve_context is not None
+        )
+        try:
+            self._asset_validator.validate(
+                asset_id=asset_id,
+                storage_uri=storage_uri,
+                asset_origin=asset_origin,
+                expected_kind=expected_kind,  # type: ignore[arg-type]
+                project_id=context.project_id,
+                require_resolvable=require_resolvable,
+                resolve_context=context.asset_resolve_context,
+            )
+        except StudioAssetReferenceError as exc:
+            return _issue(
+                code=exc.code,
+                message=str(exc),
+                severity=IssueSeverity.BLOCKER,
+                category=IssueCategory.ARCHITECTURAL,
+                evidence=[str(asset_id), storage_uri.strip()],
+            )
+        return None
 
 
 def _node_not_found(base_hash: str, node_id: str) -> CommandExecutionResult:

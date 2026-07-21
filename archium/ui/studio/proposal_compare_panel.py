@@ -170,6 +170,7 @@ def _render_change_list(proposal: SceneChangeProposal) -> None:
 
 
 def _render_qa_diff(proposal: SceneChangeProposal) -> None:
+    from archium.application.visual.scene_deterministic_qa_service import summarize_layer_counts
     from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 
     diff = compare_proposal_qa(proposal.qa_before, proposal.qa_after)
@@ -188,6 +189,26 @@ def _render_qa_diff(proposal: SceneChangeProposal) -> None:
         st.markdown(f"- 已解决：{len(diff.resolved)} 项")
     if diff.introduced:
         st.markdown(f"- 新增：{len(diff.introduced)} 项")
+
+    layer_labels = {
+        "semantic": "Semantic QA",
+        "geometry": "Geometry QA",
+        "asset": "Asset QA",
+        "drawing": "Drawing QA",
+        "render": "Render QA",
+        "post_render": "Post-render Visual QA",
+    }
+    if proposal.qa_after_by_layer:
+        st.markdown("**分层 QA（修改后）**")
+        after_counts = summarize_layer_counts(
+            {layer: tuple(items) for layer, items in proposal.qa_after_by_layer.items()}
+        )
+        for layer, label in layer_labels.items():
+            count = after_counts.get(layer, 0)
+            if count:
+                st.markdown(f"- {label}：{count} 个 Major/Blocker")
+            else:
+                st.caption(f"- {label}：通过")
 
 
 def _render_decision_buttons(

@@ -157,6 +157,13 @@ class TextNode(BaseRenderNode):
     minimum_font_size: float = Field(default=8, gt=0)
 
 
+def replace_text_node_content(node: TextNode, new_text: str) -> None:
+    """Replace TextNode.text and collapse paragraphs to one consistent source."""
+    node.text = new_text
+    alignment = node.paragraphs[0].alignment if node.paragraphs else node.alignment
+    node.paragraphs = [TextParagraph(text=new_text, alignment=alignment)]
+
+
 class ImageNode(BaseRenderNode):
     node_type: Literal["image"] = "image"
     asset_id: UUID | None = None

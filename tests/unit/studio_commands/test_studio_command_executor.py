@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from archium.application.visual.asset_path_resolver import (
+    AssetPathResolveContext,
+    benchmark_asset_uri,
+    project_asset_uri,
+)
 from archium.application.visual.studio_command_executor import (
     StudioCommandExecutor,
     StudioExecutionContext,
@@ -72,8 +77,17 @@ def _scene(*nodes: TextNode) -> RenderScene:
     return _render_scene(*nodes)
 
 
-def _context(scene: RenderScene) -> StudioExecutionContext:
-    return StudioExecutionContext(presentation_id=uuid4(), slide_order=0)
+def _context(
+    scene: RenderScene,
+    *,
+    validate_asset_bindings: bool = False,
+    asset_resolve_context: AssetPathResolveContext | None = None,
+) -> StudioExecutionContext:
+    return StudioExecutionContext(
+        presentation_id=uuid4(),
+        validate_asset_bindings=validate_asset_bindings,
+        asset_resolve_context=asset_resolve_context,
+    )
 
 
 def test_rewrite_text_updates_node_and_paragraphs() -> None:
@@ -97,6 +111,7 @@ def test_rewrite_text_updates_node_and_paragraphs() -> None:
     node = result.candidate_scene.node_by_id("title")
     assert isinstance(node, TextNode)
     assert node.text == "结论式标题：院区交通组织优化"
+    assert len(node.paragraphs) == 1
     assert node.paragraphs[0].text == "结论式标题：院区交通组织优化"
     assert len(result.applied_actions) == 1
     assert result.applied_actions[0].action_type == "rewrite_text"
@@ -106,6 +121,30 @@ def test_rewrite_text_updates_node_and_paragraphs() -> None:
     assert action.slide_id == scene.slide_id
     assert action.scene_id != action.slide_id
     assert action.base_scene_hash == result.base_scene_hash
+
+
+def test_rewrite_text_replaces_all_paragraphs() -> None:
+    scene = _scene(_text_node(node_id="body", text="第一段\n第二段\n第三段"))
+    text_node = scene.nodes[0]
+    text_node.paragraphs = [
+        {"text": "第一段", "alignment": "left"},
+        {"text": "第二段", "alignment": "left"},
+        {"text": "第三段", "alignment": "left"},
+    ]
+    command = RewriteTextCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="body",
+        new_text="合并后的新正文",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    node = result.candidate_scene.node_by_id("body") if result.candidate_scene else None
+    assert isinstance(node, TextNode)
+    assert node.text == "合并后的新正文"
+    assert len(node.paragraphs) == 1
+    assert node.paragraphs[0].text == "合并后的新正文"
+    assert all(paragraph.text == "合并后的新正文" for paragraph in node.paragraphs)
 
 
 def test_rewrite_text_rejects_locked_node() -> None:
@@ -284,7 +323,7 @@ def test_replace_asset_updates_image_node_and_manifest() -> None:
         slide_id=scene.slide_id,
         node_id="photo_1",
         asset_id=new_id,
-        storage_uri="project://site/photo-02.png",
+        storage_uri=project_asset_uri(new_id),
         asset_origin="project_upload",
         reason="replace project photo",
     )
@@ -293,7 +332,7 @@ def test_replace_asset_updates_image_node_and_manifest() -> None:
     node = result.candidate_scene.node_by_id("photo_1") if result.candidate_scene else None
     assert isinstance(node, ImageNode)
     assert node.asset_id == new_id
-    assert node.storage_uri == "project://site/photo-02.png"
+    assert node.storage_uri == project_asset_uri(new_id)
     assert node.asset_origin == "project_upload"
     assert result.candidate_scene is not None
     assert any(ref.asset_id == new_id for ref in result.candidate_scene.asset_manifest)
@@ -358,7 +397,7 @@ def test_replace_drawing_updates_node_and_keeps_contain() -> None:
         slide_id=scene.slide_id,
         node_id="site_plan",
         asset_id=new_id,
-        storage_uri="project://drawings/site-plan-v2.png",
+        storage_uri=project_asset_uri(new_id),
         drawing_type="site_plan",
         reason="replace site plan",
     )
@@ -368,7 +407,7 @@ def test_replace_drawing_updates_node_and_keeps_contain() -> None:
     assert isinstance(node, DrawingNode)
     assert node.asset_id == new_id
     assert node.fit_mode == "contain"
-    assert node.storage_uri == "project://drawings/site-plan-v2.png"
+    assert node.storage_uri == project_asset_uri(new_id)
     action = result.applied_actions[0]
     assert action.after_payload["drawing_type"] == "site_plan"
     assert action.after_payload["preserve_aspect_ratio"] is True
@@ -462,4 +501,77 @@ def test_increase_drawing_readability_rejects_locked_geometry() -> None:
     assert result.success is False
     assert any("locked" in item for item in result.skipped_actions)
 
+
+def test_replace_asset_rejects_invalid_project_uri() -> None:
+    new_id = uuid4()
+    scene = _render_scene(_image_node(node_id="photo_1"))
+    command = ReplaceAssetCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="photo_1",
+        asset_id=new_id,
+        storage_uri="project://site/photo-02.png",
+    )
+    result = StudioCommandExecutor().execute(
+        scene,
+        command,
+        _context(scene, validate_asset_bindings=True),
+    )
+    assert result.success is False
+    assert any(issue.code == "STUDIO.ASSET_URI_UNSUPPORTED" for issue in result.issues)
+
+
+def test_replace_asset_rejects_uri_asset_id_mismatch() -> None:
+    new_id = uuid4()
+    other_id = uuid4()
+    scene = _render_scene(_image_node(node_id="photo_1"))
+    command = ReplaceAssetCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="photo_1",
+        asset_id=new_id,
+        storage_uri=project_asset_uri(other_id),
+    )
+    result = StudioCommandExecutor().execute(
+        scene,
+        command,
+        _context(scene, validate_asset_bindings=True),
+    )
+    assert result.success is False
+    assert any(issue.code == "STUDIO.ASSET_URI_MISMATCH" for issue in result.issues)
+
+
+def test_replace_asset_accepts_resolvable_benchmark_uri(tmp_path) -> None:  # noqa: ANN001
+    from PIL import Image
+
+    new_id = uuid4()
+    case_dir = tmp_path / "case_photo"
+    assets = case_dir / "assets"
+    assets.mkdir(parents=True)
+    asset_file = assets / f"{new_id}.png"
+    Image.new("RGB", (1, 1), color="red").save(asset_file)
+    uri = benchmark_asset_uri("case_photo", f"assets/{new_id}.png")
+    scene = _render_scene(_image_node(node_id="photo_1"))
+    command = ReplaceAssetCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="photo_1",
+        asset_id=new_id,
+        storage_uri=uri,
+    )
+    result = StudioCommandExecutor().execute(
+        scene,
+        command,
+        _context(
+            scene,
+            validate_asset_bindings=True,
+            asset_resolve_context=AssetPathResolveContext(
+                case_dir=case_dir,
+                case_id="case_photo",
+                assets_dir=assets,
+                benchmark_root=tmp_path,
+            ),
+        ),
+    )
+    assert result.success is True
 

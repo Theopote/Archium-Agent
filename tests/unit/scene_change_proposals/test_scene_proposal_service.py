@@ -30,6 +30,7 @@ from archium.domain.visual.studio_command import (
     ScenePatchAction,
     build_patch_action,
 )
+from archium.application.visual.asset_path_resolver import project_asset_uri
 from archium.exceptions import WorkflowError
 
 
@@ -170,6 +171,10 @@ def test_compare_proposal_qa_resolved_and_introduced() -> None:
 
 def test_apply_patch_actions_rewrite_text() -> None:
     scene = _scene(_text_node(node_id="title", text="旧"))
+    scene.nodes[0].paragraphs = [
+        {"text": "旧", "alignment": "left"},
+        {"text": "旧段落二", "alignment": "left"},
+    ]
 
     patched = apply_patch_actions(
         scene,
@@ -186,6 +191,8 @@ def test_apply_patch_actions_rewrite_text() -> None:
     node = patched.node_by_id("title")
     assert isinstance(node, TextNode)
     assert node.text == "新"
+    assert len(node.paragraphs) == 1
+    assert node.paragraphs[0].text == "新"
 
 
 def test_resolve_accepted_scene_applies_subset() -> None:
@@ -315,10 +322,15 @@ def _mixed_scene(*nodes) -> RenderScene:
 
 def _proposal_service() -> SceneProposalService:
     service = SceneProposalService.__new__(SceneProposalService)
-    service._executor = __import__(
+    executor_module = __import__(
         "archium.application.visual.studio_command_executor",
-        fromlist=["StudioCommandExecutor"],
-    ).StudioCommandExecutor()
+        fromlist=["StudioCommandExecutor", "StudioExecutionContext"],
+    )
+    service._executor = executor_module.StudioCommandExecutor()
+    service._executor._asset_validator = __import__(
+        "archium.application.visual.asset_binding_validator",
+        fromlist=["AssetBindingValidator"],
+    ).AssetBindingValidator()
     service._scenes = None  # type: ignore[assignment]
     service._presentations = None  # type: ignore[assignment]
     service._scene_history = None  # type: ignore[assignment]
@@ -360,7 +372,7 @@ def test_partial_accept_replace_asset_preserves_manifest_and_origin() -> None:
                 slide_id=scene.slide_id,
                 node_id="photo_1",
                 asset_id=new_id,
-                storage_uri="project://site/photo-02.png",
+                storage_uri=project_asset_uri(new_id),
                 asset_origin="reference_case",
                 reason="replace project photo",
             ),
@@ -383,7 +395,7 @@ def test_partial_accept_replace_asset_preserves_manifest_and_origin() -> None:
     photo = accepted.node_by_id("photo_1")
     assert isinstance(photo, ImageNode)
     assert photo.asset_id == new_id
-    assert photo.storage_uri == "project://site/photo-02.png"
+    assert photo.storage_uri == project_asset_uri(new_id)
     assert photo.asset_origin == "reference_case"
     assert any(ref.asset_id == new_id for ref in accepted.asset_manifest)
     assert accepted.node_by_id("title").text == "旧标题"  # type: ignore[union-attr]
@@ -404,7 +416,7 @@ def test_partial_accept_replace_drawing_preserves_drawing_metadata() -> None:
                 slide_id=scene.slide_id,
                 node_id="site_plan",
                 asset_id=new_id,
-                storage_uri="project://drawings/site-plan-v2.png",
+                storage_uri=project_asset_uri(new_id),
                 drawing_type="elevation",
                 preserve_aspect_ratio=True,
                 preserve_annotations=True,
@@ -453,11 +465,11 @@ def test_apply_patch_actions_replace_asset_uses_after_payload() -> None:
                 base_scene_hash=compute_scene_hash(scene),
                 node_id="photo_1",
                 action_type="replace_asset",
-                after_value="project://site/photo-02.png",
+                after_value=project_asset_uri(new_id),
                 after_asset_id=new_id,
                 after_payload={
                     "asset_id": str(new_id),
-                    "storage_uri": "project://site/photo-02.png",
+                    "storage_uri": project_asset_uri(new_id),
                     "asset_origin": "reference_case",
                 },
             )
@@ -493,7 +505,7 @@ def test_resolve_accepted_commands_returns_only_selected_commands() -> None:
         slide_id=scene.slide_id,
         node_id="photo_1",
         asset_id=new_id,
-        storage_uri="project://site/photo-02.png",
+        storage_uri=project_asset_uri(new_id),
     )
     enlarge_cmd = IncreaseDrawingReadabilityCommand(
         presentation_id=presentation_id,
