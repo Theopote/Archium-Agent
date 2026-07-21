@@ -8,7 +8,9 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.slide_semantic_qa import SlideSemanticFinding
 from archium.domain.visual.render_scene import RenderScene
+from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 
 
 class SceneRepairApplyMode(StrEnum):
@@ -29,6 +31,13 @@ class SceneRepairActionType(StrEnum):
 
 
 SAFE_AUTO_ACTION_TYPES = frozenset({SceneRepairActionType.SET_FIT_MODE_CONTAIN.value})
+
+PROPOSAL_REQUIRED_REPAIR_CODES = frozenset(
+    {
+        SceneSemanticCheckCode.TEXT_OVERFLOW,
+        SceneSemanticCheckCode.FONT_TOO_SMALL,
+    }
+)
 
 
 def is_safe_auto_repair(action_type: str) -> bool:
@@ -60,3 +69,4 @@ class SceneRepairBatchResult(DomainModel):
     actions: list[SceneRepairAction] = Field(default_factory=list)
     rounds: int = Field(default=0, ge=0)
     remaining_issue_count: int = Field(default=0, ge=0)
+    deferred_findings: list[SlideSemanticFinding] = Field(default_factory=list)

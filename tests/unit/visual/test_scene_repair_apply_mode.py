@@ -133,3 +133,46 @@ def test_all_repairable_applies_text_overflow_fixes() -> None:
     assert isinstance(body, TextNode)
     assert len(body.text) < len("这是一段非常长的说明文字" * 20)
     assert result.applied_count >= 1
+
+
+def test_repair_deck_reports_deferred_overflow_without_auto_shortening() -> None:
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            TextNode(
+                id="body",
+                x=0.5,
+                y=1.0,
+                width=2.0,
+                height=0.4,
+                z_index=1,
+                text="这是一段非常长的说明文字" * 20,
+                font_family="Arial",
+                font_size=12,
+                color="#000000",
+                line_height=1.2,
+                overflow_policy="error",
+            )
+        ],
+    )
+    original_len = len(scene.nodes[0].text)  # type: ignore[union-attr]
+    presentation_id = uuid4()
+
+    batch = SceneRepairService().repair_deck(
+        presentation_id,
+        [scene],
+        max_rounds=1,
+        slide_orders={scene.slide_id: 0},
+        apply_mode=SceneRepairApplyMode.SAFE_AUTO_ONLY,
+    )
+
+    body = batch.scenes[0].node_by_id("body")
+    assert isinstance(body, TextNode)
+    assert len(body.text) == original_len
+    assert batch.deferred_findings
+    assert batch.deferred_findings[0].check_code == SceneSemanticCheckCode.TEXT_OVERFLOW
+

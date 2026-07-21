@@ -13,13 +13,17 @@ from archium.application.visual.asset_reference import (
     content_refs_from_plan,
 )
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
+from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
+from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_semantic_qa import SlideSemanticFinding
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
+from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairBatchResult
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.database.visual_repositories import (
@@ -39,6 +43,8 @@ class StudioSceneResult:
     scene_hash: str
     preview_path: Path
     reused: bool
+    safe_repair_actions: tuple[SceneRepairAction, ...] = ()
+    deferred_repair_findings: tuple[SlideSemanticFinding, ...] = ()
 
 
 class StudioSceneService:
@@ -189,7 +195,7 @@ class StudioSceneService:
                 }
             )
             if compute_scene_hash(comparable) == compute_scene_hash(existing):
-                prepared = self._apply_scene_repair(existing, slide)
+                prepared, batch = self._run_scene_repair(existing, slide)
                 saved = existing
                 if compute_scene_hash(prepared) != compute_scene_hash(existing):
                     saved = self._scenes.save(
@@ -201,16 +207,17 @@ class StudioSceneService:
                             }
                         )
                     )
+                    self._record_safe_auto_repair(slide, saved, batch)
                     self.invalidate_preview_cache(
                         slide.presentation_id,
                         layout_plan_id=plan.id,
                     )
                 preview = self._ensure_preview(slide.presentation_id, saved)
-                return StudioSceneResult(
+                return self._build_scene_result(
                     scene=saved,
-                    scene_hash=compute_scene_hash(saved),
                     preview_path=preview,
                     reused=True,
+                    batch=batch,
                 )
 
         if existing is not None:
@@ -221,18 +228,19 @@ class StudioSceneService:
                     "created_at": existing.created_at,
                 }
             )
-        scene = self._apply_scene_repair(scene, slide)
-        saved = self._scenes.save(scene)
+        prepared, batch = self._run_scene_repair(scene, slide)
+        saved = self._scenes.save(prepared)
+        self._record_safe_auto_repair(slide, saved, batch)
         self.invalidate_preview_cache(
             slide.presentation_id,
             layout_plan_id=plan.id,
         )
         preview = self._ensure_preview(slide.presentation_id, saved)
-        return StudioSceneResult(
+        return self._build_scene_result(
             scene=saved,
-            scene_hash=compute_scene_hash(saved),
             preview_path=preview,
             reused=False,
+            batch=batch,
         )
 
     def refresh_after_layout_edit(
@@ -271,9 +279,13 @@ class StudioSceneService:
                 results.append(result)
         return results
 
-    def _apply_scene_repair(self, scene: RenderScene, slide: SlideSpec) -> RenderScene:
+    def _run_scene_repair(
+        self,
+        scene: RenderScene,
+        slide: SlideSpec,
+    ) -> tuple[RenderScene, SceneRepairBatchResult | None]:
         if not bool(getattr(self._settings, "scene_repair_enabled", True)):
-            return scene
+            return scene, None
         max_rounds = int(getattr(self._settings, "scene_repair_max_rounds", 2))
         batch = self._scene_repair.repair_deck(
             slide.presentation_id,
@@ -281,7 +293,49 @@ class StudioSceneService:
             max_rounds=max_rounds,
             slide_orders={scene.slide_id: slide.order},
         )
-        return batch.scenes[0] if batch.scenes else scene
+        repaired = batch.scenes[0] if batch.scenes else scene
+        return repaired, batch
+
+    def _build_scene_result(
+        self,
+        *,
+        scene: RenderScene,
+        preview_path: Path,
+        reused: bool,
+        batch: SceneRepairBatchResult | None,
+    ) -> StudioSceneResult:
+        safe_actions: tuple[SceneRepairAction, ...] = ()
+        deferred: tuple[SlideSemanticFinding, ...] = ()
+        if batch is not None:
+            safe_actions = tuple(batch.actions)
+            deferred = tuple(batch.deferred_findings)
+        return StudioSceneResult(
+            scene=scene,
+            scene_hash=compute_scene_hash(scene),
+            preview_path=preview_path,
+            reused=reused,
+            safe_repair_actions=safe_actions,
+            deferred_repair_findings=deferred,
+        )
+
+    def _record_safe_auto_repair(
+        self,
+        slide: SlideSpec,
+        scene: RenderScene,
+        batch: SceneRepairBatchResult | None,
+    ) -> None:
+        if batch is None or not batch.actions:
+            return
+        summary = "; ".join(
+            f"{action.action_type}@{action.node_id}" for action in batch.actions
+        )
+        SceneHistoryService(self._session).record_scene(
+            slide=slide,
+            scene=scene,
+            change_source=RevisionSource.AUTO_REPAIR,
+            scene_revision_source="automatic_repair",
+            note=summary or "safe auto repair",
+        )
 
     def _ensure_preview(self, presentation_id: UUID, scene: RenderScene) -> Path:
         path = self.preview_cache_path(presentation_id, scene)

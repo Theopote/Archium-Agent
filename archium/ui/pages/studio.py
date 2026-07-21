@@ -93,6 +93,10 @@ def render() -> None:
             presentation_id=context.presentation.id,
         )
         st.divider()
+        from archium.ui.studio.scene_repair_prompt_panel import render_deferred_scene_repair_panel
+
+        render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
+        st.divider()
         from archium.ui.llm_settings import get_ui_effective_settings
         from archium.ui.studio.proposal_compare_panel import render_proposal_compare_panel
 

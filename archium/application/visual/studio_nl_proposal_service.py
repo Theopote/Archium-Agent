@@ -103,6 +103,35 @@ class StudioNLProposalService:
         )
         return self._create_from_plan(slide, scene, presentation_id, plan)
 
+    def create_overflow_repair_proposal(
+        self,
+        slide_id: UUID,
+        *,
+        node_ids: list[str] | None = None,
+    ) -> SceneChangeProposal:
+        """Build a Proposal for semantic overflow repair (requires user review)."""
+        from archium.domain.visual.studio_command import FixOverflowCommand
+
+        slide, scene, presentation_id = self._load_slide_scene(slide_id)
+        command = FixOverflowCommand(
+            presentation_id=presentation_id,
+            slide_id=slide.id,
+            node_ids=node_ids,
+            target_node_ids=list(node_ids or []),
+            reason="修复文本溢出（需 Proposal 确认）",
+            expected_effect="修复文本溢出",
+        )
+        base_revision_id = self._scene_history.latest_scene_revision_id(slide)
+        return self._proposals.create_proposal(
+            base_scene=scene,
+            commands=[command],
+            presentation_id=presentation_id,
+            slide_id=slide.id,
+            slide_order=slide.order,
+            base_revision_id=base_revision_id,
+            reasons=[command.expected_effect],
+        )
+
     def _create_from_plan(
         self,
         slide: SlideSpec,

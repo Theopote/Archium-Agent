@@ -23,6 +23,7 @@ from archium.application.visual.visual_workflow_service import (
 from archium.config.settings import Settings
 from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_semantic_qa import SlideSemanticFinding
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily
@@ -58,6 +59,7 @@ class SlideVisualSnapshot:
     preview_image: str | None = None
     preview_kind: Literal["scene", "screenshot", "wireframe"] | None = None
     render_scene: RenderScene | None = None
+    deferred_scene_repairs: list[SlideSemanticFinding] = field(default_factory=list)
 
 
 @dataclass

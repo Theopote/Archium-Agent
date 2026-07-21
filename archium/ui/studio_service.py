@@ -140,7 +140,11 @@ def load_studio_context(
         if scene_result is not None:
             scene_preview_by_index[index] = str(scene_result.preview_path)
             enriched_with_scenes.append(
-                replace(item, render_scene=scene_result.scene)
+                replace(
+                    item,
+                    render_scene=scene_result.scene,
+                    deferred_scene_repairs=list(scene_result.deferred_repair_findings),
+                )
             )
         else:
             enriched_with_scenes.append(item)
@@ -389,6 +393,23 @@ def create_slide_scene_proposal_from_intent(
         settings=settings,
         use_llm=settings.llm_configured,
     ).create_proposal_from_intent(slide_id, intent, params=params)
+
+
+def create_slide_overflow_repair_proposal(
+    session: Session,
+    slide_id: UUID,
+    *,
+    node_ids: list[str] | None = None,
+) -> SceneChangeProposal:
+    """Create a SceneChangeProposal for deferred semantic overflow repair."""
+    from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
+
+    settings = _resolve_runtime_settings(None)
+    return StudioNLProposalService(
+        session,
+        settings=settings,
+        use_llm=settings.llm_configured,
+    ).create_overflow_repair_proposal(slide_id, node_ids=node_ids)
 
 
 def apply_slide_visual_edit(

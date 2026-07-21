@@ -22,6 +22,7 @@ from archium.domain.visual.scene_repair import (
     SceneRepairApplyMode,
     SceneRepairBatchResult,
     SceneRepairResult,
+    PROPOSAL_REQUIRED_REPAIR_CODES,
 )
 
 _CHARS_PER_INCH_AT_12PT = 12.0
@@ -33,6 +34,27 @@ _REPAIRABLE_CODES = frozenset(
         SceneSemanticCheckCode.DRAWING_COVER_MODE_FORBIDDEN,
     }
 )
+
+
+def proposal_required_findings(
+    findings: list[SlideSemanticFinding],
+) -> list[SlideSemanticFinding]:
+    """Findings that must be resolved via Studio Proposal, not auto-repair."""
+    return [
+        finding
+        for finding in findings
+        if finding.check_code in PROPOSAL_REQUIRED_REPAIR_CODES
+    ]
+
+
+def summarize_deferred_repair(finding: SlideSemanticFinding) -> str:
+    if finding.check_code == SceneSemanticCheckCode.TEXT_OVERFLOW:
+        nodes = ", ".join(finding.evidence_refs or []) or "文本节点"
+        return f"文本溢出（{nodes}）"
+    if finding.check_code == SceneSemanticCheckCode.FONT_TOO_SMALL:
+        nodes = ", ".join(finding.evidence_refs or []) or "文本节点"
+        return f"字体过小（{nodes}）"
+    return finding.title or finding.check_code
 
 
 class SceneRepairService:
@@ -122,11 +144,13 @@ class SceneRepairService:
             for finding in final_report.findings
             if finding.check_code in _REPAIRABLE_CODES
         )
+        deferred = proposal_required_findings(final_report.findings)
         return SceneRepairBatchResult(
             scenes=current,
             actions=all_actions,
             rounds=rounds,
             remaining_issue_count=remaining,
+            deferred_findings=deferred,
         )
 
     def _repair_node(
