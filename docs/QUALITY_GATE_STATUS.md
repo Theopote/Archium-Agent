@@ -246,6 +246,18 @@ Architectural Template Induction sprint (PPTAgent-inspired, **not** a parallel P
 
 Tests: `tests/unit/reference_ppt_parser/test_phase2_parser_fixes.py` (5 passed).
 
+### Phase 3 classifier honesty (closed)
+
+V1 is **rule-driven structural induction** (`classifier=rule_driven_structural_v1`), not full visual-semantic induction.
+
+| Limitation | Mitigation |
+|------------|------------|
+| First page ≠ absolute COVER | `first-page prior`; disclaimer / dense opener can override; weak signals → `needs_review` |
+| Sparse → SECTION_DIVIDER easy false positive | Always `needs_review`; confidence ≤ 0.54; large visual prefers CONTENT; neighbor flank is soft evidence only |
+| Keyword / count heavy (not VLM) | Module docstring + evidence tag; screenshot / embedding deferred |
+
+Tests: `tests/unit/functional_slide_classifier/` (incl. disclaimer, sparse review, large-visual content).
+
 ## Template Induction Phase 4 (2026-07-21)
 
 | Capability | Status | Location |
