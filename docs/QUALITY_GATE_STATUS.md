@@ -357,11 +357,12 @@ Tests: `tests/unit/induction_cluster_editor/`; runner: `scripts/run_phase35_refe
 | Review UI schema correction + publish attempt | **Done** | `template_induction.py` |
 | Artifacts `content_schemas.json` / `schema_publish_report.json` | **Done** | `TemplateInductionService.export_artifacts` |
 | Induction → `ArchitecturalTemplate` bridge | **Done** | `InductionArchitecturalTemplatePublisher` · `architectural_template.json` |
+| Reference slide matching (WP I) | **Done (V1)** | `ReferenceSlideMatcher` · co-plan integration |
 | Outline–Template co-planning / edit-based generation | **Co-plan Done / Edit Not** | Phase 5 co-plan; Phase 6 edit |
 
 **对外口径：** 内容 Schema 可自动归纳并用于开发与测试；经人工修正且发布门 `PASS` 后方可标为正式发布模板。**不得**在未完成 Phase 3.5 真人签署前，将自动归纳结果对外宣称已验收。
 
-Tests: `tests/unit/visual/test_architectural_content_schema.py`, `tests/unit/visual/test_template_publication_readiness.py`.
+Tests: `tests/unit/visual/test_architectural_content_schema.py`, `tests/unit/visual/test_template_publication_readiness.py`, `tests/unit/reference_slide_matcher/`.
 
 ## Template Induction Phase 5 (2026-07-21)
 
@@ -379,6 +380,7 @@ Outline–Template co-planning (rule-driven V1) — **not** edit-based generatio
 | Free Composition fallback | **Done** | weak/no match → `free_composition` |
 | Artifact `outline_template_co_plan.json` | **Done** | `TemplateInductionService.co_plan_outline` |
 | Review UI co-plan panel | **Done** | `template_induction.py` |
+| Reference slide ranking (WP I) | **Done (V1)** | `ReferenceSlideMatcher` in co-plan when template has schemas |
 | Reference slide edit-based generation | **Not in this round** | Phase 6 |
 
 **对外口径：** 大纲可与归纳 Schema 做亲和映射并暴露未匹配模板页；**不得**宣称参考页编辑式生成、Scene Repair 或 Deck Coherence QA 已完成。

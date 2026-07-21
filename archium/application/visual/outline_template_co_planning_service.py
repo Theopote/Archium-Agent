@@ -15,8 +15,12 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
+from archium.application.visual.reference_slide_matcher import ReferenceSlideMatcher
 from archium.domain.outline import OutlinePlan, OutlineSection
+from archium.domain.slide import SlideSpec
+from archium.domain.enums import SlideType
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
+from archium.domain.visual.reference_slide_matching import DeckContext
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
     ArchitecturalTemplateLayout,
@@ -88,6 +92,9 @@ _METRIC_TOKENS = ("指标", "面积", "㎡", "metric", "%")
 class OutlineTemplateCoPlanningService:
     """Build OutlineTemplateCoPlan from outline + induced schemas (+ optional template)."""
 
+    def __init__(self, reference_matcher: ReferenceSlideMatcher | None = None) -> None:
+        self._reference_matcher = reference_matcher or ReferenceSlideMatcher()
+
     def plan(
         self,
         outline: OutlinePlan,
@@ -128,10 +135,24 @@ class OutlineTemplateCoPlanningService:
                     page_role = "section_opener"
 
                 best = ranked[0] if ranked else None
+                schema_obj = next(
+                    (s for s in schemas if best and s.id == best.schema_id), None
+                )
                 layout_ids, preferred_layout = self._match_layouts(
                     content_type=content,
                     functional_type=functional,
                     template=template,
+                    outline=outline,
+                    section=section,
+                    page_index=page_i,
+                    schema=schema_obj,
+                    used_layout_ids=list(used_layout_ids),
+                    used_schema_ids=list(used_schema_ids),
+                    used_representative_slide_ids=[
+                        p.representative_slide_id
+                        for p in page_plans
+                        if p.representative_slide_id
+                    ],
                 )
                 page_plan = self._build_page_plan(
                     section=section,
@@ -363,9 +384,55 @@ class OutlineTemplateCoPlanningService:
         content_type: ArchitecturalContentType,
         functional_type: FunctionalSlideType,
         template: ArchitecturalTemplate | None,
+        outline: OutlinePlan | None = None,
+        section: OutlineSection | None = None,
+        page_index: int = 0,
+        schema: ArchitecturalContentSchema | None = None,
+        used_layout_ids: list[str] | None = None,
+        used_schema_ids: list[str] | None = None,
+        used_representative_slide_ids: list[str] | None = None,
     ) -> tuple[list[str], str | None]:
         if template is None:
             return [], None
+
+        if (
+            schema is not None
+            and outline is not None
+            and section is not None
+            and template.layouts
+            and template.content_schemas
+        ):
+            slide_spec = SlideSpec(
+                presentation_id=outline.presentation_id,
+                chapter_id=section.id,
+                order=page_index,
+                title=section.title,
+                message=(section.key_message or section.purpose or section.title).strip()
+                or section.title,
+                slide_type=self._slide_type_for_functional(functional_type, content_type),
+            )
+            deck_context = DeckContext(
+                section_id=section.id,
+                section_title=section.title,
+                section_index=section.order,
+                planned_page_index=page_index,
+                used_layout_ids=list(used_layout_ids or []),
+                used_schema_ids=list(used_schema_ids or []),
+                used_representative_slide_ids=list(used_representative_slide_ids or []),
+            )
+            candidates = self._reference_matcher.rank(
+                slide_spec=slide_spec,
+                content_schema=schema,
+                assets=[],
+                template=template,
+                deck_context=deck_context,
+                limit=3,
+            )
+            layout_ids = [c.layout_id for c in candidates if c.layout_id]
+            preferred = layout_ids[0] if layout_ids else None
+            if preferred:
+                return layout_ids, preferred
+
         preferred_pages = set(_CONTENT_TO_PAGE.get(content_type, set()))
         if functional_type == FunctionalSlideType.COVER:
             preferred_pages.add(TemplatePageType.COVER)
@@ -386,6 +453,33 @@ class OutlineTemplateCoPlanningService:
         ids = [layout.id for layout in compatible]
         preferred = ids[0] if ids else None
         return ids, preferred
+
+    @staticmethod
+    def _slide_type_for_functional(
+        functional: FunctionalSlideType,
+        content: ArchitecturalContentType,
+    ) -> SlideType:
+        if functional == FunctionalSlideType.COVER:
+            return SlideType.TITLE
+        if functional == FunctionalSlideType.CLOSING:
+            return SlideType.CLOSING
+        if functional == FunctionalSlideType.EXECUTIVE_SUMMARY:
+            return SlideType.SUMMARY
+        if content == ArchitecturalContentType.METRIC_SUMMARY:
+            return SlideType.DATA
+        if content in {
+            ArchitecturalContentType.CASE_COMPARISON,
+            ArchitecturalContentType.BEFORE_AFTER,
+        }:
+            return SlideType.COMPARISON
+        if content == ArchitecturalContentType.TIMELINE:
+            return SlideType.TIMELINE
+        if content in {
+            ArchitecturalContentType.PHOTO_ANALYSIS,
+            ArchitecturalContentType.MULTI_IMAGE_GRID,
+        }:
+            return SlideType.IMAGE
+        return SlideType.CONTENT
 
     def _build_page_plan(
         self,
