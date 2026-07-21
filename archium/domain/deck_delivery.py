@@ -151,7 +151,12 @@ def refresh_slide_asset_delivery(slide: SlideSpec) -> SlideSpec:
     if not required:
         return slide
 
-    missing = [req for req in required if not req.preferred_asset_ids]
+    def _is_bound(req: object) -> bool:
+        if getattr(req, "type", None) == VisualType.ICON:
+            return bool(getattr(req, "icon_id", None))
+        return bool(getattr(req, "preferred_asset_ids", None))
+
+    missing = [req for req in required if not _is_bound(req)]
     if missing:
         if slide.delivery_status in {
             SlideDeliveryStatus.READY,

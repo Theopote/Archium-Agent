@@ -306,6 +306,11 @@ class AssetMatchingService:
         changed = False
         match_count = 0
         for requirement in slide.visual_requirements:
+            if requirement.type == VisualType.ICON:
+                if self._match_icon_requirement(requirement):
+                    changed = True
+                    match_count += 1
+                continue
             if requirement.confirmed:
                 if requirement.preferred_asset_ids:
                     match_count += 1
@@ -335,6 +340,36 @@ class AssetMatchingService:
 
         slide, changed = _finalize_slide_delivery(slide, changed=changed)
         return slide, match_count, changed
+
+    def _match_icon_requirement(self, requirement: VisualRequirement) -> bool:
+        """Bind semantic icon description onto the Architectural Icon Registry."""
+        from archium.application.visual.architectural_icon_registry import (
+            ArchitecturalIconMatcher,
+        )
+
+        if requirement.confirmed and requirement.icon_id:
+            return False
+        matcher = ArchitecturalIconMatcher()
+        result = matcher.match(requirement.description)
+        if result is None:
+            if requirement.icon_id:
+                requirement.icon_id = None
+                requirement.icon_canonical_name = None
+                requirement.match_score = None
+                return True
+            return False
+        changed = (
+            requirement.icon_id != result.icon.id
+            or requirement.icon_canonical_name != result.icon.canonical_name
+            or requirement.match_score != result.score
+        )
+        requirement.icon_id = result.icon.id
+        requirement.icon_canonical_name = result.icon.canonical_name
+        requirement.match_score = result.score
+        instruction = f"icon:{result.icon.canonical_name}:{result.matched_by}"
+        if instruction not in requirement.processing_instructions:
+            requirement.processing_instructions.append(instruction)
+        return changed
 
 
 def _finalize_slide_delivery(slide: SlideSpec, *, changed: bool) -> tuple[SlideSpec, bool]:

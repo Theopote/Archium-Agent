@@ -1,0 +1,86 @@
+{
+  "pack_name": "archium_architectural_icons_v1",
+  "license": "MIT",
+  "icons": [
+    {
+      "id": "icon.pedestrian_flow",
+      "canonical_name": "pedestrian_flow",
+      "aliases": ["步行流线", "人行", "pedestrian", "footpath", "traffic_pedestrian"],
+      "categories": ["circulation", "traffic"],
+      "svg_path": "svg/pedestrian_flow.svg",
+      "description": "步行与人行流线"
+    },
+    {
+      "id": "icon.emergency_access",
+      "canonical_name": "emergency_access",
+      "aliases": ["消防通道", "应急通道", "疏散", "evacuation", "egress", "fire_access"],
+      "categories": ["safety", "circulation"],
+      "svg_path": "svg/emergency_access.svg",
+      "description": "应急与消防通道"
+    },
+    {
+      "id": "icon.healing_garden",
+      "canonical_name": "healing_garden",
+      "aliases": ["疗愈花园", "景观", "landscape", "garden", "绿化"],
+      "categories": ["landscape", "healthcare"],
+      "svg_path": "svg/healing_garden.svg",
+      "description": "景观与疗愈空间"
+    },
+    {
+      "id": "icon.public_transport",
+      "canonical_name": "public_transport",
+      "aliases": ["公交", "轨道交通", "交通", "transit", "bus", "metro"],
+      "categories": ["traffic", "urban"],
+      "svg_path": "svg/public_transport.svg",
+      "description": "公共交通"
+    },
+    {
+      "id": "icon.parking",
+      "canonical_name": "parking",
+      "aliases": ["停车", "停车场", "car_park", "garage"],
+      "categories": ["traffic", "parking"],
+      "svg_path": "svg/parking.svg",
+      "description": "停车设施"
+    },
+    {
+      "id": "icon.accessibility",
+      "canonical_name": "accessibility",
+      "aliases": ["无障碍", "barrier_free", "accessible", "通行便利"],
+      "categories": ["accessibility", "inclusive"],
+      "svg_path": "svg/accessibility.svg",
+      "description": "无障碍通行"
+    },
+    {
+      "id": "icon.energy_saving",
+      "canonical_name": "energy_saving",
+      "aliases": ["节能", "低碳", "energy", "sustainability", "绿色能源"],
+      "categories": ["sustainability", "energy"],
+      "svg_path": "svg/energy_saving.svg",
+      "description": "节能与可持续"
+    },
+    {
+      "id": "icon.healthcare",
+      "canonical_name": "healthcare",
+      "aliases": ["医疗", "医院", "medical", "clinic", "health"],
+      "categories": ["healthcare", "program"],
+      "svg_path": "svg/healthcare.svg",
+      "description": "医疗功能"
+    },
+    {
+      "id": "icon.education",
+      "canonical_name": "education",
+      "aliases": ["教育", "学校", "school", "campus", "学习"],
+      "categories": ["education", "program"],
+      "svg_path": "svg/education.svg",
+      "description": "教育功能"
+    },
+    {
+      "id": "icon.smart_systems",
+      "canonical_name": "smart_systems",
+      "aliases": ["智慧化", "智能化", "smart", "iot", "digital"],
+      "categories": ["smart", "technology"],
+      "svg_path": "svg/smart_systems.svg",
+      "description": "智慧化系统"
+    }
+  ]
+}

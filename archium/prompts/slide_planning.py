@@ -24,6 +24,10 @@ SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 
 图纸与素材：
 - 总图/平面图/剖面/效果图使用对应 visual_requirements（site_plan、floor_plan 等）。
+- 功能示意图标（交通/医疗/教育/景观/节能/疏散/停车/无障碍/智慧化等）→
+  `{"type": "icon", "description": "pedestrian_flow"}`，description 只写语义名
+ （如 pedestrian_flow / emergency_access / healing_garden / public_transport），
+  不要写图标文件名；系统会用本地 Architectural Icon Registry 匹配 SVG。
 - 不要在 key_points 或 message 中伪造指北针方向、比例尺或图例内容；
   这些由素材标注元数据负责，未标注时不应声称图纸已含这些元素。
 
@@ -86,6 +90,7 @@ SINGLE_SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - key_points 不超过 5 条；优先使用页面上下文中已核实事实与引用。
 - 项目资料中的 `[chunk_id=...]` 可直接复制到 source_citations.chunk_id。
 - 为页面分配合适的 slide_type 与 visual_requirements。
+- 功能图标使用 `{"type": "icon", "description": "pedestrian_flow"}` 等语义名，不要写文件名。
 
 禁止事项：
 - 不要输出 Markdown 代码块。

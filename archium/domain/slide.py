@@ -29,6 +29,9 @@ class VisualRequirement(DomainModel):
     needs_highlight: bool = False
     processing_instructions: list[str] = Field(default_factory=list)
     required: bool = True
+    # Semantic architectural icon (registry id) — set by local matcher, not LLM filenames.
+    icon_id: str | None = None
+    icon_canonical_name: str | None = None
 
     @property
     def primary_asset_id(self) -> UUID | None:
