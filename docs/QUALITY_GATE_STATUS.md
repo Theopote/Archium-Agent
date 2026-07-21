@@ -258,6 +258,16 @@ V1 is **rule-driven structural induction** (`classifier=rule_driven_structural_v
 
 Tests: `tests/unit/functional_slide_classifier/` (incl. disclaimer, sparse review, large-visual content).
 
+### Phase 3 clustering honesty (closed)
+
+| Limitation | Mitigation |
+|------------|------------|
+| `layout_name` hard-bucket forever splits copies | Bucket by `content_type` only; `layout_name` soft penalty; signature excludes layout |
+| Seed-only grouping lacks transitivity | Pairwise **connected components** (single-linkage) |
+| Structural `covered` summed overlaps | Axis-aligned **rectangle union** clipped to page; coverage ∈ [0, 1] |
+
+Tests: `tests/unit/reference_slide_clusterer/` (layout soft-merge, transitive chain, union coverage).
+
 ## Template Induction Phase 4 (2026-07-21)
 
 | Capability | Status | Location |

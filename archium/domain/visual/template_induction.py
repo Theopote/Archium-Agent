@@ -124,17 +124,63 @@ class TemplateInductionResult(IdentifiedModel, TimestampedModel):
 
 
 class OutlineTemplateCompatibility(DomainModel):
-    """Placeholder for Phase 5 — kept so Outline can already reference the shape."""
+    """One planned content page mapped to a template schema/layout (Phase 5)."""
 
+    # Stable id for this planned page slot (not a project SlideSpec id yet).
     slide_id: str = Field(min_length=1)
+    section_id: str = ""
+    section_title: str = ""
     outline_purpose: str = ""
+    planned_page_index: int = Field(default=0, ge=0)
+    page_role: Literal["primary", "overflow", "section_opener"] = "primary"
+
+    inferred_functional_type: FunctionalSlideType = FunctionalSlideType.CONTENT
+    inferred_content_type: ArchitecturalContentType = ArchitecturalContentType.UNKNOWN
+
+    schema_id: str | None = None
+    representative_slide_id: str | None = None
     compatible_layout_ids: list[str] = Field(default_factory=list)
     preferred_layout_id: str | None = None
+
+    template_affinity: float = Field(default=0.0, ge=0.0, le=1.0)
     compatibility_score: float = Field(default=0.0, ge=0.0, le=1.0)
     blockers: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
     fallback_mode: Literal[
         "template_editing",
         "free_composition",
         "manual_required",
     ] = "free_composition"
+
+
+class SchemaAffinityScore(DomainModel):
+    """How well one induced schema fits an outline section intent."""
+
+    schema_id: str = Field(min_length=1)
+    section_id: str = Field(min_length=1)
+    affinity: float = Field(default=0.0, ge=0.0, le=1.0)
+    reasons: list[str] = Field(default_factory=list)
+
+
+class OutlineTemplateCoPlan(IdentifiedModel, TimestampedModel):
+    """Phase 5 artifact: outline sections ↔ template schemas with fallback routing."""
+
+    outline_id: str = ""
+    outline_title: str = ""
+    induction_id: str = ""
+    template_id: str = ""
+    page_plans: list[OutlineTemplateCompatibility] = Field(default_factory=list)
+    schema_affinities: list[SchemaAffinityScore] = Field(default_factory=list)
+    # Template/schema pages that never received an outline assignment (exposed for review).
+    unmatched_schema_ids: list[str] = Field(default_factory=list)
+    unmatched_layout_ids: list[str] = Field(default_factory=list)
+    free_composition_page_ids: list[str] = Field(default_factory=list)
+    template_editing_page_ids: list[str] = Field(default_factory=list)
+    manual_required_page_ids: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    planning_method: str = "rule_driven_outline_template_v1"
+
+    @property
+    def planned_page_count(self) -> int:
+        return len(self.page_plans)

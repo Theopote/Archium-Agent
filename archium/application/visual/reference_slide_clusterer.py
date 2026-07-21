@@ -1,4 +1,11 @@
-"""Cluster content reference slides by structure + visual signature."""
+"""Cluster content reference slides by structure + visual signature.
+
+Clustering policy (V1):
+    - Hard bucket only by ``content_type`` (semantic label from the classifier).
+    - ``layout_name`` is a soft similarity feature — never a hard split key.
+    - Groups are connected components over a pairwise similarity graph
+      (single-linkage / transitive), not seed-only comparisons.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +21,8 @@ from archium.domain.visual.template_induction import (
 )
 
 _DEFAULT_DISTANCE_THRESHOLD = 0.42
+# Soft penalty when layout names differ — does not permanently separate pages.
+_LAYOUT_MISMATCH_PENALTY = 0.06
 
 
 def _euclidean(a: list[float], b: list[float]) -> float:
@@ -36,6 +45,10 @@ def _mean_embedding(slides: list[ReferenceSlideSnapshot]) -> list[float]:
         for i in range(dim):
             acc[i] += vec[i] if i < len(vec) else 0.0
     return [v / len(vectors) for v in acc]
+
+
+def _normalize_layout(name: str | None) -> str:
+    return (name or "").strip().casefold()
 
 
 class ReferenceSlideClusterer:
@@ -81,15 +94,14 @@ class ReferenceSlideClusterer:
             and class_by_id[s.slide_id].functional_type == FunctionalSlideType.CONTENT
         ]
 
-        # First bucket by content_type + layout_name for stability.
-        buckets: dict[tuple[str, str], list[ReferenceSlideSnapshot]] = defaultdict(list)
+        # Hard bucket by content_type only — layout_name is soft (see _pair_distance).
+        buckets: dict[str, list[ReferenceSlideSnapshot]] = defaultdict(list)
         for slide in content_slides:
             clf = class_by_id[slide.slide_id]
-            key = (clf.content_type.value, slide.layout_name or "")
-            buckets[key].append(slide)
+            buckets[clf.content_type.value].append(slide)
 
-        for (content_type_value, _layout), bucket in sorted(buckets.items()):
-            groups = self._group_by_distance(bucket)
+        for content_type_value, bucket in sorted(buckets.items()):
+            groups = self._group_connected_components(bucket)
             for group in groups:
                 content_type = ArchitecturalContentType(content_type_value)
                 embeddings = [s.visual_embedding or [] for s in group]
@@ -101,9 +113,22 @@ class ReferenceSlideClusterer:
                     mean_d = sum(dists) / max(len(dists), 1)
                     visual_sim = max(0.0, 1.0 - mean_d)
                 signatures = {s.content_signature for s in group}
-                structural_sim = 1.0 if len(signatures) == 1 else max(0.4, 1.0 - 0.15 * (len(signatures) - 1))
+                structural_sim = (
+                    1.0
+                    if len(signatures) == 1
+                    else max(0.4, 1.0 - 0.15 * (len(signatures) - 1))
+                )
                 semantic_sim = 1.0  # same content_type bucket
                 conf = sum(class_by_id[s.slide_id].confidence for s in group) / len(group)
+                layout_names = {_normalize_layout(s.layout_name) for s in group}
+                rationale = [
+                    f"content_type={content_type.value}",
+                    f"size={len(group)}",
+                    f"visual_sim={visual_sim:.2f}",
+                    "method=connected_components",
+                ]
+                if len(layout_names) > 1:
+                    rationale.append("layout_name soft-merged")
                 clusters.append(
                     ReferenceSlideCluster(
                         functional_type=FunctionalSlideType.CONTENT,
@@ -114,11 +139,7 @@ class ReferenceSlideClusterer:
                         structural_similarity=round(structural_sim, 3),
                         semantic_similarity=round(semantic_sim, 3),
                         confidence=round(conf, 3),
-                        selection_rationale=[
-                            f"content_type={content_type.value}",
-                            f"size={len(group)}",
-                            f"visual_sim={visual_sim:.2f}",
-                        ],
+                        selection_rationale=rationale,
                         needs_review=any(class_by_id[s.slide_id].needs_review for s in group)
                         or conf < 0.55,
                     )
@@ -133,25 +154,66 @@ class ReferenceSlideClusterer:
 
         return sorted(clusters, key=sort_key)
 
-    def _group_by_distance(
+    def _group_connected_components(
         self,
         slides: list[ReferenceSlideSnapshot],
     ) -> list[list[ReferenceSlideSnapshot]]:
-        remaining = list(sorted(slides, key=lambda s: s.slide_index))
-        groups: list[list[ReferenceSlideSnapshot]] = []
-        while remaining:
-            seed = remaining.pop(0)
-            seed_vec = seed.visual_embedding or []
-            group = [seed]
-            kept: list[ReferenceSlideSnapshot] = []
-            for candidate in remaining:
-                cand_vec = candidate.visual_embedding or []
-                same_sig = candidate.content_signature == seed.content_signature
-                dist = _euclidean(seed_vec, cand_vec) if seed_vec and cand_vec else 99.0
-                if same_sig or dist <= self._threshold:
-                    group.append(candidate)
-                else:
-                    kept.append(candidate)
-            remaining = kept
-            groups.append(group)
-        return groups
+        """Single-linkage clustering via pairwise connected components."""
+        ordered = list(sorted(slides, key=lambda s: (s.slide_index, s.slide_id)))
+        n = len(ordered)
+        if n == 0:
+            return []
+        parent = list(range(n))
+
+        def find(i: int) -> int:
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        def union(i: int, j: int) -> None:
+            ri, rj = find(i), find(j)
+            if ri == rj:
+                return
+            # Prefer lower index root for deterministic component identity.
+            if ri < rj:
+                parent[rj] = ri
+            else:
+                parent[ri] = rj
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                if self._are_similar(ordered[i], ordered[j]):
+                    union(i, j)
+
+        components: dict[int, list[ReferenceSlideSnapshot]] = defaultdict(list)
+        for i, slide in enumerate(ordered):
+            components[find(i)].append(slide)
+
+        return sorted(
+            components.values(),
+            key=lambda group: (group[0].slide_index, group[0].slide_id),
+        )
+
+    def _are_similar(
+        self,
+        left: ReferenceSlideSnapshot,
+        right: ReferenceSlideSnapshot,
+    ) -> bool:
+        if left.content_signature and left.content_signature == right.content_signature:
+            return True
+        return self._pair_distance(left, right) <= self._threshold
+
+    def _pair_distance(
+        self,
+        left: ReferenceSlideSnapshot,
+        right: ReferenceSlideSnapshot,
+    ) -> float:
+        left_vec = left.visual_embedding or []
+        right_vec = right.visual_embedding or []
+        if not left_vec or not right_vec:
+            return 99.0
+        dist = _euclidean(left_vec, right_vec)
+        if _normalize_layout(left.layout_name) != _normalize_layout(right.layout_name):
+            dist += _LAYOUT_MISMATCH_PENALTY
+        return dist

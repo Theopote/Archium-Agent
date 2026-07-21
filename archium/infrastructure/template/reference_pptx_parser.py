@@ -74,15 +74,14 @@ def _assert_relative(path: str) -> str:
 
 def _content_signature(
     *,
-    layout_name: str | None,
     element_types: list[str],
     image_count: int,
     text_length: int,
     chart_count: int,
     table_count: int,
 ) -> str:
+    """Structural signature — layout_name intentionally excluded (soft feature only)."""
     payload = {
-        "layout": layout_name or "",
         "types": element_types,
         "images": image_count,
         "text_len_bucket": text_length // 40,
@@ -91,6 +90,42 @@ def _content_signature(
     }
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+
+
+def _axis_aligned_union_area(
+    rects: list[tuple[float, float, float, float]],
+    *,
+    page_width: float,
+    page_height: float,
+) -> float:
+    """Exact union area of axis-aligned rectangles clipped to the page.
+
+    ``rects`` are ``(x, y, width, height)``. Overlaps are counted once.
+    """
+    clipped: list[tuple[float, float, float, float]] = []
+    for x, y, w, h in rects:
+        x0 = max(0.0, min(float(x), page_width))
+        y0 = max(0.0, min(float(y), page_height))
+        x1 = max(0.0, min(float(x) + float(w), page_width))
+        y1 = max(0.0, min(float(y) + float(h), page_height))
+        if x1 > x0 and y1 > y0:
+            clipped.append((x0, y0, x1, y1))
+    if not clipped:
+        return 0.0
+    xs = sorted({r[0] for r in clipped} | {r[2] for r in clipped})
+    ys = sorted({r[1] for r in clipped} | {r[3] for r in clipped})
+    area = 0.0
+    for i in range(len(xs) - 1):
+        for j in range(len(ys) - 1):
+            cx0, cx1 = xs[i], xs[i + 1]
+            cy0, cy1 = ys[j], ys[j + 1]
+            if cx1 <= cx0 or cy1 <= cy0:
+                continue
+            mx = (cx0 + cx1) * 0.5
+            my = (cy0 + cy1) * 0.5
+            if any(r[0] <= mx <= r[2] and r[1] <= my <= r[3] for r in clipped):
+                area += (cx1 - cx0) * (cy1 - cy0)
+    return area
 
 
 def _visual_embedding(
@@ -107,14 +142,33 @@ def _visual_embedding(
     area = max(width * height, 0.01)
     flat = [node for e in elements for node in e.iter_self_and_descendants()]
     type_counts = Counter(e.element_type.value for e in flat)
-    covered = sum(e.width * e.height for e in flat) / area
-    top_heavy = sum(e.width * e.height for e in flat if e.y < height * 0.33) / area
-    left_heavy = sum(e.width * e.height for e in flat if e.x < width * 0.45) / area
+    rects = [(e.x, e.y, e.width, e.height) for e in flat]
+    # True page coverage (union), not summed element areas.
+    covered = _axis_aligned_union_area(rects, page_width=width, page_height=height) / area
+    top_band = height * 0.33
+    left_band = width * 0.45
+    top_rects = [
+        (x, y, w, min(y + h, top_band) - y)
+        for x, y, w, h in rects
+        if y < top_band and min(y + h, top_band) > y
+    ]
+    left_rects = [
+        (x, y, min(x + w, left_band) - x, h)
+        for x, y, w, h in rects
+        if x < left_band and min(x + w, left_band) > x
+    ]
+    top_heavy = (
+        _axis_aligned_union_area(top_rects, page_width=width, page_height=top_band) / area
+    )
+    left_heavy = (
+        _axis_aligned_union_area(left_rects, page_width=left_band, page_height=height)
+        / area
+    )
     max_element = max((e.width * e.height for e in flat), default=0.0) / area
     return [
-        round(min(covered, 2.0), 4),
-        round(min(top_heavy, 1.5), 4),
-        round(min(left_heavy, 1.5), 4),
+        round(min(covered, 1.0), 4),
+        round(min(top_heavy, 1.0), 4),
+        round(min(left_heavy, 1.0), 4),
         round(min(max_element, 1.5), 4),
         round(image_count / 8.0, 4),
         round(min(text_length, 800) / 800.0, 4),
@@ -187,6 +241,98 @@ def _picture_alt_text(shape: object) -> str:
             if title:
                 return title
     return ""
+
+
+_HARD_EDIT_SHAPE_NOTES: dict[object, str] = {
+    MSO_SHAPE_TYPE.DIAGRAM: "hard_edit:smartart",
+    MSO_SHAPE_TYPE.IGX_GRAPHIC: "hard_edit:smartart",
+    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT: "hard_edit:ole_embedded",
+    MSO_SHAPE_TYPE.LINKED_OLE_OBJECT: "hard_edit:ole_linked",
+    MSO_SHAPE_TYPE.OLE_CONTROL_OBJECT: "hard_edit:ole_control",
+    MSO_SHAPE_TYPE.MEDIA: "hard_edit:media",
+}
+
+
+def _hard_edit_notes_for_shape(
+    shape: object,
+    *,
+    shape_type: object,
+    is_picture: bool,
+    width: float,
+    height: float,
+    page_width: float,
+    page_height: float,
+) -> list[str]:
+    """Tag shapes that are typically hard to replace in edit-based generation."""
+    notes: list[str] = []
+    hard = _HARD_EDIT_SHAPE_NOTES.get(shape_type)
+    if hard:
+        notes.append(hard)
+    type_name = getattr(shape_type, "name", "") or ""
+    if "DIAGRAM" in type_name or "IGX" in type_name:
+        if "hard_edit:smartart" not in notes:
+            notes.append("hard_edit:smartart")
+    if "OLE" in type_name and not any(n.startswith("hard_edit:ole") for n in notes):
+        notes.append("hard_edit:ole_embedded")
+
+    page_area = max(page_width * page_height, 0.01)
+    if is_picture and width * height >= page_area * 0.85:
+        notes.append("hard_edit:full_page_background")
+
+    notes.extend(_shape_lock_notes(shape))
+    if is_picture:
+        notes.extend(_picture_complexity_notes(shape))
+    return notes
+
+
+def _shape_lock_notes(shape: object) -> list[str]:
+    """Detect OOXML lock flags (noSelect / noGrp / noChangeAspect, …)."""
+    notes: list[str] = []
+    with contextlib.suppress(Exception):
+        element = getattr(shape, "_element", None)
+        if element is None:
+            return notes
+        for locks in element.iter():
+            tag = getattr(locks, "tag", "") or ""
+            if not str(tag).endswith("Locks"):
+                continue
+            attrs = getattr(locks, "attrib", {}) or {}
+            restrictive = {
+                "noSelect",
+                "noGrp",
+                "noMove",
+                "noResize",
+                "noRot",
+                "noChangeAspect",
+                "noEditPoints",
+                "noAdjustHandles",
+            }
+            local_attrs = {str(k).split("}")[-1] for k in attrs}
+            if local_attrs & restrictive:
+                notes.append("hard_edit:locked")
+                break
+    return notes
+
+
+def _picture_complexity_notes(shape: object) -> list[str]:
+    """Crop / soft-edge / duotone style cues that complicate clean replacement."""
+    notes: list[str] = []
+    with contextlib.suppress(Exception):
+        element = getattr(shape, "_element", None)
+        if element is None:
+            return notes
+        xml = str(getattr(element, "xml", "") or "")
+        lower = xml.lower()
+        if "srcrect" in lower:
+            notes.append("hard_edit:picture_crop")
+        if any(token in lower for token in ("alphamodfix", "duotone", "softedge", "blipfill")):
+            # blipFill alone is normal; only flag when effect-like tokens appear.
+            if any(
+                token in lower
+                for token in ("alphamodfix", "duotone", "softedge", "lumimod", "grayscl")
+            ):
+                notes.append("hard_edit:picture_effects")
+    return notes
 
 
 def _infer_semantic_role(
@@ -519,7 +665,6 @@ class ReferencePptxParser:
         text_length = sum(len(t) for t in text_content)
         type_list = sorted(e.element_type.value for e in flat_for_inference)
         signature = _content_signature(
-            layout_name=layout_name,
             element_types=type_list,
             image_count=image_count,
             text_length=text_length,
@@ -690,6 +835,21 @@ class ReferencePptxParser:
                 style_notes.append("placeholder_hosts_picture")
             elif text:
                 style_notes.append("placeholder_hosts_text")
+        if is_group:
+            style_notes.append("hard_edit:group")
+        style_notes.extend(
+            _hard_edit_notes_for_shape(
+                shape,
+                shape_type=shape_type,
+                is_picture=is_picture,
+                width=width,
+                height=height,
+                page_width=page_width,
+                page_height=page_height,
+            )
+        )
+        # De-dupe while preserving order.
+        style_notes = list(dict.fromkeys(style_notes))
 
         assets: list[ReferenceAsset] = []
         asset_id: str | None = None
