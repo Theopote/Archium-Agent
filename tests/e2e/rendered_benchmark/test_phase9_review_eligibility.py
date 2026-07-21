@@ -44,19 +44,24 @@ def test_phase9_reused_screenshots_block_formal_visual_review() -> None:
     assert len(case_ids) == HUMAN_REVIEW_FORMAL_TOTAL_CASES
     still_unlocked: list[str] = []
     reused_blocked = 0
+    freshly_eligible = 0
     for case_id in case_ids:
         directory = case_dir(case_id)
         eligible, manifest, blockers = visual_review_eligibility(directory)
         assert pptx_render_path(directory).is_file(), f"{case_id} missing pptx_render.png"
         assert manifest is not None, case_id
-        if manifest.pptx_screenshot_reused and not manifest.pptx_screenshot_generated:
+        if manifest.pptx_screenshot_generated and not manifest.pptx_screenshot_reused:
+            freshly_eligible += 1
+            assert eligible is True, f"{case_id}: {blockers}"
+        elif manifest.pptx_screenshot_reused and not manifest.pptx_screenshot_generated:
             reused_blocked += 1
             assert eligible is False, case_id
             assert any("pptx_screenshot_generated" in item for item in blockers)
         elif eligible and not manifest.pptx_screenshot_generated:
             still_unlocked.append(case_id)
-    assert reused_blocked == HUMAN_REVIEW_FORMAL_TOTAL_CASES, (
-        "expected all current goldens to declare reused screenshots"
+    assert freshly_eligible >= 3, "expected pilot trio to have fresh screenshots"
+    assert reused_blocked + freshly_eligible == HUMAN_REVIEW_FORMAL_TOTAL_CASES, (
+        f"unexpected manifest mix: fresh={freshly_eligible} reused={reused_blocked}"
     )
     assert still_unlocked == []
 

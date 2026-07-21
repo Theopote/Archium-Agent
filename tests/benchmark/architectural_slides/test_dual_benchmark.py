@@ -73,18 +73,39 @@ def test_invalidated_manual_review_cannot_count_for_delivery() -> None:
     assert review.validity == ReviewValidity.INVALID_RENDER_ARTIFACT
 
 
-@pytest.mark.parametrize("case_id", ["case_001_site_plan", "case_002_site_photos", "case_006_project_hero"])
-def test_reused_screenshots_block_formal_visual_review(case_id: str) -> None:
-    """Current goldens reuse pptx_render.png — formal visual scoring must stay blocked."""
+PILOT_FRESH_SCREENSHOT_CASES = (
+    "case_001_site_plan",
+    "case_002_site_photos",
+    "case_006_project_hero",
+)
+
+
+@pytest.mark.parametrize("case_id", list(PILOT_FRESH_SCREENSHOT_CASES))
+def test_pilot_fresh_screenshots_unlock_formal_visual_review(case_id: str) -> None:
+    """Pilot trio regenerated via PowerPoint — formal visual scoring may proceed."""
     directory = case_dir(case_id)
     eligible, manifest, blockers = visual_review_eligibility(directory)
     assert manifest is not None
     assert manifest.render_valid is True, blockers
+    assert manifest.pptx_screenshot_generated is True
+    assert manifest.pptx_screenshot_reused is False
+    assert eligible is True, blockers
+    edit_ok, edit_blockers = editability_review_eligibility(directory)
+    assert edit_ok is True, edit_blockers
+
+
+@pytest.mark.parametrize("case_id", ["case_003_case_comparison", "case_010_construction_phases"])
+def test_reused_screenshots_still_block_non_pilot_cases(case_id: str) -> None:
+    """Non-regenerated goldens remain blocked until fresh PPTX screenshots exist."""
+    directory = case_dir(case_id)
+    eligible, manifest, blockers = visual_review_eligibility(directory)
+    assert manifest is not None
+    assert manifest.render_valid is True, blockers
+    if manifest.pptx_screenshot_generated:
+        pytest.skip(f"{case_id} already has a fresh screenshot")
     assert manifest.pptx_screenshot_reused is True
-    assert manifest.pptx_screenshot_generated is False
     assert eligible is False, "reused screenshot must not unlock formal visual review"
     assert any("pptx_screenshot_generated" in item for item in blockers)
-    assert any("pptx_screenshot_reused" in item for item in blockers)
     edit_ok, edit_blockers = editability_review_eligibility(directory)
     assert edit_ok is True, edit_blockers
 

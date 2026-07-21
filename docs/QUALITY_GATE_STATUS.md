@@ -71,24 +71,74 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | `font_fallbacks` 识别 Arial→CJK 隐式替换 | **Enforced** via `detect_font_fallbacks` |
 | 本机字体路径写入 Scene | **Forbidden**（仅 manifest 记录运行时替换） |
 
+## Final verdict (2026-07-21) — engineering trust vs formal pass
+
+**Solved this round (engineering credibility):**
+
+- Portable asset URIs; scene ↔ PPTX ↔ screenshot identity / hash chain
+- Structured render evidence; formal visual save blocked on reuse / inconsistency
+- Repo hygiene for `.data/`; Golden binary governance
+- Honest scope labels (RenderScene V1, ReferenceStyle not in compiler, Phase 8 ≠ acceptance)
+
+**Remaining last layer before formal pass:**
+
+`scene.json` → `output.pptx` → `pptx_render.png` must use a **freshly generated** screenshot
+(`pptx_screenshot_generated=true`), not a reused historical PNG. Hash agreement alone is not enough.
+
+Formal gate already **requires** `pptx_screenshot_generated=true` (item 2 done in code).
+
+### Next steps — only these three
+
+1. **Regenerate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens  
+2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)  
+3. **Pilot human review on 3 pages**, then expand to 30
+
+### Pilot trio (do first)
+
+| Case | Covers | Fresh screenshot (this host) |
+|------|--------|------------------------------|
+| `case_001_site_plan` | 建筑图纸 | Regenerated via PowerPoint COM |
+| `case_002_site_photos` | 多张现场照片 | Regenerated via PowerPoint COM |
+| `case_006_project_hero` | 大图视觉页面 | Regenerated via PowerPoint COM |
+
+Each pilot page must simultaneously satisfy:
+
+- Fresh PPTX screenshot (`pptx_screenshot_generated=true`) — **done for pilot trio on this machine**
+- Scene / PPTX / screenshot hash consistency — **pilot trio eligible**
+- Manual visual review passed (`source=manual`) — **still required (human)**
+- PPTX editability review passed — **still required (human)**
+
+Only then expand formal review / screenshot regen to all 30 pages.
+
+```bash
+# Regenerate pilot screenshots into Goldens (PowerPoint available on this host)
+python scripts/render_architectural_benchmark_visuals.py --write-goldens \
+  --case case_001_site_plan \
+  --case case_002_site_photos \
+  --case case_006_project_hero
+```
+
+Then Settings →「建筑幻灯片基准 · 人工视觉评审」for those three only.
+
 ## Architectural Slide Benchmark (30 cases)
 
 | Gate | Status | Evidence |
 |------|--------|----------|
 | Layout rule quality | **Passed** | `rule_pass_rate = 1.0` (30/30) |
-| Manual human visual review | **Not started / blocked** | `manual_human_review_count = 0`; current goldens have `pptx_screenshot_reused=true` |
+| Provenance chain scene → PPTX → screenshot | **In place** | hashes + sidecars |
+| Manual human visual review | **Not started** | `manual_human_review_count = 0`; pilot trio unlocked for scoring after fresh shots |
 | Manual delivery acceptance | **Not started** | `manual_human_accepted_count = 0` |
 | Placeholder reviews | 30 | `source=placeholder` in each `human_review.json` |
-| Fresh PPTX screenshot for formal scoring | **Not met** | all 30 manifests: `pptx_screenshot_generated=false`, `pptx_screenshot_reused=true` |
+| Fresh PPTX screenshot for formal scoring | **Partial** | pilot 3: `generated=true`; remaining 27 still typically `reused=true` |
 | Human quality gate | **Failed** | `human_quality_gate_passed = false` |
 
 Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 
-**What automation proves:** geometry, overflow, hero sizing, whitespace rules, Deck QA scores.
+**What automation proves:** geometry, overflow, hero sizing, whitespace rules, Deck QA scores, identity/hash chain.
 
-**What automation does not prove:** information hierarchy, aesthetic finish, architect willingness to deliver, editability in practice.
+**What automation does not prove:** Office-true fonts/overflow/layout, information hierarchy, aesthetic finish, architect willingness to deliver.
 
-**How to complete:** regenerate each case's `pptx_render.png` via PowerPoint/LibreOffice (`pptx_screenshot_generated=true`), then use Settings →「建筑幻灯片基准 · 人工视觉评审」or edit each case's `human_review.json` with `"source": "manual"`, `"reviewer"`, `"reviewed_at"`, and real scores. UI defaults to `pptx_render.png` preview; visual score submit is disabled unless that preview mode is active **and** the screenshot was freshly generated.
+**How to complete:** follow **Next steps — only these three** (pilot 3 → then 30). Visual score submit stays disabled unless preview is `pptx_render.png` **and** `pptx_screenshot_generated=true`.
 
 ## Phase 8 local runs ≠ formal real-project acceptance (honest)
 

@@ -1,12 +1,12 @@
 {
-  "created_at": "2026-07-20T16:43:16.956283Z",
-  "updated_at": "2026-07-20T16:43:16.956283Z",
+  "created_at": "2026-07-21T03:55:24.259271Z",
+  "updated_at": "2026-07-21T03:55:24.259271Z",
   "version": 1,
-  "id": "ff25e8f6-96ce-4a43-a436-b01b4309eec5",
+  "id": "9a77c962-495c-4849-9cf0-d946a66e46ca",
   "schema_version": 1,
-  "slide_id": "98576411-7634-4c23-95fa-7529dd11e5e6",
+  "slide_id": "45bf8d54-b910-4aff-80bf-782876e14176",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "81e924d5-7b3e-4460-91c8-f4125a902d98",
+  "layout_plan_id": "cebff1ad-3e24-410e-9bdc-9a5a9793a326",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -60,7 +60,7 @@
     {
       "id": "hero",
       "node_type": "drawing",
-      "semantic_role": "hero_visual",
+      "semantic_role": "site_plan",
       "source_layout_element_id": "hero",
       "x": 0.7,
       "y": 1.1908333333333332,
@@ -328,7 +328,7 @@
     {
       "id": "source",
       "node_type": "text",
-      "semantic_role": "source",
+      "semantic_role": "citation",
       "source_layout_element_id": "source",
       "x": 0.7,
       "y": 4.605,

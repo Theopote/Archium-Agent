@@ -4,7 +4,7 @@
 
 本目录下的 PPTX / PNG / Scene 等是**经评审的 Golden Benchmark**（允许提交），**不是** `.data/phase8` 一类运行时垃圾。必须按下方治理规则更新，否则每次重渲染都会产生大批无避免的二进制 diff。
 
-汇总状态见 [`docs/QUALITY_GATE_STATUS.md`](../../../docs/QUALITY_GATE_STATUS.md)。
+汇总状态与**试点三页 → 再扩 30**计划见 [`docs/QUALITY_GATE_STATUS.md`](../../../docs/QUALITY_GATE_STATUS.md) § Final verdict。
 
 ---
 
