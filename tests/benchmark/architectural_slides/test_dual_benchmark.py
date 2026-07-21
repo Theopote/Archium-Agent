@@ -74,12 +74,17 @@ def test_invalidated_manual_review_cannot_count_for_delivery() -> None:
 
 
 @pytest.mark.parametrize("case_id", ["case_001_site_plan", "case_002_site_photos", "case_006_project_hero"])
-def test_rendered_cases_are_visual_review_eligible(case_id: str) -> None:
+def test_reused_screenshots_block_formal_visual_review(case_id: str) -> None:
+    """Current goldens reuse pptx_render.png — formal visual scoring must stay blocked."""
     directory = case_dir(case_id)
     eligible, manifest, blockers = visual_review_eligibility(directory)
     assert manifest is not None
     assert manifest.render_valid is True, blockers
-    assert eligible is True, blockers
+    assert manifest.pptx_screenshot_reused is True
+    assert manifest.pptx_screenshot_generated is False
+    assert eligible is False, "reused screenshot must not unlock formal visual review"
+    assert any("pptx_screenshot_generated" in item for item in blockers)
+    assert any("pptx_screenshot_reused" in item for item in blockers)
     edit_ok, edit_blockers = editability_review_eligibility(directory)
     assert edit_ok is True, edit_blockers
 

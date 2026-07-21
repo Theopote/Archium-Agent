@@ -477,10 +477,18 @@ def _render_case_preview(
         if manifest is not None:
             column.caption(
                 f"render_valid={manifest.render_valid} · "
+                f"generated={manifest.pptx_screenshot_generated} · "
+                f"reused={manifest.pptx_screenshot_reused} · "
                 f"renderer={manifest.renderer or '—'} · "
                 f"placeholder_assets={manifest.placeholder_asset_count} · "
                 f"missing_assets={len(manifest.missing_assets)}"
             )
+            if manifest.pptx_screenshot_reused and not manifest.pptx_screenshot_generated:
+                column.warning(
+                    "当前 `pptx_render.png` 为复用截图（pptx_screenshot_reused=true），"
+                    "仅可用于开发快速检查；正式人工视觉评分已禁用，"
+                    "须在本机用 PowerPoint/LibreOffice 重新打开 output.pptx 生成截图。"
+                )
         if not eligible:
             column.error(
                 BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER

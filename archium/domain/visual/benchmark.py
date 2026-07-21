@@ -22,8 +22,11 @@ HUMAN_REVIEW_INVALIDATED_LABEL = "已作废（需重评）"
 LAYOUT_REVIEW_PENDING_LABEL = "待几何评审"
 LAYOUT_REVIEW_PASS_THRESHOLD = 3.5
 BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER = (
-    "人工视觉评审须基于 pptx_render.png（PPTX 真实截图），"
-    "且 render_valid=true；不能使用 LayoutPlan 线框图 wireframe.png。"
+    "正式人工视觉评审须基于本轮重新生成的 pptx_render.png"
+    "（output.pptx → PowerPoint/LibreOffice → 截图），"
+    "且 render_valid=true、pptx_screenshot_generated=true；"
+    "复用截图（pptx_screenshot_reused=true）仅可用于开发快速检查，"
+    "不能用于最终质量门；也不能使用 LayoutPlan 线框图 wireframe.png。"
 )
 DEFAULT_INVALIDATION_REASON_WIREFRAME = (
     "Reviewed against wireframe preview rather than final rendered slide"
@@ -282,10 +285,13 @@ class BenchmarkRenderManifest(DomainModel):
         )
 
     def visual_review_eligible(self) -> bool:
+        """Formal human visual review — requires a freshly generated PPTX screenshot."""
         return (
             self.render_valid
             and self.placeholder_asset_count == 0
             and not self.missing_assets
+            and self.pptx_screenshot_generated
+            and not self.pptx_screenshot_reused
         )
 
     def eligibility_blockers(self) -> list[str]:
@@ -300,6 +306,16 @@ class BenchmarkRenderManifest(DomainModel):
             blockers.append(f"missing_assets={len(self.missing_assets)}")
         if not self.scene_hash:
             blockers.append("scene_hash missing")
+        if not self.pptx_screenshot_generated:
+            blockers.append(
+                "pptx_screenshot_generated=false"
+                "（须本轮重新打开 output.pptx 生成截图，不可仅复用）"
+            )
+        if self.pptx_screenshot_reused:
+            blockers.append(
+                "pptx_screenshot_reused=true"
+                "（复用截图不可用于正式人工视觉评审）"
+            )
         return blockers
 
 

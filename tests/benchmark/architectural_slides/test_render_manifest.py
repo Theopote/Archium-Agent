@@ -119,6 +119,35 @@ def test_valid_manifest_and_scene_preview_allows_visual_review(tmp_path: Path) -
     assert edit_blockers == []
 
 
+def test_reused_screenshot_blocks_formal_visual_review_but_allows_editability(
+    tmp_path: Path,
+) -> None:
+    case_dir = tmp_path / "case_demo"
+    case_dir.mkdir()
+    (case_dir / SCENE_PREVIEW_NAME).write_bytes(b"png")
+    scene = _write_minimal_scene(case_dir)
+    _write_full_provenance(case_dir, scene)
+    manifest = BenchmarkRenderManifest.model_validate_json(
+        (case_dir / "render_manifest.json").read_text(encoding="utf-8")
+    )
+    write_render_manifest(
+        case_dir,
+        manifest.model_copy(
+            update={
+                "screenshot_tools_available": False,
+                "pptx_screenshot_generated": False,
+                "pptx_screenshot_reused": True,
+            }
+        ),
+    )
+    eligible, _, blockers = visual_review_eligibility(case_dir)
+    assert eligible is False
+    assert any("pptx_screenshot_generated=false" in item for item in blockers)
+    assert any("pptx_screenshot_reused=true" in item for item in blockers)
+    edit_ok, edit_blockers = editability_review_eligibility(case_dir)
+    assert edit_ok is True, edit_blockers
+
+
 def test_scene_id_mismatch_blocks_visual_review(tmp_path: Path) -> None:
     case_dir = tmp_path / "case_demo"
     case_dir.mkdir()

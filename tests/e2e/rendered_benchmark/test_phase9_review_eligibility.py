@@ -27,17 +27,38 @@ pytestmark = [
 ]
 
 
-def test_phase9_all_cases_have_pptx_render_and_are_eligible() -> None:
+def test_phase9_all_cases_have_pptx_render() -> None:
     case_ids = materialized_benchmark_case_ids()
     assert len(case_ids) == HUMAN_REVIEW_FORMAL_TOTAL_CASES
-    ineligible: list[str] = []
+    missing: list[str] = []
     for case_id in case_ids:
         directory = case_dir(case_id)
+        if not pptx_render_path(directory).is_file():
+            missing.append(case_id)
+    assert missing == []
+
+
+def test_phase9_reused_screenshots_block_formal_visual_review() -> None:
+    """Formal visual review requires pptx_screenshot_generated=true; reuse is not enough."""
+    case_ids = materialized_benchmark_case_ids()
+    assert len(case_ids) == HUMAN_REVIEW_FORMAL_TOTAL_CASES
+    still_unlocked: list[str] = []
+    reused_blocked = 0
+    for case_id in case_ids:
+        directory = case_dir(case_id)
+        eligible, manifest, blockers = visual_review_eligibility(directory)
         assert pptx_render_path(directory).is_file(), f"{case_id} missing pptx_render.png"
-        eligible, _, blockers = visual_review_eligibility(directory)
-        if not eligible:
-            ineligible.append(f"{case_id}: {';'.join(blockers)}")
-    assert ineligible == []
+        assert manifest is not None, case_id
+        if manifest.pptx_screenshot_reused and not manifest.pptx_screenshot_generated:
+            reused_blocked += 1
+            assert eligible is False, case_id
+            assert any("pptx_screenshot_generated" in item for item in blockers)
+        elif eligible and not manifest.pptx_screenshot_generated:
+            still_unlocked.append(case_id)
+    assert reused_blocked == HUMAN_REVIEW_FORMAL_TOTAL_CASES, (
+        "expected all current goldens to declare reused screenshots"
+    )
+    assert still_unlocked == []
 
 
 def test_phase9_formal_gate_not_passed_until_manual_reviews_complete() -> None:

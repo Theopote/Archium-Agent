@@ -13,6 +13,7 @@ This document states what is **proven by automation** vs what still requires **h
 | Same-generation provenance | **Enforced** | `pptx_content_hash` + `output.pptx.meta.json` + screenshot sidecar; URI resolve; font state; post-render QA |
 | Structured render evidence | **Enforced** | `screenshot_tools_available`, `pptx_screenshot_generated`, `pptx_screenshot_reused`, `pptx_screenshot_source_hash`, `render_attempt_id` |
 | Human visual review on inconsistent artifacts | **Blocked** | consistency failure ⇒ treat `render_valid=false` |
+| Formal human visual review requires fresh PPTX screenshot | **Enforced** | `pptx_screenshot_generated=true` required; `pptx_screenshot_reused=true` blocks formal scoring (dev preview only) |
 
 Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolver`).
 
@@ -60,9 +61,10 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | Gate | Status | Evidence |
 |------|--------|----------|
 | Layout rule quality | **Passed** | `rule_pass_rate = 1.0` (30/30) |
-| Manual human visual review | **Not started** | `manual_human_review_count = 0` |
+| Manual human visual review | **Not started / blocked** | `manual_human_review_count = 0`; current goldens have `pptx_screenshot_reused=true` |
 | Manual delivery acceptance | **Not started** | `manual_human_accepted_count = 0` |
 | Placeholder reviews | 30 | `source=placeholder` in each `human_review.json` |
+| Fresh PPTX screenshot for formal scoring | **Not met** | all 30 manifests: `pptx_screenshot_generated=false`, `pptx_screenshot_reused=true` |
 | Human quality gate | **Failed** | `human_quality_gate_passed = false` |
 
 Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
@@ -71,7 +73,7 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 
 **What automation does not prove:** information hierarchy, aesthetic finish, architect willingness to deliver, editability in practice.
 
-**How to complete:** use Settings →「建筑幻灯片基准 · 人工视觉评审」or edit each case's `human_review.json` with `"source": "manual"`, `"reviewer"`, `"reviewed_at"`, and real scores. UI defaults to `pptx_render.png` preview; visual score submit is disabled unless that preview mode is active.
+**How to complete:** regenerate each case's `pptx_render.png` via PowerPoint/LibreOffice (`pptx_screenshot_generated=true`), then use Settings →「建筑幻灯片基准 · 人工视觉评审」or edit each case's `human_review.json` with `"source": "manual"`, `"reviewer"`, `"reviewed_at"`, and real scores. UI defaults to `pptx_render.png` preview; visual score submit is disabled unless that preview mode is active **and** the screenshot was freshly generated.
 
 ## Phase 8 local runs ≠ formal real-project acceptance (honest)
 

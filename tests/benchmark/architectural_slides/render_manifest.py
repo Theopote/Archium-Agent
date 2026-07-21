@@ -564,7 +564,12 @@ def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
 def visual_review_eligibility(
     case_dir: Path,
 ) -> tuple[bool, BenchmarkRenderManifest | None, list[str]]:
-    """Return whether Rendered Visual human review may proceed (Phase 9 gates)."""
+    """Return whether formal Rendered Visual human review may proceed.
+
+    Requires a freshly generated PPTX screenshot
+    (``pptx_screenshot_generated=true``). Reused screenshots are allowed for
+    developer inspection only and must not unlock formal scoring.
+    """
     manifest = load_render_manifest(case_dir)
     blockers: list[str] = []
     if manifest is None:
@@ -573,8 +578,8 @@ def visual_review_eligibility(
         blockers.extend(manifest.eligibility_blockers())
     if not scene_preview_path(case_dir).is_file():
         blockers.append(f"缺少 {SCENE_PREVIEW_NAME}")
-    pptx_path = case_dir / "output.pptx"
-    if not pptx_path.is_file():
+    pptx_file = case_dir / "output.pptx"
+    if not pptx_file.is_file():
         blockers.append("缺少 output.pptx")
     if not pptx_render_path(case_dir).is_file():
         blockers.append(f"缺少 {PPTX_RENDER_NAME}")
@@ -587,16 +592,36 @@ def visual_review_eligibility(
 
 
 def editability_review_eligibility(case_dir: Path) -> tuple[bool, list[str]]:
-    """Return whether PPTX editability review may proceed."""
+    """Return whether PPTX editability review may proceed.
+
+    Editability inspects ``output.pptx`` itself; it does not require a freshly
+    generated screenshot (reuse is acceptable for that path).
+    """
     blockers: list[str] = []
-    eligible, manifest, visual_blockers = visual_review_eligibility(case_dir)
-    if not eligible:
-        blockers.extend(visual_blockers)
-    pptx_path = case_dir / "output.pptx"
-    if not pptx_path.is_file():
+    manifest = load_render_manifest(case_dir)
+    if manifest is None:
+        blockers.append("缺少 render_manifest.json")
+    else:
+        if not manifest.render_valid:
+            blockers.append("render_valid=false")
+        if manifest.placeholder_asset_count > 0:
+            blockers.append(
+                f"placeholder_asset_count={manifest.placeholder_asset_count} > 0"
+            )
+        if manifest.missing_assets:
+            blockers.append(f"missing_assets={len(manifest.missing_assets)}")
+        if manifest.render_source == "pending":
+            blockers.append("render_source=pending")
+    if not scene_preview_path(case_dir).is_file():
+        blockers.append(f"缺少 {SCENE_PREVIEW_NAME}")
+    pptx_file = case_dir / "output.pptx"
+    if not pptx_file.is_file():
         blockers.append("缺少 output.pptx")
-    elif manifest is not None and manifest.render_source == "pending":
-        blockers.append("render_source=pending")
+    consistency = validate_scene_manifest_consistency(case_dir)
+    if consistency:
+        blockers.extend(consistency)
+        if manifest is not None and manifest.render_valid:
+            blockers.append("render_valid overridden by consistency failure")
     return (not blockers, blockers)
 
 
