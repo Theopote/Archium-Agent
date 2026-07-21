@@ -11,6 +11,7 @@ from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
     FunctionalSlideType,
     InductionReviewOverride,
+    OutlineTemplateCoPlan,
 )
 from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import format_user_error
@@ -136,25 +137,129 @@ def _render_review() -> None:
                 }
 
     st.markdown("##### 聚类与代表页")
-    for cluster in induction.clusters:
+    st.caption("可移动页面、合并聚类、拆分为新聚类。保存后写入 content_clusters.json。")
+
+    from archium.application.visual.induction_cluster_editor import (
+        layout_from_clusters,
+        merge_clusters,
+        move_slide,
+        split_slide,
+    )
+
+    workspace_key = str(workspace)
+    if st.session_state.get("induction_cluster_workspace") != workspace_key:
+        st.session_state.induction_cluster_workspace = workspace_key
+        st.session_state.induction_cluster_layout = layout_from_clusters(induction.clusters)
+
+    cluster_layout: dict[str, list[str]] = dict(
+        st.session_state.get("induction_cluster_layout", layout_from_clusters(induction.clusters))
+    )
+    cluster_by_id = {c.id: c for c in induction.clusters}
+
+    for cluster_id, member_ids in sorted(
+        cluster_layout.items(),
+        key=lambda item: (
+            min(
+                next(
+                    (s.slide_index for s in presentation.slides if s.slide_id == sid),
+                    10_000,
+                )
+                for sid in item[1]
+            )
+            if item[1]
+            else 10_000,
+            item[0],
+        ),
+    ):
+        meta = cluster_by_id.get(cluster_id)
+        label_type = (
+            f"{meta.functional_type.value}/{meta.content_type.value}"
+            if meta
+            else "edited"
+        )
         with st.expander(
-            f"聚类 {cluster.id[:8]} · {cluster.functional_type.value}/"
-            f"{cluster.content_type.value} · {len(cluster.slide_ids)} 页 · "
-            f"代表 {cluster.representative_slide_id}",
-            expanded=cluster.functional_type == FunctionalSlideType.CONTENT,
+            f"聚类 {cluster_id[:8]} · {label_type} · {len(member_ids)} 页",
+            expanded=meta is not None
+            and meta.functional_type == FunctionalSlideType.CONTENT,
         ):
-            st.write("成员：", ", ".join(cluster.slide_ids))
-            st.caption("；".join(cluster.selection_rationale[:5]))
+            if len(member_ids) <= 1:
+                st.caption("单页聚类 — 可使用下方「拆分为新聚类」调整其他页。")
+            merge_targets = [
+                cid for cid in cluster_layout if cid != cluster_id and cluster_layout[cid]
+            ]
+            if merge_targets and len(member_ids) > 0:
+
+                def _cluster_label(cid: str, layout: dict[str, list[str]] = cluster_layout) -> str:
+                    return f"{cid[:8]} ({len(layout[cid])} 页)"
+
+                mcol1, mcol2 = st.columns([3, 1])
+                with mcol1:
+                    merge_into = st.selectbox(
+                        "合并此聚类到",
+                        options=merge_targets,
+                        format_func=_cluster_label,
+                        key=f"merge_target_{cluster_id}",
+                    )
+                with mcol2:
+                    if st.button("合并", key=f"merge_btn_{cluster_id}", use_container_width=True):
+                        cluster_layout = merge_clusters(cluster_layout, cluster_id, merge_into)
+                        st.session_state.induction_cluster_layout = cluster_layout
+                        st.rerun()
+
+            for slide_id in member_ids:
+                slide = next((s for s in presentation.slides if s.slide_id == slide_id), None)
+                row1, row2, row3 = st.columns([2, 2, 1])
+                with row1:
+                    st.write(slide_id)
+                    if slide and slide.text_content:
+                        st.caption(slide.text_content[0][:80])
+                move_targets = [
+                    cid
+                    for cid in cluster_layout
+                    if cid != cluster_id and cluster_layout.get(cid) is not None
+                ]
+                with row2:
+                    if move_targets:
+                        dest = st.selectbox(
+                            "移动到",
+                            options=move_targets,
+                            format_func=lambda cid: cid[:8],
+                            key=f"move_dest_{cluster_id}_{slide_id}",
+                        )
+                        if st.button(
+                            "移动",
+                            key=f"move_btn_{cluster_id}_{slide_id}",
+                            use_container_width=True,
+                        ):
+                            cluster_layout = move_slide(cluster_layout, slide_id, dest)
+                            st.session_state.induction_cluster_layout = cluster_layout
+                            st.rerun()
+                with row3:
+                    if st.button(
+                        "拆分",
+                        key=f"split_btn_{cluster_id}_{slide_id}",
+                        use_container_width=True,
+                    ):
+                        cluster_layout, _new_id = split_slide(cluster_layout, slide_id)
+                        st.session_state.induction_cluster_layout = cluster_layout
+                        st.rerun()
+
+            rep_options = member_ids or [""]
+            current_rep = (
+                meta.representative_slide_id
+                if meta and meta.representative_slide_id in member_ids
+                else rep_options[0]
+            )
             choice = st.selectbox(
                 "代表页面",
-                options=cluster.slide_ids,
-                index=cluster.slide_ids.index(cluster.representative_slide_id)
-                if cluster.representative_slide_id in cluster.slide_ids
-                else 0,
-                key=f"rep_{cluster.id}",
+                options=rep_options,
+                index=rep_options.index(current_rep) if current_rep in rep_options else 0,
+                key=f"rep_{cluster_id}",
             )
             st.session_state.setdefault("induction_rep_overrides", {})
-            st.session_state["induction_rep_overrides"][cluster.id] = choice
+            st.session_state["induction_rep_overrides"][cluster_id] = choice
+
+    st.session_state.induction_cluster_layout = cluster_layout
 
     st.markdown("##### 内容 Schema（Phase 4）")
     from archium.domain.visual.architectural_content_schema import (
@@ -227,11 +332,15 @@ def _render_review() -> None:
     if report_raw:
         st.markdown("##### 发布门禁")
         st.write(f"状态：`{report_raw.get('status', 'UNKNOWN')}`")
-        for blocker in report_raw.get("blockers") or []:
-            if isinstance(blocker, dict):
-                st.error(f"{blocker.get('code')}: {blocker.get('message')}")
-        for warning in report_raw.get("warnings") or []:
-            st.warning(str(warning))
+        blockers_raw = report_raw.get("blockers")
+        if isinstance(blockers_raw, list):
+            for blocker in blockers_raw:
+                if isinstance(blocker, dict):
+                    st.error(f"{blocker.get('code')}: {blocker.get('message')}")
+        warnings_raw = report_raw.get("warnings")
+        if isinstance(warnings_raw, list):
+            for warning in warnings_raw:
+                st.warning(str(warning))
 
     col_a, col_b = st.columns(2)
     save_clicked = col_a.button("保存修正", type="primary", use_container_width=True)
@@ -256,7 +365,12 @@ def _render_review() -> None:
                     is_representative=True,
                 )
             )
-        updated = service.apply_overrides(induction, presentation, overrides)
+        updated = service.apply_overrides(
+            induction,
+            presentation,
+            overrides,
+            cluster_layout=st.session_state.get("induction_cluster_layout"),
+        )
         schema_overrides = [
             SchemaReviewOverride(
                 schema_id=schema_id,
@@ -374,7 +488,7 @@ def _render_co_plan() -> None:
     _show_co_plan(co_plan)
 
 
-def _show_co_plan(co_plan) -> None:
+def _show_co_plan(co_plan: OutlineTemplateCoPlan) -> None:
     for warning in co_plan.warnings:
         st.warning(warning)
     c1, c2, c3, c4 = st.columns(4)

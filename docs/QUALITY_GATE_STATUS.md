@@ -286,6 +286,19 @@ Editability is **heuristic V1.5**, not a full PPTX editability audit:
 
 Tests: `tests/unit/representative_slide_selector/` (incl. `test_editability_scoring.py`).
 
+### Phase 3.5 Real Reference Deck Validation Sprint (in progress)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Manuscript citation gate | **Done** | `PresentationManuscriptService` |
+| Drawing inference (neighbor text) | **Done** | `DrawingInferenceService` |
+| Parser hardening (Group/Placeholder/Decoration/Signature) | **Done** | Phase 2 fixes |
+| Full-page screenshots (LO/PPT env) | **Code done** | `@pytest.mark.requires_libreoffice` |
+| Review UI cluster move / merge / split | **Done** | `induction_cluster_editor.py` + UI |
+| Real 15–30 page deck + human sign-off | **Pending** | synthetic E2E only |
+
+Tests: `tests/unit/induction_cluster_editor/`.
+
 ## Template Induction Phase 4 (2026-07-21)
 
 | Capability | Status | Location |

@@ -156,13 +156,16 @@ def _compare_summary_payloads(actual: dict[str, Any], expected: dict[str, Any]) 
             raise AssertionError(msg)
 
     for optional_key in ("formal_gate_mode", "page_quality_status_counts"):
-        if optional_key in actual and optional_key in expected:
-            if actual.get(optional_key) != expected.get(optional_key):
-                msg = (
-                    f"summary {optional_key} mismatch: "
-                    f"committed={actual.get(optional_key)!r} live={expected.get(optional_key)!r}"
-                )
-                raise AssertionError(msg)
+        if (
+            optional_key in actual
+            and optional_key in expected
+            and actual.get(optional_key) != expected.get(optional_key)
+        ):
+            msg = (
+                f"summary {optional_key} mismatch: "
+                f"committed={actual.get(optional_key)!r} live={expected.get(optional_key)!r}"
+            )
+            raise AssertionError(msg)
 
     actual_cases = {item["case_id"]: item for item in actual.get("cases", [])}
     expected_cases = {item["case_id"]: item for item in expected.get("cases", [])}

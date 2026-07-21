@@ -101,11 +101,6 @@ def test_drawing_focus_schema_declares_drawing_slot(tmp_path: Path) -> None:
     service = TemplateInductionService()
     service.workspace_root = lambda induction_id: (tmp_path / "ind" / str(induction_id))  # type: ignore[method-assign]
     result = service.induce(pptx, capture_screenshots=False)
-    drawing_schemas = [
-        s
-        for s in result.schemas
-        if s.content_type == ArchitecturalContentType.DRAWING_FOCUS or s.supports_drawing
-    ]
     # Fixture uses text cues for 总平面 — extractor should still mark drawing support
     # via content type even without real PNG drawings.
     assert any(

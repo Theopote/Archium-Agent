@@ -11,9 +11,9 @@ from pydantic import Field, field_validator
 from archium.domain._base import DomainModel
 
 # Asset origin for anything extracted from a reference PPTX.
-REFERENCE_TEMPLATE_ASSET_ORIGIN = "reference_template"
-REFERENCE_CASE_ASSET_ORIGIN = "reference_case"
-PROJECT_ASSET_ORIGIN = "project_upload"
+REFERENCE_TEMPLATE_ASSET_ORIGIN: Literal["reference_template"] = "reference_template"
+REFERENCE_CASE_ASSET_ORIGIN: Literal["reference_case"] = "reference_case"
+PROJECT_ASSET_ORIGIN: Literal["project_upload"] = "project_upload"
 
 
 class ReferenceElementType(StrEnum):

@@ -36,7 +36,7 @@ def test_anomalous_dense_page_not_preferred(tmp_path: Path) -> None:
     )
     # Identify the anomalous last dense page (most elements).
     anomalous = max(presentation.slides, key=lambda s: len(s.elements))
-    classifications = FunctionalSlideClassifier().classify_all(presentation.slides)
+    FunctionalSlideClassifier().classify_all(presentation.slides)
     # Force anomalous into a multi-member content cluster with a normal page.
     content = [
         s

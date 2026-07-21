@@ -73,7 +73,6 @@ def test_detect_font_fallbacks_flags_arial_on_cjk() -> None:
 
 
 def test_repair_scene_fonts_rewrites_primary_to_cjk() -> None:
-    design = default_presentation_design_system()
     scene = RenderScene(
         slide_id=uuid4(),
         layout_plan_id=uuid4(),

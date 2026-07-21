@@ -134,7 +134,7 @@ def test_group_children_are_recursively_parsed_with_workspace(tmp_path: Path) ->
 def test_placeholder_shapes_are_classified(tmp_path: Path) -> None:
     presentation = Presentation()
     # Title layout includes native placeholders.
-    slide = presentation.slides.add_slide(presentation.slide_layouts[0])
+    presentation.slides.add_slide(presentation.slide_layouts[0])
     pptx = tmp_path / "ph.pptx"
     presentation.save(pptx)
     parsed = ReferencePptxParser().parse(

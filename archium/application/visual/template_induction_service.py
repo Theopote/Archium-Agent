@@ -16,6 +16,7 @@ from archium.application.visual.architectural_content_schema_publish_gate import
 )
 from archium.application.visual.asset_path_resolver import is_machine_absolute_path
 from archium.application.visual.functional_slide_classifier import FunctionalSlideClassifier
+from archium.application.visual.induction_cluster_editor import rebuild_clusters
 from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )
@@ -257,39 +258,67 @@ class TemplateInductionService:
         induction: TemplateInductionResult,
         presentation: ReferencePresentation,
         overrides: list[InductionReviewOverride],
+        *,
+        cluster_layout: dict[str, list[str]] | None = None,
     ) -> TemplateInductionResult:
         """Apply human corrections (type / cluster / representative) — not numeric scores."""
         class_by_id = {c.slide_id: c for c in induction.classifications}
+        type_changed = False
         for override in overrides:
             clf = class_by_id.get(override.slide_id)
             if clf is None:
                 continue
-            if override.functional_type is not None:
+            if override.functional_type is not None and override.functional_type != clf.functional_type:
                 clf.functional_type = override.functional_type
                 clf.needs_review = False
                 clf.evidence = [*clf.evidence, "human override: functional_type"]
-            if override.content_type is not None:
+                type_changed = True
+            if override.content_type is not None and override.content_type != clf.content_type:
                 clf.content_type = override.content_type
                 clf.evidence = [*clf.evidence, "human override: content_type"]
+                type_changed = True
             if override.is_representative and override.cluster_id:
                 for cluster in induction.clusters:
                     if cluster.id == override.cluster_id:
                         cluster.representative_slide_id = override.slide_id
                         cluster.selection_rationale = [
                             "human selected representative",
-                            *( [override.notes] if override.notes else [] ),
+                            *([override.notes] if override.notes else []),
                         ]
         induction.overrides = list(overrides)
         induction.classifications = list(class_by_id.values())
-        # Re-cluster content pages after functional overrides when needed.
-        clusters = self._clusterer.cluster(presentation.slides, induction.classifications)
-        clusters, scores = self._selector.select_for_clusters(clusters, presentation.slides)
-        # Preserve human representative picks.
+
+        if cluster_layout is not None:
+            clusters = rebuild_clusters(
+                cluster_layout,
+                induction.clusters,
+                induction.classifications,
+            )
+            clusters, scores = self._selector.select_for_clusters(
+                clusters, presentation.slides
+            )
+        elif type_changed:
+            clusters = self._clusterer.cluster(
+                presentation.slides, induction.classifications
+            )
+            clusters, scores = self._selector.select_for_clusters(
+                clusters, presentation.slides
+            )
+        else:
+            clusters = list(induction.clusters)
+            _, scores = self._selector.select_for_clusters(
+                clusters, presentation.slides
+            )
+
         for override in overrides:
             if override.is_representative and override.cluster_id:
                 for cluster in clusters:
                     if cluster.id == override.cluster_id or override.slide_id in cluster.slide_ids:
                         cluster.representative_slide_id = override.slide_id
+                        cluster.selection_rationale = [
+                            "human selected representative",
+                            *([override.notes] if override.notes else []),
+                        ]
         induction.clusters = clusters
         induction.representative_scores = scores
         induction.low_confidence_slide_ids = [

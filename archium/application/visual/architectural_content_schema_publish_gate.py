@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     SchemaPublishBlocker,
@@ -160,6 +162,7 @@ class ArchitecturalContentSchemaPublishGate:
                 f"仍有 {len(open_review)} 页功能分类待复核（不阻塞 Schema 发布，但建议先修正）"
             )
 
+        status: Literal["PASS", "PASS_WITH_WARNINGS", "NEEDS_REVIEW", "BLOCKED"]
         if blockers:
             status = "BLOCKED"
         elif warnings:
