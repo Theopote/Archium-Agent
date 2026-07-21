@@ -32,16 +32,18 @@ from archium.infrastructure.renderers.renderer_conformance import assert_rendere
 
 from tests.benchmark.architectural_slides.render_manifest import (
     FINAL_RENDER_NAME,
+    PPTX_NAME,
     PPTX_RENDER_NAME,
     SCENE_JSON_NAME,
     SCENE_PREVIEW_NAME,
     count_assets,
     ensure_pptx_render_alias,
+    run_post_render_qa,
+    sha256_file,
     write_pptx_render_sidecar,
+    write_pptx_sidecar,
     write_render_manifest,
 )
-
-PPTX_NAME = "output.pptx"
 _RENDER_TMP_DIR = "_render_tmp"
 
 
@@ -291,8 +293,24 @@ def render_benchmark_visual_artifacts(
         render_source = "pptx_screenshot"
 
     scene_hash = scene_render.scene_hash
+    pptx_content_hash = ""
+    if pptx_path is not None and pptx_path.is_file():
+        pptx_content_hash = sha256_file(pptx_path)
+        write_pptx_sidecar(
+            case_dir,
+            scene_hash=scene_hash,
+            pptx_content_hash=pptx_content_hash,
+        )
     if pptx_render is not None:
-        write_pptx_render_sidecar(case_dir, scene_hash=scene_hash)
+        write_pptx_render_sidecar(
+            case_dir,
+            scene_hash=scene_hash,
+            pptx_content_hash=pptx_content_hash,
+        )
+
+    qa_ok, qa_issues = run_post_render_qa(case_dir, scene_render.scene)
+    if not qa_ok:
+        render_valid = False
 
     # Structured evidence only — notes is a short non-authoritative summary.
     evidence_bits: list[str] = []
@@ -305,6 +323,8 @@ def render_benchmark_visual_artifacts(
     if absolute_paths:
         evidence_bits.append("non_portable_asset_paths=true")
         render_valid = False
+    if not qa_ok:
+        evidence_bits.append("post_render_qa_passed=false")
 
     manifest = BenchmarkRenderManifest(
         render_source=render_source,
@@ -328,6 +348,9 @@ def render_benchmark_visual_artifacts(
         pptx_screenshot_reused=pptx_screenshot_reused,
         pptx_screenshot_source_hash=scene_hash if pptx_render is not None else "",
         render_attempt_id=render_attempt_id,
+        pptx_content_hash=pptx_content_hash,
+        post_render_qa_passed=qa_ok,
+        post_render_qa_issues=qa_issues,
     )
     write_render_manifest(case_dir, manifest)
     return manifest

@@ -267,6 +267,10 @@ class BenchmarkRenderManifest(DomainModel):
     pptx_screenshot_reused: bool = False
     pptx_screenshot_source_hash: str = ""
     render_attempt_id: UUID | None = None
+    # Provenance — same-generation identity across scene / PPTX / screenshot.
+    pptx_content_hash: str = ""
+    post_render_qa_passed: bool = False
+    post_render_qa_issues: list[str] = Field(default_factory=list)
 
     def scene_preview_valid(self) -> bool:
         """Return True when a RenderScene preview is ready for Phase 1–2 review."""

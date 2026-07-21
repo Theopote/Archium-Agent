@@ -377,8 +377,9 @@ def _preview_mode_key(case_id: str) -> str:
 
 
 def _is_pptx_render_preview_active(case_id: str) -> bool:
-    return st.session_state.get(_preview_mode_key(case_id), _PREVIEW_PPTX_RENDER) == (
-        _PREVIEW_PPTX_RENDER
+    return bool(
+        st.session_state.get(_preview_mode_key(case_id), _PREVIEW_PPTX_RENDER)
+        == _PREVIEW_PPTX_RENDER
     )
 
 

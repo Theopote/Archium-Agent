@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 
 from archium.domain.visual.design_system import DesignSystem, TypographySystem
-from archium.domain.visual.render_scene import FontAsset, RenderScene, TextNode
+from archium.domain.visual.render_scene import FontAsset, RenderNode, RenderScene, TextNode
 from archium.infrastructure.layout.font_resolver import resolve_font_file
 
 DEFAULT_CJK_FONT = "Microsoft YaHei"
@@ -280,7 +280,7 @@ def detect_font_fallbacks(scene: RenderScene) -> list[str]:
 
 def repair_text_node_fonts(scene: RenderScene) -> RenderScene:
     """Rewrite TextNode families to resolved CJK/Latin (for legacy Arial-on-CJK scenes)."""
-    nodes = []
+    nodes: list[RenderNode] = []
     for node in scene.nodes:
         if not isinstance(node, TextNode):
             nodes.append(node)
@@ -340,7 +340,7 @@ def collect_font_assets_from_scene(scene: RenderScene) -> list[FontAsset]:
             continue
         cjk = str(token.get("font_family") or DEFAULT_CJK_FONT)
         latin = str(token.get("font_family_latin") or DEFAULT_LATIN_FONT)
-        weight = int(token.get("font_weight") or 400)
+        weight = int(str(token.get("font_weight") or 400))
         _add(family=cjk, role=role, script="cjk", weight=weight)
         _add(family=latin, role=role, script="latin", weight=weight)
 

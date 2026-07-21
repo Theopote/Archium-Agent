@@ -22,6 +22,8 @@ WIREFRAME_NAME = "wireframe.png"
 FINAL_RENDER_NAME = "final_render.png"
 PPTX_RENDER_NAME = "pptx_render.png"
 PPTX_RENDER_SIDECAR_NAME = "pptx_render.meta.json"
+PPTX_NAME = "output.pptx"
+PPTX_SIDECAR_NAME = "output.pptx.meta.json"
 SCENE_JSON_NAME = "scene.json"
 SCENE_PREVIEW_NAME = "scene_preview.png"
 LEGACY_PREVIEW_NAME = "preview.png"
@@ -61,12 +63,34 @@ def pptx_render_sidecar_path(case_dir: Path) -> Path:
     return case_dir / PPTX_RENDER_SIDECAR_NAME
 
 
+def pptx_path(case_dir: Path) -> Path:
+    return case_dir / PPTX_NAME
+
+
+def pptx_sidecar_path(case_dir: Path) -> Path:
+    return case_dir / PPTX_SIDECAR_NAME
+
+
 def final_render_path(case_dir: Path) -> Path:
     return case_dir / FINAL_RENDER_NAME
 
 
 def render_manifest_path(case_dir: Path) -> Path:
     return case_dir / RENDER_MANIFEST_NAME
+
+
+def sha256_file(path: Path) -> str:
+    """Return hex SHA-256 of a file (used for PPTX / screenshot provenance)."""
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def visual_review_image_path(case_dir: Path) -> Path | None:
@@ -93,18 +117,48 @@ def write_render_manifest(case_dir: Path, manifest: BenchmarkRenderManifest) -> 
     return path
 
 
-def write_pptx_render_sidecar(case_dir: Path, *, scene_hash: str) -> Path:
-    """Write scene_hash sidecar next to pptx_render.png for provenance checks."""
-    path = pptx_render_sidecar_path(case_dir)
+def write_pptx_sidecar(
+    case_dir: Path,
+    *,
+    scene_hash: str,
+    pptx_content_hash: str,
+) -> Path:
+    """Write provenance sidecar next to output.pptx."""
+    path = pptx_sidecar_path(case_dir)
     path.write_text(
-        json.dumps({"scene_hash": scene_hash}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(
+            {
+                "scene_hash": scene_hash,
+                "pptx_content_hash": pptx_content_hash,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     return path
 
 
-def load_pptx_render_sidecar(case_dir: Path) -> dict[str, Any] | None:
+def write_pptx_render_sidecar(
+    case_dir: Path,
+    *,
+    scene_hash: str,
+    pptx_content_hash: str = "",
+) -> Path:
+    """Write scene_hash (+ optional pptx hash) sidecar next to pptx_render.png."""
     path = pptx_render_sidecar_path(case_dir)
+    payload: dict[str, str] = {"scene_hash": scene_hash}
+    if pptx_content_hash:
+        payload["pptx_content_hash"] = pptx_content_hash
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def load_json_sidecar(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     try:
@@ -112,6 +166,14 @@ def load_pptx_render_sidecar(case_dir: Path) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def load_pptx_render_sidecar(case_dir: Path) -> dict[str, Any] | None:
+    return load_json_sidecar(pptx_render_sidecar_path(case_dir))
+
+
+def load_pptx_sidecar(case_dir: Path) -> dict[str, Any] | None:
+    return load_json_sidecar(pptx_sidecar_path(case_dir))
 
 
 def load_case_scene(case_dir: Path) -> RenderScene | None:
@@ -124,10 +186,116 @@ def load_case_scene(case_dir: Path) -> RenderScene | None:
         return None
 
 
-def validate_scene_manifest_consistency(case_dir: Path) -> list[str]:
-    """Forced identity / portability checks between scene.json and render_manifest.
+def _asset_resolve_context(case_dir: Path) -> AssetPathResolveContext:
+    return AssetPathResolveContext(
+        case_dir=case_dir,
+        case_id=case_dir.name,
+        assets_dir=case_dir / "assets",
+        benchmark_root=case_dir.parent,
+    )
 
-    Any failure means render_valid must be treated as false and human review blocked.
+
+def validate_asset_uris_resolvable(case_dir: Path, scene: RenderScene) -> list[str]:
+    """Ensure every scene asset URI resolves to an on-disk file for this case."""
+    from archium.application.visual.asset_path_resolver import iter_scene_asset_uris
+    from archium.domain.visual.render_scene import DrawingNode, ImageNode
+
+    blockers: list[str] = []
+    resolver = AssetPathResolver()
+    ctx = _asset_resolve_context(case_dir)
+    for uri in iter_scene_asset_uris(scene):
+        if not uri:
+            continue
+        resolved = resolver.resolve(uri, ctx)
+        if resolved is None or not resolved.is_file():
+            blockers.append(f"unresolvable asset URI: {uri[:96]}")
+    for node in scene.nodes:
+        if isinstance(node, (ImageNode, DrawingNode)) and node.asset_unresolved:
+            blockers.append(f"unresolved asset node: {node.id}")
+    return blockers
+
+
+def validate_font_state(scene: RenderScene) -> list[str]:
+    """Block Latin-primary on CJK text; require font_assets for used roles."""
+    from archium.application.visual.scene_fonts import (
+        DEFAULT_CJK_FONT,
+        DEFAULT_LATIN_FONT,
+        text_has_cjk,
+    )
+    from archium.domain.visual.render_scene import TextNode
+
+    blockers: list[str] = []
+    for node in scene.nodes:
+        if not isinstance(node, TextNode) or not text_has_cjk(node.text):
+            continue
+        latin = node.font_family_latin or DEFAULT_LATIN_FONT
+        cjk = node.font_family_cjk or DEFAULT_CJK_FONT
+        if node.font_family == latin and latin != cjk:
+            blockers.append(
+                f"font state invalid: node `{node.id}` uses Latin primary "
+                f"`{latin}` for CJK text (expected `{cjk}`)"
+            )
+    if any(isinstance(n, TextNode) and n.text.strip() for n in scene.nodes):
+        if not scene.font_assets:
+            blockers.append("font_assets empty while scene has text nodes")
+    # Recorded Latin→CJK glyph substitutions mean the scene was not repaired.
+    for note in detect_font_fallbacks(scene):
+        if "Latin family lacks CJK glyphs" in note:
+            blockers.append(f"font fallback unresolved: {note}")
+    return blockers
+
+
+def run_post_render_qa(case_dir: Path, scene: RenderScene) -> tuple[bool, list[str]]:
+    """Run Scene↔PPTX conformance (+ light semantic checks)."""
+    from uuid import uuid4
+
+    from archium.application.visual.asset_path_resolver import AssetPathResolver
+    from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
+    from archium.domain.visual.scene_qa import SceneSemanticCheckCode
+    from archium.infrastructure.renderers.renderer_conformance import (
+        assert_renderer_conformance,
+    )
+
+    hard_codes = frozenset(
+        {
+            SceneSemanticCheckCode.FONT_FALLBACK_CHANGED_LAYOUT,
+            SceneSemanticCheckCode.IMAGE_NOT_RENDERED,
+            SceneSemanticCheckCode.SCENE_PPTX_NODE_MISMATCH,
+        }
+    )
+    issues: list[str] = []
+    render_scene = AssetPathResolver().resolve_scene(scene, _asset_resolve_context(case_dir))
+    pptx = pptx_path(case_dir)
+    try:
+        conformance = assert_renderer_conformance(
+            render_scene,
+            pptx_path=pptx if pptx.is_file() else None,
+        )
+        if not conformance.passed:
+            issues.extend(conformance.issues[:8])
+    except Exception as exc:  # noqa: BLE001 — gate must not crash on corrupt PPTX
+        issues.append(f"pptx conformance error: {exc}")
+
+    try:
+        report = run_scene_semantic_qa(
+            uuid4(),
+            [scene],
+            pptx_paths_by_slide={scene.slide_id: pptx} if pptx.is_file() else None,
+            slide_orders={scene.slide_id: 0},
+        )
+        for finding in report.findings:
+            if finding.check_code in hard_codes:
+                issues.append(f"{finding.check_code}: {finding.title}")
+    except Exception as exc:  # noqa: BLE001
+        issues.append(f"semantic QA error: {exc}")
+    return (not issues, issues)
+
+
+def validate_scene_manifest_consistency(case_dir: Path) -> list[str]:
+    """Strict same-generation provenance gate for visual human review.
+
+    Checks: scene_id / scene_hash identity, portable + resolvable asset URIs,
+    font state, PPTX content hash chain, screenshot↔PPTX hash, post-render QA.
     """
     blockers: list[str] = []
     manifest = load_render_manifest(case_dir)
@@ -159,6 +327,37 @@ def validate_scene_manifest_consistency(case_dir: Path) -> list[str]:
     if absolute:
         blockers.append(f"non-portable asset paths ({len(absolute)})")
 
+    blockers.extend(validate_asset_uris_resolvable(case_dir, scene))
+    blockers.extend(validate_font_state(scene))
+
+    pptx_file = pptx_path(case_dir)
+    actual_pptx_hash = ""
+    if pptx_file.is_file():
+        actual_pptx_hash = sha256_file(pptx_file)
+        if not manifest.pptx_content_hash:
+            blockers.append("manifest.pptx_content_hash missing")
+        elif manifest.pptx_content_hash != actual_pptx_hash:
+            blockers.append(
+                "pptx_content_hash mismatch: "
+                f"file={actual_pptx_hash[:12]}… manifest={manifest.pptx_content_hash[:12]}…"
+            )
+        pptx_meta = load_pptx_sidecar(case_dir)
+        if pptx_meta is None:
+            blockers.append(f"缺少 {PPTX_SIDECAR_NAME}")
+        else:
+            meta_scene = str(pptx_meta.get("scene_hash") or "")
+            meta_pptx = str(pptx_meta.get("pptx_content_hash") or "")
+            if not meta_scene:
+                blockers.append("output.pptx sidecar scene_hash missing")
+            elif manifest.scene_hash and meta_scene != manifest.scene_hash:
+                blockers.append("output.pptx sidecar scene_hash mismatch vs manifest")
+            if not meta_pptx:
+                blockers.append("output.pptx sidecar pptx_content_hash missing")
+            elif meta_pptx != actual_pptx_hash:
+                blockers.append("output.pptx sidecar pptx_content_hash mismatch vs file")
+            elif manifest.pptx_content_hash and meta_pptx != manifest.pptx_content_hash:
+                blockers.append("output.pptx sidecar pptx_content_hash mismatch vs manifest")
+
     pptx_png = pptx_render_path(case_dir)
     if pptx_png.is_file():
         sidecar = load_pptx_render_sidecar(case_dir)
@@ -166,6 +365,7 @@ def validate_scene_manifest_consistency(case_dir: Path) -> list[str]:
             blockers.append(f"缺少 {PPTX_RENDER_SIDECAR_NAME}")
         else:
             sidecar_hash = str(sidecar.get("scene_hash") or "")
+            sidecar_pptx = str(sidecar.get("pptx_content_hash") or "")
             if not sidecar_hash:
                 blockers.append("pptx_render sidecar scene_hash missing")
             elif manifest.scene_hash and sidecar_hash != manifest.scene_hash:
@@ -181,6 +381,26 @@ def validate_scene_manifest_consistency(case_dir: Path) -> list[str]:
                     "pptx_render sidecar scene_hash mismatch vs "
                     "manifest.pptx_screenshot_source_hash"
                 )
+            if not sidecar_pptx:
+                blockers.append("pptx_render sidecar pptx_content_hash missing")
+            elif actual_pptx_hash and sidecar_pptx != actual_pptx_hash:
+                blockers.append(
+                    "pptx_render sidecar pptx_content_hash mismatch vs output.pptx"
+                )
+            elif (
+                manifest.pptx_content_hash
+                and sidecar_pptx
+                and sidecar_pptx != manifest.pptx_content_hash
+            ):
+                blockers.append(
+                    "pptx_render sidecar pptx_content_hash mismatch vs manifest"
+                )
+
+    qa_ok, qa_issues = run_post_render_qa(case_dir, scene)
+    if not qa_ok:
+        blockers.append("post-render QA failed: " + "; ".join(qa_issues[:4]))
+    elif not manifest.post_render_qa_passed:
+        blockers.append("manifest.post_render_qa_passed=false")
 
     return blockers
 
@@ -268,20 +488,34 @@ def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
 
     manifest = load_render_manifest(case_dir)
     absolute_left = scene_has_machine_absolute_paths(portable)
+    pptx_file = pptx_path(case_dir)
     pptx_png = pptx_render_path(case_dir)
+    pptx_content_hash = sha256_file(pptx_file) if pptx_file.is_file() else ""
+    if pptx_file.is_file() and pptx_content_hash:
+        write_pptx_sidecar(
+            case_dir,
+            scene_hash=scene_hash,
+            pptx_content_hash=pptx_content_hash,
+        )
     if pptx_png.is_file():
-        write_pptx_render_sidecar(case_dir, scene_hash=scene_hash)
+        write_pptx_render_sidecar(
+            case_dir,
+            scene_hash=scene_hash,
+            pptx_content_hash=pptx_content_hash,
+        )
+
+    qa_ok, qa_issues = run_post_render_qa(case_dir, portable)
 
     if manifest is None:
         return {
-            "ok": not absolute_left,
+            "ok": not absolute_left and qa_ok,
             "scene_id": str(portable.id),
             "scene_hash": scene_hash,
             "absolute_paths_remaining": len(absolute_left),
             "manifest_updated": False,
         }
 
-    consistency_ok = not absolute_left
+    consistency_ok = not absolute_left and qa_ok
     render_valid = bool(manifest.render_valid) and consistency_ok
     pptx_exists = pptx_png.is_file()
     font_fallbacks = detect_font_fallbacks(portable)
@@ -289,6 +523,7 @@ def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
         update={
             "scene_id": str(portable.id),
             "scene_hash": scene_hash,
+            "pptx_content_hash": pptx_content_hash,
             "font_fallbacks": font_fallbacks,
             "pptx_screenshot_source_hash": scene_hash if pptx_exists else "",
             "pptx_screenshot_generated": (
@@ -299,6 +534,8 @@ def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
                 if pptx_exists and not manifest.pptx_screenshot_generated
                 else manifest.pptx_screenshot_reused
             ),
+            "post_render_qa_passed": qa_ok,
+            "post_render_qa_issues": qa_issues,
             "render_valid": render_valid,
             "notes": (
                 "normalized_portable_uris=true"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -30,16 +31,22 @@ def test_run_gate_writes_report_and_fails_on_empty_root(tmp_path: Path) -> None:
 
 
 def test_check_case_artifacts_passes_minimal_files(tmp_path: Path) -> None:
+    from pptx import Presentation
+
+    from archium.domain.visual.benchmark import BenchmarkRenderManifest
     from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, compute_scene_hash
     from tests.benchmark.architectural_slides.render_manifest import (
+        sha256_file,
         write_pptx_render_sidecar,
+        write_pptx_sidecar,
         write_render_manifest,
     )
-    from archium.domain.visual.benchmark import BenchmarkRenderManifest
 
     case_dir = tmp_path / "case_001_demo"
     case_dir.mkdir()
-    (case_dir / "output.pptx").write_bytes(b"PK" + b"0" * 100)
+    pptx = case_dir / "output.pptx"
+    Presentation().save(str(pptx))
+    pptx_hash = sha256_file(pptx)
     scene = RenderScene(
         slide_id=uuid4(),
         layout_plan_id=uuid4(),
@@ -54,7 +61,12 @@ def test_check_case_artifacts_passes_minimal_files(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     (case_dir / "pptx_render.png").write_bytes(b"\x89PNG" + b"0" * 64)
-    write_pptx_render_sidecar(case_dir, scene_hash=scene_hash)
+    write_pptx_sidecar(case_dir, scene_hash=scene_hash, pptx_content_hash=pptx_hash)
+    write_pptx_render_sidecar(
+        case_dir,
+        scene_hash=scene_hash,
+        pptx_content_hash=pptx_hash,
+    )
     write_render_manifest(
         case_dir,
         BenchmarkRenderManifest(
@@ -63,7 +75,10 @@ def test_check_case_artifacts_passes_minimal_files(tmp_path: Path) -> None:
             scene_id=str(scene.id),
             scene_hash=scene_hash,
             pptx_screenshot_source_hash=scene_hash,
+            pptx_content_hash=pptx_hash,
+            post_render_qa_passed=True,
+            rendered_at=datetime.now(UTC),
         ),
     )
     errors = _check_case_artifacts("case_001_demo", case_dir)
-    assert errors == []
+    assert errors == [], errors

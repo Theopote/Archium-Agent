@@ -26,7 +26,7 @@ class PngRenderer:
 
     def __init__(self, *, dpi: int = DEFAULT_DPI) -> None:
         self._dpi = dpi
-        self._font_cache: dict[tuple[str, int, int], object] = {}
+        self._font_cache: dict[tuple[str, int, int, str, str], object] = {}
 
     def render(self, scene: RenderScene, output_path: Path) -> Path:
         from PIL import Image, ImageDraw
