@@ -100,6 +100,18 @@ class KnowledgeItemStatus(StrEnum):
     SUPERSEDED = "superseded"
 
 
+class NarrativeStage(StrEnum):
+    """Position of a section/page on the deck argument arc."""
+
+    CONTEXT = "context"
+    PROBLEM = "problem"
+    EVIDENCE = "evidence"
+    TENSION = "tension"
+    STRATEGY = "strategy"
+    RESOLUTION = "resolution"
+    DECISION = "decision"
+
+
 class OutlineAudienceMode(StrEnum):
     """Audience profile affecting outline structure and emphasis."""
 

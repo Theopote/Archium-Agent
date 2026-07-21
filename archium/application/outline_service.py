@@ -7,11 +7,16 @@ from uuid import UUID
 
 from archium.application.outline_templates import detect_scenario_template, template_sections
 from archium.application.presentation_manuscript_service import outline_plan_from_manuscript
-from archium.domain.enums import OutlineAudienceMode
+from archium.domain.enums import NarrativeStage, OutlineAudienceMode
+from archium.domain.narrative_arc import NarrativePosition
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
-from archium.infrastructure.llm.presentation_schemas import OutlinePlanDraft, OutlineSectionDraft
+from archium.infrastructure.llm.presentation_schemas import (
+    NarrativePositionDraft,
+    OutlinePlanDraft,
+    OutlineSectionDraft,
+)
 
 _AUDIENCE_CATEGORY_PRIORITY: dict[OutlineAudienceMode, tuple[str, ...]] = {
     OutlineAudienceMode.GOVERNMENT: (
@@ -239,6 +244,7 @@ def outline_from_draft(
             expanded=item.expanded,
             order=item.order,
             category=item.category,
+            narrative_position=_narrative_position_from_draft(item.narrative_position),
         )
         for item in draft.sections
     ]
@@ -272,6 +278,7 @@ def outline_from_manuscript(
 
 
 def section_to_draft(section: OutlineSection) -> OutlineSectionDraft:
+    position = section.narrative_position
     return OutlineSectionDraft(
         id=section.id,
         title=section.title,
@@ -284,4 +291,29 @@ def section_to_draft(section: OutlineSection) -> OutlineSectionDraft:
         expanded=section.expanded,
         order=section.order,
         category=section.category,
+        narrative_position=(
+            None
+            if position is None
+            else NarrativePositionDraft(
+                stage=position.stage.value,
+                advances_from_previous=position.advances_from_previous,
+                prepares_for_next=position.prepares_for_next,
+            )
+        ),
+    )
+
+
+def _narrative_position_from_draft(
+    draft: NarrativePositionDraft | None,
+) -> NarrativePosition | None:
+    if draft is None:
+        return None
+    try:
+        stage = NarrativeStage(draft.stage.strip().casefold())
+    except ValueError:
+        stage = NarrativeStage.CONTEXT
+    return NarrativePosition(
+        stage=stage,
+        advances_from_previous=draft.advances_from_previous.strip(),
+        prepares_for_next=draft.prepares_for_next.strip(),
     )

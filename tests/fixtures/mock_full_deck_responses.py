@@ -69,6 +69,14 @@ def build_full_deck_storyline() -> dict[str, object]:
     return {
         "thesis": "以交通重组与功能优化带动老院区系统性更新",
         "narrative_pattern": "problem_solution",
+        "narrative_arc": {
+            "opening_context": "老院区在持续运营中暴露交通与功能短板",
+            "central_problem": "现状交通与功能布局难以支撑服务升级",
+            "tension_building": ["流线冲突影响安全", "空间低效限制体验"],
+            "turning_point": "需要以系统性更新而非局部修补回应矛盾",
+            "proposed_resolution": "以交通重组与功能优化带动整体更新",
+            "final_decision": "确认总体方向与实施优先级",
+        },
         "chapters": chapters,
     }
 

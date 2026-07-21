@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.enums import ApprovalStatus, OutlineAudienceMode
+from archium.domain.narrative_arc import NarrativePosition
 
 OUTLINE_LOGICAL_KEY = "presentation-outline"
 
@@ -26,6 +27,7 @@ class OutlineSection(DomainModel):
     expanded: bool = True
     order: int = Field(default=0, ge=0)
     category: str = Field(default="general", min_length=1)
+    narrative_position: NarrativePosition | None = None
 
 
 class OutlinePlan(IdentifiedModel, VersionedModel, TimestampedModel):

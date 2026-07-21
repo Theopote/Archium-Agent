@@ -23,6 +23,14 @@ STORYLINE_JSON = """\
 {
   "thesis": "交通重组带动老院区整体品质提升",
   "narrative_pattern": "problem_solution",
+  "narrative_arc": {
+    "opening_context": "老院区日常运营承压，交通与公共空间矛盾突出",
+    "central_problem": "现有交通组织无法满足日常运营",
+    "tension_building": ["人车混行加剧安全风险", "公共空间被停车侵占"],
+    "turning_point": "必须以交通重组作为更新切入点",
+    "proposed_resolution": "交通重组带动公共空间提升",
+    "final_decision": "确认改造范围与分期策略"
+  },
   "chapters": [
     {
       "id": "ch1",

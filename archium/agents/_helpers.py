@@ -21,11 +21,13 @@ from archium.domain.enums import VerificationStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
+from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import DocumentRepository, FactRepository
 from archium.infrastructure.llm.presentation_schemas import (
     BriefDraft,
     CitationDraft,
+    NarrativeArcDraft,
     SlideDraft,
     SlidePlanDraft,
     StorylineDraft,
@@ -347,8 +349,22 @@ def storyline_from_draft(draft: StorylineDraft, *, presentation_id: UUID, versio
         presentation_id=presentation_id,
         thesis=draft.thesis,
         narrative_pattern=draft.narrative_pattern,
+        narrative_arc=_narrative_arc_from_draft(draft.narrative_arc),
         chapters=chapters,
         version=version,
+    )
+
+
+def _narrative_arc_from_draft(draft: NarrativeArcDraft | None) -> NarrativeArc | None:
+    if draft is None:
+        return None
+    return NarrativeArc(
+        opening_context=draft.opening_context,
+        central_problem=draft.central_problem,
+        tension_building=list(draft.tension_building),
+        turning_point=draft.turning_point,
+        proposed_resolution=draft.proposed_resolution,
+        final_decision=draft.final_decision,
     )
 
 

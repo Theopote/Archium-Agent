@@ -15,6 +15,8 @@ from archium.application.presentation_manuscript_service import PresentationManu
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
+    NarrativeArcUpdate,
+    NarrativePositionUpdate,
     OutlineSectionUpdate,
     OutlineUpdate,
     PresentationReviewContext,
@@ -24,12 +26,14 @@ from archium.application.review_models import (
 from archium.application.slide_history_service import SlideHistoryService
 from archium.domain.enums import (
     ApprovalStatus,
+    NarrativeStage,
     OutlineAudienceMode,
     RevisionSource,
     SlideStatus,
     SlideType,
     WorkflowStatus,
 )
+from archium.domain.narrative_arc import NarrativeArc, NarrativePosition
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
@@ -191,6 +195,7 @@ class PresentationReviewService:
         self._storyline_history.record_snapshot(storyline, RevisionSource.MANUAL_EDIT)
         storyline.thesis = update.thesis.strip()
         storyline.narrative_pattern = update.narrative_pattern.strip() or "problem_solution"
+        storyline.narrative_arc = _narrative_arc_from_update(update.narrative_arc)
         storyline.chapters = [_chapter_from_update(item) for item in update.chapters]
         storyline.approval_status = ApprovalStatus.DRAFT
         storyline.touch()
@@ -357,6 +362,26 @@ def _chapter_from_update(update: ChapterUpdate) -> Chapter:
     )
 
 
+def _narrative_arc_from_update(update: NarrativeArcUpdate | None) -> NarrativeArc | None:
+    if update is None:
+        return None
+    opening = update.opening_context.strip()
+    problem = update.central_problem.strip()
+    turning = update.turning_point.strip()
+    resolution = update.proposed_resolution.strip()
+    if not (opening and problem and turning and resolution):
+        return None
+    final = update.final_decision.strip() if update.final_decision else None
+    return NarrativeArc(
+        opening_context=opening,
+        central_problem=problem,
+        tension_building=[item.strip() for item in update.tension_building if item.strip()],
+        turning_point=turning,
+        proposed_resolution=resolution,
+        final_decision=final or None,
+    )
+
+
 def _outline_section_from_update(update: OutlineSectionUpdate) -> OutlineSection:
     return OutlineSection(
         id=update.id.strip(),
@@ -370,6 +395,23 @@ def _outline_section_from_update(update: OutlineSectionUpdate) -> OutlineSection
         required=update.required,
         expanded=update.expanded,
         category=update.category.strip() or "general",
+        narrative_position=_narrative_position_from_update(update.narrative_position),
+    )
+
+
+def _narrative_position_from_update(
+    update: NarrativePositionUpdate | None,
+) -> NarrativePosition | None:
+    if update is None:
+        return None
+    try:
+        stage = NarrativeStage(update.stage.strip().casefold())
+    except ValueError:
+        stage = NarrativeStage.CONTEXT
+    return NarrativePosition(
+        stage=stage,
+        advances_from_previous=update.advances_from_previous.strip(),
+        prepares_for_next=update.prepares_for_next.strip(),
     )
 
 

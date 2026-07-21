@@ -39,10 +39,28 @@ class ChapterUpdate:
 
 
 @dataclass(frozen=True)
+class NarrativeArcUpdate:
+    opening_context: str
+    central_problem: str
+    turning_point: str
+    proposed_resolution: str
+    tension_building: list[str] = field(default_factory=list)
+    final_decision: str | None = None
+
+
+@dataclass(frozen=True)
 class StorylineUpdate:
     thesis: str
     narrative_pattern: str = "problem_solution"
     chapters: list[ChapterUpdate] = field(default_factory=list)
+    narrative_arc: NarrativeArcUpdate | None = None
+
+
+@dataclass(frozen=True)
+class NarrativePositionUpdate:
+    stage: str = "context"
+    advances_from_previous: str = ""
+    prepares_for_next: str = ""
 
 
 @dataclass(frozen=True)
@@ -58,6 +76,7 @@ class OutlineSectionUpdate:
     required: bool = True
     expanded: bool = True
     category: str = "general"
+    narrative_position: NarrativePositionUpdate | None = None
 
 
 @dataclass(frozen=True)

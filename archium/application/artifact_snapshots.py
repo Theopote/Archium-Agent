@@ -41,6 +41,11 @@ def storyline_to_snapshot(storyline: Storyline) -> dict[str, object]:
         "presentation_id": str(storyline.presentation_id),
         "thesis": storyline.thesis,
         "narrative_pattern": storyline.narrative_pattern,
+        "narrative_arc": (
+            storyline.narrative_arc.model_dump(mode="json")
+            if storyline.narrative_arc
+            else None
+        ),
         "approval_status": storyline.approval_status.value,
         "version": storyline.version,
         "chapters": [
@@ -84,6 +89,11 @@ def outline_to_snapshot(outline: OutlinePlan) -> dict[str, object]:
                 "expanded": section.expanded,
                 "order": section.order,
                 "category": section.category,
+                "narrative_position": (
+                    section.narrative_position.model_dump(mode="json")
+                    if section.narrative_position
+                    else None
+                ),
             }
             for section in outline.sections
         ],

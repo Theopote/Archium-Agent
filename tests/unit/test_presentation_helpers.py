@@ -74,6 +74,7 @@ def test_storyline_from_draft_maps_chapters() -> None:
     storyline = storyline_from_draft(draft, presentation_id=presentation_id)
     assert len(storyline.chapters) == 1
     assert storyline.chapters[0].id == "ch1"
+    assert storyline.narrative_arc is None
 
 
 def test_slides_from_plan_sanitizes_messages(db_session: Session) -> None:

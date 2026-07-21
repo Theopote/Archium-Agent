@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.enums import ApprovalStatus, PresentationStatus, PresentationType
+from archium.domain.narrative_arc import NarrativeArc
 
 BRIEF_LOGICAL_KEY = "presentation-brief"
 STORYLINE_LOGICAL_KEY = "presentation-storyline"
@@ -81,6 +82,7 @@ class Storyline(IdentifiedModel, VersionedModel, TimestampedModel):
     logical_key: str = Field(default=STORYLINE_LOGICAL_KEY, max_length=200)
     thesis: str = Field(min_length=1)
     narrative_pattern: str = Field(default="problem_solution", min_length=1)
+    narrative_arc: NarrativeArc | None = None
     chapters: list[Chapter] = Field(default_factory=list)
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 

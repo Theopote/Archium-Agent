@@ -32,10 +32,26 @@ class ChapterDraft(BaseModel):
     estimated_slide_count: int = Field(default=1, ge=1)
 
 
+class NarrativeArcDraft(BaseModel):
+    opening_context: str
+    central_problem: str
+    tension_building: list[str] = Field(default_factory=list)
+    turning_point: str
+    proposed_resolution: str
+    final_decision: str | None = None
+
+
 class StorylineDraft(BaseModel):
     thesis: str
     narrative_pattern: str = "problem_solution"
+    narrative_arc: NarrativeArcDraft | None = None
     chapters: list[ChapterDraft] = Field(default_factory=list)
+
+
+class NarrativePositionDraft(BaseModel):
+    stage: str = "context"
+    advances_from_previous: str = ""
+    prepares_for_next: str = ""
 
 
 class OutlineSectionDraft(BaseModel):
@@ -50,6 +66,7 @@ class OutlineSectionDraft(BaseModel):
     expanded: bool = True
     order: int = Field(ge=0)
     category: str = "general"
+    narrative_position: NarrativePositionDraft | None = None
 
 
 class OutlinePlanDraft(BaseModel):

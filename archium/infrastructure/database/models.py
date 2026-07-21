@@ -237,6 +237,9 @@ class StorylineORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     thesis: Mapped[str] = mapped_column(Text, nullable=False)
     narrative_pattern: Mapped[str] = mapped_column(String(100), nullable=False, default="problem_solution")
+    narrative_arc_json: Mapped[dict[str, object] | None] = mapped_column(
+        "narrative_arc", JSON, nullable=True
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
     lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)

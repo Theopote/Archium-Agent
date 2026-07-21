@@ -12,6 +12,8 @@ from archium.application.outline_service import apply_audience_mode
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
+    NarrativeArcUpdate,
+    NarrativePositionUpdate,
     OutlineSectionUpdate,
     OutlineUpdate,
     SlideUpdate,
@@ -494,9 +496,41 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
     storyline = context.storyline
     st.markdown(f"**{_STORYLINE_LABEL} 审核** · 状态：{_approval_badge(storyline.approval_status)}")
 
+    arc = storyline.narrative_arc
     with st.form(f"storyline_meta_{storyline.id}"):
         thesis = st.text_area("总体论点", value=storyline.thesis)
         narrative_pattern = st.text_input("叙事模式", value=storyline.narrative_pattern)
+        st.caption("叙事弧线（先定论证骨架，再排章节）")
+        opening_context = st.text_area(
+            "开场背景",
+            value=arc.opening_context if arc else "",
+            height=68,
+        )
+        central_problem = st.text_area(
+            "核心问题",
+            value=arc.central_problem if arc else "",
+            height=68,
+        )
+        tension_building = st.text_area(
+            "矛盾升级（每行一条）",
+            value="\n".join(arc.tension_building) if arc else "",
+            height=68,
+        )
+        turning_point = st.text_area(
+            "转折点",
+            value=arc.turning_point if arc else "",
+            height=68,
+        )
+        proposed_resolution = st.text_area(
+            "解决方案",
+            value=arc.proposed_resolution if arc else "",
+            height=68,
+        )
+        final_decision = st.text_area(
+            "最终决策（可选）",
+            value=arc.final_decision if arc and arc.final_decision else "",
+            height=68,
+        )
         meta_submit = st.form_submit_button("保存论点", use_container_width=True)
 
     chapter_rows = [
@@ -551,6 +585,14 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
             thesis=thesis,
             narrative_pattern=narrative_pattern,
             chapters=chapters,
+            narrative_arc=_narrative_arc_update_from_form(
+                opening_context=opening_context,
+                central_problem=central_problem,
+                tension_building=tension_building,
+                turning_point=turning_point,
+                proposed_resolution=proposed_resolution,
+                final_decision=final_decision,
+            ),
         )
         with get_session() as session:
             review_service = PresentationReviewService(session)
@@ -620,6 +662,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
     reorder_clicked = col4.button("按受众重排", key=f"reorder_outline_{outline.id}", use_container_width=True)
 
     if meta_submit or save_clicked or approve_clicked or reject_clicked or reorder_clicked:
+        existing_by_id = {section.id: section for section in outline.sections}
         sections = [
             OutlineSectionUpdate(
                 id=str(row["id"]),
@@ -631,6 +674,17 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
                 required=bool(row.get("required", True)),
                 expanded=bool(row.get("expanded", True)),
                 category=str(row.get("category", "general")),
+                evidence_requirements=list(
+                    existing_by_id[str(row["id"])].evidence_requirements
+                )
+                if str(row["id"]) in existing_by_id
+                else [],
+                required_assets=list(existing_by_id[str(row["id"])].required_assets)
+                if str(row["id"]) in existing_by_id
+                else [],
+                narrative_position=_narrative_position_update_from_section(
+                    existing_by_id.get(str(row["id"]))
+                ),
             )
             for row in edited.to_dict(orient="records")
             if str(row.get("id", "")).strip()
@@ -671,6 +725,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
                                 required=s.required,
                                 expanded=s.expanded,
                                 category=s.category,
+                                narrative_position=_narrative_position_update_from_section(s),
                             )
                             for s in saved.sections
                         ],
@@ -1021,3 +1076,42 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
             st.error(format_user_error(exc))
         except Exception as exc:
             st.error(format_user_error(exc))
+
+def _narrative_arc_update_from_form(
+    *,
+    opening_context: str,
+    central_problem: str,
+    tension_building: str,
+    turning_point: str,
+    proposed_resolution: str,
+    final_decision: str,
+) -> NarrativeArcUpdate | None:
+    opening = opening_context.strip()
+    problem = central_problem.strip()
+    turning = turning_point.strip()
+    resolution = proposed_resolution.strip()
+    if not (opening and problem and turning and resolution):
+        return None
+    decision = final_decision.strip()
+    return NarrativeArcUpdate(
+        opening_context=opening,
+        central_problem=problem,
+        tension_building=parse_multiline_items(tension_building),
+        turning_point=turning,
+        proposed_resolution=resolution,
+        final_decision=decision or None,
+    )
+
+
+def _narrative_position_update_from_section(section: object | None) -> NarrativePositionUpdate | None:
+    if section is None:
+        return None
+    position = getattr(section, 'narrative_position', None)
+    if position is None:
+        return None
+    return NarrativePositionUpdate(
+        stage=position.stage.value,
+        advances_from_previous=position.advances_from_previous,
+        prepares_for_next=position.prepares_for_next,
+    )
+

@@ -49,6 +49,7 @@ from archium.domain.presentation import (
     PresentationBrief,
     Storyline,
 )
+from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
@@ -423,6 +424,8 @@ def chapter_to_orm(domain: Chapter, storyline_id: UUID, orm: ChapterORM | None =
 def storyline_to_domain(orm: StorylineORM) -> Storyline:
     lineage_id = orm.lineage_id or orm.id
     logical_key = orm.logical_key or STORYLINE_LOGICAL_KEY
+    arc_payload = getattr(orm, "narrative_arc_json", None)
+    narrative_arc = NarrativeArc.model_validate(arc_payload) if arc_payload else None
     return Storyline(
         id=orm.id,
         presentation_id=orm.presentation_id,
@@ -430,6 +433,7 @@ def storyline_to_domain(orm: StorylineORM) -> Storyline:
         logical_key=logical_key,
         thesis=orm.thesis,
         narrative_pattern=orm.narrative_pattern,
+        narrative_arc=narrative_arc,
         chapters=[chapter_to_domain(ch) for ch in orm.chapters],
         version=orm.version,
         approval_status=ApprovalStatus(orm.approval_status),
@@ -443,6 +447,9 @@ def storyline_to_orm(domain: Storyline, orm: StorylineORM | None = None) -> Stor
     target.presentation_id = domain.presentation_id
     target.thesis = domain.thesis
     target.narrative_pattern = domain.narrative_pattern
+    target.narrative_arc_json = (
+        domain.narrative_arc.model_dump(mode="json") if domain.narrative_arc else None
+    )
     target.version = domain.version
     target.approval_status = domain.approval_status.value
     target.lineage_id = domain.lineage_id
