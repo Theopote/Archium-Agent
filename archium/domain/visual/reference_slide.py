@@ -9,6 +9,7 @@ from uuid import uuid4
 from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.visual.placeholder_binding import PlaceholderBindingSignature
 
 # Asset origin for anything extracted from a reference PPTX.
 REFERENCE_TEMPLATE_ASSET_ORIGIN: Literal["reference_template"] = "reference_template"
@@ -81,6 +82,8 @@ class ReferenceElement(DomainModel):
     alt_text: str = ""
     # Cross-page repeat fingerprint (type+geometry+style+content hashes).
     structural_signature: str = ""
+    # Native PPTX placeholder identity — preferred over index-only binding.
+    placeholder_binding: PlaceholderBindingSignature | None = None
     # Nested shapes when element_type == GROUP.
     children: list[ReferenceElement] = Field(default_factory=list)
     parse_ok: bool = True

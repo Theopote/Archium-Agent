@@ -19,6 +19,7 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Emu
 
 from archium.application.visual.drawing_inference_service import DrawingInferenceService
+from archium.domain.visual.placeholder_binding import build_placeholder_binding_signature
 from archium.domain.visual.reference_slide import (
     REFERENCE_TEMPLATE_ASSET_ORIGIN,
     ReferenceAsset,
@@ -835,12 +836,19 @@ class ReferencePptxParser:
             is_picture or element_type == ReferenceElementType.PLACEHOLDER
         ) else ""
         style_notes: list[str] = []
+        placeholder_idx: int | None = None
+        placeholder_type_raw = ""
         if element_type == ReferenceElementType.PLACEHOLDER:
             with contextlib.suppress(Exception):
                 fmt = getattr(shape, "placeholder_format", None)
                 if fmt is not None:
-                    style_notes.append(f"placeholder_type:{getattr(fmt, 'type', '')}")
-                    style_notes.append(f"placeholder_idx:{getattr(fmt, 'idx', '')}")
+                    placeholder_type_raw = getattr(fmt, "type", "") or ""
+                    style_notes.append(f"placeholder_type:{placeholder_type_raw}")
+                    raw_idx = getattr(fmt, "idx", None)
+                    if raw_idx is not None:
+                        with contextlib.suppress(TypeError, ValueError):
+                            placeholder_idx = int(raw_idx)
+                        style_notes.append(f"placeholder_idx:{raw_idx}")
             if is_picture:
                 style_notes.append("placeholder_hosts_picture")
             elif text:
@@ -927,6 +935,24 @@ class ReferencePptxParser:
         if shape_name and not _GENERIC_SHAPE_NAME.match(shape_name.strip()):
             style_notes.append(f"named:{shape_name}")
 
+        placeholder_binding = None
+        if element_type == ReferenceElementType.PLACEHOLDER:
+            placeholder_binding = build_placeholder_binding_signature(
+                placeholder_idx=placeholder_idx,
+                placeholder_name=shape_name,
+                placeholder_type=placeholder_type_raw,
+                semantic_role=role,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                hosts_picture=is_picture,
+                page_height=page_height,
+            )
+            # Prefer native placeholder type over the generic "placeholder" role.
+            if placeholder_binding.semantic_role:
+                role = placeholder_binding.semantic_role
+
         element = ReferenceElement(
             id=id_prefix,
             element_type=element_type,
@@ -946,6 +972,7 @@ class ReferencePptxParser:
             source_shape_name=shape_name,
             alt_text=alt_text,
             structural_signature=signature,
+            placeholder_binding=placeholder_binding,
             children=children,
             parse_ok=True,
         )

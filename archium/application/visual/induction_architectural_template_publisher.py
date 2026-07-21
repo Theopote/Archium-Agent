@@ -341,6 +341,10 @@ class InductionArchitecturalTemplatePublisher:
             return None
 
         role = _SEMANTIC_TO_SLOT.get((element.semantic_role or "").lower())
+        if role is None and element.placeholder_binding is not None:
+            role = _SEMANTIC_TO_SLOT.get(
+                (element.placeholder_binding.semantic_role or "").lower()
+            )
         if role is None:
             if element.element_type == ReferenceElementType.IMAGE:
                 role = TemplateSlotRole.SUPPORTING_IMAGE
@@ -348,6 +352,12 @@ class InductionArchitecturalTemplatePublisher:
                 role = TemplateSlotRole.DRAWING
             elif element.element_type == ReferenceElementType.TEXT:
                 role = TemplateSlotRole.BODY
+            elif element.element_type == ReferenceElementType.PLACEHOLDER:
+                # Picture placeholders without upgraded role still become image slots.
+                if "placeholder_hosts_picture" in element.style_notes:
+                    role = TemplateSlotRole.HERO_IMAGE
+                else:
+                    role = TemplateSlotRole.BODY
             elif element.element_type == ReferenceElementType.CHART:
                 role = TemplateSlotRole.CHART
             elif element.element_type == ReferenceElementType.TABLE:
@@ -388,6 +398,7 @@ class InductionArchitecturalTemplatePublisher:
             source_shape_name=element.source_shape_name or element.id,
             auto_detected=True,
             crop_policy=crop,
+            placeholder_binding=element.placeholder_binding,
         )
 
     @staticmethod

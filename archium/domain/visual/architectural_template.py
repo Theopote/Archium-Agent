@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from pydantic import Field
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
+from archium.domain.visual.placeholder_binding import PlaceholderBindingSignature
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.render_scene import FontAsset
 
@@ -84,6 +85,7 @@ class TemplateSlot(DomainModel):
     label: str = ""
     source_shape_name: str = ""
     auto_detected: bool = True
+    placeholder_binding: PlaceholderBindingSignature | None = None
 
 
 class ArchitecturalTemplateLayout(DomainModel):

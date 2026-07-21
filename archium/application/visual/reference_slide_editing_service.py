@@ -20,6 +20,7 @@ from archium.application.visual.semantic_content_plan import (
     normalize_text_role_for_schema,
     replacement_text_for_role,
 )
+from archium.application.visual.placeholder_binding_matcher import effective_semantic_role
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
@@ -159,7 +160,9 @@ class ReferenceSlideEditingService:
                 continue
 
             if element.element_type == ReferenceElementType.TEXT or (
-                element.element_type == ReferenceElementType.PLACEHOLDER and element.text
+                element.element_type == ReferenceElementType.PLACEHOLDER
+                and element.text
+                and not self._placeholder_hosts_picture(element)
             ):
                 role = self._resolve_text_role(element)
                 role = normalize_text_role_for_schema(
@@ -201,7 +204,7 @@ class ReferenceSlideEditingService:
             if element.element_type in {
                 ReferenceElementType.IMAGE,
                 ReferenceElementType.DRAWING,
-            }:
+            } or self._placeholder_hosts_picture(element):
                 ref_asset = ref_assets_by_id.get(element.asset_id or "")
                 if ref_asset and ref_asset.asset_origin == REFERENCE_TEMPLATE_ASSET_ORIGIN:
                     stripped_asset += 1
@@ -221,7 +224,10 @@ class ReferenceSlideEditingService:
                     drawing_idx=drawing_idx,
                     plan=content_plan,
                 )
-                if element.element_type == ReferenceElementType.IMAGE:
+                if (
+                    element.element_type == ReferenceElementType.IMAGE
+                    or self._placeholder_hosts_picture(element)
+                ):
                     photo_idx = pool_idx
                 else:
                     drawing_idx = pool_idx
@@ -453,9 +459,28 @@ class ReferenceSlideEditingService:
             return True
         return bool(element.repeats_across_pages)
 
+    def _placeholder_hosts_picture(self, element: ReferenceElement) -> bool:
+        if element.element_type != ReferenceElementType.PLACEHOLDER:
+            return False
+        if "placeholder_hosts_picture" in element.style_notes:
+            return True
+        binding = element.placeholder_binding
+        if binding is None:
+            return False
+        return binding.placeholder_type in {
+            "PICTURE",
+            "BITMAP",
+            "CLIP_ART",
+            "MEDIA_CLIP",
+        } or binding.semantic_role in {
+            "hero_image",
+            "supporting_image",
+            "drawing",
+        }
+
     def _resolve_text_role(self, element: ReferenceElement) -> str:
-        role = (element.semantic_role or "").strip().lower()
-        if role:
+        role = effective_semantic_role(element)
+        if role and role != "placeholder":
             return role
         if element.font_size_pt and element.font_size_pt >= 28:
             return ContentRole.TITLE.value
