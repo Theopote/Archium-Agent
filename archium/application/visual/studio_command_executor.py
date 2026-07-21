@@ -30,7 +30,7 @@ from archium.domain.visual.render_scene import (
     replace_text_node_content,
 )
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
-from archium.domain.visual.scene_repair import SceneRepairAction
+from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairApplyMode
 from archium.domain.visual.studio_command import (
     FixOverflowCommand,
     IncreaseDrawingReadabilityCommand,
@@ -253,7 +253,11 @@ class StudioCommandExecutor:
                 ),
             )
 
-        repair_result = self._scene_repair.repair_scene(scene, repairable)
+        repair_result = self._scene_repair.repair_scene(
+            scene,
+            repairable,
+            apply_mode=SceneRepairApplyMode.ALL_REPAIRABLE,
+        )
         applied = [
             _patch_from_repair_action(action, scene, base_hash)
             for action in repair_result.actions

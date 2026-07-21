@@ -1,4 +1,12 @@
-"""Deterministic RenderScene repair from semantic QA findings (Scene Repair Loop)."""
+"""Deterministic RenderScene repair from semantic QA findings (Scene Repair Loop).
+
+Two apply modes (see ``SceneRepairApplyMode``):
+
+- **SAFE_AUTO_ONLY** — Studio compile/reuse and workflow persistence. Only
+  lossless fixes that do not change content semantics (e.g. drawing cover→contain).
+- **ALL_REPAIRABLE** — Proposal path (``FixOverflowCommand``) where the user
+  reviews before/after. Includes text shorten, font bump, overflow shrink.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +19,7 @@ from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderSce
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import (
     SceneRepairAction,
+    SceneRepairApplyMode,
     SceneRepairBatchResult,
     SceneRepairResult,
 )
@@ -33,6 +42,8 @@ class SceneRepairService:
         self,
         scene: RenderScene,
         findings: list[SlideSemanticFinding],
+        *,
+        apply_mode: SceneRepairApplyMode = SceneRepairApplyMode.SAFE_AUTO_ONLY,
     ) -> SceneRepairResult:
         actions: list[SceneRepairAction] = []
         patched = scene.model_copy(deep=True)
@@ -48,7 +59,7 @@ class SceneRepairService:
             if node is None:
                 continue
             for finding in node_findings:
-                action = self._repair_node(patched, node_id, finding)
+                action = self._repair_node(patched, node_id, finding, apply_mode=apply_mode)
                 if action is not None:
                     actions.append(action)
 
@@ -61,6 +72,7 @@ class SceneRepairService:
         *,
         max_rounds: int = 2,
         slide_orders: dict[UUID, int] | None = None,
+        apply_mode: SceneRepairApplyMode = SceneRepairApplyMode.SAFE_AUTO_ONLY,
     ) -> SceneRepairBatchResult:
         """QA → repair loop, up to ``max_rounds`` (default 2)."""
         current = [scene.model_copy(deep=True) for scene in scenes]
@@ -95,7 +107,7 @@ class SceneRepairService:
                 if not scene_findings:
                     updated.append(scene)
                     continue
-                result = self.repair_scene(scene, scene_findings)
+                result = self.repair_scene(scene, scene_findings, apply_mode=apply_mode)
                 all_actions.extend(result.actions)
                 updated.append(result.scene)
             current = updated
@@ -122,6 +134,8 @@ class SceneRepairService:
         scene: RenderScene,
         node_id: str,
         finding: SlideSemanticFinding,
+        *,
+        apply_mode: SceneRepairApplyMode,
     ) -> SceneRepairAction | None:
         node = scene.node_by_id(node_id)
         if node is None:
@@ -137,6 +151,9 @@ class SceneRepairService:
                     action_type="set_fit_mode_contain",
                     reason="drawing must not use cover",
                 )
+            return None
+
+        if apply_mode == SceneRepairApplyMode.SAFE_AUTO_ONLY:
             return None
 
         if finding.check_code == SceneSemanticCheckCode.FONT_TOO_SMALL and isinstance(node, TextNode):

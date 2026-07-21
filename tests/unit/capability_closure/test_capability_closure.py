@@ -11,6 +11,7 @@ from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )
 from archium.application.visual.scene_repair_service import SceneRepairService
+from archium.domain.visual.scene_repair import SceneRepairApplyMode
 from archium.application.visual.schema_usage_validator import validate_schema_length_bounds
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation_manuscript import ManuscriptFact
@@ -70,7 +71,11 @@ def test_scene_repair_shortens_overflow_text() -> None:
         description="overflow",
         evidence_refs=["body_1"],
     )
-    result = SceneRepairService().repair_scene(scene, [finding])
+    result = SceneRepairService().repair_scene(
+        scene,
+        [finding],
+        apply_mode=SceneRepairApplyMode.ALL_REPAIRABLE,
+    )
     text_node = next(node for node in result.scene.nodes if isinstance(node, TextNode))
     assert len(text_node.text) < len("这是一段非常长的说明文字" * 20)
     assert result.applied_count >= 1

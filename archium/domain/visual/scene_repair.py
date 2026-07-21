@@ -2,12 +2,37 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import Field
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.render_scene import RenderScene
+
+
+class SceneRepairApplyMode(StrEnum):
+    """How scene repair may be applied in a given workflow."""
+
+    SAFE_AUTO_ONLY = "safe_auto_only"
+    """Apply only lossless, non-semantic fixes (e.g. cover→contain)."""
+
+    ALL_REPAIRABLE = "all_repairable"
+    """Apply all bounded repair actions — requires Proposal review when used in Studio."""
+
+
+class SceneRepairActionType(StrEnum):
+    SET_FIT_MODE_CONTAIN = "set_fit_mode_contain"
+    BUMP_FONT_SIZE = "bump_font_size"
+    SHORTEN_TEXT = "shorten_text"
+    SET_OVERFLOW_SHRINK = "set_overflow_shrink"
+
+
+SAFE_AUTO_ACTION_TYPES = frozenset({SceneRepairActionType.SET_FIT_MODE_CONTAIN.value})
+
+
+def is_safe_auto_repair(action_type: str) -> bool:
+    return action_type in SAFE_AUTO_ACTION_TYPES
 
 
 class SceneRepairAction(DomainModel):
