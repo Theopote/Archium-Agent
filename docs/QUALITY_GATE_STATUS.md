@@ -306,24 +306,69 @@ Tests: `tests/unit/representative_slide_selector/` (incl. `test_editability_scor
 | Review UI cluster move / merge / split | **Done** | `induction_cluster_editor.py` + UI |
 | Real 15–30 page deck + human sign-off | **Run done — human pending** | see `.dev-notes/docs-history/phase35-real-reference-validation.md` |
 
+**Phase 3.5 阶段状态：`PASS_WITH_WARNINGS`**（工程门通过；真人结构复核签署未完成）。
+
 Tests: `tests/unit/induction_cluster_editor/`; runner: `scripts/run_phase35_reference_validation.py`.
 
 ## Template Induction Phase 4 (2026-07-21)
 
+**阶段状态：`IMPLEMENTED, HARDENING REQUIRED`**
+
+开发放行：可继续开发、测试、人工修正 UI。  
+正式发布放行：**有条件** — 须满足下方五项门槛，且发布门 `status == PASS`（`PASS_WITH_WARNINGS` 不写入 `published`）。
+
+### 五项正式通过门槛
+
+| # | 门槛 | 状态 |
+|---|------|------|
+| 1 | Run B 人工异常复核签署 | **未完成** — `.dev-notes/docs-history/phase35-real-reference-validation.md` |
+| 2 | 代表页低置信分类阻止 Schema 发布 | **Done** — `REPRESENTATIVE_CLASSIFICATION_UNCONFIRMED` |
+| 3 | Cluster-level Schema 统计（非仅代表页） | **Done** — `cluster_stats` + 分布边界 |
+| 4 | 每 Schema 测试内容填充 | **Done（结构层）** — `SchemaTestFillResult`；全 RenderScene 路径待补 |
+| 5 | 至少一套真实建筑 PPT 模板成功发布 | **未完成** |
+
+### 验收表（Phase 4 相关）
+
+| 项目 | 结果 |
+|------|------|
+| Manuscript 引用门 | 通过 |
+| ArchitecturalContentSchema 模型 | 通过 |
+| Schema 自动提取 | 基本通过 |
+| 建筑素材来源约束 | 通过 |
+| Photo Analysis / Drawing Schema | 通过 |
+| Schema 发布门 | 基本通过 |
+| 代表页低置信阻塞 | **通过** |
+| Cluster-level Schema 统计 | **通过** |
+| 测试内容填充 | **结构验证通过**；RenderScene 未证明 |
+| Phase 4 开发放行 | **可以** |
+| Phase 4 正式发布放行 | **有条件** |
+
 | Capability | Status | Location |
 |------------|--------|----------|
 | ArchitecturalContentSchema / ContentRequirement / VisualRequirement / EvidenceRequirement | **Done** | `archium/domain/visual/architectural_content_schema.py` |
-| Auto extract from representatives | **Done** | `ArchitecturalContentSchemaExtractor` |
+| Auto extract from representatives + cluster stats | **Done** | `ArchitecturalContentSchemaExtractor` |
+| Induction confidence (classification × cluster × rep × slot support) | **Done** | `extract_from_slide` |
 | Publish gate (`PASS` / `PASS_WITH_WARNINGS` / `BLOCKED`) | **Done** | `ArchitecturalContentSchemaPublishGate` |
+| Representative `needs_review` → blocker; non-rep → warning | **Done** | publish gate |
+| Structural test fill in publish gate | **Done** | `ArchitecturalContentSchemaTestFillService` |
+| Formal publish (`published` only on `PASS`) | **Done** | `SchemaPublishReport.can_formally_publish` |
+| Phase 3.5 human sign-off artifact + gate | **Done** | `Phase35HumanSignoff` · `PHASE35_HUMAN_SIGNOFF_REQUIRED` |
+| Five-gate readiness report + CLI | **Done** | `template_publication_readiness.py` · `scripts/run_phase4_template_publication.py` |
 | Review UI schema correction + publish attempt | **Done** | `template_induction.py` |
 | Artifacts `content_schemas.json` / `schema_publish_report.json` | **Done** | `TemplateInductionService.export_artifacts` |
+| Induction → `ArchitecturalTemplate` bridge | **Done** | `InductionArchitecturalTemplatePublisher` · `architectural_template.json` |
 | Outline–Template co-planning / edit-based generation | **Co-plan Done / Edit Not** | Phase 5 co-plan; Phase 6 edit |
 
-**对外口径：** 内容 Schema 可自动归纳并经人工修正后发布；**不得**宣称编辑式生成或 Outline–Template 协同规划已完成。
+**对外口径：** 内容 Schema 可自动归纳并用于开发与测试；经人工修正且发布门 `PASS` 后方可标为正式发布模板。**不得**在未完成 Phase 3.5 真人签署前，将自动归纳结果对外宣称已验收。
+
+Tests: `tests/unit/visual/test_architectural_content_schema.py`, `tests/unit/visual/test_template_publication_readiness.py`.
 
 ## Template Induction Phase 5 (2026-07-21)
 
-Outline–Template co-planning (rule-driven V1) — **not** edit-based generation.
+**阶段状态：`EXPERIMENTAL`**
+
+Outline–Template co-planning (rule-driven V1) — **not** edit-based generation.  
+在至少一套真实模板正式发布前，协同规划结果仅用于实验与 UI 验证，不得驱动真实交付物。
 
 | Capability | Status | Location |
 |------------|--------|----------|
@@ -339,4 +384,10 @@ Outline–Template co-planning (rule-driven V1) — **not** edit-based generatio
 **对外口径：** 大纲可与归纳 Schema 做亲和映射并暴露未匹配模板页；**不得**宣称参考页编辑式生成、Scene Repair 或 Deck Coherence QA 已完成。
 
 Tests: `tests/unit/outline_template_co_planning/`.
+
+## Template Induction Phase 6
+
+**阶段状态：`HOLD`**
+
+Reference slide edit-based generation — **暂缓**，待 Phase 4 正式通过（五项门槛 + 真实模板发布）后再启动。
 

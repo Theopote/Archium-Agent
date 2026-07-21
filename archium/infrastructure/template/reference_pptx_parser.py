@@ -727,6 +727,10 @@ class ReferencePptxParser:
         except Exception:
             return None, [], [], [], []
 
+        # Slides may bleed slightly outside the artboard; clamp for persistence.
+        x = max(0.0, x)
+        y = max(0.0, y)
+
         shape_type = getattr(shape, "shape_type", None)
         is_picture = shape_type in {
             MSO_SHAPE_TYPE.PICTURE,

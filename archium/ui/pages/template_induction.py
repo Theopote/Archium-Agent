@@ -26,7 +26,21 @@ def _selected_workspace() -> Path | None:
 
 
 def _render_upload() -> None:
-    st.markdown("#### 1. 上传参考 PPTX")
+    st.markdown("#### 1. 上传或打开参考 PPTX")
+    open_path = st.text_input(
+        "打开已有归纳工作区（induction_result.json 所在目录）",
+        value=st.session_state.get("template_induction_workspace", ""),
+        key="induction_workspace_path",
+        placeholder="例如：output/phase35-validation/.../induction/<uuid>",
+    )
+    if st.button("打开工作区", use_container_width=True, key="induction_open_workspace"):
+        path = Path(open_path.strip())
+        if path.is_dir() and (path / "induction_result.json").is_file():
+            st.session_state.template_induction_workspace = str(path)
+            st.rerun()
+        else:
+            st.error("路径无效或缺少 induction_result.json")
+
     uploaded = st.file_uploader(
         "选择建筑参考汇报（建议 ≥15 页）",
         type=["pptx", "pptm"],
@@ -65,6 +79,101 @@ def _render_upload() -> None:
         st.rerun()
 
 
+def _render_phase35_signoff(service, workspace, presentation, induction) -> None:  # type: ignore[no-untyped-def]
+    st.markdown("##### Phase 3.5 真人结构复核签署")
+    signoff = induction.phase35_signoff
+    if signoff:
+        st.info(
+            f"已签署：`{signoff.status}` · {signoff.reviewer or '（未署名）'}"
+            + (f" · {signoff.run_reference}" if signoff.run_reference else "")
+        )
+        if signoff.notes:
+            st.caption(signoff.notes)
+    else:
+        st.warning("尚未完成 Phase 3.5 真人签署 — 正式发布模板将被阻断。")
+
+    with st.expander("记录 / 更新签署", expanded=signoff is None):
+        status = st.selectbox(
+            "签署结论",
+            options=["PASS", "PASS_WITH_WARNINGS", "NEEDS_REVIEW", "BLOCKED"],
+            index=1 if signoff is None else ["PASS", "PASS_WITH_WARNINGS", "NEEDS_REVIEW", "BLOCKED"].index(signoff.status),
+            key="phase35_signoff_status",
+        )
+        reviewer = st.text_input("复核人", value=signoff.reviewer if signoff else "", key="phase35_reviewer")
+        run_ref = st.text_input(
+            "Run 引用",
+            value=signoff.run_reference if signoff else "",
+            placeholder="phase35_20260721_074113",
+            key="phase35_run_ref",
+        )
+        notes = st.text_area("备注", value=signoff.notes if signoff else "", key="phase35_notes")
+        if st.button("保存签署", key="phase35_save_signoff"):
+            if not reviewer.strip():
+                st.error("请填写复核人")
+            else:
+                service.record_phase35_signoff(
+                    induction,
+                    status=status,
+                    reviewer=reviewer,
+                    notes=notes,
+                    run_reference=run_ref,
+                    workspace=workspace,
+                    presentation=presentation,
+                )
+                st.success("已保存 Phase 3.5 签署")
+                st.rerun()
+
+
+def _render_publication_readiness(presentation, induction) -> None:  # type: ignore[no-untyped-def]
+    from archium.application.visual.architectural_content_schema_publish_gate import (
+        ArchitecturalContentSchemaPublishGate,
+    )
+    from archium.application.visual.template_publication_readiness import (
+        TemplatePublicationReadinessService,
+    )
+    from archium.domain.visual.architectural_content_schema import (
+        ArchitecturalContentSchema,
+        SchemaPublishReport,
+    )
+
+    schemas = [
+        ArchitecturalContentSchema.model_validate(item) for item in induction.content_schemas
+    ]
+    if not schemas:
+        return
+
+    report_raw = induction.publish_report or {}
+    publish_report = (
+        SchemaPublishReport.model_validate(report_raw) if report_raw else None
+    )
+    if publish_report is None:
+        publish_report = ArchitecturalContentSchemaPublishGate().evaluate(
+            induction=induction,
+            presentation=presentation,
+            schemas=schemas,
+            formal_publish=True,
+        )
+
+    readiness = TemplatePublicationReadinessService().evaluate(
+        induction=induction,
+        presentation=presentation,
+        schemas=schemas,
+        publish_report=publish_report,
+    )
+
+    st.markdown("##### 正式发布门槛（Phase 4）")
+    st.caption(f"综合：`{readiness.overall}` · 可正式发布：{'是' if readiness.can_formally_publish else '否'}")
+    for gate in readiness.gates:
+        if gate.status == "PASS":
+            st.success(f"{gate.label} — {gate.detail}")
+        elif gate.status == "PASS_WITH_WARNINGS":
+            st.warning(f"{gate.label} — {gate.detail}")
+        elif gate.status in {"BLOCKED", "NEEDS_REVIEW"}:
+            st.error(f"{gate.label} — {gate.detail}")
+        else:
+            st.info(f"{gate.label} — {gate.detail}")
+
+
 def _render_review() -> None:
     workspace = _selected_workspace()
     if workspace is None:
@@ -90,6 +199,12 @@ def _render_review() -> None:
     )
     cols[2].metric("内容聚类", content_clusters)
     cols[3].metric("待复核", len(induction.low_confidence_slide_ids))
+
+    _render_phase35_signoff(service, workspace, presentation, induction)
+    manifest = workspace / "phase4_review_manifest.md"
+    if manifest.is_file():
+        st.caption(f"复核清单：`{manifest.name}`（可用 `run_phase4_review_manifest.py` 重新生成）")
+    _render_publication_readiness(presentation, induction)
 
     st.markdown("##### 功能分类")
     for clf in induction.classifications:
@@ -261,7 +376,11 @@ def _render_review() -> None:
 
     st.session_state.induction_cluster_layout = cluster_layout
 
-    st.markdown("##### 内容 Schema（Phase 4）")
+    st.markdown("##### 内容 Schema（Phase 4 · 开发放行 / 正式发布有条件）")
+    st.caption(
+        "自动归纳的 Schema 可用于开发与测试；仅当发布门为 `PASS` 且无阻断项时，"
+        "「正式发布模板」才会写入 `published` 状态。`PASS_WITH_WARNINGS` 仅表示可继续复核。"
+    )
     from archium.domain.visual.architectural_content_schema import (
         ArchitecturalContentSchema,
         SchemaReviewOverride,
@@ -341,10 +460,20 @@ def _render_review() -> None:
         if isinstance(warnings_raw, list):
             for warning in warnings_raw:
                 st.warning(str(warning))
+        fills_raw = report_raw.get("test_fill_results")
+        if isinstance(fills_raw, list) and fills_raw:
+            st.markdown("**测试内容填充**")
+            for fill in fills_raw:
+                if not isinstance(fill, dict):
+                    continue
+                ok = fill.get("render_valid")
+                sid = fill.get("representative_slide_id", "")
+                label = "通过" if ok else "未通过"
+                st.write(f"- `{sid}` · {label}")
 
     col_a, col_b = st.columns(2)
     save_clicked = col_a.button("保存修正", type="primary", use_container_width=True)
-    publish_clicked = col_b.button("尝试发布 Schema", use_container_width=True)
+    publish_clicked = col_b.button("正式发布模板（需 PASS）", use_container_width=True)
 
     if save_clicked:
         overrides: list[InductionReviewOverride] = []
@@ -403,8 +532,21 @@ def _render_review() -> None:
         service.export_artifacts(
             workspace, presentation, induction, schemas=schemas, publish_report=report
         )
-        if report.can_publish:
-            st.success(f"Schema 可发布：{report.status}")
+        if report.can_formally_publish:
+            try:
+                mat = service.materialize_architectural_template(
+                    induction, presentation, workspace, schemas=schemas
+                )
+                st.success(
+                    f"模板已正式发布 · ArchitecturalTemplate `{mat.template.id}` "
+                    f"（{len(mat.template.layouts)} layouts）"
+                )
+            except Exception as exc:  # noqa: BLE001
+                st.warning(f"Schema 已 published，但 ArchitecturalTemplate 物化失败：{exc}")
+        elif report.can_publish:
+            st.warning(
+                f"发布门为 `{report.status}`，尚有警告未清除，未写入 published 状态。"
+            )
         else:
             st.error(f"发布被阻断：{report.status}")
         st.rerun()
@@ -415,7 +557,8 @@ def _render_review() -> None:
         "输出：reference_presentation.json · slides/ · "
         "functional_classification.json · content_clusters.json · "
         "representative_slides.json · content_schemas.json · "
-        "schema_publish_report.json · outline_template_co_plan.json（协同规划后）"
+        "schema_publish_report.json · architectural_template.json · "
+        "outline_template_co_plan.json（协同规划后）"
     )
 
 
@@ -425,10 +568,11 @@ def _render_co_plan() -> None:
         return
 
     st.divider()
-    st.markdown("#### Outline–Template 协同规划（Phase 5）")
+    st.markdown("#### Outline–Template 协同规划（Phase 5 · 实验性）")
     st.caption(
         "将大纲章节映射到已归纳 Schema：模板亲和 / 兼容检查 / "
-        "未匹配模板页暴露 / Free Composition fallback。不做编辑式生成。"
+        "未匹配模板页暴露 / Free Composition fallback。实验性功能；"
+        "在至少一套真实模板正式发布前，不得用于真实交付物生成。"
     )
     scenario = st.radio(
         "示例大纲",
@@ -478,7 +622,10 @@ def _render_co_plan() -> None:
         sections=sections,
         target_slide_count=max(1, sum(s.estimated_slide_count for s in sections)),
     )
-    co_plan = service.co_plan_outline(induction, outline, workspace=workspace)
+    template = service.load_architectural_template(workspace)
+    co_plan = service.co_plan_outline(
+        induction, outline, workspace=workspace, template=template
+    )
     st.success(
         f"已规划 {co_plan.planned_page_count} 页 · "
         f"模板编辑 {len(co_plan.template_editing_page_ids)} · "
@@ -521,8 +668,9 @@ def render() -> None:
     st.title("模板归纳复核")
     st.caption(
         "从参考 PPTX 归纳功能页、内容聚类与建筑内容 Schema，"
-        "并支持 Outline–Template 协同规划。人工只做修正，不打分。"
-        "本阶段不做编辑式生成。"
+        "并支持 Outline–Template 协同规划（实验性）。"
+        "Phase 4 可开发测试；正式发布需通过发布门且完成 Phase 3.5 人工复核。"
+        "Phase 6 参考页编辑式生成暂缓。"
     )
     _render_upload()
     st.divider()

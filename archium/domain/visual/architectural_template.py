@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from pydantic import Field
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
+from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.render_scene import FontAsset
 
 
@@ -114,6 +115,10 @@ class ArchitecturalTemplateLayout(DomainModel):
     extracted_colors: list[str] = Field(default_factory=list)
     classification_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     classification_notes: str = ""
+    # Induction bridge — one layout per induced cluster / representative slide.
+    content_schema_id: str = ""
+    cluster_id: str = ""
+    representative_slide_id: str = ""
 
 
 class ArchitecturalTemplate(IdentifiedModel, VersionedModel, TimestampedModel):
@@ -133,6 +138,16 @@ class ArchitecturalTemplate(IdentifiedModel, VersionedModel, TimestampedModel):
     status: TemplateStatus = TemplateStatus.DRAFT
     workspace_dir: str = ""
     analysis_notes: list[str] = Field(default_factory=list)
+    # Template Induction → ArchitecturalTemplate bridge (Phase 4 publish).
+    induction_id: str = ""
+    induction_workspace_relative: str = ""
+    content_schemas: list[ArchitecturalContentSchema] = Field(default_factory=list)
+
+    def layout_for_schema(self, schema_id: str) -> ArchitecturalTemplateLayout | None:
+        for layout in self.layouts:
+            if layout.content_schema_id == schema_id:
+                return layout
+        return None
 
     def layout_by_id(self, layout_id: str) -> ArchitecturalTemplateLayout | None:
         for layout in self.layouts:

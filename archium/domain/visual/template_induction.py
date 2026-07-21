@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 from uuid import uuid4
@@ -98,6 +99,20 @@ class TemplateInductionStatus(StrEnum):
     PUBLISHED = "published"
 
 
+class Phase35HumanSignoff(DomainModel):
+    """Human exception review sign-off for real reference deck validation."""
+
+    status: Literal["PASS", "PASS_WITH_WARNINGS", "NEEDS_REVIEW", "BLOCKED"]
+    reviewer: str = ""
+    notes: str = ""
+    run_reference: str = ""
+    signed_at: datetime | None = None
+
+    @property
+    def allows_formal_publish(self) -> bool:
+        return self.status in {"PASS", "PASS_WITH_WARNINGS"}
+
+
 class TemplateInductionResult(IdentifiedModel, TimestampedModel):
     """File-oriented induction package for Phase 0–4 acceptance."""
 
@@ -115,6 +130,8 @@ class TemplateInductionResult(IdentifiedModel, TimestampedModel):
     publish_report: dict[str, object] | None = None
     warnings: list[str] = Field(default_factory=list)
     low_confidence_slide_ids: list[str] = Field(default_factory=list)
+    phase35_signoff: Phase35HumanSignoff | None = None
+    architectural_template_id: str = ""
 
     def classification_for(self, slide_id: str) -> FunctionalSlideClassification | None:
         for item in self.classifications:

@@ -80,6 +80,7 @@ class ArchitecturalContentSchema(TimestampedModel):
     name: str = Field(min_length=1, max_length=200)
     cluster_id: str = ""
     representative_slide_id: str = ""
+    cluster_member_count: int = Field(default=1, ge=1)
     functional_type: FunctionalSlideType = FunctionalSlideType.CONTENT
     content_type: ArchitecturalContentType = ArchitecturalContentType.UNKNOWN
 
@@ -113,9 +114,11 @@ class ArchitecturalContentSchema(TimestampedModel):
 
     architectural_constraints: list[str] = Field(default_factory=list)
     extraction_evidence: list[str] = Field(default_factory=list)
+    cluster_stats: dict[str, float | int] = Field(default_factory=dict)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     needs_review: bool = False
     human_corrected: bool = False
+    test_fill_passed: bool | None = None
 
     def required_roles(self) -> set[str]:
         return {item.role.value for item in self.required_content if item.required}
@@ -137,6 +140,22 @@ class SchemaPublishBlocker(DomainModel):
     message: str = Field(min_length=1)
     cluster_id: str = ""
     slide_id: str = ""
+    schema_id: str = ""
+
+
+class SchemaTestFillResult(DomainModel):
+    """Structural test fill against representative slide — not full RenderScene."""
+
+    schema_id: str = Field(min_length=1)
+    representative_slide_id: str = ""
+    required_slots_filled: bool = False
+    text_overflow: bool = False
+    missing_assets: bool = False
+    drawing_policy_passed: bool = True
+    reference_leakage: bool = False
+    render_valid: bool = False
+    blockers: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SchemaPublishReport(DomainModel):
@@ -146,10 +165,16 @@ class SchemaPublishReport(DomainModel):
     blockers: list[SchemaPublishBlocker] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     schema_ids: list[str] = Field(default_factory=list)
+    test_fill_results: list[SchemaTestFillResult] = Field(default_factory=list)
 
     @property
     def can_publish(self) -> bool:
         return self.status in {"PASS", "PASS_WITH_WARNINGS"}
+
+    @property
+    def can_formally_publish(self) -> bool:
+        """Formal template publication — warnings must be cleared first."""
+        return self.status == "PASS"
 
 
 class SchemaReviewOverride(DomainModel):

@@ -69,6 +69,17 @@ py scripts/run_phase35_reference_validation.py --max-slides 35 --require-screens
 py scripts/run_phase35_reference_validation.py --source "C:\Users\navib\Desktop\development\参考pptx\<file>.pptx" --max-slides 30
 ```
 
+### Phase 4 formal publish (after human review in UI)
+
+```powershell
+# Workspace path is in phase35_validation_report.json → workspace
+py scripts/run_phase4_template_publication.py --workspace "<induction-workspace>"
+py scripts/run_phase4_template_publication.py --workspace "<ws>" --record-signoff PASS_WITH_WARNINGS --reviewer "Name" --run-reference phase35_20260721_074113
+py scripts/run_phase4_template_publication.py --workspace "<ws>" --attempt-publish
+```
+
+Or use **模板归纳复核** → 打开工作区 → 记录 Phase 3.5 签署 → 保存修正 → **正式发布模板（需 PASS）**.
+
 ## Known gaps before formal Phase 3.5 PASS
 
 1. First 28 pages of 老旧小区 deck are photo-heavy — drawing pages start ~31+.

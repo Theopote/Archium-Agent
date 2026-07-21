@@ -8,8 +8,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from sqlalchemy.orm import Session
+
 from archium.application.visual.architectural_content_schema_extractor import (
     ArchitecturalContentSchemaExtractor,
+)
+from archium.application.visual.induction_architectural_template_publisher import (
+    InductionArchitecturalTemplatePublisher,
+    InductionTemplatePublishResult,
 )
 from archium.application.visual.architectural_content_schema_publish_gate import (
     ArchitecturalContentSchemaPublishGate,
@@ -55,6 +61,18 @@ class TemplateInductionRunResult:
 
 class TemplateInductionService:
     """Phase 0–5 induction: parse → classify → cluster → schema → co-plan → publish gate."""
+
+    @staticmethod
+    def _representative_classification_unconfirmed(
+        induction: TemplateInductionResult,
+    ) -> bool:
+        for cluster in induction.clusters:
+            if not cluster.representative_slide_id:
+                continue
+            classification = induction.classification_for(cluster.representative_slide_id)
+            if classification is not None and classification.needs_review:
+                return True
+        return False
 
     def __init__(
         self,
@@ -164,7 +182,10 @@ class TemplateInductionService:
         )
         induction.content_schemas = [s.model_dump(mode="json") for s in schemas]
         induction.publish_report = publish_report.model_dump(mode="json")
-        if publish_report.can_publish and not low_confidence:
+        if (
+            publish_report.can_publish
+            and not self._representative_classification_unconfirmed(induction)
+        ):
             induction.status = TemplateInductionStatus.READY
 
         artifact_paths = self.export_artifacts(
@@ -345,7 +366,8 @@ class TemplateInductionService:
         induction.publish_report = report.model_dump(mode="json")
         induction.status = (
             TemplateInductionStatus.REVIEW
-            if induction.low_confidence_slide_ids or not report.can_publish
+            if self._representative_classification_unconfirmed(induction)
+            or not report.can_publish
             else TemplateInductionStatus.READY
         )
         induction.touch()
@@ -418,13 +440,109 @@ class TemplateInductionService:
             for item in induction.content_schemas
         ]
         report = self._publish_gate.evaluate(
-            induction=induction, presentation=presentation, schemas=schema_list
+            induction=induction,
+            presentation=presentation,
+            schemas=schema_list,
+            formal_publish=True,
         )
         induction.publish_report = report.model_dump(mode="json")
-        if report.can_publish:
+        if report.can_formally_publish:
             induction.status = TemplateInductionStatus.PUBLISHED
             induction.touch()
         return report
+
+    def materialize_architectural_template(
+        self,
+        induction: TemplateInductionResult,
+        presentation: ReferencePresentation,
+        workspace: Path,
+        *,
+        schemas: list[ArchitecturalContentSchema] | None = None,
+        source_pptx: Path | None = None,
+        session: Session | None = None,
+        project_id: UUID | None = None,
+    ) -> InductionTemplatePublishResult:
+        """Write architectural_template.json (+ optional DB persist) from published induction."""
+        if induction.status != TemplateInductionStatus.PUBLISHED:
+            raise WorkflowError("请先完成 Schema 正式发布（status=published）。")
+        schema_list = schemas or [
+            ArchitecturalContentSchema.model_validate(item)
+            for item in induction.content_schemas
+        ]
+        publisher = InductionArchitecturalTemplatePublisher()
+        if session is not None:
+            result = publisher.publish_to_database(
+                session,
+                induction=induction,
+                presentation=presentation,
+                schemas=schema_list,
+                workspace=workspace,
+                source_pptx=source_pptx,
+                project_id=project_id,
+            )
+        else:
+            result = publisher.publish_to_workspace(
+                induction=induction,
+                presentation=presentation,
+                schemas=schema_list,
+                workspace=workspace,
+                source_pptx=source_pptx,
+            )
+        self.export_artifacts(workspace, presentation, induction, schemas=schema_list)
+        return result
+
+    def record_phase35_signoff(
+        self,
+        induction: TemplateInductionResult,
+        *,
+        status: str,
+        reviewer: str,
+        notes: str = "",
+        run_reference: str = "",
+        workspace: Path | None = None,
+        presentation: ReferencePresentation | None = None,
+    ) -> TemplateInductionResult:
+        from datetime import datetime, timezone
+
+        from archium.domain.visual.template_induction import Phase35HumanSignoff
+
+        induction.phase35_signoff = Phase35HumanSignoff(
+            status=status,  # type: ignore[arg-type]
+            reviewer=reviewer.strip(),
+            notes=notes.strip(),
+            run_reference=run_reference.strip(),
+            signed_at=datetime.now(timezone.utc),
+        )
+        induction.touch()
+        if workspace is not None and presentation is not None:
+            schemas = [
+                ArchitecturalContentSchema.model_validate(item)
+                for item in induction.content_schemas
+            ]
+            report = self._publish_gate.evaluate(
+                induction=induction,
+                presentation=presentation,
+                schemas=schemas,
+                formal_publish=True,
+            )
+            induction.publish_report = report.model_dump(mode="json")
+            self.export_artifacts(
+                workspace,
+                presentation,
+                induction,
+                schemas=schemas,
+                publish_report=report,
+            )
+            signoff_path = workspace / "phase35_human_signoff.json"
+            signoff_path.write_text(
+                json.dumps(
+                    induction.phase35_signoff.model_dump(mode="json"),
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        return induction
 
     def co_plan_outline(
         self,
@@ -571,7 +689,19 @@ class TemplateInductionService:
             )
             paths["outline_template_co_plan"] = co_plan_path
 
+        template_path = workspace / "architectural_template.json"
+        if template_path.is_file():
+            paths["architectural_template"] = template_path
+
         return paths
+
+    def load_architectural_template(self, workspace: Path) -> ArchitecturalTemplate | None:
+        path = workspace / "architectural_template.json"
+        if not path.is_file():
+            return None
+        return ArchitecturalTemplate.model_validate(
+            json.loads(path.read_text(encoding="utf-8"))
+        )
 
     def load_workspace(self, workspace: Path) -> tuple[ReferencePresentation, TemplateInductionResult]:
         presentation = ReferencePresentation.model_validate(
@@ -580,6 +710,13 @@ class TemplateInductionService:
         induction = TemplateInductionResult.model_validate(
             json.loads((workspace / "induction_result.json").read_text(encoding="utf-8"))
         )
+        signoff_path = workspace / "phase35_human_signoff.json"
+        if signoff_path.is_file() and induction.phase35_signoff is None:
+            from archium.domain.visual.template_induction import Phase35HumanSignoff
+
+            induction.phase35_signoff = Phase35HumanSignoff.model_validate(
+                json.loads(signoff_path.read_text(encoding="utf-8"))
+            )
         return presentation, induction
 
     def content_cluster_count(self, induction: TemplateInductionResult) -> int:
