@@ -14,6 +14,16 @@ from archium.domain.visual.architectural_template import (
 from archium.domain.visual.reference_slide_matching import DeckContext, ReferenceSlideCandidate
 from archium.domain.visual.template_induction import ArchitecturalContentType
 
+_PATTERN_PAGE_BOOST: dict[str, set[TemplatePageType]] = {
+    "hero_image": {TemplatePageType.COVER, TemplatePageType.PHOTO_GRID},
+    "image_grid": {TemplatePageType.PHOTO_GRID},
+    "full_bleed_drawing": {TemplatePageType.DRAWING_FOCUS},
+    "two_column": {TemplatePageType.TEXT_ARGUMENT, TemplatePageType.PHOTO_GRID, TemplatePageType.CASE_COMPARISON},
+    "metric_cards": {TemplatePageType.METRIC},
+    "text_column": {TemplatePageType.TEXT_ARGUMENT, TemplatePageType.AGENDA},
+    "section_splash": {TemplatePageType.SECTION, TemplatePageType.COVER},
+}
+
 _REUSE_PENALTY = 0.18
 _WEAK_MATCH = 0.35
 _FREE_COMPOSITION_SCORE = 0.12
@@ -208,6 +218,11 @@ class ReferenceSlideMatcher:
         if content_schema.needs_review and not content_schema.human_corrected:
             score -= 0.08
             reasons.append("schema needs_review")
+
+        pattern = content_schema.visual_layout_pattern.value
+        if pattern in _PATTERN_PAGE_BOOST and layout.page_type in _PATTERN_PAGE_BOOST[pattern]:
+            score += 0.06
+            reasons.append(f"visual_layout {pattern}")
 
         score = max(0.0, min(1.0, score))
         return score, reasons, blockers

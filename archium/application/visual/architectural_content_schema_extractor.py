@@ -243,6 +243,7 @@ class ArchitecturalContentSchemaExtractor:
             f"representative={slide.slide_id}",
             f"cluster_members={stats.get('member_count', 1)}",
             f"content_type={content_type.value}",
+            f"visual_layout={cluster.visual_layout_pattern.value}",
             f"images_rep={image_count}",
             f"images_cluster_median={cluster_image_median}",
             f"images_cluster_max={cluster_image_max}",
@@ -583,6 +584,9 @@ class ArchitecturalContentSchemaExtractor:
             cluster_member_count=int(stats.get("member_count", 1)),
             functional_type=functional,
             content_type=content_type,
+            visual_layout_pattern=classification.visual_layout_pattern
+            if classification is not None
+            else cluster.visual_layout_pattern,
             page_purpose=purpose,
             audience_effect=_AUDIENCE_BY_FUNCTIONAL.get(functional, ""),
             central_claim_required=central_claim,

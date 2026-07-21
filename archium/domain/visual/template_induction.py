@@ -43,11 +43,28 @@ class ArchitecturalContentType(StrEnum):
     UNKNOWN = "unknown"
 
 
+class VisualLayoutPattern(StrEnum):
+    """Visual composition layer — layout geometry independent of content semantics."""
+
+    HERO_IMAGE = "hero_image"
+    TWO_COLUMN = "two_column"
+    IMAGE_GRID = "image_grid"
+    METRIC_CARDS = "metric_cards"
+    FULL_BLEED_DRAWING = "full_bleed_drawing"
+    TEXT_OVERLAY = "text_overlay"
+    CARD_LAYOUT = "card_layout"
+    TEXT_COLUMN = "text_column"
+    SECTION_SPLASH = "section_splash"
+    MINIMAL = "minimal"
+    UNKNOWN = "unknown"
+
+
 class FunctionalSlideClassification(DomainModel):
     slide_id: str = Field(min_length=1)
     slide_index: int = Field(ge=0)
     functional_type: FunctionalSlideType = FunctionalSlideType.UNKNOWN
     content_type: ArchitecturalContentType = ArchitecturalContentType.UNKNOWN
+    visual_layout_pattern: VisualLayoutPattern = VisualLayoutPattern.UNKNOWN
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
     needs_review: bool = False
@@ -57,6 +74,7 @@ class ReferenceSlideCluster(DomainModel):
     id: str = Field(default_factory=lambda: str(uuid4()), min_length=1)
     functional_type: FunctionalSlideType = FunctionalSlideType.CONTENT
     content_type: ArchitecturalContentType = ArchitecturalContentType.UNKNOWN
+    visual_layout_pattern: VisualLayoutPattern = VisualLayoutPattern.UNKNOWN
     slide_ids: list[str] = Field(default_factory=list)
     representative_slide_id: str = ""
     visual_similarity: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -87,6 +105,7 @@ class InductionReviewOverride(DomainModel):
     slide_id: str = Field(min_length=1)
     functional_type: FunctionalSlideType | None = None
     content_type: ArchitecturalContentType | None = None
+    visual_layout_pattern: VisualLayoutPattern | None = None
     cluster_id: str | None = None
     is_representative: bool | None = None
     notes: str = ""

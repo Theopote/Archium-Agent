@@ -12,12 +12,16 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 
+from archium.application.visual.visual_layout_pattern_classifier import (
+    dominant_visual_layout_pattern,
+)
 from archium.domain.visual.reference_slide import ReferenceSlideSnapshot
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
     FunctionalSlideClassification,
     FunctionalSlideType,
     ReferenceSlideCluster,
+    VisualLayoutPattern,
 )
 
 _DEFAULT_DISTANCE_THRESHOLD = 0.42
@@ -76,6 +80,7 @@ class ReferenceSlideClusterer:
                     ReferenceSlideCluster(
                         functional_type=clf.functional_type,
                         content_type=clf.content_type,
+                        visual_layout_pattern=clf.visual_layout_pattern,
                         slide_ids=[slide.slide_id],
                         representative_slide_id=slide.slide_id,
                         visual_similarity=1.0,
@@ -133,6 +138,7 @@ class ReferenceSlideClusterer:
                     ReferenceSlideCluster(
                         functional_type=FunctionalSlideType.CONTENT,
                         content_type=content_type,
+                        visual_layout_pattern=self._cluster_visual_pattern(group, class_by_id),
                         slide_ids=[s.slide_id for s in group],
                         representative_slide_id="",  # filled by selector
                         visual_similarity=round(visual_sim, 3),
@@ -153,6 +159,18 @@ class ReferenceSlideClusterer:
             return by_id[ids[0]].slide_index if ids[0] in by_id else 10_000
 
         return sorted(clusters, key=sort_key)
+
+    @staticmethod
+    def _cluster_visual_pattern(
+        group: list[ReferenceSlideSnapshot],
+        class_by_id: dict[str, FunctionalSlideClassification],
+    ) -> VisualLayoutPattern:
+        patterns = [
+            class_by_id[s.slide_id].visual_layout_pattern
+            for s in group
+            if s.slide_id in class_by_id
+        ]
+        return dominant_visual_layout_pattern(patterns)
 
     def _group_connected_components(
         self,

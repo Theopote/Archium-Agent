@@ -12,6 +12,7 @@ from archium.domain.visual.template_induction import (
     FunctionalSlideType,
     InductionReviewOverride,
     OutlineTemplateCoPlan,
+    VisualLayoutPattern,
 )
 from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import format_user_error
@@ -210,7 +211,8 @@ def _render_review() -> None:
     for clf in induction.classifications:
         slide = next((s for s in presentation.slides if s.slide_id == clf.slide_id), None)
         with st.expander(
-            f"{clf.slide_id} · {clf.functional_type.value} / {clf.content_type.value} · "
+            f"{clf.slide_id} · {clf.functional_type.value} / {clf.content_type.value} / "
+            f"{clf.visual_layout_pattern.value} · "
             f"置信度 {clf.confidence:.2f}"
             + (" · 需复核" if clf.needs_review else ""),
             expanded=clf.needs_review,
@@ -244,11 +246,20 @@ def _render_review() -> None:
                     ),
                     key=f"ct_{clf.slide_id}",
                 )
+                vlp = st.selectbox(
+                    "视觉布局",
+                    options=[t.value for t in VisualLayoutPattern],
+                    index=[t.value for t in VisualLayoutPattern].index(
+                        clf.visual_layout_pattern.value
+                    ),
+                    key=f"vlp_{clf.slide_id}",
+                )
                 st.caption("依据：" + "；".join(clf.evidence[:4]))
                 st.session_state.setdefault("induction_overrides", {})
                 st.session_state["induction_overrides"][clf.slide_id] = {
                     "functional_type": ft,
                     "content_type": ct,
+                    "visual_layout_pattern": vlp,
                 }
 
     st.markdown("##### 聚类与代表页")
@@ -395,6 +406,7 @@ def _render_review() -> None:
     for schema in schemas:
         with st.expander(
             f"{schema.name} · 代表 {schema.representative_slide_id} · "
+            f"{schema.visual_layout_pattern.value} · "
             f"置信度 {schema.confidence:.2f}"
             + (" · 需确认" if schema.needs_review and not schema.human_corrected else ""),
             expanded=schema.needs_review and not schema.human_corrected,
@@ -484,6 +496,9 @@ def _render_review() -> None:
                     slide_id=slide_id,
                     functional_type=FunctionalSlideType(payload["functional_type"]),
                     content_type=ArchitecturalContentType(payload["content_type"]),
+                    visual_layout_pattern=VisualLayoutPattern(
+                        payload.get("visual_layout_pattern", VisualLayoutPattern.UNKNOWN.value)
+                    ),
                 )
             )
         for cluster_id, slide_id in st.session_state.get("induction_rep_overrides", {}).items():

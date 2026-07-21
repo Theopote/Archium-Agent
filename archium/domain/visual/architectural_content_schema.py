@@ -12,6 +12,7 @@ from archium.domain._base import DomainModel, TimestampedModel
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
     FunctionalSlideType,
+    VisualLayoutPattern,
 )
 
 
@@ -83,6 +84,7 @@ class ArchitecturalContentSchema(TimestampedModel):
     cluster_member_count: int = Field(default=1, ge=1)
     functional_type: FunctionalSlideType = FunctionalSlideType.CONTENT
     content_type: ArchitecturalContentType = ArchitecturalContentType.UNKNOWN
+    visual_layout_pattern: VisualLayoutPattern = VisualLayoutPattern.UNKNOWN
 
     page_purpose: str = Field(min_length=1)
     audience_effect: str = ""

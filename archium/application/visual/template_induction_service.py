@@ -31,6 +31,7 @@ from archium.application.visual.outline_template_editing_service import (
 )
 from archium.application.visual.reference_slide_clusterer import ReferenceSlideClusterer
 from archium.application.visual.representative_slide_selector import RepresentativeSlideSelector
+from archium.application.visual.visual_layout_pattern_classifier import VisualLayoutPatternClassifier
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.outline import OutlinePlan
@@ -92,6 +93,7 @@ class TemplateInductionService:
         publish_gate: ArchitecturalContentSchemaPublishGate | None = None,
         co_planner: OutlineTemplateCoPlanningService | None = None,
         template_editor: OutlineTemplateEditingService | None = None,
+        visual_layout_classifier: VisualLayoutPatternClassifier | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._parser = parser or ReferencePptxParser()
@@ -102,6 +104,9 @@ class TemplateInductionService:
         self._publish_gate = publish_gate or ArchitecturalContentSchemaPublishGate()
         self._co_planner = co_planner or OutlineTemplateCoPlanningService()
         self._template_editor = template_editor or OutlineTemplateEditingService()
+        self._visual_layout_classifier = (
+            visual_layout_classifier or VisualLayoutPatternClassifier()
+        )
 
     def workspace_root(self, induction_id: UUID | str) -> Path:
         path = self._settings.output_path / "template-induction" / str(induction_id)
@@ -160,6 +165,10 @@ class TemplateInductionService:
             )
 
         classifications = self._classifier.classify_all(presentation.slides)
+        classifications = self._visual_layout_classifier.classify_all(
+            presentation.slides,
+            classifications,
+        )
         clusters = self._clusterer.cluster(presentation.slides, classifications)
         clusters, scores = self._selector.select_for_clusters(clusters, presentation.slides)
 
@@ -306,6 +315,9 @@ class TemplateInductionService:
                 clf.content_type = override.content_type
                 clf.evidence = [*clf.evidence, "human override: content_type"]
                 type_changed = True
+            if override.visual_layout_pattern is not None:
+                clf.visual_layout_pattern = override.visual_layout_pattern
+                clf.evidence = [*clf.evidence, "human override: visual_layout_pattern"]
             if override.is_representative and override.cluster_id:
                 for cluster in induction.clusters:
                     if cluster.id == override.cluster_id:
@@ -327,6 +339,10 @@ class TemplateInductionService:
                 clusters, presentation.slides
             )
         elif type_changed:
+            induction.classifications = self._visual_layout_classifier.classify_all(
+                presentation.slides,
+                induction.classifications,
+            )
             clusters = self._clusterer.cluster(
                 presentation.slides, induction.classifications
             )
