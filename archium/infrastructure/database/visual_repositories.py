@@ -8,11 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from archium.domain._base import new_uuid
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
+from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import visual_mappers
@@ -22,6 +24,7 @@ from archium.infrastructure.database.models import (
     DesignSystemORM,
     LayoutPlanORM,
     RenderSceneORM,
+    SceneChangeProposalORM,
     VisualIntentORM,
 )
 
@@ -189,6 +192,122 @@ class RenderSceneRepository:
             .order_by(RenderSceneORM.updated_at.desc())
         )
         return [visual_mappers.render_scene_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+_ACTIVE_PROPOSAL_STATUSES = (
+    ProposalStatus.DRAFT,
+    ProposalStatus.READY,
+    ProposalStatus.READY_WITH_WARNINGS,
+)
+
+
+class SceneProposalRepository:
+    """Persist scene change proposals with scene snapshots stored by reference."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._scenes = RenderSceneRepository(session)
+
+    def save(self, proposal: SceneChangeProposal, *, supersede_previous: bool = True) -> SceneChangeProposal:
+        try:
+            if supersede_previous:
+                self._supersede_active_for_slide(
+                    proposal.slide_id,
+                    exclude_proposal_id=proposal.proposal_id,
+                )
+
+            base_scene = self._scenes.save(proposal.base_scene)
+            proposed_scene = self._candidate_scene_snapshot(proposal)
+            saved_proposed = self._scenes.save(proposed_scene)
+
+            orm = self._session.get(SceneChangeProposalORM, proposal.proposal_id)
+            hydrated = proposal.model_copy(
+                update={
+                    "base_scene": base_scene,
+                    "proposed_scene": saved_proposed,
+                    "base_scene_id": base_scene.id,
+                    "proposed_scene_id": saved_proposed.id,
+                }
+            )
+            if orm is None:
+                orm = visual_mappers.scene_change_proposal_to_orm(
+                    hydrated,
+                    base_scene_id=base_scene.id,
+                    proposed_scene_id=saved_proposed.id,
+                )
+                self._session.add(orm)
+            else:
+                visual_mappers.scene_change_proposal_to_orm(
+                    hydrated,
+                    base_scene_id=base_scene.id,
+                    proposed_scene_id=saved_proposed.id,
+                    target=orm,
+                )
+            self._session.flush()
+            return self._hydrate(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save scene change proposal", exc)
+            raise
+
+    def get(self, proposal_id: UUID) -> SceneChangeProposal | None:
+        orm = self._session.get(SceneChangeProposalORM, proposal_id)
+        return self._hydrate(orm) if orm else None
+
+    def get_active_for_slide(self, slide_id: UUID) -> SceneChangeProposal | None:
+        statuses = [status.value for status in _ACTIVE_PROPOSAL_STATUSES]
+        stmt = (
+            select(SceneChangeProposalORM)
+            .where(
+                SceneChangeProposalORM.slide_id == slide_id,
+                SceneChangeProposalORM.status.in_(statuses),
+            )
+            .order_by(SceneChangeProposalORM.created_at.desc())
+        )
+        orm = self._session.scalars(stmt).first()
+        return self._hydrate(orm) if orm else None
+
+    def list_by_slide(self, slide_id: UUID) -> list[SceneChangeProposal]:
+        stmt = (
+            select(SceneChangeProposalORM)
+            .where(SceneChangeProposalORM.slide_id == slide_id)
+            .order_by(SceneChangeProposalORM.created_at.desc())
+        )
+        return [item for orm in self._session.scalars(stmt) if (item := self._hydrate(orm))]
+
+    def _candidate_scene_snapshot(self, proposal: SceneChangeProposal) -> RenderScene:
+        proposed = proposal.proposed_scene.model_copy(deep=True)
+        if proposal.proposed_scene_id is not None:
+            proposed = proposed.model_copy(update={"id": proposal.proposed_scene_id})
+        elif proposed.id == proposal.base_scene.id:
+            proposed = proposed.model_copy(update={"id": new_uuid()})
+        return proposed
+
+    def _supersede_active_for_slide(
+        self,
+        slide_id: UUID,
+        *,
+        exclude_proposal_id: UUID | None = None,
+    ) -> None:
+        statuses = [status.value for status in _ACTIVE_PROPOSAL_STATUSES]
+        stmt = select(SceneChangeProposalORM).where(
+            SceneChangeProposalORM.slide_id == slide_id,
+            SceneChangeProposalORM.status.in_(statuses),
+        )
+        if exclude_proposal_id is not None:
+            stmt = stmt.where(SceneChangeProposalORM.id != exclude_proposal_id)
+        for orm in self._session.scalars(stmt):
+            orm.status = ProposalStatus.SUPERSEDED.value
+
+    def _hydrate(self, orm: SceneChangeProposalORM) -> SceneChangeProposal | None:
+        base_scene = self._scenes.get(orm.base_scene_id)
+        proposed_scene = self._scenes.get(orm.proposed_scene_id)
+        if base_scene is None or proposed_scene is None:
+            return None
+        return visual_mappers.scene_change_proposal_to_domain(
+            orm,
+            base_scene=base_scene,
+            proposed_scene=proposed_scene,
+        )
 
 
 class ArchitecturalTemplateRepository:

@@ -13,7 +13,7 @@ from archium.application.visual.scene_proposal_service import (
     summarize_patch_action,
 )
 from archium.application.visual.studio_scene_service import StudioSceneService
-from archium.config.settings import Settings
+from archium.config.settings import Settings, get_settings
 from archium.domain.visual.page_quality import IssueSeverity
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import (
@@ -31,20 +31,44 @@ def _proposal_session_key(slide_id: UUID) -> str:
 
 
 def get_stored_proposal(slide_id: UUID) -> SceneChangeProposal | None:
-    payload = st.session_state.get(_proposal_session_key(slide_id))
-    if payload is None:
-        return None
-    try:
-        return SceneChangeProposal.model_validate(payload)
-    except Exception:
-        return None
+    cached = st.session_state.get(_proposal_session_key(slide_id))
+    if cached is not None:
+        try:
+            return SceneChangeProposal.model_validate(cached)
+        except Exception:
+            st.session_state.pop(_proposal_session_key(slide_id), None)
+
+    with get_session() as session:
+        from archium.application.visual.scene_proposal_service import SceneProposalService
+
+        settings = get_settings()
+        proposal = SceneProposalService(session, settings=settings).load_active_proposal(slide_id)
+        if proposal is not None:
+            st.session_state[_proposal_session_key(slide_id)] = proposal.model_dump(mode="json")
+        return proposal
 
 
 def store_proposal(proposal: SceneChangeProposal) -> None:
-    st.session_state[_proposal_session_key(proposal.slide_id)] = proposal.model_dump(mode="json")
+    with get_session() as session:
+        from archium.application.visual.scene_proposal_service import SceneProposalService
+
+        settings = get_settings()
+        persisted = SceneProposalService(session, settings=settings).save_proposal(proposal)
+    st.session_state[_proposal_session_key(proposal.slide_id)] = persisted.model_dump(mode="json")
 
 
 def clear_proposal(slide_id: UUID) -> None:
+    proposal = get_stored_proposal(slide_id)
+    if proposal is not None and proposal.status in {
+        ProposalStatus.READY,
+        ProposalStatus.READY_WITH_WARNINGS,
+        ProposalStatus.DRAFT,
+    }:
+        with get_session() as session:
+            from archium.application.visual.scene_proposal_service import SceneProposalService
+
+            settings = get_settings()
+            SceneProposalService(session, settings=settings).mark_proposal_superseded(proposal)
     st.session_state.pop(_proposal_session_key(slide_id), None)
 
 
@@ -241,8 +265,12 @@ def _render_decision_buttons(
         use_container_width=True,
         key=f"studio_reject_proposal_{proposal.proposal_id}",
     ):
-        store_proposal(proposal.model_copy(update={"status": ProposalStatus.REJECTED}))
-        st.info("已拒绝该提案，正式 Scene 未改变。")
+        with get_session() as session:
+            from archium.application.visual.scene_proposal_service import SceneProposalService
+
+            rejected = SceneProposalService(session, settings=settings).reject_proposal(proposal)
+        clear_proposal(slide.id)
+        st.info(f"已拒绝该提案（{rejected.status.value}），正式 Scene 未改变。")
         st.rerun()
     if clear_col.button(
         "清除提案",
@@ -269,7 +297,8 @@ def _accept_proposal(
         with st.spinner("正在接受提案并创建 Scene Revision…"), get_session() as session:
             service = SceneProposalService(session, settings=settings)
             if current_scene is not None and service.is_stale(proposal, current_scene):
-                store_proposal(proposal.model_copy(update={"status": ProposalStatus.SUPERSEDED}))
+                service.mark_proposal_superseded(proposal)
+                clear_proposal(slide.id)
                 raise WorkflowError("页面在提案生成后已被修改，请重新生成提案。")
             decision = None
             if partial:
@@ -285,14 +314,15 @@ def _accept_proposal(
                     proposal_id=proposal.proposal_id,
                     accepted_action_ids=accepted_action_ids,
                 )
-            service.accept_proposal(
+            result = service.accept_proposal(
                 proposal,
                 slide,
                 decision=decision,
                 current_scene=current_scene,
             )
         clear_proposal(slide.id)
-        st.success("提案已接受，Scene Revision 已保存。")
+        status_label = result.proposal.status.value
+        st.success(f"提案已接受（{status_label}），Scene Revision 已保存。")
         st.rerun()
     except WorkflowError as exc:
         st.error(format_user_error(exc))

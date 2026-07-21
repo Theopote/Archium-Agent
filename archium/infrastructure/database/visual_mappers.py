@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
-from archium.domain._base import model_to_dict
+from uuid import UUID
+
+from archium.domain._base import model_to_dict, utc_now
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
+from archium.domain.visual.scene_change_proposal import (
+    CommandProposalResult,
+    ProposalDecision,
+    ProposalStatus,
+    SceneChangeProposal,
+)
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.models import (
     ArchitecturalTemplateORM,
@@ -15,6 +23,7 @@ from archium.infrastructure.database.models import (
     DesignSystemORM,
     LayoutPlanORM,
     RenderSceneORM,
+    SceneChangeProposalORM,
     VisualIntentORM,
 )
 
@@ -121,6 +130,101 @@ def render_scene_to_orm(
 
 def render_scene_to_domain(orm: RenderSceneORM) -> RenderScene:
     return RenderScene.model_validate(orm.payload_json)
+
+
+def _models_to_json(items: list[object]) -> list[dict[str, object]]:
+    return [
+        model_to_dict(item)  # type: ignore[arg-type]
+        for item in items
+        if hasattr(item, "model_dump")
+    ]
+
+
+def _scene_change_proposal_payload(proposal: SceneChangeProposal) -> dict[str, object]:
+    return {
+        "commands": _models_to_json(proposal.commands),
+        "requested_commands": _models_to_json(proposal.requested_commands),
+        "successful_commands": _models_to_json(proposal.successful_commands),
+        "failed_commands": _models_to_json(proposal.failed_commands),
+        "command_results": _models_to_json(proposal.command_results),
+        "patch_actions": _models_to_json(proposal.patch_actions),
+        "reasons": proposal.reasons,
+        "qa_before": _models_to_json(proposal.qa_before),
+        "qa_after": _models_to_json(proposal.qa_after),
+        "qa_before_by_layer": {
+            layer: _models_to_json(items)
+            for layer, items in proposal.qa_before_by_layer.items()
+        },
+        "qa_after_by_layer": {
+            layer: _models_to_json(items)
+            for layer, items in proposal.qa_after_by_layer.items()
+        },
+        "decision": model_to_dict(proposal.decision) if proposal.decision is not None else None,
+    }
+
+
+def scene_change_proposal_to_orm(
+    proposal: SceneChangeProposal,
+    *,
+    base_scene_id: UUID,
+    proposed_scene_id: UUID,
+    target: SceneChangeProposalORM | None = None,
+) -> SceneChangeProposalORM:
+    orm = target or SceneChangeProposalORM(id=proposal.proposal_id)
+    orm.id = proposal.proposal_id
+    orm.presentation_id = proposal.presentation_id
+    orm.slide_id = proposal.slide_id
+    orm.base_revision_id = proposal.base_revision_id
+    orm.base_scene_id = base_scene_id
+    orm.proposed_scene_id = proposed_scene_id
+    orm.base_scene_hash = proposal.base_scene_hash
+    orm.status = proposal.status.value
+    orm.decided_at = proposal.decided_at
+    orm.payload_json = _scene_change_proposal_payload(proposal)
+    orm.created_at = proposal.created_at
+    orm.updated_at = utc_now()
+    return orm
+
+
+def scene_change_proposal_to_domain(
+    orm: SceneChangeProposalORM,
+    *,
+    base_scene: RenderScene,
+    proposed_scene: RenderScene,
+) -> SceneChangeProposal:
+    payload = orm.payload_json
+    decision_payload = payload.get("decision")
+    decision = (
+        ProposalDecision.model_validate(decision_payload)
+        if isinstance(decision_payload, dict)
+        else None
+    )
+    return SceneChangeProposal(
+        proposal_id=orm.id,
+        presentation_id=orm.presentation_id,
+        slide_id=orm.slide_id,
+        base_revision_id=orm.base_revision_id,
+        base_scene_id=orm.base_scene_id,
+        proposed_scene_id=orm.proposed_scene_id,
+        base_scene_hash=orm.base_scene_hash,
+        base_scene=base_scene,
+        proposed_scene=proposed_scene,
+        commands=payload.get("commands") or payload.get("successful_commands") or [],
+        requested_commands=payload.get("requested_commands") or [],
+        successful_commands=payload.get("successful_commands") or payload.get("commands") or [],
+        failed_commands=payload.get("failed_commands") or [],
+        command_results=payload.get("command_results") or [],
+        patch_actions=payload.get("patch_actions") or [],
+        reasons=list(payload.get("reasons") or []),
+        qa_before=payload.get("qa_before") or [],
+        qa_after=payload.get("qa_after") or [],
+        qa_before_by_layer=payload.get("qa_before_by_layer") or {},
+        qa_after_by_layer=payload.get("qa_after_by_layer") or {},
+        status=ProposalStatus(orm.status),
+        decision=decision,
+        decided_at=orm.decided_at,
+        created_at=orm.created_at,
+    )
 
 
 def architectural_template_to_orm(

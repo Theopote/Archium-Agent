@@ -878,6 +878,41 @@ class RenderSceneORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
 
 
+class SceneChangeProposalORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "scene_change_proposals"
+    __table_args__ = (
+        Index("ix_scene_change_proposals_slide_id", "slide_id"),
+        Index("ix_scene_change_proposals_presentation_id", "presentation_id"),
+        Index("ix_scene_change_proposals_status", "status"),
+    )
+
+    presentation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("presentations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    slide_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("slides.id", ondelete="CASCADE"), nullable=False
+    )
+    base_revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    base_scene_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("render_scenes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    proposed_scene_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("render_scenes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    base_scene_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="ready")
+    decided_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
 class ArchitecturalTemplateORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "architectural_templates"
     __table_args__ = (

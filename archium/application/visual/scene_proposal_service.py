@@ -25,6 +25,7 @@ from archium.application.visual.studio_command_executor import (
 )
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings, get_settings
+from archium.domain._base import utc_now
 from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
@@ -38,6 +39,7 @@ from archium.domain.visual.render_scene import (
 )
 from archium.domain.visual.scene_change_proposal import (
     CommandProposalResult,
+    ProposalAcceptResult,
     ProposalDecision,
     ProposalQAComparison,
     ProposalStatus,
@@ -47,7 +49,10 @@ from archium.domain.visual.scene_change_proposal import (
 from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
-from archium.infrastructure.database.visual_repositories import RenderSceneRepository
+from archium.infrastructure.database.visual_repositories import (
+    RenderSceneRepository,
+    SceneProposalRepository,
+)
 
 
 class SceneProposalService:
@@ -66,6 +71,7 @@ class SceneProposalService:
             asset_validator=AssetBindingValidator(session, settings=self._settings),
         )
         self._scenes = RenderSceneRepository(session)
+        self._proposals = SceneProposalRepository(session)
         self._presentations = PresentationRepository(session)
         self._scene_history = SceneHistoryService(session)
         self._studio_scene = StudioSceneService(session, settings=self._settings)
@@ -191,14 +197,51 @@ class SceneProposalService:
             status=status,
         )
 
+    def save_proposal(self, proposal: SceneChangeProposal) -> SceneChangeProposal:
+        """Persist proposal metadata and scene snapshot references."""
+        return self._proposals.save(proposal)
+
+    def load_proposal(self, proposal_id: UUID) -> SceneChangeProposal | None:
+        return self._proposals.get(proposal_id)
+
+    def load_active_proposal(self, slide_id: UUID) -> SceneChangeProposal | None:
+        return self._proposals.get_active_for_slide(slide_id)
+
     def qa_comparison(self, proposal: SceneChangeProposal) -> ProposalQAComparison:
         return compare_proposal_qa(proposal.qa_before, proposal.qa_after)
 
     def is_stale(self, proposal: SceneChangeProposal, current_scene: RenderScene) -> bool:
         return compute_scene_hash(current_scene) != proposal.base_scene_hash
 
-    def reject_proposal(self, proposal: SceneChangeProposal) -> SceneChangeProposal:
-        return proposal.model_copy(update={"status": ProposalStatus.REJECTED})
+    def reject_proposal(
+        self,
+        proposal: SceneChangeProposal,
+        *,
+        notes: str = "",
+    ) -> SceneChangeProposal:
+        rejected = proposal.model_copy(
+            update={
+                "status": ProposalStatus.REJECTED,
+                "decided_at": utc_now(),
+                "decision": ProposalDecision(
+                    proposal_id=proposal.proposal_id,
+                    rejected_action_ids=[
+                        action.action_id for action in proposal.patch_actions
+                    ],
+                    notes=notes,
+                ),
+            }
+        )
+        return self._proposals.save(rejected, supersede_previous=False)
+
+    def mark_proposal_superseded(self, proposal: SceneChangeProposal) -> SceneChangeProposal:
+        superseded = proposal.model_copy(
+            update={
+                "status": ProposalStatus.SUPERSEDED,
+                "decided_at": utc_now(),
+            }
+        )
+        return self._proposals.save(superseded, supersede_previous=False)
 
     def accept_proposal(
         self,
@@ -207,16 +250,19 @@ class SceneProposalService:
         decision: ProposalDecision | None = None,
         *,
         current_scene: RenderScene | None = None,
-    ) -> SceneRevision:
+    ) -> ProposalAcceptResult:
         if proposal.status in {ProposalStatus.ACCEPTED, ProposalStatus.PARTIALLY_ACCEPTED}:
             raise WorkflowError("该提案已被接受。")
         if proposal.status == ProposalStatus.REJECTED:
             raise WorkflowError("已拒绝的提案不能再次接受。")
+        if proposal.status == ProposalStatus.SUPERSEDED:
+            raise WorkflowError("该提案已过期，请重新生成提案。")
 
         live_scene = current_scene
         if live_scene is None and slide.layout_plan_id is not None:
             live_scene = self._scenes.get_by_layout_plan(slide.layout_plan_id)
         if live_scene is not None and self.is_stale(proposal, live_scene):
+            self.mark_proposal_superseded(proposal)
             raise WorkflowError(
                 "页面在提案生成后已被修改，请基于最新版本重新生成提案。"
             )
@@ -253,7 +299,34 @@ class SceneProposalService:
             slide.presentation_id,
             layout_plan_id=saved.layout_plan_id,
         )
-        return scene_revision
+        updated_proposal = self._record_proposal_decision(proposal, decision)
+        return ProposalAcceptResult(revision=scene_revision, proposal=updated_proposal)
+
+    def _record_proposal_decision(
+        self,
+        proposal: SceneChangeProposal,
+        decision: ProposalDecision | None,
+    ) -> SceneChangeProposal:
+        if decision is None:
+            final_status = ProposalStatus.ACCEPTED
+        elif len(decision.accepted_action_ids) == len(proposal.patch_actions):
+            final_status = ProposalStatus.ACCEPTED
+        else:
+            final_status = ProposalStatus.PARTIALLY_ACCEPTED
+        resolved_decision = decision
+        if resolved_decision is None:
+            resolved_decision = ProposalDecision(
+                proposal_id=proposal.proposal_id,
+                accepted_action_ids=[action.action_id for action in proposal.patch_actions],
+            )
+        updated = proposal.model_copy(
+            update={
+                "status": final_status,
+                "decision": resolved_decision,
+                "decided_at": utc_now(),
+            }
+        )
+        return self._proposals.save(updated, supersede_previous=False)
 
     def _resolve_accepted_scene(
         self,

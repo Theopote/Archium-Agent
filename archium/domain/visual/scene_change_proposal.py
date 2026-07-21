@@ -45,6 +45,15 @@ SceneRevisionSource = Literal[
 ]
 
 
+class ProposalDecision(DomainModel):
+    """User decision on a scene change proposal."""
+
+    proposal_id: UUID
+    accepted_action_ids: list[UUID] = Field(default_factory=list)
+    rejected_action_ids: list[UUID] = Field(default_factory=list)
+    notes: str = ""
+
+
 class SceneChangeProposal(DomainModel):
     """A reviewable before/after scene mutation with command traceability."""
 
@@ -53,6 +62,8 @@ class SceneChangeProposal(DomainModel):
     slide_id: UUID
 
     base_revision_id: UUID | None = None
+    base_scene_id: UUID | None = None
+    proposed_scene_id: UUID | None = None
     base_scene_hash: str = Field(min_length=1)
     base_scene: RenderScene
     proposed_scene: RenderScene
@@ -74,16 +85,9 @@ class SceneChangeProposal(DomainModel):
     qa_after_by_layer: dict[str, list[QualityIssue]] = Field(default_factory=dict)
 
     status: ProposalStatus = ProposalStatus.READY
+    decision: ProposalDecision | None = None
+    decided_at: datetime | None = None
     created_at: datetime = Field(default_factory=utc_now)
-
-
-class ProposalDecision(DomainModel):
-    """User decision on a scene change proposal."""
-
-    proposal_id: UUID
-    accepted_action_ids: list[UUID] = Field(default_factory=list)
-    rejected_action_ids: list[UUID] = Field(default_factory=list)
-    notes: str = ""
 
 
 class SceneRevision(TimestampedModel):
@@ -96,6 +100,13 @@ class SceneRevision(TimestampedModel):
     source: SceneRevisionSource = "ai_proposal"
     scene_hash: str = Field(min_length=1)
     commands: list[StudioCommand] = Field(default_factory=list)
+
+
+class ProposalAcceptResult(DomainModel):
+    """Outcome of accepting a scene change proposal."""
+
+    revision: SceneRevision
+    proposal: SceneChangeProposal
 
 
 class ProposalQAComparison(DomainModel):

@@ -20,7 +20,7 @@ from archium.domain.visual.render_scene import (
     TextNode,
     compute_scene_hash,
 )
-from archium.domain.visual.scene_change_proposal import ProposalStatus
+from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.studio_command import (
     IncreaseDrawingReadabilityCommand,
@@ -660,3 +660,155 @@ def test_create_proposal_raises_when_all_commands_fail() -> None:
     except WorkflowError:
         raised = True
     assert raised
+
+
+class _RecordingProposalRepository:
+    def __init__(self) -> None:
+        self.saved: SceneChangeProposal | None = None
+
+    def save(
+        self,
+        proposal: SceneChangeProposal,
+        *,
+        supersede_previous: bool = True,
+    ) -> SceneChangeProposal:
+        self.saved = proposal
+        return proposal
+
+
+def _service_with_recording_repo() -> tuple[SceneProposalService, _RecordingProposalRepository]:
+    service = SceneProposalService.__new__(SceneProposalService)
+    repo = _RecordingProposalRepository()
+    service._proposals = repo  # type: ignore[assignment]
+    return service, repo
+
+
+def test_record_proposal_decision_full_accept() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    service, repo = _service_with_recording_repo()
+    proposal = _proposal_service().create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+
+    updated = service._record_proposal_decision(proposal, None)
+
+    assert updated.status == ProposalStatus.ACCEPTED
+    assert updated.decision is not None
+    assert updated.decision.accepted_action_ids == [
+        action.action_id for action in proposal.patch_actions
+    ]
+    assert updated.decided_at is not None
+    assert repo.saved is not None
+    assert repo.saved.status == ProposalStatus.ACCEPTED
+
+
+def test_record_proposal_decision_partial_accept() -> None:
+    scene = _mixed_scene(
+        _text_node(node_id="title", text="旧标题"),
+        _text_node(node_id="body", text="旧正文"),
+    )
+    presentation_id = uuid4()
+    service, repo = _service_with_recording_repo()
+    proposal = _proposal_service().create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新标题",
+            ),
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="body",
+                new_text="新正文",
+            ),
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    from archium.domain.visual.scene_change_proposal import ProposalDecision
+
+    title_action = proposal.patch_actions[0]
+    updated = service._record_proposal_decision(
+        proposal,
+        ProposalDecision(
+            proposal_id=proposal.proposal_id,
+            accepted_action_ids=[title_action.action_id],
+        ),
+    )
+
+    assert updated.status == ProposalStatus.PARTIALLY_ACCEPTED
+    assert updated.decision is not None
+    assert updated.decision.accepted_action_ids == [title_action.action_id]
+    assert repo.saved is not None
+    assert repo.saved.status == ProposalStatus.PARTIALLY_ACCEPTED
+
+
+def test_mark_proposal_superseded_persists_status() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    service, repo = _service_with_recording_repo()
+    proposal = _proposal_service().create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+
+    updated = service.mark_proposal_superseded(proposal)
+
+    assert updated.status == ProposalStatus.SUPERSEDED
+    assert updated.decided_at is not None
+    assert repo.saved is not None
+    assert repo.saved.status == ProposalStatus.SUPERSEDED
+
+
+def test_reject_proposal_persists_decision() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    service, repo = _service_with_recording_repo()
+    proposal = _proposal_service().create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+
+    updated = service.reject_proposal(proposal, notes="defer")
+
+    assert updated.status == ProposalStatus.REJECTED
+    assert updated.decided_at is not None
+    assert updated.decision is not None
+    assert updated.decision.rejected_action_ids == [
+        action.action_id for action in proposal.patch_actions
+    ]
+    assert updated.decision.notes == "defer"
+    assert repo.saved is not None
+    assert repo.saved.status == ProposalStatus.REJECTED
