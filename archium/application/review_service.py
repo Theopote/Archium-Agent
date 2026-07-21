@@ -20,6 +20,7 @@ from archium.application.review_models import (
     OutlineSectionUpdate,
     OutlineUpdate,
     PresentationReviewContext,
+    SlideAssetBindingUpdate,
     SlideIntentUpdate,
     SlideUpdate,
     StorylineUpdate,
@@ -30,6 +31,7 @@ from archium.domain.enums import (
     NarrativeStage,
     OutlineAudienceMode,
     RevisionSource,
+    SlideAssetBindingRole,
     SlideStatus,
     SlideType,
     WorkflowStatus,
@@ -39,6 +41,7 @@ from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.domain.review import ReviewIssue
+from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
@@ -228,6 +231,23 @@ class PresentationReviewService:
         outline.audience_mode = audience_mode
         outline.sections = [_outline_section_from_update(item) for item in update.sections]
         outline.page_intents = [_slide_intent_from_update(item) for item in update.page_intents]
+        outline.page_asset_bindings = [
+            _slide_asset_binding_from_update(item) for item in update.page_asset_bindings
+        ]
+        outline.approval_status = ApprovalStatus.DRAFT
+        outline.touch()
+        return self._presentations.save_outline(outline)
+
+    def update_page_asset_bindings(
+        self,
+        outline_id: UUID,
+        bindings: list[SlideAssetBindingUpdate],
+    ) -> OutlinePlan:
+        outline = self._require_outline(outline_id)
+        self._outline_history.record_snapshot(outline, RevisionSource.MANUAL_EDIT)
+        outline.page_asset_bindings = [
+            _slide_asset_binding_from_update(item) for item in bindings
+        ]
         outline.approval_status = ApprovalStatus.DRAFT
         outline.touch()
         return self._presentations.save_outline(outline)
@@ -416,6 +436,24 @@ def _slide_intent_from_update(update: SlideIntentUpdate) -> SlideIntent:
         forbidden_content=[item.strip() for item in update.forbidden_content if item.strip()],
         expected_layout=update.expected_layout.strip(),
         notes=update.notes.strip(),
+    )
+
+
+def _slide_asset_binding_from_update(update: SlideAssetBindingUpdate) -> SlideAssetBinding:
+    try:
+        role = SlideAssetBindingRole(update.binding_role.strip().casefold())
+    except ValueError:
+        role = SlideAssetBindingRole.PROJECT_PHOTO
+    slide_id = None
+    if update.slide_id and str(update.slide_id).strip():
+        slide_id = UUID(str(update.slide_id).strip())
+    return SlideAssetBinding(
+        page_order=update.page_order,
+        asset_id=UUID(str(update.asset_id).strip()),
+        binding_role=role,
+        user_description=update.user_description.strip(),
+        required=update.required,
+        slide_id=slide_id,
     )
 
 

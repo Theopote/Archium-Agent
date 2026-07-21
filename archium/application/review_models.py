@@ -96,6 +96,18 @@ class SlideIntentUpdate:
 
 
 @dataclass(frozen=True)
+class SlideAssetBindingUpdate:
+    """Editable page→asset binding (page_materials)."""
+
+    page_order: int
+    asset_id: str
+    binding_role: str = "project_photo"
+    user_description: str = ""
+    required: bool = True
+    slide_id: str | None = None
+
+
+@dataclass(frozen=True)
 class OutlineUpdate:
     title: str
     thesis: str
@@ -105,6 +117,7 @@ class OutlineUpdate:
     audience_mode: str = "government"
     sections: list[OutlineSectionUpdate] = field(default_factory=list)
     page_intents: list[SlideIntentUpdate] = field(default_factory=list)
+    page_asset_bindings: list[SlideAssetBindingUpdate] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

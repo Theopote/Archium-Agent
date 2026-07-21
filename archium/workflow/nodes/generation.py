@@ -306,10 +306,22 @@ class GenerationNodesMixin(WorkflowNodeBase):
             manuscript, use_pipeline = self._manuscript_context(state)
             request = state.get("request")
             page_intents = None
-            if request is not None and getattr(request, "page_instructions", None):
-                from archium.domain.slide_intent import slide_intents_from_page_instructions
+            page_asset_bindings = None
+            if request is not None:
+                if getattr(request, "page_instructions", None):
+                    from archium.domain.slide_intent import slide_intents_from_page_instructions
 
-                page_intents = slide_intents_from_page_instructions(list(request.page_instructions))
+                    page_intents = slide_intents_from_page_instructions(
+                        list(request.page_instructions)
+                    )
+                if getattr(request, "page_materials", None):
+                    from archium.domain.slide_asset_binding import (
+                        slide_asset_bindings_from_page_materials,
+                    )
+
+                    page_asset_bindings = slide_asset_bindings_from_page_materials(
+                        request.page_materials
+                    ) or None
             outline = self._runtime.presentation_service.generate_outline_plan(
                 project_id,
                 brief,
@@ -319,6 +331,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 manuscript=manuscript,
                 use_manuscript_pipeline=use_pipeline,
                 page_intents=page_intents,
+                page_asset_bindings=page_asset_bindings,
             )
             if state.get("require_outline_review"):
                 outline.approval_status = ApprovalStatus.PENDING

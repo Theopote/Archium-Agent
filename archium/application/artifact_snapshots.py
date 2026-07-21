@@ -97,6 +97,10 @@ def outline_to_snapshot(outline: OutlinePlan) -> dict[str, object]:
             }
             for section in outline.sections
         ],
+        "page_intents": [intent.model_dump(mode="json") for intent in outline.page_intents],
+        "page_asset_bindings": [
+            binding.model_dump(mode="json") for binding in outline.page_asset_bindings
+        ],
     }
 
 

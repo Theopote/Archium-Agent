@@ -16,6 +16,7 @@ from archium.application.review_models import (
     NarrativePositionUpdate,
     OutlineSectionUpdate,
     OutlineUpdate,
+    SlideAssetBindingUpdate,
     SlideIntentUpdate,
     SlideUpdate,
     StorylineUpdate,
@@ -30,6 +31,7 @@ from archium.domain.enums import (
     ReviewLayer,
     ReviewSeverity,
     ReviewStatus,
+    SlideAssetBindingRole,
     SlideStatus,
     SlideType,
 )
@@ -712,6 +714,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             if str(row.get("id", "")).strip()
         ]
         page_intents = _slide_intent_updates_from_editor(edited_intents)
+        page_asset_bindings = _slide_asset_binding_updates_from_outline(outline)
         update = OutlineUpdate(
             title=outline.title,
             thesis=thesis,
@@ -721,6 +724,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             audience_mode=audience_mode.value,
             sections=sections,
             page_intents=page_intents,
+            page_asset_bindings=page_asset_bindings,
         )
         with get_session() as session:
             review_service = PresentationReviewService(session)
@@ -767,6 +771,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
                             )
                             for intent in saved.page_intents
                         ],
+                        page_asset_bindings=_slide_asset_binding_updates_from_outline(saved),
                     ),
                 )
             if approve_clicked:
@@ -775,6 +780,11 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
                 review_service.reject_outline(outline.id)
         st.success(f"{_OUTLINE_LABEL} 已更新。")
         st.rerun()
+
+    _render_page_asset_binding_editor(
+        outline=outline,
+        project_id=context.presentation.project_id,
+    )
 
 
 def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
@@ -1214,4 +1224,157 @@ def _slide_intent_updates_from_editor(edited_intents: pd.DataFrame) -> list[Slid
             )
         )
     return updates
+
+
+_BINDING_ROLE_LABELS = {
+    SlideAssetBindingRole.PRIMARY_DRAWING: "主图纸",
+    SlideAssetBindingRole.PROJECT_PHOTO: "项目照片",
+    SlideAssetBindingRole.SUPPORTING_PHOTO: "辅助照片",
+    SlideAssetBindingRole.REFERENCE_CASE: "参考案例",
+    SlideAssetBindingRole.METRIC_SOURCE: "指标数据源",
+    SlideAssetBindingRole.BACKGROUND: "背景",
+    SlideAssetBindingRole.LOGO: "Logo",
+}
+
+
+def _slide_asset_binding_updates_from_outline(outline: object) -> list[SlideAssetBindingUpdate]:
+    return [
+        SlideAssetBindingUpdate(
+            page_order=binding.page_order,
+            asset_id=str(binding.asset_id),
+            binding_role=binding.binding_role.value,
+            user_description=binding.user_description,
+            required=binding.required,
+            slide_id=str(binding.slide_id) if binding.slide_id else None,
+        )
+        for binding in list(getattr(outline, "page_asset_bindings", []) or [])
+    ]
+
+
+def _render_page_asset_binding_editor(*, outline: object, project_id: UUID) -> None:
+    from archium.application.asset_provenance import format_asset_option_label
+    from archium.infrastructure.database.repositories import AssetRepository
+
+    st.markdown("**页面素材绑定（page_materials）**")
+    st.caption("把项目素材显式绑到某一页；生成与匹配时优先尊重这些绑定，而不是让 AI 猜测。")
+
+    with get_session() as session:
+        assets = AssetRepository(session).list_by_project(project_id)
+    assets_by_id = {asset.id: asset for asset in assets}
+
+    bindings = list(getattr(outline, "page_asset_bindings", []) or [])
+    if bindings:
+        rows = []
+        for index, binding in enumerate(
+            sorted(bindings, key=lambda item: (item.page_order, item.binding_role.value))
+        ):
+            asset = assets_by_id.get(binding.asset_id)
+            rows.append(
+                {
+                    "index": index,
+                    "页序": binding.page_order,
+                    "角色": _BINDING_ROLE_LABELS.get(binding.binding_role, binding.binding_role.value),
+                    "素材": asset.filename if asset is not None else str(binding.asset_id),
+                    "说明": binding.user_description or "—",
+                    "必用": "是" if binding.required else "否",
+                }
+            )
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+
+        remove_options = {
+            str(index): (
+                f"p{row['页序'] + 1} · {row['角色']} · {row['素材']}"
+            )
+            for index, row in enumerate(rows)
+        }
+        remove_key = st.selectbox(
+            "移除绑定",
+            options=[""] + list(remove_options.keys()),
+            format_func=lambda value: "— 选择 —" if value == "" else remove_options[value],
+            key=f"remove_binding_{getattr(outline, 'id', 'outline')}",
+        )
+        if st.button("删除所选绑定", key=f"delete_binding_{getattr(outline, 'id', 'outline')}"):
+            if remove_key:
+                remaining = [
+                    binding
+                    for index, binding in enumerate(
+                        sorted(bindings, key=lambda item: (item.page_order, item.binding_role.value))
+                    )
+                    if str(index) != remove_key
+                ]
+                with get_session() as session:
+                    PresentationReviewService(session).update_page_asset_bindings(
+                        getattr(outline, "id"),
+                        [
+                            SlideAssetBindingUpdate(
+                                page_order=item.page_order,
+                                asset_id=str(item.asset_id),
+                                binding_role=item.binding_role.value,
+                                user_description=item.user_description,
+                                required=item.required,
+                                slide_id=str(item.slide_id) if item.slide_id else None,
+                            )
+                            for item in remaining
+                        ],
+                    )
+                st.success("已删除素材绑定。")
+                st.rerun()
+    else:
+        st.info("尚未绑定页面素材。从下方把素材挂到指定页序。")
+
+    if not assets:
+        st.warning("当前项目还没有可绑定的素材，请先上传图纸/照片/图表。")
+        return
+
+    st.markdown("添加绑定")
+    asset_options = {str(asset.id): format_asset_option_label(asset) for asset in assets}
+    col1, col2 = st.columns(2)
+    page_order = col1.number_input(
+        "页序（从 0 起）",
+        min_value=0,
+        max_value=max(int(getattr(outline, "target_slide_count", 1)) - 1, 0),
+        value=0,
+        step=1,
+        key=f"bind_page_order_{getattr(outline, 'id', 'outline')}",
+    )
+    role = col2.selectbox(
+        "绑定角色",
+        options=list(SlideAssetBindingRole),
+        format_func=lambda value: _BINDING_ROLE_LABELS.get(value, value.value),
+        key=f"bind_role_{getattr(outline, 'id', 'outline')}",
+    )
+    asset_id = st.selectbox(
+        "项目素材",
+        options=list(asset_options.keys()),
+        format_func=lambda value: asset_options[value],
+        key=f"bind_asset_{getattr(outline, 'id', 'outline')}",
+    )
+    description = st.text_input(
+        "素材说明（给生成模型）",
+        value="",
+        key=f"bind_desc_{getattr(outline, 'id', 'outline')}",
+    )
+    required = st.checkbox(
+        "必用（禁止自动匹配覆盖）",
+        value=True,
+        key=f"bind_required_{getattr(outline, 'id', 'outline')}",
+    )
+    if st.button("绑定到该页", key=f"add_binding_{getattr(outline, 'id', 'outline')}", use_container_width=True):
+        updates = _slide_asset_binding_updates_from_outline(outline)
+        updates.append(
+            SlideAssetBindingUpdate(
+                page_order=int(page_order),
+                asset_id=str(asset_id),
+                binding_role=role.value,
+                user_description=description.strip(),
+                required=bool(required),
+            )
+        )
+        with get_session() as session:
+            PresentationReviewService(session).update_page_asset_bindings(
+                getattr(outline, "id"),
+                updates,
+            )
+        st.success(f"已将素材绑定到第 {int(page_order) + 1} 页。")
+        st.rerun()
 

@@ -22,6 +22,7 @@ from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
