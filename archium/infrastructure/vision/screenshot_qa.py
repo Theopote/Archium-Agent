@@ -18,6 +18,7 @@ except ImportError:  # pragma: no cover
     ImageStat = None  # type: ignore[assignment]
 
 from archium.domain.visual.scene_qa import PostRenderCheckCode
+from archium.infrastructure.vision.pillow_pixels import iter_image_pixels
 
 _BLANK_STDEV = 12.0
 _BLANK_NEAR_WHITE_RATIO = 0.92
@@ -143,7 +144,7 @@ def check_drawing_blur(gray: Image.Image) -> ScreenshotCheck:
 def average_hash(image: Image.Image, *, size: int = 8) -> int:
     """Simple aHash for duplicate-page detection."""
     gray = ImageOps.grayscale(image).resize((size, size))
-    pixels = list(gray.getdata())
+    pixels = list(iter_image_pixels(gray))
     avg = sum(pixels) / max(1, len(pixels))
     bits = 0
     for index, value in enumerate(pixels):
@@ -160,8 +161,8 @@ def compare_png_pptx_screenshots(png: Image.Image, pptx_shot: Image.Image) -> Sc
     """Mean-squared error style difference between two page screenshots."""
     left = ImageOps.grayscale(png).resize((160, 90))
     right = ImageOps.grayscale(pptx_shot).resize((160, 90))
-    lp = list(left.getdata())
-    rp = list(right.getdata())
+    lp = list(iter_image_pixels(left))
+    rp = list(iter_image_pixels(right))
     mse = sum((a - b) ** 2 for a, b in zip(lp, rp, strict=True)) / max(1, len(lp))
     passed = mse < _PNG_PPTX_MSE
     return ScreenshotCheck(

@@ -358,14 +358,22 @@ class ReviewNodesMixin(WorkflowNodeBase):
             manuscript = self._coerce_manuscript(state.get("manuscript"))
             if manuscript is None:
                 return False
-            refreshed = PresentationManuscriptService(self._runtime.session).get(manuscript.id)
-            return refreshed is not None and refreshed.status == ManuscriptStatus.READY
+            refreshed_manuscript = PresentationManuscriptService(
+                self._runtime.session
+            ).get(manuscript.id)
+            return (
+                refreshed_manuscript is not None
+                and refreshed_manuscript.status == ManuscriptStatus.READY
+            )
         if gate == "brief":
             brief = self._coerce_domain(PresentationBrief, state.get("brief"))
             if brief is None:
                 return False
-            refreshed = self._presentations.get_brief(brief.id)
-            return refreshed is not None and refreshed.approval_status == ApprovalStatus.APPROVED
+            refreshed_brief = self._presentations.get_brief(brief.id)
+            return (
+                refreshed_brief is not None
+                and refreshed_brief.approval_status == ApprovalStatus.APPROVED
+            )
         if gate == "storyline":
             storyline = self._coerce_domain(Storyline, state.get("storyline"))
             if storyline is None:

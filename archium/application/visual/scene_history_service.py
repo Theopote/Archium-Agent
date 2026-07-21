@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -55,7 +56,7 @@ class SceneHistoryService:
             lineage_id=slide.lineage_id,
             presentation_id=slide.presentation_id,
             change_source=change_source,
-            snapshot=snapshot,
+            snapshot=cast(dict[str, object], snapshot),
             note=note,
         )
         scene_revision = SceneRevision(

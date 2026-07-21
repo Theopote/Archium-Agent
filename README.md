@@ -589,6 +589,12 @@ Copyright (c) 2026 Theopote and Archium contributors
 
 ## 遗留模块
 
-以下模块属于 v0.1 实验性功能，将在后续阶段移入 `legacy/` 并与主汇报流程解耦：
+v0.1 实验性功能已移入 `legacy/` 包，根目录保留薄 shim（`main.py`、`config.py` 等）以兼容旧脚本。主产品入口：
 
-- `file_manager.py` — AI 辅助文件整理（**CLI 中唯一会移动本地文件的路径**；执行前会展示分类方案并要求二次确认）
+- **工作台**：`streamlit run app.py` 或 `archium ui`
+- **Legacy CLI**：`archium-legacy`（等价于 `python main.py`）
+
+Legacy 能力（与主 Brief → Storyline → SlideSpec 流程解耦）：
+
+- `legacy/file_manager.py` — AI 辅助文件整理（**CLI 中唯一会移动本地文件的路径**；执行前会展示分类方案并要求二次确认）
+- `legacy/ppt_generator.py` — 快速 Marp PPT 生成

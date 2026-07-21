@@ -20,6 +20,7 @@ from archium.domain.document import DocumentChunk
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import DocumentRepository, FactRepository
 from archium.infrastructure.llm.presentation_schemas import (
@@ -193,7 +194,7 @@ def resolve_design_context_bundle(
     session: Session,
     project_id: UUID,
     *,
-    manuscript,
+    manuscript: PresentationManuscript | None,
     use_manuscript_pipeline: bool,
     query: str | None = None,
     max_chunks: int = 24,
@@ -217,7 +218,7 @@ def resolve_design_context_text(
     session: Session,
     project_id: UUID,
     *,
-    manuscript,
+    manuscript: PresentationManuscript | None,
     use_manuscript_pipeline: bool,
     query: str | None = None,
     settings: Settings | None = None,

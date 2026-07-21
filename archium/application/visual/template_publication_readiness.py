@@ -230,6 +230,7 @@ class TemplatePublicationReadinessService:
             )
 
         statuses = {g.status for g in gates}
+        overall: Literal["PASS", "PASS_WITH_WARNINGS", "NEEDS_REVIEW", "BLOCKED", "PENDING"]
         if "BLOCKED" in statuses:
             overall = "BLOCKED"
         elif "PENDING" in statuses or "NEEDS_REVIEW" in statuses:

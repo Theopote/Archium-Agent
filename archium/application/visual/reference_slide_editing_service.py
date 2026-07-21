@@ -28,7 +28,10 @@ from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRole,
 )
-from archium.domain.visual.architectural_template import ArchitecturalTemplate
+from archium.domain.visual.architectural_template import (
+    ArchitecturalTemplate,
+    ArchitecturalTemplateLayout,
+)
 from archium.domain.visual.design_system import DesignSystem, TextStyleToken
 from archium.domain.visual.reference_slide import (
     REFERENCE_TEMPLATE_ASSET_ORIGIN,
@@ -403,7 +406,7 @@ class ReferenceSlideEditingService:
         template: ArchitecturalTemplate,
         layout_id: str | None,
         schema: ArchitecturalContentSchema,
-    ):
+    ) -> ArchitecturalTemplateLayout | None:
         if layout_id:
             for layout in template.layouts:
                 if layout.id == layout_id:
@@ -448,9 +451,7 @@ class ReferenceSlideEditingService:
             return True
         if element.likely_background_or_decoration:
             return True
-        if element.repeats_across_pages:
-            return True
-        return False
+        return bool(element.repeats_across_pages)
 
     def _resolve_text_role(self, element: ReferenceElement) -> str:
         role = (element.semantic_role or "").strip().lower()

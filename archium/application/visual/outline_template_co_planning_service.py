@@ -642,9 +642,12 @@ class OutlineTemplateCoPlanningService:
                         ),
                     )
                 )
-            if hydrated.max_text_length and section.key_message:
-                if len(section.key_message) > hydrated.max_text_length:
-                    warnings.append(
+            if (
+                hydrated.max_text_length
+                and section.key_message
+                and len(section.key_message) > hydrated.max_text_length
+            ):
+                warnings.append(
                         CoPlanCapacityWarning(
                             code="TEXT_EXCEEDS_SCHEMA_BUDGET",
                             severity="blocker",

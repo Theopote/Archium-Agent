@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -22,6 +23,7 @@ from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -207,7 +209,7 @@ class SceneProposalService:
         scene: RenderScene,
         presentation_id: UUID,
         slide_order: int,
-    ) -> list:
+    ) -> list[QualityIssue]:
         return self._qa_issues_for_scene(scene, presentation_id, slide_order)
 
     def _qa_issues_for_scene(
@@ -215,7 +217,7 @@ class SceneProposalService:
         scene: RenderScene,
         presentation_id: UUID,
         slide_order: int,
-    ):
+    ) -> list[QualityIssue]:
         report = run_scene_semantic_qa(
             presentation_id,
             [scene],
@@ -283,10 +285,8 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
         node.overflow_policy = "shrink"
         return
     if action.action_type == "bump_font_size" and isinstance(node, TextNode):
-        try:
+        with contextlib.suppress(TypeError, ValueError):
             node.font_size = max(node.font_size, float(action.after_value or node.font_size))
-        except (TypeError, ValueError):
-            pass
 
 
 def summarize_patch_action(action: ScenePatchAction) -> str:
@@ -308,7 +308,7 @@ def summarize_patch_action(action: ScenePatchAction) -> str:
     return action.reason or action.action_type
 
 
-def count_issues_by_severity(issues: list, severity) -> int:
+def count_issues_by_severity(issues: list[QualityIssue], severity: IssueSeverity) -> int:
     return sum(1 for issue in issues if issue.severity == severity)
 
 

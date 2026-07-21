@@ -21,6 +21,7 @@ from uuid import UUID
 
 from archium.domain.visual_qa import VisualQACheck, VisualQAReport
 from archium.infrastructure.vision.analyzer_version import ANALYZER_VERSION
+from archium.infrastructure.vision.pillow_pixels import iter_image_pixels
 
 _MIN_PRESENTATION_WIDTH = 800
 _MIN_PRESENTATION_HEIGHT = 600
@@ -138,7 +139,7 @@ def check_dominant_colors(image: Image.Image) -> VisualQACheck:
     sample.thumbnail((256, 256))
     quantized = sample.quantize(colors=8, method=Image.Quantize.MEDIANCUT)
     palette = quantized.getpalette() or []
-    counts = Counter(quantized.getdata())
+    counts = Counter(iter_image_pixels(quantized))
     ranked: list[dict[str, object]] = []
     total = sum(counts.values()) or 1
     for color_index, count in counts.most_common(5):
@@ -190,7 +191,7 @@ def check_edge_clipping(image: Image.Image) -> VisualQACheck:
         ("right", (width - edge, 0, width, height)),
     ):
         region = gray.crop(box)
-        pixels = list(region.getdata())
+        pixels = list(iter_image_pixels(region))
         dark = sum(1 for value in pixels if value < dark_threshold)
         edge_ratios[name] = dark / max(len(pixels), 1)
 
@@ -220,7 +221,7 @@ def check_text_density(image: Image.Image) -> VisualQACheck:
     ocr_chars, ocr_engine = _try_ocr_char_count(image)
     gray = ImageOps.grayscale(image)
     edges = gray.filter(ImageFilter.FIND_EDGES)
-    edge_pixels = list(edges.getdata())
+    edge_pixels = list(iter_image_pixels(edges))
     edge_density = sum(1 for value in edge_pixels if value > 40) / max(len(edge_pixels), 1)
 
     if ocr_chars is not None:
@@ -349,11 +350,11 @@ def classify_drawing(image: Image.Image) -> tuple[str, float, dict[str, object]]
     gray = ImageOps.grayscale(image)
     stdev = ImageStat.Stat(gray).stddev[0]
     edge = gray.filter(ImageFilter.FIND_EDGES)
-    edge_ratio = sum(1 for value in list(edge.getdata()) if value > 35) / max(width * height, 1)
+    edge_ratio = sum(1 for value in iter_image_pixels(edge) if value > 35) / max(width * height, 1)
 
     sample = image.copy()
     sample.thumbnail((128, 128))
-    color_count = len(set(sample.quantize(colors=12, method=Image.Quantize.MEDIANCUT).getdata()))
+    color_count = len(set(iter_image_pixels(sample.quantize(colors=12, method=Image.Quantize.MEDIANCUT))))
 
     scores = {
         "site_plan": _score_site_plan(aspect, edge_ratio, color_count),
@@ -389,11 +390,11 @@ def _corner_symbol_score(region: Image.Image) -> float:
     if width < 8 or height < 8:
         return 0.0
     edges = region.filter(ImageFilter.FIND_EDGES)
-    edge_ratio = sum(1 for value in list(edges.getdata()) if value > 45) / max(width * height, 1)
-    dark_ratio = sum(1 for value in list(region.getdata()) if value < 120) / max(width * height, 1)
+    edge_ratio = sum(1 for value in iter_image_pixels(edges) if value > 45) / max(width * height, 1)
+    dark_ratio = sum(1 for value in iter_image_pixels(region) if value < 120) / max(width * height, 1)
     upper_focus = region.crop((0, 0, width, max(1, height // 2)))
     upper_edges = upper_focus.filter(ImageFilter.FIND_EDGES)
-    upper_ratio = sum(1 for value in list(upper_edges.getdata()) if value > 45) / max(width * max(1, height // 2), 1)
+    upper_ratio = sum(1 for value in iter_image_pixels(upper_edges) if value > 45) / max(width * max(1, height // 2), 1)
     return min(1.0, edge_ratio * 4 + dark_ratio * 0.8 + upper_ratio * 2)
 
 
@@ -401,11 +402,11 @@ def _legend_score(region: Image.Image) -> tuple[float, int]:
     sample = region.copy()
     sample.thumbnail((160, 120))
     quantized = sample.quantize(colors=8, method=Image.Quantize.MEDIANCUT)
-    counts = Counter(quantized.getdata())
+    counts = Counter(iter_image_pixels(quantized))
     significant = [count for count in counts.values() if count >= max(20, (sample.size[0] * sample.size[1]) // 200)]
     patch_count = len(significant)
     edge = ImageOps.grayscale(sample).filter(ImageFilter.FIND_EDGES)
-    box_lines = sum(1 for value in list(edge.getdata()) if value > 50) / max(sample.size[0] * sample.size[1], 1)
+    box_lines = sum(1 for value in iter_image_pixels(edge) if value > 50) / max(sample.size[0] * sample.size[1], 1)
     score = min(1.0, patch_count / 6 + box_lines * 2)
     return score, patch_count
 

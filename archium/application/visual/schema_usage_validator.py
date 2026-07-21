@@ -16,12 +16,15 @@ def validate_schema_length_bounds(schema: ArchitecturalContentSchema) -> list[st
     """Return blocker messages for invalid schema-level text length bounds."""
     hydrated = schema.hydrate_semantic_contract()
     blockers: list[str] = []
-    if hydrated.min_text_length and hydrated.max_text_length:
-        if hydrated.min_text_length > hydrated.max_text_length:
-            blockers.append(
-                "schema min_text_length exceeds max_text_length "
-                f"({hydrated.min_text_length} > {hydrated.max_text_length})"
-            )
+    if (
+        hydrated.min_text_length
+        and hydrated.max_text_length
+        and hydrated.min_text_length > hydrated.max_text_length
+    ):
+        blockers.append(
+            "schema min_text_length exceeds max_text_length "
+            f"({hydrated.min_text_length} > {hydrated.max_text_length})"
+        )
     for requirement in hydrated.required_content + hydrated.evidence_items:
         if requirement.min_length > requirement.max_length:
             blockers.append(

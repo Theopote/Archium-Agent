@@ -32,7 +32,7 @@ from archium.domain.enums import (
 )
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
-from archium.domain.presentation_manuscript import ManuscriptStatus
+from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
@@ -267,7 +267,7 @@ class PresentationReviewService:
             approved.append(self._presentations.save_slide(slide))
         return approved
 
-    def approve_manuscript(self, manuscript_id: UUID):
+    def approve_manuscript(self, manuscript_id: UUID) -> PresentationManuscript:
         return PresentationManuscriptService(self._session).approve(manuscript_id)
 
     def ensure_can_continue(self, workflow_run_id: UUID) -> PresentationReviewContext:

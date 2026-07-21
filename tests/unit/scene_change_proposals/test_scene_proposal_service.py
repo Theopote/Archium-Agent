@@ -170,6 +170,59 @@ def test_apply_patch_actions_rewrite_text() -> None:
     assert node.text == "新"
 
 
+def test_resolve_accepted_scene_applies_subset() -> None:
+    scene = _scene(
+        _text_node(node_id="title", text="旧标题"),
+        _text_node(node_id="body", text="旧正文", width=3.0, height=0.5),
+    )
+    presentation_id = uuid4()
+    service = SceneProposalService.__new__(SceneProposalService)
+    service._executor = __import__(
+        "archium.application.visual.studio_command_executor",
+        fromlist=["StudioCommandExecutor"],
+    ).StudioCommandExecutor()
+    service._scenes = None  # type: ignore[assignment]
+    service._presentations = None  # type: ignore[assignment]
+    service._scene_history = None  # type: ignore[assignment]
+    service._studio_scene = None  # type: ignore[assignment]
+    service._settings = None  # type: ignore[assignment]
+    service._session = None  # type: ignore[assignment]
+
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新标题",
+            ),
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="body",
+                new_text="新正文",
+            ),
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    from archium.domain.visual.scene_change_proposal import ProposalDecision
+
+    title_action = next(
+        action for action in proposal.patch_actions if action.node_id == "title"
+    )
+    accepted = service._resolve_accepted_scene(
+        proposal,
+        ProposalDecision(
+            proposal_id=proposal.proposal_id,
+            accepted_action_ids=[title_action.action_id],
+        ),
+    )
+    assert accepted.node_by_id("title").text == "新标题"  # type: ignore[union-attr]
+    assert accepted.node_by_id("body").text == "旧正文"  # type: ignore[union-attr]
+
+
 def test_create_proposal_requires_commands() -> None:
     scene = _scene(_text_node(node_id="title", text="x"))
     service = SceneProposalService.__new__(SceneProposalService)

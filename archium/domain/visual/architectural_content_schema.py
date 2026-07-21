@@ -241,10 +241,10 @@ class ArchitecturalContentSchema(TimestampedModel):
 
         visual = list(self.visual_requirements)
         visual_roles = {v.role for v in visual}
-        for item in self.visual_evidence:
-            if item.role not in visual_roles:
-                visual.append(item)
-                visual_roles.add(item.role)
+        for visual_item in self.visual_evidence:
+            if visual_item.role not in visual_roles:
+                visual.append(visual_item)
+                visual_roles.add(visual_item.role)
 
         object.__setattr__(self, "required_content", merged_content)
         object.__setattr__(self, "visual_requirements", visual)
@@ -272,7 +272,7 @@ class SchemaPublishBlocker(DomainModel):
 
 
 class SchemaTestFillResult(DomainModel):
-    """Structural test fill against representative slide — not full RenderScene."""
+    """Test fill against representative slide: structure + optional RenderScene QA."""
 
     schema_id: str = Field(min_length=1)
     representative_slide_id: str = ""
@@ -281,6 +281,7 @@ class SchemaTestFillResult(DomainModel):
     missing_assets: bool = False
     drawing_policy_passed: bool = True
     reference_leakage: bool = False
+    scene_compiled: bool = False
     render_valid: bool = False
     blockers: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

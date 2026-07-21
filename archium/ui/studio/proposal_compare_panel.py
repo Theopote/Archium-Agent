@@ -14,6 +14,7 @@ from archium.application.visual.scene_proposal_service import (
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings
 from archium.domain.visual.page_quality import IssueSeverity
+from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import (
     ProposalStatus,
     SceneChangeProposal,
@@ -44,6 +45,21 @@ def store_proposal(proposal: SceneChangeProposal) -> None:
 
 def clear_proposal(slide_id: UUID) -> None:
     st.session_state.pop(_proposal_session_key(slide_id), None)
+
+
+def _proposal_selection_key(proposal_id: UUID) -> str:
+    return f"studio_proposal_selected_actions_{proposal_id}"
+
+
+def _selected_action_ids(proposal: SceneChangeProposal) -> set[str]:
+    stored = st.session_state.get(_proposal_selection_key(proposal.proposal_id))
+    if stored is None:
+        return {str(action.action_id) for action in proposal.patch_actions}
+    return {str(item) for item in stored}
+
+
+def _store_selected_action_ids(proposal: SceneChangeProposal, action_ids: set[str]) -> None:
+    st.session_state[_proposal_selection_key(proposal.proposal_id)] = sorted(action_ids)
 
 
 def render_proposal_compare_panel(
@@ -107,7 +123,11 @@ def _render_before_after_previews(
             st.caption("预览不可用")
 
 
-def _preview_path(studio_scene: StudioSceneService, presentation_id: UUID, scene) -> Path:
+def _preview_path(
+    studio_scene: StudioSceneService,
+    presentation_id: UUID,
+    scene: RenderScene,
+) -> Path:
     return studio_scene.render_scene_preview(presentation_id, scene)
 
 
@@ -116,8 +136,19 @@ def _render_change_list(proposal: SceneChangeProposal) -> None:
     if not proposal.patch_actions:
         st.caption("无结构化 patch 记录。")
         return
+    selected_ids = _selected_action_ids(proposal)
     for action in proposal.patch_actions:
-        st.markdown(f"- {summarize_patch_action(action)}")
+        action_key = str(action.action_id)
+        checked = st.checkbox(
+            summarize_patch_action(action),
+            value=action_key in selected_ids,
+            key=f"studio_proposal_action_{proposal.proposal_id}_{action_key}",
+        )
+        if checked:
+            selected_ids.add(action_key)
+        else:
+            selected_ids.discard(action_key)
+    _store_selected_action_ids(proposal, selected_ids)
 
 
 def _render_qa_diff(proposal: SceneChangeProposal) -> None:
@@ -147,7 +178,7 @@ def _render_decision_buttons(
     settings: Settings,
 ) -> None:
     slide = slide_snapshot.slide
-    accept_col, reject_col, clear_col = st.columns(3)
+    accept_col, partial_col, reject_col, clear_col = st.columns(4)
     if accept_col.button(
         "接受全部",
         type="primary",
@@ -155,6 +186,17 @@ def _render_decision_buttons(
         key=f"studio_accept_proposal_{proposal.proposal_id}",
     ):
         _accept_proposal(proposal, slide_snapshot, settings)
+    if partial_col.button(
+        "接受选中",
+        use_container_width=True,
+        key=f"studio_partial_accept_proposal_{proposal.proposal_id}",
+    ):
+        _accept_proposal(
+            proposal,
+            slide_snapshot,
+            settings,
+            partial=True,
+        )
     if reject_col.button(
         "拒绝全部",
         use_container_width=True,
@@ -176,9 +218,12 @@ def _accept_proposal(
     proposal: SceneChangeProposal,
     slide_snapshot: SlideVisualSnapshot,
     settings: Settings,
+    *,
+    partial: bool = False,
 ) -> None:
     try:
         from archium.application.visual.scene_proposal_service import SceneProposalService
+        from archium.domain.visual.scene_change_proposal import ProposalDecision
 
         slide = slide_snapshot.slide
         current_scene = slide_snapshot.render_scene
@@ -187,9 +232,24 @@ def _accept_proposal(
             if current_scene is not None and service.is_stale(proposal, current_scene):
                 store_proposal(proposal.model_copy(update={"status": ProposalStatus.SUPERSEDED}))
                 raise WorkflowError("页面在提案生成后已被修改，请重新生成提案。")
+            decision = None
+            if partial:
+                selected_ids = _selected_action_ids(proposal)
+                accepted_action_ids = [
+                    action.action_id
+                    for action in proposal.patch_actions
+                    if str(action.action_id) in selected_ids
+                ]
+                if not accepted_action_ids:
+                    raise WorkflowError("请至少勾选一项要接受的修改。")
+                decision = ProposalDecision(
+                    proposal_id=proposal.proposal_id,
+                    accepted_action_ids=accepted_action_ids,
+                )
             service.accept_proposal(
                 proposal,
                 slide,
+                decision=decision,
                 current_scene=current_scene,
             )
         clear_proposal(slide.id)

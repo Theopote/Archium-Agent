@@ -193,9 +193,9 @@ class SlideGenerationContextService:
                 if section.id == chapter_id:
                     return section
         if outline is not None:
-            for section in outline.sections:
-                if section.id == chapter_id:
-                    return section
+            for outline_section in outline.sections:
+                if outline_section.id == chapter_id:
+                    return outline_section
         if storyline is not None:
             for chapter in storyline.chapters:
                 if chapter.id == chapter_id:

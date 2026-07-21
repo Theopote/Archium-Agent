@@ -19,7 +19,9 @@ class GenerationNodesMixin(WorkflowNodeBase):
     """Generate presentation content and enrich slides with citations and assets."""
 
     @staticmethod
-    def _manuscript_context(state: PresentationWorkflowState):
+    def _manuscript_context(
+        state: PresentationWorkflowState,
+    ) -> tuple[PresentationManuscript | None, bool]:
         request = state.get("request")
         use_pipeline = bool(request and request.use_manuscript_pipeline)
         manuscript = state.get("manuscript")

@@ -34,7 +34,7 @@ def _route_after_validate_facts(state: PresentationWorkflowState) -> str:
     return "generate_brief"
 
 
-def _coerce_manuscript(state: PresentationWorkflowState):
+def _coerce_manuscript(state: PresentationWorkflowState) -> PresentationManuscript | None:
     manuscript = state.get("manuscript")
     if manuscript is None or isinstance(manuscript, PresentationManuscript):
         return manuscript

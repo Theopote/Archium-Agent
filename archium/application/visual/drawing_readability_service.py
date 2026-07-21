@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 from archium.application.slide_repair_policy import smart_shorten_text
-from archium.domain.visual.render_scene import DrawingNode, RenderScene, TextNode
+from archium.domain.visual.render_scene import (
+    DrawingNode,
+    ImageNode,
+    RenderScene,
+    ShapeNode,
+    TextNode,
+)
 from archium.domain.visual.studio_command import IncreaseDrawingReadabilityCommand, ScenePatchAction
 
 _PAGE_MARGIN_IN = 0.4
@@ -160,7 +167,7 @@ def _compress_overlapping_body_text(
     scene: RenderScene,
     drawing: DrawingNode,
     *,
-    scene_id,
+    scene_id: UUID,
 ) -> list[ScenePatchAction]:
     actions: list[ScenePatchAction] = []
     for node in scene.nodes:
@@ -200,12 +207,14 @@ def _relocate_overlapping_nodes(
     scene: RenderScene,
     drawing: DrawingNode,
     *,
-    scene_id,
+    scene_id: UUID,
 ) -> list[ScenePatchAction]:
     actions: list[ScenePatchAction] = []
     anchor_y = drawing.y + drawing.height + _BODY_GAP_IN
     for node in sorted(scene.nodes, key=lambda item: (item.y, item.x)):
         if node.id == drawing.id:
+            continue
+        if not isinstance(node, (TextNode, DrawingNode, ImageNode, ShapeNode)):
             continue
         if node.locked or "position" in node.lock_scopes or "all" in node.lock_scopes:
             continue
@@ -237,7 +246,7 @@ def _relocate_overlapping_nodes(
 
 
 def _rects_overlap(
-    first: DrawingNode | TextNode,
+    first: DrawingNode | TextNode | ImageNode | ShapeNode,
     second: DrawingNode,
     *,
     gap: float = 0.02,

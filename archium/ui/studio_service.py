@@ -21,6 +21,7 @@ from archium.domain.render import RenderResult
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
+from archium.domain.visual.scene_change_proposal import SceneChangeProposal
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.renderers.pptx_pdf import convert_pptx_to_pdf
@@ -357,7 +358,7 @@ def create_slide_scene_proposal_from_text(
     session: Session,
     slide_id: UUID,
     text: str,
-) -> object:
+) -> SceneChangeProposal:
     """Parse NL text into Studio commands and return a SceneChangeProposal."""
     from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
 
@@ -375,7 +376,7 @@ def create_slide_scene_proposal_from_intent(
     intent: object,
     *,
     params: dict[str, object] | None = None,
-) -> object:
+) -> SceneChangeProposal:
     """Map a preset visual intent to Studio commands and return a SceneChangeProposal."""
     from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
     from archium.domain.visual.edit_intent import VisualEditIntent

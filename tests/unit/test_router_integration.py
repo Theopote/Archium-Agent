@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from archium.infrastructure.llm.factory import reset_llm_provider_cache
 from archium.infrastructure.llm.mock import MockLLMProvider
-from main import run_instruction
+from legacy.main import run_instruction
 
 
 @dataclass(frozen=True)

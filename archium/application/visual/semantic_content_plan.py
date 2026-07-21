@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from archium.domain.enums import SlideType
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_generation_context import SlideGenerationContext
@@ -12,7 +13,11 @@ from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRole,
 )
-from archium.domain.visual.template_induction import OutlineTemplateCompatibility
+from archium.domain.visual.template_induction import (
+    ArchitecturalContentType,
+    FunctionalSlideType,
+    OutlineTemplateCompatibility,
+)
 
 _VISUAL_EVIDENCE_ROLE_SET = frozenset(
     {
@@ -99,7 +104,7 @@ def build_slide_spec_from_outline_page(
     outline: OutlinePlan,
     section: OutlineSection,
     page: OutlineTemplateCompatibility,
-    slide_type_resolver: Callable[[str, str], str] | None = None,
+    slide_type_resolver: Callable[[FunctionalSlideType, ArchitecturalContentType], SlideType] | None = None,
 ) -> SlideSpec:
     """Build a SlideSpec aligned with semantic contract fill from outline sections."""
     message = (section.key_message or section.purpose or section.title).strip()
@@ -123,7 +128,7 @@ def build_slide_spec_from_outline_page(
     if purpose and purpose not in {message, *key_points}:
         speaker_notes = purpose
 
-    slide_type = "content"
+    slide_type = SlideType.CONTENT
     if slide_type_resolver is not None:
         slide_type = slide_type_resolver(
             page.inferred_functional_type,

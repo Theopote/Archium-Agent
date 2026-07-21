@@ -170,6 +170,7 @@ class InductionArchitecturalTemplatePublisher:
                 f"induction_id={induction.id}",
                 f"schema_count={len(schemas)}",
                 f"layout_count={len(layouts)}",
+                f"extracted_fonts={','.join(fonts[:12])}" if fonts else "extracted_fonts=",
             ],
             induction_id=str(induction.id),
             induction_workspace_relative=induction.workspace_relative,

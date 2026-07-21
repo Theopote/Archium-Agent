@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from uuid import UUID
 
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.edit_intent import VisualEditIntent, parse_natural_language
@@ -90,8 +91,8 @@ class StudioNLCommandPlanner:
         text: str,
         *,
         scene: RenderScene,
-        presentation_id,
-        slide_id,
+        presentation_id: UUID,
+        slide_id: UUID,
     ) -> StudioCommandPlan:
         normalized = text.strip()
         if not normalized:
@@ -172,8 +173,8 @@ class StudioNLCommandPlanner:
         intent: VisualEditIntent,
         *,
         scene: RenderScene,
-        presentation_id,
-        slide_id,
+        presentation_id: UUID,
+        slide_id: UUID,
         params: dict[str, object] | None = None,
     ) -> StudioCommandPlan:
         return self._plan_intent(
@@ -190,8 +191,8 @@ class StudioNLCommandPlanner:
         text: str,
         *,
         scene: RenderScene,
-        presentation_id,
-        slide_id,
+        presentation_id: UUID,
+        slide_id: UUID,
     ) -> StudioCommandPlan | None:
         lowered = text.lower()
         for pattern, kind in _REWRITE_PATTERNS:
@@ -230,8 +231,8 @@ class StudioNLCommandPlanner:
         params: dict[str, object],
         *,
         scene: RenderScene,
-        presentation_id,
-        slide_id,
+        presentation_id: UUID,
+        slide_id: UUID,
         confidence: float,
     ) -> StudioCommandPlan:
         if intent == VisualEditIntent.REDUCE_TEXT:
@@ -335,8 +336,8 @@ class StudioNLCommandPlanner:
         self,
         *,
         scene: RenderScene,
-        presentation_id,
-        slide_id,
+        presentation_id: UUID,
+        slide_id: UUID,
         reason: str,
         node_ids: list[str] | None = None,
         parsed_intent: VisualEditIntent | None = None,
@@ -362,8 +363,8 @@ class StudioNLCommandPlanner:
         text: str,
         *,
         scene: RenderScene,
-        presentation_id,
-        slide_id,
+        presentation_id: UUID,
+        slide_id: UUID,
     ) -> StudioCommandPlan | None:
         lowered = text.lower()
         if not any(keyword in lowered for keyword in _DRAWING_READABILITY_KEYWORDS):
@@ -387,8 +388,8 @@ class StudioNLCommandPlanner:
         self,
         *,
         scene: RenderScene,
-        presentation_id,
-        slide_id,
+        presentation_id: UUID,
+        slide_id: UUID,
         node_id: str,
         reason: str,
         parsed_intent: VisualEditIntent | None = None,

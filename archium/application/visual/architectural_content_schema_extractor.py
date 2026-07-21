@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,
@@ -55,7 +57,7 @@ _AUDIENCE_BY_FUNCTIONAL: dict[FunctionalSlideType, str] = {
 }
 
 
-def _median(values: list[int | float]) -> float:
+def _median(values: Sequence[int | float]) -> float:
     if not values:
         return 0.0
     ordered = sorted(values)
@@ -65,7 +67,7 @@ def _median(values: list[int | float]) -> float:
     return (ordered[mid - 1] + ordered[mid]) / 2.0
 
 
-def _percentile(values: list[int | float], pct: float) -> float:
+def _percentile(values: Sequence[int | float], pct: float) -> float:
     if not values:
         return 0.0
     ordered = sorted(values)

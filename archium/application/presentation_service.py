@@ -18,6 +18,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.slide import SlideSpec
@@ -76,7 +77,7 @@ class PresentationService:
         presentation_id: UUID,
         request: PresentationRequest,
         *,
-        manuscript=None,
+        manuscript: PresentationManuscript | None = None,
     ) -> PresentationBrief:
         return self._brief_builder.generate(
             project_id,
@@ -113,7 +114,7 @@ class PresentationService:
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
         renovation_issue_map: RenovationIssueMap | None = None,
-        manuscript=None,
+        manuscript: PresentationManuscript | None = None,
         use_manuscript_pipeline: bool = False,
     ) -> Storyline:
         return self._narrative.generate(
@@ -133,7 +134,7 @@ class PresentationService:
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
         renovation_issue_map: RenovationIssueMap | None = None,
-        manuscript=None,
+        manuscript: PresentationManuscript | None = None,
         use_manuscript_pipeline: bool = False,
     ) -> OutlinePlan:
         return self._outline.generate(
@@ -153,7 +154,7 @@ class PresentationService:
         storyline: Storyline,
         outline: OutlinePlan | None = None,
         *,
-        manuscript=None,
+        manuscript: PresentationManuscript | None = None,
         use_manuscript_pipeline: bool = False,
     ) -> list[SlideSpec]:
         return self._slide_planner.generate(

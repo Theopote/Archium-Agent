@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import streamlit as st
-from main import ExecutionReport, StepResult, run_instruction
+from legacy.main import ExecutionReport, StepResult, run_instruction
 
 from archium.ui.components import render_file_downloads
 
