@@ -104,6 +104,141 @@ def _slide_counts(slide: ReferenceSlideSnapshot) -> dict[str, int]:
     }
 
 
+def _collect_reference_paragraphs(slide: ReferenceSlideSnapshot) -> list[str]:
+    """Paragraph-level text collected from the representative slide (PPTAgent-style)."""
+    paragraphs: list[str] = []
+    seen: set[str] = set()
+    for chunk in slide.text_content:
+        text = chunk.strip()
+        if text and text not in seen:
+            paragraphs.append(text)
+            seen.add(text)
+    for element in slide.iter_elements():
+        if element.element_type != ReferenceElementType.TEXT:
+            continue
+        text = (element.text or "").strip()
+        if text and text not in seen:
+            paragraphs.append(text)
+            seen.add(text)
+    return paragraphs
+
+
+def _infer_slide_purpose(
+    slide: ReferenceSlideSnapshot,
+    content_type: ArchitecturalContentType,
+    default: str,
+) -> str:
+    paragraphs = _collect_reference_paragraphs(slide)
+    lead = paragraphs[0] if paragraphs else ""
+    if content_type == ArchitecturalContentType.PHOTO_ANALYSIS and len(lead) >= 4:
+        clean = lead.strip("。．. ")
+        return f"证明{clean}"
+    if content_type == ArchitecturalContentType.DRAWING_FOCUS and len(lead) >= 4:
+        return f"解释{lead.strip('。．. ')}"
+    return default
+
+
+_VISUAL_EVIDENCE_ROLES = frozenset(
+    {
+        "hero_image",
+        "supporting_image",
+        "drawing",
+        "before_after_pair",
+        "multi_image_grid",
+    }
+)
+
+
+def _build_semantic_contract(
+    *,
+    content_type: ArchitecturalContentType,
+    functional: FunctionalSlideType,
+    required_content: list[ContentRequirement],
+    visual: list[VisualRequirement],
+    image_count: int,
+    caption_count: int,
+    body_count: int,
+    stats: dict[str, float | int],
+    claim_max: int,
+    evidence_max: int,
+) -> tuple[
+    ContentRequirement | None,
+    list[ContentRequirement],
+    list[VisualRequirement],
+    ContentRequirement | None,
+    ContentRequirement | None,
+]:
+    central_claim = next(
+        (item for item in required_content if item.role == ContentRole.CENTRAL_CLAIM),
+        None,
+    )
+    evidence_items = [item for item in required_content if item.role == ContentRole.EVIDENCE]
+    interpretation = next(
+        (item for item in required_content if item.role == ContentRole.INTERPRETATION),
+        None,
+    )
+    decision_request = next(
+        (item for item in required_content if item.role == ContentRole.DECISION_REQUEST),
+        None,
+    )
+    visual_evidence = [item for item in visual if item.role in _VISUAL_EVIDENCE_ROLES]
+
+    if central_claim is None and functional == FunctionalSlideType.CONTENT:
+        central_claim = ContentRequirement(
+            role=ContentRole.CENTRAL_CLAIM,
+            required=True,
+            min_count=1,
+            max_count=1,
+            min_length=8,
+            max_length=claim_max,
+            semantic_description="一句综合判断或中心主张",
+            label="问题判断",
+        )
+
+    if content_type == ArchitecturalContentType.PHOTO_ANALYSIS and not evidence_items:
+        photo_min = max(2, min(int(stats.get("image_min", image_count) or 2), 4))
+        evidence_items = [
+            ContentRequirement(
+                role=ContentRole.EVIDENCE,
+                required=True,
+                min_count=photo_min,
+                max_count=max(4, image_count, int(stats.get("image_max", image_count))),
+                min_length=4,
+                max_length=evidence_max,
+                semantic_description="每张现场照片对应一个可观察问题标签",
+                label="照片问题标签",
+            )
+        ]
+
+    if (
+        content_type == ArchitecturalContentType.PHOTO_ANALYSIS
+        and interpretation is None
+        and (body_count > 0 or int(stats.get("text_len_p50", 0)) >= 20)
+    ):
+        interpretation = ContentRequirement(
+            role=ContentRole.INTERPRETATION,
+            required=True,
+            min_count=1,
+            max_count=1,
+            min_length=12,
+            max_length=220,
+            semantic_description="综合影响或对策导向总结",
+            label="综合影响",
+        )
+
+    if caption_count > 0 and content_type == ArchitecturalContentType.PHOTO_ANALYSIS:
+        caption_req = next(
+            (item for item in required_content if item.role == ContentRole.CAPTION),
+            None,
+        )
+        if caption_req is not None and caption_req.label == "":
+            caption_req = caption_req.model_copy(
+                update={"label": "图片说明", "semantic_description": "说明图片观察点"}
+            )
+
+    return central_claim, evidence_items, visual_evidence, interpretation, decision_request
+
+
 def _cluster_induction_stats(
     member_slides: list[ReferenceSlideSnapshot],
 ) -> dict[str, float | int]:
@@ -271,7 +406,7 @@ class ArchitecturalContentSchemaExtractor:
         evidence_reqs: list[EvidenceRequirement] = []
         constraints: list[str] = []
 
-        central_claim = functional == FunctionalSlideType.CONTENT
+        wants_central_claim = functional == FunctionalSlideType.CONTENT
         citation_required = (
             float(stats.get("source_rate", 0.0)) >= 0.5
             or source_count > 0
@@ -299,7 +434,7 @@ class ArchitecturalContentSchemaExtractor:
             or content_type == ArchitecturalContentType.DRAWING_FOCUS
         )
 
-        if central_claim:
+        if wants_central_claim:
             claim_max = _cluster_role_max_length(
                 members, {"title", "body", "subtitle"}, floor=120
             )
@@ -566,6 +701,10 @@ class ArchitecturalContentSchemaExtractor:
         )
         if functional != FunctionalSlideType.CONTENT:
             purpose = f"{_AUDIENCE_BY_FUNCTIONAL.get(functional, '')}；{purpose}".strip("；")
+        purpose = _infer_slide_purpose(slide, content_type, purpose)
+        reference_paragraphs = _collect_reference_paragraphs(slide)
+        if reference_paragraphs:
+            evidence.append(f"reference_paragraphs={len(reference_paragraphs)}")
 
         min_assets = 0
         max_assets = 8
@@ -577,7 +716,26 @@ class ArchitecturalContentSchemaExtractor:
                 cluster_image_max + cluster_drawing_max,
             )
 
-        return ArchitecturalContentSchema(
+        claim_max = _cluster_role_max_length(members, {"title", "body", "subtitle"}, floor=120)
+        evidence_max = _cluster_role_max_length(
+            members, {"body", "caption", "subtitle"}, floor=80
+        )
+        central_claim, evidence_items, visual_evidence, interpretation, decision_request = (
+            _build_semantic_contract(
+                content_type=content_type,
+                functional=functional,
+                required_content=required_content,
+                visual=visual,
+                image_count=image_count,
+                caption_count=caption_count,
+                body_count=body_count,
+                stats=stats,
+                claim_max=claim_max,
+                evidence_max=evidence_max,
+            )
+        )
+
+        schema = ArchitecturalContentSchema(
             name=name,
             cluster_id=cluster.id,
             representative_slide_id=slide.slide_id,
@@ -589,7 +747,13 @@ class ArchitecturalContentSchemaExtractor:
             else cluster.visual_layout_pattern,
             page_purpose=purpose,
             audience_effect=_AUDIENCE_BY_FUNCTIONAL.get(functional, ""),
-            central_claim_required=central_claim,
+            central_claim_required=wants_central_claim,
+            reference_paragraphs=reference_paragraphs,
+            central_claim=central_claim,
+            evidence_items=evidence_items,
+            visual_evidence=visual_evidence,
+            interpretation=interpretation,
+            decision_request=decision_request,
             required_content=required_content,
             optional_content=optional_content,
             visual_requirements=visual,
@@ -615,3 +779,4 @@ class ArchitecturalContentSchemaExtractor:
             confidence=round(confidence, 3),
             needs_review=needs_review,
         )
+        return schema.apply_semantic_contract()

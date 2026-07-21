@@ -98,7 +98,13 @@ class TemplateInductionService:
         self._settings = settings or get_settings()
         self._parser = parser or ReferencePptxParser()
         self._classifier = classifier or FunctionalSlideClassifier()
-        self._clusterer = clusterer or ReferenceSlideClusterer()
+        if clusterer is None:
+            self._clusterer = ReferenceSlideClusterer(
+                blend_screenshot_embedding=self._settings.induction_screenshot_clustering_enabled,
+                screenshot_blend_weight=self._settings.induction_screenshot_clustering_weight,
+            )
+        else:
+            self._clusterer = clusterer
         self._selector = selector or RepresentativeSlideSelector()
         self._schema_extractor = schema_extractor or ArchitecturalContentSchemaExtractor()
         self._publish_gate = publish_gate or ArchitecturalContentSchemaPublishGate()
@@ -823,6 +829,17 @@ class TemplateInductionService:
         induction = TemplateInductionResult.model_validate(
             json.loads((workspace / "induction_result.json").read_text(encoding="utf-8"))
         )
+        from archium.application.visual.induction_screenshot_embedding import (
+            enrich_slide_screenshot_embeddings,
+        )
+
+        slides, attached = enrich_slide_screenshot_embeddings(
+            presentation.slides,
+            workspace,
+            enabled=self._settings.induction_screenshot_clustering_enabled,
+        )
+        if attached:
+            presentation = presentation.model_copy(update={"slides": slides})
         signoff_path = workspace / "phase35_human_signoff.json"
         if signoff_path.is_file() and induction.phase35_signoff is None:
             from archium.domain.visual.template_induction import Phase35HumanSignoff

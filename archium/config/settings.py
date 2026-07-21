@@ -308,6 +308,19 @@ class Settings(BaseSettings):
             "export for Visual Critic. Soft-skips when tools are missing."
         ),
     )
+    induction_screenshot_clustering_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, blend deterministic screenshot fingerprints into reference "
+            "slide clustering when per-slide PNGs exist."
+        ),
+    )
+    induction_screenshot_clustering_weight: float = Field(
+        default=0.35,
+        ge=0.0,
+        le=1.0,
+        description="Weight of screenshot distance vs structural embedding distance.",
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

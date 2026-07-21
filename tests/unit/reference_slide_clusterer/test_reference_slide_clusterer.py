@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from archium.application.visual.functional_slide_classifier import FunctionalSlideClassifier
 from archium.application.visual.reference_slide_clusterer import (
     _LAYOUT_MISMATCH_PENALTY,
@@ -24,6 +26,10 @@ from archium.infrastructure.template.reference_pptx_parser import (
     _axis_aligned_union_area,
     _content_signature,
     _visual_embedding,
+)
+from archium.infrastructure.vision.screenshot_embedding import (
+    compute_screenshot_embedding_from_image,
+    screenshot_embedding_available,
 )
 
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
@@ -149,6 +155,39 @@ def test_connected_components_are_transitive() -> None:
     assert len(content) == 1
     assert set(content[0].slide_ids) == {"slide_001", "slide_002", "slide_003"}
     assert any("connected_components" in r for r in content[0].selection_rationale)
+
+
+def test_screenshot_embedding_can_merge_visually_similar_slides() -> None:
+    """Screenshot blend pulls together pages when structural JSON diverges slightly."""
+    if not screenshot_embedding_available():
+        pytest.skip("Pillow not available")
+    from PIL import Image
+
+    shared = compute_screenshot_embedding_from_image(
+        Image.new("RGB", (320, 180), color=(200, 200, 200))
+    )
+    emb_near = [0.0] * 12
+    emb_far = [0.55] + [0.0] * 11
+    slides = [
+        _slide(index=0, layout_name="A", embedding=emb_near, signature="a").model_copy(
+            update={"screenshot_embedding": shared, "image_path": "slides/slide_001.png"}
+        ),
+        _slide(index=1, layout_name="A", embedding=emb_far, signature="b").model_copy(
+            update={"screenshot_embedding": shared, "image_path": "slides/slide_002.png"}
+        ),
+    ]
+    classifications = [_content_clf(s.slide_id, s.slide_index) for s in slides]
+    without = ReferenceSlideClusterer(
+        blend_screenshot_embedding=False,
+        distance_threshold=0.42,
+    ).cluster(slides, classifications)
+    with_blend = ReferenceSlideClusterer(
+        blend_screenshot_embedding=True,
+        screenshot_blend_weight=0.75,
+        distance_threshold=0.42,
+    ).cluster(slides, classifications)
+    assert len([c for c in without if c.functional_type == FunctionalSlideType.CONTENT]) == 2
+    assert len([c for c in with_blend if c.functional_type == FunctionalSlideType.CONTENT]) == 1
 
 
 def test_layout_mismatch_adds_soft_penalty_only() -> None:

@@ -69,6 +69,18 @@ class ArchitecturalContentSchemaTestFillService:
                         f"({text_len} > {requirement.max_length})"
                     )
 
+        for requirement in schema.evidence_items:
+            if not requirement.required:
+                continue
+            roles = _ROLE_SEMANTICS.get(requirement.role, {requirement.role.value})
+            candidates = [el for role in roles for el in text_by_role.get(role, [])]
+            if len(candidates) < requirement.min_count:
+                required_slots_filled = False
+                blockers.append(
+                    f"缺少证据项 {requirement.label or requirement.role.value} "
+                    f"(需要 {requirement.min_count}，现有 {len(candidates)})"
+                )
+
         for visual in schema.visual_requirements:
             if not visual.required:
                 continue
@@ -82,6 +94,17 @@ class ArchitecturalContentSchemaTestFillService:
             if visual.role == "drawing" and visual.fit_mode == "contain":
                 if visual_counts.get("drawing", 0) < visual.min_count:
                     drawing_policy_passed = False
+
+        for visual in schema.visual_evidence:
+            if not visual.required:
+                continue
+            available = self._count_visual_role(visual.role, visual_counts)
+            if available < visual.min_count:
+                missing_assets = True
+                blockers.append(
+                    f"缺少视觉证据 {visual.description or visual.role} "
+                    f"(需要 {visual.min_count}，现有 {available})"
+                )
 
         if not slide.elements:
             required_slots_filled = False

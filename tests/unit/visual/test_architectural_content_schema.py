@@ -112,7 +112,44 @@ def test_photo_analysis_schema_forbids_reference_case() -> None:
     assert "project_upload" in schema.allowed_asset_origins
     assert "reference_case" in schema.forbidden_asset_origins
     assert schema.has_image_slot()
+    assert schema.central_claim is not None
+    assert schema.evidence_items
+    assert schema.visual_evidence
+    assert schema.reference_paragraphs
+    assert schema.slide_purpose.startswith("证明")
     assert any(r.role.value == "evidence" for r in schema.required_content)
+
+
+def test_photo_analysis_schema_semantic_contract_roundtrip() -> None:
+    from archium.domain.visual.architectural_content_schema import (
+        ArchitecturalContentSchema,
+        ContentRequirement,
+        ContentRole,
+        VisualRequirement,
+    )
+
+    schema = ArchitecturalContentSchema(
+        name="content/photo_analysis",
+        page_purpose="证明入口冲突",
+        required_content=[
+            ContentRequirement(role=ContentRole.TITLE, required=True, max_count=1),
+            ContentRequirement(role=ContentRole.EVIDENCE, required=True, min_count=2, max_count=4),
+        ],
+        visual_requirements=[
+            VisualRequirement(
+                role="supporting_image",
+                required=True,
+                min_count=2,
+                max_count=4,
+                description="现场照片",
+            )
+        ],
+    )
+    hydrated = schema.hydrate_semantic_contract()
+    assert hydrated.evidence_items
+    assert hydrated.visual_evidence
+    merged = hydrated.apply_semantic_contract()
+    assert any(item.role == ContentRole.EVIDENCE for item in merged.required_content)
 
 
 def test_drawing_focus_schema_declares_drawing_slot(tmp_path: Path) -> None:

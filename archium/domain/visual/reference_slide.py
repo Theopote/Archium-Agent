@@ -111,8 +111,10 @@ class ReferenceSlideSnapshot(DomainModel):
     text_content: list[str] = Field(default_factory=list)
     image_assets: list[ReferenceAsset] = Field(default_factory=list)
 
-    # Deterministic structural embedding (not a neural embedding requirement).
+    # Deterministic structural embedding (not a neural model).
     visual_embedding: list[float] | None = None
+    # Optional PNG fingerprint for clustering when slide screenshots exist.
+    screenshot_embedding: list[float] | None = None
     content_signature: str = ""
 
     notes: str = ""

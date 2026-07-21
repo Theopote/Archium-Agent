@@ -58,8 +58,16 @@ def _normalize_layout(name: str | None) -> str:
 class ReferenceSlideClusterer:
     """Deterministic clustering of CONTENT pages (functional pages stay singleton)."""
 
-    def __init__(self, *, distance_threshold: float = _DEFAULT_DISTANCE_THRESHOLD) -> None:
+    def __init__(
+        self,
+        *,
+        distance_threshold: float = _DEFAULT_DISTANCE_THRESHOLD,
+        blend_screenshot_embedding: bool = True,
+        screenshot_blend_weight: float = 0.35,
+    ) -> None:
         self._threshold = distance_threshold
+        self._blend_screenshot_embedding = blend_screenshot_embedding
+        self._screenshot_blend_weight = max(0.0, min(1.0, screenshot_blend_weight))
 
     def cluster(
         self,
@@ -134,6 +142,8 @@ class ReferenceSlideClusterer:
                 ]
                 if len(layout_names) > 1:
                     rationale.append("layout_name soft-merged")
+                if any(by_id[s.slide_id].screenshot_embedding for s in group if s.slide_id in by_id):
+                    rationale.append("screenshot_embedding blended")
                 clusters.append(
                     ReferenceSlideCluster(
                         functional_type=FunctionalSlideType.CONTENT,
@@ -231,7 +241,15 @@ class ReferenceSlideClusterer:
         right_vec = right.visual_embedding or []
         if not left_vec or not right_vec:
             return 99.0
-        dist = _euclidean(left_vec, right_vec)
+        struct_dist = _euclidean(left_vec, right_vec)
+        dist = struct_dist
+        if self._blend_screenshot_embedding:
+            left_shot = left.screenshot_embedding or []
+            right_shot = right.screenshot_embedding or []
+            if left_shot and right_shot:
+                shot_dist = _euclidean(left_shot, right_shot)
+                weight = self._screenshot_blend_weight
+                dist = (1.0 - weight) * struct_dist + weight * shot_dist
         if _normalize_layout(left.layout_name) != _normalize_layout(right.layout_name):
             dist += _LAYOUT_MISMATCH_PENALTY
         return dist

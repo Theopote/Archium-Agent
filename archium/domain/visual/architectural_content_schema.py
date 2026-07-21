@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel, TimestampedModel
 from archium.domain.visual.template_induction import (
@@ -37,6 +37,7 @@ class ContentRequirement(DomainModel):
     min_length: int = Field(default=0, ge=0)
     max_length: int = Field(default=500, ge=0)
     semantic_description: str = ""
+    label: str = ""
 
 
 class VisualRequirement(DomainModel):
@@ -90,6 +91,14 @@ class ArchitecturalContentSchema(TimestampedModel):
     audience_effect: str = ""
     central_claim_required: bool = True
 
+    # PPTAgent-style communication contract (semantic layer — not geometry).
+    reference_paragraphs: list[str] = Field(default_factory=list)
+    central_claim: ContentRequirement | None = None
+    evidence_items: list[ContentRequirement] = Field(default_factory=list)
+    visual_evidence: list[VisualRequirement] = Field(default_factory=list)
+    interpretation: ContentRequirement | None = None
+    decision_request: ContentRequirement | None = None
+
     required_content: list[ContentRequirement] = Field(default_factory=list)
     optional_content: list[ContentRequirement] = Field(default_factory=list)
     visual_requirements: list[VisualRequirement] = Field(default_factory=list)
@@ -134,7 +143,107 @@ class ArchitecturalContentSchema(TimestampedModel):
         return any(
             v.role in {"hero_image", "supporting_image", "before_after_pair", "multi_image_grid"}
             for v in self.visual_requirements
-        )
+        ) or bool(self.visual_evidence)
+
+    @property
+    def slide_purpose(self) -> str:
+        """Alias for ``page_purpose`` (PPTAgent / task-book vocabulary)."""
+        return self.page_purpose
+
+    @slide_purpose.setter
+    def slide_purpose(self, value: str) -> None:
+        self.page_purpose = value
+
+    def hydrate_semantic_contract(self) -> ArchitecturalContentSchema:
+        """Populate semantic fields from flat lists (legacy JSON readers)."""
+        if self.central_claim is None:
+            for item in self.required_content:
+                if item.role == ContentRole.CENTRAL_CLAIM:
+                    object.__setattr__(self, "central_claim", item)
+                    break
+        if not self.evidence_items:
+            object.__setattr__(
+                self,
+                "evidence_items",
+                [i for i in self.required_content if i.role == ContentRole.EVIDENCE],
+            )
+        if not self.visual_evidence:
+            evidence_roles = {
+                "hero_image",
+                "supporting_image",
+                "drawing",
+                "before_after_pair",
+                "multi_image_grid",
+            }
+            object.__setattr__(
+                self,
+                "visual_evidence",
+                [v for v in self.visual_requirements if v.role in evidence_roles],
+            )
+        if self.interpretation is None:
+            for item in self.required_content:
+                if item.role == ContentRole.INTERPRETATION:
+                    object.__setattr__(self, "interpretation", item)
+                    break
+        if self.decision_request is None:
+            for item in self.required_content:
+                if item.role == ContentRole.DECISION_REQUEST:
+                    object.__setattr__(self, "decision_request", item)
+                    break
+        return self
+
+    def apply_semantic_contract(self) -> ArchitecturalContentSchema:
+        """Merge semantic contract into ``required_content`` / ``visual_requirements``."""
+        merged_content: list[ContentRequirement] = []
+        seen_roles: set[ContentRole] = set()
+
+        def add_unique(item: ContentRequirement | None) -> None:
+            if item is None or item.role in seen_roles:
+                return
+            merged_content.append(item)
+            seen_roles.add(item.role)
+
+        add_unique(next((r for r in self.required_content if r.role == ContentRole.TITLE), None))
+        add_unique(self.central_claim)
+        for item in self.evidence_items:
+            add_unique(item)
+        add_unique(self.interpretation)
+        add_unique(self.decision_request)
+        for item in self.required_content:
+            if item.role in seen_roles:
+                continue
+            if item.role in {
+                ContentRole.CENTRAL_CLAIM,
+                ContentRole.EVIDENCE,
+                ContentRole.INTERPRETATION,
+                ContentRole.DECISION_REQUEST,
+            }:
+                continue
+            merged_content.append(item)
+            seen_roles.add(item.role)
+
+        visual = list(self.visual_requirements)
+        visual_roles = {v.role for v in visual}
+        for item in self.visual_evidence:
+            if item.role not in visual_roles:
+                visual.append(item)
+                visual_roles.add(item.role)
+
+        object.__setattr__(self, "required_content", merged_content)
+        object.__setattr__(self, "visual_requirements", visual)
+        self.central_claim_required = self.central_claim is not None and self.central_claim.required
+        return self
+
+    @model_validator(mode="after")
+    def _default_semantic_hydration(self) -> ArchitecturalContentSchema:
+        if (
+            self.central_claim is None
+            and not self.evidence_items
+            and not self.visual_evidence
+            and self.required_content
+        ):
+            return self.hydrate_semantic_contract()
+        return self
 
 
 class SchemaPublishBlocker(DomainModel):

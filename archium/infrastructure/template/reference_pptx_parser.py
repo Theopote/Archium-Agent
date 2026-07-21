@@ -565,6 +565,14 @@ class ReferencePptxParser:
 
         _mark_repeated_elements(slides)
 
+        from archium.application.visual.induction_screenshot_embedding import (
+            enrich_slide_screenshot_embeddings,
+        )
+
+        slides, attached = enrich_slide_screenshot_embeddings(slides, workspace, enabled=True)
+        if attached:
+            warnings.append(f"screenshot_embedding attached for {attached} slides")
+
         return ReferencePresentation(
             name=name or source.stem or "reference",
             source_filename=source.name,

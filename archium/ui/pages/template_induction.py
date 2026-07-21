@@ -412,6 +412,32 @@ def _render_review() -> None:
             expanded=schema.needs_review and not schema.human_corrected,
         ):
             st.write(schema.page_purpose)
+            if schema.reference_paragraphs:
+                st.caption(
+                    "参考段落："
+                    + " | ".join(schema.reference_paragraphs[:3])
+                    + (" …" if len(schema.reference_paragraphs) > 3 else "")
+                )
+            if schema.central_claim:
+                st.caption(
+                    f"中心主张：{schema.central_claim.label or schema.central_claim.semantic_description}"
+                )
+            if schema.evidence_items:
+                st.caption(
+                    "证据项："
+                    + "；".join(
+                        item.label or item.semantic_description for item in schema.evidence_items
+                    )
+                )
+            if schema.visual_evidence:
+                st.caption(
+                    "视觉证据："
+                    + "；".join(v.description or v.role for v in schema.visual_evidence)
+                )
+            if schema.interpretation:
+                st.caption(
+                    f"综合解读：{schema.interpretation.label or schema.interpretation.semantic_description}"
+                )
             st.caption(
                 "必填角色："
                 + ", ".join(sorted(schema.required_roles()) or ["（无）"])
