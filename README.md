@@ -75,6 +75,8 @@ archium                            # 启动项目工作台（Streamlit UI）
      → 四层审核 + 视觉 QA → 修复 → JSON / 原生元素 PPTX / PDF
 ```
 
+逻辑角色（Research / Narrative / Architecture / Composition / Layout / Render / Critic）与服务映射见 [`docs/architecture/pipeline-roles.md`](docs/architecture/pipeline-roles.md)——**角色 ≠ Agent 类**。
+
 前置规划说明见 [`docs/project-mission-adaptive-planning.md`](docs/project-mission-adaptive-planning.md)。视觉编排说明见 [`docs/visual/README.md`](docs/visual/README.md)。工作台仍保留直接填 Brief 的快捷路径。
 
 ## Golden Case 验收（三层模型）
