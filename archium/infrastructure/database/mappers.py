@@ -14,6 +14,7 @@ from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
     AssetType,
+    DeckDeliveryStatus,
     DocumentType,
     InformationOrigin,
     InformationReliability,
@@ -32,6 +33,7 @@ from archium.domain.enums import (
     ReviewStatus,
     RevisionEntityType,
     RevisionSource,
+    SlideDeliveryStatus,
     SlideStatus,
     SlideType,
     VerificationStatus,
@@ -305,11 +307,17 @@ def project_knowledge_item_to_orm(
 
 
 def presentation_to_domain(orm: PresentationORM) -> Presentation:
+    raw_delivery = getattr(orm, "delivery_status", None) or "ready"
+    try:
+        delivery_status = DeckDeliveryStatus(raw_delivery)
+    except ValueError:
+        delivery_status = DeckDeliveryStatus.READY
     return Presentation(
         id=orm.id,
         project_id=orm.project_id,
         title=orm.title,
         status=PresentationStatus(orm.status),
+        delivery_status=delivery_status,
         description=orm.description,
         current_brief_id=orm.current_brief_id,
         current_storyline_id=orm.current_storyline_id,
@@ -326,6 +334,7 @@ def presentation_to_orm(
     target.project_id = domain.project_id
     target.title = domain.title
     target.status = domain.status.value
+    target.delivery_status = domain.delivery_status.value
     target.description = domain.description
     target.current_brief_id = domain.current_brief_id
     target.current_storyline_id = domain.current_storyline_id
@@ -738,6 +747,11 @@ def reference_style_profile_to_orm(
 def slide_to_domain(orm: SlideORM) -> SlideSpec:
     lineage_id = orm.lineage_id or orm.id
     logical_key = orm.logical_key or build_slide_logical_key(orm.chapter_id, orm.order)
+    raw_delivery = getattr(orm, "delivery_status", None) or "ready"
+    try:
+        delivery_status = SlideDeliveryStatus(raw_delivery)
+    except ValueError:
+        delivery_status = SlideDeliveryStatus.READY
     return SlideSpec(
         id=orm.id,
         presentation_id=orm.presentation_id,
@@ -754,6 +768,8 @@ def slide_to_domain(orm: SlideORM) -> SlideSpec:
         source_citations=citations_from_json(orm.source_citations_json),
         speaker_notes=orm.speaker_notes,
         status=SlideStatus(orm.status),
+        delivery_status=delivery_status,
+        delivery_detail=getattr(orm, "delivery_detail", None),
         version=orm.version,
         visual_intent_id=getattr(orm, "visual_intent_id", None),
         layout_plan_id=getattr(orm, "layout_plan_id", None),
@@ -774,6 +790,8 @@ def slide_to_orm(domain: SlideSpec, orm: SlideORM | None = None) -> SlideORM:
     target.source_citations_json = citations_to_json(domain.source_citations)
     target.speaker_notes = domain.speaker_notes
     target.status = domain.status.value
+    target.delivery_status = domain.delivery_status.value
+    target.delivery_detail = domain.delivery_detail
     target.version = domain.version
     target.lineage_id = domain.lineage_id
     target.logical_key = domain.logical_key or build_slide_logical_key(domain.chapter_id, domain.order)

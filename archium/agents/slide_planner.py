@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -19,7 +20,8 @@ from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
 from archium.application.slide_plan_slots import SlidePlanSlot, build_slide_plan_slots
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import RevisionSource, SlideType
+from archium.domain.deck_delivery import mark_slide_delivery
+from archium.domain.enums import RevisionSource, SlideDeliveryStatus, SlideType
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
@@ -33,6 +35,8 @@ from archium.prompts.slide_planning import (
     build_single_slide_plan_user_prompt,
     build_slide_plan_user_prompt,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _brief_summary(brief: PresentationBrief) -> str:
@@ -193,8 +197,111 @@ class SlidePlanner:
         citation_chunk_limit = min(8, self._settings.retrieval_top_k)
 
         for slot in slots:
-            placeholder = _placeholder_slide(brief, slot)
-            deck_context = [*generated, placeholder]
+            slide = self._generate_one_slot(
+                project_id,
+                brief,
+                storyline,
+                slot=slot,
+                generated_so_far=generated,
+                outline=outline,
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_manuscript_pipeline,
+                version=version,
+                brief_text=brief_text,
+                storyline_text=storyline_text,
+                citation_chunk_limit=citation_chunk_limit,
+                context_service=context_service,
+            )
+            generated.append(slide)
+
+        from archium.agents.citations import enrich_slide_citations
+
+        for index, slide in enumerate(generated):
+            if slide.delivery_status != SlideDeliveryStatus.READY:
+                continue
+            slot = slots[index]
+            slide_query = " ".join(
+                part
+                for part in (slot.section_title, slide.title, slide.message)
+                if part.strip()
+            )
+            citation_bundle = resolve_design_context_bundle(
+                self._session,
+                project_id,
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_manuscript_pipeline,
+                query=slide_query,
+                max_chunks=citation_chunk_limit,
+                settings=self._settings,
+            )
+            enrich_slide_citations(
+                slide,
+                session=self._session,
+                project_id=project_id,
+                context_bundle=citation_bundle,
+                settings=self._settings,
+            )
+        return generated
+
+    def generate_one(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+        storyline: Storyline,
+        *,
+        order: int,
+        outline: OutlinePlan | None = None,
+        manuscript: PresentationManuscript | None = None,
+        use_manuscript_pipeline: bool = False,
+        version: int = 1,
+        sibling_slides: list[SlideSpec] | None = None,
+    ) -> SlideSpec:
+        """Generate / regenerate a single page without aborting the deck."""
+        slots = build_slide_plan_slots(brief, storyline, outline=outline)
+        try:
+            slot = next(item for item in slots if item.order == order)
+        except StopIteration as exc:
+            from archium.exceptions import WorkflowError
+
+            raise WorkflowError(f"No slide plan slot for order={order}") from exc
+
+        context_service = SlideGenerationContextService(self._session)
+        return self._generate_one_slot(
+            project_id,
+            brief,
+            storyline,
+            slot=slot,
+            generated_so_far=list(sibling_slides or []),
+            outline=outline,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
+            version=version,
+            brief_text=_brief_summary(brief),
+            storyline_text=_storyline_summary(storyline),
+            citation_chunk_limit=min(8, self._settings.retrieval_top_k),
+            context_service=context_service,
+        )
+
+    def _generate_one_slot(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+        storyline: Storyline,
+        *,
+        slot: SlidePlanSlot,
+        generated_so_far: list[SlideSpec],
+        outline: OutlinePlan | None,
+        manuscript: PresentationManuscript | None,
+        use_manuscript_pipeline: bool,
+        version: int,
+        brief_text: str,
+        storyline_text: str,
+        citation_chunk_limit: int,
+        context_service: SlideGenerationContextService,
+    ) -> SlideSpec:
+        placeholder = _placeholder_slide(brief, slot)
+        deck_context = [*generated_so_far, placeholder]
+        try:
             slide_context = context_service.build_for_slide(
                 placeholder,
                 all_slides=deck_context,
@@ -243,31 +350,20 @@ class SlidePlanner:
             )
             slide.chapter_id = slot.chapter_id
             slide.order = slot.order
-            generated.append(slide)
-
-        from archium.agents.citations import enrich_slide_citations
-
-        for index, slide in enumerate(generated):
-            slot = slots[index]
-            slide_query = " ".join(
-                part
-                for part in (slot.section_title, slide.title, slide.message)
-                if part.strip()
+            mark_slide_delivery(slide, SlideDeliveryStatus.READY)
+            return slide
+        except Exception as exc:
+            # Single-page failure must not abort the whole deck.
+            logger.exception(
+                "Slide generation failed for order=%s chapter=%s; keeping fallback page",
+                slot.order,
+                slot.chapter_id,
             )
-            citation_bundle = resolve_design_context_bundle(
-                self._session,
-                project_id,
-                manuscript=manuscript,
-                use_manuscript_pipeline=use_manuscript_pipeline,
-                query=slide_query,
-                max_chunks=citation_chunk_limit,
-                settings=self._settings,
+            fallback = _placeholder_slide(brief, slot)
+            fallback.version = version
+            mark_slide_delivery(
+                fallback,
+                SlideDeliveryStatus.FALLBACK_USED,
+                detail=f"generation failed: {exc}",
             )
-            enrich_slide_citations(
-                slide,
-                session=self._session,
-                project_id=project_id,
-                context_bundle=citation_bundle,
-                settings=self._settings,
-            )
-        return generated
+            return fallback

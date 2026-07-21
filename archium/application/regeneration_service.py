@@ -11,7 +11,8 @@ from archium.application.presentation_service import PresentationService
 from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
+from archium.domain.deck_delivery import apply_deck_delivery_to_presentation
+from archium.domain.enums import ApprovalStatus, RevisionSource, WorkflowStatus, WorkflowStep
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
@@ -188,6 +189,57 @@ class RegenerationService:
             outline=context.outline,
             slides=saved,
         )
+        return saved
+
+    def retry_slide(
+        self,
+        presentation_id: UUID,
+        slide_id: UUID,
+        *,
+        workflow_run_id: UUID | None = None,
+    ) -> SlideSpec:
+        """Regenerate one failed/degraded page; keep the rest of the deck intact."""
+        context = self._review.get_review_context(
+            presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+        if context is None or context.brief is None or context.storyline is None:
+            raise WorkflowError("Cannot retry slide without brief and storyline")
+        if context.outline is None or context.outline.approval_status != ApprovalStatus.APPROVED:
+            raise WorkflowError("Outline plan must be approved before retrying a slide")
+
+        existing = self._presentations.get_slide(slide_id)
+        if existing is None or existing.presentation_id != presentation_id:
+            raise WorkflowError(f"Slide not found: {slide_id}")
+
+        siblings = [
+            slide
+            for slide in self._presentations.list_slides(presentation_id)
+            if slide.id != slide_id
+        ]
+        regenerated = self._pipeline.retry_slide(
+            context.presentation.project_id,
+            context.brief,
+            context.storyline,
+            order=existing.order,
+            outline=context.outline,
+            sibling_slides=siblings,
+            version=existing.version + 1,
+        )
+
+        # Preserve identity / lineage while replacing content.
+        regenerated.id = existing.id
+        regenerated.lineage_id = existing.lineage_id
+        regenerated.logical_key = existing.logical_key
+        regenerated.mark_planned()
+        self._history.record_snapshot(existing, RevisionSource.REGENERATION)
+        saved = self._presentations.save_slide(regenerated)
+
+        all_slides = self._presentations.list_slides(presentation_id)
+        presentation = self._presentations.get_presentation(presentation_id)
+        if presentation is not None:
+            apply_deck_delivery_to_presentation(presentation, all_slides)
+            self._presentations.update_presentation(presentation)
         return saved
 
     def _load_request(

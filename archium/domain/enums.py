@@ -170,6 +170,25 @@ class SlideStatus(StrEnum):
     NEEDS_REVISION = "needs_revision"
 
 
+class SlideDeliveryStatus(StrEnum):
+    """Per-page delivery readiness — independent of content review lifecycle."""
+
+    READY = "ready"
+    FALLBACK_USED = "fallback_used"
+    ASSET_MISSING = "asset_missing"
+    RENDER_FAILED = "render_failed"
+    SCHEMA_BLOCKED = "schema_blocked"
+
+
+class DeckDeliveryStatus(StrEnum):
+    """Deck-level delivery readiness — single page failure ≠ whole-deck failure."""
+
+    READY = "ready"
+    READY_WITH_FAILED_SLIDES = "ready_with_failed_slides"
+    NEEDS_REVIEW = "needs_review"
+    BLOCKED = "blocked"
+
+
 class RevisionSource(StrEnum):
     """Origin of an entity revision — shared by slides, briefs, missions, plans, etc."""
 

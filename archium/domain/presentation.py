@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
-from archium.domain.enums import ApprovalStatus, PresentationStatus, PresentationType
+from archium.domain.enums import ApprovalStatus, DeckDeliveryStatus, PresentationStatus, PresentationType
 from archium.domain.narrative_arc import NarrativeArc
 
 BRIEF_LOGICAL_KEY = "presentation-brief"
@@ -20,6 +20,7 @@ class Presentation(IdentifiedModel, TimestampedModel):
     project_id: UUID
     title: str = Field(min_length=1, max_length=500)
     status: PresentationStatus = PresentationStatus.DRAFT
+    delivery_status: DeckDeliveryStatus = DeckDeliveryStatus.READY
     description: str | None = None
     current_brief_id: UUID | None = None
     current_storyline_id: UUID | None = None

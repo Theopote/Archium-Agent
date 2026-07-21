@@ -165,3 +165,28 @@ class PresentationService:
             manuscript=manuscript,
             use_manuscript_pipeline=use_manuscript_pipeline,
         )
+
+    def retry_slide(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+        storyline: Storyline,
+        *,
+        order: int,
+        outline: OutlinePlan | None = None,
+        sibling_slides: list[SlideSpec] | None = None,
+        version: int = 1,
+        manuscript: PresentationManuscript | None = None,
+        use_manuscript_pipeline: bool = False,
+    ) -> SlideSpec:
+        return self._slide_planner.generate_one(
+            project_id,
+            brief,
+            storyline,
+            order=order,
+            outline=outline,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
+            version=version,
+            sibling_slides=sibling_slides,
+        )

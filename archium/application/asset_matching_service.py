@@ -216,8 +216,21 @@ class AssetMatchingService:
             match_count += slide_matches
             updated.append(self._presentations.save_slide(matched_slide) if changed else matched_slide)
 
+        self._refresh_presentation_delivery(presentation_id, updated)
         return updated, match_count
 
+    def _refresh_presentation_delivery(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+    ) -> None:
+        from archium.domain.deck_delivery import apply_deck_delivery_to_presentation
+
+        presentation = self._presentations.get_presentation(presentation_id)
+        if presentation is None:
+            return
+        apply_deck_delivery_to_presentation(presentation, slides)
+        self._presentations.update_presentation(presentation)
     def match_slides(
         self,
         project_id: UUID,
@@ -320,4 +333,17 @@ class AssetMatchingService:
             if requirement.preferred_asset_ids:
                 match_count += 1
 
+        slide, changed = _finalize_slide_delivery(slide, changed=changed)
         return slide, match_count, changed
+
+
+def _finalize_slide_delivery(slide: SlideSpec, *, changed: bool) -> tuple[SlideSpec, bool]:
+    from archium.domain.deck_delivery import refresh_slide_asset_delivery
+
+    before = slide.delivery_status
+    before_detail = slide.delivery_detail
+    refresh_slide_asset_delivery(slide)
+    delivery_changed = (
+        slide.delivery_status != before or slide.delivery_detail != before_detail
+    )
+    return slide, changed or delivery_changed

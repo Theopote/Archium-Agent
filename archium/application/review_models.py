@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from archium.domain.outline import OutlinePlan
+from archium.domain.deck_delivery import DeckDeliveryReport, aggregate_deck_delivery
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.review import ReviewIssue
@@ -144,6 +145,21 @@ class PresentationReviewContext:
             for issue in self.review_issues
             if issue.severity == ReviewSeverity.CRITICAL and issue.status == ReviewStatus.OPEN
         ]
+
+    @property
+    def deck_delivery(self) -> DeckDeliveryReport:
+        return aggregate_deck_delivery(
+            self.slides,
+            needs_review=self.slides_pending_review,
+        )
+
+    @property
+    def allows_preview(self) -> bool:
+        return self.deck_delivery.allows_preview
+
+    @property
+    def allows_draft_export(self) -> bool:
+        return self.deck_delivery.allows_draft_export
 
 
 def parse_multiline_items(text: str) -> list[str]:

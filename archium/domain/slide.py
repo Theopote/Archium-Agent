@@ -8,7 +8,7 @@ from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, VersionedModel
 from archium.domain.citation import Citation
-from archium.domain.enums import SlideStatus, SlideType, VisualType
+from archium.domain.enums import SlideDeliveryStatus, SlideStatus, SlideType, VisualType
 
 
 def build_slide_logical_key(chapter_id: str, order: int) -> str:
@@ -63,6 +63,9 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     source_citations: list[Citation] = Field(default_factory=list)
     speaker_notes: str | None = None
     status: SlideStatus = SlideStatus.PLANNED
+    # Delivery readiness (independent of content review SlideStatus).
+    delivery_status: SlideDeliveryStatus = SlideDeliveryStatus.READY
+    delivery_detail: str | None = None
     # Optional links into the visual composition pipeline (external relation preferred long-term).
     visual_intent_id: UUID | None = None
     layout_plan_id: UUID | None = None

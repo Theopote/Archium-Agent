@@ -171,6 +171,9 @@ class PresentationORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    delivery_status: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="ready"
+    )
     description: Mapped[str | None] = mapped_column(Text)
     current_brief_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_storyline_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
@@ -382,6 +385,10 @@ class SlideORM(UUIDPrimaryKeyMixin, Base):
     )
     speaker_notes: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="planned")
+    delivery_status: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="ready"
+    )
+    delivery_detail: Mapped[str | None] = mapped_column(Text)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
     logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="")

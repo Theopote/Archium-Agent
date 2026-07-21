@@ -13,12 +13,17 @@ from archium.application.visual.asset_reference import (
     content_refs_from_plan,
 )
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
+from archium.application.visual.scene_compilers import (
+    SceneCompileContext,
+    SceneCompilerChain,
+)
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
+from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
@@ -56,12 +61,19 @@ class StudioSceneService:
         *,
         settings: Settings | None = None,
         compiler: RenderSceneCompiler | None = None,
+        compiler_chain: SceneCompilerChain | None = None,
         canvas_renderer: CanvasRenderer | None = None,
         scene_repair: SceneRepairService | None = None,
     ) -> None:
+        from archium.application.visual.scene_compilers.chain import default_scene_compilers
+
         self._session = session
         self._settings = settings or get_settings()
-        self._compiler = compiler or RenderSceneCompiler()
+        inner = compiler or RenderSceneCompiler()
+        self._compiler = inner
+        self._compiler_chain = compiler_chain or SceneCompilerChain(
+            compilers=default_scene_compilers(inner=inner)
+        )
         self._canvas = canvas_renderer or CanvasRenderer()
         self._scene_repair = scene_repair or SceneRepairService()
         self._scenes = RenderSceneRepository(session)
@@ -129,6 +141,7 @@ class StudioSceneService:
         plan: LayoutPlan,
         design_system: DesignSystem,
         visual_intent: VisualIntent | None = None,
+        content_schema: ArchitecturalContentSchema | None = None,
         presentation_id: UUID | None = None,
         project_id: UUID | None = None,
     ) -> RenderScene:
@@ -146,14 +159,18 @@ class StudioSceneService:
                 slide=slide,
                 plan=plan,
             )
-        return self._compiler.compile(
-            slide=slide,
-            layout_plan=plan,
-            design_system=design_system,
-            content_bundle=bundle,
-            visual_intent=visual_intent,
-            presentation_id=presentation_id or slide.presentation_id,
+        result = self._compiler_chain.compile(
+            SceneCompileContext(
+                slide=slide,
+                layout_plan=plan,
+                design_system=design_system,
+                content_bundle=bundle,
+                visual_intent=visual_intent,
+                content_schema=content_schema,
+                presentation_id=presentation_id or slide.presentation_id,
+            )
         )
+        return result.scene
 
     def ensure_scene_for_slide(
         self,

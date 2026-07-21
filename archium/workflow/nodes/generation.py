@@ -379,16 +379,50 @@ class GenerationNodesMixin(WorkflowNodeBase):
                     slide.approve()
                 reviewed_slides.append(self._presentations.save_slide(slide))
 
+            from archium.domain.deck_delivery import (
+                aggregate_deck_delivery,
+                apply_deck_delivery_to_presentation,
+            )
+
+            presentation = self._presentations.get_presentation(presentation_id)
+            if presentation is not None:
+                delivery = apply_deck_delivery_to_presentation(
+                    presentation,
+                    reviewed_slides,
+                    needs_review=bool(state.get("require_slides_review")),
+                )
+                self._presentations.update_presentation(presentation)
+            else:
+                delivery = aggregate_deck_delivery(
+                    reviewed_slides,
+                    needs_review=bool(state.get("require_slides_review")),
+                )
+
             next_state: PresentationWorkflowState = {
                 "slides": reviewed_slides,
                 "current_step": WorkflowStep.SLIDES.value,
             }
+            if delivery.failed_count and delivery.allows_draft_export:
+                # Soft-fail: keep going with partial deck; do not set state errors.
+                next_state["render_warnings"] = [
+                    f"deck delivery={delivery.status.value}; "
+                    f"{delivery.failed_count}/{delivery.total_slides} slides degraded"
+                ]
+            elif delivery.status.value == "blocked":
+                return {
+                    "errors": [
+                        "All slides failed delivery; cannot continue with an empty deck"
+                    ],
+                    "slides": reviewed_slides,
+                    "current_step": WorkflowStep.SLIDES.value,
+                }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
             logger.info(
-                "Slide plan generated for presentation %s (%d slides)",
+                "Slide plan generated for presentation %s (%d slides, delivery=%s)",
                 state["presentation_id"],
                 len(reviewed_slides),
+                delivery.status.value,
             )
             return next_state
         except Exception as exc:
