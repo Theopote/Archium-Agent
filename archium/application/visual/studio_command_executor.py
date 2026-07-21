@@ -177,6 +177,7 @@ class StudioCommandExecutor:
 
         action = ScenePatchAction(
             scene_id=scene.slide_id,
+            command_id=command.command_id,
             node_id=command.node_id,
             action_type="rewrite_text",
             property_name="text",
@@ -296,6 +297,7 @@ class StudioCommandExecutor:
         patched = scene.model_copy(deep=True)
         target = patched.node_by_id(command.node_id)
         assert isinstance(target, ImageNode)
+        before_payload = _image_asset_payload(node)
         before_uri = target.storage_uri or target.asset_path
         uri = command.storage_uri.strip()
         target.asset_id = command.asset_id
@@ -312,12 +314,20 @@ class StudioCommandExecutor:
 
         action = ScenePatchAction(
             scene_id=scene.slide_id,
+            command_id=command.command_id,
             node_id=command.node_id,
             action_type="replace_asset",
             property_name="storage_uri",
             before_value=before_uri or None,
             after_value=uri,
             after_asset_id=command.asset_id,
+            before_payload=before_payload,
+            after_payload=_image_asset_payload(
+                target,
+                asset_id=command.asset_id,
+                storage_uri=uri,
+                asset_origin=command.asset_origin,
+            ),
             reason=command.reason or "replace image asset",
         )
         return CommandExecutionResult(
@@ -371,6 +381,7 @@ class StudioCommandExecutor:
         patched = scene.model_copy(deep=True)
         target = patched.node_by_id(command.node_id)
         assert isinstance(target, DrawingNode)
+        before_payload = _drawing_asset_payload(node)
         before_uri = target.storage_uri or target.asset_path
         uri = command.storage_uri.strip()
         target.asset_id = command.asset_id
@@ -391,12 +402,23 @@ class StudioCommandExecutor:
 
         action = ScenePatchAction(
             scene_id=scene.slide_id,
+            command_id=command.command_id,
             node_id=command.node_id,
             action_type="replace_drawing",
             property_name="storage_uri",
             before_value=before_uri or None,
             after_value=uri,
             after_asset_id=command.asset_id,
+            before_payload=before_payload,
+            after_payload=_drawing_asset_payload(
+                target,
+                asset_id=command.asset_id,
+                storage_uri=uri,
+                drawing_type=command.drawing_type or node.drawing_type,
+                fit_mode="contain",
+                preserve_aspect_ratio=command.preserve_aspect_ratio,
+                preserve_annotations=command.preserve_annotations,
+            ),
             reason=command.reason or "replace drawing asset",
         )
         return CommandExecutionResult(
@@ -613,6 +635,58 @@ def _property_for_repair_action(action_type: str) -> str:
     if action_type == "set_fit_mode_contain":
         return "fit_mode"
     return ""
+
+
+def _image_asset_payload(
+    node: ImageNode,
+    *,
+    asset_id: UUID | None = None,
+    storage_uri: str | None = None,
+    asset_origin: str | None = None,
+) -> dict[str, str]:
+    resolved_id = asset_id if asset_id is not None else node.asset_id
+    uri = (storage_uri if storage_uri is not None else node.storage_uri or node.asset_path).strip()
+    origin = asset_origin if asset_origin is not None else node.asset_origin
+    payload: dict[str, str] = {
+        "storage_uri": uri,
+        "asset_origin": origin,
+    }
+    if resolved_id is not None:
+        payload["asset_id"] = str(resolved_id)
+    return payload
+
+
+def _drawing_asset_payload(
+    node: DrawingNode,
+    *,
+    asset_id: UUID | None = None,
+    storage_uri: str | None = None,
+    drawing_type: str | None = None,
+    fit_mode: str | None = None,
+    preserve_aspect_ratio: bool | None = None,
+    preserve_annotations: bool | None = None,
+) -> dict[str, str | bool]:
+    resolved_id = asset_id if asset_id is not None else node.asset_id
+    uri = (storage_uri if storage_uri is not None else node.storage_uri or node.asset_path).strip()
+    payload: dict[str, str | bool] = {
+        "storage_uri": uri,
+        "drawing_type": drawing_type if drawing_type is not None else node.drawing_type,
+        "fit_mode": fit_mode if fit_mode is not None else node.fit_mode,
+        "preserve_aspect_ratio": (
+            preserve_aspect_ratio
+            if preserve_aspect_ratio is not None
+            else node.preserve_aspect_ratio
+        ),
+        "preserve_annotations": (
+            preserve_annotations
+            if preserve_annotations is not None
+            else node.preserve_annotations
+        ),
+        "asset_origin": "project_upload",
+    }
+    if resolved_id is not None:
+        payload["asset_id"] = str(resolved_id)
+    return payload
 
 
 def _issue(

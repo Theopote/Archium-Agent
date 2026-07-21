@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 from archium.application.visual.scene_proposal_service import (
@@ -10,10 +10,22 @@ from archium.application.visual.scene_proposal_service import (
     apply_patch_actions,
 )
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue, QualityIssueSource
-from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
+from archium.domain.visual.render_scene import (
+    BackgroundStyle,
+    DrawingNode,
+    ImageNode,
+    RenderScene,
+    SceneAssetReference,
+    TextNode,
+)
 from archium.domain.visual.scene_change_proposal import ProposalStatus
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
-from archium.domain.visual.studio_command import RewriteTextCommand
+from archium.domain.visual.studio_command import (
+    ReplaceAssetCommand,
+    ReplaceDrawingCommand,
+    RewriteTextCommand,
+    ScenePatchAction,
+)
 from archium.exceptions import WorkflowError
 
 
@@ -238,3 +250,213 @@ def test_create_proposal_requires_commands() -> None:
     except WorkflowError:
         raised = True
     assert raised
+
+
+def _image_node(
+    *,
+    node_id: str,
+    asset_id: UUID | None = None,
+    storage_uri: str = "project://old-photo.png",
+    asset_origin: str = "project_upload",
+) -> ImageNode:
+    resolved_id = asset_id or uuid4()
+    return ImageNode(
+        id=node_id,
+        x=1.0,
+        y=1.0,
+        width=4.0,
+        height=3.0,
+        z_index=2,
+        asset_id=resolved_id,
+        storage_uri=storage_uri,
+        asset_path=storage_uri,
+        asset_origin=asset_origin,  # type: ignore[arg-type]
+    )
+
+
+def _drawing_node(
+    *,
+    node_id: str,
+    asset_id: UUID | None = None,
+    storage_uri: str = "project://old-plan.png",
+) -> DrawingNode:
+    resolved_id = asset_id or uuid4()
+    return DrawingNode(
+        id=node_id,
+        x=0.5,
+        y=0.5,
+        width=8.0,
+        height=4.5,
+        z_index=1,
+        asset_id=resolved_id,
+        storage_uri=storage_uri,
+        asset_path=storage_uri,
+        drawing_type="site_plan",
+        fit_mode="contain",
+    )
+
+
+def _mixed_scene(*nodes) -> RenderScene:
+    return RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=list(nodes),
+    )
+
+
+def _proposal_service() -> SceneProposalService:
+    service = SceneProposalService.__new__(SceneProposalService)
+    service._executor = __import__(
+        "archium.application.visual.studio_command_executor",
+        fromlist=["StudioCommandExecutor"],
+    ).StudioCommandExecutor()
+    service._scenes = None  # type: ignore[assignment]
+    service._presentations = None  # type: ignore[assignment]
+    service._scene_history = None  # type: ignore[assignment]
+    service._studio_scene = None  # type: ignore[assignment]
+    service._settings = None  # type: ignore[assignment]
+    service._session = None  # type: ignore[assignment]
+    return service
+
+
+def test_partial_accept_replace_asset_preserves_manifest_and_origin() -> None:
+    old_id = uuid4()
+    new_id = uuid4()
+    scene = _mixed_scene(
+        _text_node(node_id="title", text="旧标题"),
+        _image_node(node_id="photo_1", asset_id=old_id, asset_origin="project_upload"),
+    )
+    scene.asset_manifest = [
+        SceneAssetReference(
+            asset_id=old_id,
+            storage_uri="project://old-photo.png",
+            asset_path="project://old-photo.png",
+            origin="project_upload",
+        )
+    ]
+    presentation_id = uuid4()
+    service = _proposal_service()
+
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新标题",
+            ),
+            ReplaceAssetCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="photo_1",
+                asset_id=new_id,
+                storage_uri="project://site/photo-02.png",
+                asset_origin="reference_case",
+                reason="replace project photo",
+            ),
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    from archium.domain.visual.scene_change_proposal import ProposalDecision
+
+    asset_action = next(
+        action for action in proposal.patch_actions if action.action_type == "replace_asset"
+    )
+    accepted = service._resolve_accepted_scene(
+        proposal,
+        ProposalDecision(
+            proposal_id=proposal.proposal_id,
+            accepted_action_ids=[asset_action.action_id],
+        ),
+    )
+    photo = accepted.node_by_id("photo_1")
+    assert isinstance(photo, ImageNode)
+    assert photo.asset_id == new_id
+    assert photo.storage_uri == "project://site/photo-02.png"
+    assert photo.asset_origin == "reference_case"
+    assert any(ref.asset_id == new_id for ref in accepted.asset_manifest)
+    assert accepted.node_by_id("title").text == "旧标题"  # type: ignore[union-attr]
+
+
+def test_partial_accept_replace_drawing_preserves_drawing_metadata() -> None:
+    old_id = uuid4()
+    new_id = uuid4()
+    scene = _mixed_scene(_drawing_node(node_id="site_plan", asset_id=old_id))
+    presentation_id = uuid4()
+    service = _proposal_service()
+
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[
+            ReplaceDrawingCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="site_plan",
+                asset_id=new_id,
+                storage_uri="project://drawings/site-plan-v2.png",
+                drawing_type="elevation",
+                preserve_aspect_ratio=True,
+                preserve_annotations=True,
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    from archium.domain.visual.scene_change_proposal import ProposalDecision
+
+    drawing_action = proposal.patch_actions[0]
+    accepted = service._resolve_accepted_scene(
+        proposal,
+        ProposalDecision(
+            proposal_id=proposal.proposal_id,
+            accepted_action_ids=[drawing_action.action_id],
+        ),
+    )
+    drawing = accepted.node_by_id("site_plan")
+    assert isinstance(drawing, DrawingNode)
+    assert drawing.asset_id == new_id
+    assert drawing.drawing_type == "elevation"
+    assert drawing.fit_mode == "contain"
+    assert drawing.preserve_aspect_ratio is True
+    assert drawing.preserve_annotations is True
+    assert any(ref.asset_id == new_id for ref in accepted.asset_manifest)
+
+
+def test_apply_patch_actions_replace_asset_uses_after_payload() -> None:
+    old_id = uuid4()
+    new_id = uuid4()
+    scene = _mixed_scene(_image_node(node_id="photo_1", asset_id=old_id))
+    scene.asset_manifest = [
+        SceneAssetReference(
+            asset_id=old_id,
+            storage_uri="project://old-photo.png",
+            asset_path="project://old-photo.png",
+            origin="project_upload",
+        )
+    ]
+    patched = apply_patch_actions(
+        scene,
+        [
+            ScenePatchAction(
+                scene_id=scene.slide_id,
+                node_id="photo_1",
+                action_type="replace_asset",
+                after_value="project://site/photo-02.png",
+                after_asset_id=new_id,
+                after_payload={
+                    "asset_id": str(new_id),
+                    "storage_uri": "project://site/photo-02.png",
+                    "asset_origin": "reference_case",
+                },
+            )
+        ],
+    )
+    photo = patched.node_by_id("photo_1")
+    assert isinstance(photo, ImageNode)
+    assert photo.asset_origin == "reference_case"
+    assert any(ref.asset_id == new_id for ref in patched.asset_manifest)

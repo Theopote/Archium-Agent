@@ -292,6 +292,10 @@ def test_replace_asset_updates_image_node_and_manifest() -> None:
     assert node.asset_origin == "project_upload"
     assert result.candidate_scene is not None
     assert any(ref.asset_id == new_id for ref in result.candidate_scene.asset_manifest)
+    action = result.applied_actions[0]
+    assert action.command_id == command.command_id
+    assert action.after_payload["asset_origin"] == "project_upload"
+    assert action.after_payload["asset_id"] == str(new_id)
 
 
 def test_replace_asset_rejects_drawing_node() -> None:
@@ -360,6 +364,10 @@ def test_replace_drawing_updates_node_and_keeps_contain() -> None:
     assert node.asset_id == new_id
     assert node.fit_mode == "contain"
     assert node.storage_uri == "project://drawings/site-plan-v2.png"
+    action = result.applied_actions[0]
+    assert action.after_payload["drawing_type"] == "site_plan"
+    assert action.after_payload["preserve_aspect_ratio"] is True
+    assert action.after_payload["preserve_annotations"] is True
 
 
 def test_replace_drawing_rejects_image_node() -> None:

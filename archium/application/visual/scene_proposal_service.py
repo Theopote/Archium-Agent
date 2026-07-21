@@ -18,6 +18,7 @@ from archium.application.visual.scene_semantic_qa_service import run_scene_seman
 from archium.application.visual.studio_command_executor import (
     StudioCommandExecutor,
     StudioExecutionContext,
+    _upsert_asset_manifest,
 )
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings, get_settings
@@ -93,7 +94,11 @@ class SceneProposalService:
                 )
                 continue
             candidate = result.candidate_scene
-            applied_actions.extend(result.applied_actions)
+            for action in result.applied_actions:
+                stamped = action
+                if action.command_id is None:
+                    stamped = action.model_copy(update={"command_id": command.command_id})
+                applied_actions.append(stamped)
 
         if issues and not applied_actions:
             raise WorkflowError("；".join(issues))
@@ -147,7 +152,11 @@ class SceneProposalService:
                 "页面在提案生成后已被修改，请基于最新版本重新生成提案。"
             )
 
-        accepted_scene = self._resolve_accepted_scene(proposal, decision)
+        accepted_scene = self._resolve_accepted_scene(
+            proposal,
+            decision,
+            slide_order=slide.order,
+        )
         comparison = compare_proposal_qa(proposal.qa_before, self._qa_issues_for_scene(
             accepted_scene,
             proposal.presentation_id,
@@ -177,6 +186,8 @@ class SceneProposalService:
         self,
         proposal: SceneChangeProposal,
         decision: ProposalDecision | None,
+        *,
+        slide_order: int = 0,
     ) -> RenderScene:
         if decision is None or not decision.accepted_action_ids:
             return proposal.proposed_scene.model_copy(deep=True)
@@ -189,7 +200,51 @@ class SceneProposalService:
             raise WorkflowError("请至少选择一项要接受的修改。")
         if len(selected) == len(proposal.patch_actions):
             return proposal.proposed_scene.model_copy(deep=True)
-        return apply_patch_actions(proposal.base_scene, selected)
+
+        actions_by_command: dict[UUID, list[ScenePatchAction]] = {}
+        orphan_actions: list[ScenePatchAction] = []
+        for action in proposal.patch_actions:
+            if action.command_id is not None:
+                actions_by_command.setdefault(action.command_id, []).append(action)
+            else:
+                orphan_actions.append(action)
+
+        scene = proposal.base_scene.model_copy(deep=True)
+        context = StudioExecutionContext(
+            presentation_id=proposal.presentation_id,
+            slide_order=slide_order,
+        )
+        fallback_actions: list[ScenePatchAction] = []
+
+        for command in proposal.commands:
+            command_actions = actions_by_command.get(command.command_id, [])
+            if not command_actions:
+                continue
+            selected_command_actions = [
+                action for action in command_actions if action.action_id in accepted_ids
+            ]
+            if not selected_command_actions:
+                continue
+            if len(selected_command_actions) == len(command_actions):
+                result = self._executor.execute(scene, command, context)
+                if not result.success or result.candidate_scene is None:
+                    message = (
+                        result.issues[0].message
+                        if result.issues
+                        else f"{command.command_type} failed during partial accept"
+                    )
+                    raise WorkflowError(message)
+                scene = result.candidate_scene
+            else:
+                fallback_actions.extend(selected_command_actions)
+
+        orphan_selected = [action for action in orphan_actions if action.action_id in accepted_ids]
+        fallback_actions.extend(orphan_selected)
+
+        if fallback_actions:
+            scene = apply_patch_actions(scene, fallback_actions)
+
+        return scene
 
     def _persist_scene(self, slide: SlideSpec, scene: RenderScene) -> RenderScene:
         existing = self._scenes.get_by_layout_plan(scene.layout_plan_id)
@@ -253,14 +308,17 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
     if action.action_type in {"replace_asset", "replace_drawing"} and isinstance(
         node, (ImageNode, DrawingNode)
     ):
-        if action.after_value is not None:
-            node.storage_uri = action.after_value
-            node.asset_path = action.after_value
-        if action.after_asset_id is not None:
-            node.asset_id = action.after_asset_id
-        node.asset_unresolved = False
-        if isinstance(node, DrawingNode):
-            node.fit_mode = "contain"
+        if action.after_payload:
+            _apply_asset_patch(scene, node, action)
+        else:
+            if action.after_value is not None:
+                node.storage_uri = action.after_value
+                node.asset_path = action.after_value
+            if action.after_asset_id is not None:
+                node.asset_id = action.after_asset_id
+            node.asset_unresolved = False
+            if isinstance(node, DrawingNode):
+                node.fit_mode = "contain"
         return
     if action.action_type == "enlarge_drawing" and isinstance(node, DrawingNode):
         if action.after_value:
@@ -287,6 +345,55 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
     if action.action_type == "bump_font_size" and isinstance(node, TextNode):
         with contextlib.suppress(TypeError, ValueError):
             node.font_size = max(node.font_size, float(action.after_value or node.font_size))
+
+
+def _apply_asset_patch(
+    scene: RenderScene,
+    node: ImageNode | DrawingNode,
+    action: ScenePatchAction,
+) -> None:
+    payload = action.after_payload
+    uri = str(payload.get("storage_uri") or action.after_value or "").strip()
+    asset_id_raw = payload.get("asset_id") or action.after_asset_id
+    asset_id = UUID(str(asset_id_raw)) if asset_id_raw else node.asset_id
+    if uri:
+        node.storage_uri = uri
+        node.asset_path = uri
+    if asset_id is not None:
+        node.asset_id = asset_id
+    node.asset_unresolved = False
+
+    if isinstance(node, ImageNode):
+        origin = payload.get("asset_origin")
+        if isinstance(origin, str) and origin:
+            node.asset_origin = origin  # type: ignore[assignment]
+        if asset_id is not None and uri:
+            _upsert_asset_manifest(
+                scene,
+                asset_id=asset_id,
+                storage_uri=uri,
+                origin=str(origin or node.asset_origin),
+            )
+        return
+
+    drawing_type = payload.get("drawing_type")
+    if isinstance(drawing_type, str) and drawing_type:
+        node.drawing_type = drawing_type  # type: ignore[assignment]
+    fit_mode = payload.get("fit_mode")
+    if isinstance(fit_mode, str) and fit_mode:
+        node.fit_mode = fit_mode  # type: ignore[assignment]
+    if "preserve_aspect_ratio" in payload:
+        node.preserve_aspect_ratio = bool(payload["preserve_aspect_ratio"])
+    if "preserve_annotations" in payload:
+        node.preserve_annotations = bool(payload["preserve_annotations"])
+    origin = str(payload.get("asset_origin") or "project_upload")
+    if asset_id is not None and uri:
+        _upsert_asset_manifest(
+            scene,
+            asset_id=asset_id,
+            storage_uri=uri,
+            origin=origin,
+        )
 
 
 def summarize_patch_action(action: ScenePatchAction) -> str:

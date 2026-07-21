@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import Field
@@ -97,6 +97,7 @@ class ScenePatchAction(DomainModel):
     """One reversible patch applied to a RenderScene node."""
 
     action_id: UUID = Field(default_factory=new_uuid)
+    command_id: UUID | None = None
     scene_id: UUID
     node_id: str
     action_type: str = Field(min_length=1)
@@ -104,4 +105,6 @@ class ScenePatchAction(DomainModel):
     before_value: str | None = None
     after_value: str | None = None
     after_asset_id: UUID | None = None
+    before_payload: dict[str, Any] = Field(default_factory=dict)
+    after_payload: dict[str, Any] = Field(default_factory=dict)
     reason: str = ""
