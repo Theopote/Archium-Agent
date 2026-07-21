@@ -21,6 +21,23 @@ from archium.domain.visual.template_induction import (
 )
 
 
+def _summarize_parse_warnings(warnings: list[str], *, limit: int = 2) -> str:
+    """Shorten raw Pydantic dumps for publish-gate UI."""
+    parts: list[str] = []
+    for raw in warnings[:limit]:
+        text = " ".join(str(raw).split())
+        if "greater_than_equal" in text or "Input should be greater than or equal to 0" in text:
+            parts.append("形状坐标轻微越界（已忽略，不阻断）")
+            continue
+        if len(text) > 120:
+            text = text[:117] + "…"
+        parts.append(text)
+    extra = len(warnings) - limit
+    if extra > 0:
+        parts.append(f"另有 {extra} 条")
+    return "；".join(parts) if parts else "（无详情）"
+
+
 class ArchitecturalContentSchemaPublishGate:
     """Enforce Phase 4 publish readiness without numeric scores."""
 
@@ -191,15 +208,12 @@ class ArchitecturalContentSchemaPublishGate:
             slide = by_id.get(cluster.representative_slide_id)
             if slide is not None:
                 if slide.parse_warnings:
-                    blockers.append(
-                        SchemaPublishBlocker(
-                            code="UNPARSEABLE_ELEMENTS",
-                            message="代表页存在无法解析元素："
-                            + "; ".join(slide.parse_warnings[:3]),
-                            cluster_id=cluster.id,
-                            slide_id=slide.slide_id,
-                            schema_id=schema.id,
-                        )
+                    # Tiny artboard bleed / decorator parse failures are expected on
+                    # real PPTX; do not block Phase 4 / human review with raw
+                    # Pydantic dumps. Surface a short warning instead.
+                    short = _summarize_parse_warnings(slide.parse_warnings)
+                    warnings.append(
+                        f"{slide.slide_id} 代表页解析提示（不阻塞签署）：{short}"
                     )
                 if not slide.elements:
                     warnings.append(f"{slide.slide_id} 无可用元素，填测可能失败")

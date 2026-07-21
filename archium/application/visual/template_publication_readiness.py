@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.architectural_content_schema import (
@@ -16,6 +16,19 @@ from archium.domain.visual.template_induction import (
     FunctionalSlideType,
     TemplateInductionResult,
 )
+
+
+def _fill_result_flag(fill: Any, name: str) -> bool:
+    """Read a boolean from SchemaTestFillResult without AttributeError on stale instances.
+
+    Streamlit may keep old Pydantic classes in ``sys.modules`` that lack newer
+    fields such as ``scene_compiled``. Prefer ``model_dump`` / dict over getattr.
+    """
+    if isinstance(fill, dict):
+        return bool(fill.get(name, False))
+    if isinstance(fill, BaseModel):
+        return bool(fill.model_dump().get(name, False))
+    return bool(getattr(fill, name, False))
 
 
 class PublicationGateItem(DomainModel):
@@ -160,8 +173,16 @@ class TemplatePublicationReadinessService:
                 )
             )
         else:
-            failed = [f for f in publish_report.test_fill_results if not f.render_valid]
-            compiled = [f for f in publish_report.test_fill_results if f.scene_compiled]
+            failed = [
+                f
+                for f in publish_report.test_fill_results
+                if not _fill_result_flag(f, "render_valid")
+            ]
+            compiled = [
+                f
+                for f in publish_report.test_fill_results
+                if _fill_result_flag(f, "scene_compiled")
+            ]
             if failed:
                 gates.append(
                     PublicationGateItem(

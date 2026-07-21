@@ -156,6 +156,10 @@ def _render_upload() -> None:
 
 def _render_phase35_signoff(service, workspace, presentation, induction) -> None:  # type: ignore[no-untyped-def]
     st.markdown("##### Phase 3.5 真人结构复核签署")
+    st.caption(
+        "本段只记录结构复核结论。下方「发布门禁」红框属于 Phase 4 Schema 正式发布，"
+        "不会阻止你在此保存签署。"
+    )
     signoff = induction.phase35_signoff
     if signoff:
         st.info(
@@ -222,9 +226,16 @@ def _render_publication_readiness(presentation, induction) -> None:  # type: ign
         return
 
     report_raw = induction.publish_report or {}
-    publish_report = (
-        SchemaPublishReport.model_validate(report_raw) if report_raw else None
-    )
+    publish_report = None
+    if report_raw:
+        try:
+            # Dump → re-validate so stale in-memory SchemaTestFillResult instances
+            # (missing scene_compiled etc. after Streamlit hot-reload) get defaults.
+            if hasattr(report_raw, "model_dump"):
+                report_raw = report_raw.model_dump(mode="python")
+            publish_report = SchemaPublishReport.model_validate(report_raw)
+        except Exception:
+            publish_report = None
     if publish_report is None:
         publish_report = ArchitecturalContentSchemaPublishGate().evaluate(
             induction=induction,
@@ -565,17 +576,28 @@ def _render_review() -> None:
 
     report_raw = induction.publish_report or {}
     if report_raw:
-        st.markdown("##### 发布门禁")
+        st.markdown("##### 发布门禁（Phase 4 · Schema 正式发布）")
+        st.caption(
+            "与上方 Phase 3.5 签署独立。坐标轻微越界等解析提示已改为警告；"
+            "`SCHEMA_NEEDS_REVIEW` 需在 Schema 区标记人工确认后才会放行正式发布。"
+        )
         st.write(f"状态：`{report_raw.get('status', 'UNKNOWN')}`")
         blockers_raw = report_raw.get("blockers")
         if isinstance(blockers_raw, list):
             for blocker in blockers_raw:
                 if isinstance(blocker, dict):
-                    st.error(f"{blocker.get('code')}: {blocker.get('message')}")
+                    code = blocker.get("code") or "BLOCKER"
+                    msg = str(blocker.get("message") or "")
+                    if len(msg) > 200:
+                        msg = msg[:197] + "…"
+                    st.error(f"{code}: {msg}")
         warnings_raw = report_raw.get("warnings")
         if isinstance(warnings_raw, list):
             for warning in warnings_raw:
-                st.warning(str(warning))
+                text = str(warning)
+                if len(text) > 240:
+                    text = text[:237] + "…"
+                st.warning(text)
         fills_raw = report_raw.get("test_fill_results")
         if isinstance(fills_raw, list) and fills_raw:
             st.markdown("**测试内容填充**")
