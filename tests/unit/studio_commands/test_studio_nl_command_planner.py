@@ -75,7 +75,72 @@ def test_plan_reduce_text_maps_to_fix_overflow() -> None:
     assert isinstance(plan.commands[0], FixOverflowCommand)
 
 
-def test_plan_enlarge_hero_marks_layout_fallback() -> None:
+def test_plan_enlarge_hero_maps_to_drawing_readability_when_drawing_exists() -> None:
+    from archium.domain.visual.render_scene import DrawingNode
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            DrawingNode(
+                id="site_plan",
+                x=1,
+                y=1,
+                width=3,
+                height=2,
+                z_index=1,
+                storage_uri="project://plan.png",
+                asset_path="project://plan.png",
+            )
+        ],
+    )
+    plan = StudioNLCommandPlanner().plan_text(
+        "放大主图",
+        scene=scene,
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+    )
+    assert len(plan.commands) == 1
+    from archium.domain.visual.studio_command import IncreaseDrawingReadabilityCommand
+
+    assert isinstance(plan.commands[0], IncreaseDrawingReadabilityCommand)
+
+
+def test_plan_drawing_readability_keywords() -> None:
+    from archium.domain.visual.render_scene import DrawingNode
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            DrawingNode(
+                id="site_plan",
+                x=1,
+                y=1,
+                width=3,
+                height=2,
+                z_index=1,
+                storage_uri="project://plan.png",
+                asset_path="project://plan.png",
+            )
+        ],
+    )
+    plan = StudioNLCommandPlanner().plan_text(
+        "提高图纸可读性",
+        scene=scene,
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+    )
+    assert plan.commands
+
+
+def test_plan_enlarge_hero_marks_layout_fallback_without_drawing() -> None:
     scene = _title_scene()
     plan = StudioNLCommandPlanner().plan_text(
         "放大主图",

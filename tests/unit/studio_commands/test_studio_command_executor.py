@@ -375,3 +375,78 @@ def test_replace_drawing_rejects_image_node() -> None:
     assert result.success is False
     assert any(issue.code == "STUDIO.NODE_NOT_DRAWING" for issue in result.issues)
 
+
+def test_increase_drawing_readability_enlarges_drawing() -> None:
+    from archium.application.visual.drawing_readability_service import node_area_ratio
+    from archium.domain.visual.studio_command import IncreaseDrawingReadabilityCommand
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            TextNode(
+                id="title",
+                semantic_role="title",
+                x=0.8,
+                y=0.3,
+                width=8.4,
+                height=0.5,
+                z_index=2,
+                text="院区总平面",
+                font_family="Arial",
+                font_size=20,
+                color="#000000",
+                line_height=1.2,
+            ),
+            _drawing_node(node_id="site_plan", storage_uri="project://plan.png"),
+            _text_node(
+                node_id="body",
+                text="说明文字覆盖在图面上方用于测试压缩与重排。" * 3,
+                x=1.0,
+                y=1.2,
+                width=4.0,
+                height=1.0,
+            ),
+        ],
+    )
+    drawing = scene.node_by_id("site_plan")
+    assert isinstance(drawing, DrawingNode)
+    drawing.width = 3.0
+    drawing.height = 2.0
+    before_ratio = node_area_ratio(drawing, scene)
+
+    command = IncreaseDrawingReadabilityCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="site_plan",
+        target_min_area_ratio=0.45,
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    updated = result.candidate_scene.node_by_id("site_plan")
+    assert isinstance(updated, DrawingNode)
+    assert updated.fit_mode == "contain"
+    assert node_area_ratio(updated, result.candidate_scene) > before_ratio
+    assert any(action.action_type == "enlarge_drawing" for action in result.applied_actions)
+
+
+def test_increase_drawing_readability_rejects_locked_geometry() -> None:
+    from archium.domain.visual.studio_command import IncreaseDrawingReadabilityCommand
+
+    scene = _render_scene(
+        _drawing_node(node_id="site_plan", locked=True),
+    )
+    command = IncreaseDrawingReadabilityCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="site_plan",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is False
+    assert any("locked" in item for item in result.skipped_actions)
+
+

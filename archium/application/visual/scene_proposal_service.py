@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.drawing_readability_service import parse_geometry_token
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_proposal_qa import (
     compare_proposal_qa,
@@ -259,6 +260,19 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
         if isinstance(node, DrawingNode):
             node.fit_mode = "contain"
         return
+    if action.action_type == "enlarge_drawing" and isinstance(node, DrawingNode):
+        if action.after_value:
+            x, y, width, height = parse_geometry_token(action.after_value)
+            node.x = x
+            node.y = y
+            node.width = width
+            node.height = height
+            node.fit_mode = "contain"
+        return
+    if action.action_type == "relocate_node":
+        if action.after_value is not None:
+            node.y = float(action.after_value)
+        return
     if action.action_type == "shorten_text" and isinstance(node, TextNode):
         if action.after_value is not None:
             node.text = action.after_value
@@ -283,6 +297,10 @@ def summarize_patch_action(action: ScenePatchAction) -> str:
         return f"替换图片 `{action.node_id}`"
     if action.action_type == "replace_drawing":
         return f"替换图纸 `{action.node_id}`"
+    if action.action_type == "enlarge_drawing":
+        return f"扩大图纸 `{action.node_id}`"
+    if action.action_type == "relocate_node":
+        return f"移动节点 `{action.node_id}`"
     if action.action_type == "shorten_text":
         return f"缩短文本 `{action.node_id}`"
     if action.action_type == "set_overflow_shrink":

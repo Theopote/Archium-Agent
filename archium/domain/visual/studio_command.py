@@ -71,11 +71,24 @@ class ReplaceDrawingCommand(StudioCommandBase):
     preserve_annotations: bool = True
 
 
+class IncreaseDrawingReadabilityCommand(StudioCommandBase):
+    """Enlarge a drawing node and compress supporting body content."""
+
+    command_type: Literal["increase_drawing_readability"] = "increase_drawing_readability"
+    node_id: str = Field(min_length=1)
+    target_min_area_ratio: float = Field(default=0.45, gt=0, le=1.0)
+    allow_reduce_body_text: bool = True
+    preserve_aspect_ratio: bool = True
+    preserve_annotations: bool = True
+    forbid_cover_crop: bool = True
+
+
 StudioCommand = Annotated[
     RewriteTextCommand
     | FixOverflowCommand
     | ReplaceAssetCommand
-    | ReplaceDrawingCommand,
+    | ReplaceDrawingCommand
+    | IncreaseDrawingReadabilityCommand,
     Field(discriminator="command_type"),
 ]
 

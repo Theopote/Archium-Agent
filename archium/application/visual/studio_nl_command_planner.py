@@ -12,6 +12,7 @@ from archium.domain.visual.nlp_parser import ParsedIntent
 from archium.domain.visual.render_scene import RenderScene, TextNode
 from archium.domain.visual.studio_command import (
     FixOverflowCommand,
+    IncreaseDrawingReadabilityCommand,
     RewriteTextCommand,
     StudioCommand,
 )
@@ -35,6 +36,17 @@ _OVERFLOW_KEYWORDS: tuple[str, ...] = (
     "放不下",
     "fix overflow",
     "text overflow",
+)
+
+_DRAWING_READABILITY_KEYWORDS: tuple[str, ...] = (
+    "提高图纸可读性",
+    "增大图纸",
+    "放大图纸",
+    "放大总平面",
+    "图纸太小",
+    "图纸过小",
+    "increase drawing readability",
+    "enlarge drawing",
 )
 
 _REWRITE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -105,6 +117,15 @@ class StudioNLCommandPlanner:
                 slide_id=slide_id,
                 reason="修复文本溢出",
             )
+
+        drawing_plan = self._plan_drawing_readability_keywords(
+            normalized,
+            scene=scene,
+            presentation_id=presentation_id,
+            slide_id=slide_id,
+        )
+        if drawing_plan is not None:
+            return drawing_plan
 
         parsed = self._hybrid_parser.parse(normalized)
         if parsed is None:
@@ -257,7 +278,6 @@ class StudioNLCommandPlanner:
             )
 
         layout_only = {
-            VisualEditIntent.ENLARGE_HERO,
             VisualEditIntent.INCREASE_WHITESPACE,
             VisualEditIntent.CHANGE_LAYOUT,
             VisualEditIntent.SET_HERO_ASSET,
@@ -268,6 +288,29 @@ class StudioNLCommandPlanner:
             VisualEditIntent.MOVE_ELEMENT,
             VisualEditIntent.RESIZE_ELEMENT,
         }
+        if intent == VisualEditIntent.ENLARGE_HERO:
+            drawing_id = _default_drawing_node_id(scene)
+            if drawing_id is not None:
+                return self._drawing_readability_plan(
+                    scene=scene,
+                    presentation_id=presentation_id,
+                    slide_id=slide_id,
+                    node_id=drawing_id,
+                    reason="放大主图/图纸以提升可读性",
+                    parsed_intent=intent,
+                    confidence=confidence,
+                )
+            return StudioCommandPlan(
+                commands=(),
+                reasons=(),
+                parsed_intent=intent,
+                confidence=confidence,
+                unsupported_reason=(
+                    "当前页未找到图纸节点，无法生成图纸可读性提案。"
+                ),
+                uses_layout_fallback=True,
+            )
+
         if intent in layout_only:
             return StudioCommandPlan(
                 commands=(),
@@ -314,6 +357,58 @@ class StudioNLCommandPlanner:
             confidence=confidence,
         )
 
+    def _plan_drawing_readability_keywords(
+        self,
+        text: str,
+        *,
+        scene: RenderScene,
+        presentation_id,
+        slide_id,
+    ) -> StudioCommandPlan | None:
+        lowered = text.lower()
+        if not any(keyword in lowered for keyword in _DRAWING_READABILITY_KEYWORDS):
+            return None
+        node_id = _default_drawing_node_id(scene)
+        if node_id is None:
+            return StudioCommandPlan(
+                commands=(),
+                reasons=(),
+                unsupported_reason="当前页未找到可放大的图纸节点。",
+            )
+        return self._drawing_readability_plan(
+            scene=scene,
+            presentation_id=presentation_id,
+            slide_id=slide_id,
+            node_id=node_id,
+            reason="提高图纸可读性",
+        )
+
+    def _drawing_readability_plan(
+        self,
+        *,
+        scene: RenderScene,
+        presentation_id,
+        slide_id,
+        node_id: str,
+        reason: str,
+        parsed_intent: VisualEditIntent | None = None,
+        confidence: float = 0.9,
+    ) -> StudioCommandPlan:
+        command = IncreaseDrawingReadabilityCommand(
+            presentation_id=presentation_id,
+            slide_id=slide_id,
+            node_id=node_id,
+            target_node_ids=[node_id],
+            reason=reason,
+            expected_effect=f"扩大图纸 `{node_id}` 并压缩辅助正文",
+        )
+        return StudioCommandPlan(
+            commands=(command,),
+            reasons=(command.expected_effect,),
+            parsed_intent=parsed_intent,
+            confidence=confidence,
+        )
+
     @staticmethod
     def _is_composite(parsed: ParsedIntent) -> bool:
         has_constraints = any(modifier.type.value == "constraint" for modifier in parsed.modifiers)
@@ -353,3 +448,13 @@ def resolve_render_node_id(scene: RenderScene, hint: str | None, *, default: str
                 return node.id
 
     raise ValueError(f"无法在 RenderScene 中定位节点：`{hint}`")
+
+
+def _default_drawing_node_id(scene: RenderScene) -> str | None:
+    for node in scene.nodes:
+        if getattr(node, "node_type", "") == "drawing":
+            return node.id
+    for node in scene.nodes:
+        if "plan" in node.id or "drawing" in node.id:
+            return node.id
+    return None

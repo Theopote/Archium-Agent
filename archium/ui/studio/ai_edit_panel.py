@@ -39,12 +39,12 @@ def render_ai_edit_panel(
 
     st.caption(
         "Scene 提案模式：自然语言会先解析为结构化命令，再生成 Before/After 对比。"
-        "支持：改写标题/正文、修复文字溢出、减少文字。"
+        "支持：改写标题/正文、修复文字溢出、减少文字、提高图纸可读性。"
     )
 
     text = st.text_area(
         "描述你想做的修改",
-        placeholder="例如：标题改为「结论：院区交通需分层组织」、修复文字溢出、减少文字…",
+        placeholder="例如：标题改为「结论：…」、修复文字溢出、提高图纸可读性…",
         height=100,
         key=f"studio_ai_edit_input_{slide_id}",
     )

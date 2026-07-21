@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from archium.application.visual.drawing_readability_service import increase_drawing_readability
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
@@ -28,6 +29,7 @@ from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction
 from archium.domain.visual.studio_command import (
     FixOverflowCommand,
+    IncreaseDrawingReadabilityCommand,
     ReplaceAssetCommand,
     ReplaceDrawingCommand,
     RewriteTextCommand,
@@ -61,6 +63,7 @@ class CommandExecutionResult:
 
 _CONTENT_LOCK_SCOPES = frozenset({"content", "all"})
 _ASSET_LOCK_SCOPES = frozenset({"asset", "all"})
+_GEOMETRY_LOCK_SCOPES = frozenset({"position", "size", "all"})
 
 
 def node_content_locked(node: BaseRenderNode) -> bool:
@@ -71,6 +74,11 @@ def node_content_locked(node: BaseRenderNode) -> bool:
 def node_asset_locked(node: BaseRenderNode) -> bool:
     """Return True when asset binding on a render node must not be mutated."""
     return _node_has_lock_scope(node, _ASSET_LOCK_SCOPES)
+
+
+def node_geometry_locked(node: BaseRenderNode) -> bool:
+    """Return True when node position/size must not be mutated."""
+    return _node_has_lock_scope(node, _GEOMETRY_LOCK_SCOPES)
 
 
 def _node_has_lock_scope(node: BaseRenderNode, scopes: frozenset[str]) -> bool:
@@ -100,6 +108,8 @@ class StudioCommandExecutor:
             return self._execute_replace_asset(scene, command, context, base_hash)
         if isinstance(command, ReplaceDrawingCommand):
             return self._execute_replace_drawing(scene, command, context, base_hash)
+        if isinstance(command, IncreaseDrawingReadabilityCommand):
+            return self._execute_increase_drawing_readability(scene, command, base_hash)
         return CommandExecutionResult(
             success=False,
             base_scene_hash=base_hash,
@@ -394,6 +404,80 @@ class StudioCommandExecutor:
             base_scene_hash=base_hash,
             candidate_scene=patched,
             applied_actions=(action,),
+        )
+
+    def _execute_increase_drawing_readability(
+        self,
+        scene: RenderScene,
+        command: IncreaseDrawingReadabilityCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if not isinstance(node, DrawingNode):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.NODE_NOT_DRAWING",
+                        message=f"node `{command.node_id}` is not a drawing node",
+                        evidence=[command.node_id],
+                        category=IssueCategory.ARCHITECTURAL,
+                    ),
+                ),
+            )
+        if node_geometry_locked(node):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="increase_drawing_readability",
+                node_id=command.node_id,
+                lock_kind="geometry",
+            )
+        if command.forbid_cover_crop and node.fit_mode == "cover":
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.DRAWING_COVER_FORBIDDEN",
+                        message="drawing must not use cover fit mode",
+                        severity=IssueSeverity.BLOCKER,
+                        category=IssueCategory.ARCHITECTURAL,
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        try:
+            result = increase_drawing_readability(scene, command)
+        except ValueError as exc:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.COMMAND_INVALID",
+                        message=str(exc),
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        if not result.actions:
+            return CommandExecutionResult(
+                success=True,
+                base_scene_hash=base_hash,
+                candidate_scene=result.scene,
+            )
+
+        return CommandExecutionResult(
+            success=result.area_ratio_after + 1e-6 >= command.target_min_area_ratio
+            or result.area_ratio_after > result.area_ratio_before,
+            base_scene_hash=base_hash,
+            candidate_scene=result.scene,
+            applied_actions=result.actions,
         )
 
 
