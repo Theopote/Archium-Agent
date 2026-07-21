@@ -31,9 +31,9 @@ def format_slide_generation_context(context: SlideGenerationContext) -> str:
             lines.append(f"- [{flag}] {fact.statement}")
     if context.project_facts:
         lines.append("\n【相关项目事实】")
-        for fact in context.project_facts:
-            suffix = f" {fact.unit}" if fact.unit else ""
-            lines.append(f"- {fact.label}: {fact.value}{suffix}")
+        for pfact in context.project_facts:
+            suffix = f" {pfact.unit}" if pfact.unit else ""
+            lines.append(f"- {pfact.label}: {pfact.value}{suffix}")
     if context.relevant_assets:
         lines.append("\n【相关素材】")
         for asset in context.relevant_assets:
@@ -47,6 +47,6 @@ def format_slide_generation_context(context: SlideGenerationContext) -> str:
             lines.append(f"- {cite.document_name}{page}{quote}")
     if context.template_schema is not None:
         lines.append(
-            f"\n【版式语义契约】\nschema_id={context.template_schema.schema_id}"
+            f"\n【版式语义契约】\nschema_id={context.template_schema.id}"
         )
     return ContextBudgetManager().trim_prompt_block("\n".join(lines), stage="slide_generate")

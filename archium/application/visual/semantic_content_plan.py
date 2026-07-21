@@ -263,10 +263,10 @@ def _merge_evidence_labels(
         if statement and statement not in seen:
             merged.append(statement)
             seen.add(statement)
-    for fact in context.project_facts:
-        line = f"{fact.label}: {fact.value}"
-        if fact.unit:
-            line = f"{line} {fact.unit}"
+    for pfact in context.project_facts:
+        line = f"{pfact.label}: {pfact.value}"
+        if pfact.unit:
+            line = f"{line} {pfact.unit}"
         line = line.strip()
         if line and line not in seen:
             merged.append(line)
