@@ -6,9 +6,11 @@ from copy import deepcopy
 from uuid import UUID
 
 from archium.application.outline_templates import detect_scenario_template, template_sections
+from archium.application.presentation_manuscript_service import outline_plan_from_manuscript
 from archium.domain.enums import OutlineAudienceMode
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.infrastructure.llm.presentation_schemas import OutlinePlanDraft, OutlineSectionDraft
 
 _AUDIENCE_CATEGORY_PRIORITY: dict[OutlineAudienceMode, tuple[str, ...]] = {
@@ -250,6 +252,22 @@ def outline_from_draft(
         audience_mode=audience_mode,
         sections=sections,
         version=version,
+    )
+
+
+def outline_from_manuscript(
+    manuscript: PresentationManuscript,
+    *,
+    brief: PresentationBrief | None = None,
+    audience: str = "",
+    purpose: str = "",
+) -> OutlinePlan:
+    """Outline planning entry that reads PresentationManuscript sections."""
+    return outline_plan_from_manuscript(
+        manuscript,
+        brief=brief,
+        audience=audience,
+        purpose=purpose,
     )
 
 

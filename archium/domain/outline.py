@@ -34,6 +34,8 @@ class OutlinePlan(IdentifiedModel, VersionedModel, TimestampedModel):
     presentation_id: UUID
     lineage_id: UUID = Field(default_factory=uuid4)
     logical_key: str = Field(default=OUTLINE_LOGICAL_KEY, max_length=200)
+    # Optional link to the research manuscript that seeded this outline.
+    manuscript_id: UUID | None = None
     title: str = Field(min_length=1, max_length=500)
     thesis: str = Field(min_length=1)
     audience: str = Field(min_length=1)

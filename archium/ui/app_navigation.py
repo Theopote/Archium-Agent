@@ -24,6 +24,7 @@ def build_app_pages() -> dict[str, list[Any]]:
         project_mission,
         settings,
         studio,
+        template_induction,
         template_studio,
         visual_design,
         workspace,
@@ -91,6 +92,12 @@ def build_app_pages() -> dict[str, list[Any]]:
             icon="🧩",
             url_path="template-studio",
         ),
+        "template-induction": st.Page(
+            template_induction.render,
+            title="模板归纳",
+            icon="🔬",
+            url_path="template-induction",
+        ),
         "workspace": st.Page(workspace.render, title="项目工作台", icon="📂", url_path="workspace"),
         "visual-design": st.Page(
             visual_design.render,
@@ -131,6 +138,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             advanced_pages["studio"],
             advanced_pages["visual-design"],
             advanced_pages["template-studio"],
+            advanced_pages["template-induction"],
             advanced_pages["command-center"],
             advanced_pages["settings"],
         ],

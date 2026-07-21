@@ -49,6 +49,7 @@ from archium.domain.presentation import (
     PresentationBrief,
     Storyline,
 )
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.reference_style import (
@@ -69,6 +70,7 @@ from archium.infrastructure.database.models import (
     OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
+    PresentationManuscriptORM,
     PresentationORM,
     ProjectFactORM,
     ProjectKnowledgeItemORM,
@@ -468,6 +470,7 @@ def outline_plan_to_domain(orm: OutlinePlanORM) -> OutlinePlan:
     return OutlinePlan(
         id=orm.id,
         presentation_id=orm.presentation_id,
+        manuscript_id=getattr(orm, "manuscript_id", None),
         lineage_id=lineage_id,
         logical_key=logical_key,
         title=orm.title,
@@ -487,6 +490,7 @@ def outline_plan_to_domain(orm: OutlinePlanORM) -> OutlinePlan:
 def outline_plan_to_orm(domain: OutlinePlan, orm: OutlinePlanORM | None = None) -> OutlinePlanORM:
     target = orm or OutlinePlanORM(id=domain.id)
     target.presentation_id = domain.presentation_id
+    target.manuscript_id = domain.manuscript_id
     target.title = domain.title
     target.thesis = domain.thesis
     target.audience = domain.audience
@@ -500,6 +504,57 @@ def outline_plan_to_orm(domain: OutlinePlan, orm: OutlinePlanORM | None = None) 
     target.logical_key = domain.logical_key
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
+    return target
+
+
+def presentation_manuscript_to_domain(orm: PresentationManuscriptORM) -> PresentationManuscript:
+    payload = dict(orm.payload_json or {})
+    payload.update(
+        {
+            "id": orm.id,
+            "project_id": orm.project_id,
+            "presentation_id": orm.presentation_id,
+            "title": orm.title,
+            "status": orm.status,
+            "version": orm.version,
+            "lineage_id": orm.lineage_id,
+            "logical_key": orm.logical_key,
+            "created_at": orm.created_at,
+            "updated_at": orm.updated_at,
+        }
+    )
+    return PresentationManuscript.model_validate(payload)
+
+
+def presentation_manuscript_to_orm(
+    domain: PresentationManuscript,
+    orm: PresentationManuscriptORM | None = None,
+) -> PresentationManuscriptORM:
+    target = orm or PresentationManuscriptORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.presentation_id = domain.presentation_id
+    target.title = domain.title
+    target.status = domain.status.value
+    target.version = domain.version
+    target.lineage_id = domain.lineage_id
+    target.logical_key = domain.logical_key
+    target.created_at = domain.created_at
+    target.updated_at = domain.updated_at
+    payload = domain.model_dump(mode="json")
+    for key in (
+        "id",
+        "project_id",
+        "presentation_id",
+        "title",
+        "status",
+        "version",
+        "lineage_id",
+        "logical_key",
+        "created_at",
+        "updated_at",
+    ):
+        payload.pop(key, None)
+    target.payload_json = payload
     return target
 
 

@@ -204,3 +204,33 @@ Recent work improved **wiring and honesty**, not human sign-off:
 - Phase 8 local multi-slide generation (runtime under `.data/phase8` only)
 
 None of the above substitutes for 30 manual benchmark reviews, five real-project rehearsal sign-offs, or treating Phase 8 dumps as formal acceptance.
+
+## Template Induction Phase 0–3 (2026-07-21)
+
+Architectural Template Induction sprint (PPTAgent-inspired, **not** a parallel PPT kernel).
+
+### Phase 0 audit (summary)
+
+| Bucket | Items |
+|--------|--------|
+| **A 可直接复用** | `DomainModel` / repos, `OutlinePlan`, `SlideSpec`, `RenderScene`, `ProjectKnowledge`, Semantic/Deck QA, Template Studio shell, asset origin literals, Streamlit review patterns |
+| **B 需扩展** | `PptxStructureExtractor` → `ReferencePptxParser` + snapshots; `ArchitecturalTemplate` (later publish); `TemplateLayoutMatcher`; Outline ↔ Manuscript; Template Studio UI |
+| **C 重复风险** | `TemplatePageType` / `LayoutFamily` / `VisualContentType` / `SlideType` — induction uses separate `FunctionalSlideType` + `ArchitecturalContentType` with explicit mapping later |
+| **D 旧路径** | Legacy `main.py` / `ppt_generator.py` remain secondary; do not revive as induction kernel |
+| **E 迁移** | `019_presentation_manuscripts` adds manuscripts + `outline_plans.manuscript_id` |
+
+### Phase 1–3 delivered
+
+| Capability | Status | Location |
+|------------|--------|----------|
+| PresentationManuscript (+ Fact/Evidence/Section) | **Done** | `archium/domain/presentation_manuscript.py` |
+| Research → Manuscript → Outline | **Done** | `PresentationManuscriptService`, `outline_from_manuscript` |
+| Reference PPT parse + snapshots | **Done** | `ReferencePptxParser`, `ReferenceSlideSnapshot` |
+| Functional classification | **Done** | `FunctionalSlideClassifier` |
+| Content clustering + representatives | **Done** | `ReferenceSlideClusterer`, `RepresentativeSlideSelector` |
+| Artifact export (acceptance layout) | **Done** | `TemplateInductionService.export_artifacts` |
+| Simple Review UI (corrections, not scores) | **Done** | `archium/ui/pages/template_induction.py` |
+| Edit-based generation / Schema / Repair / Deck coherence | **Not in this round** | Phase 4+ |
+
+**对外口径：** Phase 0–3 完成参考页归纳与复核；**不得**宣称 ArchitecturalContentSchema 发布、编辑式生成或 Scene 修复环已完成。
+

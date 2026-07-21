@@ -270,6 +270,7 @@ class OutlinePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     presentation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
     )
+    manuscript_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     thesis: Mapped[str] = mapped_column(Text, nullable=False)
     audience: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -283,6 +284,27 @@ class OutlinePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="presentation-outline")
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="outlines")
+
+
+class PresentationManuscriptORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "presentation_manuscripts"
+    __table_args__ = (
+        Index("ix_presentation_manuscripts_project_id", "project_id"),
+        Index("ix_presentation_manuscripts_presentation_id", "presentation_id"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    presentation_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    logical_key: Mapped[str] = mapped_column(
+        String(200), nullable=False, default="presentation-manuscript"
+    )
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
 
 
 class CulturalNarrativePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):

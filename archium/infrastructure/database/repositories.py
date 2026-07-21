@@ -16,6 +16,7 @@ from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.domain.reference_style import ReferenceStyleProfile
@@ -34,6 +35,7 @@ from archium.infrastructure.database.models import (
     OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
+    PresentationManuscriptORM,
     PresentationORM,
     ProjectFactORM,
     ProjectKnowledgeItemORM,
@@ -1033,3 +1035,39 @@ class EntityRevisionRepository:
 
 
 SlideRevisionRepository = EntityRevisionRepository
+
+
+class PresentationManuscriptRepository:
+    """CRUD for PresentationManuscript (research middle layer)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def save(self, manuscript: PresentationManuscript) -> PresentationManuscript:
+        try:
+            orm = self._session.get(PresentationManuscriptORM, manuscript.id)
+            if orm is None:
+                orm = mappers.presentation_manuscript_to_orm(manuscript)
+                self._session.add(orm)
+            else:
+                mappers.presentation_manuscript_to_orm(manuscript, orm)
+            self._session.flush()
+            return mappers.presentation_manuscript_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save presentation manuscript", exc)
+            raise
+
+    def get(self, manuscript_id: UUID) -> PresentationManuscript | None:
+        orm = self._session.get(PresentationManuscriptORM, manuscript_id)
+        return mappers.presentation_manuscript_to_domain(orm) if orm else None
+
+    def list_by_project(self, project_id: UUID) -> list[PresentationManuscript]:
+        stmt = (
+            select(PresentationManuscriptORM)
+            .where(PresentationManuscriptORM.project_id == project_id)
+            .order_by(PresentationManuscriptORM.version.desc())
+        )
+        return [
+            mappers.presentation_manuscript_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
