@@ -9,7 +9,7 @@ from alembic import context
 from archium.config.settings import get_settings
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.session import create_engine_from_settings
-from sqlalchemy import pool
+from sqlalchemy import create_engine, pool
 
 config = context.config
 if config.config_file_name is not None:
@@ -24,7 +24,7 @@ def get_url() -> str:
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=get_url(),
+        url=config.attributes.get("engine_url") or get_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -35,7 +35,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connectable = create_engine_from_settings(get_settings(), poolclass=pool.NullPool)
+    engine_url = config.attributes.get("engine_url")
+    if engine_url:
+        connectable = create_engine(engine_url, poolclass=pool.NullPool)
+    else:
+        connectable = create_engine_from_settings(get_settings(), poolclass=pool.NullPool)
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
