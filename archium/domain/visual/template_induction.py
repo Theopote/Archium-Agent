@@ -95,10 +95,11 @@ class TemplateInductionStatus(StrEnum):
     DRAFT = "draft"
     REVIEW = "review"
     READY = "ready"
+    PUBLISHED = "published"
 
 
 class TemplateInductionResult(IdentifiedModel, TimestampedModel):
-    """File-oriented induction package for Phase 0–3 acceptance."""
+    """File-oriented induction package for Phase 0–4 acceptance."""
 
     name: str = Field(min_length=1)
     workspace_relative: str = ""
@@ -109,6 +110,9 @@ class TemplateInductionResult(IdentifiedModel, TimestampedModel):
     clusters: list[ReferenceSlideCluster] = Field(default_factory=list)
     representative_scores: list[RepresentativeSlideScore] = Field(default_factory=list)
     overrides: list[InductionReviewOverride] = Field(default_factory=list)
+    # Phase 4 — content schemas keyed by cluster representatives.
+    content_schemas: list[dict[str, object]] = Field(default_factory=list)
+    publish_report: dict[str, object] | None = None
     warnings: list[str] = Field(default_factory=list)
     low_confidence_slide_ids: list[str] = Field(default_factory=list)
 

@@ -157,7 +157,88 @@ def _render_review() -> None:
             st.session_state.setdefault("induction_rep_overrides", {})
             st.session_state["induction_rep_overrides"][cluster.id] = choice
 
-    if st.button("保存修正", type="primary", use_container_width=True):
+    st.markdown("##### 内容 Schema（Phase 4）")
+    from archium.domain.visual.architectural_content_schema import (
+        ArchitecturalContentSchema,
+        SchemaReviewOverride,
+    )
+
+    schemas = [
+        ArchitecturalContentSchema.model_validate(item)
+        for item in induction.content_schemas
+    ]
+    if not schemas:
+        st.info("尚无 Schema，请先保存分类/代表页修正以重新提取。")
+    for schema in schemas:
+        with st.expander(
+            f"{schema.name} · 代表 {schema.representative_slide_id} · "
+            f"置信度 {schema.confidence:.2f}"
+            + (" · 需确认" if schema.needs_review and not schema.human_corrected else ""),
+            expanded=schema.needs_review and not schema.human_corrected,
+        ):
+            st.write(schema.page_purpose)
+            st.caption(
+                "必填角色："
+                + ", ".join(sorted(schema.required_roles()) or ["（无）"])
+            )
+            slots = ", ".join(v.role for v in schema.visual_requirements) or "（无）"
+            st.caption("视觉槽位：" + slots)
+            purpose = st.text_area(
+                "页面用途",
+                value=schema.page_purpose,
+                key=f"schema_purpose_{schema.id}",
+            )
+            c1, c2, c3 = st.columns(3)
+            supports_drawing = c1.checkbox(
+                "允许图纸",
+                value=schema.supports_drawing,
+                key=f"schema_drawing_{schema.id}",
+            )
+            citation_required = c2.checkbox(
+                "需要引用",
+                value=schema.citation_required,
+                key=f"schema_cite_{schema.id}",
+            )
+            caption_required = c3.checkbox(
+                "需要图注",
+                value=schema.caption_required,
+                key=f"schema_cap_{schema.id}",
+            )
+            allowed = st.multiselect(
+                "允许素材来源",
+                options=[
+                    "project_upload",
+                    "public_research",
+                    "reference_case",
+                    "stock_image",
+                ],
+                default=[o for o in schema.allowed_asset_origins if o != "reference_template"],
+                key=f"schema_allowed_{schema.id}",
+            )
+            st.session_state.setdefault("induction_schema_overrides", {})
+            st.session_state["induction_schema_overrides"][schema.id] = {
+                "page_purpose": purpose,
+                "supports_drawing": supports_drawing,
+                "citation_required": citation_required,
+                "caption_required": caption_required,
+                "allowed_asset_origins": allowed,
+            }
+
+    report_raw = induction.publish_report or {}
+    if report_raw:
+        st.markdown("##### 发布门禁")
+        st.write(f"状态：`{report_raw.get('status', 'UNKNOWN')}`")
+        for blocker in report_raw.get("blockers") or []:
+            if isinstance(blocker, dict):
+                st.error(f"{blocker.get('code')}: {blocker.get('message')}")
+        for warning in report_raw.get("warnings") or []:
+            st.warning(str(warning))
+
+    col_a, col_b = st.columns(2)
+    save_clicked = col_a.button("保存修正", type="primary", use_container_width=True)
+    publish_clicked = col_b.button("尝试发布 Schema", use_container_width=True)
+
+    if save_clicked:
         overrides: list[InductionReviewOverride] = []
         type_map = st.session_state.get("induction_overrides", {})
         for slide_id, payload in type_map.items():
@@ -177,23 +258,58 @@ def _render_review() -> None:
                 )
             )
         updated = service.apply_overrides(induction, presentation, overrides)
-        service.export_artifacts(workspace, presentation, updated)
-        st.success("已保存人工修正，并更新聚类产物。")
+        schema_overrides = [
+            SchemaReviewOverride(
+                schema_id=schema_id,
+                page_purpose=payload.get("page_purpose"),
+                supports_drawing=payload.get("supports_drawing"),
+                citation_required=payload.get("citation_required"),
+                caption_required=payload.get("caption_required"),
+                allowed_asset_origins=payload.get("allowed_asset_origins"),
+                forbidden_asset_origins=["reference_template", "ai_generated"],
+            )
+            for schema_id, payload in st.session_state.get(
+                "induction_schema_overrides", {}
+            ).items()
+        ]
+        updated, schemas, report = service.apply_schema_overrides(
+            updated, presentation, schema_overrides
+        )
+        service.export_artifacts(
+            workspace, presentation, updated, schemas=schemas, publish_report=report
+        )
+        st.success("已保存人工修正，并更新 Schema / 聚类产物。")
+        st.rerun()
+
+    if publish_clicked:
+        schemas = [
+            ArchitecturalContentSchema.model_validate(item)
+            for item in induction.content_schemas
+        ]
+        report = service.publish(induction, presentation, schemas=schemas)
+        service.export_artifacts(
+            workspace, presentation, induction, schemas=schemas, publish_report=report
+        )
+        if report.can_publish:
+            st.success(f"Schema 可发布：{report.status}")
+        else:
+            st.error(f"发布被阻断：{report.status}")
         st.rerun()
 
     st.markdown("##### 产物路径")
     st.code(str(workspace), language="text")
     st.caption(
         "输出：reference_presentation.json · slides/ · "
-        "functional_classification.json · content_clusters.json · representative_slides.json"
+        "functional_classification.json · content_clusters.json · "
+        "representative_slides.json · content_schemas.json · schema_publish_report.json"
     )
 
 
 def render() -> None:
     st.title("模板归纳复核")
     st.caption(
-        "从参考 PPTX 归纳功能页与内容页聚类。本阶段不发布完整 Schema，"
-        "也不做编辑式生成。"
+        "从参考 PPTX 归纳功能页、内容聚类与建筑内容 Schema。"
+        "人工只做修正，不打分。本阶段不做编辑式生成。"
     )
     _render_upload()
     st.divider()

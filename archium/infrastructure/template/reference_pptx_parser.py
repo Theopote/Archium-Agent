@@ -1,7 +1,8 @@
 """Parse reference PPTX into ReferenceSlideSnapshot (induction IR).
 
 Extends Template Studio extraction with richer element typing, signatures,
-and portable relative image paths. Does not invent a parallel generation kernel.
+extracted reference assets, group recursion, and portable relative paths.
+Does not invent a parallel generation kernel.
 """
 
 from __future__ import annotations
@@ -10,13 +11,14 @@ import contextlib
 import hashlib
 import json
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Emu
 
+from archium.application.visual.drawing_inference_service import DrawingInferenceService
 from archium.domain.visual.reference_slide import (
     REFERENCE_TEMPLATE_ASSET_ORIGIN,
     ReferenceAsset,
@@ -25,7 +27,6 @@ from archium.domain.visual.reference_slide import (
     ReferencePresentation,
     ReferenceSlideSnapshot,
 )
-from archium.application.visual.drawing_inference_service import DrawingInferenceService
 from archium.infrastructure.renderers.pptx_screenshot import (
     export_pptx_slide_pngs,
     screenshot_tools_available,
@@ -33,6 +34,12 @@ from archium.infrastructure.renderers.pptx_screenshot import (
 
 _EMU_PER_INCH = 914400.0
 _WINDOWS_ABS = re.compile(r"^[A-Za-z]:[\\/]")
+_GENERIC_SHAPE_NAME = re.compile(
+    r"^(textbox|rectangle|picture|oval|shape|group|placeholder|autoshape)\s*\d*$",
+    re.I,
+)
+# Large non-text fills covering ~17.5%+ of the page area → decoration candidate.
+_DECORATION_AREA_RATIO = 0.175
 
 
 def _emu_to_inches(value: int | float | None) -> float:
@@ -98,11 +105,12 @@ def _visual_embedding(
 ) -> list[float]:
     """Deterministic structural embedding for clustering (not a neural model)."""
     area = max(width * height, 0.01)
-    type_counts = Counter(e.element_type.value for e in elements)
-    covered = sum(e.width * e.height for e in elements) / area
-    top_heavy = sum(e.width * e.height for e in elements if e.y < height * 0.33) / area
-    left_heavy = sum(e.width * e.height for e in elements if e.x < width * 0.45) / area
-    max_element = max((e.width * e.height for e in elements), default=0.0) / area
+    flat = [node for e in elements for node in e.iter_self_and_descendants()]
+    type_counts = Counter(e.element_type.value for e in flat)
+    covered = sum(e.width * e.height for e in flat) / area
+    top_heavy = sum(e.width * e.height for e in flat if e.y < height * 0.33) / area
+    left_heavy = sum(e.width * e.height for e in flat if e.x < width * 0.45) / area
+    max_element = max((e.width * e.height for e in flat), default=0.0) / area
     return [
         round(min(covered, 2.0), 4),
         round(min(top_heavy, 1.5), 4),
@@ -115,33 +123,44 @@ def _visual_embedding(
         round(type_counts.get("text", 0) / 12.0, 4),
         round(type_counts.get("decoration", 0) / 8.0, 4),
         round(type_counts.get("drawing", 0) / 3.0, 4),
-        round(len(elements) / 20.0, 4),
+        round(len(flat) / 20.0, 4),
     ]
+
+
+def _is_placeholder_shape(shape: object) -> bool:
+    with contextlib.suppress(Exception):
+        if bool(getattr(shape, "is_placeholder", False)):
+            return True
+    return getattr(shape, "shape_type", None) == MSO_SHAPE_TYPE.PLACEHOLDER
 
 
 def _infer_element_type(
     *,
+    shape: object,
     shape_type: object,
     has_text: bool,
     text: str,
     is_picture: bool,
     width: float,
     height: float,
+    page_width: float,
     page_height: float,
 ) -> ReferenceElementType:
+    if _is_placeholder_shape(shape) or shape_type == MSO_SHAPE_TYPE.PLACEHOLDER:
+        return ReferenceElementType.PLACEHOLDER
     if shape_type == MSO_SHAPE_TYPE.GROUP:
         return ReferenceElementType.GROUP
     if shape_type == MSO_SHAPE_TYPE.TABLE or getattr(shape_type, "name", "") == "TABLE":
         return ReferenceElementType.TABLE
     if shape_type == MSO_SHAPE_TYPE.CHART:
         return ReferenceElementType.CHART
-    if is_picture:
-        # Picture shapes almost never have a text frame. Drawing vs photo is
-        # decided later by DrawingInferenceService (neighbors / name / alt / title).
+    if is_picture or shape_type == MSO_SHAPE_TYPE.LINKED_PICTURE:
+        # Drawing vs photo decided later by DrawingInferenceService.
         return ReferenceElementType.IMAGE
     if has_text and text.strip():
         return ReferenceElementType.TEXT
-    if width * height >= page_height * 0.35 * 10 * 0.5:
+    page_area = max(page_width * page_height, 0.01)
+    if width * height >= page_area * _DECORATION_AREA_RATIO:
         return ReferenceElementType.DECORATION
     if not has_text:
         return ReferenceElementType.DECORATION
@@ -151,13 +170,22 @@ def _infer_element_type(
 def _picture_alt_text(shape: object) -> str:
     """Read OOXML cNvPr descr/title — the usual home for picture alt text."""
     with contextlib.suppress(Exception):
-        c_nv_pr = shape._element.nvPicPr.cNvPr  # type: ignore[attr-defined]
-        descr = (c_nv_pr.get("descr") or "").strip()
-        if descr:
-            return descr
-        title = (c_nv_pr.get("title") or "").strip()
-        if title:
-            return title
+        element = getattr(shape, "_element", None)
+        if element is None:
+            return ""
+        for attr_path in ("nvPicPr", "nvSpPr"):
+            container = getattr(element, attr_path, None)
+            if container is None:
+                continue
+            c_nv_pr = getattr(container, "cNvPr", None)
+            if c_nv_pr is None:
+                continue
+            descr = (c_nv_pr.get("descr") or "").strip()
+            if descr:
+                return descr
+            title = (c_nv_pr.get("title") or "").strip()
+            if title:
+                return title
     return ""
 
 
@@ -171,6 +199,8 @@ def _infer_semantic_role(
     font_size_pt: float | None,
 ) -> str:
     lower = text.lower()
+    if element_type == ReferenceElementType.PLACEHOLDER:
+        return "placeholder"
     if element_type == ReferenceElementType.IMAGE:
         return "supporting_image" if height < page_height * 0.45 else "hero_image"
     if element_type == ReferenceElementType.DRAWING:
@@ -179,6 +209,8 @@ def _infer_semantic_role(
         return "chart"
     if element_type == ReferenceElementType.TABLE:
         return "table"
+    if element_type == ReferenceElementType.GROUP:
+        return "group"
     if element_type == ReferenceElementType.DECORATION:
         return "decoration"
     if y <= page_height * 0.22 and (font_size_pt or 0) >= 20:
@@ -192,6 +224,117 @@ def _infer_semantic_role(
     if y >= page_height * 0.82:
         return "caption"
     return "body"
+
+
+def _extension_for_image(content_type: str, blob: bytes) -> str:
+    ctype = (content_type or "").lower()
+    if "png" in ctype:
+        return ".png"
+    if "jpeg" in ctype or "jpg" in ctype:
+        return ".jpg"
+    if "gif" in ctype:
+        return ".gif"
+    if "webp" in ctype:
+        return ".webp"
+    if "emf" in ctype:
+        return ".emf"
+    if "wmf" in ctype:
+        return ".wmf"
+    if blob.startswith(b"\x89PNG"):
+        return ".png"
+    if blob[:2] == b"\xff\xd8":
+        return ".jpg"
+    return ".bin"
+
+
+def _structural_signature(
+    *,
+    element_type: ReferenceElementType,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    font_name: str | None,
+    fill_color: str | None,
+    text: str,
+    asset_hash: str,
+    layout_name: str | None,
+    master_name: str | None,
+    placeholder: bool,
+) -> str:
+    text_hash = (
+        hashlib.sha256(text.strip().encode("utf-8")).hexdigest()[:12] if text.strip() else ""
+    )
+    payload = {
+        "type": element_type.value,
+        "geom": (
+            round(x, 2),
+            round(y, 2),
+            round(width, 2),
+            round(height, 2),
+        ),
+        "font": font_name or "",
+        "fill": fill_color or "",
+        "text_hash": text_hash,
+        "asset_hash": asset_hash or "",
+        "layout": layout_name or "",
+        "master": master_name or "",
+        "placeholder": placeholder,
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
+
+
+def _mark_repeated_elements(slides: list[ReferenceSlideSnapshot]) -> None:
+    """Mark cross-page repeats using structural signatures — not PowerPoint auto-names."""
+    if len(slides) < 2:
+        return
+    threshold = max(2, len(slides) // 3)
+    sig_pages: dict[str, set[int]] = defaultdict(set)
+    for slide in slides:
+        for element in slide.iter_elements():
+            if not element.structural_signature:
+                continue
+            sig_pages[element.structural_signature].add(slide.slide_index)
+
+    repeated = {sig for sig, pages in sig_pages.items() if len(pages) >= threshold}
+    for slide in slides:
+        for element in slide.iter_elements():
+            if element.structural_signature not in repeated:
+                continue
+            element.repeats_across_pages = True
+            # Only promote to decoration when the signature is chrome-like, not body copy.
+            if _looks_like_chrome(element):
+                element.likely_background_or_decoration = True
+                if element.element_type == ReferenceElementType.TEXT and not element.text.strip():
+                    element.element_type = ReferenceElementType.DECORATION
+                    element.semantic_role = "decoration"
+
+
+def _looks_like_chrome(element: ReferenceElement) -> bool:
+    if element.element_type in {
+        ReferenceElementType.DECORATION,
+        ReferenceElementType.SHAPE,
+        ReferenceElementType.PLACEHOLDER,
+    }:
+        return True
+    if element.element_type == ReferenceElementType.TEXT:
+        # Repeated empty/short labels near edges are often footer chrome.
+        if len(element.text.strip()) <= 12 and element.semantic_role in {
+            "",
+            "body",
+            "caption",
+            "source",
+        }:
+            return True
+        return False
+    if element.element_type in {
+        ReferenceElementType.IMAGE,
+        ReferenceElementType.DRAWING,
+    }:
+        # Shared identical image hash across pages can be logo/watermark.
+        return bool(element.asset_id) and element.width * element.height < 4.0
+    return False
 
 
 class ReferencePptxParser:
@@ -213,6 +356,7 @@ class ReferencePptxParser:
         workspace.mkdir(parents=True, exist_ok=True)
         slides_dir = workspace / "slides"
         slides_dir.mkdir(parents=True, exist_ok=True)
+        (workspace / "assets").mkdir(parents=True, exist_ok=True)
 
         warnings: list[str] = []
         try:
@@ -233,7 +377,6 @@ class ReferencePptxParser:
         if capture_screenshots and screenshot_tools_available():
             pngs = export_pptx_slide_pngs(source, slides_dir)
             for index, png in enumerate(pngs):
-                # Normalize to slide_XXX.png naming for acceptance artifacts.
                 target = slides_dir / f"{_slide_id(index)}.png"
                 if png.resolve() != target.resolve():
                     with contextlib.suppress(Exception):
@@ -247,8 +390,6 @@ class ReferencePptxParser:
         slides: list[ReferenceSlideSnapshot] = []
         all_fonts: Counter[str] = Counter()
         all_colors: Counter[str] = Counter()
-        # Track shape names that appear on many slides → repeated chrome.
-        shape_name_pages: dict[str, set[int]] = {}
 
         for index, slide in enumerate(presentation.slides):
             try:
@@ -257,12 +398,12 @@ class ReferencePptxParser:
                     index=index,
                     page_width=page_width,
                     page_height=page_height,
+                    workspace=workspace,
                     image_path=_relative_slide_image(index)
                     if index in screenshot_map
                     else "",
                     fonts_counter=all_fonts,
                     colors_counter=all_colors,
-                    shape_name_pages=shape_name_pages,
                 )
                 slides.append(snapshot)
             except Exception as exc:  # noqa: BLE001 — page failure must not drop deck
@@ -278,22 +419,7 @@ class ReferencePptxParser:
                     )
                 )
 
-        # Mark repeated chrome elements.
-        repeated_names = {
-            name
-            for name, pages in shape_name_pages.items()
-            if name and len(pages) >= max(2, len(slides) // 3)
-        }
-        for slide in slides:
-            for element in slide.elements:
-                if element.source_shape_name in repeated_names:
-                    element.repeats_across_pages = True
-                    if element.element_type in {
-                        ReferenceElementType.SHAPE,
-                        ReferenceElementType.DECORATION,
-                        ReferenceElementType.TEXT,
-                    } and element.semantic_role in {"", "body", "caption"}:
-                        element.likely_background_or_decoration = True
+        _mark_repeated_elements(slides)
 
         return ReferencePresentation(
             name=name or source.stem or "reference",
@@ -315,10 +441,10 @@ class ReferencePptxParser:
         index: int,
         page_width: float,
         page_height: float,
+        workspace: Path,
         image_path: str,
         fonts_counter: Counter[str],
         colors_counter: Counter[str],
-        shape_name_pages: dict[str, set[int]],
     ) -> ReferenceSlideSnapshot:
         layout_name: str | None = None
         master_name: str | None = None
@@ -336,15 +462,22 @@ class ReferencePptxParser:
         page_fonts: list[str] = []
         page_colors: list[str] = []
         parse_warnings: list[str] = []
+        image_seq = {"n": 0}
 
         shapes = list(getattr(slide, "shapes", []))
         for z_index, shape in enumerate(shapes):
             try:
-                element, asset, texts, fonts, colors = self._parse_shape(
+                element, assets, texts, fonts, colors = self._parse_shape(
                     shape,
                     slide_index=index,
                     z_index=z_index,
+                    id_prefix=f"s{index + 1:03d}_e{z_index + 1:03d}",
+                    page_width=page_width,
                     page_height=page_height,
+                    workspace=workspace,
+                    layout_name=layout_name,
+                    master_name=master_name,
+                    image_seq=image_seq,
                 )
             except Exception as exc:  # noqa: BLE001
                 parse_warnings.append(f"shape[{z_index}] failed: {exc}")
@@ -359,36 +492,32 @@ class ReferencePptxParser:
                 fonts_counter[font] += 1
             for color in colors:
                 colors_counter[color] += 1
-                page_colors.append(color)
-            if asset is not None:
-                image_assets.append(asset)
-            shape_name = element.source_shape_name
-            if shape_name:
-                shape_name_pages.setdefault(shape_name, set()).add(index)
+            image_assets.extend(assets)
 
-        # Notes (needed before drawing inference).
         notes = ""
         with contextlib.suppress(Exception):
             notes_slide = getattr(slide, "notes_slide", None)
             if notes_slide is not None and notes_slide.notes_text_frame is not None:
                 notes = (notes_slide.notes_text_frame.text or "").strip()
 
-        # Promote bare Picture shapes to DRAWING using neighborhood cues.
-        self._drawing_inference.refine_slide_elements(
-            elements,
-            slide_notes=notes,
-        )
+        # Drawing inference on flattened picture nodes (including group children).
+        flat_for_inference = [n for e in elements for n in e.iter_self_and_descendants()]
+        self._drawing_inference.refine_slide_elements(flat_for_inference, slide_notes=notes)
 
         image_count = sum(
             1
-            for e in elements
+            for e in flat_for_inference
             if e.element_type
             in {ReferenceElementType.IMAGE, ReferenceElementType.DRAWING}
         )
-        chart_count = sum(1 for e in elements if e.element_type == ReferenceElementType.CHART)
-        table_count = sum(1 for e in elements if e.element_type == ReferenceElementType.TABLE)
+        chart_count = sum(
+            1 for e in flat_for_inference if e.element_type == ReferenceElementType.CHART
+        )
+        table_count = sum(
+            1 for e in flat_for_inference if e.element_type == ReferenceElementType.TABLE
+        )
         text_length = sum(len(t) for t in text_content)
-        type_list = sorted(e.element_type.value for e in elements)
+        type_list = sorted(e.element_type.value for e in flat_for_inference)
         signature = _content_signature(
             layout_name=layout_name,
             element_types=type_list,
@@ -432,10 +561,17 @@ class ReferencePptxParser:
         *,
         slide_index: int,
         z_index: int,
+        id_prefix: str,
+        page_width: float,
         page_height: float,
+        workspace: Path,
+        layout_name: str | None,
+        master_name: str | None,
+        image_seq: dict[str, int],
+        depth: int = 0,
     ) -> tuple[
         ReferenceElement | None,
-        ReferenceAsset | None,
+        list[ReferenceAsset],
         list[str],
         list[str],
         list[str],
@@ -446,14 +582,24 @@ class ReferencePptxParser:
             width = max(_emu_to_inches(getattr(shape, "width", 0)), 0.05)
             height = max(_emu_to_inches(getattr(shape, "height", 0)), 0.05)
         except Exception:
-            return None, None, [], [], []
+            return None, [], [], [], []
 
         shape_type = getattr(shape, "shape_type", None)
-        is_picture = shape_type == MSO_SHAPE_TYPE.PICTURE
+        is_picture = shape_type in {
+            MSO_SHAPE_TYPE.PICTURE,
+            MSO_SHAPE_TYPE.LINKED_PICTURE,
+        }
+        # Placeholder picture hosts still expose .image
+        if not is_picture:
+            with contextlib.suppress(Exception):
+                if _is_placeholder_shape(shape) and getattr(shape, "image", None) is not None:
+                    is_picture = True
+
         has_text = bool(getattr(shape, "has_text_frame", False))
         text = ""
         font_name: str | None = None
         font_size_pt: float | None = None
+        fill_color: str | None = None
         fonts: list[str] = []
         colors: list[str] = []
         texts: list[str] = []
@@ -482,19 +628,43 @@ class ReferencePptxParser:
             if text:
                 texts.append(text)
 
-        # Skip tiny marks.
-        if width < 0.12 or height < 0.1:
-            return None, None, texts, fonts, colors
-        if not has_text and not is_picture and width * height < 0.25:
-            return None, None, texts, fonts, colors
+        with contextlib.suppress(Exception):
+            fill = getattr(shape, "fill", None)
+            if fill is not None and getattr(fill, "type", None) is not None:
+                fore = getattr(fill, "fore_color", None)
+                rgb = getattr(fore, "rgb", None) if fore is not None else None
+                if rgb is not None:
+                    fill_color = _rgb_to_hex(rgb)
+                    if fill_color:
+                        colors.append(fill_color)
+
+        is_group = shape_type == MSO_SHAPE_TYPE.GROUP
+        # Skip tiny marks (but keep groups / pictures / placeholders).
+        if (
+            not is_group
+            and not is_picture
+            and not _is_placeholder_shape(shape)
+            and (width < 0.12 or height < 0.1)
+        ):
+            return None, [], texts, fonts, colors
+        if (
+            not is_group
+            and not is_picture
+            and not _is_placeholder_shape(shape)
+            and not has_text
+            and width * height < 0.25
+        ):
+            return None, [], texts, fonts, colors
 
         element_type = _infer_element_type(
+            shape=shape,
             shape_type=shape_type,
             has_text=bool(text),
             text=text,
             is_picture=is_picture,
             width=width,
             height=height,
+            page_width=page_width,
             page_height=page_height,
         )
         role = _infer_semantic_role(
@@ -506,34 +676,89 @@ class ReferencePptxParser:
             font_size_pt=font_size_pt,
         )
         shape_name = getattr(shape, "name", "") or ""
-        alt_text = _picture_alt_text(shape) if is_picture else ""
-        element_id = f"s{slide_index + 1:03d}_e{z_index + 1:03d}"
-
-        asset: ReferenceAsset | None = None
-        asset_id: str | None = None
+        alt_text = _picture_alt_text(shape) if (
+            is_picture or element_type == ReferenceElementType.PLACEHOLDER
+        ) else ""
         style_notes: list[str] = []
-        if is_picture:
-            asset_id = f"refimg_{slide_index + 1:03d}_{z_index + 1:03d}"
-            blob_hash = ""
+        if element_type == ReferenceElementType.PLACEHOLDER:
             with contextlib.suppress(Exception):
-                image = shape.image  # type: ignore[attr-defined]
-                blob = getattr(image, "blob", b"") or b""
-                if blob:
-                    blob_hash = hashlib.sha256(blob).hexdigest()[:16]
-            asset = ReferenceAsset(
-                id=asset_id,
-                asset_origin=REFERENCE_TEMPLATE_ASSET_ORIGIN,
-                relative_path="",  # images stay inside PPTX; not extracted as project assets
+                fmt = getattr(shape, "placeholder_format", None)
+                if fmt is not None:
+                    style_notes.append(f"placeholder_type:{getattr(fmt, 'type', '')}")
+                    style_notes.append(f"placeholder_idx:{getattr(fmt, 'idx', '')}")
+            if is_picture:
+                style_notes.append("placeholder_hosts_picture")
+            elif text:
+                style_notes.append("placeholder_hosts_text")
+
+        assets: list[ReferenceAsset] = []
+        asset_id: str | None = None
+        asset_hash = ""
+        if is_picture:
+            image_seq["n"] += 1
+            asset_id = f"refimg_{slide_index + 1:03d}_{image_seq['n']:03d}"
+            asset, warning = self._extract_picture_asset(
+                shape,
+                slide_index=slide_index,
+                image_index=image_seq["n"],
+                asset_id=asset_id,
                 width=width,
                 height=height,
-                content_hash=blob_hash,
-                notes="reference_template_only",
+                workspace=workspace,
             )
-            if alt_text:
-                style_notes.append(f"alt:{alt_text}")
+            if warning:
+                style_notes.append(warning)
+            if asset is not None:
+                assets.append(asset)
+                asset_hash = asset.content_hash
+                if alt_text:
+                    style_notes.append(f"alt:{alt_text}")
+
+        children: list[ReferenceElement] = []
+        if is_group and depth < 6:
+            child_shapes = list(getattr(shape, "shapes", []))
+            for child_index, child in enumerate(child_shapes):
+                child_element, child_assets, child_texts, child_fonts, child_colors = (
+                    self._parse_shape(
+                        child,
+                        slide_index=slide_index,
+                        z_index=child_index,
+                        id_prefix=f"{id_prefix}_c{child_index + 1:03d}",
+                        page_width=page_width,
+                        page_height=page_height,
+                        workspace=workspace,
+                        layout_name=layout_name,
+                        master_name=master_name,
+                        image_seq=image_seq,
+                        depth=depth + 1,
+                    )
+                )
+                if child_element is not None:
+                    children.append(child_element)
+                assets.extend(child_assets)
+                texts.extend(child_texts)
+                fonts.extend(child_fonts)
+                colors.extend(child_colors)
+
+        signature = _structural_signature(
+            element_type=element_type,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            font_name=font_name,
+            fill_color=fill_color,
+            text=text,
+            asset_hash=asset_hash,
+            layout_name=layout_name,
+            master_name=master_name,
+            placeholder=element_type == ReferenceElementType.PLACEHOLDER,
+        )
+        if shape_name and not _GENERIC_SHAPE_NAME.match(shape_name.strip()):
+            style_notes.append(f"named:{shape_name}")
 
         element = ReferenceElement(
-            id=element_id,
+            id=id_prefix,
             element_type=element_type,
             x=x,
             y=y,
@@ -543,15 +768,73 @@ class ReferencePptxParser:
             text=text,
             font_name=font_name,
             font_size_pt=font_size_pt,
+            fill_color=fill_color,
             style_notes=style_notes,
             semantic_role=role,
             likely_background_or_decoration=element_type == ReferenceElementType.DECORATION,
             asset_id=asset_id,
             source_shape_name=shape_name,
             alt_text=alt_text,
+            structural_signature=signature,
+            children=children,
             parse_ok=True,
         )
-        return element, asset, texts, fonts, colors
+        return element, assets, texts, fonts, colors
+
+    def _extract_picture_asset(
+        self,
+        shape: object,
+        *,
+        slide_index: int,
+        image_index: int,
+        asset_id: str,
+        width: float,
+        height: float,
+        workspace: Path,
+    ) -> tuple[ReferenceAsset | None, str]:
+        blob = b""
+        content_type = ""
+        with contextlib.suppress(Exception):
+            image = shape.image  # type: ignore[attr-defined]
+            blob = getattr(image, "blob", b"") or b""
+            content_type = getattr(image, "content_type", "") or ""
+        if not blob:
+            return (
+                ReferenceAsset(
+                    id=asset_id,
+                    asset_origin=REFERENCE_TEMPLATE_ASSET_ORIGIN,
+                    relative_path="",
+                    width=width,
+                    height=height,
+                    content_hash="",
+                    content_type=content_type,
+                    notes="reference_template_missing_blob",
+                ),
+                "picture_blob_missing",
+            )
+
+        content_hash = hashlib.sha256(blob).hexdigest()[:16]
+        ext = _extension_for_image(content_type, blob)
+        relative = (
+            f"assets/{_slide_id(slide_index)}/image_{image_index:03d}{ext}"
+        )
+        relative = _assert_relative(relative)
+        dest = workspace / relative
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(blob)
+        return (
+            ReferenceAsset(
+                id=asset_id,
+                asset_origin=REFERENCE_TEMPLATE_ASSET_ORIGIN,
+                relative_path=relative,
+                width=width,
+                height=height,
+                content_hash=content_hash,
+                content_type=content_type or f"image/{ext.lstrip('.')}",
+                notes="reference_template_only",
+            ),
+            "",
+        )
 
 
 # Keep Emu imported for parity with structure extractor / type checkers.

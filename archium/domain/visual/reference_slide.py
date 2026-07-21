@@ -38,11 +38,23 @@ class ReferenceAsset(DomainModel):
         "project_upload",
     ] = REFERENCE_TEMPLATE_ASSET_ORIGIN
     # Relative path inside induction workspace (never machine absolute).
+    # Example: assets/slide_003/image_002.png
     relative_path: str = ""
     width: float = Field(default=0.0, ge=0.0)
     height: float = Field(default=0.0, ge=0.0)
     content_hash: str = ""
+    content_type: str = ""
     notes: str = ""
+
+    @field_validator("relative_path")
+    @classmethod
+    def _forbid_absolute_asset_path(cls, value: str) -> str:
+        text = (value or "").strip().replace("\\", "/")
+        if not text:
+            return ""
+        if text.startswith(("/", "\\\\")) or (len(text) > 1 and text[1] == ":"):
+            raise ValueError("relative_path must be workspace-relative, not machine absolute")
+        return text
 
 
 class ReferenceElement(DomainModel):
@@ -67,8 +79,18 @@ class ReferenceElement(DomainModel):
     source_shape_name: str = ""
     # Picture accessibility description (cNvPr/@descr) — often empty on photos.
     alt_text: str = ""
+    # Cross-page repeat fingerprint (type+geometry+style+content hashes).
+    structural_signature: str = ""
+    # Nested shapes when element_type == GROUP.
+    children: list[ReferenceElement] = Field(default_factory=list)
     parse_ok: bool = True
     parse_warning: str = ""
+
+    def iter_self_and_descendants(self) -> list[ReferenceElement]:
+        nodes = [self]
+        for child in self.children:
+            nodes.extend(child.iter_self_and_descendants())
+        return nodes
 
 
 class ReferenceSlideSnapshot(DomainModel):
@@ -108,11 +130,17 @@ class ReferenceSlideSnapshot(DomainModel):
             raise ValueError("image_path must be workspace-relative, not machine absolute")
         return text
 
+    def iter_elements(self) -> list[ReferenceElement]:
+        nodes: list[ReferenceElement] = []
+        for element in self.elements:
+            nodes.extend(element.iter_self_and_descendants())
+        return nodes
+
     @property
     def image_count(self) -> int:
         return sum(
             1
-            for element in self.elements
+            for element in self.iter_elements()
             if element.element_type
             in {ReferenceElementType.IMAGE, ReferenceElementType.DRAWING}
         )
@@ -123,11 +151,15 @@ class ReferenceSlideSnapshot(DomainModel):
 
     @property
     def chart_count(self) -> int:
-        return sum(1 for e in self.elements if e.element_type == ReferenceElementType.CHART)
+        return sum(
+            1 for e in self.iter_elements() if e.element_type == ReferenceElementType.CHART
+        )
 
     @property
     def table_count(self) -> int:
-        return sum(1 for e in self.elements if e.element_type == ReferenceElementType.TABLE)
+        return sum(
+            1 for e in self.iter_elements() if e.element_type == ReferenceElementType.TABLE
+        )
 
 
 class ReferencePresentation(DomainModel):

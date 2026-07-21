@@ -234,3 +234,28 @@ Architectural Template Induction sprint (PPTAgent-inspired, **not** a parallel P
 
 **对外口径：** Phase 0–3 完成参考页归纳与复核；**不得**宣称 ArchitecturalContentSchema 发布、编辑式生成或 Scene 修复环已完成。
 
+### Phase 2 parser hardening (closed)
+
+| Defect | Status | Evidence |
+|--------|--------|----------|
+| Picture blob → `assets/slide_XXX/image_YYY.*` (`reference_template`) | **Done** | `ReferencePptxParser._extract_picture_asset` |
+| Group recursive `children` | **Done** | `ReferenceElement.children` + `_parse_shape` depth≤6 |
+| Placeholder typing | **Done** | `is_placeholder` / `MSO_SHAPE_TYPE.PLACEHOLDER` |
+| Decoration uses `page_width * page_height` | **Done** | `_DECORATION_AREA_RATIO` on actual page area |
+| Repeat chrome via structural signature (not `TextBox 1`) | **Done** | `_structural_signature` + `_mark_repeated_elements` |
+
+Tests: `tests/unit/reference_ppt_parser/test_phase2_parser_fixes.py` (5 passed).
+
+## Template Induction Phase 4 (2026-07-21)
+
+| Capability | Status | Location |
+|------------|--------|----------|
+| ArchitecturalContentSchema / ContentRequirement / VisualRequirement / EvidenceRequirement | **Done** | `archium/domain/visual/architectural_content_schema.py` |
+| Auto extract from representatives | **Done** | `ArchitecturalContentSchemaExtractor` |
+| Publish gate (`PASS` / `PASS_WITH_WARNINGS` / `BLOCKED`) | **Done** | `ArchitecturalContentSchemaPublishGate` |
+| Review UI schema correction + publish attempt | **Done** | `template_induction.py` |
+| Artifacts `content_schemas.json` / `schema_publish_report.json` | **Done** | `TemplateInductionService.export_artifacts` |
+| Outline–Template co-planning / edit-based generation | **Not in this round** | Phase 5–6 |
+
+**对外口径：** 内容 Schema 可自动归纳并经人工修正后发布；**不得**宣称编辑式生成或 Outline–Template 协同规划已完成。
+

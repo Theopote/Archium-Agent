@@ -8,11 +8,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from archium.application.visual.architectural_content_schema_extractor import (
+    ArchitecturalContentSchemaExtractor,
+)
+from archium.application.visual.architectural_content_schema_publish_gate import (
+    ArchitecturalContentSchemaPublishGate,
+)
 from archium.application.visual.asset_path_resolver import is_machine_absolute_path
 from archium.application.visual.functional_slide_classifier import FunctionalSlideClassifier
 from archium.application.visual.reference_slide_clusterer import ReferenceSlideClusterer
 from archium.application.visual.representative_slide_selector import RepresentativeSlideSelector
 from archium.config.settings import Settings, get_settings
+from archium.domain.visual.architectural_content_schema import (
+    ArchitecturalContentSchema,
+    SchemaPublishReport,
+    SchemaReviewOverride,
+)
 from archium.domain.visual.reference_slide import ReferencePresentation, ReferenceSlideSnapshot
 from archium.domain.visual.template_induction import (
     FunctionalSlideClassification,
@@ -34,10 +45,12 @@ class TemplateInductionRunResult:
     artifact_paths: dict[str, Path]
     screenshot_count: int = 0
     screenshot_tools_available: bool = False
+    schemas: tuple[ArchitecturalContentSchema, ...] = ()
+    publish_report: SchemaPublishReport | None = None
 
 
 class TemplateInductionService:
-    """Phase 0–3 induction without edit-based generation or parallel PPT kernels."""
+    """Phase 0–4 induction: parse → classify → cluster → schema → publish gate."""
 
     def __init__(
         self,
@@ -47,12 +60,16 @@ class TemplateInductionService:
         classifier: FunctionalSlideClassifier | None = None,
         clusterer: ReferenceSlideClusterer | None = None,
         selector: RepresentativeSlideSelector | None = None,
+        schema_extractor: ArchitecturalContentSchemaExtractor | None = None,
+        publish_gate: ArchitecturalContentSchemaPublishGate | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._parser = parser or ReferencePptxParser()
         self._classifier = classifier or FunctionalSlideClassifier()
         self._clusterer = clusterer or ReferenceSlideClusterer()
         self._selector = selector or RepresentativeSlideSelector()
+        self._schema_extractor = schema_extractor or ArchitecturalContentSchemaExtractor()
+        self._publish_gate = publish_gate or ArchitecturalContentSchemaPublishGate()
 
     def workspace_root(self, induction_id: UUID | str) -> Path:
         path = self._settings.output_path / "template-induction" / str(induction_id)
@@ -133,7 +150,20 @@ class TemplateInductionService:
             low_confidence_slide_ids=low_confidence,
         )
 
-        artifact_paths = self.export_artifacts(workspace, presentation, induction)
+        schemas = self._schema_extractor.extract_for_induction(presentation, induction)
+        publish_report = self._publish_gate.evaluate(
+            induction=induction,
+            presentation=presentation,
+            schemas=schemas,
+        )
+        induction.content_schemas = [s.model_dump(mode="json") for s in schemas]
+        induction.publish_report = publish_report.model_dump(mode="json")
+        if publish_report.can_publish and not low_confidence:
+            induction.status = TemplateInductionStatus.READY
+
+        artifact_paths = self.export_artifacts(
+            workspace, presentation, induction, schemas=schemas, publish_report=publish_report
+        )
         self._assert_no_absolute_paths(workspace)
         return TemplateInductionRunResult(
             induction=induction,
@@ -142,6 +172,8 @@ class TemplateInductionService:
             artifact_paths=artifact_paths,
             screenshot_count=screenshot_count,
             screenshot_tools_available=tools_ok,
+            schemas=tuple(schemas),
+            publish_report=publish_report,
         )
 
     @staticmethod
@@ -258,31 +290,126 @@ class TemplateInductionService:
         induction.low_confidence_slide_ids = [
             c.slide_id for c in induction.classifications if c.needs_review
         ]
+        schemas = self._schema_extractor.extract_for_induction(presentation, induction)
+        # Preserve human schema corrections by schema cluster id when present.
+        previous = {
+            str(item.get("cluster_id")): item
+            for item in induction.content_schemas
+            if isinstance(item, dict) and item.get("human_corrected")
+        }
+        for schema in schemas:
+            prior = previous.get(schema.cluster_id)
+            if prior:
+                schema.human_corrected = True
+                schema.needs_review = False
+                if prior.get("page_purpose"):
+                    schema.page_purpose = str(prior["page_purpose"])
+        report = self._publish_gate.evaluate(
+            induction=induction, presentation=presentation, schemas=schemas
+        )
+        induction.content_schemas = [s.model_dump(mode="json") for s in schemas]
+        induction.publish_report = report.model_dump(mode="json")
         induction.status = (
             TemplateInductionStatus.REVIEW
-            if induction.low_confidence_slide_ids
+            if induction.low_confidence_slide_ids or not report.can_publish
             else TemplateInductionStatus.READY
         )
         induction.touch()
         return induction
+
+    def apply_schema_overrides(
+        self,
+        induction: TemplateInductionResult,
+        presentation: ReferencePresentation,
+        overrides: list[SchemaReviewOverride],
+    ) -> tuple[TemplateInductionResult, list[ArchitecturalContentSchema], SchemaPublishReport]:
+        schemas = [
+            ArchitecturalContentSchema.model_validate(item)
+            for item in induction.content_schemas
+        ]
+        by_id = {s.id: s for s in schemas}
+        for override in overrides:
+            schema = by_id.get(override.schema_id)
+            if schema is None:
+                continue
+            if override.page_purpose is not None:
+                schema.page_purpose = override.page_purpose.strip() or schema.page_purpose
+            if override.central_claim_required is not None:
+                schema.central_claim_required = override.central_claim_required
+            if override.supports_drawing is not None:
+                schema.supports_drawing = override.supports_drawing
+            if override.citation_required is not None:
+                schema.citation_required = override.citation_required
+            if override.caption_required is not None:
+                schema.caption_required = override.caption_required
+            if override.allowed_asset_origins is not None:
+                schema.allowed_asset_origins = list(override.allowed_asset_origins)
+            if override.forbidden_asset_origins is not None:
+                schema.forbidden_asset_origins = list(override.forbidden_asset_origins)
+            if "reference_template" not in schema.forbidden_asset_origins:
+                schema.forbidden_asset_origins = [
+                    *schema.forbidden_asset_origins,
+                    "reference_template",
+                ]
+            schema.human_corrected = True
+            schema.needs_review = False
+            if override.notes:
+                schema.extraction_evidence = [
+                    *schema.extraction_evidence,
+                    f"human:{override.notes}",
+                ]
+            schema.touch()
+
+        report = self._publish_gate.evaluate(
+            induction=induction, presentation=presentation, schemas=schemas
+        )
+        induction.content_schemas = [s.model_dump(mode="json") for s in schemas]
+        induction.publish_report = report.model_dump(mode="json")
+        if report.can_publish:
+            induction.status = TemplateInductionStatus.READY
+        else:
+            induction.status = TemplateInductionStatus.REVIEW
+        induction.touch()
+        return induction, schemas, report
+
+    def publish(
+        self,
+        induction: TemplateInductionResult,
+        presentation: ReferencePresentation,
+        *,
+        schemas: list[ArchitecturalContentSchema] | None = None,
+    ) -> SchemaPublishReport:
+        schema_list = schemas or [
+            ArchitecturalContentSchema.model_validate(item)
+            for item in induction.content_schemas
+        ]
+        report = self._publish_gate.evaluate(
+            induction=induction, presentation=presentation, schemas=schema_list
+        )
+        induction.publish_report = report.model_dump(mode="json")
+        if report.can_publish:
+            induction.status = TemplateInductionStatus.PUBLISHED
+            induction.touch()
+        return report
 
     def export_artifacts(
         self,
         workspace: Path,
         presentation: ReferencePresentation,
         induction: TemplateInductionResult,
+        *,
+        schemas: list[ArchitecturalContentSchema] | None = None,
+        publish_report: SchemaPublishReport | None = None,
     ) -> dict[str, Path]:
         slides_dir = workspace / "slides"
         slides_dir.mkdir(parents=True, exist_ok=True)
 
-        # Per-slide JSON (+ ensure PNG placeholder note if missing).
         for slide in presentation.slides:
             slide_json = slides_dir / f"{slide.slide_id}.json"
             slide_json.write_text(
                 json.dumps(slide.model_dump(mode="json"), ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            # If screenshot missing, leave image_path empty (already); do not invent absolute paths.
 
         ref_path = workspace / "reference_presentation.json"
         ref_path.write_text(
@@ -329,6 +456,32 @@ class TemplateInductionService:
             encoding="utf-8",
         )
 
+        schema_list = schemas or [
+            ArchitecturalContentSchema.model_validate(item)
+            for item in induction.content_schemas
+        ]
+        schemas_path = workspace / "content_schemas.json"
+        schemas_path.write_text(
+            json.dumps(
+                [s.model_dump(mode="json") for s in schema_list],
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        report = publish_report
+        if report is None and induction.publish_report:
+            report = SchemaPublishReport.model_validate(induction.publish_report)
+        if report is not None:
+            publish_path = workspace / "schema_publish_report.json"
+            publish_path.write_text(
+                json.dumps(report.model_dump(mode="json"), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        else:
+            publish_path = workspace / "schema_publish_report.json"
+
         induction_path = workspace / "induction_result.json"
         induction_path.write_text(
             json.dumps(induction.model_dump(mode="json"), ensure_ascii=False, indent=2),
@@ -340,6 +493,8 @@ class TemplateInductionService:
             "functional_classification": functional_path,
             "content_clusters": clusters_path,
             "representative_slides": reps_path,
+            "content_schemas": schemas_path,
+            "schema_publish_report": publish_path,
             "induction_result": induction_path,
             "slides_dir": slides_dir,
         }
