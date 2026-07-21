@@ -62,6 +62,11 @@ class ArchitecturalContentSchemaTestFillService:
                 continue
             for element in candidates[: requirement.max_count]:
                 text_len = len((element.text or "").strip())
+                if text_len and requirement.min_length and text_len < requirement.min_length:
+                    blockers.append(
+                        f"{requirement.role.value} 文本低于下限 "
+                        f"({text_len} < {requirement.min_length})"
+                    )
                 if text_len and text_len > requirement.max_length:
                     text_overflow = True
                     blockers.append(

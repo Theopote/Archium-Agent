@@ -13,6 +13,7 @@ from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )
 from archium.application.visual.reference_slide_editing_service import ReferenceSlideEditingService
+from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.semantic_content_plan import build_slide_spec_from_outline_page
 from archium.domain.asset import Asset
 from archium.domain.outline import OutlinePlan, OutlineSection
@@ -47,6 +48,7 @@ class OutlineTemplateEditingService:
     ) -> None:
         self._editor = editor or ReferenceSlideEditingService()
         self._co_planner = co_planner or OutlineTemplateCoPlanningService()
+        self._scene_repair = SceneRepairService()
 
     def execute(
         self,
@@ -163,6 +165,22 @@ class OutlineTemplateEditingService:
                     presentation_id=outline.presentation_id,
                     generation_context=generation_context,
                 )
+                repair_batch = self._scene_repair.repair_deck(
+                    outline.presentation_id,
+                    [edit_result.scene],
+                    max_rounds=2,
+                    slide_orders={edit_result.scene.slide_id: slide_spec.order},
+                )
+                if repair_batch.actions:
+                    edit_result = edit_result.model_copy(
+                        update={
+                            "scene": repair_batch.scenes[0],
+                            "warnings": [
+                                *edit_result.warnings,
+                                f"scene_repair applied {len(repair_batch.actions)} patch(es)",
+                            ],
+                        }
+                    )
             except Exception as exc:  # noqa: BLE001 — batch must continue on single-page failure
                 result = self._failed_result(
                     page,

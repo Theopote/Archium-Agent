@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.asset_matching_service import score_asset_for_requirement
+from archium.application.context_budget_manager import ContextBudgetManager
 from archium.application.fact_retrieval import rank_facts_for_context
 from archium.application.knowledge_isolation import filter_generation_facts
 from archium.domain.asset import Asset
@@ -141,16 +142,19 @@ class SlideGenerationContextService:
             limit=max_citations,
         )
 
-        return SlideGenerationContext(
-            slide_spec=slide,
-            section_summary=section_text,
-            previous_slide_summary=previous_summary,
-            next_slide_intent=next_intent,
-            verified_facts=verified_facts,
-            project_facts=project_facts,
-            relevant_assets=relevant_assets,
-            relevant_citations=relevant_citations,
-            template_schema=template_schema,
+        return ContextBudgetManager().trim_slide_context(
+            SlideGenerationContext(
+                slide_spec=slide,
+                section_summary=section_text,
+                previous_slide_summary=previous_summary,
+                next_slide_intent=next_intent,
+                verified_facts=verified_facts,
+                project_facts=project_facts,
+                relevant_assets=relevant_assets,
+                relevant_citations=relevant_citations,
+                template_schema=template_schema,
+            ),
+            stage="slide_generate",
         )
 
     def build_for_deck(

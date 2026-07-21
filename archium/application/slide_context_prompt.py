@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from archium.application.context_budget_manager import ContextBudgetManager
 from archium.domain.slide_generation_context import SlideGenerationContext
 
 
@@ -48,4 +49,4 @@ def format_slide_generation_context(context: SlideGenerationContext) -> str:
         lines.append(
             f"\n【版式语义契约】\nschema_id={context.template_schema.schema_id}"
         )
-    return "\n".join(lines)
+    return ContextBudgetManager().trim_prompt_block("\n".join(lines), stage="slide_generate")

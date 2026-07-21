@@ -7,6 +7,7 @@ from typing import Literal
 from archium.application.visual.architectural_content_schema_test_fill import (
     ArchitecturalContentSchemaTestFillService,
 )
+from archium.application.visual.schema_usage_validator import validate_schema_length_bounds
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     SchemaPublishBlocker,
@@ -111,6 +112,17 @@ class ArchitecturalContentSchemaPublishGate:
                     SchemaPublishBlocker(
                         code="EMPTY_PAGE_PURPOSE",
                         message="Schema 缺少页面用途",
+                        cluster_id=cluster.id,
+                        slide_id=schema.representative_slide_id,
+                        schema_id=schema.id,
+                    )
+                )
+
+            for message in validate_schema_length_bounds(schema):
+                blockers.append(
+                    SchemaPublishBlocker(
+                        code="LENGTH_BOUNDS_INVALID",
+                        message=message,
                         cluster_id=cluster.id,
                         slide_id=schema.representative_slide_id,
                         schema_id=schema.id,

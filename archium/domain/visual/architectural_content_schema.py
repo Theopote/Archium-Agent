@@ -75,6 +75,21 @@ class EvidenceRequirement(DomainModel):
     description: str = ""
 
 
+class UsageCondition(DomainModel):
+    """When this schema should (or should not) be selected during co-planning."""
+
+    field: Literal[
+        "functional_type",
+        "content_type",
+        "requires_drawing",
+        "min_evidence_count",
+        "section_category",
+    ]
+    operator: Literal["eq", "in", "gte", "not_eq"] = "eq"
+    value: str | int | list[str] = ""
+    description: str = ""
+
+
 class ArchitecturalContentSchema(TimestampedModel):
     """Communication contract for one induced template page type."""
 
@@ -122,6 +137,8 @@ class ArchitecturalContentSchema(TimestampedModel):
     citation_required: bool = False
     caption_required: bool = False
     metric_unit_required: bool = False
+
+    usage_conditions: list[UsageCondition] = Field(default_factory=list)
 
     architectural_constraints: list[str] = Field(default_factory=list)
     extraction_evidence: list[str] = Field(default_factory=list)

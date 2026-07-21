@@ -15,6 +15,10 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
+from archium.application.visual.semantic_content_plan import (
+    expected_text_evidence_count,
+    expand_visual_evidence_roles,
+)
 from archium.application.visual.reference_slide_matcher import ReferenceSlideMatcher
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.slide import SlideSpec
@@ -28,6 +32,8 @@ from archium.domain.visual.architectural_template import (
 )
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
+    CoPlanCapacityWarning,
+    CoPlanRhythmFlag,
     FunctionalSlideType,
     OutlineTemplateCompatibility,
     OutlineTemplateCoPlan,
@@ -194,6 +200,9 @@ class OutlineTemplateCoPlanningService:
         edit_ids = [p.slide_id for p in page_plans if p.fallback_mode == "template_editing"]
         manual_ids = [p.slide_id for p in page_plans if p.fallback_mode == "manual_required"]
 
+        capacity_warnings = self._compute_capacity_warnings(outline, page_plans, schemas)
+        rhythm_flags = self._compute_rhythm_flags(page_plans)
+
         return OutlineTemplateCoPlan(
             outline_id=str(outline.id),
             outline_title=outline.title,
@@ -207,6 +216,8 @@ class OutlineTemplateCoPlanningService:
             template_editing_page_ids=edit_ids,
             manual_required_page_ids=manual_ids,
             warnings=warnings,
+            capacity_warnings=capacity_warnings,
+            rhythm_flags=rhythm_flags,
         )
 
     def _infer_types(
@@ -564,3 +575,141 @@ class OutlineTemplateCoPlanningService:
             evidence=evidence,
             fallback_mode=mode,
         )
+
+    def _compute_capacity_warnings(
+        self,
+        outline: OutlinePlan,
+        page_plans: list[OutlineTemplateCompatibility],
+        schemas: list[ArchitecturalContentSchema],
+    ) -> list[CoPlanCapacityWarning]:
+        schema_by_id = {schema.id: schema for schema in schemas}
+        warnings: list[CoPlanCapacityWarning] = []
+        section_pages: dict[str, list[OutlineTemplateCompatibility]] = {}
+        for page in page_plans:
+            section_pages.setdefault(page.section_id, []).append(page)
+
+        for section in outline.sections:
+            pages = section_pages.get(section.id, [])
+            if not pages:
+                continue
+            overflow_count = sum(1 for page in pages if page.page_role == "overflow")
+            if overflow_count > 0:
+                warnings.append(
+                    CoPlanCapacityWarning(
+                        code="SECTION_OVERFLOW_PAGES",
+                        severity="warning",
+                        section_id=section.id,
+                        message=(
+                            f"章节「{section.title}」规划 {len(pages)} 页，"
+                            f"其中 {overflow_count} 页为 overflow 扩展页"
+                        ),
+                    )
+                )
+            primary = pages[0]
+            schema = schema_by_id.get(primary.schema_id or "")
+            if schema is None:
+                continue
+            hydrated = schema.hydrate_semantic_contract()
+            evidence_slots = expected_text_evidence_count(hydrated)
+            visual_slots = len(expand_visual_evidence_roles(hydrated))
+            evidence_items = len(section.evidence_requirements)
+            if evidence_items > evidence_slots > 0:
+                warnings.append(
+                    CoPlanCapacityWarning(
+                        code="EVIDENCE_EXCEEDS_SCHEMA_SLOTS",
+                        severity="warning",
+                        section_id=section.id,
+                        schema_id=schema.id,
+                        slide_id=primary.slide_id,
+                        message=(
+                            f"章节证据要求 {evidence_items} 项，"
+                            f"schema 文本证据槽约 {evidence_slots} 项"
+                        ),
+                    )
+                )
+            asset_items = len(section.required_assets)
+            if asset_items > visual_slots > 0:
+                warnings.append(
+                    CoPlanCapacityWarning(
+                        code="ASSETS_EXCEED_VISUAL_SLOTS",
+                        severity="warning",
+                        section_id=section.id,
+                        schema_id=schema.id,
+                        slide_id=primary.slide_id,
+                        message=(
+                            f"章节要求素材 {asset_items} 项，"
+                            f"schema 视觉槽约 {visual_slots} 项"
+                        ),
+                    )
+                )
+            if hydrated.max_text_length and section.key_message:
+                if len(section.key_message) > hydrated.max_text_length:
+                    warnings.append(
+                        CoPlanCapacityWarning(
+                            code="TEXT_EXCEEDS_SCHEMA_BUDGET",
+                            severity="blocker",
+                            section_id=section.id,
+                            schema_id=schema.id,
+                            slide_id=primary.slide_id,
+                            message=(
+                                f"章节 key_message 长度 {len(section.key_message)} "
+                                f"超出 schema max_text_length {hydrated.max_text_length}"
+                            ),
+                        )
+                    )
+        return warnings
+
+    def _compute_rhythm_flags(
+        self,
+        page_plans: list[OutlineTemplateCompatibility],
+    ) -> list[CoPlanRhythmFlag]:
+        flags: list[CoPlanRhythmFlag] = []
+        if len(page_plans) < 2:
+            return flags
+
+        streak: list[str] = []
+        last_type: ArchitecturalContentType | None = None
+        for page in page_plans:
+            if page.inferred_content_type == last_type:
+                streak.append(page.slide_id)
+            else:
+                if len(streak) >= 3:
+                    flags.append(
+                        CoPlanRhythmFlag(
+                            code="CONSECUTIVE_SAME_CONTENT_TYPE",
+                            slide_ids=list(streak),
+                            message=(
+                                f"连续 {len(streak)} 页使用相同内容类型 "
+                                f"「{last_type.value if last_type else 'unknown'}」"
+                            ),
+                        )
+                    )
+                streak = [page.slide_id]
+                last_type = page.inferred_content_type
+        if len(streak) >= 3 and last_type is not None:
+            flags.append(
+                CoPlanRhythmFlag(
+                    code="CONSECUTIVE_SAME_CONTENT_TYPE",
+                    slide_ids=list(streak),
+                    message=(
+                        f"连续 {len(streak)} 页使用相同内容类型 「{last_type.value}」"
+                    ),
+                )
+            )
+
+        section_ids = {page.section_id for page in page_plans}
+        openers = {page.section_id for page in page_plans if page.page_role == "section_opener"}
+        missing_openers = sorted(section_ids - openers)
+        if missing_openers and len(page_plans) >= 4:
+            flags.append(
+                CoPlanRhythmFlag(
+                    code="MISSING_SECTION_OPENER",
+                    slide_ids=[
+                        page.slide_id
+                        for page in page_plans
+                        if page.section_id in missing_openers
+                    ][:6],
+                    message=f"{len(missing_openers)} 个章节未规划 section_opener 页",
+                )
+            )
+        return flags

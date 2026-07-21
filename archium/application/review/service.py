@@ -11,11 +11,14 @@ from archium.application.chunk_models import ProjectContextBundle
 from archium.application.review.architectural import ArchitecturalReviewer
 from archium.application.review.content import ContentReviewer
 from archium.application.review.evidence import EvidenceReviewer
+from archium.application.review.deck_coherence import DeckCoherenceReviewer
 from archium.application.review.layout import LayoutReviewer
 from archium.application.review.scene_render_qa import PostRenderReviewer, SceneSemanticReviewer
 from archium.application.review.slide_semantic import SlideSemanticReviewer
 from archium.config.settings import Settings, get_settings
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
@@ -42,6 +45,7 @@ class AutomatedReviewService:
         self._semantic = SlideSemanticReviewer(session, llm=llm, settings=resolved_settings)
         self._scene_semantic = SceneSemanticReviewer(session, llm=llm, settings=resolved_settings)
         self._post_render = PostRenderReviewer(session, llm=llm, settings=resolved_settings)
+        self._deck_coherence = DeckCoherenceReviewer(session, llm=llm, settings=resolved_settings)
 
     def run_content_review(
         self,
@@ -166,6 +170,23 @@ class AutomatedReviewService:
             pptx_screenshots=pptx_screenshots,
         )
 
+    def run_deck_coherence_review(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        outline: OutlinePlan | None = None,
+        storyline: Storyline | None = None,
+        manuscript: PresentationManuscript | None = None,
+    ) -> list[ReviewIssue]:
+        return self._deck_coherence.run(
+            presentation_id,
+            slides,
+            outline=outline,
+            storyline=storyline,
+            manuscript=manuscript,
+        )
+
     def run_professional_review(
         self,
         presentation_id: UUID,
@@ -173,12 +194,23 @@ class AutomatedReviewService:
         *,
         brief: PresentationBrief | None = None,
         storyline: Storyline | None = None,
+        outline: OutlinePlan | None = None,
+        manuscript: PresentationManuscript | None = None,
         context_bundle: ProjectContextBundle | None = None,
         project_id: UUID | None = None,
     ) -> list[ReviewIssue]:
         """Run all four review layers (backward-compatible aggregate entry point)."""
         issues: list[ReviewIssue] = []
         issues.extend(self.run_content_review(presentation_id, slides, brief=brief))
+        issues.extend(
+            self.run_deck_coherence_review(
+                presentation_id,
+                slides,
+                outline=outline,
+                storyline=storyline,
+                manuscript=manuscript,
+            )
+        )
         issues.extend(
             self.run_evidence_review(presentation_id, slides, context_bundle=context_bundle)
         )

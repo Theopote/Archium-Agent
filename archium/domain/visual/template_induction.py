@@ -244,6 +244,21 @@ class SchemaAffinityScore(DomainModel):
     reasons: list[str] = Field(default_factory=list)
 
 
+class CoPlanCapacityWarning(DomainModel):
+    code: str = Field(min_length=1)
+    severity: Literal["warning", "blocker"] = "warning"
+    section_id: str = ""
+    schema_id: str = ""
+    slide_id: str = ""
+    message: str = Field(min_length=1)
+
+
+class CoPlanRhythmFlag(DomainModel):
+    code: str = Field(min_length=1)
+    slide_ids: list[str] = Field(default_factory=list)
+    message: str = Field(min_length=1)
+
+
 class OutlineTemplateCoPlan(IdentifiedModel, TimestampedModel):
     """Phase 5 artifact: outline sections ↔ template schemas with fallback routing."""
 
@@ -260,6 +275,8 @@ class OutlineTemplateCoPlan(IdentifiedModel, TimestampedModel):
     template_editing_page_ids: list[str] = Field(default_factory=list)
     manual_required_page_ids: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    capacity_warnings: list["CoPlanCapacityWarning"] = Field(default_factory=list)
+    rhythm_flags: list["CoPlanRhythmFlag"] = Field(default_factory=list)
     planning_method: str = "rule_driven_outline_template_v1"
 
     @property
