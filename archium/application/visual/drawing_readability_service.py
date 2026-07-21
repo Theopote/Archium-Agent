@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
 
 from archium.application.slide_repair_policy import smart_shorten_text
 from archium.domain.visual.render_scene import (
@@ -13,7 +12,11 @@ from archium.domain.visual.render_scene import (
     ShapeNode,
     TextNode,
 )
-from archium.domain.visual.studio_command import IncreaseDrawingReadabilityCommand, ScenePatchAction
+from archium.domain.visual.studio_command import (
+    IncreaseDrawingReadabilityCommand,
+    ScenePatchAction,
+    build_patch_action,
+)
 
 _PAGE_MARGIN_IN = 0.4
 _TITLE_GAP_IN = 0.12
@@ -40,6 +43,8 @@ def node_area_ratio(node: DrawingNode, scene: RenderScene) -> float:
 def increase_drawing_readability(
     scene: RenderScene,
     command: IncreaseDrawingReadabilityCommand,
+    *,
+    base_scene_hash: str,
 ) -> DrawingReadabilityResult:
     patched = scene.model_copy(deep=True)
     drawing = patched.node_by_id(command.node_id)
@@ -66,8 +71,9 @@ def increase_drawing_readability(
     drawing.height = new_box[3]
 
     actions.append(
-        ScenePatchAction(
-            scene_id=scene.slide_id,
+        build_patch_action(
+            scene,
+            base_scene_hash=base_scene_hash,
             node_id=drawing.id,
             action_type="enlarge_drawing",
             property_name="geometry",
@@ -85,14 +91,16 @@ def increase_drawing_readability(
             _compress_overlapping_body_text(
                 patched,
                 drawing,
-                scene_id=scene.slide_id,
+                source_scene=scene,
+                base_scene_hash=base_scene_hash,
             )
         )
         actions.extend(
             _relocate_overlapping_nodes(
                 patched,
                 drawing,
-                scene_id=scene.slide_id,
+                source_scene=scene,
+                base_scene_hash=base_scene_hash,
             )
         )
 
@@ -164,13 +172,14 @@ def _compute_target_box(
 
 
 def _compress_overlapping_body_text(
-    scene: RenderScene,
+    patched_scene: RenderScene,
     drawing: DrawingNode,
     *,
-    scene_id: UUID,
+    source_scene: RenderScene,
+    base_scene_hash: str,
 ) -> list[ScenePatchAction]:
     actions: list[ScenePatchAction] = []
-    for node in scene.nodes:
+    for node in patched_scene.nodes:
         if not isinstance(node, TextNode):
             continue
         if node.id == drawing.id:
@@ -190,8 +199,9 @@ def _compress_overlapping_body_text(
         if node.paragraphs:
             node.paragraphs[0].text = shortened
         actions.append(
-            ScenePatchAction(
-                scene_id=scene_id,
+            build_patch_action(
+                source_scene,
+                base_scene_hash=base_scene_hash,
                 node_id=node.id,
                 action_type="shorten_text",
                 property_name="text",
@@ -204,14 +214,15 @@ def _compress_overlapping_body_text(
 
 
 def _relocate_overlapping_nodes(
-    scene: RenderScene,
+    patched_scene: RenderScene,
     drawing: DrawingNode,
     *,
-    scene_id: UUID,
+    source_scene: RenderScene,
+    base_scene_hash: str,
 ) -> list[ScenePatchAction]:
     actions: list[ScenePatchAction] = []
     anchor_y = drawing.y + drawing.height + _BODY_GAP_IN
-    for node in sorted(scene.nodes, key=lambda item: (item.y, item.x)):
+    for node in sorted(patched_scene.nodes, key=lambda item: (item.y, item.x)):
         if node.id == drawing.id:
             continue
         if not isinstance(node, (TextNode, DrawingNode, ImageNode, ShapeNode)):
@@ -222,18 +233,19 @@ def _relocate_overlapping_nodes(
             continue
         before_y = node.y
         target_y = max(anchor_y, before_y)
-        if target_y + node.height > scene.page_height - _PAGE_MARGIN_IN:
+        if target_y + node.height > patched_scene.page_height - _PAGE_MARGIN_IN:
             target_y = max(
                 drawing.y + drawing.height + _BODY_GAP_IN,
-                scene.page_height - _PAGE_MARGIN_IN - node.height,
+                patched_scene.page_height - _PAGE_MARGIN_IN - node.height,
             )
         if abs(target_y - before_y) < 1e-3:
             continue
         node.y = target_y
         anchor_y = max(anchor_y, node.y + node.height + _BODY_GAP_IN)
         actions.append(
-            ScenePatchAction(
-                scene_id=scene_id,
+            build_patch_action(
+                source_scene,
+                base_scene_hash=base_scene_hash,
                 node_id=node.id,
                 action_type="relocate_node",
                 property_name="y",

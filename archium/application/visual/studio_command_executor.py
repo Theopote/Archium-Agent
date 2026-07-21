@@ -35,6 +35,7 @@ from archium.domain.visual.studio_command import (
     RewriteTextCommand,
     ScenePatchAction,
     StudioCommand,
+    build_patch_action,
 )
 
 
@@ -175,8 +176,9 @@ class StudioCommandExecutor:
         if target.paragraphs:
             target.paragraphs[0].text = command.new_text
 
-        action = ScenePatchAction(
-            scene_id=scene.slide_id,
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
             command_id=command.command_id,
             node_id=command.node_id,
             action_type="rewrite_text",
@@ -242,7 +244,7 @@ class StudioCommandExecutor:
 
         repair_result = self._scene_repair.repair_scene(scene, repairable)
         applied = [
-            _patch_from_repair_action(action, scene.slide_id)
+            _patch_from_repair_action(action, scene, base_hash)
             for action in repair_result.actions
         ]
         return CommandExecutionResult(
@@ -312,8 +314,9 @@ class StudioCommandExecutor:
             origin=command.asset_origin,
         )
 
-        action = ScenePatchAction(
-            scene_id=scene.slide_id,
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
             command_id=command.command_id,
             node_id=command.node_id,
             action_type="replace_asset",
@@ -400,8 +403,9 @@ class StudioCommandExecutor:
             origin="project_upload",
         )
 
-        action = ScenePatchAction(
-            scene_id=scene.slide_id,
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
             command_id=command.command_id,
             node_id=command.node_id,
             action_type="replace_drawing",
@@ -473,7 +477,7 @@ class StudioCommandExecutor:
             )
 
         try:
-            result = increase_drawing_readability(scene, command)
+            result = increase_drawing_readability(scene, command, base_scene_hash=base_hash)
         except ValueError as exc:
             return CommandExecutionResult(
                 success=False,
@@ -614,9 +618,14 @@ def _is_locked_text_node(scene: RenderScene, node_id: str) -> bool:
     return node_content_locked(node)
 
 
-def _patch_from_repair_action(action: SceneRepairAction, scene_id: UUID) -> ScenePatchAction:
-    return ScenePatchAction(
-        scene_id=scene_id,
+def _patch_from_repair_action(
+    action: SceneRepairAction,
+    scene: RenderScene,
+    base_scene_hash: str,
+) -> ScenePatchAction:
+    return build_patch_action(
+        scene,
+        base_scene_hash=base_scene_hash,
         node_id=action.node_id,
         action_type=action.action_type,
         property_name=_property_for_repair_action(action.action_type),

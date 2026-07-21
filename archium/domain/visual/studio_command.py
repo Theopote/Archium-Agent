@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import DomainModel, new_uuid
-from archium.domain.visual.render_scene import DrawingType
+from archium.domain.visual.render_scene import DrawingType, RenderScene
 
 ImageAssetOrigin = Literal[
     "project_upload",
@@ -99,6 +99,8 @@ class ScenePatchAction(DomainModel):
     action_id: UUID = Field(default_factory=new_uuid)
     command_id: UUID | None = None
     scene_id: UUID
+    slide_id: UUID
+    base_scene_hash: str = Field(min_length=1)
     node_id: str
     action_type: str = Field(min_length=1)
     property_name: str = ""
@@ -108,3 +110,18 @@ class ScenePatchAction(DomainModel):
     before_payload: dict[str, Any] = Field(default_factory=dict)
     after_payload: dict[str, Any] = Field(default_factory=dict)
     reason: str = ""
+
+
+def build_patch_action(
+    scene: RenderScene,
+    *,
+    base_scene_hash: str,
+    **fields: object,
+) -> ScenePatchAction:
+    """Create a patch action bound to a concrete RenderScene identity."""
+    return ScenePatchAction(
+        scene_id=scene.id,
+        slide_id=scene.slide_id,
+        base_scene_hash=base_scene_hash,
+        **fields,  # type: ignore[arg-type]
+    )

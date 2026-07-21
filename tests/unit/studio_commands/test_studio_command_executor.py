@@ -101,6 +101,11 @@ def test_rewrite_text_updates_node_and_paragraphs() -> None:
     assert len(result.applied_actions) == 1
     assert result.applied_actions[0].action_type == "rewrite_text"
     assert result.applied_actions[0].before_value == "旧标题"
+    action = result.applied_actions[0]
+    assert action.scene_id == scene.id
+    assert action.slide_id == scene.slide_id
+    assert action.scene_id != action.slide_id
+    assert action.base_scene_hash == result.base_scene_hash
 
 
 def test_rewrite_text_rejects_locked_node() -> None:

@@ -8,7 +8,7 @@ from archium.application.visual.drawing_readability_service import (
     increase_drawing_readability,
     node_area_ratio,
 )
-from archium.domain.visual.render_scene import BackgroundStyle, DrawingNode, RenderScene
+from archium.domain.visual.render_scene import BackgroundStyle, DrawingNode, RenderScene, compute_scene_hash
 from archium.domain.visual.studio_command import IncreaseDrawingReadabilityCommand
 
 
@@ -39,7 +39,11 @@ def test_increase_drawing_readability_meets_target_ratio() -> None:
         node_id="plan",
         target_min_area_ratio=0.45,
     )
-    result = increase_drawing_readability(scene, command)
+    result = increase_drawing_readability(
+        scene,
+        command,
+        base_scene_hash=compute_scene_hash(scene),
+    )
     assert result.area_ratio_after >= 0.45
     assert result.scene.node_by_id("plan").fit_mode == "contain"
 
@@ -75,5 +79,6 @@ def test_noop_when_target_already_met() -> None:
             node_id="plan",
             target_min_area_ratio=0.45,
         ),
+        base_scene_hash=compute_scene_hash(scene),
     )
     assert result.actions == ()

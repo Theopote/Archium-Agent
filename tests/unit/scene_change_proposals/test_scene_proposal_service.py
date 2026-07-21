@@ -18,6 +18,7 @@ from archium.domain.visual.render_scene import (
     RenderScene,
     SceneAssetReference,
     TextNode,
+    compute_scene_hash,
 )
 from archium.domain.visual.scene_change_proposal import ProposalStatus
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
@@ -27,6 +28,7 @@ from archium.domain.visual.studio_command import (
     ReplaceDrawingCommand,
     RewriteTextCommand,
     ScenePatchAction,
+    build_patch_action,
 )
 from archium.exceptions import WorkflowError
 
@@ -168,13 +170,13 @@ def test_compare_proposal_qa_resolved_and_introduced() -> None:
 
 def test_apply_patch_actions_rewrite_text() -> None:
     scene = _scene(_text_node(node_id="title", text="旧"))
-    from archium.domain.visual.studio_command import ScenePatchAction
 
     patched = apply_patch_actions(
         scene,
         [
-            ScenePatchAction(
-                scene_id=scene.slide_id,
+            build_patch_action(
+                scene,
+                base_scene_hash=compute_scene_hash(scene),
                 node_id="title",
                 action_type="rewrite_text",
                 after_value="新",
@@ -446,8 +448,9 @@ def test_apply_patch_actions_replace_asset_uses_after_payload() -> None:
     patched = apply_patch_actions(
         scene,
         [
-            ScenePatchAction(
-                scene_id=scene.slide_id,
+            build_patch_action(
+                scene,
+                base_scene_hash=compute_scene_hash(scene),
                 node_id="photo_1",
                 action_type="replace_asset",
                 after_value="project://site/photo-02.png",
