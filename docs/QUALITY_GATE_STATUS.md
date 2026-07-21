@@ -295,9 +295,9 @@ Tests: `tests/unit/representative_slide_selector/` (incl. `test_editability_scor
 | Parser hardening (Group/Placeholder/Decoration/Signature) | **Done** | Phase 2 fixes |
 | Full-page screenshots (LO/PPT env) | **Code done** | `@pytest.mark.requires_libreoffice` |
 | Review UI cluster move / merge / split | **Done** | `induction_cluster_editor.py` + UI |
-| Real 15–30 page deck + human sign-off | **Pending** | synthetic E2E only |
+| Real 15–30 page deck + human sign-off | **Run done — human pending** | see `.dev-notes/docs-history/phase35-real-reference-validation.md` |
 
-Tests: `tests/unit/induction_cluster_editor/`.
+Tests: `tests/unit/induction_cluster_editor/`; runner: `scripts/run_phase35_reference_validation.py`.
 
 ## Template Induction Phase 4 (2026-07-21)
 
