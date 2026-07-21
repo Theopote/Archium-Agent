@@ -6,8 +6,10 @@ from collections import defaultdict
 from uuid import uuid4
 
 from archium.application.visual.reference_slide_editing_service import ReferenceSlideEditingService
-from archium.application.visual.scene_proposal_qa import findings_to_quality_issues
-from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
+from archium.application.visual.scene_deterministic_qa_service import (
+    run_proposal_scene_qa,
+    summarize_layer_counts,
+)
 from archium.application.visual.semantic_content_plan import expand_visual_evidence_roles
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
@@ -25,14 +27,20 @@ from archium.domain.visual.architectural_template import (
     TemplateStatus,
 )
 from archium.domain.visual.defaults import default_presentation_design_system
-from archium.domain.visual.page_quality import IssueSeverity
+from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
 from archium.domain.visual.reference_slide import (
     REFERENCE_TEMPLATE_ASSET_ORIGIN,
     ReferenceElement,
     ReferenceElementType,
     ReferenceSlideSnapshot,
 )
-from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderScene
+from archium.domain.visual.render_scene import (
+    DrawingNode,
+    ImageNode,
+    RenderScene,
+    TextNode,
+    compute_scene_hash,
+)
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 
 _ROLE_SEMANTICS: dict[ContentRole, set[str]] = {
@@ -174,6 +182,7 @@ class ArchitecturalContentSchemaTestFillService:
             drawing_policy_passed=drawing_policy_passed,
             reference_leakage=False,
             scene_compiled=False,
+            scene_role_coverage_ok=False,
             render_valid=render_valid,
             blockers=blockers,
             warnings=warnings,
@@ -192,6 +201,11 @@ class ArchitecturalContentSchemaTestFillService:
         drawing_policy_passed = structural.drawing_policy_passed
         reference_leakage = False
         scene_compiled = False
+        scene_role_coverage_ok = False
+        scene_id = ""
+        scene_hash = ""
+        node_count = 0
+        qa_layer_issue_counts: dict[str, int] = {}
 
         try:
             edit_result = self._editor.generate_scene(
@@ -210,11 +224,16 @@ class ArchitecturalContentSchemaTestFillService:
                     "blockers": blockers,
                     "warnings": warnings,
                     "render_valid": False,
+                    "scene_compiled": False,
+                    "scene_role_coverage_ok": False,
                 }
             )
 
         scene = edit_result.scene
         scene_compiled = True
+        scene_id = str(scene.id)
+        scene_hash = compute_scene_hash(scene)
+        node_count = len(scene.nodes)
         if edit_result.warnings:
             warnings.extend(edit_result.warnings[:3])
 
@@ -222,31 +241,44 @@ class ArchitecturalContentSchemaTestFillService:
         if reference_leakage:
             blockers.append("RenderScene 仍包含 reference_template 素材")
 
-        qa_issues = findings_to_quality_issues(
-            [
-                finding
-                for finding in run_scene_semantic_qa(
-                    uuid4(),
-                    [scene],
-                    slide_orders={scene.slide_id: 0},
-                ).findings
-                if finding.slide_id == scene.slide_id
-            ]
+        role_gaps = _scene_role_coverage_gaps(schema, scene)
+        scene_role_coverage_ok = not role_gaps
+        blockers.extend(role_gaps)
+
+        qa_result = run_proposal_scene_qa(
+            uuid4(),
+            scene,
+            slide_order=0,
+            include_post_render=False,
         )
-        for issue in qa_issues:
+        qa_layer_issue_counts = {
+            layer: len(issues) for layer, issues in qa_result.layers.items()
+        }
+        major_by_layer = summarize_layer_counts(
+            {layer: tuple(items) for layer, items in qa_result.layers.items()}
+        )
+
+        for issue in qa_result.issues:
             if issue.code == SceneSemanticCheckCode.TEXT_OVERFLOW:
                 text_overflow = True
-            if issue.code == SceneSemanticCheckCode.IMAGE_NOT_RENDERED:
+            if issue.code in {
+                SceneSemanticCheckCode.IMAGE_NOT_RENDERED,
+                "LAYOUT.UNRESOLVED_ASSET_PATH",
+            }:
                 missing_assets = True
             if issue.code == SceneSemanticCheckCode.DRAWING_COVER_MODE_FORBIDDEN:
                 drawing_policy_passed = False
 
-            message = issue.message or issue.code
+            message = (
+                f"[{_layer_for_issue(qa_result.layers, issue)}] "
+                f"{issue.message or issue.code}"
+            )
             if issue.severity in {IssueSeverity.BLOCKER, IssueSeverity.MAJOR}:
                 blockers.append(message)
             else:
                 warnings.append(message)
 
+        has_major_qa = any(count > 0 for count in major_by_layer.values())
         render_valid = (
             structural.required_slots_filled
             and not text_overflow
@@ -254,10 +286,8 @@ class ArchitecturalContentSchemaTestFillService:
             and drawing_policy_passed
             and not reference_leakage
             and scene_compiled
-            and not any(
-                issue.severity in {IssueSeverity.BLOCKER, IssueSeverity.MAJOR}
-                for issue in qa_issues
-            )
+            and scene_role_coverage_ok
+            and not has_major_qa
         )
 
         return SchemaTestFillResult(
@@ -269,7 +299,12 @@ class ArchitecturalContentSchemaTestFillService:
             drawing_policy_passed=drawing_policy_passed,
             reference_leakage=reference_leakage,
             scene_compiled=scene_compiled,
+            scene_role_coverage_ok=scene_role_coverage_ok,
             render_valid=render_valid,
+            scene_id=scene_id,
+            scene_hash=scene_hash,
+            node_count=node_count,
+            qa_layer_issue_counts=qa_layer_issue_counts,
             blockers=blockers,
             warnings=warnings,
         )
@@ -462,3 +497,57 @@ def _scene_has_reference_template_leak(scene: RenderScene) -> bool:
                 if ref.origin == REFERENCE_TEMPLATE_ASSET_ORIGIN and ref.asset_id == node.asset_id:
                     return True
     return any(ref.origin == REFERENCE_TEMPLATE_ASSET_ORIGIN for ref in scene.asset_manifest)
+
+
+def _scene_role_coverage_gaps(
+    schema: ArchitecturalContentSchema,
+    scene: RenderScene,
+) -> list[str]:
+    """Ensure required schema text/visual roles appear on the compiled RenderScene."""
+    gaps: list[str] = []
+    text_roles = {
+        (node.semantic_role or node.id or "").strip().lower()
+        for node in scene.nodes
+        if isinstance(node, TextNode)
+    }
+    for requirement in schema.required_content:
+        if not requirement.required:
+            continue
+        aliases = _ROLE_SEMANTICS.get(requirement.role, {requirement.role.value})
+        matched = sum(
+            1 for role in text_roles if role in aliases or any(alias in role for alias in aliases)
+        )
+        if matched < requirement.min_count:
+            gaps.append(
+                f"RenderScene 缺少角色 {requirement.role.value} "
+                f"(需要 {requirement.min_count}，现有 {matched})"
+            )
+
+    drawing_count = sum(1 for node in scene.nodes if isinstance(node, DrawingNode))
+    image_count = sum(1 for node in scene.nodes if isinstance(node, ImageNode))
+    for visual in schema.visual_requirements:
+        if not visual.required:
+            continue
+        role = visual.role.lower()
+        if role == "drawing":
+            available = drawing_count
+        elif role in {"hero_image", "hero", "supporting_image", "image", "multi_image_grid"}:
+            available = image_count
+        else:
+            available = image_count + drawing_count
+        if available < visual.min_count:
+            gaps.append(
+                f"RenderScene 缺少视觉 {visual.role} "
+                f"(需要 {visual.min_count}，现有 {available})"
+            )
+    return gaps
+
+
+def _layer_for_issue(
+    layers: dict[str, tuple[QualityIssue, ...]],
+    issue: QualityIssue,
+) -> str:
+    for layer, items in layers.items():
+        if any(item.code == issue.code and item.message == issue.message for item in items):
+            return layer
+    return "qa"

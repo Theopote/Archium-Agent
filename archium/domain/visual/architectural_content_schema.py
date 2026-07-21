@@ -272,7 +272,7 @@ class SchemaPublishBlocker(DomainModel):
 
 
 class SchemaTestFillResult(DomainModel):
-    """Test fill against representative slide: structure + optional RenderScene QA."""
+    """Test fill against representative slide: structure + RenderScene QA."""
 
     schema_id: str = Field(min_length=1)
     representative_slide_id: str = ""
@@ -282,7 +282,12 @@ class SchemaTestFillResult(DomainModel):
     drawing_policy_passed: bool = True
     reference_leakage: bool = False
     scene_compiled: bool = False
+    scene_role_coverage_ok: bool = False
     render_valid: bool = False
+    scene_id: str = ""
+    scene_hash: str = ""
+    node_count: int = Field(default=0, ge=0)
+    qa_layer_issue_counts: dict[str, int] = Field(default_factory=dict)
     blockers: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 

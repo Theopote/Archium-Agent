@@ -324,7 +324,7 @@ Tests: `tests/unit/induction_cluster_editor/`; runner: `scripts/run_phase35_refe
 | 1 | Run B 人工异常复核签署 | **未完成** — `.dev-notes/docs-history/phase35-real-reference-validation.md` |
 | 2 | 代表页低置信分类阻止 Schema 发布 | **Done** — `REPRESENTATIVE_CLASSIFICATION_UNCONFIRMED` |
 | 3 | Cluster-level Schema 统计（非仅代表页） | **Done** — `cluster_stats` + 分布边界 |
-| 4 | 每 Schema 测试内容填充 | **Done（结构层）** — `SchemaTestFillResult`；全 RenderScene 路径待补 |
+| 4 | 每 Schema 测试内容填充 | **Done** — 结构层 + `RenderScene` 编译；分层 QA（semantic/geometry/asset/drawing）+ 角色覆盖 |
 | 5 | 至少一套真实建筑 PPT 模板成功发布 | **未完成** |
 
 ### 验收表（Phase 4 相关）
@@ -339,7 +339,7 @@ Tests: `tests/unit/induction_cluster_editor/`; runner: `scripts/run_phase35_refe
 | Schema 发布门 | 基本通过 |
 | 代表页低置信阻塞 | **通过** |
 | Cluster-level Schema 统计 | **通过** |
-| 测试内容填充 | **结构验证通过**；RenderScene 未证明 |
+| 测试内容填充 | **通过** — 结构 + RenderScene 编译与分层 QA |
 | Phase 4 开发放行 | **可以** |
 | Phase 4 正式发布放行 | **有条件** |
 
@@ -350,7 +350,7 @@ Tests: `tests/unit/induction_cluster_editor/`; runner: `scripts/run_phase35_refe
 | Induction confidence (classification × cluster × rep × slot support) | **Done** | `extract_from_slide` |
 | Publish gate (`PASS` / `PASS_WITH_WARNINGS` / `BLOCKED`) | **Done** | `ArchitecturalContentSchemaPublishGate` |
 | Representative `needs_review` → blocker; non-rep → warning | **Done** | publish gate |
-| Structural test fill in publish gate | **Done** | `ArchitecturalContentSchemaTestFillService` |
+| Structural + RenderScene test fill in publish gate | **Done** | `ArchitecturalContentSchemaTestFillService` |
 | Formal publish (`published` only on `PASS`) | **Done** | `SchemaPublishReport.can_formally_publish` |
 | Phase 3.5 human sign-off artifact + gate | **Done** | `Phase35HumanSignoff` · `PHASE35_HUMAN_SIGNOFF_REQUIRED` |
 | Five-gate readiness report + CLI | **Done** | `template_publication_readiness.py` · `scripts/run_phase4_template_publication.py` |

@@ -161,13 +161,18 @@ class TemplatePublicationReadinessService:
             )
         else:
             failed = [f for f in publish_report.test_fill_results if not f.render_valid]
+            compiled = [f for f in publish_report.test_fill_results if f.scene_compiled]
             if failed:
                 gates.append(
                     PublicationGateItem(
                         gate_id="schema_test_fill",
                         label="Schema 测试内容填充",
                         status="BLOCKED",
-                        detail=f"{len(failed)}/{len(publish_report.test_fill_results)} 未通过结构填充",
+                        detail=(
+                            f"{len(failed)}/{len(publish_report.test_fill_results)} "
+                            f"未通过 RenderScene 测试填充"
+                            f"（已编译 {len(compiled)}）"
+                        ),
                     )
                 )
             else:
@@ -176,7 +181,10 @@ class TemplatePublicationReadinessService:
                         gate_id="schema_test_fill",
                         label="Schema 测试内容填充",
                         status="PASS",
-                        detail=f"{len(publish_report.test_fill_results)} 个 Schema 结构填充通过",
+                        detail=(
+                            f"{len(publish_report.test_fill_results)} 个 Schema "
+                            f"RenderScene 测试填充通过"
+                        ),
                     )
                 )
 
