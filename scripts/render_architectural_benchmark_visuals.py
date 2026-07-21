@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Re-export full-content PPTX and final_render.png for architectural benchmark cases."""
+"""Re-export full-content PPTX and final_render.png for architectural benchmark cases.
+
+By default this script refuses to write into the committed Golden tree.
+Pass ``--write-goldens`` (or set UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1)
+after intentional review — see README.md § Golden 二进制治理.
+"""
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -13,6 +19,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from tests.benchmark.architectural_slides.artifacts import (  # noqa: E402
     BENCHMARK_ROOT,
+    UPDATE_ENV,
     ensure_case_assets,
     materialized_benchmark_case_ids,
 )
@@ -44,9 +51,34 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="List cases only; do not write artifacts",
     )
+    parser.add_argument(
+        "--write-goldens",
+        action="store_true",
+        help=(
+            "Permit writing into the committed architectural_slides case tree. "
+            f"Also accepted via {UPDATE_ENV}=1."
+        ),
+    )
     args = parser.parse_args(argv)
 
-    case_ids = tuple(args.case_ids) if args.case_ids else materialized_benchmark_case_ids(root=args.root)
+    root = args.root.resolve()
+    writing_committed_tree = root == BENCHMARK_ROOT.resolve() and not args.dry_run
+    allowed = args.write_goldens or os.environ.get(UPDATE_ENV) == "1"
+    if writing_committed_tree and not allowed:
+        print(
+            "Refusing to overwrite committed Golden binaries under "
+            f"{BENCHMARK_ROOT}.\n"
+            "Re-run with --write-goldens after review, or set "
+            f"{UPDATE_ENV}=1. See tests/benchmark/architectural_slides/README.md.",
+            file=sys.stderr,
+        )
+        return 2
+
+    case_ids = (
+        tuple(args.case_ids)
+        if args.case_ids
+        else materialized_benchmark_case_ids(root=args.root)
+    )
     rendered = 0
     pptx_only = 0
     skipped = 0

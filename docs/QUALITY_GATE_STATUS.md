@@ -23,6 +23,7 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 |------|--------|----------|
 | Runtime DBs / Phase 8 dumps not on main | **Remediated** | `.data/` removed from Git index; `.gitignore` covers `.data/`, `data/`, `output/`, `*.db`, `*.sqlite`, `*.sqlite3` |
 | Real-project run outputs | **CI artifacts / reviewed goldens only** | Do not commit full phase8/Studio run trees |
+| Architectural Benchmark binaries are Goldens | **Governed (P1)** | See `tests/benchmark/architectural_slides/README.md` § Golden 二进制治理；`test_golden_binary_budget.py`；render script requires `--write-goldens` |
 
 ## RenderScene scope (honest — V1 only)
 
