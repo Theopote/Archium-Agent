@@ -81,6 +81,21 @@ class OutlineSectionUpdate:
 
 
 @dataclass(frozen=True)
+class SlideIntentUpdate:
+    """Editable Slide Intent Card for one planned page."""
+
+    order: int
+    page_task: str
+    chapter_id: str = ""
+    central_conclusion: str = ""
+    required_evidence: list[str] = field(default_factory=list)
+    required_assets: list[str] = field(default_factory=list)
+    forbidden_content: list[str] = field(default_factory=list)
+    expected_layout: str = ""
+    notes: str = ""
+
+
+@dataclass(frozen=True)
 class OutlineUpdate:
     title: str
     thesis: str
@@ -89,6 +104,7 @@ class OutlineUpdate:
     target_slide_count: int = 20
     audience_mode: str = "government"
     sections: list[OutlineSectionUpdate] = field(default_factory=list)
+    page_intents: list[SlideIntentUpdate] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

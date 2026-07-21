@@ -216,6 +216,13 @@ class AssetMatchingService:
             match_count += slide_matches
             updated.append(self._presentations.save_slide(matched_slide) if changed else matched_slide)
 
+        updated, binding_count = self._apply_outline_asset_bindings(
+            presentation_id,
+            updated,
+            assets_by_id={asset.id: asset for asset in assets},
+        )
+        match_count += binding_count
+
         self._refresh_presentation_delivery(presentation_id, updated)
         return updated, match_count
 
@@ -370,6 +377,46 @@ class AssetMatchingService:
         if instruction not in requirement.processing_instructions:
             requirement.processing_instructions.append(instruction)
         return changed
+
+
+    def _apply_outline_asset_bindings(
+        self,
+        presentation_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        assets_by_id: dict[UUID, Asset],
+    ) -> tuple[list[SlideSpec], int]:
+        """Apply OutlinePlan.page_asset_bindings after auto-match (user wins)."""
+        from archium.application.slide_asset_binding_service import apply_slide_asset_bindings
+
+        outline = None
+        presentation = self._presentations.get_presentation(presentation_id)
+        if presentation is not None and presentation.current_outline_id is not None:
+            outline = self._presentations.get_outline(presentation.current_outline_id)
+        if outline is None:
+            outlines = self._presentations.list_outlines(presentation_id)
+            outline = outlines[0] if outlines else None
+        if outline is None or not outline.page_asset_bindings:
+            return slides, 0
+
+        updated_slides, resolved_bindings, applied = apply_slide_asset_bindings(
+            slides,
+            list(outline.page_asset_bindings),
+            assets_by_id=assets_by_id,
+        )
+        if applied <= 0 and resolved_bindings == list(outline.page_asset_bindings):
+            return slides, 0
+
+        persisted: list[SlideSpec] = []
+        for slide in updated_slides:
+            persisted.append(self._presentations.save_slide(slide))
+
+        if resolved_bindings != list(outline.page_asset_bindings):
+            outline.page_asset_bindings = resolved_bindings
+            outline.touch()
+            self._presentations.save_outline(outline)
+
+        return persisted, applied
 
 
 def _finalize_slide_delivery(slide: SlideSpec, *, changed: bool) -> tuple[SlideSpec, bool]:

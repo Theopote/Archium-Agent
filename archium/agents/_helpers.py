@@ -286,6 +286,13 @@ def build_request_context(request: PresentationRequest) -> str:
         parts.append("对象关切: " + ", ".join(request.audience_concerns))
     if request.user_notes:
         parts.append(f"补充说明: {request.user_notes}")
+    if request.page_instructions:
+        parts.append("逐页说明:")
+        for index, instruction in enumerate(request.page_instructions):
+            text = instruction.strip()
+            if not text:
+                continue
+            parts.append(f"- 第 {index + 1} 页: {text}")
     return "\n".join(parts)
 
 

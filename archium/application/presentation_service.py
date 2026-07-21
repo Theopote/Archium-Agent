@@ -22,6 +22,7 @@ from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider
@@ -136,6 +137,8 @@ class PresentationService:
         renovation_issue_map: RenovationIssueMap | None = None,
         manuscript: PresentationManuscript | None = None,
         use_manuscript_pipeline: bool = False,
+        page_intents: list[SlideIntent] | None = None,
+        page_asset_bindings: list[SlideAssetBinding] | None = None,
     ) -> OutlinePlan:
         return self._outline.generate(
             project_id,
@@ -145,6 +148,8 @@ class PresentationService:
             renovation_issue_map=renovation_issue_map,
             manuscript=manuscript,
             use_manuscript_pipeline=use_manuscript_pipeline,
+            page_intents=page_intents,
+            page_asset_bindings=page_asset_bindings,
         )
 
     def generate_slide_plan(

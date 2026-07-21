@@ -8,6 +8,11 @@ from archium.application.slide_plan_slots import build_slide_plan_slots
 from archium.domain.enums import PresentationType
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
+from archium.domain.slide_intent import (
+    SlideIntent,
+    format_slide_intent_card,
+    slide_intents_from_page_instructions,
+)
 
 
 def _brief(target_slide_count: int = 4) -> PresentationBrief:
@@ -92,3 +97,58 @@ def test_slots_trim_to_target_slide_count() -> None:
     slots = build_slide_plan_slots(brief, storyline)
     assert len(slots) == 3
     assert all(slot.deck_total == 3 for slot in slots)
+
+
+def test_slots_merge_page_intent_cards() -> None:
+    brief = _brief(target_slide_count=4)
+    storyline = _storyline(brief.presentation_id)
+    outline = OutlinePlan(
+        presentation_id=brief.presentation_id,
+        title=brief.title,
+        thesis="交通重组",
+        audience=brief.audience,
+        purpose=brief.purpose,
+        sections=[
+            OutlineSection(
+                id="ch1",
+                title="现状",
+                purpose="问题",
+                key_message="人车混行",
+                order=0,
+                estimated_slide_count=2,
+            ),
+            OutlineSection(
+                id="ch2",
+                title="策略",
+                purpose="方案",
+                key_message="环形车道",
+                order=1,
+                estimated_slide_count=2,
+            ),
+        ],
+        page_intents=[
+            SlideIntent(
+                order=0,
+                page_task="入口交通问题",
+                central_conclusion="人车混行是早高峰拥堵和安全风险的主要原因",
+                required_evidence=["入口航拍图", "现场照片 3 张", "早高峰车流统计"],
+                forbidden_content=["参考案例图片", "AI 生成现场图"],
+                expected_layout="photo_evidence_grid",
+            )
+        ],
+    )
+
+    slots = build_slide_plan_slots(brief, storyline, outline=outline)
+
+    assert slots[0].page_intent == "人车混行是早高峰拥堵和安全风险的主要原因"
+    assert slots[0].slide_intent is not None
+    assert "photo_evidence_grid" in slots[0].intent_card_text
+    assert "禁止内容" in format_slide_intent_card(slots[0].slide_intent)
+    assert slots[1].slide_intent is None
+    assert slots[1].page_intent.startswith("人车混行")
+
+
+def test_slide_intents_from_page_instructions() -> None:
+    intents = slide_intents_from_page_instructions(["", "入口交通问题", "策略页"])
+    assert [intent.order for intent in intents] == [1, 2]
+    assert intents[0].page_task == "入口交通问题"

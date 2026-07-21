@@ -28,6 +28,8 @@ from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
+from archium.domain.slide_asset_binding import SlideAssetBinding
+from archium.domain.slide_intent import SlideIntent
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import OutlinePlanDraft
@@ -65,6 +67,8 @@ class OutlinePlanner:
         use_manuscript_pipeline: bool = False,
         version: int | None = None,
         audience_mode: OutlineAudienceMode | None = None,
+        page_intents: list[SlideIntent] | None = None,
+        page_asset_bindings: list[SlideAssetBinding] | None = None,
     ) -> OutlinePlan:
         previous_outlines = self._presentations.list_outlines(brief.presentation_id)
         previous = previous_outlines[0] if previous_outlines else None
@@ -78,6 +82,10 @@ class OutlinePlanner:
         fallback = merge_template_with_storyline(brief, storyline)
 
         if not self._settings.llm_configured:
+            _attach_page_intents(fallback, page_intents=page_intents, previous=previous)
+            _attach_page_asset_bindings(
+                fallback, page_asset_bindings=page_asset_bindings, previous=previous
+            )
             saved = self._persist(fallback, brief, version, previous)
             return saved
 
@@ -130,6 +138,10 @@ class OutlinePlanner:
         outline.audience_mode = mode
         if not outline.sections:
             outline.sections = list(fallback.sections)
+        _attach_page_intents(outline, page_intents=page_intents, previous=previous)
+        _attach_page_asset_bindings(
+            outline, page_asset_bindings=page_asset_bindings, previous=previous
+        )
 
         saved = self._persist(outline, brief, version, previous)
         return saved
@@ -151,3 +163,28 @@ class OutlinePlanner:
             presentation.current_outline_id = saved.id
             self._presentations.update_presentation(presentation)
         return saved
+
+
+def _attach_page_intents(
+    outline: OutlinePlan,
+    *,
+    page_intents: list[SlideIntent] | None,
+    previous: OutlinePlan | None,
+) -> None:
+    """Prefer explicit request intents; otherwise keep previous user edits."""
+    if page_intents is not None:
+        outline.page_intents = list(page_intents)
+    elif previous is not None and previous.page_intents:
+        outline.page_intents = list(previous.page_intents)
+
+
+def _attach_page_asset_bindings(
+    outline: OutlinePlan,
+    *,
+    page_asset_bindings: list[SlideAssetBinding] | None,
+    previous: OutlinePlan | None,
+) -> None:
+    if page_asset_bindings is not None:
+        outline.page_asset_bindings = list(page_asset_bindings)
+    elif previous is not None and previous.page_asset_bindings:
+        outline.page_asset_bindings = list(previous.page_asset_bindings)

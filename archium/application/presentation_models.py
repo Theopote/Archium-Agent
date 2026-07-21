@@ -30,6 +30,13 @@ class PresentationRequest:
     language: str = "zh-CN"
     user_notes: str = ""
     use_manuscript_pipeline: bool = False
+    # Per-page free-text instructions (index = page order). Seeded onto OutlinePlan.page_intents.
+    page_instructions: list[str] = field(default_factory=list)
+    # Explicit page materials: {page_index: [{asset_id, type/description/...}, ...]}
+    # or flat list with page_index/page_order. Seeded onto OutlinePlan.page_asset_bindings.
+    page_materials: dict[int, list[dict[str, object]]] | list[dict[str, object]] = field(
+        default_factory=dict
+    )
 
 
 @dataclass

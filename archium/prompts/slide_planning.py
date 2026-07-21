@@ -87,6 +87,8 @@ SINGLE_SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 专业原则：
 - 只输出一页，chapter_id 与 order 必须与输入一致。
 - message 必须是该页唯一核心结论，不是主题标题。
+- 若提供【页面意图卡】：message 优先采用「中心结论」；必须落实「必须使用的证据」与「指定素材」；严禁「禁止内容」；期望版式应反映到 slide_type / visual_requirements。
+- 若提供【页面素材绑定】：必须把列出的 asset_id 写入对应 visual_requirements.preferred_asset_ids，并按绑定角色选择 visual type；不得改用其他素材替代必用绑定。
 - key_points 不超过 5 条；优先使用页面上下文中已核实事实与引用。
 - 项目资料中的 `[chunk_id=...]` 可直接复制到 source_citations.chunk_id。
 - 为页面分配合适的 slide_type 与 visual_requirements。
@@ -122,10 +124,18 @@ def build_single_slide_plan_user_prompt(
     slide_context: str,
     brief_summary: str,
     storyline_summary: str,
+    intent_card: str | None = None,
+    asset_bindings: str | None = None,
 ) -> str:
+    intent_block = f"{intent_card.strip()}\n\n" if intent_card and intent_card.strip() else ""
+    bindings_block = (
+        f"{asset_bindings.strip()}\n\n" if asset_bindings and asset_bindings.strip() else ""
+    )
     return (
         f"请生成单页 SlideSpec JSON（页序：{slot_order}，章节：{slot_chapter_id}，"
         f"第 {deck_position + 1}/{deck_total} 页）。\n\n"
+        f"{intent_block}"
+        f"{bindings_block}"
         f"【Brief 摘要】\n{brief_summary}\n\n"
         f"【Storyline 摘要】\n{storyline_summary}\n\n"
         f"{slide_context}\n\n"

@@ -20,6 +20,7 @@ from archium.application.review_models import (
     OutlineSectionUpdate,
     OutlineUpdate,
     PresentationReviewContext,
+    SlideIntentUpdate,
     SlideUpdate,
     StorylineUpdate,
 )
@@ -38,6 +39,7 @@ from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.domain.review import ReviewIssue
+from archium.domain.slide_intent import SlideIntent
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
@@ -225,6 +227,7 @@ class PresentationReviewService:
         outline.target_slide_count = update.target_slide_count
         outline.audience_mode = audience_mode
         outline.sections = [_outline_section_from_update(item) for item in update.sections]
+        outline.page_intents = [_slide_intent_from_update(item) for item in update.page_intents]
         outline.approval_status = ApprovalStatus.DRAFT
         outline.touch()
         return self._presentations.save_outline(outline)
@@ -396,6 +399,23 @@ def _outline_section_from_update(update: OutlineSectionUpdate) -> OutlineSection
         expanded=update.expanded,
         category=update.category.strip() or "general",
         narrative_position=_narrative_position_from_update(update.narrative_position),
+    )
+
+
+def _slide_intent_from_update(update: SlideIntentUpdate) -> SlideIntent:
+    page_task = update.page_task.strip()
+    if not page_task:
+        page_task = update.central_conclusion.strip() or f"第 {update.order + 1} 页"
+    return SlideIntent(
+        order=update.order,
+        chapter_id=update.chapter_id.strip(),
+        page_task=page_task,
+        central_conclusion=update.central_conclusion.strip(),
+        required_evidence=[item.strip() for item in update.required_evidence if item.strip()],
+        required_assets=[item.strip() for item in update.required_assets if item.strip()],
+        forbidden_content=[item.strip() for item in update.forbidden_content if item.strip()],
+        expected_layout=update.expected_layout.strip(),
+        notes=update.notes.strip(),
     )
 
 

@@ -312,7 +312,13 @@ class SlidePlanner:
             )
             slide_query = " ".join(
                 part
-                for part in (slot.section_title, slot.page_intent, brief.core_message)
+                for part in (
+                    slot.section_title,
+                    slot.page_intent,
+                    brief.core_message,
+                    *(slot.slide_intent.required_evidence if slot.slide_intent else ()),
+                    *(slot.slide_intent.required_assets if slot.slide_intent else ()),
+                )
                 if part.strip()
             )
             citation_bundle = resolve_design_context_bundle(
@@ -335,6 +341,8 @@ class SlidePlanner:
                         slide_context=format_slide_generation_context(slide_context),
                         brief_summary=brief_text,
                         storyline_summary=storyline_text,
+                        intent_card=slot.intent_card_text or None,
+                        asset_bindings=slot.asset_bindings_text or None,
                     ),
                     temperature=0.5,
                 ),

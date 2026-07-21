@@ -52,7 +52,17 @@ def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
         "language": request.language,
         "user_notes": request.user_notes,
         "use_manuscript_pipeline": request.use_manuscript_pipeline,
+        "page_instructions": list(request.page_instructions),
+        "page_materials": _serialize_page_materials(request.page_materials),
     }
+
+
+def _serialize_page_materials(
+    materials: dict[int, list[dict[str, object]]] | list[dict[str, object]],
+) -> dict[str, list[dict[str, object]]] | list[dict[str, object]]:
+    if isinstance(materials, dict):
+        return {str(key): list(value) for key, value in materials.items()}
+    return list(materials)
 
 
 def request_from_dict(data: dict[str, Any]) -> PresentationRequest:
@@ -77,7 +87,29 @@ def request_from_dict(data: dict[str, Any]) -> PresentationRequest:
         language=str(data.get("language", "zh-CN")),
         user_notes=str(data.get("user_notes", "")),
         use_manuscript_pipeline=bool(data.get("use_manuscript_pipeline", False)),
+        page_instructions=[str(item) for item in data.get("page_instructions", [])],
+        page_materials=_deserialize_page_materials(data.get("page_materials")),
     )
+
+
+def _deserialize_page_materials(
+    raw: object,
+) -> dict[int, list[dict[str, object]]] | list[dict[str, object]]:
+    if raw is None:
+        return {}
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    if isinstance(raw, dict):
+        result: dict[int, list[dict[str, object]]] = {}
+        for key, value in raw.items():
+            try:
+                page_index = int(key)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(value, list):
+                result[page_index] = [item for item in value if isinstance(item, dict)]
+        return result
+    return {}
 
 
 def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:

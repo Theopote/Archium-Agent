@@ -42,6 +42,8 @@ from archium.domain.enums import (
 from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.memory import UserPreference
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
+from archium.domain.slide_asset_binding import SlideAssetBinding
+from archium.domain.slide_intent import SlideIntent
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
@@ -480,6 +482,28 @@ def _outline_sections_from_json(data: list[dict[str, object]]) -> list[OutlineSe
     return [OutlineSection.model_validate(item) for item in data]
 
 
+def _page_intents_to_json(intents: list[SlideIntent]) -> list[dict[str, object]]:
+    return [intent.model_dump(mode="json") for intent in intents]
+
+
+def _page_intents_from_json(data: list[dict[str, object]] | None) -> list[SlideIntent]:
+    if not data:
+        return []
+    return [SlideIntent.model_validate(item) for item in data]
+
+
+def _page_asset_bindings_to_json(bindings: list[SlideAssetBinding]) -> list[dict[str, object]]:
+    return [binding.model_dump(mode="json") for binding in bindings]
+
+
+def _page_asset_bindings_from_json(
+    data: list[dict[str, object]] | None,
+) -> list[SlideAssetBinding]:
+    if not data:
+        return []
+    return [SlideAssetBinding.model_validate(item) for item in data]
+
+
 def outline_plan_to_domain(orm: OutlinePlanORM) -> OutlinePlan:
     lineage_id = orm.lineage_id or orm.id
     logical_key = orm.logical_key or OUTLINE_LOGICAL_KEY
@@ -496,6 +520,10 @@ def outline_plan_to_domain(orm: OutlinePlanORM) -> OutlinePlan:
         target_slide_count=orm.target_slide_count,
         audience_mode=OutlineAudienceMode(orm.audience_mode),
         sections=_outline_sections_from_json(orm.sections_json),
+        page_intents=_page_intents_from_json(getattr(orm, "page_intents_json", None)),
+        page_asset_bindings=_page_asset_bindings_from_json(
+            getattr(orm, "page_asset_bindings_json", None)
+        ),
         version=orm.version,
         approval_status=ApprovalStatus(orm.approval_status),
         created_at=orm.created_at,
@@ -514,6 +542,8 @@ def outline_plan_to_orm(domain: OutlinePlan, orm: OutlinePlanORM | None = None) 
     target.target_slide_count = domain.target_slide_count
     target.audience_mode = domain.audience_mode.value
     target.sections_json = _outline_sections_to_json(domain.sections)
+    target.page_intents_json = _page_intents_to_json(domain.page_intents)
+    target.page_asset_bindings_json = _page_asset_bindings_to_json(domain.page_asset_bindings)
     target.version = domain.version
     target.approval_status = domain.approval_status.value
     target.lineage_id = domain.lineage_id

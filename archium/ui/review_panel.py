@@ -16,6 +16,7 @@ from archium.application.review_models import (
     NarrativePositionUpdate,
     OutlineSectionUpdate,
     OutlineUpdate,
+    SlideIntentUpdate,
     SlideUpdate,
     StorylineUpdate,
     parse_multiline_items,
@@ -655,6 +656,27 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
         key=f"outline_sections_{outline.id}",
     )
 
+    st.markdown("**逐页意图卡（Slide Intent Card）**")
+    st.caption("为每一页单独设定任务、中心结论、必用证据/素材、禁止内容与期望版式。")
+    intent_rows = _outline_intent_rows(outline)
+    edited_intents = st.data_editor(
+        pd.DataFrame(intent_rows),
+        num_rows="dynamic",
+        use_container_width=True,
+        key=f"outline_page_intents_{outline.id}",
+        column_config={
+            "order": st.column_config.NumberColumn("页序", min_value=0, step=1),
+            "page_task": st.column_config.TextColumn("页面任务", width="medium"),
+            "central_conclusion": st.column_config.TextColumn("中心结论", width="large"),
+            "required_evidence": st.column_config.TextColumn("必须证据", width="medium"),
+            "required_assets": st.column_config.TextColumn("指定素材", width="medium"),
+            "forbidden_content": st.column_config.TextColumn("禁止内容", width="medium"),
+            "expected_layout": st.column_config.TextColumn("期望版式", width="small"),
+            "notes": st.column_config.TextColumn("备注", width="medium"),
+            "chapter_id": st.column_config.TextColumn("章节ID", width="small"),
+        },
+    )
+
     col1, col2, col3, col4 = st.columns(4)
     save_clicked = col1.button(f"保存 {_OUTLINE_LABEL}", key=f"save_outline_{outline.id}", use_container_width=True)
     approve_clicked = col2.button(f"批准 {_OUTLINE_LABEL}", key=f"approve_outline_{outline.id}", use_container_width=True)
@@ -689,6 +711,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             for row in edited.to_dict(orient="records")
             if str(row.get("id", "")).strip()
         ]
+        page_intents = _slide_intent_updates_from_editor(edited_intents)
         update = OutlineUpdate(
             title=outline.title,
             thesis=thesis,
@@ -697,6 +720,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             target_slide_count=outline.target_slide_count,
             audience_mode=audience_mode.value,
             sections=sections,
+            page_intents=page_intents,
         )
         with get_session() as session:
             review_service = PresentationReviewService(session)
@@ -728,6 +752,20 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
                                 narrative_position=_narrative_position_update_from_section(s),
                             )
                             for s in saved.sections
+                        ],
+                        page_intents=[
+                            SlideIntentUpdate(
+                                order=intent.order,
+                                chapter_id=intent.chapter_id,
+                                page_task=intent.page_task,
+                                central_conclusion=intent.central_conclusion,
+                                required_evidence=list(intent.required_evidence),
+                                required_assets=list(intent.required_assets),
+                                forbidden_content=list(intent.forbidden_content),
+                                expected_layout=intent.expected_layout,
+                                notes=intent.notes,
+                            )
+                            for intent in saved.page_intents
                         ],
                     ),
                 )
@@ -1114,4 +1152,66 @@ def _narrative_position_update_from_section(section: object | None) -> Narrative
         advances_from_previous=position.advances_from_previous,
         prepares_for_next=position.prepares_for_next,
     )
+
+
+def _join_list_items(items: list[str]) -> str:
+    return "、".join(item for item in items if item.strip())
+
+
+def _outline_intent_rows(outline: object) -> list[dict[str, object]]:
+    intents = list(getattr(outline, "page_intents", []) or [])
+    if intents:
+        return [
+            {
+                "order": intent.order,
+                "chapter_id": intent.chapter_id,
+                "page_task": intent.page_task,
+                "central_conclusion": intent.central_conclusion,
+                "required_evidence": _join_list_items(list(intent.required_evidence)),
+                "required_assets": _join_list_items(list(intent.required_assets)),
+                "forbidden_content": _join_list_items(list(intent.forbidden_content)),
+                "expected_layout": intent.expected_layout,
+                "notes": intent.notes,
+            }
+            for intent in sorted(intents, key=lambda item: item.order)
+        ]
+    target = int(getattr(outline, "target_slide_count", 0) or 0)
+    return [
+        {
+            "order": index,
+            "chapter_id": "",
+            "page_task": "",
+            "central_conclusion": "",
+            "required_evidence": "",
+            "required_assets": "",
+            "forbidden_content": "",
+            "expected_layout": "",
+            "notes": "",
+        }
+        for index in range(target)
+    ]
+
+
+def _slide_intent_updates_from_editor(edited_intents: pd.DataFrame) -> list[SlideIntentUpdate]:
+    updates: list[SlideIntentUpdate] = []
+    for row in edited_intents.to_dict(orient="records"):
+        page_task = str(row.get("page_task", "") or "").strip()
+        central = str(row.get("central_conclusion", "") or "").strip()
+        notes = str(row.get("notes", "") or "").strip()
+        if not (page_task or central or notes):
+            continue
+        updates.append(
+            SlideIntentUpdate(
+                order=int(row.get("order", 0) or 0),
+                chapter_id=str(row.get("chapter_id", "") or "").strip(),
+                page_task=page_task or central or notes,
+                central_conclusion=central,
+                required_evidence=parse_multiline_items(str(row.get("required_evidence", "") or "")),
+                required_assets=parse_multiline_items(str(row.get("required_assets", "") or "")),
+                forbidden_content=parse_multiline_items(str(row.get("forbidden_content", "") or "")),
+                expected_layout=str(row.get("expected_layout", "") or "").strip(),
+                notes=notes,
+            )
+        )
+    return updates
 

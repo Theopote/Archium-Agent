@@ -487,6 +487,18 @@ class AssetType(StrEnum):
     OTHER = "other"
 
 
+class SlideAssetBindingRole(StrEnum):
+    """User-declared role when binding a project asset to a planned page."""
+
+    PRIMARY_DRAWING = "primary_drawing"
+    PROJECT_PHOTO = "project_photo"
+    SUPPORTING_PHOTO = "supporting_photo"
+    REFERENCE_CASE = "reference_case"
+    METRIC_SOURCE = "metric_source"
+    BACKGROUND = "background"
+    LOGO = "logo"
+
+
 class PipelineRole(StrEnum):
     """Logical pipeline roles — annotation vocabulary, not runtime Agent classes.
 
