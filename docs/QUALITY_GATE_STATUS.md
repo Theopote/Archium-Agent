@@ -73,6 +73,22 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 
 **How to complete:** use Settings →「建筑幻灯片基准 · 人工视觉评审」or edit each case's `human_review.json` with `"source": "manual"`, `"reviewer"`, `"reviewed_at"`, and real scores. UI defaults to `pptx_render.png` preview; visual score submit is disabled unless that preview mode is active.
 
+## Phase 8 local runs ≠ formal real-project acceptance (honest)
+
+本轮可生成两套约 20 页项目产物（Presentation / PPTX / Studio scene preview / Deck composition / QA reports）——这是**管线可跑通**的进步。
+
+| Claim | Status |
+|------|--------|
+| Phase 8 端到端自动生成两套 20 页项目 | **Runnable**（本地 / CI 产物） |
+| 产物落在 `.data/phase8`（运行时目录） | **Yes** — 不得当作仓库 Golden 或正式交付包 |
+| 本机路径 / 自动生成数据 / 运行时 DB | **仍存在** — 不可移植、不可作为验收证据 |
+| 有效人工视觉评分 | **Missing** |
+| 真实修改时间（live edit cost） | **Missing** |
+| 外部建筑师评价 | **Missing** |
+| 最终交付结论 / 签收 | **Missing** |
+
+**对外口径：** Phase 8 本地跑通 ≠ 正式真实项目验收。不得宣称「真实项目验收已完成」或把 `.data/phase8` 输出当作签收交付物。
+
 ## Real Project Acceptance (5 scenarios)
 
 | Gate | Status | Evidence |
@@ -82,17 +98,19 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 | Manual human rehearsal | **Not completed** | `human_metrics_source != studio_manual` on all records |
 | Human rehearsal gate | **Failed** | `human_rehearsal_passed = false` |
 | Verifiable real deliverables | **Not published** | no sanitized `files/<project_id>/` drop-ins; no signed-off PPTX/PDF bundle |
+| Phase 8 `.data/phase8` dumps as acceptance | **Not accepted** | runtime only; see section above |
 
-**What automation proves:** five desensitized scenarios can run end-to-end with mock LLM; slide/asset counts and layout validation metrics.
+**What automation proves:** five desensitized scenarios can run end-to-end with mock LLM; slide/asset counts and layout validation metrics; Phase 8 can emit multi-slide decks locally.
 
-**What automation does not prove:** real client-ready decks, live edit time, export ratios from human sessions.
+**What automation does not prove:** real client-ready decks, live edit time, architect sign-off, portable sanitized deliverables, or final delivery conclusions.
 
 **How to complete:**
 
-1. Add sanitized files under `tests/e2e/real_projects/files/<project_id>/`
-2. Run live rehearsal; capture Studio manual reviews per slide
-3. Re-run `UPDATE_REAL_PROJECT_ACCEPTANCE_RECORDS=1 python scripts/run_real_project_acceptance.py --update`
-4. Set `human_metrics_source=studio_manual` and `human_rehearsal_passed=true` only after review
+1. Add sanitized files under `tests/e2e/real_projects/files/<project_id>/` (not `.data/phase8`)
+2. Run live rehearsal; capture Studio manual reviews per slide + real edit time
+3. Obtain external architect evaluation and a final delivery conclusion
+4. Re-run `UPDATE_REAL_PROJECT_ACCEPTANCE_RECORDS=1 python scripts/run_real_project_acceptance.py --update`
+5. Set `human_metrics_source=studio_manual` and `human_rehearsal_passed=true` only after review
 
 ## Recent engineering focus (does not close human gates)
 
@@ -104,5 +122,6 @@ Recent work improved **wiring and honesty**, not human sign-off:
 - Project management service layer
 - LLM structured output fixes
 - Test and CI cleanup
+- Phase 8 local multi-slide generation (runtime under `.data/phase8` only)
 
-None of the above substitutes for 30 manual benchmark reviews or five real-project rehearsal sign-offs.
+None of the above substitutes for 30 manual benchmark reviews, five real-project rehearsal sign-offs, or treating Phase 8 dumps as formal acceptance.
