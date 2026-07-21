@@ -17,6 +17,13 @@ from archium.domain.slide import SlideSpec
 from archium.workflow.state import PresentationWorkflowState
 
 
+def _dump_artifact(value: Any) -> Any:
+    """Serialize a domain artifact that may already be a plain dict."""
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    return value
+
+
 def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
     return {
         "title": request.title,
@@ -117,21 +124,21 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
     if request is not None:
         payload["request"] = request_to_dict(request)
     if presentation is not None:
-        payload["presentation"] = presentation.model_dump(mode="json")
+        payload["presentation"] = _dump_artifact(presentation)
     if brief is not None:
-        payload["brief"] = brief.model_dump(mode="json")
+        payload["brief"] = _dump_artifact(brief)
     if cultural_narrative is not None:
-        payload["cultural_narrative"] = cultural_narrative.model_dump(mode="json")
+        payload["cultural_narrative"] = _dump_artifact(cultural_narrative)
     if renovation_issue_map is not None:
-        payload["renovation_issue_map"] = renovation_issue_map.model_dump(mode="json")
+        payload["renovation_issue_map"] = _dump_artifact(renovation_issue_map)
     if reference_style_profile is not None:
-        payload["reference_style_profile"] = reference_style_profile.model_dump(mode="json")
+        payload["reference_style_profile"] = _dump_artifact(reference_style_profile)
     if storyline is not None:
-        payload["storyline"] = storyline.model_dump(mode="json")
+        payload["storyline"] = _dump_artifact(storyline)
     if outline is not None:
-        payload["outline"] = outline.model_dump(mode="json")
+        payload["outline"] = _dump_artifact(outline)
     if slides:
-        payload["slides"] = [slide.model_dump(mode="json") for slide in slides]
+        payload["slides"] = [_dump_artifact(slide) for slide in slides]
     project_facts = state.get("project_facts", [])
     if project_facts:
         payload["project_facts"] = [

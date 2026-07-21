@@ -98,6 +98,15 @@ Formal gate already **requires** `pptx_screenshot_generated=true` (item 2 done i
 
 **原则：** 人工判断仍然重要，但人工打分并不重要。
 
+### Human review variance control (benchmark pages)
+
+For low-visual-density pages (booth/text-heavy, near-single font/color, few architectural visuals),
+reviewers must use a **type-aware pass/review rubric** instead of aesthetic micro-scoring:
+
+- Do not auto-penalize “no architectural drawing/photo” when the page purpose is explanatory.
+- De-emphasize color/font richness; prioritize structure clarity, readability, and narrative order.
+- Prefer `PASS` / `NEEDS_REVIEW` judgment over fragile 1–5 differences on such pages.
+
 ### Next steps — only these three
 
 1. **Regenerate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens  
