@@ -29,6 +29,7 @@ class PresentationRequest:
     tone: str = "professional"
     language: str = "zh-CN"
     user_notes: str = ""
+    use_manuscript_pipeline: bool = False
 
 
 @dataclass

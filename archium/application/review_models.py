@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.domain.workflow import WorkflowRun
@@ -88,6 +89,7 @@ class PresentationReviewContext:
     brief: PresentationBrief | None
     storyline: Storyline | None
     outline: OutlinePlan | None
+    manuscript: PresentationManuscript | None = None
     slides: list[SlideSpec] = field(default_factory=list)
     review_issues: list[ReviewIssue] = field(default_factory=list)
     workflow_run: WorkflowRun | None = None

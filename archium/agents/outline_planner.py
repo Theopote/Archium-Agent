@@ -7,10 +7,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents._helpers import (
-    build_project_context,
     build_retrieval_query_from_storyline,
+    resolve_design_context_text,
     to_json,
 )
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.application.artifact_history_service import OutlineHistoryService
 from archium.application.artifact_lineage import apply_outline_lineage
 from archium.application.cultural_narrative_service import format_narrative_for_prompt
@@ -60,6 +61,8 @@ class OutlinePlanner:
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
         renovation_issue_map: RenovationIssueMap | None = None,
+        manuscript: PresentationManuscript | None = None,
+        use_manuscript_pipeline: bool = False,
         version: int | None = None,
         audience_mode: OutlineAudienceMode | None = None,
     ) -> OutlinePlan:
@@ -90,9 +93,11 @@ class OutlinePlanner:
                 for section in template_sections(template_key)[:12]
             )
 
-        project_context = build_project_context(
+        project_context = resolve_design_context_text(
             self._session,
             project_id,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
             query=build_retrieval_query_from_storyline(brief, storyline),
             settings=self._settings,
         )

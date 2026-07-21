@@ -13,6 +13,7 @@ from langgraph.types import Command
 from archium.application.review_service import slides_are_approved
 from archium.application.slide_repair_service import has_repairable_open_issues
 from archium.domain.enums import ApprovalStatus
+from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.workflow.nodes import PresentationWorkflowNodes
 from archium.workflow.runtime import PresentationWorkflowRuntime
 from archium.workflow.state import PresentationWorkflowState
@@ -22,6 +23,32 @@ def _route_on_errors(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
     return "continue"
+
+
+def _route_after_validate_facts(state: PresentationWorkflowState) -> str:
+    if state.get("errors"):
+        return "finalize"
+    request = state.get("request")
+    if request is not None and request.use_manuscript_pipeline:
+        return "build_manuscript"
+    return "generate_brief"
+
+
+def _coerce_manuscript(state: PresentationWorkflowState):
+    manuscript = state.get("manuscript")
+    if manuscript is None or isinstance(manuscript, PresentationManuscript):
+        return manuscript
+    return PresentationManuscript.model_validate(manuscript)
+
+
+def _route_after_manuscript(state: PresentationWorkflowState) -> str:
+    if state.get("errors"):
+        return "finalize"
+    if state.get("require_manuscript_review"):
+        manuscript = _coerce_manuscript(state)
+        if manuscript is not None and manuscript.status != ManuscriptStatus.READY:
+            return "pause_for_review"
+    return "generate_brief"
 
 
 def _route_after_brief(state: PresentationWorkflowState) -> str:
@@ -68,6 +95,8 @@ def _route_after_pause(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
     gate = state.get("review_gate")
+    if gate == "manuscript":
+        return "generate_brief"
     if gate == "brief":
         return "generate_cultural_narrative"
     if gate == "storyline":
@@ -116,11 +145,13 @@ class PresentationWorkflowGraph:
         builder.add_node("retrieve_context", self._nodes.retrieve_context)
         builder.add_node("extract_facts", self._nodes.extract_facts)
         builder.add_node("validate_facts", self._nodes.validate_facts)
+        builder.add_node("build_manuscript", self._nodes.build_manuscript)
         builder.add_node("generate_brief", self._nodes.generate_brief)
         builder.add_node("generate_cultural_narrative", self._nodes.generate_cultural_narrative)
         builder.add_node("generate_renovation_issue_map", self._nodes.generate_renovation_issue_map)
         builder.add_node("generate_reference_style_profile", self._nodes.generate_reference_style_profile)
         builder.add_node("generate_storyline", self._nodes.generate_storyline)
+        builder.add_node("sync_manuscript_from_storyline", self._nodes.sync_manuscript_from_storyline)
         builder.add_node("generate_outline", self._nodes.generate_outline)
         builder.add_node("generate_slides", self._nodes.generate_slides)
         builder.add_node("resolve_citations", self._nodes.resolve_citations)
@@ -160,8 +191,21 @@ class PresentationWorkflowGraph:
         )
         builder.add_conditional_edges(
             "validate_facts",
-            _route_on_errors,
-            {"continue": "generate_brief", "finalize": "finalize"},
+            _route_after_validate_facts,
+            {
+                "build_manuscript": "build_manuscript",
+                "generate_brief": "generate_brief",
+                "finalize": "finalize",
+            },
+        )
+        builder.add_conditional_edges(
+            "build_manuscript",
+            _route_after_manuscript,
+            {
+                "generate_brief": "generate_brief",
+                "pause_for_review": "pause_for_review",
+                "finalize": "finalize",
+            },
         )
         builder.add_conditional_edges(
             "generate_brief",
@@ -175,8 +219,9 @@ class PresentationWorkflowGraph:
         builder.add_edge("generate_cultural_narrative", "generate_renovation_issue_map")
         builder.add_edge("generate_renovation_issue_map", "generate_reference_style_profile")
         builder.add_edge("generate_reference_style_profile", "generate_storyline")
+        builder.add_edge("generate_storyline", "sync_manuscript_from_storyline")
         builder.add_conditional_edges(
-            "generate_storyline",
+            "sync_manuscript_from_storyline",
             _route_after_storyline,
             {"continue": "generate_outline", "pause_for_review": "pause_for_review", "finalize": "finalize"},
         )
@@ -221,6 +266,7 @@ class PresentationWorkflowGraph:
             "pause_for_review",
             _route_after_pause,
             {
+                "generate_brief": "generate_brief",
                 "generate_cultural_narrative": "generate_cultural_narrative",
                 "generate_renovation_issue_map": "generate_renovation_issue_map",
                 "generate_reference_style_profile": "generate_reference_style_profile",

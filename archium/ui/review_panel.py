@@ -30,7 +30,7 @@ from archium.domain.enums import (
     SlideStatus,
     SlideType,
 )
-from archium.domain.review import ReviewIssue
+from archium.domain.presentation_manuscript import ManuscriptStatus
 from archium.domain.review_rules import repair_strategy_for_rule
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
@@ -65,6 +65,7 @@ from archium.ui.workspace_service import (
 FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
 
 _BRIEF_LABEL = entity_label("PresentationBrief")
+_MANUSCRIPT_LABEL = "研究手稿"
 _STORYLINE_LABEL = entity_label("Storyline")
 _OUTLINE_LABEL = entity_label("OutlinePlan")
 _SLIDE_LABEL = entity_label("SlideSpec")
@@ -417,6 +418,65 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
         st.rerun()
 
     render_brief_history_panel(brief_id=brief.id)
+
+
+def _manuscript_status_badge(status: ManuscriptStatus) -> str:
+    if status == ManuscriptStatus.READY:
+        return "✅ 已批准"
+    if status == ManuscriptStatus.SUPERSEDED:
+        return "⏭ 已替代"
+    return "⏳ 待审核"
+
+
+def _render_manuscript_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
+    with get_session() as session:
+        review_service = PresentationReviewService(session)
+        context = review_service.get_review_context(
+            context_presentation_id,
+            workflow_run_id=workflow_run_id,
+        )
+
+    if context is None or context.manuscript is None:
+        st.caption(f"当前没有可审核的 {_MANUSCRIPT_LABEL}。")
+        return
+
+    manuscript = context.manuscript
+    st.markdown(
+        f"**{_MANUSCRIPT_LABEL} 审核** · 状态：{_manuscript_status_badge(manuscript.status)}"
+    )
+    st.text_input("标题", value=manuscript.title, disabled=True)
+    st.text_area("项目摘要", value=manuscript.project_summary, disabled=True)
+    st.text_area("叙事论点", value=manuscript.narrative_thesis, disabled=True)
+    st.caption(
+        f"已验证事实 {len(manuscript.verified_facts)} 条 · "
+        f"证据 {len(manuscript.evidence_catalog)} 项 · "
+        f"章节 {len(manuscript.sections)} 个"
+    )
+    if manuscript.missing_information:
+        with st.expander("缺失信息", expanded=False):
+            for item in manuscript.missing_information[:20]:
+                st.write(f"- {item}")
+    if manuscript.unsupported_claims:
+        with st.expander("未支持主张", expanded=False):
+            for item in manuscript.unsupported_claims[:20]:
+                st.write(f"- {item}")
+
+    if manuscript.status == ManuscriptStatus.READY:
+        st.success(f"{_MANUSCRIPT_LABEL} 已批准，设计阶段将只读取手稿内容。")
+        return
+
+    col1, col2 = st.columns(2)
+    approve_clicked = col1.button(
+        f"批准 {_MANUSCRIPT_LABEL}",
+        key=f"approve_manuscript_{manuscript.id}",
+        use_container_width=True,
+    )
+    if approve_clicked:
+        with get_session() as session:
+            PresentationReviewService(session).approve_manuscript(manuscript.id)
+            session.commit()
+        st.success(f"{_MANUSCRIPT_LABEL} 已批准。")
+        st.rerun()
 
 
 def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
@@ -893,23 +953,34 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         or (context.slides_pending_review and context.review_gate == "slides"),
     )
 
-    tab_brief, tab_storyline, tab_outline, tab_slides, tab_assets, tab_quality = st.tabs(
-        [_BRIEF_LABEL, _STORYLINE_LABEL, _OUTLINE_LABEL, _SLIDE_LABEL, _ASSET_BOARD_LABEL, "质量审核"]
-    )
-    with tab_brief:
+    tab_labels = [_BRIEF_LABEL, _STORYLINE_LABEL, _OUTLINE_LABEL, _SLIDE_LABEL, _ASSET_BOARD_LABEL, "质量审核"]
+    if context.manuscript is not None:
+        tab_labels.insert(1, _MANUSCRIPT_LABEL)
+    tabs = st.tabs(tab_labels)
+    tab_index = 0
+    with tabs[tab_index]:
         _render_brief_editor(presentation_id, workflow_run_id)
-    with tab_storyline:
+    tab_index += 1
+    if context.manuscript is not None:
+        with tabs[tab_index]:
+            _render_manuscript_editor(presentation_id, workflow_run_id)
+        tab_index += 1
+    with tabs[tab_index]:
         _render_storyline_editor(presentation_id, workflow_run_id)
-    with tab_outline:
+    tab_index += 1
+    with tabs[tab_index]:
         _render_outline_editor(presentation_id, workflow_run_id)
-    with tab_slides:
+    tab_index += 1
+    with tabs[tab_index]:
         _render_slides_editor(presentation_id, workflow_run_id)
-    with tab_assets:
+    tab_index += 1
+    with tabs[tab_index]:
         render_asset_board_panel(
             project_id=context.presentation.project_id,
             presentation_id=presentation_id,
         )
-    with tab_quality:
+    tab_index += 1
+    with tabs[tab_index]:
         _render_review_issues_panel(
             presentation_id,
             slides=context.slides,

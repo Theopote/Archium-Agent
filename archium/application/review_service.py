@@ -11,6 +11,7 @@ from archium.application.artifact_history_service import (
     OutlineHistoryService,
     StorylineHistoryService,
 )
+from archium.application.presentation_manuscript_service import PresentationManuscriptService
 from archium.application.review_models import (
     BriefUpdate,
     ChapterUpdate,
@@ -31,6 +32,7 @@ from archium.domain.enums import (
 )
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import ManuscriptStatus
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
@@ -96,6 +98,7 @@ class PresentationReviewService:
         review_issues = self._reviews.list_by_presentation(presentation_id)
 
         workflow_run = None
+        manuscript = None
         if workflow_run_id is not None:
             workflow_run = self._workflow_runs.get_by_id(workflow_run_id)
         else:
@@ -105,11 +108,28 @@ class PresentationReviewService:
                 runs[0] if runs else None,
             )
 
+        if workflow_run is not None:
+            from archium.workflow.serialization import restore_domain_artifacts
+
+            restored = restore_domain_artifacts(workflow_run.state)
+            candidate = restored.get("manuscript")
+            if candidate is not None:
+                manuscript = PresentationManuscriptService(self._session).get(candidate.id)
+        if manuscript is None:
+            manuscripts = PresentationManuscriptService(self._session).list_for_project(
+                presentation.project_id
+            )
+            manuscript = next(
+                (item for item in manuscripts if item.presentation_id == presentation_id),
+                None,
+            )
+
         return PresentationReviewContext(
             presentation=presentation,
             brief=brief,
             storyline=storyline,
             outline=outline,
+            manuscript=manuscript,
             slides=slides,
             review_issues=review_issues,
             workflow_run=workflow_run,
@@ -247,6 +267,9 @@ class PresentationReviewService:
             approved.append(self._presentations.save_slide(slide))
         return approved
 
+    def approve_manuscript(self, manuscript_id: UUID):
+        return PresentationManuscriptService(self._session).approve(manuscript_id)
+
     def ensure_can_continue(self, workflow_run_id: UUID) -> PresentationReviewContext:
         run = self._workflow_runs.get_by_id(workflow_run_id)
         if run is None:
@@ -262,7 +285,12 @@ class PresentationReviewService:
             raise WorkflowError(f"Presentation {run.presentation_id} not found")
 
         gate = run.state.get("review_gate")
-        if gate == "brief":
+        if gate == "manuscript":
+            if context.manuscript is None:
+                raise WorkflowError("Manuscript is missing for review continuation")
+            if context.manuscript.status != ManuscriptStatus.READY:
+                raise WorkflowError("Manuscript must be approved before continuing")
+        elif gate == "brief":
             if context.brief is None:
                 raise WorkflowError("Brief is missing for review continuation")
             if context.brief.approval_status != ApprovalStatus.APPROVED:

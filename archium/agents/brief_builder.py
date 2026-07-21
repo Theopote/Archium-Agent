@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 
 from archium.agents._helpers import (
     brief_from_draft,
-    build_project_context,
     build_request_context,
     build_retrieval_query_from_request,
+    resolve_design_context_text,
 )
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.application.artifact_history_service import BriefHistoryService
 from archium.application.artifact_lineage import apply_brief_lineage
 from archium.application.presentation_models import PresentationRequest
@@ -46,6 +47,7 @@ class BriefBuilder:
         presentation_id: UUID,
         request: PresentationRequest,
         *,
+        manuscript: PresentationManuscript | None = None,
         version: int | None = None,
     ) -> PresentationBrief:
         previous_briefs = self._presentations.list_briefs(presentation_id)
@@ -56,9 +58,11 @@ class BriefBuilder:
         if version is None:
             version = (previous.version + 1) if previous is not None else 1
 
-        project_context = build_project_context(
+        project_context = resolve_design_context_text(
             self._session,
             project_id,
+            manuscript=manuscript,
+            use_manuscript_pipeline=request.use_manuscript_pipeline,
             query=build_retrieval_query_from_request(request),
             settings=self._settings,
         )

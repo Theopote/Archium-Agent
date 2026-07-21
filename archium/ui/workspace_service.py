@@ -219,6 +219,7 @@ def build_presentation_request(
         target_slide_count=target_slide_count,
         required_sections=sections,
         presentation_type=presentation_type,
+        use_manuscript_pipeline=True,
     )
 
 

@@ -75,8 +75,15 @@ class PresentationService:
         project_id: UUID,
         presentation_id: UUID,
         request: PresentationRequest,
+        *,
+        manuscript=None,
     ) -> PresentationBrief:
-        return self._brief_builder.generate(project_id, presentation_id, request)
+        return self._brief_builder.generate(
+            project_id,
+            presentation_id,
+            request,
+            manuscript=manuscript,
+        )
 
     def generate_cultural_narrative(
         self,
@@ -106,12 +113,16 @@ class PresentationService:
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
         renovation_issue_map: RenovationIssueMap | None = None,
+        manuscript=None,
+        use_manuscript_pipeline: bool = False,
     ) -> Storyline:
         return self._narrative.generate(
             project_id,
             brief,
             cultural_narrative=cultural_narrative,
             renovation_issue_map=renovation_issue_map,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
         )
 
     def generate_outline_plan(
@@ -122,6 +133,8 @@ class PresentationService:
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
         renovation_issue_map: RenovationIssueMap | None = None,
+        manuscript=None,
+        use_manuscript_pipeline: bool = False,
     ) -> OutlinePlan:
         return self._outline.generate(
             project_id,
@@ -129,6 +142,8 @@ class PresentationService:
             storyline,
             cultural_narrative=cultural_narrative,
             renovation_issue_map=renovation_issue_map,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
         )
 
     def generate_slide_plan(
@@ -137,5 +152,15 @@ class PresentationService:
         brief: PresentationBrief,
         storyline: Storyline,
         outline: OutlinePlan | None = None,
+        *,
+        manuscript=None,
+        use_manuscript_pipeline: bool = False,
     ) -> list[SlideSpec]:
-        return self._slide_planner.generate(project_id, brief, storyline, outline=outline)
+        return self._slide_planner.generate(
+            project_id,
+            brief,
+            storyline,
+            outline=outline,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
+        )

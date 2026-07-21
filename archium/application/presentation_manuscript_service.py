@@ -219,6 +219,46 @@ class PresentationManuscriptService:
         )
         return self._manuscripts.save(manuscript)
 
+    def build_from_project_research(
+        self,
+        *,
+        project_id: UUID,
+        presentation_id: UUID,
+        title: str,
+        project_summary: str,
+        narrative_thesis: str,
+    ) -> PresentationManuscript:
+        """ProjectKnowledge (+ synced facts) → PresentationManuscript."""
+        from archium.application.project_knowledge_service import ProjectKnowledgeService
+
+        items = ProjectKnowledgeService(self._session).generation_eligible_items(project_id)
+        return self.build_from_knowledge(
+            project_id=project_id,
+            title=title,
+            project_summary=project_summary,
+            narrative_thesis=narrative_thesis,
+            knowledge_items=items,
+            presentation_id=presentation_id,
+        )
+
+    def apply_storyline_sections(
+        self,
+        manuscript: PresentationManuscript,
+        storyline: Storyline,
+    ) -> PresentationManuscript:
+        """Refresh manuscript sections after narrative storyline is approved."""
+        updated = manuscript.model_copy(
+            update={"sections": _sections_from_storyline(storyline)}
+        )
+        return self.save(updated)
+
+    def approve(self, manuscript_id: UUID) -> PresentationManuscript:
+        manuscript = self.get(manuscript_id)
+        if manuscript is None:
+            raise WorkflowError(f"PresentationManuscript not found: {manuscript_id}")
+        manuscript.mark_ready()
+        return self.save(manuscript)
+
     def outline_from_manuscript(
         self,
         manuscript: PresentationManuscript,

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.cultural_narrative import CulturalNarrativePlan
@@ -10,6 +12,7 @@ from archium.domain.enums import WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
@@ -21,6 +24,14 @@ def _dump_artifact(value: Any) -> Any:
     """Serialize a domain artifact that may already be a plain dict."""
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")
+    if isinstance(value, dict):
+        return {key: _dump_artifact(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_dump_artifact(item) for item in value]
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, UUID):
+        return str(value)
     return value
 
 
@@ -40,6 +51,7 @@ def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
         "tone": request.tone,
         "language": request.language,
         "user_notes": request.user_notes,
+        "use_manuscript_pipeline": request.use_manuscript_pipeline,
     }
 
 
@@ -64,6 +76,7 @@ def request_from_dict(data: dict[str, Any]) -> PresentationRequest:
         tone=str(data.get("tone", "professional")),
         language=str(data.get("language", "zh-CN")),
         user_notes=str(data.get("user_notes", "")),
+        use_manuscript_pipeline=bool(data.get("use_manuscript_pipeline", False)),
     )
 
 
@@ -75,6 +88,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
     reference_style_profile = state.get("reference_style_profile")
     storyline = state.get("storyline")
     outline = state.get("outline")
+    manuscript = state.get("manuscript")
     presentation = state.get("presentation")
     slides = state.get("slides", [])
     request = state.get("request")
@@ -92,6 +106,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "export_pdf": state.get("export_pdf", False),
         "export_preview_images": state.get("export_preview_images", False),
         "require_brief_review": state.get("require_brief_review", False),
+        "require_manuscript_review": state.get("require_manuscript_review", False),
         "require_storyline_review": state.get("require_storyline_review", False),
         "require_outline_review": state.get("require_outline_review", True),
         "require_slides_review": state.get("require_slides_review", False),
@@ -135,6 +150,8 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         payload["reference_style_profile"] = _dump_artifact(reference_style_profile)
     if storyline is not None:
         payload["storyline"] = _dump_artifact(storyline)
+    if manuscript is not None:
+        payload["manuscript"] = _dump_artifact(manuscript)
     if outline is not None:
         payload["outline"] = _dump_artifact(outline)
     if slides:
@@ -204,6 +221,14 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
                 storyline
                 if isinstance(storyline, Storyline)
                 else Storyline.model_validate(storyline)
+            )
+    if "manuscript" in state_data:
+        manuscript = state_data["manuscript"]
+        if manuscript is not None:
+            restored["manuscript"] = (
+                manuscript
+                if isinstance(manuscript, PresentationManuscript)
+                else PresentationManuscript.model_validate(manuscript)
             )
     if "outline" in state_data:
         outline = state_data["outline"]

@@ -541,6 +541,8 @@ class WorkflowStep(StrEnum):
     RETRIEVE_CONTEXT = "retrieve_context"
     EXTRACT_FACTS = "extract_facts"
     VALIDATE_FACTS = "validate_facts"
+    BUILD_MANUSCRIPT = "build_manuscript"
+    REVIEW_MANUSCRIPT = "review_manuscript"
     BRIEF = "brief"
     REVIEW_BRIEF = "review_brief"
     CULTURAL_NARRATIVE = "cultural_narrative"

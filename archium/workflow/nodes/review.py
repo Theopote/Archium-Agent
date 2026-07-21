@@ -11,9 +11,13 @@ from archium.application.automated_review_service import (
     AutomatedReviewService,
     critical_export_block_messages,
 )
+from archium.application.presentation_manuscript_service import PresentationManuscriptService
 from archium.application.review_service import slides_are_approved
 from archium.application.slide_repair_service import SlideRepairService, split_affected_slide_ids
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
+from archium.domain.outline import OutlinePlan
+from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.workflow.nodes.base import WorkflowNodeBase
 from archium.workflow.state import PresentationWorkflowState
 
@@ -289,6 +293,22 @@ class ReviewNodesMixin(WorkflowNodeBase):
             logger.info("Slide validation passed for %d slides", len(slides))
         return next_state
 
+    @staticmethod
+    def _coerce_domain(model_cls, value):  # type: ignore[no-untyped-def]
+        if value is None:
+            return None
+        if isinstance(value, model_cls):
+            return value
+        if isinstance(value, dict):
+            return model_cls.model_validate(value)
+        return value
+
+    @staticmethod
+    def _coerce_manuscript(manuscript):  # type: ignore[no-untyped-def]
+        if manuscript is None or isinstance(manuscript, PresentationManuscript):
+            return manuscript
+        return PresentationManuscript.model_validate(manuscript)
+
     def _refresh_review_artifacts(
         self,
         state: PresentationWorkflowState,
@@ -297,21 +317,30 @@ class ReviewNodesMixin(WorkflowNodeBase):
         presentation_id = UUID(state["presentation_id"])
         updates: PresentationWorkflowState = {}
 
-        brief = state.get("brief")
+        brief = self._coerce_domain(PresentationBrief, state.get("brief"))
         if brief is not None:
             refreshed_brief = self._presentations.get_brief(brief.id)
             if refreshed_brief is not None:
                 updates["brief"] = refreshed_brief
 
+        if gate == "manuscript":
+            manuscript = self._coerce_manuscript(state.get("manuscript"))
+            if manuscript is not None:
+                refreshed_manuscript = PresentationManuscriptService(
+                    self._runtime.session
+                ).get(manuscript.id)
+                if refreshed_manuscript is not None:
+                    updates["manuscript"] = refreshed_manuscript
+
         if gate in {"storyline", "outline", "slides"}:
-            storyline = state.get("storyline")
+            storyline = self._coerce_domain(Storyline, state.get("storyline"))
             if storyline is not None:
                 refreshed_storyline = self._presentations.get_storyline(storyline.id)
                 if refreshed_storyline is not None:
                     updates["storyline"] = refreshed_storyline
 
         if gate in {"outline", "slides"}:
-            outline = state.get("outline")
+            outline = self._coerce_domain(OutlinePlan, state.get("outline"))
             if outline is not None:
                 refreshed_outline = self._presentations.get_outline(outline.id)
                 if refreshed_outline is not None:
@@ -323,14 +352,20 @@ class ReviewNodesMixin(WorkflowNodeBase):
         return updates
 
     def _gate_ready_to_continue(self, state: PresentationWorkflowState, gate: str) -> bool:
+        if gate == "manuscript":
+            manuscript = self._coerce_manuscript(state.get("manuscript"))
+            if manuscript is None:
+                return False
+            refreshed = PresentationManuscriptService(self._runtime.session).get(manuscript.id)
+            return refreshed is not None and refreshed.status == ManuscriptStatus.READY
         if gate == "brief":
-            brief = state.get("brief")
+            brief = self._coerce_domain(PresentationBrief, state.get("brief"))
             if brief is None:
                 return False
             refreshed = self._presentations.get_brief(brief.id)
             return refreshed is not None and refreshed.approval_status == ApprovalStatus.APPROVED
         if gate == "storyline":
-            storyline = state.get("storyline")
+            storyline = self._coerce_domain(Storyline, state.get("storyline"))
             if storyline is None:
                 return False
             refreshed_storyline = self._presentations.get_storyline(storyline.id)
@@ -339,7 +374,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 and refreshed_storyline.approval_status == ApprovalStatus.APPROVED
             )
         if gate == "outline":
-            outline = state.get("outline")
+            outline = self._coerce_domain(OutlinePlan, state.get("outline"))
             if outline is None:
                 return False
             refreshed_outline = self._presentations.get_outline(outline.id)
@@ -355,6 +390,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
     def pause_for_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         review_steps = {
+            WorkflowStep.REVIEW_MANUSCRIPT.value,
             WorkflowStep.REVIEW_BRIEF.value,
             WorkflowStep.REVIEW_STORYLINE.value,
             WorkflowStep.REVIEW_OUTLINE.value,
@@ -369,7 +405,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 existing_step = run.state.get("current_step")
                 if (
                     isinstance(existing_gate, str)
-                    and existing_gate in {"brief", "storyline", "outline", "slides"}
+                    and existing_gate in {"manuscript", "brief", "storyline", "outline", "slides"}
                     and isinstance(existing_step, str)
                     and existing_step in review_steps
                     and self._gate_ready_to_continue(state, existing_gate)
@@ -390,7 +426,19 @@ class ReviewNodesMixin(WorkflowNodeBase):
         outline = state.get("outline")
         slides = self._load_slides_for_export(state)
 
-        if brief is not None and brief.approval_status != ApprovalStatus.APPROVED:
+        request = state.get("request")
+        manuscript = self._coerce_manuscript(state.get("manuscript"))
+
+        if (
+            request is not None
+            and request.use_manuscript_pipeline
+            and state.get("require_manuscript_review")
+            and manuscript is not None
+            and manuscript.status != ManuscriptStatus.READY
+        ):
+            gate = "manuscript"
+            step = WorkflowStep.REVIEW_MANUSCRIPT.value
+        elif brief is not None and brief.approval_status != ApprovalStatus.APPROVED:
             gate = "brief"
             step = WorkflowStep.REVIEW_BRIEF.value
         elif storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:

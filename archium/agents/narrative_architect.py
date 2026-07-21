@@ -7,8 +7,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents._helpers import (
-    build_project_context,
     build_retrieval_query_from_brief,
+    resolve_design_context_text,
     storyline_from_draft,
     to_json,
 )
@@ -20,6 +20,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -50,6 +51,8 @@ class NarrativeArchitect:
         *,
         cultural_narrative: CulturalNarrativePlan | None = None,
         renovation_issue_map: RenovationIssueMap | None = None,
+        manuscript: PresentationManuscript | None = None,
+        use_manuscript_pipeline: bool = False,
         version: int | None = None,
     ) -> Storyline:
         previous_storylines = self._presentations.list_storylines(brief.presentation_id)
@@ -60,9 +63,11 @@ class NarrativeArchitect:
         if version is None:
             version = (previous.version + 1) if previous is not None else 1
 
-        project_context = build_project_context(
+        project_context = resolve_design_context_text(
             self._session,
             project_id,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
             query=build_retrieval_query_from_brief(brief),
             settings=self._settings,
         )

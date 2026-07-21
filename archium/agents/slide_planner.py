@@ -7,11 +7,12 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents._helpers import (
-    build_project_context_bundle,
     build_retrieval_query_from_storyline,
+    resolve_design_context_bundle,
     slides_from_plan,
     to_json,
 )
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
 from archium.config.settings import Settings, get_settings
@@ -47,6 +48,8 @@ class SlidePlanner:
         storyline: Storyline,
         *,
         outline: OutlinePlan | None = None,
+        manuscript: PresentationManuscript | None = None,
+        use_manuscript_pipeline: bool = False,
         version: int = 1,
         replace_existing: bool = True,
     ) -> list[SlideSpec]:
@@ -58,9 +61,11 @@ class SlidePlanner:
         else:
             existing = self._presentations.list_slides(brief.presentation_id)
 
-        context_bundle = build_project_context_bundle(
+        context_bundle = resolve_design_context_bundle(
             self._session,
             project_id,
+            manuscript=manuscript,
+            use_manuscript_pipeline=use_manuscript_pipeline,
             query=build_retrieval_query_from_storyline(brief, storyline),
             settings=self._settings,
         )

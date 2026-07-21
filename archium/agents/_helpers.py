@@ -189,6 +189,47 @@ def build_project_context_bundle(
     )
 
 
+def resolve_design_context_bundle(
+    session: Session,
+    project_id: UUID,
+    *,
+    manuscript,
+    use_manuscript_pipeline: bool,
+    query: str | None = None,
+    settings: Settings | None = None,
+) -> ProjectContextBundle:
+    """Design-stage context: manuscript when pipeline active, else legacy RAG."""
+    if use_manuscript_pipeline and manuscript is not None:
+        from archium.application.manuscript_prompt import context_bundle_from_manuscript
+
+        return context_bundle_from_manuscript(manuscript)
+    return build_project_context_bundle(
+        session,
+        project_id,
+        query=query,
+        settings=settings,
+    )
+
+
+def resolve_design_context_text(
+    session: Session,
+    project_id: UUID,
+    *,
+    manuscript,
+    use_manuscript_pipeline: bool,
+    query: str | None = None,
+    settings: Settings | None = None,
+) -> str:
+    return resolve_design_context_bundle(
+        session,
+        project_id,
+        manuscript=manuscript,
+        use_manuscript_pipeline=use_manuscript_pipeline,
+        query=query,
+        settings=settings,
+    ).text
+
+
 def _format_fact_line(fact: ProjectFact) -> str:
     unit_suffix = f" {fact.unit}" if fact.unit else ""
     if fact.is_confirmed:

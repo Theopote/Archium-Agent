@@ -10,12 +10,22 @@ from archium.agents.citations import enrich_slide_citations
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.domain.enums import ApprovalStatus, WorkflowStep
 from archium.domain.slide import SlideSpec
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.workflow.nodes.base import WorkflowNodeBase
 from archium.workflow.state import PresentationWorkflowState
 
 
 class GenerationNodesMixin(WorkflowNodeBase):
     """Generate presentation content and enrich slides with citations and assets."""
+
+    @staticmethod
+    def _manuscript_context(state: PresentationWorkflowState):
+        request = state.get("request")
+        use_pipeline = bool(request and request.use_manuscript_pipeline)
+        manuscript = state.get("manuscript")
+        if manuscript is not None and not isinstance(manuscript, PresentationManuscript):
+            manuscript = PresentationManuscript.model_validate(manuscript)
+        return manuscript, use_pipeline
 
     def generate_brief(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
@@ -32,10 +42,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
             project_id = UUID(state["project_id"])
             presentation_id = UUID(state["presentation_id"])
             request = state["request"]
+            manuscript, _ = self._manuscript_context(state)
             brief = self._runtime.presentation_service.generate_brief(
                 project_id,
                 presentation_id,
                 request,
+                manuscript=manuscript,
             )
             if state.get("require_brief_review"):
                 brief.approval_status = ApprovalStatus.PENDING
@@ -238,11 +250,14 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
         try:
             project_id = UUID(state["project_id"])
+            manuscript, use_pipeline = self._manuscript_context(state)
             storyline = self._runtime.presentation_service.generate_storyline(
                 project_id,
                 brief,
                 cultural_narrative=state.get("cultural_narrative"),
                 renovation_issue_map=state.get("renovation_issue_map"),
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_pipeline,
             )
             if state.get("require_storyline_review"):
                 storyline.approval_status = ApprovalStatus.PENDING
@@ -286,12 +301,15 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
         try:
             project_id = UUID(state["project_id"])
+            manuscript, use_pipeline = self._manuscript_context(state)
             outline = self._runtime.presentation_service.generate_outline_plan(
                 project_id,
                 brief,
                 storyline,
                 cultural_narrative=state.get("cultural_narrative"),
                 renovation_issue_map=state.get("renovation_issue_map"),
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_pipeline,
             )
             if state.get("require_outline_review"):
                 outline.approval_status = ApprovalStatus.PENDING
@@ -342,11 +360,14 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
         try:
             project_id = UUID(state["project_id"])
+            manuscript, use_pipeline = self._manuscript_context(state)
             slides = self._runtime.presentation_service.generate_slide_plan(
                 project_id,
                 brief,
                 storyline,
                 outline=outline,
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_pipeline,
             )
             reviewed_slides: list[SlideSpec] = []
             for slide in slides:

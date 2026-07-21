@@ -11,6 +11,7 @@ from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import WorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
@@ -34,6 +35,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     project_facts: list[ProjectFact]
     extracted_fact_count: int
     fact_validation_issues: Annotated[list[str], operator.add]
+    manuscript: PresentationManuscript | None
     brief: PresentationBrief | None
     cultural_narrative: CulturalNarrativePlan | None
     renovation_issue_map: RenovationIssueMap | None
@@ -62,6 +64,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     export_preview_images: bool
     render_warnings: Annotated[list[str], operator.add]
     require_brief_review: bool
+    require_manuscript_review: bool
     require_storyline_review: bool
     require_outline_review: bool
     require_slides_review: bool
@@ -86,6 +89,7 @@ def initial_workflow_state(
     export_pdf: bool = False,
     export_preview_images: bool = True,
     require_brief_review: bool = False,
+    require_manuscript_review: bool = False,
     require_storyline_review: bool = False,
     require_outline_review: bool = True,
     require_slides_review: bool = False,
@@ -105,6 +109,7 @@ def initial_workflow_state(
         "project_facts": [],
         "extracted_fact_count": 0,
         "fact_validation_issues": [],
+        "manuscript": None,
         "brief": None,
         "cultural_narrative": None,
         "renovation_issue_map": None,
@@ -133,6 +138,7 @@ def initial_workflow_state(
         "export_preview_images": export_preview_images,
         "render_warnings": [],
         "require_brief_review": require_brief_review,
+        "require_manuscript_review": require_manuscript_review,
         "require_storyline_review": require_storyline_review,
         "require_outline_review": require_outline_review,
         "require_slides_review": require_slides_review,

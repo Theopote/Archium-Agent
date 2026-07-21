@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.workflow.nodes.export import ExportNodesMixin
 from archium.workflow.nodes.generation import GenerationNodesMixin
 from archium.workflow.nodes.ingestion import IngestionNodesMixin
+from archium.workflow.nodes.manuscript import ManuscriptNodesMixin
 from archium.workflow.nodes.review import ReviewNodesMixin
 
 
 class PresentationWorkflowNodes(
     IngestionNodesMixin,
+    ManuscriptNodesMixin,
     GenerationNodesMixin,
     ReviewNodesMixin,
     ExportNodesMixin,

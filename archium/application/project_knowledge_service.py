@@ -154,6 +154,10 @@ class ProjectKnowledgeService:
             reference_document_ids=reference_doc_ids,
         )
 
+    def generation_eligible_items(self, project_id: UUID) -> list[ProjectKnowledgeItem]:
+        """Knowledge items safe for manuscript / design-stage consumption."""
+        return self.get_view(project_id).generation_eligible_items
+
     def _require_item(self, item_id: UUID) -> ProjectKnowledgeItem:
         item = self._knowledge.get_by_id(item_id)
         if item is None:
