@@ -13,6 +13,7 @@ from archium.application.visual.asset_reference import (
     content_refs_from_plan,
 )
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
+from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.defaults import default_presentation_design_system
@@ -50,11 +51,13 @@ class StudioSceneService:
         settings: Settings | None = None,
         compiler: RenderSceneCompiler | None = None,
         canvas_renderer: CanvasRenderer | None = None,
+        scene_repair: SceneRepairService | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
         self._compiler = compiler or RenderSceneCompiler()
         self._canvas = canvas_renderer or CanvasRenderer()
+        self._scene_repair = scene_repair or SceneRepairService()
         self._scenes = RenderSceneRepository(session)
         self._presentations = PresentationRepository(session)
         self._plans = LayoutPlanRepository(session)
@@ -182,10 +185,26 @@ class StudioSceneService:
                 }
             )
             if compute_scene_hash(comparable) == compute_scene_hash(existing):
-                preview = self._ensure_preview(slide.presentation_id, existing)
+                prepared = self._apply_scene_repair(existing, slide)
+                saved = existing
+                if compute_scene_hash(prepared) != compute_scene_hash(existing):
+                    saved = self._scenes.save(
+                        prepared.model_copy(
+                            update={
+                                "id": existing.id,
+                                "version": existing.version + 1,
+                                "created_at": existing.created_at,
+                            }
+                        )
+                    )
+                    self.invalidate_preview_cache(
+                        slide.presentation_id,
+                        layout_plan_id=plan.id,
+                    )
+                preview = self._ensure_preview(slide.presentation_id, saved)
                 return StudioSceneResult(
-                    scene=existing,
-                    scene_hash=compute_scene_hash(existing),
+                    scene=saved,
+                    scene_hash=compute_scene_hash(saved),
                     preview_path=preview,
                     reused=True,
                 )
@@ -198,6 +217,7 @@ class StudioSceneService:
                     "created_at": existing.created_at,
                 }
             )
+        scene = self._apply_scene_repair(scene, slide)
         saved = self._scenes.save(scene)
         self.invalidate_preview_cache(
             slide.presentation_id,
@@ -246,6 +266,18 @@ class StudioSceneService:
             if result is not None:
                 results.append(result)
         return results
+
+    def _apply_scene_repair(self, scene: RenderScene, slide: SlideSpec) -> RenderScene:
+        if not bool(getattr(self._settings, "scene_repair_enabled", True)):
+            return scene
+        max_rounds = int(getattr(self._settings, "scene_repair_max_rounds", 2))
+        batch = self._scene_repair.repair_deck(
+            slide.presentation_id,
+            [scene],
+            max_rounds=max_rounds,
+            slide_orders={scene.slide_id: slide.order},
+        )
+        return batch.scenes[0] if batch.scenes else scene
 
     def _ensure_preview(self, presentation_id: UUID, scene: RenderScene) -> Path:
         path = self.preview_cache_path(presentation_id, scene)
