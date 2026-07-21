@@ -550,7 +550,7 @@ def test_successful_transaction_records_history() -> None:
     assert history.records
 
 
-def test_transaction_records_distinct_per_step_snapshots() -> None:
+def test_transaction_records_final_step_snapshot() -> None:
     plan = _sample_plan()
     hero_id = plan.elements[0].id
     history = _FakeHistory()
@@ -572,14 +572,12 @@ def test_transaction_records_distinct_per_step_snapshots() -> None:
         presentations_repo=_FakePresentationsRepo(slide),
     )
     assert result.success is True
-    assert len(history.records) == 2
+    # History is recorded once per transaction, capturing the final step state.
+    assert len(history.records) == 1
 
-    first_plan = history.records[0].layout_plan
-    second_plan = history.records[1].layout_plan
-    assert first_plan is not None
-    assert second_plan is not None
-    assert first_plan.elements[0].locked is True
-    assert second_plan.elements[0].locked is False
+    final_plan = history.records[0].layout_plan
+    assert final_plan is not None
+    assert final_plan.elements[0].locked is False
 
 
 def test_transaction_records_history_before_commit() -> None:

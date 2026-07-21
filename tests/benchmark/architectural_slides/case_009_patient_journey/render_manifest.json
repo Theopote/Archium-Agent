@@ -19,5 +19,8 @@
   "pptx_screenshot_generated": false,
   "pptx_screenshot_reused": true,
   "pptx_screenshot_source_hash": "1c9b6006a82b6044f97a7347b78ef22d0a167b49c5b9ec313fd1383fb85ac27f",
-  "render_attempt_id": "47b674f4-10f2-44b0-8acb-b34f24a08a43"
+  "render_attempt_id": "47b674f4-10f2-44b0-8acb-b34f24a08a43",
+  "pptx_content_hash": "fcbcf68010a6e29c8fceffb153fa922cb2cc3b8cb8a6abe26f15e55b6a5e3631",
+  "post_render_qa_passed": true,
+  "post_render_qa_issues": []
 }

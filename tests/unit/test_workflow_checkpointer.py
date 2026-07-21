@@ -53,7 +53,7 @@ def test_workflow_service_closes_checkpointer_after_run(
     )
 
     try:
-        result = service.run(project.id, payload, export_marp=False)
+        result = service.run(project.id, payload, export_marp=False, require_outline_review=False)
         assert result.workflow_run.status == WorkflowStatus.COMPLETED
         assert checkpoint_path.exists()
     finally:
