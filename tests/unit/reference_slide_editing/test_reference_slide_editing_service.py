@@ -9,6 +9,8 @@ from archium.domain.asset import Asset
 from archium.domain.citation import Citation
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_generation_context import SlideGenerationContext
+from archium.domain.presentation_manuscript import ManuscriptFact
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,
@@ -474,3 +476,52 @@ def test_generate_scene_maps_multiple_image_slots_to_evidence_depth() -> None:
         "supporting_image",
     ]
     assert len({n.asset_id for n in image_nodes}) == 3
+
+
+def test_generate_scene_uses_generation_context_assets_and_warnings() -> None:
+    schema = _semantic_schema()
+    template = _template(schema)
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="problem",
+        order=0,
+        title="项目现场问题",
+        message="人车冲突严重，需要优化入口流线。",
+        key_points=[],
+        speaker_notes="图1为工作日高峰拍摄。",
+    )
+    context_asset = Asset(
+        id=uuid4(),
+        project_id=uuid4(),
+        filename="context_site.jpg",
+        path="project://context_site.jpg",
+        asset_type=AssetType.PHOTO,
+        description="现场入口拥堵",
+    )
+    generation_context = SlideGenerationContext(
+        slide_spec=slide,
+        section_summary="现状分析：入口人车交织严重。",
+        verified_facts=[
+            ManuscriptFact(
+                statement="高峰时段入口排队超过 80 米",
+                source_id="fact-ctx",
+                verified=True,
+            )
+        ],
+        relevant_assets=[context_asset],
+    )
+    result = ReferenceSlideEditingService().generate_scene(
+        reference_slide=_semantic_reference_slide(),
+        content_schema=schema,
+        slide_spec=slide,
+        assets=[],
+        design_system=default_presentation_design_system(),
+        template=template,
+        generation_context=generation_context,
+    )
+    assert any("slide_generation_context active" in w for w in result.warnings)
+    image_nodes = [n for n in result.scene.nodes if isinstance(n, ImageNode)]
+    assert image_nodes
+    assert image_nodes[0].asset_id == context_asset.id
+    texts = {n.text for n in result.scene.nodes if isinstance(n, TextNode)}
+    assert "高峰时段入口排队超过 80 米" in texts

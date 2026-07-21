@@ -35,6 +35,8 @@ from archium.application.visual.visual_layout_pattern_classifier import VisualLa
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.outline import OutlinePlan
+from archium.domain.presentation import Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     SchemaPublishReport,
@@ -644,6 +646,10 @@ class TemplateInductionService:
         assets: list[Asset] | None = None,
         design_system: DesignSystem | None = None,
         workspace: Path | None = None,
+        session: Session | None = None,
+        project_id: UUID | None = None,
+        manuscript: PresentationManuscript | None = None,
+        storyline: Storyline | None = None,
     ) -> tuple[OutlineTemplateEditingBatch, OutlineTemplateCoPlan]:
         """Phase 6: materialize RenderScenes for co-plan ``template_editing`` pages."""
         schema_list = schemas or [
@@ -667,6 +673,10 @@ class TemplateInductionService:
             assets=assets,
             design_system=design_system,
             workspace=workspace,
+            session=session,
+            project_id=project_id,
+            manuscript=manuscript,
+            storyline=storyline,
         )
         if workspace is not None:
             self.export_artifacts(

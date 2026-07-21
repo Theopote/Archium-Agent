@@ -322,6 +322,15 @@ class Settings(BaseSettings):
         description="Weight of screenshot distance vs structural embedding distance.",
     )
 
+    # ── generation.* ─────────────────────────────────────────────────────────
+    slide_per_page_generation: bool = Field(
+        default=True,
+        description=(
+            "When true, SlidePlanner invokes the LLM once per page with "
+            "SlideGenerationContext instead of one batch SlidePlan call."
+        ),
+    )
+
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(
         default=False,

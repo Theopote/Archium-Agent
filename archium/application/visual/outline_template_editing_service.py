@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import UUID
 
+from sqlalchemy.orm import Session
+
+from archium.application.slide_generation_context_service import SlideGenerationContextService
 from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )
@@ -12,6 +16,8 @@ from archium.application.visual.reference_slide_editing_service import Reference
 from archium.application.visual.semantic_content_plan import build_slide_spec_from_outline_page
 from archium.domain.asset import Asset
 from archium.domain.outline import OutlinePlan, OutlineSection
+from archium.domain.presentation import Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
@@ -53,6 +59,10 @@ class OutlineTemplateEditingService:
         assets: list[Asset] | None = None,
         design_system: DesignSystem | None = None,
         workspace: Path | None = None,
+        session: Session | None = None,
+        project_id: UUID | None = None,
+        manuscript: PresentationManuscript | None = None,
+        storyline: Storyline | None = None,
     ) -> tuple[OutlineTemplateEditingBatch, OutlineTemplateCoPlan]:
         ds = design_system or default_presentation_design_system()
         project_assets = list(assets or [])
@@ -60,6 +70,12 @@ class OutlineTemplateEditingService:
         section_by_id = {section.id: section for section in outline.sections}
         slide_by_id = {slide.slide_id: slide for slide in presentation.slides}
         layout_by_id = {layout.id: layout for layout in template.layouts}
+        deck_slides = self._deck_slide_specs(co_plan, outline, section_by_id)
+        context_service = (
+            SlideGenerationContextService(session)
+            if session is not None and project_id is not None
+            else None
+        )
 
         page_results: list[TemplateEditingPageResult] = []
         updated_pages: list[OutlineTemplateCompatibility] = []
@@ -124,6 +140,17 @@ class OutlineTemplateEditingService:
                 page=page,
                 slide_type_resolver=OutlineTemplateCoPlanningService._slide_type_for_functional,
             )
+            generation_context = None
+            if context_service is not None and project_id is not None:
+                generation_context = context_service.build_for_slide(
+                    slide_spec,
+                    all_slides=deck_slides,
+                    project_id=project_id,
+                    manuscript=manuscript,
+                    outline=outline,
+                    storyline=storyline,
+                    template_schema=schema,
+                )
             try:
                 edit_result = self._editor.generate_scene(
                     reference_slide=reference_slide,
@@ -134,6 +161,7 @@ class OutlineTemplateEditingService:
                     template=template,
                     layout_id=page.preferred_layout_id,
                     presentation_id=outline.presentation_id,
+                    generation_context=generation_context,
                 )
             except Exception as exc:  # noqa: BLE001 — batch must continue on single-page failure
                 result = self._failed_result(
@@ -208,6 +236,29 @@ class OutlineTemplateEditingService:
             )
 
         return batch, updated_co_plan
+
+    @staticmethod
+    def _deck_slide_specs(
+        co_plan: OutlineTemplateCoPlan,
+        outline: OutlinePlan,
+        section_by_id: dict[str, OutlineSection],
+    ) -> list[SlideSpec]:
+        slides: list[SlideSpec] = []
+        for page in co_plan.page_plans:
+            if page.fallback_mode != "template_editing":
+                continue
+            section = section_by_id.get(page.section_id)
+            if section is None:
+                continue
+            slides.append(
+                build_slide_spec_from_outline_page(
+                    outline=outline,
+                    section=section,
+                    page=page,
+                    slide_type_resolver=OutlineTemplateCoPlanningService._slide_type_for_functional,
+                )
+            )
+        return slides
 
     @staticmethod
     def _slide_spec_for_page(

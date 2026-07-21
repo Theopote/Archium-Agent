@@ -196,6 +196,7 @@ def resolve_design_context_bundle(
     manuscript,
     use_manuscript_pipeline: bool,
     query: str | None = None,
+    max_chunks: int = 24,
     settings: Settings | None = None,
 ) -> ProjectContextBundle:
     """Design-stage context: manuscript when pipeline active, else legacy RAG."""
@@ -207,6 +208,7 @@ def resolve_design_context_bundle(
         session,
         project_id,
         query=query,
+        max_chunks=max_chunks,
         settings=settings,
     )
 

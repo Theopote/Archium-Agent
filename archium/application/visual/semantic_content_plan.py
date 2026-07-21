@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_generation_context import SlideGenerationContext
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRole,
@@ -180,6 +181,8 @@ def schema_uses_semantic_contract(schema: ArchitecturalContentSchema) -> bool:
 def build_semantic_content_plan(
     schema: ArchitecturalContentSchema,
     slide_spec: SlideSpec,
+    *,
+    generation_context: SlideGenerationContext | None = None,
 ) -> SemanticContentPlan:
     hydrated = schema.hydrate_semantic_contract()
     uses_contract = schema_uses_semantic_contract(hydrated)
@@ -189,6 +192,10 @@ def build_semantic_content_plan(
         cite = slide_spec.source_citations[0]
         page = f", p.{cite.page_number}" if cite.page_number else ""
         source = f"{cite.document_name}{page}"
+    elif generation_context and generation_context.relevant_citations:
+        cite = generation_context.relevant_citations[0]
+        page = f", p.{cite.page_number}" if cite.page_number else ""
+        source = f"{cite.document_name}{page}"
 
     captions: list[str] = []
     if slide_spec.speaker_notes and slide_spec.speaker_notes.strip():
@@ -196,6 +203,8 @@ def build_semantic_content_plan(
     captions.extend(slide_spec.key_points)
 
     evidence_labels = list(slide_spec.key_points)
+    if generation_context is not None:
+        evidence_labels = _merge_evidence_labels(evidence_labels, generation_context)
     if not evidence_labels and hydrated.evidence_items:
         evidence_labels = [slide_spec.message]
     if not evidence_labels and any(
@@ -210,6 +219,7 @@ def build_semantic_content_plan(
     has_evidence = bool(
         hydrated.evidence_items
         or any(item.role == ContentRole.EVIDENCE for item in hydrated.required_content)
+        or evidence_labels
     )
     has_interpretation = bool(
         hydrated.interpretation
@@ -217,24 +227,51 @@ def build_semantic_content_plan(
     )
 
     visual_roles = expand_visual_evidence_roles(hydrated)
+    if generation_context is not None and generation_context.relevant_assets:
+        while len(visual_roles) < len(generation_context.relevant_assets):
+            visual_roles.append("supporting_image" if visual_roles else "hero_image")
+
+    interpretation = (slide_spec.speaker_notes or slide_spec.message).strip()
+    if generation_context and generation_context.section_summary.strip():
+        interpretation = generation_context.section_summary.strip()
 
     return SemanticContentPlan(
         uses_semantic_contract=uses_contract,
         title=slide_spec.title,
         central_claim=slide_spec.message if has_central else "",
         evidence_labels=evidence_labels if has_evidence else [],
-        interpretation=(slide_spec.speaker_notes or slide_spec.message).strip()
-        if has_interpretation
-        else "",
+        interpretation=interpretation if has_interpretation else "",
         decision_request=slide_spec.message
         if hydrated.decision_request
         or any(item.role == ContentRole.DECISION_REQUEST for item in hydrated.required_content)
         else "",
         captions=captions if hydrated.caption_required or has_interpretation else [],
         source=source,
-        metrics=list(slide_spec.key_points) if hydrated.metric_unit_required else [],
+        metrics=list(evidence_labels) if hydrated.metric_unit_required else [],
         visual_evidence_roles=visual_roles,
     )
+
+
+def _merge_evidence_labels(
+    existing: list[str],
+    context: SlideGenerationContext,
+) -> list[str]:
+    merged = list(existing)
+    seen = {item.strip() for item in merged if item.strip()}
+    for fact in context.verified_facts:
+        statement = fact.statement.strip()
+        if statement and statement not in seen:
+            merged.append(statement)
+            seen.add(statement)
+    for fact in context.project_facts:
+        line = f"{fact.label}: {fact.value}"
+        if fact.unit:
+            line = f"{line} {fact.unit}"
+        line = line.strip()
+        if line and line not in seen:
+            merged.append(line)
+            seen.add(line)
+    return merged[:8]
 
 
 def normalize_text_role_for_schema(

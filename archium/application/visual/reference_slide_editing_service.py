@@ -23,6 +23,7 @@ from archium.application.visual.semantic_content_plan import (
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_generation_context import SlideGenerationContext
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema, ContentRole
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.design_system import DesignSystem, TextStyleToken
@@ -89,6 +90,7 @@ class ReferenceSlideEditingService:
         template: ArchitecturalTemplate,
         layout_id: str | None = None,
         presentation_id: UUID | None = None,
+        generation_context: SlideGenerationContext | None = None,
     ) -> ReferenceSlideEditResult:
         actions: list[
             ReplaceTextAction
@@ -104,11 +106,19 @@ class ReferenceSlideEditingService:
         stripped_asset = 0
 
         layout = self._resolve_layout(template, layout_id, content_schema)
-        asset_pool = self._project_asset_pool(assets, content_schema)
-        content_plan = build_semantic_content_plan(content_schema, slide_spec)
+        merged_assets = self._merge_context_assets(assets, generation_context)
+        asset_pool = self._project_asset_pool(merged_assets, content_schema)
+        content_plan = build_semantic_content_plan(
+            content_schema,
+            slide_spec,
+            generation_context=generation_context,
+        )
         fill_state = SemanticFillState()
         photo_idx = 0
         drawing_idx = 0
+
+        if generation_context is not None:
+            warnings.append("slide_generation_context active")
 
         ref_assets_by_id = {asset.id: asset for asset in reference_slide.image_assets}
         image_slot_count = sum(
@@ -401,6 +411,22 @@ class ReferenceSlideEditingService:
             if layout.representative_slide_id == schema.representative_slide_id:
                 return layout
         return template.layouts[0] if template.layouts else None
+
+    @staticmethod
+    def _merge_context_assets(
+        assets: list[Asset],
+        generation_context: SlideGenerationContext | None,
+    ) -> list[Asset]:
+        if generation_context is None:
+            return list(assets)
+        merged = list(assets)
+        seen = {asset.id for asset in merged}
+        for asset in generation_context.relevant_assets:
+            if asset.id in seen:
+                continue
+            seen.add(asset.id)
+            merged.append(asset)
+        return merged
 
     def _project_asset_pool(
         self,

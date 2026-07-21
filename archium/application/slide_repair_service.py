@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from archium.agents._helpers import sanitize_slide_message
 from archium.application.asset_matching_service import AssetMatchingService
-from archium.application.slide_diff import slide_to_snapshot
+from archium.application.slide_context_prompt import format_slide_generation_context
+from archium.application.slide_generation_context_service import SlideGenerationContextService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_repair_policy import (
     apply_tiered_layout_repair,
@@ -27,7 +28,9 @@ from archium.domain.enums import (
     SlideRepairSource,
     SlideRepairTier,
 )
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec, build_slide_logical_key
@@ -111,6 +114,8 @@ class SlideRepairService:
         *,
         brief: PresentationBrief | None = None,
         storyline: Storyline | None = None,
+        outline: OutlinePlan | None = None,
+        manuscript: PresentationManuscript | None = None,
         project_id: UUID | None = None,
     ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord]]:
         """Repair slide-level issues and return updated slides, count, and audit records."""
@@ -142,6 +147,10 @@ class SlideRepairService:
                 slides_by_id,
                 open_issues,
                 brief=brief,
+                storyline=storyline,
+                outline=outline,
+                manuscript=manuscript,
+                project_id=project_id,
             )
             updated_slides = llm_slides
             repaired += llm_count
@@ -339,6 +348,10 @@ class SlideRepairService:
         issues: list[ReviewIssue],
         *,
         brief: PresentationBrief | None,
+        storyline: Storyline | None = None,
+        outline: OutlinePlan | None = None,
+        manuscript: PresentationManuscript | None = None,
+        project_id: UUID | None = None,
     ) -> tuple[list[SlideSpec], int, list[SlideRepairRecord], list[ReviewIssue]]:
         issues_by_slide: dict[UUID, list[ReviewIssue]] = {}
         for issue in issues:
@@ -367,12 +380,27 @@ class SlideRepairService:
         if llm is None:
             return slides, 0, [], []
 
+        context_service = (
+            SlideGenerationContextService(self._session) if project_id is not None else None
+        )
+
         for slide_id, slide_issues in issues_by_slide.items():
             slide = slides_by_id.get(slide_id)
             if slide is None:
                 continue
 
             before_snapshot = slide_to_snapshot(slide)
+            slide_context_text = None
+            if context_service is not None and project_id is not None:
+                slide_context = context_service.build_for_slide(
+                    slide,
+                    all_slides=current_slides,
+                    project_id=project_id,
+                    manuscript=manuscript,
+                    outline=outline,
+                    storyline=storyline,
+                )
+                slide_context_text = format_slide_generation_context(slide_context)
             try:
                 draft = llm.generate_structured(
                     LLMRequest(
@@ -381,6 +409,7 @@ class SlideRepairService:
                             slide_summary=_slide_summary(slide),
                             issue_summary=_issue_summary(slide_issues),
                             brief_summary=brief_summary,
+                            slide_context=slide_context_text,
                         ),
                         model=self._settings.llm_model,
                         temperature=0.3,

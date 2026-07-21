@@ -21,8 +21,14 @@ from archium.application.visual.template_induction_service import TemplateInduct
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.outline import OutlinePlan
+from archium.domain.presentation_manuscript import (
+    ManuscriptSection,
+    PresentationManuscript,
+)
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.template_induction import TemplateInductionStatus
+from archium.domain.visual.reference_slide_editing import ReferenceSlideEditResult
+from archium.domain.visual.render_scene import BackgroundStyle, RenderScene
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 
@@ -339,3 +345,156 @@ def test_execute_marks_semantic_contract_for_strategy_schema() -> None:
     )
     assert batch.generated_count == 1
     assert batch.page_results[0].semantic_contract_active
+
+
+class _RecordingEditor:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def generate_scene(self, **kwargs):
+        self.calls.append(kwargs)
+        return ReferenceSlideEditResult(
+            scene=RenderScene(
+                slide_id=uuid4(),
+                layout_plan_id=uuid4(),
+                page_width=10,
+                page_height=5.625,
+                background=BackgroundStyle(color="#FFFFFF"),
+                nodes=[],
+            ),
+            warnings=["slide_generation_context active"] if kwargs.get("generation_context") else [],
+        )
+
+
+def test_execute_passes_slide_generation_context_when_session_provided(
+    db_session,
+) -> None:
+    from archium.domain.outline import OutlineSection
+    from archium.domain.visual.architectural_template import (
+        ArchitecturalTemplate,
+        ArchitecturalTemplateLayout,
+        TemplatePageType,
+        TemplateStatus,
+    )
+    from archium.domain.visual.reference_slide import (
+        ReferenceElement,
+        ReferenceElementType,
+        ReferencePresentation,
+        ReferenceSlideSnapshot,
+    )
+    from archium.domain.visual.template_induction import (
+        ArchitecturalContentType,
+        FunctionalSlideType,
+        OutlineTemplateCompatibility,
+        OutlineTemplateCoPlan,
+    )
+
+    project_id = uuid4()
+    presentation_id = uuid4()
+    schema = ArchitecturalContentSchema(
+        name="content/strategy",
+        cluster_id="c1",
+        representative_slide_id="slide_001",
+        content_type=ArchitecturalContentType.STRATEGY,
+        functional_type=FunctionalSlideType.CONTENT,
+        page_purpose="提出策略",
+    )
+    layout = ArchitecturalTemplateLayout(
+        name="strategy",
+        page_index=0,
+        page_type=TemplatePageType.TEXT_ARGUMENT,
+        content_schema_id=schema.id,
+        representative_slide_id="slide_001",
+        cluster_id="c1",
+    )
+    template = ArchitecturalTemplate(
+        id=uuid4(),
+        name="t",
+        layouts=[layout],
+        content_schemas=[schema],
+        status=TemplateStatus.PUBLISHED,
+    )
+    reference_slide = ReferenceSlideSnapshot(
+        slide_index=0,
+        slide_id="slide_001",
+        elements=[
+            ReferenceElement(
+                id="title_1",
+                element_type=ReferenceElementType.TEXT,
+                x=0.5,
+                y=0.3,
+                width=8,
+                height=0.6,
+                text="参考标题",
+                semantic_role="title",
+            ),
+        ],
+        text_content=["参考标题"],
+    )
+    outline = OutlinePlan(
+        presentation_id=presentation_id,
+        title="t",
+        thesis="t",
+        audience="a",
+        purpose="p",
+        sections=[
+            OutlineSection(
+                id="strategy",
+                title="策略",
+                purpose="说明策略方向",
+                key_message="以慢行优先组织空间",
+                order=0,
+                category="strategy",
+            )
+        ],
+    )
+    page = OutlineTemplateCompatibility(
+        slide_id="strategy__p01",
+        section_id="strategy",
+        section_title="策略",
+        schema_id=schema.id,
+        representative_slide_id="slide_001",
+        preferred_layout_id=layout.id,
+        fallback_mode="template_editing",
+        template_affinity=0.9,
+    )
+    co_plan = OutlineTemplateCoPlan(
+        outline_id=str(outline.id),
+        page_plans=[page],
+        template_editing_page_ids=[page.slide_id],
+    )
+    manuscript = PresentationManuscript(
+        project_id=project_id,
+        presentation_id=presentation_id,
+        title="手稿",
+        project_summary="老院区更新",
+        narrative_thesis="以慢行优先组织空间",
+        sections=[
+            ManuscriptSection(
+                id="strategy",
+                title="策略",
+                purpose="说明策略方向",
+                argument="以慢行优先组织空间",
+                key_points=["保留历史街巷肌理"],
+                fact_ids=[],
+                order=0,
+            )
+        ],
+    )
+    editor = _RecordingEditor()
+    batch, _ = OutlineTemplateEditingService(editor=editor).execute(
+        co_plan=co_plan,
+        outline=outline,
+        presentation=ReferencePresentation(name="ref", slides=[reference_slide]),
+        schemas=[schema],
+        template=template,
+        session=db_session,
+        project_id=project_id,
+        manuscript=manuscript,
+    )
+    assert batch.generated_count == 1
+    assert len(editor.calls) == 1
+    assert editor.calls[0]["generation_context"] is not None
+    assert editor.calls[0]["generation_context"].slide_spec.title == "策略"
+    assert batch.page_results[0].warnings
+    assert any("slide_generation_context active" in w for w in batch.page_results[0].warnings)

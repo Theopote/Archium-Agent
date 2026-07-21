@@ -32,10 +32,15 @@ def build_slide_repair_user_prompt(
     slide_summary: str,
     issue_summary: str,
     brief_summary: str,
+    slide_context: str | None = None,
 ) -> str:
+    context_block = ""
+    if slide_context:
+        context_block = f"\n【页面上下文（仅限本页）】\n{slide_context}\n"
     return (
         "请根据审核反馈修订以下页面 JSON。\n\n"
-        f"【Brief 摘要】\n{brief_summary}\n\n"
+        f"【Brief 摘要】\n{brief_summary}\n"
+        f"{context_block}\n"
         f"【当前页面】\n{slide_summary}\n\n"
         f"【待修复问题】\n{issue_summary}\n"
     )

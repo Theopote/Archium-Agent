@@ -214,6 +214,8 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 list(state.get("review_issues", [])),
                 brief=state.get("brief"),
                 storyline=state.get("storyline"),
+                outline=state.get("outline"),
+                manuscript=state.get("manuscript"),
                 project_id=UUID(state["project_id"]),
             )
             split_slide_ids = split_affected_slide_ids(repair_records)

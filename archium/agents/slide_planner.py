@@ -9,21 +9,61 @@ from sqlalchemy.orm import Session
 from archium.agents._helpers import (
     build_retrieval_query_from_storyline,
     resolve_design_context_bundle,
+    slide_from_draft,
     slides_from_plan,
     to_json,
 )
-from archium.domain.presentation_manuscript import PresentationManuscript
+from archium.application.slide_context_prompt import format_slide_generation_context
+from archium.application.slide_generation_context_service import SlideGenerationContextService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
+from archium.application.slide_plan_slots import SlidePlanSlot, build_slide_plan_slots
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import RevisionSource
+from archium.domain.enums import RevisionSource, SlideType
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
-from archium.infrastructure.llm.presentation_schemas import SlidePlanDraft
-from archium.prompts.slide_planning import SLIDE_PLAN_SYSTEM_PROMPT, build_slide_plan_user_prompt
+from archium.infrastructure.llm.presentation_schemas import SlideDraft, SlidePlanDraft
+from archium.prompts.slide_planning import (
+    SINGLE_SLIDE_PLAN_SYSTEM_PROMPT,
+    SLIDE_PLAN_SYSTEM_PROMPT,
+    build_single_slide_plan_user_prompt,
+    build_slide_plan_user_prompt,
+)
+
+
+def _brief_summary(brief: PresentationBrief) -> str:
+    return (
+        f"标题：{brief.title}\n"
+        f"汇报对象：{brief.audience}\n"
+        f"目的：{brief.purpose}\n"
+        f"核心信息：{brief.core_message}\n"
+        f"目标页数：{brief.target_slide_count}"
+    )
+
+
+def _storyline_summary(storyline: Storyline) -> str:
+    lines = [f"论点：{storyline.thesis}", "章节："]
+    for chapter in sorted(storyline.chapters, key=lambda item: item.order):
+        lines.append(f"- [{chapter.id}] {chapter.title} — {chapter.key_message}")
+    return "\n".join(lines)
+
+
+def _placeholder_slide(
+    brief: PresentationBrief,
+    slot: SlidePlanSlot,
+) -> SlideSpec:
+    return SlideSpec(
+        presentation_id=brief.presentation_id,
+        chapter_id=slot.chapter_id,
+        order=slot.order,
+        title=slot.section_title,
+        message=slot.page_intent,
+        slide_type=SlideType.CONTENT,
+    )
 
 
 class SlidePlanner:
@@ -61,6 +101,47 @@ class SlidePlanner:
         else:
             existing = self._presentations.list_slides(brief.presentation_id)
 
+        if self._settings.slide_per_page_generation:
+            slides = self._generate_per_page(
+                project_id,
+                brief,
+                storyline,
+                outline=outline,
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_manuscript_pipeline,
+                version=version,
+            )
+        else:
+            slides = self._generate_batch(
+                project_id,
+                brief,
+                storyline,
+                outline=outline,
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_manuscript_pipeline,
+                version=version,
+            )
+
+        if existing:
+            apply_slide_lineage(slides, existing)
+        saved: list[SlideSpec] = []
+        history = SlideHistoryService(self._session)
+        for slide in slides:
+            saved.append(self._presentations.save_slide(slide))
+            history.record_snapshot(saved[-1], RevisionSource.GENERATED)
+        return saved
+
+    def _generate_batch(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+        storyline: Storyline,
+        *,
+        outline: OutlinePlan | None,
+        manuscript: PresentationManuscript | None,
+        use_manuscript_pipeline: bool,
+        version: int,
+    ) -> list[SlideSpec]:
         context_bundle = resolve_design_context_bundle(
             self._session,
             project_id,
@@ -83,7 +164,7 @@ class SlidePlanner:
             ),
             SlidePlanDraft,
         )
-        slides = slides_from_plan(
+        return slides_from_plan(
             draft,
             presentation_id=brief.presentation_id,
             session=self._session,
@@ -92,11 +173,101 @@ class SlidePlanner:
             settings=self._settings,
             version=version,
         )
-        if existing:
-            apply_slide_lineage(slides, existing)
-        saved: list[SlideSpec] = []
-        history = SlideHistoryService(self._session)
-        for slide in slides:
-            saved.append(self._presentations.save_slide(slide))
-            history.record_snapshot(saved[-1], RevisionSource.GENERATED)
-        return saved
+
+    def _generate_per_page(
+        self,
+        project_id: UUID,
+        brief: PresentationBrief,
+        storyline: Storyline,
+        *,
+        outline: OutlinePlan | None,
+        manuscript: PresentationManuscript | None,
+        use_manuscript_pipeline: bool,
+        version: int,
+    ) -> list[SlideSpec]:
+        slots = build_slide_plan_slots(brief, storyline, outline=outline)
+        context_service = SlideGenerationContextService(self._session)
+        generated: list[SlideSpec] = []
+        brief_text = _brief_summary(brief)
+        storyline_text = _storyline_summary(storyline)
+        citation_chunk_limit = min(8, self._settings.retrieval_top_k)
+
+        for slot in slots:
+            placeholder = _placeholder_slide(brief, slot)
+            deck_context = [*generated, placeholder]
+            slide_context = context_service.build_for_slide(
+                placeholder,
+                all_slides=deck_context,
+                project_id=project_id,
+                manuscript=manuscript,
+                outline=outline,
+                storyline=storyline,
+            )
+            slide_query = " ".join(
+                part
+                for part in (slot.section_title, slot.page_intent, brief.core_message)
+                if part.strip()
+            )
+            citation_bundle = resolve_design_context_bundle(
+                self._session,
+                project_id,
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_manuscript_pipeline,
+                query=slide_query,
+                max_chunks=citation_chunk_limit,
+                settings=self._settings,
+            )
+            draft = self._llm.generate_structured(
+                LLMRequest(
+                    system_prompt=SINGLE_SLIDE_PLAN_SYSTEM_PROMPT,
+                    user_prompt=build_single_slide_plan_user_prompt(
+                        slot_chapter_id=slot.chapter_id,
+                        slot_order=slot.order,
+                        deck_position=slot.deck_position,
+                        deck_total=slot.deck_total,
+                        slide_context=format_slide_generation_context(slide_context),
+                        brief_summary=brief_text,
+                        storyline_summary=storyline_text,
+                    ),
+                    temperature=0.5,
+                ),
+                SlideDraft,
+            )
+            slide = slide_from_draft(
+                draft,
+                presentation_id=brief.presentation_id,
+                session=self._session,
+                document_names=citation_bundle.document_names,
+                context_chunks=citation_bundle.chunks,
+                version=version,
+            )
+            slide.chapter_id = slot.chapter_id
+            slide.order = slot.order
+            generated.append(slide)
+
+        from archium.agents.citations import enrich_slide_citations
+
+        for index, slide in enumerate(generated):
+            slot = slots[index]
+            slide_query = " ".join(
+                part
+                for part in (slot.section_title, slide.title, slide.message)
+                if part.strip()
+            )
+            citation_bundle = resolve_design_context_bundle(
+                self._session,
+                project_id,
+                manuscript=manuscript,
+                use_manuscript_pipeline=use_manuscript_pipeline,
+                query=slide_query,
+                max_chunks=citation_chunk_limit,
+                settings=self._settings,
+            )
+            enrich_slide_citations(
+                slide,
+                session=self._session,
+                project_id=project_id,
+                context_bundle=citation_bundle,
+                settings=self._settings,
+            )
+        return generated

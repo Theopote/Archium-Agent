@@ -75,3 +75,63 @@ def build_slide_plan_user_prompt(
         "数值页请优先使用 slide_type=data 或 visual_requirements 中的 chart/table；"
         "key_points 使用 `标签：数值` 或 `列1|列2|列3` 格式。"
     )
+
+
+SINGLE_SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
+当前任务：作为 Slide Planner，为**单页**生成 SlideSpec JSON。
+
+专业原则：
+- 只输出一页，chapter_id 与 order 必须与输入一致。
+- message 必须是该页唯一核心结论，不是主题标题。
+- key_points 不超过 5 条；优先使用页面上下文中已核实事实与引用。
+- 项目资料中的 `[chunk_id=...]` 可直接复制到 source_citations.chunk_id。
+- 为页面分配合适的 slide_type 与 visual_requirements。
+
+禁止事项：
+- 不要输出 Markdown 代码块。
+- 不要编造来源或项目数据。
+- 不要覆盖邻页内容或重复上一页 message。
+
+输出必须是合法 JSON（单页 SlideDraft 对象，不要 slides 数组）：
+{
+  "chapter_id": "ch1",
+  "order": 0,
+  "title": "页面标题",
+  "message": "该页唯一核心观点",
+  "slide_type": "content",
+  "layout_id": "default",
+  "key_points": ["要点1"],
+  "visual_requirements": [],
+  "source_citations": [],
+  "speaker_notes": null
+}
+"""
+
+
+def build_single_slide_plan_user_prompt(
+    *,
+    slot_chapter_id: str,
+    slot_order: int,
+    deck_position: int,
+    deck_total: int,
+    slide_context: str,
+    brief_summary: str,
+    storyline_summary: str,
+) -> str:
+    return (
+        f"请生成单页 SlideSpec JSON（页序：{slot_order}，章节：{slot_chapter_id}，"
+        f"第 {deck_position + 1}/{deck_total} 页）。\n\n"
+        f"【Brief 摘要】\n{brief_summary}\n\n"
+        f"【Storyline 摘要】\n{storyline_summary}\n\n"
+        f"{slide_context}\n\n"
+        "数值页请优先使用 slide_type=data 或 visual_requirements 中的 chart/table。"
+    )
+
+
+def build_brief_summary_for_slide_plan(brief_json: str) -> str:
+    """Compact brief block — callers may pass pre-serialized JSON."""
+    return brief_json
+
+
+def build_storyline_summary_for_slide_plan(storyline_json: str) -> str:
+    return storyline_json
