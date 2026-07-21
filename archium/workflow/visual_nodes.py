@@ -27,8 +27,12 @@ from archium.application.visual.layout_planning_service import (
 )
 from archium.application.visual.layout_repair_service import LayoutRepairService
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.application.visual.visual_intent_service import VisualIntentService
+from archium.application.visual.visual_scene_repair_workflow_service import (
+    VisualSceneRepairWorkflowService,
+)
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
@@ -105,6 +109,11 @@ class VisualWorkflowRuntime:
         )
         self.deck_qa_service = DeckQAService()
         self.deck_composition_service = EnhancedDeckCompositionService()
+        self.scene_repair_workflow_service = VisualSceneRepairWorkflowService(
+            session,
+            settings=settings,
+            scene_repair=SceneRepairService(),
+        )
         self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
             settings, session=session
         )
@@ -1184,6 +1193,106 @@ class VisualWorkflowNodes:
                 "current_step": step,
                 "warnings": [f"Visual Critic / Deck QA skipped: {exc}"],
             }
+
+    def repair_render_scenes(self, state: VisualWorkflowState) -> VisualWorkflowState:
+        """Compile RenderScenes from layout plans and run semantic repair loop."""
+        logger = self._logger(state)
+        step = WorkflowStep.VISUAL_SCENE_REPAIR.value
+        if state.get("errors"):
+            return {"current_step": step}
+
+        if not bool(getattr(self._runtime.settings, "scene_repair_enabled", True)):
+            return {"current_step": step, "scene_repair_report": None}
+
+        design = state.get("design_system")
+        slides = list(state.get("slides") or [])
+        if design is None or not slides:
+            return {
+                "current_step": step,
+                "warnings": ["Scene repair skipped: missing design system or slides."],
+            }
+
+        plans: list[LayoutPlan] = []
+        for plan_id in state.get("layout_plan_ids", []):
+            plan = self._runtime.layout_plans.get(UUID(plan_id))
+            if plan is not None:
+                plans.append(plan)
+        if not plans:
+            return {
+                "current_step": step,
+                "warnings": ["Scene repair skipped: no layout plans."],
+            }
+
+        output_dir = Path(state.get("output_dir") or ".")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        max_rounds = int(getattr(self._runtime.settings, "scene_repair_max_rounds", 2))
+        brief = state.get("brief")
+        title = brief.title if brief is not None else "Archium Visual Composition"
+
+        try:
+            result = self._runtime.scene_repair_workflow_service.repair_and_persist(
+                presentation_id=UUID(state["presentation_id"]),
+                project_id=UUID(state["project_id"]),
+                slides=slides,
+                plans=plans,
+                design_system=design,
+                output_dir=output_dir,
+                max_rounds=max_rounds,
+                export_scene_pptx=bool(state.get("export_pptx", False)),
+                deck_title=title,
+            )
+        except Exception as exc:  # noqa: BLE001 — soft-fail like critique
+            logger.warning("repair_render_scenes failed (non-fatal): %s", exc)
+            return {
+                "current_step": step,
+                "warnings": [f"Scene repair skipped: {exc}"],
+            }
+
+        report = {
+            "scene_count": len(result.scenes),
+            "repair_actions": result.repair_actions,
+            "repair_rounds": result.repair_rounds,
+            "remaining_issue_count": result.remaining_issue_count,
+            "scene_paths": result.scene_paths,
+            "scene_pptx_path": result.scene_pptx_path,
+        }
+        warnings: list[str] = []
+        render_paths = list(state.get("render_paths") or [])
+        render_paths.extend(result.scene_paths)
+        if result.scene_pptx_path:
+            render_paths.append(result.scene_pptx_path)
+        if result.repair_actions:
+            warnings.append(
+                f"Scene repair applied {result.repair_actions} patch(es) "
+                f"in {result.repair_rounds} round(s)"
+            )
+        if result.remaining_issue_count:
+            warnings.append(
+                f"Scene repair left {result.remaining_issue_count} repairable issue(s)"
+            )
+
+        report_path = output_dir / "scene_repair_report.json"
+        report_path.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        render_paths.append(str(report_path))
+
+        next_state: VisualWorkflowState = {
+            "scene_repair_report": report,
+            "render_paths": render_paths,
+            "warnings": warnings,
+            "current_step": step,
+        }
+        merged = cast(VisualWorkflowState, {**state, **next_state})
+        self._persist(merged)
+        logger.info(
+            "Scene repair complete: scenes=%s actions=%s rounds=%s",
+            len(result.scenes),
+            result.repair_actions,
+            result.repair_rounds,
+        )
+        return next_state
 
     @staticmethod
     def _map_slide_preview_pngs(

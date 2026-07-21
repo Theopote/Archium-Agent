@@ -112,6 +112,8 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "visual_pptx_screenshots_enabled": ConfigDomain.REVIEW,
     "slide_repair_enabled": ConfigDomain.REPAIR,
     "slide_repair_max_rounds": ConfigDomain.REPAIR,
+    "scene_repair_enabled": ConfigDomain.REPAIR,
+    "scene_repair_max_rounds": ConfigDomain.REPAIR,
     "marp_command": ConfigDomain.RENDER,
     "marp_preview_images_enabled": ConfigDomain.RENDER,
     "marp_preview_image_format": ConfigDomain.RENDER,

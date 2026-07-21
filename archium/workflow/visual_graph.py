@@ -108,6 +108,7 @@ class VisualWorkflowGraph:
         builder.add_node("await_layout_review", nodes.await_layout_review)
         builder.add_node("render_presentation", nodes.render_presentation)
         builder.add_node("critique_visuals", nodes.critique_visuals)
+        builder.add_node("repair_render_scenes", nodes.repair_render_scenes)
         builder.add_node("finalize", nodes.finalize)
 
         builder.add_edge(START, "load_presentation_context")
@@ -180,6 +181,11 @@ class VisualWorkflowGraph:
         )
         builder.add_conditional_edges(
             "critique_visuals",
+            _route_on_errors,
+            {"continue": "repair_render_scenes", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "repair_render_scenes",
             _route_on_errors,
             {"continue": "finalize", "finalize": "finalize"},
         )

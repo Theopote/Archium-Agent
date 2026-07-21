@@ -599,4 +599,5 @@ class WorkflowStep(StrEnum):
     VISUAL_AWAIT_LAYOUT_REVIEW = "visual_await_layout_review"
     VISUAL_RENDER = "visual_render"
     VISUAL_CRITIQUE = "visual_critique"
+    VISUAL_SCENE_REPAIR = "visual_scene_repair"
     VISUAL_FINALIZE = "visual_finalize"

@@ -58,6 +58,7 @@ class VisualWorkflowState(TypedDict, total=False):
     repair_diffs: Annotated[list[dict], operator.add]
     visual_critic_reports: list[dict]
     deck_qa_report: dict | None
+    scene_repair_report: dict | None
     output_dir: str | None
 
 
@@ -109,6 +110,7 @@ def initial_visual_workflow_state(
         "repair_diffs": [],
         "visual_critic_reports": [],
         "deck_qa_report": None,
+        "scene_repair_report": None,
         "deck_composition_plan": None,
         "output_dir": None,
     }

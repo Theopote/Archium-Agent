@@ -851,6 +851,13 @@ def _show_template_editing_batch(batch: OutlineTemplateEditingBatch) -> None:
 def _show_co_plan(co_plan: OutlineTemplateCoPlan, *, workspace: Path | None = None) -> None:
     for warning in co_plan.warnings:
         st.warning(warning)
+    for item in co_plan.capacity_warnings:
+        if item.severity == "blocker":
+            st.error(item.message)
+        else:
+            st.warning(item.message)
+    for flag in co_plan.rhythm_flags:
+        st.info(flag.message)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("规划页", co_plan.planned_page_count)
     c2.metric("模板编辑", len(co_plan.template_editing_page_ids))

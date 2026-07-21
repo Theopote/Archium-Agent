@@ -342,6 +342,16 @@ class Settings(BaseSettings):
         le=5,
         description="Maximum automated repair → four-layer re-review cycles per workflow run.",
     )
+    scene_repair_enabled: bool = Field(
+        default=True,
+        description="When true, compile RenderScenes after render and run deterministic scene repair.",
+    )
+    scene_repair_max_rounds: int = Field(
+        default=2,
+        ge=0,
+        le=3,
+        description="Maximum semantic QA → RenderScene repair rounds in visual workflow.",
+    )
 
     # ── render.* ─────────────────────────────────────────────────────────────
     marp_command: str = Field(default="marp", description="Marp CLI executable name or path.")
