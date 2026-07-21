@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.outline_service import outline_from_manuscript
 from archium.application.presentation_manuscript_service import (
     PresentationManuscriptService,
@@ -29,11 +28,10 @@ from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitatio
 def db_session(tmp_path, monkeypatch):
     """Minimal in-memory-ish session via project test helpers if available."""
     pytest.importorskip("sqlalchemy")
+    import archium.infrastructure.database.models  # noqa: F401
+    from archium.infrastructure.database.base import Base
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-
-    from archium.infrastructure.database.base import Base
-    import archium.infrastructure.database.models  # noqa: F401
 
     engine = create_engine(f"sqlite:///{tmp_path / 'ms.db'}")
     Base.metadata.create_all(engine)

@@ -6,11 +6,11 @@ import json
 from pathlib import Path
 
 import pytest
-
 from archium.application.visual.asset_path_resolver import is_machine_absolute_path
 from archium.application.visual.template_induction_service import TemplateInductionService
 from archium.domain.visual.template_induction import FunctionalSlideType
 from archium.infrastructure.renderers.pptx_screenshot import screenshot_tools_available
+
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 

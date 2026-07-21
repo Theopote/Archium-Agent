@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
 import streamlit as st
 
@@ -301,19 +300,120 @@ def _render_review() -> None:
     st.caption(
         "输出：reference_presentation.json · slides/ · "
         "functional_classification.json · content_clusters.json · "
-        "representative_slides.json · content_schemas.json · schema_publish_report.json"
+        "representative_slides.json · content_schemas.json · "
+        "schema_publish_report.json · outline_template_co_plan.json（协同规划后）"
     )
+
+
+def _render_co_plan() -> None:
+    workspace = _selected_workspace()
+    if workspace is None:
+        return
+
+    st.divider()
+    st.markdown("#### Outline–Template 协同规划（Phase 5）")
+    st.caption(
+        "将大纲章节映射到已归纳 Schema：模板亲和 / 兼容检查 / "
+        "未匹配模板页暴露 / Free Composition fallback。不做编辑式生成。"
+    )
+    scenario = st.radio(
+        "示例大纲",
+        options=["老旧建筑改造", "文化名村"],
+        horizontal=True,
+        key="induction_co_plan_scenario",
+    )
+    if not st.button("生成协同规划", key="induction_run_co_plan", use_container_width=True):
+        existing = workspace / "outline_template_co_plan.json"
+        if existing.is_file():
+            import json
+
+            from archium.domain.visual.template_induction import OutlineTemplateCoPlan
+
+            co_plan = OutlineTemplateCoPlan.model_validate(
+                json.loads(existing.read_text(encoding="utf-8"))
+            )
+            _show_co_plan(co_plan)
+        return
+
+    from uuid import uuid4
+
+    from archium.application.outline_templates import (
+        cultural_village_outline_sections,
+        renovation_outline_sections,
+    )
+    from archium.domain.outline import OutlinePlan
+
+    service = TemplateInductionService()
+    try:
+        _presentation, induction = service.load_workspace(workspace)
+    except Exception as exc:  # noqa: BLE001
+        st.error(format_user_error(exc))
+        return
+
+    sections = (
+        renovation_outline_sections()
+        if scenario == "老旧建筑改造"
+        else cultural_village_outline_sections()
+    )
+    outline = OutlinePlan(
+        presentation_id=uuid4(),
+        title=scenario,
+        thesis="以证据支持汇报决策",
+        audience="主管部门",
+        purpose="协同规划演示",
+        sections=sections,
+        target_slide_count=max(1, sum(s.estimated_slide_count for s in sections)),
+    )
+    co_plan = service.co_plan_outline(induction, outline, workspace=workspace)
+    st.success(
+        f"已规划 {co_plan.planned_page_count} 页 · "
+        f"模板编辑 {len(co_plan.template_editing_page_ids)} · "
+        f"自由构图 {len(co_plan.free_composition_page_ids)} · "
+        f"需人工 {len(co_plan.manual_required_page_ids)}"
+    )
+    _show_co_plan(co_plan)
+
+
+def _show_co_plan(co_plan) -> None:
+    for warning in co_plan.warnings:
+        st.warning(warning)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("规划页", co_plan.planned_page_count)
+    c2.metric("模板编辑", len(co_plan.template_editing_page_ids))
+    c3.metric("自由构图", len(co_plan.free_composition_page_ids))
+    c4.metric("需人工", len(co_plan.manual_required_page_ids))
+    if co_plan.unmatched_schema_ids:
+        st.caption(
+            f"未匹配 Schema（暴露）：{len(co_plan.unmatched_schema_ids)} 个 — "
+            + ", ".join(co_plan.unmatched_schema_ids[:6])
+        )
+    rows = []
+    for page in co_plan.page_plans[:40]:
+        rows.append(
+            {
+                "section": page.section_title or page.section_id,
+                "page": page.slide_id,
+                "content": page.inferred_content_type.value,
+                "affinity": page.template_affinity,
+                "mode": page.fallback_mode,
+                "schema": (page.schema_id or "")[:8],
+            }
+        )
+    if rows:
+        st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 def render() -> None:
     st.title("模板归纳复核")
     st.caption(
-        "从参考 PPTX 归纳功能页、内容聚类与建筑内容 Schema。"
-        "人工只做修正，不打分。本阶段不做编辑式生成。"
+        "从参考 PPTX 归纳功能页、内容聚类与建筑内容 Schema，"
+        "并支持 Outline–Template 协同规划。人工只做修正，不打分。"
+        "本阶段不做编辑式生成。"
     )
     _render_upload()
     st.divider()
     _render_review()
+    _render_co_plan()
 
 
 def render_page() -> None:

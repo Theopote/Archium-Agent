@@ -235,9 +235,8 @@ def validate_font_state(scene: RenderScene) -> list[str]:
                 f"font state invalid: node `{node.id}` uses Latin primary "
                 f"`{latin}` for CJK text (expected `{cjk}`)"
             )
-    if any(isinstance(n, TextNode) and n.text.strip() for n in scene.nodes):
-        if not scene.font_assets:
-            blockers.append("font_assets empty while scene has text nodes")
+    if any(isinstance(n, TextNode) and n.text.strip() for n in scene.nodes) and not scene.font_assets:
+        blockers.append("font_assets empty while scene has text nodes")
     # Recorded Latin→CJK glyph substitutions mean the scene was not repaired.
     for note in detect_font_fallbacks(scene):
         if "Latin family lacks CJK glyphs" in note:

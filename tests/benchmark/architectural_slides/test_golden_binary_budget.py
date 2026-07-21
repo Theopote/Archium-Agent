@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from tests.benchmark.architectural_slides.artifacts import BENCHMARK_ROOT, case_dir, materialized_benchmark_case_ids
+from tests.benchmark.architectural_slides.artifacts import (
+    BENCHMARK_ROOT,
+    case_dir,
+    materialized_benchmark_case_ids,
+)
 
 # Keep in sync with README.md § 二进制大小上限 (hard limits only).
 HARD_PNG_BYTES = 2 * 1024 * 1024

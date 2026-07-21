@@ -6,8 +6,8 @@ from pathlib import Path
 
 from archium.application.visual.functional_slide_classifier import FunctionalSlideClassifier
 from archium.application.visual.reference_slide_clusterer import (
-    ReferenceSlideClusterer,
     _LAYOUT_MISMATCH_PENALTY,
+    ReferenceSlideClusterer,
 )
 from archium.domain.visual.reference_slide import (
     ReferenceElement,
@@ -25,6 +25,7 @@ from archium.infrastructure.template.reference_pptx_parser import (
     _content_signature,
     _visual_embedding,
 )
+
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 

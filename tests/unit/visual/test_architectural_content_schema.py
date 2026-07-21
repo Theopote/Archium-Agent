@@ -35,7 +35,11 @@ def test_schema_extracted_for_each_cluster(tmp_path: Path) -> None:
 
 
 def test_photo_analysis_schema_forbids_reference_case() -> None:
-    from archium.domain.visual.reference_slide import ReferenceElement, ReferenceElementType, ReferenceSlideSnapshot
+    from archium.domain.visual.reference_slide import (
+        ReferenceElement,
+        ReferenceElementType,
+        ReferenceSlideSnapshot,
+    )
     from archium.domain.visual.template_induction import (
         ArchitecturalContentType,
         FunctionalSlideType,

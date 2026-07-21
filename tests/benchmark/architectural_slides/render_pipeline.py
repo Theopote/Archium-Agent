@@ -44,6 +44,7 @@ from tests.benchmark.architectural_slides.render_manifest import (
     write_pptx_sidecar,
     write_render_manifest,
 )
+
 _RENDER_TMP_DIR = "_render_tmp"
 
 

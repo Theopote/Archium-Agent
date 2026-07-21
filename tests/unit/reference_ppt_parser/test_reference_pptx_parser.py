@@ -7,6 +7,7 @@ from pathlib import Path
 from archium.application.visual.asset_path_resolver import is_machine_absolute_path
 from archium.domain.visual.reference_slide import REFERENCE_TEMPLATE_ASSET_ORIGIN
 from archium.infrastructure.template.reference_pptx_parser import ReferencePptxParser
+
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 

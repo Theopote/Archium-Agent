@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from archium.domain.visual.reference_slide import ReferenceElementType
+from archium.infrastructure.template.reference_pptx_parser import ReferencePptxParser
 from PIL import Image
 from pptx import Presentation
 from pptx.util import Inches, Pt
-
-from archium.domain.visual.reference_slide import ReferenceElementType
-from archium.infrastructure.template.reference_pptx_parser import ReferencePptxParser
 
 
 def _make_png(path: Path, color: tuple[int, int, int] = (220, 220, 220)) -> Path:

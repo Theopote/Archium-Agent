@@ -269,7 +269,6 @@ class RenderSceneCompiler:
                 )
             )
 
-        font_family = typography.font_family_latin or typography.font_family
         semantic = "metric" if element.role == LayoutElementRole.METRIC else element.role.value
         if element.role == LayoutElementRole.SOURCE:
             semantic = "citation"

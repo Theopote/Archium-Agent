@@ -16,20 +16,23 @@ from archium.application.visual.architectural_content_schema_publish_gate import
 )
 from archium.application.visual.asset_path_resolver import is_machine_absolute_path
 from archium.application.visual.functional_slide_classifier import FunctionalSlideClassifier
+from archium.application.visual.outline_template_co_planning_service import (
+    OutlineTemplateCoPlanningService,
+)
 from archium.application.visual.reference_slide_clusterer import ReferenceSlideClusterer
 from archium.application.visual.representative_slide_selector import RepresentativeSlideSelector
 from archium.config.settings import Settings, get_settings
+from archium.domain.outline import OutlinePlan
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     SchemaPublishReport,
     SchemaReviewOverride,
 )
-from archium.domain.visual.reference_slide import ReferencePresentation, ReferenceSlideSnapshot
+from archium.domain.visual.architectural_template import ArchitecturalTemplate
+from archium.domain.visual.reference_slide import ReferencePresentation
 from archium.domain.visual.template_induction import (
-    FunctionalSlideClassification,
     InductionReviewOverride,
-    ReferenceSlideCluster,
-    RepresentativeSlideScore,
+    OutlineTemplateCoPlan,
     TemplateInductionResult,
     TemplateInductionStatus,
 )
@@ -50,7 +53,7 @@ class TemplateInductionRunResult:
 
 
 class TemplateInductionService:
-    """Phase 0–4 induction: parse → classify → cluster → schema → publish gate."""
+    """Phase 0–5 induction: parse → classify → cluster → schema → co-plan → publish gate."""
 
     def __init__(
         self,
@@ -62,6 +65,7 @@ class TemplateInductionService:
         selector: RepresentativeSlideSelector | None = None,
         schema_extractor: ArchitecturalContentSchemaExtractor | None = None,
         publish_gate: ArchitecturalContentSchemaPublishGate | None = None,
+        co_planner: OutlineTemplateCoPlanningService | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._parser = parser or ReferencePptxParser()
@@ -70,6 +74,7 @@ class TemplateInductionService:
         self._selector = selector or RepresentativeSlideSelector()
         self._schema_extractor = schema_extractor or ArchitecturalContentSchemaExtractor()
         self._publish_gate = publish_gate or ArchitecturalContentSchemaPublishGate()
+        self._co_planner = co_planner or OutlineTemplateCoPlanningService()
 
     def workspace_root(self, induction_id: UUID | str) -> Path:
         path = self._settings.output_path / "template-induction" / str(induction_id)
@@ -392,6 +397,35 @@ class TemplateInductionService:
             induction.touch()
         return report
 
+    def co_plan_outline(
+        self,
+        induction: TemplateInductionResult,
+        outline: OutlinePlan,
+        *,
+        schemas: list[ArchitecturalContentSchema] | None = None,
+        template: ArchitecturalTemplate | None = None,
+        workspace: Path | None = None,
+    ) -> OutlineTemplateCoPlan:
+        """Phase 5: map outline sections onto induced schemas (+ optional template layouts)."""
+        schema_list = schemas or [
+            ArchitecturalContentSchema.model_validate(item)
+            for item in induction.content_schemas
+        ]
+        co_plan = self._co_planner.plan(
+            outline,
+            schema_list,
+            template=template,
+            induction_id=induction.id,
+        )
+        if workspace is not None:
+            workspace.mkdir(parents=True, exist_ok=True)
+            co_plan_path = workspace / "outline_template_co_plan.json"
+            co_plan_path.write_text(
+                json.dumps(co_plan.model_dump(mode="json"), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        return co_plan
+
     def export_artifacts(
         self,
         workspace: Path,
@@ -400,6 +434,7 @@ class TemplateInductionService:
         *,
         schemas: list[ArchitecturalContentSchema] | None = None,
         publish_report: SchemaPublishReport | None = None,
+        co_plan: OutlineTemplateCoPlan | None = None,
     ) -> dict[str, Path]:
         slides_dir = workspace / "slides"
         slides_dir.mkdir(parents=True, exist_ok=True)
@@ -488,7 +523,7 @@ class TemplateInductionService:
             encoding="utf-8",
         )
 
-        return {
+        paths: dict[str, Path] = {
             "reference_presentation": ref_path,
             "functional_classification": functional_path,
             "content_clusters": clusters_path,
@@ -498,6 +533,16 @@ class TemplateInductionService:
             "induction_result": induction_path,
             "slides_dir": slides_dir,
         }
+
+        if co_plan is not None:
+            co_plan_path = workspace / "outline_template_co_plan.json"
+            co_plan_path.write_text(
+                json.dumps(co_plan.model_dump(mode="json"), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            paths["outline_template_co_plan"] = co_plan_path
+
+        return paths
 
     def load_workspace(self, workspace: Path) -> tuple[ReferencePresentation, TemplateInductionResult]:
         presentation = ReferencePresentation.model_validate(
@@ -524,11 +569,20 @@ class TemplateInductionService:
     def _walk_forbid_absolute(self, node: object, *, context: str) -> None:
         if isinstance(node, dict):
             for key, value in node.items():
-                if key in {"image_path", "relative_path", "source_pptx_relative", "workspace_relative"}:
-                    if isinstance(value, str) and is_machine_absolute_path(value):
-                        raise WorkflowError(
-                            f"绝对路径不得持久化：{context}::{key}={value}"
-                        )
+                if (
+                    key
+                    in {
+                        "image_path",
+                        "relative_path",
+                        "source_pptx_relative",
+                        "workspace_relative",
+                    }
+                    and isinstance(value, str)
+                    and is_machine_absolute_path(value)
+                ):
+                    raise WorkflowError(
+                        f"绝对路径不得持久化：{context}::{key}={value}"
+                    )
                 self._walk_forbid_absolute(value, context=context)
         elif isinstance(node, list):
             for item in node:

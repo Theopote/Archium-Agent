@@ -5,11 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from PIL import Image
-from pptx import Presentation
-from pptx.enum.shapes import MSO_SHAPE_TYPE
-from pptx.util import Inches, Pt
-
 from archium.application.visual.asset_path_resolver import is_machine_absolute_path
 from archium.domain.visual.reference_slide import (
     REFERENCE_TEMPLATE_ASSET_ORIGIN,
@@ -22,6 +17,10 @@ from archium.infrastructure.template.reference_pptx_parser import (
     _mark_repeated_elements,
     _structural_signature,
 )
+from PIL import Image
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.util import Inches
 
 
 def _png(path: Path, color: tuple[int, int, int] = (200, 200, 200)) -> Path:

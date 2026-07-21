@@ -31,10 +31,9 @@ def test_run_gate_writes_report_and_fails_on_empty_root(tmp_path: Path) -> None:
 
 
 def test_check_case_artifacts_passes_minimal_files(tmp_path: Path) -> None:
-    from pptx import Presentation
-
     from archium.domain.visual.benchmark import BenchmarkRenderManifest
     from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, compute_scene_hash
+    from pptx import Presentation
     from tests.benchmark.architectural_slides.render_manifest import (
         sha256_file,
         write_pptx_render_sidecar,

@@ -9,6 +9,7 @@ from archium.application.visual.asset_path_resolver import is_machine_absolute_p
 from archium.application.visual.template_induction_service import TemplateInductionService
 from archium.domain.visual.reference_slide import REFERENCE_TEMPLATE_ASSET_ORIGIN
 from archium.domain.visual.template_induction import FunctionalSlideType
+
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 

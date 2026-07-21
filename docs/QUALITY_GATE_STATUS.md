@@ -268,6 +268,24 @@ Tests: `tests/unit/functional_slide_classifier/` (incl. disclaimer, sparse revie
 
 Tests: `tests/unit/reference_slide_clusterer/` (layout soft-merge, transitive chain, union coverage).
 
+### Phase 3 representative selection — editability honesty (closed)
+
+Overall selector quality is **good** (centrality, anomaly/complexity/parse penalties, rationale).
+
+Editability is **heuristic V1.5**, not a full PPTX editability audit:
+
+| Signal | Handled |
+|--------|---------|
+| Top-level placeholder / text / content-image slots | Yes — weighted credits |
+| Group nesting | Yes — weak nested credit + group-root penalty |
+| Master-like cross-page chrome | Yes — `repeats_across_pages` |
+| Full-page background image | Yes — area + `hard_edit:full_page_background` |
+| SmartArt / OLE / media | Yes — parser `hard_edit:*` tags |
+| Lock flags / picture crop & effects | Yes — OOXML lock + blip effect cues |
+| Truly safe rewrite in edit generator | **Not proven** — Phase 6 scope |
+
+Tests: `tests/unit/representative_slide_selector/` (incl. `test_editability_scoring.py`).
+
 ## Template Induction Phase 4 (2026-07-21)
 
 | Capability | Status | Location |
@@ -277,7 +295,26 @@ Tests: `tests/unit/reference_slide_clusterer/` (layout soft-merge, transitive ch
 | Publish gate (`PASS` / `PASS_WITH_WARNINGS` / `BLOCKED`) | **Done** | `ArchitecturalContentSchemaPublishGate` |
 | Review UI schema correction + publish attempt | **Done** | `template_induction.py` |
 | Artifacts `content_schemas.json` / `schema_publish_report.json` | **Done** | `TemplateInductionService.export_artifacts` |
-| Outline–Template co-planning / edit-based generation | **Not in this round** | Phase 5–6 |
+| Outline–Template co-planning / edit-based generation | **Co-plan Done / Edit Not** | Phase 5 co-plan; Phase 6 edit |
 
 **对外口径：** 内容 Schema 可自动归纳并经人工修正后发布；**不得**宣称编辑式生成或 Outline–Template 协同规划已完成。
+
+## Template Induction Phase 5 (2026-07-21)
+
+Outline–Template co-planning (rule-driven V1) — **not** edit-based generation.
+
+| Capability | Status | Location |
+|------------|--------|----------|
+| Template affinity (section ↔ schema) | **Done** | `OutlineTemplateCoPlanningService` |
+| Content page planning (`estimated_slide_count`) | **Done** | `OutlineTemplateCompatibility` page slots |
+| Compatibility / fallback routing | **Done** | `template_editing` / `free_composition` / `manual_required` |
+| Unmatched schema/layout exposure | **Done** | `unmatched_schema_ids` / `unmatched_layout_ids` |
+| Free Composition fallback | **Done** | weak/no match → `free_composition` |
+| Artifact `outline_template_co_plan.json` | **Done** | `TemplateInductionService.co_plan_outline` |
+| Review UI co-plan panel | **Done** | `template_induction.py` |
+| Reference slide edit-based generation | **Not in this round** | Phase 6 |
+
+**对外口径：** 大纲可与归纳 Schema 做亲和映射并暴露未匹配模板页；**不得**宣称参考页编辑式生成、Scene Repair 或 Deck Coherence QA 已完成。
+
+Tests: `tests/unit/outline_template_co_planning/`.
 

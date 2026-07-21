@@ -269,9 +269,8 @@ def _hard_edit_notes_for_shape(
     if hard:
         notes.append(hard)
     type_name = getattr(shape_type, "name", "") or ""
-    if "DIAGRAM" in type_name or "IGX" in type_name:
-        if "hard_edit:smartart" not in notes:
-            notes.append("hard_edit:smartart")
+    if ("DIAGRAM" in type_name or "IGX" in type_name) and "hard_edit:smartart" not in notes:
+        notes.append("hard_edit:smartart")
     if "OLE" in type_name and not any(n.startswith("hard_edit:ole") for n in notes):
         notes.append("hard_edit:ole_embedded")
 
@@ -325,13 +324,14 @@ def _picture_complexity_notes(shape: object) -> list[str]:
         lower = xml.lower()
         if "srcrect" in lower:
             notes.append("hard_edit:picture_crop")
-        if any(token in lower for token in ("alphamodfix", "duotone", "softedge", "blipfill")):
-            # blipFill alone is normal; only flag when effect-like tokens appear.
-            if any(
-                token in lower
-                for token in ("alphamodfix", "duotone", "softedge", "lumimod", "grayscl")
-            ):
-                notes.append("hard_edit:picture_effects")
+        # blipFill alone is normal; only flag when effect-like tokens appear.
+        if any(
+            token in lower for token in ("alphamodfix", "duotone", "softedge", "blipfill")
+        ) and any(
+            token in lower
+            for token in ("alphamodfix", "duotone", "softedge", "lumimod", "grayscl")
+        ):
+            notes.append("hard_edit:picture_effects")
     return notes
 
 
@@ -466,14 +466,12 @@ def _looks_like_chrome(element: ReferenceElement) -> bool:
         return True
     if element.element_type == ReferenceElementType.TEXT:
         # Repeated empty/short labels near edges are often footer chrome.
-        if len(element.text.strip()) <= 12 and element.semantic_role in {
+        return len(element.text.strip()) <= 12 and element.semantic_role in {
             "",
             "body",
             "caption",
             "source",
-        }:
-            return True
-        return False
+        }
     if element.element_type in {
         ReferenceElementType.IMAGE,
         ReferenceElementType.DRAWING,

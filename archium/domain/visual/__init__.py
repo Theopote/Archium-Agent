@@ -13,15 +13,6 @@ from archium.domain.visual.benchmark import (
     HumanVisualReview,
     HumanVisualReviewSource,
 )
-from archium.domain.visual.page_quality import (
-    IssueCategory,
-    IssueSeverity,
-    PageQualityStatus,
-    QualityIssue,
-    ReportingReady,
-    ScoringMode,
-    derive_page_quality_status,
-)
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
     CRITIC_FOCUS_UNCLEAR,
@@ -101,6 +92,15 @@ from archium.domain.visual.enums import (
     WhitespacePreference,
 )
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
+from archium.domain.visual.page_quality import (
+    IssueCategory,
+    IssueSeverity,
+    PageQualityStatus,
+    QualityIssue,
+    ReportingReady,
+    ScoringMode,
+    derive_page_quality_status,
+)
 from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.validation import (
     LAYOUT_DRAWING_CROPPED,

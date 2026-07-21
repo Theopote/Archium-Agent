@@ -9,6 +9,7 @@ from archium.application.visual.reference_slide_clusterer import ReferenceSlideC
 from archium.application.visual.representative_slide_selector import RepresentativeSlideSelector
 from archium.domain.visual.template_induction import FunctionalSlideType
 from archium.infrastructure.template.reference_pptx_parser import ReferencePptxParser
+
 from tests.unit.reference_ppt_parser.conftest import write_architectural_reference_pptx
 
 

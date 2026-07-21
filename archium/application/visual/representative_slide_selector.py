@@ -67,6 +67,42 @@ def _hard_edit_tags(element: ReferenceElement) -> set[str]:
     return tags
 
 
+_HARD_EDIT_PENALTIES: dict[str, float] = {
+    "hard_edit:smartart": 0.14,
+    "hard_edit:ole_embedded": 0.12,
+    "hard_edit:ole_linked": 0.12,
+    "hard_edit:ole_control": 0.12,
+    "hard_edit:media": 0.10,
+    "hard_edit:locked": 0.08,
+    "hard_edit:picture_crop": 0.06,
+    "hard_edit:picture_effects": 0.07,
+    "hard_edit:parse_failed": 0.10,
+}
+
+
+def _placeholder_credit(element: ReferenceElement) -> float:
+    """Top-level placeholders: text slots score higher than picture hosts; master chrome none."""
+    if element.repeats_across_pages:
+        return 0.0
+    if "placeholder_hosts_picture" in element.style_notes:
+        return 0.07
+    if "placeholder_hosts_text" in element.style_notes:
+        return 0.14
+    return 0.12
+
+
+def _is_replaceable_top_level(element: ReferenceElement, *, page_area: float) -> bool:
+    if element.repeats_across_pages or element.likely_background_or_decoration:
+        return False
+    if element.element_type == ReferenceElementType.TEXT:
+        return True
+    if element.element_type in _CONTENT_IMAGE_TYPES:
+        return not _is_full_page(element, page_area=page_area)
+    if element.element_type == ReferenceElementType.PLACEHOLDER:
+        return "hard_edit:locked" not in element.style_notes
+    return False
+
+
 def compute_editability(slide: ReferenceSlideSnapshot) -> tuple[float, list[str]]:
     """Heuristic editability in ``[0, 1]`` plus short rationale fragments."""
     rationale: list[str] = []
@@ -74,25 +110,23 @@ def compute_editability(slide: ReferenceSlideSnapshot) -> tuple[float, list[str]
     top_level = list(slide.elements)
     flat = list(slide.iter_elements())
 
-    placeholder_slots = sum(
-        1 for e in top_level if e.element_type == ReferenceElementType.PLACEHOLDER
+    placeholder_credit = sum(
+        _placeholder_credit(e)
+        for e in top_level
+        if e.element_type == ReferenceElementType.PLACEHOLDER
     )
     replaceable_text = sum(
         1
         for e in top_level
         if e.element_type == ReferenceElementType.TEXT
-        and not e.repeats_across_pages
-        and not e.likely_background_or_decoration
+        and _is_replaceable_top_level(e, page_area=page_area)
     )
     replaceable_images = sum(
         1
         for e in top_level
         if e.element_type in _CONTENT_IMAGE_TYPES
-        and not e.likely_background_or_decoration
-        and not e.repeats_across_pages
-        and not _is_full_page(e, page_area=page_area)
+        and _is_replaceable_top_level(e, page_area=page_area)
     )
-    # Nested text/images inside groups are weaker slots (harder to target).
     grouped_slots = sum(
         1
         for e in flat
@@ -104,20 +138,26 @@ def compute_editability(slide: ReferenceSlideSnapshot) -> tuple[float, list[str]
             ReferenceElementType.DRAWING,
             ReferenceElementType.PLACEHOLDER,
         }
+        and not _hard_edit_tags(e)
     )
 
     score = 0.18
-    score += 0.14 * min(placeholder_slots, 4)
+    score += min(placeholder_credit, 0.42)
     score += 0.10 * min(replaceable_text, 4)
     score += 0.12 * min(replaceable_images, 3)
-    score += 0.04 * min(grouped_slots, 3)  # weak credit only
+    score += 0.04 * min(grouped_slots, 3)
 
-    if placeholder_slots:
-        rationale.append(f"placeholders={placeholder_slots}")
+    ph_count = sum(
+        1 for e in top_level if e.element_type == ReferenceElementType.PLACEHOLDER
+    )
+    if ph_count:
+        rationale.append(f"placeholders={ph_count}")
     if replaceable_text:
         rationale.append(f"top_text_slots={replaceable_text}")
     if replaceable_images:
         rationale.append(f"top_image_slots={replaceable_images}")
+    if grouped_slots:
+        rationale.append(f"nested_group_slots={grouped_slots}")
 
     group_roots = sum(1 for e in top_level if e.element_type == ReferenceElementType.GROUP)
     if group_roots:
@@ -151,12 +191,14 @@ def compute_editability(slide: ReferenceSlideSnapshot) -> tuple[float, list[str]
         hard_tags |= _hard_edit_tags(element)
     # Group / full-page already scored above — avoid double-counting those tags.
     scored_elsewhere = {"hard_edit:group", "hard_edit:full_page_background"}
-    remaining_hard = sorted(hard_tags - scored_elsewhere)
-    if remaining_hard:
-        score -= 0.10 * min(len(remaining_hard), 4)
-        rationale.extend(remaining_hard[:4])
+    for tag in sorted(hard_tags - scored_elsewhere):
+        score -= _HARD_EDIT_PENALTIES.get(tag, 0.08)
+        rationale.append(tag)
 
-    if placeholder_slots + replaceable_text + replaceable_images == 0:
+    replaceable_total = (
+        ph_count + replaceable_text + replaceable_images + int(grouped_slots > 0)
+    )
+    if replaceable_total == 0:
         score *= 0.45
         rationale.append("no_clear_replaceable_slots")
 
