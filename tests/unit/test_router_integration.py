@@ -31,8 +31,8 @@ def test_run_instruction_with_mock_llm() -> None:
     )
 
     with (
-        patch("main.get_llm_provider", return_value=mock_provider),
-        patch("main.scan_folder", return_value=[]),
+        patch("legacy.main.get_llm_provider", return_value=mock_provider),
+        patch("legacy.main.scan_folder", return_value=[]),
     ):
         report = run_instruction("整理 Downloads 文件夹")
 
@@ -55,13 +55,13 @@ def test_run_instruction_skips_file_moves_when_not_confirmed() -> None:
     fake_file = _FakeFile(name="draft.dwg", suffix=".dwg", path=Path("/tmp/draft.dwg"))
 
     with (
-        patch("main.get_llm_provider", return_value=mock_provider),
-        patch("main.scan_folder", return_value=[fake_file]),
+        patch("legacy.main.get_llm_provider", return_value=mock_provider),
+        patch("legacy.main.scan_folder", return_value=[fake_file]),
         patch(
-            "main.classify_files_with_ai",
+            "legacy.main.classify_files_with_ai",
             return_value={"draft.dwg": "/tmp/Drawings"},
         ),
-        patch("main.move_files") as move_files,
+        patch("legacy.main.move_files") as move_files,
     ):
         report = run_instruction(
             "整理 Downloads 文件夹",
@@ -87,13 +87,13 @@ def test_run_instruction_moves_files_when_confirmed() -> None:
     fake_file = _FakeFile(name="draft.dwg", suffix=".dwg", path=Path("/tmp/draft.dwg"))
 
     with (
-        patch("main.get_llm_provider", return_value=mock_provider),
-        patch("main.scan_folder", return_value=[fake_file]),
+        patch("legacy.main.get_llm_provider", return_value=mock_provider),
+        patch("legacy.main.scan_folder", return_value=[fake_file]),
         patch(
-            "main.classify_files_with_ai",
+            "legacy.main.classify_files_with_ai",
             return_value={"draft.dwg": "/tmp/Drawings"},
         ),
-        patch("main.move_files", return_value=[]) as move_files,
+        patch("legacy.main.move_files", return_value=[]) as move_files,
     ):
         report = run_instruction(
             "整理 Downloads 文件夹",
