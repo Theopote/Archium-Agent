@@ -477,7 +477,7 @@ class LayoutPlanningService:
                 preferred_order=preferred_for_registry,
             )
             try:
-                request, _skill_audit = apply_skills_to_request(
+                request, skill_audit = apply_skills_to_request(
                     LLMRequest(
                         system_prompt=LAYOUT_PLAN_SYSTEM_PROMPT,
                         user_prompt=build_layout_plan_user_prompt(
@@ -490,6 +490,14 @@ class LayoutPlanningService:
                     ),
                     task_type="layout_plan",
                     slide_type=str(getattr(slide, "slide_type", "") or ""),
+                )
+                from archium.application.agent_skills.audit_store import record_skill_audit
+
+                record_skill_audit(
+                    skill_audit,
+                    presentation_id=slide.presentation_id,
+                    slide_id=slide.id,
+                    settings=self._settings,
                 )
                 draft = self._llm.generate_structured(
                     request,

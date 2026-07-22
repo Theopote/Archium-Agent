@@ -278,7 +278,7 @@ class VisualCriticService:
         try:
             from archium.application.agent_skills import apply_skills_to_request
 
-            request, _audit = apply_skills_to_request(
+            request, skill_audit = apply_skills_to_request(
                 LLMRequest(
                     system_prompt=_VISION_SYSTEM,
                     user_prompt=prompt,
@@ -292,6 +292,10 @@ class VisualCriticService:
                 slide_type=str(getattr(plan, "layout_family", "") or ""),
                 limit=4,
             )
+            from archium.application.agent_skills.audit_store import record_skill_audit
+            from archium.config.settings import get_settings
+
+            record_skill_audit(skill_audit, settings=get_settings())
             return self._llm.generate_structured(request, _VisionCriticDraft)
         except Exception as exc:  # noqa: BLE001
             logger.warning("LLM vision critic failed (non-fatal): %s", exc)

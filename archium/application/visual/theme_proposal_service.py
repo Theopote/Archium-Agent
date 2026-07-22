@@ -23,6 +23,7 @@ from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
 from archium.domain.visual.render_scene import compute_scene_hash
 from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,
+    ThemeDeckImpactStats,
     ThemeProposalDecision,
     ThemeProposalStatus,
 )
@@ -187,6 +188,13 @@ class ThemeProposalService:
             preview_scene_hashes=preview_hashes,
             qa_by_slide=qa_by_slide,
             qa_summary=_dedupe_issues(qa_summary),
+            deck_impact=_compute_deck_impact(
+                slides=slides,
+                base=base,
+                proposed=proposed,
+                sample_scenes=sample_scenes,
+                qa_summary=_dedupe_issues(qa_summary),
+            ),
             status=status,
         )
         return self._proposals.save(proposal, supersede_previous=True)
@@ -403,6 +411,52 @@ def _dedupe_issues(issues: list[QualityIssue]) -> list[QualityIssue]:
         seen.add(key)
         result.append(issue)
     return result
+
+
+def _compute_deck_impact(
+    *,
+    slides: list[SlideSpec],
+    base,
+    proposed,
+    sample_scenes: list,
+    qa_summary: list[QualityIssue],
+) -> ThemeDeckImpactStats:
+    """Estimate full-deck impact from DesignSystem delta + sample scenes."""
+    from archium.domain.visual.render_scene import DrawingNode, ImageNode
+
+    font_changed = (
+        base.typography.title.font_family != proposed.typography.title.font_family
+        or base.typography.body.font_family != proposed.typography.body.font_family
+        or abs(base.typography.title.font_size - proposed.typography.title.font_size) > 1e-6
+        or abs(base.typography.body.font_size - proposed.typography.body.font_size) > 1e-6
+    )
+    bg_changed = base.colors.background != proposed.colors.background
+    photo_mode_changed = (
+        base.image_style.photo_treatment != proposed.image_style.photo_treatment
+    )
+
+    drawing_nodes = 0
+    evidence_photos = 0
+    for scene in sample_scenes:
+        for node in scene.nodes:
+            if isinstance(node, DrawingNode):
+                drawing_nodes += 1
+            elif isinstance(node, ImageNode) and node.asset_origin == "project_upload":
+                evidence_photos += 1
+
+    page_count = len(slides)
+    return ThemeDeckImpactStats(
+        affected_pages=page_count,
+        font_changes=page_count if font_changed else 0,
+        background_changes=page_count if bg_changed else 0,
+        # Theme resolve does not rewrite drawing pixels; report sample count as exposure.
+        drawing_node_changes=0 if not font_changed else drawing_nodes,
+        evidence_photo_changes=evidence_photos if photo_mode_changed else 0,
+        warnings=sum(
+            1 for issue in qa_summary if issue.severity in {IssueSeverity.MINOR, IssueSeverity.MAJOR}
+        ),
+        blockers=sum(1 for issue in qa_summary if issue.severity == IssueSeverity.BLOCKER),
+    )
 
 
 def _theme_brief_gate(proposed, constraints) -> list[QualityIssue]:

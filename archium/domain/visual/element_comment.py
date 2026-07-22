@@ -94,6 +94,16 @@ class ElementComment(TimestampedModel):
     proposal_id: UUID | None = None
     created_by: str = "user"
 
+    @property
+    def candidate_node_ids(self) -> list[str]:
+        """Alias for ``scope_node_ids`` (region / multi-select candidates)."""
+        return list(self.scope_node_ids)
+
+    @property
+    def node_snapshot(self) -> dict[str, Any]:
+        """Alias for ``node_snapshot_json`` (P0 checklist naming)."""
+        return dict(self.node_snapshot_json)
+
     def allowed_node_ids(self, *, scene_node_ids: set[str] | None = None) -> set[str] | None:
         """Return the allowed mutation set, or ``None`` when unrestricted (SLIDE)."""
         if self.scope == ElementCommentScope.SLIDE:

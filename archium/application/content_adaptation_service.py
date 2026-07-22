@@ -26,7 +26,11 @@ from archium.domain.content_adaptation import (
 from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
-from archium.domain.slide_split import SlideSplitPlan
+from archium.domain.slide_split import (
+    SlideSplitPagePreview,
+    SlideSplitPlan,
+    SlideSplitProposal,
+)
 from archium.domain.studio_errors import StudioAssetReferenceError
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.element_lock import ElementLockedError
@@ -109,6 +113,60 @@ class ContentAdaptationService:
         if slide.visual_intent_id is not None:
             intent = VisualIntentRepository(self._session).get(slide.visual_intent_id)
         return SlideCapacityService().estimate(slide, design, visual_intent=intent)
+
+    def propose_split(self, slide_id: UUID) -> SlideSplitProposal:
+        """Build a reviewable split proposal without mutating the deck."""
+        from copy import deepcopy
+
+        slide = self._presentations.get_slide(slide_id)
+        if slide is None:
+            raise WorkflowError(f"页面 {slide_id} 不存在")
+        if len(slide.key_points) < 2:
+            raise WorkflowError("至少需要 2 条要点才能拆分页面。")
+
+        updated_source = deepcopy(slide)
+        mid = max(1, len(updated_source.key_points) // 2)
+        moved = updated_source.key_points[mid:]
+        updated_source.key_points = updated_source.key_points[:mid]
+        plan = build_split_plan(
+            slide,
+            updated_source,
+            moved,
+            "Capacity OVERLOADED → SlideSplitProposal",
+        )
+        budget = self._estimate_capacity(slide)
+        capacity_status = budget.status.value if budget is not None else ""
+        before = SlideSplitPagePreview(
+            title=slide.title,
+            message=slide.message,
+            key_points=list(slide.key_points),
+        )
+        after = [
+            SlideSplitPagePreview(
+                title=page.title,
+                message=page.message,
+                key_points=list(page.key_points),
+            )
+            for page in plan.new_slides
+        ]
+        return SlideSplitProposal(
+            source_slide_id=slide.id,
+            plan=plan,
+            before=before,
+            after=after,
+            capacity_status=capacity_status,
+        )
+
+    def accept_split_proposal(self, proposal: SlideSplitProposal) -> ContentAdaptationResult:
+        """Apply a previously reviewed split proposal."""
+        if proposal.status == "rejected":
+            raise WorkflowError("拆页提案已拒绝，无法接受。")
+        result = self.apply(
+            proposal.source_slide_id,
+            ContentAdaptationAction.SPLIT_SLIDE,
+            replan_visual=True,
+        )
+        return result
 
     def apply(
         self,

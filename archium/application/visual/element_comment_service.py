@@ -88,7 +88,7 @@ class ElementCommentService:
         if resolved_scope == ElementCommentScope.REGION and not region_bbox and not extra_ids:
             raise WorkflowError("scope=`region` 时请提供 region_bbox 或 scope_node_ids。")
 
-        scene_revision_id = self._scene_history.latest_scene_revision_id(slide)
+        scene_revision_id = self._live_scene_revision_id(slide)
         scene_hash = compute_scene_hash(scene)
         node_snapshot = node.model_dump(mode="json")
 
@@ -115,6 +115,34 @@ class ElementCommentService:
     def list_for_slide(self, slide_id: UUID) -> list[ElementComment]:
         return self._comments.list_by_slide(slide_id)
 
+    def list_for_presentation(self, presentation_id: UUID) -> list[ElementComment]:
+        return self._comments.list_by_presentation(presentation_id)
+
+    def inbox_counts(
+        self,
+        presentation_id: UUID,
+        *,
+        slide_id: UUID | None = None,
+    ) -> dict[str, int]:
+        """Status histogram for Comment Inbox (pending / proposed / …)."""
+        comments = self.list_for_presentation(presentation_id)
+        if slide_id is not None:
+            comments = [item for item in comments if item.slide_id == slide_id]
+        counts = {
+            "pending": 0,
+            "proposed": 0,
+            "needs_rebase": 0,
+            "accepted": 0,
+            "rejected": 0,
+            "resolved": 0,
+            "total": len(comments),
+        }
+        for comment in comments:
+            key = comment.status.value
+            if key in counts:
+                counts[key] += 1
+        return counts
+
     def requires_rebase(
         self,
         comment: ElementComment,
@@ -122,12 +150,16 @@ class ElementCommentService:
         slide: SlideSpec,
         scene: RenderScene,
     ) -> bool:
-        """True when the formal scene moved past the comment's bound revision/hash."""
-        current_revision_id = self._scene_history.latest_scene_revision_id(slide)
+        """True when the live formal scene moved past the comment's bound revision/hash."""
         current_hash = compute_scene_hash(scene)
-        if comment.scene_revision_id != current_revision_id:
-            return True
         if comment.scene_hash and comment.scene_hash != current_hash:
+            return True
+        live_revision_id = self._live_scene_revision_id(slide)
+        if (
+            live_revision_id is not None
+            and comment.scene_revision_id is not None
+            and comment.scene_revision_id != live_revision_id
+        ):
             return True
         return False
 
@@ -166,7 +198,7 @@ class ElementCommentService:
         rebound = comment.model_copy(
             update={
                 "status": ElementCommentStatus.PENDING,
-                "scene_revision_id": self._scene_history.latest_scene_revision_id(slide),
+                "scene_revision_id": self._live_scene_revision_id(slide),
                 "scene_hash": compute_scene_hash(scene),
                 "node_snapshot_json": node.model_dump(mode="json"),
                 "proposal_id": None,
@@ -309,3 +341,15 @@ class ElementCommentService:
         if scene_result is None:
             raise WorkflowError("当前页面无法编译 RenderScene。")
         return scene_result.scene
+
+    def _live_scene_revision_id(self, slide: SlideSpec) -> UUID | None:
+        """Prefer revision matching live scene hash (correct after undo branches)."""
+        from archium.application.visual.scene_undo_service import SceneUndoService
+
+        live_id = SceneUndoService(
+            self._session,
+            settings=self._settings,
+        ).revision_id_for_live_scene(slide)
+        if live_id is not None:
+            return live_id
+        return self._scene_history.latest_scene_revision_id(slide)

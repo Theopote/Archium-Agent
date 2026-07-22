@@ -44,7 +44,7 @@ def _apply_visual_result(result: object) -> None:
         st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
 
 
-_INSPECTOR_TABS = ("属性", "布局", "内容", "AI", "风格", "检查")
+_INSPECTOR_TABS = ("属性", "布局", "内容", "AI", "评论", "风格", "检查")
 
 
 def _select_inspector_tab() -> str:
@@ -104,6 +104,15 @@ def _render_inspector_tabs(
             slide_snapshot=slide_snapshot,
             presentation_id=presentation_id,
             settings=get_ui_effective_settings(),
+        )
+        return
+    if active == "评论":
+        from archium.ui.studio.comment_inbox_panel import render_comment_inbox
+
+        render_inspector_section("评论 Inbox")
+        render_comment_inbox(
+            presentation_id=presentation_id,
+            slide_snapshot=slide_snapshot,
         )
         return
     if active == "风格":

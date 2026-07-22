@@ -213,6 +213,18 @@ def render_deck_theme_panel(
         }
     )
 
+    impact = proposal.deck_impact
+    st.markdown("**全稿影响（接受前）**")
+    impact_cols = st.columns(4)
+    impact_cols[0].metric("受影响页面", impact.affected_pages)
+    impact_cols[1].metric("字体变化", impact.font_changes)
+    impact_cols[2].metric("背景变化", impact.background_changes)
+    impact_cols[3].metric("图纸节点变化", impact.drawing_node_changes)
+    impact_cols2 = st.columns(3)
+    impact_cols2[0].metric("证据照片变化", impact.evidence_photo_changes)
+    impact_cols2[1].metric("警告", impact.warnings)
+    impact_cols2[2].metric("阻塞", impact.blockers)
+
     has_blocker = any(
         issue.severity == IssueSeverity.BLOCKER for issue in proposal.qa_summary
     )

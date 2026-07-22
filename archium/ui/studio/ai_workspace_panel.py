@@ -18,7 +18,9 @@ from archium.ui.studio.proposal_compare_panel import (
 )
 from archium.ui.studio_service import (
     apply_slide_visual_edit,
+    create_slide_scene_proposal_from_element_comment,
     create_slide_scene_proposal_from_text,
+    resolve_selected_render_node_id,
     restore_slide_visual_edit,
 )
 from archium.ui.visual_service import SlideVisualSnapshot
@@ -42,9 +44,21 @@ def render_ai_workspace(
         _render_legacy_panel(slide_id=slide_id)
         return
 
+    selected_ids = list(st.session_state.get("studio_selected_element_ids") or [])
+    if not selected_ids:
+        raw = st.session_state.get("studio_selected_element_id")
+        if isinstance(raw, str) and raw:
+            selected_ids = [raw]
+
+    bound_nodes: list[tuple[str, str | None]] = []
+    for element_id in selected_ids:
+        node_id, layout_id = resolve_selected_render_node_id(slide_snapshot, element_id)
+        if node_id:
+            bound_nodes.append((node_id, layout_id))
+
     st.caption(
-        "修改范围默认：当前页面。"
         "保护：锁定内容、素材身份、页面事实与引用保持不变。"
+        "评论会绑定当前 Scene Revision / hash / node_snapshot。"
     )
     text = st.text_area(
         "输入修改要求",
@@ -54,13 +68,16 @@ def render_ai_workspace(
     )
     scope = st.radio(
         "修改范围",
-        options=["当前页面", "选中对象", "指定区域"],
+        options=["选中对象", "多选", "当前页面"],
         horizontal=True,
         key=f"studio_ai_edit_scope_{slide_id}",
-        disabled=True,
-        help="当前版本以整页提案为主；选中对象 / 指定区域将在后续开放。",
+        help="选中对象=单节点；多选=当前画布多选；当前页面=整页自然语言。",
     )
-    _ = scope
+    if bound_nodes:
+        labels = ", ".join(f"`{nid}`" for nid, _ in bound_nodes[:6])
+        st.caption(f"当前选中节点：{labels}" + ("…" if len(bound_nodes) > 6 else ""))
+    else:
+        st.caption("未选中元素时，「选中对象 / 多选」不可用；请用「当前页面」。")
 
     if st.button(
         "生成修改提案",
@@ -68,7 +85,12 @@ def render_ai_workspace(
         use_container_width=True,
         key=f"studio_create_proposal_{slide_id}",
     ):
-        _run_proposal(slide_id=slide_id, text=text.strip())
+        _run_scoped_proposal(
+            slide_id=slide_id,
+            text=text.strip(),
+            scope_label=scope,
+            bound_nodes=bound_nodes,
+        )
 
     proposal = get_stored_proposal(slide_id)
     if proposal is None:
@@ -85,6 +107,51 @@ def render_ai_workspace(
     with st.expander("版式直接编辑（不经提案确认）", expanded=False):
         st.caption("安全提示：直接写入版式，无 Before/After。优先使用上方提案流程。")
         _render_legacy_panel(slide_id=slide_id)
+
+
+def _run_scoped_proposal(
+    *,
+    slide_id: UUID,
+    text: str,
+    scope_label: str,
+    bound_nodes: list[tuple[str, str | None]],
+) -> None:
+    if not text:
+        st.error("请先描述想做的修改。")
+        return
+    try:
+        with st.spinner("正在生成修改提案…"), get_session() as session:
+            if scope_label == "当前页面" or not bound_nodes:
+                proposal = create_slide_scene_proposal_from_text(session, slide_id, text)
+            elif scope_label == "多选" and len(bound_nodes) >= 2:
+                primary_id, layout_id = bound_nodes[0]
+                extras = [nid for nid, _ in bound_nodes[1:]]
+                proposal = create_slide_scene_proposal_from_element_comment(
+                    session,
+                    slide_id,
+                    node_id=primary_id,
+                    note=text,
+                    layout_element_id=layout_id,
+                    scope="selection",
+                    scope_node_ids=extras,
+                )
+            else:
+                primary_id, layout_id = bound_nodes[0]
+                proposal = create_slide_scene_proposal_from_element_comment(
+                    session,
+                    slide_id,
+                    node_id=primary_id,
+                    note=text,
+                    layout_element_id=layout_id,
+                    scope="node",
+                )
+        store_proposal(proposal)
+        st.success("修改提案已生成，请在下方对比后接受或拒绝。")
+        st.rerun()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
 
 
 def _render_legacy_panel(*, slide_id: UUID) -> None:
@@ -125,30 +192,14 @@ def _render_legacy_panel(*, slide_id: UUID) -> None:
             st.error(format_user_error(exc))
 
 
-def _run_proposal(*, slide_id: UUID, text: str) -> None:
-    if not text:
-        st.error("请先描述想做的修改。")
-        return
-    try:
-        with st.spinner("正在生成修改提案…"), get_session() as session:
-            proposal = create_slide_scene_proposal_from_text(session, slide_id, text)
-        store_proposal(proposal)
-        st.success("修改提案已生成，请在下方对比后接受或拒绝。")
-        st.rerun()
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-    except Exception as exc:
-        st.error(format_user_error(exc))
-
-
 def _run_edit(*, slide_id: UUID, text: str) -> None:
     if not text:
         st.error("请先描述想做的修改。")
         return
     try:
-        with st.spinner("正在应用修改…"), get_session() as session:
-            apply_slide_visual_edit(session, slide_id, text)
-        st.success("已应用视觉修改。")
+        with st.spinner("正在应用…"), get_session() as session:
+            apply_slide_visual_edit(session, slide_id, text=text)
+        st.success("已直接应用视觉修改。")
         st.rerun()
     except WorkflowError as exc:
         st.error(format_user_error(exc))

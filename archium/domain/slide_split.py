@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field, field_validator
 
-from archium.domain._base import DomainModel
+from archium.domain._base import DomainModel, new_uuid
 from archium.domain.slide import SlideSpec
 
 GENERIC_CONTINUATION_MESSAGE = "本页延续上一页内容，详见下列要点。"
@@ -50,3 +51,26 @@ class SlideSplitPlan(DomainModel):
     @property
     def primary_continuation(self) -> SlideSpec:
         return self.new_slides[1]
+
+
+class SlideSplitPagePreview(DomainModel):
+    """One page summary for before/after split confirmation UI."""
+
+    title: str = ""
+    message: str = ""
+    key_points: list[str] = Field(default_factory=list)
+
+
+class SlideSplitProposal(DomainModel):
+    """Reviewable split proposal — confirm before mutating the deck.
+
+    OVERLOADED capacity → propose → before/after → user accept → apply.
+    """
+
+    proposal_id: UUID = Field(default_factory=new_uuid)
+    source_slide_id: UUID
+    plan: SlideSplitPlan
+    before: SlideSplitPagePreview
+    after: list[SlideSplitPagePreview] = Field(default_factory=list)
+    status: Literal["draft", "accepted", "rejected"] = "draft"
+    capacity_status: str = ""

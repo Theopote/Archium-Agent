@@ -465,6 +465,9 @@ def create_slide_scene_proposal_from_element_comment(
     node_id: str,
     note: str,
     layout_element_id: str | None = None,
+    scope: str = "node",
+    scope_node_ids: list[str] | None = None,
+    region_bbox: dict[str, float] | None = None,
 ) -> SceneChangeProposal:
     """Bind an NL note to a RenderScene node and create a SceneChangeProposal."""
     from archium.application.visual.element_comment_service import ElementCommentService
@@ -479,6 +482,9 @@ def create_slide_scene_proposal_from_element_comment(
         node_id=node_id,
         note=note,
         layout_element_id=layout_element_id,
+        scope=scope,
+        scope_node_ids=scope_node_ids,
+        region_bbox=region_bbox,
     )
     return proposal
 

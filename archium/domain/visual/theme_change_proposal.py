@@ -30,6 +30,18 @@ class ThemeProposalDecision(DomainModel):
     notes: str = ""
 
 
+class ThemeDeckImpactStats(DomainModel):
+    """Full-deck impact preview shown before accepting a theme proposal."""
+
+    affected_pages: int = 0
+    font_changes: int = 0
+    background_changes: int = 0
+    drawing_node_changes: int = 0
+    evidence_photo_changes: int = 0
+    warnings: int = 0
+    blockers: int = 0
+
+
 class ThemeChangeProposal(DomainModel):
     """Reviewable before/after DesignSystem change for an entire presentation.
 
@@ -54,6 +66,7 @@ class ThemeChangeProposal(DomainModel):
     preview_scene_hashes: dict[str, str] = Field(default_factory=dict)
     qa_by_slide: dict[str, list[QualityIssue]] = Field(default_factory=dict)
     qa_summary: list[QualityIssue] = Field(default_factory=list)
+    deck_impact: ThemeDeckImpactStats = Field(default_factory=ThemeDeckImpactStats)
 
     status: ThemeProposalStatus = ThemeProposalStatus.READY
     decision: ThemeProposalDecision | None = None

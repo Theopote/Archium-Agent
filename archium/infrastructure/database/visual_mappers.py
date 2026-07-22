@@ -21,6 +21,7 @@ from archium.domain.visual.scene_change_proposal import (
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,
+    ThemeDeckImpactStats,
     ThemeProposalDecision,
     ThemeProposalStatus,
 )
@@ -333,6 +334,7 @@ def _theme_change_proposal_payload(proposal: ThemeChangeProposal) -> dict[str, o
         "preview_scene_hashes": proposal.preview_scene_hashes,
         "qa_by_slide": qa_by_slide,
         "qa_summary": _models_to_json(proposal.qa_summary),
+        "deck_impact": model_to_dict(proposal.deck_impact),
         "decision": (
             model_to_dict(proposal.decision) if proposal.decision is not None else None
         ),
@@ -409,6 +411,12 @@ def theme_change_proposal_to_domain(
             str(key): str(value) for key, value in reason_raw.items() if value is not None
         }
     hashes = payload.get("preview_scene_hashes") or {}
+    impact_raw = payload.get("deck_impact") or {}
+    deck_impact = (
+        ThemeDeckImpactStats.model_validate(impact_raw)
+        if isinstance(impact_raw, dict)
+        else ThemeDeckImpactStats()
+    )
     return ThemeChangeProposal(
         proposal_id=orm.id,
         presentation_id=orm.presentation_id,
@@ -423,6 +431,7 @@ def theme_change_proposal_to_domain(
         preview_scene_hashes=hashes if isinstance(hashes, dict) else {},
         qa_by_slide=qa_by_slide,
         qa_summary=qa_summary,
+        deck_impact=deck_impact,
         status=ThemeProposalStatus(orm.status),
         decision=decision,
         decided_at=orm.decided_at,

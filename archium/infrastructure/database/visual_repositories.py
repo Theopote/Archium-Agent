@@ -352,6 +352,17 @@ class ElementCommentRepository:
             for row in self._session.scalars(stmt)
         ]
 
+    def list_by_presentation(self, presentation_id: UUID) -> list[ElementComment]:
+        stmt = (
+            select(ElementCommentORM)
+            .where(ElementCommentORM.presentation_id == presentation_id)
+            .order_by(ElementCommentORM.created_at.desc())
+        )
+        return [
+            visual_mappers.element_comment_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
     def list_by_proposal(self, proposal_id: UUID) -> list[ElementComment]:
         stmt = (
             select(ElementCommentORM)
