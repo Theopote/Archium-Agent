@@ -1,0 +1,27 @@
+---
+description: Load Archium product Agent Skills from archium-agent-skills/ when authoring, reviewing, or editing architectural presentations
+alwaysApply: false
+---
+
+# Archium Agent Skills
+
+When the task involves architectural presentation authoring, drawing/photo layout, renovation report narrative, Studio element comments, or visual QA, **Read** the matching skill file under `archium-agent-skills/` before acting. Do not invent parallel rules.
+
+## Skill map
+
+| Trigger | Skill path |
+|---------|------------|
+| Building decks, narrative, facts, slide rules | `archium-agent-skills/architectural-presentation-authoring/SKILL.md` |
+| Site plan / floor plan / section pages | `archium-agent-skills/drawing-page-design/SKILL.md` |
+| Photo evidence boards, site issues | `archium-agent-skills/photo-evidence-layout/SKILL.md` |
+| Executive summary, cover thesis, closing | `archium-agent-skills/executive-summary-writing/SKILL.md` |
+| Hospital / medical renovation reports | `archium-agent-skills/hospital-renovation-report/SKILL.md` |
+| Campus renovation reports | `archium-agent-skills/campus-renovation-report/SKILL.md` |
+| Element comments, NL edit on selected node, proposals | `archium-agent-skills/apply-studio-comments/SKILL.md` |
+| Visual QA, north arrow, crop, overflow review | `archium-agent-skills/visual-qa-review/SKILL.md` |
+
+## Rules
+
+1. Prefer the skill checklist over ad-hoc style advice.
+2. Stack skills when needed (domain + authoring + QA).
+3. Keep `archium-agent-skills/` as the single source of truth; do not duplicate long rules into this file.

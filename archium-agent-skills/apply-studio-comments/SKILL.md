@@ -1,0 +1,61 @@
+---
+name: apply-studio-comments
+description: >-
+  Applies Studio element-bound natural-language comments through ElementComment
+  to StudioCommand to SceneChangeProposal without guessing targets. Use when
+  the user selects a scene node and comments, or asks to turn NL notes into
+  Before/After proposals.
+---
+
+# Apply Studio comments
+
+## Intent
+
+用户点击 / 选中 RenderScene 节点再评论时，**目标对象不猜测**。保留 Command → Patch → Proposal → QA → Revision 审计链；不要直接改 JSX / 静默写 Scene。
+
+## Pipeline
+
+```
+Select element (studio_selected_element_id)
+  → map to RenderScene node_id
+  → ElementComment (status=pending)
+  → CommentToCommandPlanner (bound_node_id)
+  → StudioCommand(+)
+  → SceneChangeProposal
+  → Before/After review
+  → accept | reject
+  → ElementComment status = accepted | rejected
+```
+
+## Hard rules
+
+1. **硬绑定 `node_id`** — 有选中时禁止再用「右边第二张图」类 hint 覆盖目标
+2. **只修改绑定节点及相关必要参考**（如对齐参考 sibling）；遵守 partial-edit 合同
+3. **解析失败要明确 `unsupported_reason`** — 不可静默改错节点
+4. **无选中** — 可回退纯 NL 提案路径（`StudioNLProposalService`），并提示用户选中更稳
+5. 状态机：`pending → proposed → accepted|rejected → resolved`
+
+## Agent behavior
+
+- UI：AI 编辑面板显示「当前目标」；按钮「对选中元素生成提案」
+- 代码入口：`ElementCommentService.create_and_propose`；planner：`CommentToCommandPlanner`
+- 几何启发式：「放大一点」→ Resize / drawing readability；「和左边对齐」→ Align（最近左侧 sibling）或贴页左边 Move
+- 接受/拒绝提案后由 `SceneProposalService` 回调同步评论状态
+
+## Checklist
+
+```
+- [ ] 已解析 node_id（或明确走无绑定 NL）
+- [ ] 评论已持久化为 ElementComment
+- [ ] 全部 command 主目标 = 绑定节点
+- [ ] 用户看过 Before/After 再接受
+- [ ] 评论状态与提案决策一致
+```
+
+## Related
+
+- Domain: `archium/domain/visual/element_comment.py`
+- Service: `archium/application/visual/element_comment_service.py`
+- Planner: `archium/application/visual/comment_to_command_planner.py`
+- Parent authoring rules: `architectural-presentation-authoring`
+- QA gate: `visual-qa-review`
