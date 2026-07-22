@@ -17,12 +17,12 @@ from archium.config.settings import Settings, get_settings
 from archium.domain._base import utc_now
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
-from archium.domain.visual.art_direction import ArtDirection
-from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,

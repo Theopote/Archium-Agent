@@ -23,7 +23,11 @@ from archium.ui.studio.project_sidebar import render_studio_selection
 from archium.ui.studio.slide_canvas_enhanced import render_slide_canvas
 from archium.ui.studio.slide_navigator import render_slide_navigator
 from archium.ui.studio.slide_properties import render_slide_properties
-from archium.ui.studio_service import SlideVisualSnapshot, StudioPresentationContext, get_selected_slide_snapshot
+from archium.ui.studio_service import (
+    SlideVisualSnapshot,
+    StudioPresentationContext,
+    get_selected_slide_snapshot,
+)
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel
 
 

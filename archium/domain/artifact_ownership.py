@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
+from uuid import UUID
 
 from pydantic import Field
 
-from archium.domain._base import DomainModel
+from archium.domain._base import DomainModel, IdentifiedModel, utc_now
 
 
 class ArtifactKind(StrEnum):
@@ -19,6 +21,7 @@ class ArtifactKind(StrEnum):
     PPTX = "pptx"
     ROUND_TRIP_PNG = "round_trip_png"
     EXPORT_MANIFEST = "export_manifest"
+    RECONCILIATION_PROPOSAL = "reconciliation_proposal"
 
 
 class ArtifactAuthority(StrEnum):
@@ -112,7 +115,31 @@ ARTIFACT_OWNERSHIP: dict[ArtifactKind, ArtifactOwnershipContract] = {
         reproducible=True,
         derived_from=(ArtifactKind.PPTX,),
     ),
+    ArtifactKind.RECONCILIATION_PROPOSAL: ArtifactOwnershipContract(
+        kind=ArtifactKind.RECONCILIATION_PROPOSAL,
+        authority=ArtifactAuthority.AUTHORED_STATE,
+        owner="user_and_reconciliation_service",
+        user_editable=True,
+        reproducible=True,
+        derived_from=(ArtifactKind.PPTX, ArtifactKind.RENDER_SCENE),
+    ),
 }
+
+
+class ArtifactRecord(IdentifiedModel):
+    """Immutable identity and lineage for one concrete artifact instance."""
+
+    kind: ArtifactKind
+    project_id: UUID
+    presentation_id: UUID | None = None
+    revision_id: UUID | None = None
+    content_hash: str = Field(min_length=1, max_length=128)
+    derived_from_artifact_ids: tuple[UUID, ...] = Field(default_factory=tuple)
+    generator_version: str = Field(min_length=1, max_length=100)
+    font_manifest_hash: str | None = Field(default=None, max_length=128)
+    theme_version: str | None = Field(default=None, max_length=100)
+    export_policy: str | None = Field(default=None, max_length=100)
+    created_at: datetime = Field(default_factory=utc_now)
 
 
 def ownership_for(kind: ArtifactKind) -> ArtifactOwnershipContract:
@@ -125,4 +152,3 @@ def can_overwrite_canonical_state(kind: ArtifactKind) -> bool:
         ArtifactAuthority.SOURCE,
         ArtifactAuthority.AUTHORED_STATE,
     }
-

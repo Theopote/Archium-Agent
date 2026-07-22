@@ -13,10 +13,10 @@ from archium.application.slide_design_brief_service import (
     summarize_design_briefs,
 )
 from archium.domain.outline import OutlinePlan
-from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_design_brief import (
     BRIEF_STATUS_LABELS_ZH,
     BriefStatus,
+    SlideDesignBrief,
     format_design_brief_card,
     index_design_briefs,
 )

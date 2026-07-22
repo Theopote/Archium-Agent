@@ -993,6 +993,16 @@ class DeliveryRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
     )
     revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    artifact_kind: Mapped[str] = mapped_column(String(50), nullable=False, default="pptx")
+    derived_from_artifact_ids_json: Mapped[list[str]] = mapped_column(
+        "derived_from_artifact_ids", JSON, nullable=False, default=list
+    )
+    generator_version: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="archium-unknown"
+    )
+    font_manifest_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    theme_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    export_policy: Mapped[str | None] = mapped_column(String(100), nullable=True)
     format: Mapped[str] = mapped_column(String(40), nullable=False)
     file_uri: Mapped[str] = mapped_column(String(2000), nullable=False)
     file_hash: Mapped[str] = mapped_column(String(128), nullable=False, default="")

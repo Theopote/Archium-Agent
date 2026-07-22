@@ -27,7 +27,6 @@ from archium.domain.visual.critic import (
     VisualCriticFinding,
     VisualCriticReport,
 )
-from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.enums import (
     ImageFit,
     LayoutContentType,
@@ -36,6 +35,7 @@ from archium.domain.visual.enums import (
     LayoutIssueSeverity,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.infrastructure.layout.geometry import Rect
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.logging import get_logger

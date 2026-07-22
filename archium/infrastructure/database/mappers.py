@@ -1090,6 +1090,12 @@ def delivery_record_to_domain(orm: DeliveryRecordORM) -> DeliveryRecord:
         project_id=orm.project_id,
         presentation_id=orm.presentation_id,
         revision_id=orm.revision_id,
+        artifact_kind=orm.artifact_kind,
+        derived_from_artifact_ids=[UUID(value) for value in orm.derived_from_artifact_ids_json],
+        generator_version=orm.generator_version,
+        font_manifest_hash=orm.font_manifest_hash,
+        theme_version=orm.theme_version,
+        export_policy=orm.export_policy,
         format=orm.format,
         file_uri=orm.file_uri,
         file_hash=orm.file_hash or "",
@@ -1109,6 +1115,14 @@ def delivery_record_to_orm(
     target.project_id = domain.project_id
     target.presentation_id = domain.presentation_id
     target.revision_id = domain.revision_id
+    target.artifact_kind = domain.artifact_kind
+    target.derived_from_artifact_ids_json = [
+        str(value) for value in domain.derived_from_artifact_ids
+    ]
+    target.generator_version = domain.generator_version
+    target.font_manifest_hash = domain.font_manifest_hash
+    target.theme_version = domain.theme_version
+    target.export_policy = domain.export_policy
     target.format = domain.format
     target.file_uri = domain.file_uri
     target.file_hash = domain.file_hash

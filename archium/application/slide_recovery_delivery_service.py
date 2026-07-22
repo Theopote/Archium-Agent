@@ -10,6 +10,10 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_policy_service import (
+    ArtifactMutationGuard,
+    ArtifactMutationOperation,
+)
 from archium.application.delivery_record_service import DeliveryRecordService
 from archium.application.export_policy_service import (
     ExportPolicyService,
@@ -23,13 +27,14 @@ from archium.application.visual.template_studio_service import (
     TemplateStudioService,
 )
 from archium.config.settings import Settings, get_settings
+from archium.domain.artifact_ownership import ArtifactKind
 from archium.domain.enums import RevisionSource, SlideType
 from archium.domain.export_fidelity import DeckExportManifest, ExportPolicy, SlideExportResult
 from archium.domain.presentation import Presentation
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_recovery import HybridRenderScene, SlideRecoveryResult
-from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.defaults import default_presentation_design_system
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, TextNode
@@ -180,6 +185,10 @@ class SlideRecoveryDeliveryService:
         presentation_id: UUID | None = None,
         slide_title: str | None = None,
     ) -> SlideRecoveryImportResult:
+        ArtifactMutationGuard().require_writable(
+            ArtifactKind.RENDER_SCENE,
+            ArtifactMutationOperation.CREATE,
+        )
         presentation = self._resolve_presentation(project_id, presentation_id)
         slides = self._presentations.list_slides(presentation.id)
         slide_order = max((slide.order for slide in slides), default=-1) + 1

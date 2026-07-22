@@ -232,7 +232,6 @@ def _load_oriented_srgb(opened: PILImage.Image) -> PILImage.Image:
 
 
 def _apply_norm_crop(image: PILImage.Image, crop: ImageCropBox) -> PILImage.Image:
-    from PIL import Image
     w, h = image.size
     left = int(max(0.0, min(1.0, float(crop.x))) * w)
     top = int(max(0.0, min(1.0, float(crop.y))) * h)
@@ -250,7 +249,6 @@ def _focal_center_crop(
     keep_ratio: float = 0.85,
 ) -> PILImage.Image:
     """Crop around focal point, keeping ``keep_ratio`` of the shorter side."""
-    from PIL import Image
     keep_ratio = max(0.5, min(1.0, keep_ratio))
     w, h = image.size
     crop_w = int(w * keep_ratio)

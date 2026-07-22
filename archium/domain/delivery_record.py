@@ -16,6 +16,12 @@ class DeliveryRecord(IdentifiedModel, TimestampedModel):
     project_id: UUID
     presentation_id: UUID
     revision_id: UUID | None = None
+    artifact_kind: str = Field(default="pptx", max_length=50)
+    derived_from_artifact_ids: list[UUID] = Field(default_factory=list)
+    generator_version: str = Field(default="archium-unknown", max_length=100)
+    font_manifest_hash: str | None = Field(default=None, max_length=128)
+    theme_version: str | None = Field(default=None, max_length=100)
+    export_policy: str | None = Field(default=None, max_length=100)
     format: str = Field(min_length=1, max_length=40)
     file_uri: str = Field(min_length=1, max_length=2000)
     file_hash: str = Field(default="", max_length=128)

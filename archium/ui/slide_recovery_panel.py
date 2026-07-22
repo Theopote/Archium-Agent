@@ -12,7 +12,7 @@ from archium.application.slide_recovery_workflow_service import SlideRecoveryWor
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.domain.export_fidelity import FIDELITY_LABELS_ZH
-from archium.domain.slide_recovery import HybridRenderScene, PAGE_KIND_LABELS_ZH
+from archium.domain.slide_recovery import PAGE_KIND_LABELS_ZH, HybridRenderScene
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS

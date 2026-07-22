@@ -6,7 +6,6 @@ from uuid import UUID
 
 from archium.application.visual.element_edit_intent_compiler import ElementEditIntentCompiler
 from archium.application.visual.element_edit_intent_parser import ElementEditIntentParser
-from archium.domain.visual.element_edit_intent import ElementEditIntent
 from archium.application.visual.partial_edit_preservation import command_target_node_ids
 from archium.application.visual.studio_nl_command_planner import (
     StudioCommandPlan,
@@ -14,6 +13,7 @@ from archium.application.visual.studio_nl_command_planner import (
 )
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.element_comment import ElementComment, ElementCommentScope
+from archium.domain.visual.element_edit_intent import ElementEditIntent
 from archium.domain.visual.render_scene import RenderNode, RenderScene
 from archium.domain.visual.studio_command import StudioCommand
 

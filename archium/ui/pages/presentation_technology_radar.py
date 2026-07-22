@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-import streamlit as st
 from typing import cast
+
+import streamlit as st
 
 from archium.application.presentation_technology_radar_service import (
     PresentationTechnologyRadarService,
     RadarFilter,
 )
 from archium.domain.external_presentation_system import (
-    ArchiumRelevance,
     CATEGORY_LABELS_ZH,
     RELEVANCE_LABELS_ZH,
+    ArchiumRelevance,
     SystemCategory,
 )
 

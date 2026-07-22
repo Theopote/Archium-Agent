@@ -1,0 +1,93 @@
+CI FAIL SUMMARY — Archium-Agent
+Run: https://github.com/Theopote/Archium-Agent/actions/runs/29946837650
+Run ID: 29946837650
+SHA: c3eeaeb7d2b834cac8de254a73e3e25b1117f960
+Commit: refactor(export): 优化导出保真度和PowerPoint功能统计逻辑
+Date: 2026-07-22T18:28:58Z (UTC)
+
+LOG ACCESS
+----------
+- Unauthenticated job log API: 403 Forbidden ("Must have admin rights to read")
+- `gh` CLI: not installed / not on PATH; no GITHUB_TOKEN / GH_TOKEN in env
+- Desktop logs_*: only logs_81109494222 (Commit 02667638 — OLDER run; dimension 1920→1440 + stale alembic 024 vs 033). NOT this run.
+- Root causes below reconstructed from: Jobs API step conclusions + local reproduction on detached worktree at c3eeaeb.
+
+FAILED JOBS (from Jobs API)
+---------------------------
+1) test (3.11)                       job_id=89014252185  https://github.com/Theopote/Archium-Agent/actions/runs/29946837650/job/89014252185
+2) test (3.12)                       job_id=89014252298  https://github.com/Theopote/Archium-Agent/actions/runs/29946837650/job/89014252298
+3) alembic migration smoke           job_id=89014252188  https://github.com/Theopote/Archium-Agent/actions/runs/29946837650/job/89014252188
+4) layout pptx screenshot regression job_id=89014252115  https://github.com/Theopote/Archium-Agent/actions/runs/29946837650/job/89014252115
+
+(Other jobs on this run succeeded: marp export smoke, architectural benchmark render pipeline, security audit, streamlit startup smoke.)
+
+ROOT CAUSES
+-----------
+A) test (3.11) / test (3.12): NOT mypy, NOT pytest.
+   - Failed step: Ruff (step 8). Mypy / Pytest unit/integration/golden all SKIPPED after Ruff.
+   - Contrast vs prior run 29943725480 (SHA 139541a): that one passed Ruff and failed Mypy (217 errors).
+   - Local ruff at exact c3eeaeb tree: Found 12 errors (all --fix fixable):
+       I001 import sort (10):
+         archium/application/slide_design_brief_service.py
+         archium/application/slide_recovery_delivery_service.py
+         archium/application/visual/comment_to_command_planner.py
+         archium/application/visual/theme_proposal_service.py
+         archium/application/visual/visual_critic_service.py
+         archium/ui/outline/design_brief_panel.py
+         archium/ui/pages/presentation_technology_radar.py
+         archium/ui/pages/studio.py
+         archium/ui/slide_recovery_panel.py
+         archium/ui/studio_service.py
+       F401 unused import (2):
+         archium/application/visual/image_derivative_executor.py:235  PIL.Image
+         archium/application/visual/image_derivative_executor.py:253  PIL.Image
+
+B) alembic migration smoke: YES — HEAD revision mismatch again.
+   - Failed step: Alembic migration smoke test (pytest tests/smoke/test_alembic_migration.py)
+   - At c3eeaeb:
+       expected (_HEAD_REVISION in test): 033_template_usage_briefs
+       actual (alembic ScriptDirectory head): 034_project_mission_narrative_mode
+   - 034 was added in 23bbb43 (feat mission narrative mode) but smoke constant was never bumped.
+   - Will fail all 3 tests:
+       test_alembic_upgrade_head_on_initialized_database
+       test_alembic_incremental_upgrade_from_previous_revision
+       test_alembic_head_matches_script_directory
+   - Likely assertion shape:
+       assert '033_template_usage_briefs' == '034_project_mission_narrative_mode'
+       (and '033_...' not in '034_... (head)')
+
+C) layout pptx screenshot: still visual regression (NOT dimension 1920→1440 on this SHA).
+   - Failed step: LayoutPlan PPTX screenshot regression (pptx_visual_regression)
+   - Preceding step "Composition JSON golden cases (preview_visual_regression)" SUCCEEDED
+   - LibreOffice -scale-to-x/y 1920/1080 fix IS present at c3eeaeb (pptx_screenshot.py)
+   - Exact Hamming/pixel numbers unavailable (no auth logs for this run)
+   - Strong inference from sibling recent run 29943725480 (same gate, scale fix present):
+       9 failed / 2 passed — layout hash drift (Hamming > 12) and/or pixel diff > 5.0%
+       across v1–v9 cases
+   - Artifacts uploaded:
+       layout-pptx-screenshot-candidates  id=8540546724
+       layout-pptx-screenshot-baselines   id=8540546039
+
+LOCAL CHECKS (workspace at investigation time)
+----------------------------------------------
+git show HEAD:tests/smoke/test_alembic_migration.py | findstr HEAD_REVISION
+  → _HEAD_REVISION = "033_template_usage_briefs"  (still stale)
+
+Newest alembic/versions/ (name-desc):
+  035_project_mission_approval_hash.py   ← local HEAD now (newer than c3eeaeb)
+  034_project_mission_narrative_mode.py  ← c3eeaeb HEAD
+  033_template_usage_briefs.py           ← what smoke test still expects
+  032_element_comment_scope.py
+  031_element_comment_scene_binding.py
+  …
+
+Note: local working tree is AHEAD of c3eeaeb (has 035); smoke constant still points at 033,
+so alembic smoke remains broken until _HEAD_REVISION is bumped to current head.
+
+FIX HINTS
+---------
+1) ruff check archium tests --fix   (clears the 12 I001/F401 at c3eeaeb)
+2) Bump tests/smoke/test_alembic_migration.py _HEAD_REVISION to current alembic head
+   (034 on c3eeaeb; 035 if committing from current local tree)
+3) layout pptx: review candidates artifact 8540546724; approve baselines only after human visual review
+   (scripts/approve_layout_pptx_screenshot_baselines.py --i-reviewed)

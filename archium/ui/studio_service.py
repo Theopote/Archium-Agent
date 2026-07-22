@@ -12,15 +12,15 @@ from archium.application.content_adaptation_service import ContentAdaptationServ
 from archium.application.ingestion_service import ImportItemResult
 from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.application.visual.studio_scene_service import StudioSceneService
-from archium.config.settings import Settings
 from archium.application.visual.visual_edit_service import VisualEditResult
+from archium.config.settings import Settings
 from archium.domain.content_adaptation import ContentAdaptationSuggestion
 from archium.domain.enums import ProjectType, SlideStatus, SlideType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
-from archium.domain.scene_revision_summary import SceneRevisionRestoreResult
 from archium.domain.render import RenderResult
 from archium.domain.revision import EntityRevision
+from archium.domain.scene_revision_summary import SceneRevisionRestoreResult
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.domain.visual.design_system import DesignSystem

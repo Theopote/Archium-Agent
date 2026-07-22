@@ -29,8 +29,8 @@ from archium.domain.slide_design_brief import (
     index_design_briefs,
     infer_primary_visual_type,
 )
-from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 
