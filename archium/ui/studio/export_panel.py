@@ -213,6 +213,30 @@ def _export_pptx(
             file_path = Path(path)
             if file_path.is_file():
                 file_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()[:16]
+
+            round_trip_report = None
+            qa_status = qa_status
+            with st.spinner("正在执行 Round-trip QA…"), get_session() as session:
+                from archium.application.export_round_trip_service import (
+                    ExportRoundTripService,
+                )
+                from archium.application.evidence_readiness_service import (
+                    latest_presentation_revision_id,
+                )
+
+                rt_revision_id = latest_presentation_revision_id(session, presentation_id)
+                rt_report = ExportRoundTripService(session, settings=settings).validate_pptx_export(
+                    presentation_id=presentation_id,
+                    pptx_path=file_path,
+                    revision_id=rt_revision_id,
+                    export_file_hash=file_hash,
+                )
+                from archium.ui.delivery.fidelity_report_panel import store_round_trip_report
+
+                store_round_trip_report(rt_report)
+                round_trip_report = rt_report.model_dump(mode="json")
+                qa_status = rt_report.qa_status_value()
+
             manifest = manifest.model_copy(
                 update={
                     "file_uri": str(path),
@@ -228,6 +252,7 @@ def _export_pptx(
                 project_id=project_id,
                 presentation_id=presentation_id,
                 qa_status=qa_status,
+                round_trip_report=round_trip_report,
             )
             st.success("PPTX 导出完成。")
             for line in manifest.summary_lines_zh():
@@ -250,6 +275,7 @@ def _append_delivery_record(
     project_id: UUID,
     presentation_id: UUID,
     qa_status: str = "unknown",
+    round_trip_report: dict | None = None,
 ) -> None:
     import logging
     from datetime import UTC, datetime
@@ -276,6 +302,7 @@ def _append_delivery_record(
                 file_uri=path,
                 qa_status=qa_status,
                 revision_id=revision_id,
+                round_trip_report=round_trip_report,
             )
             session.commit()
         result = DeliveryRecordResult(

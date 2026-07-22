@@ -1094,6 +1094,7 @@ def delivery_record_to_domain(orm: DeliveryRecordORM) -> DeliveryRecord:
         file_uri=orm.file_uri,
         file_hash=orm.file_hash or "",
         qa_status=orm.qa_status or "unknown",
+        round_trip_report_json=getattr(orm, "round_trip_report_json", None),
         exported_at=orm.exported_at,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -1112,6 +1113,7 @@ def delivery_record_to_orm(
     target.file_uri = domain.file_uri
     target.file_hash = domain.file_hash
     target.qa_status = domain.qa_status
+    target.round_trip_report_json = domain.round_trip_report_json
     target.exported_at = domain.exported_at
     if domain.created_at is not None:
         target.created_at = domain.created_at

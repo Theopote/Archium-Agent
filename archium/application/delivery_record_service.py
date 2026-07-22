@@ -48,6 +48,7 @@ class DeliveryRecordService:
         file_uri: str,
         qa_status: str = "unknown",
         revision_id: UUID | None = None,
+        round_trip_report: dict[str, object] | None = None,
     ) -> DeliveryRecord:
         record = DeliveryRecord(
             project_id=project_id,
@@ -57,6 +58,7 @@ class DeliveryRecordService:
             file_uri=file_uri,
             file_hash=_file_hash(file_uri),
             qa_status=qa_status,
+            round_trip_report_json=round_trip_report,
             exported_at=datetime.now(UTC),
         )
         return self._records.create(record)

@@ -23,3 +23,10 @@ def test_export_panel_integrates_policy_before_export() -> None:
     assert "build_pre_export_manifest" in source
     assert "enforce_export_policy" in source
     assert "render_export_policy_panel" in source
+    assert "ExportRoundTripService" in source
+
+
+def test_fidelity_panel_shows_round_trip() -> None:
+    source = Path("archium/ui/delivery/fidelity_report_panel.py").read_text(encoding="utf-8")
+    assert "render_round_trip_report_panel" in source
+    assert "Round-trip QA" in source

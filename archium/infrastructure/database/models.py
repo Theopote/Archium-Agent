@@ -991,6 +991,7 @@ class DeliveryRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     file_uri: Mapped[str] = mapped_column(String(2000), nullable=False)
     file_hash: Mapped[str] = mapped_column(String(128), nullable=False, default="")
     qa_status: Mapped[str] = mapped_column(String(40), nullable=False, default="unknown")
+    round_trip_report_json: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     exported_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )
