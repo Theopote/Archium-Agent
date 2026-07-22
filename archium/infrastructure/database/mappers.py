@@ -10,6 +10,7 @@ from archium.domain.cultural_narrative import (
     CULTURAL_NARRATIVE_LOGICAL_KEY,
     CulturalNarrativePlan,
 )
+from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
@@ -71,6 +72,7 @@ from archium.infrastructure.database.models import (
     AssetORM,
     ChapterORM,
     CulturalNarrativePlanORM,
+    DeliveryRecordORM,
     DocumentChunkORM,
     OutlinePlanORM,
     PlanningSessionORM,
@@ -1061,3 +1063,39 @@ def entity_revision_to_orm(
 
 slide_revision_to_domain = entity_revision_to_domain
 slide_revision_to_orm = entity_revision_to_orm
+
+
+def delivery_record_to_domain(orm: DeliveryRecordORM) -> DeliveryRecord:
+    return DeliveryRecord(
+        id=orm.id,
+        project_id=orm.project_id,
+        presentation_id=orm.presentation_id,
+        revision_id=orm.revision_id,
+        format=orm.format,
+        file_uri=orm.file_uri,
+        file_hash=orm.file_hash or "",
+        qa_status=orm.qa_status or "unknown",
+        exported_at=orm.exported_at,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def delivery_record_to_orm(
+    domain: DeliveryRecord,
+    orm: DeliveryRecordORM | None = None,
+) -> DeliveryRecordORM:
+    target = orm or DeliveryRecordORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.presentation_id = domain.presentation_id
+    target.revision_id = domain.revision_id
+    target.format = domain.format
+    target.file_uri = domain.file_uri
+    target.file_hash = domain.file_hash
+    target.qa_status = domain.qa_status
+    target.exported_at = domain.exported_at
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target

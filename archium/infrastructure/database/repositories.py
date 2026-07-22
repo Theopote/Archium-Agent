@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from archium.domain.asset import Asset
 from archium.domain.cultural_narrative import CulturalNarrativePlan
+from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProjectStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
@@ -31,6 +32,7 @@ from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
     AssetORM,
     CulturalNarrativePlanORM,
+    DeliveryRecordORM,
     DocumentChunkORM,
     OutlinePlanORM,
     PlanningSessionORM,
@@ -1071,3 +1073,43 @@ class PresentationManuscriptRepository:
             mappers.presentation_manuscript_to_domain(row)
             for row in self._session.scalars(stmt)
         ]
+
+
+class DeliveryRecordRepository:
+    """CRUD for persisted delivery export records."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, record: DeliveryRecord) -> DeliveryRecord:
+        try:
+            orm = mappers.delivery_record_to_orm(record)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.delivery_record_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create delivery record", exc)
+            raise
+
+    def list_by_project(self, project_id: UUID, *, limit: int = 20) -> list[DeliveryRecord]:
+        stmt = (
+            select(DeliveryRecordORM)
+            .where(DeliveryRecordORM.project_id == project_id)
+            .order_by(DeliveryRecordORM.exported_at.desc())
+            .limit(limit)
+        )
+        return [mappers.delivery_record_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def list_by_presentation(
+        self,
+        presentation_id: UUID,
+        *,
+        limit: int = 20,
+    ) -> list[DeliveryRecord]:
+        stmt = (
+            select(DeliveryRecordORM)
+            .where(DeliveryRecordORM.presentation_id == presentation_id)
+            .order_by(DeliveryRecordORM.exported_at.desc())
+            .limit(limit)
+        )
+        return [mappers.delivery_record_to_domain(row) for row in self._session.scalars(stmt)]

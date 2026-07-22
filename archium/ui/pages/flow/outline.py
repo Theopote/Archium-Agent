@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from uuid import UUID
 
 import streamlit as st
 
+from archium.application.review_models import (
+    OutlineSectionUpdate,
+    OutlineUpdate,
+    SlideAssetBindingUpdate,
+    SlideIntentUpdate,
+)
 from archium.application.review_service import PresentationReviewService
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Storyline
@@ -20,6 +27,18 @@ from archium.ui.pages.flow import (
 )
 from archium.ui.planning_service import PlanningSnapshot, TASK_EXAMPLE_PROMPTS
 from archium.ui.workspace_service import list_project_presentations
+
+_PAGE_TYPE_OPTIONS = (
+    "general",
+    "title",
+    "content",
+    "photo_evidence_grid",
+    "drawing_focus",
+    "comparison",
+    "summary",
+    "data",
+    "closing",
+)
 
 
 def _render_task_composer(project_id: UUID) -> None:
@@ -59,6 +78,131 @@ def _load_outline_storyline(
         return context.outline, context.storyline, list(context.slides or [])
 
 
+def _split_items(raw: str) -> list[str]:
+    text = raw.replace("\n", "、").replace(",", "、").replace(";", "、")
+    return [part.strip() for part in text.split("、") if part.strip()]
+
+
+def _section_updates(outline: OutlinePlan) -> list[OutlineSectionUpdate]:
+    return [
+        OutlineSectionUpdate(
+            id=section.id,
+            title=section.title,
+            purpose=section.purpose,
+            key_message=section.key_message,
+            order=section.order,
+            estimated_slide_count=section.estimated_slide_count,
+            evidence_requirements=list(section.evidence_requirements),
+            required_assets=list(section.required_assets),
+            required=section.required,
+            expanded=section.expanded,
+            category=section.category,
+        )
+        for section in sorted(outline.sections, key=lambda item: item.order)
+    ]
+
+
+def _intent_updates(intents: list[SlideIntent]) -> list[SlideIntentUpdate]:
+    return [
+        SlideIntentUpdate(
+            order=intent.order,
+            chapter_id=intent.chapter_id,
+            page_task=intent.page_task,
+            central_conclusion=intent.central_conclusion,
+            required_evidence=list(intent.required_evidence),
+            required_assets=list(intent.required_assets),
+            forbidden_content=list(intent.forbidden_content),
+            expected_layout=intent.expected_layout,
+            notes=intent.notes,
+        )
+        for intent in sorted(intents, key=lambda item: item.order)
+    ]
+
+
+def _binding_updates(outline: OutlinePlan) -> list[SlideAssetBindingUpdate]:
+    return [
+        SlideAssetBindingUpdate(
+            page_order=binding.page_order,
+            asset_id=str(binding.asset_id),
+            binding_role=binding.binding_role.value
+            if hasattr(binding.binding_role, "value")
+            else str(binding.binding_role),
+            user_description=binding.user_description,
+            required=binding.required,
+            slide_id=str(binding.slide_id) if binding.slide_id else None,
+        )
+        for binding in outline.page_asset_bindings
+    ]
+
+
+def _outline_update_from(
+    outline: OutlinePlan,
+    *,
+    sections: list[OutlineSectionUpdate] | None = None,
+    page_intents: list[SlideIntentUpdate] | None = None,
+) -> OutlineUpdate:
+    return OutlineUpdate(
+        title=outline.title,
+        thesis=outline.thesis,
+        audience=outline.audience,
+        purpose=outline.purpose,
+        target_slide_count=outline.target_slide_count,
+        audience_mode=outline.audience_mode.value
+        if hasattr(outline.audience_mode, "value")
+        else str(outline.audience_mode),
+        sections=sections if sections is not None else _section_updates(outline),
+        page_intents=page_intents
+        if page_intents is not None
+        else _intent_updates(list(outline.page_intents)),
+        page_asset_bindings=_binding_updates(outline),
+    )
+
+
+def _save_outline(outline_id: UUID, update: OutlineUpdate) -> OutlinePlan:
+    with get_session() as session:
+        saved = PresentationReviewService(session).update_outline(outline_id, update)
+        session.commit()
+        return saved
+
+
+def _bootstrap_intents_from_sections(outline: OutlinePlan) -> list[SlideIntent]:
+    intents: list[SlideIntent] = []
+    order = 0
+    for section in sorted(outline.sections, key=lambda item: item.order):
+        if not section.expanded:
+            continue
+        for _ in range(max(1, section.estimated_slide_count)):
+            intents.append(
+                SlideIntent(
+                    order=order,
+                    chapter_id=section.id,
+                    page_task=section.purpose or section.title,
+                    central_conclusion=section.key_message,
+                    required_evidence=list(section.evidence_requirements),
+                    required_assets=list(section.required_assets),
+                    expected_layout=section.category or "general",
+                    notes=section.title,
+                )
+            )
+            order += 1
+    return intents
+
+
+def _ensure_editable_intents(outline: OutlinePlan) -> list[SlideIntent]:
+    if outline.page_intents:
+        return list(sorted(outline.page_intents, key=lambda item: item.order))
+    bootstrapped = _bootstrap_intents_from_sections(outline)
+    if not bootstrapped:
+        return [
+            SlideIntent(
+                order=0,
+                page_task="待填写页面任务",
+                notes="第 1 页",
+            )
+        ]
+    return bootstrapped
+
+
 def _intent_cards_from_sources(
     *,
     outline: OutlinePlan | None,
@@ -73,7 +217,6 @@ def _intent_cards_from_sources(
         return cards
 
     if outline is not None and outline.sections:
-        order = 0
         for section in sorted(outline.sections, key=lambda item: item.order):
             if not section.expanded:
                 continue
@@ -89,7 +232,6 @@ def _intent_cards_from_sources(
                         "status": "已规划",
                     }
                 )
-                order += 1
         if cards:
             return cards
 
@@ -134,6 +276,32 @@ def _card_from_slide_intent(intent: SlideIntent, *, title_fallback: str) -> dict
     }
 
 
+def _toggle_section_expanded(outline: OutlinePlan, section_id: str) -> None:
+    sections = _section_updates(outline)
+    updated: list[OutlineSectionUpdate] = []
+    for section in sections:
+        if section.id == section_id:
+            updated.append(
+                OutlineSectionUpdate(
+                    id=section.id,
+                    title=section.title,
+                    purpose=section.purpose,
+                    key_message=section.key_message,
+                    order=section.order,
+                    estimated_slide_count=section.estimated_slide_count,
+                    evidence_requirements=list(section.evidence_requirements),
+                    required_assets=list(section.required_assets),
+                    required=section.required,
+                    expanded=not section.expanded,
+                    category=section.category,
+                )
+            )
+        else:
+            updated.append(section)
+    _save_outline(outline.id, _outline_update_from(outline, sections=updated))
+    st.rerun()
+
+
 def _render_chapter_tree(
     *,
     outline: OutlinePlan | None,
@@ -145,7 +313,12 @@ def _render_chapter_tree(
         page_index = 0
         for section in sorted(outline.sections, key=lambda item: item.order):
             mark = "▾" if section.expanded else "▸"
-            st.markdown(f"{mark} **{section.title}** · {section.estimated_slide_count} 页")
+            if st.button(
+                f"{mark} {section.title} · {section.estimated_slide_count} 页",
+                key=f"outline_sec_toggle_{section.id}",
+                use_container_width=True,
+            ):
+                _toggle_section_expanded(outline, section.id)
             count = max(1, section.estimated_slide_count) if section.expanded else 0
             for _ in range(count):
                 if page_index < len(cards):
@@ -187,33 +360,174 @@ def _render_chapter_tree(
     st.caption("生成大纲后将显示章节与页面树。")
 
 
-def _render_intent_cards(cards: list[dict[str, str]]) -> None:
+def _persist_intents(outline: OutlinePlan, intents: list[SlideIntent]) -> None:
+    reindexed = []
+    for index, intent in enumerate(sorted(intents, key=lambda item: item.order)):
+        payload = intent.model_copy(deep=True)
+        payload.order = index
+        reindexed.append(payload)
+    _save_outline(
+        outline.id,
+        _outline_update_from(outline, page_intents=_intent_updates(reindexed)),
+    )
+
+
+def _render_intent_cards(
+    cards: list[dict[str, str]],
+    *,
+    outline: OutlinePlan | None,
+) -> None:
     st.markdown("**页面意图卡**")
-    if not cards:
+    if not cards and outline is None:
         st.info("尚无页面意图。先描述汇报任务并生成大纲。")
         return
+
+    mode = st.radio(
+        "模式",
+        options=["查看", "编辑"],
+        horizontal=True,
+        key="outline_intent_mode",
+    )
+
+    if outline is None:
+        st.caption("当前尚无 OutlinePlan，仅可查看规划摘要。")
+        mode = "查看"
+
     selected = int(st.session_state.get("outline_selected_card", 0) or 0)
-    selected = max(0, min(selected, len(cards) - 1))
+    intents = _ensure_editable_intents(outline) if outline is not None else []
+    source_count = len(intents) if intents else len(cards)
+    if source_count <= 0:
+        st.info("尚无页面意图。")
+        return
+    selected = max(0, min(selected, source_count - 1))
     st.session_state.outline_selected_card = selected
-    labels = [f"{index:02d} {card['title']}" for index, card in enumerate(cards, start=1)]
+
+    if intents:
+        labels = [
+            f"{index:02d} {intent.notes.strip() or intent.page_task.strip() or f'第 {index} 页'}"
+            for index, intent in enumerate(intents, start=1)
+        ]
+    else:
+        labels = [f"{index:02d} {card['title']}" for index, card in enumerate(cards, start=1)]
+
     choice = st.selectbox(
         "选择页面",
-        options=list(range(len(cards))),
+        options=list(range(source_count)),
         index=selected,
-        format_func=lambda value: labels[value],
+        format_func=lambda value: labels[value] if value < len(labels) else str(value),
         key="outline_card_select",
     )
     st.session_state.outline_selected_card = int(choice)
-    card = cards[int(choice)]
+
+    if mode == "查看" or outline is None:
+        card = (
+            _card_from_slide_intent(intents[int(choice)], title_fallback=f"第 {int(choice) + 1} 页")
+            if intents
+            else cards[int(choice)]
+        )
+        with st.container(border=True):
+            st.markdown(f"**页面标题**  \n{card['title']}")
+            st.markdown(f"**中心结论**  \n{card['conclusion']}")
+            st.markdown(f"**页面任务**  \n{card['task']}")
+            st.markdown(f"**证据**  \n{card['evidence']}")
+            st.markdown(f"**指定素材**  \n{card['assets']}")
+            meta = st.columns(2)
+            meta[0].markdown(f"**页面类型**  \n{card['page_type']}")
+            meta[1].markdown(f"**状态**  \n{card['status']}")
+        return
+
+    intent = intents[int(choice)]
     with st.container(border=True):
-        st.markdown(f"**页面标题**  \n{card['title']}")
-        st.markdown(f"**中心结论**  \n{card['conclusion']}")
-        st.markdown(f"**页面任务**  \n{card['task']}")
-        st.markdown(f"**证据**  \n{card['evidence']}")
-        st.markdown(f"**指定素材**  \n{card['assets']}")
-        meta = st.columns(2)
-        meta[0].markdown(f"**页面类型**  \n{card['page_type']}")
-        meta[1].markdown(f"**状态**  \n{card['status']}")
+        title = st.text_input(
+            "页面标题",
+            value=intent.notes or intent.page_task,
+            key=f"outline_intent_title_{outline.id}_{intent.order}",
+        )
+        conclusion = st.text_area(
+            "中心结论",
+            value=intent.central_conclusion,
+            height=80,
+            key=f"outline_intent_conclusion_{outline.id}_{intent.order}",
+        )
+        task = st.text_area(
+            "页面任务",
+            value=intent.page_task,
+            height=80,
+            key=f"outline_intent_task_{outline.id}_{intent.order}",
+        )
+        evidence = st.text_area(
+            "证据（用顿号或换行分隔）",
+            value="、".join(intent.required_evidence),
+            height=70,
+            key=f"outline_intent_evidence_{outline.id}_{intent.order}",
+        )
+        assets = st.text_area(
+            "指定素材（用顿号或换行分隔）",
+            value="、".join(intent.required_assets),
+            height=70,
+            key=f"outline_intent_assets_{outline.id}_{intent.order}",
+        )
+        page_type_options = list(_PAGE_TYPE_OPTIONS)
+        current_type = intent.expected_layout.strip() or "general"
+        if current_type not in page_type_options:
+            page_type_options = [current_type, *page_type_options]
+        page_type = st.selectbox(
+            "页面类型",
+            options=page_type_options,
+            index=page_type_options.index(current_type),
+            key=f"outline_intent_type_{outline.id}_{intent.order}",
+        )
+
+    actions = st.columns(4)
+    with actions[0]:
+        if st.button("保存当前页", type="primary", use_container_width=True, key="outline_intent_save"):
+            updated = list(intents)
+            updated[int(choice)] = SlideIntent(
+                order=intent.order,
+                chapter_id=intent.chapter_id,
+                page_task=(task.strip() or title.strip() or "待填写页面任务")[:500],
+                central_conclusion=conclusion.strip()[:1000],
+                required_evidence=_split_items(evidence),
+                required_assets=_split_items(assets),
+                forbidden_content=list(intent.forbidden_content),
+                expected_layout=str(page_type),
+                notes=(title.strip() or intent.notes)[:2000],
+            )
+            _persist_intents(outline, updated)
+            st.success("已保存当前页意图（生成 Outline Revision）。")
+            st.rerun()
+    with actions[1]:
+        if st.button("复制意图", use_container_width=True, key="outline_intent_copy"):
+            cloned = deepcopy(intent)
+            cloned.order = len(intents)
+            cloned.notes = f"{(cloned.notes or cloned.page_task).strip()}（副本）"
+            _persist_intents(outline, [*intents, cloned])
+            st.session_state.outline_selected_card = len(intents)
+            st.rerun()
+    with actions[2]:
+        if st.button(
+            "删除页面",
+            use_container_width=True,
+            disabled=len(intents) <= 1,
+            key="outline_intent_delete",
+        ):
+            remaining = [item for index, item in enumerate(intents) if index != int(choice)]
+            _persist_intents(outline, remaining)
+            st.session_state.outline_selected_card = max(0, int(choice) - 1)
+            st.rerun()
+    with actions[3]:
+        if st.button("插入下一页", use_container_width=True, key="outline_intent_insert"):
+            insert_at = int(choice) + 1
+            blank = SlideIntent(
+                order=insert_at,
+                chapter_id=intent.chapter_id,
+                page_task="待填写页面任务",
+                notes=f"第 {insert_at + 1} 页",
+            )
+            next_intents = [*intents[:insert_at], blank, *intents[insert_at:]]
+            _persist_intents(outline, next_intents)
+            st.session_state.outline_selected_card = insert_at
+            st.rerun()
 
 
 def _render_task_meta(
@@ -257,11 +571,26 @@ def _render_task_meta(
 
     st.caption("尚未确认汇报任务。")
 
+
+def _render_draft_banner(document_count: int) -> None:
+    if document_count > 0:
+        return
+    st.warning("无项目证据 · 草稿模式 — 可继续规划与生成，但不得正式交付。")
+
+
 def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> None:
     has_mission = snapshot.mission is not None
     has_request = snapshot.presentation_request is not None
     outline, storyline, slides = _load_outline_storyline(project_id)
     cards = _intent_cards_from_sources(outline=outline, snapshot=snapshot, slides=slides)
+
+    try:
+        from archium.ui.project_progress_card import load_project_progress_snapshot
+
+        progress = load_project_progress_snapshot()
+        _render_draft_banner(int(progress.document_count) if progress else 0)
+    except Exception:
+        pass
 
     if not has_mission and not has_request and outline is None and not cards:
         st.info("尚未确认大纲。先描述汇报任务，再生成结构。")
@@ -272,34 +601,77 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
     with left:
         _render_chapter_tree(outline=outline, storyline=storyline, cards=cards)
     with mid:
-        _render_intent_cards(cards)
+        _render_intent_cards(cards, outline=outline)
     with right:
         _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
 
     st.divider()
-    cols = st.columns(3)
+    cols = st.columns(2)
     with cols[0]:
         if st.button("重新规划", use_container_width=True, key="outline_replan"):
             project_mission.reset_planning_session()
             st.rerun()
     with cols[1]:
         ready = has_request or has_mission or outline is not None or bool(cards)
-        if st.button(
-            "确认大纲并进入生成",
+        if outline is not None and outline.is_approved:
+            st.success(f"大纲已确认（v{outline.version}）")
+            if st.button(
+                "进入生成 →",
+                type="primary",
+                use_container_width=True,
+                key="outline_goto_generate",
+            ):
+                st.switch_page(get_app_page("generate"))
+        elif st.button(
+            "确认大纲并开始生成 →",
             type="primary",
             use_container_width=True,
             disabled=not ready,
             key="outline_confirm",
         ):
-            st.switch_page(get_app_page("generate"))
-    with cols[2]:
-        from archium.ui import icons
-
-        st.page_link(get_app_page("generate"), label="直接前往生成", icon=icons.GENERATE)
+            _confirm_outline_and_go(project_id, outline=outline)
 
     if not has_request and has_mission:
         with st.expander("继续完善任务描述", expanded=False):
             _render_task_composer(project_id)
+
+
+def _confirm_outline_and_go(project_id: UUID, *, outline: OutlinePlan | None) -> None:
+    from archium.application.outline_approval_service import OutlineApprovalService
+    from archium.exceptions import WorkflowError
+    from archium.ui.error_handlers import format_user_error
+
+    try:
+        with get_session() as session:
+            result = OutlineApprovalService(session).approve_for_project(
+                project_id,
+                approved_by="user",
+                expected_revision=outline.version if outline is not None else None,
+            )
+            session.commit()
+        records = list(st.session_state.get("outline_approval_records") or [])
+        records.append(
+            {
+                "outline_id": str(result.outline_id) if result.outline_id else None,
+                "presentation_id": str(result.presentation_id)
+                if result.presentation_id
+                else None,
+                "status": result.approval_status,
+                "revision": result.approved_revision,
+                "hash": result.outline_hash,
+                "by": result.approved_by,
+                "at": result.approved_at.isoformat(),
+            }
+        )
+        st.session_state.outline_approval_records = records[-20:]
+        if result.presentation_id is not None:
+            st.session_state.selected_presentation_id = str(result.presentation_id)
+        st.success(result.message)
+        st.switch_page(get_app_page("generate"))
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
 
 
 def render() -> None:
@@ -308,7 +680,7 @@ def render() -> None:
 
     project_id = render_flow_project_context(allow_create=False, key_prefix="outline")
     if project_id is None:
-        render_stage_nav("outline")
+        render_stage_nav("outline", include_next=False)
         return
 
     snapshot = project_mission.load_planning_snapshot(project_id)
@@ -324,5 +696,5 @@ def render() -> None:
     if show_advanced:
         project_mission.render(embedded=True)
 
-    st.divider()
-    render_stage_nav("outline")
+    # Outline owns the confirm CTA — do not render a second「前往生成」.
+    render_stage_nav("outline", include_next=False)

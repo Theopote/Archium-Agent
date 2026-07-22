@@ -44,6 +44,31 @@ def _apply_visual_result(result: object) -> None:
         st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
 
 
+_INSPECTOR_TABS = ("属性", "布局", "内容", "AI", "检查")
+
+
+def _select_inspector_tab() -> str:
+    """Only the active inspector panel should run work on each rerun."""
+    if hasattr(st, "segmented_control"):
+        active = st.segmented_control(
+            "检查器",
+            options=list(_INSPECTOR_TABS),
+            key="studio_inspector_tab",
+            label_visibility="collapsed",
+        )
+    else:
+        active = st.radio(
+            "检查器",
+            options=list(_INSPECTOR_TABS),
+            horizontal=True,
+            key="studio_inspector_tab",
+            label_visibility="collapsed",
+        )
+    if active not in _INSPECTOR_TABS:
+        return _INSPECTOR_TABS[0]
+    return str(active)
+
+
 def _render_inspector_tabs(
     *,
     slide_snapshot: SlideVisualSnapshot | None,
@@ -51,61 +76,135 @@ def _render_inspector_tabs(
     project_id: UUID,
     presentation_id: UUID,
 ) -> None:
-    """Right-column inspector tabs."""
+    """Right-column inspector — lazy by active tab (not st.tabs)."""
     from archium.ui.llm_settings import get_ui_effective_settings
     from archium.ui.studio.scene_repair_prompt_panel import render_deferred_scene_repair_panel
 
-    tab_props, tab_layout, tab_content, tab_ai, tab_check = st.tabs(
-        ["属性", "布局", "内容", "AI", "检查"]
-    )
-
-    with tab_props:
+    active = _select_inspector_tab()
+    if active == "属性":
         render_slide_properties(
             slide_snapshot=slide_snapshot,
             advanced=advanced,
             project_id=project_id,
         )
-
-    with tab_layout:
+        return
+    if active == "布局":
         render_layout_candidates_panel(slide_snapshot=slide_snapshot, advanced=advanced)
-
-    with tab_content:
+        return
+    if active == "内容":
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
-
-    with tab_ai:
+        return
+    if active == "AI":
         render_ai_workspace(
             slide_snapshot=slide_snapshot,
             presentation_id=presentation_id,
             settings=get_ui_effective_settings(),
         )
+        return
 
-    with tab_check:
-        st.markdown("**检查**")
-        st.caption(
-            "自动安全修复（越界 / contain / 缺省 / 无损对齐）可静默应用；"
-            "其余归入修改建议，需确认。"
-        )
-        st.markdown("`安全修复 · 可自动应用`　　`AI / QA 修改 · 需确认`")
-        render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
-        st.divider()
-        st.markdown("**人工复核**")
-        render_human_review_panel(
-            presentation_id=presentation_id,
-            slide_snapshot=slide_snapshot,
-        )
+    st.markdown("**检查**")
+    st.caption(
+        "自动安全修复（越界 / contain / 缺省 / 无损对齐）可静默应用；"
+        "其余归入修改建议，需确认。"
+    )
+    st.markdown("`安全修复 · 可自动应用`　　`AI / QA 修改 · 需确认`")
+    render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
+    st.divider()
+    st.markdown("**人工复核**")
+    render_human_review_panel(
+        presentation_id=presentation_id,
+        slide_snapshot=slide_snapshot,
+    )
 
 
-def _render_bottom_dock(
+def _render_view_controls() -> None:
+    """Compact view menu instead of a full engineering control row."""
+    if "studio_show_nav" not in st.session_state:
+        st.session_state.studio_show_nav = True
+    if "studio_show_inspector" not in st.session_state:
+        st.session_state.studio_show_inspector = True
+
+    show_nav = bool(st.session_state.studio_show_nav)
+    show_inspector = bool(st.session_state.studio_show_inspector)
+    is_three = show_nav and show_inspector
+
+    cols = st.columns([1.2, 4])
+    with cols[0]:
+        with st.popover("视图", use_container_width=True):
+            st.checkbox("页面列表", key="studio_show_nav")
+            st.checkbox("检查器", key="studio_show_inspector")
+            if is_three:
+                st.caption("当前：三栏")
+                if st.button("画布专注", use_container_width=True, key="studio_canvas_focus"):
+                    st.session_state.studio_show_nav = False
+                    st.session_state.studio_show_inspector = False
+                    st.rerun()
+            else:
+                st.caption("当前：专注 / 双栏")
+                if st.button("恢复三栏", use_container_width=True, key="studio_restore_three"):
+                    st.session_state.studio_show_nav = True
+                    st.session_state.studio_show_inspector = True
+                    st.rerun()
+    with cols[1]:
+        bits = []
+        if show_nav:
+            bits.append("页面列表")
+        if show_inspector:
+            bits.append("检查器")
+        st.caption("视图：" + (" · ".join(bits) if bits else "画布专注"))
+
+
+def _render_deck_issue_list(*, context: object) -> None:
+    """Full-deck issue list only — no repair controls (those live in 检查 tab)."""
+    from archium.ui.page_status_board_panel import (
+        load_page_status_board,
+        status_label,
+        status_short_detail,
+    )
+
+    try:
+        board = load_page_status_board(context.presentation.id)
+    except Exception:
+        st.caption("问题列表暂不可用。")
+        return
+
+    attention = [
+        row for row in board.rows if row.severity in {"warn", "error"}
+    ]
+    if not attention:
+        st.caption("当前没有需处理的全稿问题。")
+        return
+
+    for row in attention:
+        title = row.title or f"第 {row.order + 1} 页"
+        detail = status_short_detail(row) or status_label(row)
+        label = f"第 {row.order + 1} 页 · {title} · {detail}"
+        if st.button(
+            label,
+            key=f"studio_deck_issue_{context.presentation.id}_{row.order}",
+            use_container_width=True,
+        ):
+            if row.slide_id is not None:
+                st.session_state.studio_focus_slide_id = str(row.slide_id)
+            st.rerun()
+
+
+def _render_studio_info_menus(
     *,
     context: object,
     advanced: bool,
     slide_snapshot: SlideVisualSnapshot | None,
     show_progress: bool,
 ) -> None:
-    """Collapsible dock: 状态 / 问题 / 历史."""
-    with st.expander("状态 / 问题 / 历史", expanded=False):
-        dock_tabs = st.tabs(["状态", "问题", "历史"])
-        with dock_tabs[0]:
+    """Top-toolbar info menus (not a fake fixed dock).
+
+    - 状态 / 历史：后台进度与修订
+    - 问题：全稿问题列表（点击聚焦页面）
+    - 当前页修复操作只在右侧「检查」Tab
+    """
+    cols = st.columns(3)
+    with cols[0]:
+        with st.popover("状态", use_container_width=True):
             if show_progress:
                 render_workflow_progress_panel(
                     context.project.id,
@@ -123,27 +222,21 @@ def _render_bottom_dock(
                 presentation_id=context.presentation.id,
                 project_id=context.project.id,
                 compact=True,
-                key_prefix="studio_dock_status",
+                key_prefix="studio_info_status",
                 title="",
             )
-        with dock_tabs[1]:
-            from archium.ui.studio.human_review_panel import render_human_review_panel
-            from archium.ui.studio.scene_repair_prompt_panel import (
-                render_deferred_scene_repair_panel,
-            )
-
-            st.caption("安全修复与需确认问题。")
-            render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
-            render_human_review_panel(
-                presentation_id=context.presentation.id,
-                slide_snapshot=slide_snapshot,
-            )
-        with dock_tabs[2]:
+    with cols[1]:
+        with st.popover("问题", use_container_width=True):
+            st.caption("全稿问题列表。点击后聚焦对应页面；修复请用右侧「检查」。")
+            _render_deck_issue_list(context=context)
+    with cols[2]:
+        with st.popover("历史", use_container_width=True):
             render_history_panel(
                 context=context,
                 advanced=advanced,
                 slide_snapshot=slide_snapshot,
             )
+
 
 def render(
     *,
@@ -162,7 +255,7 @@ def render(
 
     if show_header:
         st.markdown("### 工作室")
-        st.caption("页面列表 · 主画布 · 属性/布局/AI。历史与生成状态收在底部 Dock。")
+        st.caption("页面列表 · 主画布 · 检查器。状态 / 问题 / 历史在顶部菜单。")
 
     critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
     context = render_studio_selection(
@@ -177,32 +270,21 @@ def render(
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
+    advanced = bool(st.session_state.get("studio_advanced_mode", False))
 
     render_studio_toolbar(
         context=context,
         slide_snapshot=slide_snapshot,
         show_export=show_export,
     )
+    _render_studio_info_menus(
+        context=context,
+        advanced=advanced,
+        slide_snapshot=slide_snapshot,
+        show_progress=show_progress,
+    )
 
-    layout_cols = st.columns([1, 1, 1, 1.2])
-    if "studio_show_nav" not in st.session_state:
-        st.session_state.studio_show_nav = True
-    if "studio_show_inspector" not in st.session_state:
-        st.session_state.studio_show_inspector = True
-    with layout_cols[0]:
-        st.toggle("页面列表", key="studio_show_nav")
-    with layout_cols[1]:
-        st.toggle("检查器", key="studio_show_inspector")
-    with layout_cols[2]:
-        if st.button("画布最大化", use_container_width=True, key="studio_canvas_maximize"):
-            st.session_state.studio_show_nav = False
-            st.session_state.studio_show_inspector = False
-            st.rerun()
-    with layout_cols[3]:
-        if st.button("恢复三栏", use_container_width=True, key="studio_restore_three"):
-            st.session_state.studio_show_nav = True
-            st.session_state.studio_show_inspector = True
-            st.rerun()
+    _render_view_controls()
 
     show_nav = bool(st.session_state.studio_show_nav)
     show_inspector = bool(st.session_state.studio_show_inspector)
@@ -223,7 +305,6 @@ def render(
         with left_col:
             selected_index = render_slide_navigator(context=context)
 
-    advanced = bool(st.session_state.get("studio_advanced_mode", False))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
 
     with center_col:
@@ -244,10 +325,3 @@ def render(
                 project_id=context.project.id,
                 presentation_id=context.presentation.id,
             )
-
-    _render_bottom_dock(
-        context=context,
-        advanced=advanced,
-        slide_snapshot=slide_snapshot,
-        show_progress=show_progress,
-    )

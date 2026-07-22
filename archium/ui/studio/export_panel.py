@@ -137,7 +137,13 @@ def _run_generate_layouts(
         st.error(format_user_error(exc))
 
 
-def _export_pptx(*, presentation_id: UUID, settings: Settings) -> None:
+def _export_pptx(
+    *,
+    project_id: UUID,
+    presentation_id: UUID,
+    settings: Settings,
+    qa_status: str = "unknown",
+) -> None:
     try:
         with st.spinner("正在导出 PPTX…"), get_session() as session:
             pptx_export_result: RenderResult = export_presentation_from_studio(
@@ -148,7 +154,13 @@ def _export_pptx(*, presentation_id: UUID, settings: Settings) -> None:
         path = pptx_export_result.editable_pptx_path
         if path:
             st.session_state.last_studio_pptx_path = str(path)
-            _append_delivery_record("PPTX", str(path))
+            _append_delivery_record(
+                "PPTX",
+                str(path),
+                project_id=project_id,
+                presentation_id=presentation_id,
+                qa_status=qa_status,
+            )
             st.success("PPTX 导出完成。")
             st.code(path, language=None)
         else:
@@ -159,8 +171,30 @@ def _export_pptx(*, presentation_id: UUID, settings: Settings) -> None:
         st.error(format_user_error(exc))
 
 
-def _append_delivery_record(fmt: str, path: str) -> None:
+def _append_delivery_record(
+    fmt: str,
+    path: str,
+    *,
+    project_id: UUID,
+    presentation_id: UUID,
+    qa_status: str = "unknown",
+) -> None:
     from datetime import UTC, datetime
+
+    from archium.application.delivery_record_service import DeliveryRecordService
+
+    try:
+        with get_session() as session:
+            DeliveryRecordService(session).record_export(
+                project_id=project_id,
+                presentation_id=presentation_id,
+                format=fmt,
+                file_uri=path,
+                qa_status=qa_status,
+            )
+            session.commit()
+    except Exception:
+        pass
 
     records = list(st.session_state.get("delivery_export_records") or [])
     records.append(
@@ -168,12 +202,21 @@ def _append_delivery_record(fmt: str, path: str) -> None:
             "format": fmt,
             "path": path,
             "when": datetime.now(UTC).astimezone().strftime("%Y-%m-%d %H:%M"),
+            "project_id": str(project_id),
+            "presentation_id": str(presentation_id),
+            "qa_status": qa_status,
         }
     )
     st.session_state.delivery_export_records = records[-20:]
 
 
-def _export_pdf(*, presentation_id: UUID, settings: Settings) -> None:
+def _export_pdf(
+    *,
+    project_id: UUID,
+    presentation_id: UUID,
+    settings: Settings,
+    qa_status: str = "unknown",
+) -> None:
     try:
         with st.spinner("正在导出 PDF…"), get_session() as session:
             pdf_export_result: RenderResult = export_presentation_pdf_from_studio(
@@ -184,12 +227,24 @@ def _export_pdf(*, presentation_id: UUID, settings: Settings) -> None:
         pdf_path = pdf_export_result.pdf_path
         if pdf_path:
             st.session_state.last_studio_pdf_path = str(pdf_path)
-            _append_delivery_record("PDF", str(pdf_path))
+            _append_delivery_record(
+                "PDF",
+                str(pdf_path),
+                project_id=project_id,
+                presentation_id=presentation_id,
+                qa_status=qa_status,
+            )
             st.success("PDF 导出完成。")
             st.code(pdf_path, language=None)
         elif pdf_export_result.editable_pptx_path:
             st.session_state.last_studio_pptx_path = str(pdf_export_result.editable_pptx_path)
-            _append_delivery_record("PPTX", str(pdf_export_result.editable_pptx_path))
+            _append_delivery_record(
+                "PPTX",
+                str(pdf_export_result.editable_pptx_path),
+                project_id=project_id,
+                presentation_id=presentation_id,
+                qa_status=qa_status,
+            )
             st.warning("PPTX 已导出，但未检测到 LibreOffice，无法生成 PDF。")
             st.code(pdf_export_result.editable_pptx_path, language=None)
         else:
@@ -202,6 +257,16 @@ def _export_pdf(*, presentation_id: UUID, settings: Settings) -> None:
         st.error(format_user_error(exc))
 
 
+def _project_has_documents(project_id: UUID) -> bool:
+    from archium.infrastructure.database.repositories import DocumentRepository
+
+    try:
+        with get_session() as session:
+            return len(DocumentRepository(session).list_by_project(project_id)) > 0
+    except Exception:
+        return True
+
+
 def _render_quick_export_popover(
     *,
     context: StudioPresentationContext,
@@ -209,10 +274,13 @@ def _render_quick_export_popover(
     key_prefix: str = "studio",
 ) -> None:
     """Compact export entry — does not dominate the editing chrome."""
-    export_disabled = not context.ready_for_export
+    has_docs = _project_has_documents(context.project.id)
+    export_disabled = (not context.ready_for_export) or (not has_docs)
     with st.popover("导出", use_container_width=True):
         st.caption("快速导出当前汇报。完整导出与质量检查请到「交付」。")
-        if export_disabled:
+        if not has_docs:
+            st.caption("概念草稿不可正式导出，请先绑定项目资料。")
+        elif not context.ready_for_export:
             st.caption("导出需先完成全部页面版式。")
         if st.button(
             "导出 PPTX",
@@ -220,14 +288,22 @@ def _render_quick_export_popover(
             disabled=export_disabled,
             key=f"{key_prefix}_export_pptx",
         ):
-            _export_pptx(presentation_id=context.presentation.id, settings=settings)
+            _export_pptx(
+                project_id=context.project.id,
+                presentation_id=context.presentation.id,
+                settings=settings,
+            )
         if st.button(
             "导出 PDF",
             use_container_width=True,
             disabled=export_disabled,
             key=f"{key_prefix}_export_pdf",
         ):
-            _export_pdf(presentation_id=context.presentation.id, settings=settings)
+            _export_pdf(
+                project_id=context.project.id,
+                presentation_id=context.presentation.id,
+                settings=settings,
+            )
         from archium.ui import icons
 
         st.page_link(get_app_page("deliver"), label="打开交付页", icon=icons.DELIVER)
@@ -304,7 +380,8 @@ def render_export_panel(
     project_id = context.project.id
     presentation_id = context.presentation.id
     settings = get_ui_effective_settings()
-    export_disabled = not context.ready_for_export
+    has_docs = _project_has_documents(project_id)
+    export_disabled = (not context.ready_for_export) or (not has_docs)
     preferences = _render_scene_preset_row()
 
     (
@@ -355,7 +432,11 @@ def render_export_panel(
             disabled=export_disabled,
             key="deliver_export_pptx",
         ):
-            _export_pptx(presentation_id=presentation_id, settings=settings)
+            _export_pptx(
+                project_id=project_id,
+                presentation_id=presentation_id,
+                settings=settings,
+            )
 
     with col_pdf:
         if st.button(
@@ -364,7 +445,13 @@ def render_export_panel(
             disabled=export_disabled,
             key="deliver_export_pdf",
         ):
-            _export_pdf(presentation_id=presentation_id, settings=settings)
+            _export_pdf(
+                project_id=project_id,
+                presentation_id=presentation_id,
+                settings=settings,
+            )
 
-    if export_disabled:
+    if not has_docs:
+        st.caption("概念草稿不可正式导出，请先绑定项目资料。")
+    elif export_disabled:
         st.caption("导出需先完成全部页面版式。")

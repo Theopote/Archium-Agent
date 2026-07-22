@@ -214,6 +214,13 @@ def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     assert "章节与页面树" in text
     assert "叙事弧线" in text
     assert "页面标题" in text
+    assert "确认大纲并开始生成" in text
+    assert "直接前往生成" not in text
+    assert "OutlineApprovalService" in text
+    assert "include_next=False" in text
+    assert "保存当前页" in text
+    assert "outline_intent_mode" in text
+    assert "outline_sec_toggle_" in text
 
 
 def test_generate_stage_shows_page_queue() -> None:
@@ -276,7 +283,10 @@ def test_edit_stage_embeds_studio_without_inner_header() -> None:
     assert "show_progress=True" in edit_text
     assert "show_header: bool | None = None" in studio_text
     assert 'st.markdown("### 工作室")' in studio_text
-    assert "状态 / 问题 / 历史" in studio_text
+    assert "_render_studio_info_menus" in studio_text
+    assert "_render_deck_issue_list" in studio_text
+    assert "_render_bottom_dock" not in studio_text
+    assert 'st.popover("问题"' in studio_text
 
 
 def test_studio_export_is_popover_not_top_panel() -> None:
@@ -303,7 +313,7 @@ def test_studio_export_is_popover_not_top_panel() -> None:
     assert "打开交付页" in export_text
 
 
-def test_studio_inspector_uses_five_tabs_with_ai_workspace() -> None:
+def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
     studio_src = (
         Path(__file__).resolve().parents[3]
         / "archium"
@@ -312,15 +322,22 @@ def test_studio_inspector_uses_five_tabs_with_ai_workspace() -> None:
         / "studio.py"
     )
     text = studio_src.read_text(encoding="utf-8")
-    assert '["属性", "布局", "内容", "AI", "检查"]' in text
+    assert '["属性", "布局", "内容", "AI", "检查"]' in text or (
+        '"属性", "布局", "内容", "AI", "检查"' in text
+    )
     assert "def _render_inspector_tabs" in text
+    assert "_select_inspector_tab" in text
+    assert "st.tabs(" not in text
+    assert "_render_view_controls" in text
+    assert 'st.popover("视图"' in text
     assert "render_ai_workspace" in text
-    assert "_render_bottom_dock" in text
-    assert "逐页状态板" not in text
-    ai_block_start = text.index("with tab_ai:")
-    check_block_start = text.index("with tab_check:")
-    ai_block = text[ai_block_start:check_block_start]
-    assert "render_ai_workspace" in ai_block
-    assert "render_human_review_panel" not in ai_block
-    assert "render_deferred_scene_repair_panel" in text[check_block_start:]
-    assert "render_human_review_panel" in text[check_block_start:]
+    assert "_render_bottom_dock" not in text
+    assert "_render_studio_info_menus" in text
+    # Lazy panels: AI and check are gated, not both under st.tabs contexts.
+    assert 'if active == "AI":' in text
+    assert "render_deferred_scene_repair_panel" in text
+    assert "render_human_review_panel" in text
+    info_start = text.index("def _render_studio_info_menus")
+    info_block = text[info_start : text.index("def render(", info_start)]
+    assert "render_deferred_scene_repair_panel" not in info_block
+    assert "render_human_review_panel" not in info_block

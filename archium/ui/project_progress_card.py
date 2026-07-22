@@ -35,6 +35,7 @@ class ProjectProgressSnapshot:
     has_brief: bool
     ready_for_export: bool
     updated_at: datetime
+    outline_approved: bool = False
 
     @property
     def pending_count(self) -> int:
@@ -46,7 +47,7 @@ class ProjectProgressSnapshot:
 
     @property
     def outline_label(self) -> str:
-        if self.has_brief:
+        if self.outline_approved or self.has_brief:
             return "已确认"
         if self.presentation_id is not None:
             return "进行中"
@@ -160,6 +161,7 @@ def _snapshot_for_project(
     slide_count = 0
     layout_ready_count = 0
     has_brief = False
+    outline_approved = False
     ready_for_export = False
     presentation_type: str | None = None
     updated_at = project.updated_at
@@ -172,6 +174,16 @@ def _snapshot_for_project(
         has_brief = len(briefs) > 0
         if briefs:
             presentation_type = briefs[0].presentation_type.value
+        outline = None
+        if presentation.current_outline_id is not None:
+            outline = PresentationRepository(session).get_outline(presentation.current_outline_id)
+        if outline is None:
+            outlines = PresentationRepository(session).list_outlines(presentation.id)
+            outline = outlines[0] if outlines else None
+        if outline is not None:
+            from archium.domain.enums import ApprovalStatus
+
+            outline_approved = outline.approval_status == ApprovalStatus.APPROVED
         ready_for_export = presentation_has_visual_layout(session, presentation.id)
         updated_at = max(project.updated_at, presentation.updated_at)
 
@@ -187,6 +199,7 @@ def _snapshot_for_project(
         has_brief=has_brief,
         ready_for_export=ready_for_export,
         updated_at=updated_at,
+        outline_approved=outline_approved,
     )
 
 

@@ -141,11 +141,37 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         warn_count = int(deck_qa.deck_qa_report.get("warning_count") or 0)
         blocker_count = int(deck_qa.deck_qa_report.get("blocker_count") or 0)
 
-    cols = st.columns(4)
-    cols[0].metric("PPTX", "可导出" if ready else "版式未齐")
-    cols[1].metric("PDF", "可导出" if ready else "版式未齐")
-    cols[2].metric("待处理页", pending if pending else warn_count)
+    document_count = _project_document_count(context.project.id)
+    if document_count <= 0:
+        st.warning("无项目证据 · 草稿模式 · 不得正式交付（请先绑定资料）")
+
+    cols = st.columns(5)
+    cols[0].metric(
+        "页面完成",
+        f"{context.layout_ready_count}/{context.slide_count}"
+        if context.slide_count
+        else "0/0",
+    )
+    cols[1].metric("待完成页", pending)
+    cols[2].metric("警告", warn_count)
     cols[3].metric("阻塞项", blocker_count)
+    cols[4].metric(
+        "导出",
+        "可导出" if ready and document_count > 0 else ("草稿" if document_count <= 0 else "版式未齐"),
+    )
+    st.caption(
+        "PPTX / PDF 目前共用版式准备度；后续将分别建模 pptx_readiness / pdf_readiness。"
+    )
+
+
+def _project_document_count(project_id: UUID) -> int:
+    from archium.infrastructure.database.repositories import DocumentRepository
+
+    try:
+        with get_session() as session:
+            return len(DocumentRepository(session).list_by_project(project_id))
+    except Exception:
+        return 0
 
 
 def _render_qa(project_id: UUID) -> None:
@@ -157,16 +183,36 @@ def _render_qa(project_id: UUID) -> None:
         render_review_stage(project_id)
 
 
-def _render_delivery_records() -> None:
+def _render_delivery_records(presentation_id: UUID) -> None:
     st.markdown("#### 版本记录")
-    records = list(st.session_state.get("delivery_export_records") or [])
+    from archium.application.delivery_record_service import DeliveryRecordService
+
+    try:
+        with get_session() as session:
+            records = DeliveryRecordService(session).list_for_presentation(
+                presentation_id, limit=12
+            )
+    except Exception:
+        records = []
+
     if not records:
-        st.caption("尚无导出记录。完成导出后会显示格式、时间与路径。")
+        # Legacy session fallback for in-flight browser sessions before DB persist.
+        legacy = list(st.session_state.get("delivery_export_records") or [])
+        if not legacy:
+            st.caption("尚无导出记录。完成导出后会显示格式、时间与路径。")
+            return
+        for item in reversed(legacy[-12:]):
+            st.markdown(
+                f"- **{item.get('format', '文件')}** · {item.get('when', '')}"
+                f" · `{item.get('path', '')}`"
+            )
         return
-    for item in reversed(records[-12:]):
+
+    for item in records:
+        when = item.exported_at.astimezone().strftime("%Y-%m-%d %H:%M")
+        hash_note = f" · `{item.file_hash}`" if item.file_hash else ""
         st.markdown(
-            f"- **{item.get('format', '文件')}** · {item.get('when', '')}"
-            f" · `{item.get('path', '')}`"
+            f"- **{item.format}** · {when} · QA {item.qa_status} · `{item.file_uri}`{hash_note}"
         )
 
 
@@ -196,6 +242,6 @@ def render() -> None:
     render_export_panel(context=context, slide_snapshot=slide_snapshot)
 
     st.divider()
-    _render_delivery_records()
+    _render_delivery_records(context.presentation.id)
     st.divider()
     render_stage_nav("deliver")

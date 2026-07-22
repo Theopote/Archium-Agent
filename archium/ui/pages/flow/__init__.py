@@ -52,20 +52,26 @@ def evaluate_stage_gate(
 
     if stage_id == "materials":
         if snapshot.document_count <= 0:
-            blockers.append("至少绑定一份项目资料")
+            warnings.append(
+                "尚未绑定项目资料，后续生成将标记为概念草稿，不得正式交付"
+            )
         return StageGateResult(
-            can_proceed=not blockers,
+            can_proceed=True,
             blockers=tuple(blockers),
             warnings=tuple(warnings),
         )
 
     if stage_id == "outline":
         if snapshot.document_count <= 0:
-            blockers.append("至少绑定一份项目资料")
-        if not snapshot.has_brief and snapshot.presentation_id is None:
+            warnings.append("尚未绑定项目资料，生成内容仅作为概念草稿")
+        if (
+            not snapshot.outline_approved
+            and not snapshot.has_brief
+            and snapshot.presentation_id is None
+        ):
             blockers.append("确认汇报对象与大纲结构（生成大纲）")
-        elif not snapshot.has_brief:
-            warnings.append("建议确认 Brief / 大纲后再生成")
+        elif not snapshot.outline_approved and not snapshot.has_brief:
+            warnings.append("建议确认大纲后再生成")
         return StageGateResult(
             can_proceed=not blockers,
             blockers=tuple(blockers),
@@ -88,6 +94,19 @@ def evaluate_stage_gate(
             blockers.append("尚无可编辑页面，请先完成生成")
         elif not snapshot.ready_for_export:
             warnings.append("部分页面版式未齐，交付时可能受限")
+        if snapshot.document_count <= 0:
+            warnings.append("无项目证据 · 草稿模式，正式交付将被阻止")
+        return StageGateResult(
+            can_proceed=not blockers,
+            blockers=tuple(blockers),
+            warnings=tuple(warnings),
+        )
+
+    if stage_id == "deliver":
+        if snapshot.document_count <= 0:
+            blockers.append("概念草稿不可正式交付：请先绑定至少一份项目资料")
+        elif not snapshot.ready_for_export:
+            warnings.append("版式未齐，导出可能不完整")
         return StageGateResult(
             can_proceed=not blockers,
             blockers=tuple(blockers),
@@ -107,26 +126,58 @@ def _stage_marker(status: str) -> str:
     }.get(status, "○")
 
 
+def stage_completion_status(
+    stage_id: str,
+    snapshot: ProjectProgressSnapshot | None,
+) -> str:
+    """Real completion for one stage from project data (never inferred from page index)."""
+    if snapshot is None:
+        return "blocked"
+
+    if stage_id == "materials":
+        return "done" if snapshot.document_count > 0 else "warn"
+
+    if stage_id == "outline":
+        if snapshot.has_brief or getattr(snapshot, "outline_approved", False):
+            return "done"
+        return "warn" if snapshot.presentation_id else "todo"
+
+    if stage_id == "generate":
+        if snapshot.slide_count <= 0:
+            return "todo"
+        if snapshot.pending_count > 0:
+            return "warn"
+        return "done"
+
+    if stage_id == "edit":
+        if snapshot.slide_count <= 0:
+            return "blocked"
+        return "done" if snapshot.ready_for_export else "warn"
+
+    if stage_id == "deliver":
+        return "done" if snapshot.ready_for_export else "todo"
+
+    return "todo"
+
+
 def _stage_statuses(
     current_stage_id: str,
     snapshot: ProjectProgressSnapshot | None,
 ) -> dict[str, str]:
-    ids = primary_stage_ids()
-    current_index = ids.index(current_stage_id)
+    """Highlight current page; completion comes from snapshot, not navigation order."""
     statuses: dict[str, str] = {}
-    for index, stage_id in enumerate(ids):
-        if index < current_index:
-            statuses[stage_id] = "done"
-        elif index == current_index:
-            gate = evaluate_stage_gate(stage_id, snapshot)
-            if gate.has_blockers and stage_id in {"materials", "outline"}:
-                statuses[stage_id] = "blocked"
-            elif gate.warnings:
-                statuses[stage_id] = "warn"
+    for stage in primary_stages():
+        completion = stage_completion_status(stage.id, snapshot)
+        if stage.id == current_stage_id:
+            # Current page is highlighted; do not fake "done" for unfinished work.
+            if completion in {"blocked", "todo"}:
+                statuses[stage.id] = "blocked" if completion == "blocked" else "current"
+            elif completion == "warn":
+                statuses[stage.id] = "warn"
             else:
-                statuses[stage_id] = "current"
+                statuses[stage.id] = "current"
         else:
-            statuses[stage_id] = "todo"
+            statuses[stage.id] = completion
     return statuses
 
 
@@ -211,8 +262,16 @@ def render_flow_project_context(
     return UUID(str(selected))
 
 
-def render_stage_nav(stage_id: str, *, primary_only: bool = False) -> None:
-    """Conditional primary next-stage action; previous stage is secondary."""
+def render_stage_nav(
+    stage_id: str,
+    *,
+    primary_only: bool = False,
+    include_next: bool = True,
+) -> None:
+    """Conditional primary next-stage action; previous stage is secondary.
+
+    ``include_next=False`` lets a stage page own its confirm CTA (e.g. 大纲).
+    """
     snapshot = None
     try:
         snapshot = load_project_progress_snapshot()
@@ -220,15 +279,19 @@ def render_stage_nav(stage_id: str, *, primary_only: bool = False) -> None:
         snapshot = None
 
     prev = previous_stage(stage_id)
-    nxt = next_stage(stage_id)
+    nxt = next_stage(stage_id) if include_next else None
     gate = evaluate_stage_gate(stage_id, snapshot)
 
     st.divider()
-    if gate.blockers:
-        st.warning("进入下一阶段前还需完成：\n" + "\n".join(f"• {item}" for item in gate.blockers))
-    elif gate.warnings:
-        for item in gate.warnings:
-            st.caption(f"提示：{item}")
+    if include_next:
+        if gate.blockers:
+            st.warning(
+                "进入下一阶段前还需完成：\n"
+                + "\n".join(f"• {item}" for item in gate.blockers)
+            )
+        elif gate.warnings:
+            for item in gate.warnings:
+                st.caption(f"提示：{item}")
 
     left, right = st.columns([1, 1.4])
     with left:

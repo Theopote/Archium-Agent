@@ -967,3 +967,27 @@ class DeliverablePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     mission: Mapped[ProjectMissionORM] = relationship(back_populates="deliverable_plans")
+
+
+class DeliveryRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "delivery_records"
+    __table_args__ = (
+        Index("ix_delivery_records_project_id", "project_id"),
+        Index("ix_delivery_records_presentation_id", "presentation_id"),
+        Index("ix_delivery_records_exported_at", "exported_at"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    presentation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
+    )
+    revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    format: Mapped[str] = mapped_column(String(40), nullable=False)
+    file_uri: Mapped[str] = mapped_column(String(2000), nullable=False)
+    file_hash: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    qa_status: Mapped[str] = mapped_column(String(40), nullable=False, default="unknown")
+    exported_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now
+    )

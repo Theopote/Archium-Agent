@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import streamlit as st
 
 from archium.infrastructure.database.session import get_session
@@ -16,6 +18,8 @@ from archium.ui.project_progress_card import (
     _format_relative_time,
 )
 from archium.ui.workspace_service import list_project_presentations
+
+logger = logging.getLogger(__name__)
 
 
 def _select_and_continue(snapshot: ProjectProgressSnapshot) -> None:
@@ -54,6 +58,21 @@ def _render_empty_state() -> None:
             )
 
 
+def _render_load_failed(exc: Exception) -> None:
+    logger.exception("Failed to load home project snapshots: %s", exc)
+    st.error("项目列表暂时无法加载，请重试。")
+    st.caption("这通常是数据或连接问题，并不表示你没有项目。")
+    if st.button("重试", type="primary", key="home_retry_load"):
+        st.rerun()
+    from archium.ui import icons
+
+    st.page_link(
+        get_app_page("project-management"),
+        label="前往项目管理",
+        icon=icons.PROJECT,
+    )
+
+
 def _render_progress_bar(snapshot: ProjectProgressSnapshot) -> None:
     if snapshot.slide_count <= 0:
         st.progress(0.0, text=snapshot.completion_label)
@@ -67,6 +86,7 @@ def _render_pending_issues(snapshot: ProjectProgressSnapshot) -> None:
     try:
         tasks = load_cockpit_task_summary(snapshot)
     except Exception:
+        logger.exception("Failed to load cockpit task summary")
         st.caption("任务摘要暂不可用。")
         return
     if not tasks.has_tasks:
@@ -85,13 +105,23 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
         with get_session() as session:
             presentations = list_project_presentations(session, snapshot.project_id)
     except Exception:
+        logger.exception("Failed to list presentations for home")
         presentations = []
 
-    export_records = [
-        item
-        for item in (st.session_state.get("delivery_export_records") or [])
-        if str(item.get("project_id") or "") in {"", str(snapshot.project_id)}
-    ]
+    export_records: list = []
+    try:
+        from archium.application.delivery_record_service import DeliveryRecordService
+
+        with get_session() as session:
+            export_records = DeliveryRecordService(session).list_for_project(
+                snapshot.project_id, limit=4
+            )
+    except Exception:
+        export_records = [
+            item
+            for item in (st.session_state.get("delivery_export_records") or [])
+            if str(item.get("project_id") or "") in {"", str(snapshot.project_id)}
+        ]
 
     if presentations:
         for item in presentations[:4]:
@@ -99,13 +129,18 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
                 f"{item.title} · {item.status.value} · "
                 f"{item.updated_at.strftime('%Y-%m-%d %H:%M')}"
             )
-    elif export_records:
-        for item in reversed(export_records[-4:]):
-            st.caption(
-                f"{item.get('format', '导出')} · {item.get('when', '')} · "
-                f"`{item.get('path', '')}`"
-            )
-    else:
+    if export_records:
+        st.caption("最近导出")
+        for item in export_records[:4]:
+            if hasattr(item, "format"):
+                when = item.exported_at.astimezone().strftime("%Y-%m-%d %H:%M")
+                st.caption(f"{item.format} · {when} · `{item.file_uri}`")
+            else:
+                st.caption(
+                    f"{item.get('format', '导出')} · {item.get('when', '')} · "
+                    f"`{item.get('path', '')}`"
+                )
+    if not presentations and not export_records:
         st.caption("尚无汇报版本。完成生成或导出后会显示在此。")
 
 
@@ -124,7 +159,7 @@ def _task_statement_for(snapshot: ProjectProgressSnapshot) -> str:
             if text:
                 return text
     except Exception:
-        pass
+        logger.exception("Failed to load planning snapshot for home task statement")
     if snapshot.presentation_title:
         return snapshot.presentation_title
     return snapshot.presentation_type_label
@@ -203,8 +238,9 @@ def _render_other_projects(
 def render() -> None:
     try:
         snapshots = list_recent_project_snapshots(limit=6)
-    except Exception:
-        snapshots = []
+    except Exception as exc:
+        _render_load_failed(exc)
+        return
 
     primary = _resolve_primary(snapshots)
     if primary is None:
