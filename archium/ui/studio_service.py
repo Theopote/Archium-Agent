@@ -624,6 +624,9 @@ def restore_slide_visual_edit(session: Session, slide_id: UUID) -> object:
 
 
 def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+    from archium.application.revision_service import RevisionService
+    from archium.application.visual.scene_history_service import SCENE_STATE_SNAPSHOT_KIND
+    from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.infrastructure.database.repositories import PresentationRepository
@@ -631,12 +634,23 @@ def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
         LayoutPlanRepository,
         VisualIntentRepository,
     )
+    from archium.ui.studio.canvas_command_bridge import bump_canvas_generation
     from archium.ui.studio.undo_stack import push_visual_redo_revision
 
     presentations = PresentationRepository(session)
     slide = presentations.get_slide(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
+
+    settings = _resolve_runtime_settings(None)
+    scene_undo = SceneUndoService(session, settings=settings)
+    if scene_undo.count_undo_steps(slide) > 0:
+        result, redo_revision_id = scene_undo.undo(slide)
+        if redo_revision_id is not None:
+            push_visual_redo_revision(slide_id, redo_revision_id)
+        bump_canvas_generation(slide_id)
+        return result
+
     history = VisualHistoryService(session)
     intents = VisualIntentRepository(session)
     plans = LayoutPlanRepository(session)
@@ -647,19 +661,39 @@ def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
         visual_intent=intent,
         layout_plan=plan,
     )
-    service = VisualEditService(session, settings=_resolve_runtime_settings(None))
+    service = VisualEditService(session, settings=settings)
     result = service.restore_previous(slide_id)
     if redo_revision_id is not None:
         push_visual_redo_revision(slide_id, redo_revision_id)
+    bump_canvas_generation(slide_id)
     return result
 
 
 def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+    from archium.application.revision_service import RevisionService
+    from archium.application.visual.scene_history_service import SCENE_STATE_SNAPSHOT_KIND
+    from archium.application.visual.scene_undo_service import SceneUndoService
+    from archium.ui.studio.canvas_command_bridge import bump_canvas_generation
     from archium.ui.studio.undo_stack import pop_visual_redo_revision
 
     revision_id = pop_visual_redo_revision(slide_id)
     if revision_id is None:
         raise WorkflowError("没有可重做的视觉修改。")
+
+    presentations = PresentationRepository(session)
+    slide = presentations.get_slide(slide_id)
+    if slide is None:
+        raise WorkflowError("页面不存在。")
+
+    revisions = RevisionService(session)
+    revision = revisions.get_revision(revision_id)
+    if revision is not None and revision.snapshot.get("kind") == SCENE_STATE_SNAPSHOT_KIND:
+        result = SceneUndoService(
+            session,
+            settings=_resolve_runtime_settings(None),
+        ).redo(slide, revision_id)
+        bump_canvas_generation(slide_id)
+        return result
     return restore_slide_visual_at_revision(session, slide_id, revision_id)
 
 
@@ -763,11 +797,17 @@ def count_scene_revisions(session: Session, slide_id: UUID) -> int:
 
 
 def count_visual_undo_steps(session: Session, slide_id: UUID) -> int:
+    from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.infrastructure.database.repositories import PresentationRepository
 
-    return VisualEditService(session, settings=_resolve_runtime_settings(None)).count_undo_steps(
-        slide_id
-    )
+    slide = PresentationRepository(session).get_slide(slide_id)
+    if slide is None:
+        return 0
+    settings = _resolve_runtime_settings(None)
+    scene_steps = SceneUndoService(session, settings=settings).count_undo_steps(slide)
+    visual_steps = VisualEditService(session, settings=settings).count_undo_steps(slide_id)
+    return scene_steps + visual_steps
 
 
 def count_content_undo_steps(session: Session, slide_id: UUID) -> int:

@@ -33,6 +33,8 @@ def render_undo_toolbar(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
     visual_redo_steps = visual_redo_depth(slide_id)
     content_redo_steps = content_redo_depth(slide_id)
 
+    st.caption("画布拖拽、移动与缩放会写入 Scene 修订；可用撤销/重做回退。")
+
     cols = st.columns(4)
     with cols[0]:
         if st.button(
@@ -74,8 +76,7 @@ def _run_visual_undo(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在撤销视觉修改…"), get_session() as session:
             result = undo_slide_visual_edit(session, slide_id)
-        message = getattr(result, "message", None) or "已撤销一步视觉修改。"
-        st.success(message)
+        st.success(_visual_history_message(result, fallback="已撤销一步视觉修改。"))
         st.rerun()
     except WorkflowError as exc:
         st.error(format_user_error(exc))
@@ -87,13 +88,24 @@ def _run_visual_redo(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在重做视觉修改…"), get_session() as session:
             result = redo_slide_visual_edit(session, slide_id)
-        message = getattr(result, "message", None) or "已重做一步视觉修改。"
-        st.success(message)
+        st.success(_visual_history_message(result, fallback="已重做一步视觉修改。"))
         st.rerun()
     except WorkflowError as exc:
         st.error(format_user_error(exc))
     except Exception as exc:
         st.error(format_user_error(exc))
+
+
+def _visual_history_message(result: object, *, fallback: str) -> str:
+    summary = getattr(result, "summary", None)
+    if summary is not None and hasattr(summary, "summary"):
+        text = str(summary.summary).strip()
+        if text:
+            return text
+    message = getattr(result, "message", None)
+    if message:
+        return str(message)
+    return fallback
 
 
 def _run_content_undo(*, slide_id: UUID) -> None:

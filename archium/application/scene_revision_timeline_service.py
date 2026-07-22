@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from archium.application.visual.scene_history_service import (
     SCENE_STATE_SNAPSHOT_KIND,
     SceneHistoryService,
 )
+from archium.application.visual.studio_scene_edit_service import sync_layout_geometry_from_scene
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
@@ -25,7 +27,9 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
 from archium.exceptions import WorkflowError
+from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.database.visual_repositories import (
+    LayoutPlanRepository,
     RenderSceneRepository,
     SceneProposalRepository,
 )
@@ -171,6 +175,7 @@ class SceneRevisionTimelineService:
             raise WorkflowError("该修订不包含可恢复的 RenderScene。")
 
         saved = self._persist_restored_scene(source_scene)
+        self._sync_layout_plan_from_scene(slide, saved)
         source_version = source_revision.revision_number
         note = f"从 Scene 版本 #{source_version} 恢复"
         entity_revision, _ = self._scene_history.record_scene(
@@ -183,7 +188,57 @@ class SceneRevisionTimelineService:
             summary=note,
             qa_status="restored",
         )
+        self._studio_scene.invalidate_preview_cache(
+            slide.presentation_id,
+            layout_plan_id=saved.layout_plan_id,
+        )
+        try:
+            self._studio_scene.render_scene_preview(slide.presentation_id, saved)
+        except (MemoryError, OSError):
+            pass
+        self._session.commit()
         summary = self._summary_from_revision(entity_revision)
+        return SceneRevisionRestoreResult(
+            summary=summary,
+            restored_scene_id=saved.id,
+            source_revision_id=source_revision_id,
+            source_version=source_version,
+        )
+
+    def reapply_scene_state(
+        self,
+        *,
+        slide: SlideSpec,
+        scene: RenderScene,
+        source_revision_id: UUID,
+        source_version: int,
+        note: str,
+    ) -> SceneRevisionRestoreResult:
+        """Restore a scene snapshot in place without creating a new revision branch."""
+        saved = self._persist_restored_scene(scene)
+        self._sync_layout_plan_from_scene(slide, saved)
+        self._studio_scene.invalidate_preview_cache(
+            slide.presentation_id,
+            layout_plan_id=saved.layout_plan_id,
+        )
+        try:
+            self._studio_scene.render_scene_preview(slide.presentation_id, saved)
+        except (MemoryError, OSError):
+            pass
+        self._session.commit()
+        summary = SceneRevisionSummary(
+            revision_id=source_revision_id,
+            scene_id=saved.id,
+            version=source_version,
+            source="manual_edit",
+            summary=note,
+            command_ids=[],
+            created_at=datetime.now(UTC),
+            qa_status="restored",
+            accepted=True,
+            parent_revision_id=None,
+            is_current=True,
+        )
         return SceneRevisionRestoreResult(
             summary=summary,
             restored_scene_id=saved.id,
@@ -203,6 +258,21 @@ class SceneRevisionTimelineService:
                 }
             )
         return self._scenes.save(payload)
+
+    def _sync_layout_plan_from_scene(self, slide: SlideSpec, scene: RenderScene) -> None:
+        if slide.layout_plan_id is None:
+            return
+        plans = LayoutPlanRepository(self._session)
+        presentations = PresentationRepository(self._session)
+        plan = plans.get(slide.layout_plan_id)
+        if plan is None:
+            return
+        synced = sync_layout_geometry_from_scene(scene, plan)
+        plans.save(synced)
+        slide_ref = presentations.get_slide(slide.id)
+        if slide_ref is not None:
+            slide_ref.layout_plan_id = synced.id
+            presentations.save_slide(slide_ref)
 
     def _summary_from_revision(self, revision: EntityRevision) -> SceneRevisionSummary:
         snapshot = revision.snapshot
