@@ -325,6 +325,7 @@ def _theme_change_proposal_payload(proposal: ThemeChangeProposal) -> dict[str, o
     return {
         "token_patch": model_to_dict(proposal.token_patch),
         "sample_slide_ids": [str(item) for item in proposal.sample_slide_ids],
+        "sample_selection_reason": dict(proposal.sample_selection_reason),
         "preview_scene_hashes": proposal.preview_scene_hashes,
         "qa_by_slide": qa_by_slide,
         "qa_summary": _models_to_json(proposal.qa_summary),
@@ -397,6 +398,12 @@ def theme_change_proposal_to_domain(
                 sample_slide_ids.append(UUID(str(item)))
             except (TypeError, ValueError):
                 continue
+    reason_raw = payload.get("sample_selection_reason") or {}
+    sample_selection_reason: dict[str, str] = {}
+    if isinstance(reason_raw, dict):
+        sample_selection_reason = {
+            str(key): str(value) for key, value in reason_raw.items() if value is not None
+        }
     hashes = payload.get("preview_scene_hashes") or {}
     return ThemeChangeProposal(
         proposal_id=orm.id,
@@ -408,6 +415,7 @@ def theme_change_proposal_to_domain(
         proposed_design_system=proposed_design_system,
         token_patch=token_patch,
         sample_slide_ids=sample_slide_ids,
+        sample_selection_reason=sample_selection_reason,
         preview_scene_hashes=hashes if isinstance(hashes, dict) else {},
         qa_by_slide=qa_by_slide,
         qa_summary=qa_summary,

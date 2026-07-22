@@ -31,7 +31,12 @@ class ThemeProposalDecision(DomainModel):
 
 
 class ThemeChangeProposal(DomainModel):
-    """Reviewable before/after DesignSystem change for an entire presentation."""
+    """Reviewable before/after DesignSystem change for an entire presentation.
+
+    Accept switches ``ArtDirection.design_system_id`` and re-resolves scenes from
+    token references — it must not bake theme colors into every node via
+    per-slide SceneRevision spam.
+    """
 
     proposal_id: UUID = Field(default_factory=new_uuid)
     presentation_id: UUID
@@ -44,6 +49,8 @@ class ThemeChangeProposal(DomainModel):
     token_patch: DeckThemeTokens
 
     sample_slide_ids: list[UUID] = Field(default_factory=list)
+    # slide_id → human/agent-readable reason (cover / drawing_focus / …)
+    sample_selection_reason: dict[str, str] = Field(default_factory=dict)
     preview_scene_hashes: dict[str, str] = Field(default_factory=dict)
     qa_by_slide: dict[str, list[QualityIssue]] = Field(default_factory=dict)
     qa_summary: list[QualityIssue] = Field(default_factory=list)

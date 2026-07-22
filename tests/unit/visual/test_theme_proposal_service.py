@@ -135,6 +135,70 @@ def test_theme_tokens_never_force_drawing_cover(db_session: Session) -> None:
     assert proposal.proposed_design_system.image_style.default_fit == ImageFit.CONTAIN
 
 
+def test_accept_does_not_record_theme_scene_revisions(db_session: Session, monkeypatch) -> None:
+    presentation, art = _seed_theme_context(db_session)
+    service = ThemeProposalService(db_session)
+    proposal = service.create_proposal(
+        presentation.id,
+        DeckThemeTokens(primary="#222222"),
+    )
+
+    recorded: list[object] = []
+
+    def _forbid_record(*_args, **_kwargs):
+        recorded.append(True)
+        raise AssertionError("theme accept must not record SceneRevision")
+
+    monkeypatch.setattr(
+        "archium.application.visual.scene_history_service.SceneHistoryService.record_scene",
+        _forbid_record,
+    )
+    accepted = service.accept_proposal(proposal)
+    assert accepted.status == ThemeProposalStatus.ACCEPTED
+    assert recorded == []
+    refreshed = ArtDirectionRepository(db_session).get(art.id)
+    assert refreshed is not None
+    assert refreshed.design_system_id == accepted.proposed_design_system_id
+
+
+def test_create_proposal_persists_sample_selection_reason(db_session: Session) -> None:
+    from archium.domain.visual.enums import LayoutFamily
+    from archium.domain.visual.layout import LayoutPlan
+    from archium.infrastructure.database.visual_repositories import LayoutPlanRepository
+
+    presentation, art = _seed_theme_context(db_session)
+    slides = PresentationRepository(db_session).list_slides(presentation.id)
+    assert slides
+    slide = slides[0]
+    design_id = art.design_system_id
+    assert design_id is not None
+    plan = LayoutPlanRepository(db_session).save(
+        LayoutPlan(
+            slide_id=slide.id,
+            design_system_id=design_id,
+            visual_intent_id=slide.visual_intent_id or design_id,
+            layout_family=LayoutFamily.HERO,
+            layout_variant="default",
+            page_width=10,
+            page_height=5.625,
+        )
+    )
+    PresentationRepository(db_session).save_slide(
+        slide.model_copy(update={"layout_plan_id": plan.id})
+    )
+
+    service = ThemeProposalService(db_session)
+    proposal = service.create_proposal(
+        presentation.id,
+        DeckThemeTokens(accent="#FFAA00"),
+    )
+    assert proposal.sample_slide_ids
+    assert proposal.sample_selection_reason
+    for slide_id in proposal.sample_slide_ids:
+        assert str(slide_id) in proposal.sample_selection_reason
+        assert proposal.sample_selection_reason[str(slide_id)]
+
+
 def test_accept_blockers_requires_allow_flag(db_session: Session) -> None:
     presentation, _art = _seed_theme_context(db_session)
     service = ThemeProposalService(db_session)

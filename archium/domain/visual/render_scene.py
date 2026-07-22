@@ -148,6 +148,9 @@ class TextNode(BaseRenderNode):
     font_weight: int = Field(default=400, ge=100, le=900)
     font_style: str = "normal"
     color: str
+    # Prefer token refs for theme re-resolution; empty = treat ``color`` as explicit.
+    color_token: str = ""
+    typography_token: str = ""
     alignment: str = "left"
     vertical_alignment: str = "top"
     line_height: float = Field(gt=0)
@@ -289,6 +292,11 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
     V1 supports Text / Image / Drawing / Shape only. Charts and tables from
     LayoutPlan are degraded by the compiler (see ``RenderSceneCompiler``).
 
+    Theme model: persist geometry + token references; resolve colors/fonts from
+    the active DesignSystem at compile / preview time
+    (``Base scene + DesignSystem → Resolved scene``). Do not bake deck-wide
+    theme accepts into per-node SceneRevision spam.
+
     schema_version 1: ``storage_uri`` + mirrored ``asset_path`` (same URI).
     Planned schema_version 2 (P2): persist ``storage_uri`` only; drop
     ``asset_path`` from dump; keep ``resolved_path`` runtime-only.
@@ -298,6 +306,7 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
     slide_id: UUID
     presentation_id: UUID | None = None
     layout_plan_id: UUID
+    design_system_id: UUID | None = None
     page_width: float = Field(gt=0)
     page_height: float = Field(gt=0)
     background: BackgroundStyle

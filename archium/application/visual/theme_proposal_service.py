@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from archium.application.visual.deck_theme_apply import apply_tokens_to_design_system
 from archium.application.visual.scene_deterministic_qa_service import run_proposal_scene_qa
-from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.studio_scene_service import StudioSceneService
+from archium.application.visual.theme_integrity_qa import run_theme_integrity_qa
+from archium.application.visual.theme_scene_resolve import resolve_scene_with_design_system
 from archium.config.settings import Settings, get_settings
 from archium.domain._base import utc_now
-from archium.domain.enums import RevisionSource
+from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
-from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
 from archium.domain.visual.render_scene import compute_scene_hash
 from archium.domain.visual.theme_change_proposal import (
@@ -30,12 +32,34 @@ from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
     LayoutPlanRepository,
+    RenderSceneRepository,
     ThemeProposalRepository,
 )
 
+# Prefer these roles when sampling; skip silently if absent.
+_SAMPLE_ROLE_ORDER: tuple[str, ...] = (
+    "cover",
+    "section",
+    "drawing_focus",
+    "photo_evidence",
+    "data",
+    "text_dense",
+)
+
+
+@dataclass(frozen=True)
+class _SamplePick:
+    slide: SlideSpec
+    reason: str
+
 
 class ThemeProposalService:
-    """Deck theme tokens → ThemeChangeProposal → DesignSystem switch on accept."""
+    """Deck theme tokens → ThemeChangeProposal → DesignSystem switch on accept.
+
+    Accept updates ArtDirection.design_system_id and refreshes scene caches by
+    recompile / token re-resolution. It does **not** write per-slide SceneRevision
+    rows for a theme-only change (avoids meaningless diffs and revision bloat).
+    """
 
     def __init__(
         self,
@@ -50,8 +74,8 @@ class ThemeProposalService:
         self._design_systems = DesignSystemRepository(session)
         self._plans = LayoutPlanRepository(session)
         self._proposals = ThemeProposalRepository(session)
+        self._scenes = RenderSceneRepository(session)
         self._studio_scene = StudioSceneService(session, settings=self._settings)
-        self._scene_history = SceneHistoryService(session)
 
     def create_proposal(
         self,
@@ -74,11 +98,18 @@ class ThemeProposalService:
 
         proposed = apply_tokens_to_design_system(base, tokens)
         slides = self._presentations.list_slides(presentation_id)
-        sample_slides = self._select_sample_slides(slides, preferred_slide_id=preferred_slide_id)
+        sample_picks = self._select_sample_slides(
+            slides, preferred_slide_id=preferred_slide_id
+        )
+        sample_slides = [pick.slide for pick in sample_picks]
+        sample_selection_reason = {
+            str(pick.slide.id): pick.reason for pick in sample_picks
+        }
 
         preview_hashes: dict[str, str] = {}
         qa_by_slide: dict[str, list[QualityIssue]] = {}
         qa_summary: list[QualityIssue] = []
+        sample_scenes = []
 
         for slide in sample_slides:
             if slide.layout_plan_id is None:
@@ -102,6 +133,7 @@ class ThemeProposalService:
                 presentation_id=presentation_id,
                 project_id=presentation.project_id,
             )
+            sample_scenes.append(scene)
             preview_hashes[str(slide.id)] = compute_scene_hash(scene)
             qa = run_proposal_scene_qa(
                 presentation_id,
@@ -113,6 +145,15 @@ class ThemeProposalService:
             issues = list(qa.issues)
             qa_by_slide[str(slide.id)] = issues
             qa_summary.extend(issues)
+
+        integrity = run_theme_integrity_qa(
+            base=base,
+            proposed=proposed,
+            sample_scenes=sample_scenes,
+        )
+        qa_summary.extend(integrity)
+        for issue in integrity:
+            qa_by_slide.setdefault("_theme_integrity", []).append(issue)
 
         status = ThemeProposalStatus.READY
         if any(issue.severity == IssueSeverity.BLOCKER for issue in qa_summary):
@@ -129,6 +170,7 @@ class ThemeProposalService:
             proposed_design_system_id=proposed.id,
             token_patch=tokens,
             sample_slide_ids=[slide.id for slide in sample_slides],
+            sample_selection_reason=sample_selection_reason,
             preview_scene_hashes=preview_hashes,
             qa_by_slide=qa_by_slide,
             qa_summary=_dedupe_issues(qa_summary),
@@ -206,23 +248,33 @@ class ThemeProposalService:
         updated_art.touch()
         self._art_directions.save(updated_art)
 
+        # Theme accept = DesignSystem pointer switch + token re-resolve.
+        # Do NOT force-recompile or record per-slide SceneRevision (theme ≠ content).
         slides = self._presentations.list_slides(proposal.presentation_id)
         for slide in slides:
             if slide.layout_plan_id is None:
                 continue
-            result = self._studio_scene.ensure_scene_for_slide(
-                slide.id,
-                force_recompile=True,
-            )
-            if result is None:
+            existing = self._scenes.get_by_layout_plan(slide.layout_plan_id)
+            if existing is None:
                 continue
-            self._scene_history.record_scene(
-                slide=slide,
-                scene=result.scene,
-                change_source=RevisionSource.AI_PROPOSAL,
-                scene_revision_source="ai_proposal",
-                note=notes or "theme_change",
-                summary="全稿风格 Token 已应用",
+            resolved = resolve_scene_with_design_system(existing, saved_ds)
+            if compute_scene_hash(resolved) == compute_scene_hash(existing):
+                self._studio_scene.invalidate_preview_cache(
+                    proposal.presentation_id,
+                    layout_plan_id=slide.layout_plan_id,
+                )
+                continue
+            saved_scene = resolved.model_copy(
+                update={
+                    "id": existing.id,
+                    "version": existing.version + 1,
+                    "created_at": existing.created_at,
+                }
+            )
+            self._scenes.save(saved_scene)
+            self._studio_scene.invalidate_preview_cache(
+                proposal.presentation_id,
+                layout_plan_id=slide.layout_plan_id,
             )
 
         accepted = proposal.model_copy(
@@ -231,7 +283,7 @@ class ThemeProposalService:
                 "decided_at": utc_now(),
                 "decision": ThemeProposalDecision(
                     proposal_id=proposal.proposal_id,
-                    notes=notes,
+                    notes=notes or "theme_change:design_system_switch",
                 ),
                 "proposed_design_system": saved_ds,
                 "proposed_design_system_id": saved_ds.id,
@@ -251,39 +303,81 @@ class ThemeProposalService:
         slides: list[SlideSpec],
         *,
         preferred_slide_id: UUID | None,
-    ) -> list[SlideSpec]:
+    ) -> list[_SamplePick]:
+        """Explainable sampling: cover / section / drawing / photo / data / text."""
         with_plans = [slide for slide in slides if slide.layout_plan_id is not None]
         if not with_plans:
             return []
 
-        selected: list[SlideSpec] = []
+        ordered = sorted(with_plans, key=lambda item: item.order)
+        classified: dict[str, list[tuple[SlideSpec, str]]] = {role: [] for role in _SAMPLE_ROLE_ORDER}
+
+        for slide in ordered:
+            plan = self._plans.get(slide.layout_plan_id) if slide.layout_plan_id else None
+            for role, reason in self._classify_sample_roles(slide, plan):
+                classified.setdefault(role, []).append((slide, reason))
+
+        selected: list[_SamplePick] = []
         seen: set[UUID] = set()
 
-        def _add(slide: SlideSpec | None) -> None:
-            if slide is None or slide.id in seen:
+        def _add(slide: SlideSpec, reason: str) -> None:
+            if slide.id in seen:
                 return
-            selected.append(slide)
+            selected.append(_SamplePick(slide=slide, reason=reason))
             seen.add(slide.id)
 
         if preferred_slide_id is not None:
-            _add(next((s for s in with_plans if s.id == preferred_slide_id), None))
+            preferred = next((s for s in ordered if s.id == preferred_slide_id), None)
+            if preferred is not None:
+                _add(preferred, "preferred:当前编辑页")
 
-        ordered = sorted(with_plans, key=lambda item: item.order)
-        _add(ordered[0] if ordered else None)
+        for role in _SAMPLE_ROLE_ORDER:
+            candidates = classified.get(role) or []
+            if not candidates:
+                continue
+            slide, reason = candidates[0]
+            _add(slide, reason)
 
-        for slide in ordered:
-            if len(selected) >= 3:
-                break
-            plan = self._plans.get(slide.layout_plan_id) if slide.layout_plan_id else None
-            if plan is not None and plan.layout_family == LayoutFamily.DRAWING_FOCUS:
-                _add(slide)
+        # Ensure at least one page when roles are sparse.
+        if not selected and ordered:
+            _add(ordered[0], "fallback:首张有 LayoutPlan 的页面")
 
-        for slide in ordered:
-            if len(selected) >= 3:
-                break
-            _add(slide)
+        return selected
 
-        return selected[:3]
+    def _classify_sample_roles(
+        self,
+        slide: SlideSpec,
+        plan: LayoutPlan | None,
+    ) -> list[tuple[str, str]]:
+        roles: list[tuple[str, str]] = []
+        family = plan.layout_family if plan is not None else None
+        slide_type = slide.slide_type
+
+        if (
+            slide.order == 0
+            or slide_type == SlideType.TITLE
+            or family == LayoutFamily.HERO
+        ):
+            roles.append(("cover", "cover:封面/开篇页"))
+        if slide_type == SlideType.SECTION or (
+            "章节" in (slide.title or "") or "section" in (slide.title or "").lower()
+        ):
+            roles.append(("section", "section:章节页"))
+        if family == LayoutFamily.DRAWING_FOCUS:
+            roles.append(("drawing_focus", "drawing_focus:图纸主导页"))
+        if family == LayoutFamily.EVIDENCE_BOARD or slide_type == SlideType.IMAGE:
+            roles.append(("photo_evidence", "photo_evidence:照片证据页"))
+        if family in {
+            LayoutFamily.METRIC_DASHBOARD,
+            LayoutFamily.ANALYTICAL_DIAGRAM,
+            LayoutFamily.COMPARATIVE_MATRIX,
+        } or slide_type == SlideType.DATA:
+            roles.append(("data", "data:数据/指标页"))
+        if family == LayoutFamily.TEXTUAL_ARGUMENT or (
+            slide_type == SlideType.CONTENT and len((slide.message or "").strip()) >= 80
+        ):
+            roles.append(("text_dense", "text_dense:文字密集页"))
+        return roles
 
 
 def _dedupe_issues(issues: list[QualityIssue]) -> list[QualityIssue]:

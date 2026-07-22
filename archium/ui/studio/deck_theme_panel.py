@@ -46,7 +46,8 @@ def render_deck_theme_panel(
     st.markdown("**全稿风格**")
     st.caption(
         "修改 Token 只生成 ThemeChangeProposal，不会静默覆盖正式 DesignSystem。"
-        "预览样本页 QA 后接受，才会切换 ArtDirection 并重编译全稿。"
+        "接受后切换 DesignSystem 指针并按 Token 引用重解析 Scene，"
+        "不会把主题颜色批量写死进每个节点的 SceneRevision。"
     )
 
     with get_session() as session:
@@ -188,6 +189,13 @@ def render_deck_theme_panel(
         f"DesignSystem `{proposal.base_design_system.name}` → "
         f"`{proposal.proposed_design_system.name}`"
     )
+    if proposal.sample_selection_reason:
+        st.caption("抽样说明：" + "；".join(
+            f"`{sid[:8]}…` → {reason}"
+            if len(sid) > 12
+            else f"`{sid}` → {reason}"
+            for sid, reason in proposal.sample_selection_reason.items()
+        ))
     patch = proposal.token_patch
     st.write(
         {

@@ -156,6 +156,7 @@ class RenderSceneCompiler:
             slide_id=layout_plan.slide_id,
             presentation_id=presentation_id or slide.presentation_id,
             layout_plan_id=layout_plan.id,
+            design_system_id=effective.id,
             page_width=layout_plan.page_width,
             page_height=layout_plan.page_height,
             background=BackgroundStyle(color=bg_color),
@@ -276,6 +277,8 @@ class RenderSceneCompiler:
         semantic = "metric" if element.role == LayoutElementRole.METRIC else element.role.value
         if element.role == LayoutElementRole.SOURCE:
             semantic = "citation"
+        # Map role → typography token name for theme re-resolution.
+        typography_token = _typography_token_for_role(element.role)
         cjk_family = typography.font_family
         latin_family = typography.font_family_latin or typography.font_family
         resolved = resolve_text_fonts(
@@ -304,6 +307,8 @@ class RenderSceneCompiler:
                 font_size=typography.font_size,
                 font_weight=typography.font_weight,
                 color=color,
+                color_token=typography.color_token,
+                typography_token=typography_token,
                 alignment=element.alignment or typography.alignment,
                 line_height=typography.line_height,
                 letter_spacing=typography.letter_spacing,
@@ -435,6 +440,22 @@ class RenderSceneCompiler:
             warnings.append(f"UNSUPPORTED_FORMAT:{element.content_ref}")
             return path, True
         return path, False
+
+
+def _typography_token_for_role(role: LayoutElementRole) -> str:
+    mapping = {
+        LayoutElementRole.TITLE: "title",
+        LayoutElementRole.SUBTITLE: "subtitle",
+        LayoutElementRole.LEAD_STATEMENT: "heading",
+        LayoutElementRole.BODY_TEXT: "body",
+        LayoutElementRole.CAPTION: "caption",
+        LayoutElementRole.METRIC: "metric",
+        LayoutElementRole.SOURCE: "source",
+        LayoutElementRole.FOOTER: "footnote",
+        LayoutElementRole.PAGE_NUMBER: "footnote",
+        LayoutElementRole.ANNOTATION: "caption",
+    }
+    return mapping.get(role, "body")
 
 
 def new_render_scene_id() -> UUID:
