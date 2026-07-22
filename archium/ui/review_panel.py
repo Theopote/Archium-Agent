@@ -719,6 +719,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             sections=sections,
             page_intents=page_intents,
             page_asset_bindings=page_asset_bindings,
+            expected_version=outline.version,
         )
         with get_session() as session:
             review_service = PresentationReviewService(session)
@@ -766,6 +767,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
                             for intent in saved.page_intents
                         ],
                         page_asset_bindings=_slide_asset_binding_updates_from_outline(saved),
+                        expected_version=saved.version,
                     ),
                 )
             if approve_clicked:

@@ -141,11 +141,26 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         warn_count = int(deck_qa.deck_qa_report.get("warning_count") or 0)
         blocker_count = int(deck_qa.deck_qa_report.get("blocker_count") or 0)
 
-    document_count = _project_document_count(context.project.id)
-    if document_count <= 0:
-        st.warning("无项目证据 · 草稿模式 · 不得正式交付（请先绑定资料）")
+    from archium.application.project_evidence import resolve_project_evidence_safe
+    from archium.domain.enums import EvidenceAvailability
 
-    cols = st.columns(5)
+    evidence = resolve_project_evidence_safe(context.project.id)
+    if evidence.availability == EvidenceAvailability.UNKNOWN:
+        st.error("资料状态无法验证 · 禁止正式交付（请检查数据库后重试）")
+        materials_label = "无法验证"
+    elif evidence.is_concept_draft:
+        st.warning("无项目证据 · 草稿模式 · 不得正式交付（请先绑定资料）")
+        materials_label = "0 份"
+    else:
+        materials_label = f"{evidence.document_count} 份"
+
+    formal_ready = (
+        ready
+        and evidence.allows_formal_export
+        and blocker_count <= 0
+    )
+
+    cols = st.columns(6)
     cols[0].metric(
         "页面完成",
         f"{context.layout_ready_count}/{context.slide_count}"
@@ -155,23 +170,19 @@ def _render_readiness(context: StudioPresentationContext) -> None:
     cols[1].metric("待完成页", pending)
     cols[2].metric("警告", warn_count)
     cols[3].metric("阻塞项", blocker_count)
-    cols[4].metric(
-        "导出",
-        "可导出" if ready and document_count > 0 else ("草稿" if document_count <= 0 else "版式未齐"),
-    )
+    cols[4].metric("项目资料", materials_label)
+    if formal_ready:
+        export_label = "可导出"
+    elif evidence.availability == EvidenceAvailability.UNKNOWN:
+        export_label = "待验证"
+    elif evidence.is_concept_draft:
+        export_label = "草稿"
+    else:
+        export_label = "版式未齐"
+    cols[5].metric("导出", export_label)
     st.caption(
         "PPTX / PDF 目前共用版式准备度；后续将分别建模 pptx_readiness / pdf_readiness。"
     )
-
-
-def _project_document_count(project_id: UUID) -> int:
-    from archium.infrastructure.database.repositories import DocumentRepository
-
-    try:
-        with get_session() as session:
-            return len(DocumentRepository(session).list_by_project(project_id))
-    except Exception:
-        return 0
 
 
 def _render_qa(project_id: UUID) -> None:
@@ -185,35 +196,119 @@ def _render_qa(project_id: UUID) -> None:
 
 def _render_delivery_records(presentation_id: UUID) -> None:
     st.markdown("#### 版本记录")
+    import logging
+
     from archium.application.delivery_record_service import DeliveryRecordService
 
+    logger = logging.getLogger(__name__)
+    records_load_failed = False
     try:
         with get_session() as session:
             records = DeliveryRecordService(session).list_for_presentation(
                 presentation_id, limit=12
             )
     except Exception:
+        logger.exception("Failed to load delivery records")
         records = []
+        records_load_failed = True
+        st.warning("版本记录暂时无法从数据库读取。")
 
     if not records:
-        # Legacy session fallback for in-flight browser sessions before DB persist.
         legacy = list(st.session_state.get("delivery_export_records") or [])
         if not legacy:
-            st.caption("尚无导出记录。完成导出后会显示格式、时间与路径。")
+            if not records_load_failed:
+                st.caption("尚无导出记录。完成导出后会显示格式、时间与操作。")
             return
+        st.caption("以下为本次会话的临时记录（尚未写入数据库）：")
         for item in reversed(legacy[-12:]):
-            st.markdown(
-                f"- **{item.get('format', '文件')}** · {item.get('when', '')}"
-                f" · `{item.get('path', '')}`"
+            _render_delivery_record_actions(
+                key_suffix=f"legacy_{item.get('when', '')}_{item.get('path', '')}",
+                fmt=str(item.get("format", "文件")),
+                when=str(item.get("when", "")),
+                qa_status=str(item.get("qa_status", "unknown")),
+                file_uri=str(item.get("path", "")),
+                file_hash="",
             )
         return
 
     for item in records:
         when = item.exported_at.astimezone().strftime("%Y-%m-%d %H:%M")
-        hash_note = f" · `{item.file_hash}`" if item.file_hash else ""
-        st.markdown(
-            f"- **{item.format}** · {when} · QA {item.qa_status} · `{item.file_uri}`{hash_note}"
+        _render_delivery_record_actions(
+            key_suffix=str(item.id),
+            fmt=item.format,
+            when=when,
+            qa_status=item.qa_status,
+            file_uri=item.file_uri,
+            file_hash=item.file_hash,
         )
+
+
+def _render_delivery_record_actions(
+    *,
+    key_suffix: str,
+    fmt: str,
+    when: str,
+    qa_status: str,
+    file_uri: str,
+    file_hash: str,
+) -> None:
+    from pathlib import Path
+
+    hash_note = f" · `{file_hash}`" if file_hash else ""
+    st.markdown(f"**{fmt}** · {when} · QA {qa_status}{hash_note}")
+    path = Path(file_uri) if file_uri else None
+    cols = st.columns([2.4, 1, 1, 1])
+    with cols[0]:
+        st.caption(file_uri or "（无路径）")
+    with cols[1]:
+        if path is not None and path.is_file():
+            st.download_button(
+                "下载",
+                data=path.read_bytes(),
+                file_name=path.name,
+                use_container_width=True,
+                key=f"deliver_dl_{key_suffix}",
+            )
+        else:
+            st.button(
+                "下载",
+                disabled=True,
+                use_container_width=True,
+                key=f"deliver_dl_{key_suffix}",
+            )
+    with cols[2]:
+        if st.button("打开目录", use_container_width=True, key=f"deliver_open_{key_suffix}"):
+            _open_containing_folder(file_uri)
+    with cols[3]:
+        if st.button("复制路径", use_container_width=True, key=f"deliver_copy_{key_suffix}"):
+            st.session_state[f"deliver_copied_path_{key_suffix}"] = file_uri
+            st.code(file_uri, language=None)
+            st.caption("路径已显示，可手动复制。")
+
+
+def _open_containing_folder(file_uri: str) -> None:
+    import logging
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    logger = logging.getLogger(__name__)
+    path = Path(file_uri)
+    target = path if path.is_dir() else path.parent
+    if not target.exists():
+        st.warning("文件目录不存在。")
+        return
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(str(target))  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(target)], check=False)
+        else:
+            subprocess.run(["xdg-open", str(target)], check=False)
+    except Exception:
+        logger.exception("Failed to open folder %s", target)
+        st.warning(f"无法打开目录：{target}")
 
 
 def render() -> None:

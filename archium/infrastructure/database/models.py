@@ -991,3 +991,31 @@ class DeliveryRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     exported_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )
+
+
+class OutlineApprovalRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "outline_approval_records"
+    __table_args__ = (
+        Index("ix_outline_approval_records_outline_id", "outline_id"),
+        Index("ix_outline_approval_records_presentation_id", "presentation_id"),
+        Index("ix_outline_approval_records_approved_at", "approved_at"),
+    )
+
+    outline_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("outline_plans.id", ondelete="CASCADE"), nullable=False
+    )
+    presentation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("presentations.id", ondelete="CASCADE"), nullable=False
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    outline_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    outline_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    approved_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    approved_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now
+    )
+    superseded_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

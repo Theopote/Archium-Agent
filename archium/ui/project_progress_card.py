@@ -8,6 +8,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.domain.enums import EvidenceAvailability
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 
@@ -36,19 +37,43 @@ class ProjectProgressSnapshot:
     ready_for_export: bool
     updated_at: datetime
     outline_approved: bool = False
+    has_outline: bool = False
+    evidence_availability: EvidenceAvailability = EvidenceAvailability.MISSING
+    export_blocker_count: int = 0
 
     @property
     def pending_count(self) -> int:
         return max(0, self.slide_count - self.layout_ready_count)
 
     @property
+    def draft_export_ready(self) -> bool:
+        """Layout is complete enough to draft-export (may still lack materials)."""
+        return self.ready_for_export
+
+    @property
+    def formal_delivery_ready(self) -> bool:
+        """Ready for formal delivery — layout + verified materials + no blockers."""
+        return (
+            self.ready_for_export
+            and self.evidence_availability == EvidenceAvailability.AVAILABLE
+            and self.document_count > 0
+            and self.export_blocker_count <= 0
+        )
+
+    @property
     def materials_label(self) -> str:
+        if self.evidence_availability == EvidenceAvailability.UNKNOWN:
+            return "状态未知"
         return "已整理" if self.document_count > 0 else "未上传"
 
     @property
     def outline_label(self) -> str:
-        if self.outline_approved or self.has_brief:
+        if self.outline_approved:
             return "已确认"
+        if self.has_outline:
+            return "待确认"
+        if self.has_brief:
+            return "Brief 已有"
         if self.presentation_id is not None:
             return "进行中"
         return "未开始"
@@ -61,8 +86,16 @@ class ProjectProgressSnapshot:
 
     @property
     def deliver_label(self) -> str:
-        if self.ready_for_export:
+        if self.formal_delivery_ready:
             return "可交付"
+        if self.draft_export_ready:
+            if self.evidence_availability == EvidenceAvailability.MISSING:
+                return "草稿"
+            if self.evidence_availability == EvidenceAvailability.UNKNOWN:
+                return "待验证"
+            if self.export_blocker_count > 0:
+                return "有阻塞"
+            return "未通过"
         if self.slide_count <= 0:
             return "未开始"
         return "未通过"
@@ -76,16 +109,18 @@ class ProjectProgressSnapshot:
     @property
     def current_stage_id(self) -> str:
         """Best next product-flow stage for「继续工作」."""
-        if self.document_count <= 0:
+        if (
+            self.evidence_availability == EvidenceAvailability.UNKNOWN
+            or self.document_count <= 0
+        ):
             return "materials"
-        if not self.has_brief:
+        if not self.outline_approved:
             return "outline"
         if self.slide_count <= 0 or self.pending_count > 0:
             return "generate"
         if not self.ready_for_export:
             return "edit"
         return "deliver"
-
     @property
     def current_stage_label(self) -> str:
         labels = {
@@ -140,13 +175,22 @@ def _snapshot_for_project(
     *,
     preferred_presentation_id: UUID | None = None,
 ) -> ProjectProgressSnapshot:
-    from archium.infrastructure.database.repositories import (
-        DocumentRepository,
-        PresentationRepository,
+    from archium.application.project_evidence import (
+        ProjectEvidenceStatus,
+        resolve_project_evidence,
     )
+    from archium.domain.enums import EvidenceAvailability as _EvidenceAvailability
+    from archium.infrastructure.database.repositories import PresentationRepository
     from archium.ui.visual_service import presentation_has_visual_layout
 
-    documents = DocumentRepository(session).list_by_project(project.id)
+    try:
+        evidence = resolve_project_evidence(session, project.id)
+    except Exception:
+        evidence = ProjectEvidenceStatus(
+            availability=_EvidenceAvailability.UNKNOWN,
+            document_count=0,
+        )
+
     presentations = PresentationRepository(session).list_by_project(project.id)
 
     presentation = None
@@ -161,6 +205,7 @@ def _snapshot_for_project(
     slide_count = 0
     layout_ready_count = 0
     has_brief = False
+    has_outline = False
     outline_approved = False
     ready_for_export = False
     presentation_type: str | None = None
@@ -183,6 +228,7 @@ def _snapshot_for_project(
         if outline is not None:
             from archium.domain.enums import ApprovalStatus
 
+            has_outline = True
             outline_approved = outline.approval_status == ApprovalStatus.APPROVED
         ready_for_export = presentation_has_visual_layout(session, presentation.id)
         updated_at = max(project.updated_at, presentation.updated_at)
@@ -193,13 +239,15 @@ def _snapshot_for_project(
         presentation_id=presentation.id if presentation is not None else None,
         presentation_title=presentation.title if presentation is not None else None,
         presentation_type=presentation_type,
-        document_count=len(documents),
+        document_count=evidence.document_count,
         slide_count=slide_count,
         layout_ready_count=layout_ready_count,
         has_brief=has_brief,
         ready_for_export=ready_for_export,
         updated_at=updated_at,
         outline_approved=outline_approved,
+        has_outline=has_outline,
+        evidence_availability=evidence.availability,
     )
 
 

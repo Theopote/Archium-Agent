@@ -44,6 +44,7 @@ from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.memory import UserPreference
 from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
+from archium.domain.outline_approval_record import OutlineApprovalRecord
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
@@ -74,6 +75,7 @@ from archium.infrastructure.database.models import (
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
+    OutlineApprovalRecordORM,
     OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
@@ -1094,6 +1096,44 @@ def delivery_record_to_orm(
     target.file_hash = domain.file_hash
     target.qa_status = domain.qa_status
     target.exported_at = domain.exported_at
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def outline_approval_record_to_domain(
+    orm: OutlineApprovalRecordORM,
+) -> OutlineApprovalRecord:
+    return OutlineApprovalRecord(
+        id=orm.id,
+        outline_id=orm.outline_id,
+        presentation_id=orm.presentation_id,
+        project_id=orm.project_id,
+        outline_revision=orm.outline_revision,
+        outline_hash=orm.outline_hash,
+        approved_by=orm.approved_by,
+        approved_at=orm.approved_at,
+        superseded_at=orm.superseded_at,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def outline_approval_record_to_orm(
+    domain: OutlineApprovalRecord,
+    orm: OutlineApprovalRecordORM | None = None,
+) -> OutlineApprovalRecordORM:
+    target = orm or OutlineApprovalRecordORM(id=domain.id)
+    target.outline_id = domain.outline_id
+    target.presentation_id = domain.presentation_id
+    target.project_id = domain.project_id
+    target.outline_revision = domain.outline_revision
+    target.outline_hash = domain.outline_hash
+    target.approved_by = domain.approved_by
+    target.approved_at = domain.approved_at
+    target.superseded_at = domain.superseded_at
     if domain.created_at is not None:
         target.created_at = domain.created_at
     if domain.updated_at is not None:

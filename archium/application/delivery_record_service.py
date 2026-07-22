@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
@@ -22,6 +23,16 @@ def _file_hash(path: str) -> str:
         for chunk in iter(lambda: handle.read(65536), b""):
             digest.update(chunk)
     return digest.hexdigest()[:16]
+
+
+@dataclass(frozen=True)
+class DeliveryRecordResult:
+    """Distinguishes file export success from audit-row persistence."""
+
+    file_exported: bool
+    record_persisted: bool
+    record: DeliveryRecord | None = None
+    error_message: str | None = None
 
 
 class DeliveryRecordService:

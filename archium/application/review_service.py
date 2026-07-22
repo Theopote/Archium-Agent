@@ -217,7 +217,20 @@ class PresentationReviewService:
         return self._presentations.save_storyline(storyline)
 
     def update_outline(self, outline_id: UUID, update: OutlineUpdate) -> OutlinePlan:
+        from archium.infrastructure.database.repositories import (
+            OutlineApprovalRecordRepository,
+        )
+
         outline = self._require_outline(outline_id)
+        if (
+            update.expected_version is not None
+            and outline.version != update.expected_version
+        ):
+            raise WorkflowError(
+                f"大纲版本冲突（期望 v{update.expected_version}，当前 v{outline.version}）。"
+                "请刷新后合并再保存。"
+            )
+        previous_status = outline.approval_status
         self._outline_history.record_snapshot(outline, RevisionSource.MANUAL_EDIT)
         try:
             audience_mode = OutlineAudienceMode(update.audience_mode)
@@ -235,22 +248,42 @@ class PresentationReviewService:
             _slide_asset_binding_from_update(item) for item in update.page_asset_bindings
         ]
         outline.approval_status = _outline_status_after_edit(outline.approval_status)
+        outline.version += 1
         outline.touch()
-        return self._presentations.save_outline(outline)
+        saved = self._presentations.save_outline(outline)
+        if previous_status in {ApprovalStatus.APPROVED, ApprovalStatus.CHANGES_PENDING}:
+            OutlineApprovalRecordRepository(self._session).supersede_active(saved.id)
+        return saved
 
     def update_page_asset_bindings(
         self,
         outline_id: UUID,
         bindings: list[SlideAssetBindingUpdate],
+        *,
+        expected_version: int | None = None,
     ) -> OutlinePlan:
+        from archium.infrastructure.database.repositories import (
+            OutlineApprovalRecordRepository,
+        )
+
         outline = self._require_outline(outline_id)
+        if expected_version is not None and outline.version != expected_version:
+            raise WorkflowError(
+                f"大纲版本冲突（期望 v{expected_version}，当前 v{outline.version}）。"
+                "请刷新后合并再保存。"
+            )
+        previous_status = outline.approval_status
         self._outline_history.record_snapshot(outline, RevisionSource.MANUAL_EDIT)
         outline.page_asset_bindings = [
             _slide_asset_binding_from_update(item) for item in bindings
         ]
         outline.approval_status = _outline_status_after_edit(outline.approval_status)
+        outline.version += 1
         outline.touch()
-        return self._presentations.save_outline(outline)
+        saved = self._presentations.save_outline(outline)
+        if previous_status in {ApprovalStatus.APPROVED, ApprovalStatus.CHANGES_PENDING}:
+            OutlineApprovalRecordRepository(self._session).supersede_active(saved.id)
+        return saved
 
     def approve_outline(self, outline_id: UUID) -> OutlinePlan:
         outline = self._require_outline(outline_id)

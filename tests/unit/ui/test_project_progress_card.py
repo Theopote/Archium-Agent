@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from archium.domain.enums import EvidenceAvailability
 from archium.ui.project_progress_card import (
     CockpitTaskSummary,
     ProjectProgressSnapshot,
@@ -26,13 +27,16 @@ def _snapshot(**overrides: object) -> ProjectProgressSnapshot:
         "has_brief": True,
         "ready_for_export": False,
         "updated_at": datetime.now(UTC),
+        "evidence_availability": EvidenceAvailability.AVAILABLE,
+        "has_outline": True,
+        "outline_approved": False,
     }
     base.update(overrides)
     return ProjectProgressSnapshot(**base)  # type: ignore[arg-type]
 
 
 def test_progress_labels_match_user_facing_copy() -> None:
-    snap = _snapshot()
+    snap = _snapshot(outline_approved=True, has_outline=True)
     assert snap.materials_label == "已整理"
     assert snap.outline_label == "已确认"
     assert snap.generate_label == "21/24 页"
@@ -41,6 +45,14 @@ def test_progress_labels_match_user_facing_copy() -> None:
     assert snap.presentation_type_label == "甲方汇报"
     assert snap.current_stage_id == "generate"
     assert snap.completion_label == "21/24 页完成"
+
+
+def test_brief_alone_is_not_outline_confirmed() -> None:
+    from archium.ui.pages.flow import stage_completion_status
+
+    snap = _snapshot(has_brief=True, has_outline=False, outline_approved=False)
+    assert snap.outline_label == "Brief 已有"
+    assert stage_completion_status("outline", snap) == "current"
 
 
 def test_progress_empty_project_labels() -> None:
@@ -53,6 +65,9 @@ def test_progress_empty_project_labels() -> None:
         layout_ready_count=0,
         has_brief=False,
         ready_for_export=False,
+        evidence_availability=EvidenceAvailability.MISSING,
+        has_outline=False,
+        outline_approved=False,
     )
     assert snap.materials_label == "未上传"
     assert snap.outline_label == "未开始"
@@ -64,10 +79,32 @@ def test_progress_empty_project_labels() -> None:
 
 
 def test_progress_ready_for_export_label() -> None:
-    snap = _snapshot(ready_for_export=True, layout_ready_count=24, slide_count=24)
+    snap = _snapshot(
+        ready_for_export=True,
+        layout_ready_count=24,
+        slide_count=24,
+        document_count=3,
+        evidence_availability=EvidenceAvailability.AVAILABLE,
+        has_outline=True,
+        outline_approved=True,
+    )
     assert snap.deliver_label == "可交付"
+    assert snap.formal_delivery_ready
     assert snap.pending_count == 0
     assert snap.current_stage_id == "deliver"
+
+
+def test_progress_draft_export_not_formal() -> None:
+    snap = _snapshot(
+        ready_for_export=True,
+        layout_ready_count=24,
+        slide_count=24,
+        document_count=0,
+        evidence_availability=EvidenceAvailability.MISSING,
+    )
+    assert snap.draft_export_ready
+    assert not snap.formal_delivery_ready
+    assert snap.deliver_label == "草稿"
 
 
 def test_format_relative_time_minutes() -> None:

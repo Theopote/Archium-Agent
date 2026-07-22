@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 import streamlit as st
 
+from archium.domain.enums import EvidenceAvailability
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import (
     render_page_header,
@@ -57,7 +58,16 @@ def evaluate_stage_gate(
         return StageGateResult(can_proceed=False, blockers=tuple(blockers))
 
     if stage_id == "materials":
-        if snapshot.document_count <= 0:
+        if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+            blockers.append("资料状态无法验证，请稍后重试或检查数据库连接")
+            return StageGateResult(
+                can_proceed=False,
+                blockers=tuple(blockers),
+            )
+        if (
+            snapshot.evidence_availability == EvidenceAvailability.MISSING
+            or snapshot.document_count <= 0
+        ):
             warnings.append(
                 "尚未绑定项目资料，后续生成将标记为概念草稿，不得正式交付"
             )
@@ -68,18 +78,24 @@ def evaluate_stage_gate(
         )
 
     if stage_id == "outline":
-        if snapshot.document_count <= 0:
-            warnings.append("尚未绑定项目资料，生成内容仅作为概念草稿")
-        if (
-            not snapshot.outline_approved
-            and not snapshot.has_brief
-            and snapshot.presentation_id is None
+        if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+            warnings.append("资料状态无法验证；生成前请确认资料可读取")
+        elif (
+            snapshot.evidence_availability == EvidenceAvailability.MISSING
+            or snapshot.document_count <= 0
         ):
-            blockers.append("确认汇报对象与大纲结构（生成大纲）")
-        elif not snapshot.outline_approved and not snapshot.has_brief:
-            warnings.append("建议确认大纲后再生成")
+            warnings.append("尚未绑定项目资料，生成内容仅作为概念草稿")
+        if not snapshot.outline_approved:
+            if not getattr(snapshot, "has_outline", False) and not snapshot.has_brief:
+                blockers.append("确认汇报对象与大纲结构（生成大纲）")
+            elif not snapshot.outline_approved and getattr(snapshot, "has_outline", False):
+                warnings.append("大纲已生成，请确认后再进入生成")
+            elif snapshot.has_brief and not getattr(snapshot, "has_outline", False):
+                warnings.append("Brief 已有，请生成并确认 OutlinePlan")
+            else:
+                warnings.append("建议确认大纲后再生成")
         return StageGateResult(
-            can_proceed=not blockers,
+            can_proceed=snapshot.outline_approved or not blockers,
             blockers=tuple(blockers),
             warnings=tuple(warnings),
         )
@@ -100,7 +116,12 @@ def evaluate_stage_gate(
             blockers.append("尚无可编辑页面，请先完成生成")
         elif not snapshot.ready_for_export:
             warnings.append("部分页面版式未齐，交付时可能受限")
-        if snapshot.document_count <= 0:
+        if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+            warnings.append("资料状态无法验证 · 正式交付将被阻止")
+        elif (
+            snapshot.evidence_availability == EvidenceAvailability.MISSING
+            or snapshot.document_count <= 0
+        ):
             warnings.append("无项目证据 · 草稿模式，正式交付将被阻止")
         return StageGateResult(
             can_proceed=not blockers,
@@ -109,10 +130,18 @@ def evaluate_stage_gate(
         )
 
     if stage_id == "deliver":
-        if snapshot.document_count <= 0:
+        if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+            blockers.append("资料状态无法验证，禁止正式交付")
+        elif (
+            snapshot.evidence_availability == EvidenceAvailability.MISSING
+            or snapshot.document_count <= 0
+        ):
             blockers.append("概念草稿不可正式交付：请先绑定至少一份项目资料")
-        elif not snapshot.ready_for_export:
-            warnings.append("版式未齐，导出可能不完整")
+        elif not snapshot.formal_delivery_ready:
+            if snapshot.export_blocker_count > 0:
+                blockers.append(f"仍有 {snapshot.export_blocker_count} 个阻塞项未清除")
+            elif not snapshot.ready_for_export:
+                warnings.append("版式未齐，导出可能不完整")
         return StageGateResult(
             can_proceed=not blockers,
             blockers=tuple(blockers),
@@ -141,12 +170,24 @@ def stage_completion_status(
         return "blocked"
 
     if stage_id == "materials":
-        return "done" if snapshot.document_count > 0 else "blocked"
+        if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+            return "blocked"
+        if (
+            snapshot.evidence_availability == EvidenceAvailability.AVAILABLE
+            or snapshot.document_count > 0
+        ):
+            return "done"
+        # Concept-draft mode: allow continue, but do not show ✕.
+        return "warn"
 
     if stage_id == "outline":
-        if snapshot.has_brief or getattr(snapshot, "outline_approved", False):
+        if snapshot.outline_approved:
             return "done"
-        return "warn" if snapshot.presentation_id else "todo"
+        if getattr(snapshot, "has_outline", False):
+            return "warn"
+        if snapshot.has_brief:
+            return "current"
+        return "todo"
 
     if stage_id == "generate":
         if snapshot.slide_count <= 0:
@@ -161,7 +202,11 @@ def stage_completion_status(
         return "done" if snapshot.ready_for_export else "warn"
 
     if stage_id == "deliver":
-        return "done" if snapshot.ready_for_export else "todo"
+        if snapshot.formal_delivery_ready:
+            return "done"
+        if snapshot.draft_export_ready:
+            return "warn"
+        return "todo"
 
     return "todo"
 
@@ -178,13 +223,41 @@ def _stage_statuses(
             # Current page is highlighted; do not fake "done" for unfinished work.
             if completion in {"blocked", "todo"}:
                 statuses[stage.id] = "blocked" if completion == "blocked" else "current"
-            elif completion == "warn":
-                statuses[stage.id] = "warn"
+            elif completion in {"warn", "current"}:
+                statuses[stage.id] = "warn" if completion == "warn" else "current"
             else:
                 statuses[stage.id] = "current"
         else:
-            statuses[stage.id] = completion
+            # "current" is page-relative; off-page treat as unfinished todo.
+            statuses[stage.id] = "todo" if completion == "current" else completion
     return statuses
+
+
+def _stage_status_hint(
+    stage_id: str,
+    status: str,
+    snapshot: ProjectProgressSnapshot | None,
+) -> str:
+    if status == "warn" and stage_id == "materials":
+        return "无项目资料，当前为概念草稿模式"
+    if status == "blocked" and stage_id == "materials":
+        if snapshot is None:
+            return "请先创建或选择项目"
+        if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+            return "资料状态无法验证"
+    if (
+        status == "warn"
+        and stage_id == "deliver"
+        and snapshot is not None
+        and snapshot.draft_export_ready
+    ):
+        if snapshot.evidence_availability == EvidenceAvailability.MISSING:
+            return "版式已齐，但无项目资料，不可正式交付"
+        if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+            return "资料状态无法验证，禁止正式交付"
+        if snapshot.export_blocker_count > 0:
+            return "仍有阻塞项，不可正式交付"
+    return ""
 
 
 def render_flow_stepper(current_stage_id: str) -> None:
@@ -202,10 +275,15 @@ def render_flow_stepper(current_stage_id: str) -> None:
     for stage in primary_stages():
         marker = _stage_marker(statuses[stage.id])
         title = html.escape(stage.title)
+        hint = _stage_status_hint(stage.id, statuses[stage.id], snapshot)
+        label = f"{marker} {title}"
+        if hint:
+            escaped_hint = html.escape(hint)
+            label = f'<span title="{escaped_hint}">{label}</span>'
         if stage.id == current_stage_id:
-            parts.append(f"<strong>{marker} {title}</strong>")
+            parts.append(f"<strong>{label}</strong>")
         else:
-            parts.append(f"{marker} {title}")
+            parts.append(label)
     render_stepper(" ─ ".join(parts))
 
 

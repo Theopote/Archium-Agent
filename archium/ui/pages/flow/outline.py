@@ -155,6 +155,7 @@ def _outline_update_from(
         if page_intents is not None
         else _intent_updates(list(outline.page_intents)),
         page_asset_bindings=_binding_updates(outline),
+        expected_version=outline.version,
     )
 
 
@@ -638,7 +639,8 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
             project_mission.reset_planning_session()
             st.rerun()
     with cols[1]:
-        ready = has_request or has_mission or outline is not None or bool(cards)
+        from archium.application.outline_approval_service import outline_ready_for_approval
+
         if outline is not None and outline.is_approved:
             st.success(f"大纲已确认（v{outline.version}）")
             if st.button(
@@ -648,14 +650,50 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                 key="outline_goto_generate",
             ):
                 st.switch_page(get_app_page("generate"))
-        elif st.button(
-            "确认大纲并开始生成 →",
-            type="primary",
-            use_container_width=True,
-            disabled=not ready,
-            key="outline_confirm",
-        ):
-            _confirm_outline_and_go(project_id, outline=outline)
+        elif outline is None:
+            task_ready = has_request or has_mission or bool(cards)
+            if not task_ready:
+                st.caption("先描述汇报任务，再生成大纲结构。")
+            if st.button(
+                "确认任务并生成大纲",
+                type="primary",
+                use_container_width=True,
+                disabled=not task_ready,
+                key="outline_confirm_task",
+            ):
+                task = (
+                    st.session_state.get("outline_task_draft")
+                    or st.session_state.get("mission_task_draft")
+                    or ""
+                )
+                if not str(task).strip() and snapshot.presentation_request is not None:
+                    req = snapshot.presentation_request
+                    task = (
+                        getattr(req, "core_message", None)
+                        or getattr(req, "purpose", None)
+                        or getattr(req, "user_notes", None)
+                        or getattr(req, "title", None)
+                        or ""
+                    )
+                if not str(task).strip() and snapshot.mission is not None:
+                    task = getattr(snapshot.mission, "description", "") or ""
+                if not str(task).strip():
+                    st.warning("请先填写任务描述。")
+                else:
+                    st.session_state.mission_task_draft = str(task)
+                    project_mission.start_outline_planning(project_id, str(task))
+        else:
+            can_confirm, missing = outline_ready_for_approval(outline)
+            if not can_confirm:
+                st.caption("确认大纲前还需：" + "；".join(missing))
+            if st.button(
+                "确认大纲并开始生成 →",
+                type="primary",
+                use_container_width=True,
+                disabled=not can_confirm,
+                key="outline_confirm",
+            ):
+                _confirm_outline_and_go(project_id, outline=outline)
 
     if not has_request and has_mission:
         with st.expander("继续完善任务描述", expanded=False):

@@ -179,13 +179,19 @@ def _append_delivery_record(
     presentation_id: UUID,
     qa_status: str = "unknown",
 ) -> None:
+    import logging
     from datetime import UTC, datetime
 
-    from archium.application.delivery_record_service import DeliveryRecordService
+    from archium.application.delivery_record_service import (
+        DeliveryRecordResult,
+        DeliveryRecordService,
+    )
 
+    logger = logging.getLogger(__name__)
+    result = DeliveryRecordResult(file_exported=True, record_persisted=False)
     try:
         with get_session() as session:
-            DeliveryRecordService(session).record_export(
+            record = DeliveryRecordService(session).record_export(
                 project_id=project_id,
                 presentation_id=presentation_id,
                 format=fmt,
@@ -193,8 +199,19 @@ def _append_delivery_record(
                 qa_status=qa_status,
             )
             session.commit()
-    except Exception:
-        pass
+        result = DeliveryRecordResult(
+            file_exported=True,
+            record_persisted=True,
+            record=record,
+        )
+    except Exception as exc:
+        logger.exception("Failed to persist delivery record for %s", path)
+        result = DeliveryRecordResult(
+            file_exported=True,
+            record_persisted=False,
+            error_message=str(exc),
+        )
+        st.warning("文件已导出，但版本记录保存失败。重新打开应用后可能看不到本条记录。")
 
     records = list(st.session_state.get("delivery_export_records") or [])
     records.append(
@@ -205,6 +222,7 @@ def _append_delivery_record(
             "project_id": str(project_id),
             "presentation_id": str(presentation_id),
             "qa_status": qa_status,
+            "record_persisted": result.record_persisted,
         }
     )
     st.session_state.delivery_export_records = records[-20:]
@@ -257,14 +275,10 @@ def _export_pdf(
         st.error(format_user_error(exc))
 
 
-def _project_has_documents(project_id: UUID) -> bool:
-    from archium.infrastructure.database.repositories import DocumentRepository
+def _project_evidence_status(project_id: UUID):
+    from archium.application.project_evidence import resolve_project_evidence_safe
 
-    try:
-        with get_session() as session:
-            return len(DocumentRepository(session).list_by_project(project_id)) > 0
-    except Exception:
-        return True
+    return resolve_project_evidence_safe(project_id)
 
 
 def _render_quick_export_popover(
@@ -274,11 +288,13 @@ def _render_quick_export_popover(
     key_prefix: str = "studio",
 ) -> None:
     """Compact export entry — does not dominate the editing chrome."""
-    has_docs = _project_has_documents(context.project.id)
-    export_disabled = (not context.ready_for_export) or (not has_docs)
+    evidence = _project_evidence_status(context.project.id)
+    export_disabled = (not context.ready_for_export) or (not evidence.allows_formal_export)
     with st.popover("导出", use_container_width=True):
         st.caption("快速导出当前汇报。完整导出与质量检查请到「交付」。")
-        if not has_docs:
+        if evidence.is_unknown:
+            st.caption("资料状态无法验证，禁止正式导出。")
+        elif evidence.is_concept_draft:
             st.caption("概念草稿不可正式导出，请先绑定项目资料。")
         elif not context.ready_for_export:
             st.caption("导出需先完成全部页面版式。")
@@ -380,8 +396,8 @@ def render_export_panel(
     project_id = context.project.id
     presentation_id = context.presentation.id
     settings = get_ui_effective_settings()
-    has_docs = _project_has_documents(project_id)
-    export_disabled = (not context.ready_for_export) or (not has_docs)
+    evidence = _project_evidence_status(project_id)
+    export_disabled = (not context.ready_for_export) or (not evidence.allows_formal_export)
     preferences = _render_scene_preset_row()
 
     (
@@ -451,7 +467,9 @@ def render_export_panel(
                 settings=settings,
             )
 
-    if not has_docs:
+    if evidence.is_unknown:
+        st.caption("资料状态无法验证，禁止正式导出。")
+    elif evidence.is_concept_draft:
         st.caption("概念草稿不可正式导出，请先绑定项目资料。")
     elif export_disabled:
         st.caption("导出需先完成全部页面版式。")

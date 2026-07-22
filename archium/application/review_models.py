@@ -118,6 +118,7 @@ class OutlineUpdate:
     sections: list[OutlineSectionUpdate] = field(default_factory=list)
     page_intents: list[SlideIntentUpdate] = field(default_factory=list)
     page_asset_bindings: list[SlideAssetBindingUpdate] = field(default_factory=list)
+    expected_version: int | None = None
 
 
 @dataclass(frozen=True)

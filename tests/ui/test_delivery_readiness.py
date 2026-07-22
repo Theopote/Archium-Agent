@@ -26,8 +26,19 @@ def test_deliver_readiness_shows_pending_warnings_and_blockers() -> None:
     assert "待完成页" in text
     assert 'metric("警告"' in text or 'metric("警告",' in text
     assert "阻塞项" in text
+    assert "项目资料" in text
+    assert "_render_delivery_record_actions" in text
     # Must not collapse warnings into the pending metric.
     assert "pending if pending else warn_count" not in text
+
+
+def test_export_panel_warns_when_record_persist_fails() -> None:
+    export = (
+        ROOT / "archium" / "ui" / "studio" / "export_panel.py"
+    ).read_text(encoding="utf-8")
+    assert "DeliveryRecordResult" in export
+    assert "版本记录保存失败" in export
+    assert "except Exception:\n        pass" not in export
 
 
 def test_delivery_records_survive_new_session(

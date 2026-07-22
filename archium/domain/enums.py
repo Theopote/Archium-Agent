@@ -152,6 +152,14 @@ class ApprovalStatus(StrEnum):
     CHANGES_PENDING = "changes_pending"
 
 
+class EvidenceAvailability(StrEnum):
+    """Tri-state project materials check — never collapse query failure into bool."""
+
+    AVAILABLE = "available"
+    MISSING = "missing"
+    UNKNOWN = "unknown"
+
+
 class SlideType(StrEnum):
     TITLE = "title"
     SECTION = "section"

@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+from archium.domain.enums import EvidenceAvailability
 from archium.ui.pages.flow import evaluate_stage_gate, stage_completion_status
 from archium.ui.project_progress_card import ProjectProgressSnapshot
 
@@ -24,6 +25,9 @@ def _snapshot(**overrides: object) -> ProjectProgressSnapshot:
         "ready_for_export": False,
         "updated_at": datetime.now(UTC),
         "outline_approved": False,
+        "has_outline": False,
+        "evidence_availability": EvidenceAvailability.AVAILABLE,
+        "export_blocker_count": 0,
     }
     base.update(overrides)
     return ProjectProgressSnapshot(**base)  # type: ignore[arg-type]
@@ -38,9 +42,10 @@ def test_stage_completion_does_not_fake_done_from_navigation() -> None:
         slide_count=0,
         layout_ready_count=0,
         ready_for_export=False,
+        evidence_availability=EvidenceAvailability.MISSING,
     )
     # Opening 工作室 must not mark earlier stages done.
-    assert stage_completion_status("materials", empty) == "blocked"
+    assert stage_completion_status("materials", empty) == "warn"
     assert stage_completion_status("outline", empty) == "todo"
     assert stage_completion_status("generate", empty) == "todo"
     assert stage_completion_status("edit", empty) == "blocked"
@@ -50,15 +55,59 @@ def test_stage_completion_does_not_fake_done_from_navigation() -> None:
         document_count=3,
         has_brief=True,
         outline_approved=True,
+        has_outline=True,
         slide_count=5,
         layout_ready_count=5,
         ready_for_export=True,
+        evidence_availability=EvidenceAvailability.AVAILABLE,
     )
     assert stage_completion_status("materials", ready) == "done"
     assert stage_completion_status("outline", ready) == "done"
     assert stage_completion_status("generate", ready) == "done"
     assert stage_completion_status("edit", ready) == "done"
     assert stage_completion_status("deliver", ready) == "done"
+
+
+def test_outline_completion_requires_approval_not_brief() -> None:
+    brief_only = _snapshot(
+        has_brief=True,
+        has_outline=False,
+        outline_approved=False,
+    )
+    assert stage_completion_status("outline", brief_only) == "current"
+
+    has_outline = _snapshot(
+        has_brief=True,
+        has_outline=True,
+        outline_approved=False,
+    )
+    assert stage_completion_status("outline", has_outline) == "warn"
+
+    approved = _snapshot(has_outline=True, outline_approved=True)
+    assert stage_completion_status("outline", approved) == "done"
+
+
+def test_deliver_completion_requires_formal_delivery_ready() -> None:
+    draft_ready = _snapshot(
+        document_count=0,
+        evidence_availability=EvidenceAvailability.MISSING,
+        ready_for_export=True,
+        slide_count=3,
+        layout_ready_count=3,
+    )
+    assert stage_completion_status("deliver", draft_ready) == "warn"
+    assert not draft_ready.formal_delivery_ready
+
+    blocked = _snapshot(
+        document_count=2,
+        evidence_availability=EvidenceAvailability.AVAILABLE,
+        ready_for_export=True,
+        slide_count=3,
+        layout_ready_count=3,
+        export_blocker_count=2,
+    )
+    assert stage_completion_status("deliver", blocked) == "warn"
+    assert not blocked.formal_delivery_ready
 
 
 def test_outline_gate_allows_concept_draft_without_materials() -> None:
@@ -68,6 +117,7 @@ def test_outline_gate_allows_concept_draft_without_materials() -> None:
         presentation_id=None,
         slide_count=0,
         layout_ready_count=0,
+        evidence_availability=EvidenceAvailability.MISSING,
     )
     gate = evaluate_stage_gate("outline", empty)
     assert not gate.can_proceed
@@ -79,7 +129,13 @@ def test_outline_gate_allows_concept_draft_without_materials() -> None:
 def test_materials_gate_allows_continue_as_draft() -> None:
     gate = evaluate_stage_gate(
         "materials",
-        _snapshot(document_count=0, has_brief=False, presentation_id=None, slide_count=0),
+        _snapshot(
+            document_count=0,
+            has_brief=False,
+            presentation_id=None,
+            slide_count=0,
+            evidence_availability=EvidenceAvailability.MISSING,
+        ),
     )
     assert gate.can_proceed
     assert any("草稿" in item or "资料" in item for item in gate.warnings)
@@ -88,7 +144,13 @@ def test_materials_gate_allows_continue_as_draft() -> None:
 def test_deliver_gate_blocks_concept_draft() -> None:
     gate = evaluate_stage_gate(
         "deliver",
-        _snapshot(document_count=0, ready_for_export=True, slide_count=3, layout_ready_count=3),
+        _snapshot(
+            document_count=0,
+            evidence_availability=EvidenceAvailability.MISSING,
+            ready_for_export=True,
+            slide_count=3,
+            layout_ready_count=3,
+        ),
     )
     assert not gate.can_proceed
     assert any("交付" in item or "资料" in item for item in gate.blockers)
@@ -148,6 +210,10 @@ def test_deliver_page_hides_benchmark_and_has_readiness() -> None:
     settings_text = settings_src.read_text(encoding="utf-8")
     assert "准备度" in deliver_text
     assert "版本记录" in deliver_text
+    assert "项目资料" in deliver_text
+    assert "_render_delivery_record_actions" in deliver_text
+    assert "下载" in deliver_text
+    assert "打开目录" in deliver_text
     assert "render_benchmark_review_panel" not in deliver_text
     assert "开发者与验收" in settings_text
     assert "render_benchmark_review_panel" in settings_text
@@ -200,4 +266,6 @@ def test_deliver_readiness_shows_separate_metrics() -> None:
     assert "页面完成" in text
     assert 'metric("警告"' in text or 'metric("警告",' in text
     assert "待完成页" in text
+    assert "项目资料" in text
     assert "DeliveryRecordService" in text
+    assert "版本记录保存失败" not in text  # warning lives in export_panel

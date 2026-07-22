@@ -15,6 +15,7 @@ from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProjectStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
+from archium.domain.outline_approval_record import OutlineApprovalRecord
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
@@ -34,6 +35,7 @@ from archium.infrastructure.database.models import (
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
+    OutlineApprovalRecordORM,
     OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
@@ -1113,3 +1115,51 @@ class DeliveryRecordRepository:
             .limit(limit)
         )
         return [mappers.delivery_record_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class OutlineApprovalRecordRepository:
+    """CRUD for durable outline approval audit rows."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, record: OutlineApprovalRecord) -> OutlineApprovalRecord:
+        try:
+            orm = mappers.outline_approval_record_to_orm(record)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.outline_approval_record_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create outline approval record", exc)
+            raise
+
+    def list_by_outline(
+        self,
+        outline_id: UUID,
+        *,
+        limit: int = 20,
+        active_only: bool = False,
+    ) -> list[OutlineApprovalRecord]:
+        stmt = select(OutlineApprovalRecordORM).where(
+            OutlineApprovalRecordORM.outline_id == outline_id
+        )
+        if active_only:
+            stmt = stmt.where(OutlineApprovalRecordORM.superseded_at.is_(None))
+        stmt = stmt.order_by(OutlineApprovalRecordORM.approved_at.desc()).limit(limit)
+        return [
+            mappers.outline_approval_record_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
+    def supersede_active(self, outline_id: UUID, *, superseded_at=None) -> int:
+        from datetime import UTC, datetime
+
+        moment = superseded_at or datetime.now(UTC)
+        rows = self.list_by_outline(outline_id, active_only=True, limit=100)
+        for record in rows:
+            orm = self._session.get(OutlineApprovalRecordORM, record.id)
+            if orm is None or orm.superseded_at is not None:
+                continue
+            orm.superseded_at = moment
+        self._session.flush()
+        return len(rows)
