@@ -5,13 +5,14 @@
 - ``CHART`` → ``ImageNode`` (may be a rasterized chart asset; not ``ChartNode``)
 - ``TABLE`` / ``METRIC`` → ``TextNode`` (tabular data as text; not ``TableNode``)
 
-**Style application (honest):**
+**Style application:**
 
-- Scene tokens/colors come from ``DesignSystem`` only.
-- ``art_direction`` and ``reference_style`` are accepted for API stability but
-  **not applied** (discarded until Phase 3+ style overlays).
-- Do not claim Reference Style / ArtDirection visual overlays are applied in
-  RenderScene compilation.
+- Base tokens come from ``DesignSystem``.
+- When provided, ``art_direction`` and ``reference_style`` are merged via
+  :func:`archium.application.visual.style_overlay.apply_style_overlays`
+  (in-memory only; persisted DesignSystem rows are unchanged).
+- ReferenceStyle color/typography cues with resolvable hex / font / size win
+  over ArtDirection tone heuristics.
 
 Phase 0–2 only requires Text / Image / Drawing / Shape. Do not describe V1 as
 a complete editable chart/table scene model.
@@ -26,6 +27,7 @@ from archium.application.visual.scene_fonts import (
     collect_font_assets,
     resolve_text_fonts,
 )
+from archium.application.visual.style_overlay import apply_style_overlays
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -75,8 +77,7 @@ _VALID_ORIGINS = frozenset(
 class RenderSceneCompiler:
     """Translate planning artifacts into a unified RenderScene (V1 minimal nodes).
 
-    Applies ``DesignSystem`` only. ``art_direction`` / ``reference_style`` are
-    API placeholders until Phase 3+ style overlays.
+    Applies ``DesignSystem`` plus optional ArtDirection / ReferenceStyle overlays.
     """
 
     def compile(
@@ -91,20 +92,23 @@ class RenderSceneCompiler:
         reference_style: ReferenceStyleProfile | None = None,
         presentation_id: UUID | None = None,
     ) -> RenderScene:
-        # Phase 3+: apply ArtDirection / ReferenceStyleProfile overlays onto theme
-        # tokens and node styles. Until then only DesignSystem affects the scene.
-        _ = art_direction, reference_style
+        overlay = apply_style_overlays(
+            design_system,
+            art_direction=art_direction,
+            reference_style=reference_style,
+        )
+        effective = overlay.design_system
         bundle = content_bundle or SlideContentBundle()
-        warnings: list[str] = []
+        warnings: list[str] = list(overlay.warnings)
         asset_manifest: list[SceneAssetReference] = []
         nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
         drawing_type = self._infer_drawing_type(slide, visual_intent)
 
-        bg_color = design_system.colors.resolve("background")
+        bg_color = effective.colors.resolve("background")
         for element in sorted(layout_plan.elements, key=lambda el: el.z_index):
             compiled = self._compile_element(
                 element,
-                design_system=design_system,
+                design_system=effective,
                 bundle=bundle,
                 drawing_type=drawing_type,
                 asset_manifest=asset_manifest,
@@ -114,7 +118,7 @@ class RenderSceneCompiler:
 
         theme = ThemeTokens(
             colors={
-                name: design_system.colors.resolve(name)
+                name: effective.colors.resolve(name)
                 for name in (
                     "background",
                     "surface",
@@ -128,7 +132,7 @@ class RenderSceneCompiler:
                 )
             },
             typography={
-                name: getattr(design_system.typography, name).model_dump()
+                name: getattr(effective.typography, name).model_dump()
                 for name in (
                     "display",
                     "title",
@@ -141,10 +145,10 @@ class RenderSceneCompiler:
                     "source",
                 )
             },
-            spacing=design_system.spacing.model_dump(),
+            spacing=effective.spacing.model_dump(),
         )
         font_assets = collect_font_assets(
-            design_system,
+            effective,
             [n for n in nodes if isinstance(n, TextNode)],
         )
 

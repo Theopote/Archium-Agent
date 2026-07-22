@@ -221,7 +221,15 @@ class ContentAdaptationService:
                 raise WorkflowError("当前核心信息不足以拆成多条要点。")
             updated.key_points = parts[:5]
             lead, applied, _reason = smart_shorten_text(parts[0], _MAX_MESSAGE_LENGTH)
-            updated.message = lead if applied else parts[0][: min(len(parts[0]), 80)]
+            if applied:
+                updated.message = lead
+            else:
+                updated.message = self._safe_truncate(parts[0], max_length=80)
+                self._add_warning(
+                    ContentAdaptationAction.CONVERT_TO_BULLETS,
+                    "拆分要点后的导语无法安全缩短，已按语义边界压缩。",
+                    severity="warning",
+                )
 
         updated.version += 1
         saved = self._presentations.save_slide(updated)

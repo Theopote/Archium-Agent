@@ -21,16 +21,21 @@ from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
+from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairBatchResult
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.database.repositories import (
+    PresentationRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
@@ -78,6 +83,7 @@ class StudioSceneService:
         self._scene_repair = scene_repair or SceneRepairService()
         self._scenes = RenderSceneRepository(session)
         self._presentations = PresentationRepository(session)
+        self._projects = ProjectRepository(session)
         self._plans = LayoutPlanRepository(session)
         self._intents = VisualIntentRepository(session)
         self._design_repo = DesignSystemRepository(session)
@@ -142,14 +148,15 @@ class StudioSceneService:
         design_system: DesignSystem,
         visual_intent: VisualIntent | None = None,
         content_schema: ArchitecturalContentSchema | None = None,
+        art_direction: ArtDirection | None = None,
+        reference_style: ReferenceStyleProfile | None = None,
         presentation_id: UUID | None = None,
         project_id: UUID | None = None,
     ) -> RenderScene:
         resolved_project = project_id
+        resolved_presentation = presentation_id or slide.presentation_id
         if resolved_project is None:
-            presentation = self._presentations.get_presentation(
-                presentation_id or slide.presentation_id
-            )
+            presentation = self._presentations.get_presentation(resolved_presentation)
             if presentation is not None:
                 resolved_project = presentation.project_id
         bundle = SlideContentBundle()
@@ -159,6 +166,13 @@ class StudioSceneService:
                 slide=slide,
                 plan=plan,
             )
+        if art_direction is None and resolved_project is not None:
+            art_direction = self._resolve_art_direction(
+                resolved_project,
+                resolved_presentation,
+            )
+        if reference_style is None and resolved_project is not None:
+            reference_style = self._resolve_reference_style(resolved_project)
         result = self._compiler_chain.compile(
             SceneCompileContext(
                 slide=slide,
@@ -167,7 +181,9 @@ class StudioSceneService:
                 content_bundle=bundle,
                 visual_intent=visual_intent,
                 content_schema=content_schema,
-                presentation_id=presentation_id or slide.presentation_id,
+                art_direction=art_direction,
+                reference_style=reference_style,
+                presentation_id=resolved_presentation,
             )
         )
         return result.scene
@@ -188,7 +204,16 @@ class StudioSceneService:
         if presentation is None:
             return None
 
-        design = self._resolve_design_system(presentation.project_id, slide.presentation_id)
+        art_direction = self._resolve_art_direction(
+            presentation.project_id,
+            slide.presentation_id,
+        )
+        design = self._resolve_design_system(
+            presentation.project_id,
+            slide.presentation_id,
+            art_direction=art_direction,
+        )
+        reference_style = self._resolve_reference_style(presentation.project_id)
         intent = None
         if slide.visual_intent_id is not None:
             intent = self._intents.get(slide.visual_intent_id)
@@ -199,6 +224,8 @@ class StudioSceneService:
             plan=plan,
             design_system=design,
             visual_intent=intent,
+            art_direction=art_direction,
+            reference_style=reference_style,
             presentation_id=slide.presentation_id,
             project_id=presentation.project_id,
         )
@@ -374,21 +401,41 @@ class StudioSceneService:
         )
         return self._canvas.render_preview(render_scene, path)
 
+    def _resolve_art_direction(
+        self,
+        project_id: UUID,
+        presentation_id: UUID,
+    ) -> ArtDirection | None:
+        matched: ArtDirection | None = None
+        for art in self._art_repo.list_by_project(project_id):
+            if art.presentation_id == presentation_id:
+                matched = art
+                break
+        if matched is None:
+            arts = self._art_repo.list_by_project(project_id)
+            matched = arts[0] if arts else None
+        return matched
+
+    def _resolve_reference_style(self, project_id: UUID) -> ReferenceStyleProfile | None:
+        profiles = self._projects.list_reference_style_profiles(project_id)
+        if not profiles:
+            return None
+        approved = [profile for profile in profiles if profile.is_approved]
+        return (approved or profiles)[0]
+
     def _resolve_design_system(
         self,
         project_id: UUID,
         presentation_id: UUID,
+        *,
+        art_direction: ArtDirection | None = None,
     ) -> DesignSystem:
-        art_direction = None
-        for art in self._art_repo.list_by_project(project_id):
-            if art.presentation_id == presentation_id:
-                art_direction = art
-                break
-        if art_direction is None:
-            arts = self._art_repo.list_by_project(project_id)
-            art_direction = arts[0] if arts else None
-        if art_direction is not None and art_direction.design_system_id is not None:
-            design = self._design_repo.get(art_direction.design_system_id)
+        resolved_art = art_direction or self._resolve_art_direction(
+            project_id,
+            presentation_id,
+        )
+        if resolved_art is not None and resolved_art.design_system_id is not None:
+            design = self._design_repo.get(resolved_art.design_system_id)
             if design is not None:
                 return design
         return default_presentation_design_system()

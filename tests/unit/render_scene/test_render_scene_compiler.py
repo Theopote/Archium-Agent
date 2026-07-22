@@ -140,12 +140,12 @@ def test_compiler_warns_on_missing_asset() -> None:
     assert any("UNRESOLVED_ASSET" in warning for warning in scene.warnings)
 
 
-def test_reference_style_and_art_direction_do_not_affect_compiled_scene() -> None:
-    """P1 contract: ReferenceStyle / ArtDirection are API placeholders only.
+def test_reference_style_and_art_direction_affect_compiled_scene() -> None:
+    """Style overlays close the ReferenceStyle / ArtDirection → Scene loop.
 
-    When Phase 3+ applies style overlays, this test must be replaced with
-    assertions that cues change theme tokens / typography — do not delete the
-    honesty gap without implementing overlays.
+    Resolvable color hex + typography cues from ReferenceStyle, and ArtDirection
+    oversized-title strategy, must change theme tokens and text node styles.
+    Persisted DesignSystem defaults remain the baseline when overlays are absent.
     """
     from archium.domain.reference_style import (
         ReferenceStyleProfile,
@@ -171,7 +171,7 @@ def test_reference_style_and_art_direction_do_not_affect_compiled_scene() -> Non
                 id="title",
                 role=LayoutElementRole.TITLE,
                 content_type=LayoutContentType.TEXT,
-                text_content="风格应被忽略",
+                text_content="风格应被应用",
                 x=0.7,
                 y=0.45,
                 width=8.6,
@@ -182,7 +182,7 @@ def test_reference_style_and_art_direction_do_not_affect_compiled_scene() -> Non
     )
     slide = SlideSpec(
         presentation_id=uuid4(),
-        title="风格应被忽略",
+        title="风格应被应用",
         message="msg",
         chapter_id="cover",
         order=1,
@@ -217,8 +217,8 @@ def test_reference_style_and_art_direction_do_not_affect_compiled_scene() -> Non
     )
     art_direction = ArtDirection(
         project_id=project_id,
-        concept_name="ignored-concept",
-        rationale="Must not change scene until Phase 3+",
+        concept_name="applied-concept",
+        rationale="Must change scene theme via style overlays",
         palette_strategy="neon pink background",
         typography_strategy="oversized display",
         grid_strategy="asymmetric",
@@ -248,16 +248,19 @@ def test_reference_style_and_art_direction_do_not_affect_compiled_scene() -> Non
         reference_style=reference_style,
     )
 
-    assert styled.background.color == baseline.background.color == design.colors.resolve(
-        "background"
-    )
-    assert styled.theme_tokens.model_dump() == baseline.theme_tokens.model_dump()
+    assert baseline.background.color == design.colors.resolve("background")
+    assert styled.background.color.upper() == "#FF00AA"
+    assert styled.theme_tokens.colors["background"].upper() == "#FF00AA"
+    assert styled.theme_tokens.model_dump() != baseline.theme_tokens.model_dump()
+
     base_title = baseline.node_by_id("title")
     styled_title = styled.node_by_id("title")
     assert isinstance(base_title, TextNode)
     assert isinstance(styled_title, TextNode)
-    assert styled_title.font_family == base_title.font_family
-    assert styled_title.font_size == base_title.font_size
-    assert styled_title.color == base_title.color
-    assert "#FF00AA" not in (styled.background.color or "").upper()
-    assert "Comic" not in (styled_title.font_family or "")
+    assert "Comic" in (styled_title.font_family or "")
+    assert styled_title.font_size == 72.0
+    assert any("style_overlay:colors=" in warning for warning in styled.warnings)
+    assert any("style_overlay:typography=" in warning for warning in styled.warnings)
+    # Baseline path remains untouched (no overlays).
+    assert base_title.font_family != styled_title.font_family
+    assert base_title.font_size != styled_title.font_size

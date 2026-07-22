@@ -25,3 +25,15 @@ def package_version() -> str:
 
 
 FULL_VERSION_LABEL = package_version()
+
+
+def render_version_footer() -> None:
+    """Compact productized version line for the sidebar."""
+    import streamlit as st
+
+    st.markdown(
+        '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
+        f"{DISPLAY_VERSION}<br>{SIDEBAR_VALUE_HINT}"
+        "</div>",
+        unsafe_allow_html=True,
+    )

@@ -5,12 +5,8 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.ui.app_navigation import build_app_pages
-from archium.ui.bootstrap import (
-    init_app,
-    inject_styles,
-    render_branding,
-    render_version_footer,
-)
+from archium.ui.bootstrap import init_app, inject_styles, render_branding
+from archium.ui.branding import render_version_footer
 from archium.ui.project_progress_card import render_project_progress_card
 
 st.set_page_config(

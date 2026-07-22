@@ -16,12 +16,18 @@ from archium.application.visual.asset_reference import (
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
-from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.database.repositories import (
+    PresentationRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.database.visual_repositories import (
+    ArtDirectionRepository,
     RenderSceneRepository,
     VisualIntentRepository,
 )
@@ -54,6 +60,8 @@ class VisualSceneRepairWorkflowService:
         self._compiler = compiler or RenderSceneCompiler()
         self._scene_repair = scene_repair or SceneRepairService()
         self._presentations = PresentationRepository(session)
+        self._projects = ProjectRepository(session)
+        self._art_directions = ArtDirectionRepository(session)
         self._intents = VisualIntentRepository(session)
         self._scenes = RenderSceneRepository(session)
 
@@ -65,7 +73,13 @@ class VisualSceneRepairWorkflowService:
         design_system: DesignSystem,
         presentation_id: UUID,
         project_id: UUID,
+        art_direction: ArtDirection | None = None,
+        reference_style: ReferenceStyleProfile | None = None,
     ) -> list[RenderScene]:
+        if art_direction is None:
+            art_direction = self._resolve_art_direction(project_id, presentation_id)
+        if reference_style is None:
+            reference_style = self._resolve_reference_style(project_id)
         slide_by_id = {slide.id: slide for slide in slides}
         compiled: list[RenderScene] = []
         for plan in plans:
@@ -85,10 +99,34 @@ class VisualSceneRepairWorkflowService:
                     design_system=design_system,
                     content_bundle=bundle,
                     visual_intent=intent,
+                    art_direction=art_direction,
+                    reference_style=reference_style,
                     presentation_id=presentation_id,
                 )
             )
         return compiled
+
+    def _resolve_art_direction(
+        self,
+        project_id: UUID,
+        presentation_id: UUID,
+    ) -> ArtDirection | None:
+        matched: ArtDirection | None = None
+        for art in self._art_directions.list_by_project(project_id):
+            if art.presentation_id == presentation_id:
+                matched = art
+                break
+        if matched is None:
+            arts = self._art_directions.list_by_project(project_id)
+            matched = arts[0] if arts else None
+        return matched
+
+    def _resolve_reference_style(self, project_id: UUID) -> ReferenceStyleProfile | None:
+        profiles = self._projects.list_reference_style_profiles(project_id)
+        if not profiles:
+            return None
+        approved = [profile for profile in profiles if profile.is_approved]
+        return (approved or profiles)[0]
 
     def repair_and_persist(
         self,

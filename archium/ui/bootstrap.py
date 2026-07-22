@@ -175,14 +175,9 @@ def render_branding() -> None:
 
 def render_version_footer() -> None:
     """Compact productized version line for the sidebar."""
-    from archium.ui.branding import DISPLAY_VERSION, SIDEBAR_VALUE_HINT
+    from archium.ui.branding import render_version_footer as _render
 
-    st.markdown(
-        '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
-        f"{DISPLAY_VERSION}<br>{SIDEBAR_VALUE_HINT}"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    _render()
 
 
 def render_about_panel() -> None:

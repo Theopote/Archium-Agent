@@ -335,7 +335,8 @@ class TemplateStudioService:
             chapter_id="template-test",
             message="Template Studio 测试内容填充。",
         )
-        # DesignSystem only — reference_style / art_direction not applied in V1 compiler.
+        # Template fill preview uses DesignSystem only (no project ArtDirection /
+        # ReferenceStyle in this path). Project Studio compile path applies overlays.
         scene = RenderSceneCompiler().compile(
             slide=slide,
             layout_plan=plan,
