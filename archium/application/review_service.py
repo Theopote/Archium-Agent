@@ -41,9 +41,9 @@ from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.domain.review import ReviewIssue
+from archium.domain.slide import SlideSpec
 from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_intent import SlideIntent
-from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,

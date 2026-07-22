@@ -11,7 +11,6 @@ from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )
 from archium.application.visual.scene_repair_service import SceneRepairService
-from archium.domain.visual.scene_repair import SceneRepairApplyMode
 from archium.application.visual.schema_usage_validator import validate_schema_length_bounds
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation_manuscript import ManuscriptFact
@@ -25,6 +24,7 @@ from archium.domain.visual.architectural_content_schema import (
 )
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
+from archium.domain.visual.scene_repair import SceneRepairApplyMode
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
     FunctionalSlideType,

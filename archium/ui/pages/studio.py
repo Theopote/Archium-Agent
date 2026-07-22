@@ -133,22 +133,21 @@ def _render_view_controls() -> None:
     is_three = show_nav and show_inspector
 
     cols = st.columns([1.2, 4])
-    with cols[0]:
-        with st.popover("视图", use_container_width=True):
-            st.checkbox("页面列表", key="studio_show_nav")
-            st.checkbox("检查器", key="studio_show_inspector")
-            if is_three:
-                st.caption("当前：三栏")
-                if st.button("画布专注", use_container_width=True, key="studio_canvas_focus"):
-                    st.session_state.studio_show_nav = False
-                    st.session_state.studio_show_inspector = False
-                    st.rerun()
-            else:
-                st.caption("当前：专注 / 双栏")
-                if st.button("恢复三栏", use_container_width=True, key="studio_restore_three"):
-                    st.session_state.studio_show_nav = True
-                    st.session_state.studio_show_inspector = True
-                    st.rerun()
+    with cols[0], st.popover("视图", use_container_width=True):
+        st.checkbox("页面列表", key="studio_show_nav")
+        st.checkbox("检查器", key="studio_show_inspector")
+        if is_three:
+            st.caption("当前：三栏")
+            if st.button("画布专注", use_container_width=True, key="studio_canvas_focus"):
+                st.session_state.studio_show_nav = False
+                st.session_state.studio_show_inspector = False
+                st.rerun()
+        else:
+            st.caption("当前：专注 / 双栏")
+            if st.button("恢复三栏", use_container_width=True, key="studio_restore_three"):
+                st.session_state.studio_show_nav = True
+                st.session_state.studio_show_inspector = True
+                st.rerun()
     with cols[1]:
         bits = []
         if show_nav:
@@ -207,39 +206,36 @@ def _render_studio_info_menus(
     - 当前页修复操作只在右侧「检查」Tab
     """
     cols = st.columns(3)
-    with cols[0]:
-        with st.popover("状态", use_container_width=True):
-            if show_progress:
-                render_workflow_progress_panel(
-                    context.project.id,
-                    scope="visual",
-                    presentation_id=context.presentation.id,
-                    result_session_key="last_visual_workflow_result",
-                    on_complete=_apply_visual_result,
-                    rerun_on_complete=False,
-                )
-            else:
-                st.caption("生成进度在后台任务运行时显示。")
-            from archium.ui.page_status_board_panel import render_page_status_board
-
-            render_page_status_board(
+    with cols[0], st.popover("状态", use_container_width=True):
+        if show_progress:
+            render_workflow_progress_panel(
+                context.project.id,
+                scope="visual",
                 presentation_id=context.presentation.id,
-                project_id=context.project.id,
-                compact=True,
-                key_prefix="studio_info_status",
-                title="",
+                result_session_key="last_visual_workflow_result",
+                on_complete=_apply_visual_result,
+                rerun_on_complete=False,
             )
-    with cols[1]:
-        with st.popover("问题", use_container_width=True):
-            st.caption("全稿问题列表。点击后聚焦对应页面；修复请用右侧「检查」。")
-            _render_deck_issue_list(context=context)
-    with cols[2]:
-        with st.popover("历史", use_container_width=True):
-            render_history_panel(
-                context=context,
-                advanced=advanced,
-                slide_snapshot=slide_snapshot,
-            )
+        else:
+            st.caption("生成进度在后台任务运行时显示。")
+        from archium.ui.page_status_board_panel import render_page_status_board
+
+        render_page_status_board(
+            presentation_id=context.presentation.id,
+            project_id=context.project.id,
+            compact=True,
+            key_prefix="studio_info_status",
+            title="",
+        )
+    with cols[1], st.popover("问题", use_container_width=True):
+        st.caption("全稿问题列表。点击后聚焦对应页面；修复请用右侧「检查」。")
+        _render_deck_issue_list(context=context)
+    with cols[2], st.popover("历史", use_container_width=True):
+        render_history_panel(
+            context=context,
+            advanced=advanced,
+            slide_snapshot=slide_snapshot,
+        )
 
 
 def render(

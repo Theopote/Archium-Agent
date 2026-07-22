@@ -11,7 +11,12 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode, compute_scene_hash
+from archium.domain.visual.render_scene import (
+    BackgroundStyle,
+    RenderScene,
+    TextNode,
+    compute_scene_hash,
+)
 from archium.domain.visual.scene_change_proposal import (
     ProposalStatus,
     SceneChangeProposal,

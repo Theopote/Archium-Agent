@@ -19,10 +19,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from archium.domain.reference_style import ReferenceStyleProfile, StyleColorCue, StyleTypographyCue
+from archium.domain.reference_style import ReferenceStyleProfile, StyleTypographyCue
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import (
-    ColorSystem,
     DesignSystem,
     ImageStyleSystem,
     TextStyleToken,
@@ -398,11 +397,14 @@ def _colors_from_art_direction(
 
     # Neon / loud palette keyword used in honesty tests — only when hex already present
     # or explicit pink language maps to a known accent.
-    if any(k in blob for k in ("neon", "hot pink", "hot-pink", "荧光")):
-        if "background" not in updates and re.search(r"pink|粉", blob):
-            # Prefer reference-style hex when available; art alone gets a vivid accent.
-            updates.setdefault("accent", "#FF00AA")
-            notes.append("style_overlay:art_direction:neon_accent")
+    if (
+        any(k in blob for k in ("neon", "hot pink", "hot-pink", "荧光"))
+        and "background" not in updates
+        and re.search(r"pink|粉", blob)
+    ):
+        # Prefer reference-style hex when available; art alone gets a vivid accent.
+        updates.setdefault("accent", "#FF00AA")
+        notes.append("style_overlay:art_direction:neon_accent")
 
     return updates, notes
 

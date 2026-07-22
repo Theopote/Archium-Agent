@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
-
 from archium.application.outline_approval_service import OutlineApprovalService
 from archium.application.review_models import (
     OutlineSectionUpdate,
@@ -20,6 +18,7 @@ from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
 )
+from sqlalchemy.orm import Session
 
 
 def _seed(session: Session) -> tuple[Project, Presentation, OutlinePlan]:

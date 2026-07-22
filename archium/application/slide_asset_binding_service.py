@@ -95,11 +95,14 @@ def _apply_one_binding(
     if requirement.match_score != 1.0:
         requirement.match_score = 1.0
         changed = True
-    if description and requirement.description != description:
+    if (
+        description
+        and requirement.description != description
+        and binding.user_description.strip()
+    ):
         # Prefer user description when provided; otherwise keep planner text.
-        if binding.user_description.strip():
-            requirement.description = description
-            changed = True
+        requirement.description = description
+        changed = True
     if instruction not in requirement.processing_instructions:
         requirement.processing_instructions.append(instruction)
         changed = True

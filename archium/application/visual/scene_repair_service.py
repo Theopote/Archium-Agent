@@ -15,14 +15,20 @@ from uuid import UUID
 from archium.application.slide_repair_policy import smart_shorten_text
 from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
-from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderScene, TextNode, replace_text_node_content
+from archium.domain.visual.render_scene import (
+    DrawingNode,
+    ImageNode,
+    RenderScene,
+    TextNode,
+    replace_text_node_content,
+)
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import (
+    PROPOSAL_REQUIRED_REPAIR_CODES,
     SceneRepairAction,
     SceneRepairApplyMode,
     SceneRepairBatchResult,
     SceneRepairResult,
-    PROPOSAL_REQUIRED_REPAIR_CODES,
 )
 
 _CHARS_PER_INCH_AT_12PT = 12.0

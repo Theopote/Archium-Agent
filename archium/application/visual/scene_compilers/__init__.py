@@ -2,8 +2,8 @@
 
 from archium.application.visual.scene_compilers.base import (
     SceneCompileContext,
-    SceneCompileResult,
     SceneCompiler,
+    SceneCompileResult,
 )
 from archium.application.visual.scene_compilers.chain import (
     SceneCompilerChain,

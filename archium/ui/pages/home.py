@@ -11,11 +11,11 @@ from archium.ui.app_navigation import get_app_page
 from archium.ui.product_flow import primary_stages, product_flow_chain, product_flow_home_steps
 from archium.ui.project_progress_card import (
     ProjectProgressSnapshot,
+    _format_relative_time,
     continue_work_page_key,
     greeting_for_now,
     list_recent_project_snapshots,
     load_cockpit_task_summary,
-    _format_relative_time,
 )
 from archium.ui.workspace_service import list_project_presentations
 

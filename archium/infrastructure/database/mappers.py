@@ -42,9 +42,8 @@ from archium.domain.enums import (
 )
 from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.memory import UserPreference
+from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
-from archium.domain.slide_asset_binding import SlideAssetBinding
-from archium.domain.slide_intent import SlideIntent
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import (
     BRIEF_LOGICAL_KEY,
@@ -54,7 +53,6 @@ from archium.domain.presentation import (
     PresentationBrief,
     Storyline,
 )
-from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
@@ -66,6 +64,8 @@ from archium.domain.renovation_issue import RENOVATION_ISSUE_MAP_LOGICAL_KEY, Re
 from archium.domain.review import ReviewIssue
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logical_key
+from archium.domain.slide_asset_binding import SlideAssetBinding
+from archium.domain.slide_intent import SlideIntent
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (

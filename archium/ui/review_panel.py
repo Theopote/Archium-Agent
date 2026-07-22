@@ -1299,30 +1299,32 @@ def _render_page_asset_binding_editor(*, outline: object, project_id: UUID) -> N
             format_func=lambda value: "— 选择 —" if value == "" else remove_options[value],
             key=f"remove_binding_{getattr(outline, 'id', 'outline')}",
         )
-        if st.button("删除所选绑定", key=f"delete_binding_{getattr(outline, 'id', 'outline')}"):
-            if remove_key:
-                remaining = [
-                    binding
-                    for index, binding in enumerate(
-                        sorted(bindings, key=lambda item: (item.page_order, item.binding_role.value))
-                    )
-                    if str(index) != remove_key
-                ]
-                with get_session() as session:
-                    PresentationReviewService(session).update_page_asset_bindings(
-                        getattr(outline, "id"),
-                        [
-                            SlideAssetBindingUpdate(
-                                page_order=item.page_order,
-                                asset_id=str(item.asset_id),
-                                binding_role=item.binding_role.value,
-                                user_description=item.user_description,
-                                required=item.required,
-                                slide_id=str(item.slide_id) if item.slide_id else None,
-                            )
-                            for item in remaining
-                        ],
-                    )
+        if (
+            st.button("删除所选绑定", key=f"delete_binding_{getattr(outline, 'id', 'outline')}")
+            and remove_key
+        ):
+            remaining = [
+                binding
+                for index, binding in enumerate(
+                    sorted(bindings, key=lambda item: (item.page_order, item.binding_role.value))
+                )
+                if str(index) != remove_key
+            ]
+            with get_session() as session:
+                PresentationReviewService(session).update_page_asset_bindings(
+                    outline.id,
+                    [
+                        SlideAssetBindingUpdate(
+                            page_order=item.page_order,
+                            asset_id=str(item.asset_id),
+                            binding_role=item.binding_role.value,
+                            user_description=item.user_description,
+                            required=item.required,
+                            slide_id=str(item.slide_id) if item.slide_id else None,
+                        )
+                        for item in remaining
+                    ],
+                )
                 st.success("已删除素材绑定。")
                 st.rerun()
     else:
@@ -1378,7 +1380,7 @@ def _render_page_asset_binding_editor(*, outline: object, project_id: UUID) -> N
         )
         with get_session() as session:
             PresentationReviewService(session).update_page_asset_bindings(
-                getattr(outline, "id"),
+                outline.id,
                 updates,
             )
         st.success(f"已将素材绑定到第 {int(page_order) + 1} 页。")

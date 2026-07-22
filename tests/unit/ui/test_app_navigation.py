@@ -168,8 +168,8 @@ def test_sidebar_uses_project_progress_not_module_status() -> None:
 
 
 def test_branding_avoids_museum_subtitle() -> None:
-    from archium.ui.branding import BRAND_SUBTITLE, DISPLAY_VERSION, SIDEBAR_VALUE_HINT
     from archium.ui import icons
+    from archium.ui.branding import BRAND_SUBTITLE, DISPLAY_VERSION, SIDEBAR_VALUE_HINT
     from archium.ui.product_flow import get_stage
 
     assert "Museum" not in BRAND_SUBTITLE

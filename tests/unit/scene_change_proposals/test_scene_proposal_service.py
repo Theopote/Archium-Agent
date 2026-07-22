@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from archium.application.visual.asset_path_resolver import project_asset_uri
 from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 from archium.application.visual.scene_proposal_service import (
     SceneProposalService,
@@ -27,10 +28,8 @@ from archium.domain.visual.studio_command import (
     ReplaceAssetCommand,
     ReplaceDrawingCommand,
     RewriteTextCommand,
-    ScenePatchAction,
     build_patch_action,
 )
-from archium.application.visual.asset_path_resolver import project_asset_uri
 from archium.exceptions import WorkflowError
 
 

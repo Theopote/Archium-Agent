@@ -177,21 +177,20 @@ def render_compact_page_actions(
                 workflow_run_id=workflow_run_id,
             )
     if more:
-        with cols[1]:
-            with st.popover("⋯"):
-                for action in more:
-                    if st.button(
-                        action_label(action),
-                        key=f"{key_prefix}_{presentation_id}_{row.slide_id}_more_{action.value}",
-                        use_container_width=True,
-                    ):
-                        _handle_action(
-                            presentation_id=presentation_id,
-                            project_id=project_id,
-                            slide_id=row.slide_id,
-                            action=action,
-                            workflow_run_id=workflow_run_id,
-                        )
+        with cols[1], st.popover("⋯"):
+            for action in more:
+                if st.button(
+                    action_label(action),
+                    key=f"{key_prefix}_{presentation_id}_{row.slide_id}_more_{action.value}",
+                    use_container_width=True,
+                ):
+                    _handle_action(
+                        presentation_id=presentation_id,
+                        project_id=project_id,
+                        slide_id=row.slide_id,
+                        action=action,
+                        workflow_run_id=workflow_run_id,
+                    )
 
 
 def render_page_status_board(

@@ -6,7 +6,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.asset_path_resolver import (
     AssetPathResolveContext,

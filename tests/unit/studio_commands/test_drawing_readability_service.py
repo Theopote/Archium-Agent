@@ -8,7 +8,12 @@ from archium.application.visual.drawing_readability_service import (
     increase_drawing_readability,
     node_area_ratio,
 )
-from archium.domain.visual.render_scene import BackgroundStyle, DrawingNode, RenderScene, compute_scene_hash
+from archium.domain.visual.render_scene import (
+    BackgroundStyle,
+    DrawingNode,
+    RenderScene,
+    compute_scene_hash,
+)
 from archium.domain.visual.studio_command import IncreaseDrawingReadabilityCommand
 
 

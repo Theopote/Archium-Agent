@@ -77,8 +77,8 @@ def test_empty_deck_is_blocked() -> None:
 
 
 def test_refresh_slide_asset_delivery_marks_missing() -> None:
-    from archium.domain.enums import VisualType
     from archium.domain.deck_delivery import refresh_slide_asset_delivery
+    from archium.domain.enums import VisualType
     from archium.domain.slide import VisualRequirement
 
     slide = _slide(0, SlideDeliveryStatus.READY)

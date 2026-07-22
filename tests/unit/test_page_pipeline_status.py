@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from archium.application.page_status_board_service import _actions_for_phase, _derive_phase, action_label
+from archium.application.page_status_board_service import (
+    _actions_for_phase,
+    _derive_phase,
+    action_label,
+)
 from archium.domain.enums import SlideDeliveryStatus, VisualType
 from archium.domain.page_pipeline_status import (
     PAGE_ACTION_LABELS,

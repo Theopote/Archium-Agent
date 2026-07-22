@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.outline_approval_service import OutlineApprovalService
 from archium.domain.enums import ApprovalStatus, OutlineAudienceMode
 from archium.domain.outline import OutlinePlan, OutlineSection
@@ -17,6 +13,7 @@ from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
 )
+from sqlalchemy.orm import Session
 
 
 def _seed_outline(session: Session) -> tuple[Project, Presentation, OutlinePlan]:

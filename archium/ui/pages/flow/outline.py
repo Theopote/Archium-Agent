@@ -25,7 +25,7 @@ from archium.ui.pages.flow import (
     render_stage_header,
     render_stage_nav,
 )
-from archium.ui.planning_service import PlanningSnapshot, TASK_EXAMPLE_PROMPTS
+from archium.ui.planning_service import TASK_EXAMPLE_PROMPTS, PlanningSnapshot
 from archium.ui.workspace_service import list_project_presentations
 
 _PAGE_TYPE_OPTIONS = (

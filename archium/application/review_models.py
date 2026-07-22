@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from archium.domain.outline import OutlinePlan
 from archium.domain.deck_delivery import DeckDeliveryReport, aggregate_deck_delivery
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.review import ReviewIssue

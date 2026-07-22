@@ -11,7 +11,6 @@ from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_change_proposal import (
-    CommandProposalResult,
     ProposalDecision,
     ProposalStatus,
     SceneChangeProposal,

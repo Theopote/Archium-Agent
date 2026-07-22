@@ -14,7 +14,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.visual.asset_path_resolver import project_asset_uri
 from archium.application.visual.scene_proposal_service import (
     SceneProposalService,
@@ -383,8 +382,8 @@ def test_stale_proposal_is_superseded_and_cannot_accept() -> None:
     service._proposals = _Repo()  # type: ignore[assignment]
     service._scenes = type("S", (), {"get_by_layout_plan": staticmethod(lambda *_: current)})()  # type: ignore[assignment]
 
-    from archium.domain.slide import SlideSpec
     from archium.domain.enums import SlideType
+    from archium.domain.slide import SlideSpec
 
     slide = SlideSpec(
         id=scene.slide_id,

@@ -103,9 +103,14 @@ def semantic_role_from_placeholder_type(
             return "supporting_image"
         return "hero_image"
     role = _PLACEHOLDER_TYPE_TO_ROLE.get(key, "")
-    if role == "hero_image" and height is not None and page_height and page_height > 0:
-        if height < page_height * 0.45:
-            return "supporting_image"
+    if (
+        role == "hero_image"
+        and height is not None
+        and page_height
+        and page_height > 0
+        and height < page_height * 0.45
+    ):
+        return "supporting_image"
     return role
 
 

@@ -18,7 +18,6 @@ from archium.ui.product_flow import (
     get_stage,
     next_stage,
     previous_stage,
-    primary_stage_ids,
     primary_stages,
 )
 from archium.ui.project_progress_card import (
@@ -304,12 +303,15 @@ def render_stage_nav(
 
     left, right = st.columns([1, 1.4])
     with left:
-        if prev is not None and not primary_only:
-            if render_secondary_action(
+        if (
+            prev is not None
+            and not primary_only
+            and render_secondary_action(
                 f"← 上一阶段：{prev.title}",
                 key=f"stage_prev_{stage_id}",
-            ):
-                st.switch_page(get_app_page(prev.page_key))
+            )
+        ):
+            st.switch_page(get_app_page(prev.page_key))
     with right:
         if nxt is None:
             return

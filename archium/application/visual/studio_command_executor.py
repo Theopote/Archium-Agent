@@ -6,10 +6,10 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
+from archium.application.visual.asset_path_resolver import AssetPathResolveContext
 from archium.application.visual.drawing_readability_service import increase_drawing_readability
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
-from archium.application.visual.asset_path_resolver import AssetPathResolveContext
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
 from archium.domain.studio_errors import StudioAssetReferenceError
 from archium.domain.visual.page_quality import (

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from archium.application.visual.placeholder_binding_matcher import effective_semantic_role
 from archium.application.visual.scene_fonts import (
     collect_font_assets,
     resolve_text_fonts,
@@ -20,7 +21,6 @@ from archium.application.visual.semantic_content_plan import (
     normalize_text_role_for_schema,
     replacement_text_for_role,
 )
-from archium.application.visual.placeholder_binding_matcher import effective_semantic_role
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec

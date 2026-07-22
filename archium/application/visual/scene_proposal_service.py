@@ -7,20 +7,20 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.drawing_readability_service import parse_geometry_token
 from archium.application.visual.partial_edit_preservation import (
     assert_partial_edit_preservation,
 )
-from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_deterministic_qa_service import (
     ProposalSceneQAResult,
     run_proposal_scene_qa,
 )
+from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_proposal_qa import (
     compare_proposal_qa,
     proposal_introduces_blocker,
 )
-from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.studio_command_executor import (
     StudioCommandExecutor,
     StudioExecutionContext,
@@ -48,7 +48,6 @@ from archium.domain.visual.scene_change_proposal import (
     ProposalQAComparison,
     ProposalStatus,
     SceneChangeProposal,
-    SceneRevision,
 )
 from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
 from archium.exceptions import WorkflowError
@@ -341,9 +340,7 @@ class SceneProposalService:
         proposal: SceneChangeProposal,
         decision: ProposalDecision | None,
     ) -> SceneChangeProposal:
-        if decision is None:
-            final_status = ProposalStatus.ACCEPTED
-        elif len(decision.accepted_action_ids) == len(proposal.patch_actions):
+        if decision is None or len(decision.accepted_action_ids) == len(proposal.patch_actions):
             final_status = ProposalStatus.ACCEPTED
         else:
             final_status = ProposalStatus.PARTIALLY_ACCEPTED

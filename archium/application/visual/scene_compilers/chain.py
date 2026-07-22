@@ -5,8 +5,8 @@ from __future__ import annotations
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
 from archium.application.visual.scene_compilers.base import (
     SceneCompileContext,
-    SceneCompileResult,
     SceneCompiler,
+    SceneCompileResult,
 )
 from archium.application.visual.scene_compilers.generic import GenericContentCompiler
 from archium.application.visual.scene_compilers.specialized import (

@@ -41,9 +41,10 @@ def command_target_node_ids(command: StudioCommand) -> set[str]:
     elif isinstance(command, FixOverflowCommand):
         if command.node_ids:
             targets.update(command.node_ids)
-    elif isinstance(command, (ReplaceAssetCommand, ReplaceDrawingCommand)):
-        targets.add(command.node_id)
-    elif isinstance(command, IncreaseDrawingReadabilityCommand):
+    elif isinstance(
+        command,
+        (ReplaceAssetCommand, ReplaceDrawingCommand, IncreaseDrawingReadabilityCommand),
+    ):
         targets.add(command.node_id)
     return {node_id for node_id in targets if node_id.strip()}
 
@@ -60,9 +61,11 @@ def collect_allowed_node_ids(
     if patch_actions:
         command_ids = {command.command_id for command in commands}
         for action in patch_actions:
-            if action.command_id is None or action.command_id in command_ids:
-                if action.node_id.strip():
-                    allowed.add(action.node_id)
+            if (
+                (action.command_id is None or action.command_id in command_ids)
+                and action.node_id.strip()
+            ):
+                allowed.add(action.node_id)
     return allowed
 
 

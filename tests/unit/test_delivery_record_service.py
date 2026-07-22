@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy.orm import Session
-
 from archium.application.delivery_record_service import DeliveryRecordService
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
@@ -14,6 +12,7 @@ from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
 )
+from sqlalchemy.orm import Session
 
 
 def test_record_export_persists(db_session: Session, tmp_path: Path) -> None:

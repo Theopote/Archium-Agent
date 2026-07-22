@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
+from archium.application.visual.asset_path_resolver import project_asset_uri
 from archium.application.visual.partial_edit_preservation import (
     assert_partial_edit_preservation,
     evaluate_partial_edit_preservation,
@@ -15,7 +15,6 @@ from archium.application.visual.studio_command_executor import (
     StudioCommandExecutor,
     StudioExecutionContext,
 )
-from archium.application.visual.asset_path_resolver import project_asset_uri
 from archium.domain.citation import Citation
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.partial_edit_preservation import (
@@ -109,7 +108,7 @@ def test_rewrite_preserves_unspecified_and_assets() -> None:
     assert report.ok
     assert "body" not in report.changed_node_ids
     assert "photo" not in report.changed_node_ids
-    assert PARTIAL_EDIT_INTERACTION_RULE == report.interaction_rule
+    assert report.interaction_rule == PARTIAL_EDIT_INTERACTION_RULE
 
 
 def test_unspecified_node_mutation_is_rejected() -> None:
