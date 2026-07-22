@@ -92,9 +92,15 @@ def render_proposal_compare_panel(
     slide_snapshot: SlideVisualSnapshot | None,
     presentation_id: UUID,
     settings: Settings,
+    embedded: bool = False,
 ) -> None:
-    """Render proposal creation and before/after review controls."""
-    st.markdown("**Scene 修改提案**")
+    """Render proposal before/after review controls.
+
+    When ``embedded`` is True (inside the unified AI workspace), skip the
+    standalone panel title and empty-state pointer to a separate AI panel.
+    """
+    if not embedded:
+        st.markdown("**修改建议 · AI 修改 · 需确认**")
     if slide_snapshot is None or slide_snapshot.render_scene is None:
         st.caption("当前页尚无 RenderScene，无法生成修改提案。")
         return
@@ -103,7 +109,8 @@ def render_proposal_compare_panel(
     proposal = get_stored_proposal(slide.id)
 
     if proposal is None:
-        st.caption("在上方 **AI 编辑** 中输入描述，点击「生成修改提案」后在此查看 Before/After。")
+        if not embedded:
+            st.caption("在 **AI** Tab 中输入描述并生成提案后，在此查看 Before/After。")
         return
 
     if proposal.status == ProposalStatus.SUPERSEDED:
@@ -114,7 +121,7 @@ def render_proposal_compare_panel(
     st.caption(f"提案状态：{proposal.status.value}")
     if proposal.preservation is not None:
         st.caption(
-            f"保护规则：{proposal.preservation.interaction_rule} · "
+            f"保护：{proposal.preservation.interaction_rule} · "
             + " / ".join(proposal.preservation.captions())
         )
     elif proposal.reasons:

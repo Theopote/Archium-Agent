@@ -1,4 +1,4 @@
-"""Presentation Studio — three-column editing shell."""
+"""Presentation Studio — workbench shell (nav | canvas | inspector + bottom dock)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
-from archium.ui.studio.ai_edit_panel import render_ai_edit_panel
+from archium.ui.studio.ai_workspace_panel import render_ai_workspace
 from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
 from archium.ui.studio.export_panel import render_studio_toolbar
 from archium.ui.studio.history_panel import render_history_panel
@@ -45,9 +45,8 @@ def _render_inspector_tabs(
     project_id: UUID,
     presentation_id: UUID,
 ) -> None:
-    """Right-column inspector: one job per tab; AI edit sits with Before/After."""
+    """Right-column inspector tabs."""
     from archium.ui.llm_settings import get_ui_effective_settings
-    from archium.ui.studio.proposal_compare_panel import render_proposal_compare_panel
     from archium.ui.studio.scene_repair_prompt_panel import render_deferred_scene_repair_panel
 
     tab_props, tab_layout, tab_content, tab_ai, tab_check = st.tabs(
@@ -68,23 +67,56 @@ def _render_inspector_tabs(
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
 
     with tab_ai:
-        render_ai_edit_panel(
-            slide_snapshot=slide_snapshot,
-            presentation_id=presentation_id,
-        )
-        st.divider()
-        render_proposal_compare_panel(
+        render_ai_workspace(
             slide_snapshot=slide_snapshot,
             presentation_id=presentation_id,
             settings=get_ui_effective_settings(),
         )
 
     with tab_check:
+        st.markdown("**检查**")
+        st.caption(
+            "自动安全修复（越界 / contain / 缺省 / 无损对齐）可静默应用；"
+            "其余归入修改建议，需确认。"
+        )
+        st.markdown("`安全修复 · 可自动应用`　　`AI / QA 修改 · 需确认`")
         render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
+        st.divider()
+        st.markdown("**人工复核**")
         render_human_review_panel(
             presentation_id=presentation_id,
             slide_snapshot=slide_snapshot,
         )
+
+
+def _render_bottom_dock(
+    *,
+    context: object,
+    advanced: bool,
+    slide_snapshot: SlideVisualSnapshot | None,
+    show_progress: bool,
+) -> None:
+    """Collapsible dock for history / generation status (not long-page chrome)."""
+    with st.expander("问题 / 生成状态 / 历史", expanded=False):
+        dock_tabs = st.tabs(["历史", "生成状态"])
+        with dock_tabs[0]:
+            render_history_panel(
+                context=context,
+                advanced=advanced,
+                slide_snapshot=slide_snapshot,
+            )
+        with dock_tabs[1]:
+            if show_progress:
+                render_workflow_progress_panel(
+                    context.project.id,
+                    scope="visual",
+                    presentation_id=context.presentation.id,
+                    result_session_key="last_visual_workflow_result",
+                    on_complete=_apply_visual_result,
+                    rerun_on_complete=False,
+                )
+            else:
+                st.caption("生成进度在后台任务运行时显示。")
 
 
 def render(
@@ -94,13 +126,7 @@ def render(
     show_export: bool | None = None,
     show_progress: bool | None = None,
 ) -> None:
-    """Render the presentation studio shell.
-
-    When embedded in the product-flow「工作室」stage, pass ``embedded=True``
-    (or ``show_header=False``) so the outer stage chrome owns the page title.
-    ``show_export`` controls the compact export popover vs a link to「交付」;
-    the full export panel lives on the deliver stage.
-    """
+    """Render the presentation studio workbench."""
     if show_header is None:
         show_header = not embedded
     if show_export is None:
@@ -110,11 +136,7 @@ def render(
 
     if show_header:
         st.markdown("### 工作室")
-        st.caption(
-            "在同一界面浏览页面、调整版式与图文。"
-            "完整导出在「交付」；此处「导出」为快捷入口。"
-            "高级模式可显示 SlideSpec / LayoutPlan 等技术术语。"
-        )
+        st.caption("页面列表 · 主画布 · 属性/布局/AI。历史与生成状态收在底部 Dock。")
 
     critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
     context = render_studio_selection(
@@ -126,20 +148,9 @@ def render(
     if context is None:
         return
 
-    from archium.ui.page_status_board_panel import render_page_status_board
-
-    with st.expander("逐页状态板", expanded=False):
-        render_page_status_board(
-            presentation_id=context.presentation.id,
-            project_id=context.project.id,
-            compact=False,
-            key_prefix=f"studio_page_status_{context.presentation.id}",
-        )
-
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
 
-    # Editing chrome first; export is a secondary popover (or link to 交付).
     render_studio_toolbar(
         context=context,
         slide_snapshot=slide_snapshot,
@@ -152,7 +163,7 @@ def render(
     if "studio_show_inspector" not in st.session_state:
         st.session_state.studio_show_inspector = True
     with layout_cols[0]:
-        st.toggle("页面导航", key="studio_show_nav")
+        st.toggle("页面列表", key="studio_show_nav")
     with layout_cols[1]:
         st.toggle("检查器", key="studio_show_inspector")
     with layout_cols[2]:
@@ -165,8 +176,6 @@ def render(
             st.session_state.studio_show_nav = True
             st.session_state.studio_show_inspector = True
             st.rerun()
-
-    st.divider()
 
     show_nav = bool(st.session_state.studio_show_nav)
     show_inspector = bool(st.session_state.studio_show_inspector)
@@ -209,15 +218,9 @@ def render(
                 presentation_id=context.presentation.id,
             )
 
-    st.divider()
-    render_history_panel(context=context, advanced=advanced, slide_snapshot=slide_snapshot)
-
-    if show_progress:
-        render_workflow_progress_panel(
-            context.project.id,
-            scope="visual",
-            presentation_id=context.presentation.id,
-            result_session_key="last_visual_workflow_result",
-            on_complete=_apply_visual_result,
-            rerun_on_complete=False,
-        )
+    _render_bottom_dock(
+        context=context,
+        advanced=advanced,
+        slide_snapshot=slide_snapshot,
+        show_progress=show_progress,
+    )

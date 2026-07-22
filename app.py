@@ -26,6 +26,8 @@ init_app()
 inject_styles()
 
 try:
+    # Register pages before sidebar chrome so st.page_link resolves.
+    pages = build_app_pages()
     with st.sidebar:
         render_branding()
         render_project_progress_card()
@@ -36,7 +38,7 @@ try:
             unsafe_allow_html=True,
         )
 
-    navigation = st.navigation(build_app_pages())
+    navigation = st.navigation(pages)
     navigation.run()
 finally:
     from archium.infrastructure.database.session import close_scoped_session

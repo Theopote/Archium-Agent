@@ -20,7 +20,7 @@ def render_deferred_scene_repair_panel(
     *,
     slide_snapshot: SlideVisualSnapshot | None,
 ) -> None:
-    """Surface semantic QA issues that were not auto-applied and offer Proposal CTA."""
+    """Surface deferred QA findings as confirmation-required modification suggestions."""
     if slide_snapshot is None or slide_snapshot.render_scene is None:
         return
 
@@ -30,6 +30,7 @@ def render_deferred_scene_repair_panel(
 
     deferred = list(slide_snapshot.deferred_scene_repairs or [])
     if not deferred:
+        st.caption("当前页没有待确认的 QA 修复建议。")
         return
 
     overflow_nodes: list[str] = []
@@ -37,9 +38,11 @@ def render_deferred_scene_repair_panel(
         if finding.check_code == SceneSemanticCheckCode.TEXT_OVERFLOW:
             overflow_nodes.extend(list(finding.evidence_refs or []))
 
-    st.markdown("**待修复 Scene 问题**")
+    st.markdown("**修改建议 · QA 修复 · 需确认**")
     st.caption(
-        "以下语义级问题不会自动写入正式 Scene，需通过修改提案确认后再应用。"
+        "以下问题不会自动写入正式页面。"
+        "安全自动修复仅限越界收拢、明确 contain、缺省值与无损对齐；"
+        "其余需生成提案后人工确认。"
     )
     for finding in deferred:
         st.markdown(f"- {summarize_deferred_repair(finding)}")
@@ -56,7 +59,7 @@ def render_deferred_scene_repair_panel(
         finding.check_code == SceneSemanticCheckCode.FONT_TOO_SMALL
         for finding in deferred
     ):
-        st.caption("字体过小问题请在上方 **AI 编辑** 中描述期望的字号或可读性调整。")
+        st.caption("字体过小：请到 **AI** Tab 描述期望的字号或可读性调整。")
 
 
 def _create_overflow_proposal(slide_id: UUID, node_ids: list[str]) -> None:
@@ -69,7 +72,7 @@ def _create_overflow_proposal(slide_id: UUID, node_ids: list[str]) -> None:
                 node_ids=unique_nodes or None,
             )
         store_proposal(proposal)
-        st.success("溢出修复提案已生成，请在下方 Scene 修改提案面板查看对比。")
+        st.success("溢出修复提案已生成，请到 **AI** Tab 查看对比并确认。")
         st.rerun()
     except WorkflowError as exc:
         st.error(format_user_error(exc))

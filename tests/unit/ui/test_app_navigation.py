@@ -183,7 +183,7 @@ def test_studio_export_is_popover_not_top_panel() -> None:
     assert "打开交付页" in export_text
 
 
-def test_studio_inspector_uses_five_tabs_with_ai_and_proposal_together() -> None:
+def test_studio_inspector_uses_five_tabs_with_ai_workspace() -> None:
     studio_src = (
         Path(__file__).resolve().parents[3]
         / "archium"
@@ -194,11 +194,13 @@ def test_studio_inspector_uses_five_tabs_with_ai_and_proposal_together() -> None
     text = studio_src.read_text(encoding="utf-8")
     assert '["属性", "布局", "内容", "AI", "检查"]' in text
     assert "def _render_inspector_tabs" in text
+    assert "render_ai_workspace" in text
+    assert "_render_bottom_dock" in text
+    assert "逐页状态板" not in text
     ai_block_start = text.index("with tab_ai:")
     check_block_start = text.index("with tab_check:")
     ai_block = text[ai_block_start:check_block_start]
-    assert "render_ai_edit_panel" in ai_block
-    assert "render_proposal_compare_panel" in ai_block
+    assert "render_ai_workspace" in ai_block
     assert "render_human_review_panel" not in ai_block
     assert "render_deferred_scene_repair_panel" in text[check_block_start:]
     assert "render_human_review_panel" in text[check_block_start:]

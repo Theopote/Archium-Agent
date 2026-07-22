@@ -10,7 +10,13 @@ from archium.application.page_status_board_service import (
     PageStatusBoardService,
     action_label,
 )
-from archium.domain.page_pipeline_status import PageStatusAction
+from archium.domain.page_pipeline_status import (
+    PAGE_PHASE_LABELS,
+    PagePipelinePhase,
+    PagePipelineStatus,
+    PageStatusAction,
+    PageStatusBoard,
+)
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -23,6 +29,126 @@ _SEVERITY_ICON = {
     "error": "❌",
 }
 
+_PRIMARY_ACTION_PREFERENCE: tuple[PageStatusAction, ...] = (
+    PageStatusAction.REBIND_ASSETS,
+    PageStatusAction.RETRY,
+    PageStatusAction.CHANGE_TEMPLATE,
+    PageStatusAction.UNSKIP,
+    PageStatusAction.OPEN_STUDIO,
+    PageStatusAction.SKIP,
+)
+
+
+def load_page_status_board(
+    presentation_id: UUID,
+    *,
+    workflow_step: str | None = None,
+) -> PageStatusBoard:
+    with get_session() as session:
+        return PageStatusBoardService(session).build_board(
+            presentation_id,
+            workflow_step=workflow_step,
+        )
+
+
+def status_badge(row: PagePipelineStatus) -> str:
+    """Compact badge for navigator rows."""
+    if row.phase == PagePipelinePhase.COMPLETE or row.severity == "success":
+        return "✓"
+    if row.phase == PagePipelinePhase.DRAWING_QA_FAILED or row.severity == "error":
+        return "✕"
+    if row.phase in {
+        PagePipelinePhase.ASSET_MISSING,
+        PagePipelinePhase.FALLBACK,
+        PagePipelinePhase.SCHEMA_BLOCKED,
+    } or row.severity == "warn":
+        return "⚠"
+    if row.phase in {
+        PagePipelinePhase.QUEUED,
+        PagePipelinePhase.GENERATING,
+        PagePipelinePhase.BINDING_ASSETS,
+        PagePipelinePhase.COMPILING_SCENE,
+    }:
+        return "⏳"
+    return "○"
+
+
+def status_short_detail(row: PagePipelineStatus) -> str:
+    label = row.status_label or PAGE_PHASE_LABELS.get(row.phase, "")
+    if row.detail and row.severity in {"warn", "error"}:
+        detail = row.detail.strip()
+        if len(detail) > 18:
+            detail = detail[:18] + "…"
+        return detail
+    return label
+
+
+def pick_primary_action(actions: list[PageStatusAction]) -> PageStatusAction | None:
+    if not actions:
+        return None
+    for preferred in _PRIMARY_ACTION_PREFERENCE:
+        if preferred in actions:
+            return preferred
+    return actions[0]
+
+
+def split_primary_and_more(
+    actions: list[PageStatusAction],
+) -> tuple[PageStatusAction | None, list[PageStatusAction]]:
+    primary = pick_primary_action(actions)
+    if primary is None:
+        return None, []
+    more = [action for action in actions if action != primary]
+    return primary, more
+
+
+def render_compact_page_actions(
+    *,
+    presentation_id: UUID,
+    project_id: UUID | None,
+    row: PagePipelineStatus,
+    workflow_run_id: UUID | None = None,
+    key_prefix: str = "page_status",
+) -> None:
+    """One primary CTA + optional more menu (avoids 5 equal-weight buttons)."""
+    if not row.actions or row.slide_id is None:
+        return
+    primary, more = split_primary_and_more(list(row.actions))
+    if primary is None:
+        return
+
+    cols = st.columns([3, 1] if more else [1])
+    with cols[0]:
+        if st.button(
+            action_label(primary),
+            key=f"{key_prefix}_{presentation_id}_{row.slide_id}_{primary.value}",
+            use_container_width=True,
+            type="primary",
+        ):
+            _handle_action(
+                presentation_id=presentation_id,
+                project_id=project_id,
+                slide_id=row.slide_id,
+                action=primary,
+                workflow_run_id=workflow_run_id,
+            )
+    if more:
+        with cols[1]:
+            with st.popover("⋯"):
+                for action in more:
+                    if st.button(
+                        action_label(action),
+                        key=f"{key_prefix}_{presentation_id}_{row.slide_id}_more_{action.value}",
+                        use_container_width=True,
+                    ):
+                        _handle_action(
+                            presentation_id=presentation_id,
+                            project_id=project_id,
+                            slide_id=row.slide_id,
+                            action=action,
+                            workflow_run_id=workflow_run_id,
+                        )
+
 
 def render_page_status_board(
     *,
@@ -34,12 +160,8 @@ def render_page_status_board(
     key_prefix: str = "page_status",
     title: str | None = None,
 ) -> None:
-    """Render per-page status lines and action buttons."""
-    with get_session() as session:
-        board = PageStatusBoardService(session).build_board(
-            presentation_id,
-            workflow_step=workflow_step,
-        )
+    """Render per-page status lines and compact recovery actions."""
+    board = load_page_status_board(presentation_id, workflow_step=workflow_step)
 
     if not board.rows:
         if not compact:
@@ -69,23 +191,13 @@ def render_page_status_board(
 
         with st.container(border=True):
             st.markdown(line)
-            if not row.actions or row.slide_id is None:
-                continue
-            cols = st.columns(min(len(row.actions), 5))
-            for column, action in zip(cols, row.actions, strict=False):
-                button_key = f"{key_prefix}_{presentation_id}_{row.slide_id}_{action.value}"
-                if column.button(
-                    action_label(action),
-                    key=button_key,
-                    use_container_width=True,
-                ):
-                    _handle_action(
-                        presentation_id=presentation_id,
-                        project_id=project_id,
-                        slide_id=row.slide_id,
-                        action=action,
-                        workflow_run_id=workflow_run_id,
-                    )
+            render_compact_page_actions(
+                presentation_id=presentation_id,
+                project_id=project_id,
+                row=row,
+                workflow_run_id=workflow_run_id,
+                key_prefix=key_prefix,
+            )
 
 
 def _handle_action(
@@ -104,7 +216,7 @@ def _handle_action(
             presentation_id,
             project_id=project_id,
             slide_id=slide_id,
-            toast="已打开 Studio，请在「版式候选」中更换模板。",
+            toast="已打开 Studio，请在「布局」中更换模板。",
         )
         return
     if action == PageStatusAction.REBIND_ASSETS:

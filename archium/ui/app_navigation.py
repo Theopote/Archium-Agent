@@ -158,6 +158,9 @@ def build_app_pages() -> dict[str, list[Any]]:
 
 def get_app_page(key: str) -> Any:
     """Return a registered ``st.Page`` object for ``st.page_link``."""
+    if not _PAGES:
+        # Sidebar / early chrome may link before ``st.navigation(build_app_pages())``.
+        build_app_pages()
     page = _PAGES.get(key)
     if page is None:
         msg = f"Unknown app page: {key}"
