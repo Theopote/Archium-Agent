@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 from archium.application.deliverable_planning_service import DeliverablePlanningService
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.mission_validation_service import MissionValidationService
-from archium.application.project_mission_service import ProjectMissionService
+from archium.application.project_mission_service import (
+    ProjectMissionService,
+    is_mission_approval_current,
+)
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
@@ -404,7 +407,7 @@ class PlanningWorkflowNodes:
         if (
             run is not None
             and run.state.get("review_gate") == "mission_approval"
-            and mission.approval_status == ApprovalStatus.APPROVED
+            and is_mission_approval_current(mission)
         ):
             bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
             resume_state: PlanningWorkflowState = {
@@ -421,7 +424,7 @@ class PlanningWorkflowNodes:
             return resume_state
 
         if not state.get("require_mission_approval", True):
-            if mission.approval_status != ApprovalStatus.APPROVED:
+            if not is_mission_approval_current(mission):
                 mission = self._runtime.mission_service.approve_mission(mission_id)
             return {
                 "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,

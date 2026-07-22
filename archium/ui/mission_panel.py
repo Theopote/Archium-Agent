@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from archium.application.project_mission_service import MissionPatch
+from archium.application.project_mission_service import MissionPatch, suggest_narrative_mode
+from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
 from archium.domain.enums import (
     InterventionScale,
     ProjectDomain,
@@ -93,6 +94,17 @@ DOMAIN_LABELS = {
     ProjectDomain.OTHER: "其他",
 }
 
+NARRATIVE_MODE_LABELS = {
+    ArchitecturalNarrativeMode.DECISION_FIRST: "决策优先",
+    ArchitecturalNarrativeMode.PROBLEM_SOLUTION: "问题解决",
+    ArchitecturalNarrativeMode.EVIDENCE_ARGUMENT: "证据论证",
+    ArchitecturalNarrativeMode.DESIGN_PROCESS: "设计过程",
+    ArchitecturalNarrativeMode.OPTION_COMPARISON: "方案比较",
+    ArchitecturalNarrativeMode.TECHNICAL_BRIEFING: "技术简报",
+    ArchitecturalNarrativeMode.PHASED_IMPLEMENTATION: "分期实施",
+    ArchitecturalNarrativeMode.PUBLIC_STORYTELLING: "公众叙事",
+}
+
 UNCERTAINTY_LABELS = {
     UncertaintyLevel.LOW: "低",
     UncertaintyLevel.MEDIUM: "中",
@@ -179,6 +191,12 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
     st.caption(f"{mission.title} · v{mission.version} · 置信度 {mission.confidence:.0%}")
     st.caption("可纠正 AI 对任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
 
+    narrative_suggestion = suggest_narrative_mode(mission)
+    st.info(
+        f"建议叙事模式：{NARRATIVE_MODE_LABELS[narrative_suggestion.mode]}\n\n"
+        f"原因：{narrative_suggestion.reason}"
+    )
+
     with st.form(f"{key_prefix}_edit_form"):
         title = st.text_input("标题", value=mission.title)
         task_statement = st.text_area("任务陈述", value=mission.task_statement, height=90)
@@ -220,6 +238,15 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
             if mission.uncertainty_level in UNCERTAINTY_LABELS
             else 1,
             format_func=lambda item: UNCERTAINTY_LABELS.get(item, item.value),
+        )
+        narrative_options = list(NARRATIVE_MODE_LABELS)
+        narrative_mode = st.selectbox(
+            "叙事模式（决定内容组织，不决定视觉风格）",
+            options=narrative_options,
+            index=narrative_options.index(mission.narrative_mode)
+            if mission.narrative_mode in narrative_options
+            else narrative_options.index(narrative_suggestion.mode),
+            format_func=lambda item: NARRATIVE_MODE_LABELS[item],
         )
 
         current_situation = st.text_area(
@@ -293,6 +320,7 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
             intervention_scales=selected_scales,
             requested_service_depths=selected_depths,
             uncertainty_level=uncertainty,
+            narrative_mode=narrative_mode,
             stakeholders=_parse_stakeholders(stakeholders_text),
             known_constraints=_parse_constraints(constraints_text),
             evaluation_criteria=_parse_criteria(criteria_text),

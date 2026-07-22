@@ -608,6 +608,7 @@ class ProjectMissionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     decision_context: Mapped[str] = mapped_column(Text, nullable=False, default="")
     decisions_required_json: Mapped[list[str]] = mapped_column("decisions_required", JSON, default=list)
     narrative_mode: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    approval_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     known_constraints_json: Mapped[list[dict[str, object]]] = mapped_column(
         "known_constraints", JSON, default=list
     )

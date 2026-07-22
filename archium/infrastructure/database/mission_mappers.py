@@ -92,6 +92,7 @@ def project_mission_to_domain(orm: ProjectMissionORM) -> ProjectMission:
         narrative_mode=(
             ArchitecturalNarrativeMode(orm.narrative_mode) if orm.narrative_mode else None
         ),
+        approval_hash=orm.approval_hash,
         known_constraints=[
             MissionConstraint.model_validate(item) for item in orm.known_constraints_json
         ],
@@ -136,6 +137,7 @@ def project_mission_to_orm(
     target.decision_context = domain.decision_context
     target.decisions_required_json = list(domain.decisions_required)
     target.narrative_mode = domain.narrative_mode.value if domain.narrative_mode else None
+    target.approval_hash = domain.approval_hash
     target.known_constraints_json = [
         item.model_dump(mode="json") for item in domain.known_constraints
     ]

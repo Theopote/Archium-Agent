@@ -75,6 +75,7 @@ class ProjectMission(IdentifiedModel, VersionedModel, TimestampedModel):
     decision_context: str = ""
     decisions_required: list[str] = Field(default_factory=list)
     narrative_mode: ArchitecturalNarrativeMode | None = None
+    approval_hash: str | None = Field(default=None, max_length=64)
     known_constraints: list[MissionConstraint] = Field(default_factory=list)
     key_unknowns: list[str] = Field(default_factory=list)
     research_questions: list[str] = Field(default_factory=list)
@@ -101,6 +102,12 @@ class ProjectMission(IdentifiedModel, VersionedModel, TimestampedModel):
 
     def approve(self) -> None:
         self.approval_status = ApprovalStatus.APPROVED
+        self.touch()
+
+    def invalidate_approval(self) -> None:
+        """Make downstream approvals stale after approved mission content changes."""
+        self.approval_status = ApprovalStatus.DRAFT
+        self.approval_hash = None
         self.touch()
 
     def reject(self) -> None:

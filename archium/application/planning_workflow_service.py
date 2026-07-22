@@ -18,6 +18,7 @@ from archium.application.mission_to_presentation_request import (
     build_presentation_bridge,
 )
 from archium.application.presentation_models import PresentationRequest
+from archium.application.project_mission_service import is_mission_approval_current
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
 from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, WorkflowStep
@@ -268,7 +269,7 @@ class PlanningWorkflowService:
         mission = self._runtime.missions.get_mission(mission_id)
         if mission is None:
             raise WorkflowError(f"Mission {mission_id} not found")
-        if mission.approval_status != ApprovalStatus.APPROVED:
+        if not is_mission_approval_current(mission):
             raise WorkflowError("任务理解尚未批准，无法继续。请先调用 approve_mission。")
 
         return self._resume_interrupted_run(

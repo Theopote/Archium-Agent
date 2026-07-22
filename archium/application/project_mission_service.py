@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -18,7 +20,9 @@ from archium.application.mission_parser import (
 )
 from archium.config.settings import Settings, get_settings
 from archium.domain._base import DomainModel
+from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
 from archium.domain.enums import (
+    ApprovalStatus,
     InterventionScale,
     ProjectDomain,
     RevisionSource,
@@ -76,6 +80,7 @@ class MissionPatch(DomainModel):
     known_constraints: list[MissionConstraint] | None = None
     evaluation_criteria: list[EvaluationCriterion] | None = None
     uncertainty_level: UncertaintyLevel | None = None
+    narrative_mode: ArchitecturalNarrativeMode | None = None
 
 
 @dataclass
@@ -174,7 +179,10 @@ class ProjectMissionService:
         payload = mission.model_dump(mode="json")
         payload.update(patch.model_dump(mode="json", exclude_none=True))
         updated = ProjectMission.model_validate(payload)
-        updated.touch()
+        if patch.model_dump(exclude_none=True):
+            updated.invalidate_approval()
+        else:
+            updated.touch()
         saved = self._missions.save_mission(updated)
         self._history.record_snapshot(saved, RevisionSource.MANUAL_EDIT)
         return saved
@@ -188,7 +196,11 @@ class ProjectMissionService:
     ) -> ProjectMission:
         """Mark the mission approved (domain action only — does not resume workflow)."""
         mission = self._require_mission(mission_id)
+        if mission.narrative_mode is None:
+            suggestion = suggest_narrative_mode(mission)
+            mission.narrative_mode = suggestion.mode
         mission.approve()
+        mission.approval_hash = mission_approval_hash(mission)
         saved = self._missions.save_mission(mission)
         history_note = note or "批准任务理解"
         if user_id:
@@ -200,6 +212,7 @@ class ProjectMissionService:
             actor=user_id,
         )
         return saved
+
 
     def reject_mission(
         self,
@@ -318,3 +331,63 @@ class ProjectMissionService:
         if mission is None:
             raise WorkflowError(f"任务理解 {mission_id} 不存在")
         return mission
+
+
+class NarrativeModeSuggestion(DomainModel):
+    mode: ArchitecturalNarrativeMode
+    reason: str
+
+
+def suggest_narrative_mode(mission: ProjectMission) -> NarrativeModeSuggestion:
+    """Suggest content organization from mission semantics, never visual style."""
+    context = " ".join(
+        [mission.decision_context, mission.task_statement, *mission.primary_problems]
+    ).lower()
+    if any(token in context for token in ("分期", "实施", "roadmap", "phase")):
+        return NarrativeModeSuggestion(
+            mode=ArchitecturalNarrativeMode.PHASED_IMPLEMENTATION,
+            reason="任务强调实施次序与阶段成果，需要说明各阶段如何逐步解锁。",
+        )
+    if any(token in context for token in ("比较", "比选", "option", "scheme")):
+        return NarrativeModeSuggestion(
+            mode=ArchitecturalNarrativeMode.OPTION_COMPARISON,
+            reason="任务包含方案比较或选择，需要用统一标准形成可审议结论。",
+        )
+    if any(token in context for token in ("技术", "规范", "technical", "compliance")):
+        return NarrativeModeSuggestion(
+            mode=ArchitecturalNarrativeMode.TECHNICAL_BRIEFING,
+            reason="任务以技术依据和合规判断为主，适合技术简报结构。",
+        )
+    if mission.decisions_required:
+        return NarrativeModeSuggestion(
+            mode=ArchitecturalNarrativeMode.DECISION_FIRST,
+            reason="Mission 已明确待决策事项，应先呈现决策请求，再展开证据与策略。",
+        )
+    if mission.primary_problems:
+        return NarrativeModeSuggestion(
+            mode=ArchitecturalNarrativeMode.PROBLEM_SOLUTION,
+            reason="Mission 已识别现状问题与期望改变，适合问题—证据—策略叙事。",
+        )
+    return NarrativeModeSuggestion(
+        mode=ArchitecturalNarrativeMode.DESIGN_PROCESS,
+        reason="当前任务以设计形成过程为主，适合按背景、策略和方案演进组织。",
+    )
+
+
+def mission_approval_hash(mission: ProjectMission) -> str:
+    """Hash all approval-bearing Mission content, including narrative mode."""
+    payload = mission.model_dump(
+        mode="json",
+        exclude={"approval_hash", "approval_status", "created_at", "updated_at"},
+    )
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def is_mission_approval_current(mission: ProjectMission) -> bool:
+    """Reject legacy, edited, or tampered approvals at every workflow gate."""
+    return (
+        mission.approval_status == ApprovalStatus.APPROVED
+        and mission.approval_hash is not None
+        and mission.approval_hash == mission_approval_hash(mission)
+    )
