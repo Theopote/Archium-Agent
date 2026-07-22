@@ -707,6 +707,7 @@ def _render_review() -> None:
         "functional_classification.json · content_clusters.json · "
         "representative_slides.json · content_schemas.json · "
         "schema_publish_report.json · architectural_template.json · "
+        "TemplateUsageBrief.md · template_usage_brief.json · "
         "outline_template_co_plan.json（协同规划后）"
     )
 

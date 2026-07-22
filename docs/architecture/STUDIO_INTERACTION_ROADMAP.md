@@ -488,3 +488,17 @@ open-slide 把「可用高度 = 页高 − 顶底边距」写进 Agent 规则；
 **尚未做**
 - Studio 独立「容量仪表」面板
 - 按真实分栏几何的更细预算（当前为确定性启发式）
+
+## TemplateUsageBrief 设计契约（已接线）
+
+Template Induction 物化后写出可读设计契约，避免主题规则只埋在代码里。
+
+**已实现**
+- `TemplateUsageBrief`：品牌特征 / 标题行为 / 字体层级 / 页边距 / 内容密度 / 图片与图纸处理 / 页码 / 重复装饰 / 禁用模式
+- 双产物：`TemplateUsageBrief.md`（人与 Agent）+ `template_usage_brief.json`（程序）
+- `InductionArchitecturalTemplatePublisher` 与 `export_artifacts` 在写出 `architectural_template.json` 后同步生成
+- 图纸硬规则在 brief 中显式可见：contain、禁止 cover/crop
+
+**尚未做**
+- 从 DesignSystem 变更自动重写 brief
+- Agent Skill 强制把 brief 当作生成前置约束的独立校验门

@@ -888,6 +888,17 @@ class TemplateInductionService:
         template_path = workspace / "architectural_template.json"
         if template_path.is_file():
             paths["architectural_template"] = template_path
+            from archium.application.visual.template_usage_brief_service import (
+                TemplateUsageBriefService,
+            )
+
+            template = ArchitecturalTemplate.model_validate(
+                json.loads(template_path.read_text(encoding="utf-8"))
+            )
+            _, brief_paths = TemplateUsageBriefService().write_for_template(
+                workspace, template, induction=induction
+            )
+            paths.update(brief_paths)
 
         return paths
 

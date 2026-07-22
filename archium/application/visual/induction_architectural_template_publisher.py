@@ -198,6 +198,13 @@ class InductionArchitecturalTemplatePublisher:
             json.dumps(template.model_dump(mode="json"), ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        from archium.application.visual.template_usage_brief_service import (
+            TemplateUsageBriefService,
+        )
+
+        TemplateUsageBriefService().write_for_template(
+            workspace, template, induction=induction
+        )
         induction.architectural_template_id = str(template.id)
         induction_path = workspace / "induction_result.json"
         induction_path.write_text(
