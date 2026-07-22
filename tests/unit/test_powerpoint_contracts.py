@@ -44,8 +44,16 @@ def test_scene_closure_rejects_renderer_created_visible_content() -> None:
     report = PowerPointContractService().validate_scene_closure(
         _scene(),
         [
-            RendererEmission(scene_node_id="title", pptx_object_type="p:sp"),
-            RendererEmission(scene_node_id="renderer-decoration", pptx_object_type="p:sp"),
+            RendererEmission(
+                emission_id="title-shape",
+                source_scene_node_id="title",
+                pptx_object_type="p:sp",
+            ),
+            RendererEmission(
+                emission_id="decoration-shape",
+                source_scene_node_id="renderer-decoration",
+                pptx_object_type="p:sp",
+            ),
         ],
     )
     assert not report.valid
@@ -54,7 +62,13 @@ def test_scene_closure_rejects_renderer_created_visible_content() -> None:
 
 def test_scene_closure_counts_only_visible_authored_nodes() -> None:
     service = PowerPointContractService()
-    emissions = [RendererEmission(scene_node_id="title", pptx_object_type="p:sp")]
+    emissions = [
+        RendererEmission(
+            emission_id="title-shape",
+            source_scene_node_id="title",
+            pptx_object_type="p:sp",
+        )
+    ]
     assert service.validate_scene_closure(_scene(), emissions).valid
     service.require_scene_closure(_scene(), emissions)
 

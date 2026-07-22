@@ -23,10 +23,17 @@ class PowerPointFidelity(StrEnum):
     UNSUPPORTED = "unsupported"
 
 
+class MappingCardinality(StrEnum):
+    ONE_TO_ONE = "one_to_one"
+    ONE_TO_MANY = "one_to_many"
+    MANY_TO_ONE = "many_to_one"
+
+
 class PowerPointCapabilityMapping(DomainModel):
     scene_node_type: str = Field(min_length=1)
     pptx_object_type: str = Field(min_length=1)
     fidelity: PowerPointFidelity
+    mapping_cardinality: MappingCardinality = MappingCardinality.ONE_TO_ONE
     limitations: list[str] = Field(default_factory=list)
     validation_rules: list[str] = Field(default_factory=list)
 
