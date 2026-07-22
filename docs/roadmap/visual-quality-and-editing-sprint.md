@@ -143,7 +143,7 @@ PptxGen / AssetPathResolver 只消费 URI，不做滤镜。
 ### 仍待
 1. Sharp/Node 作为可插拔执行器（大图 / 模型级主体检测）
 2. DB 级 derivative 元数据索引（当前靠文件缓存 + params_hash）
-3. 回归截图覆盖 unify 前后对比
+3. 组件级截图 golden 覆盖 unify（当前有 Pillow 像素 before/after 单测）
 
 ### 验收指标
 - 证据类策略不破坏事实性表达（QA 规则 + 回归截图）

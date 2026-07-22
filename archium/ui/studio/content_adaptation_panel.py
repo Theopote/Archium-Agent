@@ -13,17 +13,36 @@ from archium.domain.content_adaptation import (
     parse_content_adaptation_text,
 )
 from archium.domain.slide_split import SlideSplitProposal
+from archium.domain.visual.slide_capacity_budget import (
+    CapacityStatus,
+    SlideCapacityBudget,
+)
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
 from archium.ui.studio_service import (
     analyze_slide_content_adaptation,
     apply_slide_content_adaptation,
+    estimate_slide_capacity,
     restore_slide_content_adaptation,
 )
 from archium.ui.visual_service import SlideVisualSnapshot
 
 _SPLIT_PROPOSAL_KEY = "studio_slide_split_proposal"
+
+_CAPACITY_ACTION_LABELS = {
+    "proceed": "可继续布局",
+    "adapt_content": "建议缩短 / 适配内容",
+    "split_slide": "建议拆页",
+    "blocked": "容量不可行 — 需大幅删减或换版式",
+}
+
+_CAPACITY_STATUS_HELP = {
+    CapacityStatus.FITS: "内容在固定画布内舒适",
+    CapacityStatus.TIGHT: "偏紧：可出候选，但必须 QA",
+    CapacityStatus.OVERLOADED: "超载：禁止继续缩字，应适配或拆页",
+    CapacityStatus.IMPOSSIBLE: "不可行：当前载荷无法落入固定画布",
+}
 
 
 def render_content_adaptation_panel(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
@@ -34,6 +53,7 @@ def render_content_adaptation_panel(*, slide_snapshot: SlideVisualSnapshot | Non
         return
 
     slide_id = slide_snapshot.slide.id
+    _render_capacity_gauge(slide_id)
     st.caption("调整页面文字与结构；OVERLOADED 拆页需确认 Before/After 后再执行。")
 
     pending = st.session_state.get(_SPLIT_PROPOSAL_KEY)
@@ -112,6 +132,51 @@ def render_content_adaptation_panel(*, slide_snapshot: SlideVisualSnapshot | Non
         key=f"studio_undo_content_{slide_id}",
     ):
         _run_restore(slide_id=slide_id)
+
+
+def _render_capacity_gauge(slide_id: UUID) -> None:
+    budget = _load_capacity(slide_id)
+    if budget is None:
+        st.caption("容量预算：暂无 DesignSystem，无法估算固定画布容量。")
+        return
+
+    st.markdown("**固定画布容量**")
+    status = budget.status
+    help_text = _CAPACITY_STATUS_HELP.get(status, "")
+    action_label = _CAPACITY_ACTION_LABELS.get(
+        budget.recommended_action, budget.recommended_action
+    )
+    c1, c2, c3 = st.columns(3)
+    c1.metric("状态", status.value)
+    c2.metric("容量比", f"{budget.capacity_ratio:.2f}")
+    c3.metric("溢出风险", f"{budget.overflow_risk:.2f}")
+    st.caption(
+        f"{help_text} · 建议：{action_label} · "
+        f"可用 {budget.usable_width:.2f}×{budget.usable_height:.2f} in · "
+        f"文字高估 {budget.estimated_text_height:.2f} in"
+        + (" · 真实字体度量" if budget.used_real_font_metrics else " · 回退度量")
+    )
+    if budget.drawing_min_readable_area > 0:
+        st.caption(
+            f"图纸可读区 ≥ {budget.drawing_min_readable_area:.2f} in² · "
+            f"图注高 {budget.caption_required_height:.2f} in · "
+            f"图例区 {budget.legend_required_area:.2f} in²"
+        )
+    if status == CapacityStatus.OVERLOADED:
+        st.warning("容量超载：禁止继续缩字。请缩短内容或生成拆页提案。")
+    elif status == CapacityStatus.IMPOSSIBLE:
+        st.error("容量不可行：即使适配当前载荷也无法落入固定画布。")
+
+
+def _load_capacity(slide_id: UUID) -> SlideCapacityBudget | None:
+    try:
+        with get_session() as session:
+            return estimate_slide_capacity(session, slide_id)
+    except WorkflowError as exc:
+        st.caption(format_user_error(exc))
+        return None
+    except Exception:
+        return None
 
 
 def _render_split_proposal(proposal: SlideSplitProposal) -> None:

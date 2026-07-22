@@ -456,13 +456,14 @@ open-slide 式 Inspector 评论适合 Archium，但应以 Command / Patch / Prop
 - `CommentToCommandPlanner` → `ElementEditIntent`（关键词快捷 + Structured Output）→ `StudioCommand` → `SceneChangeProposal` → Before/After
 - 元素意图操作：move / resize / align / distribute / replace_asset / rewrite_text / change_style / visibility / lock / reorder
 - 提案接受/拒绝后回写评论状态
+- Studio AI 工作区：选中 / 多选 / 选区(包围盒) / 整页；Inbox 展示 region bbox 并可「在画布定位」
 
 **尚未做**
 - 画布上的评论气泡 / 独立评论线程 UI
 - 多评论协作与指派
 - 复合几何指令的完整 LLM 规划（关键词仅为高置信快捷路径；其余走 `ElementEditIntent` Structured Output）
 - `needs_rebase` 的可视化 Diff（评论时节点快照 vs 当前节点）与一键 rebind UI
-- Studio 多选 UI 自动写入 `scope=selection` + `scope_node_ids`
+- 自由框选 → 独立 region 评论手势（当前：多选包围盒 → `region_bbox`；Inbox 可「在画布定位」）
 ## 全稿 Theme Token → ThemeChangeProposal（已接线）
 
 open-slide Design Panel 的全稿 Token 调节值得参考，但 Archium **禁止像网页 CSS 一样静默覆盖正式页面**。
@@ -492,10 +493,11 @@ open-slide 把「可用高度 = 页高 − 顶底边距」写进 Agent 规则；
 - `SlideCapacityService.estimate`：全部文本路径显式传 `TextStyleToken`（family/size/weight/line_height）+ `box_width` + `language`；记录 `used_real_font_metrics`
 - 规则：`TIGHT` 可出候选但必须 QA；`OVERLOADED` 强制适配/拆页并禁缩字；`IMPOSSIBLE` → `CAPACITY.IMPOSSIBLE` BLOCKED（不产出候选）
 - `LayoutPlanningService` / `LayoutRepairService` / `suggest_content_adaptations` 已按状态接线
+- Studio「内容」页 **固定画布容量** 仪表：`status` / `capacity_ratio` / `overflow_risk` / `recommended_action` + 图纸可读区摘要
 
 **尚未做**
-- Studio 独立「容量仪表」面板
 - 按真实分栏几何的更细预算（当前为确定性启发式）
+- 容量仪表历史曲线 / 与 Layout 候选并排对比
 
 ## TemplateUsageBrief 设计契约（已接线）
 

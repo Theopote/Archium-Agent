@@ -127,6 +127,28 @@ def _render_comment_row(comment: ElementComment, *, presentation_id: UUID) -> No
             f"slide `{comment.slide_id}` · revision "
             f"`{comment.scene_revision_id}` · hash `{comment.scene_hash[:12] if comment.scene_hash else '—'}`"
         )
+        if comment.region_bbox:
+            box = comment.region_bbox
+            st.caption(
+                "选区 bbox (in)： "
+                f"x={box.get('x', 0):.2f} y={box.get('y', 0):.2f} "
+                f"w={box.get('width', 0):.2f} h={box.get('height', 0):.2f}"
+            )
+        if st.button(
+            "在画布定位节点",
+            key=f"studio_comment_focus_{comment.id}",
+            use_container_width=True,
+            help="将评论绑定的 node / 多选写入画布选中态。",
+        ):
+            focus_ids = [comment.node_id, *list(comment.scope_node_ids or [])]
+            st.session_state["studio_selected_element_id"] = comment.node_id
+            st.session_state["studio_selected_element_ids"] = focus_ids
+            if comment.region_bbox:
+                st.session_state["studio_comment_region_bbox"] = dict(comment.region_bbox)
+            else:
+                st.session_state.pop("studio_comment_region_bbox", None)
+            st.success("已定位到评论绑定节点。")
+            st.rerun()
         if comment.status == ElementCommentStatus.NEEDS_REBASE:
             if st.button(
                 "重新绑定到当前 Scene",

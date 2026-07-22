@@ -318,3 +318,65 @@ def test_selection_region_bbox_covers_nodes() -> None:
     box = selection_region_bbox(scene, ["a", "b"])
     assert box == {"x": 1.0, "y": 0.5, "width": 4.0, "height": 2.3}
     assert selection_region_bbox(scene, ["missing"]) is None
+
+
+def test_presentation_unify_changes_pixels_evidence_stays_untreated(
+    tmp_path: Path,
+) -> None:
+    """Before/after unify regression without golden PNG promote."""
+    executor = ImageDerivativeExecutor()
+    if not executor.is_available():
+        pytest.skip("Pillow unavailable")
+
+    project_id = uuid4()
+    settings = Settings(_env_file=None, project_storage_path=tmp_path)
+    storage = LocalProjectStorage(settings=settings)
+    layout = storage.ensure_project_layout(project_id)
+    original = layout["assets"] / "unify.jpg"
+    Image.new("RGB", (160, 120), color=(180, 90, 40)).save(original, format="JPEG")
+    original_bytes = original.read_bytes()
+    executor = ImageDerivativeExecutor(storage=storage)
+
+    none_spec = ImageTreatmentSpec(
+        original_asset_id=uuid4(),
+        mode=ImageTreatmentMode.NONE,
+    )
+    assert executor.execute(none_spec, project_id=project_id, original_path=original) is None
+
+    unify = ImageTreatmentSpec(
+        original_asset_id=uuid4(),
+        asset_class=ImageAssetClass.PRESENTATION,
+        mode=ImageTreatmentMode.PRESENTATION_UNIFY,
+        overlay=ImageOverlaySpec(kind="soft_vignette", opacity=0.25),
+        target_max_edge_px=160,
+    )
+    derivative = executor.execute(unify, project_id=project_id, original_path=original)
+    assert derivative is not None
+    assert original.read_bytes() == original_bytes
+
+    der_path = next(
+        (layout["cache"] / "derivatives").rglob(f"{derivative.params_hash}.jpg"),
+        None,
+    )
+    assert der_path is not None and der_path.is_file()
+    before = Image.open(original).convert("RGB")
+    after = Image.open(der_path).convert("RGB")
+    assert after.size[0] <= before.size[0] and after.size[1] <= before.size[1]
+    # Mean absolute channel delta must be non-trivial for unify+vignette.
+    from statistics import mean
+
+    b_px = list(before.getdata())
+    a_px = list(after.resize(before.size, Image.Resampling.LANCZOS).getdata())
+    mad = mean(
+        abs(bp[c] - ap[c]) for bp, ap in zip(b_px, a_px, strict=True) for c in range(3)
+    )
+    assert mad > 0.5
+
+    # Evidence assets must refuse presentation_unify (executor returns None).
+    evidence = ImageTreatmentSpec(
+        original_asset_id=uuid4(),
+        asset_class=ImageAssetClass.PROJECT_EVIDENCE_PHOTO,
+        mode=ImageTreatmentMode.PRESENTATION_UNIFY,
+        overlay=ImageOverlaySpec(kind="soft_vignette", opacity=0.3),
+    )
+    assert executor.execute(evidence, project_id=project_id, original_path=original) is None

@@ -69,6 +69,13 @@ class ContentAdaptationService:
         self._visual_edits = VisualEditService(session)
         self._warnings: list[AdaptationWarning] = []
 
+    def estimate_capacity(self, slide_id: UUID) -> SlideCapacityBudget | None:
+        """Public pre-layout capacity estimate for Studio gauges."""
+        slide = self._presentations.get_slide(slide_id)
+        if slide is None:
+            raise WorkflowError(f"页面 {slide_id} 不存在")
+        return self._estimate_capacity(slide)
+
     def analyze(
         self,
         slide_id: UUID,

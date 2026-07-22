@@ -358,6 +358,11 @@ def analyze_slide_content_adaptation(
     )
 
 
+def estimate_slide_capacity(session: Session, slide_id: UUID):
+    """Return ``SlideCapacityBudget`` for the Studio capacity gauge, or None."""
+    return ContentAdaptationService(session).estimate_capacity(slide_id)
+
+
 def create_slide_scene_proposal_from_text(
     session: Session,
     slide_id: UUID,
