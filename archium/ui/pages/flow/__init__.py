@@ -142,7 +142,7 @@ def stage_completion_status(
         return "blocked"
 
     if stage_id == "materials":
-        return "done" if snapshot.document_count > 0 else "warn"
+        return "done" if snapshot.document_count > 0 else "blocked"
 
     if stage_id == "outline":
         if snapshot.has_brief or getattr(snapshot, "outline_approved", False):

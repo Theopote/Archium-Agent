@@ -40,7 +40,7 @@ def test_stage_completion_does_not_fake_done_from_navigation() -> None:
         ready_for_export=False,
     )
     # Opening 工作室 must not mark earlier stages done.
-    assert stage_completion_status("materials", empty) == "warn"
+    assert stage_completion_status("materials", empty) == "blocked"
     assert stage_completion_status("outline", empty) == "todo"
     assert stage_completion_status("generate", empty) == "todo"
     assert stage_completion_status("edit", empty) == "blocked"

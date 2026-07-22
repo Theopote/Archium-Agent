@@ -20,6 +20,7 @@ def test_tier_path_prefixes_map_to_known_markers() -> None:
     ("relative_path", "expected_tier"),
     [
         ("tests/unit/test_settings.py", "unit"),
+        ("tests/ui/test_navigation_structure.py", "unit"),
         ("tests/application/visual/test_composite_operations.py", "integration"),
         ("tests/integration/visual/test_e2e_benchmark_service.py", "integration"),
         ("tests/benchmark/architectural_slides/test_architectural_benchmark.py", "benchmark"),

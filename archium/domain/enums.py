@@ -148,6 +148,8 @@ class ApprovalStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+    # Approved outline edited again — needs re-confirmation before generation.
+    CHANGES_PENDING = "changes_pending"
 
 
 class SlideType(StrEnum):

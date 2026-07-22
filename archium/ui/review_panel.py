@@ -94,6 +94,7 @@ APPROVAL_LABELS = {
     ApprovalStatus.PENDING: "待审核",
     ApprovalStatus.APPROVED: "已通过",
     ApprovalStatus.REJECTED: "已驳回",
+    ApprovalStatus.CHANGES_PENDING: "待重新确认",
 }
 
 SLIDE_STATUS_LABELS = {

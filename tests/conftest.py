@@ -65,6 +65,7 @@ _TIER_MARKERS = frozenset({"unit", "integration", "e2e", "benchmark", "smoke"})
 # Primary CI tier markers are assigned from path when not declared on the test module/class.
 _TIER_PATH_PREFIXES: tuple[tuple[str, str], ...] = (
     ("tests/unit/", "unit"),
+    ("tests/ui/", "unit"),
     ("tests/application/", "integration"),
     ("tests/integration/", "integration"),
     ("tests/benchmark/", "benchmark"),

@@ -234,7 +234,7 @@ class PresentationReviewService:
         outline.page_asset_bindings = [
             _slide_asset_binding_from_update(item) for item in update.page_asset_bindings
         ]
-        outline.approval_status = ApprovalStatus.DRAFT
+        outline.approval_status = _outline_status_after_edit(outline.approval_status)
         outline.touch()
         return self._presentations.save_outline(outline)
 
@@ -248,7 +248,7 @@ class PresentationReviewService:
         outline.page_asset_bindings = [
             _slide_asset_binding_from_update(item) for item in bindings
         ]
-        outline.approval_status = ApprovalStatus.DRAFT
+        outline.approval_status = _outline_status_after_edit(outline.approval_status)
         outline.touch()
         return self._presentations.save_outline(outline)
 
@@ -420,6 +420,13 @@ def _outline_section_from_update(update: OutlineSectionUpdate) -> OutlineSection
         category=update.category.strip() or "general",
         narrative_position=_narrative_position_from_update(update.narrative_position),
     )
+
+
+def _outline_status_after_edit(current: ApprovalStatus) -> ApprovalStatus:
+    """Editing an approved outline returns it to changes-pending (needs re-confirm)."""
+    if current in {ApprovalStatus.APPROVED, ApprovalStatus.CHANGES_PENDING}:
+        return ApprovalStatus.CHANGES_PENDING
+    return ApprovalStatus.DRAFT
 
 
 def _slide_intent_from_update(update: SlideIntentUpdate) -> SlideIntent:
