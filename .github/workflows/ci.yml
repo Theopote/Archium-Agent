@@ -238,7 +238,9 @@ jobs:
         run: python scripts/materialize_benchmark_curated_assets.py --force --sync-cases
 
       - name: Render architectural benchmark visuals
-        run: python scripts/render_architectural_benchmark_visuals.py --case case_001_site_plan --case case_002_site_photos
+        # Ephemeral CI workspace only — regenerates sample renders for pipeline smoke + artifacts.
+        # Local golden updates still require an explicit --write-goldens / UPDATE_* env.
+        run: python scripts/render_architectural_benchmark_visuals.py --write-goldens --case case_001_site_plan --case case_002_site_photos
 
       - name: Render pipeline tests
         run: pytest tests/benchmark/architectural_slides/test_render_pipeline.py -v

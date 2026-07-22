@@ -87,7 +87,13 @@ def export_pptx_slide_pngs(
         return []
 
     if libreoffice_screenshot_tools_available():
-        results = _export_via_libreoffice(pptx, out, timeout_seconds=timeout_seconds)
+        results = _export_via_libreoffice(
+            pptx,
+            out,
+            timeout_seconds=timeout_seconds,
+            width=width,
+            height=height,
+        )
         if results:
             return results
         logger.warning("LibreOffice screenshot path failed; trying PowerPoint fallback")
@@ -115,6 +121,8 @@ def _export_via_libreoffice(
     out: Path,
     *,
     timeout_seconds: int,
+    width: int = _DEFAULT_EXPORT_WIDTH,
+    height: int = _DEFAULT_EXPORT_HEIGHT,
 ) -> list[Path]:
     soffice = find_libreoffice()
     pdftoppm = find_pdftoppm()
@@ -154,13 +162,17 @@ def _export_via_libreoffice(
                 logger.warning("LibreOffice produced no PDF for %s", pptx.name)
                 return []
 
+            # Match PowerPoint COM export size (baselines are 1920x1080).
+            # Fixed DPI (e.g. -r 144) yields 1440x811 on 10x5.625" slides.
             prefix = tmp_dir / "slide"
             raster = subprocess.run(
                 [
                     pdftoppm,
                     "-png",
-                    "-r",
-                    "144",
+                    "-scale-to-x",
+                    str(int(width)),
+                    "-scale-to-y",
+                    str(int(height)),
                     str(pdfs[0]),
                     str(prefix),
                 ],
