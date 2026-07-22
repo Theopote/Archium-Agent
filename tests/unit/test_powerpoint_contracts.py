@@ -8,6 +8,7 @@ from archium.application.powerpoint_contract_service import (
 from archium.domain.powerpoint_capability import PowerPointFidelity, capability_for_scene_node
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, ShapeNode, TextNode
 from archium.domain.workflow_route import PresentationWorkflowRoute, contract_for_route
+from archium.infrastructure.renderers.scene_pptx_adapter import RenderScenePptxAdapter
 
 
 def _scene() -> RenderScene:
@@ -57,3 +58,7 @@ def test_scene_closure_counts_only_visible_authored_nodes() -> None:
     assert service.validate_scene_closure(_scene(), emissions).valid
     service.require_scene_closure(_scene(), emissions)
 
+
+def test_scene_adapter_does_not_emit_hidden_authored_nodes() -> None:
+    instruction = RenderScenePptxAdapter().render_slide(_scene())
+    assert [element['id'] for element in instruction.elements] == ['title']

@@ -30,7 +30,13 @@ class RenderScenePptxAdapter:
         design_system_id: UUID | None = None,
         speaker_notes: str | None = None,
     ) -> RenderedSlideInstruction:
-        elements = [self._node_instruction(node, scene) for node in scene.sorted_nodes()]
+        # Hidden nodes remain part of authored revision state, but are not
+        # visible delivery objects under the RenderScene closure contract.
+        elements = [
+            self._node_instruction(node, scene)
+            for node in scene.sorted_nodes()
+            if node.visible
+        ]
         theme_tokens: dict[str, Any] = {
             "colors": dict(scene.theme_tokens.colors),
             "typography": dict(scene.theme_tokens.typography),

@@ -1,0 +1,75 @@
+﻿CI FAIL SUMMARY — Archium-Agent
+Run: https://github.com/Theopote/Archium-Agent/actions/runs/29943725480
+Run ID: 29943725480
+SHA: 139541ab1d49860ff553d85c977695fb04e9c0ed (docs: 更新配置选项和文档链接)
+Source: authenticated job logs (unauthenticated API logs = 403 "Must have admin rights")
+
+FAILED JOBS
+-----------
+1) test (3.12)                          job_id=89003748832
+2) test (3.11)                          job_id=89003748836
+3) layout pptx screenshot regression    job_id=89003748850
+
+ROOT CAUSES
+-----------
+A) test (3.11) / test (3.12): NOT Ruff, NOT pytest.
+   - Ruff: "All checks passed!"
+   - Failed step: Mypy (exit 1). Pytest unit/integration/golden were skipped after Mypy.
+   - Mypy: Found 217 errors in 56 files (checked 645 source files)
+   - Top codes: arg-type(63), no-untyped-def(44), attr-defined(40), assignment(19),
+     typeddict-item(19), call-overload(10), unused-ignore(7), no-any-return(6), ...
+   - Hot files: visual_mappers.py, slide_canvas_enhanced.py, main_chain_adopt_service.py,
+     project_progress_card.py, ocr_region_detector.py, studio_service.py, pages/studio.py
+
+B) layout pptx screenshot: NOT dimension 1920->1440 on this run.
+   - LibreOffice size fix (76cc464, -scale-to-x/y 1920x1080) is present; no dimension lines.
+   - Failed step: LayoutPlan PPTX screenshot regression (pptx_visual_regression)
+   - Result: 9 failed, 2 passed in 14.73s
+   - Failures: layout hash drift (Hamming > 12) and/or pixel diff > 5.0%
+
+EXCERPTS — Mypy (test 3.12; 3.11 same 217 count)
+------------------------------------------------
+archium/infrastructure/slide_recovery/pdf_page_renderer.py:13: error: Unused "type: ignore" comment  [unused-ignore]
+archium/domain/slide_asset_binding.py:111: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium/application/visual/architectural_icon_registry.py:185: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium/application/visual/architectural_icon_registry.py:198: error: Function is missing a return type annotation  [no-untyped-def]
+archium/domain/deck_delivery.py:110: error: Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")  [assignment]
+archium/domain/deck_delivery.py:121: error: Argument "status" to "DeckDeliveryReport" has incompatible type "SlideDeliveryStatus"; expected "DeckDeliveryStatus"  [arg-type]
+archium/infrastructure/slide_recovery/scene_region_adapter.py:244: error: Argument "drawing_type" to "DrawingNode" has incompatible type "str"; expected Literal[...]  [arg-type]
+archium/infrastructure/slide_recovery/scene_region_adapter.py:267: error: Argument "asset_origin" to "ImageNode" has incompatible type "str"; expected Literal[...]  [arg-type]
+archium/ui/studio/slide_canvas_enhanced.py:388: error: TypedDict "CanvasMoveManyEvent" has no key "elementId"  [typeddict-item]
+archium/ui/studio/ai_workspace_panel.py:191: error: "type[VisualEditIntent]" has no attribute "FIX_OVERFLOW"  [attr-defined]
+... (217 errors in 56 files)
+Found 217 errors in 56 files (checked 645 source files)
+##[error]Process completed with exit code 1.
+
+EXCERPTS — layout pptx screenshot
+---------------------------------
+E           Failed: v1_drawing_focus pptx_visual_regression failed:
+E           - slide_01.png: layout hash drift (Hamming 26 > 12)
+E           Failed: v2_evidence_board pptx_visual_regression failed:
+E           - slide_01.png: layout hash drift (Hamming 25 > 12)
+E           - slide_01.png: pixel diff 6.6% exceeds 5.0%
+E           Failed: v3_comparative_matrix pptx_visual_regression failed:
+E           - slide_01.png: layout hash drift (Hamming 13 > 12)
+E           - slide_01.png: pixel diff 7.9% exceeds 5.0%
+E           Failed: v4_analytical_diagram pptx_visual_regression failed:
+E           - slide_01.png: layout hash drift (Hamming 23 > 12)
+E           Failed: v5_process_narrative pptx_visual_regression failed:
+E           - slide_01.png: pixel diff 5.4% exceeds 5.0%
+E           Failed: v6_metric_dashboard pptx_visual_regression failed:
+E           - slide_01.png: pixel diff 6.4% exceeds 5.0%
+E           Failed: v7_hybrid_canvas pptx_visual_regression failed:
+E           - slide_01.png: pixel diff 6.6% exceeds 5.0%
+E           Failed: v8_process_narrative_icons pptx_visual_regression failed:
+E           - slide_01.png: pixel diff 6.7% exceeds 5.0%
+E           Failed: v9_metric_dashboard_icons pptx_visual_regression failed:
+E           - slide_01.png: pixel diff 7.2% exceeds 5.0%
+========================= 9 failed, 2 passed in 14.73s =========================
+
+NOTES
+-----
+- Desktop logs_81109494222 is an OLDER run (SHA f0c299f7): Ruff 110 errors + layout 1920->1440.
+  Do not confuse with this run (139541a).
+- Artifacts: layout-pptx-screenshot-candidates id=8539311834,
+  layout-pptx-screenshot-baselines id=8539311357 (for human approve-baseline review).

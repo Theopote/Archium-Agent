@@ -1,0 +1,279 @@
+archium\infrastructure\slide_recovery\pdf_page_renderer.py:13: error: Unused "type: ignore" comment  [unused-ignore]
+archium\domain\slide_asset_binding.py:111: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\domain\slide_asset_binding.py:111: note: Possible overload variants:
+archium\domain\slide_asset_binding.py:111: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\domain\slide_asset_binding.py:111: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\application\visual\architectural_icon_registry.py:185: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\architectural_icon_registry.py:198: error: Function is missing a return type annotation  [no-untyped-def]
+archium\domain\deck_delivery.py:110: error: Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")  [assignment]
+archium\domain\deck_delivery.py:112: error: Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")  [assignment]
+archium\domain\deck_delivery.py:114: error: Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")  [assignment]
+archium\domain\deck_delivery.py:116: error: Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")  [assignment]
+archium\domain\deck_delivery.py:118: error: Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")  [assignment]
+archium\domain\deck_delivery.py:121: error: Argument "status" to "DeckDeliveryReport" has incompatible type "SlideDeliveryStatus"; expected "DeckDeliveryStatus"  [arg-type]
+archium\infrastructure\slide_recovery\scene_region_adapter.py:244: error: Argument "drawing_type" to "DrawingNode" has incompatible type "str"; expected "Literal['site_plan', 'floor_plan', 'elevation', 'section', 'detail', 'diagram', 'heritage_map', 'circulation_plan']"  [arg-type]
+archium\infrastructure\slide_recovery\scene_region_adapter.py:267: error: Argument "asset_origin" to "ImageNode" has incompatible type "str"; expected "Literal['project_upload', 'public_research', 'reference_case', 'ai_generated', 'stock_image']"  [arg-type]
+archium\infrastructure\slide_recovery\scene_region_adapter.py:304: error: Incompatible types in assignment (expression has type "None", variable has type "str")  [assignment]
+archium\infrastructure\slide_recovery\scene_region_adapter.py:307: error: Incompatible types in assignment (expression has type "str | None", variable has type "str")  [assignment]
+archium\infrastructure\slide_recovery\region_overlay_renderer.py:41: error: Incompatible types in assignment (expression has type "ImageFont", variable has type "FreeTypeFont")  [assignment]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:14: error: Unused "type: ignore[misc]" comment  [unused-ignore]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:22: error: Unused "type: ignore" comment  [unused-ignore]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:87: error: Argument 1 to "float" has incompatible type "object"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:93: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:93: note: Possible overload variants:
+archium\infrastructure\slide_recovery\ocr_region_detector.py:93: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:93: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:94: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:94: note: Possible overload variants:
+archium\infrastructure\slide_recovery\ocr_region_detector.py:94: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:94: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:95: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:95: note: Possible overload variants:
+archium\infrastructure\slide_recovery\ocr_region_detector.py:95: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:95: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:105: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:105: note: Possible overload variants:
+archium\infrastructure\slide_recovery\ocr_region_detector.py:105: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:105: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:106: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:106: note: Possible overload variants:
+archium\infrastructure\slide_recovery\ocr_region_detector.py:106: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:106: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:107: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:107: note: Possible overload variants:
+archium\infrastructure\slide_recovery\ocr_region_detector.py:107: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:107: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:108: error: No overload variant of "int" matches argument type "object"  [call-overload]
+archium\infrastructure\slide_recovery\ocr_region_detector.py:108: note: Possible overload variants:
+archium\infrastructure\slide_recovery\ocr_region_detector.py:108: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:108: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+archium\infrastructure\slide_recovery\ocr_region_detector.py:122: error: Argument 1 to "float" has incompatible type "object"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+archium\application\visual\partial_edit_preservation.py:159: error: Incompatible types in assignment (expression has type "BaseRenderNode", variable has type "TextNode | ImageNode | DrawingNode | ShapeNode | None")  [assignment]
+archium\application\visual\partial_edit_preservation.py:207: error: Incompatible types in assignment (expression has type "BaseRenderNode", variable has type "TextNode | ImageNode | DrawingNode | ShapeNode | None")  [assignment]
+archium\application\visual\placeholder_binding_matcher.py:47: error: Returning Any from function declared to return "float"  [no-any-return]
+archium\infrastructure\renderers\png_renderer.py:191: error: Function is missing a return type annotation  [no-untyped-def]
+archium\infrastructure\renderers\png_renderer.py:202: error: Function is missing a return type annotation  [no-untyped-def]
+archium\infrastructure\renderers\png_renderer.py:218: error: Function is missing a return type annotation  [no-untyped-def]
+archium\infrastructure\renderers\png_renderer.py:242: error: Function is missing a return type annotation  [no-untyped-def]
+archium\infrastructure\renderers\png_renderer.py:325: error: Argument 1 to "Draw" has incompatible type "object"; expected "Image"  [arg-type]
+archium\ui\pages\presentation_technology_radar.py:50: error: Argument "relevance" to "RadarFilter" has incompatible type "str | None"; expected "Literal['adopt', 'trial', 'assess', 'hold'] | None"  [arg-type]
+archium\ui\pages\presentation_technology_radar.py:51: error: Argument "category" to "RadarFilter" has incompatible type "str | None"; expected "Literal['saas', 'open_source', 'research', 'office_addin', 'slides_as_code'] | None"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:159: error: Argument 1 to "_models_to_json" has incompatible type "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:159: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:159: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:160: error: Argument 1 to "_models_to_json" has incompatible type "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:160: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:160: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:161: error: Argument 1 to "_models_to_json" has incompatible type "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:161: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:161: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:162: error: Argument 1 to "_models_to_json" has incompatible type "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:162: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:162: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:163: error: Argument 1 to "_models_to_json" has incompatible type "list[CommandProposalResult]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:163: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:163: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:164: error: Argument 1 to "_models_to_json" has incompatible type "list[ScenePatchAction]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:164: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:164: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:166: error: Argument 1 to "_models_to_json" has incompatible type "list[QualityIssue]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:166: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:166: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:167: error: Argument 1 to "_models_to_json" has incompatible type "list[QualityIssue]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:167: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:167: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:169: error: Argument 1 to "_models_to_json" has incompatible type "list[QualityIssue]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:169: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:169: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:173: error: Argument 1 to "_models_to_json" has incompatible type "list[QualityIssue]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:173: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:173: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:237: error: Argument "commands" to "SceneChangeProposal" has incompatible type "object"; expected "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:238: error: Argument "requested_commands" to "SceneChangeProposal" has incompatible type "object"; expected "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:239: error: Argument "successful_commands" to "SceneChangeProposal" has incompatible type "object"; expected "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:240: error: Argument "failed_commands" to "SceneChangeProposal" has incompatible type "object"; expected "list[RewriteTextCommand | FixOverflowCommand | ReplaceAssetCommand | ReplaceDrawingCommand | IncreaseDrawingReadabilityCommand | <9 more items>]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:241: error: Argument "command_results" to "SceneChangeProposal" has incompatible type "object"; expected "list[CommandProposalResult]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:242: error: Argument "patch_actions" to "SceneChangeProposal" has incompatible type "object"; expected "list[ScenePatchAction]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:243: error: No overload variant of "list" matches argument type "object"  [call-overload]
+archium\infrastructure\database\visual_mappers.py:243: note: Possible overload variants:
+archium\infrastructure\database\visual_mappers.py:243: note:     def [_T] list() -> list[_T]
+archium\infrastructure\database\visual_mappers.py:243: note:     def [_T] list(Iterable[_T], /) -> list[_T]
+archium\infrastructure\database\visual_mappers.py:244: error: Argument "qa_before" to "SceneChangeProposal" has incompatible type "object"; expected "list[QualityIssue]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:245: error: Argument "qa_after" to "SceneChangeProposal" has incompatible type "object"; expected "list[QualityIssue]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:246: error: Argument "qa_before_by_layer" to "SceneChangeProposal" has incompatible type "object"; expected "dict[str, list[QualityIssue]]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:247: error: Argument "qa_after_by_layer" to "SceneChangeProposal" has incompatible type "object"; expected "dict[str, list[QualityIssue]]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:336: error: Argument 1 to "_models_to_json" has incompatible type "list[QualityIssue]"; expected "list[object]"  [arg-type]
+archium\infrastructure\database\visual_mappers.py:336: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\infrastructure\database\visual_mappers.py:336: note: Consider using "Sequence" instead, which is covariant
+archium\infrastructure\database\visual_mappers.py:385: error: "object" has no attribute "__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+archium\domain\scene_revision_summary.py:35: error: Unused "type: ignore" comment  [unused-ignore]
+archium\infrastructure\database\repositories.py:1154: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\image_derivative_executor.py:124: error: "object" has no attribute "save"  [attr-defined]
+archium\application\visual\image_derivative_executor.py:170: error: Argument 1 to "autocontrast" has incompatible type "object"; expected "Image"  [arg-type]
+archium\application\visual\image_derivative_executor.py:173: error: Argument 1 to "grayscale" has incompatible type "object"; expected "Image"  [arg-type]
+archium\application\visual\image_derivative_executor.py:176: error: Argument 1 to "Color" has incompatible type "object"; expected "Image"  [arg-type]
+archium\application\visual\image_derivative_executor.py:199: error: "object" has no attribute "thumbnail"  [attr-defined]
+archium\application\visual\image_derivative_executor.py:204: error: "object" has no attribute "size"  [attr-defined]
+archium\application\visual\slide_capacity_service.py:118: error: Argument "needs_caption" to "_caption_height_budget" of "SlideCapacityService" has incompatible type "float | bool"; expected "bool"  [arg-type]
+archium\application\visual\slide_capacity_service.py:127: error: Argument "needs_drawing_chrome" to "_annotation_height_budget" of "SlideCapacityService" has incompatible type "float | bool"; expected "bool"  [arg-type]
+archium\application\visual\slide_capacity_service.py:151: error: Argument "drawing_impossible" to "capacity_status_for_ratio" has incompatible type "float | bool"; expected "bool"  [arg-type]
+archium\infrastructure\database\visual_repositories.py:253: error: Incompatible return value type (got "SceneChangeProposal | None", expected "SceneChangeProposal")  [return-value]
+archium\infrastructure\database\visual_repositories.py:439: error: Incompatible return value type (got "ThemeChangeProposal | None", expected "ThemeChangeProposal")  [return-value]
+archium\application\main_chain_adopt_service.py:62: error: "object" has no attribute "id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:64: error: "object" has no attribute "current_outline_id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:65: error: "object" has no attribute "current_outline_id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:67: error: "object" has no attribute "id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:71: error: "object" has no attribute "current_storyline_id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:72: error: "object" has no attribute "current_storyline_id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:74: error: "object" has no attribute "id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:81: error: "object" has no attribute "id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:82: error: Argument "slides" to "_evaluate_binding" of "MainChainAdoptService" has incompatible type "list[SlideSpec]"; expected "list[object]"  [arg-type]
+archium\application\main_chain_adopt_service.py:82: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\application\main_chain_adopt_service.py:82: note: Consider using "Sequence" instead, which is covariant
+archium\application\main_chain_adopt_service.py:90: error: "object" has no attribute "id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:196: error: Argument 1 to "evaluate" of "DeckCoherenceQAService" has incompatible type "list[object]"; expected "list[SlideSpec]"  [arg-type]
+archium\application\main_chain_adopt_service.py:196: error: Argument "outline" to "evaluate" of "DeckCoherenceQAService" has incompatible type "object"; expected "OutlinePlan | None"  [arg-type]
+archium\application\main_chain_adopt_service.py:196: error: Argument "storyline" to "evaluate" of "DeckCoherenceQAService" has incompatible type "object"; expected "Storyline | None"  [arg-type]
+archium\application\main_chain_adopt_service.py:313: error: "object" has no attribute "id"  [attr-defined]
+archium\application\main_chain_adopt_service.py:322: error: Generator has incompatible item type "int"; expected "bool"  [misc]
+archium\application\main_chain_adopt_service.py:325: error: "object" has no attribute "visual_requirements"  [attr-defined]
+archium\application\asset_matching_service.py:379: error: Returning Any from function declared to return "bool"  [no-any-return]
+archium\application\visual\image_derivative_service.py:88: error: Argument 1 to "append" of "list" has incompatible type "ImageNode | DrawingNode"; expected "TextNode | ShapeNode"  [arg-type]
+archium\application\slide_recovery_source_parser.py:168: error: Argument 1 to "float" has incompatible type "Length | None"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+archium\application\slide_recovery_source_parser.py:260: error: Unsupported left operand type for / ("None")  [operator]
+archium\application\slide_recovery_source_parser.py:260: note: Left operand is of type "Path | None"
+archium\application\slide_recovery_source_parser.py:273: error: Argument "nodes" to "RenderScene" has incompatible type "list[TextNode | ImageNode | ShapeNode]"; expected "list[TextNode | ImageNode | DrawingNode | ShapeNode]"  [arg-type]
+archium\application\slide_recovery_source_parser.py:273: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\application\slide_recovery_source_parser.py:273: note: Consider using "Sequence" instead, which is covariant
+archium\application\visual\visual_critic_service.py:87: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\visual_critic_service.py:439: error: Invalid self argument "VisualCriticService" to attribute function "_fingerprint_similarity" with type "Callable[[list[tuple[Any, ...]], list[tuple[Any, ...]]], float]"  [misc]
+archium\application\visual\visual_critic_service.py:439: error: Too many arguments for "_fingerprint_similarity" of "VisualCriticService"  [call-arg]
+archium\application\visual\visual_critic_service.py:439: note: Looks like the first special argument in a method is not named "self", "cls", or "mcs", maybe it is missing?
+archium\application\visual\visual_critic_service.py:460: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\visual_critic_service.py:513: error: "self" parameter missing for a non-static method (or an invalid type for self)  [misc]
+archium\application\visual\template_usage_brief_service.py:197: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\template_usage_brief_service.py:228: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\template_usage_brief_service.py:277: error: Incompatible types in assignment (expression has type "list[str]", variable has type "ColorSystem")  [assignment]
+archium\application\visual\template_usage_brief_service.py:278: error: Argument 1 to "len" has incompatible type "ColorSystem"; expected "Sized"  [arg-type]
+archium\application\visual\template_usage_brief_service.py:279: error: Returning Any from function declared to return "list[str]"  [no-any-return]
+archium\application\visual\template_usage_brief_service.py:279: error: Value of type "ColorSystem" is not indexable  [index]
+archium\application\visual\template_studio_service.py:576: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\template_studio_service.py:697: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\infrastructure\renderers\pptxgen_renderer.py:211: error: Incompatible types in assignment (expression has type "str", variable has type "Path")  [assignment]
+archium\infrastructure\renderers\pptxgen_renderer.py:212: error: Argument 2 to "setdefault" of "MutableMapping" has incompatible type "Path"; expected "str"  [arg-type]
+archium\application\slide_design_brief_service.py:259: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\slide_design_brief_service.py:372: error: Function is missing a return type annotation  [no-untyped-def]
+archium\application\visual\scene_compilers\specialized.py:53: error: Argument 1 to "append" of "list" has incompatible type "TextNode | ImageNode | ShapeNode"; expected "DrawingNode"  [arg-type]
+archium\ui\outline\design_brief_panel.py:156: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\outline\design_brief_panel.py:156: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\infrastructure\slide_recovery\vlm_region_analyzer.py:31: error: Unused "type: ignore[misc]" comment  [unused-ignore]
+archium\infrastructure\slide_recovery\vlm_region_analyzer.py:159: error: Argument "confidence" to "RecoveredPageRegion" has incompatible type "float | None"; expected "float"  [arg-type]
+archium\application\visual\element_edit_intent_parser.py:119: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\studio_command_executor.py:808: error: Incompatible types in assignment (expression has type "_Box", variable has type "TextNode | ImageNode | DrawingNode | ShapeNode | None")  [assignment]
+archium\application\visual\studio_command_executor.py:810: error: Argument 1 to "align_nodes" has incompatible type "list[TextNode | ImageNode | DrawingNode | ShapeNode]"; expected "list[BaseRenderNode]"  [arg-type]
+archium\application\visual\studio_command_executor.py:810: note: "list" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+archium\application\visual\studio_command_executor.py:810: note: Consider using "Sequence" instead, which is covariant
+archium\application\visual\comment_to_command_planner.py:140: error: Incompatible types in assignment (expression has type "ElementEditIntent | None", variable has type "ElementEditIntent")  [assignment]
+archium\application\visual\comment_to_command_planner.py:175: error: Function is missing a return type annotation  [no-untyped-def]
+archium\application\visual\comment_to_command_planner.py:175: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\export_round_trip_service.py:192: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\export_round_trip_service.py:235: error: Argument 1 to "float" has incompatible type "object"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+archium\application\export_round_trip_service.py:325: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\export_round_trip_service.py:335: error: Returning Any from function declared to return "float"  [no-any-return]
+archium\application\export_round_trip_service.py:336: error: Returning Any from function declared to return "float"  [no-any-return]
+archium\application\export_policy_service.py:58: error: Incompatible types in assignment (expression has type "ImageNode", variable has type "DrawingNode")  [assignment]
+archium\application\visual\theme_proposal_service.py:313: error: Function is missing a return type annotation  [no-untyped-def]
+archium\application\visual\theme_proposal_service.py:414: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\visual\theme_proposal_service.py:460: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\application\slide_recovery_delivery_service.py:306: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio\visual_version_timeline.py:100: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\studio\visual_version_timeline.py:163: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\studio_service.py:361: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio_service.py:382: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio_service.py:402: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio_service.py:423: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio_service.py:430: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio_service.py:453: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio_service.py:838: error: Incompatible types in assignment (expression has type "VisualEditResult", variable has type "SceneRevisionRestoreResult")  [assignment]
+archium\ui\studio\slide_properties.py:263: error: Unused "type: ignore" comment  [unused-ignore]
+archium\ui\studio\slide_canvas_enhanced.py:380: error: "object" has no attribute "__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+archium\ui\studio\slide_canvas_enhanced.py:388: error: TypedDict "CanvasMoveManyEvent" has no key "elementId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:389: error: TypedDict "CanvasSelectEvent" has no key "text"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:389: error: TypedDict "CanvasMoveEvent" has no key "text"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:389: error: TypedDict "CanvasMoveManyEvent" has no key "text"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:389: error: TypedDict "CanvasResizeEvent" has no key "text"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:389: error: TypedDict "CanvasEditTextEvent" has no key "text"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:389: error: TypedDict "CanvasCommitReplaceAssetEvent" has no key "text"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:389: error: TypedDict "CanvasRequestReplaceAssetEvent" has no key "text"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:396: error: TypedDict "CanvasMoveManyEvent" has no key "elementId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:397: error: TypedDict "CanvasSelectEvent" has no key "assetId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:397: error: TypedDict "CanvasMoveEvent" has no key "assetId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:397: error: TypedDict "CanvasMoveManyEvent" has no key "assetId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:397: error: TypedDict "CanvasResizeEvent" has no key "assetId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:397: error: TypedDict "CanvasEditTextEvent" has no key "assetId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:397: error: TypedDict "CanvasCommitTextEvent" has no key "assetId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:397: error: TypedDict "CanvasRequestReplaceAssetEvent" has no key "assetId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:402: error: TypedDict "CanvasMoveManyEvent" has no key "elementId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:403: error: TypedDict "CanvasMoveManyEvent" has no key "elementId"  [typeddict-item]
+archium\ui\studio\slide_canvas_enhanced.py:408: error: No overload variant of "list" matches argument type "object"  [call-overload]
+archium\ui\studio\slide_canvas_enhanced.py:408: note: Possible overload variants:
+archium\ui\studio\slide_canvas_enhanced.py:408: note:     def [_T] list() -> list[_T]
+archium\ui\studio\slide_canvas_enhanced.py:408: note:     def [_T] list(Iterable[_T], /) -> list[_T]
+archium\ui\studio\slide_canvas_enhanced.py:410: error: TypedDict "CanvasMoveManyEvent" has no key "elementId"  [typeddict-item]
+archium\ui\studio\content_adaptation_panel.py:174: error: Returning Any from function declared to return "SlideCapacityBudget | None"  [no-any-return]
+archium\ui\studio\ai_workspace_panel.py:191: error: "type[VisualEditIntent]" has no attribute "FIX_OVERFLOW"  [attr-defined]
+archium\ui\studio\ai_workspace_panel.py:191: error: "type[VisualEditIntent]" has no attribute "BALANCE_COLUMNS"  [attr-defined]
+archium\ui\slide_recovery_region_panel.py:216: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\slide_recovery_region_panel.py:303: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\slide_recovery_region_panel.py:496: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\slide_recovery_panel.py:23: error: Missing return statement  [return]
+archium\ui\slide_recovery_panel.py:263: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\slide_recovery_panel.py:308: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\slide_recovery_panel.py:341: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\generate_queue.py:49: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\review_panel.py:1317: error: "object" has no attribute "id"  [attr-defined]
+archium\ui\review_panel.py:1378: error: "None" has no attribute "value"  [attr-defined]
+archium\ui\review_panel.py:1385: error: "object" has no attribute "id"  [attr-defined]
+archium\ui\project_progress_card.py:199: error: Argument 1 to "resolve_project_evidence" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:199: error: "object" has no attribute "id"  [attr-defined]
+archium\ui\project_progress_card.py:208: error: Argument 1 to "PresentationRepository" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:208: error: "object" has no attribute "id"  [attr-defined]
+archium\ui\project_progress_card.py:233: error: "object" has no attribute "updated_at"  [attr-defined]
+archium\ui\project_progress_card.py:236: error: Argument 1 to "PresentationRepository" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:239: error: Argument 1 to "PresentationRepository" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:245: error: Argument 1 to "PresentationRepository" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:247: error: Argument 1 to "PresentationRepository" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:264: error: Argument 1 to "presentation_has_visual_layout" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:266: error: Argument 1 to "resolve_delivery_readiness" has incompatible type "object"; expected "Session"  [arg-type]
+archium\ui\project_progress_card.py:267: error: "object" has no attribute "id"  [attr-defined]
+archium\ui\project_progress_card.py:273: error: "object" has no attribute "updated_at"  [attr-defined]
+archium\ui\project_progress_card.py:276: error: "object" has no attribute "id"  [attr-defined]
+archium\ui\project_progress_card.py:277: error: "object" has no attribute "name"  [attr-defined]
+archium\ui\studio\export_panel.py:147: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\studio\export_panel.py:389: error: Function is missing a return type annotation  [no-untyped-def]
+archium\ui\pages\slide_recovery.py:75: error: Unused "type: ignore" comment  [unused-ignore]
+archium\ui\pages\slide_recovery.py:75: error: "object" has no attribute "getvalue"  [attr-defined]
+archium\ui\pages\slide_recovery.py:75: note: Error code "attr-defined" not covered by "type: ignore[union-attr]" comment
+archium\ui\pages\project_mission.py:742: error: Incompatible types in assignment (expression has type "UUID | None", variable has type "UUID")  [assignment]
+archium\ui\pages\home.py:150: error: Incompatible types in assignment (expression has type "Any | DeliveryRecord", variable has type "Presentation")  [assignment]
+archium\ui\pages\home.py:152: error: "Presentation" has no attribute "exported_at"  [attr-defined]
+archium\ui\pages\home.py:153: error: "Presentation" has no attribute "file_uri"  [attr-defined]
+archium\ui\pages\home.py:156: error: "Presentation" has no attribute "get"  [attr-defined]
+archium\ui\pages\home.py:157: error: "Presentation" has no attribute "get"  [attr-defined]
+archium\ui\pages\flow\outline.py:257: error: Incompatible types in assignment (expression has type "Any | str", variable has type "SlideIntent")  [assignment]
+archium\ui\pages\flow\outline.py:796: error: Argument 1 to "load_planning_snapshot" has incompatible type "object"; expected "UUID"  [arg-type]
+archium\ui\pages\flow\outline.py:797: error: Argument 1 to "_render_default_outline" has incompatible type "object"; expected "UUID"  [arg-type]
+archium\ui\pages\flow\materials.py:23: error: Argument 1 to "render_materials_stage" has incompatible type "object"; expected "UUID"  [arg-type]
+archium\ui\pages\flow\generate.py:40: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+archium\ui\pages\flow\generate.py:117: error: Argument 1 to "_selected_presentation_id" has incompatible type "object"; expected "UUID"  [arg-type]
+archium\ui\pages\flow\generate.py:121: error: Argument 1 to "_render_page_queue" has incompatible type "object"; expected "UUID"  [arg-type]
+archium\ui\pages\flow\generate.py:128: error: Argument 1 to "render_generate_stage" has incompatible type "object"; expected "UUID"  [arg-type]
+archium\ui\pages\flow\deliver.py:299: error: Unused "type: ignore" comment  [unused-ignore]
+archium\ui\pages\studio.py:186: error: "object" has no attribute "presentation"  [attr-defined]
+archium\ui\pages\studio.py:204: error: "object" has no attribute "presentation"  [attr-defined]
+archium\ui\pages\studio.py:259: error: "object" has no attribute "project"  [attr-defined]
+archium\ui\pages\studio.py:261: error: "object" has no attribute "presentation"  [attr-defined]
+archium\ui\pages\studio.py:271: error: "object" has no attribute "presentation"  [attr-defined]
+archium\ui\pages\studio.py:272: error: "object" has no attribute "project"  [attr-defined]
+archium\ui\pages\studio.py:282: error: Argument "context" to "render_history_panel" has incompatible type "object"; expected "StudioPresentationContext"  [arg-type]
+Found 217 errors in 56 files (checked 650 source files)
