@@ -1,9 +1,9 @@
 """Image / drawing **layout** treatment planning from DesignSystem + TemplateUsageBrief.
 
 This service only decides fit/crop *policy* and drawing chrome flags for layout.
-It is **not** the Sprint 3 ImageDerivative pipeline (Sharp / focal point /
-safe_normalize / presentation_unify pixels). See
-``archium.domain.visual.image_derivative`` (NOT IMPLEMENTED).
+It is **not** the pixel ImageDerivative pipeline (EXIF/sRGB, focal crop, soft
+vignette). That lives in ``ImageTreatmentSpecPlanner`` +
+``ImageDerivativeExecutor`` (Pillow V2; Sharp still pending).
 """
 
 from __future__ import annotations

@@ -257,6 +257,47 @@ def _handle_canvas_resize(
     )
 
 
+def _load_comment_anchors(
+    slide_snapshot: SlideVisualSnapshot,
+    plan: LayoutPlan,
+) -> list[dict]:
+    """Active ElementComment overlays for the interactive canvas."""
+    from uuid import UUID
+
+    from archium.infrastructure.database.session import get_session
+    from archium.ui.studio.comment_canvas_anchors import build_comment_canvas_anchors
+
+    focused_id = st.session_state.get("studio_focused_comment_id")
+    focused_uuid: UUID | None = None
+    if isinstance(focused_id, str) and focused_id:
+        try:
+            focused_uuid = UUID(focused_id)
+        except ValueError:
+            focused_uuid = None
+    focused_region = st.session_state.get("studio_comment_region_bbox")
+    if not isinstance(focused_region, dict):
+        focused_region = None
+
+    try:
+        with get_session() as session:
+            from archium.application.visual.element_comment_service import (
+                ElementCommentService,
+            )
+
+            comments = ElementCommentService(session).list_for_slide(slide_snapshot.slide.id)
+    except Exception:
+        comments = []
+
+    return build_comment_canvas_anchors(
+        comments,
+        page_width=float(plan.page_width or 10.0),
+        page_height=float(plan.page_height or 5.625),
+        scene=slide_snapshot.render_scene,
+        focused_comment_id=focused_uuid,
+        focused_region_bbox=focused_region,
+    )
+
+
 def _render_interactive_canvas(
     *,
     slide_snapshot: SlideVisualSnapshot,
@@ -305,6 +346,8 @@ def _render_interactive_canvas(
         except Exception:
             assets = []
 
+    comment_anchors = _load_comment_anchors(slide_snapshot, plan)
+
     try:
         canvas_event = canvas_editor(
             image_url=preview_path,
@@ -313,6 +356,7 @@ def _render_interactive_canvas(
             selected_element_id=selected_element_id,
             selected_element_ids=selected_ids,
             assets=assets,
+            comment_anchors=comment_anchors,
             show_labels=True,
             show_all_borders=True,
             key=canvas_component_key(slide_snapshot.slide.id),

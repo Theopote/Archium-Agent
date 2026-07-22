@@ -457,13 +457,14 @@ open-slide 式 Inspector 评论适合 Archium，但应以 Command / Patch / Prop
 - 元素意图操作：move / resize / align / distribute / replace_asset / rewrite_text / change_style / visibility / lock / reorder
 - 提案接受/拒绝后回写评论状态
 - Studio AI 工作区：选中 / 多选 / 选区(包围盒) / 整页；Inbox 展示 region bbox 并可「在画布定位」
+- 画布非交互评论锚点：pending/proposed/needs_rebase 节点 pin + region 虚线框；Inbox 定位高亮
+- `needs_rebase` 节点快照 vs 当前字段 Diff（几何/文本）+ 一键 rebind
 
 **尚未做**
-- 画布上的评论气泡 / 独立评论线程 UI
-- 多评论协作与指派
+- 独立评论线程 UI / 多评论协作与指派
 - 复合几何指令的完整 LLM 规划（关键词仅为高置信快捷路径；其余走 `ElementEditIntent` Structured Output）
-- `needs_rebase` 的可视化 Diff（评论时节点快照 vs 当前节点）与一键 rebind UI
-- 自由框选 → 独立 region 评论手势（当前：多选包围盒 → `region_bbox`；Inbox 可「在画布定位」）
+- 自由框选 → 独立 region 评论手势（当前：多选包围盒 → `region_bbox`）
+- 画布上点击气泡直接开评论（当前仅展示锚点，创建仍走 AI / Inbox）
 ## 全稿 Theme Token → ThemeChangeProposal（已接线）
 
 open-slide Design Panel 的全稿 Token 调节值得参考，但 Archium **禁止像网页 CSS 一样静默覆盖正式页面**。

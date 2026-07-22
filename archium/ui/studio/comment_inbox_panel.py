@@ -107,10 +107,19 @@ def render_comment_inbox(
         return
 
     for comment in filtered[:40]:
-        _render_comment_row(comment, presentation_id=presentation_id)
+        _render_comment_row(
+            comment,
+            presentation_id=presentation_id,
+            slide_snapshot=slide_snapshot,
+        )
 
 
-def _render_comment_row(comment: ElementComment, *, presentation_id: UUID) -> None:
+def _render_comment_row(
+    comment: ElementComment,
+    *,
+    presentation_id: UUID,
+    slide_snapshot: SlideVisualSnapshot | None = None,
+) -> None:
     status = _STATUS_LABELS.get(comment.status.value, comment.status.value)
     scope_bits = [comment.scope.value]
     if comment.scope_node_ids:
@@ -134,21 +143,15 @@ def _render_comment_row(comment: ElementComment, *, presentation_id: UUID) -> No
                 f"x={box.get('x', 0):.2f} y={box.get('y', 0):.2f} "
                 f"w={box.get('width', 0):.2f} h={box.get('height', 0):.2f}"
             )
+        if comment.status == ElementCommentStatus.NEEDS_REBASE:
+            _render_snapshot_diff(comment, slide_snapshot=slide_snapshot)
         if st.button(
             "在画布定位节点",
             key=f"studio_comment_focus_{comment.id}",
             use_container_width=True,
-            help="将评论绑定的 node / 多选写入画布选中态。",
+            help="将评论绑定的 node / 多选写入画布选中态，并高亮选区。",
         ):
-            focus_ids = [comment.node_id, *list(comment.scope_node_ids or [])]
-            st.session_state["studio_selected_element_id"] = comment.node_id
-            st.session_state["studio_selected_element_ids"] = focus_ids
-            if comment.region_bbox:
-                st.session_state["studio_comment_region_bbox"] = dict(comment.region_bbox)
-            else:
-                st.session_state.pop("studio_comment_region_bbox", None)
-            st.success("已定位到评论绑定节点。")
-            st.rerun()
+            _focus_comment_on_canvas(comment, slide_snapshot=slide_snapshot)
         if comment.status == ElementCommentStatus.NEEDS_REBASE:
             if st.button(
                 "重新绑定到当前 Scene",
@@ -167,6 +170,51 @@ def _render_comment_row(comment: ElementComment, *, presentation_id: UUID) -> No
                 use_container_width=True,
             ):
                 _resolve(comment.id)
+
+
+def _focus_comment_on_canvas(
+    comment: ElementComment,
+    *,
+    slide_snapshot: SlideVisualSnapshot | None,
+) -> None:
+    from archium.ui.studio.comment_canvas_anchors import canvas_element_id_for_node
+
+    scene = slide_snapshot.render_scene if slide_snapshot is not None else None
+    primary = comment.layout_element_id or canvas_element_id_for_node(scene, comment.node_id)
+    focus_ids = [primary]
+    for node_id in comment.scope_node_ids or []:
+        mapped = canvas_element_id_for_node(scene, node_id)
+        if mapped not in focus_ids:
+            focus_ids.append(mapped)
+    st.session_state["studio_selected_element_id"] = primary
+    st.session_state["studio_selected_element_ids"] = focus_ids
+    st.session_state["studio_focused_comment_id"] = str(comment.id)
+    if comment.region_bbox:
+        st.session_state["studio_comment_region_bbox"] = dict(comment.region_bbox)
+    else:
+        st.session_state.pop("studio_comment_region_bbox", None)
+    st.success("已定位到评论绑定节点。")
+    st.rerun()
+
+
+def _render_snapshot_diff(
+    comment: ElementComment,
+    *,
+    slide_snapshot: SlideVisualSnapshot | None,
+) -> None:
+    from archium.ui.studio.comment_canvas_anchors import comment_snapshot_diff
+
+    scene = slide_snapshot.render_scene if slide_snapshot is not None else None
+    rows = comment_snapshot_diff(comment, scene=scene)
+    st.markdown("**节点快照 vs 当前**")
+    if not rows:
+        if scene is None or scene.node_by_id(comment.node_id) is None:
+            st.caption("当前 Scene 中找不到该节点，或尚无几何差异。")
+        else:
+            st.caption("几何/文本字段与评论时快照一致（可能仅 scene_hash 漂移）。")
+        return
+    for key, old, new in rows:
+        st.caption(f"`{key}`: `{old}` → `{new}`")
 
 
 def _rebind(comment_id: UUID) -> None:

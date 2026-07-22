@@ -20,6 +20,19 @@ interface Element {
   text_content?: string;
 }
 
+interface CommentAnchor {
+  id: string;
+  nodeId?: string;
+  elementId?: string;
+  status: string;
+  kind: "node" | "region";
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  focused?: boolean;
+}
+
 interface AssetOption {
   id: string;
   label: string;
@@ -157,6 +170,9 @@ const CanvasEditor: React.FC = () => {
   const showLabels: boolean = args?.showLabels ?? true;
   const showAllBorders: boolean = args?.showAllBorders ?? true;
   const assets: AssetOption[] = Array.isArray(args?.assets) ? args.assets : [];
+  const commentAnchors: CommentAnchor[] = Array.isArray(args?.commentAnchors)
+    ? args.commentAnchors
+    : [];
 
   useEffect(() => {
     setLocalSelectedIds(selectedIdsProp);
@@ -182,7 +198,7 @@ const CanvasEditor: React.FC = () => {
       const height = imageRef.current.offsetHeight + 40;
       Streamlit.setFrameHeight(height);
     }
-  }, [containerSize, dragElementId, inlineEdit, assetPicker]);
+  }, [containerSize, dragElementId, inlineEdit, assetPicker, commentAnchors.length]);
 
   useEffect(() => {
     if (inlineEdit && textareaRef.current) {
@@ -674,6 +690,73 @@ const CanvasEditor: React.FC = () => {
       }
     : null;
 
+  const commentStatusColor = (status: string, focused?: boolean): string => {
+    if (focused) return "#d92d20";
+    if (status === "needs_rebase") return "#dc6803";
+    if (status === "proposed") return "#175cd3";
+    return "#f79009";
+  };
+
+  const renderCommentAnchors = () => {
+    if (!commentAnchors.length) return null;
+    return (
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          zIndex: 4,
+        }}
+      >
+        {commentAnchors.map((anchor) => {
+          const color = commentStatusColor(anchor.status, anchor.focused);
+          if (anchor.kind === "region") {
+            return (
+              <div
+                key={anchor.id}
+                title={`评论选区 · ${anchor.status}`}
+                style={{
+                  position: "absolute",
+                  left: `${anchor.x}%`,
+                  top: `${anchor.y}%`,
+                  width: `${Math.max(anchor.width || 0, 0.5)}%`,
+                  height: `${Math.max(anchor.height || 0, 0.5)}%`,
+                  border: `2px dashed ${color}`,
+                  background: anchor.focused
+                    ? "rgba(217, 45, 32, 0.08)"
+                    : "rgba(247, 144, 9, 0.06)",
+                  borderRadius: "4px",
+                  boxSizing: "border-box",
+                }}
+              />
+            );
+          }
+          return (
+            <div
+              key={anchor.id}
+              title={`评论 · ${anchor.status} · ${anchor.nodeId || ""}`}
+              style={{
+                position: "absolute",
+                left: `${anchor.x}%`,
+                top: `${anchor.y}%`,
+                transform: "translate(-50%, -50%)",
+                width: anchor.focused ? 16 : 12,
+                height: anchor.focused ? 16 : 12,
+                borderRadius: "50%",
+                background: color,
+                border: "2px solid white",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: "8px 0" }}>
       <div
@@ -736,6 +819,8 @@ const CanvasEditor: React.FC = () => {
         </div>
 
         {marqueeStyle && <div style={marqueeStyle} />}
+
+        {renderCommentAnchors()}
 
         {inlineEdit && (
           <textarea
