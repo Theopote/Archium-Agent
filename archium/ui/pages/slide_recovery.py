@@ -258,11 +258,14 @@ def render() -> None:
             awaiting_review_message="页面复活等待复核。",
         )
         if isinstance(active_result, SlideRecoveryWorkflowResult):
-            render_slide_recovery_result_panel(
+            refreshed = render_slide_recovery_result_panel(
                 active_result,
                 project_id=project_id,
                 settings=settings,
             )
+            if refreshed is not None:
+                st.session_state.last_slide_recovery_result = refreshed
+                active_result = refreshed
             _render_review_actions(active_result, settings)
 
     if st.button("开始页面复活", type="primary", key="slide_recovery_start"):

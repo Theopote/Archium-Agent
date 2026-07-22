@@ -52,6 +52,30 @@ PAGE_KIND_LABELS_ZH: dict[SlideRecoveryPageKind, str] = {
     SlideRecoveryPageKind.DRAWING_DOMINANT: "图纸主导页",
 }
 
+REGION_TYPE_LABELS_ZH: dict[str, str] = {
+    "text": "文字",
+    "image": "图片",
+    "drawing": "图纸",
+    "table": "表格",
+    "chart": "图表",
+    "line": "线条",
+    "shape": "形状",
+    "background": "背景",
+    "unknown": "未知",
+}
+
+REGION_TYPE_OPTIONS: tuple[RegionType, ...] = (
+    "text",
+    "image",
+    "drawing",
+    "table",
+    "chart",
+    "line",
+    "shape",
+    "background",
+    "unknown",
+)
+
 
 class NormalizedBox(DomainModel):
     """Region bounding box in normalized page coordinates (0–1)."""

@@ -16,6 +16,7 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS
 from archium.ui.error_handlers import format_user_error
+from archium.ui.slide_recovery_region_panel import render_slide_recovery_region_editor
 
 
 def render_slide_recovery_result_panel(
@@ -24,15 +25,15 @@ def render_slide_recovery_result_panel(
     project_id: UUID | None = None,
     settings: Settings | None = None,
     key_prefix: str = "slide_recovery",
-) -> None:
+) -> SlideRecoveryWorkflowResult | None:
     if result is None:
-        return
+        return None
 
     recovery = result.recovery_result
     hybrid = result.hybrid_scene or (recovery.hybrid_scene if recovery else None)
     if recovery is None and hybrid is None:
         st.info("恢复结果尚未生成。")
-        return
+        return None
 
     st.markdown("#### 恢复结果")
     if hybrid is not None:
@@ -42,6 +43,17 @@ def render_slide_recovery_result_panel(
         )
 
     _render_preview_row(result, project_id=project_id, settings=settings)
+
+    updated_result: SlideRecoveryWorkflowResult | None = None
+    if project_id is not None and settings is not None:
+        updated_result = render_slide_recovery_region_editor(
+            result,
+            project_id=project_id,
+            settings=settings,
+            key_prefix=f"{key_prefix}_region",
+        )
+    if updated_result is not None:
+        return updated_result
 
     if recovery is not None:
         for line in recovery.summary_lines_zh():
@@ -231,6 +243,8 @@ def _render_delivery_actions(
 
     if run.status == WorkflowStatus.AWAITING_REVIEW:
         st.caption("复核通过后可导入到汇报；导出预览可在接受前进行。")
+
+    return None
 
 
 def _run_export(
