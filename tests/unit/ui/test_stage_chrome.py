@@ -59,6 +59,8 @@ def test_stage_completion_does_not_fake_done_from_navigation() -> None:
         slide_count=5,
         layout_ready_count=5,
         ready_for_export=True,
+        pptx_ready=True,
+        pdf_ready=True,
         evidence_availability=EvidenceAvailability.AVAILABLE,
     )
     assert stage_completion_status("materials", ready) == "done"
@@ -251,7 +253,21 @@ def test_studio_supports_canvas_maximize() -> None:
     assert 'st.popover("活动中心"' in text
 
 
-def test_home_other_projects_continue_into_project() -> None:
+def test_home_shows_outline_reconfirm_when_changes_pending() -> None:
+    home = (
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
+    ).read_text(encoding="utf-8")
+    progress = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "project_progress_card.py"
+    ).read_text(encoding="utf-8")
+    assert "outline_changes_pending" in home
+    assert "待重新确认" in home
+    assert "outline_changes_pending" in progress
+    assert "大纲已编辑，待重新确认" in progress
+
     home = (
         Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
     ).read_text(encoding="utf-8")
@@ -286,6 +302,6 @@ def test_deliver_readiness_shows_separate_metrics() -> None:
     assert "页面完成" in text
     assert 'metric("警告"' in text or 'metric("警告",' in text
     assert "待完成页" in text
-    assert "项目资料" in text
+    assert "PPTX" in text
     assert "DeliveryRecordService" in text
     assert "版本记录保存失败" not in text  # warning lives in export_panel

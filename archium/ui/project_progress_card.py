@@ -38,8 +38,11 @@ class ProjectProgressSnapshot:
     updated_at: datetime
     outline_approved: bool = False
     has_outline: bool = False
+    outline_changes_pending: bool = False
     evidence_availability: EvidenceAvailability = EvidenceAvailability.MISSING
     export_blocker_count: int = 0
+    pptx_ready: bool = False
+    pdf_ready: bool = False
 
     @property
     def pending_count(self) -> int:
@@ -48,13 +51,14 @@ class ProjectProgressSnapshot:
     @property
     def draft_export_ready(self) -> bool:
         """Layout is complete enough to draft-export (may still lack materials)."""
-        return self.ready_for_export
+        return self.pptx_ready or self.ready_for_export
 
     @property
     def formal_delivery_ready(self) -> bool:
         """Ready for formal delivery — layout + verified materials + no blockers."""
         return (
-            self.ready_for_export
+            self.pptx_ready
+            and self.pdf_ready
             and self.evidence_availability == EvidenceAvailability.AVAILABLE
             and self.document_count > 0
             and self.export_blocker_count <= 0
@@ -70,6 +74,8 @@ class ProjectProgressSnapshot:
     def outline_label(self) -> str:
         if self.outline_approved:
             return "已确认"
+        if self.outline_changes_pending:
+            return "待重新确认"
         if self.has_outline:
             return "待确认"
         if self.has_brief:
@@ -175,17 +181,20 @@ def _snapshot_for_project(
     *,
     preferred_presentation_id: UUID | None = None,
 ) -> ProjectProgressSnapshot:
-    from archium.application.project_evidence import (
+    from archium.application.evidence_readiness_service import (
         ProjectEvidenceStatus,
+        resolve_delivery_readiness,
         resolve_project_evidence,
     )
-    from archium.domain.enums import EvidenceAvailability as _EvidenceAvailability
+    from archium.domain.enums import ApprovalStatus
     from archium.infrastructure.database.repositories import PresentationRepository
     from archium.ui.visual_service import presentation_has_visual_layout
 
     try:
         evidence = resolve_project_evidence(session, project.id)
     except Exception:
+        from archium.domain.enums import EvidenceAvailability as _EvidenceAvailability
+
         evidence = ProjectEvidenceStatus(
             availability=_EvidenceAvailability.UNKNOWN,
             document_count=0,
@@ -207,7 +216,11 @@ def _snapshot_for_project(
     has_brief = False
     has_outline = False
     outline_approved = False
+    outline_changes_pending = False
     ready_for_export = False
+    pptx_ready = False
+    pdf_ready = False
+    export_blocker_count = 0
     presentation_type: str | None = None
     updated_at = project.updated_at
 
@@ -226,11 +239,20 @@ def _snapshot_for_project(
             outlines = PresentationRepository(session).list_outlines(presentation.id)
             outline = outlines[0] if outlines else None
         if outline is not None:
-            from archium.domain.enums import ApprovalStatus
-
             has_outline = True
             outline_approved = outline.approval_status == ApprovalStatus.APPROVED
+            outline_changes_pending = (
+                outline.approval_status == ApprovalStatus.CHANGES_PENDING
+            )
         ready_for_export = presentation_has_visual_layout(session, presentation.id)
+        readiness = resolve_delivery_readiness(
+            session,
+            project_id=project.id,
+            presentation_id=presentation.id,
+        )
+        pptx_ready = readiness.pptx_ready
+        pdf_ready = readiness.pdf_ready
+        export_blocker_count = readiness.export_blocker_count
         updated_at = max(project.updated_at, presentation.updated_at)
 
     return ProjectProgressSnapshot(
@@ -247,7 +269,11 @@ def _snapshot_for_project(
         updated_at=updated_at,
         outline_approved=outline_approved,
         has_outline=has_outline,
+        outline_changes_pending=outline_changes_pending,
         evidence_availability=evidence.availability,
+        export_blocker_count=export_blocker_count,
+        pptx_ready=pptx_ready,
+        pdf_ready=pdf_ready,
     )
 
 
@@ -334,6 +360,8 @@ def load_cockpit_task_summary(snapshot: ProjectProgressSnapshot) -> CockpitTaskS
             pass
 
     lines: list[str] = []
+    if snapshot.outline_changes_pending:
+        lines.append("大纲已编辑，待重新确认")
     if missing_assets:
         lines.append(f"{missing_assets} 页缺少素材")
     if drawing_qa:

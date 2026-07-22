@@ -200,7 +200,7 @@ def stage_completion_status(
     if stage_id == "edit":
         if snapshot.slide_count <= 0:
             return "blocked"
-        return "done" if snapshot.ready_for_export else "warn"
+        return "done" if snapshot.pptx_ready else "warn"
 
     if stage_id == "deliver":
         if snapshot.formal_delivery_ready:

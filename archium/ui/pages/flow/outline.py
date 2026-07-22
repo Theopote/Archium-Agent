@@ -720,21 +720,6 @@ def _confirm_outline_and_go(project_id: UUID, *, outline: OutlinePlan | None) ->
                 expected_revision=outline.version if outline is not None else None,
             )
             session.commit()
-        records = list(st.session_state.get("outline_approval_records") or [])
-        records.append(
-            {
-                "outline_id": str(result.outline_id) if result.outline_id else None,
-                "presentation_id": str(result.presentation_id)
-                if result.presentation_id
-                else None,
-                "status": result.approval_status,
-                "revision": result.approved_revision,
-                "hash": result.outline_hash,
-                "by": result.approved_by,
-                "at": result.approved_at.isoformat(),
-            }
-        )
-        st.session_state.outline_approval_records = records[-20:]
         if result.presentation_id is not None:
             st.session_state.selected_presentation_id = str(result.presentation_id)
         st.success(result.message)

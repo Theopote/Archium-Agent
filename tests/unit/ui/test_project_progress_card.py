@@ -30,6 +30,10 @@ def _snapshot(**overrides: object) -> ProjectProgressSnapshot:
         "evidence_availability": EvidenceAvailability.AVAILABLE,
         "has_outline": True,
         "outline_approved": False,
+        "outline_changes_pending": False,
+        "export_blocker_count": 0,
+        "pptx_ready": False,
+        "pdf_ready": False,
     }
     base.update(overrides)
     return ProjectProgressSnapshot(**base)  # type: ignore[arg-type]
@@ -81,12 +85,15 @@ def test_progress_empty_project_labels() -> None:
 def test_progress_ready_for_export_label() -> None:
     snap = _snapshot(
         ready_for_export=True,
+        pptx_ready=True,
+        pdf_ready=True,
         layout_ready_count=24,
         slide_count=24,
         document_count=3,
         evidence_availability=EvidenceAvailability.AVAILABLE,
         has_outline=True,
         outline_approved=True,
+        export_blocker_count=0,
     )
     assert snap.deliver_label == "可交付"
     assert snap.formal_delivery_ready
@@ -97,6 +104,8 @@ def test_progress_ready_for_export_label() -> None:
 def test_progress_draft_export_not_formal() -> None:
     snap = _snapshot(
         ready_for_export=True,
+        pptx_ready=True,
+        pdf_ready=True,
         layout_ready_count=24,
         slide_count=24,
         document_count=0,
@@ -105,6 +114,15 @@ def test_progress_draft_export_not_formal() -> None:
     assert snap.draft_export_ready
     assert not snap.formal_delivery_ready
     assert snap.deliver_label == "草稿"
+
+
+def test_outline_changes_pending_label() -> None:
+    snap = _snapshot(
+        has_outline=True,
+        outline_approved=False,
+        outline_changes_pending=True,
+    )
+    assert snap.outline_label == "待重新确认"
 
 
 def test_format_relative_time_minutes() -> None:

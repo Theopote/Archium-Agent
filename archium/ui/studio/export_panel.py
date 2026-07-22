@@ -137,6 +137,30 @@ def _run_generate_layouts(
         st.error(format_user_error(exc))
 
 
+def _deck_qa_report() -> dict | None:
+    result = st.session_state.get("last_visual_workflow_result")
+    if isinstance(result, VisualWorkflowResult) and isinstance(result.deck_qa_report, dict):
+        return result.deck_qa_report
+    return None
+
+
+def _delivery_readiness(*, project_id: UUID, presentation_id: UUID):
+    from archium.application.evidence_readiness_service import resolve_delivery_readiness_safe
+
+    return resolve_delivery_readiness_safe(
+        project_id=project_id,
+        presentation_id=presentation_id,
+        deck_qa_report=_deck_qa_report(),
+    )
+
+
+def _assert_export_gate(*, project_id: UUID, presentation_id: UUID, export_format: str) -> None:
+    from archium.application.evidence_readiness_service import assert_formal_export_allowed
+
+    report = _delivery_readiness(project_id=project_id, presentation_id=presentation_id)
+    assert_formal_export_allowed(report, export_format=export_format)
+
+
 def _export_pptx(
     *,
     project_id: UUID,
@@ -145,6 +169,11 @@ def _export_pptx(
     qa_status: str = "unknown",
 ) -> None:
     try:
+        _assert_export_gate(
+            project_id=project_id,
+            presentation_id=presentation_id,
+            export_format="PPTX",
+        )
         with st.spinner("正在导出 PPTX…"), get_session() as session:
             pptx_export_result: RenderResult = export_presentation_from_studio(
                 session,
@@ -189,14 +218,21 @@ def _append_delivery_record(
 
     logger = logging.getLogger(__name__)
     result = DeliveryRecordResult(file_exported=True, record_persisted=False)
+    revision_id = None
     try:
         with get_session() as session:
+            from archium.application.evidence_readiness_service import (
+                latest_presentation_revision_id,
+            )
+
+            revision_id = latest_presentation_revision_id(session, presentation_id)
             record = DeliveryRecordService(session).record_export(
                 project_id=project_id,
                 presentation_id=presentation_id,
                 format=fmt,
                 file_uri=path,
                 qa_status=qa_status,
+                revision_id=revision_id,
             )
             session.commit()
         result = DeliveryRecordResult(
@@ -236,6 +272,11 @@ def _export_pdf(
     qa_status: str = "unknown",
 ) -> None:
     try:
+        _assert_export_gate(
+            project_id=project_id,
+            presentation_id=presentation_id,
+            export_format="PDF",
+        )
         with st.spinner("正在导出 PDF…"), get_session() as session:
             pdf_export_result: RenderResult = export_presentation_pdf_from_studio(
                 session,
@@ -276,7 +317,7 @@ def _export_pdf(
 
 
 def _project_evidence_status(project_id: UUID):
-    from archium.application.project_evidence import resolve_project_evidence_safe
+    from archium.application.evidence_readiness_service import resolve_project_evidence_safe
 
     return resolve_project_evidence_safe(project_id)
 
@@ -288,16 +329,21 @@ def _render_quick_export_popover(
     key_prefix: str = "studio",
 ) -> None:
     """Compact export entry — does not dominate the editing chrome."""
-    evidence = _project_evidence_status(context.project.id)
-    export_disabled = (not context.ready_for_export) or (not evidence.allows_formal_export)
+    readiness = _delivery_readiness(
+        project_id=context.project.id,
+        presentation_id=context.presentation.id,
+    )
+    export_disabled = not readiness.allows_formal_export
     with st.popover("导出", use_container_width=True):
         st.caption("快速导出当前汇报。完整导出与质量检查请到「交付」。")
-        if evidence.is_unknown:
+        if readiness.evidence.is_unknown:
             st.caption("资料状态无法验证，禁止正式导出。")
-        elif evidence.is_concept_draft:
+        elif readiness.evidence.is_concept_draft:
             st.caption("概念草稿不可正式导出，请先绑定项目资料。")
-        elif not context.ready_for_export:
+        elif not readiness.pptx_ready:
             st.caption("导出需先完成全部页面版式。")
+        elif readiness.export_blocker_count > 0:
+            st.caption("存在阻塞项，正式导出已被阻止。")
         if st.button(
             "导出 PPTX",
             use_container_width=True,
@@ -396,8 +442,8 @@ def render_export_panel(
     project_id = context.project.id
     presentation_id = context.presentation.id
     settings = get_ui_effective_settings()
-    evidence = _project_evidence_status(project_id)
-    export_disabled = (not context.ready_for_export) or (not evidence.allows_formal_export)
+    readiness = _delivery_readiness(project_id=project_id, presentation_id=presentation_id)
+    export_disabled = not readiness.allows_formal_export
     preferences = _render_scene_preset_row()
 
     (
@@ -467,9 +513,11 @@ def render_export_panel(
                 settings=settings,
             )
 
-    if evidence.is_unknown:
+    if readiness.evidence.is_unknown:
         st.caption("资料状态无法验证，禁止正式导出。")
-    elif evidence.is_concept_draft:
+    elif readiness.evidence.is_concept_draft:
         st.caption("概念草稿不可正式导出，请先绑定项目资料。")
-    elif export_disabled:
+    elif not readiness.pptx_ready:
         st.caption("导出需先完成全部页面版式。")
+    elif readiness.export_blocker_count > 0:
+        st.caption("存在阻塞项，正式导出已被阻止。")

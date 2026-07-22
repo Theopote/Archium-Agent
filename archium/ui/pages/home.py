@@ -192,10 +192,15 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
 
     st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
 
-    meta = st.columns(2)
+    if snapshot.outline_changes_pending:
+        st.warning("大纲已编辑 · 待重新确认后再进入生成。")
+
+    meta = st.columns(3)
     with meta[0]:
         st.markdown(f"**当前阶段**  \n{snapshot.current_stage_label}")
     with meta[1]:
+        st.markdown(f"**大纲**  \n{snapshot.outline_label}")
+    with meta[2]:
         st.markdown("**总体进度**")
         _render_progress_bar(snapshot)
 

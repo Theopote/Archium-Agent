@@ -131,36 +131,32 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
 
 def _render_readiness(context: StudioPresentationContext) -> None:
     st.markdown("#### 准备度")
-    ready = bool(context.ready_for_export)
     pending = max(0, context.slide_count - context.layout_ready_count)
 
     warn_count = 0
-    blocker_count = 0
     deck_qa = st.session_state.get("last_visual_workflow_result")
+    deck_qa_report = None
     if isinstance(deck_qa, VisualWorkflowResult) and isinstance(deck_qa.deck_qa_report, dict):
-        warn_count = int(deck_qa.deck_qa_report.get("warning_count") or 0)
-        blocker_count = int(deck_qa.deck_qa_report.get("blocker_count") or 0)
+        deck_qa_report = deck_qa.deck_qa_report
+        warn_count = int(deck_qa_report.get("warning_count") or 0)
 
-    from archium.application.project_evidence import resolve_project_evidence_safe
-    from archium.domain.enums import EvidenceAvailability
+    from archium.application.evidence_readiness_service import resolve_delivery_readiness_safe
 
-    evidence = resolve_project_evidence_safe(context.project.id)
-    if evidence.availability == EvidenceAvailability.UNKNOWN:
+    readiness = resolve_delivery_readiness_safe(
+        project_id=context.project.id,
+        presentation_id=context.presentation.id,
+        deck_qa_report=deck_qa_report,
+    )
+    evidence = readiness.evidence
+    if evidence.is_unknown:
         st.error("资料状态无法验证 · 禁止正式交付（请检查数据库后重试）")
         materials_label = "无法验证"
     elif evidence.is_concept_draft:
-        # Global draft banner already shown in stage header; keep metric only.
         materials_label = "0 份"
     else:
         materials_label = f"{evidence.document_count} 份"
 
-    formal_ready = (
-        ready
-        and evidence.allows_formal_export
-        and blocker_count <= 0
-    )
-
-    cols = st.columns(6)
+    cols = st.columns(7)
     cols[0].metric(
         "页面完成",
         f"{context.layout_ready_count}/{context.slide_count}"
@@ -168,21 +164,20 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         else "0/0",
     )
     cols[1].metric("待完成页", pending)
-    cols[2].metric("警告", warn_count)
-    cols[3].metric("阻塞项", blocker_count)
-    cols[4].metric("项目资料", materials_label)
-    if formal_ready:
-        export_label = "可导出"
-    elif evidence.availability == EvidenceAvailability.UNKNOWN:
+    cols[2].metric("PPTX", "可导出" if readiness.pptx_ready else "未齐")
+    cols[3].metric("PDF", "可导出" if readiness.pdf_ready else "未齐")
+    cols[4].metric("警告", warn_count)
+    cols[5].metric("阻塞项", readiness.export_blocker_count)
+    cols[6].metric("项目资料", materials_label)
+    if readiness.formal_delivery_ready:
+        export_label = "可正式交付"
+    elif evidence.is_unknown:
         export_label = "待验证"
     elif evidence.is_concept_draft:
         export_label = "草稿"
     else:
-        export_label = "版式未齐"
-    cols[5].metric("导出", export_label)
-    st.caption(
-        "PPTX / PDF 目前共用版式准备度；后续将分别建模 pptx_readiness / pdf_readiness。"
-    )
+        export_label = "未通过"
+    st.caption(f"正式交付：{export_label}")
 
 
 def _render_qa(project_id: UUID) -> None:

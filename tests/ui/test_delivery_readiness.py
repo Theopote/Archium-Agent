@@ -24,9 +24,11 @@ def test_deliver_readiness_shows_pending_warnings_and_blockers() -> None:
     text = DELIVER.read_text(encoding="utf-8")
     assert "页面完成" in text
     assert "待完成页" in text
-    assert 'metric("警告"' in text or 'metric("警告",' in text
+    assert 'metric("PPTX"' in text or 'metric("PPTX",' in text
+    assert 'metric("PDF"' in text or 'metric("PDF",' in text
     assert "阻塞项" in text
     assert "项目资料" in text
+    assert "evidence_readiness_service" in text
     assert "_render_delivery_record_actions" in text
     # Must not collapse warnings into the pending metric.
     assert "pending if pending else warn_count" not in text
