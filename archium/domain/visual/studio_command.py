@@ -134,6 +134,14 @@ class SetNodeLockCommand(StudioCommandBase):
     lock_scopes: list[str] = Field(default_factory=list)
 
 
+class SetNodeVisibilityCommand(StudioCommandBase):
+    """Show or hide a render node without removing it from the scene."""
+
+    command_type: Literal["set_node_visibility"] = "set_node_visibility"
+    node_id: str = Field(min_length=1)
+    visible: bool = True
+
+
 class AlignNodesCommand(StudioCommandBase):
     """Align or distribute multiple render nodes."""
 
@@ -161,6 +169,7 @@ StudioCommand = Annotated[
     | ResizeNodeCommand
     | DeleteNodeCommand
     | SetNodeLockCommand
+    | SetNodeVisibilityCommand
     | AlignNodesCommand
     | ReorderNodeCommand,
     Field(discriminator="command_type"),

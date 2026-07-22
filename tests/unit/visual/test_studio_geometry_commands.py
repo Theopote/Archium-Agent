@@ -25,6 +25,7 @@ from archium.domain.visual.studio_command import (
     MoveNodeCommand,
     ResizeNodeCommand,
     SetNodeLockCommand,
+    SetNodeVisibilityCommand,
     build_patch_action,
 )
 
@@ -123,6 +124,58 @@ def test_delete_node_hides_node() -> None:
         presentation_id=uuid4(),
         slide_id=scene.slide_id,
         node_id="title",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("title")
+    assert node is not None
+    assert node.visible is False
+
+
+def test_set_node_visibility_updates_visible_state() -> None:
+    scene = _scene(_text_node(node_id="title", visible=True))
+    command = SetNodeVisibilityCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        visible=False,
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("title")
+    assert node is not None
+    assert node.visible is False
+    replayed = apply_patch_actions(scene, list(result.applied_actions))
+    replay_node = replayed.node_by_id("title")
+    assert replay_node is not None
+    assert replay_node.visible is False
+
+
+def test_set_node_visibility_show_restores_hidden_node() -> None:
+    scene = _scene(_text_node(node_id="title", visible=False))
+    command = SetNodeVisibilityCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        visible=True,
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("title")
+    assert node is not None
+    assert node.visible is True
+
+
+def test_set_node_visibility_works_on_locked_node() -> None:
+    scene = _scene(_text_node(node_id="title", locked=True, visible=True))
+    command = SetNodeVisibilityCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        visible=False,
     )
     result = StudioCommandExecutor().execute(scene, command, _context(scene))
     assert result.success is True

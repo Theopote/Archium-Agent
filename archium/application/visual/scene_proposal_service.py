@@ -598,6 +598,12 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
     if action.action_type == "delete_node":
         node.visible = action.after_value != "false"
         return
+    if action.action_type == "set_node_visibility":
+        if action.after_payload:
+            node.visible = bool(action.after_payload.get("visible", node.visible))
+        elif action.after_value is not None:
+            node.visible = action.after_value != "false"
+        return
     if action.action_type == "set_node_lock":
         if action.after_payload:
             node.locked = bool(action.after_payload.get("locked", node.locked))
@@ -707,6 +713,7 @@ def summarize_command_type(command: StudioCommand) -> str:
         "replace_drawing": "替换图纸",
         "increase_drawing_readability": "提高图纸可读性",
         "set_node_lock": "锁定设置",
+        "set_node_visibility": "显示设置",
     }
     return labels.get(command.command_type, command.command_type)
 

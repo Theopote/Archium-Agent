@@ -17,6 +17,56 @@ from archium.ui.studio.element_labels import CONTENT_TYPE_LABELS, ROLE_LABELS, f
 from archium.ui.studio_service import SlideVisualSnapshot, apply_slide_visual_edit
 
 
+def _element_ids_for_panel(slide_snapshot: SlideVisualSnapshot) -> list[str]:
+    plan = slide_snapshot.layout_plan
+    if plan is None:
+        return []
+    visible_ids = [element.id for element in plan.elements]
+    scene = slide_snapshot.render_scene
+    if scene is None:
+        return visible_ids
+    visible_set = set(visible_ids)
+    hidden_ids: list[str] = []
+    for node in scene.nodes:
+        if node.visible:
+            continue
+        element_id = node.source_layout_element_id or node.id
+        if element_id not in visible_set and element_id not in hidden_ids:
+            hidden_ids.append(element_id)
+    return visible_ids + hidden_ids
+
+
+def _element_visibility(slide_snapshot: SlideVisualSnapshot, element_id: str) -> bool:
+    scene = slide_snapshot.render_scene
+    if scene is not None:
+        node = scene.node_by_layout_element_id(element_id) or scene.node_by_id(element_id)
+        if node is not None:
+            return node.visible
+    return True
+
+
+def _run_visibility(
+    slide_id: UUID,
+    element_id: str,
+    *,
+    visible: bool,
+) -> None:
+    try:
+        with get_session() as session:
+            from archium.ui.studio_service import apply_slide_element_visibility
+
+            apply_slide_element_visibility(
+                session,
+                slide_id,
+                element_id=element_id,
+                visible=visible,
+            )
+        st.success("已显示元素。" if visible else "已隐藏元素。")
+        st.rerun()
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
 def _run_align(
     slide_id: UUID,
     element_ids: list[str],
@@ -112,7 +162,10 @@ def _render_element_properties(
 
     st.divider()
     st.markdown("**元素属性**")
-    element_ids = [element.id for element in plan.elements]
+    element_ids = _element_ids_for_panel(slide_snapshot)
+    if not element_ids:
+        st.caption("当前页面没有可编辑元素。")
+        return
     selected_raw = st.session_state.get("studio_selected_element_id")
     selected_id: str = (
         selected_raw
@@ -120,14 +173,19 @@ def _render_element_properties(
         else element_ids[0]
     )
 
+    def _format_element_option(value: str) -> str:
+        element = plan.element_by_id(value)
+        if element is not None:
+            return format_element_label(element_id=value, role=element.role)
+        if not _element_visibility(slide_snapshot, value):
+            return f"{value}（已隐藏）"
+        return value
+
     selected_from_ui = st.selectbox(
         "选择元素",
         options=element_ids,  # type: ignore[arg-type]
         index=element_ids.index(selected_id),
-        format_func=lambda value: format_element_label(
-            element_id=value,
-            role=plan.element_by_id(value).role,  # type: ignore[union-attr]
-        ),
+        format_func=_format_element_option,
         key=f"studio_element_select_{slide_snapshot.slide.id}",
     )
     if not isinstance(selected_from_ui, str):
@@ -135,6 +193,17 @@ def _render_element_properties(
     st.session_state.studio_selected_element_id = selected_from_ui
 
     element = plan.element_by_id(selected_from_ui)
+    is_visible = _element_visibility(slide_snapshot, selected_from_ui)
+    if element is None and not is_visible:
+        st.caption("此元素已隐藏，恢复显示后可继续编辑属性。")
+        if st.button(
+            "显示此元素",
+            use_container_width=True,
+            type="primary",
+            key=f"studio_show_element_{slide_snapshot.slide.id}_{selected_from_ui}",
+        ):
+            _run_visibility(slide_snapshot.slide.id, selected_from_ui, visible=True)
+        return
     if element is None:
         return
 
@@ -144,6 +213,7 @@ def _render_element_properties(
     st.write(f"类型：{content_label}")
     st.write(f"位置：{element.x:.2f}, {element.y:.2f}")
     st.write(f"尺寸：{element.width:.2f} × {element.height:.2f}")
+    st.write(f"显示：{'是' if is_visible else '否'}")
     st.write(f"锁定：{'是' if element.locked else '否'}")
 
     if is_drawing_element(element) or canvas_geometry_locked(element):
@@ -281,6 +351,13 @@ def _render_element_properties(
                 "left",
                 reference_element_id=element.id,
             )
+
+        if st.button(
+            "隐藏此元素",
+            use_container_width=True,
+            key=f"studio_hide_element_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            _run_visibility(slide_snapshot.slide.id, element.id, visible=False)
 
         if st.button(
             "删除此元素",

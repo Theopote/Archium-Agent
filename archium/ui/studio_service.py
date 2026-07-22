@@ -524,6 +524,27 @@ def apply_slide_element_delete(
     ).delete_layout_element(slide_id, element_id=element_id)
 
 
+def apply_slide_element_visibility(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    visible: bool,
+) -> object:
+    """Show or hide a layout element through the Studio command chain."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).set_layout_element_visibility(
+        slide_id,
+        element_id=element_id,
+        visible=visible,
+    )
+
+
 def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
     return undo_slide_content_adaptation(session, slide_id)
 

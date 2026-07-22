@@ -48,6 +48,7 @@ from archium.domain.visual.studio_command import (
     ReplaceDrawingCommand,
     ResizeNodeCommand,
     SetNodeLockCommand,
+    SetNodeVisibilityCommand,
     RewriteTextCommand,
     ScenePatchAction,
     StudioCommand,
@@ -144,6 +145,8 @@ class StudioCommandExecutor:
             return self._execute_delete_node(scene, command, base_hash)
         if isinstance(command, SetNodeLockCommand):
             return self._execute_set_node_lock(scene, command, base_hash)
+        if isinstance(command, SetNodeVisibilityCommand):
+            return self._execute_set_node_visibility(scene, command, base_hash)
         if isinstance(command, AlignNodesCommand):
             return self._execute_align_nodes(scene, command, base_hash)
         if isinstance(command, ReorderNodeCommand):
@@ -819,6 +822,43 @@ class StudioCommandExecutor:
             before_payload={"locked": before_locked, "lock_scopes": list(node.lock_scopes)},
             after_payload={"locked": target.locked, "lock_scopes": list(target.lock_scopes)},
             reason=command.reason or ("lock node" if command.locked else "unlock node"),
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_set_node_visibility(
+        self,
+        scene: RenderScene,
+        command: SetNodeVisibilityCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert target is not None
+
+        before_visible = target.visible
+        target.visible = command.visible
+
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="set_node_visibility",
+            property_name="visible",
+            before_value=str(before_visible).lower(),
+            after_value=str(target.visible).lower(),
+            before_payload={"visible": before_visible},
+            after_payload={"visible": target.visible},
+            reason=command.reason or ("show node" if command.visible else "hide node"),
         )
         return CommandExecutionResult(
             success=True,
