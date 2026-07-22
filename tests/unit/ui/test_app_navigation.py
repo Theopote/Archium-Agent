@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 from archium.ui import app_navigation
 from archium.ui.product_flow import (
+    LEGACY_STUDIO_PAGE_KEY,
     MAKE_SECTION,
+    PRODUCT_STUDIO_PAGE_KEY,
     PROJECT_SECTION,
     RESOURCE_SECTION,
     SYSTEM_SECTION,
@@ -19,6 +21,7 @@ from archium.ui.product_flow import (
     primary_stage_ids,
     product_flow_chain,
     product_flow_home_steps,
+    product_studio_page_key,
 )
 
 
@@ -85,6 +88,49 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     visible_pages = {id(page) for pages in sections.values() for page in pages}
     for key in hidden_page_keys():
         assert id(app_navigation.get_app_page(key)) not in visible_pages
+
+
+def test_edit_is_product_studio_key_studio_is_legacy_hidden_only() -> None:
+    """edit = formal 工作室 stage; studio = deep-link only (not sidebar)."""
+    assert product_studio_page_key() == PRODUCT_STUDIO_PAGE_KEY == "edit"
+    assert LEGACY_STUDIO_PAGE_KEY == "studio"
+    assert PRODUCT_STUDIO_PAGE_KEY in primary_page_keys()
+    assert LEGACY_STUDIO_PAGE_KEY in hidden_page_keys()
+    assert LEGACY_STUDIO_PAGE_KEY not in primary_page_keys()
+
+    sections = app_navigation.build_app_pages()
+    make_ids = {id(page) for page in sections[MAKE_SECTION]}
+    assert id(app_navigation.get_app_page(PRODUCT_STUDIO_PAGE_KEY)) in make_ids
+    assert id(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY)) not in make_ids
+
+
+def test_product_ui_does_not_navigate_to_legacy_studio_page_key() -> None:
+    """Guardrail: product chrome must open 工作室 via ``edit``, not ``studio``."""
+    import re
+
+    root = Path(__file__).resolve().parents[3] / "archium" / "ui"
+    pattern = re.compile(
+        r"""get_app_page\(\s*['"]studio['"]\s*\)"""
+        r"""|switch_page\(\s*['"]studio['"]\s*\)"""
+        r"""|page_link\(\s*['"]studio['"]"""
+    )
+    # Registration / docs only — not product navigation targets.
+    allow = {
+        root / "app_navigation.py",
+        root / "product_flow.py",
+        root / "pages" / "studio.py",
+    }
+    offenders: list[str] = []
+    for path in root.rglob("*.py"):
+        if path in allow:
+            continue
+        text = path.read_text(encoding="utf-8")
+        if pattern.search(text):
+            offenders.append(str(path.relative_to(root.parent.parent)))
+    assert offenders == [], (
+        "Product navigation must use page key 'edit' "
+        f"(product_studio_page_key), not legacy 'studio': {offenders}"
+    )
 
 
 def test_home_is_project_cockpit_not_welcome_wall() -> None:

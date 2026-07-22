@@ -13,7 +13,11 @@ from archium.domain.slide_intent import SlideIntent, slide_intents_from_page_ins
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.pages import project_mission
-from archium.ui.pages.flow import render_stage_header, render_stage_nav
+from archium.ui.pages.flow import (
+    render_flow_project_context,
+    render_stage_header,
+    render_stage_nav,
+)
 from archium.ui.planning_service import PlanningSnapshot, TASK_EXAMPLE_PROMPTS
 from archium.ui.workspace_service import list_project_presentations
 
@@ -302,7 +306,7 @@ def render() -> None:
     render_stage_header("outline")
     st.caption("确认章节、页面意图与汇报任务。高级六步规划可按需打开。")
 
-    project_id = project_mission.select_current_project()
+    project_id = render_flow_project_context(allow_create=False, key_prefix="outline")
     if project_id is None:
         render_stage_nav("outline")
         return

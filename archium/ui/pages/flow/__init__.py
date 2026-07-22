@@ -156,6 +156,61 @@ def render_stage_header(stage_id: str) -> None:
     render_flow_stepper(stage_id)
 
 
+def render_flow_project_context(
+    *,
+    allow_create: bool = False,
+    key_prefix: str = "flow",
+) -> object | None:
+    """Compact current-project chrome for product-flow stages.
+
+    Avoids repeating a full project selector on every stage when a project is
+    already selected; switching stays behind an expander.
+    """
+    from uuid import UUID
+
+    from archium.infrastructure.database.session import get_session
+    from archium.ui.pages.workspace import ensure_workspace_session
+    from archium.ui.workspace_service import list_projects
+
+    ensure_workspace_session()
+    with get_session() as session:
+        projects = list_projects(session)
+    if not projects:
+        if allow_create:
+            from archium.ui.pages.workspace import render_project_picker
+
+            return render_project_picker(allow_create=True)
+        st.info("请先在「资料」阶段创建或选择项目。")
+        return None
+
+    labels = {str(project.id): project.name for project in projects}
+    options = list(labels.keys())
+    selected = st.session_state.get("selected_project_id")
+    if selected not in options:
+        from archium.ui.pages.workspace import render_project_picker
+
+        return render_project_picker(allow_create=allow_create)
+
+    st.caption(f"当前项目：{labels[str(selected)]}")
+    with st.expander("切换项目", expanded=False):
+        if allow_create:
+            from archium.ui.pages.workspace import _render_create_project
+
+            _render_create_project()
+        picked = st.selectbox(
+            "项目",
+            options=options,
+            index=options.index(str(selected)),
+            format_func=lambda value: labels[value],
+            key=f"{key_prefix}_project_switch",
+        )
+        if picked != str(selected):
+            st.session_state.selected_project_id = picked
+            st.session_state.selected_presentation_id = None
+            st.rerun()
+    return UUID(str(selected))
+
+
 def render_stage_nav(stage_id: str, *, primary_only: bool = False) -> None:
     """Conditional primary next-stage action; previous stage is secondary."""
     snapshot = None

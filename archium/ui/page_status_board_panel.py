@@ -316,7 +316,8 @@ def _open_studio(
     st.toast(message)
     try:
         from archium.ui.app_navigation import get_app_page
+        from archium.ui.product_flow import product_studio_page_key
 
-        st.switch_page(get_app_page("studio"))
+        st.switch_page(get_app_page(product_studio_page_key()))
     except Exception:
         st.info("请切换到「工作室」继续编辑该页。")

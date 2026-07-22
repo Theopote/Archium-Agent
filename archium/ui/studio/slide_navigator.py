@@ -75,8 +75,17 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
             if str(item.slide.id) == str(focus_slide_id):
                 selected_index = index
                 break
-    selected_index = max(0, min(selected_index, len(slides) - 1))
     status_map = _status_by_slide(context)
+
+    # From Generate「处理问题页」: jump to first warn/error page.
+    if st.session_state.pop("studio_focus_attention", None):
+        for index, item in enumerate(slides):
+            row = status_map.get(str(item.slide.id))
+            if row is not None and row.severity in {"warn", "error"}:
+                selected_index = index
+                break
+
+    selected_index = max(0, min(selected_index, len(slides) - 1))
 
     manage_cols = st.columns(2)
     with manage_cols[0]:

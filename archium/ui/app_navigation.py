@@ -1,4 +1,9 @@
-"""Shared Streamlit pages for ``st.navigation`` and ``st.page_link``."""
+"""Shared Streamlit pages for ``st.navigation`` and ``st.page_link``.
+
+Studio page-key contract (see ``product_flow``):
+- Primary flow uses ``edit`` (制作 → 工作室).
+- ``studio`` remains a hidden deep-link / workbench module entry only.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,9 @@ import streamlit as st
 
 from archium.ui import icons
 from archium.ui.product_flow import (
+    LEGACY_STUDIO_PAGE_KEY,
     MAKE_SECTION,
+    PRODUCT_STUDIO_PAGE_KEY,
     PROJECT_SECTION,
     RESOURCE_SECTION,
     SYSTEM_SECTION,
@@ -61,11 +68,11 @@ def build_app_pages() -> dict[str, list[Any]]:
             icon=stages[2].icon,
             url_path="generate",
         ),
-        "edit": st.Page(
+        PRODUCT_STUDIO_PAGE_KEY: st.Page(
             edit.render,
             title=stages[3].title,
             icon=stages[3].icon,
-            url_path="edit",
+            url_path=PRODUCT_STUDIO_PAGE_KEY,
         ),
         "deliver": st.Page(
             deliver.render,
@@ -99,6 +106,8 @@ def build_app_pages() -> dict[str, list[Any]]:
     )
 
     # Hidden from sidebar but kept for deep links / st.page_link / st.switch_page.
+    # LEGACY_STUDIO_PAGE_KEY registers the raw workbench for bookmarks only —
+    # product navigation must use PRODUCT_STUDIO_PAGE_KEY (edit).
     hidden_pages = {
         "project-mission": st.Page(
             project_mission.render,
@@ -106,8 +115,11 @@ def build_app_pages() -> dict[str, list[Any]]:
             icon=icons.PROJECT_MISSION,
             url_path="project-mission",
         ),
-        "studio": st.Page(
-            studio.render, title="工作室", icon=icons.STUDIO, url_path="studio"
+        LEGACY_STUDIO_PAGE_KEY: st.Page(
+            studio.render,
+            title="工作室",
+            icon=icons.STUDIO,
+            url_path=LEGACY_STUDIO_PAGE_KEY,
         ),
         "template-studio": st.Page(
             template_studio.render,
@@ -148,9 +160,9 @@ def build_app_pages() -> dict[str, list[Any]]:
     _PAGES.update({"template-library": template_library_page})
     _PAGES.update({"settings": settings_page})
     _PAGES.update(hidden_pages)
-    # Aliases so older links keep working while primary flow uses stage keys.
-    _PAGES["studio"] = hidden_pages["studio"]
-    _PAGES.setdefault("edit", stage_pages["edit"])
+    # Keep legacy deep-link key resolvable; do not put it in sidebar sections.
+    _PAGES[LEGACY_STUDIO_PAGE_KEY] = hidden_pages[LEGACY_STUDIO_PAGE_KEY]
+    _PAGES.setdefault(PRODUCT_STUDIO_PAGE_KEY, stage_pages[PRODUCT_STUDIO_PAGE_KEY])
 
     return {
         PROJECT_SECTION: [home_page, project_page],
@@ -158,7 +170,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             stage_pages["materials"],
             stage_pages["outline"],
             stage_pages["generate"],
-            stage_pages["edit"],
+            stage_pages[PRODUCT_STUDIO_PAGE_KEY],
             stage_pages["deliver"],
         ],
         RESOURCE_SECTION: [template_library_page],

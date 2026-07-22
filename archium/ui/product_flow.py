@@ -6,6 +6,19 @@ from dataclasses import dataclass
 
 from archium.ui import icons
 
+# ---------------------------------------------------------------------------
+# Studio page-key contract (UI Architecture V1)
+#
+# - ``edit``  — formal product-flow stage key (制作 → 工作室). Use this for
+#   ``st.page_link`` / ``st.switch_page`` / stage navigation.
+# - ``studio`` — legacy hidden deep-link only (``url_path=studio``). It still
+#   registers ``pages/studio.py`` for bookmarks and internal embeds, but MUST
+#   NOT appear in sidebar navigation. New product chrome must not navigate to
+#   ``studio``; call ``product_studio_page_key()`` / ``"edit"`` instead.
+# ---------------------------------------------------------------------------
+PRODUCT_STUDIO_PAGE_KEY = "edit"
+LEGACY_STUDIO_PAGE_KEY = "studio"
+
 
 @dataclass(frozen=True)
 class ProductStage:
@@ -44,7 +57,7 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
         id="edit",
         title="工作室",
         caption="在工作室调整页面、版式与图文。",
-        page_key="edit",
+        page_key=PRODUCT_STUDIO_PAGE_KEY,
         icon=icons.STUDIO,
     ),
     ProductStage(
@@ -57,10 +70,11 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
 )
 
 # Still registered for deep links / st.page_link, but not shown in the sidebar.
+# ``studio`` is deprecated for product navigation — prefer PRODUCT_STUDIO_PAGE_KEY.
 HIDDEN_PAGE_KEYS: tuple[str, ...] = (
     "project-mission",
     "workspace",
-    "studio",
+    LEGACY_STUDIO_PAGE_KEY,  # deprecated deep link; not a primary nav target
     "visual-design",
     "template-studio",
     "template-induction",
@@ -78,6 +92,11 @@ SYSTEM_SECTION = "系统"
 # Backward-compatible aliases (old two-section IA).
 PRIMARY_SECTION = MAKE_SECTION
 ADVANCED_SECTION = SYSTEM_SECTION
+
+
+def product_studio_page_key() -> str:
+    """Page key for product navigation into the Studio workbench (``edit``)."""
+    return PRODUCT_STUDIO_PAGE_KEY
 
 
 def primary_stages() -> tuple[ProductStage, ...]:

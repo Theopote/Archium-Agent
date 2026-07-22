@@ -1,4 +1,10 @@
-"""Presentation Studio — workbench shell (nav | canvas | inspector + bottom dock)."""
+"""Presentation Studio — workbench shell (nav | canvas | inspector + bottom dock).
+
+This module is the embeddable workbench. Product navigation must use the
+``edit`` stage (``product_flow.PRODUCT_STUDIO_PAGE_KEY``), which calls
+``render(embedded=True)``. The standalone ``studio`` page key is a legacy
+deep link only and must not be re-added to sidebar navigation.
+"""
 
 from __future__ import annotations
 

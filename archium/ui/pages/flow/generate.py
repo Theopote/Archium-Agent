@@ -13,8 +13,13 @@ from archium.ui.page_status_board_panel import (
     load_page_status_board,
     render_compact_page_actions,
 )
-from archium.ui.pages.flow import render_stage_header, render_stage_nav
-from archium.ui.pages.workspace import render_generate_stage, render_project_picker
+from archium.ui.pages.flow import (
+    render_flow_project_context,
+    render_stage_header,
+    render_stage_nav,
+)
+from archium.ui.pages.workspace import render_generate_stage
+from archium.ui.product_flow import product_studio_page_key
 from archium.ui.project_progress_card import load_project_progress_snapshot
 from archium.ui.workspace_service import list_project_presentations
 
@@ -90,10 +95,10 @@ def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> No
             help=None if has_attention else "当前没有需要处理的问题页",
         ):
             st.session_state["studio_focus_attention"] = True
-            st.switch_page(get_app_page("edit"))
+            st.switch_page(get_app_page(product_studio_page_key()))
     with cols[1]:
         if st.button("进入工作室", type="primary", use_container_width=True):
-            st.switch_page(get_app_page("edit"))
+            st.switch_page(get_app_page(product_studio_page_key()))
     if ready_for_export:
         from archium.ui import icons
 
@@ -103,7 +108,7 @@ def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> No
 def render() -> None:
     render_stage_header("generate")
     st.caption("主体是逐页队列。版式微调请到「工作室」；导出在「交付」。")
-    project_id = render_project_picker(allow_create=False)
+    project_id = render_flow_project_context(allow_create=False, key_prefix="generate")
     if project_id is None:
         st.info("请先在「资料」阶段创建或选择项目。")
         render_stage_nav("generate")

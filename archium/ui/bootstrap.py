@@ -18,16 +18,35 @@ ENV_PATH = PROJECT_ROOT / ".env"
 
 ARCHIUM_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600&family=Source+Serif+4:wght@600&display=swap');
+
+:root {
+    --archium-ink: #1a1a1a;
+    --archium-muted: #8a8780;
+    --archium-line: #e8e6e1;
+    --archium-surface: #f7f6f3;
+    --archium-ok: #1f6b45;
+    --archium-ok-bg: #eef7f1;
+    --archium-ok-border: #9ecbb0;
+    --archium-info: #3d5a80;
+    --archium-info-bg: #eef3f8;
+    --archium-info-border: #a8bdd4;
+    --archium-warn: #7a5c12;
+    --archium-warn-bg: #faf4e4;
+    --archium-warn-border: #d4bc6a;
+    --archium-error: #8a3030;
+    --archium-error-bg: #f8ecec;
+    --archium-error-border: #d4a0a0;
+}
 
 html, body, [class*="css"] {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: #1a1a1a;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+    color: var(--archium-ink);
 }
 
 [data-testid="stSidebar"] {
-    background-color: #f7f6f3;
-    border-right: 1px solid #e8e6e1;
+    background-color: var(--archium-surface);
+    border-right: 1px solid var(--archium-line);
 }
 
 [data-testid="stSidebar"] .block-container {
@@ -35,19 +54,19 @@ html, body, [class*="css"] {
 }
 
 .archium-logo {
+    font-family: 'Source Serif 4', 'Times New Roman', serif;
     font-size: 1.75rem;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #1a1a1a;
+    letter-spacing: 0.04em;
+    color: var(--archium-ink);
     margin-bottom: 0.15rem;
 }
 
 .archium-sub {
     font-size: 0.78rem;
     font-weight: 300;
-    letter-spacing: 0.06em;
-    color: #8a8780;
+    letter-spacing: 0.04em;
+    color: var(--archium-muted);
     margin-bottom: 2rem;
 }
 
@@ -91,24 +110,24 @@ html, body, [class*="css"] {
     opacity: 0.9;
 }
 .status-chip-ok {
-    color: #1f6b45;
-    background: #eef7f1;
-    border-color: #9ecbb0;
+    color: var(--archium-ok);
+    background: var(--archium-ok-bg);
+    border-color: var(--archium-ok-border);
 }
 .status-chip-info {
-    color: #3d5a80;
-    background: #eef3f8;
-    border-color: #a8bdd4;
+    color: var(--archium-info);
+    background: var(--archium-info-bg);
+    border-color: var(--archium-info-border);
 }
 .status-chip-warn {
-    color: #7a5c12;
-    background: #faf4e4;
-    border-color: #d4bc6a;
+    color: var(--archium-warn);
+    background: var(--archium-warn-bg);
+    border-color: var(--archium-warn-border);
 }
 .status-chip-error {
-    color: #8a3030;
-    background: #f8ecec;
-    border-color: #d4a0a0;
+    color: var(--archium-error);
+    background: var(--archium-error-bg);
+    border-color: var(--archium-error-border);
 }
 .status-chip-neutral {
     color: #5c5a55;
@@ -137,9 +156,9 @@ div[data-testid="stChatInput"] textarea {
 }
 
 .stDownloadButton button {
-    border: 1px solid #1a1a1a !important;
+    border: 1px solid var(--archium-ink) !important;
     background: transparent !important;
-    color: #1a1a1a !important;
+    color: var(--archium-ink) !important;
     border-radius: 2px !important;
     font-size: 0.8rem !important;
     letter-spacing: 0.04em;
