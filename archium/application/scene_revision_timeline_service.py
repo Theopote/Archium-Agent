@@ -117,9 +117,11 @@ class SceneRevisionTimelineService:
 
     def get_summary(self, revision_id: UUID) -> SceneRevisionSummary | None:
         revision = self._revisions.get_revision(revision_id)
-        if revision is not None:
-            if revision.snapshot.get("kind") == SCENE_STATE_SNAPSHOT_KIND:
-                return self._summary_from_revision(revision)
+        if (
+            revision is not None
+            and revision.snapshot.get("kind") == SCENE_STATE_SNAPSHOT_KIND
+        ):
+            return self._summary_from_revision(revision)
         proposal = self._proposals.get(revision_id)
         if proposal is not None and proposal.status == ProposalStatus.REJECTED:
             return self._summary_from_rejected_proposal(proposal)

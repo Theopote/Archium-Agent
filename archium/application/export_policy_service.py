@@ -58,9 +58,11 @@ class ExportPolicyService:
         for node in image_nodes:
             if node.asset_unresolved:
                 unresolved.append(node.id)
-            if _node_area(node, page_area) >= page_area * _FULL_PAGE_AREA_RATIO:
-                if native_text == 0:
-                    warnings.append(f"full_page_image:{node.id}")
+            if (
+                _node_area(node, page_area) >= page_area * _FULL_PAGE_AREA_RATIO
+                and native_text == 0
+            ):
+                warnings.append(f"full_page_image:{node.id}")
 
         for font in scene.font_assets:
             if font.resolved_family and font.resolved_family != font.family:
@@ -174,20 +176,24 @@ class ExportPolicyService:
 
         required_rank = fidelity_rank(active.required_fidelity)
         for slide in manifest.slides:
-            if fidelity_rank(slide.fidelity_level) > required_rank:
-                if not active.allow_slide_level_fallback:
-                    raise WorkflowError(
-                        f"存在 {slide.fidelity_level.value} 页面，"
-                        f"不满足要求的 {active.required_fidelity.value}。"
-                        "系统不会静默降级为图片式 PPTX。"
-                    )
-
-        if manifest.final_fidelity == ExportFidelityLevel.RASTER_FALLBACK:
-            if not active.allow_raster_fallback:
+            if (
+                fidelity_rank(slide.fidelity_level) > required_rank
+                and not active.allow_slide_level_fallback
+            ):
                 raise WorkflowError(
-                    "导出结果将为整页图片式 PPTX，但当前策略禁止图片降级。"
-                    "请修复页面或显式启用「允许图片式降级」。"
+                    f"存在 {slide.fidelity_level.value} 页面，"
+                    f"不满足要求的 {active.required_fidelity.value}。"
+                    "系统不会静默降级为图片式 PPTX。"
                 )
+
+        if (
+            manifest.final_fidelity == ExportFidelityLevel.RASTER_FALLBACK
+            and not active.allow_raster_fallback
+        ):
+            raise WorkflowError(
+                "导出结果将为整页图片式 PPTX，但当前策略禁止图片降级。"
+                "请修复页面或显式启用「允许图片式降级」。"
+            )
 
     def _classify_fidelity(
         self,

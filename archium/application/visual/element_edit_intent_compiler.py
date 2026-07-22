@@ -270,16 +270,18 @@ class ElementEditIntentCompiler:
         else:
             scale = intent.amount if intent.amount is not None else 1.15
 
-        if isinstance(node, DrawingNode) or getattr(node, "node_type", "") == "drawing":
-            if scale >= 1.0:
-                return IncreaseDrawingReadabilityCommand(
-                    presentation_id=presentation_id,
-                    slide_id=slide_id,
-                    node_id=bound_node_id,
-                    target_node_ids=[bound_node_id],
-                    reason="element intent: enlarge drawing",
-                    expected_effect=f"扩大图纸 `{bound_node_id}`",
-                )
+        if (
+            (isinstance(node, DrawingNode) or getattr(node, "node_type", "") == "drawing")
+            and scale >= 1.0
+        ):
+            return IncreaseDrawingReadabilityCommand(
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                node_id=bound_node_id,
+                target_node_ids=[bound_node_id],
+                reason="element intent: enlarge drawing",
+                expected_effect=f"扩大图纸 `{bound_node_id}`",
+            )
 
         new_width = max(0.05, node.width * scale)
         new_height = max(0.05, node.height * scale)

@@ -482,28 +482,32 @@ class VisualCriticService:
                 }:
                     continue
                 fit = element.fit_mode
-                if fit is not None and fit != ImageFit.CONTAIN:
-                    # Drawing-focus pages must not use cover when brief forbids it.
-                    if plan.layout_family == LayoutFamily.DRAWING_FOCUS or (
-                        element.content_type == LayoutContentType.DRAWING
-                    ):
-                        findings.append(
-                            VisualCriticFinding(
-                                rule_code=CRITIC_TEMPLATE_BRIEF_VIOLATION,
-                                severity=LayoutIssueSeverity.ERROR,
-                                message=(
-                                    f"Element `{element.id}` fit={fit.value} violates "
-                                    f"TemplateUsageBrief v{constraints.brief_version} "
-                                    "drawing contain rule."
-                                ),
-                                suggestion="Set drawing fit_mode=contain; forbid cover/crop.",
-                                evidence={
-                                    "template_usage_brief_id": str(constraints.brief_id),
-                                    "template_usage_brief_version": constraints.brief_version,
-                                    "element_id": element.id,
-                                },
-                            )
+                # Drawing-focus pages must not use cover when brief forbids it.
+                if (
+                    fit is not None
+                    and fit != ImageFit.CONTAIN
+                    and (
+                        plan.layout_family == LayoutFamily.DRAWING_FOCUS
+                        or element.content_type == LayoutContentType.DRAWING
+                    )
+                ):
+                    findings.append(
+                        VisualCriticFinding(
+                            rule_code=CRITIC_TEMPLATE_BRIEF_VIOLATION,
+                            severity=LayoutIssueSeverity.ERROR,
+                            message=(
+                                f"Element `{element.id}` fit={fit.value} violates "
+                                f"TemplateUsageBrief v{constraints.brief_version} "
+                                "drawing contain rule."
+                            ),
+                            suggestion="Set drawing fit_mode=contain; forbid cover/crop.",
+                            evidence={
+                                "template_usage_brief_id": str(constraints.brief_id),
+                                "template_usage_brief_version": constraints.brief_version,
+                                "element_id": element.id,
+                            },
                         )
+                    )
         return findings
 
     def _fingerprint_similarity(

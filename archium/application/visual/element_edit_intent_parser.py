@@ -191,9 +191,12 @@ class ElementEditIntentParser:
             ):
                 continue
             # Disambiguate nested antonyms (unlock⊃lock, 取消隐藏⊃隐藏).
-            if rule.operation == "lock" and rule.locked is True:
-                if any(token in lowered for token in ("unlock", "解锁")):
-                    continue
+            if (
+                rule.operation == "lock"
+                and rule.locked is True
+                and any(token in lowered for token in ("unlock", "解锁"))
+            ):
+                continue
             if rule.operation == "visibility" and rule.visible is False and any(
                 token in lowered
                 for token in ("unhide", "show", "显示", "取消隐藏")
@@ -249,18 +252,25 @@ class ElementEditIntentParser:
     ) -> ElementEditIntent | None:
         """Deterministic field extraction for common templates (not keyword sprawl)."""
         color = _extract_color(text)
-        if color and any(
-            token in text.lower() for token in ("颜色", "colour", "color", "改成", "改为")
+        # Prefer style when a color token is present (avoid rewrite stealing 「改为 #FF0000」).
+        if (
+            color
+            and any(
+                token in text.lower()
+                for token in ("颜色", "colour", "color", "改成", "改为")
+            )
+            and (
+                any(token in text for token in ("颜色", "colour", "color"))
+                or color in text
+            )
         ):
-            # Prefer style when a color token is present (avoid rewrite stealing 「改为 #FF0000」).
-            if any(token in text for token in ("颜色", "colour", "color")) or color in text:
-                return ElementEditIntent(
-                    operation="change_style",
-                    color_value=color,
-                    confidence=0.88,
-                    source="heuristic",
-                    rationale="color style template",
-                )
+            return ElementEditIntent(
+                operation="change_style",
+                color_value=color,
+                confidence=0.88,
+                source="heuristic",
+                rationale="color style template",
+            )
 
         rewrite = _extract_rewrite_text(text)
         if rewrite:
