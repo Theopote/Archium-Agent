@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.drawing_readability_service import parse_geometry_token
+from archium.application.visual.scene_geometry import apply_geometry_token
 from archium.application.visual.partial_edit_preservation import (
     assert_partial_edit_preservation,
 )
@@ -589,6 +590,17 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
             node.width = width
             node.height = height
             node.fit_mode = "contain"
+        return
+    if action.action_type in {"move_node", "resize_node", "align_nodes"}:
+        if action.after_value:
+            apply_geometry_token(node, action.after_value)
+        return
+    if action.action_type == "delete_node":
+        node.visible = action.after_value != "false"
+        return
+    if action.action_type == "reorder_node":
+        with contextlib.suppress(TypeError, ValueError):
+            node.z_index = int(action.after_value or node.z_index)
         return
     if action.action_type == "relocate_node":
         if action.after_value is not None:

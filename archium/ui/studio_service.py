@@ -444,13 +444,13 @@ def apply_slide_element_move(
     y: float,
 ) -> object:
     """Move a layout element via canvas drag or property panel."""
-    from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
     clear_visual_redo_stack(slide_id)
-    return VisualEditService(session, settings=_resolve_runtime_settings(None)).apply_element_move(
+    return StudioSceneEditService(session, settings=_resolve_runtime_settings(None)).move_layout_element(
         slide_id,
-        element_id,
+        element_id=element_id,
         x=x,
         y=y,
     )
@@ -465,22 +465,63 @@ def apply_slide_element_resize(
     y: float,
     width: float,
     height: float,
+    preserve_aspect_ratio: bool = False,
 ) -> object:
     """Resize a layout element via canvas handles."""
-    from archium.application.visual.visual_edit_service import VisualEditService
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
     clear_visual_redo_stack(slide_id)
-    return VisualEditService(
+    return StudioSceneEditService(
         session, settings=_resolve_runtime_settings(None)
-    ).apply_element_resize(
+    ).resize_layout_element(
         slide_id,
-        element_id,
+        element_id=element_id,
         x=x,
         y=y,
         width=width,
         height=height,
+        preserve_aspect_ratio=preserve_aspect_ratio,
     )
+
+
+def apply_slide_element_align(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_ids: list[str],
+    alignment: str,
+    reference_element_id: str | None = None,
+) -> object:
+    """Align selected layout elements through the Studio command chain."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).align_layout_elements(
+        slide_id,
+        element_ids=element_ids,
+        alignment=alignment,  # type: ignore[arg-type]
+        reference_element_id=reference_element_id,
+    )
+
+
+def apply_slide_element_delete(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+) -> object:
+    """Delete (hide) a layout element through the Studio command chain."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).delete_layout_element(slide_id, element_id=element_id)
 
 
 def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object:

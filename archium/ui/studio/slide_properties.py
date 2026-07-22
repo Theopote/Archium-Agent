@@ -17,6 +17,30 @@ from archium.ui.studio.element_labels import CONTENT_TYPE_LABELS, ROLE_LABELS, f
 from archium.ui.studio_service import SlideVisualSnapshot, apply_slide_visual_edit
 
 
+def _run_align(
+    slide_id: UUID,
+    element_ids: list[str],
+    alignment: str,
+    *,
+    reference_element_id: str | None = None,
+) -> None:
+    try:
+        with get_session() as session:
+            from archium.ui.studio_service import apply_slide_element_align
+
+            apply_slide_element_align(
+                session,
+                slide_id,
+                element_ids=element_ids,
+                alignment=alignment,
+                reference_element_id=reference_element_id,
+            )
+        st.success("已更新对齐。")
+        st.rerun()
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
 def render_slide_properties(
     *,
     slide_snapshot: SlideVisualSnapshot | None,
@@ -218,6 +242,66 @@ def _render_element_properties(
             st.write(f"裁切策略：`{element.crop_policy.value}`")
 
     if not element.locked:
+        align_cols = st.columns(3)
+        with align_cols[0]:
+            if st.button(
+                "左对齐",
+                use_container_width=True,
+                key=f"studio_align_left_{slide_snapshot.slide.id}_{element.id}",
+            ):
+                _run_align(slide_snapshot.slide.id, [element.id], "left")
+        with align_cols[1]:
+            if st.button(
+                "居中",
+                use_container_width=True,
+                key=f"studio_align_center_{slide_snapshot.slide.id}_{element.id}",
+            ):
+                _run_align(slide_snapshot.slide.id, [element.id], "center")
+        with align_cols[2]:
+            if st.button(
+                "右对齐",
+                use_container_width=True,
+                key=f"studio_align_right_{slide_snapshot.slide.id}_{element.id}",
+            ):
+                _run_align(slide_snapshot.slide.id, [element.id], "right")
+        st.caption("左/中/右对齐以整页为参考；可将其他未锁定元素对齐到当前元素。")
+        other_ids = [
+            item.id
+            for item in plan.elements
+            if item.id != element.id and not item.locked
+        ]
+        if other_ids and st.button(
+            "将其他元素对齐到当前元素",
+            use_container_width=True,
+            key=f"studio_align_to_current_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            _run_align(
+                slide_snapshot.slide.id,
+                other_ids,
+                "left",
+                reference_element_id=element.id,
+            )
+
+        if st.button(
+            "删除此元素",
+            use_container_width=True,
+            key=f"studio_delete_element_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            try:
+                with get_session() as session:
+                    from archium.ui.studio_service import apply_slide_element_delete
+
+                    apply_slide_element_delete(
+                        session,
+                        slide_snapshot.slide.id,
+                        element_id=element.id,
+                    )
+                st.session_state.pop("studio_selected_element_id", None)
+                st.success("已删除元素。")
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
         if st.button(
             "锁定此元素",
             use_container_width=True,

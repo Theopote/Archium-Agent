@@ -83,12 +83,76 @@ class IncreaseDrawingReadabilityCommand(StudioCommandBase):
     forbid_cover_crop: bool = True
 
 
+NodeAlignment = Literal[
+    "left",
+    "center",
+    "right",
+    "top",
+    "middle",
+    "bottom",
+    "distribute_h",
+    "distribute_v",
+]
+
+NodeReorderDirection = Literal["front", "back", "forward", "backward"]
+
+
+class MoveNodeCommand(StudioCommandBase):
+    """Move a render node to absolute page coordinates."""
+
+    command_type: Literal["move_node"] = "move_node"
+    node_id: str = Field(min_length=1)
+    x: float
+    y: float
+
+
+class ResizeNodeCommand(StudioCommandBase):
+    """Resize a render node to absolute page bounds."""
+
+    command_type: Literal["resize_node"] = "resize_node"
+    node_id: str = Field(min_length=1)
+    x: float
+    y: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+    preserve_aspect_ratio: bool = False
+
+
+class DeleteNodeCommand(StudioCommandBase):
+    """Hide a render node from the scene (reversible via patch replay)."""
+
+    command_type: Literal["delete_node"] = "delete_node"
+    node_id: str = Field(min_length=1)
+
+
+class AlignNodesCommand(StudioCommandBase):
+    """Align or distribute multiple render nodes."""
+
+    command_type: Literal["align_nodes"] = "align_nodes"
+    node_ids: list[str] = Field(min_length=1)
+    alignment: NodeAlignment
+    reference_node_id: str | None = None
+
+
+class ReorderNodeCommand(StudioCommandBase):
+    """Change render order (z-index) for one node."""
+
+    command_type: Literal["reorder_node"] = "reorder_node"
+    node_id: str = Field(min_length=1)
+    direction: NodeReorderDirection
+
+
 StudioCommand = Annotated[
     RewriteTextCommand
     | FixOverflowCommand
     | ReplaceAssetCommand
     | ReplaceDrawingCommand
-    | IncreaseDrawingReadabilityCommand,
+    | IncreaseDrawingReadabilityCommand
+    | MoveNodeCommand
+    | ResizeNodeCommand
+    | DeleteNodeCommand
+    | AlignNodesCommand
+    | ReorderNodeCommand,
     Field(discriminator="command_type"),
 ]
 

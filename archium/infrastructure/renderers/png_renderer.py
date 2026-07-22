@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 from archium.application.visual.scene_fonts import (
     CJK_FALLBACK_CHAIN,
@@ -193,9 +194,18 @@ class PngRenderer:
         if path.suffix.lower() != ".svg":
             return Image.open(path).convert("RGBA")
         try:
+            return self._load_svg_via_cairosvg(path, target_w=target_w, target_h=target_h)
+        except Exception:
+            return self._load_svg_via_simple_parser(path, target_w=target_w, target_h=target_h)
+
+    @staticmethod
+    def _load_svg_via_cairosvg(path: Path, *, target_w: int, target_h: int):
+        from PIL import Image
+
+        try:
             import cairosvg
-        except ImportError as exc:  # pragma: no cover - exercised through fallback path
-            raise OSError("CairoSVG not installed") from exc
+        except Exception as exc:  # pragma: no cover - platform/env dependent
+            raise OSError("CairoSVG unavailable") from exc
 
         png_bytes = cairosvg.svg2png(
             url=str(path),
@@ -203,6 +213,107 @@ class PngRenderer:
             output_height=max(target_h * 2, 32),
         )
         return Image.open(BytesIO(png_bytes)).convert("RGBA")
+
+    @staticmethod
+    def _load_svg_via_simple_parser(path: Path, *, target_w: int, target_h: int):
+        from PIL import Image
+        from PIL import ImageDraw
+        from svg.path import parse_path
+
+        scale = 2
+        canvas_w = max(target_w * scale, 32)
+        canvas_h = max(target_h * scale, 32)
+        image = Image.new("RGBA", (canvas_w, canvas_h), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(image)
+
+        root = ET.fromstring(path.read_text(encoding="utf-8"))
+        view_box = root.attrib.get("viewBox", "0 0 24 24").replace(",", " ").split()
+        if len(view_box) != 4:
+            raise OSError("unsupported SVG viewBox")
+        vb_x, vb_y, vb_w, vb_h = (float(part) for part in view_box)
+        sx = canvas_w / max(vb_w, 1.0)
+        sy = canvas_h / max(vb_h, 1.0)
+
+        def px_x(value: float) -> float:
+            return (value - vb_x) * sx
+
+        def px_y(value: float) -> float:
+            return (value - vb_y) * sy
+
+        def parse_color(value: str | None, *, default: tuple[int, int, int, int] = (26, 26, 26, 255)):
+            text = (value or "").strip()
+            if not text or text == "currentColor":
+                return default
+            if text == "none":
+                return None
+            cleaned = text.lstrip("#")
+            if len(cleaned) == 6:
+                return (
+                    int(cleaned[0:2], 16),
+                    int(cleaned[2:4], 16),
+                    int(cleaned[4:6], 16),
+                    255,
+                )
+            return default
+
+        def stroke_width(elem: ET.Element) -> int:
+            raw = elem.attrib.get("stroke-width", root.attrib.get("stroke-width", "1.0"))
+            try:
+                return max(1, int(round(float(raw) * ((sx + sy) / 2))))
+            except ValueError:
+                return max(1, int(round((sx + sy) / 2)))
+
+        def inherit(elem: ET.Element, name: str, fallback: str | None = None) -> str | None:
+            return elem.attrib.get(name, root.attrib.get(name, fallback))
+
+        for elem in root.iter():
+            tag = elem.tag.rsplit("}", 1)[-1]
+            if tag == "svg":
+                continue
+            stroke = parse_color(inherit(elem, "stroke"))
+            fill = parse_color(inherit(elem, "fill", "none"))
+            width = stroke_width(elem)
+
+            if tag == "circle":
+                cx = float(elem.attrib["cx"])
+                cy = float(elem.attrib["cy"])
+                r = float(elem.attrib["r"])
+                box = (px_x(cx - r), px_y(cy - r), px_x(cx + r), px_y(cy + r))
+                if fill is not None:
+                    draw.ellipse(box, fill=fill)
+                if stroke is not None:
+                    draw.ellipse(box, outline=stroke, width=width)
+            elif tag == "rect":
+                x = float(elem.attrib.get("x", "0"))
+                y = float(elem.attrib.get("y", "0"))
+                w = float(elem.attrib["width"])
+                h = float(elem.attrib["height"])
+                box = (px_x(x), px_y(y), px_x(x + w), px_y(y + h))
+                if fill is not None:
+                    draw.rounded_rectangle(box, radius=0, fill=fill)
+                if stroke is not None:
+                    draw.rounded_rectangle(box, radius=0, outline=stroke, width=width)
+            elif tag == "line":
+                x1 = px_x(float(elem.attrib["x1"]))
+                y1 = px_y(float(elem.attrib["y1"]))
+                x2 = px_x(float(elem.attrib["x2"]))
+                y2 = px_y(float(elem.attrib["y2"]))
+                if stroke is not None:
+                    draw.line((x1, y1, x2, y2), fill=stroke, width=width)
+            elif tag == "path":
+                d = elem.attrib.get("d")
+                if not d or stroke is None:
+                    continue
+                for segment in parse_path(d):
+                    samples = max(8, min(64, int(segment.length(error=1e-2) * max(sx, sy) / 4)))
+                    points: list[tuple[float, float]] = []
+                    for i in range(samples + 1):
+                        t = i / max(samples, 1)
+                        point = segment.point(t)
+                        points.append((px_x(point.real), px_y(point.imag)))
+                    if len(points) >= 2:
+                        draw.line(points, fill=stroke, width=width, joint="curve")
+        return image
 
     @staticmethod
     def _draw_svg_placeholder(

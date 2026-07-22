@@ -325,6 +325,12 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
                 return node
         return None
 
+    def node_by_layout_element_id(self, layout_element_id: str) -> RenderNode | None:
+        for node in self.nodes:
+            if node.source_layout_element_id == layout_element_id:
+                return node
+        return None
+
     def scene_hash_input(self) -> str:
         """Stable serialization input for content hashing.
 

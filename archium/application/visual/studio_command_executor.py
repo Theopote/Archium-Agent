@@ -8,6 +8,12 @@ from uuid import UUID
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.asset_path_resolver import AssetPathResolveContext
 from archium.application.visual.drawing_readability_service import increase_drawing_readability
+from archium.application.visual.scene_geometry import (
+    align_nodes,
+    geometry_token,
+    page_box,
+    reorder_node_z_index,
+)
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
@@ -32,10 +38,15 @@ from archium.domain.visual.render_scene import (
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairApplyMode
 from archium.domain.visual.studio_command import (
+    AlignNodesCommand,
+    DeleteNodeCommand,
     FixOverflowCommand,
     IncreaseDrawingReadabilityCommand,
+    MoveNodeCommand,
+    ReorderNodeCommand,
     ReplaceAssetCommand,
     ReplaceDrawingCommand,
+    ResizeNodeCommand,
     RewriteTextCommand,
     ScenePatchAction,
     StudioCommand,
@@ -124,6 +135,16 @@ class StudioCommandExecutor:
             return self._execute_replace_drawing(scene, command, context, base_hash)
         if isinstance(command, IncreaseDrawingReadabilityCommand):
             return self._execute_increase_drawing_readability(scene, command, base_hash)
+        if isinstance(command, MoveNodeCommand):
+            return self._execute_move_node(scene, command, base_hash)
+        if isinstance(command, ResizeNodeCommand):
+            return self._execute_resize_node(scene, command, base_hash)
+        if isinstance(command, DeleteNodeCommand):
+            return self._execute_delete_node(scene, command, base_hash)
+        if isinstance(command, AlignNodesCommand):
+            return self._execute_align_nodes(scene, command, base_hash)
+        if isinstance(command, ReorderNodeCommand):
+            return self._execute_reorder_node(scene, command, base_hash)
         return CommandExecutionResult(
             success=False,
             base_scene_hash=base_hash,
@@ -553,6 +574,255 @@ class StudioCommandExecutor:
             base_scene_hash=base_hash,
             candidate_scene=result.scene,
             applied_actions=result.actions,
+        )
+
+    def _execute_move_node(
+        self,
+        scene: RenderScene,
+        command: MoveNodeCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if node_geometry_locked(node):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="move_node",
+                node_id=command.node_id,
+                lock_kind="geometry",
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert target is not None
+        before_token = geometry_token(target)
+        target.x = command.x
+        target.y = command.y
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="move_node",
+            property_name="geometry",
+            before_value=before_token,
+            after_value=geometry_token(target),
+            reason=command.reason or "move node",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_resize_node(
+        self,
+        scene: RenderScene,
+        command: ResizeNodeCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if node_geometry_locked(node):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="resize_node",
+                node_id=command.node_id,
+                lock_kind="geometry",
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert target is not None
+        before_token = geometry_token(target)
+        width = command.width
+        height = command.height
+        if command.preserve_aspect_ratio and target.width > 0 and target.height > 0:
+            aspect = target.width / target.height
+            if width / max(height, 1e-6) > aspect:
+                width = height * aspect
+            else:
+                height = width / aspect
+        target.x = command.x
+        target.y = command.y
+        target.width = width
+        target.height = height
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="resize_node",
+            property_name="geometry",
+            before_value=before_token,
+            after_value=geometry_token(target),
+            reason=command.reason or "resize node",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_delete_node(
+        self,
+        scene: RenderScene,
+        command: DeleteNodeCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if node_geometry_locked(node):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="delete_node",
+                node_id=command.node_id,
+                lock_kind="geometry",
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert target is not None
+        before_visible = str(target.visible)
+        target.visible = False
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="delete_node",
+            property_name="visible",
+            before_value=before_visible,
+            after_value="false",
+            reason=command.reason or "delete node",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_align_nodes(
+        self,
+        scene: RenderScene,
+        command: AlignNodesCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        patched = scene.model_copy(deep=True)
+        nodes = [patched.node_by_id(node_id) for node_id in command.node_ids]
+        resolved = [node for node in nodes if node is not None]
+        if not resolved:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.NODE_NOT_FOUND",
+                        message="no alignable nodes found",
+                        evidence=list(command.node_ids),
+                    ),
+                ),
+            )
+
+        locked = [node.id for node in resolved if node_geometry_locked(node)]
+        if locked:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                skipped_actions=tuple(f"align_nodes:{node_id}:locked" for node_id in locked),
+                issues=(
+                    _issue(
+                        code="STUDIO.NODE_LOCKED",
+                        message="one or more nodes are locked for geometry edits",
+                        evidence=locked,
+                    ),
+                ),
+            )
+
+        before_tokens = {node.id: geometry_token(node) for node in resolved}
+        reference = None
+        if command.reference_node_id:
+            reference = patched.node_by_id(command.reference_node_id)
+        elif len(resolved) == 1:
+            reference = page_box(patched.page_width, patched.page_height)
+        updates = align_nodes(
+            resolved,
+            command.alignment,
+            reference=reference,
+        )
+        if not updates:
+            return CommandExecutionResult(
+                success=True,
+                base_scene_hash=base_hash,
+                candidate_scene=patched,
+            )
+
+        actions: list[ScenePatchAction] = []
+        for node_id, after_token in updates.items():
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=node_id,
+                    action_type="align_nodes",
+                    property_name="geometry",
+                    before_value=before_tokens[node_id],
+                    after_value=after_token,
+                    reason=command.reason or f"align {command.alignment}",
+                )
+            )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=tuple(actions),
+        )
+
+    def _execute_reorder_node(
+        self,
+        scene: RenderScene,
+        command: ReorderNodeCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if node_geometry_locked(node):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="reorder_node",
+                node_id=command.node_id,
+                lock_kind="geometry",
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert target is not None
+        before_z = str(target.z_index)
+        target.z_index = reorder_node_z_index(patched, target, command.direction)
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="reorder_node",
+            property_name="z_index",
+            before_value=before_z,
+            after_value=str(target.z_index),
+            reason=command.reason or f"reorder {command.direction}",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
         )
 
     def _validate_asset_binding(

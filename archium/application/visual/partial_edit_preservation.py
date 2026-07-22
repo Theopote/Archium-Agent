@@ -19,10 +19,15 @@ from archium.domain.visual.render_scene import (
     TextNode,
 )
 from archium.domain.visual.studio_command import (
+    AlignNodesCommand,
+    DeleteNodeCommand,
     FixOverflowCommand,
     IncreaseDrawingReadabilityCommand,
+    MoveNodeCommand,
+    ReorderNodeCommand,
     ReplaceAssetCommand,
     ReplaceDrawingCommand,
+    ResizeNodeCommand,
     RewriteTextCommand,
     ScenePatchAction,
     StudioCommand,
@@ -43,9 +48,19 @@ def command_target_node_ids(command: StudioCommand) -> set[str]:
             targets.update(command.node_ids)
     elif isinstance(
         command,
-        (ReplaceAssetCommand, ReplaceDrawingCommand, IncreaseDrawingReadabilityCommand),
+        (
+            ReplaceAssetCommand,
+            ReplaceDrawingCommand,
+            IncreaseDrawingReadabilityCommand,
+            MoveNodeCommand,
+            ResizeNodeCommand,
+            DeleteNodeCommand,
+            ReorderNodeCommand,
+        ),
     ):
         targets.add(command.node_id)
+    elif isinstance(command, AlignNodesCommand):
+        targets.update(command.node_ids)
     return {node_id for node_id in targets if node_id.strip()}
 
 
