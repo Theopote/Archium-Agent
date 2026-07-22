@@ -52,6 +52,16 @@ def test_product_flow_pages_exist() -> None:
         assert app_navigation.get_app_page(key) is not None
 
 
+def test_resource_section_includes_slide_recovery() -> None:
+    sections = app_navigation.build_app_pages()
+    assert len(sections[RESOURCE_SECTION]) >= 2
+    assert app_navigation.get_app_page("slide-recovery") is not None
+
+
+def test_slide_recovery_page_is_registered() -> None:
+    assert app_navigation.get_app_page("slide-recovery") is not None
+
+
 def test_bootstrap_is_not_diagnostics_home() -> None:
     text = (ROOT / "archium" / "ui" / "bootstrap.py").read_text(encoding="utf-8")
     assert "def init_app" in text

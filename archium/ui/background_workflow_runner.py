@@ -17,9 +17,10 @@ from archium.application.planning_workflow_service import (
 )
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
-from archium.application.visual.visual_workflow_service import (
-    VisualWorkflowResult,
-    VisualWorkflowService,
+from archium.application.slide_recovery_workflow_service import (
+    SlideRecoveryWorkflowRequest,
+    SlideRecoveryWorkflowResult,
+    SlideRecoveryWorkflowService,
 )
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings
@@ -51,6 +52,11 @@ class PlanningJobAction(StrEnum):
 class VisualJobAction(StrEnum):
     RUN = "run"
     CONTINUE_LAYOUT_REVIEW = "continue_layout_review"
+
+
+class SlideRecoveryJobAction(StrEnum):
+    RUN = "run"
+    CONTINUE_REVIEW = "continue_review"
 
 
 @dataclass
@@ -109,6 +115,28 @@ def _create_planning_service(session: Session, settings: Settings) -> PlanningWo
         settings=settings,
         checkpointer_manager=get_workflow_checkpointer_manager(settings),
     )
+
+
+def _create_slide_recovery_service(
+    session: Session, settings: Settings
+) -> SlideRecoveryWorkflowService:
+    return SlideRecoveryWorkflowService(session, settings=settings)
+
+
+def _set_slide_recovery_job_result(
+    job: BackgroundWorkflowJob, result: SlideRecoveryWorkflowResult
+) -> None:
+    if not isinstance(result, SlideRecoveryWorkflowResult):
+        raise TypeError("expected SlideRecoveryWorkflowResult")
+    job.result = result
+    job.workflow_run_id = result.workflow_run.id
+    if result.awaiting_review:
+        _set_job_status(job, BackgroundJobStatus.AWAITING_REVIEW)
+    elif result.succeeded:
+        _set_job_status(job, BackgroundJobStatus.COMPLETED)
+    else:
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+        job.error = "; ".join(result.errors) or "页面复活未完成"
 
 
 def _create_visual_service(
@@ -448,6 +476,78 @@ def submit_visual_job(
     return job
 
 
+def _run_slide_recovery_job(
+    job: BackgroundWorkflowJob,
+    *,
+    action: SlideRecoveryJobAction,
+    settings: Settings,
+    request: SlideRecoveryWorkflowRequest,
+    workflow_run_id: UUID | None = None,
+    review_accepted: bool = True,
+    review_notes: str | None = None,
+) -> None:
+    _set_job_status(job, BackgroundJobStatus.RUNNING)
+    if workflow_run_id is not None:
+        job.workflow_run_id = workflow_run_id
+    try:
+        with get_session(scoped=False) as session:
+            service = _create_slide_recovery_service(session, settings)
+            if action == SlideRecoveryJobAction.RUN:
+                result = service.run(job.project_id, request)
+                _set_slide_recovery_job_result(job, result)
+            elif action == SlideRecoveryJobAction.CONTINUE_REVIEW:
+                if workflow_run_id is None:
+                    raise WorkflowError("缺少 workflow_run_id")
+                result = service.continue_after_review(
+                    workflow_run_id,
+                    accepted=review_accepted,
+                    notes=review_notes,
+                )
+                _set_slide_recovery_job_result(job, result)
+            else:
+                raise WorkflowError(f"Unknown slide recovery action: {action}")
+    except WorkflowError as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+    except Exception as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+
+
+def submit_slide_recovery_job(
+    project_id: UUID,
+    action: SlideRecoveryJobAction,
+    *,
+    request: SlideRecoveryWorkflowRequest,
+    settings: Settings | None = None,
+    workflow_run_id: UUID | None = None,
+    review_accepted: bool = True,
+    review_notes: str | None = None,
+) -> BackgroundWorkflowJob:
+    """Run slide recovery in a background thread."""
+    resolved = _resolve_settings(settings)
+    job = BackgroundWorkflowJob(
+        job_id=str(uuid4()),
+        project_id=project_id,
+        workflow_run_id=workflow_run_id,
+        kind="slide_recovery",
+        action=action.value,
+    )
+    start_background_thread(
+        job,
+        lambda: _run_slide_recovery_job(
+            job,
+            action=action,
+            settings=resolved,
+            request=request,
+            workflow_run_id=workflow_run_id,
+            review_accepted=review_accepted,
+            review_notes=review_notes,
+        ),
+    )
+    return job
+
+
 def find_running_workflow_run_id(
     project_id: UUID,
     *,
@@ -465,7 +565,13 @@ def find_running_workflow_run_id(
             continue
         if workflow_kind == "visual" and kind != "visual_composition":
             continue
-        if workflow_kind == "presentation" and kind in {"planning", "visual_composition"}:
+        if workflow_kind == "slide_recovery" and kind != "slide_recovery":
+            continue
+        if workflow_kind == "presentation" and kind in {
+            "planning",
+            "visual_composition",
+            "slide_recovery",
+        }:
             continue
         if presentation_id is not None and run.presentation_id != presentation_id:
             continue
@@ -500,6 +606,16 @@ def load_planning_result(
             return cast(PlanningWorkflowResult, service.result_from_run(workflow_run_id))
         finally:
             service.close()
+
+
+def load_slide_recovery_result(
+    workflow_run_id: UUID, *, settings: Settings | None = None
+) -> SlideRecoveryWorkflowResult:
+    """Load a slide recovery workflow result from persisted DB state."""
+    resolved = _resolve_settings(settings)
+    with get_session(scoped=False) as session:
+        service = _create_slide_recovery_service(session, resolved)
+        return service.result_from_run(workflow_run_id)
 
 
 def load_visual_result(

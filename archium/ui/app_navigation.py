@@ -33,6 +33,8 @@ def build_app_pages() -> dict[str, list[Any]]:
         project_management,
         project_mission,
         settings,
+        slide_recovery,
+        presentation_technology_radar,
         studio,
         template_induction,
         template_library,
@@ -101,6 +103,18 @@ def build_app_pages() -> dict[str, list[Any]]:
         icon=icons.TEMPLATE_LIBRARY,
         url_path="template-library",
     )
+    slide_recovery_page = st.Page(
+        slide_recovery.render,
+        title="页面复活",
+        icon=icons.SLIDE_RECOVERY,
+        url_path="slide-recovery",
+    )
+    tech_radar_page = st.Page(
+        presentation_technology_radar.render,
+        title="技术雷达",
+        icon=icons.TECH_RADAR,
+        url_path="tech-radar",
+    )
     settings_page = st.Page(
         settings.render, title="设置", icon=icons.SETTINGS, url_path="settings"
     )
@@ -158,6 +172,8 @@ def build_app_pages() -> dict[str, list[Any]]:
     _PAGES.update({"project-management": project_page})
     _PAGES.update(stage_pages)
     _PAGES.update({"template-library": template_library_page})
+    _PAGES.update({"slide-recovery": slide_recovery_page})
+    _PAGES.update({"tech-radar": tech_radar_page})
     _PAGES.update({"settings": settings_page})
     _PAGES.update(hidden_pages)
     # Keep legacy deep-link key resolvable; do not put it in sidebar sections.
@@ -173,7 +189,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             stage_pages[PRODUCT_STUDIO_PAGE_KEY],
             stage_pages["deliver"],
         ],
-        RESOURCE_SECTION: [template_library_page],
+        RESOURCE_SECTION: [template_library_page, slide_recovery_page, tech_radar_page],
         SYSTEM_SECTION: [settings_page],
     }
 

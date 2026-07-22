@@ -65,6 +65,14 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.VISUAL_RENDER.value: "渲染 PPTX",
     WorkflowStep.VISUAL_CRITIQUE.value: "视觉检查与整套一致性",
     WorkflowStep.VISUAL_FINALIZE.value: "完成视觉编排",
+    WorkflowStep.SLIDE_RECOVERY_QUEUED.value: "排队等待",
+    WorkflowStep.SLIDE_RECOVERY_OCR.value: "OCR 文字识别",
+    WorkflowStep.SLIDE_RECOVERY_VLM_ANALYSIS.value: "VLM 页面区域分析",
+    WorkflowStep.SLIDE_RECOVERY_REGION_RECOVERY.value: "区域内容恢复",
+    WorkflowStep.SLIDE_RECOVERY_HYBRID_SCENE.value: "构建 Hybrid RenderScene",
+    WorkflowStep.SLIDE_RECOVERY_QA.value: "恢复质量评估",
+    WorkflowStep.SLIDE_RECOVERY_AWAIT_REVIEW.value: "等待人工复核",
+    WorkflowStep.SLIDE_RECOVERY_FINALIZE.value: "完成页面复活",
 }
 
 STATUS_LABELS: dict[WorkflowStatus, str] = {
@@ -139,6 +147,17 @@ VISUAL_PROGRESS_STEPS: tuple[str, ...] = (
     WorkflowStep.VISUAL_FINALIZE.value,
 )
 
+SLIDE_RECOVERY_PROGRESS_STEPS: tuple[str, ...] = (
+    WorkflowStep.SLIDE_RECOVERY_QUEUED.value,
+    WorkflowStep.SLIDE_RECOVERY_OCR.value,
+    WorkflowStep.SLIDE_RECOVERY_VLM_ANALYSIS.value,
+    WorkflowStep.SLIDE_RECOVERY_REGION_RECOVERY.value,
+    WorkflowStep.SLIDE_RECOVERY_HYBRID_SCENE.value,
+    WorkflowStep.SLIDE_RECOVERY_QA.value,
+    WorkflowStep.SLIDE_RECOVERY_AWAIT_REVIEW.value,
+    WorkflowStep.SLIDE_RECOVERY_FINALIZE.value,
+)
+
 
 @dataclass(frozen=True)
 class WorkflowProgressSnapshot:
@@ -199,13 +218,15 @@ def label_for_step(step: str | None, *, state: dict[str, Any] | None = None) -> 
 
 
 def infer_workflow_kind(step: str | None) -> str:
-    """Return ``presentation``, ``planning``, or ``visual`` from a step id."""
+    """Return workflow kind from a step id."""
     if not step:
         return "presentation"
     if step.startswith("planning_"):
         return "planning"
     if step.startswith("visual_"):
         return "visual"
+    if step.startswith("slide_recovery_"):
+        return "slide_recovery"
     return "presentation"
 
 
@@ -214,6 +235,8 @@ def progress_steps_for_kind(kind: str) -> tuple[str, ...]:
         return PLANNING_PROGRESS_STEPS
     if kind == "visual":
         return VISUAL_PROGRESS_STEPS
+    if kind == "slide_recovery":
+        return SLIDE_RECOVERY_PROGRESS_STEPS
     return PRESENTATION_PROGRESS_STEPS
 
 

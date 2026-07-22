@@ -23,6 +23,8 @@ TEMPLATE_STUDIO = ":material/view_quilt:"
 TEMPLATE_INDUCTION = ":material/science:"
 WORKSPACE = ":material/work:"
 VISUAL_DESIGN = ":material/palette:"
+SLIDE_RECOVERY = ":material/photo_album:"
+TECH_RADAR = ":material/radar:"
 COMMAND_CENTER = ":material/chat:"
 
 # —— Common actions ——

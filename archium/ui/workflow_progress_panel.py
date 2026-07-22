@@ -24,13 +24,14 @@ from archium.ui.background_workflow_runner import (
     find_running_workflow_run_id,
     get_job,
     load_planning_result,
+    load_slide_recovery_result,
     load_visual_result,
     load_workflow_result,
 )
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import brief_storyline_pair
 
-WorkflowScope = str  # "presentation" | "planning" | "visual"
+WorkflowScope = str  # "presentation" | "planning" | "visual" | "slide_recovery"
 
 
 def _session_job_key(
@@ -41,6 +42,8 @@ def _session_job_key(
 ) -> str:
     if scope == "planning":
         return f"active_planning_wf_job_{project_id}"
+    if scope == "slide_recovery":
+        return f"active_slide_recovery_wf_job_{project_id}"
     if scope == "visual" and presentation_id is not None:
         return f"active_visual_wf_job_{project_id}_{presentation_id}"
     return f"active_wf_job_{project_id}"
@@ -84,6 +87,8 @@ def recover_active_workflow_run(
         workflow_kind = "planning"
     elif scope == "visual":
         workflow_kind = "visual"
+    elif scope == "slide_recovery":
+        workflow_kind = "slide_recovery"
     elif scope == "presentation":
         workflow_kind = "presentation"
     return find_running_workflow_run_id(
@@ -111,6 +116,8 @@ def _load_result_for_scope(
         return load_planning_result(workflow_run_id, settings=settings)
     if scope == "visual":
         return load_visual_result(workflow_run_id, settings=settings)
+    if scope == "slide_recovery":
+        return load_slide_recovery_result(workflow_run_id, settings=settings)
     return load_workflow_result(workflow_run_id, settings=settings)
 
 
@@ -119,6 +126,8 @@ def _default_success_message(scope: WorkflowScope, result: Any) -> str | None:
         return "规划工作流步骤已完成。"
     if scope == "visual":
         return "视觉编排完成。"
+    if scope == "slide_recovery":
+        return "页面复活流程已完成。"
     slides = getattr(result, "slides", None) or []
     return f"汇报已生成，共 {len(slides)} 页。"
 
@@ -128,6 +137,8 @@ def _default_awaiting_message(scope: WorkflowScope) -> str:
         return "规划工作流已暂停，请按当前步骤继续审核或编辑。"
     if scope == "visual":
         return "视觉编排已暂停，请审核视觉方向或版式后继续。"
+    if scope == "slide_recovery":
+        return "页面复活已暂停，请复核恢复质量与混合可编辑降级说明。"
     return f"工作流已暂停，请切换到「审核」标签页继续处理 {brief_storyline_pair()}。"
 
 
@@ -302,6 +313,8 @@ def _poll_once(
             kind = "planning"
         elif scope == "visual":
             kind = "visual"
+        elif scope == "slide_recovery":
+            kind = "slide_recovery"
         elif scope == "presentation":
             kind = "presentation"
         recovered = find_running_workflow_run_id(
