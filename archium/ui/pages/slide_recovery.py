@@ -205,8 +205,9 @@ def _render_review_actions(result: SlideRecoveryWorkflowResult, settings: Settin
 def render() -> None:
     st.title("页面复活")
     st.caption(
-        "将外部 PNG/JPG 或图片式 PPTX 页面恢复为 Hybrid RenderScene。"
-        "本工具独立于主生成链，仅用于技术验证与导入辅助。"
+        "将外部 PNG/JPG/PDF 或图片式 PPTX 页面恢复为 Hybrid RenderScene，"
+        "支持预览、导出混合 PPTX 与导入到项目汇报。"
+        "本工具独立于主生成链，用于技术验证与导入辅助。"
     )
     _init_session_state()
     settings = get_ui_effective_settings()
@@ -257,7 +258,11 @@ def render() -> None:
             awaiting_review_message="页面复活等待复核。",
         )
         if isinstance(active_result, SlideRecoveryWorkflowResult):
-            render_slide_recovery_result_panel(active_result)
+            render_slide_recovery_result_panel(
+                active_result,
+                project_id=project_id,
+                settings=settings,
+            )
             _render_review_actions(active_result, settings)
 
     if st.button("开始页面复活", type="primary", key="slide_recovery_start"):

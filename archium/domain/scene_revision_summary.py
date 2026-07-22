@@ -25,6 +25,7 @@ _SCENE_SOURCE_TO_TIMELINE: dict[SceneRevisionSource, SceneRevisionTimelineSource
     "ai_proposal": "ai_proposal",
     "automatic_repair": "qa_repair",
     "template_application": "layout_replan",
+    "import_recovery": "import_recovery",
 }
 
 

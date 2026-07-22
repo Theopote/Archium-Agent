@@ -1,17 +1,28 @@
-"""Slide Recovery result panel — metrics, fidelity, and review actions."""
+"""Slide Recovery result panel — previews, metrics, fidelity, and delivery."""
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import streamlit as st
 
+from archium.application.slide_recovery_delivery_service import SlideRecoveryDeliveryService
 from archium.application.slide_recovery_workflow_service import SlideRecoveryWorkflowResult
+from archium.config.settings import Settings
+from archium.domain.enums import WorkflowStatus
 from archium.domain.export_fidelity import FIDELITY_LABELS_ZH
 from archium.domain.slide_recovery import PAGE_KIND_LABELS_ZH
+from archium.exceptions import WorkflowError
+from archium.infrastructure.database.session import get_session
+from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS
+from archium.ui.error_handlers import format_user_error
 
 
 def render_slide_recovery_result_panel(
     result: SlideRecoveryWorkflowResult | None,
     *,
+    project_id: UUID | None = None,
+    settings: Settings | None = None,
     key_prefix: str = "slide_recovery",
 ) -> None:
     if result is None:
@@ -29,6 +40,8 @@ def render_slide_recovery_result_panel(
             f"页面类型：{PAGE_KIND_LABELS_ZH.get(hybrid.page_kind, hybrid.page_kind.value)} · "
             f"可编辑级别：{hybrid.fidelity_label_zh()}"
         )
+
+    _render_preview_row(result, project_id=project_id, settings=settings)
 
     if recovery is not None:
         for line in recovery.summary_lines_zh():
@@ -86,3 +99,215 @@ def render_slide_recovery_result_panel(
         with st.expander("Hybrid RenderScene 节点", expanded=False):
             for node in hybrid.scene.sorted_nodes():
                 st.write(f"- `{node.id}` · {node.node_type} · {node.semantic_role or '—'}")
+
+    if project_id is not None and settings is not None and hybrid is not None:
+        _render_delivery_actions(
+            result,
+            project_id=project_id,
+            settings=settings,
+            key_prefix=key_prefix,
+        )
+
+
+def _render_preview_row(
+    result: SlideRecoveryWorkflowResult,
+    *,
+    project_id: UUID | None,
+    settings: Settings | None,
+) -> None:
+    if project_id is None or settings is None:
+        return
+    hybrid = result.hybrid_scene or (
+        result.recovery_result.hybrid_scene if result.recovery_result else None
+    )
+    if hybrid is None:
+        return
+
+    with get_session() as session:
+        delivery = SlideRecoveryDeliveryService(session, settings=settings)
+        source_path = delivery.resolve_source_preview_path(result)
+        try:
+            scene_preview = delivery.render_hybrid_preview(project_id, hybrid)
+        except Exception:
+            scene_preview = None
+
+    if source_path is None and scene_preview is None:
+        return
+
+    st.markdown("#### 视觉预览")
+    col_source, col_scene = st.columns(2)
+    with col_source:
+        st.caption("源页面")
+        if source_path is not None and source_path.is_file():
+            st.image(str(source_path), use_container_width=True)
+        else:
+            st.info("暂无源页面栅格预览。")
+    with col_scene:
+        st.caption("恢复 Hybrid Scene")
+        if scene_preview is not None and scene_preview.is_file():
+            st.image(str(scene_preview), use_container_width=True)
+        else:
+            st.info("场景预览暂不可用。")
+
+
+def _render_delivery_actions(
+    result: SlideRecoveryWorkflowResult,
+    *,
+    project_id: UUID,
+    settings: Settings,
+    key_prefix: str,
+) -> None:
+    hybrid = result.hybrid_scene or (
+        result.recovery_result.hybrid_scene if result.recovery_result else None
+    )
+    if hybrid is None:
+        return
+
+    run = result.workflow_run
+    can_export = run.status in {
+        WorkflowStatus.COMPLETED,
+        WorkflowStatus.AWAITING_REVIEW,
+    }
+    can_import = run.status == WorkflowStatus.COMPLETED
+
+    st.markdown("#### 交付闭环")
+    preset_options = list(EXPORT_POLICY_PRESETS.keys())
+    default_index = preset_options.index("allow_hybrid")
+    policy_preset = st.selectbox(
+        "导出策略",
+        options=preset_options,
+        index=default_index,
+        format_func=lambda key: EXPORT_POLICY_PRESETS[key],
+        key=f"{key_prefix}_export_policy",
+    )
+
+    with get_session() as session:
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        deck_options = PresentationRepository(session).list_by_project(project_id)
+
+    deck_labels = {str(item.id): item.title for item in deck_options}
+    deck_ids = list(deck_labels.keys())
+    selected_presentation: UUID | None = None
+    if deck_ids:
+        selected = st.selectbox(
+            "导入目标汇报",
+            options=deck_ids,
+            format_func=lambda value: deck_labels[value],
+            key=f"{key_prefix}_import_presentation",
+        )
+        selected_presentation = UUID(selected)
+    else:
+        st.caption("当前项目尚无汇报，导入时将自动创建「页面复活导入」。")
+
+    col_export, col_import = st.columns(2)
+    with col_export:
+        if st.button(
+            "导出混合 PPTX",
+            key=f"{key_prefix}_export_pptx",
+            disabled=not can_export,
+        ):
+            _run_export(
+                project_id=project_id,
+                result=result,
+                hybrid=hybrid,
+                policy_preset=policy_preset,
+                settings=settings,
+            )
+    with col_import:
+        if st.button(
+            "导入到汇报",
+            key=f"{key_prefix}_import_slide",
+            type="primary",
+            disabled=not can_import,
+        ):
+            _run_import(
+                project_id=project_id,
+                result=result,
+                hybrid=hybrid,
+                presentation_id=selected_presentation,
+                settings=settings,
+            )
+
+    if run.status == WorkflowStatus.AWAITING_REVIEW:
+        st.caption("复核通过后可导入到汇报；导出预览可在接受前进行。")
+
+
+def _run_export(
+    *,
+    project_id: UUID,
+    result: SlideRecoveryWorkflowResult,
+    hybrid,
+    policy_preset: str,
+    settings: Settings,
+) -> None:
+    try:
+        with get_session() as session:
+            delivery = SlideRecoveryDeliveryService(session, settings=settings)
+            export_result = delivery.export_pptx(
+                project_id,
+                hybrid,
+                source_page_id=result.source_page_id,
+                policy_preset=policy_preset,
+            )
+            session.commit()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+        return
+    except Exception as exc:
+        st.error(format_user_error(exc))
+        return
+
+    if export_result.pptx_export_skipped:
+        st.warning("Node/PptxGenJS 不可用，已生成保真度清单但未写出 PPTX 文件。")
+    elif export_result.pptx_path is not None:
+        st.success(f"已导出：{export_result.pptx_path}")
+        try:
+            st.download_button(
+                "下载 PPTX",
+                data=export_result.pptx_path.read_bytes(),
+                file_name=export_result.pptx_path.name,
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                key="slide_recovery_download_pptx",
+            )
+        except OSError:
+            pass
+
+    manifest = export_result.manifest
+    st.caption(
+        f"导出保真度：{manifest.final_fidelity.value}"
+        + (f" · 降级：{manifest.fallback_reason}" if manifest.fallback_used else "")
+    )
+
+
+def _run_import(
+    *,
+    project_id: UUID,
+    result: SlideRecoveryWorkflowResult,
+    hybrid,
+    presentation_id: UUID | None,
+    settings: Settings,
+) -> None:
+    try:
+        with get_session() as session:
+            delivery = SlideRecoveryDeliveryService(session, settings=settings)
+            import_result = delivery.import_to_presentation(
+                project_id,
+                hybrid,
+                result.recovery_result,
+                presentation_id=presentation_id,
+            )
+            session.commit()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+        return
+    except Exception as exc:
+        st.error(format_user_error(exc))
+        return
+
+    st.success(
+        f"已导入到汇报（第 {import_result.slide_order + 1} 页）。"
+        f" Slide ID: {import_result.slide_id}"
+    )
+    if import_result.scene_preview_path and import_result.scene_preview_path.is_file():
+        st.image(str(import_result.scene_preview_path), caption="导入后场景预览", width=480)

@@ -43,6 +43,7 @@ SceneRevisionSource = Literal[
     "ai_proposal",
     "automatic_repair",
     "template_application",
+    "import_recovery",
 ]
 
 

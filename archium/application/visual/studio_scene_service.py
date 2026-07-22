@@ -219,6 +219,15 @@ class StudioSceneService:
             intent = self._intents.get(slide.visual_intent_id)
 
         existing = self._scenes.get_by_layout_plan(plan.id)
+        if plan.layout_variant == "recovery_import" and existing is not None:
+            preview = self._ensure_preview(slide.presentation_id, existing)
+            return self._build_scene_result(
+                scene=existing,
+                preview_path=preview,
+                reused=True,
+                batch=None,
+            )
+
         scene = self.compile_scene(
             slide=slide,
             plan=plan,

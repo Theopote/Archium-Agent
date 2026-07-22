@@ -265,6 +265,7 @@ class SlideRecoveryWorkflowService:
         workflow_run.state = {
             **dict(workflow_run.state or {}),
             "source_page_id": source_page_id,
+            "preview_image_path": str(preview_path) if preview_path else None,
             "source_scene": source_scene.model_dump(mode="json"),
             "recovery_result": recovery_result.model_dump(mode="json"),
             "hybrid_scene": (
