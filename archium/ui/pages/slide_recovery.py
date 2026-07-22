@@ -113,14 +113,13 @@ def _launch_recovery_job(
         )
         return
 
-    with st.spinner("正在恢复页面…"):
-        with get_session() as session:
-            from archium.application.slide_recovery_workflow_service import (
-                SlideRecoveryWorkflowService,
-            )
+    with st.spinner("正在恢复页面…"), get_session() as session:
+        from archium.application.slide_recovery_workflow_service import (
+            SlideRecoveryWorkflowService,
+        )
 
-            service = SlideRecoveryWorkflowService(session, settings=settings)
-            result = service.run(project_id, request)
+        service = SlideRecoveryWorkflowService(session, settings=settings)
+        result = service.run(project_id, request)
     st.session_state.last_slide_recovery_result = result
     if result.awaiting_review:
         st.warning("恢复结果需人工复核。")

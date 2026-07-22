@@ -22,6 +22,10 @@ from archium.application.slide_recovery_workflow_service import (
     SlideRecoveryWorkflowResult,
     SlideRecoveryWorkflowService,
 )
+from archium.application.visual.visual_workflow_service import (
+    VisualWorkflowResult,
+    VisualWorkflowService,
+)
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus

@@ -13,8 +13,10 @@ from archium.domain.visual import (
     default_presentation_design_system,
 )
 from archium.domain.visual.enums import LayoutContentType
-from archium.infrastructure.layout.generators.base import LayoutGeneratorContext
-from archium.infrastructure.layout.generators.base import LayoutContentBundle
+from archium.infrastructure.layout.generators.base import (
+    LayoutContentBundle,
+    LayoutGeneratorContext,
+)
 from archium.infrastructure.layout.layout_solver import LayoutSolver
 
 

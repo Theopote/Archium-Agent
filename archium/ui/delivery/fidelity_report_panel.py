@@ -5,9 +5,9 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.domain.export_fidelity import (
+    FIDELITY_LABELS_ZH,
     DeckExportManifest,
     ExportFidelityLevel,
-    FIDELITY_LABELS_ZH,
 )
 from archium.domain.export_round_trip import (
     ROUND_TRIP_STATUS_LABELS_ZH,
@@ -73,7 +73,7 @@ def render_fidelity_report_panel(
 
     if resolved.fallback_used:
         st.warning(
-            f"本次导出使用了降级策略。"
+            "本次导出使用了降级策略。"
             + (f" 原因：{resolved.fallback_reason}" if resolved.fallback_reason else "")
         )
     elif resolved.final_fidelity == ExportFidelityLevel.FULLY_EDITABLE:

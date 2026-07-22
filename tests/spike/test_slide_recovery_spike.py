@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from archium.application.slide_recovery_service import SlideRecoveryRequest, SlideRecoveryService
 from archium.domain.slide_recovery import (
     SIMILARITY_TARGET,

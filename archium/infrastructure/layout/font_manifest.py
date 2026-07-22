@@ -14,6 +14,7 @@ import sys
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 from pathlib import Path
+
 from archium.infrastructure.layout.font_resolver import (
     CJK_FALLBACK_CHAIN,
     DEFAULT_CJK_FONT,

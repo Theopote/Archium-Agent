@@ -16,9 +16,9 @@ from archium.domain.narrative_arc import NarrativeArc, NarrativePosition
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Chapter, Presentation, Storyline
 from archium.domain.project import Project
+from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.ui.pages.flow import evaluate_stage_gate
 from archium.ui.project_progress_card import ProjectProgressSnapshot
-from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from sqlalchemy.orm import Session
 
 

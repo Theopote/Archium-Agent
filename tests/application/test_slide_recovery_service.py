@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from archium.application.slide_recovery_service import (
     SlideRecoveryRequest,
     SlideRecoveryService,

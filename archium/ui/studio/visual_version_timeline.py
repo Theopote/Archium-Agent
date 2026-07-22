@@ -48,10 +48,7 @@ def _summary_row_label(item: SceneRevisionSummary) -> str:
     if item.is_current:
         version_label = f"{version_label} 当前正式版本"
     source = timeline_source_label(item.source)
-    if item.accepted:
-        status = "已接受"
-    else:
-        status = "已拒绝"
+    status = "已接受" if item.accepted else "已拒绝"
     created = item.created_at.strftime("%m-%d %H:%M")
     return f"{version_label} · {source} · {status} · {created}"
 

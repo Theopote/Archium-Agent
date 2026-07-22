@@ -11,8 +11,8 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from archium.domain._base import DomainModel, IdentifiedModel
-from archium.domain.export_fidelity import ExportFidelityLevel, FIDELITY_LABELS_ZH
+from archium.domain._base import DomainModel
+from archium.domain.export_fidelity import FIDELITY_LABELS_ZH, ExportFidelityLevel
 from archium.domain.visual.render_scene import RenderScene
 
 RegionType = Literal[

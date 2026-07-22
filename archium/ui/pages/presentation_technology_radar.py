@@ -11,8 +11,6 @@ from archium.application.presentation_technology_radar_service import (
 from archium.domain.external_presentation_system import (
     CATEGORY_LABELS_ZH,
     RELEVANCE_LABELS_ZH,
-    ArchiumRelevance,
-    SystemCategory,
 )
 
 

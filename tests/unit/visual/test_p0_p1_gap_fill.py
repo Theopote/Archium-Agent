@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-import pytest
 from archium.application.agent_skills.audit_store import SkillAuditStore
 from archium.config.settings import Settings
 from archium.domain.agent_skill import SkillInvocationAudit

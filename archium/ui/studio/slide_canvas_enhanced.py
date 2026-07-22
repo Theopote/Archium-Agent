@@ -310,6 +310,8 @@ def _render_interactive_canvas(
         CanvasEditorUnavailableError,
         canvas_editor,
         canvas_editor_unavailable_reason,
+    )
+    from archium.ui.components.canvas_editor import (
         parse_canvas_editor_event as parse_typed_event,
     )
     from archium.ui.studio.canvas_command_bridge import (

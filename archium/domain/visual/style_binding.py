@@ -13,7 +13,7 @@ must switch DesignSystem — not bake colors into every node via SceneRevision.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -35,7 +35,7 @@ class ExplicitStyleValue(DomainModel):
 
 
 StyleBinding = Annotated[
-    Union[ThemeTokenReference, ExplicitStyleValue],
+    ThemeTokenReference | ExplicitStyleValue,
     Field(discriminator="kind"),
 ]
 

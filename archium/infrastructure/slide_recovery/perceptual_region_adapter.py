@@ -13,7 +13,6 @@ from archium.infrastructure.slide_recovery.ocr_region_detector import (
 )
 from archium.infrastructure.slide_recovery.scene_region_adapter import classify_page_kind
 from archium.infrastructure.slide_recovery.vlm_region_analyzer import (
-    VlmAnalysisResult,
     VlmRegionAnalyzer,
 )
 

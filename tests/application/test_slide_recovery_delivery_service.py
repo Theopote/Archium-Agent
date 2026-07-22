@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from archium.application.slide_recovery_delivery_service import SlideRecoveryDeliveryService
 from archium.application.visual.template_studio_service import TemplateStudioService
 from archium.config.settings import Settings
@@ -76,14 +75,13 @@ def test_export_blocked_under_strict_native_policy(
     with patch(
         "archium.application.slide_recovery_delivery_service.maybe_export_scene_pptx",
         return_value=tmp_path / "blocked.pptx",
-    ):
-        with pytest.raises(WorkflowError, match="忠实度"):
-            service.export_pptx(
-                project.id,
-                hybrid,
-                source_page_id="drawing-page",
-                policy_preset="strict_native",
-            )
+    ), pytest.raises(WorkflowError, match="忠实度"):
+        service.export_pptx(
+            project.id,
+            hybrid,
+            source_page_id="drawing-page",
+            policy_preset="strict_native",
+        )
 
 
 def test_import_creates_slide_scene_and_recovery_revision(

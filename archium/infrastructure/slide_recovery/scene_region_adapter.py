@@ -154,7 +154,6 @@ def build_render_scene_from_regions(
     page_kind: SlideRecoveryPageKind,
 ) -> tuple[RenderScene, list[UUID]]:
     """Rebuild a hybrid RenderScene from recovered regions."""
-    from archium.domain.visual.render_scene import BackgroundStyle
 
     hybrid_bitmap_ids: list[UUID] = []
     nodes: list[RenderNode] = []

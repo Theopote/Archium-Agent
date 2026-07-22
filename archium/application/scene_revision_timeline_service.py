@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
@@ -192,10 +193,8 @@ class SceneRevisionTimelineService:
             slide.presentation_id,
             layout_plan_id=saved.layout_plan_id,
         )
-        try:
+        with contextlib.suppress(MemoryError, OSError):
             self._studio_scene.render_scene_preview(slide.presentation_id, saved)
-        except (MemoryError, OSError):
-            pass
         self._session.commit()
         summary = self._summary_from_revision(entity_revision)
         return SceneRevisionRestoreResult(
@@ -221,10 +220,8 @@ class SceneRevisionTimelineService:
             slide.presentation_id,
             layout_plan_id=saved.layout_plan_id,
         )
-        try:
+        with contextlib.suppress(MemoryError, OSError):
             self._studio_scene.render_scene_preview(slide.presentation_id, saved)
-        except (MemoryError, OSError):
-            pass
         self._session.commit()
         summary = SceneRevisionSummary(
             revision_id=source_revision_id,

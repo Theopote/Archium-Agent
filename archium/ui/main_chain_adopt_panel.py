@@ -16,7 +16,6 @@ from archium.domain.main_chain_adopt import (
 )
 from archium.infrastructure.database.session import get_session
 
-
 _STATUS_LABELS_ZH = {
     AdoptLandingStatus.LANDED: "已落地",
     AdoptLandingStatus.PLATFORM: "平台内置",

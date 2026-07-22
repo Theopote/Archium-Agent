@@ -31,9 +31,9 @@ from archium.domain.visual.studio_command import (
     NodeReorderDirection,
     ReorderNodeCommand,
     ResizeNodeCommand,
+    ScenePatchAction,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
-    ScenePatchAction,
     StudioCommand,
 )
 from archium.exceptions import WorkflowError

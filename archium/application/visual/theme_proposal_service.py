@@ -170,9 +170,7 @@ class ThemeProposalService:
                 qa_by_slide.setdefault("_template_usage_brief", []).append(issue)
 
         status = ThemeProposalStatus.READY
-        if any(issue.severity == IssueSeverity.BLOCKER for issue in qa_summary):
-            status = ThemeProposalStatus.READY_WITH_WARNINGS
-        elif qa_summary:
+        if any(issue.severity == IssueSeverity.BLOCKER for issue in qa_summary) or qa_summary:
             status = ThemeProposalStatus.READY_WITH_WARNINGS
 
         proposal = ThemeChangeProposal(

@@ -226,8 +226,8 @@ def apply_canvas_commit_replace_asset_event(
     if _already_applied(slide_id, fingerprint):
         return False
     try:
-        from archium.ui.studio_service import apply_slide_visual_edit
         from archium.ui.studio.undo_stack import clear_visual_redo_stack
+        from archium.ui.studio_service import apply_slide_visual_edit
 
         clear_visual_redo_stack(slide_id)
         with get_session() as session:

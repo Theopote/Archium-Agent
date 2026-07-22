@@ -261,7 +261,7 @@ class CommentToCommandPlanner:
             if hasattr(command, "target_node_ids"):
                 updates["target_node_ids"] = [bound_node_id]
             if hasattr(command, "node_ids") and getattr(command, "node_ids", None) is not None:
-                existing = list(getattr(command, "node_ids") or [])
+                existing = list(command.node_ids or [])
                 others = [node_id for node_id in existing if node_id != bound_node_id]
                 updates["node_ids"] = [bound_node_id, *others]
             rewritten.append(command.model_copy(update=updates) if updates else command)
@@ -298,12 +298,12 @@ class CommentToCommandPlanner:
             updates: dict[str, object] = {}
             if bound_node_id not in targets:
                 if hasattr(command, "target_node_ids"):
-                    existing_targets = list(getattr(command, "target_node_ids") or [])
+                    existing_targets = list(command.target_node_ids or [])
                     updates["target_node_ids"] = [bound_node_id, *existing_targets]
                 elif hasattr(command, "node_id"):
                     updates["node_id"] = bound_node_id
             if hasattr(command, "node_ids") and getattr(command, "node_ids", None) is not None:
-                existing = list(getattr(command, "node_ids") or [])
+                existing = list(command.node_ids or [])
                 if bound_node_id not in existing:
                     updates["node_ids"] = [bound_node_id, *existing]
             rewritten.append(command.model_copy(update=updates) if updates else command)

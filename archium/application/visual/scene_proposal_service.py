@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.drawing_readability_service import parse_geometry_token
-from archium.application.visual.scene_geometry import apply_geometry_token
 from archium.application.visual.partial_edit_preservation import (
     assert_partial_edit_preservation,
 )
@@ -17,6 +16,7 @@ from archium.application.visual.scene_deterministic_qa_service import (
     ProposalSceneQAResult,
     run_proposal_scene_qa,
 )
+from archium.application.visual.scene_geometry import apply_geometry_token
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_proposal_qa import (
     compare_proposal_qa,

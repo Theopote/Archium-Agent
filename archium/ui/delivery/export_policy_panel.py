@@ -5,7 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.application.export_policy_service import export_policy_from_preset
-from archium.domain.export_fidelity import ExportPolicy, FIDELITY_LABELS_ZH
+from archium.domain.export_fidelity import ExportPolicy
 
 EXPORT_POLICY_PRESETS: dict[str, str] = {
     "strict_native": "严格原生可编辑",

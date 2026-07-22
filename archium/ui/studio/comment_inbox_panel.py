@@ -152,24 +152,22 @@ def _render_comment_row(
             help="将评论绑定的 node / 多选写入画布选中态，并高亮选区。",
         ):
             _focus_comment_on_canvas(comment, slide_snapshot=slide_snapshot)
-        if comment.status == ElementCommentStatus.NEEDS_REBASE:
-            if st.button(
-                "重新绑定到当前 Scene",
-                key=f"studio_comment_rebind_{comment.id}",
-                use_container_width=True,
-            ):
-                _rebind(comment.id)
+        if comment.status == ElementCommentStatus.NEEDS_REBASE and st.button(
+            "重新绑定到当前 Scene",
+            key=f"studio_comment_rebind_{comment.id}",
+            use_container_width=True,
+        ):
+            _rebind(comment.id)
         if comment.status in {
             ElementCommentStatus.PENDING,
             ElementCommentStatus.PROPOSED,
             ElementCommentStatus.NEEDS_REBASE,
-        }:
-            if st.button(
-                "标记已解决",
-                key=f"studio_comment_resolve_{comment.id}",
-                use_container_width=True,
-            ):
-                _resolve(comment.id)
+        } and st.button(
+            "标记已解决",
+            key=f"studio_comment_resolve_{comment.id}",
+            use_container_width=True,
+        ):
+            _resolve(comment.id)
 
 
 def _focus_comment_on_canvas(

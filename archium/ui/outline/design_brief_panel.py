@@ -154,7 +154,6 @@ def render_design_brief_panel(
 
 
 def _render_brief_editor(outline_id: UUID, brief):
-    from archium.domain.slide_design_brief import SlideDesignBrief
 
     visual_options = [key for key, _ in _PRIMARY_VISUAL_OPTIONS]
     visual_labels = {key: label for key, label in _PRIMARY_VISUAL_OPTIONS}

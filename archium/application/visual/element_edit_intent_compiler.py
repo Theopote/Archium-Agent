@@ -7,7 +7,13 @@ from uuid import UUID, uuid4
 from archium.application.visual.studio_nl_command_planner import StudioCommandPlan
 from archium.domain.visual.element_edit_intent import ElementEditIntent
 from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
-from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderNode, RenderScene, TextNode
+from archium.domain.visual.render_scene import (
+    DrawingNode,
+    ImageNode,
+    RenderNode,
+    RenderScene,
+    TextNode,
+)
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     IncreaseDrawingReadabilityCommand,

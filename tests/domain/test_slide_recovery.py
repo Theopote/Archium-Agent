@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.domain.export_fidelity import ExportFidelityLevel
 from archium.domain.slide_recovery import (
     NormalizedBox,

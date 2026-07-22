@@ -155,13 +155,7 @@ class ElementCommentService:
         if comment.scene_hash and comment.scene_hash != current_hash:
             return True
         live_revision_id = self._live_scene_revision_id(slide)
-        if (
-            live_revision_id is not None
-            and comment.scene_revision_id is not None
-            and comment.scene_revision_id != live_revision_id
-        ):
-            return True
-        return False
+        return bool(live_revision_id is not None and comment.scene_revision_id is not None and comment.scene_revision_id != live_revision_id)
 
     def mark_needs_rebase(self, comment: ElementComment) -> ElementComment:
         updated = comment.model_copy(

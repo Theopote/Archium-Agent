@@ -799,8 +799,6 @@ def restore_slide_visual_edit(session: Session, slide_id: UUID) -> object:
 
 
 def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
-    from archium.application.revision_service import RevisionService
-    from archium.application.visual.scene_history_service import SCENE_STATE_SNAPSHOT_KIND
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.application.visual.visual_history_service import VisualHistoryService

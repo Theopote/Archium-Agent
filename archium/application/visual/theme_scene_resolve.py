@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode, ThemeTokens
 
@@ -57,10 +59,8 @@ def resolve_scene_with_design_system(
         if not isinstance(node, TextNode):
             continue
         if node.color_token:
-            try:
+            with contextlib.suppress(KeyError):
                 node.color = design_system.colors.resolve(node.color_token)
-            except KeyError:
-                pass
         if node.typography_token and hasattr(design_system.typography, node.typography_token):
             token = getattr(design_system.typography, node.typography_token)
             # Only refresh size/weight/family when still token-bound (no local pin).

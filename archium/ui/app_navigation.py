@@ -30,11 +30,11 @@ def build_app_pages() -> dict[str, list[Any]]:
     from archium.ui.pages import (
         command_center,
         home,
+        presentation_technology_radar,
         project_management,
         project_mission,
         settings,
         slide_recovery,
-        presentation_technology_radar,
         studio,
         template_induction,
         template_library,

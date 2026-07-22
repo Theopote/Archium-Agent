@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from archium.application.export_round_trip_service import (
     ExportRoundTripService,
     _derive_status,

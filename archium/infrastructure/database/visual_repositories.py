@@ -16,8 +16,8 @@ from archium.domain.visual.element_comment import ElementComment
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
-from archium.domain.visual.theme_change_proposal import ThemeChangeProposal, ThemeProposalStatus
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
+from archium.domain.visual.theme_change_proposal import ThemeChangeProposal, ThemeProposalStatus
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import visual_mappers

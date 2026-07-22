@@ -7,7 +7,11 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.visual.deck_theme_apply import deck_theme_tokens_from_design_system
-from archium.domain.visual.deck_theme_tokens import DeckThemeTokens, IconStyleToken, PageDensityToken
+from archium.domain.visual.deck_theme_tokens import (
+    DeckThemeTokens,
+    IconStyleToken,
+    PageDensityToken,
+)
 from archium.domain.visual.enums import PhotoTreatment
 from archium.domain.visual.page_quality import IssueSeverity
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal, ThemeProposalStatus

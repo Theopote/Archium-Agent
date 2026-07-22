@@ -20,7 +20,6 @@ from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
     RenderScene,
-    TextNode,
     compute_scene_hash,
 )
 from archium.infrastructure.renderers.canvas_renderer import CanvasRenderer
@@ -68,7 +67,7 @@ class ExportRoundTripService:
             force_recompile=False,
         )
         scenes = [result.scene for result in scene_results]
-        scenes_by_slide = {scene.slide_id: scene for scene in scenes}
+        {scene.slide_id: scene for scene in scenes}
 
         source_hash = _combined_scene_hash(scenes)
         file_hash = export_file_hash or _file_hash(pptx)
@@ -104,7 +103,7 @@ class ExportRoundTripService:
 
             for index, scene in enumerate(scenes):
                 pptx_snap = per_slide_pptx[index] if index < len(per_slide_pptx) else None
-                source_snap = snapshot_from_scene(scene)
+                snapshot_from_scene(scene)
                 slide_result = self._validate_slide(
                     scene,
                     slide_order=index,
@@ -344,9 +343,12 @@ def _drawing_integrity_checks(scene: RenderScene) -> list[str]:
             continue
         if node.fit_mode not in {"contain", "safe_crop"}:
             issues.append(f"{node.id}:fit_mode={node.fit_mode}")
-        if node.drawing_type in {"site_plan", "floor_plan", "circulation_plan"}:
-            if not node.north_arrow_visible and not node.scale_label:
-                issues.append(f"{node.id}:missing_north_or_scale")
+        if (
+            node.drawing_type in {"site_plan", "floor_plan", "circulation_plan"}
+            and not node.north_arrow_visible
+            and not node.scale_label
+        ):
+            issues.append(f"{node.id}:missing_north_or_scale")
         if node.crop_allowed and node.fit_mode == "contain":
             issues.append(f"{node.id}:crop_allowed_with_contain")
     return issues
@@ -355,9 +357,12 @@ def _drawing_integrity_checks(scene: RenderScene) -> list[str]:
 def _citation_integrity_checks(scene: RenderScene) -> list[str]:
     issues: list[str] = []
     for node in scene.nodes:
-        if isinstance(node, ImageNode) and node.asset_origin == "reference_case":
-            if not node.caption_node_id:
-                issues.append(f"{node.id}:reference_without_caption")
+        if (
+            isinstance(node, ImageNode)
+            and node.asset_origin == "reference_case"
+            and not node.caption_node_id
+        ):
+            issues.append(f"{node.id}:reference_without_caption")
     return issues
 
 

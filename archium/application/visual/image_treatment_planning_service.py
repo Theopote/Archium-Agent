@@ -8,6 +8,7 @@ vignette). That lives in ``ImageTreatmentSpecPlanner`` +
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 
 from archium.application.visual.template_usage_brief_context import (
@@ -68,10 +69,8 @@ class ImageTreatmentPlanningService:
         if design_system is not None:
             photo_treatment = design_system.image_style.photo_treatment
         if resolved is not None:
-            try:
+            with contextlib.suppress(ValueError):
                 photo_treatment = PhotoTreatment(resolved.photo_treatment_policy)
-            except ValueError:
-                pass
 
         if is_drawing:
             fit = ImageFit.CONTAIN

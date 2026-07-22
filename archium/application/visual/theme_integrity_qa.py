@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import colorsys
+import contextlib
 import re
 
 from archium.domain.visual.design_system import DesignSystem
@@ -173,10 +174,8 @@ def _check_citation_contrast(scene: RenderScene, proposed: DesignSystem) -> list
             continue
         color = node.color
         if node.color_token:
-            try:
+            with contextlib.suppress(KeyError):
                 color = proposed.colors.resolve(node.color_token)
-            except KeyError:
-                pass
         node_ratio = _contrast_ratio(bg, color)
         if node_ratio < 3.0:
             issues.append(

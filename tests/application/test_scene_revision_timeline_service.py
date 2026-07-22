@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
-
 from archium.application.scene_revision_timeline_service import SceneRevisionTimelineService
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.domain.enums import ApprovalStatus, RevisionSource, SlideType
@@ -15,6 +13,7 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.visual_repositories import RenderSceneRepository
+from sqlalchemy.orm import Session
 
 
 def _seed_slide(db_session: Session) -> SlideSpec:

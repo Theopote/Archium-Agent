@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from archium.domain.external_presentation_system import (
-    ExternalPresentationSystem,
     RELEVANCE_LABELS_ZH,
+    ExternalPresentationSystem,
 )
 
 

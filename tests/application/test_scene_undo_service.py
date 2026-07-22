@@ -5,8 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_undo_service import SceneUndoService
 from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
@@ -22,6 +20,7 @@ from archium.infrastructure.database.visual_repositories import (
     LayoutPlanRepository,
     RenderSceneRepository,
 )
+from sqlalchemy.orm import Session
 
 
 def _seed_slide_with_plan(db_session: Session) -> tuple[SlideSpec, LayoutPlan]:

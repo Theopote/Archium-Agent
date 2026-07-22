@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from uuid import UUID
 
 from sqlalchemy.orm import Session
 

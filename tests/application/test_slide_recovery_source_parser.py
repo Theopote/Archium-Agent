@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.application.slide_recovery_source_parser import parse_source_page
 from archium.domain.visual.render_scene import ImageNode, TextNode
 from tests.fixtures.sample_files import create_sample_pdf

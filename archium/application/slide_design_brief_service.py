@@ -15,7 +15,7 @@ from archium.application.review_models import (
     SlideIntentUpdate,
 )
 from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import RevisionSource, SlideAssetBindingRole
+from archium.domain.enums import SlideAssetBindingRole
 from archium.domain.outline import OutlinePlan
 from archium.domain.slide_asset_binding import SlideAssetBinding, index_page_asset_bindings
 from archium.domain.slide_design_brief import (
@@ -26,13 +26,12 @@ from archium.domain.slide_design_brief import (
     default_drawing_policy,
     default_image_policy,
     default_protection_rules_for_page,
-    infer_primary_visual_type,
     index_design_briefs,
+    infer_primary_visual_type,
 )
 from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
-
 
 _LAYOUT_FAMILY_BY_VISUAL: dict[str, str] = {
     "drawing": "drawing_focus",

@@ -16,7 +16,7 @@ from archium.domain.visual import (
     default_presentation_design_system,
 )
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutContentType, LayoutElementRole
+from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent

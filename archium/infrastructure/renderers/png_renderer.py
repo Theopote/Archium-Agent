@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from io import BytesIO
 from pathlib import Path
-import xml.etree.ElementTree as ET
 
 from archium.application.visual.scene_fonts import (
     CJK_FALLBACK_CHAIN,
@@ -216,8 +216,7 @@ class PngRenderer:
 
     @staticmethod
     def _load_svg_via_simple_parser(path: Path, *, target_w: int, target_h: int):
-        from PIL import Image
-        from PIL import ImageDraw
+        from PIL import Image, ImageDraw
         from svg.path import parse_path
 
         scale = 2

@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.export_policy_service import ExportPolicyService
 from archium.domain.export_fidelity import ExportFidelityLevel, ExportPolicy
 from archium.domain.visual.render_scene import (

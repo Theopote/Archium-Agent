@@ -194,12 +194,11 @@ class ElementEditIntentParser:
             if rule.operation == "lock" and rule.locked is True:
                 if any(token in lowered for token in ("unlock", "解锁")):
                     continue
-            if rule.operation == "visibility" and rule.visible is False:
-                if any(
-                    token in lowered
-                    for token in ("unhide", "show", "显示", "取消隐藏")
-                ):
-                    continue
+            if rule.operation == "visibility" and rule.visible is False and any(
+                token in lowered
+                for token in ("unhide", "show", "显示", "取消隐藏")
+            ):
+                continue
             key = (rule.operation, rule.direction or rule.match_dimension)
             if key in seen_ops:
                 continue

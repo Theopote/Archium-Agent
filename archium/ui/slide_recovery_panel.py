@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from uuid import UUID
 
 import streamlit as st
@@ -288,7 +289,7 @@ def _run_export(
         st.warning("Node/PptxGenJS 不可用，已生成保真度清单但未写出 PPTX 文件。")
     elif export_result.pptx_path is not None:
         st.success(f"已导出：{export_result.pptx_path}")
-        try:
+        with contextlib.suppress(OSError):
             st.download_button(
                 "下载 PPTX",
                 data=export_result.pptx_path.read_bytes(),
@@ -296,8 +297,6 @@ def _run_export(
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 key="slide_recovery_download_pptx",
             )
-        except OSError:
-            pass
 
     manifest = export_result.manifest
     st.caption(

@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.slide_recovery_region_canvas import (
     apply_canvas_move,
     apply_canvas_resize,
@@ -13,7 +12,6 @@ from archium.application.slide_recovery_region_canvas import (
     merge_regions,
     split_region,
 )
-from archium.application.slide_recovery_region_edit_service import normalize_bbox
 from archium.domain.slide_recovery import NormalizedBox, RecoveredPageRegion
 from archium.exceptions import WorkflowError
 

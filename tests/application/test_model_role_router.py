@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from archium.application.model_role_router import ModelRoleRegistryService, ModelRoleRouter
 from archium.domain.model_roles import ModelProfile, ModelRole, ModelRoleAssignment
 from archium.exceptions import ConfigurationError

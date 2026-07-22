@@ -174,9 +174,13 @@ const CanvasEditor: React.FC = () => {
     ? args.commentAnchors
     : [];
 
+  const selectedIdsKey = selectedIdsProp.join("|");
+
   useEffect(() => {
     setLocalSelectedIds(selectedIdsProp);
-  }, [selectedIdsProp.join("|")]);
+    // Sync from Streamlit props; selectedIdsKey is the stable fingerprint of selectedIdsProp.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid resetting on new array identity each render
+  }, [selectedIdsKey]);
 
   useEffect(() => {
     const updateSize = () => {
@@ -200,12 +204,16 @@ const CanvasEditor: React.FC = () => {
     }
   }, [containerSize, dragElementId, inlineEdit, assetPicker, commentAnchors.length]);
 
+  const inlineEditElementId = inlineEdit?.elementId;
+
   useEffect(() => {
     if (inlineEdit && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.select();
     }
-  }, [inlineEdit?.elementId]);
+    // Focus when the edited element changes; inlineEdit object identity is unstable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inlineEditElementId]);
 
   const emitEvent = (event: CanvasEvent) => {
     Streamlit.setComponentValue(event);

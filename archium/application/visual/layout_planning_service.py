@@ -26,7 +26,12 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_composition import SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.enums import LayoutFamily, LayoutValidationStatus, OverflowPolicy, VisualContentType
+from archium.domain.visual.enums import (
+    LayoutFamily,
+    LayoutValidationStatus,
+    OverflowPolicy,
+    VisualContentType,
+)
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.slide_capacity_budget import (
     CAPACITY_IMPOSSIBLE_RULE,

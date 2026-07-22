@@ -6,7 +6,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from PIL import Image
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.defaults import default_presentation_design_system
@@ -14,6 +13,7 @@ from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
+from PIL import Image
 from tests.golden.visual.composition.case_builders import CompositionCaseResult
 from tests.golden.visual.composition.screenshot_baseline import (
     approve_candidate_baseline,

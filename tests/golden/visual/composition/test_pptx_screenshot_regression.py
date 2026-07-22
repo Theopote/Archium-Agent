@@ -23,7 +23,6 @@ from tests.golden.visual.composition.case_builders import build_composition_case
 from tests.golden.visual.composition.screenshot_baseline import (
     CANDIDATE_ENV,
     PPTX_VISUAL_REGRESSION_CASE_IDS,
-    UPDATE_ENV,
     candidate_mode_enabled,
     compare_screenshot_to_baseline,
     render_case_pptx_screenshot,

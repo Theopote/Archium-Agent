@@ -217,11 +217,11 @@ def _export_pptx(
             round_trip_report = None
             qa_status = qa_status
             with st.spinner("正在执行 Round-trip QA…"), get_session() as session:
-                from archium.application.export_round_trip_service import (
-                    ExportRoundTripService,
-                )
                 from archium.application.evidence_readiness_service import (
                     latest_presentation_revision_id,
+                )
+                from archium.application.export_round_trip_service import (
+                    ExportRoundTripService,
                 )
 
                 rt_revision_id = latest_presentation_revision_id(session, presentation_id)

@@ -24,8 +24,8 @@ from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     DeleteNodeCommand,
     MoveNodeCommand,
-    ResizeNodeCommand,
     ReorderNodeCommand,
+    ResizeNodeCommand,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     build_patch_action,
@@ -327,7 +327,7 @@ def test_align_nodes_uses_page_reference_for_single_node() -> None:
 def test_align_nodes_left_with_reference_node() -> None:
     left = _text_node(node_id="caption", x=4.0, y=2.0, width=1.0)
     right = _text_node(node_id="body", x=6.0, y=2.0, width=1.0)
-    scene = _scene(left, right)
+    _scene(left, right)
     updates = align_nodes([right], "left", reference=left)
     assert updates
     assert right.x == pytest.approx(4.0)

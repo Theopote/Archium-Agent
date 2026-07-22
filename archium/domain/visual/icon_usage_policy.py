@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from pydantic import Field
+
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import LayoutFamily
-from pydantic import Field
 
 
 class IconUsagePolicy(DomainModel):

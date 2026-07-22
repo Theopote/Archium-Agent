@@ -6,7 +6,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-
 from archium.application.slide_recovery_region_edit_service import (
     SlideRecoveryRegionEditService,
     extract_regions,

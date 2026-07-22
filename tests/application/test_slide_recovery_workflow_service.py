@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.application.slide_recovery_workflow_service import (
     SlideRecoveryWorkflowRequest,
     SlideRecoveryWorkflowService,

@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from archium.application.slide_recovery_region_analyzer import SlideRecoveryRegionAnalyzer
 from archium.application.slide_recovery_service import SlideRecoveryRequest, SlideRecoveryService
 from archium.domain.slide_recovery import SlideRecoveryPageKind
@@ -141,8 +140,8 @@ def test_perceptual_adapter_combines_ocr_and_vlm(tmp_path: Path) -> None:
     with patch(
         "archium.infrastructure.slide_recovery.perceptual_region_adapter.detect_text_regions"
     ) as mock_ocr:
-        from archium.infrastructure.slide_recovery.ocr_region_detector import OcrDetectionResult
         from archium.domain.slide_recovery import NormalizedBox, RecoveredPageRegion
+        from archium.infrastructure.slide_recovery.ocr_region_detector import OcrDetectionResult
 
         mock_ocr.return_value = OcrDetectionResult(
             regions=[
@@ -191,10 +190,10 @@ def test_service_raster_recovery_records_analysis_meta(tmp_path: Path) -> None:
     with patch(
         "archium.application.slide_recovery_region_analyzer.regions_from_page_image"
     ) as mock_perceptual:
+        from archium.domain.slide_recovery import NormalizedBox, RecoveredPageRegion
         from archium.infrastructure.slide_recovery.perceptual_region_adapter import (
             PerceptualAnalysisResult,
         )
-        from archium.domain.slide_recovery import NormalizedBox, RecoveredPageRegion
 
         mock_perceptual.return_value = PerceptualAnalysisResult(
             regions=[
@@ -261,7 +260,6 @@ def test_hybrid_merge_supplements_structural_text() -> None:
 def test_region_analyzer_hybrid_for_structural_pptx_with_preview(tmp_path: Path) -> None:
     pytest.importorskip("PIL")
     from PIL import Image
-    from archium.domain.visual.render_scene import TextNode
 
     image_path = tmp_path / "preview.png"
     Image.new("RGB", (800, 450), color=(255, 255, 255)).save(image_path)
@@ -292,10 +290,10 @@ def test_region_analyzer_hybrid_for_structural_pptx_with_preview(tmp_path: Path)
     with patch(
         "archium.application.slide_recovery_region_analyzer.regions_from_page_image"
     ) as mock_perceptual:
+        from archium.domain.slide_recovery import NormalizedBox, RecoveredPageRegion
         from archium.infrastructure.slide_recovery.perceptual_region_adapter import (
             PerceptualAnalysisResult,
         )
-        from archium.domain.slide_recovery import NormalizedBox, RecoveredPageRegion
 
         mock_perceptual.return_value = PerceptualAnalysisResult(
             regions=[

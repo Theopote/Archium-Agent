@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from PIL import Image
-
 from archium.domain.visual.render_scene import BackgroundStyle, ImageNode, RenderScene
 from archium.infrastructure.renderers.png_renderer import PngRenderer
+from PIL import Image
 
 
 def test_png_renderer_rasterizes_svg_icon(tmp_path: Path) -> None:

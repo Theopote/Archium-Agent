@@ -492,11 +492,7 @@ class TemplateUsageBriefService:
         candidates = []
         for layout in template.layouts:
             for slot in layout.slots:
-                if slot.role == TemplateSlotRole.SOURCE:
-                    candidates.append(slot)
-                elif slot.role == TemplateSlotRole.DECORATION and slot.y >= layout.page_height * 0.85:
-                    candidates.append(slot)
-                elif "page" in (slot.label or "").lower() or "页码" in (slot.label or ""):
+                if slot.role == TemplateSlotRole.SOURCE or slot.role == TemplateSlotRole.DECORATION and slot.y >= layout.page_height * 0.85 or "page" in (slot.label or "").lower() or "页码" in (slot.label or ""):
                     candidates.append(slot)
         if not candidates:
             evidence.append("page_number=undetected")

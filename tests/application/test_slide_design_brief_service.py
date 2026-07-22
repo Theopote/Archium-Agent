@@ -5,8 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.review_models import SlideDesignBriefUpdate
 from archium.application.slide_design_brief_service import (
     SlideDesignBriefService,
@@ -22,6 +20,7 @@ from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
 )
+from sqlalchemy.orm import Session
 
 
 def _seed_outline(session: Session) -> OutlinePlan:
