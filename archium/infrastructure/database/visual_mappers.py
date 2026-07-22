@@ -278,6 +278,9 @@ def element_comment_to_orm(
     orm.layout_element_id = domain.layout_element_id
     orm.note = domain.note
     orm.status = domain.status.value
+    orm.scene_revision_id = domain.scene_revision_id
+    orm.scene_hash = domain.scene_hash or ""
+    orm.node_snapshot_json = dict(domain.node_snapshot_json or {})
     orm.proposal_id = domain.proposal_id
     orm.created_by = domain.created_by
     orm.created_at = domain.created_at
@@ -286,6 +289,7 @@ def element_comment_to_orm(
 
 
 def element_comment_to_domain(orm: ElementCommentORM) -> ElementComment:
+    snapshot = orm.node_snapshot_json if isinstance(orm.node_snapshot_json, dict) else {}
     return ElementComment(
         id=orm.id,
         presentation_id=orm.presentation_id,
@@ -294,6 +298,9 @@ def element_comment_to_domain(orm: ElementCommentORM) -> ElementComment:
         layout_element_id=orm.layout_element_id,
         note=orm.note,
         status=ElementCommentStatus(orm.status),
+        scene_revision_id=orm.scene_revision_id,
+        scene_hash=orm.scene_hash or "",
+        node_snapshot_json=dict(snapshot),
         proposal_id=orm.proposal_id,
         created_by=orm.created_by,
         created_at=orm.created_at,

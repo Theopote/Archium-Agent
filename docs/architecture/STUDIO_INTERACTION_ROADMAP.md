@@ -449,8 +449,9 @@ const TextEditor = ({ element, onUpdate }) => {
 open-slide 式 Inspector 评论适合 Archium，但应以 Command / Patch / Proposal / QA / Revision 保留可审计性，而不是直接改渲染树。
 
 **已实现（最小闭环）**
-- 领域模型 `ElementComment`（`pending → proposed → accepted|rejected → resolved`）
+- 领域模型 `ElementComment`（`pending → proposed → needs_rebase → accepted|rejected → resolved`）
 - 选中 Layout 元素 → 映射 RenderScene `node_id` → 自然语言评论硬绑定
+- 版本钉扎：`scene_revision_id` / `scene_hash` / `node_snapshot_json`；生成提案前若与当前正式 SceneRevision 不一致 → `needs_rebase`（禁止静默应用到新版本）
 - `CommentToCommandPlanner` → `StudioCommand` → `SceneChangeProposal` → Before/After
 - 提案接受/拒绝后回写评论状态
 
@@ -458,7 +459,7 @@ open-slide 式 Inspector 评论适合 Archium，但应以 Command / Patch / Prop
 - 画布上的评论气泡 / 独立评论线程 UI
 - 多评论协作与指派
 - 复合几何指令的完整 LLM 规划（当前对「放大 / 左对齐」有关键词启发式）
-
+- `needs_rebase` 的可视化 Diff（评论时节点快照 vs 当前节点）与一键 rebind UI
 ## 全稿 Theme Token → ThemeChangeProposal（已接线）
 
 open-slide Design Panel 的全稿 Token 调节值得参考，但 Archium **禁止像网页 CSS 一样静默覆盖正式页面**。

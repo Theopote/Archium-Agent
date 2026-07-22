@@ -18,7 +18,7 @@ description: >-
 ```
 Select element (studio_selected_element_id)
   → map to RenderScene node_id
-  → ElementComment (status=pending)
+  → ElementComment (status=pending; scene_revision_id / scene_hash / node_snapshot)
   → CommentToCommandPlanner (bound_node_id)
   → StudioCommand(+)
   → SceneChangeProposal
@@ -27,13 +27,16 @@ Select element (studio_selected_element_id)
   → ElementComment status = accepted | rejected
 ```
 
+若评论时 SceneRevision / scene_hash 与当前正式版本不一致 → `needs_rebase`（禁止静默应用到新版本；可 `rebind_to_current_scene` 后重试）。
+
 ## Hard rules
 
 1. **硬绑定 `node_id`** — 有选中时禁止再用「右边第二张图」类 hint 覆盖目标
 2. **只修改绑定节点及相关必要参考**（如对齐参考 sibling）；遵守 partial-edit 合同
 3. **解析失败要明确 `unsupported_reason`** — 不可静默改错节点
 4. **无选中** — 可回退纯 NL 提案路径（`StudioNLProposalService`），并提示用户选中更稳
-5. 状态机：`pending → proposed → accepted|rejected → resolved`
+5. **版本钉扎** — 提案前校验 `scene_revision_id` / `scene_hash`；漂移则 `needs_rebase`，不可直接 apply
+6. 状态机：`pending → proposed → accepted|rejected → resolved`（旁路：`needs_rebase`）
 
 ## Agent behavior
 

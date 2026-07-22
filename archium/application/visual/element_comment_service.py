@@ -11,8 +11,9 @@ from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_proposal_service import SceneProposalService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings, get_settings
+from archium.domain.slide import SlideSpec
 from archium.domain.visual.element_comment import ElementComment, ElementCommentStatus
-from archium.domain.visual.render_scene import RenderScene
+from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -56,12 +57,17 @@ class ElementCommentService:
             raise WorkflowError("未找到当前页面。")
 
         scene = self._require_scene(slide_id)
-        if scene.node_by_id(node_id) is None:
+        node = scene.node_by_id(node_id)
+        if node is None:
             raise WorkflowError(f"绑定节点不存在：`{node_id}`")
 
         cleaned = note.strip()
         if not cleaned:
             raise WorkflowError("请输入修改描述。")
+
+        scene_revision_id = self._scene_history.latest_scene_revision_id(slide)
+        scene_hash = compute_scene_hash(scene)
+        node_snapshot = node.model_dump(mode="json")
 
         comment = ElementComment(
             presentation_id=presentation_id or slide.presentation_id,
@@ -70,6 +76,9 @@ class ElementCommentService:
             layout_element_id=layout_element_id,
             note=cleaned,
             status=ElementCommentStatus.PENDING,
+            scene_revision_id=scene_revision_id,
+            scene_hash=scene_hash,
+            node_snapshot_json=node_snapshot,
             created_by=created_by or "user",
         )
         return self._comments.save(comment)
@@ -80,10 +89,74 @@ class ElementCommentService:
     def list_for_slide(self, slide_id: UUID) -> list[ElementComment]:
         return self._comments.list_by_slide(slide_id)
 
+    def requires_rebase(
+        self,
+        comment: ElementComment,
+        *,
+        slide: SlideSpec,
+        scene: RenderScene,
+    ) -> bool:
+        """True when the formal scene moved past the comment's bound revision/hash."""
+        current_revision_id = self._scene_history.latest_scene_revision_id(slide)
+        current_hash = compute_scene_hash(scene)
+        if comment.scene_revision_id != current_revision_id:
+            return True
+        if comment.scene_hash and comment.scene_hash != current_hash:
+            return True
+        return False
+
+    def mark_needs_rebase(self, comment: ElementComment) -> ElementComment:
+        updated = comment.model_copy(
+            update={
+                "status": ElementCommentStatus.NEEDS_REBASE,
+                "proposal_id": None,
+            }
+        )
+        return self._comments.save(updated)
+
+    def rebind_to_current_scene(self, comment_id: UUID) -> ElementComment:
+        """Re-pin a needs_rebase comment to the current formal scene (same node_id)."""
+        comment = self._comments.get(comment_id)
+        if comment is None:
+            raise WorkflowError("未找到元素评论。")
+        if comment.status not in {
+            ElementCommentStatus.NEEDS_REBASE,
+            ElementCommentStatus.PENDING,
+        }:
+            raise WorkflowError(
+                f"评论状态 `{comment.status.value}` 不能重新绑定到当前 Scene。"
+            )
+
+        slide = self._presentations.get_slide(comment.slide_id)
+        if slide is None:
+            raise WorkflowError("未找到当前页面。")
+        scene = self._require_scene(comment.slide_id)
+        node = scene.node_by_id(comment.node_id)
+        if node is None:
+            raise WorkflowError(
+                f"当前 Scene 已无节点 `{comment.node_id}`，无法自动 rebase；请重新选择元素。"
+            )
+
+        rebound = comment.model_copy(
+            update={
+                "status": ElementCommentStatus.PENDING,
+                "scene_revision_id": self._scene_history.latest_scene_revision_id(slide),
+                "scene_hash": compute_scene_hash(scene),
+                "node_snapshot_json": node.model_dump(mode="json"),
+                "proposal_id": None,
+            }
+        )
+        return self._comments.save(rebound)
+
     def propose_from_comment(self, comment_id: UUID) -> tuple[ElementComment, SceneChangeProposal]:
         comment = self._comments.get(comment_id)
         if comment is None:
             raise WorkflowError("未找到元素评论。")
+        if comment.status == ElementCommentStatus.NEEDS_REBASE:
+            raise WorkflowError(
+                "评论绑定的 Scene 版本已过期（needs_rebase）。"
+                "请先重新绑定到当前正式 Scene，再生成提案。"
+            )
         if comment.status not in {
             ElementCommentStatus.PENDING,
             ElementCommentStatus.PROPOSED,
@@ -94,6 +167,19 @@ class ElementCommentService:
         if slide is None:
             raise WorkflowError("未找到当前页面。")
         scene = self._require_scene(comment.slide_id)
+
+        if self.requires_rebase(comment, slide=slide, scene=scene):
+            self.mark_needs_rebase(comment)
+            raise WorkflowError(
+                "评论创建时的 SceneRevision 与当前正式版本不一致（needs_rebase）。"
+                "请勿直接应用到新版本；请先确认节点语境后重新绑定。"
+            )
+
+        if scene.node_by_id(comment.node_id) is None:
+            self.mark_needs_rebase(comment)
+            raise WorkflowError(
+                f"绑定节点 `{comment.node_id}` 在当前 Scene 中不存在（needs_rebase）。"
+            )
 
         plan = self._planner.plan(
             comment,
@@ -149,6 +235,7 @@ class ElementCommentService:
             ElementCommentStatus.ACCEPTED,
             ElementCommentStatus.REJECTED,
             ElementCommentStatus.RESOLVED,
+            ElementCommentStatus.NEEDS_REBASE,
         }:
             # Allow manual close after review outcomes; pending/proposed go to resolved too.
             pass
@@ -177,6 +264,7 @@ class ElementCommentService:
                 ElementCommentStatus.ACCEPTED,
                 ElementCommentStatus.REJECTED,
                 ElementCommentStatus.RESOLVED,
+                ElementCommentStatus.NEEDS_REBASE,
             }:
                 synced.append(comment)
                 continue

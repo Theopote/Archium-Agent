@@ -1032,6 +1032,7 @@ class ElementCommentORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_element_comments_presentation_id", "presentation_id"),
         Index("ix_element_comments_status", "status"),
         Index("ix_element_comments_proposal_id", "proposal_id"),
+        Index("ix_element_comments_scene_revision_id", "scene_revision_id"),
     )
 
     presentation_id: Mapped[uuid.UUID] = mapped_column(
@@ -1046,6 +1047,9 @@ class ElementCommentORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     layout_element_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     note: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    scene_revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    scene_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    node_snapshot_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
     proposal_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     created_by: Mapped[str] = mapped_column(String(200), nullable=False, default="user")
 

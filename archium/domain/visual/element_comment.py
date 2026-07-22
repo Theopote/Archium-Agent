@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import Field
@@ -16,6 +16,7 @@ class ElementCommentStatus(StrEnum):
 
     PENDING = "pending"
     PROPOSED = "proposed"
+    NEEDS_REBASE = "needs_rebase"
     ACCEPTED = "accepted"
     REJECTED = "rejected"
     RESOLVED = "resolved"
@@ -24,6 +25,7 @@ class ElementCommentStatus(StrEnum):
 ElementCommentStatusLiteral = Literal[
     "pending",
     "proposed",
+    "needs_rebase",
     "accepted",
     "rejected",
     "resolved",
@@ -36,6 +38,10 @@ class ElementComment(TimestampedModel):
     Binding ``node_id`` removes the need for the planner to guess the target
     from phrases like "右边第二张图". Status advances with SceneChangeProposal
     decisions while preserving Command / Patch / Proposal / QA / Revision.
+
+    Version fields (``scene_revision_id`` / ``scene_hash`` / ``node_snapshot_json``)
+    pin the comment to the formal scene at create time. Proposing against a
+    newer revision must go through ``needs_rebase`` instead of silent apply.
     """
 
     id: UUID = Field(default_factory=new_uuid)
@@ -46,6 +52,11 @@ class ElementComment(TimestampedModel):
 
     note: str = Field(min_length=1)
     status: ElementCommentStatus = ElementCommentStatus.PENDING
+
+    # Formal scene version at comment creation (audit / rebase gate).
+    scene_revision_id: UUID | None = None
+    scene_hash: str = ""
+    node_snapshot_json: dict[str, Any] = Field(default_factory=dict)
 
     proposal_id: UUID | None = None
     created_by: str = "user"
