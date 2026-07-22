@@ -19,6 +19,14 @@ def clear_visual_redo_stack(slide_id: UUID) -> None:
     st.session_state[_visual_redo_key(slide_id)] = []
 
 
+def clear_all_visual_redo_stacks() -> None:
+    """Invalidate every slide visual redo stack (e.g. after theme accept)."""
+    prefix = "studio_visual_redo_stack_"
+    for key in list(st.session_state.keys()):
+        if isinstance(key, str) and key.startswith(prefix):
+            st.session_state[key] = []
+
+
 def push_visual_redo_revision(slide_id: UUID, revision_id: UUID) -> None:
     stack = list(st.session_state.get(_visual_redo_key(slide_id), []))
     stack.append(str(revision_id))

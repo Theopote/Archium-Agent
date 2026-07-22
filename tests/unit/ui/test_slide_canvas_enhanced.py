@@ -113,3 +113,29 @@ def test_parse_canvas_editor_event_supports_edit_text() -> None:
     assert width_percent is None
     assert height_percent is None
     assert preserve is False
+
+
+def test_parse_canvas_editor_event_supports_move_many_and_commit_text() -> None:
+    kind, element_id, *_rest = parse_canvas_editor_event(
+        {
+            "type": "moveMany",
+            "moves": [
+                {"elementId": "a", "x": 10.0, "y": 20.0},
+                {"elementId": "b", "x": 30.0, "y": 40.0},
+            ],
+        }
+    )
+    assert kind == "moveMany"
+    assert element_id is None
+
+    kind, element_id, *_rest = parse_canvas_editor_event(
+        {"type": "commitText", "elementId": "title", "text": "新标题"}
+    )
+    assert kind == "commitText"
+    assert element_id == "title"
+
+    kind, element_id, *_rest = parse_canvas_editor_event(
+        {"type": "commitReplaceAsset", "elementId": "photo", "assetId": "asset-1"}
+    )
+    assert kind == "commitReplaceAsset"
+    assert element_id == "photo"

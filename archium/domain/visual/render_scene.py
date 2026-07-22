@@ -343,11 +343,14 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
     def scene_hash_input(self) -> str:
         """Stable serialization input for content hashing.
 
-        Excludes timestamps and runtime-only ``resolved_path`` (Field exclude=True).
-        Persisted asset fields must be portable ``storage_uri`` values so the hash
-        is machine-independent.
+        Excludes identity/timestamps and runtime-only ``resolved_path``
+        (Field exclude=True) so undo/reapply (version bump, same content) still
+        matches the parent revision hash. Persisted asset fields must be portable
+        ``storage_uri`` values so the hash is machine-independent.
         """
-        return self.model_dump_json(exclude={"created_at", "updated_at"})
+        return self.model_dump_json(
+            exclude={"created_at", "updated_at", "id", "version"}
+        )
 
 
 def compute_scene_hash(scene: RenderScene) -> str:

@@ -35,7 +35,11 @@ def align_nodes(
     """Return node_id -> geometry_token for aligned positions."""
     if not nodes:
         return {}
-    if len(nodes) == 1 and alignment not in {"distribute_h", "distribute_v"}:
+    if alignment in {"distribute_h", "distribute_v", "equal_width", "equal_height"}:
+        if len(nodes) < (3 if alignment.startswith("distribute") else 2):
+            return {}
+    elif len(nodes) == 1 and reference is None:
+        # Single-node align needs an explicit reference (page box or another node).
         return {}
 
     ref = reference or _bounding_box(nodes)
@@ -115,6 +119,24 @@ def align_nodes(
                 node.y = cursor
                 updates[node.id] = geometry_token(node)
             cursor += node.height + gap
+    elif alignment == "equal_width":
+        if len(nodes) < 2:
+            return {}
+        target_width = ref.width if reference is not None else nodes[0].width
+        for node in nodes:
+            if abs(node.width - target_width) < 1e-6:
+                continue
+            node.width = target_width
+            updates[node.id] = geometry_token(node)
+    elif alignment == "equal_height":
+        if len(nodes) < 2:
+            return {}
+        target_height = ref.height if reference is not None else nodes[0].height
+        for node in nodes:
+            if abs(node.height - target_height) < 1e-6:
+                continue
+            node.height = target_height
+            updates[node.id] = geometry_token(node)
     return updates
 
 

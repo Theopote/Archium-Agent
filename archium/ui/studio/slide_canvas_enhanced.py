@@ -15,7 +15,11 @@ from archium.ui.visual_service import SlideVisualSnapshot
 
 
 def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | None, float | None, float | None, float | None, bool]:
-    """Return event kind, element id, geometry in percent, and preserve-aspect flag."""
+    """Return event kind, element id, geometry in percent, and preserve-aspect flag.
+
+    Legacy flat tuple for move/resize/select/editText. Prefer typed events from
+    ``archium.ui.components.canvas_editor.parse_canvas_editor_event`` for new kinds.
+    """
     from archium.ui.components.canvas_editor import parse_canvas_editor_event as _parse
 
     event = _parse(value)
@@ -37,6 +41,14 @@ def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | N
         )
     if event["type"] == "editText":
         return "editText", str(event["elementId"]), None, None, None, None, False
+    if event["type"] == "commitText":
+        return "commitText", str(event["elementId"]), None, None, None, None, False
+    if event["type"] == "commitReplaceAsset":
+        return "commitReplaceAsset", str(event["elementId"]), None, None, None, None, False
+    if event["type"] == "requestReplaceAsset":
+        return "requestReplaceAsset", str(event["elementId"]), None, None, None, None, False
+    if event["type"] == "moveMany":
+        return "moveMany", None, None, None, None, None, False
     return "select", event.get("elementId"), None, None, None, None, False
 
 _SEVERITY_COLORS = {
@@ -251,14 +263,47 @@ def _render_interactive_canvas(
     plan: LayoutPlan,
     preview_path: str,
     selected_element_id: str | None,
+    project_id: object | None = None,
 ) -> bool:
     from archium.ui.components.canvas_editor import (
         CanvasEditorUnavailableError,
         canvas_editor,
         canvas_editor_unavailable_reason,
+        parse_canvas_editor_event as parse_typed_event,
+    )
+    from archium.ui.studio.canvas_command_bridge import (
+        apply_canvas_commit_replace_asset_event,
+        apply_canvas_commit_text_event,
+        apply_canvas_move_event,
+        apply_canvas_move_many_event,
+        apply_canvas_resize_event,
+        canvas_component_key,
+        set_studio_selection,
     )
 
-    from archium.ui.studio.canvas_command_bridge import canvas_component_key
+    selected_ids = list(st.session_state.get("studio_selected_element_ids") or [])
+    if not selected_ids and selected_element_id:
+        selected_ids = [selected_element_id]
+
+    assets: list[dict[str, str]] = []
+    if project_id is not None:
+        try:
+            from uuid import UUID
+
+            from archium.application.asset_board_service import AssetBoardService
+            from archium.infrastructure.database.session import get_session
+
+            with get_session() as session:
+                for asset in AssetBoardService(session).list_project_assets(UUID(str(project_id))):
+                    assets.append(
+                        {
+                            "id": str(asset.id),
+                            "label": asset.filename,
+                            "storageUri": str(getattr(asset, "storage_uri", "") or asset.id),
+                        }
+                    )
+        except Exception:
+            assets = []
 
     try:
         canvas_event = canvas_editor(
@@ -266,6 +311,8 @@ def _render_interactive_canvas(
             layout_plan=plan,
             render_scene=slide_snapshot.render_scene,
             selected_element_id=selected_element_id,
+            selected_element_ids=selected_ids,
+            assets=assets,
             show_labels=True,
             show_all_borders=True,
             key=canvas_component_key(slide_snapshot.slide.id),
@@ -278,6 +325,52 @@ def _render_interactive_canvas(
         st.warning(f"交互式画布加载失败，已切换为静态预览：{exc}")
         return False
 
+    typed = parse_typed_event(canvas_event)
+    slide_id = slide_snapshot.slide.id
+
+    if isinstance(typed, dict) and typed.get("type") == "moveMany":
+        moves = [
+            (str(item["elementId"]), float(item["x"]), float(item["y"]))
+            for item in typed.get("moves", [])
+        ]
+        apply_canvas_move_many_event(slide_id=slide_id, plan=plan, moves=moves)
+        return True
+
+    if isinstance(typed, dict) and typed.get("type") == "commitText":
+        apply_canvas_commit_text_event(
+            slide_id=slide_id,
+            element_id=str(typed["elementId"]),
+            text=str(typed["text"]),
+        )
+        return True
+
+    if isinstance(typed, dict) and typed.get("type") == "commitReplaceAsset":
+        apply_canvas_commit_replace_asset_event(
+            slide_id=slide_id,
+            element_id=str(typed["elementId"]),
+            asset_id=str(typed["assetId"]),
+        )
+        return True
+
+    if isinstance(typed, dict) and typed.get("type") == "requestReplaceAsset":
+        set_studio_selection([str(typed["elementId"])])
+        st.session_state["studio_focus_asset_replace"] = str(typed["elementId"])
+        st.rerun()
+        return True
+
+    if isinstance(typed, dict) and typed.get("type") == "select":
+        ids = list(typed.get("elementIds") or [])
+        if not ids and typed.get("elementId"):
+            ids = [str(typed["elementId"])]
+        current = list(st.session_state.get("studio_selected_element_ids") or [])
+        if not current and selected_element_id:
+            current = [selected_element_id]
+        if ids != current:
+            set_studio_selection(ids)
+            st.rerun()
+        st.caption(_preview_caption(slide_snapshot.preview_kind))
+        return True
+
     (
         event_kind,
         element_id,
@@ -288,8 +381,8 @@ def _render_interactive_canvas(
         preserve_aspect_ratio,
     ) = parse_canvas_editor_event(canvas_event)
     if event_kind == "move" and element_id and x_percent is not None and y_percent is not None:
-        _handle_canvas_move(
-            slide_id=slide_snapshot.slide.id,
+        apply_canvas_move_event(
+            slide_id=slide_id,
             plan=plan,
             element_id=element_id,
             x_percent=x_percent,
@@ -305,8 +398,8 @@ def _render_interactive_canvas(
         and width_percent is not None
         and height_percent is not None
     ):
-        _handle_canvas_resize(
-            slide_id=slide_snapshot.slide.id,
+        apply_canvas_resize_event(
+            slide_id=slide_id,
             plan=plan,
             element_id=element_id,
             x_percent=x_percent,
@@ -318,12 +411,8 @@ def _render_interactive_canvas(
         return True
 
     if event_kind == "editText" and element_id:
-        st.session_state["studio_selected_element_id"] = element_id
+        set_studio_selection([element_id])
         st.session_state["studio_focus_text_edit"] = element_id
-        st.rerun()
-
-    if event_kind == "select" and element_id != selected_element_id:
-        st.session_state["studio_selected_element_id"] = element_id
         st.rerun()
 
     st.caption(_preview_caption(slide_snapshot.preview_kind))
@@ -335,6 +424,7 @@ def render_slide_canvas(
     slide_snapshot: SlideVisualSnapshot | None,
     advanced: bool,
     use_interactive_canvas: bool = True,
+    project_id: object | None = None,
 ) -> None:
     """Render the selected slide preview area."""
     st.markdown("**页面预览**")
@@ -375,6 +465,7 @@ def render_slide_canvas(
             plan=plan,
             preview_path=preview_path,
             selected_element_id=selected_element_id_str,
+            project_id=project_id,
         )
 
     if not rendered_interactive:

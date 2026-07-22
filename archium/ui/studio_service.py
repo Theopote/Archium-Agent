@@ -431,15 +431,18 @@ def accept_theme_proposal(
 ):
     from archium.application.visual.theme_proposal_service import ThemeProposalService
     from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
+    from archium.ui.studio.undo_stack import clear_all_visual_redo_stacks
 
     if not isinstance(proposal, ThemeChangeProposal):
         raise WorkflowError("无效的风格提案。")
     settings = _resolve_runtime_settings(None)
-    return ThemeProposalService(session, settings=settings).accept_proposal(
+    result = ThemeProposalService(session, settings=settings).accept_proposal(
         proposal,
         notes=notes,
         allow_blockers=allow_blockers,
     )
+    clear_all_visual_redo_stacks()
+    return result
 
 
 def reject_theme_proposal(session: Session, proposal: object, *, notes: str = ""):
@@ -582,6 +585,39 @@ def apply_slide_element_move(
         x=x,
         y=y,
     )
+
+
+def apply_slide_element_moves(
+    session: Session,
+    slide_id: UUID,
+    *,
+    moves: list[tuple[str, float, float]],
+) -> object:
+    """Batch-move layout elements (one Scene revision)."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).move_layout_elements(slide_id, moves=moves)
+
+
+def apply_slide_element_text(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    text: str,
+) -> object:
+    """Rewrite element text via Studio command chain (canvas inline edit)."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).rewrite_layout_element_text(slide_id, element_id=element_id, new_text=text)
 
 
 def apply_slide_element_resize(

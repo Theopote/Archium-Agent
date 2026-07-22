@@ -25,7 +25,9 @@ from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     DeleteNodeCommand,
     MoveNodeCommand,
+    MoveNodesCommand,
     NodeAlignment,
+    NodeMoveTarget,
     NodeReorderDirection,
     ReorderNodeCommand,
     ResizeNodeCommand,
@@ -73,7 +75,7 @@ class StudioSceneEditService:
 
     def apply_command(self, slide_id: UUID, command: StudioCommand) -> SceneEditResult:
         slide, plan, scene = self._require_scene_context(slide_id)
-        parent_revision_id = SceneHistoryService(self._session).latest_scene_revision_id(slide)
+        parent_revision_id = self._parent_revision_for_live_scene(slide)
 
         if plan is not None:
             self._visual_history.record_state(
@@ -150,6 +152,29 @@ class StudioSceneEditService:
         )
         return self.apply_command(slide.id, command)
 
+    def move_layout_elements(
+        self,
+        slide_id: UUID,
+        *,
+        moves: list[tuple[str, float, float]],
+    ) -> SceneEditResult:
+        """Batch-move layout elements (one revision). ``moves`` is (element_id, x, y)."""
+        slide = self._require_slide(slide_id)
+        targets: list[NodeMoveTarget] = []
+        node_ids: list[str] = []
+        for element_id, x, y in moves:
+            node_id = self._resolve_node_id(slide_id, element_id)
+            node_ids.append(node_id)
+            targets.append(NodeMoveTarget(node_id=node_id, x=x, y=y))
+        command = MoveNodesCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=node_ids,
+            moves=targets,
+            reason="move elements",
+        )
+        return self.apply_command(slide.id, command)
+
     def resize_layout_element(
         self,
         slide_id: UUID,
@@ -186,6 +211,27 @@ class StudioSceneEditService:
             target_node_ids=[node_id],
             node_id=node_id,
             reason="delete element",
+        )
+        return self.apply_command(slide.id, command)
+
+    def rewrite_layout_element_text(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        new_text: str,
+    ) -> SceneEditResult:
+        from archium.domain.visual.studio_command import RewriteTextCommand
+
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        command = RewriteTextCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            node_id=node_id,
+            new_text=new_text,
+            reason="canvas rewrite text",
         )
         return self.apply_command(slide.id, command)
 
@@ -316,9 +362,22 @@ class StudioSceneEditService:
         presentation = self._presentations.get_presentation(slide.presentation_id)
         return presentation.project_id if presentation is not None else None
 
+    def _parent_revision_for_live_scene(self, slide: SlideSpec) -> UUID | None:
+        """Parent new edits from the revision matching live scene (branch after undo)."""
+        from archium.application.visual.scene_undo_service import SceneUndoService
+
+        live_id = SceneUndoService(self._session, settings=self._settings).revision_id_for_live_scene(
+            slide
+        )
+        if live_id is not None:
+            return live_id
+        return self._scene_history.latest_scene_revision_id(slide)
+
 
 def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> LayoutPlan:
-    """Mirror scene node geometry back to linked layout elements."""
+    """Mirror scene node geometry (and text) back to linked layout elements."""
+    from archium.domain.visual.render_scene import TextNode
+
     patched = plan.model_copy(deep=True)
     visible_layout_ids: set[str] = set()
     for element in patched.elements:
@@ -334,13 +393,21 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
         element.z_index = node.z_index
         element.locked = node.locked
         element.lock_scopes = _layout_lock_scopes(node.lock_scopes)
+        if isinstance(node, TextNode):
+            element.text_content = node.text
         visible_layout_ids.add(element.id)
-    patched.elements = [element for element in patched.elements if element.id in visible_layout_ids]
-    if patched.reading_order:
-        patched.reading_order = [
-            element_id for element_id in patched.reading_order if element_id in visible_layout_ids
-        ]
-    return patched
+    next_elements = [element for element in patched.elements if element.id in visible_layout_ids]
+    next_reading_order = [
+        element_id
+        for element_id in (patched.reading_order or [])
+        if element_id in visible_layout_ids
+    ]
+    return patched.model_copy(
+        update={
+            "elements": next_elements,
+            "reading_order": next_reading_order,
+        }
+    )
 
 
 def _layout_lock_scopes(raw_scopes: list[str]) -> list[ElementLockScope]:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.orm import Session
 
 from archium.application.visual.scene_history_service import SceneHistoryService
@@ -158,3 +159,73 @@ def test_scene_undo_reverts_canvas_move(db_session: Session) -> None:
     assert moved is not None
     assert moved.x == 3.0
     assert moved.y == 2.0
+
+
+def test_undo_then_new_edit_branches_from_live_parent(db_session: Session) -> None:
+    """v10→move→v11→resize→v12→undo→v11→move→v13 parents v11; v12 kept."""
+    slide, plan = _seed_slide_with_plan(db_session)
+    history = SceneHistoryService(db_session)
+    edit = StudioSceneEditService(db_session)
+    undo = SceneUndoService(db_session)
+
+    revisions = history.list_slide_scene_revisions(slide)
+    v10 = revisions[0]
+
+    edit.move_layout_element(slide.id, element_id="title", x=3.0, y=2.0)
+    revisions = history.list_slide_scene_revisions(slide)
+    v11 = revisions[0]
+    assert str(v11.snapshot.get("parent_revision_id")) == str(v10.id)
+
+    edit.resize_layout_element(
+        slide.id,
+        element_id="title",
+        x=3.0,
+        y=2.0,
+        width=3.0,
+        height=1.0,
+    )
+    revisions = history.list_slide_scene_revisions(slide)
+    v12 = revisions[0]
+    assert str(v12.snapshot.get("parent_revision_id")) == str(v11.id)
+
+    _result, redo_v12 = undo.undo(slide)
+    assert redo_v12 == v12.id
+    live = RenderSceneRepository(db_session).get_by_layout_plan(plan.id)
+    assert live is not None
+    node = live.node_by_layout_element_id("title")
+    assert node is not None
+    assert node.x == pytest.approx(3.0)
+    assert node.width == pytest.approx(2.0)
+    assert undo.revision_id_for_live_scene(slide) == v11.id
+
+    edit.move_layout_element(slide.id, element_id="title", x=4.5, y=2.5)
+    revisions = history.list_slide_scene_revisions(slide)
+    v13 = revisions[0]
+    assert v13.id != v12.id
+    assert str(v13.snapshot.get("parent_revision_id")) == str(v11.id)
+    # Chronological prior sibling remains addressable.
+    assert any(item.id == v12.id for item in revisions)
+
+    # Undo from branched tip follows parent (v11), not chronological neighbor (v12).
+    undo.undo(slide)
+    assert undo.revision_id_for_live_scene(slide) == v11.id
+    live_after = RenderSceneRepository(db_session).get_by_layout_plan(plan.id)
+    assert live_after is not None
+    restored = live_after.node_by_layout_element_id("title")
+    assert restored is not None
+    assert restored.x == pytest.approx(3.0)
+    assert restored.y == pytest.approx(2.0)
+
+
+def test_batch_move_creates_single_revision(db_session: Session) -> None:
+    slide, _plan = _seed_slide_with_plan(db_session)
+    history = SceneHistoryService(db_session)
+    before = len(history.list_slide_scene_revisions(slide))
+    StudioSceneEditService(db_session).move_layout_elements(
+        slide.id,
+        moves=[("title", 2.0, 2.0)],
+    )
+    after = history.list_slide_scene_revisions(slide)
+    assert len(after) == before + 1
+    assert after[0].snapshot.get("commands")
+    assert after[0].snapshot["commands"][0]["command_type"] == "move_nodes"

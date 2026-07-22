@@ -1,4 +1,10 @@
-"""Image / drawing treatment planning from DesignSystem + TemplateUsageBrief."""
+"""Image / drawing **layout** treatment planning from DesignSystem + TemplateUsageBrief.
+
+This service only decides fit/crop *policy* and drawing chrome flags for layout.
+It is **not** the Sprint 3 ImageDerivative pipeline (Sharp / focal point /
+safe_normalize / presentation_unify pixels). See
+``archium.domain.visual.image_derivative`` (NOT IMPLEMENTED).
+"""
 
 from __future__ import annotations
 

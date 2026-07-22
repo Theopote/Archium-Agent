@@ -333,6 +333,17 @@ def test_align_nodes_left_with_reference_node() -> None:
     assert right.x == pytest.approx(4.0)
 
 
+def test_align_nodes_equal_width_and_height() -> None:
+    a = _text_node(node_id="a", x=1.0, y=1.0, width=2.0, height=0.5)
+    b = _text_node(node_id="b", x=4.0, y=1.0, width=3.0, height=1.5)
+    updates_w = align_nodes([a, b], "equal_width", reference=a)
+    assert updates_w
+    assert b.width == pytest.approx(2.0)
+    updates_h = align_nodes([a, b], "equal_height", reference=a)
+    assert updates_h
+    assert b.height == pytest.approx(0.5)
+
+
 def test_sync_layout_geometry_from_scene() -> None:
     slide_id = uuid4()
     plan = LayoutPlan(
@@ -357,7 +368,7 @@ def test_sync_layout_geometry_from_scene() -> None:
             ),
             LayoutElement(
                 id="body",
-                role=LayoutElementRole.BODY,
+                role=LayoutElementRole.BODY_TEXT,
                 content_type=LayoutContentType.TEXT,
                 text_content="正文",
                 x=1.0,

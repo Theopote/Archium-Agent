@@ -92,9 +92,19 @@ NodeAlignment = Literal[
     "bottom",
     "distribute_h",
     "distribute_v",
+    "equal_width",
+    "equal_height",
 ]
 
 NodeReorderDirection = Literal["front", "back", "forward", "backward"]
+
+
+class NodeMoveTarget(DomainModel):
+    """Absolute position for one node inside a batch move."""
+
+    node_id: str = Field(min_length=1)
+    x: float
+    y: float
 
 
 class MoveNodeCommand(StudioCommandBase):
@@ -104,6 +114,13 @@ class MoveNodeCommand(StudioCommandBase):
     node_id: str = Field(min_length=1)
     x: float
     y: float
+
+
+class MoveNodesCommand(StudioCommandBase):
+    """Move multiple render nodes in one revision (multi-select drag)."""
+
+    command_type: Literal["move_nodes"] = "move_nodes"
+    moves: list[NodeMoveTarget] = Field(min_length=1)
 
 
 class ResizeNodeCommand(StudioCommandBase):
@@ -176,6 +193,7 @@ StudioCommand = Annotated[
     | ReplaceDrawingCommand
     | IncreaseDrawingReadabilityCommand
     | MoveNodeCommand
+    | MoveNodesCommand
     | ResizeNodeCommand
     | DeleteNodeCommand
     | SetNodeLockCommand

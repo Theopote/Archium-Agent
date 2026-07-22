@@ -344,6 +344,9 @@ def _accept_proposal(
                 current_scene=current_scene,
             )
         clear_proposal(slide.id)
+        from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+        clear_visual_redo_stack(slide.id)
         status_label = result.proposal.status.value
         st.success(f"提案已接受（{status_label}），Scene Revision 已保存。")
         st.rerun()

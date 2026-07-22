@@ -413,29 +413,126 @@ def _render_element_properties(
             st.write(f"裁切策略：`{element.crop_policy.value}`")
 
     if not element_locked:
+        multi_ids = [
+            item
+            for item in (st.session_state.get("studio_selected_element_ids") or [element.id])
+            if isinstance(item, str) and plan.element_by_id(item) is not None
+        ]
+        if len(multi_ids) < 2:
+            multi_ids = [element.id]
+
+        if len(multi_ids) >= 2:
+            st.caption(f"多选 {len(multi_ids)} 个元素：对齐 / 分布 / 等宽高")
+            row1 = st.columns(3)
+            with row1[0]:
+                if st.button(
+                    "左对齐",
+                    use_container_width=True,
+                    key=f"studio_multi_align_left_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "left")
+            with row1[1]:
+                if st.button(
+                    "水平居中",
+                    use_container_width=True,
+                    key=f"studio_multi_align_center_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "center")
+            with row1[2]:
+                if st.button(
+                    "右对齐",
+                    use_container_width=True,
+                    key=f"studio_multi_align_right_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "right")
+            row2 = st.columns(3)
+            with row2[0]:
+                if st.button(
+                    "顶对齐",
+                    use_container_width=True,
+                    key=f"studio_multi_align_top_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "top")
+            with row2[1]:
+                if st.button(
+                    "垂直居中",
+                    use_container_width=True,
+                    key=f"studio_multi_align_middle_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "middle")
+            with row2[2]:
+                if st.button(
+                    "底对齐",
+                    use_container_width=True,
+                    key=f"studio_multi_align_bottom_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "bottom")
+            row3 = st.columns(2)
+            with row3[0]:
+                if st.button(
+                    "水平分布",
+                    use_container_width=True,
+                    key=f"studio_multi_dist_h_{slide_snapshot.slide.id}",
+                    disabled=len(multi_ids) < 3,
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "distribute_h")
+            with row3[1]:
+                if st.button(
+                    "垂直分布",
+                    use_container_width=True,
+                    key=f"studio_multi_dist_v_{slide_snapshot.slide.id}",
+                    disabled=len(multi_ids) < 3,
+                ):
+                    _run_align(slide_snapshot.slide.id, multi_ids, "distribute_v")
+            row4 = st.columns(2)
+            with row4[0]:
+                if st.button(
+                    "等宽",
+                    use_container_width=True,
+                    key=f"studio_multi_eq_w_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(
+                        slide_snapshot.slide.id,
+                        multi_ids,
+                        "equal_width",
+                        reference_element_id=element.id,
+                    )
+            with row4[1]:
+                if st.button(
+                    "等高",
+                    use_container_width=True,
+                    key=f"studio_multi_eq_h_{slide_snapshot.slide.id}",
+                ):
+                    _run_align(
+                        slide_snapshot.slide.id,
+                        multi_ids,
+                        "equal_height",
+                        reference_element_id=element.id,
+                    )
+
         align_cols = st.columns(3)
         with align_cols[0]:
             if st.button(
-                "左对齐",
+                "左对齐页面",
                 use_container_width=True,
                 key=f"studio_align_left_{slide_snapshot.slide.id}_{element.id}",
             ):
                 _run_align(slide_snapshot.slide.id, [element.id], "left")
         with align_cols[1]:
             if st.button(
-                "居中",
+                "居中页面",
                 use_container_width=True,
                 key=f"studio_align_center_{slide_snapshot.slide.id}_{element.id}",
             ):
                 _run_align(slide_snapshot.slide.id, [element.id], "center")
         with align_cols[2]:
             if st.button(
-                "右对齐",
+                "右对齐页面",
                 use_container_width=True,
                 key=f"studio_align_right_{slide_snapshot.slide.id}_{element.id}",
             ):
                 _run_align(slide_snapshot.slide.id, [element.id], "right")
-        st.caption("左/中/右对齐以整页为参考；可将其他未锁定元素对齐到当前元素。")
+        st.caption("单选时左/中/右以整页为参考；多选时用上方批量工具。")
         other_ids = [
             item.id
             for item in plan.elements

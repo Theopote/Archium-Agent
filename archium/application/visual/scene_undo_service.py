@@ -13,9 +13,10 @@ from archium.application.visual.scene_history_service import (
     SceneHistoryService,
 )
 from archium.config.settings import Settings, get_settings
+from archium.domain.revision import EntityRevision
 from archium.domain.scene_revision_summary import SceneRevisionRestoreResult
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
+from archium.domain.visual.render_scene import compute_scene_hash
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.visual_repositories import RenderSceneRepository
 
@@ -48,10 +49,10 @@ class SceneUndoService:
         if live_scene is None:
             return 0
         live_hash = compute_scene_hash(live_scene)
-        current_index = self._revision_index_for_hash(revisions, live_hash)
-        if current_index is None:
+        current = self._revision_for_hash(revisions, live_hash)
+        if current is None:
             return 0
-        return len(revisions) - current_index - 1
+        return self._parent_chain_depth(current, revisions)
 
     def current_revision_id(self, slide: SlideSpec) -> UUID | None:
         summaries = self._timeline.list_summaries(slide, include_rejected_proposals=False)
@@ -73,11 +74,8 @@ class SceneUndoService:
         if live_scene is None:
             return None
         live_hash = compute_scene_hash(live_scene)
-        index = self._revision_index_for_hash(revisions, live_hash)
-        if index is None:
-            return None
-        revision = revisions[index]
-        return revision.id
+        current = self._revision_for_hash(revisions, live_hash)
+        return current.id if current is not None else None
 
     def undo(self, slide: SlideSpec) -> tuple[SceneRevisionRestoreResult, UUID | None]:
         revisions = self._scene_history.list_slide_scene_revisions(slide)
@@ -89,14 +87,16 @@ class SceneUndoService:
         if live_scene is None or len(revisions) < 2:
             raise WorkflowError("没有可撤销的 Scene 编辑。")
         live_hash = compute_scene_hash(live_scene)
-        current_index = self._revision_index_for_hash(revisions, live_hash)
-        if current_index is None or current_index >= len(revisions) - 1:
+        current = self._revision_for_hash(revisions, live_hash)
+        if current is None:
             raise WorkflowError("没有可撤销的 Scene 编辑。")
-        parent_revision = revisions[current_index + 1]
+        parent_revision = self._parent_revision(current, revisions)
+        if parent_revision is None:
+            raise WorkflowError("没有可撤销的 Scene 编辑。")
         parent_scene = SceneHistoryService.scene_from_revision(parent_revision)
         if parent_scene is None:
             raise WorkflowError("没有可撤销的 Scene 编辑。")
-        redo_revision_id = revisions[current_index].id
+        redo_revision_id = current.id
         result = self._timeline.reapply_scene_state(
             slide=slide,
             scene=parent_scene,
@@ -127,12 +127,63 @@ class SceneUndoService:
         return revision is not None and revision.snapshot.get("kind") == SCENE_STATE_SNAPSHOT_KIND
 
     @staticmethod
+    def _revision_for_hash(
+        revisions: list[EntityRevision],
+        scene_hash: str,
+    ) -> EntityRevision | None:
+        for revision in revisions:
+            scene = SceneHistoryService.scene_from_revision(revision)
+            if scene is not None and compute_scene_hash(scene) == scene_hash:
+                return revision
+        return None
+
+    @staticmethod
     def _revision_index_for_hash(
         revisions: list[object],
         scene_hash: str,
     ) -> int | None:
+        """Backward-compatible index lookup (newest-first lists)."""
         for index, revision in enumerate(revisions):
             scene = SceneHistoryService.scene_from_revision(revision)  # type: ignore[arg-type]
             if scene is not None and compute_scene_hash(scene) == scene_hash:
                 return index
         return None
+
+    @staticmethod
+    def _parent_revision(
+        current: EntityRevision,
+        revisions: list[EntityRevision],
+    ) -> EntityRevision | None:
+        """Resolve undo parent via snapshot parent_revision_id, else chronological older."""
+        by_id = {revision.id: revision for revision in revisions}
+        raw_parent = current.snapshot.get("parent_revision_id")
+        if raw_parent:
+            parent = by_id.get(UUID(str(raw_parent)))
+            if parent is not None:
+                return parent
+        # Legacy snapshots without parent: walk newest-first list toward older entries.
+        try:
+            index = next(i for i, item in enumerate(revisions) if item.id == current.id)
+        except StopIteration:
+            return None
+        if index + 1 >= len(revisions):
+            return None
+        return revisions[index + 1]
+
+    @classmethod
+    def _parent_chain_depth(
+        cls,
+        current: EntityRevision,
+        revisions: list[EntityRevision],
+    ) -> int:
+        steps = 0
+        cursor = current
+        seen: set[UUID] = set()
+        while True:
+            parent = cls._parent_revision(cursor, revisions)
+            if parent is None or parent.id in seen:
+                break
+            seen.add(parent.id)
+            steps += 1
+            cursor = parent
+        return steps

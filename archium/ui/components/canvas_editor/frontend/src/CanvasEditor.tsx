@@ -2,12 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 
 /**
- * Canvas Editor Component for Archium Studio
+ * Canvas Editor — Studio Essential Editing V1
  *
- * Features:
- * - Click to select elements
- * - Drag unlocked elements to reposition
- * - Hover to highlight elements
+ * pointermove → local preview only (no Streamlit traffic)
+ * pointerup   → one Command event (move / moveMany / resize / commitText / …)
  */
 
 interface Element {
@@ -22,9 +20,19 @@ interface Element {
   text_content?: string;
 }
 
+interface AssetOption {
+  id: string;
+  label: string;
+  storageUri?: string;
+}
+
 type CanvasEvent =
-  | { type: "select"; elementId: string | null }
+  | { type: "select"; elementId: string | null; elementIds?: string[] }
   | { type: "move"; elementId: string; x: number; y: number }
+  | {
+      type: "moveMany";
+      moves: Array<{ elementId: string; x: number; y: number }>;
+    }
   | {
       type: "resize";
       elementId: string;
@@ -34,7 +42,10 @@ type CanvasEvent =
       height: number;
       preserveAspectRatio?: boolean;
     }
-  | { type: "editText"; elementId: string };
+  | { type: "editText"; elementId: string }
+  | { type: "commitText"; elementId: string; text: string }
+  | { type: "commitReplaceAsset"; elementId: string; assetId: string }
+  | { type: "requestReplaceAsset"; elementId: string };
 
 const ROLE_COLORS: Record<string, { border: string; background: string; label: string }> = {
   HERO_VISUAL: {
@@ -67,11 +78,40 @@ const ROLE_COLORS: Record<string, { border: string; background: string; label: s
 const DRAG_THRESHOLD_PX = 4;
 const GEOMETRY_EPSILON = 0.05;
 
+const isTextContent = (contentType?: string) =>
+  (contentType || "").toLowerCase() === "text";
+const isImageContent = (contentType?: string) =>
+  (contentType || "").toLowerCase() === "image";
+
 const CanvasEditor: React.FC = () => {
   const [hoverElementId, setHoverElementId] = useState<string | null>(null);
+  const [localSelectedIds, setLocalSelectedIds] = useState<string[]>([]);
   const [dragElementId, setDragElementId] = useState<string | null>(null);
-  const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
+  const [dragPreviewById, setDragPreviewById] = useState<Record<string, { x: number; y: number }>>(
+    {},
+  );
   const [resizePreview, setResizePreview] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [marquee, setMarquee] = useState<{
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+  } | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{
+    elementId: string;
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [assetPicker, setAssetPicker] = useState<{
+    elementId: string;
     x: number;
     y: number;
     width: number;
@@ -80,10 +120,13 @@ const CanvasEditor: React.FC = () => {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dragStateRef = useRef<{
-    elementId: string;
+    elementIds: string[];
+    anchorId: string;
     startClientX: number;
     startClientY: number;
+    startPositions: Record<string, { x: number; y: number }>;
     moved: boolean;
   } | null>(null);
   const resizeStateRef = useRef<{
@@ -96,13 +139,28 @@ const CanvasEditor: React.FC = () => {
     currentHeight: number;
     preserveAspectRatio: boolean;
   } | null>(null);
+  const marqueeStateRef = useRef<{
+    startX: number;
+    startY: number;
+    additive: boolean;
+  } | null>(null);
 
   const args = (window as any).streamlitArgs;
   const imageUrl: string = args?.imageUrl || "";
   const elements: Element[] = args?.elements || [];
   const selectedId: string | null = args?.selectedId || null;
+  const selectedIdsProp: string[] = Array.isArray(args?.selectedIds)
+    ? args.selectedIds.map(String)
+    : selectedId
+      ? [selectedId]
+      : [];
   const showLabels: boolean = args?.showLabels ?? true;
   const showAllBorders: boolean = args?.showAllBorders ?? true;
+  const assets: AssetOption[] = Array.isArray(args?.assets) ? args.assets : [];
+
+  useEffect(() => {
+    setLocalSelectedIds(selectedIdsProp);
+  }, [selectedIdsProp.join("|")]);
 
   useEffect(() => {
     const updateSize = () => {
@@ -124,10 +182,28 @@ const CanvasEditor: React.FC = () => {
       const height = imageRef.current.offsetHeight + 40;
       Streamlit.setFrameHeight(height);
     }
-  }, [containerSize, dragElementId]);
+  }, [containerSize, dragElementId, inlineEdit, assetPicker]);
+
+  useEffect(() => {
+    if (inlineEdit && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+    }
+  }, [inlineEdit?.elementId]);
 
   const emitEvent = (event: CanvasEvent) => {
     Streamlit.setComponentValue(event);
+  };
+
+  const selectedIds = localSelectedIds.length ? localSelectedIds : selectedIdsProp;
+
+  const emitSelection = (ids: string[]) => {
+    setLocalSelectedIds(ids);
+    emitEvent({
+      type: "select",
+      elementId: ids[0] ?? null,
+      elementIds: ids,
+    });
   };
 
   const percentFromClient = (clientX: number, clientY: number) => {
@@ -156,10 +232,35 @@ const CanvasEditor: React.FC = () => {
     return null;
   };
 
+  const elementsInRect = (x0: number, y0: number, x1: number, y1: number): string[] => {
+    const left = Math.min(x0, x1);
+    const right = Math.max(x0, x1);
+    const top = Math.min(y0, y1);
+    const bottom = Math.max(y0, y1);
+    return elements
+      .filter((element) => {
+        const ex1 = element.x + element.width;
+        const ey1 = element.y + element.height;
+        return element.x < right && ex1 > left && element.y < bottom && ey1 > top;
+      })
+      .map((element) => element.id);
+  };
+
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
 
     const { x, y } = percentFromClient(event.clientX, event.clientY);
+    const activeMarquee = marqueeStateRef.current;
+    if (activeMarquee) {
+      setMarquee({
+        x0: activeMarquee.startX,
+        y0: activeMarquee.startY,
+        x1: x,
+        y1: y,
+      });
+      return;
+    }
+
     const activeResize = resizeStateRef.current;
     if (activeResize) {
       let nextWidth = Math.max(4, Math.min(100 - activeResize.startX, x - activeResize.startX));
@@ -185,20 +286,27 @@ const CanvasEditor: React.FC = () => {
     }
 
     const activeDrag = dragStateRef.current;
-
     if (activeDrag) {
       const deltaX = event.clientX - activeDrag.startClientX;
       const deltaY = event.clientY - activeDrag.startClientY;
       if (Math.abs(deltaX) > DRAG_THRESHOLD_PX || Math.abs(deltaY) > DRAG_THRESHOLD_PX) {
         activeDrag.moved = true;
       }
-      const element = elements.find((item) => item.id === activeDrag.elementId);
-      if (element) {
-        const previewX = Math.max(0, Math.min(100 - element.width, x - element.width / 2));
-        const previewY = Math.max(0, Math.min(100 - element.height, y - element.height / 2));
-        setDragElementId(activeDrag.elementId);
-        setDragPreview({ x: previewX, y: previewY });
+      const rect = containerRef.current.getBoundingClientRect();
+      const dxPercent = (deltaX / rect.width) * 100;
+      const dyPercent = (deltaY / rect.height) * 100;
+      const nextPreview: Record<string, { x: number; y: number }> = {};
+      for (const id of activeDrag.elementIds) {
+        const element = elements.find((item) => item.id === id);
+        const start = activeDrag.startPositions[id];
+        if (!element || !start) continue;
+        nextPreview[id] = {
+          x: Math.max(0, Math.min(100 - element.width, start.x + dxPercent)),
+          y: Math.max(0, Math.min(100 - element.height, start.y + dyPercent)),
+        };
       }
+      setDragElementId(activeDrag.anchorId);
+      setDragPreviewById(nextPreview);
       return;
     }
 
@@ -206,38 +314,49 @@ const CanvasEditor: React.FC = () => {
     setHoverElementId(elementId);
   };
 
-  const finishDrag = (event: MouseEvent) => {
+  const finishDrag = (_event: MouseEvent) => {
     const activeDrag = dragStateRef.current;
     dragStateRef.current = null;
+    const preview = { ...dragPreviewById };
     setDragElementId(null);
-    setDragPreview(null);
+    setDragPreviewById({});
 
     if (!activeDrag) return;
 
     if (activeDrag.moved) {
-      const { x, y } = percentFromClient(event.clientX, event.clientY);
-      const element = elements.find((item) => item.id === activeDrag.elementId);
-      if (element) {
-        const nextX = Math.max(0, Math.min(100 - element.width, x - element.width / 2));
-        const nextY = Math.max(0, Math.min(100 - element.height, y - element.height / 2));
-        if (
-          Math.abs(nextX - element.x) < GEOMETRY_EPSILON &&
-          Math.abs(nextY - element.y) < GEOMETRY_EPSILON
-        ) {
-          emitEvent({ type: "select", elementId: activeDrag.elementId });
-          return;
-        }
+      const moves = activeDrag.elementIds
+        .map((id) => {
+          const element = elements.find((item) => item.id === id);
+          const next = preview[id];
+          if (!element || !next) return null;
+          if (
+            Math.abs(next.x - element.x) < GEOMETRY_EPSILON &&
+            Math.abs(next.y - element.y) < GEOMETRY_EPSILON
+          ) {
+            return null;
+          }
+          return { elementId: id, x: next.x, y: next.y };
+        })
+        .filter(Boolean) as Array<{ elementId: string; x: number; y: number }>;
+
+      if (moves.length === 0) {
+        emitSelection(activeDrag.elementIds);
+        return;
+      }
+      if (moves.length === 1) {
         emitEvent({
           type: "move",
-          elementId: activeDrag.elementId,
-          x: nextX,
-          y: nextY,
+          elementId: moves[0].elementId,
+          x: moves[0].x,
+          y: moves[0].y,
         });
+        return;
       }
+      emitEvent({ type: "moveMany", moves });
       return;
     }
 
-    emitEvent({ type: "select", elementId: activeDrag.elementId });
+    emitSelection(activeDrag.elementIds);
   };
 
   const finishResize = () => {
@@ -265,13 +384,28 @@ const CanvasEditor: React.FC = () => {
     });
   };
 
+  const finishMarquee = () => {
+    const active = marqueeStateRef.current;
+    const box = marquee;
+    marqueeStateRef.current = null;
+    setMarquee(null);
+    if (!active || !box) return;
+    const hit = elementsInRect(box.x0, box.y0, box.x1, box.y1);
+    if (active.additive) {
+      const merged = Array.from(new Set([...selectedIds, ...hit]));
+      emitSelection(merged);
+    } else {
+      emitSelection(hit);
+    }
+  };
+
   const handleResizeMouseDown = (
     element: Element,
     event: React.MouseEvent<HTMLDivElement>,
   ) => {
     event.stopPropagation();
     if (element.locked) {
-      emitEvent({ type: "select", elementId: element.id });
+      emitSelection([element.id]);
       return;
     }
     resizeStateRef.current = {
@@ -290,7 +424,7 @@ const CanvasEditor: React.FC = () => {
       width: element.width,
       height: element.height,
     });
-    const onPointerUp = (pointerEvent: PointerEvent) => {
+    const onPointerUp = () => {
       window.removeEventListener("pointerup", onPointerUp);
       finishResize();
     };
@@ -302,15 +436,47 @@ const CanvasEditor: React.FC = () => {
     event: React.MouseEvent<HTMLDivElement>,
   ) => {
     event.stopPropagation();
+    if (inlineEdit || assetPicker) return;
+
+    let nextIds = selectedIds.includes(element.id) ? [...selectedIds] : [element.id];
+    if (event.shiftKey) {
+      if (selectedIds.includes(element.id)) {
+        nextIds = selectedIds.filter((id) => id !== element.id);
+      } else {
+        nextIds = [...selectedIds, element.id];
+      }
+      setLocalSelectedIds(nextIds);
+    } else if (!selectedIds.includes(element.id)) {
+      setLocalSelectedIds([element.id]);
+      nextIds = [element.id];
+    }
+
     if (element.locked) {
-      emitEvent({ type: "select", elementId: element.id });
+      emitSelection(nextIds.length ? nextIds : [element.id]);
       return;
     }
 
+    const dragIds = nextIds.filter((id) => {
+      const item = elements.find((el) => el.id === id);
+      return item && !item.locked;
+    });
+    if (dragIds.length === 0) {
+      emitSelection(nextIds);
+      return;
+    }
+
+    const startPositions: Record<string, { x: number; y: number }> = {};
+    for (const id of dragIds) {
+      const item = elements.find((el) => el.id === id);
+      if (item) startPositions[id] = { x: item.x, y: item.y };
+    }
+
     dragStateRef.current = {
-      elementId: element.id,
+      elementIds: dragIds,
+      anchorId: element.id,
       startClientX: event.clientX,
       startClientY: event.clientY,
+      startPositions,
       moved: false,
     };
 
@@ -321,9 +487,38 @@ const CanvasEditor: React.FC = () => {
     window.addEventListener("pointerup", onPointerUp);
   };
 
-  const handleCanvasClick = () => {
-    if (dragStateRef.current) return;
-    emitEvent({ type: "select", elementId: null });
+  const handleCanvasMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (inlineEdit || assetPicker) return;
+    const { x, y } = percentFromClient(event.clientX, event.clientY);
+    if (findElementAtPosition(x, y)) return;
+    marqueeStateRef.current = {
+      startX: x,
+      startY: y,
+      additive: event.shiftKey,
+    };
+    setMarquee({ x0: x, y0: y, x1: x, y1: y });
+    const onPointerUp = () => {
+      window.removeEventListener("pointerup", onPointerUp);
+      finishMarquee();
+    };
+    window.addEventListener("pointerup", onPointerUp);
+  };
+
+  const commitInlineText = () => {
+    if (!inlineEdit) return;
+    const payload = { ...inlineEdit };
+    setInlineEdit(null);
+    const original = elements.find((item) => item.id === payload.elementId);
+    if (original && original.text_content === payload.text) {
+      emitSelection([payload.elementId]);
+      return;
+    }
+    emitEvent({
+      type: "commitText",
+      elementId: payload.elementId,
+      text: payload.text,
+    });
   };
 
   const handleElementDoubleClick = (
@@ -332,15 +527,49 @@ const CanvasEditor: React.FC = () => {
   ) => {
     event.stopPropagation();
     event.preventDefault();
+    if (element.locked) {
+      emitSelection([element.id]);
+      return;
+    }
+    if (isTextContent(element.content_type)) {
+      setAssetPicker(null);
+      setInlineEdit({
+        elementId: element.id,
+        text: element.text_content || "",
+        x: element.x,
+        y: element.y,
+        width: element.width,
+        height: element.height,
+      });
+      setLocalSelectedIds([element.id]);
+      return;
+    }
+    if (isImageContent(element.content_type)) {
+      setInlineEdit(null);
+      setLocalSelectedIds([element.id]);
+      if (assets.length > 0) {
+        setAssetPicker({
+          elementId: element.id,
+          x: element.x,
+          y: element.y,
+          width: Math.max(element.width, 18),
+          height: Math.max(element.height, 12),
+        });
+      } else {
+        emitEvent({ type: "requestReplaceAsset", elementId: element.id });
+      }
+      return;
+    }
     emitEvent({ type: "editText", elementId: element.id });
   };
 
   const renderElementBox = (element: Element, isHovered: boolean, isSelected: boolean) => {
     const roleColor = ROLE_COLORS[element.role] || ROLE_COLORS.DECORATION;
-    const isDragging = dragElementId === element.id && dragPreview !== null;
+    const preview = dragPreviewById[element.id];
+    const isDragging = preview !== undefined;
     const isResizing = dragElementId === element.id && resizePreview !== null;
-    const displayX = isResizing ? resizePreview.x : isDragging ? dragPreview.x : element.x;
-    const displayY = isResizing ? resizePreview.y : isDragging ? dragPreview.y : element.y;
+    const displayX = isResizing ? resizePreview.x : isDragging ? preview.x : element.x;
+    const displayY = isResizing ? resizePreview.y : isDragging ? preview.y : element.y;
     const displayWidth = isResizing ? resizePreview.width : element.width;
     const displayHeight = isResizing ? resizePreview.height : element.height;
 
@@ -409,7 +638,7 @@ const CanvasEditor: React.FC = () => {
             {element.locked && " 🔒"}
           </div>
         )}
-        {isSelected && !element.locked && (
+        {isSelected && selectedIds.length === 1 && !element.locked && (
           <div
             onMouseDown={(event) => handleResizeMouseDown(element, event)}
             style={{
@@ -431,6 +660,20 @@ const CanvasEditor: React.FC = () => {
     );
   };
 
+  const marqueeStyle: React.CSSProperties | null = marquee
+    ? {
+        position: "absolute",
+        left: `${Math.min(marquee.x0, marquee.x1)}%`,
+        top: `${Math.min(marquee.y0, marquee.y1)}%`,
+        width: `${Math.abs(marquee.x1 - marquee.x0)}%`,
+        height: `${Math.abs(marquee.y1 - marquee.y0)}%`,
+        border: "1px dashed #175cd3",
+        background: "rgba(23, 92, 211, 0.08)",
+        pointerEvents: "none",
+        zIndex: 5,
+      }
+    : null;
+
   return (
     <div style={{ padding: "8px 0" }}>
       <div
@@ -442,15 +685,15 @@ const CanvasEditor: React.FC = () => {
           overflow: "hidden",
           borderRadius: "8px",
           border: "1px solid #e4e4e7",
-          cursor: dragElementId ? "grabbing" : "default",
+          cursor: dragElementId || marquee ? "crosshair" : "default",
         }}
         onMouseMove={handleMouseMove}
+        onMouseDown={handleCanvasMouseDown}
         onMouseLeave={() => {
-          if (!dragStateRef.current) {
+          if (!dragStateRef.current && !marqueeStateRef.current) {
             setHoverElementId(null);
           }
         }}
-        onClick={handleCanvasClick}
       >
         {imageUrl && (
           <img
@@ -480,16 +723,109 @@ const CanvasEditor: React.FC = () => {
           }}
         >
           {elements.map((element) => {
-            const isSelected = element.id === selectedId;
+            const isSelected = selectedIds.includes(element.id);
             const isHovered = element.id === hoverElementId;
             const shouldShow =
-              showAllBorders || isSelected || isHovered || dragElementId === element.id;
+              showAllBorders ||
+              isSelected ||
+              isHovered ||
+              dragPreviewById[element.id] !== undefined;
             if (!shouldShow) return null;
             return renderElementBox(element, isHovered, isSelected);
           })}
         </div>
 
-        {hoverElementId && !selectedId && !dragElementId && (
+        {marqueeStyle && <div style={marqueeStyle} />}
+
+        {inlineEdit && (
+          <textarea
+            ref={textareaRef}
+            value={inlineEdit.text}
+            onChange={(event) =>
+              setInlineEdit({ ...inlineEdit, text: event.target.value })
+            }
+            onBlur={commitInlineText}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                commitInlineText();
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setInlineEdit(null);
+              }
+            }}
+            style={{
+              position: "absolute",
+              left: `${inlineEdit.x}%`,
+              top: `${inlineEdit.y}%`,
+              width: `${inlineEdit.width}%`,
+              height: `${Math.max(inlineEdit.height, 8)}%`,
+              zIndex: 6,
+              resize: "none",
+              fontSize: "14px",
+              padding: "6px",
+              border: "2px solid #175cd3",
+              borderRadius: "4px",
+              boxSizing: "border-box",
+            }}
+          />
+        )}
+
+        {assetPicker && (
+          <div
+            style={{
+              position: "absolute",
+              left: `${assetPicker.x}%`,
+              top: `${assetPicker.y}%`,
+              width: `${Math.min(assetPicker.width, 40)}%`,
+              zIndex: 6,
+              background: "white",
+              border: "2px solid #175cd3",
+              borderRadius: "6px",
+              padding: "8px",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div style={{ fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>
+              更换素材
+            </div>
+            <select
+              defaultValue=""
+              style={{ width: "100%", fontSize: "12px" }}
+              onChange={(event) => {
+                const assetId = event.target.value;
+                if (!assetId) return;
+                const elementId = assetPicker.elementId;
+                setAssetPicker(null);
+                emitEvent({
+                  type: "commitReplaceAsset",
+                  elementId,
+                  assetId,
+                });
+              }}
+            >
+              <option value="" disabled>
+                选择图片…
+              </option>
+              {assets.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              style={{ marginTop: "6px", fontSize: "12px", width: "100%" }}
+              onClick={() => setAssetPicker(null)}
+            >
+              取消
+            </button>
+          </div>
+        )}
+
+        {hoverElementId && selectedIds.length === 0 && !dragElementId && !marquee && (
           <div
             style={{
               position: "absolute",
@@ -503,7 +839,7 @@ const CanvasEditor: React.FC = () => {
               pointerEvents: "none",
             }}
           >
-            点击选择，拖拽移动
+            点击选择 · Shift 多选 · 框选 · 双击改字/换图
           </div>
         )}
       </div>

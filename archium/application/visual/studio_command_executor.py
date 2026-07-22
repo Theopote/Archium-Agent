@@ -44,6 +44,7 @@ from archium.domain.visual.studio_command import (
     FixOverflowCommand,
     IncreaseDrawingReadabilityCommand,
     MoveNodeCommand,
+    MoveNodesCommand,
     ReorderNodeCommand,
     ReplaceAssetCommand,
     ReplaceDrawingCommand,
@@ -141,6 +142,8 @@ class StudioCommandExecutor:
             return self._execute_increase_drawing_readability(scene, command, base_hash)
         if isinstance(command, MoveNodeCommand):
             return self._execute_move_node(scene, command, base_hash)
+        if isinstance(command, MoveNodesCommand):
+            return self._execute_move_nodes(scene, command, base_hash)
         if isinstance(command, ResizeNodeCommand):
             return self._execute_resize_node(scene, command, base_hash)
         if isinstance(command, DeleteNodeCommand):
@@ -625,6 +628,48 @@ class StudioCommandExecutor:
             base_scene_hash=base_hash,
             candidate_scene=patched,
             applied_actions=(action,),
+        )
+
+    def _execute_move_nodes(
+        self,
+        scene: RenderScene,
+        command: MoveNodesCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        patched = scene.model_copy(deep=True)
+        actions: list[ScenePatchAction] = []
+        for move in command.moves:
+            node = patched.node_by_id(move.node_id)
+            if node is None:
+                return _node_not_found(base_hash, move.node_id)
+            if node_geometry_locked(node):
+                return _locked_result(
+                    base_hash=base_hash,
+                    command_type="move_nodes",
+                    node_id=move.node_id,
+                    lock_kind="geometry",
+                )
+            before_token = geometry_token(node)
+            node.x = move.x
+            node.y = move.y
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=move.node_id,
+                    action_type="move_nodes",
+                    property_name="geometry",
+                    before_value=before_token,
+                    after_value=geometry_token(node),
+                    reason=command.reason or "move nodes",
+                )
+            )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=tuple(actions),
         )
 
     def _execute_resize_node(

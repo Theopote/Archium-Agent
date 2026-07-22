@@ -363,6 +363,7 @@ def render(
             slide_snapshot=slide_snapshot,
             advanced=advanced,
             use_interactive_canvas=True,
+            project_id=context.project.id,
         )
 
     if right_col is not None:

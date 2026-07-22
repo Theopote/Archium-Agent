@@ -23,6 +23,7 @@ _BUILD_EXPORTS = frozenset(
 class CanvasSelectEvent(TypedDict):
     type: Literal["select"]
     elementId: str | None
+    elementIds: NotRequired[list[str]]
 
 
 class CanvasMoveEvent(TypedDict):
@@ -30,6 +31,17 @@ class CanvasMoveEvent(TypedDict):
     elementId: str
     x: float
     y: float
+
+
+class CanvasMoveManyItem(TypedDict):
+    elementId: str
+    x: float
+    y: float
+
+
+class CanvasMoveManyEvent(TypedDict):
+    type: Literal["moveMany"]
+    moves: list[CanvasMoveManyItem]
 
 
 class CanvasResizeEvent(TypedDict):
@@ -47,8 +59,34 @@ class CanvasEditTextEvent(TypedDict):
     elementId: str
 
 
+class CanvasCommitTextEvent(TypedDict):
+    type: Literal["commitText"]
+    elementId: str
+    text: str
+
+
+class CanvasCommitReplaceAssetEvent(TypedDict):
+    type: Literal["commitReplaceAsset"]
+    elementId: str
+    assetId: str
+
+
+class CanvasRequestReplaceAssetEvent(TypedDict):
+    type: Literal["requestReplaceAsset"]
+    elementId: str
+
+
 CanvasEditorEvent = (
-    str | CanvasSelectEvent | CanvasMoveEvent | CanvasResizeEvent | CanvasEditTextEvent | None
+    str
+    | CanvasSelectEvent
+    | CanvasMoveEvent
+    | CanvasMoveManyEvent
+    | CanvasResizeEvent
+    | CanvasEditTextEvent
+    | CanvasCommitTextEvent
+    | CanvasCommitReplaceAssetEvent
+    | CanvasRequestReplaceAssetEvent
+    | None
 )
 
 
@@ -71,6 +109,27 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
                     x=float(x),
                     y=float(y),
                 )
+        if event_type == "moveMany":
+            raw_moves = value.get("moves")
+            if isinstance(raw_moves, list) and raw_moves:
+                moves: list[CanvasMoveManyItem] = []
+                for item in raw_moves:
+                    if not isinstance(item, dict):
+                        continue
+                    element_id = item.get("elementId")
+                    x = item.get("x")
+                    y = item.get("y")
+                    if element_id is None or x is None or y is None:
+                        continue
+                    moves.append(
+                        CanvasMoveManyItem(
+                            elementId=str(element_id),
+                            x=float(x),
+                            y=float(y),
+                        )
+                    )
+                if moves:
+                    return CanvasMoveManyEvent(type="moveMany", moves=moves)
         if event_type == "resize":
             element_id = value.get("elementId")
             x = value.get("x")
@@ -97,9 +156,44 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
             element_id = value.get("elementId")
             if element_id is not None:
                 return CanvasEditTextEvent(type="editText", elementId=str(element_id))
+        if event_type == "commitText":
+            element_id = value.get("elementId")
+            text = value.get("text")
+            if element_id is not None and text is not None:
+                return CanvasCommitTextEvent(
+                    type="commitText",
+                    elementId=str(element_id),
+                    text=str(text),
+                )
+        if event_type == "commitReplaceAsset":
+            element_id = value.get("elementId")
+            asset_id = value.get("assetId")
+            if element_id is not None and asset_id is not None:
+                return CanvasCommitReplaceAssetEvent(
+                    type="commitReplaceAsset",
+                    elementId=str(element_id),
+                    assetId=str(asset_id),
+                )
+        if event_type == "requestReplaceAsset":
+            element_id = value.get("elementId")
+            if element_id is not None:
+                return CanvasRequestReplaceAssetEvent(
+                    type="requestReplaceAsset",
+                    elementId=str(element_id),
+                )
         if event_type == "select":
             element_id = value.get("elementId")
-            return CanvasSelectEvent(type="select", elementId=str(element_id) if element_id else None)
+            raw_ids = value.get("elementIds")
+            element_ids: list[str] = []
+            if isinstance(raw_ids, list):
+                element_ids = [str(item) for item in raw_ids if item]
+            elif element_id:
+                element_ids = [str(element_id)]
+            return CanvasSelectEvent(
+                type="select",
+                elementId=str(element_id) if element_id else None,
+                elementIds=element_ids,
+            )
     return None
 
 
@@ -117,6 +211,8 @@ def canvas_editor(
     *,
     render_scene: RenderScene | None = None,
     selected_element_id: str | None = None,
+    selected_element_ids: list[str] | None = None,
+    assets: list[dict[str, str]] | None = None,
     show_labels: bool = True,
     show_all_borders: bool = True,
     key: str | None = None,
@@ -129,10 +225,15 @@ def canvas_editor(
     """
     component_func = get_canvas_editor_component()
     elements = convert_elements_for_canvas(layout_plan, render_scene=render_scene)
+    ids = list(selected_element_ids or [])
+    if not ids and selected_element_id:
+        ids = [selected_element_id]
     component_value = component_func(
         imageUrl=image_url,
         elements=elements,
-        selectedId=selected_element_id,
+        selectedId=ids[0] if ids else selected_element_id,
+        selectedIds=ids,
+        assets=assets or [],
         showLabels=show_labels,
         showAllBorders=show_all_borders,
         key=key,
@@ -149,6 +250,7 @@ def convert_elements_for_canvas(
     """Convert layout/scene geometry to canvas overlay elements."""
     from archium.application.visual.studio_command_executor import node_geometry_locked
     from archium.domain.visual.element_lock import canvas_geometry_locked
+    from archium.domain.visual.render_scene import TextNode
 
     page_width = float(layout_plan.page_width or 10.0)
     page_height = float(layout_plan.page_height or 5.625)
@@ -174,6 +276,9 @@ def convert_elements_for_canvas(
             if hasattr(element.content_type, "value")
             else str(element.content_type)
         )
+        text_content = element.text_content or ""
+        if isinstance(node, TextNode):
+            text_content = node.text
         elements.append(
             {
                 "id": element.id,
@@ -184,7 +289,7 @@ def convert_elements_for_canvas(
                 "role": element.role.value if hasattr(element.role, "value") else str(element.role),
                 "locked": locked,
                 "content_type": content_type,
-                "text_content": element.text_content or "",
+                "text_content": text_content,
             }
         )
     return elements
@@ -198,8 +303,12 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
 __all__ = [
     "CanvasEditorUnavailableError",
     "CanvasEditorEvent",
+    "CanvasCommitReplaceAssetEvent",
+    "CanvasCommitTextEvent",
     "CanvasEditTextEvent",
     "CanvasMoveEvent",
+    "CanvasMoveManyEvent",
+    "CanvasRequestReplaceAssetEvent",
     "CanvasResizeEvent",
     "CanvasSelectEvent",
     "build_canvas_editor",

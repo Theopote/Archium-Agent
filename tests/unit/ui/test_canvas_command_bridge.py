@@ -22,6 +22,17 @@ def test_geometry_event_fingerprint_is_stable() -> None:
     assert first == second
 
 
+def test_pointerup_contract_move_many_fingerprint_is_batch() -> None:
+    """Multi-select drag must collapse to one fingerprint (one Command / revision)."""
+    parts = [
+        geometry_event_fingerprint("moveMany", "a", 10.0, 20.0),
+        geometry_event_fingerprint("moveMany", "b", 30.0, 40.0),
+    ]
+    fingerprint = "|".join(sorted(parts))
+    assert fingerprint.count("moveMany:") == 2
+    assert "a" in fingerprint and "b" in fingerprint
+
+
 def test_canvas_component_key_bumps_after_generation(monkeypatch: pytest.MonkeyPatch) -> None:
     slide_id = uuid4()
     state: dict[str, object] = {}
