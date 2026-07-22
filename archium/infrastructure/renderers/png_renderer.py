@@ -156,6 +156,21 @@ class PngRenderer:
         try:
             asset = Image.open(path).convert("RGBA")
         except OSError:
+            # Pillow typically cannot open SVG. Render a deterministic placeholder
+            # so Studio preview shows the icon slot (instead of a blank area).
+            if path.suffix.lower() == ".svg":
+                from PIL import ImageDraw
+
+                box = self._box(node)
+                placeholder_color = (210, 210, 210)
+                draw = ImageDraw.Draw(canvas)
+                draw.rectangle(box, outline=placeholder_color, width=2)
+                # Small center mark for visual alignment.
+                cx = (box[0] + box[2]) // 2
+                cy = (box[1] + box[3]) // 2
+                draw.line((cx - 6, cy, cx + 6, cy), fill=placeholder_color, width=2)
+                draw.line((cx, cy - 6, cx, cy + 6), fill=placeholder_color, width=2)
+                return
             return
 
         box = self._box(node)

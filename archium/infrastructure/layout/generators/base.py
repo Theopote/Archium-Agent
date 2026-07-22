@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from uuid import UUID
+from archium.domain.enums import VisualType
 
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -27,6 +28,9 @@ class LayoutContentBundle:
     source_text: str | None = None
     hero_asset_ref: str | None = None
     supporting_asset_refs: list[str] = field(default_factory=list)
+    # Curated architectural icon refs (e.g. "icon:pedestrian_flow").
+    # Used by specific layout generators to place semantic symbols.
+    icon_refs: list[str] = field(default_factory=list)
     case_labels: list[str] = field(default_factory=list)
     comparison_dimensions: list[str] = field(default_factory=list)
     insight: str | None = None
@@ -160,6 +164,11 @@ def content_from_slide(
         citations = first.document_name
         if first.page_number is not None:
             citations = f"{citations} p.{first.page_number}"
+    icon_refs = [
+        f"icon:{req.icon_canonical_name}"
+        for req in slide.visual_requirements
+        if req.type == VisualType.ICON and req.icon_canonical_name
+    ]
     return LayoutContentBundle(
         title=slide.title,
         message=slide.message,
@@ -168,6 +177,7 @@ def content_from_slide(
         source_text=citations,
         hero_asset_ref=hero,
         supporting_asset_refs=supporting,
+        icon_refs=icon_refs,
         case_labels=[point for point in points if "：" in point or ":" in point][:3],
         insight=slide.message if len(slide.message) < 120 else None,
     )

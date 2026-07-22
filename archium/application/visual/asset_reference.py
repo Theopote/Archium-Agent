@@ -26,7 +26,7 @@ from archium.infrastructure.database.repositories import AssetRepository, Docume
 
 # Formats pptxgen / LayoutPlan render path can place reliably.
 SUPPORTED_LAYOUT_IMAGE_EXTENSIONS = frozenset(
-    {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+    {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
 )
 # Asset catalog types accepted as technical drawings for DRAWING slots.
 TECHNICAL_DRAWING_ASSET_TYPES = frozenset(
@@ -337,7 +337,29 @@ def build_asset_reference_context(
     asset_types: dict[str, str] = {}
     asset_origins: dict[str, str] = {}
     project_root = settings.project_storage_path / str(project_id)
+    icon_registry = None
     for ref in dict.fromkeys(refs):
+        if ref.startswith("icon:"):
+            # Curated architectural icon SVGs bundled inside Archium.
+            if icon_registry is None:
+                from archium.application.visual.architectural_icon_registry import (
+                    load_default_architectural_icon_registry,
+                )
+
+                icon_registry = load_default_architectural_icon_registry()
+            icon_key = ref.split(":", 1)[1].strip()
+            if icon_key:
+                icon = icon_registry.get_by_name(icon_key)
+                if icon is not None:
+                    svg_path = icon_registry.resolve_svg_path(icon)
+                    if svg_path.is_file():
+                        known.add(ref)
+                        # Use absolute path for layout validation + renderers.
+                        resolved[ref] = str(svg_path.resolve())
+                        absolute[ref] = str(svg_path.resolve())
+                        asset_types[ref] = "other"
+                        asset_origins[ref] = "stock_image"
+            continue
         try:
             asset_id = UUID(ref)
         except ValueError:

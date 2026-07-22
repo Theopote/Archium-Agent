@@ -91,6 +91,7 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
             gap_y=spacing.md,
         )
         metric_ids: list[str] = []
+        icon_refs = list(getattr(context.content, "icon_refs", []) or [])
         for index, (cell, metric) in enumerate(zip(cells, metrics, strict=False)):
             mid = f"metric_{index}"
             metric_ids.append(mid)
@@ -108,6 +109,30 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
                     alignment="center",
                 )
             )
+            # Optional semantic icon: small, top-left, rendered as a decorative image.
+            # Using z_index=1 places it above the metric card background/text.
+            if index < len(icon_refs):
+                icon = icon_refs[index]
+                icon_w = max(0.18, cell.width * 0.32)
+                icon_h = max(0.16, cell.height * 0.28)
+                icon_x = cell.x + cell.width * 0.06
+                icon_y = cell.y + cell.height * 0.06
+                elements.append(
+                    LayoutElement(
+                        id=f"{mid}__icon",
+                        role=LayoutElementRole.DECORATION,
+                        content_type=LayoutContentType.IMAGE,
+                        content_ref=icon,
+                        x=icon_x,
+                        y=icon_y,
+                        width=icon_w,
+                        height=icon_h,
+                        fit_mode=ImageFit.CONTAIN,
+                        crop_policy=CropPolicy.FORBIDDEN,
+                        style_token="body",
+                        z_index=1,
+                    )
+                )
 
         if chart_area is not None:
             chart_ref = context.content.hero_asset_ref

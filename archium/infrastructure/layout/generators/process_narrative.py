@@ -89,6 +89,7 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
         step_ids: list[str] = []
         arrow_ids: list[str] = []
         visual_ids: list[str] = []
+        icon_refs = list(getattr(context.content, "icon_refs", []) or [])
 
         use_horizontal = (
             context.variant == "steps_horizontal" or context.content.hero_asset_ref is None
@@ -143,20 +144,41 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                     gap_left = cell.right
                     gap_right = next_cell.x
                     arrow_w = max(0.08, gap_right - gap_left)
-                    elements.append(
-                        LayoutElement(
-                            id=arrow_id,
-                            role=LayoutElementRole.DECORATION,
-                            content_type=LayoutContentType.SHAPE,
-                            text_content="→",
-                            x=gap_left,
-                            y=cell.y + cell.height * 0.35,
-                            width=arrow_w,
-                            height=0.28,
-                            style_token="caption",
-                            alignment="center",
+                    arrow_x = gap_left
+                    arrow_y = cell.y + cell.height * 0.35
+                    arrow_h = 0.28
+                    if index < len(icon_refs):
+                        elements.append(
+                            LayoutElement(
+                                id=arrow_id,
+                                role=LayoutElementRole.DECORATION,
+                                content_type=LayoutContentType.IMAGE,
+                                content_ref=icon_refs[index],
+                                x=arrow_x,
+                                y=arrow_y,
+                                width=arrow_w,
+                                height=arrow_h,
+                                fit_mode=ImageFit.CONTAIN,
+                                crop_policy=CropPolicy.FORBIDDEN,
+                                style_token="caption",
+                                alignment="center",
+                            )
                         )
-                    )
+                    else:
+                        elements.append(
+                            LayoutElement(
+                                id=arrow_id,
+                                role=LayoutElementRole.DECORATION,
+                                content_type=LayoutContentType.SHAPE,
+                                text_content="→",
+                                x=arrow_x,
+                                y=arrow_y,
+                                width=arrow_w,
+                                height=arrow_h,
+                                style_token="caption",
+                                alignment="center",
+                            )
+                        )
         else:
             left, right = split_horizontal(board, left_ratio=0.58, gap=spacing.lg)
             row_h = (left.height - spacing.sm * (step_count - 1)) / step_count
