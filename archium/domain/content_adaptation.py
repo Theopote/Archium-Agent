@@ -8,6 +8,10 @@ from pydantic import Field
 
 from archium.domain._base import DomainModel
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.slide_capacity_budget import (
+    CAPACITY_OVERLOAD_RULE,
+    SlideCapacityBudget,
+)
 from archium.domain.visual.validation import (
     LAYOUT_EXCESSIVE_DENSITY,
     LAYOUT_FONT_TOO_SMALL,
@@ -78,6 +82,7 @@ def suggest_content_adaptations(
     slide: SlideSpec,
     *,
     layout_report: LayoutValidationReport | None = None,
+    capacity_budget: SlideCapacityBudget | None = None,
 ) -> list[ContentAdaptationSuggestion]:
     """Analyze slide content and layout issues; return ordered adaptation suggestions."""
     suggestions: list[ContentAdaptationSuggestion] = []
@@ -85,6 +90,46 @@ def suggest_content_adaptations(
         [issue.rule_code for issue in layout_report.issues] if layout_report is not None else []
     )
     overflow_rules = [code for code in rule_codes if code in _OVERFLOW_RULES]
+
+    if capacity_budget is not None and capacity_budget.is_overloaded:
+        if capacity_budget.recommended_action == "split_slide":
+            suggestions.append(
+                ContentAdaptationSuggestion(
+                    action=ContentAdaptationAction.SPLIT_SLIDE,
+                    reason=(
+                        f"固定画布容量超载（capacity_ratio="
+                        f"{capacity_budget.capacity_ratio:.2f}），应拆页而非继续压缩字体。"
+                    ),
+                    trigger_rule_codes=[CAPACITY_OVERLOAD_RULE],
+                    requires_user_approval=True,
+                )
+            )
+            suggestions.append(
+                ContentAdaptationSuggestion(
+                    action=ContentAdaptationAction.SHORTEN,
+                    reason="容量严重超载时也可先缩短正文，再决定是否拆页。",
+                    trigger_rule_codes=[CAPACITY_OVERLOAD_RULE],
+                )
+            )
+        else:
+            suggestions.append(
+                ContentAdaptationSuggestion(
+                    action=ContentAdaptationAction.SHORTEN,
+                    reason=(
+                        f"固定画布容量超载（capacity_ratio="
+                        f"{capacity_budget.capacity_ratio:.2f}），"
+                        "禁止继续缩字，请先缩短或改写内容。"
+                    ),
+                    trigger_rule_codes=[CAPACITY_OVERLOAD_RULE],
+                )
+            )
+            suggestions.append(
+                ContentAdaptationSuggestion(
+                    action=ContentAdaptationAction.CONVERT_TO_BULLETS,
+                    reason="将长段落改为要点可降低文字高度预算。",
+                    trigger_rule_codes=[CAPACITY_OVERLOAD_RULE],
+                )
+            )
 
     if overflow_rules:
         suggestions.append(

@@ -16,6 +16,7 @@ from archium.domain.visual.enums import (
     OverflowPolicy,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
 from archium.domain.visual.text_style import (
     clamp_font_size_override,
     next_larger_token,
@@ -116,6 +117,9 @@ class LayoutRepairService:
         layout_plan: LayoutPlan,
         report: LayoutValidationReport,
         design_system: DesignSystem,
+        *,
+        capacity_budget: SlideCapacityBudget | None = None,
+        forbid_font_shrink: bool | None = None,
     ) -> LayoutRepairResult:
         elements = [el.model_copy(deep=True) for el in layout_plan.elements]
         by_id = {el.id: el for el in elements}
@@ -127,6 +131,13 @@ class LayoutRepairService:
         unresolved_overflow_ids: list[str] = []
         reading_order = list(layout_plan.reading_order)
         before_snapshots = {el.id: self._snapshot_element(el) for el in elements}
+        block_shrink = (
+            forbid_font_shrink
+            if forbid_font_shrink is not None
+            else bool(capacity_budget is not None and capacity_budget.is_overloaded)
+        )
+        if block_shrink:
+            overflow_policy = OverflowPolicy.SPLIT
 
         for issue in report.issues:
             if not issue.auto_repairable:
@@ -195,6 +206,7 @@ class LayoutRepairService:
                         page_w=page_w,
                         page_h=page_h,
                         others=list(by_id.values()),
+                        forbid_font_shrink=block_shrink,
                     )
                     if not fixed:
                         unresolved_overflow_ids.append(element_id)
@@ -419,6 +431,7 @@ class LayoutRepairService:
         page_w: float,
         page_h: float,
         others: list[LayoutElement],
+        forbid_font_shrink: bool = False,
     ) -> bool:
         """Fix text overflow without claiming the whole safe area.
 
@@ -427,6 +440,7 @@ class LayoutRepairService:
         2. Reduce inter-element padding (tighter gap)
         3. Fine-tune box to the minimum height/width that fits
         4. Switch to a more compact but still compliant style token (by real size)
+           — skipped when ``forbid_font_shrink`` (pre-layout capacity overload)
         5–6. Caller escalates to variant change + split suggestion
         """
         if not element.text_content:
@@ -447,7 +461,10 @@ class LayoutRepairService:
             max(_GAP, design_system.spacing.sm),
             max(design_system.spacing.xs, _GAP * 0.5),
         )
-        token_chain = self._compact_token_chain(element, design_system=design_system)
+        if forbid_font_shrink:
+            token_chain = [element.style_token or "body"]
+        else:
+            token_chain = self._compact_token_chain(element, design_system=design_system)
 
         for token_name in token_chain:
             # Compact steps use the named token size (clear any prior override).

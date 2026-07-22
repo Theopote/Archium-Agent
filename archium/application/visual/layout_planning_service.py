@@ -18,14 +18,16 @@ from archium.application.visual.layout_style_preference import (
     merge_preferred_families,
 )
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.slide_capacity_service import SlideCapacityService
 from archium.config.settings import Settings, get_settings
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_composition import SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.enums import LayoutFamily, LayoutValidationStatus, VisualContentType
+from archium.domain.visual.enums import LayoutFamily, LayoutValidationStatus, OverflowPolicy, VisualContentType
 from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.repositories import ProjectRepository
@@ -78,6 +80,8 @@ class LayoutPlanningService:
         self._projects = ProjectRepository(session)
         self._settings = settings or get_settings()
         self._warnings: list[dict[str, Any]] = []
+        self._capacity = SlideCapacityService()
+        self._last_capacity_budget: SlideCapacityBudget | None = None
         self._last_style_preference: LayoutStylePreference = LayoutStylePreference()
 
     def drain_warnings(self) -> list[dict[str, Any]]:
@@ -141,6 +145,27 @@ class LayoutPlanningService:
             raise ValueError(f"DesignSystem {design_system_id} not found")
         art = self._art.get(art_direction_id) if art_direction_id else None
 
+        capacity = self._capacity.estimate(
+            slide,
+            design,
+            visual_intent=intent,
+        )
+        self._last_capacity_budget = capacity
+        if capacity.is_overloaded:
+            self._warnings.append(
+                {
+                    "code": "CAPACITY.OVERLOAD",
+                    "detail": (
+                        f"capacity_ratio={capacity.capacity_ratio:.2f}; "
+                        f"action={capacity.recommended_action}; "
+                        "forbid further font shrink — adapt or split"
+                    ),
+                    "capacity_ratio": capacity.capacity_ratio,
+                    "recommended_action": capacity.recommended_action,
+                    "overflow_risk": capacity.overflow_risk,
+                }
+            )
+
         resolved_style = reference_style
         if resolved_style is None and project_id is not None:
             resolved_style = self.resolve_reference_style(project_id)
@@ -172,6 +197,13 @@ class LayoutPlanningService:
         results: list[tuple[LayoutPlan, LayoutValidationReport]] = []
         for decision in decisions:
             family = LayoutFamily(decision.layout_family)
+            # Re-estimate with chosen family for tighter image budget metadata.
+            family_budget = self._capacity.estimate(
+                slide,
+                design,
+                visual_intent=intent,
+                layout_family=family,
+            )
             variant = self._registry.resolve_variant(family, decision.layout_variant)
             context = LayoutGeneratorContext(
                 slide=slide,
@@ -183,6 +215,8 @@ class LayoutPlanningService:
             )
             plan = self._solver.generate(family, context)
             plan = preserve_locked_elements(plan, previous_layout_plan)
+            if family_budget.is_overloaded:
+                plan = plan.model_copy(update={"overflow_policy": OverflowPolicy.SPLIT})
             asset_context = None
             if project_id is not None:
                 asset_context = build_asset_reference_context(
@@ -206,6 +240,10 @@ class LayoutPlanningService:
             )
             results.append((plan, report))
         return results
+
+    @property
+    def last_capacity_budget(self) -> SlideCapacityBudget | None:
+        return self._last_capacity_budget
 
     def select_best(
         self,

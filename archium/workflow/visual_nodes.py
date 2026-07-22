@@ -738,7 +738,28 @@ class VisualWorkflowNodes:
                     if key not in {"layout_plan_id", "slide_id", "valid"}
                 }
                 report = LayoutValidationReport.model_validate(filtered)
-                result = self._runtime.layout_repair_service.repair(plan, report, design)
+                capacity = None
+                try:
+                    from archium.application.visual.slide_capacity_service import (
+                        SlideCapacityService,
+                    )
+                    from archium.infrastructure.database.repositories import (
+                        PresentationRepository,
+                    )
+
+                    slide = PresentationRepository(self._runtime.session).get_slide(
+                        plan.slide_id
+                    )
+                    if slide is not None and design is not None:
+                        capacity = SlideCapacityService().estimate(slide, design)
+                except Exception:
+                    capacity = None
+                result = self._runtime.layout_repair_service.repair(
+                    plan,
+                    report,
+                    design,
+                    capacity_budget=capacity,
+                )
                 saved = self._runtime.layout_plans.save(result.plan)
                 updated_ids.append(str(saved.id))
                 round_index = int(state.get("repair_round", 0)) + 1

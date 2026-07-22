@@ -30,6 +30,7 @@ from archium.domain.slide_split import SlideSplitPlan
 from archium.domain.studio_errors import StudioAssetReferenceError
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.element_lock import ElementLockedError
+from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -69,11 +70,45 @@ class ContentAdaptationService:
         slide_id: UUID,
         *,
         layout_report: LayoutValidationReport | None = None,
+        capacity_budget: SlideCapacityBudget | None = None,
     ) -> list[ContentAdaptationSuggestion]:
         slide = self._presentations.get_slide(slide_id)
         if slide is None:
             raise WorkflowError(f"页面 {slide_id} 不存在")
-        return suggest_content_adaptations(slide, layout_report=layout_report)
+        budget = capacity_budget
+        if budget is None:
+            budget = self._estimate_capacity(slide)
+        return suggest_content_adaptations(
+            slide,
+            layout_report=layout_report,
+            capacity_budget=budget,
+        )
+
+    def _estimate_capacity(self, slide: SlideSpec) -> SlideCapacityBudget | None:
+        from archium.application.visual.slide_capacity_service import SlideCapacityService
+        from archium.infrastructure.database.visual_repositories import (
+            ArtDirectionRepository,
+            DesignSystemRepository,
+            VisualIntentRepository,
+        )
+
+        presentation = self._presentations.get_presentation(slide.presentation_id)
+        if presentation is None:
+            return None
+        design = None
+        arts = ArtDirectionRepository(self._session).list_by_project(presentation.project_id)
+        art = next(
+            (item for item in arts if item.presentation_id == slide.presentation_id),
+            arts[0] if arts else None,
+        )
+        if art is not None and art.design_system_id is not None:
+            design = DesignSystemRepository(self._session).get(art.design_system_id)
+        if design is None:
+            return None
+        intent = None
+        if slide.visual_intent_id is not None:
+            intent = VisualIntentRepository(self._session).get(slide.visual_intent_id)
+        return SlideCapacityService().estimate(slide, design, visual_intent=intent)
 
     def apply(
         self,
