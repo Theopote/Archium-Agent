@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from archium.application.visual.comment_to_command_planner import CommentToCommandPlanner
 from archium.application.visual.studio_nl_command_planner import StudioNLCommandPlanner
-from archium.domain.visual.element_comment import ElementComment
+from archium.domain.visual.element_comment import ElementComment, ElementCommentScope
 from archium.domain.visual.render_scene import BackgroundStyle, ImageNode, RenderScene, TextNode
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
@@ -26,12 +26,22 @@ def _scene(*nodes) -> RenderScene:
     )
 
 
-def _comment(*, node_id: str, note: str, slide_id=None, presentation_id=None) -> ElementComment:
+def _comment(
+    *,
+    node_id: str,
+    note: str,
+    slide_id=None,
+    presentation_id=None,
+    scope: ElementCommentScope = ElementCommentScope.NODE,
+    scope_node_ids: list[str] | None = None,
+) -> ElementComment:
     return ElementComment(
         presentation_id=presentation_id or uuid4(),
         slide_id=slide_id or uuid4(),
         node_id=node_id,
         note=note,
+        scope=scope,
+        scope_node_ids=list(scope_node_ids or []),
     )
 
 
@@ -216,3 +226,217 @@ def test_nl_planner_bound_node_id_skips_fuzzy_hint() -> None:
     assert len(plan.commands) == 1
     assert isinstance(plan.commands[0], RewriteTextCommand)
     assert plan.commands[0].node_id == "caption"
+
+
+def test_multi_node_note_with_default_scope_is_gated() -> None:
+    scene = _scene(
+        ImageNode(
+            id="card_a",
+            x=1,
+            y=1,
+            width=2,
+            height=2,
+            z_index=1,
+            storage_uri="project://a.png",
+            asset_path="project://a.png",
+        )
+    )
+    comment = _comment(
+        node_id="card_a",
+        note="让这三个卡片大小一致",
+        slide_id=scene.slide_id,
+    )
+    plan = CommentToCommandPlanner().plan(comment, scene=scene)
+    assert plan.commands == ()
+    assert plan.unsupported_reason is not None
+    assert "selection" in plan.unsupported_reason
+    assert CommentToCommandPlanner.suggested_scope_for_note(comment.note) == (
+        ElementCommentScope.SELECTION
+    )
+
+
+def test_selection_scope_allows_multi_node_targets() -> None:
+    scene = _scene(
+        ImageNode(
+            id="card_a",
+            x=1,
+            y=1,
+            width=2,
+            height=1.5,
+            z_index=1,
+            storage_uri="project://a.png",
+            asset_path="project://a.png",
+        ),
+        ImageNode(
+            id="card_b",
+            x=4,
+            y=1,
+            width=2.5,
+            height=2,
+            z_index=1,
+            storage_uri="project://b.png",
+            asset_path="project://b.png",
+        ),
+        ImageNode(
+            id="card_c",
+            x=7,
+            y=1,
+            width=1.8,
+            height=2.2,
+            z_index=1,
+            storage_uri="project://c.png",
+            asset_path="project://c.png",
+        ),
+    )
+    presentation_id = uuid4()
+    commands = []
+    for node_id, width, height in (
+        ("card_a", 2.0, 2.0),
+        ("card_b", 2.0, 2.0),
+        ("card_c", 2.0, 2.0),
+    ):
+        node = scene.node_by_id(node_id)
+        assert node is not None
+        commands.append(
+            ResizeNodeCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id=node_id,
+                target_node_ids=[node_id],
+                x=node.x,
+                y=node.y,
+                width=width,
+                height=height,
+                reason="equalize",
+                expected_effect=f"统一 `{node_id}` 尺寸",
+            )
+        )
+
+    class _StubNL:
+        def plan_text(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            from archium.application.visual.studio_nl_command_planner import StudioCommandPlan
+
+            return StudioCommandPlan(commands=tuple(commands), reasons=("equalize cards",))
+
+    comment = _comment(
+        node_id="card_a",
+        note="让这三个卡片大小一致",
+        slide_id=scene.slide_id,
+        presentation_id=presentation_id,
+        scope=ElementCommentScope.SELECTION,
+        scope_node_ids=["card_b", "card_c"],
+    )
+    plan = CommentToCommandPlanner(nl_planner=_StubNL()).plan(comment, scene=scene)
+    assert len(plan.commands) == 3
+    assert {cmd.node_id for cmd in plan.commands} == {"card_a", "card_b", "card_c"}
+
+
+def test_selection_scope_rejects_outside_targets() -> None:
+    scene = _scene(
+        ImageNode(
+            id="card_a",
+            x=1,
+            y=1,
+            width=2,
+            height=2,
+            z_index=1,
+            storage_uri="project://a.png",
+            asset_path="project://a.png",
+        ),
+        ImageNode(
+            id="card_b",
+            x=4,
+            y=1,
+            width=2,
+            height=2,
+            z_index=1,
+            storage_uri="project://b.png",
+            asset_path="project://b.png",
+        ),
+        ImageNode(
+            id="outsider",
+            x=7,
+            y=1,
+            width=2,
+            height=2,
+            z_index=1,
+            storage_uri="project://c.png",
+            asset_path="project://c.png",
+        ),
+    )
+    presentation_id = uuid4()
+
+    class _StubNL:
+        def plan_text(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            from archium.application.visual.studio_nl_command_planner import StudioCommandPlan
+
+            return StudioCommandPlan(
+                commands=(
+                    ResizeNodeCommand(
+                        presentation_id=presentation_id,
+                        slide_id=scene.slide_id,
+                        node_id="outsider",
+                        target_node_ids=["outsider"],
+                        x=7,
+                        y=1,
+                        width=2,
+                        height=2,
+                        reason="leak",
+                        expected_effect="改到作用域外",
+                    ),
+                ),
+                reasons=("leak",),
+            )
+
+    comment = _comment(
+        node_id="card_a",
+        note="统一大小",
+        slide_id=scene.slide_id,
+        presentation_id=presentation_id,
+        scope=ElementCommentScope.SELECTION,
+        scope_node_ids=["card_b"],
+    )
+    plan = CommentToCommandPlanner(nl_planner=_StubNL()).plan(comment, scene=scene)
+    assert plan.commands == ()
+    assert plan.unsupported_reason is not None
+    assert "outsider" in plan.unsupported_reason
+
+
+def test_node_and_references_keeps_align_reference() -> None:
+    scene = _scene(
+        TextNode(
+            id="caption",
+            x=1,
+            y=2,
+            width=2,
+            height=0.5,
+            z_index=1,
+            text="说明",
+            font_family="Arial",
+            font_size=12,
+            color="#000000",
+            line_height=1.2,
+        ),
+        ImageNode(
+            id="photo",
+            x=4,
+            y=1,
+            width=3,
+            height=3,
+            z_index=1,
+            storage_uri="project://a.png",
+            asset_path="project://a.png",
+        ),
+    )
+    comment = _comment(
+        node_id="photo",
+        note="和左边对齐",
+        slide_id=scene.slide_id,
+        scope=ElementCommentScope.NODE_AND_REFERENCES,
+    )
+    plan = CommentToCommandPlanner().plan(comment, scene=scene)
+    assert len(plan.commands) == 1
+    align = plan.commands[0]
+    assert isinstance(align, AlignNodesCommand)
+    assert align.node_ids[0] == "photo"
+    assert "caption" in align.node_ids

@@ -278,6 +278,9 @@ def element_comment_to_orm(
     orm.layout_element_id = domain.layout_element_id
     orm.note = domain.note
     orm.status = domain.status.value
+    orm.scope = domain.scope.value
+    orm.scope_node_ids_json = list(domain.scope_node_ids or [])
+    orm.region_bbox_json = dict(domain.region_bbox) if domain.region_bbox else None
     orm.scene_revision_id = domain.scene_revision_id
     orm.scene_hash = domain.scene_hash or ""
     orm.node_snapshot_json = dict(domain.node_snapshot_json or {})
@@ -289,7 +292,11 @@ def element_comment_to_orm(
 
 
 def element_comment_to_domain(orm: ElementCommentORM) -> ElementComment:
+    from archium.domain.visual.element_comment import ElementCommentScope
+
     snapshot = orm.node_snapshot_json if isinstance(orm.node_snapshot_json, dict) else {}
+    scope_nodes = orm.scope_node_ids_json if isinstance(orm.scope_node_ids_json, list) else []
+    region = orm.region_bbox_json if isinstance(orm.region_bbox_json, dict) else None
     return ElementComment(
         id=orm.id,
         presentation_id=orm.presentation_id,
@@ -298,6 +305,9 @@ def element_comment_to_domain(orm: ElementCommentORM) -> ElementComment:
         layout_element_id=orm.layout_element_id,
         note=orm.note,
         status=ElementCommentStatus(orm.status),
+        scope=ElementCommentScope(orm.scope or ElementCommentScope.NODE.value),
+        scope_node_ids=[str(item) for item in scope_nodes],
+        region_bbox={str(k): float(v) for k, v in region.items()} if region else None,
         scene_revision_id=orm.scene_revision_id,
         scene_hash=orm.scene_hash or "",
         node_snapshot_json=dict(snapshot),

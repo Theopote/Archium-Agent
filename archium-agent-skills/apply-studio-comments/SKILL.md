@@ -31,12 +31,13 @@ Select element (studio_selected_element_id)
 
 ## Hard rules
 
-1. **硬绑定 `node_id`** — 有选中时禁止再用「右边第二张图」类 hint 覆盖目标
-2. **只修改绑定节点及相关必要参考**（如对齐参考 sibling）；遵守 partial-edit 合同
-3. **解析失败要明确 `unsupported_reason`** — 不可静默改错节点
-4. **无选中** — 可回退纯 NL 提案路径（`StudioNLProposalService`），并提示用户选中更稳
-5. **版本钉扎** — 提案前校验 `scene_revision_id` / `scene_hash`；漂移则 `needs_rebase`，不可直接 apply
-6. 状态机：`pending → proposed → accepted|rejected → resolved`（旁路：`needs_rebase`）
+1. **硬绑定 `node_id`（默认 scope=`node`）** — 有选中时禁止再用「右边第二张图」类 hint 覆盖目标
+2. **作用域可显式扩大** — `node_and_references` / `selection` / `region` / `slide`；多节点意图（「这三个卡片大小一致」）在 `node` 下会拒绝并提示改 scope
+3. **只修改作用域内节点**；遵守 partial-edit 合同
+4. **解析失败要明确 `unsupported_reason`** — 不可静默改错节点
+5. **无选中** — 可回退纯 NL 提案路径（`StudioNLProposalService`），并提示用户选中更稳
+6. **版本钉扎** — 提案前校验 `scene_revision_id` / `scene_hash`；漂移则 `needs_rebase`，不可直接 apply
+7. 状态机：`pending → proposed → accepted|rejected → resolved`（旁路：`needs_rebase`）
 
 ## Agent behavior
 

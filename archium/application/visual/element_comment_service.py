@@ -12,7 +12,11 @@ from archium.application.visual.scene_proposal_service import SceneProposalServi
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings, get_settings
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.element_comment import ElementComment, ElementCommentStatus
+from archium.domain.visual.element_comment import (
+    ElementComment,
+    ElementCommentScope,
+    ElementCommentStatus,
+)
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
 from archium.exceptions import WorkflowError
@@ -51,6 +55,9 @@ class ElementCommentService:
         layout_element_id: str | None = None,
         created_by: str = "user",
         presentation_id: UUID | None = None,
+        scope: ElementCommentScope | str = ElementCommentScope.NODE,
+        scope_node_ids: list[str] | None = None,
+        region_bbox: dict[str, float] | None = None,
     ) -> ElementComment:
         slide = self._presentations.get_slide(slide_id)
         if slide is None:
@@ -65,6 +72,22 @@ class ElementCommentService:
         if not cleaned:
             raise WorkflowError("请输入修改描述。")
 
+        resolved_scope = (
+            scope
+            if isinstance(scope, ElementCommentScope)
+            else ElementCommentScope(str(scope))
+        )
+        extra_ids = [item for item in (scope_node_ids or []) if item and item != node_id]
+        for extra_id in extra_ids:
+            if scene.node_by_id(extra_id) is None:
+                raise WorkflowError(f"作用域节点不存在：`{extra_id}`")
+        if resolved_scope == ElementCommentScope.SELECTION and not extra_ids:
+            raise WorkflowError(
+                "scope=`selection` 时请提供 scope_node_ids（除主节点外的选中节点）。"
+            )
+        if resolved_scope == ElementCommentScope.REGION and not region_bbox and not extra_ids:
+            raise WorkflowError("scope=`region` 时请提供 region_bbox 或 scope_node_ids。")
+
         scene_revision_id = self._scene_history.latest_scene_revision_id(slide)
         scene_hash = compute_scene_hash(scene)
         node_snapshot = node.model_dump(mode="json")
@@ -76,6 +99,9 @@ class ElementCommentService:
             layout_element_id=layout_element_id,
             note=cleaned,
             status=ElementCommentStatus.PENDING,
+            scope=resolved_scope,
+            scope_node_ids=extra_ids,
+            region_bbox=region_bbox,
             scene_revision_id=scene_revision_id,
             scene_hash=scene_hash,
             node_snapshot_json=node_snapshot,
@@ -217,6 +243,9 @@ class ElementCommentService:
         note: str,
         layout_element_id: str | None = None,
         created_by: str = "user",
+        scope: ElementCommentScope | str = ElementCommentScope.NODE,
+        scope_node_ids: list[str] | None = None,
+        region_bbox: dict[str, float] | None = None,
     ) -> tuple[ElementComment, SceneChangeProposal]:
         comment = self.create_comment(
             slide_id=slide_id,
@@ -224,6 +253,9 @@ class ElementCommentService:
             note=note,
             layout_element_id=layout_element_id,
             created_by=created_by,
+            scope=scope,
+            scope_node_ids=scope_node_ids,
+            region_bbox=region_bbox,
         )
         return self.propose_from_comment(comment.id)
 

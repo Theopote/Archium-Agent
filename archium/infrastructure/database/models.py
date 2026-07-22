@@ -1047,6 +1047,13 @@ class ElementCommentORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     layout_element_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     note: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    scope: Mapped[str] = mapped_column(String(40), nullable=False, default="node")
+    scope_node_ids_json: Mapped[list[str]] = mapped_column(
+        "scope_node_ids", JSON, nullable=False, default=list
+    )
+    region_bbox_json: Mapped[dict[str, float] | None] = mapped_column(
+        "region_bbox", JSON, nullable=True
+    )
     scene_revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     scene_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     node_snapshot_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
