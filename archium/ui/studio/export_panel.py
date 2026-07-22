@@ -168,12 +168,36 @@ def _export_pptx(
     settings: Settings,
     qa_status: str = "unknown",
 ) -> None:
+    from archium.application.export_policy_service import (
+        ExportPolicyService,
+        build_pre_export_manifest,
+    )
+    from archium.ui.delivery.export_policy_panel import get_session_export_policy
+    from archium.ui.delivery.fidelity_report_panel import store_manifest
+
+    policy = get_session_export_policy()
     try:
         _assert_export_gate(
             project_id=project_id,
             presentation_id=presentation_id,
             export_format="PPTX",
         )
+        with st.spinner("正在评估导出忠实度…"), get_session() as session:
+            from archium.application.evidence_readiness_service import (
+                latest_presentation_revision_id,
+            )
+
+            revision_id = latest_presentation_revision_id(session, presentation_id)
+            manifest = build_pre_export_manifest(
+                session,
+                presentation_id=presentation_id,
+                policy=policy,
+                export_format="PPTX",
+                revision_id=revision_id,
+                settings=settings,
+            )
+            ExportPolicyService().enforce_export_policy(manifest, policy=policy)
+
         with st.spinner("正在导出 PPTX…"), get_session() as session:
             pptx_export_result: RenderResult = export_presentation_from_studio(
                 session,
@@ -182,6 +206,21 @@ def _export_pptx(
             )
         path = pptx_export_result.editable_pptx_path
         if path:
+            import hashlib
+            from pathlib import Path
+
+            file_hash = ""
+            file_path = Path(path)
+            if file_path.is_file():
+                file_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()[:16]
+            manifest = manifest.model_copy(
+                update={
+                    "file_uri": str(path),
+                    "file_hash": file_hash,
+                    "qa_status": qa_status,
+                }
+            )
+            store_manifest(manifest)
             st.session_state.last_studio_pptx_path = str(path)
             _append_delivery_record(
                 "PPTX",
@@ -191,6 +230,10 @@ def _export_pptx(
                 qa_status=qa_status,
             )
             st.success("PPTX 导出完成。")
+            for line in manifest.summary_lines_zh():
+                st.caption(line)
+            if manifest.fallback_used and manifest.fallback_reason:
+                st.warning(f"降级说明：{manifest.fallback_reason}")
             st.code(path, language=None)
         else:
             st.warning("导出完成，但未返回文件路径。")
@@ -521,3 +564,9 @@ def render_export_panel(
         st.caption("导出需先完成全部页面版式。")
     elif readiness.export_blocker_count > 0:
         st.caption("存在阻塞项，正式导出已被阻止。")
+
+    from archium.ui.delivery.export_policy_panel import render_export_policy_panel
+    from archium.ui.delivery.fidelity_report_panel import render_fidelity_report_panel
+
+    render_export_policy_panel(key_prefix="deliver")
+    render_fidelity_report_panel(key_prefix="deliver")

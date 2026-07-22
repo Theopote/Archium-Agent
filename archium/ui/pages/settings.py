@@ -186,11 +186,86 @@ def render() -> None:
         st.warning("尚未配置可用的 LLM API Key。可在此页面配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
 
     st.divider()
+    _render_model_role_mapping(draft_profile)
+    st.divider()
     _render_system_diagnostics()
     st.divider()
     _render_about()
     st.divider()
     _render_image_search_settings()
+
+
+def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
+    from archium.application.model_role_router import ModelRoleRegistryService
+    from archium.domain.model_roles import (
+        CORE_MODEL_ROLES,
+        ModelRole,
+        ModelRoleAssignment,
+        model_profile_from_llm_profile,
+    )
+
+    st.markdown("### 高级：模型角色映射")
+    st.caption(
+        "日常生成使用上方默认 LLM 配置。"
+        "可选角色（OCR、图像生成等）未配置时不影响普通生成流程。"
+    )
+
+    with get_session() as session:
+        registry = ModelRoleRegistryService(session)
+        profiles = registry.list_profiles()
+        assignments = registry.list_role_assignments()
+
+    if not profiles:
+        profiles = [
+            model_profile_from_llm_profile(
+                profile_id="default",
+                provider=draft_profile.provider,
+                model=draft_profile.model,
+                base_url=draft_profile.base_url,
+                timeout_seconds=draft_profile.timeout_seconds,
+            )
+        ]
+
+    profile_labels = {p.id: f"{p.id} · {p.provider}/{p.model}" for p in profiles}
+    assignment_by_role = {a.role: a.profile_id for a in assignments}
+
+    with st.expander("角色 → 模型配置", expanded=False):
+        new_assignments: list[ModelRoleAssignment] = []
+        for role in ModelRole:
+            optional = role not in CORE_MODEL_ROLES
+            label = f"{role.value}" + ("（可选）" if optional else "")
+            options = ["（未指定）"] + list(profile_labels.keys())
+            current = assignment_by_role.get(role)
+            index = options.index(current) if current in options else 0
+            picked = st.selectbox(
+                label,
+                options=options,
+                index=index,
+                format_func=lambda value: profile_labels.get(value, value),
+                key=f"model_role_map_{role.value}",
+            )
+            if picked != "（未指定）":
+                new_assignments.append(ModelRoleAssignment(role=role, profile_id=picked))
+
+        if st.button("保存角色映射", key="save_model_role_mapping"):
+            with get_session() as session:
+                save_registry = ModelRoleRegistryService(session)
+                save_registry.save_profiles(profiles)
+                save_registry.save_role_assignments(new_assignments)
+                session.commit()
+            st.success("模型角色映射已保存")
+            st.rerun()
+
+        configured = {a.role for a in new_assignments} | {
+            role for profile in profiles for role in profile.roles
+        }
+        missing_optional = [r for r in ModelRole if r not in CORE_MODEL_ROLES and r not in configured]
+        if missing_optional:
+            st.caption(
+                "未配置的可选角色："
+                + "、".join(r.value for r in missing_optional)
+                + "。调用这些能力前需在此指定模型。"
+            )
 
 
 def _render_system_diagnostics() -> None:
