@@ -1023,3 +1023,28 @@ class OutlineApprovalRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     superseded_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class ElementCommentORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "element_comments"
+    __table_args__ = (
+        Index("ix_element_comments_slide_id", "slide_id"),
+        Index("ix_element_comments_presentation_id", "presentation_id"),
+        Index("ix_element_comments_status", "status"),
+        Index("ix_element_comments_proposal_id", "proposal_id"),
+    )
+
+    presentation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("presentations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    slide_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("slides.id", ondelete="CASCADE"), nullable=False
+    )
+    node_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    layout_element_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    note: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    proposal_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(200), nullable=False, default="user")

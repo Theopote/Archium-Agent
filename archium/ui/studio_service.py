@@ -374,6 +374,53 @@ def create_slide_scene_proposal_from_text(
     ).create_proposal_from_text(slide_id, text)
 
 
+def create_slide_scene_proposal_from_element_comment(
+    session: Session,
+    slide_id: UUID,
+    *,
+    node_id: str,
+    note: str,
+    layout_element_id: str | None = None,
+) -> SceneChangeProposal:
+    """Bind an NL note to a RenderScene node and create a SceneChangeProposal."""
+    from archium.application.visual.element_comment_service import ElementCommentService
+
+    settings = _resolve_runtime_settings(None)
+    _comment, proposal = ElementCommentService(
+        session,
+        settings=settings,
+        use_llm=settings.llm_configured,
+    ).create_and_propose(
+        slide_id=slide_id,
+        node_id=node_id,
+        note=note,
+        layout_element_id=layout_element_id,
+    )
+    return proposal
+
+
+def resolve_selected_render_node_id(
+    slide_snapshot: object,
+    selected_element_id: str | None,
+) -> tuple[str | None, str | None]:
+    """Map Studio selection (layout element id) to a RenderScene node id.
+
+    Returns ``(node_id, layout_element_id)``. Either may be None when unresolved.
+    """
+    if not selected_element_id or not selected_element_id.strip():
+        return None, None
+    layout_element_id = selected_element_id.strip()
+    scene = getattr(slide_snapshot, "render_scene", None)
+    if scene is None:
+        return None, layout_element_id
+    node = scene.node_by_layout_element_id(layout_element_id) or scene.node_by_id(
+        layout_element_id
+    )
+    if node is None:
+        return None, layout_element_id
+    return node.id, layout_element_id
+
+
 def create_slide_scene_proposal_from_intent(
     session: Session,
     slide_id: UUID,

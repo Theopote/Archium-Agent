@@ -104,6 +104,7 @@ class StudioNLCommandPlanner:
         scene: RenderScene,
         presentation_id: UUID,
         slide_id: UUID,
+        bound_node_id: str | None = None,
     ) -> StudioCommandPlan:
         normalized = text.strip()
         if not normalized:
@@ -118,17 +119,20 @@ class StudioNLCommandPlanner:
             scene=scene,
             presentation_id=presentation_id,
             slide_id=slide_id,
+            bound_node_id=bound_node_id,
         )
         if rewrite_plan is not None:
             return self._stamp_partial_edit_rule(rewrite_plan)
 
         if any(keyword in normalized.lower() for keyword in _OVERFLOW_KEYWORDS):
+            node_ids = [bound_node_id] if bound_node_id else None
             return self._stamp_partial_edit_rule(
                 self._overflow_plan(
                     scene=scene,
                     presentation_id=presentation_id,
                     slide_id=slide_id,
                     reason="修复文本溢出",
+                    node_ids=node_ids,
                 )
             )
 
@@ -137,6 +141,7 @@ class StudioNLCommandPlanner:
             scene=scene,
             presentation_id=presentation_id,
             slide_id=slide_id,
+            bound_node_id=bound_node_id,
         )
         if drawing_plan is not None:
             return self._stamp_partial_edit_rule(drawing_plan)
@@ -161,6 +166,7 @@ class StudioNLCommandPlanner:
                     presentation_id=presentation_id,
                     slide_id=slide_id,
                     confidence=0.75,
+                    bound_node_id=bound_node_id,
                 )
             )
 
@@ -182,6 +188,7 @@ class StudioNLCommandPlanner:
                 presentation_id=presentation_id,
                 slide_id=slide_id,
                 confidence=parsed.confidence,
+                bound_node_id=bound_node_id,
             )
         )
 
@@ -193,6 +200,7 @@ class StudioNLCommandPlanner:
         presentation_id: UUID,
         slide_id: UUID,
         params: dict[str, object] | None = None,
+        bound_node_id: str | None = None,
     ) -> StudioCommandPlan:
         return self._stamp_partial_edit_rule(
             self._plan_intent(
@@ -202,6 +210,7 @@ class StudioNLCommandPlanner:
                 presentation_id=presentation_id,
                 slide_id=slide_id,
                 confidence=1.0,
+                bound_node_id=bound_node_id,
             )
         )
 
@@ -229,6 +238,7 @@ class StudioNLCommandPlanner:
         scene: RenderScene,
         presentation_id: UUID,
         slide_id: UUID,
+        bound_node_id: str | None = None,
     ) -> StudioCommandPlan | None:
         lowered = text.lower()
         for pattern, kind in _REWRITE_PATTERNS:
@@ -237,11 +247,13 @@ class StudioNLCommandPlanner:
                 continue
             if kind == "title_text":
                 new_text = match.group(1).strip()
-                node_id = resolve_render_node_id(scene, "title")
+                node_id = _resolve_target_node_id(scene, "title", bound_node_id=bound_node_id)
             else:
                 element_hint = match.group(1).strip()
                 new_text = match.group(2).strip()
-                node_id = resolve_render_node_id(scene, element_hint)
+                node_id = _resolve_target_node_id(
+                    scene, element_hint, bound_node_id=bound_node_id
+                )
             if not new_text:
                 continue
             command = RewriteTextCommand(
@@ -270,12 +282,16 @@ class StudioNLCommandPlanner:
         presentation_id: UUID,
         slide_id: UUID,
         confidence: float,
+        bound_node_id: str | None = None,
     ) -> StudioCommandPlan:
         if intent == VisualEditIntent.REDUCE_TEXT:
             node_ids = None
-            element_id = params.get("element_id")
-            if isinstance(element_id, str) and element_id.strip():
-                node_ids = [resolve_render_node_id(scene, element_id)]
+            if bound_node_id:
+                node_ids = [bound_node_id]
+            else:
+                element_id = params.get("element_id")
+                if isinstance(element_id, str) and element_id.strip():
+                    node_ids = [resolve_render_node_id(scene, element_id)]
             return self._overflow_plan(
                 scene=scene,
                 presentation_id=presentation_id,
@@ -297,7 +313,9 @@ class StudioNLCommandPlanner:
                     confidence=confidence,
                     unsupported_reason="更新文字需要提供目标元素和新文本内容。",
                 )
-            node_id = resolve_render_node_id(scene, element_id)
+            node_id = _resolve_target_node_id(
+                scene, element_id, bound_node_id=bound_node_id
+            )
             command = RewriteTextCommand(
                 presentation_id=presentation_id,
                 slide_id=slide_id,
@@ -326,7 +344,7 @@ class StudioNLCommandPlanner:
             VisualEditIntent.RESIZE_ELEMENT,
         }
         if intent == VisualEditIntent.ENLARGE_HERO:
-            drawing_id = _default_drawing_node_id(scene)
+            drawing_id = bound_node_id or _default_drawing_node_id(scene)
             if drawing_id is not None:
                 return self._drawing_readability_plan(
                     scene=scene,
@@ -401,11 +419,12 @@ class StudioNLCommandPlanner:
         scene: RenderScene,
         presentation_id: UUID,
         slide_id: UUID,
+        bound_node_id: str | None = None,
     ) -> StudioCommandPlan | None:
         lowered = text.lower()
         if not any(keyword in lowered for keyword in _DRAWING_READABILITY_KEYWORDS):
             return None
-        node_id = _default_drawing_node_id(scene)
+        node_id = bound_node_id or _default_drawing_node_id(scene)
         if node_id is None:
             return StudioCommandPlan(
                 commands=(),
@@ -451,6 +470,21 @@ class StudioNLCommandPlanner:
         has_constraints = any(modifier.type.value == "constraint" for modifier in parsed.modifiers)
         has_multi_step = any(modifier.type.value == "multi_step" for modifier in parsed.modifiers)
         return has_constraints or has_multi_step or "multi_step_operations" in parsed.params
+
+
+def _resolve_target_node_id(
+    scene: RenderScene,
+    hint: str | None,
+    *,
+    bound_node_id: str | None = None,
+) -> str:
+    """Prefer a hard-bound node id over fuzzy hint resolution."""
+    if bound_node_id:
+        node = scene.node_by_id(bound_node_id)
+        if node is None:
+            raise ValueError(f"绑定节点不存在：`{bound_node_id}`")
+        return bound_node_id
+    return resolve_render_node_id(scene, hint)
 
 
 def resolve_render_node_id(scene: RenderScene, hint: str | None, *, default: str = "title") -> str:

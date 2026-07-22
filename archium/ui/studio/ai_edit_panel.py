@@ -13,8 +13,10 @@ from archium.ui.error_handlers import format_user_error
 from archium.ui.studio.proposal_compare_panel import store_proposal
 from archium.ui.studio_service import (
     apply_slide_visual_edit,
+    create_slide_scene_proposal_from_element_comment,
     create_slide_scene_proposal_from_intent,
     create_slide_scene_proposal_from_text,
+    resolve_selected_render_node_id,
     restore_slide_visual_edit,
 )
 from archium.ui.visual_service import SlideVisualSnapshot
@@ -37,27 +39,49 @@ def render_ai_edit_panel(
         _render_legacy_panel(slide_id=slide_id)
         return
 
+    selected_raw = st.session_state.get("studio_selected_element_id")
+    selected_element_id = selected_raw if isinstance(selected_raw, str) else None
+    bound_node_id, layout_element_id = resolve_selected_render_node_id(
+        slide_snapshot,
+        selected_element_id,
+    )
+
     st.caption(
         "Scene 提案模式：自然语言 → StudioCommand → Before/After → 接受后写入 Revision。"
         "系统规则：**只修改我提到的部分**"
         "（未指定节点 / 锁定节点 / 素材身份 / 页面事实 / 引用保持不变）。"
-        "支持：改写标题/正文、修复文字溢出、减少文字、提高图纸可读性。"
+        "选中元素后评论可硬绑定目标节点，无需描述「右边第二张图」。"
     )
+
+    if bound_node_id:
+        label = layout_element_id or bound_node_id
+        st.info(f"当前目标：`{bound_node_id}`" + (f"（layout `{label}`）" if label != bound_node_id else ""))
+    else:
+        st.caption("未选中元素：将按纯自然语言解析目标（可能需要描述位置/角色）。")
 
     text = st.text_area(
         "描述你想做的修改",
-        placeholder="例如：标题改为「结论：…」、修复文字溢出、提高图纸可读性…",
+        placeholder="例如：放大一点并和左边对齐；或标题改为「结论：…」、修复文字溢出…",
         height=100,
         key=f"studio_ai_edit_input_{slide_id}",
     )
 
+    button_label = "对选中元素生成提案" if bound_node_id else "生成修改提案"
     if st.button(
-        "生成修改提案",
+        button_label,
         type="primary",
         use_container_width=True,
         key=f"studio_create_proposal_{slide_id}",
     ):
-        _run_proposal(slide_id=slide_id, text=text.strip())
+        if bound_node_id:
+            _run_element_comment_proposal(
+                slide_id=slide_id,
+                node_id=bound_node_id,
+                layout_element_id=layout_element_id,
+                text=text.strip(),
+            )
+        else:
+            _run_proposal(slide_id=slide_id, text=text.strip())
 
     with st.expander("版式直接编辑（不经 Scene 提案）", expanded=False):
         _render_legacy_panel(slide_id=slide_id)
@@ -107,6 +131,34 @@ def _run_proposal(*, slide_id: UUID, text: str) -> None:
             proposal = create_slide_scene_proposal_from_text(session, slide_id, text)
         store_proposal(proposal)
         st.success("修改提案已生成，请在下方 Scene 修改提案面板查看对比。")
+        st.rerun()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
+def _run_element_comment_proposal(
+    *,
+    slide_id: UUID,
+    node_id: str,
+    layout_element_id: str | None,
+    text: str,
+) -> None:
+    if not text:
+        st.error("请输入修改描述。")
+        return
+    try:
+        with st.spinner("正在按选中元素生成 Before/After 提案…"), get_session() as session:
+            proposal = create_slide_scene_proposal_from_element_comment(
+                session,
+                slide_id,
+                node_id=node_id,
+                note=text,
+                layout_element_id=layout_element_id,
+            )
+        store_proposal(proposal)
+        st.success("元素评论提案已生成，请在下方 Scene 修改提案面板查看对比。")
         st.rerun()
     except WorkflowError as exc:
         st.error(format_user_error(exc))

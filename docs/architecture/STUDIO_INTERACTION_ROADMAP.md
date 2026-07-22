@@ -443,3 +443,18 @@ const TextEditor = ({ element, onUpdate }) => {
 - 如果是**混合用户**：保持两种模式并存
 
 当前的增强自然语言解析是正确的第一步，它显著提升了命令式编辑的能力。下一步应该根据实际使用反馈决定是否投入资源开发完整的 WYSIWYG 编辑器。
+
+## 元素级评论 → Proposal（已接线）
+
+open-slide 式 Inspector 评论适合 Archium，但应以 Command / Patch / Proposal / QA / Revision 保留可审计性，而不是直接改渲染树。
+
+**已实现（最小闭环）**
+- 领域模型 `ElementComment`（`pending → proposed → accepted|rejected → resolved`）
+- 选中 Layout 元素 → 映射 RenderScene `node_id` → 自然语言评论硬绑定
+- `CommentToCommandPlanner` → `StudioCommand` → `SceneChangeProposal` → Before/After
+- 提案接受/拒绝后回写评论状态
+
+**尚未做**
+- 画布上的评论气泡 / 独立评论线程 UI
+- 多评论协作与指派
+- 复合几何指令的完整 LLM 规划（当前对「放大 / 左对齐」有关键词启发式）

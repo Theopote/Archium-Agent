@@ -8,10 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from archium.domain._base import new_uuid
+from archium.domain._base import new_uuid, utc_now
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.element_comment import ElementComment
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
@@ -22,6 +23,7 @@ from archium.infrastructure.database.models import (
     ArchitecturalTemplateORM,
     ArtDirectionORM,
     DesignSystemORM,
+    ElementCommentORM,
     LayoutPlanORM,
     RenderSceneORM,
     SceneChangeProposalORM,
@@ -308,6 +310,54 @@ class SceneProposalRepository:
             base_scene=base_scene,
             proposed_scene=proposed_scene,
         )
+
+
+class ElementCommentRepository:
+    """Persist element-bound Studio comments."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def save(self, comment: ElementComment) -> ElementComment:
+        try:
+            orm = self._session.get(ElementCommentORM, comment.id)
+            updated = comment.model_copy(update={"updated_at": utc_now()})
+            if orm is None:
+                orm = visual_mappers.element_comment_to_orm(updated)
+                self._session.add(orm)
+            else:
+                visual_mappers.element_comment_to_orm(updated, orm)
+            self._session.flush()
+            return visual_mappers.element_comment_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save element comment", exc)
+            raise
+
+    def get(self, comment_id: UUID) -> ElementComment | None:
+        orm = self._session.get(ElementCommentORM, comment_id)
+        return visual_mappers.element_comment_to_domain(orm) if orm else None
+
+    def list_by_slide(self, slide_id: UUID) -> list[ElementComment]:
+        stmt = (
+            select(ElementCommentORM)
+            .where(ElementCommentORM.slide_id == slide_id)
+            .order_by(ElementCommentORM.created_at.desc())
+        )
+        return [
+            visual_mappers.element_comment_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
+    def list_by_proposal(self, proposal_id: UUID) -> list[ElementComment]:
+        stmt = (
+            select(ElementCommentORM)
+            .where(ElementCommentORM.proposal_id == proposal_id)
+            .order_by(ElementCommentORM.created_at.desc())
+        )
+        return [
+            visual_mappers.element_comment_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
 
 
 class ArchitecturalTemplateRepository:

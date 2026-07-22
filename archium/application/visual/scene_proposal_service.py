@@ -247,7 +247,9 @@ class SceneProposalService:
                 ),
             }
         )
-        return self._proposals.save(rejected, supersede_previous=False)
+        saved = self._proposals.save(rejected, supersede_previous=False)
+        self._sync_element_comments(saved)
+        return saved
 
     def mark_proposal_superseded(self, proposal: SceneChangeProposal) -> SceneChangeProposal:
         superseded = proposal.model_copy(
@@ -336,6 +338,7 @@ class SceneProposalService:
             layout_plan_id=saved.layout_plan_id,
         )
         updated_proposal = self._record_proposal_decision(proposal, decision)
+        self._sync_element_comments(updated_proposal)
         return ProposalAcceptResult(revision=scene_revision, proposal=updated_proposal)
 
     def _record_proposal_decision(
@@ -373,6 +376,14 @@ class SceneProposalService:
             }
         )
         return self._proposals.save(updated, supersede_previous=False)
+
+    def _sync_element_comments(self, proposal: SceneChangeProposal) -> None:
+        from archium.application.visual.element_comment_service import ElementCommentService
+
+        ElementCommentService(
+            self._session,
+            settings=self._settings,
+        ).sync_from_proposal_decision(proposal)
 
     def _resolve_accepted_scene(
         self,

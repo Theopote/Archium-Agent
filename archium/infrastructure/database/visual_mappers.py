@@ -8,6 +8,7 @@ from archium.domain._base import model_to_dict, utc_now
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.element_comment import ElementComment, ElementCommentStatus
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_change_proposal import (
@@ -20,6 +21,7 @@ from archium.infrastructure.database.models import (
     ArchitecturalTemplateORM,
     ArtDirectionORM,
     DesignSystemORM,
+    ElementCommentORM,
     LayoutPlanORM,
     RenderSceneORM,
     SceneChangeProposalORM,
@@ -254,6 +256,41 @@ def architectural_template_to_orm(
     orm.created_at = domain.created_at
     orm.updated_at = domain.updated_at
     return orm
+
+
+def element_comment_to_orm(
+    domain: ElementComment,
+    target: ElementCommentORM | None = None,
+) -> ElementCommentORM:
+    orm = target or ElementCommentORM(id=domain.id)
+    orm.id = domain.id
+    orm.presentation_id = domain.presentation_id
+    orm.slide_id = domain.slide_id
+    orm.node_id = domain.node_id
+    orm.layout_element_id = domain.layout_element_id
+    orm.note = domain.note
+    orm.status = domain.status.value
+    orm.proposal_id = domain.proposal_id
+    orm.created_by = domain.created_by
+    orm.created_at = domain.created_at
+    orm.updated_at = domain.updated_at
+    return orm
+
+
+def element_comment_to_domain(orm: ElementCommentORM) -> ElementComment:
+    return ElementComment(
+        id=orm.id,
+        presentation_id=orm.presentation_id,
+        slide_id=orm.slide_id,
+        node_id=orm.node_id,
+        layout_element_id=orm.layout_element_id,
+        note=orm.note,
+        status=ElementCommentStatus(orm.status),
+        proposal_id=orm.proposal_id,
+        created_by=orm.created_by,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
 
 
 def architectural_template_to_domain(orm: ArchitecturalTemplateORM) -> ArchitecturalTemplate:
