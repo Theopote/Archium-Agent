@@ -714,6 +714,7 @@ def summarize_command_type(command: StudioCommand) -> str:
         "increase_drawing_readability": "提高图纸可读性",
         "set_node_lock": "锁定设置",
         "set_node_visibility": "显示设置",
+        "reorder_node": "图层顺序",
     }
     return labels.get(command.command_type, command.command_type)
 

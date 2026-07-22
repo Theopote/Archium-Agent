@@ -45,6 +45,47 @@ def _element_visibility(slide_snapshot: SlideVisualSnapshot, element_id: str) ->
     return True
 
 
+def _element_z_index(slide_snapshot: SlideVisualSnapshot, element_id: str) -> int:
+    scene = slide_snapshot.render_scene
+    if scene is not None:
+        node = scene.node_by_layout_element_id(element_id) or scene.node_by_id(element_id)
+        if node is not None:
+            return node.z_index
+    plan = slide_snapshot.layout_plan
+    if plan is not None:
+        element = plan.element_by_id(element_id)
+        if element is not None:
+            return element.z_index
+    return 0
+
+
+def _run_reorder(
+    slide_id: UUID,
+    element_id: str,
+    direction: str,
+) -> None:
+    try:
+        with get_session() as session:
+            from archium.ui.studio_service import apply_slide_element_reorder
+
+            apply_slide_element_reorder(
+                session,
+                slide_id,
+                element_id=element_id,
+                direction=direction,
+            )
+        labels = {
+            "forward": "上移",
+            "backward": "下移",
+            "front": "置顶",
+            "back": "置底",
+        }
+        st.success(f"已{labels.get(direction, '调整')}图层。")
+        st.rerun()
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
 def _run_visibility(
     slide_id: UUID,
     element_id: str,
@@ -214,6 +255,7 @@ def _render_element_properties(
     st.write(f"位置：{element.x:.2f}, {element.y:.2f}")
     st.write(f"尺寸：{element.width:.2f} × {element.height:.2f}")
     st.write(f"显示：{'是' if is_visible else '否'}")
+    st.write(f"图层：{_element_z_index(slide_snapshot, selected_from_ui)}")
     st.write(f"锁定：{'是' if element.locked else '否'}")
 
     if is_drawing_element(element) or canvas_geometry_locked(element):
@@ -228,6 +270,28 @@ def _render_element_properties(
     elif focus_text and element.content_type != LayoutContentType.TEXT:
         st.caption("当前元素不是文字类型；请在属性栏选择文字元素进行改字。")
         st.session_state.pop("studio_focus_text_edit", None)
+
+    if is_visible:
+        st.markdown("**图层顺序**")
+        layer_cols = st.columns(4)
+        layer_actions = (
+            ("上移", "forward"),
+            ("下移", "backward"),
+            ("置顶", "front"),
+            ("置底", "back"),
+        )
+        for column, (label, direction) in zip(layer_cols, layer_actions, strict=True):
+            with column:
+                if st.button(
+                    label,
+                    use_container_width=True,
+                    key=(
+                        f"studio_layer_{direction}_"
+                        f"{slide_snapshot.slide.id}_{element.id}"
+                    ),
+                ):
+                    _run_reorder(slide_snapshot.slide.id, element.id, direction)
+        st.caption("图层顺序影响导出时的叠放关系；数值越大越靠前。")
 
     if element.content_type == LayoutContentType.TEXT:
         edited_text = st.text_area(

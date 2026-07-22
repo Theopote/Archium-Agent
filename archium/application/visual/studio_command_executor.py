@@ -876,13 +876,6 @@ class StudioCommandExecutor:
         node = scene.node_by_id(command.node_id)
         if node is None:
             return _node_not_found(base_hash, command.node_id)
-        if node_geometry_locked(node):
-            return _locked_result(
-                base_hash=base_hash,
-                command_type="reorder_node",
-                node_id=command.node_id,
-                lock_kind="geometry",
-            )
 
         patched = scene.model_copy(deep=True)
         target = patched.node_by_id(command.node_id)

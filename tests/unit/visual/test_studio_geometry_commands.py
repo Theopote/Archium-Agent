@@ -24,6 +24,7 @@ from archium.domain.visual.studio_command import (
     DeleteNodeCommand,
     MoveNodeCommand,
     ResizeNodeCommand,
+    ReorderNodeCommand,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     build_patch_action,
@@ -40,6 +41,7 @@ def _text_node(
     source_layout_element_id: str | None = None,
     locked: bool = False,
     visible: bool = True,
+    z_index: int = 1,
 ) -> TextNode:
     return TextNode(
         id=node_id,
@@ -48,7 +50,7 @@ def _text_node(
         y=y,
         width=width,
         height=height,
-        z_index=1,
+        z_index=z_index,
         text="标题",
         font_family="Arial",
         font_size=18,
@@ -183,6 +185,76 @@ def test_set_node_visibility_works_on_locked_node() -> None:
     node = result.candidate_scene.node_by_id("title")
     assert node is not None
     assert node.visible is False
+
+
+def test_reorder_node_forward_moves_to_next_layer() -> None:
+    scene = _scene(
+        _text_node(node_id="back", z_index=1),
+        _text_node(node_id="front", z_index=5),
+    )
+    command = ReorderNodeCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="back",
+        direction="forward",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("back")
+    assert node is not None
+    assert node.z_index == 5
+
+
+def test_reorder_node_front_places_above_all() -> None:
+    scene = _scene(
+        _text_node(node_id="back", z_index=1),
+        _text_node(node_id="front", z_index=5),
+    )
+    command = ReorderNodeCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="back",
+        direction="front",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("back")
+    assert node is not None
+    assert node.z_index == 6
+
+
+def test_reorder_node_works_on_locked_node() -> None:
+    scene = _scene(_text_node(node_id="title", z_index=1, locked=True))
+    command = ReorderNodeCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        direction="front",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("title")
+    assert node is not None
+    assert node.z_index == 2
+
+
+def test_reorder_node_patch_replay() -> None:
+    scene = _scene(_text_node(node_id="title", z_index=1))
+    command = ReorderNodeCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        direction="front",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    replayed = apply_patch_actions(scene, list(result.applied_actions))
+    replay_node = replayed.node_by_id("title")
+    assert replay_node is not None
+    assert replay_node.z_index == 2
 
 
 def test_set_node_lock_updates_lock_state() -> None:
