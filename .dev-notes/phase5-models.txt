@@ -1,0 +1,335 @@
+status: Literal[
+        "pass",
+        "pass_with_warnings",
+        "needs_review",
+        "blocked",
+    ]
+```
+
+建筑图纸额外检查：
+
+* 图纸边界完整；
+* 不发生 cover 裁剪；
+* 指北针仍存在；
+* 比例尺仍存在；
+* 图例未缺失；
+* 来源和图注未缺失；
+* 图片身份未变化；
+* 尺寸比例没有异常变化。
+
+像素相似度不得作为唯一判断标准。
+
+---
+
+# 能力包 E：External Slide Reconstruction Tool
+
+## 图片、PDF 和图片式 PPTX 页面复活工具
+
+参考 AIPPT 的 Image-to-Editable-PPTX，但必须作为独立工具，不进入主生成链。
+
+工具名称建议：
+
+```text
+页面复活
+Slide Recovery
+```
+
+支持输入：
+
+* 单页 PNG/JPG；
+* PDF；
+* 图片式 PPTX；
+* 第三方 AI PPT 截图；
+* NotebookLM、Gamma 等工具导出的 PDF；
+* 旧汇报扫描件。
+
+处理流程：
+
+```text
+Source Page
+→ OCR
+→ VLM Page Region Analysis
+→ Text Region Recovery
+→ Background/Foreground Separation
+→ Native Simple Shape Recovery
+→ Bitmap Complex Region Recovery
+→ Semantic Role Inference
+→ HybridRenderScene
+→ User Review
+→ Native/Hybrid PPTX
+```
+
+新增：
+
+```python
+class RecoveredPageRegion(BaseModel):
+    id: UUID
+    bbox: NormalizedBox
+
+    region_type: Literal[
+        "text",
+        "image",
+        "drawing",
+        "table",
+        "chart",
+        "line",
+        "shape",
+        "background",
+        "unknown",
+    ]
+
+    semantic_role: str | None
+    confidence: float
+    source_asset_uri: str | None
+```
+
+新增：
+
+```python
+class SlideRecoveryResult(BaseModel):
+    source_page_id: str
+    recovered_scene_id: UUID | None
+
+    text_regions: list[RecoveredPageRegion]
+    visual_regions: list[RecoveredPageRegion]
+    native_shape_regions: list[RecoveredPageRegion]
+
+    reconstruction_fidelity: ExportFidelityLevel
+    warnings: list[str]
+    blockers: list[str]
+```
+
+建筑图纸处理规则：
+
+```text
+如果某区域被识别为建筑图纸：
+- 默认作为完整对象保留
+- 不拆墙线、尺寸线、轴网、符号
+- 只恢复页面外部标题、图注和注释
+- 用户可手动标记“保持整体图纸”
+```
+
+初期只支持：
+
+1. 标题页；
+2. 图文混排页；
+3. 普通表格页；
+4. 现场照片页；
+5. 图纸主导页的外层布局恢复。
+
+禁止承诺完整恢复复杂建筑图纸内部语义。
+
+---
+
+# 能力包 F：Visual Version Timeline
+
+## Studio 页面视觉版本轨
+
+参考 AIPPT 的单页版本历史和确认替换，但使用 Archium 的 SceneRevision 模型。
+
+增强 Studio History：
+
+```text
+v12 当前正式版本
+v13 AI 提案：放大总平面图
+v14 用户编辑：修改中心结论
+v15 QA 修复：图注越界
+v16 已拒绝：更换背景图
+```
+
+每个版本显示：
+
+* 页面缩略图；
+* 版本号；
+* 来源；
+* 创建时间；
+* 修改摘要；
+* 对应 StudioCommand；
+* QA 结果；
+* 是否已接受；
+* 是否已拒绝；
+* 恢复按钮；
+* 与当前版本对比按钮。
+
+新增：
+
+```python
+class SceneRevisionSummary(BaseModel):
+    revision_id: UUID
+    scene_id: UUID
+    version: int
+
+    source: Literal[
+        "manual_edit",
+        "ai_proposal",
+        "qa_repair",
+        "layout_replan",
+        "asset_rebind",
+        "import_recovery",
+    ]
+
+    summary: str
+    command_ids: list[UUID]
+    created_at: datetime
+    qa_status: str
+    accepted: bool
+```
+
+恢复旧版本时不得直接覆盖，必须生成新的 Revision：
+
+```text
+Restore v12
+→ Create v17 based on v12
+```
+
+---
+
+# 能力包 G：Presentation Technology Radar
+
+## 外部项目和能力观察档案
+
+建立内部技术雷达，避免每次临时分析一个项目后失去记录。
+
+新增文档或数据模型：
+
+```python
+class ExternalPresentationSystem(BaseModel):
+    id: str
+    name: str
+
+    repository_url: str | None
+    product_url: str | None
+
+    category: Literal[
+        "saas",
+        "open_source",
+        "research",
+        "office_addin",
+        "slides_as_code",
+    ]
+
+    input_modes: list[str]
+    output_formats: list[str]
+
+    editable_pptx: bool
+    local_llm: bool
+    agentic_workflow: bool
+    document_grounding: bool
+    office_integration: bool
+
+    page_model: str
+    layout_engine: str
+    template_system: str
+    edit_model: str
+    qa_model: str
+
+    archium_relevance: Literal[
+        "adopt",
+        "trial",
+        "assess",
+        "hold",
+    ]
+
+    concepts_to_adopt: list[str]
+    concepts_to_avoid: list[str]
+
+    last_reviewed_at: datetime
+```
+
+初始记录至少包括：
+
+* PPTAgent；
+* Presenton；
+* presentation-ai；
+* slide-deck-ai；
+* SlideBot-AI；
+* Slideweaver；
+* AIPPT；
+* Beautiful.ai；
+* Plus AI；
+* Microsoft Copilot；
+* Gamma。
+
+---
+
+# 三、架构边界
+
+本轮不得破坏以下边界。
+
+## 1. Domain 层不得依赖 Streamlit
+
+所有：
+
+* ExportPolicy；
+* SlideDesignBrief；
+* ModelRole；
+* SlideRecoveryResult；
+* ExportRoundTripReport；
+
+必须放在 Domain 或 Application 层。
+
+---
+
+## 2. UI 只负责交互，不直接编排复杂业务
+
+禁止在 Streamlit 页面中直接：
+
+* 调用多个 Provider；
+* 操作文件；
+* 修改数据库实体；
+* 拼装导出 Manifest；
+* 计算质量门。
+
+必须通过 Application Service。
+
+---
+
+## 3. 所有长任务必须使用现有后台工作流
+
+以下操作必须支持异步工作流状态：
+
+* 逐页设计摘要生成；
+* 外部页面恢复；
+* Round-trip Validation；
+* 批量导出；
+* 图片背景清理；
+* OCR；
+* VLM 页面分析。
+
+状态必须进入：
+
+```text
+QUEUED
+RUNNING
+AWAITING_REVIEW
+SUCCEEDED
+FAILED
+CANCELLED
+```
+
+---
+
+## 4. 所有外部模型调用必须可追踪
+
+至少记录：
+
+```text
+role
+provider
+model
+request_id
+workflow_run_id
+slide_id
+duration
+retry_count
+success
+failure_type
+```
+
+不得记录明文 API Key。
+
+---
+
+# 四、建议新增目录
+
+```te
