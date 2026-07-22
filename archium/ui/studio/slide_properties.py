@@ -59,6 +59,42 @@ def _element_z_index(slide_snapshot: SlideVisualSnapshot, element_id: str) -> in
     return 0
 
 
+def _element_locked(slide_snapshot: SlideVisualSnapshot, element_id: str) -> bool:
+    scene = slide_snapshot.render_scene
+    if scene is not None:
+        node = scene.node_by_layout_element_id(element_id) or scene.node_by_id(element_id)
+        if node is not None:
+            return node.locked
+    plan = slide_snapshot.layout_plan
+    if plan is not None:
+        element = plan.element_by_id(element_id)
+        if element is not None:
+            return element.locked
+    return False
+
+
+def _run_lock(
+    slide_id: UUID,
+    element_id: str,
+    *,
+    locked: bool,
+) -> None:
+    try:
+        with get_session() as session:
+            from archium.ui.studio_service import apply_slide_element_lock
+
+            apply_slide_element_lock(
+                session,
+                slide_id,
+                element_id=element_id,
+                locked=locked,
+            )
+        st.success("已锁定元素。" if locked else "已解锁元素。")
+        st.rerun()
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
 def _run_reorder(
     slide_id: UUID,
     element_id: str,
@@ -256,12 +292,13 @@ def _render_element_properties(
     st.write(f"尺寸：{element.width:.2f} × {element.height:.2f}")
     st.write(f"显示：{'是' if is_visible else '否'}")
     st.write(f"图层：{_element_z_index(slide_snapshot, selected_from_ui)}")
-    st.write(f"锁定：{'是' if element.locked else '否'}")
+    element_locked = _element_locked(slide_snapshot, selected_from_ui)
+    st.write(f"锁定：{'是' if element_locked else '否'}")
 
     if is_drawing_element(element) or canvas_geometry_locked(element):
         if is_drawing_element(element):
             st.info("图纸元素位置与尺寸已固定，画布上不可拖拽或缩放。")
-        elif element.locked:
+        elif element_locked:
             st.caption("此元素已锁定几何，画布上不可拖拽或缩放。")
 
     focus_text = st.session_state.get("studio_focus_text_edit") == element.id
@@ -375,7 +412,7 @@ def _render_element_properties(
         if element.crop_policy is not None:
             st.write(f"裁切策略：`{element.crop_policy.value}`")
 
-    if not element.locked:
+    if not element_locked:
         align_cols = st.columns(3)
         with align_cols[0]:
             if st.button(
@@ -448,36 +485,14 @@ def _render_element_properties(
             use_container_width=True,
             key=f"studio_lock_element_{slide_snapshot.slide.id}_{element.id}",
         ):
-            try:
-                with get_session() as session:
-                    apply_slide_visual_edit(
-                        session,
-                        slide_snapshot.slide.id,
-                        intent="lock_element",
-                        params={"element_id": element.id},
-                    )
-                st.success("已锁定元素。")
-                st.rerun()
-            except Exception as exc:
-                st.error(format_user_error(exc))
+            _run_lock(slide_snapshot.slide.id, element.id, locked=True)
     else:
         if st.button(
             "解锁此元素",
             use_container_width=True,
             key=f"studio_unlock_element_{slide_snapshot.slide.id}_{element.id}",
         ):
-            try:
-                with get_session() as session:
-                    apply_slide_visual_edit(
-                        session,
-                        slide_snapshot.slide.id,
-                        intent="unlock_element",
-                        params={"element_id": element.id},
-                    )
-                st.success("已解锁元素。")
-                st.rerun()
-            except Exception as exc:
-                st.error(format_user_error(exc))
+            _run_lock(slide_snapshot.slide.id, element.id, locked=False)
 
     if advanced:
         st.caption(f"元素 ID：`{element.id}` · style `{element.style_token or '—'}`")

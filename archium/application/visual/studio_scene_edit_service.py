@@ -18,6 +18,7 @@ from archium.application.visual.visual_history_service import VisualHistoryServi
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.element_lock import ElementLockScope
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.studio_command import (
@@ -331,6 +332,8 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
         element.width = node.width
         element.height = node.height
         element.z_index = node.z_index
+        element.locked = node.locked
+        element.lock_scopes = _layout_lock_scopes(node.lock_scopes)
         visible_layout_ids.add(element.id)
     patched.elements = [element for element in patched.elements if element.id in visible_layout_ids]
     if patched.reading_order:
@@ -338,6 +341,16 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
             element_id for element_id in patched.reading_order if element_id in visible_layout_ids
         ]
     return patched
+
+
+def _layout_lock_scopes(raw_scopes: list[str]) -> list[ElementLockScope]:
+    scopes: list[ElementLockScope] = []
+    for raw in raw_scopes:
+        try:
+            scopes.append(ElementLockScope(raw))
+        except ValueError:
+            continue
+    return scopes
 
 
 def _failure_message(result: CommandExecutionResult) -> str:

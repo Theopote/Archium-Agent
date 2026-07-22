@@ -162,6 +162,18 @@ class VisualEditService:
         if resolved == VisualEditIntent.RESTORE_PREVIOUS:
             return self.restore_previous(slide_id)
 
+        if resolved in {VisualEditIntent.LOCK_ELEMENT, VisualEditIntent.UNLOCK_ELEMENT}:
+            slide = self._require_slide(slide_id)
+            locked = resolved == VisualEditIntent.LOCK_ELEMENT
+            return self._apply_element_lock_state(
+                slide,
+                self._load_intent(slide),
+                self._load_plan(slide),
+                params or {},
+                locked=locked,
+                edit_intent=resolved,
+            )
+
         slide = self._require_slide(slide_id)
         current_intent = self._load_intent(slide)
         current_plan = self._load_plan(slide)
@@ -172,17 +184,6 @@ class VisualEditService:
             change_source=RevisionSource.MANUAL_EDIT,
             note=resolved.value,
         )
-
-        if resolved in {VisualEditIntent.LOCK_ELEMENT, VisualEditIntent.UNLOCK_ELEMENT}:
-            locked = resolved == VisualEditIntent.LOCK_ELEMENT
-            return self._apply_element_lock_state(
-                slide,
-                current_intent,
-                current_plan,
-                params or {},
-                locked=locked,
-                edit_intent=resolved,
-            )
 
         if resolved in {
             VisualEditIntent.UPDATE_ELEMENT_TEXT,
@@ -753,41 +754,30 @@ class VisualEditService:
         if plan is None:
             action = "锁定" if locked else "解锁"
             raise WorkflowError(f"当前页面尚无版式，无法{action}元素。")
-        element_id = str(params.get("element_id") or plan.hero_element_id or "")
-        if not element_id:
-            hero = next(
-                (
-                    element
-                    for element in plan.elements
-                    if element.role == LayoutElementRole.HERO_VISUAL
-                ),
-                None,
-            )
-            element_id = hero.id if hero is not None else plan.elements[0].id
 
-        updated_elements = []
-        changed = False
-        for element in plan.elements:
-            if element.id == element_id:
-                updated_elements.append(element.model_copy(update={"locked": locked}))
-                changed = True
-            else:
-                updated_elements.append(element)
-        if not changed:
+        element_id = self._resolve_lock_element_id(plan, params)
+        lock_scopes_raw = params.get("lock_scopes")
+        lock_scopes = (
+            [str(item) for item in lock_scopes_raw]
+            if isinstance(lock_scopes_raw, list)
+            else []
+        )
+
+        from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+
+        edit_result = StudioSceneEditService(
+            self._session,
+            settings=self._settings,
+        ).set_layout_element_lock(
+            slide.id,
+            element_id=element_id,
+            locked=locked,
+            lock_scopes=lock_scopes if locked else [],
+        )
+        saved_plan = edit_result.layout_plan
+        if saved_plan is None:
             action = "锁定" if locked else "解锁"
             raise WorkflowError(f"未找到可{action}的元素：{element_id}")
-
-        updated_plan = plan.model_copy(
-            update={
-                "elements": updated_elements,
-                "version": plan.version + 1,
-            }
-        )
-        updated_plan.touch()
-        saved_plan = self._plans.save(updated_plan)
-        slide.layout_plan_id = saved_plan.id
-        self._presentations.save_slide(slide)
-        self._invalidate_preview_cache(slide.presentation_id, saved_plan)
 
         design = self._resolve_design_system(slide, visual_intent)
         validation = None
@@ -807,6 +797,28 @@ class VisualEditService:
             validation=validation,
             message=f"已{verb}元素 `{element_id}`。",
         )
+
+    def _resolve_lock_element_id(
+        self,
+        plan: LayoutPlan,
+        params: dict[str, object],
+    ) -> str:
+        element_id = str(params.get("element_id") or plan.hero_element_id or "")
+        if element_id:
+            return element_id
+        hero = next(
+            (
+                element
+                for element in plan.elements
+                if element.role == LayoutElementRole.HERO_VISUAL
+            ),
+            None,
+        )
+        if hero is not None:
+            return hero.id
+        if not plan.elements:
+            raise WorkflowError("当前版式没有可锁定的元素。")
+        return plan.elements[0].id
 
     def _apply_lock_element(
         self,

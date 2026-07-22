@@ -12,6 +12,7 @@ from archium.application.visual.studio_command_executor import (
     StudioExecutionContext,
 )
 from archium.application.visual.studio_scene_edit_service import sync_layout_geometry_from_scene
+from archium.domain.visual.element_lock import ElementLockScope
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import (
@@ -392,6 +393,55 @@ def test_sync_layout_geometry_from_scene() -> None:
     assert title.y == pytest.approx(2.5)
     assert synced.element_by_id("body") is None
     assert synced.reading_order == ["title"]
+
+
+def test_sync_layout_geometry_from_scene_syncs_lock_state() -> None:
+    slide_id = uuid4()
+    plan = LayoutPlan(
+        slide_id=slide_id,
+        layout_family=LayoutFamily.HERO,
+        layout_variant="centered",
+        page_width=10,
+        page_height=5.625,
+        hero_element_id="title",
+        reading_order=["title"],
+        whitespace_ratio=0.4,
+        elements=[
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="标题",
+                x=1.0,
+                y=1.0,
+                width=2.0,
+                height=0.5,
+                locked=False,
+            ),
+        ],
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+    )
+    scene = RenderScene(
+        slide_id=slide_id,
+        layout_plan_id=plan.id,
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            _text_node(
+                node_id="title_node",
+                source_layout_element_id="title",
+                locked=True,
+            ),
+        ],
+    )
+    scene.nodes[0].lock_scopes = ["position", "size"]
+    synced = sync_layout_geometry_from_scene(scene, plan)
+    title = synced.element_by_id("title")
+    assert title is not None
+    assert title.locked is True
+    assert title.lock_scopes == [ElementLockScope.POSITION, ElementLockScope.SIZE]
 
 
 def test_geometry_token_round_trip() -> None:
