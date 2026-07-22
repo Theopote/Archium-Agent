@@ -13,6 +13,16 @@ contract: having a contract does not mean the implementation is complete.
 | Recover image deck | Available | `slide_recovery_workflow` | Reconstructs editable scene state from visual pages |
 | Distill template | Available | `template_induction` | Produces reusable Archium template contracts |
 
-Callers should resolve the route registration and required inputs before
-constructing a handler. Partial or planned routes fail with their declared
-limitations instead of silently falling back to the generation pipeline.
+`PresentationWorkflowRouter` is the execution boundary. The composition root
+injects one application-service handler per implemented route; the router never
+falls back to the generation pipeline. A missing handler fails before side
+effects begin. Static availability remains the product-facing declaration, so
+partial and planned implementations are not advertised as complete merely
+because an experimental handler can be injected in a test or internal tool.
+
+For routes with preservation promises, the composition root must also provide
+a route-specific snapshotter. The router takes a baseline before dispatch and
+compares the handler result afterwards. Every field in `preserved` must exist
+in both snapshots and remain equal. Missing snapshots, missing fields, or
+changed values raise `WorkflowError`; in particular, Beautify and Enhance are
+fail-closed rather than relying on descriptive metadata.

@@ -6,11 +6,17 @@ authoring source.
 
 ## RenderScene closure invariant
 
-Every visible object emitted by a renderer must trace to exactly one visible `RenderScene`
-node. A renderer may transform coordinates, map object types, substitute fonts, bind declared
+Every emitted object must have a unique `emission_id` and trace to a visible `RenderScene`
+node. Every visible node must produce at least one emission. A renderer may transform
+coordinates, map object types, substitute fonts, bind declared
 masters/layouts, package sidecars, or perform an explicitly disclosed safe degradation. It may
-not invent titles, icons, decoration, assets, or wording. Missing, extra, or duplicate emissions
-are contract violations.
+not invent titles, icons, decoration, assets, or wording.
+
+The capability mapping declares `one_to_one`, `one_to_many`, or `many_to_one` cardinality.
+Multiple objects from one node are valid only for a declared `one_to_many` mapping, and each
+must carry a role and unique sequence. Duplicate emission identities, missing source nodes,
+untraceable emissions, and cardinality violations are contract failures. `many_to_one` is
+reserved but intentionally rejected by the V1 single-source emission schema.
 
 The executable check lives in `PowerPointContractService.validate_scene_closure`. Renderer
 adapters should report `RendererEmission` records and call `require_scene_closure` before the
@@ -21,7 +27,7 @@ delivery artifact is accepted.
 | Scene node | PowerPoint object | Fidelity | Important boundary |
 | --- | --- | --- | --- |
 | text | `p:sp` + `p:txBody` | native stable | font substitution can change wrapping |
-| shape | `p:sp` | native normalized | only rectangle, ellipse, line, card |
+| shape | `p:sp` | feature-dependent | simple rectangle is stable; other V1 shapes currently normalize to rectangle |
 | image | `p:pic` | native stable | pixels remain raster |
 | drawing | `p:pic` | native stable | drawing is not native CAD/vector geometry in V1 |
 
