@@ -1,22 +1,19 @@
 """Image derivative pipeline domain contract (Sprint 3).
 
-Status: **NOT IMPLEMENTED** as an execution pipeline.
-
-What exists today (do not confuse with this module):
-- ``ImageTreatmentPlanningService`` — layout/fit + photo_treatment *policy* for
-  DesignSystem / TemplateUsageBrief (contain vs cover, drawing chrome flags).
-- Page-revival OCR/VLM — slide recovery / region understanding, **not** photo
-  visual harmonization.
-
-Intended pipeline (do not short-circuit into PptxGenJS filters):
+Pipeline:
 
     OriginalAsset
       → ImageTreatmentSpec (plan: mode, focal point, crops, overlays)
-      → ImageDerivative (immutable processed bytes + params hash)
+      → ImageDerivative (immutable processed bytes + params_hash)
       → RenderScene asset reference (storage_uri of derivative)
 
-Node/Sharp (or equivalent) only **executes** a plan; Python owns allow/deny rules
-for evidence vs presentation photos.
+Execution: Pillow via ``ImageDerivativeExecutor`` (SAFE_NORMALIZE /
+PRESENTATION_UNIFY / DOCUMENT_SCAN). Auto subject crop / Sharp advanced ops
+remain deferred. Do **not** add filters inside PptxGenJS.
+
+Related (not this pipeline):
+- ``ImageTreatmentPlanningService`` — layout fit/policy only
+- Page-revival OCR/VLM — not photo harmonization
 """
 
 from __future__ import annotations
