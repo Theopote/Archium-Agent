@@ -99,6 +99,23 @@ def run_visual_workflow(
     candidate_count: int = 3,
     settings: Settings | None = None,
 ) -> VisualWorkflowResult:
+    from archium.application.slide_design_brief_service import design_briefs_ready
+    from archium.exceptions import WorkflowError
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    presentations = PresentationRepository(session)
+    presentation = presentations.get_presentation(presentation_id)
+    if presentation is not None and presentation.current_outline_id is not None:
+        outline = presentations.get_outline(presentation.current_outline_id)
+        if outline is not None:
+            ready, missing = design_briefs_ready(outline)
+            if not ready:
+                raise WorkflowError(
+                    "视觉版式生成被阻止："
+                    + "；".join(missing)
+                    + "。请在大纲页完成页面设计摘要批准。"
+                )
+
     resolved = _resolve_runtime_settings(settings)
     service = _create_visual_workflow_service(session, settings=resolved, use_llm=use_llm)
     try:

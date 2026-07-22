@@ -10,6 +10,7 @@ from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel,
 from archium.domain.enums import ApprovalStatus, OutlineAudienceMode
 from archium.domain.narrative_arc import NarrativePosition
 from archium.domain.slide_asset_binding import SlideAssetBinding
+from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_intent import SlideIntent
 
 OUTLINE_LOGICAL_KEY = "presentation-outline"
@@ -51,6 +52,8 @@ class OutlinePlan(IdentifiedModel, VersionedModel, TimestampedModel):
     page_intents: list[SlideIntent] = Field(default_factory=list)
     # Explicit page→asset bindings (page_materials); applied before auto-match.
     page_asset_bindings: list[SlideAssetBinding] = Field(default_factory=list)
+    # Per-page design briefs confirmed before LayoutPlan generation.
+    page_design_briefs: list[SlideDesignBrief] = Field(default_factory=list)
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 
     @model_validator(mode="after")

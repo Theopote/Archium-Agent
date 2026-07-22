@@ -627,7 +627,22 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
     page_picker = narrow or not has_tree
 
     if narrow:
-        _render_intent_cards(cards, outline=outline, page_picker=True)
+        tab_intent, tab_brief = st.tabs(["页面意图", "页面设计摘要"])
+        intents = _ensure_editable_intents(outline) if outline is not None else []
+        selected = int(st.session_state.get("outline_selected_card", 0) or 0)
+        with tab_intent:
+            _render_intent_cards(cards, outline=outline, page_picker=True)
+        with tab_brief:
+            if outline is not None:
+                from archium.ui.outline.design_brief_panel import render_design_brief_panel
+
+                render_design_brief_panel(
+                    outline=outline,
+                    intents=intents,
+                    selected_page=max(0, min(selected, max(len(intents) - 1, 0))),
+                )
+            else:
+                st.caption("生成大纲后可编辑页面设计摘要。")
         with st.expander("汇报任务", expanded=False):
             _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
     else:
@@ -635,7 +650,22 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
         with left:
             _render_chapter_tree(outline=outline, storyline=storyline, cards=cards)
         with mid:
-            _render_intent_cards(cards, outline=outline, page_picker=page_picker)
+            tab_intent, tab_brief = st.tabs(["页面意图", "页面设计摘要"])
+            intents = _ensure_editable_intents(outline) if outline is not None else []
+            selected = int(st.session_state.get("outline_selected_card", 0) or 0)
+            with tab_intent:
+                _render_intent_cards(cards, outline=outline, page_picker=page_picker)
+            with tab_brief:
+                if outline is not None:
+                    from archium.ui.outline.design_brief_panel import render_design_brief_panel
+
+                    render_design_brief_panel(
+                        outline=outline,
+                        intents=intents,
+                        selected_page=max(0, min(selected, max(len(intents) - 1, 0))),
+                    )
+                else:
+                    st.caption("生成大纲后可编辑页面设计摘要。")
         with right:
             _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
 
@@ -649,14 +679,38 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
         from archium.application.outline_approval_service import outline_ready_for_approval
 
         if outline is not None and outline.is_approved:
+            from archium.application.slide_design_brief_service import design_briefs_ready
+
+            briefs_ready, brief_missing = design_briefs_ready(outline)
             st.success(f"大纲已确认（v{outline.version}）")
-            if st.button(
-                "进入生成 →",
-                type="primary",
-                use_container_width=True,
-                key="outline_goto_generate",
-            ):
-                st.switch_page(get_app_page("generate"))
+            if briefs_ready:
+                if st.button(
+                    "进入生成 →",
+                    type="primary",
+                    use_container_width=True,
+                    key="outline_goto_generate",
+                ):
+                    st.switch_page(get_app_page("generate"))
+            else:
+                st.caption("进入生成前需完成：" + "；".join(brief_missing))
+                if not outline.page_design_briefs and st.button(
+                    "生成全部设计摘要",
+                    use_container_width=True,
+                    key="outline_generate_briefs_cta",
+                ):
+                    from archium.application.slide_design_brief_service import (
+                        SlideDesignBriefService,
+                    )
+                    from archium.exceptions import WorkflowError
+                    from archium.ui.error_handlers import format_user_error
+
+                    try:
+                        with get_session() as session:
+                            SlideDesignBriefService(session).generate_all(outline.id)
+                            session.commit()
+                        st.rerun()
+                    except WorkflowError as exc:
+                        st.error(format_user_error(exc))
         elif outline is None:
             task_ready = has_request or has_mission or bool(cards)
             if not task_ready:
@@ -694,20 +748,20 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
             if not can_confirm:
                 st.caption("确认大纲前还需：" + "；".join(missing))
             if st.button(
-                "确认大纲并开始生成 →",
+                "确认大纲",
                 type="primary",
                 use_container_width=True,
                 disabled=not can_confirm,
                 key="outline_confirm",
             ):
-                _confirm_outline_and_go(project_id, outline=outline)
+                _confirm_outline(project_id, outline=outline)
 
     if not has_request and has_mission:
         with st.expander("继续完善任务描述", expanded=False):
             _render_task_composer(project_id)
 
 
-def _confirm_outline_and_go(project_id: UUID, *, outline: OutlinePlan | None) -> None:
+def _confirm_outline(project_id: UUID, *, outline: OutlinePlan | None) -> None:
     from archium.application.outline_approval_service import OutlineApprovalService
     from archium.exceptions import WorkflowError
     from archium.ui.error_handlers import format_user_error
@@ -722,8 +776,8 @@ def _confirm_outline_and_go(project_id: UUID, *, outline: OutlinePlan | None) ->
             session.commit()
         if result.presentation_id is not None:
             st.session_state.selected_presentation_id = str(result.presentation_id)
-        st.success(result.message)
-        st.switch_page(get_app_page("generate"))
+        st.success(result.message + " 请继续确认各页设计摘要。")
+        st.rerun()
     except WorkflowError as exc:
         st.error(format_user_error(exc))
     except Exception as exc:

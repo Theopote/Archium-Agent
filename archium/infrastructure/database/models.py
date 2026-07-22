@@ -290,6 +290,9 @@ class OutlinePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     page_asset_bindings_json: Mapped[list[dict[str, object]]] = mapped_column(
         "page_asset_bindings", JSON, default=list
     )
+    page_design_briefs_json: Mapped[list[dict[str, object]]] = mapped_column(
+        "page_design_briefs", JSON, default=list
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
     lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)

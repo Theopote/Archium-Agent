@@ -152,7 +152,7 @@ def test_outline_page_has_no_bypass_generate_link() -> None:
     assert "直接前往生成" not in text
     assert "include_next=False" in text
     assert "OutlineApprovalService" in text
-    assert "确认大纲并开始生成" in text
+    assert "确认大纲" in text
     assert "确认任务并生成大纲" in text
     assert "outline_ready_for_approval" in text
     assert "尚无 OutlinePlan" in (

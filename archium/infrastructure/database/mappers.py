@@ -66,6 +66,7 @@ from archium.domain.review import ReviewIssue
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logical_key
 from archium.domain.slide_asset_binding import SlideAssetBinding
+from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
@@ -508,6 +509,18 @@ def _page_asset_bindings_from_json(
     return [SlideAssetBinding.model_validate(item) for item in data]
 
 
+def _page_design_briefs_to_json(briefs: list[SlideDesignBrief]) -> list[dict[str, object]]:
+    return [brief.model_dump(mode="json") for brief in briefs]
+
+
+def _page_design_briefs_from_json(
+    data: list[dict[str, object]] | None,
+) -> list[SlideDesignBrief]:
+    if not data:
+        return []
+    return [SlideDesignBrief.model_validate(item) for item in data]
+
+
 def outline_plan_to_domain(orm: OutlinePlanORM) -> OutlinePlan:
     lineage_id = orm.lineage_id or orm.id
     logical_key = orm.logical_key or OUTLINE_LOGICAL_KEY
@@ -527,6 +540,9 @@ def outline_plan_to_domain(orm: OutlinePlanORM) -> OutlinePlan:
         page_intents=_page_intents_from_json(getattr(orm, "page_intents_json", None)),
         page_asset_bindings=_page_asset_bindings_from_json(
             getattr(orm, "page_asset_bindings_json", None)
+        ),
+        page_design_briefs=_page_design_briefs_from_json(
+            getattr(orm, "page_design_briefs_json", None)
         ),
         version=orm.version,
         approval_status=ApprovalStatus(orm.approval_status),
@@ -548,6 +564,7 @@ def outline_plan_to_orm(domain: OutlinePlan, orm: OutlinePlanORM | None = None) 
     target.sections_json = _outline_sections_to_json(domain.sections)
     target.page_intents_json = _page_intents_to_json(domain.page_intents)
     target.page_asset_bindings_json = _page_asset_bindings_to_json(domain.page_asset_bindings)
+    target.page_design_briefs_json = _page_design_briefs_to_json(domain.page_design_briefs)
     target.version = domain.version
     target.approval_status = domain.approval_status.value
     target.lineage_id = domain.lineage_id

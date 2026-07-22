@@ -95,8 +95,15 @@ def evaluate_stage_gate(
                 warnings.append("Brief 已有，请生成并确认 OutlinePlan")
             else:
                 warnings.append("建议确认大纲后再生成")
+        elif not snapshot.design_briefs_approved:
+            if snapshot.design_briefs_total <= 0:
+                warnings.append("请生成并批准全部页面设计摘要")
+            else:
+                pending = snapshot.design_briefs_total - snapshot.design_briefs_approved_count
+                warnings.append(f"仍有 {pending} 页设计摘要未批准")
+            blockers.append("全部页面设计摘要批准后方可进入生成")
         return StageGateResult(
-            can_proceed=snapshot.outline_approved or not blockers,
+            can_proceed=snapshot.outline_approved and snapshot.design_briefs_approved and not blockers,
             blockers=tuple(blockers),
             warnings=tuple(warnings),
         )

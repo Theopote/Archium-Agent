@@ -21,6 +21,7 @@ from archium.application.review_models import (
     OutlineUpdate,
     PresentationReviewContext,
     SlideAssetBindingUpdate,
+    SlideDesignBriefUpdate,
     SlideIntentUpdate,
     SlideUpdate,
     StorylineUpdate,
@@ -43,6 +44,7 @@ from archium.domain.presentation_manuscript import ManuscriptStatus, Presentatio
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_asset_binding import SlideAssetBinding
+from archium.domain.slide_design_brief import BriefStatus, SlideDesignBrief
 from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
@@ -247,6 +249,10 @@ class PresentationReviewService:
         outline.page_asset_bindings = [
             _slide_asset_binding_from_update(item) for item in update.page_asset_bindings
         ]
+        if update.page_design_briefs:
+            outline.page_design_briefs = [
+                _slide_design_brief_from_update(item) for item in update.page_design_briefs
+            ]
         outline.approval_status = _outline_status_after_edit(outline.approval_status)
         outline.version += 1
         outline.touch()
@@ -494,6 +500,43 @@ def _slide_asset_binding_from_update(update: SlideAssetBindingUpdate) -> SlideAs
         user_description=update.user_description.strip(),
         required=update.required,
         slide_id=slide_id,
+    )
+
+
+def _slide_design_brief_from_update(update: SlideDesignBriefUpdate) -> SlideDesignBrief:
+    from archium.domain.slide_design_brief import DrawingDisplayPolicy, ImageDisplayPolicy
+
+    try:
+        status = BriefStatus(update.status.strip().casefold())
+    except ValueError:
+        status = BriefStatus.DRAFT
+    drawing_policy = (
+        DrawingDisplayPolicy.model_validate(update.drawing_policy)
+        if update.drawing_policy
+        else None
+    )
+    image_policy = (
+        ImageDisplayPolicy.model_validate(update.image_policy) if update.image_policy else None
+    )
+    density = update.expected_density.strip().casefold()
+    if density not in {"low", "medium", "high"}:
+        density = "medium"
+    return SlideDesignBrief(
+        page_order=update.page_order,
+        page_task=update.page_task.strip() or f"第 {update.page_order + 1} 页",
+        central_claim=update.central_claim.strip(),
+        primary_visual_type=update.primary_visual_type.strip() or "content",
+        primary_asset_ids=list(update.primary_asset_ids),
+        supporting_asset_ids=list(update.supporting_asset_ids),
+        evidence_ids=list(update.evidence_ids),
+        layout_family=update.layout_family.strip(),
+        expected_density=density,  # type: ignore[arg-type]
+        drawing_policy=drawing_policy,
+        image_policy=image_policy,
+        required_content=[item.strip() for item in update.required_content if item.strip()],
+        forbidden_content=[item.strip() for item in update.forbidden_content if item.strip()],
+        protection_rules=[item.strip() for item in update.protection_rules if item.strip()],
+        status=status,
     )
 
 

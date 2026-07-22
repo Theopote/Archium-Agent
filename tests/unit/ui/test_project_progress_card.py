@@ -40,7 +40,11 @@ def _snapshot(**overrides: object) -> ProjectProgressSnapshot:
 
 
 def test_progress_labels_match_user_facing_copy() -> None:
-    snap = _snapshot(outline_approved=True, has_outline=True)
+    snap = _snapshot(
+        outline_approved=True,
+        has_outline=True,
+        design_briefs_approved=True,
+    )
     assert snap.materials_label == "已整理"
     assert snap.outline_label == "已确认"
     assert snap.generate_label == "21/24 页"
@@ -93,6 +97,7 @@ def test_progress_ready_for_export_label() -> None:
         evidence_availability=EvidenceAvailability.AVAILABLE,
         has_outline=True,
         outline_approved=True,
+        design_briefs_approved=True,
         export_blocker_count=0,
     )
     assert snap.deliver_label == "可交付"

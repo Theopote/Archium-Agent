@@ -214,7 +214,7 @@ def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     assert "章节与页面树" in text
     assert "叙事弧线" in text
     assert "页面标题" in text
-    assert "确认大纲并开始生成" in text
+    assert "确认大纲" in text
     assert "直接前往生成" not in text
     assert "OutlineApprovalService" in text
     assert "include_next=False" in text

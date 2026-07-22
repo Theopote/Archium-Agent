@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from uuid import UUID
 
 from archium.domain.deck_delivery import DeckDeliveryReport, aggregate_deck_delivery
 from archium.domain.outline import OutlinePlan
@@ -108,6 +109,27 @@ class SlideAssetBindingUpdate:
 
 
 @dataclass(frozen=True)
+class SlideDesignBriefUpdate:
+    """Editable per-page design brief."""
+
+    page_order: int
+    page_task: str
+    central_claim: str = ""
+    primary_visual_type: str = "content"
+    primary_asset_ids: list[UUID] = field(default_factory=list)
+    supporting_asset_ids: list[UUID] = field(default_factory=list)
+    evidence_ids: list[UUID] = field(default_factory=list)
+    layout_family: str = ""
+    expected_density: str = "medium"
+    drawing_policy: dict[str, object] | None = None
+    image_policy: dict[str, object] | None = None
+    required_content: list[str] = field(default_factory=list)
+    forbidden_content: list[str] = field(default_factory=list)
+    protection_rules: list[str] = field(default_factory=list)
+    status: str = "draft"
+
+
+@dataclass(frozen=True)
 class OutlineUpdate:
     title: str
     thesis: str
@@ -118,6 +140,7 @@ class OutlineUpdate:
     sections: list[OutlineSectionUpdate] = field(default_factory=list)
     page_intents: list[SlideIntentUpdate] = field(default_factory=list)
     page_asset_bindings: list[SlideAssetBindingUpdate] = field(default_factory=list)
+    page_design_briefs: list[SlideDesignBriefUpdate] = field(default_factory=list)
     expected_version: int | None = None
 
 

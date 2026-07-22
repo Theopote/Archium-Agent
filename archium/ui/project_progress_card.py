@@ -39,6 +39,9 @@ class ProjectProgressSnapshot:
     outline_approved: bool = False
     has_outline: bool = False
     outline_changes_pending: bool = False
+    design_briefs_approved: bool = False
+    design_briefs_total: int = 0
+    design_briefs_approved_count: int = 0
     evidence_availability: EvidenceAvailability = EvidenceAvailability.MISSING
     export_blocker_count: int = 0
     pptx_ready: bool = False
@@ -121,6 +124,8 @@ class ProjectProgressSnapshot:
         ):
             return "materials"
         if not self.outline_approved:
+            return "outline"
+        if not self.design_briefs_approved:
             return "outline"
         if self.slide_count <= 0 or self.pending_count > 0:
             return "generate"
@@ -217,6 +222,9 @@ def _snapshot_for_project(
     has_outline = False
     outline_approved = False
     outline_changes_pending = False
+    design_briefs_approved = False
+    design_briefs_total = 0
+    design_briefs_approved_count = 0
     ready_for_export = False
     pptx_ready = False
     pdf_ready = False
@@ -244,6 +252,15 @@ def _snapshot_for_project(
             outline_changes_pending = (
                 outline.approval_status == ApprovalStatus.CHANGES_PENDING
             )
+            from archium.application.slide_design_brief_service import (
+                design_briefs_ready,
+                summarize_design_briefs,
+            )
+
+            brief_summary = summarize_design_briefs(outline)
+            design_briefs_total = brief_summary.total
+            design_briefs_approved_count = brief_summary.approved
+            design_briefs_approved, _ = design_briefs_ready(outline)
         ready_for_export = presentation_has_visual_layout(session, presentation.id)
         readiness = resolve_delivery_readiness(
             session,
@@ -270,6 +287,9 @@ def _snapshot_for_project(
         outline_approved=outline_approved,
         has_outline=has_outline,
         outline_changes_pending=outline_changes_pending,
+        design_briefs_approved=design_briefs_approved,
+        design_briefs_total=design_briefs_total,
+        design_briefs_approved_count=design_briefs_approved_count,
         evidence_availability=evidence.availability,
         export_blocker_count=export_blocker_count,
         pptx_ready=pptx_ready,
