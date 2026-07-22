@@ -612,21 +612,20 @@ COMPOSITION_CASE_BUILDERS: dict[str, object] = {
     "v7_hybrid_canvas": build_v7_hybrid_canvas,
 }
 
-COMPOSITION_CASE_IDS: tuple[str, ...] = tuple(COMPOSITION_CASE_BUILDERS.keys())
-
-# Calibrated single-slide layouts used for PPTX screenshot regression.
-SCREENSHOT_CASE_IDS: tuple[str, ...] = COMPOSITION_CASE_IDS
-
 ICON_CASE_BUILDERS: dict[str, object] = {
     "v8_process_narrative_icons": build_v8_process_narrative_icons,
     "v9_metric_dashboard_icons": build_v9_metric_dashboard_icons,
 }
 
 ICON_CASE_IDS: tuple[str, ...] = tuple(ICON_CASE_BUILDERS.keys())
+COMPOSITION_CASE_IDS: tuple[str, ...] = tuple(COMPOSITION_CASE_BUILDERS.keys())
+
+# Calibrated single-slide layouts used for PPTX screenshot regression.
+SCREENSHOT_CASE_IDS: tuple[str, ...] = (*COMPOSITION_CASE_IDS, *ICON_CASE_IDS)
 
 
 def build_composition_case(case_id: str, intent_service: VisualIntentService) -> CompositionCaseResult:
-    builder = COMPOSITION_CASE_BUILDERS.get(case_id)
+    builder = COMPOSITION_CASE_BUILDERS.get(case_id) or ICON_CASE_BUILDERS.get(case_id)
     if builder is None:
         msg = f"Unknown composition case: {case_id}"
         raise ValueError(msg)

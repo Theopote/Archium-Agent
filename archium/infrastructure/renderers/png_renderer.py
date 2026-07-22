@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 
 from archium.application.visual.scene_fonts import (
@@ -153,30 +154,17 @@ class PngRenderer:
         path = Path(node.asset_path)
         if not path.is_file():
             return
-        try:
-            asset = Image.open(path).convert("RGBA")
-        except OSError:
-            # Pillow typically cannot open SVG. Render a deterministic placeholder
-            # so Studio preview shows the icon slot (instead of a blank area).
-            if path.suffix.lower() == ".svg":
-                from PIL import ImageDraw
-
-                box = self._box(node)
-                placeholder_color = (210, 210, 210)
-                draw = ImageDraw.Draw(canvas)
-                draw.rectangle(box, outline=placeholder_color, width=2)
-                # Small center mark for visual alignment.
-                cx = (box[0] + box[2]) // 2
-                cy = (box[1] + box[3]) // 2
-                draw.line((cx - 6, cy, cx + 6, cy), fill=placeholder_color, width=2)
-                draw.line((cx, cy - 6, cx, cy + 6), fill=placeholder_color, width=2)
-                return
-            return
-
         box = self._box(node)
         target_w = box[2] - box[0]
         target_h = box[3] - box[1]
         if target_w <= 0 or target_h <= 0:
+            return
+        try:
+            asset = self._load_image_asset(path, target_w=target_w, target_h=target_h)
+        except OSError:
+            if path.suffix.lower() == ".svg":
+                self._draw_svg_placeholder(canvas, box)
+                return
             return
 
         src_w, src_h = asset.size
@@ -198,3 +186,35 @@ class PngRenderer:
         top = max(0, (new_h - target_h) // 2)
         cropped = resized.crop((left, top, left + target_w, top + target_h))
         canvas.paste(cropped, (box[0], box[1]), cropped)  # type: ignore[attr-defined]
+
+    def _load_image_asset(self, path: Path, *, target_w: int, target_h: int):
+        from PIL import Image
+
+        if path.suffix.lower() != ".svg":
+            return Image.open(path).convert("RGBA")
+        try:
+            import cairosvg
+        except ImportError as exc:  # pragma: no cover - exercised through fallback path
+            raise OSError("CairoSVG not installed") from exc
+
+        png_bytes = cairosvg.svg2png(
+            url=str(path),
+            output_width=max(target_w * 2, 32),
+            output_height=max(target_h * 2, 32),
+        )
+        return Image.open(BytesIO(png_bytes)).convert("RGBA")
+
+    @staticmethod
+    def _draw_svg_placeholder(
+        canvas: object,
+        box: tuple[int, int, int, int],
+    ) -> None:
+        from PIL import ImageDraw
+
+        placeholder_color = (210, 210, 210)
+        draw = ImageDraw.Draw(canvas)
+        draw.rectangle(box, outline=placeholder_color, width=2)
+        cx = (box[0] + box[2]) // 2
+        cy = (box[1] + box[3]) // 2
+        draw.line((cx - 6, cy, cx + 6, cy), fill=placeholder_color, width=2)
+        draw.line((cx, cy - 6, cx, cy + 6), fill=placeholder_color, width=2)

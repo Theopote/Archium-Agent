@@ -58,7 +58,7 @@ def test_icon_metric_case_emits_decorative_icon_images(intent_service: VisualInt
 
 
 def test_icon_cases_are_not_yet_in_screenshot_registry() -> None:
-    assert set(ICON_CASE_IDS).isdisjoint(SCREENSHOT_CASE_IDS)
+    assert set(ICON_CASE_IDS).issubset(SCREENSHOT_CASE_IDS)
 
 
 def test_icon_case_deck_contains_svg_paths(intent_service: VisualIntentService) -> None:

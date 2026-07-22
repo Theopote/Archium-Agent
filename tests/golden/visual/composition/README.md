@@ -1,4 +1,4 @@
-# Visual Composition Golden Cases (V1–V7)
+# Visual Composition Golden Cases (V1–V9)
 
 LayoutPlan JSON baselines for architectural visual composition — distinct from Marp PNG visual regression in [`../README.md`](../README.md).
 
@@ -13,6 +13,8 @@ LayoutPlan JSON baselines for architectural visual composition — distinct from
 | `v5_process_narrative` | `process_narrative` | 4 阶段 + 箭头 + 阶段图示 + 总结 |
 | `v6_metric_dashboard` | `metric_dashboard` | 5 指标 + 趋势图 + 结论 |
 | `v7_hybrid_canvas` | `hybrid_canvas` | 主图纸 + 辅助图 + 指标 + 文字 + 图注 |
+| `v8_process_narrative_icons` | `process_narrative` | 4 阶段 + 语义图标箭头 + 阶段图示 + 总结 |
+| `v9_metric_dashboard_icons` | `metric_dashboard` | 4 指标 + 语义图标 + 趋势图 + 结论 |
 
 Each case directory contains:
 
