@@ -186,7 +186,22 @@ class StudioSceneService:
                 presentation_id=resolved_presentation,
             )
         )
-        return result.scene
+        scene = result.scene
+        if resolved_project is not None:
+            from archium.application.visual.image_derivative_service import (
+                ImageDerivativeService,
+            )
+
+            applied = ImageDerivativeService(
+                self._session,
+                settings=self._settings,
+            ).apply_to_scene(
+                scene,
+                project_id=resolved_project,
+                design_system=design_system,
+            )
+            scene = applied.scene
+        return scene
 
     def ensure_scene_for_slide(
         self,

@@ -291,6 +291,14 @@ class Settings(BaseSettings):
             "layers (content/evidence/architectural/layout) and Brief semantic alignment."
         ),
     )
+    image_derivatives_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true and Pillow is available, run ImageTreatmentSpec → ImageDerivative "
+            "after RenderScene compile (cache under project/cache/derivatives). "
+            "Never mutates originals; never applies filters inside PptxGenJS."
+        ),
+    )
     visual_qa_enabled: bool = Field(
         default=True,
         description=(
