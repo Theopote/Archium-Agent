@@ -147,7 +147,7 @@ class PngRenderer:
 
     def _paste_image(
         self,
-        canvas: object,
+        canvas: PILImage.Image,
         node: ImageNode | DrawingNode,
         *,
         fit: str,

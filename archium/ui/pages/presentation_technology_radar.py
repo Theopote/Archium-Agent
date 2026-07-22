@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import streamlit as st
+from typing import cast
 
 from archium.application.presentation_technology_radar_service import (
     PresentationTechnologyRadarService,
     RadarFilter,
 )
 from archium.domain.external_presentation_system import (
+    ArchiumRelevance,
     CATEGORY_LABELS_ZH,
     RELEVANCE_LABELS_ZH,
+    SystemCategory,
 )
 
 
@@ -47,8 +50,8 @@ def _render_filters() -> RadarFilter:
     local_llm_only = flags[1].checkbox("仅支持本地 LLM", key="radar_filter_local_llm")
 
     return RadarFilter(
-        relevance=None if relevance_raw == "全部" else relevance_raw,
-        category=None if category_raw == "全部" else category_raw,
+        relevance=None if relevance_raw == "全部" else cast(ArchiumRelevance, relevance_raw),
+        category=None if category_raw == "全部" else cast(SystemCategory, category_raw),
         query=query or None,
         editable_pptx_only=editable_only,
         local_llm_only=local_llm_only,

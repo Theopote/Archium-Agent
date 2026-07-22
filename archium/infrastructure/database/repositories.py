@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -1151,7 +1152,9 @@ class OutlineApprovalRecordRepository:
             for row in self._session.scalars(stmt)
         ]
 
-    def supersede_active(self, outline_id: UUID, *, superseded_at=None) -> int:
+    def supersede_active(
+        self, outline_id: UUID, *, superseded_at: datetime | None = None
+    ) -> int:
         from datetime import UTC, datetime
 
         moment = superseded_at or datetime.now(UTC)

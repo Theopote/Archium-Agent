@@ -28,7 +28,7 @@ from archium.prompts.slide_recovery import (
 try:
     from PIL import Image
 except ImportError:  # pragma: no cover
-    Image = None  # type: ignore[assignment,misc]
+    Image = None
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ class VlmRegionAnalyzer:
                 bbox=NormalizedBox(x=0.0, y=0.0, width=1.0, height=1.0),
                 region_type=region_type,  # type: ignore[arg-type]
                 semantic_role=semantic_role,
-                confidence=report.drawing_type_confidence,
+                confidence=report.drawing_type_confidence or 0.0,
                 source_asset_uri=uri,
                 keep_whole_drawing=keep_whole,
                 bitmap_fallback=bitmap_fallback,

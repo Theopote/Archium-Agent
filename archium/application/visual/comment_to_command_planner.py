@@ -6,6 +6,7 @@ from uuid import UUID
 
 from archium.application.visual.element_edit_intent_compiler import ElementEditIntentCompiler
 from archium.application.visual.element_edit_intent_parser import ElementEditIntentParser
+from archium.domain.visual.element_edit_intent import ElementEditIntent
 from archium.application.visual.partial_edit_preservation import command_target_node_ids
 from archium.application.visual.studio_nl_command_planner import (
     StudioCommandPlan,
@@ -137,16 +138,16 @@ class CommentToCommandPlanner:
                     scene=scene,
                 )
 
-        intent = self._intent_parser.parse(
+        parsed_intent = self._intent_parser.parse(
             note,
             bound_node_id=comment.node_id,
             scene=scene,
             scope_node_ids=list(comment.scope_node_ids),
         )
-        if intent is not None:
-            intent = self._enrich_intent_refs(intent, comment)
+        if parsed_intent is not None:
+            parsed_intent = self._enrich_intent_refs(parsed_intent, comment)
             plan = self._intent_compiler.compile(
-                intent,
+                parsed_intent,
                 scene=scene,
                 bound_node_id=comment.node_id,
                 presentation_id=presentation,
@@ -172,7 +173,9 @@ class CommentToCommandPlanner:
         return self._enforce_bound_targets(plan, comment, scene=scene)
 
     @staticmethod
-    def _enrich_intent_refs(intent, comment: ElementComment):
+    def _enrich_intent_refs(
+        intent: ElementEditIntent, comment: ElementComment
+    ) -> ElementEditIntent:
         if (
             comment.scope == ElementCommentScope.SELECTION
             and comment.scope_node_ids

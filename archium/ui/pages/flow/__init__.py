@@ -379,7 +379,7 @@ def render_flow_project_context(
     *,
     allow_create: bool = False,
     key_prefix: str = "flow",
-) -> object | None:
+) -> UUID | None:
     """Compact current-project chrome for product-flow stages.
 
     Avoids repeating a full project selector on every stage when a project is

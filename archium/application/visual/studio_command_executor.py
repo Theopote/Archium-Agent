@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 from uuid import UUID
 
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
@@ -801,15 +802,15 @@ class StudioCommandExecutor:
             )
 
         before_tokens = {node.id: geometry_token(node) for node in resolved}
-        reference = None
+        align_reference = None
         if command.reference_node_id:
-            reference = patched.node_by_id(command.reference_node_id)
+            align_reference = patched.node_by_id(command.reference_node_id)
         elif len(resolved) == 1:
-            reference = page_box(patched.page_width, patched.page_height)
+            align_reference = page_box(patched.page_width, patched.page_height)
         updates = align_nodes(
-            resolved,
+            cast(list[BaseRenderNode], resolved),
             command.alignment,
-            reference=reference,
+            reference=align_reference,
         )
         if not updates:
             return CommandExecutionResult(

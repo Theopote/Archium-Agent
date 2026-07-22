@@ -254,12 +254,12 @@ def _intent_cards_from_sources(
     for index, slide in enumerate(slides):
         title = getattr(slide, "title", None) or f"第 {index + 1} 页"
         message = getattr(slide, "message", None) or getattr(slide, "core_message", None) or ""
-        intent = getattr(slide, "intent", None) or ""
+        intent_text = getattr(slide, "intent", None) or ""
         cards.append(
             {
                 "title": str(title),
                 "conclusion": str(message) or "—",
-                "task": str(intent) or "—",
+                "task": str(intent_text) or "—",
                 "evidence": "—",
                 "assets": "—",
                 "page_type": str(getattr(slide, "slide_type", None) or "—"),

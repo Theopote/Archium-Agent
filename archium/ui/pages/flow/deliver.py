@@ -296,7 +296,7 @@ def _open_containing_folder(file_uri: str) -> None:
         return
     try:
         if sys.platform.startswith("win"):
-            os.startfile(str(target))  # type: ignore[attr-defined]
+            os.startfile(str(target))
         elif sys.platform == "darwin":
             subprocess.run(["open", str(target)], check=False)
         else:

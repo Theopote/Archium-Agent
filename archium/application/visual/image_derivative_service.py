@@ -80,7 +80,7 @@ class ImageDerivativeService:
 
         derivatives: list[ImageDerivative] = []
         skipped = 0
-        nodes: list[TextNode | ImageNode | DrawingNode] = []
+        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
         for node in scene.nodes:
             if not isinstance(node, (ImageNode, DrawingNode)):
                 nodes.append(node)

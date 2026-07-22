@@ -36,7 +36,9 @@ def render_region_overlay(
     width, height = image.size
 
     try:
-        font = ImageFont.truetype("arial.ttf", max(12, width // 80))
+        font: ImageFont.ImageFont | ImageFont.FreeTypeFont = ImageFont.truetype(
+            "arial.ttf", max(12, width // 80)
+        )
     except OSError:
         font = ImageFont.load_default()
 

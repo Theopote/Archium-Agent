@@ -15,7 +15,7 @@ from archium.domain.visual.element_edit_intent import (
     ElementEditOperation,
 )
 from archium.domain.visual.render_scene import RenderScene
-from archium.infrastructure.llm.base import LLMRequest
+from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.factory import create_llm_provider
 
 _DEFAULT_MOVE_IN = 0.25
@@ -121,7 +121,7 @@ class ElementEditIntentParser:
         *,
         settings: Settings | None = None,
         use_llm: bool = False,
-        llm_provider=None,
+        llm_provider: LLMProvider | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._use_llm = bool(use_llm and self._settings.llm_configured)

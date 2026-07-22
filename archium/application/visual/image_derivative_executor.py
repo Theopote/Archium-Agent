@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 if TYPE_CHECKING:
@@ -220,7 +220,7 @@ def _load_oriented_srgb(opened: PILImage.Image) -> PILImage.Image:
         if icc and image.mode in {"RGB", "RGBA", "L", "CMYK"}:
             src = ImageCms.ImageCmsProfile(bytes(icc))
             dst = ImageCms.createProfile("sRGB")
-            image = ImageCms.profileToProfile(image, src, dst, outputMode="RGB")
+            image = cast(PILImage.Image, ImageCms.profileToProfile(image, src, dst, outputMode="RGB"))
             return image
     except Exception:  # noqa: BLE001 — ICC optional
         pass
