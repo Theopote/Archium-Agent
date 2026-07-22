@@ -186,5 +186,5 @@ def load_image(path: Path) -> Image.Image | None:
     try:
         with Image.open(path) as opened:
             return opened.convert("RGB")
-    except OSError:
+    except (OSError, Image.DecompressionBombError):
         return None

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -142,10 +142,14 @@ def test_validate_pptx_ten_text_nodes_eight_found(tmp_path: Path) -> None:
         )
     ]
 
-    report = service.validate_pptx_export(
-        presentation_id=presentation_id,
-        pptx_path=pptx_path,
-    )
+    with patch(
+        "archium.application.export_round_trip_service.screenshot_tools_available",
+        return_value=False,
+    ):
+        report = service.validate_pptx_export(
+            presentation_id=presentation_id,
+            pptx_path=pptx_path,
+        )
     assert report.text_match_rate == pytest.approx(0.8, abs=0.05)
     assert report.status in {RoundTripStatus.NEEDS_REVIEW, RoundTripStatus.BLOCKED}
 
@@ -198,9 +202,13 @@ def test_validate_pptx_full_text_match(tmp_path: Path) -> None:
         )
     ]
 
-    report = service.validate_pptx_export(
-        presentation_id=presentation_id,
-        pptx_path=pptx_path,
-    )
+    with patch(
+        "archium.application.export_round_trip_service.screenshot_tools_available",
+        return_value=False,
+    ):
+        report = service.validate_pptx_export(
+            presentation_id=presentation_id,
+            pptx_path=pptx_path,
+        )
     assert report.text_match_rate == 1.0
     assert report.status != RoundTripStatus.BLOCKED
