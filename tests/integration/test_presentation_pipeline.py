@@ -6,6 +6,8 @@ Full pipeline execution uses :class:`PresentationWorkflowService` — see
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
@@ -16,6 +18,8 @@ from archium.domain.enums import ProjectType
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.domain.project_mission import ProjectMission
+from archium.domain.workflow_route import PresentationWorkflowRoute
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
@@ -187,3 +191,23 @@ def test_storyline_honors_mission_narrative_mode(
     )
     storyline = presentation_service.generate_storyline(project_with_context.id, brief)
     assert storyline.narrative_pattern == ArchitecturalNarrativeMode.DECISION_FIRST.value
+
+
+def test_generate_pipeline_rejects_another_route_before_creating_presentation(
+    db_session: Session,
+    test_settings: object,
+    mock_llm: MockLLMProvider,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+) -> None:
+    request = replace(
+        request_payload,
+        workflow_route=PresentationWorkflowRoute.BEAUTIFY_EXISTING_DECK,
+    )
+    service = PresentationWorkflowService(db_session, mock_llm, settings=test_settings)  # type: ignore[arg-type]
+    try:
+        with pytest.raises(WorkflowError, match="dedicated workflow"):
+            service.prepare_run(project_with_context.id, request)
+    finally:
+        service.close()
+    assert PresentationRepository(db_session).list_by_project(project_with_context.id) == []

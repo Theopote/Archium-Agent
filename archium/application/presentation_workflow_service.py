@@ -13,11 +13,13 @@ from sqlalchemy.orm import Session
 from archium.application.presentation_models import PresentationRequest
 from archium.application.review_service import PresentationReviewService
 from archium.application.workflow_models import WorkflowRunResult
+from archium.application.workflow_route_service import WorkflowRouteService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import WorkflowStatus, WorkflowStep
 from archium.domain.presentation import Presentation
 from archium.domain.render import RenderResult
 from archium.domain.workflow import WorkflowRun
+from archium.domain.workflow_route import PresentationWorkflowRoute
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
@@ -56,6 +58,7 @@ class PresentationWorkflowService:
             renderer=renderer,
         )
         self._workflow_runs = WorkflowRunRepository(session)
+        self._route_service = WorkflowRouteService()
         self._owns_checkpointer = checkpointer_manager is None
         self._checkpointer_manager = checkpointer_manager or WorkflowCheckpointerManager(
             self._settings.workflow_checkpoint_path
@@ -129,6 +132,14 @@ class PresentationWorkflowService:
         require_slides_review: bool = False,
     ) -> WorkflowRun:
         """Create presentation + WorkflowRun records without invoking the graph."""
+        self._route_service.require_route(
+            request.workflow_route,
+            PresentationWorkflowRoute.GENERATE_FROM_PROJECT,
+        )
+        self._route_service.validate_inputs(
+            request.workflow_route,
+            {"project_knowledge"},
+        )
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
         resolved_preview_images = (
             export_preview_images

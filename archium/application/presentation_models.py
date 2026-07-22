@@ -9,6 +9,7 @@ from archium.domain.enums import PresentationType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
+from archium.domain.workflow_route import PresentationWorkflowRoute
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,8 @@ class PresentationRequest:
     page_materials: dict[int, list[dict[str, object]]] | list[dict[str, object]] = field(
         default_factory=dict
     )
+    # Explicit route keeps preservation-incompatible jobs out of this generation pipeline.
+    workflow_route: PresentationWorkflowRoute = PresentationWorkflowRoute.GENERATE_FROM_PROJECT
 
 
 @dataclass

@@ -17,6 +17,7 @@ from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
+from archium.domain.workflow_route import PresentationWorkflowRoute
 from archium.workflow.state import PresentationWorkflowState
 
 
@@ -40,6 +41,7 @@ def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
         "title": request.title,
         "audience": request.audience,
         "purpose": request.purpose,
+        "workflow_route": request.workflow_route.value,
         "duration_minutes": request.duration_minutes,
         "target_slide_count": request.target_slide_count,
         "core_message": request.core_message,
@@ -75,6 +77,9 @@ def request_from_dict(data: dict[str, Any]) -> PresentationRequest:
         title=str(data["title"]),
         audience=str(data["audience"]),
         purpose=str(data["purpose"]),
+        workflow_route=PresentationWorkflowRoute(
+            data.get("workflow_route", PresentationWorkflowRoute.GENERATE_FROM_PROJECT.value)
+        ),
         duration_minutes=int(data.get("duration_minutes", 20)),
         target_slide_count=int(data.get("target_slide_count", 20)),
         core_message=str(data.get("core_message", "")),

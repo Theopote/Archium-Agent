@@ -15,6 +15,7 @@ from archium.domain.enums import (
 from archium.domain.presentation import Presentation
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
+from archium.domain.workflow_route import PresentationWorkflowRoute
 from archium.workflow.serialization import (
     request_from_dict,
     request_to_dict,
@@ -32,11 +33,20 @@ def test_request_round_trip() -> None:
         core_message="核心信息",
         presentation_type=PresentationType.CLIENT_REVIEW,
         required_sections=["现状分析"],
+        workflow_route=PresentationWorkflowRoute.GENERATE_FROM_PROJECT,
     )
     restored = request_from_dict(request_to_dict(request))
     assert restored.title == request.title
     assert restored.presentation_type == request.presentation_type
     assert restored.required_sections == request.required_sections
+    assert restored.workflow_route == PresentationWorkflowRoute.GENERATE_FROM_PROJECT
+
+
+def test_legacy_request_defaults_to_generate_route() -> None:
+    restored = request_from_dict(
+        {"title": "Legacy", "audience": "Client", "purpose": "Decision"}
+    )
+    assert restored.workflow_route == PresentationWorkflowRoute.GENERATE_FROM_PROJECT
 
 
 def test_snapshot_state_is_json_safe() -> None:

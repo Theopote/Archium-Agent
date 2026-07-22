@@ -1,63 +1,81 @@
-mypy version: 2.3.0 (compiled: yes)
+mypy summary
+=============
+
+mypy version: mypy 2.3.0 (compiled: yes)
 command: py -3 -m mypy archium --python-version 3.12
+mypy summary line: Found 217 errors in 56 files (checked 650 source files)
+total errors (parsed): 217
+files with errors (parsed): 56
 
-total_errors: 217
-files_with_errors: 56
-mypy_footer: Found 217 errors in 56 files (checked 650 source files)
+Count by error code:
+--------------------
+  arg-type: 63
+  no-untyped-def: 44
+  attr-defined: 39
+  assignment: 19
+  typeddict-item: 19
+  call-overload: 10
+  unused-ignore: 8
+  no-any-return: 6
+  misc: 3
+  return-value: 2
+  operator: 1
+  call-arg: 1
+  index: 1
+  return: 1
 
-=== count by error code ===
-   63  arg-type
-   44  no-untyped-def
-   39  attr-defined
-   19  assignment
-   19  typeddict-item
-   10  call-overload
-    8  unused-ignore
-    6  no-any-return
-    3  misc
-    2  return-value
-    1  operator
-    1  call-arg
-    1  index
-    1  return
+Top 20 files by error count:
+----------------------------
+   1.  23  archium\infrastructure\database\visual_mappers.py
+   2.  21  archium\ui\studio\slide_canvas_enhanced.py
+   3.  16  archium\application\main_chain_adopt_service.py
+   4.  15  archium\ui\project_progress_card.py
+   5.  11  archium\infrastructure\slide_recovery\ocr_region_detector.py
+   6.   7  archium\ui\studio_service.py
+   7.   7  archium\ui\pages\studio.py
+   8.   6  archium\domain\deck_delivery.py
+   9.   6  archium\application\visual\image_derivative_executor.py
+  10.   6  archium\application\visual\template_usage_brief_service.py
+  11.   5  archium\infrastructure\renderers\png_renderer.py
+  12.   5  archium\application\visual\visual_critic_service.py
+  13.   5  archium\application\export_round_trip_service.py
+  14.   5  archium\ui\pages\home.py
+  15.   4  archium\infrastructure\slide_recovery\scene_region_adapter.py
+  16.   4  archium\ui\slide_recovery_panel.py
+  17.   4  archium\ui\pages\flow\generate.py
+  18.   3  archium\application\visual\slide_capacity_service.py
+  19.   3  archium\application\slide_recovery_source_parser.py
+  20.   3  archium\application\visual\theme_proposal_service.py
 
-=== top 20 files by error count ===
-   23  archium/infrastructure/database/visual_mappers.py
-   21  archium/ui/studio/slide_canvas_enhanced.py
-   16  archium/application/main_chain_adopt_service.py
-   15  archium/ui/project_progress_card.py
-   11  archium/infrastructure/slide_recovery/ocr_region_detector.py
-    7  archium/ui/studio_service.py
-    7  archium/ui/pages/studio.py
-    6  archium/domain/deck_delivery.py
-    6  archium/application/visual/image_derivative_executor.py
-    6  archium/application/visual/template_usage_brief_service.py
-    5  archium/infrastructure/renderers/png_renderer.py
-    5  archium/application/visual/visual_critic_service.py
-    5  archium/application/export_round_trip_service.py
-    5  archium/ui/pages/home.py
-    4  archium/infrastructure/slide_recovery/scene_region_adapter.py
-    4  archium/ui/slide_recovery_panel.py
-    4  archium/ui/pages/flow/generate.py
-    3  archium/application/visual/slide_capacity_service.py
-    3  archium/application/slide_recovery_source_parser.py
-    3  archium/application/visual/comment_to_command_planner.py
+Sample of 10 unique error messages (practicality check):
+--------------------------------------------------------
+  1. [unused-ignore] archium\infrastructure\slide_recovery\pdf_page_renderer.py:13
+     Unused "type: ignore" comment
+  2. [call-overload] archium\domain\slide_asset_binding.py:111
+     No overload variant of "int" matches argument type "object"
+  3. [no-untyped-def] archium\application\visual\architectural_icon_registry.py:185
+     Function is missing a type annotation for one or more parameters
+  4. [no-untyped-def] archium\application\visual\architectural_icon_registry.py:198
+     Function is missing a return type annotation
+  5. [assignment] archium\domain\deck_delivery.py:110
+     Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")
+  6. [arg-type] archium\domain\deck_delivery.py:121
+     Argument "status" to "DeckDeliveryReport" has incompatible type "SlideDeliveryStatus"; expected "DeckDeliveryStatus"
+  7. [arg-type] archium\infrastructure\slide_recovery\scene_region_adapter.py:244
+     Argument "drawing_type" to "DrawingNode" has incompatible type "str"; expected "Literal['site_plan', 'floor_plan', 'elevation', 'section', 'detail', 'diagram', 'heritage_map', 'circulation_plan']"
+  8. [arg-type] archium\infrastructure\slide_recovery\scene_region_adapter.py:267
+     Argument "asset_origin" to "ImageNode" has incompatible type "str"; expected "Literal['project_upload', 'public_research', 'reference_case', 'ai_generated', 'stock_image']"
+  9. [assignment] archium\infrastructure\slide_recovery\scene_region_adapter.py:304
+     Incompatible types in assignment (expression has type "None", variable has type "str")
+  10. [assignment] archium\infrastructure\slide_recovery\scene_region_adapter.py:307
+     Incompatible types in assignment (expression has type "str | None", variable has type "str")
 
-=== sample 10 unique error messages (practicality check) ===
-1. [unused-ignore] Unused "type: ignore" comment
-2. [call-overload] No overload variant of "int" matches argument type "object"
-3. [no-untyped-def] Function is missing a type annotation for one or more parameters
-4. [no-untyped-def] Function is missing a return type annotation
-5. [assignment] Incompatible types in assignment (expression has type "DeckDeliveryStatus", variable has type "SlideDeliveryStatus")
-6. [arg-type] Argument "status" to "DeckDeliveryReport" has incompatible type "SlideDeliveryStatus"; expected "DeckDeliveryStatus"
-7. [arg-type] Argument "drawing_type" to "DrawingNode" has incompatible type "str"; expected "Literal['site_plan', 'floor_plan', 'elevation', 'section', 'detail', 'diagram', 'heritage_map', 'circulation_plan']"
-8. [arg-type] Argument "asset_origin" to "ImageNode" has incompatible type "str"; expected "Literal['project_upload', 'public_research', 'reference_case', 'ai_generated', 'stock_image']"
-9. [assignment] Incompatible types in assignment (expression has type "None", variable has type "str")
-10. [assignment] Incompatible types in assignment (expression has type "str | None", variable has type "str")
-
-unique_error_message_patterns: 117
-
-=== practicality note ===
-Most errors cluster in a few codes (attr-defined, arg-type, assignment, no-untyped-def).
-Many look like session_state/object typing and missing annotations — often fixable with TypedDict/Protocol or casts,
-but volume (200+) across 50+ files is a multi-session effort, not a quick one-shot cleanup.
+Practicality assessment:
+------------------------
+Top codes: [('arg-type', 63), ('no-untyped-def', 44), ('attr-defined', 39), ('assignment', 19), ('typeddict-item', 19), ('call-overload', 10), ('unused-ignore', 8), ('no-any-return', 6)]
+From the sample, many issues look like:
+- unused-ignore / type: ignore cleanup (mechanical)
+- object attribute access without narrowing (attr-defined) - needs TypedDict/Protocol/casts
+- arg-type / call-overload mismatches - local typing fixes
+- Overall volume (217 in 56 files) is moderate; concentrated files are good targets first.
+Verdict: Likely practical in stages if tackled by code family (attr-defined + arg-type first).
