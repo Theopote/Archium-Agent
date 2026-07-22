@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from archium.application.visual.element_edit_intent_compiler import ElementEditIntentCompiler
+from archium.application.visual.element_edit_intent_parser import ElementEditIntentParser
 from archium.application.visual.partial_edit_preservation import command_target_node_ids
 from archium.application.visual.studio_nl_command_planner import (
     StudioCommandPlan,
@@ -11,34 +13,8 @@ from archium.application.visual.studio_nl_command_planner import (
 )
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.element_comment import ElementComment, ElementCommentScope
-from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
-from archium.domain.visual.render_scene import DrawingNode, RenderNode, RenderScene
-from archium.domain.visual.studio_command import (
-    AlignNodesCommand,
-    IncreaseDrawingReadabilityCommand,
-    MoveNodeCommand,
-    ResizeNodeCommand,
-    StudioCommand,
-)
-
-_ENLARGE_KEYWORDS: tuple[str, ...] = (
-    "放大一点",
-    "放大",
-    "增大",
-    "大一点",
-    "enlarge",
-    "scale up",
-    "make bigger",
-)
-
-_ALIGN_LEFT_KEYWORDS: tuple[str, ...] = (
-    "和左边对齐",
-    "与左边对齐",
-    "左对齐",
-    "靠左",
-    "align left",
-    "align to the left",
-)
+from archium.domain.visual.render_scene import RenderNode, RenderScene
+from archium.domain.visual.studio_command import StudioCommand
 
 # Multi-node intents that conflict with default NODE hard-binding.
 _MULTI_NODE_SCOPE_HINTS: tuple[str, ...] = (
@@ -59,9 +35,25 @@ _MULTI_NODE_SCOPE_HINTS: tuple[str, ...] = (
     "reflow",
 )
 
+_ALIGN_LEFT_KEYWORDS: tuple[str, ...] = (
+    "和左边对齐",
+    "与左边对齐",
+    "左对齐",
+    "靠左",
+    "align left",
+    "align to the left",
+)
+
 
 class CommentToCommandPlanner:
-    """Translate an ElementComment into Studio commands with scope-aware targets."""
+    """Translate an ElementComment into Studio commands with scope-aware targets.
+
+    Pipeline:
+    1. Scope gate for multi-node notes under ``NODE``
+    2. ``ElementEditIntent`` via keyword shortcuts / structured model
+    3. Compile intent → StudioCommand
+    4. Fall back to legacy ``StudioNLCommandPlanner`` when intent is unknown
+    """
 
     def __init__(
         self,
@@ -69,12 +61,20 @@ class CommentToCommandPlanner:
         settings: Settings | None = None,
         use_llm: bool = False,
         nl_planner: StudioNLCommandPlanner | None = None,
+        intent_parser: ElementEditIntentParser | None = None,
+        intent_compiler: ElementEditIntentCompiler | None = None,
     ) -> None:
         self._settings = settings or get_settings()
+        self._use_llm = use_llm
         self._nl_planner = nl_planner or StudioNLCommandPlanner(
             settings=self._settings,
             use_llm=use_llm,
         )
+        self._intent_parser = intent_parser or ElementEditIntentParser(
+            settings=self._settings,
+            use_llm=use_llm,
+        )
+        self._intent_compiler = intent_compiler or ElementEditIntentCompiler()
 
     def plan(
         self,
@@ -106,15 +106,54 @@ class CommentToCommandPlanner:
         if scope_gate is not None:
             return scope_gate
 
-        geometry_plan = self._plan_geometry_keywords(
-            note,
-            scene=scene,
-            bound_node_id=comment.node_id,
-            presentation_id=presentation,
-            slide_id=slide,
+        keyword_intents = self._intent_parser.parse_keyword_intents(
+            note, bound_node_id=comment.node_id, scene=scene
         )
-        if geometry_plan is not None:
-            return self._enforce_bound_targets(geometry_plan, comment, scene=scene)
+        if len(keyword_intents) > 1:
+            commands: list = []
+            reasons: list[str] = []
+            confidence = 1.0
+            for intent in keyword_intents:
+                enriched = self._enrich_intent_refs(intent, comment)
+                part = self._intent_compiler.compile(
+                    enriched,
+                    scene=scene,
+                    bound_node_id=comment.node_id,
+                    presentation_id=presentation,
+                    slide_id=slide,
+                )
+                if part.commands:
+                    commands.extend(part.commands)
+                    reasons.extend(part.reasons)
+                    confidence = min(confidence, part.confidence)
+            if commands:
+                return self._enforce_bound_targets(
+                    StudioCommandPlan(
+                        commands=tuple(commands),
+                        reasons=tuple(dict.fromkeys(reasons)),
+                        confidence=confidence,
+                    ),
+                    comment,
+                    scene=scene,
+                )
+
+        intent = self._intent_parser.parse(
+            note,
+            bound_node_id=comment.node_id,
+            scene=scene,
+            scope_node_ids=list(comment.scope_node_ids),
+        )
+        if intent is not None:
+            intent = self._enrich_intent_refs(intent, comment)
+            plan = self._intent_compiler.compile(
+                intent,
+                scene=scene,
+                bound_node_id=comment.node_id,
+                presentation_id=presentation,
+                slide_id=slide,
+            )
+            if plan.commands or plan.unsupported_reason:
+                return self._enforce_bound_targets(plan, comment, scene=scene)
 
         # Wider scopes: do not force NL planner into single-node resolution.
         bound_for_nl = (
@@ -131,6 +170,19 @@ class CommentToCommandPlanner:
             bound_node_id=bound_for_nl,
         )
         return self._enforce_bound_targets(plan, comment, scene=scene)
+
+    @staticmethod
+    def _enrich_intent_refs(intent, comment: ElementComment):
+        if (
+            comment.scope == ElementCommentScope.SELECTION
+            and comment.scope_node_ids
+            and intent.operation in {"distribute", "align", "resize"}
+            and not intent.reference_node_ids
+        ):
+            return intent.model_copy(
+                update={"reference_node_ids": list(comment.scope_node_ids)}
+            )
+        return intent
 
     @staticmethod
     def suggested_scope_for_note(note: str) -> ElementCommentScope | None:
@@ -154,7 +206,6 @@ class CommentToCommandPlanner:
         suggested = self.suggested_scope_for_note(note)
         if suggested is None or suggested == ElementCommentScope.NODE:
             return None
-        # Align-left phrases are handled by geometry keywords under NODE.
         if any(keyword in note.lower() for keyword in _ALIGN_LEFT_KEYWORDS):
             return None
         return StudioCommandPlan(
@@ -165,97 +216,6 @@ class CommentToCommandPlanner:
                 f"请将 scope 设为 `{suggested.value}`（并提供 scope_node_ids），"
                 "或改写为只针对当前节点的描述。"
             ),
-        )
-
-    def _plan_geometry_keywords(
-        self,
-        text: str,
-        *,
-        scene: RenderScene,
-        bound_node_id: str,
-        presentation_id: UUID,
-        slide_id: UUID,
-    ) -> StudioCommandPlan | None:
-        lowered = text.lower()
-        wants_enlarge = any(keyword in lowered for keyword in _ENLARGE_KEYWORDS)
-        wants_align_left = any(keyword in lowered for keyword in _ALIGN_LEFT_KEYWORDS)
-        if not wants_enlarge and not wants_align_left:
-            return None
-
-        commands: list[StudioCommand] = []
-        reasons: list[str] = []
-
-        if wants_enlarge:
-            node = scene.node_by_id(bound_node_id)
-            assert node is not None
-            if isinstance(node, DrawingNode) or getattr(node, "node_type", "") == "drawing":
-                command: StudioCommand = IncreaseDrawingReadabilityCommand(
-                    presentation_id=presentation_id,
-                    slide_id=slide_id,
-                    node_id=bound_node_id,
-                    target_node_ids=[bound_node_id],
-                    reason="element comment: enlarge drawing",
-                    expected_effect=f"扩大图纸 `{bound_node_id}`",
-                )
-            else:
-                scale = 1.15 if "一点" in text or "a bit" in lowered else 1.25
-                new_width = node.width * scale
-                new_height = node.height * scale
-                center_x = node.x + node.width / 2.0
-                center_y = node.y + node.height / 2.0
-                command = ResizeNodeCommand(
-                    presentation_id=presentation_id,
-                    slide_id=slide_id,
-                    node_id=bound_node_id,
-                    target_node_ids=[bound_node_id],
-                    x=center_x - new_width / 2.0,
-                    y=center_y - new_height / 2.0,
-                    width=new_width,
-                    height=new_height,
-                    preserve_aspect_ratio=True,
-                    reason="element comment: enlarge node",
-                    expected_effect=f"放大 `{bound_node_id}`",
-                )
-            commands.append(command)
-            reasons.append(command.expected_effect)
-
-        if wants_align_left:
-            reference_id = _nearest_left_sibling_id(scene, bound_node_id)
-            node = scene.node_by_id(bound_node_id)
-            assert node is not None
-            if reference_id is not None:
-                align: StudioCommand = AlignNodesCommand(
-                    presentation_id=presentation_id,
-                    slide_id=slide_id,
-                    node_ids=[bound_node_id, reference_id],
-                    target_node_ids=[bound_node_id],
-                    alignment="left",
-                    reference_node_id=reference_id,
-                    reason="element comment: align left",
-                    expected_effect=f"将 `{bound_node_id}` 与左侧元素对齐",
-                )
-            else:
-                margin = 0.5
-                align = MoveNodeCommand(
-                    presentation_id=presentation_id,
-                    slide_id=slide_id,
-                    node_id=bound_node_id,
-                    target_node_ids=[bound_node_id],
-                    x=margin,
-                    y=node.y,
-                    reason="element comment: align to page left",
-                    expected_effect=f"将 `{bound_node_id}` 靠左对齐",
-                )
-            commands.append(align)
-            reasons.append(align.expected_effect)
-
-        if not commands:
-            return None
-
-        return StudioCommandPlan(
-            commands=tuple(commands),
-            reasons=(PARTIAL_EDIT_INTERACTION_RULE, *reasons),
-            confidence=0.9,
         )
 
     def _enforce_bound_targets(
@@ -280,13 +240,10 @@ class CommentToCommandPlanner:
             else set()
         )
         allowed = comment.allowed_node_ids(scene_node_ids=region_ids)
-        # NODE_AND_REFERENCES: allow planner references beyond explicit scope_node_ids,
-        # but the primary bound node must remain involved.
         if scope == ElementCommentScope.NODE_AND_REFERENCES:
             return self._enforce_node_and_references(plan, bound_node_id, allowed or {bound_node_id})
 
         if allowed is None:
-            # SLIDE — unrestricted; keep planner targets as-is.
             return plan
 
         return self._enforce_allowed_set(plan, bound_node_id=bound_node_id, allowed=allowed)
@@ -335,7 +292,6 @@ class CommentToCommandPlanner:
         bound_node_id: str,
         seed_allowed: set[str],
     ) -> StudioCommandPlan:
-        """Keep bound node as primary; allow additional reference targets."""
         rewritten: list[StudioCommand] = []
         for command in plan.commands:
             targets = command_target_node_ids(command)
@@ -362,8 +318,6 @@ class CommentToCommandPlanner:
                         f"多节点引用操作仍需包含绑定节点 `{bound_node_id}`。"
                     ),
                 )
-            # Optional: if caller pre-declared scope_node_ids, extras should be within seed ∪ refs.
-            # References discovered by the planner are allowed beyond seed_allowed.
             _ = seed_allowed
 
         return StudioCommandPlan(
@@ -407,25 +361,6 @@ class CommentToCommandPlanner:
                     unsupported_reason=f"作用域未包含绑定节点 `{bound_node_id}`。",
                 )
         return plan
-
-
-def _nearest_left_sibling_id(scene: RenderScene, node_id: str) -> str | None:
-    node = scene.node_by_id(node_id)
-    if node is None:
-        return None
-    candidates: list[tuple[float, float, str]] = []
-    for other in scene.nodes:
-        if other.id == node_id or not other.visible:
-            continue
-        if other.x + other.width > node.x + 1e-6:
-            continue
-        vertical_gap = abs((other.y + other.height / 2.0) - (node.y + node.height / 2.0))
-        horizontal_gap = node.x - (other.x + other.width)
-        candidates.append((horizontal_gap, vertical_gap, other.id))
-    if not candidates:
-        return None
-    candidates.sort(key=lambda item: (item[0], item[1]))
-    return candidates[0][2]
 
 
 def _nodes_in_region(scene: RenderScene, bbox: dict[str, float] | None) -> set[str]:

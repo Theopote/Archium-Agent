@@ -43,7 +43,7 @@ Select element (studio_selected_element_id)
 
 - UI：AI 编辑面板显示「当前目标」；按钮「对选中元素生成提案」
 - 代码入口：`ElementCommentService.create_and_propose`；planner：`CommentToCommandPlanner`
-- 几何启发式：「放大一点」→ Resize / drawing readability；「和左边对齐」→ Align（最近左侧 sibling）或贴页左边 Move
+- 几何启发式：「放大一点」→ Resize；「缩小 / 左移 / 顶对齐 / 置顶 / 隐藏 / 锁定」等走 `ElementEditIntent` 快捷路径；复杂句交给 Structured Output
 - 接受/拒绝提案后由 `SceneProposalService` 回调同步评论状态
 
 ## Checklist

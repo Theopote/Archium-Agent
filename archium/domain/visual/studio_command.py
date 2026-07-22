@@ -159,6 +159,16 @@ class ReorderNodeCommand(StudioCommandBase):
     direction: NodeReorderDirection
 
 
+class UpdateNodeStyleCommand(StudioCommandBase):
+    """Update visual style fields on a Text/Shape node (color, font size, fill)."""
+
+    command_type: Literal["update_node_style"] = "update_node_style"
+    node_id: str = Field(min_length=1)
+    color: str | None = None
+    font_size: float | None = Field(default=None, gt=0)
+    fill_color: str | None = None
+
+
 StudioCommand = Annotated[
     RewriteTextCommand
     | FixOverflowCommand
@@ -171,7 +181,8 @@ StudioCommand = Annotated[
     | SetNodeLockCommand
     | SetNodeVisibilityCommand
     | AlignNodesCommand
-    | ReorderNodeCommand,
+    | ReorderNodeCommand
+    | UpdateNodeStyleCommand,
     Field(discriminator="command_type"),
 ]
 

@@ -33,6 +33,7 @@ from archium.domain.visual.studio_command import (
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     StudioCommand,
+    UpdateNodeStyleCommand,
 )
 from archium.exceptions import WorkflowError
 
@@ -60,6 +61,7 @@ def command_target_node_ids(command: StudioCommand) -> set[str]:
             ReorderNodeCommand,
             SetNodeLockCommand,
             SetNodeVisibilityCommand,
+            UpdateNodeStyleCommand,
         ),
     ):
         targets.add(command.node_id)

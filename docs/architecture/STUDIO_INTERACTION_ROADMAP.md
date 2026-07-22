@@ -453,13 +453,14 @@ open-slide 式 Inspector 评论适合 Archium，但应以 Command / Patch / Prop
 - 选中 Layout 元素 → 映射 RenderScene `node_id` → 自然语言评论硬绑定
 - 作用域 `ElementCommentScope`：默认 `NODE`；可显式扩大为 `NODE_AND_REFERENCES` / `SELECTION` / `REGION` / `SLIDE`（多卡片等齐、重排等）
 - 版本钉扎：`scene_revision_id` / `scene_hash` / `node_snapshot_json`；生成提案前若与当前正式 SceneRevision 不一致 → `needs_rebase`（禁止静默应用到新版本）
-- `CommentToCommandPlanner` → `StudioCommand` → `SceneChangeProposal` → Before/After
+- `CommentToCommandPlanner` → `ElementEditIntent`（关键词快捷 + Structured Output）→ `StudioCommand` → `SceneChangeProposal` → Before/After
+- 元素意图操作：move / resize / align / distribute / replace_asset / rewrite_text / change_style / visibility / lock / reorder
 - 提案接受/拒绝后回写评论状态
 
 **尚未做**
 - 画布上的评论气泡 / 独立评论线程 UI
 - 多评论协作与指派
-- 复合几何指令的完整 LLM 规划（当前对「放大 / 左对齐」有关键词启发式）
+- 复合几何指令的完整 LLM 规划（关键词仅为高置信快捷路径；其余走 `ElementEditIntent` Structured Output）
 - `needs_rebase` 的可视化 Diff（评论时节点快照 vs 当前节点）与一键 rebind UI
 - Studio 多选 UI 自动写入 `scope=selection` + `scope_node_ids`
 ## 全稿 Theme Token → ThemeChangeProposal（已接线）

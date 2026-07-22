@@ -31,6 +31,7 @@ from archium.domain.visual.render_scene import (
     ImageNode,
     RenderScene,
     SceneAssetReference,
+    ShapeNode,
     TextNode,
     compute_scene_hash,
     replace_text_node_content,
@@ -52,6 +53,7 @@ from archium.domain.visual.studio_command import (
     RewriteTextCommand,
     ScenePatchAction,
     StudioCommand,
+    UpdateNodeStyleCommand,
     build_patch_action,
 )
 
@@ -151,6 +153,8 @@ class StudioCommandExecutor:
             return self._execute_align_nodes(scene, command, base_hash)
         if isinstance(command, ReorderNodeCommand):
             return self._execute_reorder_node(scene, command, base_hash)
+        if isinstance(command, UpdateNodeStyleCommand):
+            return self._execute_update_node_style(scene, command, base_hash)
         return CommandExecutionResult(
             success=False,
             base_scene_hash=base_hash,
@@ -892,6 +896,95 @@ class StudioCommandExecutor:
             before_value=before_z,
             after_value=str(target.z_index),
             reason=command.reason or f"reorder {command.direction}",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_update_node_style(
+        self,
+        scene: RenderScene,
+        command: UpdateNodeStyleCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if command.color is None and command.font_size is None and command.fill_color is None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.STYLE_EMPTY",
+                        message="update_node_style requires color, font_size, or fill_color",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert target is not None
+        before: dict[str, object] = {}
+        after: dict[str, object] = {}
+
+        if isinstance(target, TextNode):
+            if command.color is not None:
+                before["color"] = target.color
+                target.color = command.color
+                after["color"] = target.color
+            if command.font_size is not None:
+                before["font_size"] = target.font_size
+                target.font_size = command.font_size
+                after["font_size"] = target.font_size
+        elif isinstance(target, ShapeNode):
+            if command.fill_color is not None or command.color is not None:
+                fill = command.fill_color or command.color
+                before["fill_color"] = target.fill_color
+                target.fill_color = fill
+                after["fill_color"] = target.fill_color
+        else:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.STYLE_UNSUPPORTED_NODE",
+                        message=f"node `{command.node_id}` does not support style updates",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        if not after:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.STYLE_NO_CHANGE",
+                        message=f"no applicable style fields for node `{command.node_id}`",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="update_node_style",
+            property_name="style",
+            before_value=str(before),
+            after_value=str(after),
+            before_payload=before,
+            after_payload=after,
+            reason=command.reason or "update node style",
         )
         return CommandExecutionResult(
             success=True,
