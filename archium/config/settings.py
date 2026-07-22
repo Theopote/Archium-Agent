@@ -204,6 +204,28 @@ class Settings(BaseSettings):
         default=None,
         description="Optional vision-capable model override for asset captioning at ingest.",
     )
+    slide_recovery_ocr_enabled: bool = Field(
+        default=True,
+        description="When true, run OCR (pytesseract) for raster slide recovery inputs.",
+    )
+    slide_recovery_vlm_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true and LLM is configured, use vision LLM for non-text region detection "
+            "during slide recovery (falls back to heuristic analysis)."
+        ),
+    )
+    slide_recovery_vlm_model: str | None = Field(
+        default=None,
+        description="Optional vision-capable model override for slide recovery VLM analysis.",
+    )
+    slide_recovery_pptx_perceptual_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, rasterize PPTX slides (when tools available) and supplement "
+            "structural parsing with OCR/VLM perceptual regions."
+        ),
+    )
     retrieval_keyword_boost_enabled: bool = Field(
         default=True,
         description=(

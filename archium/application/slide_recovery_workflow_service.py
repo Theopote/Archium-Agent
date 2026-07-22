@@ -11,6 +11,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.slide_recovery_region_analyzer import SlideRecoveryRegionAnalyzer
 from archium.application.slide_recovery_service import (
     SlideRecoveryRequest,
     SlideRecoveryService,
@@ -28,7 +29,6 @@ from archium.domain.visual.render_scene import RenderScene
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import WorkflowRunRepository
-from archium.infrastructure.slide_recovery.scene_region_adapter import classify_page_kind
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="slide_recovery_workflow")
@@ -86,6 +86,7 @@ class SlideRecoveryWorkflowService:
         self._settings = settings or get_settings()
         self._workflow_runs = WorkflowRunRepository(session)
         self._recovery = SlideRecoveryService(session)
+        self._region_analyzer = SlideRecoveryRegionAnalyzer(session, settings=self._settings)
 
     def run(
         self,
@@ -177,18 +178,41 @@ class SlideRecoveryWorkflowService:
         self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_QUEUED)
         time.sleep(0.05)
 
-        self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_OCR)
-        source_scene, source_page_id = parse_source_page(
+        parsed = parse_source_page(
             request.source_path,
             slide_index=request.slide_index,
             workspace_dir=request.workspace_dir,
         )
+        source_scene = parsed.scene
+        source_page_id = parsed.page_id
+        preview_path = parsed.preview_image_path or Path(request.source_path)
 
-        page_kind = request.page_kind or classify_page_kind(source_scene)
+        region_analysis = self._region_analyzer.analyze(
+            source_scene,
+            source_page_id=source_page_id,
+            source_image_path=preview_path,
+            page_kind=request.page_kind,
+            source_kind=parsed.source_kind,
+        )
+        self._checkpoint(
+            workflow_run,
+            WorkflowStep.SLIDE_RECOVERY_OCR,
+            extra={
+                "ocr_engine": region_analysis.ocr_engine,
+                "ocr_char_count": region_analysis.ocr_char_count,
+                "analysis_mode": region_analysis.mode,
+            },
+        )
+
+        page_kind = region_analysis.page_kind
         self._checkpoint(
             workflow_run,
             WorkflowStep.SLIDE_RECOVERY_VLM_ANALYSIS,
-            extra={"page_kind": page_kind.value, "source_page_id": source_page_id},
+            extra={
+                "page_kind": page_kind.value,
+                "source_page_id": source_page_id,
+                "vlm_source": region_analysis.vlm_source,
+            },
         )
 
         self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_REGION_RECOVERY)
@@ -197,6 +221,16 @@ class SlideRecoveryWorkflowService:
             source_scene=source_scene,
             page_kind=page_kind,
             force_table_bitmap=request.force_table_bitmap,
+            regions=region_analysis.regions,
+            resolved_page_kind=page_kind,
+            source_image_path=preview_path,
+            source_kind=parsed.source_kind,
+            analysis_meta={
+                "analysis_mode": region_analysis.mode,
+                "ocr_engine": region_analysis.ocr_engine,
+                "vlm_source": region_analysis.vlm_source,
+                "ocr_char_count": region_analysis.ocr_char_count,
+            },
         )
 
         self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_HYBRID_SCENE)

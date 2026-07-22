@@ -6,15 +6,15 @@ Technical validation only; does not enter the main materials → deliver pipelin
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.model_role_router import ModelRoleRouter, audit_model_call
-from archium.application.model_role_router import ModelRoleRegistryService
+from archium.application.slide_recovery_region_analyzer import SlideRecoveryRegionAnalyzer
+from archium.config.settings import Settings, get_settings
 from archium.domain.export_fidelity import ExportFidelityLevel
-from archium.domain.model_roles import ModelRole
 from archium.domain.slide_recovery import (
     HybridRenderScene,
     NormalizedBox,
@@ -35,7 +35,6 @@ from archium.infrastructure.slide_recovery.scene_region_adapter import (
     build_render_scene_from_regions,
     classify_page_kind,
     partition_regions,
-    regions_from_render_scene,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,31 +42,69 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SlideRecoveryRequest:
-    """Input for a single-page recovery spike run."""
+    """Input for a single-page recovery run."""
 
     source_page_id: str
     source_scene: RenderScene
     page_kind: SlideRecoveryPageKind | None = None
+    source_image_path: Path | str | None = None
+    source_kind: str | None = None
+    force_perceptual: bool = False
     # Optional controlled degradation for spike experiments.
     position_noise: float = 0.0
     drop_text_ratio: float = 0.0
     force_table_bitmap: bool = False
+    regions: list[RecoveredPageRegion] | None = None
+    resolved_page_kind: SlideRecoveryPageKind | None = None
+    analysis_meta: dict[str, object] = field(default_factory=dict)
 
 
 class SlideRecoveryService:
-    """Recover a hybrid RenderScene from a source page (spike)."""
+    """Recover a hybrid RenderScene from a source page."""
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(
+        self,
+        session: Session | None = None,
+        *,
+        settings: Settings | None = None,
+        region_analyzer: SlideRecoveryRegionAnalyzer | None = None,
+    ) -> None:
         self._session = session
-        self._router: ModelRoleRouter | None = None
-        if session is not None:
-            self._router = ModelRoleRouter(ModelRoleRegistryService(session))
+        self._settings = settings or get_settings()
+        self._region_analyzer = region_analyzer or SlideRecoveryRegionAnalyzer(
+            session,
+            settings=self._settings,
+        )
 
     def recover_page(self, request: SlideRecoveryRequest) -> SlideRecoveryResult:
-        page_kind = request.page_kind or classify_page_kind(request.source_scene)
-        self._audit_spike_roles(request.source_page_id)
-
-        regions = regions_from_render_scene(request.source_scene, page_kind=page_kind)
+        if request.regions is not None:
+            page_kind = (
+                request.resolved_page_kind
+                or request.page_kind
+                or classify_page_kind(request.source_scene)
+            )
+            regions = list(request.regions)
+            analysis_meta = dict(request.analysis_meta)
+            analysis_mode = str(analysis_meta.get("analysis_mode") or "precomputed")
+        else:
+            analysis = self._region_analyzer.analyze(
+                request.source_scene,
+                source_page_id=request.source_page_id,
+                source_image_path=request.source_image_path,
+                page_kind=request.page_kind,
+                force_perceptual=request.force_perceptual,
+                source_kind=request.source_kind,
+            )
+            page_kind = analysis.page_kind
+            regions = analysis.regions
+            analysis_meta = {
+                **dict(request.analysis_meta),
+                "analysis_mode": analysis.mode,
+                "ocr_engine": analysis.ocr_engine,
+                "vlm_source": analysis.vlm_source,
+                "ocr_char_count": analysis.ocr_char_count,
+            }
+            analysis_mode = analysis.mode
         regions = self._apply_spike_transforms(regions, request)
         regions = self._apply_table_bitmap_policy(regions, request, page_kind)
 
@@ -97,6 +134,9 @@ class SlideRecoveryService:
             hybrid_bitmap_region_ids=bitmap_ids,
             metrics=metrics,
         )
+        analysis_meta = {
+            **analysis_meta,
+        }
 
         return SlideRecoveryResult(
             source_page_id=request.source_page_id,
@@ -107,29 +147,10 @@ class SlideRecoveryService:
             reconstruction_fidelity=fidelity,
             metrics=metrics,
             hybrid_scene=hybrid,
-            warnings=warnings,
+            warnings=self._append_analysis_warnings(warnings, analysis_mode, analysis_meta),
             blockers=blockers,
+            analysis_meta=analysis_meta,
         )
-
-    def _audit_spike_roles(self, source_page_id: str) -> None:
-        if self._router is None:
-            return
-        for role in (ModelRole.OCR, ModelRole.VISION):
-            profile = self._router.resolve_optional(role)
-            if profile is None:
-                logger.debug(
-                    "slide_recovery spike: role %s not configured for %s",
-                    role.value,
-                    source_page_id,
-                )
-                continue
-            audit_model_call(
-                profile,
-                role,
-                request_id=f"slide_recovery:{source_page_id}",
-                slide_id=None,
-                success=True,
-            )
 
     def _apply_spike_transforms(
         self,
@@ -216,6 +237,25 @@ class SlideRecoveryService:
             warnings.append("素材身份可能混淆，需人工复核。")
 
         return warnings, blockers
+
+    def _append_analysis_warnings(
+        self,
+        warnings: list[str],
+        analysis_mode: str,
+        analysis_meta: dict[str, object],
+    ) -> list[str]:
+        merged = list(warnings)
+        if analysis_mode in {"perceptual", "hybrid"}:
+            ocr_engine = analysis_meta.get("ocr_engine")
+            vlm_source = analysis_meta.get("vlm_source")
+            ocr_chars = analysis_meta.get("ocr_char_count", 0)
+            if ocr_engine:
+                merged.append(f"OCR：{ocr_engine}，识别约 {ocr_chars} 字符。")
+            elif self._settings.slide_recovery_ocr_enabled:
+                merged.append("OCR 未运行（pytesseract 不可用或未识别到文字）。")
+            if vlm_source:
+                merged.append(f"VLM 区域分析：{vlm_source}。")
+        return merged
 
 
 def evaluate_recovery_metrics(

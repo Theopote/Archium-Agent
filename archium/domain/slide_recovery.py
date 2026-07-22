@@ -182,6 +182,7 @@ class SlideRecoveryResult(DomainModel):
 
     warnings: list[str] = Field(default_factory=list)
     blockers: list[str] = Field(default_factory=list)
+    analysis_meta: dict[str, object] = Field(default_factory=dict)
 
     def summary_lines_zh(self) -> list[str]:
         lines = [

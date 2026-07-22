@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
@@ -15,9 +16,21 @@ from archium.domain.visual.render_scene import (
     TextNode,
 )
 from archium.exceptions import WorkflowError
+from archium.infrastructure.slide_recovery.pdf_page_renderer import render_pdf_page_png
+from archium.infrastructure.slide_recovery.pptx_slide_renderer import render_pptx_slide_png
 
 _EMU_PER_INCH = 914400.0
 _SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
+
+@dataclass(frozen=True)
+class ParsedSourcePage:
+    """One external page loaded for slide recovery."""
+
+    scene: RenderScene
+    page_id: str
+    preview_image_path: Path | None = None
+    source_kind: str = "image"
 
 
 def parse_source_page(
@@ -25,29 +38,51 @@ def parse_source_page(
     *,
     slide_index: int = 0,
     workspace_dir: Path | None = None,
-) -> tuple[RenderScene, str]:
-    """Load a single page from PNG/JPG or PPTX into a proxy RenderScene."""
+) -> ParsedSourcePage:
+    """Load a single page from PNG/JPG, PDF, or PPTX into a proxy RenderScene."""
     source = Path(path)
     if not source.is_file():
         raise WorkflowError(f"源文件不存在：{source}")
 
     suffix = source.suffix.lower()
     if suffix in _SUPPORTED_IMAGE_SUFFIXES:
-        return _parse_image_page(source, workspace_dir=workspace_dir), source.stem
-    if suffix == ".pptx":
-        return (
-            _parse_pptx_slide(source, slide_index=slide_index, workspace_dir=workspace_dir),
-            f"{source.stem}_slide_{slide_index + 1:03d}",
+        scene, image_path = _parse_image_page(source, workspace_dir=workspace_dir)
+        return ParsedSourcePage(
+            scene=scene,
+            page_id=source.stem,
+            preview_image_path=image_path,
+            source_kind="image",
         )
     if suffix == ".pdf":
-        raise WorkflowError("PDF 输入将在后续版本支持；请先将单页导出为 PNG 或 PPTX。")
+        return _parse_pdf_page(
+            source,
+            page_index=slide_index,
+            workspace_dir=workspace_dir,
+        )
+    if suffix == ".pptx":
+        return _parse_pptx_slide(
+            source,
+            slide_index=slide_index,
+            workspace_dir=workspace_dir,
+        )
     raise WorkflowError(f"不支持的文件类型：{suffix}")
 
 
-def _parse_image_page(path: Path, *, workspace_dir: Path | None) -> RenderScene:
-    page_w, page_h = _image_page_size(path)
-    storage_uri = _materialize_asset(path, workspace_dir=workspace_dir, label="page_image")
-    return RenderScene(
+def _parse_pdf_page(
+    path: Path,
+    *,
+    page_index: int,
+    workspace_dir: Path | None,
+) -> ParsedSourcePage:
+    if workspace_dir is None:
+        workspace_dir = Path(tempfile.gettempdir()) / "archium-slide-recovery" / "pdf"
+    png_path, page_w, page_h = render_pdf_page_png(
+        path,
+        page_index=page_index,
+        workspace_dir=workspace_dir,
+    )
+    storage_uri = _materialize_asset(png_path, workspace_dir=workspace_dir, label="pdf_page")
+    scene = RenderScene(
         slide_id=uuid4(),
         layout_plan_id=uuid4(),
         page_width=page_w,
@@ -68,6 +103,47 @@ def _parse_image_page(path: Path, *, workspace_dir: Path | None) -> RenderScene:
             ),
         ],
     )
+    return ParsedSourcePage(
+        scene=scene,
+        page_id=f"{path.stem}_page_{page_index + 1:03d}",
+        preview_image_path=png_path,
+        source_kind="pdf",
+    )
+
+
+def _parse_image_page(
+    path: Path,
+    *,
+    workspace_dir: Path | None,
+) -> tuple[RenderScene, Path]:
+    page_w, page_h = _image_page_size(path)
+    storage_uri, image_path = _materialize_asset_with_path(
+        path,
+        workspace_dir=workspace_dir,
+        label="page_image",
+    )
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=page_w,
+        page_height=page_h,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ImageNode(
+                id="source_page_image",
+                x=0,
+                y=0,
+                width=page_w,
+                height=page_h,
+                z_index=0,
+                storage_uri=storage_uri,
+                semantic_role="source_page",
+                asset_origin="project_upload",
+                fit_mode="contain",
+            ),
+        ],
+    )
+    return scene, image_path
 
 
 def _parse_pptx_slide(
@@ -75,7 +151,7 @@ def _parse_pptx_slide(
     *,
     slide_index: int,
     workspace_dir: Path | None,
-) -> RenderScene:
+) -> ParsedSourcePage:
     try:
         from pptx import Presentation
         from pptx.enum.shapes import MSO_SHAPE_TYPE
@@ -179,13 +255,28 @@ def _parse_pptx_slide(
             )
         )
 
-    return RenderScene(
+    preview_dir = workspace_dir
+    if preview_dir is not None:
+        preview_dir = workspace_dir / "pptx_previews"
+    preview_image = render_pptx_slide_png(
+        path,
+        slide_index=slide_index,
+        workspace_dir=preview_dir,
+    )
+
+    scene = RenderScene(
         slide_id=uuid4(),
         layout_plan_id=uuid4(),
         page_width=page_w,
         page_height=page_h,
         background=BackgroundStyle(color="#FFFFFF"),
         nodes=nodes,
+    )
+    return ParsedSourcePage(
+        scene=scene,
+        page_id=f"{path.stem}_slide_{slide_index + 1:03d}",
+        preview_image_path=preview_image,
+        source_kind="pptx",
     )
 
 
@@ -219,14 +310,26 @@ def _materialize_asset(
     workspace_dir: Path | None,
     label: str,
 ) -> str:
+    uri, _ = _materialize_asset_with_path(path, workspace_dir=workspace_dir, label=label)
+    return uri
+
+
+def _materialize_asset_with_path(
+    path: Path,
+    *,
+    workspace_dir: Path | None,
+    label: str,
+) -> tuple[str, Path]:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
     if workspace_dir is not None:
         workspace_dir.mkdir(parents=True, exist_ok=True)
         target = workspace_dir / f"{label}_{digest}{path.suffix.lower() or '.bin'}"
         if not target.is_file():
             target.write_bytes(path.read_bytes())
-        return f"file://{target.resolve().as_posix()}"
-    return f"file://{path.resolve().as_posix()}"
+        resolved = target.resolve()
+        return f"file://{resolved.as_posix()}", resolved
+    resolved = path.resolve()
+    return f"file://{resolved.as_posix()}", resolved
 
 
 def _extract_picture_asset(

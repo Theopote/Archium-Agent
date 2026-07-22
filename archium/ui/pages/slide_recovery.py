@@ -217,7 +217,7 @@ def render() -> None:
 
     uploaded = st.file_uploader(
         "上传源页面",
-        type=["png", "jpg", "jpeg", "webp", "pptx"],
+        type=["png", "jpg", "jpeg", "webp", "pptx", "pdf"],
         key="slide_recovery_upload",
     )
 

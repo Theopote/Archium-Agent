@@ -33,6 +33,20 @@ def render_slide_recovery_result_panel(
     if recovery is not None:
         for line in recovery.summary_lines_zh():
             st.write(line)
+        meta = recovery.analysis_meta or {}
+        if meta:
+            ocr_engine = meta.get("ocr_engine")
+            vlm_source = meta.get("vlm_source")
+            mode = meta.get("analysis_mode")
+            parts: list[str] = []
+            if mode:
+                parts.append(f"分析模式：{mode}")
+            if ocr_engine:
+                parts.append(f"OCR：{ocr_engine}")
+            if vlm_source:
+                parts.append(f"VLM：{vlm_source}")
+            if parts:
+                st.caption(" · ".join(parts))
 
     metrics = recovery.metrics if recovery is not None else hybrid.metrics if hybrid else None
     if metrics is not None:
