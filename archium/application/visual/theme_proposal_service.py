@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from archium.application.visual.deck_theme_apply import apply_tokens_to_design_system
 from archium.application.visual.scene_deterministic_qa_service import run_proposal_scene_qa
 from archium.application.visual.studio_scene_service import StudioSceneService
+from archium.application.visual.template_usage_brief_context import TemplateUsageConstraints
 from archium.application.visual.theme_integrity_qa import run_theme_integrity_qa
 from archium.application.visual.theme_scene_resolve import resolve_scene_with_design_system
 from archium.config.settings import Settings, get_settings
@@ -20,7 +21,9 @@ from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
-from archium.domain.visual.render_scene import compute_scene_hash
+from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,
     ThemeDeckImpactStats,
@@ -310,7 +313,9 @@ class ThemeProposalService:
         )
         return self._proposals.save(accepted, supersede_previous=False)
 
-    def _resolve_art_direction(self, project_id: UUID, presentation_id: UUID):
+    def _resolve_art_direction(
+        self, project_id: UUID, presentation_id: UUID
+    ) -> ArtDirection | None:
         arts = self._art_directions.list_by_project(project_id)
         for art in arts:
             if art.presentation_id == presentation_id:
@@ -414,9 +419,9 @@ def _dedupe_issues(issues: list[QualityIssue]) -> list[QualityIssue]:
 def _compute_deck_impact(
     *,
     slides: list[SlideSpec],
-    base,
-    proposed,
-    sample_scenes: list,
+    base: DesignSystem,
+    proposed: DesignSystem,
+    sample_scenes: list[RenderScene],
     qa_summary: list[QualityIssue],
 ) -> ThemeDeckImpactStats:
     """Estimate full-deck impact from DesignSystem delta + sample scenes."""
@@ -457,7 +462,10 @@ def _compute_deck_impact(
     )
 
 
-def _theme_brief_gate(proposed, constraints) -> list[QualityIssue]:
+def _theme_brief_gate(
+    proposed: DesignSystem,
+    constraints: TemplateUsageConstraints,
+) -> list[QualityIssue]:
     """Ensure ThemeChangeProposal does not violate the bound TemplateUsageBrief."""
     from archium.domain.visual.enums import ImageFit, PhotoTreatment
     from archium.domain.visual.page_quality import (

@@ -30,7 +30,7 @@ def align_nodes(
     nodes: list[BaseRenderNode],
     alignment: NodeAlignment,
     *,
-    reference: BaseRenderNode | None = None,
+    reference: BaseRenderNode | _Box | None = None,
 ) -> dict[str, str]:
     """Return node_id -> geometry_token for aligned positions."""
     if not nodes:

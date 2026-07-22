@@ -6,6 +6,7 @@ import logging
 
 import streamlit as st
 
+from archium.domain.delivery_record import DeliveryRecord
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.product_flow import primary_stages, product_flow_chain, product_flow_home_steps
@@ -124,37 +125,40 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
         logger.exception("Failed to list presentations for home")
         presentations = []
 
-    export_records: list = []
+    export_records: list[DeliveryRecord | dict[str, object]] = []
     try:
         from archium.application.delivery_record_service import DeliveryRecordService
 
         with get_session() as session:
-            export_records = DeliveryRecordService(session).list_for_project(
-                snapshot.project_id, limit=4
-            )
+            export_records = [
+                record
+                for record in DeliveryRecordService(session).list_for_project(
+                    snapshot.project_id, limit=4
+                )
+            ]
     except Exception:
         export_records = [
-            item
-            for item in (st.session_state.get("delivery_export_records") or [])
-            if str(item.get("project_id") or "") in {"", str(snapshot.project_id)}
+            record
+            for record in (st.session_state.get("delivery_export_records") or [])
+            if str(record.get("project_id") or "") in {"", str(snapshot.project_id)}
         ]
 
     if presentations:
-        for item in presentations[:4]:
+        for presentation in presentations[:4]:
             st.caption(
-                f"{item.title} · {item.status.value} · "
-                f"{item.updated_at.strftime('%Y-%m-%d %H:%M')}"
+                f"{presentation.title} · {presentation.status.value} · "
+                f"{presentation.updated_at.strftime('%Y-%m-%d %H:%M')}"
             )
     if export_records:
         st.caption("最近导出")
-        for item in export_records[:4]:
-            if hasattr(item, "format"):
-                when = item.exported_at.astimezone().strftime("%Y-%m-%d %H:%M")
-                st.caption(f"{item.format} · {when} · `{item.file_uri}`")
+        for record in export_records[:4]:
+            if isinstance(record, DeliveryRecord):
+                when = record.exported_at.astimezone().strftime("%Y-%m-%d %H:%M")
+                st.caption(f"{record.format} · {when} · `{record.file_uri}`")
             else:
                 st.caption(
-                    f"{item.get('format', '导出')} · {item.get('when', '')} · "
-                    f"`{item.get('path', '')}`"
+                    f"{record.get('format', '导出')} · {record.get('when', '')} · "
+                    f"`{record.get('path', '')}`"
                 )
     if not presentations and not export_records:
         st.caption("尚无汇报版本。完成生成或导出后会显示在此。")

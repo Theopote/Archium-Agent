@@ -107,18 +107,18 @@ def aggregate_deck_delivery(
         )
 
     if ready == 0 and deliverable == 0:
-        status = DeckDeliveryStatus.BLOCKED
+        deck_status = DeckDeliveryStatus.BLOCKED
     elif needs_review:
-        status = DeckDeliveryStatus.NEEDS_REVIEW
+        deck_status = DeckDeliveryStatus.NEEDS_REVIEW
     elif failed > 0 and deliverable > 0:
-        status = DeckDeliveryStatus.READY_WITH_FAILED_SLIDES
+        deck_status = DeckDeliveryStatus.READY_WITH_FAILED_SLIDES
     elif blocking > 0 and deliverable == 0:
-        status = DeckDeliveryStatus.BLOCKED
+        deck_status = DeckDeliveryStatus.BLOCKED
     else:
-        status = DeckDeliveryStatus.READY
+        deck_status = DeckDeliveryStatus.READY
 
     return DeckDeliveryReport(
-        status=status,
+        status=deck_status,
         total_slides=len(slides),
         ready_count=ready,
         failed_count=failed,

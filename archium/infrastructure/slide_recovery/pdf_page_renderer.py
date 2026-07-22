@@ -10,7 +10,7 @@ from archium.exceptions import WorkflowError
 try:
     import fitz
 except ImportError:  # pragma: no cover
-    fitz = None  # type: ignore[assignment]
+    fitz = None
 
 
 def pymupdf_available() -> bool:

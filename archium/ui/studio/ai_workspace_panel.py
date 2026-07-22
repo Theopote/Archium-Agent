@@ -188,7 +188,7 @@ def _render_legacy_panel(*, slide_id: UUID) -> None:
         [VisualEditIntent.REDUCE_TEXT, VisualEditIntent.ENLARGE_HERO],
         [VisualEditIntent.INCREASE_WHITESPACE, VisualEditIntent.CHANGE_LAYOUT],
         [VisualEditIntent.SET_HERO_ASSET, VisualEditIntent.REMOVE_ASSET],
-        [VisualEditIntent.FIX_OVERFLOW, VisualEditIntent.BALANCE_COLUMNS],
+        [VisualEditIntent.RESIZE_ELEMENT, VisualEditIntent.MOVE_ELEMENT],
     ]
     for row in preset_rows:
         cols = st.columns(len(row))

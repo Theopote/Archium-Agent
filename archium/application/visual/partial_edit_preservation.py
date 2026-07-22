@@ -156,21 +156,22 @@ def evaluate_partial_edit_preservation(
             )
 
     # 3) Asset identity preserved unless explicit replace.
-    for node_id, before, after in _iter_paired_nodes(base, proposed):
-        if not isinstance(before, (ImageNode, DrawingNode)):
+    for node_id, paired_before, paired_after in _iter_paired_nodes(base, proposed):
+        if not isinstance(paired_before, (ImageNode, DrawingNode)):
             continue
-        if not isinstance(after, (ImageNode, DrawingNode)):
+        if not isinstance(paired_after, (ImageNode, DrawingNode)):
             continue
         if node_id in replace_targets:
             continue
-        if _asset_identity(before) != _asset_identity(after):
+        if _asset_identity(paired_before) != _asset_identity(paired_after):
             violations.append(
                 PreservationViolation(
                     rule=PartialEditPreservationRule.ASSET_IDENTITY_UNCHANGED,
                     message=f"节点 `{node_id}` 的素材身份被悄然替换。",
                     node_id=node_id,
                     detail=(
-                        f"before={_asset_identity(before)} after={_asset_identity(after)}"
+                        f"before={_asset_identity(paired_before)} "
+                        f"after={_asset_identity(paired_after)}"
                     ),
                 )
             )
@@ -204,16 +205,19 @@ def evaluate_partial_edit_preservation(
                 )
             )
 
-    for node_id, before, after in _iter_paired_nodes(base, proposed):
-        if not isinstance(before, TextNode) or not isinstance(after, TextNode):
+    for node_id, paired_before, paired_after in _iter_paired_nodes(base, proposed):
+        if not isinstance(paired_before, TextNode) or not isinstance(paired_after, TextNode):
             continue
-        role = (before.semantic_role or "").strip().casefold()
+        role = (paired_before.semantic_role or "").strip().casefold()
         if role not in _SOURCE_ROLES and "source" not in role and "citation" not in role:
             continue
         if node_id in allowed:
             # Explicitly targeted source node may be rewritten only if user asked.
             continue
-        if before.text != after.text or list(before.paragraphs) != list(after.paragraphs):
+        if (
+            paired_before.text != paired_after.text
+            or list(paired_before.paragraphs) != list(paired_after.paragraphs)
+        ):
             violations.append(
                 PreservationViolation(
                     rule=PartialEditPreservationRule.CITATIONS_UNCHANGED,

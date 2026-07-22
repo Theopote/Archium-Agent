@@ -136,10 +136,12 @@ class PresentationWorkflowService:
             request.workflow_route,
             PresentationWorkflowRoute.GENERATE_FROM_PROJECT,
         )
-        self._route_service.validate_inputs(
+        handler_key = self._route_service.resolve_handler_key(
             request.workflow_route,
             {"project_knowledge"},
         )
+        if handler_key != "presentation_workflow":
+            raise WorkflowError(f"Unexpected workflow handler: {handler_key}")
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
         resolved_preview_images = (
             export_preview_images

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
+
+from pydantic import BaseModel, TypeAdapter
 
 from archium.domain._base import model_to_dict, utc_now
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
@@ -14,10 +18,12 @@ from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.page_quality import QualityIssue
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_change_proposal import (
+    CommandProposalResult,
     ProposalDecision,
     ProposalStatus,
     SceneChangeProposal,
 )
+from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,
@@ -146,12 +152,63 @@ def render_scene_to_domain(orm: RenderSceneORM) -> RenderScene:
     return RenderScene.model_validate(orm.payload_json)
 
 
-def _models_to_json(items: list[object]) -> list[dict[str, object]]:
+def _models_to_json(items: Sequence[BaseModel]) -> list[dict[str, Any]]:
+    return [model_to_dict(item) for item in items]
+
+
+_STUDIO_COMMAND_ADAPTER: TypeAdapter[StudioCommand] = TypeAdapter(StudioCommand)
+
+
+def _quality_issues_from_payload(raw: object) -> list[QualityIssue]:
+    if not isinstance(raw, list):
+        return []
     return [
-        model_to_dict(item)  # type: ignore[arg-type]
-        for item in items
-        if hasattr(item, "model_dump")
+        QualityIssue.model_validate(item)
+        for item in raw
+        if isinstance(item, dict)
     ]
+
+
+def _studio_commands_from_payload(raw: object) -> list[StudioCommand]:
+    if not isinstance(raw, list):
+        return []
+    commands: list[StudioCommand] = []
+    for item in raw:
+        if isinstance(item, dict):
+            commands.append(_STUDIO_COMMAND_ADAPTER.validate_python(item))
+    return commands
+
+
+def _command_results_from_payload(raw: object) -> list[CommandProposalResult]:
+    if not isinstance(raw, list):
+        return []
+    return [
+        CommandProposalResult.model_validate(item)
+        for item in raw
+        if isinstance(item, dict)
+    ]
+
+
+def _patch_actions_from_payload(raw: object) -> list[ScenePatchAction]:
+    if not isinstance(raw, list):
+        return []
+    return [
+        ScenePatchAction.model_validate(item)
+        for item in raw
+        if isinstance(item, dict)
+    ]
+
+
+def _qa_by_layer_from_payload(raw: object) -> dict[str, list[QualityIssue]]:
+    if not isinstance(raw, dict):
+        return {}
+    return {str(layer): _quality_issues_from_payload(items) for layer, items in raw.items()}
+
+
+def _str_list_from_payload(raw: object) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    return [str(item) for item in raw]
 
 
 def _scene_change_proposal_payload(proposal: SceneChangeProposal) -> dict[str, object]:
@@ -234,17 +291,21 @@ def scene_change_proposal_to_domain(
         base_scene_hash=orm.base_scene_hash,
         base_scene=base_scene,
         proposed_scene=proposed_scene,
-        commands=payload.get("commands") or payload.get("successful_commands") or [],
-        requested_commands=payload.get("requested_commands") or [],
-        successful_commands=payload.get("successful_commands") or payload.get("commands") or [],
-        failed_commands=payload.get("failed_commands") or [],
-        command_results=payload.get("command_results") or [],
-        patch_actions=payload.get("patch_actions") or [],
-        reasons=list(payload.get("reasons") or []),
-        qa_before=payload.get("qa_before") or [],
-        qa_after=payload.get("qa_after") or [],
-        qa_before_by_layer=payload.get("qa_before_by_layer") or {},
-        qa_after_by_layer=payload.get("qa_after_by_layer") or {},
+        commands=_studio_commands_from_payload(
+            payload.get("commands") or payload.get("successful_commands")
+        ),
+        requested_commands=_studio_commands_from_payload(payload.get("requested_commands")),
+        successful_commands=_studio_commands_from_payload(
+            payload.get("successful_commands") or payload.get("commands")
+        ),
+        failed_commands=_studio_commands_from_payload(payload.get("failed_commands")),
+        command_results=_command_results_from_payload(payload.get("command_results")),
+        patch_actions=_patch_actions_from_payload(payload.get("patch_actions")),
+        reasons=_str_list_from_payload(payload.get("reasons")),
+        qa_before=_quality_issues_from_payload(payload.get("qa_before")),
+        qa_after=_quality_issues_from_payload(payload.get("qa_after")),
+        qa_before_by_layer=_qa_by_layer_from_payload(payload.get("qa_before_by_layer")),
+        qa_after_by_layer=_qa_by_layer_from_payload(payload.get("qa_after_by_layer")),
         preservation=preservation,
         status=ProposalStatus(orm.status),
         decision=decision,
@@ -326,7 +387,7 @@ def element_comment_to_domain(orm: ElementCommentORM) -> ElementComment:
 def _theme_change_proposal_payload(proposal: ThemeChangeProposal) -> dict[str, object]:
     qa_by_slide: dict[str, list[dict[str, object]]] = {}
     for slide_id, issues in proposal.qa_by_slide.items():
-        qa_by_slide[slide_id] = _models_to_json(issues)  # type: ignore[arg-type]
+        qa_by_slide[slide_id] = _models_to_json(issues)
     return {
         "token_patch": model_to_dict(proposal.token_patch),
         "sample_slide_ids": [str(item) for item in proposal.sample_slide_ids],
@@ -380,11 +441,13 @@ def theme_change_proposal_to_domain(
         token_payload if isinstance(token_payload, dict) else {}
     )
     qa_summary_raw = payload.get("qa_summary") or []
-    qa_summary = [
-        QualityIssue.model_validate(item)
-        for item in qa_summary_raw
-        if isinstance(item, dict)
-    ]
+    qa_summary: list[QualityIssue] = []
+    if isinstance(qa_summary_raw, list):
+        qa_summary = [
+            QualityIssue.model_validate(item)
+            for item in qa_summary_raw
+            if isinstance(item, dict)
+        ]
     qa_by_slide_raw = payload.get("qa_by_slide") or {}
     qa_by_slide: dict[str, list[QualityIssue]] = {}
     if isinstance(qa_by_slide_raw, dict):

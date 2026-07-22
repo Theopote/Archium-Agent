@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, cast
 from uuid import UUID
 
 from pydantic import Field
@@ -32,7 +32,7 @@ _SCENE_SOURCE_TO_TIMELINE: dict[SceneRevisionSource, SceneRevisionTimelineSource
 def map_scene_revision_source(source: str) -> SceneRevisionTimelineSource:
     """Map persisted ``SceneRevisionSource`` values to timeline labels."""
     if source in _SCENE_SOURCE_TO_TIMELINE:
-        return _SCENE_SOURCE_TO_TIMELINE[source]  # type: ignore[index]
+        return _SCENE_SOURCE_TO_TIMELINE[cast(SceneRevisionSource, source)]
     if source in {
         "manual_edit",
         "ai_proposal",

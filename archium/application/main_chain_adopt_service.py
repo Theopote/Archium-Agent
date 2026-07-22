@@ -14,6 +14,9 @@ from archium.domain.main_chain_adopt import (
     MainChainAdoptCheckpoint,
     MainChainAdoptReport,
 )
+from archium.domain.outline import OutlinePlan
+from archium.domain.presentation import Presentation, Storyline
+from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import (
     DeliveryRecordRepository,
     PresentationRepository,
@@ -95,7 +98,7 @@ class MainChainAdoptService:
         self,
         project_id: UUID,
         presentation_id: UUID | None,
-    ) -> object | None:
+    ) -> Presentation | None:
         presentations = self._presentations.list_by_project(project_id)
         if not presentations:
             return None
@@ -111,9 +114,9 @@ class MainChainAdoptService:
         *,
         project_id: UUID,
         presentation_id: UUID,
-        slides: list[object],
-        outline: object | None,
-        storyline: object | None,
+        slides: list[SlideSpec],
+        outline: OutlinePlan | None,
+        storyline: Storyline | None,
     ) -> MainChainAdoptCheckpoint:
         if binding.platform_builtin:
             return MainChainAdoptCheckpoint(
@@ -180,9 +183,9 @@ def _eval_multi_step_reflection(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del project_id
     runs = service._workflows.list_by_presentation(presentation_id)
@@ -217,15 +220,15 @@ def _eval_template_induction(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del presentation_id, slides, storyline
     profiles = service._projects.list_reference_style_profiles(project_id)
     if profiles:
         return _checkpoint(binding, status=AdoptLandingStatus.LANDED, detail_zh="已绑定参考风格档案")
-    if outline is not None and getattr(outline, "page_design_briefs", None):
+    if outline is not None and outline.page_design_briefs:
         return _checkpoint(
             binding,
             status=AdoptLandingStatus.PARTIAL,
@@ -244,13 +247,13 @@ def _eval_reference_structure(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del presentation_id, slides, storyline
     profiles = service._projects.list_reference_style_profiles(project_id)
-    approved = [profile for profile in profiles if getattr(profile, "is_approved", False)]
+    approved = [profile for profile in profiles if profile.is_approved]
     if approved:
         return _checkpoint(binding, status=AdoptLandingStatus.LANDED, detail_zh="已有已批准参考风格")
     if profiles:
@@ -264,12 +267,12 @@ def _eval_narrative_arc(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del service, project_id, presentation_id, slides
-    if storyline is None or getattr(storyline, "narrative_arc", None) is None:
+    if storyline is None or storyline.narrative_arc is None:
         return _checkpoint(
             binding,
             status=AdoptLandingStatus.GAP,
@@ -282,10 +285,10 @@ def _eval_narrative_arc(
             status=AdoptLandingStatus.PARTIAL,
             detail_zh="已有叙事弧线，待生成大纲章节",
         )
-    sections = getattr(outline, "sections", []) or []
+    sections = outline.sections or []
     if not sections:
         return _checkpoint(binding, status=AdoptLandingStatus.PARTIAL, detail_zh="大纲章节为空")
-    positioned = sum(1 for section in sections if getattr(section, "narrative_position", None))
+    positioned = sum(1 for section in sections if section.narrative_position is not None)
     if positioned >= len(sections):
         return _checkpoint(binding, status=AdoptLandingStatus.LANDED, detail_zh="全部章节已标注 narrative_position")
     return _checkpoint(
@@ -301,17 +304,17 @@ def _eval_per_page_binding(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del service, project_id, presentation_id, storyline
     if not slides:
         return _checkpoint(binding, status=AdoptLandingStatus.GAP, detail_zh="尚无页面")
-    bindings = list(getattr(outline, "page_asset_bindings", None) or []) if outline else []
+    bindings = outline.page_asset_bindings if outline else []
     if bindings:
-        slide_ids = {str(slide.id) for slide in slides}
-        covered = {str(item.slide_id) for item in bindings if getattr(item, "slide_id", None)}
+        slide_ids = {slide.id for slide in slides}
+        covered = {item.slide_id for item in bindings if item.slide_id is not None}
         if covered & slide_ids:
             return _checkpoint(
                 binding,
@@ -321,8 +324,8 @@ def _eval_per_page_binding(
     visual_bound = sum(
         1
         for slide in slides
-        if getattr(slide, "visual_requirements", None)
-        and any(getattr(req, "asset_id", None) for req in slide.visual_requirements)
+        if slide.visual_requirements
+        and any(req.preferred_asset_ids or req.icon_id for req in slide.visual_requirements)
     )
     if visual_bound > 0:
         return _checkpoint(
@@ -339,14 +342,14 @@ def _eval_native_layout(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del service, project_id, outline, storyline
     if not slides:
         return _checkpoint(binding, status=AdoptLandingStatus.GAP, detail_zh="尚无页面")
-    with_layout = sum(1 for slide in slides if getattr(slide, "layout_plan_id", None))
+    with_layout = sum(1 for slide in slides if slide.layout_plan_id is not None)
     if with_layout <= 0:
         return _checkpoint(binding, status=AdoptLandingStatus.GAP, detail_zh="尚无 LayoutPlan")
     if with_layout >= len(slides):
@@ -364,9 +367,9 @@ def _eval_fault_tolerant_export(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del slides, outline, storyline
     return _eval_delivery_qa(service, binding=binding, project_id=project_id, presentation_id=presentation_id)
@@ -378,9 +381,9 @@ def _eval_render_qa(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del slides, outline, storyline
     records = service._deliveries.list_by_presentation(presentation_id)
@@ -396,9 +399,9 @@ def _eval_file_integrity(
     binding: MainChainAdoptBinding,
     project_id: UUID,
     presentation_id: UUID,
-    slides: list[object],
-    outline: object | None,
-    storyline: object | None,
+    slides: list[SlideSpec],
+    outline: OutlinePlan | None,
+    storyline: Storyline | None,
 ) -> MainChainAdoptCheckpoint:
     del slides, outline, storyline
     records = service._deliveries.list_by_presentation(presentation_id)

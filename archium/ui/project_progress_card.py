@@ -7,8 +7,10 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import streamlit as st
+from sqlalchemy.orm import Session
 
 from archium.domain.enums import EvidenceAvailability
+from archium.domain.project import Project
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 
@@ -181,8 +183,8 @@ def _format_relative_time(moment: datetime) -> str:
 
 
 def _snapshot_for_project(
-    session: object,
-    project: object,
+    session: Session,
+    project: Project,
     *,
     preferred_presentation_id: UUID | None = None,
 ) -> ProjectProgressSnapshot:

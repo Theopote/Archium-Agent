@@ -17,7 +17,13 @@ from archium.application.visual.image_treatment_spec_planner import ImageTreatme
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.image_derivative import ImageDerivative
-from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderScene
+from archium.domain.visual.render_scene import (
+    DrawingNode,
+    ImageNode,
+    RenderScene,
+    ShapeNode,
+    TextNode,
+)
 from archium.infrastructure.database.repositories import AssetRepository
 from archium.infrastructure.storage.local_storage import LocalProjectStorage
 from archium.logging import get_logger
@@ -74,7 +80,7 @@ class ImageDerivativeService:
 
         derivatives: list[ImageDerivative] = []
         skipped = 0
-        nodes = []
+        nodes: list[TextNode | ImageNode | DrawingNode] = []
         for node in scene.nodes:
             if not isinstance(node, (ImageNode, DrawingNode)):
                 nodes.append(node)

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import UUID
+
+from sqlalchemy.orm import Session
 
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
@@ -201,8 +204,8 @@ class TemplateUsageBriefService:
         *,
         design_system: DesignSystem | None = None,
         induction: TemplateInductionResult | None = None,
-        session=None,
-        bind_art_direction_id=None,
+        session: Session | None = None,
+        bind_art_direction_id: UUID | None = None,
     ) -> tuple[TemplateUsageBrief, dict[str, Path]]:
         brief = self.build_brief(
             template, design_system=design_system, induction=induction
@@ -227,10 +230,10 @@ class TemplateUsageBriefService:
 
     def persist_and_bind(
         self,
-        session,
+        session: Session,
         brief: TemplateUsageBrief,
         *,
-        art_direction_id=None,
+        art_direction_id: UUID | None = None,
     ) -> TemplateUsageBrief:
         """Persist a new immutable version and optionally pin ArtDirection."""
         from archium.application.visual.template_usage_brief_context import (
@@ -264,19 +267,19 @@ class TemplateUsageBriefService:
         evidence: list[str],
     ) -> list[str]:
         if design_system is not None:
-            colors = design_system.colors
+            color_system = design_system.colors
             palette = [
-                f"background={colors.background}",
-                f"primary={colors.primary}",
-                f"accent={colors.accent}",
-                f"primary_text={colors.primary_text}",
-                f"secondary={colors.secondary}",
+                f"background={color_system.background}",
+                f"primary={color_system.primary}",
+                f"accent={color_system.accent}",
+                f"primary_text={color_system.primary_text}",
+                f"secondary={color_system.secondary}",
             ]
             evidence.append("palette=design_system.colors")
             return palette
-        colors = [c for c in template.colors if c]
-        evidence.append(f"palette=template.colors count={len(colors)}")
-        return colors[:16]
+        template_colors = [c for c in template.colors if c]
+        evidence.append(f"palette=template.colors count={len(template_colors)}")
+        return template_colors[:16]
 
     def _fonts(
         self,

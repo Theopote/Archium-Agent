@@ -376,7 +376,7 @@ class AssetMatchingService:
         instruction = f"icon:{result.icon.canonical_name}:{result.matched_by}"
         if instruction not in requirement.processing_instructions:
             requirement.processing_instructions.append(instruction)
-        return changed
+        return bool(changed)
 
 
     def _apply_outline_asset_bindings(

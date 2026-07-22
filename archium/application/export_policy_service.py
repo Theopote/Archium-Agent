@@ -49,20 +49,20 @@ class ExportPolicyService:
         font_subs: list[str] = []
 
         page_area = scene.page_width * scene.page_height
-        for node in drawing_nodes:
-            if node.fit_mode not in {"contain", "safe_crop"}:
-                blockers.append(f"drawing:{node.id}:fit_mode={node.fit_mode}")
-            if node.asset_unresolved:
-                unresolved.append(node.id)
+        for drawing_node in drawing_nodes:
+            if drawing_node.fit_mode not in {"contain", "safe_crop"}:
+                blockers.append(f"drawing:{drawing_node.id}:fit_mode={drawing_node.fit_mode}")
+            if drawing_node.asset_unresolved:
+                unresolved.append(drawing_node.id)
 
-        for node in image_nodes:
-            if node.asset_unresolved:
-                unresolved.append(node.id)
+        for image_node in image_nodes:
+            if image_node.asset_unresolved:
+                unresolved.append(image_node.id)
             if (
-                _node_area(node, page_area) >= page_area * _FULL_PAGE_AREA_RATIO
+                _node_area(image_node, page_area) >= page_area * _FULL_PAGE_AREA_RATIO
                 and native_text == 0
             ):
-                warnings.append(f"full_page_image:{node.id}")
+                warnings.append(f"full_page_image:{image_node.id}")
 
         for font in scene.font_assets:
             if font.resolved_family and font.resolved_family != font.family:

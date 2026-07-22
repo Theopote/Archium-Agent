@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from archium.application.visual.scene_compilers.base import SceneCompileContext
 from archium.application.visual.scene_compilers.generic import GenericContentCompiler
-from archium.domain.visual.render_scene import DrawingNode, RenderScene
+from archium.domain.visual.render_scene import (
+    DrawingNode,
+    ImageNode,
+    RenderScene,
+    ShapeNode,
+    TextNode,
+)
 from archium.domain.visual.semantic_block import SemanticBlockType
 
 
@@ -38,7 +44,7 @@ class DrawingFocusCompiler(_SpecializedCompilerBase):
 
     def _specialize(self, scene: RenderScene, context: SceneCompileContext) -> RenderScene:
         _ = context
-        nodes = []
+        nodes: list[DrawingNode | TextNode | ImageNode | ShapeNode] = []
         for node in scene.nodes:
             if isinstance(node, DrawingNode):
                 nodes.append(

@@ -44,12 +44,12 @@ def geometry_similarity(
         bcx, bcy = bx + bw / 2, by + bh / 2
         dist = ((acx - bcx) ** 2 + (acy - bcy) ** 2) ** 0.5
         diag = max((aw**2 + ah**2) ** 0.5, (bw**2 + bh**2) ** 0.5, 0.01)
-        return max(0.0, 1.0 - dist / diag) * 0.35
+        return float(max(0.0, 1.0 - dist / diag) * 0.35)
     inter = (right - left) * (bottom - top)
     union = aw * ah + bw * bh - inter
     if union <= 0:
         return 0.0
-    return inter / union
+    return float(inter / union)
 
 
 def score_placeholder_candidate(

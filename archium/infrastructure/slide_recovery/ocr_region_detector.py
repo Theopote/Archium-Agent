@@ -11,7 +11,7 @@ from archium.domain.slide_recovery import NormalizedBox, RecoveredPageRegion
 try:
     from PIL import Image
 except ImportError:  # pragma: no cover
-    Image = None  # type: ignore[assignment,misc]
+    Image = None  # type: ignore[assignment]
 
 _OCR_LANG = "chi_sim+eng"
 _MIN_CONFIDENCE = 30
@@ -19,7 +19,7 @@ _MIN_CONFIDENCE = 30
 try:
     import pytesseract as _pytesseract
 except ImportError:  # pragma: no cover
-    _pytesseract = None  # type: ignore[assignment]
+    _pytesseract = None
 
 
 @dataclass(frozen=True)
@@ -69,6 +69,30 @@ def detect_text_regions(
     return OcrDetectionResult(regions=regions, engine="pytesseract", char_count=char_count)
 
 
+def _to_float(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _to_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, (float, str)):
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
+
+
 def _regions_from_tesseract_data(
     data: dict[str, list[object]],
     *,
@@ -84,16 +108,18 @@ def _regions_from_tesseract_data(
         if not text:
             continue
         try:
-            confidence = float(data["conf"][index])
-        except (TypeError, ValueError):
+            confidence_raw = _to_float(data["conf"][index])
+            confidence = confidence_raw if confidence_raw is not None else 0.0
+        except (TypeError, ValueError, IndexError, KeyError):
             confidence = 0.0
         if confidence < _MIN_CONFIDENCE:
             continue
-        key = (
-            int(data["block_num"][index]),
-            int(data["par_num"][index]),
-            int(data["line_num"][index]),
-        )
+        block_num = _to_int(data["block_num"][index])
+        par_num = _to_int(data["par_num"][index])
+        line_num = _to_int(data["line_num"][index])
+        if block_num is None or par_num is None or line_num is None:
+            continue
+        key = (block_num, par_num, line_num)
         line_groups.setdefault(key, []).append(index)
 
     regions: list[RecoveredPageRegion] = []
@@ -102,10 +128,34 @@ def _regions_from_tesseract_data(
         text = " ".join(word for word in words if word)
         if not text:
             continue
-        left = min(int(data["left"][index]) for index in indices)
-        top = min(int(data["top"][index]) for index in indices)
-        right = max(int(data["left"][index]) + int(data["width"][index]) for index in indices)
-        bottom = max(int(data["top"][index]) + int(data["height"][index]) for index in indices)
+        left_vals = [_to_int(data["left"][index]) for index in indices]
+        top_vals = [_to_int(data["top"][index]) for index in indices]
+        right_vals = [
+            (_to_int(data["left"][index]), _to_int(data["width"][index]))
+            for index in indices
+        ]
+        bottom_vals = [
+            (_to_int(data["top"][index]), _to_int(data["height"][index]))
+            for index in indices
+        ]
+        if any(v is None for v in left_vals + top_vals):
+            continue
+        right_edges = [
+            left + width
+            for left, width in right_vals
+            if left is not None and width is not None
+        ]
+        bottom_edges = [
+            top + height
+            for top, height in bottom_vals
+            if top is not None and height is not None
+        ]
+        if not right_edges or not bottom_edges:
+            continue
+        left = min(v for v in left_vals if v is not None)
+        top = min(v for v in top_vals if v is not None)
+        right = max(right_edges)
+        bottom = max(bottom_edges)
         bbox = _pixel_bbox_to_normalized(
             left=left,
             top=top,
@@ -118,10 +168,9 @@ def _regions_from_tesseract_data(
             continue
         confidences = []
         for index in indices:
-            try:
-                confidences.append(float(data["conf"][index]) / 100.0)
-            except (TypeError, ValueError):
-                continue
+            parsed = _to_float(data["conf"][index])
+            if parsed is not None:
+                confidences.append(parsed / 100.0)
         confidence = sum(confidences) / len(confidences) if confidences else 0.75
         regions.append(
             RecoveredPageRegion(

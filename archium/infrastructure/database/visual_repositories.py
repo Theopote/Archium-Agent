@@ -250,7 +250,10 @@ class SceneProposalRepository:
                     target=orm,
                 )
             self._session.flush()
-            return self._hydrate(orm)
+            saved = self._hydrate(orm)
+            if saved is None:
+                raise RuntimeError("failed to hydrate scene change proposal after save")
+            return saved
         except SQLAlchemyError as exc:
             _handle_error("save scene change proposal", exc)
             raise
@@ -436,7 +439,10 @@ class ThemeProposalRepository:
                     target=orm,
                 )
             self._session.flush()
-            return self._hydrate(orm)
+            saved = self._hydrate(orm)
+            if saved is None:
+                raise RuntimeError("failed to hydrate theme change proposal after save")
+            return saved
         except SQLAlchemyError as exc:
             _handle_error("save theme change proposal", exc)
             raise

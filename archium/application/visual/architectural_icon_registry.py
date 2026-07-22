@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 
-from archium.domain.visual.architectural_icon import ArchitecturalIcon
+from archium.domain.visual.architectural_icon import ArchitecturalIcon, ArchitecturalIconMatch
 from archium.infrastructure.embeddings.local_lexical import (
     LocalLexicalEmbeddingProvider,
     lexical_embed,
@@ -186,7 +187,7 @@ class ArchitecturalIconMatcher:
         self,
         registry: ArchitecturalIconRegistry | None = None,
         *,
-        embed_query=None,
+        embed_query: Callable[[str], list[float]] | None = None,
     ) -> None:
         self._registry = registry or load_default_architectural_icon_registry()
         self._embed_query = embed_query or _embed_query
@@ -195,8 +196,7 @@ class ArchitecturalIconMatcher:
     def registry(self) -> ArchitecturalIconRegistry:
         return self._registry
 
-    def match(self, query: str, *, min_score: float = 0.35):
-        from archium.domain.visual.architectural_icon import ArchitecturalIconMatch
+    def match(self, query: str, *, min_score: float = 0.35) -> ArchitecturalIconMatch | None:
 
         text = (query or "").strip()
         if not text:

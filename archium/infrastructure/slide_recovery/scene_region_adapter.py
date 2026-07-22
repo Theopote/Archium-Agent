@@ -12,12 +12,14 @@ from archium.domain.slide_recovery import (
 )
 from archium.domain.visual.render_scene import (
     DrawingNode,
+    DrawingType,
     ImageNode,
     RenderNode,
     RenderScene,
     ShapeNode,
     TextNode,
 )
+from archium.domain.visual.studio_command import ImageAssetOrigin
 
 _VISUAL_REGION_TYPES: frozenset[RegionType] = frozenset(
     {"image", "drawing", "table", "chart", "background"}
@@ -228,7 +230,7 @@ def _node_from_region(
         region.keep_whole_drawing and region.source_asset_uri
     ):
         ref = source_by_id.get(region.source_node_id or "")
-        drawing_type = "site_plan"
+        drawing_type: DrawingType = "site_plan"
         storage_uri = region.source_asset_uri or ""
         if isinstance(ref, DrawingNode):
             drawing_type = ref.drawing_type
@@ -252,7 +254,7 @@ def _node_from_region(
     if region.region_type in {"image", "background"} or region.bitmap_fallback:
         ref = source_by_id.get(region.source_node_id or "")
         storage_uri = region.source_asset_uri or ""
-        asset_origin = "project_upload"
+        asset_origin: ImageAssetOrigin = "project_upload"
         if isinstance(ref, ImageNode):
             storage_uri = ref.storage_uri or storage_uri
             asset_origin = ref.asset_origin
@@ -282,9 +284,9 @@ def _node_from_region(
 
     if region.region_type == "line":
         ref = source_by_id.get(region.source_node_id or "")
-        stroke = "#333333"
+        line_stroke = "#333333"
         if isinstance(ref, ShapeNode):
-            stroke = ref.stroke_color or stroke
+            line_stroke = ref.stroke_color or line_stroke
         return ShapeNode(
             id=node_id,
             x=x,
@@ -293,15 +295,15 @@ def _node_from_region(
             height=height,
             z_index=z_index,
             shape_kind="line",
-            stroke_color=stroke,
+            stroke_color=line_stroke,
             stroke_width=1.0,
             semantic_role=region.semantic_role or "line",
         )
 
     if region.region_type == "shape":
         ref = source_by_id.get(region.source_node_id or "")
-        fill = None
-        stroke = None
+        fill: str | None = None
+        stroke: str | None = None
         if isinstance(ref, ShapeNode):
             fill = ref.fill_color
             stroke = ref.stroke_color

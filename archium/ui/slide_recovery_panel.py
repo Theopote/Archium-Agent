@@ -12,7 +12,7 @@ from archium.application.slide_recovery_workflow_service import SlideRecoveryWor
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.domain.export_fidelity import FIDELITY_LABELS_ZH
-from archium.domain.slide_recovery import PAGE_KIND_LABELS_ZH
+from archium.domain.slide_recovery import HybridRenderScene, PAGE_KIND_LABELS_ZH
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS
@@ -120,6 +120,8 @@ def render_slide_recovery_result_panel(
             settings=settings,
             key_prefix=key_prefix,
         )
+
+    return None
 
 
 def _render_preview_row(
@@ -264,7 +266,7 @@ def _run_export(
     *,
     project_id: UUID,
     result: SlideRecoveryWorkflowResult,
-    hybrid,
+    hybrid: HybridRenderScene,
     policy_preset: str,
     settings: Settings,
 ) -> None:
@@ -309,7 +311,7 @@ def _run_import(
     *,
     project_id: UUID,
     result: SlideRecoveryWorkflowResult,
-    hybrid,
+    hybrid: HybridRenderScene,
     presentation_id: UUID | None,
     settings: Settings,
 ) -> None:
@@ -342,7 +344,7 @@ def _run_save_template(
     *,
     project_id: UUID,
     result: SlideRecoveryWorkflowResult,
-    hybrid,
+    hybrid: HybridRenderScene,
     settings: Settings,
 ) -> None:
     try:

@@ -23,7 +23,7 @@ from archium.ui.studio.project_sidebar import render_studio_selection
 from archium.ui.studio.slide_canvas_enhanced import render_slide_canvas
 from archium.ui.studio.slide_navigator import render_slide_navigator
 from archium.ui.studio.slide_properties import render_slide_properties
-from archium.ui.studio_service import SlideVisualSnapshot, get_selected_slide_snapshot
+from archium.ui.studio_service import SlideVisualSnapshot, StudioPresentationContext, get_selected_slide_snapshot
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel
 
 
@@ -174,7 +174,7 @@ def _render_view_controls(*, compact: bool = False) -> None:
         st.caption("视图：" + (" · ".join(bits) if bits else "画布专注"))
 
 
-def _render_deck_issue_list(*, context: object) -> None:
+def _render_deck_issue_list(*, context: StudioPresentationContext) -> None:
     """Full-deck issue list only — no repair controls (those live in 检查 tab)."""
     from archium.ui.page_status_board_panel import (
         load_page_status_board,
@@ -232,7 +232,7 @@ def _select_activity_tab(options: list[str], *, key: str) -> str:
 
 def _render_studio_info_menus(
     *,
-    context: object,
+    context: StudioPresentationContext,
     advanced: bool,
     slide_snapshot: SlideVisualSnapshot | None,
     show_progress: bool,

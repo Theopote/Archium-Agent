@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import TypedDict
 
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.design_system import DesignSystem, TextStyleToken
@@ -64,6 +65,13 @@ _ANNOTATION_DENSITY_BY_CONTENT: dict[VisualContentType, float] = {
 }
 
 _CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]")
+
+
+class _DrawingBudgets(TypedDict):
+    needs_drawing_chrome: bool
+    min_readable_height: float
+    legend_height: float
+    annotation_density: float
 
 
 class SlideCapacityService:
@@ -272,7 +280,7 @@ class SlideCapacityService:
         usable_height: float,
         visual_intent: VisualIntent | None,
         layout_family: LayoutFamily | None,
-    ) -> dict[str, float | bool]:
+    ) -> _DrawingBudgets:
         content = (
             visual_intent.dominant_content_type if visual_intent is not None else None
         )

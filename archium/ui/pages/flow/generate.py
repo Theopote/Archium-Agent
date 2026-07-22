@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
-from archium.ui.generate_queue import metrics_from_board, queue_row_status
+from archium.ui.generate_queue import GenerateQueueMetrics, metrics_from_board, queue_row_status
 from archium.ui.page_status_board_panel import (
     load_page_status_board,
     render_compact_page_actions,
@@ -37,7 +37,16 @@ def _selected_presentation_id(project_id: UUID) -> UUID | None:
     return presentations[0].id
 
 
-def _render_queue_summary(metrics) -> None:
+def _resolve_flow_project_id() -> UUID | None:
+    raw = render_flow_project_context(allow_create=False, key_prefix="generate")
+    if raw is None:
+        return None
+    if isinstance(raw, UUID):
+        return raw
+    return UUID(str(raw))
+
+
+def _render_queue_summary(metrics: GenerateQueueMetrics) -> None:
     st.markdown(
         f"**总体 {metrics.complete}/{metrics.total}**　"
         f"完成 {metrics.complete}　"
@@ -108,7 +117,7 @@ def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> No
 def render() -> None:
     render_stage_header("generate")
     st.caption("主体是逐页队列。版式微调请到「工作室」；导出在「交付」。")
-    project_id = render_flow_project_context(allow_create=False, key_prefix="generate")
+    project_id = _resolve_flow_project_id()
     if project_id is None:
         st.info("请先在「资料」阶段创建或选择项目。")
         render_stage_nav("generate")

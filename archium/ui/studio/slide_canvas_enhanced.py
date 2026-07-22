@@ -374,48 +374,49 @@ def _render_interactive_canvas(
     typed = parse_typed_event(canvas_event)
     slide_id = slide_snapshot.slide.id
 
-    if isinstance(typed, dict) and typed.get("type") == "moveMany":
-        moves = [
-            (str(item["elementId"]), float(item["x"]), float(item["y"]))
-            for item in typed.get("moves", [])
-        ]
-        apply_canvas_move_many_event(slide_id=slide_id, plan=plan, moves=moves)
-        return True
+    if typed is not None and not isinstance(typed, str):
+        if typed["type"] == "moveMany":
+            moves = [
+                (str(item["elementId"]), float(item["x"]), float(item["y"]))
+                for item in typed["moves"]
+            ]
+            apply_canvas_move_many_event(slide_id=slide_id, plan=plan, moves=moves)
+            return True
 
-    if isinstance(typed, dict) and typed.get("type") == "commitText":
-        apply_canvas_commit_text_event(
-            slide_id=slide_id,
-            element_id=str(typed["elementId"]),
-            text=str(typed["text"]),
-        )
-        return True
+        elif typed["type"] == "commitText":
+            apply_canvas_commit_text_event(
+                slide_id=slide_id,
+                element_id=str(typed["elementId"]),
+                text=str(typed["text"]),
+            )
+            return True
 
-    if isinstance(typed, dict) and typed.get("type") == "commitReplaceAsset":
-        apply_canvas_commit_replace_asset_event(
-            slide_id=slide_id,
-            element_id=str(typed["elementId"]),
-            asset_id=str(typed["assetId"]),
-        )
-        return True
+        elif typed["type"] == "commitReplaceAsset":
+            apply_canvas_commit_replace_asset_event(
+                slide_id=slide_id,
+                element_id=str(typed["elementId"]),
+                asset_id=str(typed["assetId"]),
+            )
+            return True
 
-    if isinstance(typed, dict) and typed.get("type") == "requestReplaceAsset":
-        set_studio_selection([str(typed["elementId"])])
-        st.session_state["studio_focus_asset_replace"] = str(typed["elementId"])
-        st.rerun()
-        return True
-
-    if isinstance(typed, dict) and typed.get("type") == "select":
-        ids = list(typed.get("elementIds") or [])
-        if not ids and typed.get("elementId"):
-            ids = [str(typed["elementId"])]
-        current = list(st.session_state.get("studio_selected_element_ids") or [])
-        if not current and selected_element_id:
-            current = [selected_element_id]
-        if ids != current:
-            set_studio_selection(ids)
+        elif typed["type"] == "requestReplaceAsset":
+            set_studio_selection([str(typed["elementId"])])
+            st.session_state["studio_focus_asset_replace"] = str(typed["elementId"])
             st.rerun()
-        st.caption(_preview_caption(slide_snapshot.preview_kind))
-        return True
+            return True
+
+        elif typed["type"] == "select":
+            ids = list(typed.get("elementIds") or [])
+            if not ids and typed.get("elementId"):
+                ids = [str(typed["elementId"])]
+            current = list(st.session_state.get("studio_selected_element_ids") or [])
+            if not current and selected_element_id:
+                current = [selected_element_id]
+            if ids != current:
+                set_studio_selection(ids)
+                st.rerun()
+            st.caption(_preview_caption(slide_snapshot.preview_kind))
+            return True
 
     (
         event_kind,

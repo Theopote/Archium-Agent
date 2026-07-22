@@ -13,15 +13,20 @@ from archium.application.ingestion_service import ImportItemResult
 from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings
+from archium.application.visual.visual_edit_service import VisualEditResult
 from archium.domain.content_adaptation import ContentAdaptationSuggestion
 from archium.domain.enums import ProjectType, SlideStatus, SlideType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
+from archium.domain.scene_revision_summary import SceneRevisionRestoreResult
 from archium.domain.render import RenderResult
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.scene_change_proposal import SceneChangeProposal
+from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
+from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.renderers.pptx_pdf import convert_pptx_to_pdf
@@ -358,7 +363,10 @@ def analyze_slide_content_adaptation(
     )
 
 
-def estimate_slide_capacity(session: Session, slide_id: UUID):
+def estimate_slide_capacity(
+    session: Session,
+    slide_id: UUID,
+) -> SlideCapacityBudget | None:
     """Return ``SlideCapacityBudget`` for the Studio capacity gauge, or None."""
     return ContentAdaptationService(session).estimate_capacity(slide_id)
 
@@ -379,7 +387,10 @@ def create_slide_scene_proposal_from_text(
     ).create_proposal_from_text(slide_id, text)
 
 
-def load_presentation_design_system(session: Session, presentation_id: UUID):
+def load_presentation_design_system(
+    session: Session,
+    presentation_id: UUID,
+) -> DesignSystem | None:
     """Return the DesignSystem bound to this presentation's ArtDirection, if any."""
     from archium.infrastructure.database.repositories import PresentationRepository
     from archium.infrastructure.database.visual_repositories import (
@@ -405,7 +416,7 @@ def create_theme_proposal(
     tokens: object,
     *,
     preferred_slide_id: UUID | None = None,
-):
+) -> ThemeChangeProposal:
     """Create a deck-wide ThemeChangeProposal from Studio token controls."""
     from archium.application.visual.theme_proposal_service import ThemeProposalService
     from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
@@ -420,7 +431,10 @@ def create_theme_proposal(
     )
 
 
-def get_active_theme_proposal(session: Session, presentation_id: UUID):
+def get_active_theme_proposal(
+    session: Session,
+    presentation_id: UUID,
+) -> ThemeChangeProposal | None:
     from archium.application.visual.theme_proposal_service import ThemeProposalService
 
     settings = _resolve_runtime_settings(None)
@@ -433,9 +447,8 @@ def accept_theme_proposal(
     *,
     notes: str = "",
     allow_blockers: bool = False,
-):
+) -> ThemeChangeProposal:
     from archium.application.visual.theme_proposal_service import ThemeProposalService
-    from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
     from archium.ui.studio.undo_stack import clear_all_visual_redo_stacks
 
     if not isinstance(proposal, ThemeChangeProposal):
@@ -450,9 +463,13 @@ def accept_theme_proposal(
     return result
 
 
-def reject_theme_proposal(session: Session, proposal: object, *, notes: str = ""):
+def reject_theme_proposal(
+    session: Session,
+    proposal: object,
+    *,
+    notes: str = "",
+) -> ThemeChangeProposal:
     from archium.application.visual.theme_proposal_service import ThemeProposalService
-    from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 
     if not isinstance(proposal, ThemeChangeProposal):
         raise WorkflowError("无效的风格提案。")
@@ -798,7 +815,10 @@ def restore_slide_visual_edit(session: Session, slide_id: UUID) -> object:
     return undo_slide_visual_edit(session, slide_id)
 
 
-def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+def undo_slide_visual_edit(
+    session: Session,
+    slide_id: UUID,
+) -> SceneRevisionRestoreResult | VisualEditResult:
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.application.visual.visual_history_service import VisualHistoryService
@@ -818,11 +838,11 @@ def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
     settings = _resolve_runtime_settings(None)
     scene_undo = SceneUndoService(session, settings=settings)
     if scene_undo.count_undo_steps(slide) > 0:
-        result, redo_revision_id = scene_undo.undo(slide)
+        undo_result, redo_revision_id = scene_undo.undo(slide)
         if redo_revision_id is not None:
             push_visual_redo_revision(slide_id, redo_revision_id)
         bump_canvas_generation(slide_id)
-        return result
+        return undo_result
 
     history = VisualHistoryService(session)
     intents = VisualIntentRepository(session)
@@ -835,11 +855,11 @@ def undo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
         layout_plan=plan,
     )
     service = VisualEditService(session, settings=settings)
-    result = service.restore_previous(slide_id)
+    restore_result = service.restore_previous(slide_id)
     if redo_revision_id is not None:
         push_visual_redo_revision(slide_id, redo_revision_id)
     bump_canvas_generation(slide_id)
-    return result
+    return restore_result
 
 
 def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:

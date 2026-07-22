@@ -12,6 +12,9 @@ from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
+from archium.application.visual.template_usage_brief_context import (
+    TemplateUsageConstraints,
+)
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
     CRITIC_FOCUS_UNCLEAR,
@@ -24,6 +27,7 @@ from archium.domain.visual.critic import (
     VisualCriticFinding,
     VisualCriticReport,
 )
+from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.enums import (
     ImageFit,
     LayoutContentType,
@@ -91,8 +95,8 @@ class VisualCriticService:
         image_path: str | Path | None = None,
         page_area: float | None = None,
         peer_plans: list[LayoutPlan] | None = None,
-        usage_brief=None,
-        usage_constraints=None,
+        usage_brief: TemplateUsageBrief | None = None,
+        usage_constraints: TemplateUsageConstraints | None = None,
     ) -> VisualCriticReport:
         findings: list[VisualCriticFinding] = []
         notes: list[str] = []
@@ -461,8 +465,8 @@ class VisualCriticService:
         self,
         plan: LayoutPlan,
         *,
-        usage_brief=None,
-        usage_constraints=None,
+        usage_brief: TemplateUsageBrief | None = None,
+        usage_constraints: TemplateUsageConstraints | None = None,
     ) -> list[VisualCriticFinding]:
         from archium.application.visual.template_usage_brief_context import (
             constraints_from_brief,
@@ -510,6 +514,7 @@ class VisualCriticService:
                     )
         return findings
 
+    @staticmethod
     def _fingerprint_similarity(
         left: list[tuple[Any, ...]], right: list[tuple[Any, ...]]
     ) -> float:

@@ -27,7 +27,10 @@ from archium.infrastructure.renderers.pptx_screenshot import (
     export_pptx_slide_pngs,
     screenshot_tools_available,
 )
-from archium.infrastructure.renderers.renderer_conformance import snapshot_from_scene
+from archium.infrastructure.renderers.renderer_conformance import (
+    RendererSnapshot,
+    snapshot_from_scene,
+)
 from archium.infrastructure.vision.screenshot_qa import (
     compare_png_pptx_screenshots,
     load_image,
@@ -194,7 +197,7 @@ class ExportRoundTripService:
         scene: RenderScene,
         *,
         slide_order: int,
-        pptx_snap,
+        pptx_snap: RendererSnapshot | None,
         pptx_png: Path | None,
         preview_dir: Path,
     ) -> SlideRoundTripResult:
@@ -232,7 +235,8 @@ class ExportRoundTripService:
             pptx_image = load_image(pptx_png)
             if source_image is not None and pptx_image is not None:
                 check = compare_png_pptx_screenshots(source_image, pptx_image)
-                mse = float(check.evidence.get("mse", 9999))
+                mse_raw = check.evidence.get("mse", 9999)
+                mse = float(mse_raw) if isinstance(mse_raw, (int, float, str)) else 9999.0
                 similarity = max(0.0, min(1.0, 1.0 - mse / 5000.0))
                 if not check.passed:
                     warnings.append(check.description)
@@ -271,10 +275,8 @@ def _file_hash(path: Path) -> str:
     return digest.hexdigest()[:16]
 
 
-def _snapshots_by_slide(pptx_path: Path) -> list:
+def _snapshots_by_slide(pptx_path: Path) -> list[RendererSnapshot]:
     from pptx import Presentation
-
-    from archium.infrastructure.renderers.renderer_conformance import RendererSnapshot
 
     presentation = Presentation(str(pptx_path))
     snapshots: list[RendererSnapshot] = []
@@ -322,7 +324,7 @@ def _text_recall(
     return matched / total, missing
 
 
-def _geometry_match(source, exported) -> float:
+def _geometry_match(source: RendererSnapshot, exported: RendererSnapshot) -> float:
     if source.node_count <= 0:
         return 1.0
     ratio = exported.node_count / source.node_count

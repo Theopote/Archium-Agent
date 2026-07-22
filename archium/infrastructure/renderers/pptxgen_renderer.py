@@ -209,7 +209,7 @@ class PptxGenPresentationRenderer:
                     settings=self._settings,
                 )
                 for ref, path in context.resolved_paths.items():
-                    asset_paths.setdefault(ref, path)
+                    asset_paths.setdefault(ref, str(path.resolve()))
 
         adapter = PptxLayoutPlanAdapter()
         packed: list[tuple[LayoutPlan, DesignSystem, SlideContentBundle | None]] = []

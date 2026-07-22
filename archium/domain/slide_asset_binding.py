@@ -108,7 +108,8 @@ def slide_asset_bindings_from_page_materials(
             if not isinstance(item, dict):
                 continue
             raw_order = item.get("page_order", item.get("page_index", 0))
-            rows.append((int(raw_order), item))
+            page_order = raw_order if isinstance(raw_order, int) else int(str(raw_order))
+            rows.append((page_order, item))
 
     bindings: list[SlideAssetBinding] = []
     for page_order, item in rows:

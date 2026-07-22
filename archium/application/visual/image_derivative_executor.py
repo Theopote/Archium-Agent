@@ -16,7 +16,11 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from PIL import Image as PILImage
 
 from archium.application.visual.asset_path_resolver import storage_asset_uri
 from archium.domain.visual.image_derivative import (
@@ -155,7 +159,7 @@ def _image_size(path: Path) -> tuple[int | None, int | None]:
 def _process_image(
     path: Path,
     spec: ImageTreatmentSpec,
-) -> tuple[object, int, int] | None:
+) -> tuple[PILImage.Image, int, int] | None:
     from PIL import Image, ImageEnhance, ImageOps
 
     try:
@@ -205,11 +209,10 @@ def _process_image(
     return image, width, height
 
 
-def _load_oriented_srgb(opened: object) -> object:
+def _load_oriented_srgb(opened: PILImage.Image) -> PILImage.Image:
     """EXIF-orient and convert to RGB (sRGB working space for JPEG pipeline)."""
     from PIL import Image, ImageCms, ImageOps
 
-    assert isinstance(opened, Image.Image)
     image = ImageOps.exif_transpose(opened)
     # Prefer ICC → sRGB when profile present; fall back to plain RGB.
     try:
@@ -228,10 +231,8 @@ def _load_oriented_srgb(opened: object) -> object:
     return image.convert("RGB")
 
 
-def _apply_norm_crop(image: object, crop: ImageCropBox) -> object:
+def _apply_norm_crop(image: PILImage.Image, crop: ImageCropBox) -> PILImage.Image:
     from PIL import Image
-
-    assert isinstance(image, Image.Image)
     w, h = image.size
     left = int(max(0.0, min(1.0, float(crop.x))) * w)
     top = int(max(0.0, min(1.0, float(crop.y))) * h)
@@ -243,15 +244,13 @@ def _apply_norm_crop(image: object, crop: ImageCropBox) -> object:
 
 
 def _focal_center_crop(
-    image: object,
+    image: PILImage.Image,
     focal: FocalPoint,
     *,
     keep_ratio: float = 0.85,
-) -> object:
+) -> PILImage.Image:
     """Crop around focal point, keeping ``keep_ratio`` of the shorter side."""
     from PIL import Image
-
-    assert isinstance(image, Image.Image)
     keep_ratio = max(0.5, min(1.0, keep_ratio))
     w, h = image.size
     crop_w = int(w * keep_ratio)
@@ -263,10 +262,8 @@ def _focal_center_crop(
     return image.crop((left, top, left + crop_w, top + crop_h))
 
 
-def _apply_soft_vignette(image: object, *, opacity: float) -> object:
+def _apply_soft_vignette(image: PILImage.Image, *, opacity: float) -> PILImage.Image:
     from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
-
-    assert isinstance(image, Image.Image)
     opacity = max(0.0, min(1.0, opacity))
     if opacity <= 1e-6:
         return image

@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from archium.domain.visual.render_scene import (
     BackgroundStyle,
+    DrawingNode,
     ImageNode,
     RenderScene,
     ShapeNode,
@@ -164,10 +165,12 @@ def _parse_pptx_slide(
             f"PPTX 只有 {len(presentation.slides)} 页，无法读取第 {slide_index + 1} 页。"
         )
 
-    page_w = float(presentation.slide_width) / _EMU_PER_INCH
-    page_h = float(presentation.slide_height) / _EMU_PER_INCH
+    page_w = float(presentation.slide_width or 0) / _EMU_PER_INCH
+    page_h = float(presentation.slide_height or 0) / _EMU_PER_INCH
+    if page_w <= 0 or page_h <= 0:
+        raise WorkflowError("PPTX 页面尺寸无效。")
     slide = presentation.slides[slide_index]
-    nodes: list[TextNode | ImageNode | ShapeNode] = []
+    nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
     z_index = 0
 
     for shape_index, shape in enumerate(slide.shapes):
@@ -255,9 +258,9 @@ def _parse_pptx_slide(
             )
         )
 
-    preview_dir = workspace_dir
-    if preview_dir is not None:
-        preview_dir = workspace_dir / "pptx_previews"
+    preview_dir = (
+        workspace_dir / "pptx_previews" if workspace_dir is not None else None
+    )
     preview_image = render_pptx_slide_png(
         path,
         slide_index=slide_index,

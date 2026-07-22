@@ -5,6 +5,10 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from io import BytesIO
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PIL import Image as PILImage
 
 from archium.application.visual.scene_fonts import (
     CJK_FALLBACK_CHAIN,
@@ -188,7 +192,7 @@ class PngRenderer:
         cropped = resized.crop((left, top, left + target_w, top + target_h))
         canvas.paste(cropped, (box[0], box[1]), cropped)  # type: ignore[attr-defined]
 
-    def _load_image_asset(self, path: Path, *, target_w: int, target_h: int):
+    def _load_image_asset(self, path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
         from PIL import Image
 
         if path.suffix.lower() != ".svg":
@@ -199,7 +203,7 @@ class PngRenderer:
             return self._load_svg_via_simple_parser(path, target_w=target_w, target_h=target_h)
 
     @staticmethod
-    def _load_svg_via_cairosvg(path: Path, *, target_w: int, target_h: int):
+    def _load_svg_via_cairosvg(path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
         from PIL import Image
 
         try:
@@ -215,7 +219,7 @@ class PngRenderer:
         return Image.open(BytesIO(png_bytes)).convert("RGBA")
 
     @staticmethod
-    def _load_svg_via_simple_parser(path: Path, *, target_w: int, target_h: int):
+    def _load_svg_via_simple_parser(path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
         from PIL import Image, ImageDraw
         from svg.path import parse_path
 
@@ -239,7 +243,11 @@ class PngRenderer:
         def px_y(value: float) -> float:
             return (value - vb_y) * sy
 
-        def parse_color(value: str | None, *, default: tuple[int, int, int, int] = (26, 26, 26, 255)):
+        def parse_color(
+            value: str | None,
+            *,
+            default: tuple[int, int, int, int] = (26, 26, 26, 255),
+        ) -> tuple[int, int, int, int] | None:
             text = (value or "").strip()
             if not text or text == "currentColor":
                 return default
@@ -316,7 +324,7 @@ class PngRenderer:
 
     @staticmethod
     def _draw_svg_placeholder(
-        canvas: object,
+        canvas: PILImage.Image,
         box: tuple[int, int, int, int],
     ) -> None:
         from PIL import ImageDraw
