@@ -48,7 +48,7 @@
 | `sessions/` | 工作会话记录 |
 | `roadmap/` | 规划与验收草案；是否仍有效需对照发布决策 |
 
-顶层带日期的 session summary、`README_UPDATE_SUMMARY.md` 和 `COMPLETE_DELIVERY_SUMMARY.md` 同样属于历史记录。
+带日期的 session summary、README 更新与一次性交付总结统一归入 `sessions/YYYY-MM-DD/`。
 
 ## 维护规则
 

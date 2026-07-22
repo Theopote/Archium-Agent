@@ -17,9 +17,9 @@
 
 以下文件属于一次性总结，应从现行入口中移除，后续可统一迁入 `docs/archive/`：
 
-- `docs/README_UPDATE_SUMMARY.md`
-- `docs/SESSION_SUMMARY_2026-07-20.md`
-- `docs/COMPLETE_DELIVERY_SUMMARY.md`
+- `docs/sessions/2026-07-20/README_UPDATE_SUMMARY.md`
+- `docs/sessions/2026-07-20/SESSION_SUMMARY_2026-07-20.md`
+- `docs/sessions/2026-07-20/COMPLETE_DELIVERY_SUMMARY.md`
 - `docs/QUALITY_GATE_STATUS.md`（保留时必须标记生成/检查日期）
 
 ## 归档判定

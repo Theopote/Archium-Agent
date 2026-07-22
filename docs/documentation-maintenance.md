@@ -28,7 +28,8 @@
 
 ```bash
 python scripts/generate_config_docs.py --check
-pytest tests/unit/test_config_reference_sync.py -q
+python scripts/check_markdown_links.py
+pytest tests/unit/test_config_reference_sync.py tests/unit/test_markdown_links.py -q
 ```
 
-再检查 Markdown 相对链接、示例命令和用户界面名称。仓库目前没有完整 Markdown 链接 CI，因此链接检查仍是文档变更的必要人工步骤。
+链接脚本检查仓库内相对目标是否存在；锚点语义、示例命令和用户界面名称仍需人工复核。历史会话中的 `computer://` URI 作为外部审计记录保留，不作为仓库文件目标。

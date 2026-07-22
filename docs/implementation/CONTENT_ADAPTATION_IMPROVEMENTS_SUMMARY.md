@@ -1,5 +1,9 @@
 # Content Adaptation 安全性改进总结
 
+
+> **文档状态：历史快照。**
+> 本文记录特定阶段的分析、实施、验收或计划，可能包含已过时的路径、状态和结论。
+> 当前行为以代码、测试、`README.md`、`docs/README.md` 及现行专题文档为准。
 ## 改进概览
 
 修复了 `content_adaptation_service.py` 中的两个关键安全问题：

@@ -1,5 +1,9 @@
 # 仓库卫生问题修复指南
 
+
+> **文档状态：历史快照。**
+> 本文记录特定阶段的分析、实施、验收或计划，可能包含已过时的路径、状态和结论。
+> 当前行为以代码、测试、`README.md`、`docs/README.md` 及现行专题文档为准。
 ## 问题描述
 
 SQLite WAL (Write-Ahead Logging) 和 SHM (Shared Memory) 文件被错误地跟踪到 Git 版本控制中。
