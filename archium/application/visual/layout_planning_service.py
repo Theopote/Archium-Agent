@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.agent_skills import apply_skills_to_request
 from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
@@ -397,7 +398,7 @@ class LayoutPlanningService:
                 preferred_order=preferred_for_registry,
             )
             try:
-                draft = self._llm.generate_structured(
+                request, _skill_audit = apply_skills_to_request(
                     LLMRequest(
                         system_prompt=LAYOUT_PLAN_SYSTEM_PROMPT,
                         user_prompt=build_layout_plan_user_prompt(
@@ -408,6 +409,11 @@ class LayoutPlanningService:
                         ),
                         temperature=0.2,
                     ),
+                    task_type="layout_plan",
+                    slide_type=str(getattr(slide, "slide_type", "") or ""),
+                )
+                draft = self._llm.generate_structured(
+                    request,
                     LayoutDecisionDraft,
                 )
                 if draft.layout_family in allowed:

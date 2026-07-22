@@ -29,6 +29,17 @@
 
 以本目录为 system / tool 规则注入源；路径稳定，勿改名目录除非同步更新消费方。
 
+### 产品运行时（已接线）
+
+Python 侧通过 Skill Registry 消费同一目录：
+
+- `ArchiumSkillDefinition` — id / version / stages / slide_types / required_rules / prompt_uri / checksum
+- `SkillSelectionService.resolve_for_task(task_type, slide_type, project_type, audience)`
+- `apply_skills_to_request(...)` — 注入 system prompt，并在 `LLMRequest.metadata` 记录
+  `skill_ids` / `skill_versions` / `skill_checksums`
+
+入口：`archium/application/agent_skills/`。ArtDirection / LayoutPlan / Visual QA / ElementEditIntent 等 LLM 调用已挂钩。
+
 ## 编写约定
 
 - 每个技能一个目录，入口文件必须是 `SKILL.md`

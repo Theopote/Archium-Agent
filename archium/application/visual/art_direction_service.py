@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.agent_skills import apply_skills_to_request
 from archium.application.reference_style_service import format_reference_style_for_prompt
 from archium.domain.enums import ApprovalStatus
 from archium.domain.presentation import PresentationBrief, Storyline
@@ -57,8 +58,9 @@ class ArtDirectionService:
         preferences = user_preferences or VisualPreferences()
 
         draft: ArtDirectionDraft | None = None
+        skill_audit_note = ""
         if use_llm and self._llm is not None:
-            draft = self._llm.generate_structured(
+            request, skill_audit = apply_skills_to_request(
                 LLMRequest(
                     system_prompt=ART_DIRECTION_SYSTEM_PROMPT,
                     user_prompt=build_art_direction_user_prompt(
@@ -75,11 +77,17 @@ class ArtDirectionService:
                     ),
                     temperature=0.4,
                 ),
-                ArtDirectionDraft,
+                task_type="art_direction",
             )
+            skill_audit_note = (
+                f"skills={','.join(skill_audit.skill_ids)}@"
+                f"{','.join(skill_audit.skill_versions)}"
+            )
+            draft = self._llm.generate_structured(request, ArtDirectionDraft)
 
         if draft is None:
             draft = self._rule_based_draft(brief=brief, preferences=preferences)
+
 
         art = ArtDirection(
             project_id=project_id,
@@ -101,7 +109,10 @@ class ArtDirectionService:
             content_strategy=draft.content_strategy,
             closing_strategy=draft.closing_strategy,
             pacing_strategy=draft.pacing_strategy,
-            consistency_rules=list(draft.consistency_rules),
+            consistency_rules=[
+                *list(draft.consistency_rules),
+                *( [f"skill_invocation:{skill_audit_note}"] if skill_audit_note else [] ),
+            ],
             forbidden_styles=list(draft.forbidden_styles),
             design_system_id=design_system_id,
             approval_status=ApprovalStatus.PENDING,
@@ -114,8 +125,9 @@ class ArtDirectionService:
             raise ValueError(f"ArtDirection {art_direction_id} not found")
 
         draft: ArtDirectionDraft | None = None
+        skill_audit_note = ""
         if self._llm is not None:
-            draft = self._llm.generate_structured(
+            request, skill_audit = apply_skills_to_request(
                 LLMRequest(
                     system_prompt=ART_DIRECTION_SYSTEM_PROMPT,
                     user_prompt=(
@@ -125,8 +137,13 @@ class ArtDirectionService:
                     ),
                     temperature=0.4,
                 ),
-                ArtDirectionDraft,
+                task_type="art_direction",
             )
+            skill_audit_note = (
+                f"skills={','.join(skill_audit.skill_ids)}@"
+                f"{','.join(skill_audit.skill_versions)}"
+            )
+            draft = self._llm.generate_structured(request, ArtDirectionDraft)
         if draft is None:
             existing.rationale = f"{existing.rationale}\n反馈调整：{feedback.strip()}"
             existing.version += 1
@@ -134,9 +151,14 @@ class ArtDirectionService:
             existing.touch()
             return self._art_directions.save(existing)
 
+        update_payload = draft.model_dump()
+        rules = list(update_payload.get("consistency_rules") or [])
+        if skill_audit_note:
+            rules.append(f"skill_invocation:{skill_audit_note}")
+        update_payload["consistency_rules"] = rules
         updated = existing.model_copy(
             update={
-                **draft.model_dump(),
+                **update_payload,
                 "version": existing.version + 1,
                 "approval_status": ApprovalStatus.PENDING,
             }

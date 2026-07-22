@@ -1,0 +1,115 @@
+"""Static selection metadata overlay for archium-agent-skills (versioned catalog)."""
+
+from __future__ import annotations
+
+# Selection metadata lives here so SKILL.md can stay author-friendly.
+# File checksum still comes from the on-disk SKILL.md body (prompt truth).
+
+SKILL_CATALOG: dict[str, dict[str, object]] = {
+    "architectural-presentation-authoring": {
+        "version": "1.0.0",
+        "title": "Architectural presentation authoring",
+        "applicable_stages": [
+            "art_direction",
+            "outline",
+            "slide_plan",
+            "layout_plan",
+            "manuscript",
+            "visual_qa",
+            "renovation_report",
+        ],
+        "applicable_slide_types": ["*"],
+        "applicable_project_types": ["*"],
+        "applicable_audiences": ["*"],
+        "required_rules": [
+            "one_conclusion_per_page",
+            "project_facts_first",
+            "drawing_contain",
+            "reference_not_project_evidence",
+            "north_arrow_scale",
+            "strategy_answers_problems",
+            "metrics_need_sources",
+            "no_isomorphic_card_spam",
+        ],
+    },
+    "drawing-page-design": {
+        "version": "1.0.0",
+        "title": "Drawing page design",
+        "applicable_stages": ["layout_plan", "slide_plan", "drawing_page", "visual_qa", "studio_edit"],
+        "applicable_slide_types": ["drawing_focus", "image", "content"],
+        "applicable_project_types": ["*"],
+        "applicable_audiences": ["*"],
+        "required_rules": ["drawing_contain", "north_arrow_scale", "no_crop"],
+    },
+    "photo-evidence-layout": {
+        "version": "1.0.0",
+        "title": "Photo evidence layout",
+        "applicable_stages": ["layout_plan", "slide_plan", "photo_evidence", "visual_qa"],
+        "applicable_slide_types": ["image", "content", "comparison"],
+        "applicable_project_types": ["*"],
+        "applicable_audiences": ["*"],
+        "required_rules": ["reference_not_project_evidence", "evidence_caption"],
+    },
+    "executive-summary-writing": {
+        "version": "1.0.0",
+        "title": "Executive summary writing",
+        "applicable_stages": ["outline", "slide_plan", "manuscript", "executive_summary"],
+        "applicable_slide_types": ["title", "summary", "closing", "section"],
+        "applicable_project_types": ["*"],
+        "applicable_audiences": ["executive", "client", "*"],
+        "required_rules": ["one_conclusion_per_page", "project_facts_first"],
+    },
+    "hospital-renovation-report": {
+        "version": "1.0.0",
+        "title": "Hospital renovation report",
+        "applicable_stages": [
+            "art_direction",
+            "outline",
+            "slide_plan",
+            "manuscript",
+            "renovation_report",
+        ],
+        "applicable_slide_types": ["*"],
+        "applicable_project_types": ["hospital", "medical", "healthcare"],
+        "applicable_audiences": ["*"],
+        "required_rules": ["strategy_answers_problems", "operations_continuity"],
+    },
+    "campus-renovation-report": {
+        "version": "1.0.0",
+        "title": "Campus renovation report",
+        "applicable_stages": [
+            "art_direction",
+            "outline",
+            "slide_plan",
+            "manuscript",
+            "renovation_report",
+        ],
+        "applicable_slide_types": ["*"],
+        "applicable_project_types": ["campus", "school", "university", "education"],
+        "applicable_audiences": ["*"],
+        "required_rules": ["strategy_answers_problems", "program_fit"],
+    },
+    "apply-studio-comments": {
+        "version": "1.1.0",
+        "title": "Apply Studio comments",
+        "applicable_stages": ["studio_edit", "studio_comment", "element_edit_intent"],
+        "applicable_slide_types": ["*"],
+        "applicable_project_types": ["*"],
+        "applicable_audiences": ["*"],
+        "required_rules": ["bound_node_id", "proposal_before_accept", "scene_version_pin"],
+    },
+    "visual-qa-review": {
+        "version": "1.0.0",
+        "title": "Visual QA review",
+        "applicable_stages": ["visual_qa", "layout_plan", "studio_edit"],
+        "applicable_slide_types": ["*"],
+        "applicable_project_types": ["*"],
+        "applicable_audiences": ["*"],
+        "required_rules": [
+            "drawing_contain",
+            "north_arrow_scale",
+            "reference_not_project_evidence",
+            "no_isomorphic_card_spam",
+        ],
+    },
+}

@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from archium.application.agent_skills import apply_skills_to_request
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.element_edit_intent import (
     ElementEditIntent,
@@ -335,13 +336,19 @@ class ElementEditIntentParser:
             f"comment={text}"
         )
         try:
-            draft = self._llm.generate_structured(
+            request, _audit = apply_skills_to_request(
                 LLMRequest(
                     system_prompt=_SYSTEM_PROMPT,
                     user_prompt=user_prompt,
                     temperature=0.1,
                     json_mode=True,
                 ),
+                task_type="element_edit_intent",
+                inject_bodies=True,
+                limit=3,
+            )
+            draft = self._llm.generate_structured(
+                request,
                 ElementEditIntentDraft,
             )
         except Exception:

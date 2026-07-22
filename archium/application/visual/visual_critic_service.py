@@ -251,7 +251,9 @@ class VisualCriticService:
             "Return JSON matching the schema."
         )
         try:
-            return self._llm.generate_structured(
+            from archium.application.agent_skills import apply_skills_to_request
+
+            request, _audit = apply_skills_to_request(
                 LLMRequest(
                     system_prompt=_VISION_SYSTEM,
                     user_prompt=prompt,
@@ -261,8 +263,11 @@ class VisualCriticService:
                     image_paths=(str(image_path),),
                     metadata={"task": "visual_critic_vision"},
                 ),
-                _VisionCriticDraft,
+                task_type="visual_qa",
+                slide_type=str(getattr(plan, "layout_family", "") or ""),
+                limit=4,
             )
+            return self._llm.generate_structured(request, _VisionCriticDraft)
         except Exception as exc:  # noqa: BLE001
             logger.warning("LLM vision critic failed (non-fatal): %s", exc)
             return None
