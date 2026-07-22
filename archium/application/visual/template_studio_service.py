@@ -17,6 +17,7 @@ from archium.application.visual.render_scene_compiler import RenderSceneCompiler
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, SlideType
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_recovery import HybridRenderScene, SlideRecoveryPageKind
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
     ArchitecturalTemplateLayout,
@@ -106,6 +107,13 @@ class TemplateFillPreviewResult:
     layout_id: str
     preview_path: Path
     layout_plan: LayoutPlan
+
+
+@dataclass(frozen=True)
+class RecoveryTemplateSaveResult:
+    template: ArchitecturalTemplate
+    layout_id: str
+    preview_path: Path
 
 
 class TemplateStudioService:
@@ -222,6 +230,63 @@ class TemplateStudioService:
             screenshot_count=len(pngs),
             screenshot_tools_available=tools_ok,
             warnings=warnings,
+        )
+
+    def create_from_recovery_reference(
+        self,
+        *,
+        project_id: UUID,
+        hybrid: HybridRenderScene,
+        source_page_id: str,
+        source_preview_path: Path | None = None,
+        name: str | None = None,
+    ) -> RecoveryTemplateSaveResult:
+        template_id = uuid4()
+        workspace = self.workspace_root(template_id)
+        screenshots_dir = workspace / "screenshots"
+        screenshots_dir.mkdir(parents=True, exist_ok=True)
+
+        preview_path = screenshots_dir / "recovery_page_01.png"
+        if source_preview_path is not None and source_preview_path.is_file():
+            preview_path = screenshots_dir / f"source_preview{source_preview_path.suffix.lower()}"
+            shutil.copy2(source_preview_path, preview_path)
+        else:
+            CanvasRenderer().render_preview(hybrid.scene, preview_path)
+
+        design = self._build_recovery_design_system(
+            name=name or source_page_id,
+            scene=hybrid.scene,
+            source_reference=str(preview_path),
+        )
+        design = self._designs.save(design)
+        layout = self._layout_from_recovery_reference(
+            source_page_id=source_page_id,
+            hybrid=hybrid,
+            preview_path=preview_path,
+        )
+
+        template = ArchitecturalTemplate(
+            id=template_id,
+            name=name or f"Recovery Reference · {source_page_id}",
+            source_pptx_path="",
+            project_id=project_id,
+            design_system_id=design.id,
+            fonts=list(hybrid.scene.font_assets),
+            colors=self._scene_colors(hybrid.scene),
+            layouts=[layout],
+            status=TemplateStatus.DRAFT,
+            workspace_dir=str(workspace),
+            analysis_notes=[
+                "created_from_slide_recovery",
+                f"page_kind={hybrid.page_kind.value}",
+                f"fidelity={hybrid.reconstruction_fidelity.value}",
+            ],
+        )
+        saved = self._save(template)
+        return RecoveryTemplateSaveResult(
+            template=saved,
+            layout_id=layout.id,
+            preview_path=preview_path,
         )
 
     def update_page_type(
@@ -508,6 +573,138 @@ class TemplateStudioService:
             }
         )
 
+    def _build_recovery_design_system(
+        self,
+        *,
+        name: str,
+        scene,
+        source_reference: str,
+    ) -> DesignSystem:
+        fonts = [
+            font.family
+            for font in scene.font_assets
+            if getattr(font, "family", "").strip()
+        ]
+        colors = self._scene_colors(scene)
+        return self._build_imported_design_system(
+            name=f"Recovery · {name}",
+            fonts=fonts,
+            colors=colors,
+            source_reference=source_reference,
+        )
+
+    def _layout_from_recovery_reference(
+        self,
+        *,
+        source_page_id: str,
+        hybrid: HybridRenderScene,
+        preview_path: Path,
+    ) -> ArchitecturalTemplateLayout:
+        slots: list[TemplateSlot] = []
+        seen_ids: set[str] = set()
+        supports_drawing = False
+        supports_photo = False
+        supports_metrics = False
+        supports_case_reference = False
+        architectural_roles: list[str] = []
+        for index, region in enumerate(hybrid.regions):
+            slot_id = region.source_node_id or f"recovery_slot_{index + 1}"
+            if slot_id in seen_ids:
+                slot_id = f"{slot_id}_{index + 1}"
+            seen_ids.add(slot_id)
+            role = _slot_role_from_region(region.region_type, region.semantic_role)
+            supports_drawing = supports_drawing or role == TemplateSlotRole.DRAWING
+            supports_photo = supports_photo or role in {
+                TemplateSlotRole.HERO_IMAGE,
+                TemplateSlotRole.SUPPORTING_IMAGE,
+            }
+            supports_metrics = supports_metrics or role == TemplateSlotRole.METRIC
+            supports_case_reference = supports_case_reference or role in {
+                TemplateSlotRole.CAPTION,
+                TemplateSlotRole.SOURCE,
+            }
+            if region.semantic_role:
+                architectural_roles.append(region.semantic_role)
+            slots.append(
+                TemplateSlot(
+                    id=slot_id,
+                    role=role,
+                    required=role in {
+                        TemplateSlotRole.TITLE,
+                        TemplateSlotRole.BODY,
+                        TemplateSlotRole.DRAWING,
+                    },
+                    x=region.bbox.x * hybrid.scene.page_width,
+                    y=region.bbox.y * hybrid.scene.page_height,
+                    width=region.bbox.width * hybrid.scene.page_width,
+                    height=region.bbox.height * hybrid.scene.page_height,
+                    accepted_node_types=_accepted_node_types_for_slot(role),
+                    accepted_drawing_types=["site_plan"] if role == TemplateSlotRole.DRAWING else [],
+                    label=region.semantic_role or role.value,
+                    auto_detected=False,
+                )
+            )
+        if not slots:
+            slots.append(
+                TemplateSlot(
+                    id="recovery_body",
+                    role=TemplateSlotRole.BODY,
+                    required=True,
+                    x=0.7,
+                    y=0.5,
+                    width=8.0,
+                    height=0.8,
+                    label="recovery_body",
+                    auto_detected=False,
+                )
+            )
+        page_type = _template_page_type_from_recovery(hybrid.page_kind)
+        return ArchitecturalTemplateLayout(
+            name=f"Recovery {source_page_id}",
+            description="Saved from Slide Recovery result.",
+            page_index=0,
+            page_type=page_type,
+            suitable_slide_types=[page_type.value],
+            suitable_content_types=sorted({slot.role.value for slot in slots}),
+            architectural_roles=sorted(set(architectural_roles)),
+            slots=slots,
+            supports_drawing=supports_drawing,
+            supports_photo=supports_photo,
+            supports_metrics=supports_metrics,
+            supports_case_reference=supports_case_reference,
+            minimum_asset_count=sum(
+                1
+                for slot in slots
+                if slot.role
+                in {
+                    TemplateSlotRole.HERO_IMAGE,
+                    TemplateSlotRole.SUPPORTING_IMAGE,
+                    TemplateSlotRole.DRAWING,
+                    TemplateSlotRole.CHART,
+                    TemplateSlotRole.TABLE,
+                }
+            ),
+            maximum_asset_count=max(1, len(slots)),
+            preview_image_path=str(preview_path),
+            page_width=hybrid.scene.page_width,
+            page_height=hybrid.scene.page_height,
+            extracted_fonts=[font.family for font in hybrid.scene.font_assets if font.family],
+            extracted_colors=self._scene_colors(hybrid.scene),
+            classification_confidence=0.9,
+            classification_notes="slide recovery reference export",
+        )
+
+    def _scene_colors(self, scene) -> list[str]:
+        colors: list[str] = []
+        if getattr(scene.background, "color", ""):
+            colors.append(scene.background.color)
+        for node in scene.nodes:
+            for attr in ("color", "fill_color", "stroke_color"):
+                value = getattr(node, attr, None)
+                if isinstance(value, str) and value.strip():
+                    colors.append(value.strip())
+        return list(dict.fromkeys(colors))[:16]
+
     def _require_template(self, template_id: UUID) -> ArchitecturalTemplate:
         template = self._templates.get(template_id)
         if template is None:
@@ -526,3 +723,55 @@ class TemplateStudioService:
             json.dumps(template.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
+
+
+def _template_page_type_from_recovery(page_kind: SlideRecoveryPageKind) -> TemplatePageType:
+    mapping = {
+        SlideRecoveryPageKind.TITLE: TemplatePageType.COVER,
+        SlideRecoveryPageKind.IMAGE_TEXT: TemplatePageType.TEXT_ARGUMENT,
+        SlideRecoveryPageKind.TABLE: TemplatePageType.METRIC,
+        SlideRecoveryPageKind.PHOTO: TemplatePageType.PHOTO_GRID,
+        SlideRecoveryPageKind.DRAWING_DOMINANT: TemplatePageType.DRAWING_FOCUS,
+    }
+    return mapping.get(page_kind, TemplatePageType.UNKNOWN)
+
+
+def _slot_role_from_region(region_type: str, semantic_role: str | None) -> TemplateSlotRole:
+    role_text = (semantic_role or "").lower()
+    if "title" in role_text:
+        return TemplateSlotRole.TITLE
+    if "subtitle" in role_text:
+        return TemplateSlotRole.SUBTITLE
+    if "caption" in role_text:
+        return TemplateSlotRole.CAPTION
+    if "source" in role_text:
+        return TemplateSlotRole.SOURCE
+    if "metric" in role_text:
+        return TemplateSlotRole.METRIC
+    if "table" in role_text or region_type == "table":
+        return TemplateSlotRole.TABLE
+    if "chart" in role_text or region_type == "chart":
+        return TemplateSlotRole.CHART
+    if region_type == "drawing":
+        return TemplateSlotRole.DRAWING
+    if region_type == "image":
+        return TemplateSlotRole.HERO_IMAGE
+    if region_type in {"line", "shape", "background"}:
+        return TemplateSlotRole.DECORATION
+    return TemplateSlotRole.BODY
+
+
+def _accepted_node_types_for_slot(role: TemplateSlotRole) -> list[str]:
+    if role in {TemplateSlotRole.TITLE, TemplateSlotRole.SUBTITLE, TemplateSlotRole.BODY}:
+        return ["text"]
+    if role == TemplateSlotRole.DRAWING:
+        return ["drawing"]
+    if role in {TemplateSlotRole.HERO_IMAGE, TemplateSlotRole.SUPPORTING_IMAGE}:
+        return ["image"]
+    if role == TemplateSlotRole.TABLE:
+        return ["table", "text"]
+    if role == TemplateSlotRole.CHART:
+        return ["chart", "image"]
+    if role == TemplateSlotRole.DECORATION:
+        return ["shape"]
+    return ["text", "image"]

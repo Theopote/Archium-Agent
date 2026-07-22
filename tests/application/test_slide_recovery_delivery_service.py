@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from archium.application.slide_recovery_delivery_service import SlideRecoveryDeliveryService
+from archium.application.visual.template_studio_service import TemplateStudioService
 from archium.config.settings import Settings
 from archium.domain.export_fidelity import ExportFidelityLevel
 from archium.domain.presentation import Presentation
@@ -140,3 +141,35 @@ def test_import_creates_presentation_when_missing(
     assert presentation is not None
     assert presentation.project_id == project.id
     assert result.slide_order == 0
+
+
+def test_save_as_template_reference_creates_template(
+    db_session,
+    tmp_path: Path,
+) -> None:
+    project = ProjectRepository(db_session).create(Project(name="Recovery Template"))
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    hybrid = _hybrid_from_scene("template-page")
+    source_preview = tmp_path / "source.png"
+    source_preview.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+        b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+        b"\x00\x00\x00\x0bIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01"
+        b"\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    service = SlideRecoveryDeliveryService(db_session, settings=settings)
+
+    saved = service.save_as_template_reference(
+        project.id,
+        hybrid,
+        source_page_id="template-page",
+        source_preview_path=source_preview,
+    )
+
+    template = TemplateStudioService(db_session, settings=settings).get_template(saved.template.id)
+    assert template is not None
+    assert template.project_id == project.id
+    assert template.layouts
+    assert template.layouts[0].preview_image_path.endswith(".png")
+    assert template.layouts[0].slots
+    assert Path(template.workspace_dir).is_dir()

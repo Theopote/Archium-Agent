@@ -212,7 +212,7 @@ def _render_delivery_actions(
     else:
         st.caption("当前项目尚无汇报，导入时将自动创建「页面复活导入」。")
 
-    col_export, col_import = st.columns(2)
+    col_export, col_import, col_template = st.columns(3)
     with col_export:
         if st.button(
             "导出混合 PPTX",
@@ -238,6 +238,18 @@ def _render_delivery_actions(
                 result=result,
                 hybrid=hybrid,
                 presentation_id=selected_presentation,
+                settings=settings,
+            )
+    with col_template:
+        if st.button(
+            "保存为 Template Reference",
+            key=f"{key_prefix}_save_template",
+            disabled=not can_import,
+        ):
+            _run_save_template(
+                project_id=project_id,
+                result=result,
+                hybrid=hybrid,
                 settings=settings,
             )
 
@@ -325,3 +337,39 @@ def _run_import(
     )
     if import_result.scene_preview_path and import_result.scene_preview_path.is_file():
         st.image(str(import_result.scene_preview_path), caption="导入后场景预览", width=480)
+
+
+def _run_save_template(
+    *,
+    project_id: UUID,
+    result: SlideRecoveryWorkflowResult,
+    hybrid,
+    settings: Settings,
+) -> None:
+    try:
+        with get_session() as session:
+            delivery = SlideRecoveryDeliveryService(session, settings=settings)
+            template_result = delivery.save_as_template_reference(
+                project_id,
+                hybrid,
+                source_page_id=result.source_page_id,
+                source_preview_path=delivery.resolve_source_preview_path(result),
+            )
+            session.commit()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+        return
+    except Exception as exc:
+        st.error(format_user_error(exc))
+        return
+
+    st.success(
+        f"已保存 Template Reference：{template_result.template.name}"
+        f"（layout `{template_result.layout_id}`）"
+    )
+    if template_result.preview_path.is_file():
+        st.image(
+            str(template_result.preview_path),
+            caption="Template Reference 预览",
+            width=480,
+        )

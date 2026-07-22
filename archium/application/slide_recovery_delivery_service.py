@@ -18,6 +18,10 @@ from archium.application.export_policy_service import (
 from archium.application.slide_recovery_workflow_service import SlideRecoveryWorkflowResult
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.studio_scene_service import StudioSceneService
+from archium.application.visual.template_studio_service import (
+    RecoveryTemplateSaveResult,
+    TemplateStudioService,
+)
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource, SlideType
 from archium.domain.export_fidelity import DeckExportManifest, ExportPolicy, SlideExportResult
@@ -233,6 +237,24 @@ class SlideRecoveryDeliveryService:
             scene_preview_path=preview_path,
         )
 
+    def save_as_template_reference(
+        self,
+        project_id: UUID,
+        hybrid: HybridRenderScene,
+        *,
+        source_page_id: str,
+        source_preview_path: Path | None = None,
+        template_name: str | None = None,
+    ) -> RecoveryTemplateSaveResult:
+        service = TemplateStudioService(self._session, settings=self._settings)
+        return service.create_from_recovery_reference(
+            project_id=project_id,
+            hybrid=hybrid,
+            source_page_id=source_page_id,
+            source_preview_path=source_preview_path,
+            name=template_name,
+        )
+
     def _resolve_export_presentation_id(
         self,
         project_id: UUID,
@@ -302,7 +324,7 @@ def _layout_plan_from_recovery_scene(
         role = (
             LayoutElementRole.TITLE
             if node.semantic_role in {"title", "subtitle"}
-            else LayoutElementRole.BODY
+            else LayoutElementRole.BODY_TEXT
         )
         elements.append(
             LayoutElement(
@@ -322,7 +344,7 @@ def _layout_plan_from_recovery_scene(
         elements.append(
             LayoutElement(
                 id="recovery-body",
-                role=LayoutElementRole.BODY,
+                role=LayoutElementRole.BODY_TEXT,
                 content_type=LayoutContentType.TEXT,
                 text_content="页面复活导入",
                 x=0.7,
