@@ -121,7 +121,7 @@ def _render_inspector_tabs(
     )
 
 
-def _render_view_controls() -> None:
+def _render_view_controls(*, compact: bool = False) -> None:
     """Compact view menu instead of a full engineering control row."""
     if "studio_show_nav" not in st.session_state:
         st.session_state.studio_show_nav = True
@@ -132,8 +132,7 @@ def _render_view_controls() -> None:
     show_inspector = bool(st.session_state.studio_show_inspector)
     is_three = show_nav and show_inspector
 
-    cols = st.columns([1.2, 4])
-    with cols[0], st.popover("视图", use_container_width=True):
+    with st.popover("视图", use_container_width=True):
         st.checkbox("页面列表", key="studio_show_nav")
         st.checkbox("检查器", key="studio_show_inspector")
         if is_three:
@@ -148,7 +147,7 @@ def _render_view_controls() -> None:
                 st.session_state.studio_show_nav = True
                 st.session_state.studio_show_inspector = True
                 st.rerun()
-    with cols[1]:
+    if not compact:
         bits = []
         if show_nav:
             bits.append("页面列表")
@@ -192,6 +191,27 @@ def _render_deck_issue_list(*, context: object) -> None:
             st.rerun()
 
 
+def _select_activity_tab(options: list[str], *, key: str) -> str:
+    if hasattr(st, "segmented_control"):
+        active = st.segmented_control(
+            "活动分区",
+            options=options,
+            key=key,
+            label_visibility="collapsed",
+        )
+    else:
+        active = st.radio(
+            "活动分区",
+            options=options,
+            horizontal=True,
+            key=key,
+            label_visibility="collapsed",
+        )
+    if active not in options:
+        return options[0]
+    return str(active)
+
+
 def _render_studio_info_menus(
     *,
     context: object,
@@ -199,43 +219,63 @@ def _render_studio_info_menus(
     slide_snapshot: SlideVisualSnapshot | None,
     show_progress: bool,
 ) -> None:
-    """Top-toolbar info menus (not a fake fixed dock).
+    """Top chrome: one「活动中心」+「视图」— avoids three crowded popovers on small screens.
 
-    - 状态 / 历史：后台进度与修订
-    - 问题：全稿问题列表（点击聚焦页面）
+    - 活动中心 Tabs：状态 / 问题 / 历史
     - 当前页修复操作只在右侧「检查」Tab
     """
-    cols = st.columns(3)
-    with cols[0], st.popover("状态", use_container_width=True):
-        if show_progress:
-            render_workflow_progress_panel(
-                context.project.id,
-                scope="visual",
-                presentation_id=context.presentation.id,
-                result_session_key="last_visual_workflow_result",
-                on_complete=_apply_visual_result,
-                rerun_on_complete=False,
-            )
-        else:
-            st.caption("生成进度在后台任务运行时显示。")
-        from archium.ui.page_status_board_panel import render_page_status_board
+    if "studio_show_nav" not in st.session_state:
+        st.session_state.studio_show_nav = True
+    if "studio_show_inspector" not in st.session_state:
+        st.session_state.studio_show_inspector = True
 
-        render_page_status_board(
-            presentation_id=context.presentation.id,
-            project_id=context.project.id,
-            compact=True,
-            key_prefix="studio_info_status",
-            title="",
+    cols = st.columns([1.35, 1.1, 3.5])
+    with cols[0], st.popover("活动中心", use_container_width=True):
+        active = _select_activity_tab(
+            ["状态", "问题", "历史"],
+            key="studio_activity_center_tab",
         )
-    with cols[1], st.popover("问题", use_container_width=True):
-        st.caption("全稿问题列表。点击后聚焦对应页面；修复请用右侧「检查」。")
-        _render_deck_issue_list(context=context)
-    with cols[2], st.popover("历史", use_container_width=True):
-        render_history_panel(
-            context=context,
-            advanced=advanced,
-            slide_snapshot=slide_snapshot,
-        )
+        if active == "状态":
+            if show_progress:
+                render_workflow_progress_panel(
+                    context.project.id,
+                    scope="visual",
+                    presentation_id=context.presentation.id,
+                    result_session_key="last_visual_workflow_result",
+                    on_complete=_apply_visual_result,
+                    rerun_on_complete=False,
+                )
+            else:
+                st.caption("生成进度在后台任务运行时显示。")
+            from archium.ui.page_status_board_panel import render_page_status_board
+
+            render_page_status_board(
+                presentation_id=context.presentation.id,
+                project_id=context.project.id,
+                compact=True,
+                key_prefix="studio_info_status",
+                title="",
+            )
+        elif active == "问题":
+            st.caption("全稿问题列表。点击后聚焦对应页面；修复请用右侧「检查」。")
+            _render_deck_issue_list(context=context)
+        else:
+            render_history_panel(
+                context=context,
+                advanced=advanced,
+                slide_snapshot=slide_snapshot,
+            )
+    with cols[1]:
+        _render_view_controls(compact=True)
+    with cols[2]:
+        show_nav = bool(st.session_state.get("studio_show_nav", True))
+        show_inspector = bool(st.session_state.get("studio_show_inspector", True))
+        bits = []
+        if show_nav:
+            bits.append("页面列表")
+        if show_inspector:
+            bits.append("检查器")
+        st.caption("视图：" + (" · ".join(bits) if bits else "画布专注"))
 
 
 def render(
@@ -256,7 +296,7 @@ def render(
     if show_header:
         from archium.ui.components.chrome import render_page_header
 
-        render_page_header("工作室", "页面列表 · 主画布 · 检查器。状态 / 问题 / 历史在顶部菜单。")
+        render_page_header("工作室", "页面列表 · 主画布 · 检查器。活动中心与视图在顶部菜单。")
 
     critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
     context = render_studio_selection(
@@ -284,8 +324,6 @@ def render(
         slide_snapshot=slide_snapshot,
         show_progress=show_progress,
     )
-
-    _render_view_controls()
 
     show_nav = bool(st.session_state.studio_show_nav)
     show_inspector = bool(st.session_state.studio_show_inspector)

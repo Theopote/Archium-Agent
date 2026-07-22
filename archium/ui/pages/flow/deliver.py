@@ -149,7 +149,7 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         st.error("资料状态无法验证 · 禁止正式交付（请检查数据库后重试）")
         materials_label = "无法验证"
     elif evidence.is_concept_draft:
-        st.warning("无项目证据 · 草稿模式 · 不得正式交付（请先绑定资料）")
+        # Global draft banner already shown in stage header; keep metric only.
         materials_label = "0 份"
     else:
         materials_label = f"{evidence.document_count} 份"

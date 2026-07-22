@@ -176,6 +176,25 @@ def test_stage_header_uses_stepper_not_plain_chain() -> None:
     assert "主流程：" not in text
     assert "evaluate_stage_gate" in text
     assert "确认大纲并开始生成" in text
+    assert "render_concept_draft_banner" in text
+    assert "概念草稿模式" in text
+
+
+def test_outline_page_types_use_chinese_labels() -> None:
+    outline_src = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "pages"
+        / "flow"
+        / "outline.py"
+    )
+    text = outline_src.read_text(encoding="utf-8")
+    assert 'page_type_label' in text
+    assert '"photo_evidence_grid": "现场照片证据"' in text
+    assert '"drawing_focus": "图纸主导"' in text
+    assert "format_func=_format_page_type" in text
+    assert "显示内部类型值" in text
 
 
 def test_generate_page_has_single_primary_studio_path() -> None:
@@ -229,6 +248,7 @@ def test_studio_supports_canvas_maximize() -> None:
     assert "恢复三栏" in text
     assert "studio_show_nav" in text
     assert "studio_show_inspector" in text
+    assert 'st.popover("活动中心"' in text
 
 
 def test_home_other_projects_continue_into_project() -> None:

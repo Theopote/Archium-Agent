@@ -142,6 +142,23 @@ def render_warning_callout(message: str) -> None:
     )
 
 
+def render_draft_mode_banner(
+    *,
+    title: str = "概念草稿模式",
+    detail: str = "无项目资料，不得正式交付",
+) -> None:
+    """Persistent, high-visibility banner for concept-draft sessions."""
+    st.markdown(
+        (
+            f'<div class="archium-callout archium-callout-draft">'
+            f"<strong>{html.escape(title)}</strong>"
+            f"{html.escape(detail)}"
+            f"</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 def render_info_callout(message: str) -> None:
     st.markdown(
         f'<div class="archium-callout archium-callout-info">{html.escape(message)}</div>',

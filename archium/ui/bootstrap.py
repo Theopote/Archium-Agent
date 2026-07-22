@@ -190,6 +190,19 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     background: var(--archium-warn-bg);
     border-color: var(--archium-warn-border);
 }
+.archium-callout-draft {
+    color: #7a4a00;
+    background: #fff4e0;
+    border-color: #e0b45c;
+    border-width: 1px;
+    border-left-width: 4px;
+    font-weight: 500;
+}
+.archium-callout-draft strong {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 0.15rem;
+}
 .archium-callout-info {
     color: var(--archium-info);
     background: var(--archium-info-bg);

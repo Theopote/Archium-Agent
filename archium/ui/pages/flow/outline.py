@@ -28,17 +28,24 @@ from archium.ui.pages.flow import (
 from archium.ui.planning_service import TASK_EXAMPLE_PROMPTS, PlanningSnapshot
 from archium.ui.workspace_service import list_project_presentations
 
-_PAGE_TYPE_OPTIONS = (
-    "general",
-    "title",
-    "content",
-    "photo_evidence_grid",
-    "drawing_focus",
-    "comparison",
-    "summary",
-    "data",
-    "closing",
-)
+_PAGE_TYPE_LABELS = {
+    "general": "通用内容",
+    "title": "封面 / 标题",
+    "content": "正文内容",
+    "photo_evidence_grid": "现场照片证据",
+    "drawing_focus": "图纸主导",
+    "comparison": "对比分析",
+    "summary": "小结归纳",
+    "data": "数据指标",
+    "closing": "结论与决策",
+}
+
+_PAGE_TYPE_OPTIONS = tuple(_PAGE_TYPE_LABELS.keys())
+
+
+def page_type_label(value: str) -> str:
+    key = (value or "").strip() or "general"
+    return _PAGE_TYPE_LABELS.get(key, key)
 
 
 def _render_task_composer(project_id: UUID) -> None:
@@ -440,7 +447,7 @@ def _render_intent_cards(
             st.markdown(f"**证据**  \n{card['evidence']}")
             st.markdown(f"**指定素材**  \n{card['assets']}")
             meta = st.columns(2)
-            meta[0].markdown(f"**页面类型**  \n{card['page_type']}")
+            meta[0].markdown(f"**页面类型**  \n{page_type_label(str(card['page_type']))}")
             meta[1].markdown(f"**状态**  \n{card['status']}")
         return
 
@@ -479,10 +486,24 @@ def _render_intent_cards(
         current_type = intent.expected_layout.strip() or "general"
         if current_type not in page_type_options:
             page_type_options = [current_type, *page_type_options]
+        show_internal = st.toggle(
+            "显示内部类型值",
+            value=False,
+            key=f"outline_intent_type_internal_{outline.id}_{intent.order}",
+            help="高级：同时显示 English key（如 photo_evidence_grid）。",
+        )
+
+        def _format_page_type(value: str) -> str:
+            label = page_type_label(value)
+            if show_internal and value in _PAGE_TYPE_LABELS:
+                return f"{label}（{value}）"
+            return label
+
         page_type = st.selectbox(
             "页面类型",
             options=page_type_options,
             index=page_type_options.index(current_type),
+            format_func=_format_page_type,
             key=f"outline_intent_type_{outline.id}_{intent.order}",
         )
 
@@ -580,25 +601,11 @@ def _render_task_meta(
     st.caption("尚未确认汇报任务。")
 
 
-def _render_draft_banner(document_count: int) -> None:
-    if document_count > 0:
-        return
-    st.warning("无项目证据 · 草稿模式 — 可继续规划与生成，但不得正式交付。")
-
-
 def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> None:
     has_mission = snapshot.mission is not None
     has_request = snapshot.presentation_request is not None
     outline, storyline, slides = _load_outline_storyline(project_id)
     cards = _intent_cards_from_sources(outline=outline, snapshot=snapshot, slides=slides)
-
-    try:
-        from archium.ui.project_progress_card import load_project_progress_snapshot
-
-        progress = load_project_progress_snapshot()
-        _render_draft_banner(int(progress.document_count) if progress else 0)
-    except Exception:
-        pass
 
     if not has_mission and not has_request and outline is None and not cards:
         st.info("尚未确认大纲。先描述汇报任务，再生成结构。")

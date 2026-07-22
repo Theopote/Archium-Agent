@@ -9,6 +9,7 @@ import streamlit as st
 from archium.domain.enums import EvidenceAvailability
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import (
+    render_draft_mode_banner,
     render_page_header,
     render_primary_action,
     render_secondary_action,
@@ -287,10 +288,36 @@ def render_flow_stepper(current_stage_id: str) -> None:
     render_stepper(" ─ ".join(parts))
 
 
+def render_concept_draft_banner(snapshot: ProjectProgressSnapshot | None = None) -> None:
+    """Show a persistent draft-mode banner on every product-flow stage."""
+    if snapshot is None:
+        try:
+            snapshot = load_project_progress_snapshot()
+        except Exception:
+            snapshot = None
+    if snapshot is None:
+        return
+    if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
+        render_draft_mode_banner(
+            title="资料状态无法验证",
+            detail="正式交付已禁用，请检查数据库连接后重试",
+        )
+        return
+    if (
+        snapshot.evidence_availability == EvidenceAvailability.MISSING
+        or snapshot.document_count <= 0
+    ):
+        render_draft_mode_banner(
+            title="概念草稿模式",
+            detail="无项目资料，不得正式交付",
+        )
+
+
 def render_stage_header(stage_id: str) -> None:
     stage = get_stage(stage_id)
     render_page_header(stage.title, stage.caption)
     render_flow_stepper(stage_id)
+    render_concept_draft_banner()
 
 
 def render_flow_project_context(

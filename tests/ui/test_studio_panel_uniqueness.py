@@ -36,6 +36,8 @@ def test_info_menus_do_not_embed_full_repair_controls() -> None:
     assert "render_deferred_scene_repair_panel" not in info_block
     assert "render_human_review_panel" not in info_block
     assert "_render_deck_issue_list" in info_block
+    assert 'st.popover("活动中心"' in info_block
+    assert '["状态", "问题", "历史"]' in info_block
 
 
 def test_inspector_is_lazy_not_st_tabs() -> None:

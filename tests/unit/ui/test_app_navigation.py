@@ -292,7 +292,8 @@ def test_edit_stage_embeds_studio_without_inner_header() -> None:
     assert "_render_studio_info_menus" in studio_text
     assert "_render_deck_issue_list" in studio_text
     assert "_render_bottom_dock" not in studio_text
-    assert 'st.popover("问题"' in studio_text
+    assert 'st.popover("活动中心"' in studio_text
+    assert 'st.popover("问题"' not in studio_text
 
 
 def test_studio_export_is_popover_not_top_panel() -> None:
@@ -336,6 +337,7 @@ def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
     assert "st.tabs(" not in text
     assert "_render_view_controls" in text
     assert 'st.popover("视图"' in text
+    assert 'st.popover("活动中心"' in text
     assert "render_ai_workspace" in text
     assert "_render_bottom_dock" not in text
     assert "_render_studio_info_menus" in text
@@ -347,3 +349,6 @@ def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
     info_block = text[info_start : text.index("def render(", info_start)]
     assert "render_deferred_scene_repair_panel" not in info_block
     assert "render_human_review_panel" not in info_block
+    assert 'st.popover("状态"' not in info_block
+    assert 'st.popover("问题"' not in info_block
+    assert 'st.popover("历史"' not in info_block
