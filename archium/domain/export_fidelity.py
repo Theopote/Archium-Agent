@@ -123,9 +123,9 @@ class DeckExportManifest(DomainModel):
             count = self.fidelity_counts[level]
             if count:
                 lines.append(f"{FIDELITY_LABELS_ZH[level]}：{count} 页")
-        for level, count in self.powerpoint_capability_counts.items():
+        for capability_level, count in self.powerpoint_capability_counts.items():
             if count:
-                lines.append(f"PowerPoint {level.value}: {count} objects")
+                lines.append(f"PowerPoint {capability_level.value}: {count} objects")
         return lines
 
 

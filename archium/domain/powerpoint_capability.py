@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import cast
 
 from pydantic import Field
 
@@ -98,8 +99,11 @@ def capability_for_scene_node(node: str | BaseRenderNode) -> PowerPointCapabilit
         fidelity = PowerPointFidelity.APPROXIMATE
         limitations.append("V1 PPTX picture export does not preserve corner, border, or shadow styling.")
 
-    return baseline.model_copy(
-        update={"fidelity": fidelity, "limitations": list(dict.fromkeys(limitations))}
+    return cast(
+        PowerPointCapabilityMapping,
+        baseline.model_copy(
+            update={"fidelity": fidelity, "limitations": list(dict.fromkeys(limitations))}
+        ),
     )
 
 
