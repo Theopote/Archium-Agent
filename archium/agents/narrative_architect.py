@@ -22,6 +22,7 @@ from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
+from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import StorylineDraft
@@ -42,6 +43,7 @@ class NarrativeArchitect:
         self._llm = llm
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
+        self._missions = MissionRepository(session)
         self._history = StorylineHistoryService(session)
 
     def generate(
@@ -71,6 +73,9 @@ class NarrativeArchitect:
             query=build_retrieval_query_from_brief(brief),
             settings=self._settings,
         )
+        missions = self._missions.list_missions_by_project(project_id)
+        mission = missions[0] if missions else None
+        narrative_mode = mission.narrative_mode if mission is not None else None
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=STORYLINE_SYSTEM_PROMPT,
@@ -83,6 +88,7 @@ class NarrativeArchitect:
                     issue_map_json=format_issue_map_for_prompt(renovation_issue_map)
                     if renovation_issue_map is not None
                     else None,
+                    narrative_mode=narrative_mode,
                 ),
                 temperature=0.4,
             ),
@@ -93,6 +99,8 @@ class NarrativeArchitect:
             presentation_id=brief.presentation_id,
             version=version,
         )
+        if narrative_mode is not None:
+            storyline.narrative_pattern = narrative_mode.value
         apply_storyline_lineage(storyline, previous)
         saved = self._presentations.save_storyline(storyline)
         self._history.record_snapshot(saved, RevisionSource.GENERATED)

@@ -10,10 +10,13 @@ import pytest
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
 from archium.application.presentation_workflow_service import PresentationWorkflowService
+from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
 from archium.domain.document import DocumentChunk
 from archium.domain.enums import ProjectType
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
+from archium.domain.project_mission import ProjectMission
+from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
     FactRepository,
@@ -157,3 +160,30 @@ def test_pipeline_step_methods(
     assert brief.core_message
     assert len(storyline.chapters) == 2
     assert len(slides) == 4
+
+
+def test_storyline_honors_mission_narrative_mode(
+    db_session: Session,
+    presentation_service: PresentationService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+) -> None:
+    MissionRepository(db_session).save_mission(
+        ProjectMission(
+            project_id=project_with_context.id,
+            title="Decision review",
+            task_statement="Choose the preferred renewal strategy",
+            narrative_mode=ArchitecturalNarrativeMode.DECISION_FIRST,
+        )
+    )
+    presentation = presentation_service.create_presentation(
+        project_with_context.id,
+        request_payload,
+    )
+    brief = presentation_service.generate_brief(
+        project_with_context.id,
+        presentation.id,
+        request_payload,
+    )
+    storyline = presentation_service.generate_storyline(project_with_context.id, brief)
+    assert storyline.narrative_pattern == ArchitecturalNarrativeMode.DECISION_FIRST.value

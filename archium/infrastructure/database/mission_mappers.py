@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
+from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
 from archium.domain.deliverable import (
     DELIVERABLE_PLAN_LOGICAL_KEY,
     DeliverablePlan,
@@ -88,6 +89,9 @@ def project_mission_to_domain(orm: ProjectMissionORM) -> ProjectMission:
         stakeholders=[Stakeholder.model_validate(item) for item in orm.stakeholders_json],
         decision_context=orm.decision_context,
         decisions_required=list(orm.decisions_required_json),
+        narrative_mode=(
+            ArchitecturalNarrativeMode(orm.narrative_mode) if orm.narrative_mode else None
+        ),
         known_constraints=[
             MissionConstraint.model_validate(item) for item in orm.known_constraints_json
         ],
@@ -131,6 +135,7 @@ def project_mission_to_orm(
     target.stakeholders_json = [item.model_dump(mode="json") for item in domain.stakeholders]
     target.decision_context = domain.decision_context
     target.decisions_required_json = list(domain.decisions_required)
+    target.narrative_mode = domain.narrative_mode.value if domain.narrative_mode else None
     target.known_constraints_json = [
         item.model_dump(mode="json") for item in domain.known_constraints
     ]

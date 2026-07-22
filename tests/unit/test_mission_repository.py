@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import (
     ApprovalStatus,
@@ -65,6 +66,17 @@ def test_save_and_get_mission(mission_repo: MissionRepository, project_id: UUID)
     assert fetched.task_natures == mission.task_natures
     assert fetched.stakeholders[0].name == "甲方"
     assert fetched.out_of_scope == ["施工图设计"]
+
+
+def test_narrative_mode_survives_repository_round_trip(
+    mission_repo: MissionRepository, project_id: UUID
+) -> None:
+    mission = _sample_mission(project_id)
+    mission.narrative_mode = ArchitecturalNarrativeMode.DECISION_FIRST
+    saved = mission_repo.save_mission(mission)
+    fetched = mission_repo.get_mission(saved.id)
+    assert fetched is not None
+    assert fetched.narrative_mode == ArchitecturalNarrativeMode.DECISION_FIRST
 
 
 def test_list_missions_by_project(mission_repo: MissionRepository, project_id: UUID) -> None:

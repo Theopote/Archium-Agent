@@ -1,5 +1,9 @@
 """Prompts for storyline generation."""
 
+from archium.domain.architectural_narrative_mode import (
+    ArchitecturalNarrativeMode,
+    contract_for_narrative_mode,
+)
 from archium.prompts.identity import ARCHIUM_IDENTITY
 
 STORYLINE_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
@@ -49,7 +53,20 @@ def build_storyline_user_prompt(
     brief_json: str,
     narrative_json: str | None = None,
     issue_map_json: str | None = None,
+    narrative_mode: ArchitecturalNarrativeMode | None = None,
 ) -> str:
+    mode_block = ""
+    if narrative_mode is not None:
+        contract = contract_for_narrative_mode(narrative_mode)
+        stages = " -> ".join(stage.value for stage in contract.stage_sequence)
+        questions = "\n".join(f"- {question}" for question in contract.required_questions)
+        mode_block = (
+            "\n[Locked Architectural Narrative Mode]\n"
+            f"mode: {narrative_mode.value}\n"
+            f"stage_sequence: {stages}\n"
+            "This mode is mission-level and must not be replaced by a visual style.\n"
+            + (f"required_questions:\n{questions}\n" if questions else "")
+        )
     narrative_block = ""
     if narrative_json:
         narrative_block = f"\n【文化叙事计划】\n{narrative_json}\n"
@@ -63,4 +80,5 @@ def build_storyline_user_prompt(
         f"【PresentationBrief】\n{brief_json}"
         f"{narrative_block}"
         f"{issue_map_block}"
+        f"{mode_block}"
     )
