@@ -12,8 +12,10 @@ from archium.ui.studio.revision_restore_panel import (
     render_content_revision_panel,
     render_visual_revision_panel,
 )
+from archium.ui.studio.visual_version_timeline import render_scene_version_timeline_panel
 from archium.ui.studio_service import (
     StudioPresentationContext,
+    count_scene_revisions,
     count_visual_revisions,
     studio_readiness_label,
 )
@@ -27,7 +29,7 @@ def render_history_panel(
     slide_snapshot: SlideVisualSnapshot | None = None,
 ) -> None:
     """Render workflow status, deck QA summary, and revision history."""
-    st.markdown("**状态与版本**")
+    st.markdown("**状态与版本时间线**")
     readiness = studio_readiness_label(context)
     cols = st.columns(4)
     cols[0].metric("页面数", context.slide_count)
@@ -57,8 +59,16 @@ def render_history_panel(
 
     if slide_snapshot is not None:
         with get_session() as session:
-            revision_count = count_visual_revisions(session, slide_snapshot.slide.id)
-        st.caption(f"当前页视觉修订：{revision_count} 条（可逐步撤销或恢复到任意版本）")
+            scene_revision_count = count_scene_revisions(session, slide_snapshot.slide.id)
+            layout_revision_count = count_visual_revisions(session, slide_snapshot.slide.id)
+        st.caption(
+            f"RenderScene 版本：{scene_revision_count} 条 · "
+            f"版式/意图修订：{layout_revision_count} 条"
+        )
+        render_scene_version_timeline_panel(
+            slide_snapshot=slide_snapshot,
+            presentation_id=context.presentation.id,
+        )
         render_visual_revision_panel(slide_snapshot=slide_snapshot)
         render_content_revision_panel(slide_snapshot=slide_snapshot)
 

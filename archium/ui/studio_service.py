@@ -641,6 +641,21 @@ def count_visual_revisions(session: Session, slide_id: UUID) -> int:
     return len(VisualHistoryService(session).list_slide_visual_revisions(slide))
 
 
+def count_scene_revisions(session: Session, slide_id: UUID) -> int:
+    from archium.application.scene_revision_timeline_service import SceneRevisionTimelineService
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    slide = PresentationRepository(session).get_slide(slide_id)
+    if slide is None:
+        return 0
+    return len(
+        SceneRevisionTimelineService(session).list_summaries(
+            slide,
+            include_rejected_proposals=False,
+        )
+    )
+
+
 def count_visual_undo_steps(session: Session, slide_id: UUID) -> int:
     from archium.application.visual.visual_edit_service import VisualEditService
 

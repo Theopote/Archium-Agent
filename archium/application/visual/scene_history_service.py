@@ -34,9 +34,11 @@ class SceneHistoryService:
         commands: list[StudioCommand] | None = None,
         parent_revision_id: UUID | None = None,
         note: str | None = None,
+        summary: str | None = None,
+        qa_status: str | None = None,
     ) -> tuple[EntityRevision, SceneRevision]:
         scene_hash = compute_scene_hash(scene)
-        snapshot = {
+        snapshot: dict[str, object] = {
             "kind": SCENE_STATE_SNAPSHOT_KIND,
             "slide_id": str(slide.id),
             "scene_id": str(scene.id),
@@ -50,6 +52,10 @@ class SceneHistoryService:
                 command.model_dump(mode="json") for command in (commands or [])
             ],
         }
+        if summary:
+            snapshot["summary"] = summary
+        if qa_status:
+            snapshot["qa_status"] = qa_status
         entity_revision = self._revisions.record(
             entity_type=RevisionEntityType.RENDER_SCENE,
             entity_id=scene.id,

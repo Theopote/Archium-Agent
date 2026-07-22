@@ -379,6 +379,8 @@ class StudioSceneService:
             change_source=RevisionSource.AUTO_REPAIR,
             scene_revision_source="automatic_repair",
             note=summary or "safe auto repair",
+            summary=f"QA 修复：{summary}" if summary else "QA 自动修复",
+            qa_status="repaired",
         )
 
     def _ensure_preview(self, presentation_id: UUID, scene: RenderScene) -> Path:

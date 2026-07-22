@@ -327,6 +327,8 @@ class SceneProposalService:
             commands=accepted_commands,
             parent_revision_id=parent_revision_id,
             note=decision.notes if decision is not None else None,
+            summary=self._proposal_accept_summary(proposal, accepted_commands),
+            qa_status=self._proposal_qa_status(accepted_qa),
         )
         self._studio_scene.invalidate_preview_cache(
             slide.presentation_id,
@@ -467,6 +469,36 @@ class SceneProposalService:
             slide_order=slide_order,
             studio_scene=self._studio_scene,
         )
+
+    @staticmethod
+    def _proposal_accept_summary(
+        proposal: SceneChangeProposal,
+        accepted_commands: list,
+    ) -> str:
+        if proposal.reasons:
+            return "AI 提案：" + "；".join(proposal.reasons[:2])
+        if accepted_commands:
+            first = accepted_commands[0]
+            intent = getattr(first, "intent", None) or getattr(first, "command_type", None)
+            if intent:
+                return f"AI 提案：{intent}"
+            return f"AI 提案：{len(accepted_commands)} 条命令"
+        return "AI 提案：已接受"
+
+    @staticmethod
+    def _proposal_qa_status(accepted_qa: ProposalSceneQAResult) -> str:
+        blockers = sum(
+            1
+            for issue in accepted_qa.issues
+            if getattr(issue, "severity", None) is not None
+            and str(getattr(issue.severity, "value", issue.severity))
+            in {"blocker", "major", "BLOCKER", "MAJOR"}
+        )
+        if blockers:
+            return "pass_with_warnings"
+        if accepted_qa.issues:
+            return "pass_with_warnings"
+        return "passed"
 
 
 def apply_patch_actions(
