@@ -35,7 +35,7 @@ from archium.domain.visual.enums import (
     LayoutFamily,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.render_scene import FontAsset
+from archium.domain.visual.render_scene import FontAsset, RenderScene
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.visual_repositories import (
     ArchitecturalTemplateRepository,
@@ -577,7 +577,7 @@ class TemplateStudioService:
         self,
         *,
         name: str,
-        scene,
+        scene: RenderScene,
         source_reference: str,
     ) -> DesignSystem:
         fonts = [
@@ -694,7 +694,7 @@ class TemplateStudioService:
             classification_notes="slide recovery reference export",
         )
 
-    def _scene_colors(self, scene) -> list[str]:
+    def _scene_colors(self, scene: RenderScene) -> list[str]:
         colors: list[str] = []
         if getattr(scene.background, "color", ""):
             colors.append(scene.background.color)

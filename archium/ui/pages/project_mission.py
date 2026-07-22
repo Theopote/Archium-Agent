@@ -737,11 +737,12 @@ def render(*, embedded: bool = False) -> None:
         if raw is None:
             st.info("请先在上方选择项目。")
             return
-        selected_project_id = UUID(str(raw))
+        selected_project_id: UUID | None = UUID(str(raw))
     else:
         selected_project_id = _project_selector()
-        if selected_project_id is None:
-            return
+
+    if selected_project_id is None:
+        return
 
     project_id = selected_project_id
     snapshot = _load_snapshot(project_id)

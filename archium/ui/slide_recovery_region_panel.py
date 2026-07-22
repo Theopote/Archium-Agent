@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import UUID
 
 import streamlit as st
@@ -28,6 +29,7 @@ from archium.domain.enums import WorkflowStatus
 from archium.domain.slide_recovery import (
     REGION_TYPE_LABELS_ZH,
     REGION_TYPE_OPTIONS,
+    NormalizedBox,
     RecoveredPageRegion,
 )
 from archium.exceptions import WorkflowError
@@ -215,7 +217,7 @@ def render_slide_recovery_region_editor(
 
 def _render_interactive_region_canvas(
     *,
-    source_path,
+    source_path: Path | str,
     regions: list[RecoveredPageRegion],
     selected_index: int,
     selected_key: str,
@@ -302,7 +304,7 @@ def _render_interactive_region_canvas(
 
 def _render_static_region_overlay(
     *,
-    source_path,
+    source_path: Path | str,
     regions: list[RecoveredPageRegion],
     selected_region: RecoveredPageRegion,
     run_id: UUID,
@@ -316,7 +318,7 @@ def _render_static_region_overlay(
     )
     try:
         render_region_overlay(
-            source_path,
+            Path(source_path),
             regions,
             overlay_path,
             highlight_region_id=selected_region.id,
@@ -493,7 +495,7 @@ def _render_region_form(
     )
 
 
-def normalize_bbox_values(*, x: float, y: float, width: float, height: float):
+def normalize_bbox_values(*, x: float, y: float, width: float, height: float) -> NormalizedBox:
     from archium.application.slide_recovery_region_edit_service import normalize_bbox
 
     return normalize_bbox(x=x, y=y, width=width, height=height)

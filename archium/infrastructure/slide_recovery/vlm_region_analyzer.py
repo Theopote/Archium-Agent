@@ -28,7 +28,7 @@ from archium.prompts.slide_recovery import (
 try:
     from PIL import Image
 except ImportError:  # pragma: no cover
-    Image = None
+    Image = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 

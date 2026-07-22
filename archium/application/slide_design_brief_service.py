@@ -29,6 +29,7 @@ from archium.domain.slide_design_brief import (
     index_design_briefs,
     infer_primary_visual_type,
 )
+from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -262,7 +263,7 @@ class SlideDesignBriefService:
         *,
         bindings: list[SlideAssetBinding],
         preserve_status: bool = False,
-        usage_brief=None,
+        usage_brief: TemplateUsageBrief | None = None,
     ) -> SlideDesignBrief:
         from archium.application.visual.image_treatment_planning_service import (
             ImageTreatmentPlanningService,
@@ -271,7 +272,6 @@ class SlideDesignBriefService:
             constraints_from_brief,
         )
         from archium.domain.visual.enums import ImageFit
-        from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 
         primary_visual = infer_primary_visual_type(intent.expected_layout)
         primary_assets: list[UUID] = []
@@ -369,7 +369,7 @@ class SlideDesignBriefService:
             status=BriefStatus.READY_FOR_REVIEW if not preserve_status else BriefStatus.DRAFT,
         )
 
-    def _resolve_usage_brief(self, outline: OutlinePlan):
+    def _resolve_usage_brief(self, outline: OutlinePlan) -> TemplateUsageBrief | None:
         presentation = self._presentations.get_presentation(outline.presentation_id)
         if presentation is None:
             return None

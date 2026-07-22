@@ -173,11 +173,14 @@ def render_deck_theme_panel(
         except Exception as exc:
             st.error(format_user_error(exc))
 
-    proposal = _get_stored_theme_proposal(presentation_id) or active
-    if proposal is None:
+    stored_proposal: ThemeChangeProposal | None = (
+        _get_stored_theme_proposal(presentation_id) or active
+    )
+    if stored_proposal is None:
         st.caption("尚未生成风格提案。")
         return
 
+    proposal = stored_proposal
     if proposal.status not in {
         ThemeProposalStatus.READY,
         ThemeProposalStatus.READY_WITH_WARNINGS,

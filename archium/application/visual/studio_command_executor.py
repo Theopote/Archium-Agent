@@ -10,6 +10,7 @@ from archium.application.visual.asset_binding_validator import AssetBindingValid
 from archium.application.visual.asset_path_resolver import AssetPathResolveContext
 from archium.application.visual.drawing_readability_service import increase_drawing_readability
 from archium.application.visual.scene_geometry import (
+    _Box,
     align_nodes,
     geometry_token,
     page_box,
@@ -802,7 +803,7 @@ class StudioCommandExecutor:
             )
 
         before_tokens = {node.id: geometry_token(node) for node in resolved}
-        align_reference = None
+        align_reference: BaseRenderNode | _Box | None = None
         if command.reference_node_id:
             align_reference = patched.node_by_id(command.reference_node_id)
         elif len(resolved) == 1:

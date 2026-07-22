@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from archium.domain.page_pipeline_status import PagePipelinePhase, PageStatusBoard
+from archium.domain.page_pipeline_status import (
+    PagePipelinePhase,
+    PagePipelineStatus,
+    PageStatusBoard,
+)
 
 
 @dataclass(frozen=True)
@@ -46,7 +50,7 @@ def metrics_from_board(board: PageStatusBoard) -> GenerateQueueMetrics:
     )
 
 
-def queue_row_status(row) -> str:
+def queue_row_status(row: PagePipelineStatus) -> str:
     """Short Chinese status for the generate queue list."""
     from archium.ui.page_status_board_panel import status_label, status_short_detail
 

@@ -10,7 +10,7 @@ from archium.application.scene_revision_timeline_service import (
     SceneRevisionTimelineService,
     timeline_source_label,
 )
-from archium.config.settings import get_settings
+from archium.config.settings import Settings, get_settings
 from archium.domain.scene_revision_summary import SceneRevisionSummary
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
@@ -102,7 +102,7 @@ def _render_timeline_row(
     item: SceneRevisionSummary,
     slide_id: UUID,
     presentation_id: UUID,
-    settings,
+    settings: Settings,
     can_restore: bool,
 ) -> None:
     thumb_col, meta_col, action_col = st.columns([1.2, 3, 1.3])
@@ -166,7 +166,7 @@ def _render_compare_view(
     presentation_id: UUID,
     left_revision_id: UUID,
     right_revision_id: UUID,
-    settings,
+    settings: Settings,
 ) -> None:
     st.markdown("**版本对比**")
     try:

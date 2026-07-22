@@ -6,6 +6,11 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.evidence_readiness_service import (
+    DeliveryReadinessReport,
+    ProjectEvidenceStatus,
+    resolve_delivery_readiness_safe,
+)
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.config.settings import Settings
 from archium.domain.render import RenderResult
@@ -144,9 +149,7 @@ def _deck_qa_report() -> dict | None:
     return None
 
 
-def _delivery_readiness(*, project_id: UUID, presentation_id: UUID):
-    from archium.application.evidence_readiness_service import resolve_delivery_readiness_safe
-
+def _delivery_readiness(*, project_id: UUID, presentation_id: UUID) -> DeliveryReadinessReport:
     return resolve_delivery_readiness_safe(
         project_id=project_id,
         presentation_id=presentation_id,
@@ -386,7 +389,7 @@ def _export_pdf(
         st.error(format_user_error(exc))
 
 
-def _project_evidence_status(project_id: UUID):
+def _project_evidence_status(project_id: UUID) -> ProjectEvidenceStatus:
     from archium.application.evidence_readiness_service import resolve_project_evidence_safe
 
     return resolve_project_evidence_safe(project_id)

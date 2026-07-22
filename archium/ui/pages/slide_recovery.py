@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from typing import Protocol
 from uuid import UUID, uuid4
 
 import streamlit as st
@@ -67,12 +68,18 @@ def _render_project_selector() -> UUID | None:
     return UUID(selected)
 
 
-def _save_uploaded_file(uploaded_file: object) -> Path:
+class _UploadedFile(Protocol):
+    name: str
+
+    def getvalue(self) -> bytes: ...
+
+
+def _save_uploaded_file(uploaded_file: _UploadedFile) -> Path:
     suffix = Path(str(getattr(uploaded_file, "name", "page.png"))).suffix or ".png"
     workspace = Path(tempfile.gettempdir()) / "archium-slide-recovery" / "uploads"
     workspace.mkdir(parents=True, exist_ok=True)
     target = workspace / f"{uuid4().hex}{suffix.lower()}"
-    target.write_bytes(uploaded_file.getvalue())  # type: ignore[union-attr]
+    target.write_bytes(uploaded_file.getvalue())
     st.session_state.slide_recovery_upload_path = str(target)
     return target
 

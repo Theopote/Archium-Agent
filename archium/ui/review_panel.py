@@ -35,6 +35,7 @@ from archium.domain.enums import (
     SlideStatus,
     SlideType,
 )
+from archium.domain.outline import OutlinePlan
 from archium.domain.presentation_manuscript import ManuscriptStatus
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import repair_strategy_for_rule
@@ -1259,7 +1260,7 @@ def _slide_asset_binding_updates_from_outline(outline: object) -> list[SlideAsse
     ]
 
 
-def _render_page_asset_binding_editor(*, outline: object, project_id: UUID) -> None:
+def _render_page_asset_binding_editor(*, outline: OutlinePlan, project_id: UUID) -> None:
     from archium.application.asset_provenance import format_asset_option_label
     from archium.infrastructure.database.repositories import AssetRepository
 
@@ -1375,7 +1376,7 @@ def _render_page_asset_binding_editor(*, outline: object, project_id: UUID) -> N
             SlideAssetBindingUpdate(
                 page_order=int(page_order),
                 asset_id=str(asset_id),
-                binding_role=role.value,
+                binding_role=role.value if role is not None else SlideAssetBindingRole.PRIMARY_DRAWING.value,
                 user_description=description.strip(),
                 required=bool(required),
             )

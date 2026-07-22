@@ -13,6 +13,7 @@ from archium.application.slide_design_brief_service import (
     summarize_design_briefs,
 )
 from archium.domain.outline import OutlinePlan
+from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_design_brief import (
     BRIEF_STATUS_LABELS_ZH,
     BriefStatus,
@@ -153,7 +154,7 @@ def render_design_brief_panel(
         st.caption("进入生成前需完成：" + "；".join(missing))
 
 
-def _render_brief_editor(outline_id: UUID, brief):
+def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesignBrief:
 
     visual_options = [key for key, _ in _PRIMARY_VISUAL_OPTIONS]
     visual_labels = {key: label for key, label in _PRIMARY_VISUAL_OPTIONS}

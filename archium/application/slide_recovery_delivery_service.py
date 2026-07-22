@@ -28,6 +28,7 @@ from archium.domain.export_fidelity import DeckExportManifest, ExportPolicy, Sli
 from archium.domain.presentation import Presentation
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_recovery import HybridRenderScene, SlideRecoveryResult
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
@@ -303,7 +304,7 @@ class SlideRecoveryDeliveryService:
             )
         )
 
-    def _ensure_default_design_system(self):
+    def _ensure_default_design_system(self) -> DesignSystem:
         design = default_presentation_design_system()
         existing = self._designs.get(design.id)
         if existing is None:

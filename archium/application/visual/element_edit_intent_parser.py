@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Literal, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -383,7 +384,7 @@ class ElementEditIntentParser:
             asset_id=asset_id,
             locked=draft.locked,
             visible=draft.visible,
-            match_dimension=match_dim,
+            match_dimension=cast(Literal["width", "height", "both"] | None, match_dim),
             confidence=draft.confidence,
             source="structured_model",
             rationale=draft.rationale or "llm structured intent",

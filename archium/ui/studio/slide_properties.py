@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 import streamlit as st
@@ -260,7 +261,7 @@ def _render_element_properties(
 
     selected_from_ui = st.selectbox(
         "选择元素",
-        options=element_ids,  # type: ignore[arg-type]
+        options=cast(list[str], element_ids),
         index=element_ids.index(selected_id),
         format_func=_format_element_option,
         key=f"studio_element_select_{slide_snapshot.slide.id}",

@@ -180,7 +180,7 @@ class PngRenderer:
             resized = asset.resize((new_w, new_h), Image.Resampling.LANCZOS)
             offset_x = box[0] + (target_w - new_w) // 2
             offset_y = box[1] + (target_h - new_h) // 2
-            canvas.paste(resized, (offset_x, offset_y), resized)  # type: ignore[attr-defined]
+            canvas.paste(resized, (offset_x, offset_y), resized)
             return
 
         scale = max(target_w / src_w, target_h / src_h)
@@ -190,7 +190,7 @@ class PngRenderer:
         left = max(0, (new_w - target_w) // 2)
         top = max(0, (new_h - target_h) // 2)
         cropped = resized.crop((left, top, left + target_w, top + target_h))
-        canvas.paste(cropped, (box[0], box[1]), cropped)  # type: ignore[attr-defined]
+        canvas.paste(cropped, (box[0], box[1]), cropped)
 
     def _load_image_asset(self, path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
         from PIL import Image
