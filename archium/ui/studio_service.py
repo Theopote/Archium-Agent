@@ -374,6 +374,87 @@ def create_slide_scene_proposal_from_text(
     ).create_proposal_from_text(slide_id, text)
 
 
+def load_presentation_design_system(session: Session, presentation_id: UUID):
+    """Return the DesignSystem bound to this presentation's ArtDirection, if any."""
+    from archium.infrastructure.database.repositories import PresentationRepository
+    from archium.infrastructure.database.visual_repositories import (
+        ArtDirectionRepository,
+        DesignSystemRepository,
+    )
+
+    presentation = PresentationRepository(session).get_presentation(presentation_id)
+    if presentation is None:
+        return None
+    arts = ArtDirectionRepository(session).list_by_project(presentation.project_id)
+    art = next((item for item in arts if item.presentation_id == presentation_id), None)
+    if art is None and arts:
+        art = arts[0]
+    if art is None or art.design_system_id is None:
+        return None
+    return DesignSystemRepository(session).get(art.design_system_id)
+
+
+def create_theme_proposal(
+    session: Session,
+    presentation_id: UUID,
+    tokens: object,
+    *,
+    preferred_slide_id: UUID | None = None,
+):
+    """Create a deck-wide ThemeChangeProposal from Studio token controls."""
+    from archium.application.visual.theme_proposal_service import ThemeProposalService
+    from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
+
+    if not isinstance(tokens, DeckThemeTokens):
+        raise WorkflowError("无效的风格 Token。")
+    settings = _resolve_runtime_settings(None)
+    return ThemeProposalService(session, settings=settings).create_proposal(
+        presentation_id,
+        tokens,
+        preferred_slide_id=preferred_slide_id,
+    )
+
+
+def get_active_theme_proposal(session: Session, presentation_id: UUID):
+    from archium.application.visual.theme_proposal_service import ThemeProposalService
+
+    settings = _resolve_runtime_settings(None)
+    return ThemeProposalService(session, settings=settings).get_active(presentation_id)
+
+
+def accept_theme_proposal(
+    session: Session,
+    proposal: object,
+    *,
+    notes: str = "",
+    allow_blockers: bool = False,
+):
+    from archium.application.visual.theme_proposal_service import ThemeProposalService
+    from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
+
+    if not isinstance(proposal, ThemeChangeProposal):
+        raise WorkflowError("无效的风格提案。")
+    settings = _resolve_runtime_settings(None)
+    return ThemeProposalService(session, settings=settings).accept_proposal(
+        proposal,
+        notes=notes,
+        allow_blockers=allow_blockers,
+    )
+
+
+def reject_theme_proposal(session: Session, proposal: object, *, notes: str = ""):
+    from archium.application.visual.theme_proposal_service import ThemeProposalService
+    from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
+
+    if not isinstance(proposal, ThemeChangeProposal):
+        raise WorkflowError("无效的风格提案。")
+    settings = _resolve_runtime_settings(None)
+    return ThemeProposalService(session, settings=settings).reject_proposal(
+        proposal,
+        notes=notes,
+    )
+
+
 def create_slide_scene_proposal_from_element_comment(
     session: Session,
     slide_id: UUID,

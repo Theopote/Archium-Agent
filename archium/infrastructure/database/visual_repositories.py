@@ -16,6 +16,7 @@ from archium.domain.visual.element_comment import ElementComment
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
+from archium.domain.visual.theme_change_proposal import ThemeChangeProposal, ThemeProposalStatus
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import visual_mappers
@@ -27,6 +28,7 @@ from archium.infrastructure.database.models import (
     LayoutPlanORM,
     RenderSceneORM,
     SceneChangeProposalORM,
+    ThemeChangeProposalORM,
     VisualIntentORM,
 )
 
@@ -358,6 +360,119 @@ class ElementCommentRepository:
             visual_mappers.element_comment_to_domain(row)
             for row in self._session.scalars(stmt)
         ]
+
+
+_ACTIVE_THEME_PROPOSAL_STATUSES = (
+    ThemeProposalStatus.DRAFT,
+    ThemeProposalStatus.READY,
+    ThemeProposalStatus.READY_WITH_WARNINGS,
+)
+
+
+class ThemeProposalRepository:
+    """Persist deck-wide theme change proposals with DesignSystem snapshots."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._design_systems = DesignSystemRepository(session)
+
+    def save(
+        self,
+        proposal: ThemeChangeProposal,
+        *,
+        supersede_previous: bool = True,
+    ) -> ThemeChangeProposal:
+        try:
+            if supersede_previous:
+                self._supersede_active_for_presentation(
+                    proposal.presentation_id,
+                    exclude_proposal_id=proposal.proposal_id,
+                )
+
+            base_ds = self._design_systems.save(proposal.base_design_system)
+            proposed = proposal.proposed_design_system.model_copy(deep=True)
+            if proposal.proposed_design_system_id is not None:
+                proposed = proposed.model_copy(
+                    update={"id": proposal.proposed_design_system_id}
+                )
+            elif proposed.id == base_ds.id:
+                proposed = proposed.model_copy(update={"id": new_uuid()})
+            saved_proposed = self._design_systems.save(proposed)
+
+            hydrated = proposal.model_copy(
+                update={
+                    "base_design_system": base_ds,
+                    "proposed_design_system": saved_proposed,
+                    "base_design_system_id": base_ds.id,
+                    "proposed_design_system_id": saved_proposed.id,
+                }
+            )
+            orm = self._session.get(ThemeChangeProposalORM, proposal.proposal_id)
+            if orm is None:
+                orm = visual_mappers.theme_change_proposal_to_orm(
+                    hydrated,
+                    base_design_system_id=base_ds.id,
+                    proposed_design_system_id=saved_proposed.id,
+                )
+                self._session.add(orm)
+            else:
+                visual_mappers.theme_change_proposal_to_orm(
+                    hydrated,
+                    base_design_system_id=base_ds.id,
+                    proposed_design_system_id=saved_proposed.id,
+                    target=orm,
+                )
+            self._session.flush()
+            return self._hydrate(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save theme change proposal", exc)
+            raise
+
+    def get(self, proposal_id: UUID) -> ThemeChangeProposal | None:
+        orm = self._session.get(ThemeChangeProposalORM, proposal_id)
+        return self._hydrate(orm) if orm else None
+
+    def get_active_for_presentation(
+        self, presentation_id: UUID
+    ) -> ThemeChangeProposal | None:
+        statuses = [status.value for status in _ACTIVE_THEME_PROPOSAL_STATUSES]
+        stmt = (
+            select(ThemeChangeProposalORM)
+            .where(
+                ThemeChangeProposalORM.presentation_id == presentation_id,
+                ThemeChangeProposalORM.status.in_(statuses),
+            )
+            .order_by(ThemeChangeProposalORM.created_at.desc())
+        )
+        orm = self._session.scalars(stmt).first()
+        return self._hydrate(orm) if orm else None
+
+    def _supersede_active_for_presentation(
+        self,
+        presentation_id: UUID,
+        *,
+        exclude_proposal_id: UUID | None = None,
+    ) -> None:
+        statuses = [status.value for status in _ACTIVE_THEME_PROPOSAL_STATUSES]
+        stmt = select(ThemeChangeProposalORM).where(
+            ThemeChangeProposalORM.presentation_id == presentation_id,
+            ThemeChangeProposalORM.status.in_(statuses),
+        )
+        if exclude_proposal_id is not None:
+            stmt = stmt.where(ThemeChangeProposalORM.id != exclude_proposal_id)
+        for orm in self._session.scalars(stmt):
+            orm.status = ThemeProposalStatus.SUPERSEDED.value
+
+    def _hydrate(self, orm: ThemeChangeProposalORM) -> ThemeChangeProposal | None:
+        base = self._design_systems.get(orm.base_design_system_id)
+        proposed = self._design_systems.get(orm.proposed_design_system_id)
+        if base is None or proposed is None:
+            return None
+        return visual_mappers.theme_change_proposal_to_domain(
+            orm,
+            base_design_system=base,
+            proposed_design_system=proposed,
+        )
 
 
 class ArchitecturalTemplateRepository:

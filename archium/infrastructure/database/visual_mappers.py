@@ -7,14 +7,21 @@ from uuid import UUID
 from archium.domain._base import model_to_dict, utc_now
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.element_comment import ElementComment, ElementCommentStatus
 from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.page_quality import QualityIssue
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_change_proposal import (
     ProposalDecision,
     ProposalStatus,
     SceneChangeProposal,
+)
+from archium.domain.visual.theme_change_proposal import (
+    ThemeChangeProposal,
+    ThemeProposalDecision,
+    ThemeProposalStatus,
 )
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.models import (
@@ -25,6 +32,7 @@ from archium.infrastructure.database.models import (
     LayoutPlanORM,
     RenderSceneORM,
     SceneChangeProposalORM,
+    ThemeChangeProposalORM,
     VisualIntentORM,
 )
 
@@ -290,6 +298,106 @@ def element_comment_to_domain(orm: ElementCommentORM) -> ElementComment:
         created_by=orm.created_by,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
+    )
+
+
+def _theme_change_proposal_payload(proposal: ThemeChangeProposal) -> dict[str, object]:
+    qa_by_slide: dict[str, list[dict[str, object]]] = {}
+    for slide_id, issues in proposal.qa_by_slide.items():
+        qa_by_slide[slide_id] = _models_to_json(issues)  # type: ignore[arg-type]
+    return {
+        "token_patch": model_to_dict(proposal.token_patch),
+        "sample_slide_ids": [str(item) for item in proposal.sample_slide_ids],
+        "preview_scene_hashes": proposal.preview_scene_hashes,
+        "qa_by_slide": qa_by_slide,
+        "qa_summary": _models_to_json(proposal.qa_summary),
+        "decision": (
+            model_to_dict(proposal.decision) if proposal.decision is not None else None
+        ),
+    }
+
+
+def theme_change_proposal_to_orm(
+    proposal: ThemeChangeProposal,
+    *,
+    base_design_system_id: UUID,
+    proposed_design_system_id: UUID,
+    target: ThemeChangeProposalORM | None = None,
+) -> ThemeChangeProposalORM:
+    orm = target or ThemeChangeProposalORM(id=proposal.proposal_id)
+    orm.id = proposal.proposal_id
+    orm.presentation_id = proposal.presentation_id
+    orm.art_direction_id = proposal.art_direction_id
+    orm.base_design_system_id = base_design_system_id
+    orm.proposed_design_system_id = proposed_design_system_id
+    orm.status = proposal.status.value
+    orm.decided_at = proposal.decided_at
+    orm.payload_json = _theme_change_proposal_payload(proposal)
+    orm.created_at = proposal.created_at
+    orm.updated_at = utc_now()
+    return orm
+
+
+def theme_change_proposal_to_domain(
+    orm: ThemeChangeProposalORM,
+    *,
+    base_design_system: DesignSystem,
+    proposed_design_system: DesignSystem,
+) -> ThemeChangeProposal:
+    payload = orm.payload_json or {}
+    decision_payload = payload.get("decision")
+    decision = (
+        ThemeProposalDecision.model_validate(decision_payload)
+        if isinstance(decision_payload, dict)
+        else None
+    )
+    token_payload = payload.get("token_patch") or {}
+    token_patch = DeckThemeTokens.model_validate(
+        token_payload if isinstance(token_payload, dict) else {}
+    )
+    qa_summary_raw = payload.get("qa_summary") or []
+    qa_summary = [
+        QualityIssue.model_validate(item)
+        for item in qa_summary_raw
+        if isinstance(item, dict)
+    ]
+    qa_by_slide_raw = payload.get("qa_by_slide") or {}
+    qa_by_slide: dict[str, list[QualityIssue]] = {}
+    if isinstance(qa_by_slide_raw, dict):
+        for slide_key, issues in qa_by_slide_raw.items():
+            if not isinstance(issues, list):
+                continue
+            qa_by_slide[str(slide_key)] = [
+                QualityIssue.model_validate(item)
+                for item in issues
+                if isinstance(item, dict)
+            ]
+    sample_raw = payload.get("sample_slide_ids") or []
+    sample_slide_ids: list[UUID] = []
+    if isinstance(sample_raw, list):
+        for item in sample_raw:
+            try:
+                sample_slide_ids.append(UUID(str(item)))
+            except (TypeError, ValueError):
+                continue
+    hashes = payload.get("preview_scene_hashes") or {}
+    return ThemeChangeProposal(
+        proposal_id=orm.id,
+        presentation_id=orm.presentation_id,
+        art_direction_id=orm.art_direction_id,
+        base_design_system_id=orm.base_design_system_id,
+        proposed_design_system_id=orm.proposed_design_system_id,
+        base_design_system=base_design_system,
+        proposed_design_system=proposed_design_system,
+        token_patch=token_patch,
+        sample_slide_ids=sample_slide_ids,
+        preview_scene_hashes=hashes if isinstance(hashes, dict) else {},
+        qa_by_slide=qa_by_slide,
+        qa_summary=qa_summary,
+        status=ThemeProposalStatus(orm.status),
+        decision=decision,
+        decided_at=orm.decided_at,
+        created_at=orm.created_at,
     )
 
 

@@ -1,0 +1,54 @@
+"""Theme change proposals — deck-wide DesignSystem mutations with QA preview."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from enum import StrEnum
+from uuid import UUID
+
+from pydantic import Field
+
+from archium.domain._base import DomainModel, new_uuid, utc_now
+from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
+from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.page_quality import QualityIssue
+
+
+class ThemeProposalStatus(StrEnum):
+    DRAFT = "draft"
+    READY = "ready"
+    READY_WITH_WARNINGS = "ready_with_warnings"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    SUPERSEDED = "superseded"
+
+
+class ThemeProposalDecision(DomainModel):
+    """User decision on a theme change proposal."""
+
+    proposal_id: UUID
+    notes: str = ""
+
+
+class ThemeChangeProposal(DomainModel):
+    """Reviewable before/after DesignSystem change for an entire presentation."""
+
+    proposal_id: UUID = Field(default_factory=new_uuid)
+    presentation_id: UUID
+    art_direction_id: UUID | None = None
+
+    base_design_system_id: UUID | None = None
+    proposed_design_system_id: UUID | None = None
+    base_design_system: DesignSystem
+    proposed_design_system: DesignSystem
+    token_patch: DeckThemeTokens
+
+    sample_slide_ids: list[UUID] = Field(default_factory=list)
+    preview_scene_hashes: dict[str, str] = Field(default_factory=dict)
+    qa_by_slide: dict[str, list[QualityIssue]] = Field(default_factory=dict)
+    qa_summary: list[QualityIssue] = Field(default_factory=list)
+
+    status: ThemeProposalStatus = ThemeProposalStatus.READY
+    decision: ThemeProposalDecision | None = None
+    decided_at: datetime | None = None
+    created_at: datetime = Field(default_factory=utc_now)

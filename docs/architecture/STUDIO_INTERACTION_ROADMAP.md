@@ -458,3 +458,18 @@ open-slide 式 Inspector 评论适合 Archium，但应以 Command / Patch / Prop
 - 画布上的评论气泡 / 独立评论线程 UI
 - 多评论协作与指派
 - 复合几何指令的完整 LLM 规划（当前对「放大 / 左对齐」有关键词启发式）
+
+## 全稿 Theme Token → ThemeChangeProposal（已接线）
+
+open-slide Design Panel 的全稿 Token 调节值得参考，但 Archium **禁止像网页 CSS 一样静默覆盖正式页面**。
+
+**已实现**
+- `DeckThemeTokens`：主色 / 强调色 / 背景 / 标题·正文字体 / 标题比例 / 页面密度 / 圆角 / 线宽 / 图片处理 / 图标风格
+- `ThemeChangeProposal`：Token → 新 DesignSystem 候选 → 样本页编译 QA → 接受后切换 `ArtDirection.design_system_id` → 全稿 recompile + Scene Revision
+- Studio 检查器「风格」页：表单生成提案，Blocker 默认禁止接受
+- 图纸 `contain` 不变量：Token 永不把 drawing fit 改成 cover
+
+**尚未做**
+- 样本页并排可视化 Before/After 缩略图墙
+- 像素级 WYSIWYG Design Panel
+- 按章节局部主题（仍是全稿级 DesignSystem）
