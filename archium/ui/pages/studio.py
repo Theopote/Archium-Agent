@@ -145,12 +145,47 @@ def render(
         slide_snapshot=slide_snapshot,
         show_export=show_export,
     )
+
+    layout_cols = st.columns([1, 1, 1, 1.2])
+    if "studio_show_nav" not in st.session_state:
+        st.session_state.studio_show_nav = True
+    if "studio_show_inspector" not in st.session_state:
+        st.session_state.studio_show_inspector = True
+    with layout_cols[0]:
+        st.toggle("页面导航", key="studio_show_nav")
+    with layout_cols[1]:
+        st.toggle("检查器", key="studio_show_inspector")
+    with layout_cols[2]:
+        if st.button("画布最大化", use_container_width=True, key="studio_canvas_maximize"):
+            st.session_state.studio_show_nav = False
+            st.session_state.studio_show_inspector = False
+            st.rerun()
+    with layout_cols[3]:
+        if st.button("恢复三栏", use_container_width=True, key="studio_restore_three"):
+            st.session_state.studio_show_nav = True
+            st.session_state.studio_show_inspector = True
+            st.rerun()
+
     st.divider()
 
-    left_col, center_col, right_col = st.columns([1.05, 2.1, 1.05], gap="medium")
+    show_nav = bool(st.session_state.studio_show_nav)
+    show_inspector = bool(st.session_state.studio_show_inspector)
+    if show_nav and show_inspector:
+        left_col, center_col, right_col = st.columns([1.05, 2.1, 1.05], gap="medium")
+    elif show_nav and not show_inspector:
+        left_col, center_col = st.columns([1.1, 2.9], gap="medium")
+        right_col = None
+    elif show_inspector and not show_nav:
+        center_col, right_col = st.columns([2.9, 1.1], gap="medium")
+        left_col = None
+    else:
+        center_col = st.container()
+        left_col = None
+        right_col = None
 
-    with left_col:
-        selected_index = render_slide_navigator(context=context)
+    if left_col is not None:
+        with left_col:
+            selected_index = render_slide_navigator(context=context)
 
     advanced = bool(st.session_state.get("studio_advanced_mode", False))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
@@ -165,13 +200,14 @@ def render(
             use_interactive_canvas=True,
         )
 
-    with right_col:
-        _render_inspector_tabs(
-            slide_snapshot=slide_snapshot,
-            advanced=advanced,
-            project_id=context.project.id,
-            presentation_id=context.presentation.id,
-        )
+    if right_col is not None:
+        with right_col:
+            _render_inspector_tabs(
+                slide_snapshot=slide_snapshot,
+                advanced=advanced,
+                project_id=context.project.id,
+                presentation_id=context.presentation.id,
+            )
 
     st.divider()
     render_history_panel(context=context, advanced=advanced, slide_snapshot=slide_snapshot)

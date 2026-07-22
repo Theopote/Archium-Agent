@@ -147,6 +147,8 @@ def _export_pptx(*, presentation_id: UUID, settings: Settings) -> None:
             )
         path = pptx_export_result.editable_pptx_path
         if path:
+            st.session_state.last_studio_pptx_path = str(path)
+            _append_delivery_record("PPTX", str(path))
             st.success("PPTX 导出完成。")
             st.code(path, language=None)
         else:
@@ -155,6 +157,20 @@ def _export_pptx(*, presentation_id: UUID, settings: Settings) -> None:
         st.error(format_user_error(exc))
     except Exception as exc:
         st.error(format_user_error(exc))
+
+
+def _append_delivery_record(fmt: str, path: str) -> None:
+    from datetime import UTC, datetime
+
+    records = list(st.session_state.get("delivery_export_records") or [])
+    records.append(
+        {
+            "format": fmt,
+            "path": path,
+            "when": datetime.now(UTC).astimezone().strftime("%Y-%m-%d %H:%M"),
+        }
+    )
+    st.session_state.delivery_export_records = records[-20:]
 
 
 def _export_pdf(*, presentation_id: UUID, settings: Settings) -> None:
@@ -167,9 +183,13 @@ def _export_pdf(*, presentation_id: UUID, settings: Settings) -> None:
             )
         pdf_path = pdf_export_result.pdf_path
         if pdf_path:
+            st.session_state.last_studio_pdf_path = str(pdf_path)
+            _append_delivery_record("PDF", str(pdf_path))
             st.success("PDF 导出完成。")
             st.code(pdf_path, language=None)
         elif pdf_export_result.editable_pptx_path:
+            st.session_state.last_studio_pptx_path = str(pdf_export_result.editable_pptx_path)
+            _append_delivery_record("PPTX", str(pdf_export_result.editable_pptx_path))
             st.warning("PPTX 已导出，但未检测到 LibreOffice，无法生成 PDF。")
             st.code(pdf_export_result.editable_pptx_path, language=None)
         else:

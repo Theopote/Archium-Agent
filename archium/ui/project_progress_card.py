@@ -1,8 +1,8 @@
-"""Sidebar current-project progress card (user-facing, not module diagnostics)."""
+"""Sidebar / home project progress snapshots (user-facing)."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,6 +11,16 @@ import streamlit as st
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 
+_PRESENTATION_TYPE_LABELS = {
+    "concept": "概念汇报",
+    "schematic": "方案汇报",
+    "design_development": "深化汇报",
+    "client_review": "甲方汇报",
+    "competition": "竞赛汇报",
+    "internal": "内部汇报",
+    "other": "汇报",
+}
+
 
 @dataclass(frozen=True)
 class ProjectProgressSnapshot:
@@ -18,6 +28,7 @@ class ProjectProgressSnapshot:
     project_name: str
     presentation_id: UUID | None
     presentation_title: str | None
+    presentation_type: str | None
     document_count: int
     slide_count: int
     layout_ready_count: int
@@ -55,6 +66,56 @@ class ProjectProgressSnapshot:
             return "未开始"
         return "未通过"
 
+    @property
+    def presentation_type_label(self) -> str:
+        if self.presentation_type is None:
+            return "尚未创建汇报"
+        return _PRESENTATION_TYPE_LABELS.get(self.presentation_type, "汇报")
+
+    @property
+    def current_stage_id(self) -> str:
+        """Best next product-flow stage for「继续工作」."""
+        if self.document_count <= 0:
+            return "materials"
+        if not self.has_brief:
+            return "outline"
+        if self.slide_count <= 0 or self.pending_count > 0:
+            return "generate"
+        if not self.ready_for_export:
+            return "edit"
+        return "deliver"
+
+    @property
+    def current_stage_label(self) -> str:
+        labels = {
+            "materials": "资料",
+            "outline": "大纲",
+            "generate": "生成",
+            "edit": "工作室",
+            "deliver": "交付",
+        }
+        return labels.get(self.current_stage_id, "资料")
+
+    @property
+    def completion_label(self) -> str:
+        if self.slide_count <= 0:
+            return "尚无页面"
+        return f"{self.layout_ready_count}/{self.slide_count} 页完成"
+
+
+@dataclass(frozen=True)
+class CockpitTaskSummary:
+    missing_asset_pages: int = 0
+    drawing_qa_failed_pages: int = 0
+    pending_proposals: int = 0
+    pending_layout_pages: int = 0
+    other_attention_pages: int = 0
+    lines: tuple[str, ...] = field(default_factory=tuple)
+
+    @property
+    def has_tasks(self) -> bool:
+        return bool(self.lines)
+
 
 def _format_relative_time(moment: datetime) -> str:
     if moment.tzinfo is None:
@@ -72,14 +133,66 @@ def _format_relative_time(moment: datetime) -> str:
     return moment.astimezone().strftime("%Y-%m-%d")
 
 
-def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
-    """Load a lightweight progress snapshot for the sidebar."""
+def _snapshot_for_project(
+    session: object,
+    project: object,
+    *,
+    preferred_presentation_id: UUID | None = None,
+) -> ProjectProgressSnapshot:
     from archium.infrastructure.database.repositories import (
         DocumentRepository,
         PresentationRepository,
-        ProjectRepository,
     )
     from archium.ui.visual_service import presentation_has_visual_layout
+
+    documents = DocumentRepository(session).list_by_project(project.id)
+    presentations = PresentationRepository(session).list_by_project(project.id)
+
+    presentation = None
+    if preferred_presentation_id is not None and presentations:
+        presentation = next(
+            (item for item in presentations if item.id == preferred_presentation_id),
+            None,
+        )
+    if presentation is None and presentations:
+        presentation = max(presentations, key=lambda item: item.updated_at)
+
+    slide_count = 0
+    layout_ready_count = 0
+    has_brief = False
+    ready_for_export = False
+    presentation_type: str | None = None
+    updated_at = project.updated_at
+
+    if presentation is not None:
+        slides = PresentationRepository(session).list_slides(presentation.id)
+        slide_count = len(slides)
+        layout_ready_count = sum(1 for slide in slides if slide.layout_plan_id is not None)
+        briefs = PresentationRepository(session).list_briefs(presentation.id)
+        has_brief = len(briefs) > 0
+        if briefs:
+            presentation_type = briefs[0].presentation_type.value
+        ready_for_export = presentation_has_visual_layout(session, presentation.id)
+        updated_at = max(project.updated_at, presentation.updated_at)
+
+    return ProjectProgressSnapshot(
+        project_id=project.id,
+        project_name=project.name,
+        presentation_id=presentation.id if presentation is not None else None,
+        presentation_title=presentation.title if presentation is not None else None,
+        presentation_type=presentation_type,
+        document_count=len(documents),
+        slide_count=slide_count,
+        layout_ready_count=layout_ready_count,
+        has_brief=has_brief,
+        ready_for_export=ready_for_export,
+        updated_at=updated_at,
+    )
+
+
+def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
+    """Load a lightweight progress snapshot for the sidebar."""
+    from archium.infrastructure.database.repositories import ProjectRepository
 
     raw_project = st.session_state.get("selected_project_id")
     raw_presentation = st.session_state.get("selected_presentation_id")
@@ -96,54 +209,111 @@ def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
             except ValueError:
                 project = None
         if project is None:
-            project = projects[0]
+            project = max(projects, key=lambda item: item.updated_at)
 
-        documents = DocumentRepository(session).list_by_project(project.id)
-        presentations = PresentationRepository(session).list_by_project(project.id)
-
-        presentation = None
-        if raw_presentation is not None and presentations:
+        preferred = None
+        if raw_presentation is not None:
             try:
-                wanted = UUID(str(raw_presentation))
+                preferred = UUID(str(raw_presentation))
             except ValueError:
-                wanted = None
-            if wanted is not None:
-                presentation = next((item for item in presentations if item.id == wanted), None)
-        if presentation is None and presentations:
-            presentation = presentations[0]
+                preferred = None
 
-        slide_count = 0
-        layout_ready_count = 0
-        has_brief = False
-        ready_for_export = False
-        updated_at = project.updated_at
-
-        if presentation is not None:
-            slides = PresentationRepository(session).list_slides(presentation.id)
-            slide_count = len(slides)
-            layout_ready_count = sum(1 for slide in slides if slide.layout_plan_id is not None)
-            briefs = PresentationRepository(session).list_briefs(presentation.id)
-            has_brief = len(briefs) > 0
-            ready_for_export = presentation_has_visual_layout(session, presentation.id)
-            updated_at = max(project.updated_at, presentation.updated_at)
-
-        # Keep sidebar selection aligned with the card we display.
-        st.session_state.selected_project_id = str(project.id)
-        if presentation is not None:
-            st.session_state.selected_presentation_id = str(presentation.id)
-
-        return ProjectProgressSnapshot(
-            project_id=project.id,
-            project_name=project.name,
-            presentation_id=presentation.id if presentation is not None else None,
-            presentation_title=presentation.title if presentation is not None else None,
-            document_count=len(documents),
-            slide_count=slide_count,
-            layout_ready_count=layout_ready_count,
-            has_brief=has_brief,
-            ready_for_export=ready_for_export,
-            updated_at=updated_at,
+        snapshot = _snapshot_for_project(
+            session,
+            project,
+            preferred_presentation_id=preferred,
         )
+
+        st.session_state.selected_project_id = str(snapshot.project_id)
+        if snapshot.presentation_id is not None:
+            st.session_state.selected_presentation_id = str(snapshot.presentation_id)
+
+        return snapshot
+
+
+def list_recent_project_snapshots(*, limit: int = 6) -> list[ProjectProgressSnapshot]:
+    """Recent projects for the home cockpit, newest activity first."""
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    with get_session() as session:
+        projects = ProjectRepository(session).list_all()
+        if not projects:
+            return []
+        snapshots = [_snapshot_for_project(session, project) for project in projects]
+    snapshots.sort(key=lambda item: item.updated_at, reverse=True)
+    return snapshots[:limit]
+
+
+def load_cockpit_task_summary(snapshot: ProjectProgressSnapshot) -> CockpitTaskSummary:
+    """Aggregate actionable tasks for the selected / primary project."""
+    from archium.application.page_status_board_service import PageStatusBoardService
+    from archium.domain.page_pipeline_status import PagePipelinePhase
+
+    pending_layout = snapshot.pending_count
+    missing_assets = 0
+    drawing_qa = 0
+    other_attention = 0
+    pending_proposals = _count_session_proposals()
+
+    if snapshot.presentation_id is not None:
+        try:
+            with get_session() as session:
+                board = PageStatusBoardService(session).build_board(snapshot.presentation_id)
+                for row in board.rows:
+                    if row.phase == PagePipelinePhase.ASSET_MISSING:
+                        missing_assets += 1
+                    elif row.phase == PagePipelinePhase.DRAWING_QA_FAILED:
+                        drawing_qa += 1
+                    elif row.severity in {"warn", "error"} and row.phase not in {
+                        PagePipelinePhase.COMPLETE,
+                        PagePipelinePhase.SKIPPED,
+                    }:
+                        other_attention += 1
+        except Exception:
+            pass
+
+    lines: list[str] = []
+    if missing_assets:
+        lines.append(f"{missing_assets} 页缺少素材")
+    if drawing_qa:
+        lines.append(f"{drawing_qa} 页图纸可读性未通过")
+    if pending_proposals:
+        lines.append(f"{pending_proposals} 个 AI 提案待确认")
+    if pending_layout:
+        lines.append(f"{pending_layout} 页版式待完成")
+    if other_attention and not lines:
+        lines.append(f"{other_attention} 页需要关注")
+
+    return CockpitTaskSummary(
+        missing_asset_pages=missing_assets,
+        drawing_qa_failed_pages=drawing_qa,
+        pending_proposals=pending_proposals,
+        pending_layout_pages=pending_layout,
+        other_attention_pages=other_attention,
+        lines=tuple(lines),
+    )
+
+
+def _count_session_proposals() -> int:
+    return sum(
+        1
+        for key in st.session_state
+        if str(key).startswith("studio_scene_proposal_")
+        and st.session_state.get(key) is not None
+    )
+
+
+def greeting_for_now() -> str:
+    hour = datetime.now().astimezone().hour
+    if hour < 12:
+        return "早上好"
+    if hour < 18:
+        return "下午好"
+    return "晚上好"
+
+
+def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
+    return snapshot.current_stage_id
 
 
 def render_project_progress_card() -> None:

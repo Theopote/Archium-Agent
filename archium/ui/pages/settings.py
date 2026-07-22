@@ -321,11 +321,11 @@ def _render_image_search_settings() -> None:
         st.warning("尚未配置搜图 API Key。可在此页面配置，或在 `.env` 中设置 `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY`。")
 
     st.divider()
-    from archium.ui.benchmark_review_panel import render_benchmark_review_panel
+    with st.expander("开发者与验收", expanded=False):
+        st.caption("Benchmark 与视觉语料用于产品研发验收，不属于日常项目交付。")
+        from archium.ui.benchmark_review_panel import render_benchmark_review_panel
+        from archium.ui.visual_qa_corpus_panel import render_visual_qa_corpus_panel
 
-    render_benchmark_review_panel()
-
-    st.divider()
-    from archium.ui.visual_qa_corpus_panel import render_visual_qa_corpus_panel
-
-    render_visual_qa_corpus_panel()
+        render_benchmark_review_panel()
+        st.divider()
+        render_visual_qa_corpus_panel()

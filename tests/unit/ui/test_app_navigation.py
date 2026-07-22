@@ -87,15 +87,20 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
         assert id(app_navigation.get_app_page(key)) not in visible_pages
 
 
-def test_home_copy_is_five_stage_not_nine_step() -> None:
+def test_home_is_project_cockpit_not_welcome_wall() -> None:
     home_src = (
         Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
     )
     text = home_src.read_text(encoding="utf-8")
     assert "9 步" not in text
-    assert "5 步" in text
-    assert "product_flow_chain" in text
-    assert "进阶" not in text
+    assert "继续处理哪个项目" in text
+    assert "最近项目" in text
+    assert "当前任务" in text
+    assert "快捷入口" in text
+    assert "五阶段说明（首次使用）" in text
+    assert "阶段说明" not in text or "五阶段说明" in text
+    assert "list_recent_project_snapshots" in text
+    assert "欢迎使用 Archium" not in text
 
 
 def test_sidebar_uses_project_progress_not_module_status() -> None:
