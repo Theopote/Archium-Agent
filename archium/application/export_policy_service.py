@@ -17,6 +17,7 @@ from archium.domain.export_fidelity import (
     policy_allows_fidelity,
     worst_fidelity,
 )
+from archium.domain.powerpoint_capability import PowerPointFidelity, assess_scene_node
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -34,10 +35,17 @@ class ExportPolicyService:
 
     def assess_scene_fidelity(self, scene: RenderScene) -> SlideExportResult:
         """Derive per-slide fidelity from a RenderScene (pre/post export)."""
-        text_nodes = [n for n in scene.nodes if isinstance(n, TextNode)]
-        shape_nodes = [n for n in scene.nodes if isinstance(n, ShapeNode)]
-        drawing_nodes = [n for n in scene.nodes if isinstance(n, DrawingNode)]
-        image_nodes = [n for n in scene.nodes if isinstance(n, ImageNode)]
+        visible_nodes = [node for node in scene.nodes if node.visible]
+        text_nodes = [n for n in visible_nodes if isinstance(n, TextNode)]
+        shape_nodes = [n for n in visible_nodes if isinstance(n, ShapeNode)]
+        drawing_nodes = [n for n in visible_nodes if isinstance(n, DrawingNode)]
+        image_nodes = [n for n in visible_nodes if isinstance(n, ImageNode)]
+        capability_counts = {level: 0 for level in PowerPointFidelity}
+        capability_limitations: list[str] = []
+        for node in visible_nodes:
+            assessment = assess_scene_node(node)
+            capability_counts[assessment.mapping.fidelity] += 1
+            capability_limitations.extend(assessment.mapping.limitations)
 
         native_text = sum(1 for n in text_nodes if n.text.strip())
         native_shapes = len(shape_nodes)
@@ -83,6 +91,8 @@ class ExportPolicyService:
             native_text_count=native_text,
             native_shape_count=native_shapes,
             bitmap_asset_count=bitmap_count,
+            powerpoint_capability_counts=capability_counts,
+            powerpoint_capability_limitations=list(dict.fromkeys(capability_limitations)),
             font_substitutions=font_subs,
             unresolved_assets=unresolved,
             warnings=warnings,

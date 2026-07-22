@@ -316,9 +316,10 @@ def _render_static_region_overlay(
         / "region-overlays"
         / f"{run_id}_{selected_region.id}.png"
     )
+    overlay_source = source_path if isinstance(source_path, Path) else Path(source_path)
     try:
         render_region_overlay(
-            Path(source_path),
+            overlay_source,
             regions,
             overlay_path,
             highlight_region_id=selected_region.id,

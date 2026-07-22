@@ -8,6 +8,7 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.powerpoint_capability import PowerPointFidelity
 
 
 class ExportFidelityLevel(StrEnum):
@@ -73,6 +74,8 @@ class SlideExportResult(DomainModel):
     native_shape_count: int = Field(default=0, ge=0)
     native_table_count: int = Field(default=0, ge=0)
     bitmap_asset_count: int = Field(default=0, ge=0)
+    powerpoint_capability_counts: dict[PowerPointFidelity, int] = Field(default_factory=dict)
+    powerpoint_capability_limitations: list[str] = Field(default_factory=list)
 
     font_substitutions: list[str] = Field(default_factory=list)
     unresolved_assets: list[str] = Field(default_factory=list)
@@ -105,6 +108,14 @@ class DeckExportManifest(DomainModel):
             counts[slide.fidelity_level] += 1
         return counts
 
+    @property
+    def powerpoint_capability_counts(self) -> dict[PowerPointFidelity, int]:
+        counts = {level: 0 for level in PowerPointFidelity}
+        for slide in self.slides:
+            for level, count in slide.powerpoint_capability_counts.items():
+                counts[level] += count
+        return counts
+
     def summary_lines_zh(self) -> list[str]:
         """Human-readable per-level counts for delivery UI."""
         lines: list[str] = []
@@ -112,6 +123,9 @@ class DeckExportManifest(DomainModel):
             count = self.fidelity_counts[level]
             if count:
                 lines.append(f"{FIDELITY_LABELS_ZH[level]}：{count} 页")
+        for level, count in self.powerpoint_capability_counts.items():
+            if count:
+                lines.append(f"PowerPoint {level.value}: {count} objects")
         return lines
 
 

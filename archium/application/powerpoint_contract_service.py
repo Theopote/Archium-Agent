@@ -7,6 +7,8 @@ from pydantic import Field
 from archium.domain._base import DomainModel
 from archium.domain.powerpoint_capability import (
     PowerPointCapabilityMapping,
+    PowerPointNodeAssessment,
+    assess_scene_node,
     capability_for_scene_node,
 )
 from archium.domain.visual.render_scene import RenderScene
@@ -30,7 +32,10 @@ class PowerPointContractService:
     """Fail-closed checks at the RenderScene -> renderer boundary."""
 
     def capabilities(self, scene: RenderScene) -> list[PowerPointCapabilityMapping]:
-        return [capability_for_scene_node(node.node_type) for node in scene.sorted_nodes()]
+        return [capability_for_scene_node(node) for node in scene.sorted_nodes() if node.visible]
+
+    def assessments(self, scene: RenderScene) -> list[PowerPointNodeAssessment]:
+        return [assess_scene_node(node) for node in scene.sorted_nodes() if node.visible]
 
     def validate_scene_closure(
         self, scene: RenderScene, emissions: list[RendererEmission]
@@ -59,4 +64,3 @@ class PowerPointContractService:
                 f"unexpected={report.unexpected_node_ids}, "
                 f"duplicates={report.duplicate_node_ids}"
             )
-

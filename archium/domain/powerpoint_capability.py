@@ -7,6 +7,7 @@ from enum import StrEnum
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.visual.render_scene import BaseRenderNode, ImageNode, ShapeNode
 
 
 class PowerPointFidelity(StrEnum):
@@ -27,6 +28,13 @@ class PowerPointCapabilityMapping(DomainModel):
     fidelity: PowerPointFidelity
     limitations: list[str] = Field(default_factory=list)
     validation_rules: list[str] = Field(default_factory=list)
+
+
+class PowerPointNodeAssessment(DomainModel):
+    node_id: str = Field(min_length=1)
+    node_type: str = Field(min_length=1)
+    mapping: PowerPointCapabilityMapping
+    detected_features: list[str] = Field(default_factory=list)
 
 
 RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
@@ -61,10 +69,57 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
 }
 
 
-def capability_for_scene_node(node_type: str) -> PowerPointCapabilityMapping:
-    """Return the declared contract; unknown constructs fail closed."""
+def capability_for_scene_node(node: str | BaseRenderNode) -> PowerPointCapabilityMapping:
+    """Resolve fidelity from a node instance, or return the type-level baseline."""
+    node_type = node if isinstance(node, str) else node.node_type
     try:
-        return RENDER_SCENE_V1_CAPABILITIES[node_type]
+        baseline = RENDER_SCENE_V1_CAPABILITIES[node_type]
     except KeyError as exc:
         raise ValueError(f"No PowerPoint capability mapping for scene node type: {node_type}") from exc
+    if isinstance(node, str):
+        return baseline
 
+    fidelity = baseline.fidelity
+    limitations = list(baseline.limitations)
+    if node.rotation != 0 or node.opacity != 1:
+        fidelity = PowerPointFidelity.APPROXIMATE
+        limitations.append("V1 PPTX instructions do not preserve node rotation or opacity.")
+
+    if isinstance(node, ShapeNode):
+        if node.shape_kind == "rectangle" and node.corner_radius == 0 and fidelity != PowerPointFidelity.APPROXIMATE:
+            fidelity = PowerPointFidelity.NATIVE_STABLE
+        elif node.shape_kind != "rectangle" or node.corner_radius > 0:
+            fidelity = PowerPointFidelity.APPROXIMATE
+            limitations.append(
+                f"V1 PptxGenJS backend normalizes {node.shape_kind} geometry to a rectangle."
+            )
+
+    if isinstance(node, ImageNode) and (node.corner_radius or node.border or node.shadow):
+        fidelity = PowerPointFidelity.APPROXIMATE
+        limitations.append("V1 PPTX picture export does not preserve corner, border, or shadow styling.")
+
+    return baseline.model_copy(
+        update={"fidelity": fidelity, "limitations": list(dict.fromkeys(limitations))}
+    )
+
+
+def assess_scene_node(node: BaseRenderNode) -> PowerPointNodeAssessment:
+    features = [f"rotation:{node.rotation}"] if node.rotation else []
+    if node.opacity != 1:
+        features.append(f"opacity:{node.opacity}")
+    if isinstance(node, ShapeNode):
+        features.append(f"shape_kind:{node.shape_kind}")
+        if node.corner_radius:
+            features.append(f"corner_radius:{node.corner_radius}")
+    if isinstance(node, ImageNode):
+        features.append(f"fit_mode:{node.fit_mode}")
+        if node.shadow:
+            features.append("shadow")
+        if node.border:
+            features.append("border")
+    return PowerPointNodeAssessment(
+        node_id=node.id,
+        node_type=node.node_type,
+        mapping=capability_for_scene_node(node),
+        detected_features=features,
+    )
