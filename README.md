@@ -53,7 +53,7 @@ cp .env.example .env               # Windows: copy .env.example .env
 archium                            # 启动项目工作台（Streamlit UI）
 ```
 
-**注意：** 原生 PPTX 导出需要 Node.js 18+ 并在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`。
+**注意：** 原生 PPTX 导出需要 Node.js 20+ 并在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`。
 
 | 路径 | 命令 | 说明 |
 |------|------|------|
@@ -247,7 +247,7 @@ Archium-Agent/
 │   └── golden/
 │       └── visual/
 │           ├── baselines/          # Marp PNG regression
-│           └── composition/        # LayoutPlan Golden V1–V3
+│           └── composition/        # LayoutPlan Golden V1–V9
 └── pyproject.toml
 ```
 
@@ -283,34 +283,9 @@ archium/infrastructure/renderers/pptxgen/
 
 遗留命名主题：`minimal-light` · `minimal-dark` · `architecture-board` · `government-review` · `competition` · `technical-review`。视觉编排以 DesignSystem 为准，见 [`docs/visual/design-system.md`](docs/visual/design-system.md)。
 
-## 安装
+## 安装详情
 
-> 若你只想跑起来：**直接看文首 [Quickstart](#quickstart)**。本节补充 Python 版本、extras 组合与 Node/Marp 依赖。
-
-### 🐳 Docker 部署（推荐）
-
-使用 Docker 可以避免手动配置 Python、Node.js 等环境，实现一键部署：
-
-```bash
-# 前提条件：已安装 Docker Desktop
-docker-compose up -d
-```
-
-**优势：**
-- ✅ 无需安装 Python 3.11、Node.js 18
-- ✅ 环境配置时间从 30-60 分钟缩短到 5 分钟
-- ✅ 跨平台完全一致（Windows/macOS/Linux）
-- ✅ 数据自动持久化（`./data` 目录）
-
-**完整文档：**
-- [Docker 快速启动指南](docs/deployment/docker-quickstart.md)
-- [5分钟快速测试](DOCKER_QUICK_TEST.md)
-- [完整测试清单](docs/deployment/docker-test-checklist.md)
-- [跨平台优化方案](docs/deployment/CROSS_PLATFORM_OPTIMIZATION.md)
-
-### 📦 传统部署
-
-如果需要本地开发或自定义配置，可以使用传统方式安装。
+> 若你只想跑起来，请直接使用文首 [Quickstart](#quickstart)。Docker 操作、排错与跨平台说明见[部署文档](docs/deployment/docker-quickstart.md)。
 
 ### Python 版本
 
@@ -377,7 +352,7 @@ python scripts/generate_config_docs.py --check  # CI 一致性检查
 ### 什么时候必须用 Alembic？
 
 - **生产或共享环境部署**：部署流程中应执行 `alembic upgrade head`，不要依赖 `create_all` 替代 schema 变更管理。
-- **已有 `data/database/archium.db` 且仓库新增了 migration**（如 `002`–`008`）：必须 `alembic upgrade head` 才能补上新列/表；`init_database()` / `create_all` **不会**修改已有表结构。
+- **已有 `data/database/archium.db` 且仓库新增了 migration**：必须执行 `alembic upgrade head` 升级到当前 head；`init_database()` / `create_all` **不会**修改已有表结构。迁移链以 `alembic/versions/` 为准，不在 README 固定最新编号。
 - **Mission Planning 表**（`project_missions`、`knowledge_gaps`、`workstreams`、`deliverable_plans` 等）位于 revision `008_project_mission_planning`；说明见 [project-mission-adaptive-planning.md](docs/project-mission-adaptive-planning.md#5-数据库迁移)。
 - **验证 migration 链**：`pytest tests/smoke/test_alembic_migration.py -v`
 
@@ -491,7 +466,9 @@ npm install -g @marp-team/marp-cli
 marp --version
 ```
 
-未安装 Marp 时，应用仍可启动；PPT 导出步骤会给出明确提示。
++
+
++未安装 Marp 时，应用仍可启动并完成 JSON / Marp Markdown 导出；勾选 PPTX 或 PDF 时会在 `RenderResult.warnings` 中提示。
 
 未安装 Marp 时，应用仍可启动并完成 JSON / Marp Markdown 导出；勾选 PPTX 或 PDF 时会在 `RenderResult.warnings` 中提示。
 
@@ -505,16 +482,16 @@ marp --version
 | XLSX | ✅ | ✅ | ✅ | ⚠️ |
 | 图片 | ✅ | ✅ | — | — |
 
-导入能力在 Stage 5 完成；语义分块与片段编辑在 Stage 10–11 增强。
+文档解析由 `archium/infrastructure/document_parsers/` 提供；语义分块、片段编辑与检索由应用服务按配置启用。
 
 ## 数据保存位置
 
 | 路径 | 用途 |
 |------|------|
-| `data/database/` | SQLite 数据库（Stage 3+） |
+| `data/database/` | SQLite 数据库 |
 | `data/projects/` | 项目资料与资产 |
 | `data/outputs/` | 生成的汇报文件 |
-| `data/chroma/` | Chroma 向量索引（Stage 10） |
+| `data/chroma/` | Chroma 向量索引 |
 
 ## 隐私说明
 
@@ -540,64 +517,30 @@ Copyright (c) 2026 Theopote and Archium contributors
 
 你可以将本软件用于商业与非商业用途，前提是保留版权与许可声明。软件按「原样」提供，不附带担保。依赖包与生成产物的权属说明见 [NOTICE](NOTICE)。
 
-## 当前限制
+## 当前边界
 
-- 指令中心聊天记录仍保存在浏览器 Session 中，关闭页面后会丢失
-- 项目工作台已支持项目持久化、资料导入、汇报生成与 Brief / Storyline / SlideSpec 审核编辑
-- **项目任务**页支持自由描述 → 任务理解 → 澄清 → 工作路径 → 成果选择 → 进入汇报主链（见 Mission Planning 文档）
-- 文档导入后按语义边界切分（段落合并、递归切分、重叠窗口），超长段落可选 Embedding 断点检测
-- 工作台支持预览/编辑资料片段，保存后同步更新向量索引
-- Brief、Storyline、SlideSpec 均支持基于 `lineage_id` 的统一修订历史；SlideSpec 另支持字段 diff 与 unified diff 对比
-- 项目事实账本（Fact Ledger）支持标准键提取、冲突检测与人工确认；已确认事实优先注入生成上下文
-- 素材看板（Asset Board）支持视觉需求扁平化视图、素材匹配、人工指定与确认
-- **汇报工作室**页支持三栏浏览、NL 视觉编辑（8 意图）、内容适配（4 动作）与 PPTX 导出（见 [`docs/studio-user-guide.md`](docs/studio-user-guide.md)）
-- **视觉设计**页支持 ArtDirection 审核、单页候选版式与预设重排（见 [`docs/visual/user-guide.md`](docs/visual/user-guide.md)）
-- 四层质量审核：内容层、证据层、建筑专业层、版面层；严重问题可阻断导出
-- 原生元素 PPTX 现有两条路径：
-  - **LayoutPlan 执行路径**（视觉编排）：坐标来自 LayoutPlan，`render-plan.mjs` 只执行不重排
-  - **PresentationSpec 模板路径**（主汇报快捷导出）：11 种硬编码布局模板
-  - 以下能力尚未成熟：完整母版与占位符体系、可替换图片元数据、可编辑图例 / SVG 矢量保持、原生表格/图表编辑、组织品牌模板导入
-- 驳回后可一键重新生成 Brief、Storyline 或 Slide 计划
-- Marp 仍作为预览/降级路径
-- PPTX / PDF 导出依赖 Marp CLI；原生元素 PPTX 需 Node.js 并在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`
-- Round 1 视觉编排尚未覆盖：完整视觉语言模型审核、复杂约束求解、自动效果图生成；**LayoutPlan PPTX 截图级回归**已接入 CI（`tests/golden/visual/composition/test_pptx_screenshot_regression.py` + `scripts/update_layout_pptx_screenshot_baselines.py`），与 composition JSON fingerprint 互补
-- 文件整理为实验性遗留功能
+- 当前版本仍是 Alpha：API、领域模型、数据库迁移和输出格式可能继续变化，不应未经人工复核直接用于正式交付。
+- Studio Canvas 编辑的是 Archium `RenderScene`，不是任意 PPTX 对象的全功能 PowerPoint 替代品。
+- 模板归纳、占位符绑定和 Template Studio 已有初版，但复杂母版、特殊矢量效果和第三方模板的高保真往返仍需人工验证。
+- 图片衍生管线保留原图并受证据策略约束；它不生成建筑效果图，也不对证据图进行表达性重绘。
+- Visual Critic、Deck QA 和自动修复由不同策略控制；启发式评分不能单独代表可交付性。
+- 原生元素 PPTX 依赖 Node.js 20 与 PptxGenJS；Marp PPTX/PDF 依赖 Marp CLI；截图级验证还可能需要 LibreOffice 或 PowerPoint。
+- 指令中心的部分交互状态仍保存在浏览器 Session 中；正式项目、Scene、提案、评论与修订应通过数据库服务持久化。
+- `legacy/` 中的文件整理和快速 Marp 生成是兼容保留的实验功能，不属于 v0.2 主链。
 
-## 开发路线图
+详细能力和操作边界见 [Studio 用户指南](docs/studio-user-guide.md)、[视觉编排文档](docs/visual/README.md)与[当前系统架构](docs/architecture/current-system.md)。
 
-1. **Stage 1** — 工程基础（Settings、异常、日志、测试） ✅
-2. **Stage 2** — Pydantic 领域模型 ✅
-3. **Stage 3** — SQLAlchemy + Repository ✅
-4. **Stage 4** — LLM 抽象层 ✅
-5. **Stage 5** — 文档导入 ✅
-6. **Stage 6** — 汇报中间管线 ✅
-7. **Stage 7** — LangGraph 工作流 ✅
-8. **Stage 8** — Marp 渲染迁移 ✅
-9. **Stage 9** — Streamlit 项目工作台 UI ✅
-10. **Stage 10** — 向量检索增强（Chroma + Embedding） ✅
-11. **Stage 11** — 资料片段管理 + 引用溯源 ✅
-12. **Stage 12** — 统一修订历史（Brief / Storyline / SlideSpec lineage + SlideSpec diff） ✅
-13. **Stage 13** — 项目事实账本（Fact Ledger · 提取 / 冲突检测 / 人工确认） ✅
-14. **Stage 14** — 素材看板（Asset Board · 匹配 / 指定 / 确认 / 裁剪标记） ✅
-15. **Stage 15** — 四层质量审核（Content / Evidence / Architectural / Layout Reviewer） ✅
-16. **Stage 16** — PresentationSpec → PptxGenJS 原生元素 PPTX ✅
+## 当前发布重点
 
-### Architectural Visual Composition（Round 1，已落地骨架）
+当前工作重点是 [v0.2 Beta Rehearsal](docs/v0.2-beta-rehearsal.md)、[真实项目验证](docs/real-project-validation-preparation.md)和关闭[发布决策](docs/v0.2-beta-release-decision.md)中的剩余 blocker。历史 Stage、Round 与 Alpha sprint 记录保留在 roadmap/session 文档中，不再作为当前架构或进度依据。
 
-不另开 Stage 编号。能力说明与操作指南：[docs/visual/README.md](docs/visual/README.md)。
-
-### v0.2 Alpha Validation Sprint（进行中）
-
-不再称为 Stage 17。目标：**证明现有主链在真实建筑项目上可用**。  
-验收清单与进度：[docs/v0.2-alpha-validation-sprint.md](docs/v0.2-alpha-validation-sprint.md)
-
-> 主流程请使用 `PresentationWorkflowService.run()`。`PresentationService.run_pipeline()` 已在 **v0.2-beta 准备阶段移除**（原计划在 v0.3）。
+> 汇报主流程使用 `PresentationWorkflowService.run()`；历史 `PresentationService.run_pipeline()` 已移除。
 
 ## 遗留模块
 
 v0.1 实验性功能已移入 `legacy/` 包，根目录保留薄 shim（`main.py`、`config.py` 等）以兼容旧脚本。主产品入口：
 
-- **工作台**：`streamlit run app.py` 或 `archium ui`
+- **工作台**：`archium` 或 `streamlit run app.py`
 - **Legacy CLI**：`archium-legacy`（等价于 `python main.py`）
 
 Legacy 能力（与主 Brief → Storyline → SlideSpec 流程解耦）：
