@@ -32,15 +32,15 @@ def _format_report_markdown(report: ExecutionReport) -> str:
 
     for result in report.step_results:
         parts.append(f"\n---\n\n### {result.label}")
-        icon = "✅" if result.success else "❌"
-        parts.append(f"{icon} {'完成' if result.success else '失败'}")
+        status = "完成" if result.success else "失败"
+        parts.append(f"**{status}**")
         for line in result.lines:
             parts.append(line)
 
     if report.success:
-        parts.append("\n🎉 **全部任务已完成。**")
+        parts.append("\n**全部任务已完成。**")
     else:
-        parts.append("\n⚠️ **任务链中断，请检查上方错误信息。**")
+        parts.append("\n**任务链中断，请检查上方错误信息。**")
 
     return "\n\n".join(parts)
 
@@ -76,7 +76,7 @@ def render() -> None:
     st.caption(f"文件管家：{fm_h}")
 
     for msg in st.session_state.messages:
-        with st.chat_message(msg["role"], avatar="🏛️" if msg["role"] == "assistant" else None):
+        with st.chat_message(msg["role"], avatar="A" if msg["role"] == "assistant" else None):
             st.markdown(msg["content"])
             if msg.get("artifacts"):
                 _render_file_artifacts(msg["artifacts"])
@@ -86,7 +86,7 @@ def render() -> None:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        with st.chat_message("assistant", avatar="🏛️"), st.spinner("Archium 正在思考…"):
+        with st.chat_message("assistant", avatar="A"), st.spinner("Archium 正在思考…"):
             try:
                 report = run_instruction(prompt)
                 reply = _format_report_markdown(report)
@@ -101,7 +101,7 @@ def render() -> None:
                     }
                 )
             except Exception as exc:
-                err = f"❌ 执行出错：{exc}"
+                err = f"执行出错：{exc}"
                 st.error(err)
                 st.session_state.messages.append(
                     {"role": "assistant", "content": err, "artifacts": []}

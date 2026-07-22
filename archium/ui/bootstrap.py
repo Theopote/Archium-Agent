@@ -71,6 +71,51 @@ html, body, [class*="css"] {
 .dot-yellow { background: #c4a035; box-shadow: 0 0 6px #c4a03588; }
 .dot-red    { background: #c45c5c; box-shadow: 0 0 6px #c45c5c88; }
 
+/* Accessible status chips: text + color + border (not emoji-only). */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.12rem 0.5rem;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.status-chip-mark {
+    font-size: 0.72rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+.status-chip-ok {
+    color: #1f6b45;
+    background: #eef7f1;
+    border-color: #9ecbb0;
+}
+.status-chip-info {
+    color: #3d5a80;
+    background: #eef3f8;
+    border-color: #a8bdd4;
+}
+.status-chip-warn {
+    color: #7a5c12;
+    background: #faf4e4;
+    border-color: #d4bc6a;
+}
+.status-chip-error {
+    color: #8a3030;
+    background: #f8ecec;
+    border-color: #d4a0a0;
+}
+.status-chip-neutral {
+    color: #5c5a55;
+    background: #f3f2ef;
+    border-color: #d4d1c8;
+}
+
 .section-label {
     font-size: 0.68rem;
     font-weight: 500;
@@ -119,11 +164,47 @@ def inject_styles() -> None:
 
 
 def render_branding() -> None:
+    from archium.ui.branding import BRAND_SUBTITLE
+
     st.markdown('<div class="archium-logo">Archium</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="archium-sub">Architecture × Museum · 阿基姆</div>',
+        f'<div class="archium-sub">{BRAND_SUBTITLE}</div>',
         unsafe_allow_html=True,
     )
+
+
+def render_version_footer() -> None:
+    """Compact productized version line for the sidebar."""
+    from archium.ui.branding import DISPLAY_VERSION, SIDEBAR_VALUE_HINT
+
+    st.markdown(
+        '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
+        f"{DISPLAY_VERSION}<br>{SIDEBAR_VALUE_HINT}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_about_panel() -> None:
+    """Version / product identity details (Settings → About)."""
+    from archium.ui.branding import (
+        BRAND_SUBTITLE_CN,
+        BRAND_SUBTITLE_EN,
+        DISPLAY_VERSION,
+        FULL_VERSION_LABEL,
+        PRODUCT_NAME_CN,
+        SIDEBAR_VALUE_HINT,
+    )
+
+    st.markdown("### 关于 Archium")
+    st.markdown(f"**{PRODUCT_NAME_CN}**")
+    st.caption(f"{BRAND_SUBTITLE_EN} · {BRAND_SUBTITLE_CN}")
+    st.markdown(
+        f"- 显示版本：`{DISPLAY_VERSION}`\n"
+        f"- 完整版本：`{FULL_VERSION_LABEL}`\n"
+        f"- 工作方式：{SIDEBAR_VALUE_HINT}"
+    )
+    st.caption("本地优先：项目与草稿保存在本机，可随时继续编辑。")
 
 
 def render_status(name: str, color: str, hint: str) -> None:
@@ -177,11 +258,15 @@ def render_system_diagnostics() -> None:
 
 
 def module_status_node_pptx() -> tuple[str, str]:
-    from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
+    """Check Node.js + bundled pptxgenjs install (via CLI runner, not renderer)."""
+    from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 
     if not shutil.which("node") and not shutil.which("node.exe"):
         return "yellow", "待安装 Node.js"
-    renderer = PptxGenPresentationRenderer(get_settings())
-    if not renderer.is_available():
+    try:
+        available = PptxGenCliRunner(get_settings()).is_available()
+    except Exception:
+        return "yellow", "待 npm install（pptxgen）"
+    if not available:
         return "yellow", "待 npm install（pptxgen）"
     return "green", "就绪"

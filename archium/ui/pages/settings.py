@@ -188,6 +188,8 @@ def render() -> None:
     st.divider()
     _render_system_diagnostics()
     st.divider()
+    _render_about()
+    st.divider()
     _render_image_search_settings()
 
 
@@ -197,6 +199,12 @@ def _render_system_diagnostics() -> None:
     st.markdown("### 系统诊断")
     st.caption("运行依赖与导出工具状态。日常进度请看侧栏「当前项目」。")
     render_system_diagnostics()
+
+
+def _render_about() -> None:
+    from archium.ui.bootstrap import render_about_panel
+
+    render_about_panel()
 
 
 def _render_image_search_settings() -> None:

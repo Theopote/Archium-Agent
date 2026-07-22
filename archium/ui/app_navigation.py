@@ -6,6 +6,7 @@ from typing import Any
 
 import streamlit as st
 
+from archium.ui import icons
 from archium.ui.product_flow import (
     MAKE_SECTION,
     PROJECT_SECTION,
@@ -77,56 +78,65 @@ def build_app_pages() -> dict[str, list[Any]]:
     home_page = st.Page(
         home.render,
         title="概览",
-        icon="🏛️",
+        icon=icons.HOME,
         url_path="home",
         default=True,
     )
     project_page = st.Page(
         project_management.render,
         title="项目",
-        icon="📁",
+        icon=icons.PROJECT,
         url_path="project-management",
     )
     template_library_page = st.Page(
         template_library.render,
         title="模板库",
-        icon="🧩",
+        icon=icons.TEMPLATE_LIBRARY,
         url_path="template-library",
     )
-    settings_page = st.Page(settings.render, title="设置", icon="⚙️", url_path="settings")
+    settings_page = st.Page(
+        settings.render, title="设置", icon=icons.SETTINGS, url_path="settings"
+    )
 
     # Hidden from sidebar but kept for deep links / st.page_link / st.switch_page.
     hidden_pages = {
         "project-mission": st.Page(
             project_mission.render,
             title="项目任务",
-            icon="🧭",
+            icon=icons.PROJECT_MISSION,
             url_path="project-mission",
         ),
-        "studio": st.Page(studio.render, title="工作室", icon="🎬", url_path="studio"),
+        "studio": st.Page(
+            studio.render, title="工作室", icon=icons.STUDIO, url_path="studio"
+        ),
         "template-studio": st.Page(
             template_studio.render,
             title="模板工作室",
-            icon="🧩",
+            icon=icons.TEMPLATE_STUDIO,
             url_path="template-studio",
         ),
         "template-induction": st.Page(
             template_induction.render,
             title="模板归纳",
-            icon="🔬",
+            icon=icons.TEMPLATE_INDUCTION,
             url_path="template-induction",
         ),
-        "workspace": st.Page(workspace.render, title="项目工作台", icon="📂", url_path="workspace"),
+        "workspace": st.Page(
+            workspace.render,
+            title="项目工作台",
+            icon=icons.WORKSPACE,
+            url_path="workspace",
+        ),
         "visual-design": st.Page(
             visual_design.render,
             title="视觉设计",
-            icon="🎨",
+            icon=icons.VISUAL_DESIGN,
             url_path="visual-design",
         ),
         "command-center": st.Page(
             command_center.render,
             title="指令中心",
-            icon="💬",
+            icon=icons.COMMAND_CENTER,
             url_path="command-center",
         ),
     }

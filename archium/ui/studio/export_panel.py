@@ -228,7 +228,9 @@ def _render_quick_export_popover(
             key=f"{key_prefix}_export_pdf",
         ):
             _export_pdf(presentation_id=context.presentation.id, settings=settings)
-        st.page_link(get_app_page("deliver"), label="打开交付页", icon="📦")
+        from archium.ui import icons
+
+        st.page_link(get_app_page("deliver"), label="打开交付页", icon=icons.DELIVER)
 
 
 def render_studio_toolbar(
@@ -288,7 +290,9 @@ def render_studio_toolbar(
         if show_export:
             _render_quick_export_popover(context=context, settings=settings)
         else:
-            st.page_link(get_app_page("deliver"), label="交付 / 导出", icon="📦")
+            from archium.ui import icons
+
+            st.page_link(get_app_page("deliver"), label="交付 / 导出", icon=icons.EXPORT)
 
 
 def render_export_panel(

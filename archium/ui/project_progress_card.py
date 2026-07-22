@@ -323,12 +323,20 @@ def render_project_progress_card() -> None:
         snapshot = load_project_progress_snapshot()
     except Exception:
         st.caption("进度暂不可用。可到「项目」选择或创建项目。")
-        st.page_link(get_app_page("project-management"), label="打开项目", icon="📁")
+        from archium.ui import icons
+
+        st.page_link(
+            get_app_page("project-management"), label="打开项目", icon=icons.PROJECT
+        )
         return
 
     if snapshot is None:
         st.caption("还没有项目。")
-        st.page_link(get_app_page("project-management"), label="创建项目", icon="📁")
+        from archium.ui import icons
+
+        st.page_link(
+            get_app_page("project-management"), label="创建项目", icon=icons.PROJECT
+        )
         return
 
     st.markdown(f"**{snapshot.project_name}**")

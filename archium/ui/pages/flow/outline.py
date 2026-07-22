@@ -147,7 +147,9 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
         ):
             st.switch_page(get_app_page("generate"))
     with cols[2]:
-        st.page_link(get_app_page("generate"), label="直接前往生成", icon="⚡")
+        from archium.ui import icons
+
+        st.page_link(get_app_page("generate"), label="直接前往生成", icon=icons.GENERATE)
 
     if not has_request and has_mission:
         with st.expander("继续完善任务描述", expanded=False):

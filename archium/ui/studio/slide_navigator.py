@@ -156,18 +156,22 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
     for index, item in enumerate(slides):
         slide = item.slide
         row = status_map.get(str(slide.id))
-        badge = status_badge(row) if row is not None else "○"
+        badge = status_badge(row) if row is not None else "○待处理"
         order_label = f"{slide.order + 1:02d}"
         title = (slide.title or "未命名")[:16]
         hint = ""
         if row is not None and row.severity in {"warn", "error", "info"}:
             detail = status_short_detail(row)
-            if detail and badge != "✓":
+            if detail and "完成" not in badge:
                 hint = f"  {detail}"
         is_selected = index == selected_index
-        label = f"{order_label}  {title}  {badge}{hint}"
+        label = f"{order_label}  {title}  [{badge}]{hint}"
 
-        with st.container(border=is_selected):
+        # Border for selection; severity also shown as text badge (not color-only).
+        emphasize = is_selected or (
+            row is not None and row.severity in {"warn", "error"}
+        )
+        with st.container(border=emphasize):
             preview_path = item.preview_image
             if is_selected and preview_path and Path(preview_path).is_file():
                 st.image(preview_path, use_container_width=True)

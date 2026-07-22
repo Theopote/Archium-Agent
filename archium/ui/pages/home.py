@@ -93,17 +93,19 @@ def _render_current_tasks(snapshot: ProjectProgressSnapshot | None) -> None:
 
 
 def _render_shortcuts(snapshot: ProjectProgressSnapshot | None) -> None:
+    from archium.ui import icons
+
     st.markdown("#### 快捷入口")
     row1 = st.columns(2)
     with row1[0]:
-        st.page_link(get_app_page("materials"), label="上传资料", icon="📁")
+        st.page_link(get_app_page("materials"), label="上传资料", icon=icons.UPLOAD)
     with row1[1]:
-        st.page_link(get_app_page("edit"), label="继续编辑", icon="🎬")
+        st.page_link(get_app_page("edit"), label="继续编辑", icon=icons.STUDIO)
     row2 = st.columns(2)
     with row2[0]:
-        st.page_link(get_app_page("edit"), label="待复核页面", icon="✅")
+        st.page_link(get_app_page("edit"), label="待复核页面", icon=icons.CHECK)
     with row2[1]:
-        st.page_link(get_app_page("deliver"), label="导出最新版本", icon="📦")
+        st.page_link(get_app_page("deliver"), label="导出最新版本", icon=icons.EXPORT)
 
     if snapshot is not None:
         st.caption(

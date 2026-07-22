@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from archium.ui import icons
+
 
 @dataclass(frozen=True)
 class ProductStage:
@@ -22,35 +24,35 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
         title="资料",
         caption="上传文件、整理事实与素材，确认资料缺口。",
         page_key="materials",
-        icon="📁",
+        icon=icons.MATERIALS,
     ),
     ProductStage(
         id="outline",
         title="大纲",
         caption="描述汇报任务，确认结构、页数与必须出现的内容。",
         page_key="outline",
-        icon="🧭",
+        icon=icons.OUTLINE,
     ),
     ProductStage(
         id="generate",
         title="生成",
         caption="生成页面内容与版式预览，处理错误与进度。",
         page_key="generate",
-        icon="⚡",
+        icon=icons.GENERATE,
     ),
     ProductStage(
         id="edit",
         title="工作室",
         caption="在工作室调整页面、版式与图文。",
         page_key="edit",
-        icon="🎬",
+        icon=icons.STUDIO,
     ),
     ProductStage(
         id="deliver",
         title="交付",
         caption="导出 PPTX/PDF、查看质量检查与评审状态。",
         page_key="deliver",
-        icon="📦",
+        icon=icons.DELIVER,
     ),
 )
 

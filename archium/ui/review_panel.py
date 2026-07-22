@@ -121,13 +121,6 @@ SEVERITY_DOT_COLORS: dict[ReviewSeverity, str] = {
     ReviewSeverity.SUGGESTION: "green",
 }
 
-SEVERITY_EMOJI: dict[ReviewSeverity, str] = {
-    ReviewSeverity.CRITICAL: "🔴",
-    ReviewSeverity.HIGH: "🟠",
-    ReviewSeverity.MEDIUM: "🟡",
-    ReviewSeverity.SUGGESTION: "🟢",
-}
-
 CATEGORY_LABELS = {
     ReviewCategory.CITATION: "引用",
     ReviewCategory.CONTENT: "内容",
@@ -174,9 +167,8 @@ def _severity_badge_html(severity: ReviewSeverity) -> str:
 
 
 def _severity_table_label(severity: ReviewSeverity) -> str:
-    """Severity for dataframe cells (emoji cue; HTML is not rendered there)."""
-    emoji = SEVERITY_EMOJI.get(severity, "⚪")
-    return f"{emoji} {_severity_label(severity)}"
+    """Text severity for tables — label first, not emoji-only."""
+    return _severity_label(severity)
 
 
 def _slide_status_badge(status: SlideStatus) -> str:

@@ -61,11 +61,17 @@ def test_status_badge_symbols() -> None:
         phase=PagePipelinePhase.GENERATING,
         severity="info",
     )
-    assert status_badge(complete) == "✓"
-    assert status_badge(missing) == "⚠"
-    assert status_badge(drawing) == "✕"
-    assert status_badge(generating) == "⏳"
+    assert status_badge(complete) == "✓完成"
+    assert status_badge(missing) == "!需注意"
+    assert status_badge(drawing) == "✕失败"
+    assert status_badge(generating) == "…进行中"
     assert "缺少" in status_short_detail(missing)
+    from archium.ui.page_status_board_panel import status_chip_html, status_label
+
+    assert status_label(complete) == "完成"
+    assert "status-chip-ok" in status_chip_html(complete)
+    assert "完成" in status_chip_html(complete)
+    assert "status-chip-warn" in status_chip_html(missing)
 
 
 def test_pick_primary_action_empty() -> None:

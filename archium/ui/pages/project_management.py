@@ -174,7 +174,7 @@ def _render_create_project_form() -> None:
 
 def render() -> None:
     """Render the project management page."""
-    st.title("📁 项目管理")
+    st.title("项目管理")
     st.markdown("管理你的所有项目，查看、编辑或删除项目。")
 
     if "editing_project_id" not in st.session_state:
@@ -237,6 +237,6 @@ def render() -> None:
     with link_cols[0]:
         st.page_link(get_app_page("home"), label="返回概览", icon="🏠")
     with link_cols[1]:
-        st.page_link(get_app_page("outline"), label="开始大纲", icon="🧭")
+        st.page_link(get_app_page("outline"), label="开始大纲", icon=":material/account_tree:")
     with link_cols[2]:
-        st.page_link(get_app_page("materials"), label="进入资料", icon="📁")
+        st.page_link(get_app_page("materials"), label="进入资料", icon=":material/folder_open:")

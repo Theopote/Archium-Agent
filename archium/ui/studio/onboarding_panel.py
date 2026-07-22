@@ -85,9 +85,9 @@ def render_studio_no_presentation_hint(*, project_id: UUID) -> None:
     st.warning("该项目还没有汇报内容。请导入资料后，到「大纲」或「生成」产出页面内容。")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link(get_app_page("outline"), label="前往大纲", icon="🧭")
+        st.page_link(get_app_page("outline"), label="前往大纲", icon=":material/account_tree:")
     with link_cols[1]:
-        st.page_link(get_app_page("generate"), label="前往生成", icon="⚡")
+        st.page_link(get_app_page("generate"), label="前往生成", icon=":material/bolt:")
 
 
 def _run_import(project_id: UUID, uploads: list, *, settings: Settings) -> None:

@@ -22,12 +22,78 @@ from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import entity_label
 
-_SEVERITY_ICON = {
-    "success": "✅",
-    "info": "⏳",
-    "warn": "⚠️",
-    "error": "❌",
+_SEVERITY_META: dict[str, dict[str, str]] = {
+    "success": {"mark": "✓", "label": "完成", "css": "ok"},
+    "info": {"mark": "…", "label": "进行中", "css": "info"},
+    "warn": {"mark": "!", "label": "需注意", "css": "warn"},
+    "error": {"mark": "✕", "label": "失败", "css": "error"},
 }
+
+
+def _severity_meta(severity: str) -> dict[str, str]:
+    return _SEVERITY_META.get(
+        severity, {"mark": "○", "label": "未知", "css": "neutral"}
+    )
+
+
+def status_label(row: PagePipelineStatus) -> str:
+    """Human-readable status label (not emoji-only)."""
+    if row.phase == PagePipelinePhase.COMPLETE or row.severity == "success":
+        return "完成"
+    if row.phase == PagePipelinePhase.DRAWING_QA_FAILED or row.severity == "error":
+        return "失败"
+    if row.phase in {
+        PagePipelinePhase.ASSET_MISSING,
+        PagePipelinePhase.FALLBACK,
+        PagePipelinePhase.SCHEMA_BLOCKED,
+    } or row.severity == "warn":
+        return "需注意"
+    if row.phase in {
+        PagePipelinePhase.QUEUED,
+        PagePipelinePhase.GENERATING,
+        PagePipelinePhase.BINDING_ASSETS,
+        PagePipelinePhase.COMPILING_SCENE,
+    } or row.severity == "info":
+        return "进行中"
+    return "待处理"
+
+
+def status_badge(row: PagePipelineStatus) -> str:
+    """Compact badge for navigator rows: mark + text label."""
+    label = status_label(row)
+    key = {
+        "完成": "success",
+        "失败": "error",
+        "需注意": "warn",
+        "进行中": "info",
+    }.get(label, "neutral")
+    meta = _severity_meta(key)
+    return f"{meta['mark']}{label}"
+
+
+def status_chip_html(row: PagePipelineStatus) -> str:
+    """Colored bordered chip: mark + text (accessible beyond color alone)."""
+    label = status_label(row)
+    css_key = {
+        "完成": "ok",
+        "失败": "error",
+        "需注意": "warn",
+        "进行中": "info",
+    }.get(label, "neutral")
+    mark = {
+        "ok": "✓",
+        "error": "✕",
+        "warn": "!",
+        "info": "…",
+        "neutral": "○",
+    }[css_key]
+    return (
+        f'<span class="status-chip status-chip-{css_key}" '
+        f'role="status" aria-label="{label}">'
+        f'<span class="status-chip-mark" aria-hidden="true">{mark}</span>'
+        f"{label}</span>"
+    )
+
 
 _PRIMARY_ACTION_PREFERENCE: tuple[PageStatusAction, ...] = (
     PageStatusAction.REBIND_ASSETS,
@@ -49,28 +115,6 @@ def load_page_status_board(
             presentation_id,
             workflow_step=workflow_step,
         )
-
-
-def status_badge(row: PagePipelineStatus) -> str:
-    """Compact badge for navigator rows."""
-    if row.phase == PagePipelinePhase.COMPLETE or row.severity == "success":
-        return "✓"
-    if row.phase == PagePipelinePhase.DRAWING_QA_FAILED or row.severity == "error":
-        return "✕"
-    if row.phase in {
-        PagePipelinePhase.ASSET_MISSING,
-        PagePipelinePhase.FALLBACK,
-        PagePipelinePhase.SCHEMA_BLOCKED,
-    } or row.severity == "warn":
-        return "⚠"
-    if row.phase in {
-        PagePipelinePhase.QUEUED,
-        PagePipelinePhase.GENERATING,
-        PagePipelinePhase.BINDING_ASSETS,
-        PagePipelinePhase.COMPILING_SCENE,
-    }:
-        return "⏳"
-    return "○"
 
 
 def status_short_detail(row: PagePipelineStatus) -> str:
@@ -177,20 +221,21 @@ def render_page_status_board(
         st.caption(board.summary)
 
     for row in board.rows:
-        icon = _SEVERITY_ICON.get(row.severity, "•")
+        chip = status_chip_html(row)
         title_bit = f" · {row.title}" if row.title and not compact else ""
-        line = f"{icon} {row.display_line()}{title_bit}"
+        # Chip carries mark + text + color + border; phase line stays textual.
+        line = f"{chip} {row.display_line()}{title_bit}"
         if row.detail and not compact:
             line = f"{line}  \n  {row.detail}"
         elif row.detail and compact:
             line = f"{line} — {row.detail}"
 
         if compact:
-            st.markdown(line)
+            st.markdown(line, unsafe_allow_html=True)
             continue
 
         with st.container(border=True):
-            st.markdown(line)
+            st.markdown(line, unsafe_allow_html=True)
             render_compact_page_actions(
                 presentation_id=presentation_id,
                 project_id=project_id,

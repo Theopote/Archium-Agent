@@ -27,6 +27,12 @@ def render() -> None:
         snapshot = None
     if snapshot is not None and snapshot.ready_for_export:
         with st.expander("更多", expanded=False):
-            st.page_link(get_app_page("deliver"), label="前往交付（版式已齐）", icon="📦")
+            from archium.ui import icons
+
+            st.page_link(
+                get_app_page("deliver"),
+                label="前往交付（版式已齐）",
+                icon=icons.DELIVER,
+            )
 
     render_stage_nav("generate")

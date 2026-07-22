@@ -112,9 +112,25 @@ def test_sidebar_uses_project_progress_not_module_status() -> None:
     settings_text = settings_src.read_text(encoding="utf-8")
     assert "render_project_progress_card" in app_text
     assert "render_module_status" not in app_text
+    assert "render_version_footer" in app_text
+    assert "建筑 · 归档 · 智能" not in app_text
     assert "_render_system_diagnostics" in settings_text
     assert "render_system_diagnostics" in settings_text
+    assert "_render_about" in settings_text
 
+
+def test_branding_avoids_museum_subtitle() -> None:
+    from archium.ui.branding import BRAND_SUBTITLE, DISPLAY_VERSION, SIDEBAR_VALUE_HINT
+    from archium.ui import icons
+    from archium.ui.product_flow import get_stage
+
+    assert "Museum" not in BRAND_SUBTITLE
+    assert "建筑汇报智能工作台" in BRAND_SUBTITLE
+    assert DISPLAY_VERSION == "v0.2 Alpha"
+    assert SIDEBAR_VALUE_HINT == "本地项目 · 自动保存"
+    assert get_stage("materials").icon == icons.MATERIALS
+    assert get_stage("edit").icon == icons.STUDIO
+    assert icons.HOME.startswith(":material/")
 
 def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     outline_src = (

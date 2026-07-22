@@ -62,9 +62,17 @@ def _render_post_presentation_links() -> None:
     st.markdown("**下一步**")
     link_cols = st.columns(2)
     with link_cols[0]:
-        st.page_link(get_app_page("generate"), label="到「生成」产出页面内容", icon="⚡")
+        st.page_link(
+            get_app_page("generate"),
+            label="到「生成」产出页面内容",
+            icon=":material/bolt:",
+        )
     with link_cols[1]:
-        st.page_link(get_app_page("edit"), label="到「工作室」调整版式", icon="🎬")
+        st.page_link(
+            get_app_page("edit"),
+            label="到「工作室」调整版式",
+            icon=":material/slideshow:",
+        )
 
 
 def _apply_planning_result(result: object) -> None:

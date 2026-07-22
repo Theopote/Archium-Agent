@@ -42,6 +42,10 @@ class PptxGenPresentationRenderer:
         self._theme = theme
         self._cli = PptxGenCliRunner(self._settings)
 
+    def is_available(self) -> bool:
+        """Delegate to the Node/pptxgenjs CLI runtime check."""
+        return self._cli.is_available()
+
     def output_dir(self, presentation_id: UUID, version: int = 1) -> Path:
         return (
             self._settings.output_path

@@ -75,8 +75,10 @@ def render() -> None:
         st.warning(
             "尚未选择可导出的汇报。请先在「资料」选择项目，并在「生成」或「工作室」中准备页面内容。"
         )
-        st.page_link(get_app_page("materials"), label="前往资料", icon="📁")
-        st.page_link(get_app_page("generate"), label="前往生成", icon="⚡")
+        from archium.ui import icons
+
+        st.page_link(get_app_page("materials"), label="前往资料", icon=icons.MATERIALS)
+        st.page_link(get_app_page("generate"), label="前往生成", icon=icons.GENERATE)
         render_stage_nav("deliver")
         return
 
