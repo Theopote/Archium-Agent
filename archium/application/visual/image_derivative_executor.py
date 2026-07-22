@@ -2,6 +2,13 @@
 
 Original assets are never overwritten. Derivatives land under
 ``data/projects/<id>/cache/derivatives/``.
+
+Pipeline steps (in order):
+1. EXIF orientation + convert toward sRGB/RGB
+2. Mode normalize (safe / presentation_unify / document_scan)
+3. Explicit crop or focal-centered crop (when requested)
+4. Soft overlay (vignette) when allowed for asset class
+5. Max-edge downscale
 """
 
 from __future__ import annotations
@@ -12,7 +19,14 @@ from pathlib import Path
 from uuid import UUID
 
 from archium.application.visual.asset_path_resolver import storage_asset_uri
-from archium.domain.visual.image_derivative import ImageDerivative, ImageTreatmentSpec
+from archium.domain.visual.image_derivative import (
+    FocalPoint,
+    ImageAssetClass,
+    ImageCropBox,
+    ImageDerivative,
+    ImageTreatmentSpec,
+    mode_allowed_for_asset_class,
+)
 from archium.infrastructure.storage.local_storage import LocalProjectStorage, compute_file_hash
 from archium.logging import get_logger
 
@@ -20,15 +34,11 @@ logger = get_logger(__name__, operation="image_derivative")
 
 
 class ImageDerivativeNotImplementedError(NotImplementedError):
-    """Reserved for modes that still require Sharp/Node (e.g. advanced subject crop)."""
+    """Reserved for Sharp/Node advanced subject detection."""
 
 
 class ImageDerivativeExecutor:
-    """Pillow executor for SAFE_NORMALIZE / PRESENTATION_UNIFY / DOCUMENT_SCAN.
-
-    ``auto_subject_crop`` and non-none overlays are not implemented yet — those
-    modes fall back to normalize-only or raise when strictly required later.
-    """
+    """Pillow executor for SAFE_NORMALIZE / PRESENTATION_UNIFY / DOCUMENT_SCAN."""
 
     def __init__(self, storage: LocalProjectStorage | None = None) -> None:
         self._storage = storage or LocalProjectStorage()
@@ -54,6 +64,7 @@ class ImageDerivativeExecutor:
             "auto_subject_crop": spec.auto_subject_crop,
             "overlay": spec.overlay.model_dump(mode="json"),
             "target_max_edge_px": spec.target_max_edge_px,
+            "pipeline": "exif_srgb_v2",
             "original_file_hash": original_file_hash,
         }
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -67,13 +78,21 @@ class ImageDerivativeExecutor:
         original_path: Path,
     ) -> ImageDerivative | None:
         """Return a derivative, or None when mode is NONE / pass-through."""
-        if spec.mode.value == "none":
+        if spec.mode.value == "none" and not _has_geometry_ops(spec):
             return None
         if not self.is_available():
             logger.info("Pillow unavailable — skipping image derivative")
             return None
         if not original_path.is_file():
             logger.info("Original asset missing for derivative: %s", original_path)
+            return None
+        # Evidence/drawing: refuse expressive overlays even if spec asks.
+        if not mode_allowed_for_asset_class(spec.asset_class, spec.mode):
+            logger.info(
+                "Refusing mode %s for asset_class %s",
+                spec.mode.value,
+                spec.asset_class.value,
+            )
             return None
 
         file_hash = compute_file_hash(original_path)
@@ -115,6 +134,14 @@ class ImageDerivativeExecutor:
         )
 
 
+def _has_geometry_ops(spec: ImageTreatmentSpec) -> bool:
+    return bool(
+        spec.crop is not None
+        or spec.auto_subject_crop
+        or (spec.overlay.kind != "none" and spec.overlay.opacity > 0)
+    )
+
+
 def _image_size(path: Path) -> tuple[int | None, int | None]:
     try:
         from PIL import Image
@@ -133,8 +160,7 @@ def _process_image(
 
     try:
         with Image.open(path) as opened:
-            image = ImageOps.exif_transpose(opened)
-            image = image.convert("RGB")
+            image = _load_oriented_srgb(opened)
     except OSError as exc:
         logger.info("Failed to open image for derivative: %s (%s)", path, exc)
         return None
@@ -153,9 +179,21 @@ def _process_image(
 
     if spec.crop is not None:
         image = _apply_norm_crop(image, spec.crop)
-    elif spec.auto_subject_crop:
-        # Subject crop requires a dedicated detector — not implemented; skip.
-        pass
+    elif spec.auto_subject_crop or (
+        spec.focal_point.source in {"manual", "heuristic", "model"}
+        and spec.focal_point.confidence >= 0.5
+        and mode == "presentation_unify"
+    ):
+        image = _focal_center_crop(image, spec.focal_point, keep_ratio=0.85)
+
+    # Overlays only on non-evidence presentation photos.
+    if (
+        spec.overlay.kind == "soft_vignette"
+        and spec.overlay.opacity > 0
+        and spec.asset_class
+        not in {ImageAssetClass.PROJECT_DRAWING, ImageAssetClass.PROJECT_EVIDENCE_PHOTO}
+    ):
+        image = _apply_soft_vignette(image, opacity=spec.overlay.opacity)
 
     if spec.target_max_edge_px:
         image.thumbnail(
@@ -167,7 +205,30 @@ def _process_image(
     return image, width, height
 
 
-def _apply_norm_crop(image: object, crop: object) -> object:
+def _load_oriented_srgb(opened: object) -> object:
+    """EXIF-orient and convert to RGB (sRGB working space for JPEG pipeline)."""
+    from PIL import Image, ImageCms, ImageOps
+
+    assert isinstance(opened, Image.Image)
+    image = ImageOps.exif_transpose(opened)
+    # Prefer ICC → sRGB when profile present; fall back to plain RGB.
+    try:
+        icc = image.info.get("icc_profile")
+        if icc and image.mode in {"RGB", "RGBA", "L", "CMYK"}:
+            src = ImageCms.ImageCmsProfile(bytes(icc))
+            dst = ImageCms.createProfile("sRGB")
+            image = ImageCms.profileToProfile(image, src, dst, outputMode="RGB")
+            return image
+    except Exception:  # noqa: BLE001 — ICC optional
+        pass
+    if image.mode == "RGBA":
+        background = Image.new("RGB", image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[-1])
+        return background
+    return image.convert("RGB")
+
+
+def _apply_norm_crop(image: object, crop: ImageCropBox) -> object:
     from PIL import Image
 
     assert isinstance(image, Image.Image)
@@ -179,3 +240,41 @@ def _apply_norm_crop(image: object, crop: object) -> object:
     if right <= left or bottom <= top:
         return image
     return image.crop((left, top, right, bottom))
+
+
+def _focal_center_crop(
+    image: object,
+    focal: FocalPoint,
+    *,
+    keep_ratio: float = 0.85,
+) -> object:
+    """Crop around focal point, keeping ``keep_ratio`` of the shorter side."""
+    from PIL import Image
+
+    assert isinstance(image, Image.Image)
+    keep_ratio = max(0.5, min(1.0, keep_ratio))
+    w, h = image.size
+    crop_w = int(w * keep_ratio)
+    crop_h = int(h * keep_ratio)
+    cx = int(focal.x * w)
+    cy = int(focal.y * h)
+    left = max(0, min(w - crop_w, cx - crop_w // 2))
+    top = max(0, min(h - crop_h, cy - crop_h // 2))
+    return image.crop((left, top, left + crop_w, top + crop_h))
+
+
+def _apply_soft_vignette(image: object, *, opacity: float) -> object:
+    from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+
+    assert isinstance(image, Image.Image)
+    opacity = max(0.0, min(1.0, opacity))
+    if opacity <= 1e-6:
+        return image
+    w, h = image.size
+    mask = Image.new("L", (w, h), 0)
+    draw = ImageDraw.Draw(mask)
+    inset = int(min(w, h) * 0.08)
+    draw.ellipse((inset, inset, w - inset, h - inset), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=max(8, min(w, h) // 12)))
+    darkened = ImageEnhance.Brightness(image).enhance(1.0 - 0.35 * opacity)
+    return Image.composite(image, darkened, mask)

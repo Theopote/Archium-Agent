@@ -11,6 +11,7 @@ from archium.domain.visual.enums import PhotoTreatment
 from archium.domain.visual.image_derivative import (
     FocalPoint,
     ImageAssetClass,
+    ImageOverlaySpec,
     ImageTreatmentMode,
     ImageTreatmentSpec,
     mode_allowed_for_asset_class,
@@ -93,11 +94,25 @@ class ImageTreatmentSpecPlanner:
         if isinstance(node, ImageNode) and node.focus_point is not None:
             focal = _focal_from_point(node.focus_point)
 
+        overlay = ImageOverlaySpec()
+        if (
+            mode == ImageTreatmentMode.PRESENTATION_UNIFY
+            and asset_class
+            not in {ImageAssetClass.PROJECT_DRAWING, ImageAssetClass.PROJECT_EVIDENCE_PHOTO}
+        ):
+            overlay = ImageOverlaySpec(kind="soft_vignette", opacity=0.22)
+
         return ImageTreatmentSpec(
             original_asset_id=asset_id,
             asset_class=asset_class,
             mode=mode,
             focal_point=focal,
+            auto_subject_crop=(
+                mode == ImageTreatmentMode.PRESENTATION_UNIFY
+                and focal.source == "manual"
+                and focal.confidence >= 0.5
+            ),
+            overlay=overlay,
             target_max_edge_px=2400 if mode != ImageTreatmentMode.NONE else None,
             rationale=rationale,
         )

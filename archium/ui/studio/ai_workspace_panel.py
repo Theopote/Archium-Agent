@@ -68,10 +68,10 @@ def render_ai_workspace(
     )
     scope = st.radio(
         "修改范围",
-        options=["选中对象", "多选", "当前页面"],
+        options=["选中对象", "多选", "选区(包围盒)", "当前页面"],
         horizontal=True,
         key=f"studio_ai_edit_scope_{slide_id}",
-        help="选中对象=单节点；多选=当前画布多选；当前页面=整页自然语言。",
+        help="选区=多选节点的包围盒 region 评论；多选=SELECTION scope。",
     )
     if bound_nodes:
         labels = ", ".join(f"`{nid}`" for nid, _ in bound_nodes[:6])
@@ -90,6 +90,7 @@ def render_ai_workspace(
             text=text.strip(),
             scope_label=scope,
             bound_nodes=bound_nodes,
+            slide_snapshot=slide_snapshot,
         )
 
     proposal = get_stored_proposal(slide_id)
@@ -115,6 +116,7 @@ def _run_scoped_proposal(
     text: str,
     scope_label: str,
     bound_nodes: list[tuple[str, str | None]],
+    slide_snapshot: SlideVisualSnapshot | None = None,
 ) -> None:
     if not text:
         st.error("请先描述想做的修改。")
@@ -123,6 +125,25 @@ def _run_scoped_proposal(
         with st.spinner("正在生成修改提案…"), get_session() as session:
             if scope_label == "当前页面" or not bound_nodes:
                 proposal = create_slide_scene_proposal_from_text(session, slide_id, text)
+            elif scope_label == "选区(包围盒)" and len(bound_nodes) >= 1:
+                from archium.application.visual.comment_region import selection_region_bbox
+
+                primary_id, layout_id = bound_nodes[0]
+                node_ids = [nid for nid, _ in bound_nodes]
+                extras = node_ids[1:]
+                region = None
+                if slide_snapshot is not None and slide_snapshot.render_scene is not None:
+                    region = selection_region_bbox(slide_snapshot.render_scene, node_ids)
+                proposal = create_slide_scene_proposal_from_element_comment(
+                    session,
+                    slide_id,
+                    node_id=primary_id,
+                    note=text,
+                    layout_element_id=layout_id,
+                    scope="region",
+                    scope_node_ids=extras,
+                    region_bbox=region,
+                )
             elif scope_label == "多选" and len(bound_nodes) >= 2:
                 primary_id, layout_id = bound_nodes[0]
                 extras = [nid for nid, _ in bound_nodes[1:]]

@@ -17,7 +17,9 @@ from archium.config.settings import Settings
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import PhotoTreatment
 from archium.domain.visual.image_derivative import (
+    FocalPoint,
     ImageAssetClass,
+    ImageOverlaySpec,
     ImageTreatmentMode,
     ImageTreatmentSpec,
     mode_allowed_for_asset_class,
@@ -26,6 +28,7 @@ from archium.domain.visual.render_scene import (
     BackgroundStyle,
     DrawingNode,
     ImageNode,
+    Point,
     RenderScene,
 )
 from archium.infrastructure.storage.local_storage import LocalProjectStorage
@@ -199,3 +202,119 @@ def test_apply_to_scene_rewrites_image_uri(
     assert "cache/derivatives/" in hero.storage_uri
     assert plan.storage_uri == str(original.resolve())  # drawings stay original
     assert len(result.derivatives) >= 1
+
+
+def test_planner_enables_vignette_and_focal_crop_for_presentation() -> None:
+    design = default_presentation_design_system()
+    design = design.model_copy(
+        update={
+            "image_style": design.image_style.model_copy(
+                update={"photo_treatment": PhotoTreatment.SUBTLE_UNIFY}
+            )
+        }
+    )
+    node = ImageNode(
+        id="hero",
+        x=0,
+        y=0,
+        width=2,
+        height=2,
+        z_index=1,
+        asset_id=uuid4(),
+        storage_uri="project://assets/x",
+        asset_origin="project_upload",
+        focus_point=Point(x=0.7, y=0.3),
+    )
+    spec = ImageTreatmentSpecPlanner().plan_for_node(node, design_system=design)
+    assert spec is not None
+    assert spec.mode == ImageTreatmentMode.PRESENTATION_UNIFY
+    assert spec.overlay.kind == "soft_vignette"
+    assert spec.overlay.opacity > 0
+    assert spec.auto_subject_crop is True
+    assert spec.focal_point.source == "manual"
+    assert abs(spec.focal_point.x - 0.7) < 1e-6
+
+
+def test_focal_center_crop_and_vignette_change_pixels(
+    tmp_path: Path,
+) -> None:
+    executor = ImageDerivativeExecutor()
+    if not executor.is_available():
+        pytest.skip("Pillow unavailable")
+
+    project_id = uuid4()
+    settings = Settings(_env_file=None, project_storage_path=tmp_path)
+    storage = LocalProjectStorage(settings=settings)
+    layout = storage.ensure_project_layout(project_id)
+    original = layout["assets"] / "focal.jpg"
+    # Distinct left/right colors so focal crop toward the right changes mean color.
+    img = Image.new("RGB", (200, 100), color=(10, 10, 10))
+    right = Image.new("RGB", (80, 100), color=(240, 20, 20))
+    img.paste(right, (120, 0))
+    img.save(original, format="JPEG")
+
+    executor = ImageDerivativeExecutor(storage=storage)
+    asset_id = uuid4()
+    plain = ImageTreatmentSpec(
+        original_asset_id=asset_id,
+        mode=ImageTreatmentMode.PRESENTATION_UNIFY,
+        target_max_edge_px=200,
+    )
+    cropped = ImageTreatmentSpec(
+        original_asset_id=asset_id,
+        mode=ImageTreatmentMode.PRESENTATION_UNIFY,
+        focal_point=FocalPoint(x=0.85, y=0.5, confidence=1.0, source="manual"),
+        auto_subject_crop=True,
+        overlay=ImageOverlaySpec(kind="soft_vignette", opacity=0.3),
+        target_max_edge_px=200,
+    )
+    d_plain = executor.execute(plain, project_id=project_id, original_path=original)
+    d_crop = executor.execute(cropped, project_id=project_id, original_path=original)
+    assert d_plain is not None and d_crop is not None
+    assert d_plain.params_hash != d_crop.params_hash
+    assert d_crop.width_px is not None and d_plain.width_px is not None
+    assert d_crop.width_px < d_plain.width_px
+
+
+def test_selection_region_bbox_covers_nodes() -> None:
+    from archium.application.visual.comment_region import selection_region_bbox
+    from archium.domain.visual.render_scene import TextNode
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            TextNode(
+                id="a",
+                x=1.0,
+                y=0.5,
+                width=2.0,
+                height=1.0,
+                z_index=1,
+                text="A",
+                font_family="Arial",
+                font_size=12,
+                color="#000000",
+                line_height=16,
+            ),
+            TextNode(
+                id="b",
+                x=3.5,
+                y=2.0,
+                width=1.5,
+                height=0.8,
+                z_index=2,
+                text="B",
+                font_family="Arial",
+                font_size=12,
+                color="#000000",
+                line_height=16,
+            ),
+        ],
+    )
+    box = selection_region_bbox(scene, ["a", "b"])
+    assert box == {"x": 1.0, "y": 0.5, "width": 4.0, "height": 2.3}
+    assert selection_region_bbox(scene, ["missing"]) is None
