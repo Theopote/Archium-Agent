@@ -10,6 +10,7 @@ from typing import Any
 
 from archium.config.settings import Settings
 from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.enums import LayoutContentType
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import (
@@ -92,7 +93,7 @@ def maybe_export_pptx(
     runner = PptxGenCliRunner(Settings())
     if not runner.is_available() or not runner.layout_plan_script_path.exists():
         return None
-    bundle = content_bundle or SlideContentBundle(page_number=1)
+    bundle = _bundle_with_icon_asset_paths(plan, content_bundle or SlideContentBundle(page_number=1))
     deck = PptxLayoutPlanAdapter().render_deck(
         title=title,
         slides=[(plan, design, bundle)],
@@ -105,6 +106,47 @@ def maybe_export_pptx(
             encoding="utf-8",
         )
         return runner.render_layout_instructions(deck_path, output_path)
+
+
+def _bundle_with_icon_asset_paths(
+    plan: LayoutPlan,
+    bundle: SlideContentBundle,
+) -> SlideContentBundle:
+    """Resolve bundled architectural icon refs for golden PPTX export."""
+    from archium.application.visual.architectural_icon_registry import (
+        load_default_architectural_icon_registry,
+    )
+
+    asset_paths = dict(bundle.asset_paths)
+    icon_refs = {
+        el.content_ref
+        for el in plan.elements
+        if el.content_type == LayoutContentType.IMAGE
+        and el.content_ref
+        and str(el.content_ref).startswith("icon:")
+    }
+    if not icon_refs:
+        return bundle
+
+    registry = load_default_architectural_icon_registry()
+    for ref in sorted(icon_refs):
+        if ref in asset_paths:
+            continue
+        icon_key = str(ref).split(":", 1)[1].strip()
+        if not icon_key:
+            continue
+        icon = registry.get_by_name(icon_key)
+        if icon is None:
+            continue
+        svg_path = registry.resolve_svg_path(icon)
+        if svg_path.is_file():
+            asset_paths[ref] = str(svg_path.resolve())
+    return SlideContentBundle(
+        asset_paths=asset_paths,
+        asset_origins=dict(bundle.asset_origins),
+        page_number=bundle.page_number,
+        speaker_notes=bundle.speaker_notes,
+    )
 
 
 def assert_or_update_baseline(

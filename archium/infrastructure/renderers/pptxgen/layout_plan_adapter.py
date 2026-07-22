@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from archium.application.visual.asset_reference import is_supported_layout_image_path
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
@@ -137,7 +136,7 @@ class PptxLayoutPlanAdapter:
             path = bundle.asset_paths.get(element.content_ref)
             if path:
                 instruction["path"] = path
-                if not is_supported_layout_image_path(path):
+                if not _is_supported_layout_image_path(path):
                     instruction["asset_unresolved"] = True
                     instruction["asset_error"] = "LAYOUT.UNSUPPORTED_IMAGE_FORMAT"
             elif element.content_type in {
@@ -195,3 +194,11 @@ class PptxLayoutPlanAdapter:
             "schema": "archium.layout_instructions.v1",
             "slides": instructions,
         }
+
+
+def _is_supported_layout_image_path(path: str) -> bool:
+    """Keep adapter import-light to avoid infra<->application cycles."""
+    from pathlib import Path
+
+    supported = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
+    return Path(path).suffix.lower() in supported

@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 from archium.config.settings import Settings
+from archium.domain.slide import SlideSpec
 from archium.domain.visual import (
     LayoutElement,
     LayoutElementRole,
@@ -63,6 +64,17 @@ def _sample_plan(design_id) -> LayoutPlan:
     )
 
 
+def _sample_slide(slide_id) -> SlideSpec:
+    return SlideSpec(
+        id=slide_id,
+        presentation_id=uuid4(),
+        chapter_id="ch1",
+        order=0,
+        title="测试标题",
+        message="这是一个核心结论。",
+    )
+
+
 def test_adapter_render_deck_preserves_coordinates() -> None:
     design = default_presentation_design_system()
     plan = _sample_plan(design.id)
@@ -106,6 +118,48 @@ def test_renderer_writes_deck_and_invokes_layout_cli(tmp_path: Path) -> None:
     assert payload["slides"][0]["elements"][0]["x"] == 0.7
     assert rendered == pptx_path.resolve()
     mock_render.assert_called_once()
+
+
+def test_renderer_resolves_icon_refs_via_asset_context() -> None:
+    design = default_presentation_design_system()
+    plan = _sample_plan(design.id)
+    plan.elements.append(
+        LayoutElement(
+            id="metric_icon",
+            role=LayoutElementRole.DECORATION,
+            content_type=LayoutContentType.IMAGE,
+            content_ref="icon:pedestrian_flow",
+            x=0.7,
+            y=2.8,
+            width=0.3,
+            height=0.3,
+            style_token="body",
+        )
+    )
+    slide = _sample_slide(plan.slide_id)
+    renderer = PptxGenPresentationRenderer(
+        Settings(_env_file=None),
+        session=MagicMock(),
+    )
+    fake_context = MagicMock()
+    fake_context.resolved_paths = {
+        "icon:pedestrian_flow": "C:/icons/pedestrian_flow.svg",
+    }
+    with patch(
+        "archium.application.visual.asset_reference.build_asset_reference_context",
+        return_value=fake_context,
+    ) as mocked:
+        deck = renderer.build_layout_instruction_deck(
+            title="测试汇报",
+            plans=[plan],
+            design_system=design,
+            slides=[slide],
+            project_id=uuid4(),
+        )
+    mocked.assert_called_once()
+    elements = deck["slides"][0]["elements"]
+    icon_el = next(item for item in elements if item["id"] == "metric_icon")
+    assert icon_el["path"] == "C:/icons/pedestrian_flow.svg"
 
 
 def test_cli_render_layout_instructions_invokes_render_plan(tmp_path: Path) -> None:

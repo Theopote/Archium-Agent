@@ -191,6 +191,25 @@ class PptxGenPresentationRenderer:
                         resolved = self._resolve_single_asset_path(project_id, uuid_ref)
                         if resolved is not None:
                             asset_paths[ref] = str(resolved.resolve())
+            # Resolve non-UUID refs (e.g. icon:pedestrian_flow) via shared
+            # asset-reference context so LayoutPlan PPTX export can render them.
+            if self._session is not None:
+                from archium.application.visual.asset_reference import (
+                    build_asset_reference_context,
+                    content_refs_from_plan,
+                )
+
+                refs: list[str] = []
+                for plan in plans:
+                    refs.extend(content_refs_from_plan(plan))
+                context = build_asset_reference_context(
+                    self._session,
+                    project_id=project_id,
+                    content_refs=refs,
+                    settings=self._settings,
+                )
+                for ref, path in context.resolved_paths.items():
+                    asset_paths.setdefault(ref, path)
 
         adapter = PptxLayoutPlanAdapter()
         packed: list[tuple[LayoutPlan, DesignSystem, SlideContentBundle | None]] = []
