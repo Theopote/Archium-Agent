@@ -11,8 +11,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from archium.application.artifact_policy_service import (
-    ArtifactMutationGuard,
-    ArtifactMutationOperation,
+    save_render_scene,
 )
 from archium.application.delivery_record_service import DeliveryRecordService
 from archium.application.export_policy_service import (
@@ -27,7 +26,6 @@ from archium.application.visual.template_studio_service import (
     TemplateStudioService,
 )
 from archium.config.settings import Settings, get_settings
-from archium.domain.artifact_ownership import ArtifactKind
 from archium.domain.enums import RevisionSource, SlideType
 from archium.domain.export_fidelity import DeckExportManifest, ExportPolicy, SlideExportResult
 from archium.domain.presentation import Presentation
@@ -185,10 +183,6 @@ class SlideRecoveryDeliveryService:
         presentation_id: UUID | None = None,
         slide_title: str | None = None,
     ) -> SlideRecoveryImportResult:
-        ArtifactMutationGuard().require_writable(
-            ArtifactKind.RENDER_SCENE,
-            ArtifactMutationOperation.CREATE,
-        )
         presentation = self._resolve_presentation(project_id, presentation_id)
         slides = self._presentations.list_slides(presentation.id)
         slide_order = max((slide.order for slide in slides), default=-1) + 1
@@ -218,7 +212,7 @@ class SlideRecoveryDeliveryService:
                 "layout_plan_id": plan.id,
             }
         )
-        saved_scene = self._scenes.save(imported_scene)
+        saved_scene = save_render_scene(self._scenes, imported_scene)
 
         slide = self._presentations.save_slide(
             slide.model_copy(update={"layout_plan_id": plan.id})

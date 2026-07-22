@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_policy_service import save_render_scene
 from archium.application.revision_service import RevisionService
 from archium.application.visual.scene_history_service import (
     SCENE_STATE_SNAPSHOT_KIND,
@@ -256,7 +257,7 @@ class SceneRevisionTimelineService:
                     "created_at": existing.created_at,
                 }
             )
-        return self._scenes.save(payload)
+        return save_render_scene(self._scenes, payload)
 
     def _sync_layout_plan_from_scene(self, slide: SlideSpec, scene: RenderScene) -> None:
         if slide.layout_plan_id is None:

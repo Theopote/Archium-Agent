@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_policy_service import save_render_scene
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.drawing_readability_service import parse_geometry_token
 from archium.application.visual.partial_edit_preservation import (
@@ -461,7 +462,7 @@ class SceneProposalService:
                     "created_at": existing.created_at,
                 }
             )
-        return self._scenes.save(payload)
+        return save_render_scene(self._scenes, payload)
 
     def _project_id_for_presentation(self, presentation_id: UUID) -> UUID | None:
         if self._presentations is None:

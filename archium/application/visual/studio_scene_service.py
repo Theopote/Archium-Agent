@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_policy_service import save_render_scene
 from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
@@ -266,7 +267,7 @@ class StudioSceneService:
                 prepared, batch = self._run_scene_repair(existing, slide)
                 saved = existing
                 if compute_scene_hash(prepared) != compute_scene_hash(existing):
-                    saved = self._scenes.save(
+                    saved = save_render_scene(self._scenes,
                         prepared.model_copy(
                             update={
                                 "id": existing.id,
@@ -297,7 +298,7 @@ class StudioSceneService:
                 }
             )
         prepared, batch = self._run_scene_repair(scene, slide)
-        saved = self._scenes.save(prepared)
+        saved = save_render_scene(self._scenes, prepared)
         self._record_safe_auto_repair(slide, saved, batch)
         self.invalidate_preview_cache(
             slide.presentation_id,

@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_policy_service import save_render_scene
 from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,
@@ -180,7 +181,7 @@ class VisualSceneRepairWorkflowService:
                 encoding="utf-8",
             )
             scene_paths.append(str(scene_path))
-            self._scenes.save(scene)
+            save_render_scene(self._scenes, scene)
 
         scene_pptx_path: str | None = None
         if export_scene_pptx and batch.scenes:

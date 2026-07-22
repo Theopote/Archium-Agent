@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_policy_service import save_render_scene
 from archium.application.visual.deck_theme_apply import apply_tokens_to_design_system
 from archium.application.visual.scene_deterministic_qa_service import run_proposal_scene_qa
 from archium.application.visual.studio_scene_service import StudioSceneService
@@ -293,7 +294,7 @@ class ThemeProposalService:
                     "created_at": existing.created_at,
                 }
             )
-            self._scenes.save(saved_scene)
+            save_render_scene(self._scenes, saved_scene)
             self._studio_scene.invalidate_preview_cache(
                 proposal.presentation_id,
                 layout_plan_id=slide.layout_plan_id,

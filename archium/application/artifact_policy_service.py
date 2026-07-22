@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import cast
+from typing import Protocol, cast
 from uuid import UUID
 
 from pydantic import Field
@@ -15,6 +15,7 @@ from archium.domain.artifact_ownership import (
     ArtifactOwnershipContract,
     ownership_for,
 )
+from archium.domain.visual.render_scene import RenderScene
 from archium.exceptions import WorkflowError
 
 
@@ -121,3 +122,18 @@ class ArtifactMutationGuard:
             ArtifactReconciliationProposal,
             proposal.model_copy(update={"status": ReconciliationProposalStatus.ACCEPTED}),
         )
+
+
+class RenderSceneWriter(Protocol):
+    def save(self, scene: RenderScene) -> RenderScene: ...
+
+
+def save_render_scene(
+    writer: RenderSceneWriter,
+    scene: RenderScene,
+    *,
+    operation: ArtifactMutationOperation = ArtifactMutationOperation.CREATE,
+) -> RenderScene:
+    """The single policy-enforced gateway for canonical RenderScene writes."""
+    ArtifactMutationGuard().require_writable(ArtifactKind.RENDER_SCENE, operation)
+    return writer.save(scene)

@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.artifact_policy_service import save_render_scene
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.studio_command_executor import (
     CommandExecutionResult,
@@ -350,7 +351,7 @@ class StudioSceneEditService:
         )
         if compute_scene_hash(payload) == compute_scene_hash(existing):
             return existing
-        return self._scenes.save(payload)
+        return save_render_scene(self._scenes, payload)
 
     def _require_slide(self, slide_id: UUID) -> SlideSpec:
         slide = self._presentations.get_slide(slide_id)
