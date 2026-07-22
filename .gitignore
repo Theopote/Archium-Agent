@@ -25,6 +25,9 @@ tests/golden/artifacts/*
 !tests/golden/artifacts/README.md
 !tests/golden/artifacts/.gitkeep
 
+# PPTX screenshot candidates (human review → approve-baseline; never commit)
+tests/golden/visual/composition/**/candidates/
+
 # Smoke test CI artifacts (uploaded by GitHub Actions, not versioned)
 tests/smoke/artifacts/*
 !tests/smoke/artifacts/README.md

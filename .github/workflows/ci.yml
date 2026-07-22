@@ -178,11 +178,11 @@ jobs:
       - name: Install screenshot tools (LibreOffice + Poppler)
         run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils
 
-      - name: Composition JSON golden cases
-        run: pytest tests/golden/visual/composition/test_golden_cases.py -v
+      - name: Composition JSON golden cases (preview_visual_regression)
+        run: pytest tests/golden/visual/composition/test_golden_cases.py -v -m preview_visual_regression
 
-      - name: LayoutPlan PPTX screenshot regression
-        run: pytest tests/golden/visual/composition/test_pptx_screenshot_regression.py -v
+      - name: LayoutPlan PPTX screenshot regression (pptx_visual_regression)
+        run: pytest tests/golden/visual/composition/test_pptx_screenshot_regression.py -v -m pptx_visual_regression
 
       - name: Upload screenshot baselines
         if: always()
@@ -192,6 +192,16 @@ jobs:
           path: |
             tests/golden/visual/composition/**/pptx_screenshot.png
             tests/golden/visual/composition/**/pptx_screenshot_manifest.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload screenshot candidates (for human approve-baseline)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layout-pptx-screenshot-candidates
+          path: |
+            tests/golden/visual/composition/**/candidates/**
           if-no-files-found: ignore
           retention-days: 14
 

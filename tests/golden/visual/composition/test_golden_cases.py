@@ -1,4 +1,8 @@
-"""Golden visual composition cases V1–V7 (LayoutPlan + validation + preview artifacts)."""
+"""Golden visual composition cases V1–V7 — preview_visual_regression track.
+
+Track: LayoutPlan → Python wireframe ``preview.png`` + JSON fingerprints.
+Final deliverable appearance is gated separately by ``pptx_visual_regression``.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +17,8 @@ from tests.golden.visual.composition.case_builders import (
     COMPOSITION_CASE_IDS,
     build_composition_case,
 )
+
+pytestmark = [pytest.mark.preview_visual_regression]
 
 GOLDEN_ROOT = Path(__file__).resolve().parent
 

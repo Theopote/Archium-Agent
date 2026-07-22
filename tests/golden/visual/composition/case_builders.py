@@ -16,6 +16,7 @@ from archium.domain.visual import (
     default_presentation_design_system,
 )
 from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
@@ -598,6 +599,405 @@ def build_v9_metric_dashboard_icons(intent_service: VisualIntentService) -> Comp
     )
 
 
+def _dark_design() -> DesignSystem:
+    design = default_presentation_design_system().model_copy(deep=True)
+    design.colors.background = "#1A1A1A"
+    design.colors.surface = "#2A2A2A"
+    design.colors.primary_text = "#F5F5F5"
+    design.colors.secondary_text = "#CCCCCC"
+    design.colors.muted_text = "#999999"
+    design.colors.primary = "#6BA3D0"
+    design.colors.accent = "#E8A87C"
+    design.colors.border = "#444444"
+    design.name = "Dark Presentation"
+    return design
+
+
+def _light_design() -> DesignSystem:
+    design = default_presentation_design_system().model_copy(deep=True)
+    design.colors.background = "#FFFFFF"
+    design.colors.surface = "#F8F8F8"
+    design.colors.primary_text = "#111111"
+    design.colors.accent = "#C45C26"
+    design.name = "Light Presentation"
+    return design
+
+
+def _page_4x3(design: DesignSystem) -> DesignSystem:
+    updated = design.model_copy(deep=True)
+    updated.page = updated.page.model_copy(
+        update={"width": 10.0, "height": 7.5}
+    )
+    return updated
+
+
+def build_v10_icons_long_cjk_title(intent_service: VisualIntentService) -> CompositionCaseResult:
+    """Icons + very long Chinese title (wrapping / hierarchy stress)."""
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="icons-long-title",
+        order=10,
+        title="既有医院门急诊综合体更新实施中关于步行流线重组、无障碍覆盖与停车周转协同的阶段性关键指标解读",
+        message="长标题下图标仍需可读，不得挤压结论区。",
+        key_points=["日均到诊 860人", "步行可达 6分钟", "无障碍覆盖 92%"],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="步行",
+                icon_canonical_name="pedestrian_flow",
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="无障碍",
+                icon_canonical_name="accessibility",
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="停车",
+                icon_canonical_name="parking",
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="指标说明.pdf", page_number=1)
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    intent.dominant_content_type = VisualContentType.METRICS
+    intent.preferred_layout_families = [LayoutFamily.METRIC_DASHBOARD]
+    design = default_presentation_design_system()
+    content = LayoutContentBundle(
+        title=slide.title,
+        message=slide.message,
+        metrics=list(slide.key_points),
+        source_text="指标说明.pdf p.1",
+        icon_refs=["icon:pedestrian_flow", "icon:accessibility", "icon:parking"],
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.METRIC_DASHBOARD,
+        _context(
+            slide=slide,
+            intent=intent,
+            design=design,
+            variant="metric_with_chart",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v10_icons_long_cjk_title",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v11_icons_dark_theme(intent_service: VisualIntentService) -> CompositionCaseResult:
+    base = build_v9_metric_dashboard_icons(intent_service)
+    design = _dark_design()
+    content = LayoutContentBundle(
+        title=base.slide.title,
+        message=base.slide.message,
+        metrics=list(base.slide.key_points),
+        source_text="运营数据月报.pdf p.2",
+        icon_refs=[
+            "icon:pedestrian_flow",
+            "icon:accessibility",
+            "icon:parking",
+            "icon:energy_saving",
+        ],
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.METRIC_DASHBOARD,
+        _context(
+            slide=base.slide,
+            intent=base.intent,
+            design=design,
+            variant="metric_with_chart",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v11_icons_dark_theme",
+        slide=base.slide,
+        intent=base.intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v12_icons_light_theme(intent_service: VisualIntentService) -> CompositionCaseResult:
+    base = build_v9_metric_dashboard_icons(intent_service)
+    design = _light_design()
+    content = LayoutContentBundle(
+        title=base.slide.title,
+        message=base.slide.message,
+        metrics=list(base.slide.key_points),
+        source_text="运营数据月报.pdf p.2",
+        icon_refs=[
+            "icon:pedestrian_flow",
+            "icon:accessibility",
+            "icon:parking",
+            "icon:energy_saving",
+        ],
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.METRIC_DASHBOARD,
+        _context(
+            slide=base.slide,
+            intent=base.intent,
+            design=design,
+            variant="metric_with_chart",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v12_icons_light_theme",
+        slide=base.slide,
+        intent=base.intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v13_icons_small_size(intent_service: VisualIntentService) -> CompositionCaseResult:
+    """Metric icons forced to a small decorative band (size stress)."""
+    base = build_v9_metric_dashboard_icons(intent_service)
+    plan = base.plan.model_copy(deep=True)
+    for element in plan.elements:
+        if (
+            element.role == LayoutElementRole.DECORATION
+            and element.content_type == LayoutContentType.IMAGE
+            and str(element.content_ref or "").startswith("icon:")
+        ):
+            element.width = 0.18
+            element.height = 0.16
+    return CompositionCaseResult(
+        case_id="v13_icons_small_size",
+        slide=base.slide,
+        intent=base.intent,
+        design=base.design,
+        plan=plan,
+        report=base.report,
+    )
+
+
+def build_v14_icons_stroke_recolor_pending(
+    intent_service: VisualIntentService,
+) -> CompositionCaseResult:
+    """Documents stroke/theme recolor intent until IconNode ships.
+
+    Current pack SVGs use hardcoded stroke; this case still builds with accent
+    theme so future IconNode stroke remapping can lock a pptx baseline.
+    """
+    base = build_v9_metric_dashboard_icons(intent_service)
+    design = base.design.model_copy(deep=True)
+    design.colors.accent = "#E63946"
+    design.colors.primary = "#E63946"
+    return CompositionCaseResult(
+        case_id="v14_icons_stroke_recolor_pending",
+        slide=base.slide,
+        intent=base.intent,
+        design=design,
+        plan=base.plan,
+        report=base.report,
+    )
+
+
+def build_v15_icons_aspect_4x3(intent_service: VisualIntentService) -> CompositionCaseResult:
+    base = build_v8_process_narrative_icons(intent_service)
+    design = _page_4x3(base.design)
+    content = LayoutContentBundle(
+        title=base.slide.title,
+        message=base.slide.message,
+        key_points=list(base.slide.key_points),
+        source_text="实施计划.pdf p.4",
+        supporting_asset_refs=list(
+            str(asset_id) for asset_id in base.intent.supporting_asset_ids
+        ),
+        icon_refs=["icon:pedestrian_flow", "icon:public_transport", "icon:parking"],
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.PROCESS_NARRATIVE,
+        _context(
+            slide=base.slide,
+            intent=base.intent,
+            design=design,
+            variant="steps_horizontal",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v15_icons_aspect_4x3",
+        slide=base.slide,
+        intent=base.intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v16_icons_missing_fallback(intent_service: VisualIntentService) -> CompositionCaseResult:
+    """Known-bad semantic name — asset resolve must not invent a path."""
+    base = build_v8_process_narrative_icons(intent_service)
+    content = LayoutContentBundle(
+        title=base.slide.title,
+        message=base.slide.message,
+        key_points=list(base.slide.key_points),
+        source_text="实施计划.pdf p.4",
+        supporting_asset_refs=list(
+            str(asset_id) for asset_id in base.intent.supporting_asset_ids
+        ),
+        icon_refs=["icon:does_not_exist_in_registry"],
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.PROCESS_NARRATIVE,
+        _context(
+            slide=base.slide,
+            intent=base.intent,
+            design=base.design,
+            variant="steps_horizontal",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, base.design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v16_icons_missing_fallback",
+        slide=base.slide,
+        intent=base.intent,
+        design=base.design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v17_icons_illegal_ref(intent_service: VisualIntentService) -> CompositionCaseResult:
+    """Malformed icon refs must not crash layout or export adapters."""
+    base = build_v9_metric_dashboard_icons(intent_service)
+    content = LayoutContentBundle(
+        title=base.slide.title,
+        message=base.slide.message,
+        metrics=list(base.slide.key_points),
+        source_text="运营数据月报.pdf p.2",
+        icon_refs=["icon:", "icon:/../etc/passwd", "not-an-icon-ref"],
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.METRIC_DASHBOARD,
+        _context(
+            slide=base.slide,
+            intent=base.intent,
+            design=base.design,
+            variant="metric_with_chart",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, base.design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v17_icons_illegal_ref",
+        slide=base.slide,
+        intent=base.intent,
+        design=base.design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v18_icons_dense_eight_steps(intent_service: VisualIntentService) -> CompositionCaseResult:
+    """Eight process steps — dense page with many icon arrows (policy may clamp)."""
+    stage_assets = [uuid4() for _ in range(8)]
+    steps = [f"阶段{i + 1}动作" for i in range(8)]
+    # Bypass editorial max key_points=5 — this case intentionally stress-tests density.
+    slide = SlideSpec.model_construct(
+        id=uuid4(),
+        presentation_id=uuid4(),
+        lineage_id=uuid4(),
+        logical_key="dense-icons-p18",
+        chapter_id="dense-icons",
+        order=18,
+        title="八步实施路径与关键动作",
+        message="密集流程页用于验证图标密度策略与箭头占位。",
+        slide_type="content",
+        layout_id="default",
+        key_points=steps,
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.TIMELINE,
+                description=f"阶段{i + 1}",
+                preferred_asset_ids=[stage_assets[i]],
+            )
+            for i in range(8)
+        ]
+        + [
+            VisualRequirement(
+                type=VisualType.ICON,
+                description=name,
+                icon_canonical_name=name,
+            )
+            for name in (
+                "pedestrian_flow",
+                "public_transport",
+                "parking",
+                "accessibility",
+                "energy_saving",
+                "healthcare",
+                "education",
+                "smart_systems",
+            )
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="实施计划.pdf", page_number=8)
+        ],
+        version=1,
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    intent.dominant_content_type = VisualContentType.PROCESS
+    intent.preferred_layout_families = [LayoutFamily.PROCESS_NARRATIVE]
+    intent.supporting_asset_ids = list(stage_assets)
+    design = default_presentation_design_system()
+    content = LayoutContentBundle(
+        title=slide.title,
+        message=slide.message,
+        key_points=steps,
+        source_text="实施计划.pdf p.8",
+        supporting_asset_refs=[str(asset_id) for asset_id in stage_assets],
+        icon_refs=[
+            "icon:pedestrian_flow",
+            "icon:public_transport",
+            "icon:parking",
+            "icon:accessibility",
+            "icon:energy_saving",
+            "icon:healthcare",
+            "icon:education",
+            "icon:smart_systems",
+        ],
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.PROCESS_NARRATIVE,
+        _context(
+            slide=slide,
+            intent=intent,
+            design=design,
+            variant="steps_horizontal",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v18_icons_dense_eight_steps",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
 COMPOSITION_CASE_BUILDERS: dict[str, object] = {
     "v1_drawing_focus": build_v1_drawing_focus,
     "v2_evidence_board": build_v2_evidence_board,
@@ -608,20 +1008,49 @@ COMPOSITION_CASE_BUILDERS: dict[str, object] = {
     "v7_hybrid_canvas": build_v7_hybrid_canvas,
 }
 
-ICON_CASE_BUILDERS: dict[str, object] = {
+# Icon cases with committed pptx_screenshot baselines (CI-gated).
+ICON_BASELINE_CASE_BUILDERS: dict[str, object] = {
     "v8_process_narrative_icons": build_v8_process_narrative_icons,
     "v9_metric_dashboard_icons": build_v9_metric_dashboard_icons,
 }
 
+# Expanded icon cases — builders + unit tests first; pptx baselines via approve flow.
+ICON_EXPANSION_CASE_BUILDERS: dict[str, object] = {
+    "v10_icons_long_cjk_title": build_v10_icons_long_cjk_title,
+    "v11_icons_dark_theme": build_v11_icons_dark_theme,
+    "v12_icons_light_theme": build_v12_icons_light_theme,
+    "v13_icons_small_size": build_v13_icons_small_size,
+    "v14_icons_stroke_recolor_pending": build_v14_icons_stroke_recolor_pending,
+    "v15_icons_aspect_4x3": build_v15_icons_aspect_4x3,
+    "v16_icons_missing_fallback": build_v16_icons_missing_fallback,
+    "v17_icons_illegal_ref": build_v17_icons_illegal_ref,
+    "v18_icons_dense_eight_steps": build_v18_icons_dense_eight_steps,
+}
+
+ICON_CASE_BUILDERS: dict[str, object] = {
+    **ICON_BASELINE_CASE_BUILDERS,
+    **ICON_EXPANSION_CASE_BUILDERS,
+}
+
 ICON_CASE_IDS: tuple[str, ...] = tuple(ICON_CASE_BUILDERS.keys())
+ICON_BASELINE_CASE_IDS: tuple[str, ...] = tuple(ICON_BASELINE_CASE_BUILDERS.keys())
+ICON_EXPANSION_CASE_IDS: tuple[str, ...] = tuple(ICON_EXPANSION_CASE_BUILDERS.keys())
 COMPOSITION_CASE_IDS: tuple[str, ...] = tuple(COMPOSITION_CASE_BUILDERS.keys())
 
-# Calibrated single-slide layouts used for PPTX screenshot regression.
-SCREENSHOT_CASE_IDS: tuple[str, ...] = (*COMPOSITION_CASE_IDS, *ICON_CASE_IDS)
+# Cases with committed pptx_screenshot.png that CI must compare.
+PPTX_VISUAL_REGRESSION_CASE_IDS: tuple[str, ...] = (
+    *COMPOSITION_CASE_IDS,
+    *ICON_BASELINE_CASE_IDS,
+)
+# Back-compat alias used by older scripts/tests.
+SCREENSHOT_CASE_IDS: tuple[str, ...] = PPTX_VISUAL_REGRESSION_CASE_IDS
 
 
 def build_composition_case(case_id: str, intent_service: VisualIntentService) -> CompositionCaseResult:
-    builder = COMPOSITION_CASE_BUILDERS.get(case_id) or ICON_CASE_BUILDERS.get(case_id)
+    builder = (
+        COMPOSITION_CASE_BUILDERS.get(case_id)
+        or ICON_CASE_BUILDERS.get(case_id)
+    )
     if builder is None:
         msg = f"Unknown composition case: {case_id}"
         raise ValueError(msg)

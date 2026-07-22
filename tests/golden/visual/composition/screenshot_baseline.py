@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -17,11 +18,18 @@ from tests.golden.visual.baseline import average_hash_hex, compare_preview_image
 from tests.golden.visual.composition.artifacts import maybe_export_pptx
 from tests.golden.visual.composition.case_builders import (
     COMPOSITION_CASE_IDS,
+    PPTX_VISUAL_REGRESSION_CASE_IDS,
     SCREENSHOT_CASE_IDS,
     CompositionCaseResult,
 )
+from tests.golden.visual.composition.visual_regression_tracks import (
+    CANDIDATE_ENV,
+    CANDIDATE_MANIFEST_NAME,
+    CANDIDATE_SCREENSHOT_NAME,
+    LEGACY_UPDATE_ENV,
+)
 
-UPDATE_ENV = "UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS"
+UPDATE_ENV = LEGACY_UPDATE_ENV  # back-compat export
 PPTX_SCREENSHOT_NAME = "pptx_screenshot.png"
 MANIFEST_NAME = "pptx_screenshot_manifest.json"
 
@@ -73,21 +81,36 @@ def manifest_path(case_dir: Path) -> Path:
     return case_dir / MANIFEST_NAME
 
 
+def candidate_dir(case_dir: Path) -> Path:
+    from tests.golden.visual.composition.visual_regression_tracks import CANDIDATE_DIRNAME
+
+    return case_dir / CANDIDATE_DIRNAME
+
+
+def candidate_screenshot_path(case_dir: Path) -> Path:
+    return candidate_dir(case_dir) / CANDIDATE_SCREENSHOT_NAME
+
+
+def candidate_manifest_path(case_dir: Path) -> Path:
+    return candidate_dir(case_dir) / CANDIDATE_MANIFEST_NAME
+
+
 def load_screenshot_manifest(case_dir: Path) -> PptxScreenshotManifest:
     path = manifest_path(case_dir)
     payload = json.loads(path.read_text(encoding="utf-8"))
     return PptxScreenshotManifest.from_dict(payload)
 
 
-def save_screenshot_baseline(
-    case_dir: Path,
+def _write_screenshot_pair(
     *,
+    png_target: Path,
+    manifest_target: Path,
     case: CompositionCaseResult,
     screenshot_path: Path,
+    screenshot_filename: str,
 ) -> Path:
-    case_dir.mkdir(parents=True, exist_ok=True)
-    target = screenshot_baseline_path(case_dir)
-    target.write_bytes(screenshot_path.read_bytes())
+    png_target.parent.mkdir(parents=True, exist_ok=True)
+    png_target.write_bytes(screenshot_path.read_bytes())
     with Image.open(screenshot_path) as image:
         width, height = image.size
         image_hash = average_hash_hex(image.convert("RGB"))
@@ -96,17 +119,72 @@ def save_screenshot_baseline(
         layout_family=case.plan.layout_family.value,
         layout_variant=case.plan.layout_variant,
         screenshot=PptxScreenshotSnapshot(
-            file=PPTX_SCREENSHOT_NAME,
+            file=screenshot_filename,
             width=width,
             height=height,
             average_hash=image_hash,
         ),
     )
-    manifest_path(case_dir).write_text(
+    manifest_target.write_text(
         json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    return target
+    return png_target
+
+
+def save_screenshot_candidate(
+    case_dir: Path,
+    *,
+    case: CompositionCaseResult,
+    screenshot_path: Path,
+) -> Path:
+    """Write reviewable candidate images — does **not** touch committed baselines."""
+    return _write_screenshot_pair(
+        png_target=candidate_screenshot_path(case_dir),
+        manifest_target=candidate_manifest_path(case_dir),
+        case=case,
+        screenshot_path=screenshot_path,
+        screenshot_filename=CANDIDATE_SCREENSHOT_NAME,
+    )
+
+
+def save_screenshot_baseline(
+    case_dir: Path,
+    *,
+    case: CompositionCaseResult,
+    screenshot_path: Path,
+) -> Path:
+    """Write committed baseline — only call from approve-baseline after human review."""
+    return _write_screenshot_pair(
+        png_target=screenshot_baseline_path(case_dir),
+        manifest_target=manifest_path(case_dir),
+        case=case,
+        screenshot_path=screenshot_path,
+        screenshot_filename=PPTX_SCREENSHOT_NAME,
+    )
+
+
+def approve_candidate_baseline(case_dir: Path) -> Path:
+    """Promote ``candidates/`` → committed baseline after human review."""
+    candidate_png = candidate_screenshot_path(case_dir)
+    candidate_manifest = candidate_manifest_path(case_dir)
+    if not candidate_png.is_file() or not candidate_manifest.is_file():
+        raise FileNotFoundError(
+            f"Missing candidates for {case_dir.name}: "
+            f"expected {candidate_png.name} and {candidate_manifest.name}"
+        )
+    target_png = screenshot_baseline_path(case_dir)
+    target_manifest = manifest_path(case_dir)
+    case_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(candidate_png, target_png)
+    payload = json.loads(candidate_manifest.read_text(encoding="utf-8"))
+    if isinstance(payload.get("screenshot"), dict):
+        payload["screenshot"]["file"] = PPTX_SCREENSHOT_NAME
+    target_manifest.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return target_png
 
 
 def render_case_pptx(
@@ -163,22 +241,32 @@ def compare_screenshot_to_baseline(case_dir: Path, actual_path: Path) -> list[st
     return issues
 
 
+def candidate_mode_enabled() -> bool:
+    return os.environ.get(CANDIDATE_ENV) == "1" or os.environ.get(LEGACY_UPDATE_ENV) == "1"
+
+
 def update_mode_enabled() -> bool:
-    return os.environ.get(UPDATE_ENV) == "1"
+    """Deprecated alias — only enables candidate write, never silent baseline overwrite."""
+    return candidate_mode_enabled()
 
 
 __all__ = [
+    "CANDIDATE_ENV",
     "COMPOSITION_CASE_IDS",
     "MANIFEST_NAME",
     "PPTX_SCREENSHOT_NAME",
+    "PPTX_VISUAL_REGRESSION_CASE_IDS",
     "SCREENSHOT_CASE_IDS",
     "UPDATE_ENV",
+    "approve_candidate_baseline",
+    "candidate_mode_enabled",
     "compare_screenshot_to_baseline",
     "load_screenshot_manifest",
     "manifest_path",
     "render_case_pptx",
     "render_case_pptx_screenshot",
     "save_screenshot_baseline",
+    "save_screenshot_candidate",
     "screenshot_baseline_path",
     "screenshot_tools_available",
     "update_mode_enabled",

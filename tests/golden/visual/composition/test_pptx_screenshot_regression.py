@@ -1,4 +1,14 @@
-"""LayoutPlan PPTX screenshot regression — rasterized slide vs committed baseline PNG."""
+"""LayoutPlan PPTX screenshot regression — final deliverable track.
+
+Track: ``pptx_visual_regression``
+  LayoutPlan → PptxGenJS → PPTX → LibreOffice/PowerPoint → pptx_screenshot.png
+
+This is **not** the Python wireframe preview track
+(``preview_visual_regression`` / ``test_golden_cases.py``).
+
+Baseline updates require: generate candidates → human review → approve-baseline.
+Pytest never overwrites committed baselines.
+"""
 
 from __future__ import annotations
 
@@ -11,17 +21,26 @@ from archium.config.settings import Settings
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from tests.golden.visual.composition.case_builders import build_composition_case
 from tests.golden.visual.composition.screenshot_baseline import (
-    SCREENSHOT_CASE_IDS,
+    CANDIDATE_ENV,
+    PPTX_VISUAL_REGRESSION_CASE_IDS,
     UPDATE_ENV,
+    candidate_mode_enabled,
     compare_screenshot_to_baseline,
     render_case_pptx_screenshot,
-    save_screenshot_baseline,
+    save_screenshot_candidate,
     screenshot_baseline_path,
     screenshot_tools_available,
-    update_mode_enabled,
+)
+from tests.golden.visual.composition.visual_regression_tracks import (
+    PPTX_MARKER,
+    PPTX_MARKER_LEGACY,
 )
 
-pytestmark = [pytest.mark.regression, pytest.mark.layout_pptx_screenshot]
+pytestmark = [
+    pytest.mark.regression,
+    pytest.mark.pptx_visual_regression,
+    pytest.mark.layout_pptx_screenshot,
+]
 
 GOLDEN_ROOT = Path(__file__).resolve().parent
 
@@ -54,7 +73,7 @@ def _pptxgen_available() -> bool:
     return runner.is_available() and runner.layout_plan_script_path.exists()
 
 
-@pytest.mark.parametrize("case_id", SCREENSHOT_CASE_IDS)
+@pytest.mark.parametrize("case_id", PPTX_VISUAL_REGRESSION_CASE_IDS)
 def test_layout_pptx_screenshot_matches_baseline(
     intent_service: VisualIntentService,
     case_id: str,
@@ -70,26 +89,40 @@ def test_layout_pptx_screenshot_matches_baseline(
     actual = render_case_pptx_screenshot(case, tmp_path / case_id)
     assert actual is not None, f"{case_id}: failed to render PPTX screenshot"
 
-    if update_mode_enabled():
-        saved = save_screenshot_baseline(case_dir, case=case, screenshot_path=actual)
-        pytest.skip(f"Updated screenshot baseline: {saved}")
+    if candidate_mode_enabled():
+        saved = save_screenshot_candidate(case_dir, case=case, screenshot_path=actual)
+        pytest.skip(
+            f"Wrote review candidate only (did not touch baseline): {saved}. "
+            f"Approve with: python scripts/approve_layout_pptx_screenshot_baselines.py "
+            f"--case {case_id} --i-reviewed"
+        )
 
     baseline = screenshot_baseline_path(case_dir)
     if not baseline.is_file():
+        save_screenshot_candidate(case_dir, case=case, screenshot_path=actual)
         pytest.fail(
             f"{case_id}: missing committed baseline {baseline.name}. "
-            f"Run: {UPDATE_ENV}=1 python scripts/update_layout_pptx_screenshot_baselines.py"
+            f"Candidate written for review. Generate/refresh with "
+            f"python scripts/update_layout_pptx_screenshot_baselines.py --case {case_id}, "
+            f"then approve with "
+            f"scripts/approve_layout_pptx_screenshot_baselines.py --case {case_id} --i-reviewed"
         )
 
     issues = compare_screenshot_to_baseline(case_dir, actual)
-    assert not issues, f"{case_id} screenshot regression failed:\n- " + "\n- ".join(issues)
+    if issues:
+        save_screenshot_candidate(case_dir, case=case, screenshot_path=actual)
+        pytest.fail(
+            f"{case_id} pptx_visual_regression failed:\n- "
+            + "\n- ".join(issues)
+            + f"\nCandidate written under {case_dir / 'candidates'} for human review."
+        )
 
 
 def test_screenshot_case_manifests_exist() -> None:
     from tests.golden.visual.composition.screenshot_baseline import load_screenshot_manifest
 
     missing: list[str] = []
-    for case_id in SCREENSHOT_CASE_IDS:
+    for case_id in PPTX_VISUAL_REGRESSION_CASE_IDS:
         case_dir = GOLDEN_ROOT / case_id
         baseline = screenshot_baseline_path(case_dir)
         manifest_file = case_dir / "pptx_screenshot_manifest.json"
@@ -103,9 +136,11 @@ def test_screenshot_case_manifests_exist() -> None:
     assert not missing, (
         "Missing committed screenshot baselines for: "
         + ", ".join(missing)
-        + f". Run: {UPDATE_ENV}=1 python scripts/update_layout_pptx_screenshot_baselines.py"
+        + ". Use candidate → approve-baseline workflow; do not silent-overwrite."
     )
 
 
-def test_update_env_documented() -> None:
-    assert UPDATE_ENV == "UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS"
+def test_tracks_are_documented() -> None:
+    assert PPTX_MARKER == "pptx_visual_regression"
+    assert PPTX_MARKER_LEGACY == "layout_pptx_screenshot"
+    assert CANDIDATE_ENV == "ARCHIUM_WRITE_PPTX_SCREENSHOT_CANDIDATES"
