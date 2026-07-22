@@ -28,6 +28,7 @@ from archium.domain.visual.studio_command import (
     NodeReorderDirection,
     ReorderNodeCommand,
     ResizeNodeCommand,
+    SetNodeLockCommand,
     ScenePatchAction,
     StudioCommand,
 )
@@ -226,6 +227,27 @@ class StudioSceneEditService:
             node_id=node_id,
             direction=direction,
             reason=f"reorder {direction}",
+        )
+        return self.apply_command(slide.id, command)
+
+    def set_layout_element_lock(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        locked: bool,
+        lock_scopes: list[str] | None = None,
+    ) -> SceneEditResult:
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        command = SetNodeLockCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            node_id=node_id,
+            locked=locked,
+            lock_scopes=list(lock_scopes or []),
+            reason="lock element" if locked else "unlock element",
         )
         return self.apply_command(slide.id, command)
 

@@ -125,6 +125,15 @@ class DeleteNodeCommand(StudioCommandBase):
     node_id: str = Field(min_length=1)
 
 
+class SetNodeLockCommand(StudioCommandBase):
+    """Lock/unlock a render node and optionally set lock scopes."""
+
+    command_type: Literal["set_node_lock"] = "set_node_lock"
+    node_id: str = Field(min_length=1)
+    locked: bool = True
+    lock_scopes: list[str] = Field(default_factory=list)
+
+
 class AlignNodesCommand(StudioCommandBase):
     """Align or distribute multiple render nodes."""
 
@@ -151,6 +160,7 @@ StudioCommand = Annotated[
     | MoveNodeCommand
     | ResizeNodeCommand
     | DeleteNodeCommand
+    | SetNodeLockCommand
     | AlignNodesCommand
     | ReorderNodeCommand,
     Field(discriminator="command_type"),

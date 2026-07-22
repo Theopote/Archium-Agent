@@ -24,6 +24,7 @@ from archium.domain.visual.studio_command import (
     DeleteNodeCommand,
     MoveNodeCommand,
     ResizeNodeCommand,
+    SetNodeLockCommand,
     build_patch_action,
 )
 
@@ -129,6 +130,56 @@ def test_delete_node_hides_node() -> None:
     node = result.candidate_scene.node_by_id("title")
     assert node is not None
     assert node.visible is False
+
+
+def test_set_node_lock_updates_lock_state() -> None:
+    scene = _scene(_text_node(node_id="title", locked=False))
+    command = SetNodeLockCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        locked=True,
+        lock_scopes=["position", "size"],
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("title")
+    assert node is not None
+    assert node.locked is True
+    assert node.lock_scopes == ["position", "size"]
+    replayed = apply_patch_actions(scene, list(result.applied_actions))
+    replay_node = replayed.node_by_id("title")
+    assert replay_node is not None
+    assert replay_node.locked is True
+    assert replay_node.lock_scopes == ["position", "size"]
+
+
+def test_move_node_blocked_after_lock_command() -> None:
+    scene = _scene(_text_node(node_id="title", x=1.0, y=1.0))
+    lock_result = StudioCommandExecutor().execute(
+        scene,
+        SetNodeLockCommand(
+            presentation_id=uuid4(),
+            slide_id=scene.slide_id,
+            node_id="title",
+            locked=True,
+            lock_scopes=["position"],
+        ),
+        _context(scene),
+    )
+    assert lock_result.success is True
+    assert lock_result.candidate_scene is not None
+    move = MoveNodeCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        x=2.0,
+        y=2.0,
+    )
+    moved = StudioCommandExecutor().execute(lock_result.candidate_scene, move, _context(scene))
+    assert moved.success is False
+    assert any(issue.code == "STUDIO.NODE_LOCKED" for issue in moved.issues)
 
 
 def test_align_nodes_uses_page_reference_for_single_node() -> None:

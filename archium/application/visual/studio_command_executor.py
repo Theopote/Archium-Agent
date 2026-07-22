@@ -47,6 +47,7 @@ from archium.domain.visual.studio_command import (
     ReplaceAssetCommand,
     ReplaceDrawingCommand,
     ResizeNodeCommand,
+    SetNodeLockCommand,
     RewriteTextCommand,
     ScenePatchAction,
     StudioCommand,
@@ -141,6 +142,8 @@ class StudioCommandExecutor:
             return self._execute_resize_node(scene, command, base_hash)
         if isinstance(command, DeleteNodeCommand):
             return self._execute_delete_node(scene, command, base_hash)
+        if isinstance(command, SetNodeLockCommand):
+            return self._execute_set_node_lock(scene, command, base_hash)
         if isinstance(command, AlignNodesCommand):
             return self._execute_align_nodes(scene, command, base_hash)
         if isinstance(command, ReorderNodeCommand):
@@ -783,6 +786,45 @@ class StudioCommandExecutor:
             base_scene_hash=base_hash,
             candidate_scene=patched,
             applied_actions=tuple(actions),
+        )
+
+    def _execute_set_node_lock(
+        self,
+        scene: RenderScene,
+        command: SetNodeLockCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert target is not None
+
+        before_locked = target.locked
+        before_scopes = ",".join(target.lock_scopes)
+        target.locked = command.locked
+        target.lock_scopes = list(command.lock_scopes)
+
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="set_node_lock",
+            property_name="lock",
+            before_value=f"{before_locked}:{before_scopes}",
+            after_value=f"{target.locked}:{','.join(target.lock_scopes)}",
+            before_payload={"locked": before_locked, "lock_scopes": list(node.lock_scopes)},
+            after_payload={"locked": target.locked, "lock_scopes": list(target.lock_scopes)},
+            reason=command.reason or ("lock node" if command.locked else "unlock node"),
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
         )
 
     def _execute_reorder_node(
