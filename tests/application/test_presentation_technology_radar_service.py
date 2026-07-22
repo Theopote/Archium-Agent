@@ -1,4 +1,4 @@
-"""Tests for Presentation Technology Radar service and catalog."""
+"""Tests for PresentationTechnologyRadarService."""
 
 from __future__ import annotations
 
@@ -9,8 +9,14 @@ from archium.application.presentation_technology_radar_service import (
 )
 
 
-def test_seed_catalog_has_required_systems() -> None:
-    ids = {item.id for item in DEFAULT_RADAR_SYSTEMS}
+def test_default_catalog_has_eleven_systems() -> None:
+    service = PresentationTechnologyRadarService()
+    assert service.summary().total == 11
+    assert len(DEFAULT_RADAR_SYSTEMS) == 11
+
+
+def test_required_seed_ids_present() -> None:
+    service = PresentationTechnologyRadarService()
     required = {
         "pptagent",
         "presenton",
@@ -24,8 +30,8 @@ def test_seed_catalog_has_required_systems() -> None:
         "microsoft-copilot",
         "gamma",
     }
+    ids = {item.id for item in service.list_systems()}
     assert required.issubset(ids)
-    assert len(DEFAULT_RADAR_SYSTEMS) >= 11
 
 
 def test_filter_by_relevance() -> None:
@@ -35,17 +41,11 @@ def test_filter_by_relevance() -> None:
     assert all(item.archium_relevance == "adopt" for item in adopt)
 
 
-def test_search_by_concept() -> None:
+def test_filter_by_query() -> None:
     service = PresentationTechnologyRadarService()
-    results = service.list_systems(RadarFilter(query="Before/After"))
-    assert any(item.id == "presentation-ai" for item in results)
-
-
-def test_summary_counts() -> None:
-    service = PresentationTechnologyRadarService()
-    summary = service.summary()
-    assert summary.total >= 11
-    assert summary.adopt_count >= 1
+    results = service.list_systems(RadarFilter(query="gamma"))
+    assert len(results) == 1
+    assert results[0].id == "gamma"
 
 
 def test_mark_reviewed_updates_timestamp() -> None:

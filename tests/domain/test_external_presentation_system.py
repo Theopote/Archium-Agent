@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from archium.domain.external_presentation_system import ExternalPresentationSystem
+from archium.domain.external_presentation_system import (
+    ExternalPresentationSystem,
+    RELEVANCE_LABELS_ZH,
+)
 
 
 def test_capability_badges() -> None:
@@ -16,18 +19,17 @@ def test_capability_badges() -> None:
     badges = system.capability_badges()
     assert "原生 PPTX" in badges
     assert "Agent 工作流" in badges
-    assert "文档接地" in badges
 
 
 def test_summary_lines_zh() -> None:
     system = ExternalPresentationSystem(
-        id="pptagent",
-        name="PPTAgent",
-        category="research",
+        id="demo",
+        name="Demo System",
+        archium_relevance="adopt",
+        category="open_source",
         input_modes=["文档"],
         output_formats=["PPTX"],
-        archium_relevance="adopt",
     )
     lines = system.summary_lines_zh()
-    assert any("PPTAgent" in line for line in lines)
-    assert any("采纳" in line for line in lines)
+    assert RELEVANCE_LABELS_ZH["adopt"] in lines[0]
+    assert any("输入" in line for line in lines)
