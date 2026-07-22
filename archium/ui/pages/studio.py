@@ -96,16 +96,10 @@ def _render_bottom_dock(
     slide_snapshot: SlideVisualSnapshot | None,
     show_progress: bool,
 ) -> None:
-    """Collapsible dock for history / generation status (not long-page chrome)."""
-    with st.expander("问题 / 生成状态 / 历史", expanded=False):
-        dock_tabs = st.tabs(["历史", "生成状态"])
+    """Collapsible dock: 状态 / 问题 / 历史."""
+    with st.expander("状态 / 问题 / 历史", expanded=False):
+        dock_tabs = st.tabs(["状态", "问题", "历史"])
         with dock_tabs[0]:
-            render_history_panel(
-                context=context,
-                advanced=advanced,
-                slide_snapshot=slide_snapshot,
-            )
-        with dock_tabs[1]:
             if show_progress:
                 render_workflow_progress_panel(
                     context.project.id,
@@ -117,7 +111,33 @@ def _render_bottom_dock(
                 )
             else:
                 st.caption("生成进度在后台任务运行时显示。")
+            from archium.ui.page_status_board_panel import render_page_status_board
 
+            render_page_status_board(
+                presentation_id=context.presentation.id,
+                project_id=context.project.id,
+                compact=True,
+                key_prefix="studio_dock_status",
+                title="",
+            )
+        with dock_tabs[1]:
+            from archium.ui.studio.human_review_panel import render_human_review_panel
+            from archium.ui.studio.scene_repair_prompt_panel import (
+                render_deferred_scene_repair_panel,
+            )
+
+            st.caption("安全修复与需确认问题。")
+            render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
+            render_human_review_panel(
+                presentation_id=context.presentation.id,
+                slide_snapshot=slide_snapshot,
+            )
+        with dock_tabs[2]:
+            render_history_panel(
+                context=context,
+                advanced=advanced,
+                slide_snapshot=slide_snapshot,
+            )
 
 def render(
     *,

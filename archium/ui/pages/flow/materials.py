@@ -1,4 +1,4 @@
-"""Product-flow stage: 资料."""
+"""Product-flow stage: 资料 — 文件 | 事实 | 素材 | 缺口."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from archium.ui.pages.workspace import render_materials_stage, render_project_pi
 
 def render() -> None:
     render_stage_header("materials")
+    st.caption("整理本项目资料。完整工作台能力在深层「项目工作台」页，日常不必打开。")
     project_id = render_project_picker(allow_create=True)
     if project_id is None:
         st.info("创建或选择项目后，即可上传资料并整理事实与素材。")

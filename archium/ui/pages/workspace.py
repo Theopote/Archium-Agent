@@ -180,12 +180,12 @@ def _render_documents(project_id: UUID) -> None:
         st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
 
     uploads = st.file_uploader(
-        "上传项目资料",
+        "上传资料",
         type=["pdf", "docx", "pptx", "xlsx", "png", "jpg", "jpeg", "webp"],
         accept_multiple_files=True,
         key=f"upload_{project_id}",
     )
-    if uploads and st.button("开始导入", key=f"import_{project_id}"):
+    if uploads and st.button("上传资料", type="primary", key=f"import_{project_id}"):
         results = []
         with get_session() as session:
             for upload in uploads:
@@ -686,25 +686,46 @@ def render_project_picker(*, allow_create: bool = True) -> UUID | None:
 
 
 def render_materials_stage(project_id: UUID) -> None:
-    """资料阶段：上传、知识、事实、素材与参考风格。"""
-    _render_overview(project_id)
-    _render_documents(project_id)
-    st.divider()
-    render_chunk_panel(project_id)
-    st.divider()
-    render_knowledge_panel(project_id)
-    st.divider()
-    render_cultural_narrative_panel(project_id)
-    st.divider()
-    render_renovation_issue_panel(project_id)
-    st.divider()
-    render_reference_style_panel(project_id)
-    st.divider()
-    render_fact_ledger_panel(project_id)
-    st.divider()
-    render_rag_preview_panel(project_id)
-    st.divider()
-    render_asset_metadata_panel(project_id)
+    """资料阶段：摘要指标 + 文件/事实/素材/缺口；高级工具收折。"""
+    from archium.ui.materials_summary import load_materials_summary
+
+    with get_session() as session:
+        summary = load_materials_summary(session, project_id)
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("文件", summary.file_count)
+    metric_cols[1].metric("事实", summary.fact_count)
+    metric_cols[2].metric("素材", summary.asset_count)
+    metric_cols[3].metric("待确认问题", summary.pending_confirm_count)
+
+    st.caption(
+        f"{summary.file_count} 个文件 · {summary.fact_count} 条事实 · "
+        f"{summary.asset_count} 项素材 · {summary.gap_count} 个资料缺口"
+    )
+
+    tab_files, tab_facts, tab_assets, tab_gaps = st.tabs(
+        ["文件", "事实", "素材", "缺口"]
+    )
+    with tab_files:
+        _render_documents(project_id)
+    with tab_facts:
+        render_fact_ledger_panel(project_id)
+    with tab_assets:
+        render_asset_metadata_panel(project_id)
+    with tab_gaps:
+        render_knowledge_panel(project_id)
+
+    with st.expander("更多工具（片段 / 叙事 / 风格 / 检索）", expanded=False):
+        st.caption("日常资料整理不需要这些面板；需要深度排查时再打开。")
+        render_chunk_panel(project_id)
+        st.divider()
+        render_cultural_narrative_panel(project_id)
+        st.divider()
+        render_renovation_issue_panel(project_id)
+        st.divider()
+        render_reference_style_panel(project_id)
+        st.divider()
+        render_rag_preview_panel(project_id)
 
 
 def render_generate_stage(project_id: UUID, *, include_export: bool = False) -> None:

@@ -12,6 +12,6 @@ def render() -> None:
         embedded=True,
         show_header=False,
         show_export=False,
-        show_progress=False,
+        show_progress=True,
     )
     render_stage_nav("edit")

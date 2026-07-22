@@ -93,14 +93,16 @@ def test_home_is_project_cockpit_not_welcome_wall() -> None:
     )
     text = home_src.read_text(encoding="utf-8")
     assert "9 步" not in text
-    assert "继续处理哪个项目" in text
-    assert "最近项目" in text
-    assert "当前任务" in text
-    assert "快捷入口" in text
-    assert "五阶段说明（首次使用）" in text
-    assert "阶段说明" not in text or "五阶段说明" in text
-    assert "list_recent_project_snapshots" in text
     assert "欢迎使用 Archium" not in text
+    assert "继续工作" in text
+    assert "汇报任务" in text
+    assert "当前阶段" in text
+    assert "总体进度" in text
+    assert "待处理问题" in text
+    assert "最近版本" in text
+    assert "五阶段说明（首次使用）" in text
+    assert "list_recent_project_snapshots" in text
+    assert "_render_project_cockpit" in text
 
 
 def test_sidebar_uses_project_progress_not_module_status() -> None:
@@ -132,6 +134,17 @@ def test_branding_avoids_museum_subtitle() -> None:
     assert get_stage("edit").icon == icons.STUDIO
     assert icons.HOME.startswith(":material/")
 
+
+def test_materials_stage_uses_four_tabs() -> None:
+    workspace_src = (
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "workspace.py"
+    )
+    text = workspace_src.read_text(encoding="utf-8")
+    assert '["文件", "事实", "素材", "缺口"]' in text
+    assert "load_materials_summary" in text
+    assert "更多工具" in text
+
+
 def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     outline_src = (
         Path(__file__).resolve().parents[3]
@@ -146,6 +159,43 @@ def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     assert "project_mission.render(embedded=True)" in text
     assert "outline_advanced_planning" in text
     assert "def _render_default_outline" in text
+    assert "页面意图卡" in text
+    assert "章节与页面" in text
+    assert "叙事弧线" in text
+
+
+def test_generate_stage_shows_page_queue() -> None:
+    generate_src = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "pages"
+        / "flow"
+        / "generate.py"
+    )
+    text = generate_src.read_text(encoding="utf-8")
+    assert "逐页队列" in text
+    assert "处理问题页" in text
+    assert "进入工作室" in text
+    assert "render_generate_stage" in text
+
+
+def test_deliver_stage_is_export_focused() -> None:
+    deliver_src = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "pages"
+        / "flow"
+        / "deliver.py"
+    )
+    text = deliver_src.read_text(encoding="utf-8")
+    assert "准备度" in text
+    assert "版本记录" in text
+    assert "render_export_panel" in text
+    assert "render_benchmark" not in text
+    assert "render_studio_selection" not in text
+    assert "_render_simple_selection" in text
 
 
 def test_edit_stage_embeds_studio_without_inner_header() -> None:
@@ -170,9 +220,10 @@ def test_edit_stage_embeds_studio_without_inner_header() -> None:
     assert "embedded=True" in edit_text
     assert "show_header=False" in edit_text
     assert "show_export=False" in edit_text
-    assert "show_progress=False" in edit_text
+    assert "show_progress=True" in edit_text
     assert "show_header: bool | None = None" in studio_text
     assert 'st.markdown("### 工作室")' in studio_text
+    assert "状态 / 问题 / 历史" in studio_text
 
 
 def test_studio_export_is_popover_not_top_panel() -> None:
