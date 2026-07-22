@@ -37,3 +37,18 @@ def render_version_footer() -> None:
         "</div>",
         unsafe_allow_html=True,
     )
+
+
+def render_about_panel() -> None:
+    """Version / product identity details (Settings → About)."""
+    import streamlit as st
+
+    st.markdown("### 关于 Archium")
+    st.markdown(f"**{PRODUCT_NAME_CN}**")
+    st.caption(f"{BRAND_SUBTITLE_EN} · {BRAND_SUBTITLE_CN}")
+    st.markdown(
+        f"- 显示版本：`{DISPLAY_VERSION}`\n"
+        f"- 完整版本：`{FULL_VERSION_LABEL}`\n"
+        f"- 工作方式：{SIDEBAR_VALUE_HINT}"
+    )
+    st.caption("本地优先：项目与草稿保存在本机，可随时继续编辑。")

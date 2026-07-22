@@ -376,6 +376,7 @@ def _render_intent_cards(
     cards: list[dict[str, str]],
     *,
     outline: OutlinePlan | None,
+    page_picker: bool = False,
 ) -> None:
     st.markdown("**页面意图卡**")
     if not cards and outline is None:
@@ -410,14 +411,20 @@ def _render_intent_cards(
     else:
         labels = [f"{index:02d} {card['title']}" for index, card in enumerate(cards, start=1)]
 
-    choice = st.selectbox(
-        "选择页面",
-        options=list(range(source_count)),
-        index=selected,
-        format_func=lambda value: labels[value] if value < len(labels) else str(value),
-        key="outline_card_select",
-    )
-    st.session_state.outline_selected_card = int(choice)
+    # Wide layout: chapter tree is the only page selector.
+    # Narrow layout (or no tree): use a selectbox.
+    if page_picker:
+        choice = st.selectbox(
+            "选择页面",
+            options=list(range(source_count)),
+            index=selected,
+            format_func=lambda value: labels[value] if value < len(labels) else str(value),
+            key="outline_card_select",
+        )
+        st.session_state.outline_selected_card = int(choice)
+    else:
+        choice = selected
+        st.caption(f"当前页面：{labels[choice]}")
 
     if mode == "查看" or outline is None:
         card = (
@@ -597,13 +604,32 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
         _render_task_composer(project_id)
         return
 
-    left, mid, right = st.columns([1.05, 1.6, 1.1], gap="medium")
-    with left:
-        _render_chapter_tree(outline=outline, storyline=storyline, cards=cards)
-    with mid:
-        _render_intent_cards(cards, outline=outline)
-    with right:
-        _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
+    narrow = st.toggle(
+        "窄屏布局（用列表选页）",
+        value=False,
+        key="outline_narrow_layout",
+        help="宽屏由左侧章节树选页；窄屏隐藏树，改用页面列表。",
+    )
+    has_tree = bool(
+        (outline is not None and outline.sections)
+        or (storyline is not None and storyline.chapters)
+        or cards
+    )
+    # Selectbox only in narrow mode, or when there is nothing for the tree to drive.
+    page_picker = narrow or not has_tree
+
+    if narrow:
+        _render_intent_cards(cards, outline=outline, page_picker=True)
+        with st.expander("汇报任务", expanded=False):
+            _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
+    else:
+        left, mid, right = st.columns([1.05, 1.6, 1.1], gap="medium")
+        with left:
+            _render_chapter_tree(outline=outline, storyline=storyline, cards=cards)
+        with mid:
+            _render_intent_cards(cards, outline=outline, page_picker=page_picker)
+        with right:
+            _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
 
     st.divider()
     cols = st.columns(2)

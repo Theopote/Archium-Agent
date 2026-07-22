@@ -221,6 +221,11 @@ def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     assert "保存当前页" in text
     assert "outline_intent_mode" in text
     assert "outline_sec_toggle_" in text
+    assert "outline_narrow_layout" in text
+    assert "page_picker" in text
+    # Wide layout uses the tree; selectbox is gated behind narrow / no-tree.
+    assert 'key="outline_card_select"' in text
+    assert "page_picker:" in text or "page_picker =" in text or "if page_picker" in text
 
 
 def test_generate_stage_shows_page_queue() -> None:

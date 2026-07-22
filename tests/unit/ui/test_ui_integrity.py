@@ -50,6 +50,28 @@ def test_flow_pages_use_compact_project_context() -> None:
         assert "render_flow_project_context" in text, name
 
 
+def test_bootstrap_stays_init_styles_brand_only() -> None:
+    bootstrap = (
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "bootstrap.py"
+    ).read_text(encoding="utf-8")
+    assert "module_status_pipeline" not in bootstrap
+    assert "module_status_marp_export" not in bootstrap
+    assert "module_status_legacy_ppt" not in bootstrap
+    assert "def render_module_status" not in bootstrap
+    assert "def render_system_diagnostics" not in bootstrap
+    assert "def init_app" in bootstrap
+    assert "def inject_styles" in bootstrap
+    assert "def render_branding" in bootstrap
+    diagnostics = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "system_diagnostics.py"
+    ).read_text(encoding="utf-8")
+    assert "def module_status_pipeline" in diagnostics
+    assert "def render_system_diagnostics" in diagnostics
+
+
 def test_bootstrap_avoids_inter_default_stack() -> None:
     css = (
         Path(__file__).resolve().parents[3] / "archium" / "ui" / "bootstrap.py"

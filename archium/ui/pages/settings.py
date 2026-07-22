@@ -194,7 +194,7 @@ def render() -> None:
 
 
 def _render_system_diagnostics() -> None:
-    from archium.ui.bootstrap import render_system_diagnostics
+    from archium.ui.system_diagnostics import render_system_diagnostics
 
     st.markdown("### 系统诊断")
     st.caption("运行依赖与导出工具状态。日常进度请看侧栏「当前项目」。")
@@ -202,7 +202,7 @@ def _render_system_diagnostics() -> None:
 
 
 def _render_about() -> None:
-    from archium.ui.bootstrap import render_about_panel
+    from archium.ui.branding import render_about_panel
 
     render_about_panel()
 

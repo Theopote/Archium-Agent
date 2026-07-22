@@ -239,16 +239,12 @@ def _render_other_projects(
                 )
             with cols[1]:
                 if st.button(
-                    "打开",
+                    "继续工作",
                     key=f"home_open_{snapshot.project_id}",
                     use_container_width=True,
+                    help="设为当前项目并进入建议阶段",
                 ):
-                    st.session_state.selected_project_id = str(snapshot.project_id)
-                    if snapshot.presentation_id is not None:
-                        st.session_state.selected_presentation_id = str(
-                            snapshot.presentation_id
-                        )
-                    st.rerun()
+                    _select_and_continue(snapshot)
 
 
 def render() -> None:

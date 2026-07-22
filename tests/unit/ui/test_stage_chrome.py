@@ -165,6 +165,17 @@ def test_studio_supports_canvas_maximize() -> None:
     assert "studio_show_inspector" in text
 
 
+def test_home_other_projects_continue_into_project() -> None:
+    home = (
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
+    ).read_text(encoding="utf-8")
+    other_block = home.split("def _render_other_projects")[1].split("def render")[0]
+    assert "_select_and_continue(snapshot)" in other_block
+    assert 'key=f"home_open_{snapshot.project_id}"' in other_block
+    assert "继续工作" in other_block
+    assert "st.rerun()" not in other_block
+
+
 def test_home_avoids_five_column_stage_grid() -> None:
     home_src = (
         Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
