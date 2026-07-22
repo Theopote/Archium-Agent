@@ -9,7 +9,10 @@ from pydantic import Field
 from archium.domain._base import DomainModel
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.slide_capacity_budget import (
+    CAPACITY_IMPOSSIBLE_RULE,
     CAPACITY_OVERLOAD_RULE,
+    CAPACITY_TIGHT_RULE,
+    CapacityStatus,
     SlideCapacityBudget,
 )
 from archium.domain.visual.validation import (
@@ -91,14 +94,28 @@ def suggest_content_adaptations(
     )
     overflow_rules = [code for code in rule_codes if code in _OVERFLOW_RULES]
 
-    if capacity_budget is not None and capacity_budget.is_overloaded:
+    if capacity_budget is not None and capacity_budget.status == CapacityStatus.IMPOSSIBLE:
+        suggestions.append(
+            ContentAdaptationSuggestion(
+                action=ContentAdaptationAction.SPLIT_SLIDE,
+                reason=(
+                    f"固定画布容量判定为 IMPOSSIBLE（capacity_ratio="
+                    f"{capacity_budget.capacity_ratio:.2f}），"
+                    "当前内容无法在可读图纸预算下排入单页，必须拆页或删减。"
+                ),
+                trigger_rule_codes=[CAPACITY_IMPOSSIBLE_RULE],
+                requires_user_approval=True,
+            )
+        )
+    elif capacity_budget is not None and capacity_budget.is_overloaded:
         if capacity_budget.recommended_action == "split_slide":
             suggestions.append(
                 ContentAdaptationSuggestion(
                     action=ContentAdaptationAction.SPLIT_SLIDE,
                     reason=(
-                        f"固定画布容量超载（capacity_ratio="
-                        f"{capacity_budget.capacity_ratio:.2f}），应拆页而非继续压缩字体。"
+                        f"固定画布容量超载（status={capacity_budget.status.value}, "
+                        f"ratio={capacity_budget.capacity_ratio:.2f}），"
+                        "应拆页而非继续压缩字体。"
                     ),
                     trigger_rule_codes=[CAPACITY_OVERLOAD_RULE],
                     requires_user_approval=True,
@@ -116,8 +133,8 @@ def suggest_content_adaptations(
                 ContentAdaptationSuggestion(
                     action=ContentAdaptationAction.SHORTEN,
                     reason=(
-                        f"固定画布容量超载（capacity_ratio="
-                        f"{capacity_budget.capacity_ratio:.2f}），"
+                        f"固定画布容量超载（status={capacity_budget.status.value}, "
+                        f"ratio={capacity_budget.capacity_ratio:.2f}），"
                         "禁止继续缩字，请先缩短或改写内容。"
                     ),
                     trigger_rule_codes=[CAPACITY_OVERLOAD_RULE],
@@ -130,6 +147,17 @@ def suggest_content_adaptations(
                     trigger_rule_codes=[CAPACITY_OVERLOAD_RULE],
                 )
             )
+    elif capacity_budget is not None and capacity_budget.status == CapacityStatus.TIGHT:
+        suggestions.append(
+            ContentAdaptationSuggestion(
+                action=ContentAdaptationAction.SHORTEN,
+                reason=(
+                    f"容量偏紧（status=tight, ratio={capacity_budget.capacity_ratio:.2f}），"
+                    "可生成候选但必须 QA；建议预先精简。"
+                ),
+                trigger_rule_codes=[CAPACITY_TIGHT_RULE],
+            )
+        )
 
     if overflow_rules:
         suggestions.append(

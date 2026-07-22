@@ -28,7 +28,13 @@ from archium.domain.visual.deck_composition import SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily, LayoutValidationStatus, OverflowPolicy, VisualContentType
 from archium.domain.visual.layout import LayoutPlan
-from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
+from archium.domain.visual.slide_capacity_budget import (
+    CAPACITY_IMPOSSIBLE_RULE,
+    CAPACITY_OVERLOAD_RULE,
+    CAPACITY_TIGHT_RULE,
+    CapacityStatus,
+    SlideCapacityBudget,
+)
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.repositories import ProjectRepository
@@ -152,20 +158,58 @@ class LayoutPlanningService:
             visual_intent=intent,
         )
         self._last_capacity_budget = capacity
-        if capacity.is_overloaded:
+        if capacity.status == CapacityStatus.IMPOSSIBLE:
             self._warnings.append(
                 {
-                    "code": "CAPACITY.OVERLOAD",
+                    "code": CAPACITY_IMPOSSIBLE_RULE,
+                    "severity": "blocker",
                     "detail": (
                         f"capacity_ratio={capacity.capacity_ratio:.2f}; "
-                        f"action={capacity.recommended_action}; "
-                        "forbid further font shrink — adapt or split"
+                        f"status={capacity.status.value}; "
+                        "drawing/min-readable exceeds fixed canvas — BLOCKED"
                     ),
                     "capacity_ratio": capacity.capacity_ratio,
+                    "capacity_status": capacity.status.value,
                     "recommended_action": capacity.recommended_action,
                     "overflow_risk": capacity.overflow_risk,
                 }
             )
+        elif capacity.status == CapacityStatus.OVERLOADED:
+            self._warnings.append(
+                {
+                    "code": CAPACITY_OVERLOAD_RULE,
+                    "severity": "major",
+                    "detail": (
+                        f"capacity_ratio={capacity.capacity_ratio:.2f}; "
+                        f"status={capacity.status.value}; "
+                        f"action={capacity.recommended_action}; "
+                        "forbid further font shrink — adapt or split"
+                    ),
+                    "capacity_ratio": capacity.capacity_ratio,
+                    "capacity_status": capacity.status.value,
+                    "recommended_action": capacity.recommended_action,
+                    "overflow_risk": capacity.overflow_risk,
+                }
+            )
+        elif capacity.status == CapacityStatus.TIGHT:
+            self._warnings.append(
+                {
+                    "code": CAPACITY_TIGHT_RULE,
+                    "severity": "minor",
+                    "detail": (
+                        f"capacity_ratio={capacity.capacity_ratio:.2f}; "
+                        "candidates allowed but QA is mandatory"
+                    ),
+                    "capacity_ratio": capacity.capacity_ratio,
+                    "capacity_status": capacity.status.value,
+                    "recommended_action": capacity.recommended_action,
+                    "overflow_risk": capacity.overflow_risk,
+                }
+            )
+
+        if capacity.is_blocked:
+            # IMPOSSIBLE → do not emit layout candidates; force adaptation gate.
+            return []
 
         resolved_style = reference_style
         if resolved_style is None and project_id is not None:
@@ -216,8 +260,12 @@ class LayoutPlanningService:
             )
             plan = self._solver.generate(family, context)
             plan = preserve_locked_elements(plan, previous_layout_plan)
-            if family_budget.is_overloaded:
-                plan = plan.model_copy(update={"overflow_policy": OverflowPolicy.SPLIT})
+            if family_budget.is_overloaded or family_budget.status == CapacityStatus.TIGHT:
+                # OVERLOADED forces split; TIGHT keeps current policy but QA is required.
+                if family_budget.is_overloaded:
+                    plan = plan.model_copy(update={"overflow_policy": OverflowPolicy.SPLIT})
+                elif plan.overflow_policy == OverflowPolicy.CLIP:
+                    plan = plan.model_copy(update={"overflow_policy": OverflowPolicy.WARN})
             asset_context = None
             if project_id is not None:
                 asset_context = build_asset_reference_context(

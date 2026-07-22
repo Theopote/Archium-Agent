@@ -89,18 +89,29 @@ class TextMeasurementService:
         box_width_in: float,
         style: TextStyleToken,
         dpi: float = 96.0,
+        language: str | None = None,
     ) -> int:
-        """Estimate wrapped line count for ``text`` inside a box width in inches."""
+        """Estimate wrapped line count for ``text`` inside a box width in inches.
+
+        Callers (especially capacity) must pass a full ``TextStyleToken`` so
+        family / size / weight / line_height are applied. ``language`` is an
+        explicit hint (``zh`` / ``en`` / ``mixed``) for font selection bias.
+        """
         if not text.strip():
             return 0
         box_width_pt = box_width_in * 72.0
         if box_width_pt <= 0:
             return 999
+        effective = _style_with_language(style, language)
 
         if self._can_use_real_metrics():
-            return self._estimate_lines_real(text, box_width_pt=box_width_pt, style=style, dpi=dpi)
+            return self._estimate_lines_real(
+                text, box_width_pt=box_width_pt, style=effective, dpi=dpi
+            )
 
-        return self._estimate_lines_heuristic(text, box_width_pt=box_width_pt, style=style)
+        return self._estimate_lines_heuristic(
+            text, box_width_pt=box_width_pt, style=effective
+        )
 
     def estimate_block_height_in(
         self,
@@ -110,20 +121,28 @@ class TextMeasurementService:
         style: TextStyleToken,
         vertical_slack_in: float = 0.0,
         dpi: float | None = None,
+        language: str | None = None,
     ) -> float:
-        """Estimated vertical space for wrapped text (inches), optional repair slack."""
+        """Estimated vertical space for wrapped text (inches), optional repair slack.
+
+        Requires styled metrics: font family, size, weight, and line height come
+        from ``style``; wrap width from ``box_width_in``; script bias from ``language``.
+        """
+        resolved_dpi = dpi if dpi is not None else self._dpi
+        effective = _style_with_language(style, language)
         lines = self.estimate_lines(
             text,
             box_width_in=box_width_in,
-            style=style,
-            dpi=dpi if dpi is not None else self._dpi,
+            style=effective,
+            dpi=resolved_dpi,
+            language=language,
         )
         if lines == 0:
             return vertical_slack_in
-        line_height_in = self._effective_line_height_in(style, dpi=dpi if dpi is not None else self._dpi)
+        line_height_in = self._effective_line_height_in(effective, dpi=resolved_dpi)
         block = lines * line_height_in
         if self._can_use_real_metrics():
-            block += self._descender_slack_in(style, dpi=dpi if dpi is not None else self._dpi)
+            block += self._descender_slack_in(effective, dpi=resolved_dpi)
         return block + vertical_slack_in
 
     def fits(
@@ -134,14 +153,18 @@ class TextMeasurementService:
         box_height_in: float,
         style: TextStyleToken,
         vertical_tolerance_in: float = 0.0,
+        language: str | None = None,
     ) -> bool:
         needed = self.estimate_block_height_in(
             text,
             box_width_in=box_width_in,
             style=style,
+            language=language,
         )
         if style.max_lines is not None:
-            lines = self.estimate_lines(text, box_width_in=box_width_in, style=style)
+            lines = self.estimate_lines(
+                text, box_width_in=box_width_in, style=style, language=language
+            )
             if lines > style.max_lines:
                 return False
         return needed <= box_height_in + vertical_tolerance_in + 1e-6
@@ -154,15 +177,19 @@ class TextMeasurementService:
         box_height_in: float,
         style: TextStyleToken,
         vertical_tolerance_in: float = 0.0,
+        language: str | None = None,
     ) -> float:
         """Return inches of vertical overflow after tolerance (0 if fits)."""
         needed = self.estimate_block_height_in(
             text,
             box_width_in=box_width_in,
             style=style,
+            language=language,
         )
         if style.max_lines is not None:
-            lines = self.estimate_lines(text, box_width_in=box_width_in, style=style)
+            lines = self.estimate_lines(
+                text, box_width_in=box_width_in, style=style, language=language
+            )
             if lines > style.max_lines:
                 line_height_in = self._effective_line_height_in(style)
                 needed = max(needed, style.max_lines * line_height_in)
@@ -184,6 +211,7 @@ class TextMeasurementService:
 
     def _font_for_char(self, char: str, style: TextStyleToken, size_px: int) -> TruetypeFont | None:
         bold = style.font_weight >= _BOLD_WEIGHT_THRESHOLD
+        # Per-glyph script detection; language hint may already have biased families.
         if _CJK_RE.match(char):
             family = style.font_family
         else:
@@ -328,3 +356,27 @@ class TextMeasurementService:
         design_line_in = style.line_height / 72.0
         glyph_line_in = self._glyph_line_height_in(style, dpi=dpi)
         return max(0.0, glyph_line_in - design_line_in) * 0.5
+
+
+def _style_with_language(style: TextStyleToken, language: str | None) -> TextStyleToken:
+    """Apply language hint without inventing missing family/size/weight/line_height.
+
+    Capacity callers must already supply a complete TextStyleToken; this only
+    biases CJK vs Latin primary family when language is explicit.
+    """
+    if not language:
+        return style
+    normalized = language.strip().lower()
+    if normalized.startswith("zh") or normalized in {"cjk", "mixed"}:
+        if style.font_family_latin:
+            return style
+        return style.model_copy(update={"font_family_latin": "Arial"})
+    if normalized.startswith("en") or normalized in {"latin", "western"}:
+        latin = style.font_family_latin or style.font_family
+        return style.model_copy(
+            update={
+                "font_family": latin,
+                "font_family_latin": latin,
+            }
+        )
+    return style
