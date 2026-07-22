@@ -235,8 +235,8 @@ def render() -> None:
     st.markdown("### 快速导航")
     link_cols = st.columns(3)
     with link_cols[0]:
-        st.page_link(get_app_page("home"), label="返回首页", icon="🏠")
+        st.page_link(get_app_page("home"), label="返回概览", icon="🏠")
     with link_cols[1]:
-        st.page_link(get_app_page("outline"), label="开始大纲 / 任务", icon="🧭")
+        st.page_link(get_app_page("outline"), label="开始大纲", icon="🧭")
     with link_cols[2]:
         st.page_link(get_app_page("materials"), label="进入资料", icon="📁")

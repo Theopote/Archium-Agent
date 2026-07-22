@@ -640,7 +640,7 @@ def _render_history(project_id: UUID) -> None:
 def render() -> None:
     _init_session_state()
     st.markdown("### 项目工作台")
-    st.caption("管理项目资料，运行结构化汇报生成管线（进阶入口；日常请走主流程五阶段）")
+    st.caption("管理项目资料，运行结构化汇报生成管线（深层工具页；日常请走制作五阶段）")
     from archium.ui.product_flow import product_flow_chain
 
     st.info(

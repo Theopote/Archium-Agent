@@ -12,7 +12,7 @@ def render_stage_header(stage_id: str) -> None:
     stage = get_stage(stage_id)
     st.markdown(f"### {stage.title}")
     st.caption(stage.caption)
-    st.caption(f"主流程：{product_flow_chain()}")
+    st.caption(f"制作流程：{product_flow_chain()}")
 
 
 def render_stage_nav(stage_id: str) -> None:

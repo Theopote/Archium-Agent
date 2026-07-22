@@ -160,11 +160,28 @@ def module_status_legacy_ppt() -> tuple[str, str]:
 
 
 def render_module_status() -> None:
-    st.markdown('<div class="section-label">Module Status</div>', unsafe_allow_html=True)
+    """Deprecated alias — use ``render_system_diagnostics`` in Settings."""
+    render_system_diagnostics()
+
+
+def render_system_diagnostics() -> None:
+    """Developer-facing dependency checks for Settings → 系统诊断."""
     pipeline_c, pipeline_h = module_status_pipeline()
     marp_c, marp_h = module_status_marp_export()
     legacy_c, legacy_h = module_status_legacy_ppt()
-    render_status("📁 项目工作台", pipeline_c, pipeline_h)
-    render_status("🎨 视觉设计", "green", "就绪")
-    render_status("📝 Marp 导出", marp_c, marp_h)
-    render_status("📊 快速 PPT", legacy_c, legacy_h)
+    node_c, node_h = module_status_node_pptx()
+    render_status("LLM / AI 服务", pipeline_c, pipeline_h)
+    render_status("Marp CLI（预览/降级导出）", marp_c, marp_h)
+    render_status("Node.js / PptxGen（可编辑 PPTX）", node_c, node_h)
+    render_status("Legacy 快速 PPT", legacy_c, legacy_h)
+
+
+def module_status_node_pptx() -> tuple[str, str]:
+    from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
+
+    if not shutil.which("node") and not shutil.which("node.exe"):
+        return "yellow", "待安装 Node.js"
+    renderer = PptxGenPresentationRenderer(get_settings())
+    if not renderer.is_available():
+        return "yellow", "待 npm install（pptxgen）"
+    return "green", "就绪"

@@ -40,8 +40,8 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
     ),
     ProductStage(
         id="edit",
-        title="编辑",
-        caption="在汇报工作室调整页面、版式与图文。",
+        title="工作室",
+        caption="在工作室调整页面、版式与图文。",
         page_key="edit",
         icon="🎬",
     ),
@@ -54,18 +54,28 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
     ),
 )
 
-ADVANCED_PAGE_KEYS: tuple[str, ...] = (
-    "project-management",
+# Still registered for deep links / st.page_link, but not shown in the sidebar.
+HIDDEN_PAGE_KEYS: tuple[str, ...] = (
     "project-mission",
     "workspace",
+    "studio",
     "visual-design",
     "template-studio",
+    "template-induction",
     "command-center",
-    "settings",
 )
 
-PRIMARY_SECTION = "主流程"
-ADVANCED_SECTION = "进阶"
+# Backward-compatible alias used by older tests/imports.
+ADVANCED_PAGE_KEYS: tuple[str, ...] = HIDDEN_PAGE_KEYS
+
+PROJECT_SECTION = "项目"
+MAKE_SECTION = "制作"
+RESOURCE_SECTION = "资源"
+SYSTEM_SECTION = "系统"
+
+# Backward-compatible aliases (old two-section IA).
+PRIMARY_SECTION = MAKE_SECTION
+ADVANCED_SECTION = SYSTEM_SECTION
 
 
 def primary_stages() -> tuple[ProductStage, ...]:
@@ -81,7 +91,11 @@ def primary_page_keys() -> tuple[str, ...]:
 
 
 def advanced_page_keys() -> tuple[str, ...]:
-    return ADVANCED_PAGE_KEYS
+    return HIDDEN_PAGE_KEYS
+
+
+def hidden_page_keys() -> tuple[str, ...]:
+    return HIDDEN_PAGE_KEYS
 
 
 def get_stage(stage_id: str) -> ProductStage:

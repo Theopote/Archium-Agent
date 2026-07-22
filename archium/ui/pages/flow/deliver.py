@@ -28,7 +28,7 @@ def render() -> None:
     render_stage_header("deliver")
     st.info(
         "导出可编辑 PPTX / PDF，并查看质量检查与评审状态。"
-        "Benchmark 人工视觉评审可在进阶「设置」中打开。"
+        "Benchmark 人工视觉评审可在「设置」中打开。"
     )
 
     from archium.ui.pages.workspace import ensure_workspace_session
@@ -52,7 +52,7 @@ def render() -> None:
         render_review_stage(project_id)
     else:
         st.warning(
-            "尚未选择可导出的汇报。请先在「资料」选择项目，并在「生成」或「编辑」中准备页面内容。"
+            "尚未选择可导出的汇报。请先在「资料」选择项目，并在「生成」或「工作室」中准备页面内容。"
         )
         st.page_link(get_app_page("materials"), label="前往资料", icon="📁")
         st.page_link(get_app_page("generate"), label="前往生成", icon="⚡")

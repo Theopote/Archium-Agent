@@ -64,7 +64,7 @@ def _render_post_presentation_links() -> None:
     with link_cols[0]:
         st.page_link(get_app_page("generate"), label="到「生成」产出页面内容", icon="⚡")
     with link_cols[1]:
-        st.page_link(get_app_page("edit"), label="到「编辑」调整版式", icon="🎬")
+        st.page_link(get_app_page("edit"), label="到「工作室」调整版式", icon="🎬")
 
 
 def _apply_planning_result(result: object) -> None:
@@ -137,7 +137,7 @@ def _init_state() -> None:
             st.session_state[key] = value
 
 
-def _project_selector() -> UUID | None:
+def _project_selector(*, key: str = "mission_project_selector") -> UUID | None:
     with get_session() as session:
         projects = list_projects(session)
     if not projects:
@@ -154,6 +154,7 @@ def _project_selector() -> UUID | None:
         options=options,
         index=default_index,
         format_func=lambda value: labels[value],
+        key=key,
     )
     st.session_state.selected_project_id = selected
     return UUID(selected)
@@ -210,7 +211,7 @@ def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
         st.session_state.mission_step = 2
 
 
-def _render_step_nav() -> int:
+def _render_step_nav(*, key: str = "mission_step_nav") -> int:
     step = st.radio(
         "规划步骤",
         options=list(range(1, 7)),
@@ -218,8 +219,9 @@ def _render_step_nav() -> int:
         horizontal=True,
         index=max(0, min(5, st.session_state.mission_step - 1)),
         label_visibility="collapsed",
+        key=key,
     )
-    st.session_state.mission_step = step
+    st.session_state.mission_step = int(step)
     return int(step)
 
 
@@ -709,14 +711,29 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             _render_post_presentation_links()
 
 
-def render() -> None:
-    _init_state()
-    st.markdown("### 项目任务")
-    st.caption("先理解任务，再规划工作路径与成果，最后进入现有汇报主链。")
+def render(*, embedded: bool = False) -> None:
+    """Render the six-step mission planner.
 
-    project_id = _project_selector()
-    if project_id is None:
-        return
+    When ``embedded`` is True (e.g. inside the 大纲 advanced expander), skip the
+    outer page title and reuse the host page's selected project.
+    """
+    _init_state()
+    if not embedded:
+        st.markdown("### 项目任务")
+        st.caption("先理解任务，再规划工作路径与成果，最后进入现有汇报主链。")
+    else:
+        st.caption("任务理解、关键问题、工作路径与成果选择。")
+
+    if embedded:
+        raw = st.session_state.get("selected_project_id")
+        if raw is None:
+            st.info("请先在上方选择项目。")
+            return
+        project_id = UUID(str(raw))
+    else:
+        project_id = _project_selector()
+        if project_id is None:
+            return
 
     snapshot = _load_snapshot(project_id)
     _sync_step_from_snapshot(snapshot)
@@ -734,7 +751,8 @@ def render() -> None:
         st.caption(
             f"规划工作流：{snapshot.workflow_run.status.value} · 闸门：{gate}"
         )
-        if st.button("重新开始新的任务分析", key="mission_restart"):
+        restart_key = "mission_restart_embedded" if embedded else "mission_restart"
+        if st.button("重新开始新的任务分析", key=restart_key):
             st.session_state.planning_workflow_run_id = None
             st.session_state.planning_mission_id = None
             st.session_state.mission_step = 1
@@ -742,7 +760,7 @@ def render() -> None:
             st.rerun()
 
     st.divider()
-    step = _render_step_nav()
+    step = _render_step_nav(key="mission_step_nav_embedded" if embedded else "mission_step_nav")
     st.divider()
 
     if step == 1:
@@ -763,3 +781,72 @@ def render() -> None:
     else:
         snapshot = _load_snapshot(project_id)
         _render_execute(snapshot, project_id)
+
+
+def select_current_project() -> UUID | None:
+    """Shared project picker used by the 大纲 default view."""
+    _init_state()
+    return _project_selector(key="outline_project_selector")
+
+
+def load_planning_snapshot(project_id: UUID) -> PlanningSnapshot:
+    """Shared planning snapshot loader used by the 大纲 default view."""
+    _init_state()
+    return _load_snapshot(project_id)
+
+
+def reset_planning_session() -> None:
+    """Clear active planning ids so the user can start a new outline."""
+    _init_state()
+    st.session_state.planning_workflow_run_id = None
+    st.session_state.planning_mission_id = None
+    st.session_state.planning_session_id = None
+    st.session_state.mission_step = 1
+    st.session_state.mission_task_draft = ""
+
+
+def start_outline_planning(project_id: UUID, task_description: str) -> bool:
+    """Start planning from the 大纲 default view. Returns True if background job launched."""
+    _init_state()
+    settings = get_ui_effective_settings()
+    if not settings.llm_configured:
+        st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置。")
+        return False
+    if not task_description.strip():
+        st.error("请先描述汇报任务。")
+        return False
+
+    def _on_start_complete(result: object) -> None:
+        _apply_planning_result(result)
+        st.session_state.mission_step = 2
+
+    if _launch_planning_job(
+        project_id,
+        PlanningJobAction.START,
+        settings=settings,
+        task_description=task_description,
+        on_complete=_on_start_complete,
+        success_message="已生成任务理解。可在下方确认大纲，或打开高级任务规划继续细化。",
+        awaiting_review_message="已生成任务理解，但存在可修复问题。请打开高级任务规划继续处理。",
+    ):
+        return True
+
+    with st.spinner("正在理解任务并生成大纲基础…"):
+        try:
+            with get_session() as session:
+                result = start_planning(session, project_id, task_description)
+            st.session_state.planning_session_id = str(result.planning_session.id)
+            st.session_state.planning_workflow_run_id = str(result.workflow_run.id)
+            if result.mission is not None:
+                st.session_state.planning_mission_id = str(result.mission.id)
+            st.session_state.mission_step = 2
+            if result.review_gate == "mission_correction":
+                st.warning("已生成任务理解，但存在可修复问题。请打开高级任务规划继续处理。")
+            else:
+                st.success("已生成任务理解。请确认下方大纲摘要。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(format_user_error(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+    return False

@@ -181,12 +181,22 @@ def render() -> None:
 
     effective = get_ui_effective_settings()
     if effective.llm_configured:
-        st.info("当前 Archium 已具备 LLM 调用能力，可在项目工作台开始生成。")
+        st.info("当前 Archium 已具备 LLM 调用能力，可在「制作」五阶段开始生成。")
     else:
         st.warning("尚未配置可用的 LLM API Key。可在此页面配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
 
     st.divider()
+    _render_system_diagnostics()
+    st.divider()
     _render_image_search_settings()
+
+
+def _render_system_diagnostics() -> None:
+    from archium.ui.bootstrap import render_system_diagnostics
+
+    st.markdown("### 系统诊断")
+    st.caption("运行依赖与导出工具状态。日常进度请看侧栏「当前项目」。")
+    render_system_diagnostics()
 
 
 def _render_image_search_settings() -> None:

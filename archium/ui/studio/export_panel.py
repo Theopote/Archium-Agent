@@ -1,4 +1,4 @@
-"""Top export/action bar for Presentation Studio."""
+"""Studio action bar and full export panel for deliver stage."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from archium.domain.visual.scene_presets import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.ui.app_navigation import get_app_page
 from archium.ui.background_workflow_runner import (
     VisualJobAction,
     background_workflows_enabled,
@@ -83,18 +84,7 @@ def _launch_visual_job(
     return True
 
 
-def render_export_panel(
-    *,
-    context: StudioPresentationContext,
-    slide_snapshot: SlideVisualSnapshot | None = None,
-) -> None:
-    """Render generate / replan / check / export actions."""
-    project_id = context.project.id
-    presentation_id = context.presentation.id
-    settings = get_ui_effective_settings()
-    export_disabled = not context.ready_for_export
-    preferences = _resolve_scene_preferences()
-
+def _render_scene_preset_row() -> VisualPreferences:
     preset_cols = st.columns([1.2, 2.8])
     with preset_cols[0]:
         preset_key = st.selectbox(
@@ -105,52 +95,160 @@ def render_export_panel(
         )
     with preset_cols[1]:
         st.caption(SCENE_PRESET_DESCRIPTIONS.get(preset_key, ""))
+    return _resolve_scene_preferences()
 
+
+def _run_generate_layouts(
+    *,
+    project_id: UUID,
+    presentation_id: UUID,
+    settings: Settings,
+    preferences: VisualPreferences,
+) -> None:
+    if _launch_visual_job(
+        project_id,
+        presentation_id,
+        settings=settings,
+        preferences=preferences,
+    ):
+        return
+    try:
+        with st.spinner("正在生成视觉版式…"), get_session() as session:
+            result = run_visual_workflow(
+                session,
+                project_id,
+                presentation_id,
+                require_art_direction_review=False,
+                use_llm=False,
+                export_pptx=True,
+                candidate_count=3,
+                preferences=preferences,
+            )
+        _apply_visual_result(result)
+        if result.succeeded:
+            st.success("视觉版式已生成。")
+        else:
+            detail = "；".join(result.errors) if result.errors else "未知错误"
+            st.error(f"生成未完成：{detail}")
+        st.rerun()
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
+def _export_pptx(*, presentation_id: UUID, settings: Settings) -> None:
+    try:
+        with st.spinner("正在导出 PPTX…"), get_session() as session:
+            pptx_export_result: RenderResult = export_presentation_from_studio(
+                session,
+                presentation_id,
+                settings=settings,
+            )
+        path = pptx_export_result.editable_pptx_path
+        if path:
+            st.success("PPTX 导出完成。")
+            st.code(path, language=None)
+        else:
+            st.warning("导出完成，但未返回文件路径。")
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
+def _export_pdf(*, presentation_id: UUID, settings: Settings) -> None:
+    try:
+        with st.spinner("正在导出 PDF…"), get_session() as session:
+            pdf_export_result: RenderResult = export_presentation_pdf_from_studio(
+                session,
+                presentation_id,
+                settings=settings,
+            )
+        pdf_path = pdf_export_result.pdf_path
+        if pdf_path:
+            st.success("PDF 导出完成。")
+            st.code(pdf_path, language=None)
+        elif pdf_export_result.editable_pptx_path:
+            st.warning("PPTX 已导出，但未检测到 LibreOffice，无法生成 PDF。")
+            st.code(pdf_export_result.editable_pptx_path, language=None)
+        else:
+            st.warning("导出未完成。")
+        for warning in pdf_export_result.warnings:
+            st.caption(warning)
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+    except Exception as exc:
+        st.error(format_user_error(exc))
+
+
+def _render_quick_export_popover(
+    *,
+    context: StudioPresentationContext,
+    settings: Settings,
+    key_prefix: str = "studio",
+) -> None:
+    """Compact export entry — does not dominate the editing chrome."""
+    export_disabled = not context.ready_for_export
+    with st.popover("导出", use_container_width=True):
+        st.caption("快速导出当前汇报。完整导出与质量检查请到「交付」。")
+        if export_disabled:
+            st.caption("导出需先完成全部页面版式。")
+        if st.button(
+            "导出 PPTX",
+            use_container_width=True,
+            disabled=export_disabled,
+            key=f"{key_prefix}_export_pptx",
+        ):
+            _export_pptx(presentation_id=context.presentation.id, settings=settings)
+        if st.button(
+            "导出 PDF",
+            use_container_width=True,
+            disabled=export_disabled,
+            key=f"{key_prefix}_export_pdf",
+        ):
+            _export_pdf(presentation_id=context.presentation.id, settings=settings)
+        st.page_link(get_app_page("deliver"), label="打开交付页", icon="📦")
+
+
+def render_studio_toolbar(
+    *,
+    context: StudioPresentationContext,
+    slide_snapshot: SlideVisualSnapshot | None = None,
+    show_export: bool = True,
+) -> None:
+    """Compact Studio chrome: edit actions first; export is a secondary popover."""
+    project_id = context.project.id
+    presentation_id = context.presentation.id
+    settings = get_ui_effective_settings()
+    preferences = _render_scene_preset_row()
+
+    ready_label = "可导出" if context.ready_for_export else "版式未齐"
     (
         col_title,
         col_generate,
         col_replan,
         col_check,
-        col_pptx,
-        col_pdf,
-    ) = st.columns([2.4, 1, 1, 1, 1, 1])
+        col_export,
+    ) = st.columns([2.6, 1, 1, 1, 1])
 
     with col_title:
-        st.markdown("#### 操作")
-        st.caption(f"{context.project.name} · {context.presentation.title}")
+        st.markdown(f"**{context.project.name}** · {context.presentation.title}")
+        st.caption(f"状态：{ready_label}")
 
     with col_generate:
-        if st.button("生成版式", type="primary", use_container_width=True, key="studio_generate_layouts"):
-            if _launch_visual_job(
-                project_id,
-                presentation_id,
+        if st.button(
+            "生成版式",
+            type="primary",
+            use_container_width=True,
+            key="studio_generate_layouts",
+        ):
+            _run_generate_layouts(
+                project_id=project_id,
+                presentation_id=presentation_id,
                 settings=settings,
                 preferences=preferences,
-            ):
-                return
-            try:
-                with st.spinner("正在生成视觉版式…"), get_session() as session:
-                    result = run_visual_workflow(
-                        session,
-                        project_id,
-                        presentation_id,
-                        require_art_direction_review=False,
-                        use_llm=False,
-                        export_pptx=True,
-                        candidate_count=3,
-                        preferences=preferences,
-                    )
-                _apply_visual_result(result)
-                if result.succeeded:
-                    st.success("视觉版式已生成。")
-                else:
-                    detail = "；".join(result.errors) if result.errors else "未知错误"
-                    st.error(f"生成未完成：{detail}")
-                st.rerun()
-            except WorkflowError as exc:
-                st.error(format_user_error(exc))
-            except Exception as exc:
-                st.error(format_user_error(exc))
+            )
 
     with col_replan:
         replan_disabled = slide_snapshot is None
@@ -166,60 +264,83 @@ def render_export_panel(
         if st.button("检查问题", use_container_width=True, key="studio_top_check_issues"):
             show_studio_validation_feedback(slide_snapshot)
 
+    with col_export:
+        if show_export:
+            _render_quick_export_popover(context=context, settings=settings)
+        else:
+            st.page_link(get_app_page("deliver"), label="交付 / 导出", icon="📦")
+
+
+def render_export_panel(
+    *,
+    context: StudioPresentationContext,
+    slide_snapshot: SlideVisualSnapshot | None = None,
+) -> None:
+    """Full generate / export actions for the「交付」stage."""
+    project_id = context.project.id
+    presentation_id = context.presentation.id
+    settings = get_ui_effective_settings()
+    export_disabled = not context.ready_for_export
+    preferences = _render_scene_preset_row()
+
+    (
+        col_title,
+        col_generate,
+        col_replan,
+        col_check,
+        col_pptx,
+        col_pdf,
+    ) = st.columns([2.4, 1, 1, 1, 1, 1])
+
+    with col_title:
+        st.markdown("#### 导出与版式")
+        st.caption(f"{context.project.name} · {context.presentation.title}")
+
+    with col_generate:
+        if st.button(
+            "生成版式",
+            type="primary",
+            use_container_width=True,
+            key="deliver_generate_layouts",
+        ):
+            _run_generate_layouts(
+                project_id=project_id,
+                presentation_id=presentation_id,
+                settings=settings,
+                preferences=preferences,
+            )
+
+    with col_replan:
+        replan_disabled = slide_snapshot is None
+        if st.button(
+            "重新排版",
+            use_container_width=True,
+            disabled=replan_disabled,
+            key="deliver_top_replan",
+        ) and slide_snapshot is not None:
+            run_studio_replan(slide_snapshot.slide.id)
+
+    with col_check:
+        if st.button("检查问题", use_container_width=True, key="deliver_top_check_issues"):
+            show_studio_validation_feedback(slide_snapshot)
+
     with col_pptx:
         if st.button(
             "导出 PPTX",
             use_container_width=True,
             disabled=export_disabled,
-            key="studio_export_pptx",
+            key="deliver_export_pptx",
         ):
-            try:
-                with st.spinner("正在导出 PPTX…"), get_session() as session:
-                    pptx_export_result: RenderResult = export_presentation_from_studio(
-                        session,
-                        presentation_id,
-                        settings=settings,
-                    )
-                path = pptx_export_result.editable_pptx_path
-                if path:
-                    st.success("PPTX 导出完成。")
-                    st.code(path, language=None)
-                else:
-                    st.warning("导出完成，但未返回文件路径。")
-            except WorkflowError as exc:
-                st.error(format_user_error(exc))
-            except Exception as exc:
-                st.error(format_user_error(exc))
+            _export_pptx(presentation_id=presentation_id, settings=settings)
 
     with col_pdf:
         if st.button(
             "导出 PDF",
             use_container_width=True,
             disabled=export_disabled,
-            key="studio_export_pdf",
+            key="deliver_export_pdf",
         ):
-            try:
-                with st.spinner("正在导出 PDF…"), get_session() as session:
-                    pdf_export_result: RenderResult = export_presentation_pdf_from_studio(
-                        session,
-                        presentation_id,
-                        settings=settings,
-                    )
-                pdf_path = pdf_export_result.pdf_path
-                if pdf_path:
-                    st.success("PDF 导出完成。")
-                    st.code(pdf_path, language=None)
-                elif pdf_export_result.editable_pptx_path:
-                    st.warning("PPTX 已导出，但未检测到 LibreOffice，无法生成 PDF。")
-                    st.code(pdf_export_result.editable_pptx_path, language=None)
-                else:
-                    st.warning("导出未完成。")
-                for warning in pdf_export_result.warnings:
-                    st.caption(warning)
-            except WorkflowError as exc:
-                st.error(format_user_error(exc))
-            except Exception as exc:
-                st.error(format_user_error(exc))
+            _export_pdf(presentation_id=presentation_id, settings=settings)
 
     if export_disabled:
         st.caption("导出需先完成全部页面版式。")

@@ -155,11 +155,11 @@ def _open_studio(
         st.session_state["selected_project_id"] = str(project_id)
     st.session_state["studio_focus_slide_id"] = str(slide_id)
     st.session_state["review_focus_slide_id"] = str(slide_id)
-    message = toast or "正在打开汇报工作室…"
+    message = toast or "正在打开工作室…"
     st.toast(message)
     try:
         from archium.ui.app_navigation import get_app_page
 
         st.switch_page(get_app_page("studio"))
     except Exception:
-        st.info("请切换到「汇报工作室」继续编辑该页。")
+        st.info("请切换到「工作室」继续编辑该页。")

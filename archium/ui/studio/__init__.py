@@ -2,7 +2,7 @@
 
 from archium.ui.studio.ai_edit_panel import render_ai_edit_panel
 from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
-from archium.ui.studio.export_panel import render_export_panel
+from archium.ui.studio.export_panel import render_export_panel, render_studio_toolbar
 from archium.ui.studio.history_panel import render_history_panel
 from archium.ui.studio.project_sidebar import render_studio_selection
 from archium.ui.studio.slide_canvas import render_slide_canvas
@@ -18,4 +18,5 @@ __all__ = [
     "render_slide_navigator",
     "render_slide_properties",
     "render_studio_selection",
+    "render_studio_toolbar",
 ]

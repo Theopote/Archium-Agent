@@ -7,8 +7,10 @@ from typing import Any
 import streamlit as st
 
 from archium.ui.product_flow import (
-    ADVANCED_SECTION,
-    PRIMARY_SECTION,
+    MAKE_SECTION,
+    PROJECT_SECTION,
+    RESOURCE_SECTION,
+    SYSTEM_SECTION,
     primary_stages,
 )
 
@@ -16,7 +18,7 @@ _PAGES: dict[str, Any] = {}
 
 
 def build_app_pages() -> dict[str, list[Any]]:
-    """Create navigation sections (主流程 + 进阶) and cache pages for links."""
+    """Create navigation sections (项目 / 制作 / 资源 / 系统) and cache pages for links."""
     from archium.ui.pages import (
         command_center,
         home,
@@ -25,6 +27,7 @@ def build_app_pages() -> dict[str, list[Any]]:
         settings,
         studio,
         template_induction,
+        template_library,
         template_studio,
         visual_design,
         workspace,
@@ -71,21 +74,36 @@ def build_app_pages() -> dict[str, list[Any]]:
         ),
     }
 
-    home_page = st.Page(home.render, title="首页", icon="🏛️", url_path="home", default=True)
-    advanced_pages = {
-        "project-management": st.Page(
-            project_management.render,
-            title="项目管理",
-            icon="📁",
-            url_path="project-management",
-        ),
+    home_page = st.Page(
+        home.render,
+        title="概览",
+        icon="🏛️",
+        url_path="home",
+        default=True,
+    )
+    project_page = st.Page(
+        project_management.render,
+        title="项目",
+        icon="📁",
+        url_path="project-management",
+    )
+    template_library_page = st.Page(
+        template_library.render,
+        title="模板库",
+        icon="🧩",
+        url_path="template-library",
+    )
+    settings_page = st.Page(settings.render, title="设置", icon="⚙️", url_path="settings")
+
+    # Hidden from sidebar but kept for deep links / st.page_link / st.switch_page.
+    hidden_pages = {
         "project-mission": st.Page(
             project_mission.render,
             title="项目任务",
             icon="🧭",
             url_path="project-mission",
         ),
-        "studio": st.Page(studio.render, title="汇报工作室", icon="🎬", url_path="studio"),
+        "studio": st.Page(studio.render, title="工作室", icon="🎬", url_path="studio"),
         "template-studio": st.Page(
             template_studio.render,
             title="模板工作室",
@@ -105,7 +123,6 @@ def build_app_pages() -> dict[str, list[Any]]:
             icon="🎨",
             url_path="visual-design",
         ),
-        "settings": st.Page(settings.render, title="设置", icon="⚙️", url_path="settings"),
         "command-center": st.Page(
             command_center.render,
             title="指令中心",
@@ -116,32 +133,26 @@ def build_app_pages() -> dict[str, list[Any]]:
 
     _PAGES.clear()
     _PAGES.update({"home": home_page})
+    _PAGES.update({"project-management": project_page})
     _PAGES.update(stage_pages)
-    _PAGES.update(advanced_pages)
+    _PAGES.update({"template-library": template_library_page})
+    _PAGES.update({"settings": settings_page})
+    _PAGES.update(hidden_pages)
     # Aliases so older links keep working while primary flow uses stage keys.
-    _PAGES["studio"] = advanced_pages["studio"]
+    _PAGES["studio"] = hidden_pages["studio"]
     _PAGES.setdefault("edit", stage_pages["edit"])
 
     return {
-        PRIMARY_SECTION: [
-            home_page,
+        PROJECT_SECTION: [home_page, project_page],
+        MAKE_SECTION: [
             stage_pages["materials"],
             stage_pages["outline"],
             stage_pages["generate"],
             stage_pages["edit"],
             stage_pages["deliver"],
         ],
-        ADVANCED_SECTION: [
-            advanced_pages["project-management"],
-            advanced_pages["project-mission"],
-            advanced_pages["workspace"],
-            advanced_pages["studio"],
-            advanced_pages["visual-design"],
-            advanced_pages["template-studio"],
-            advanced_pages["template-induction"],
-            advanced_pages["command-center"],
-            advanced_pages["settings"],
-        ],
+        RESOURCE_SECTION: [template_library_page],
+        SYSTEM_SECTION: [settings_page],
     }
 
 

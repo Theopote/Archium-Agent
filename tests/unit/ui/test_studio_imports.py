@@ -32,6 +32,7 @@ def test_studio_modules_import() -> None:
     assert create_studio_project is not None
     assert reorder_studio_slide is not None
     assert export_panel.render_export_panel is not None
+    assert export_panel.render_studio_toolbar is not None
     assert deck_repair_panel.render_deck_repair_panel is not None
     assert human_review_panel.render_human_review_panel is not None
     assert onboarding_panel.render_studio_onboarding is not None
