@@ -49,6 +49,16 @@ def test_legacy_request_defaults_to_generate_route() -> None:
     assert restored.workflow_route == PresentationWorkflowRoute.GENERATE_FROM_PROJECT
 
 
+def test_checkpoint_string_route_is_serializable() -> None:
+    request = PresentationRequest(
+        title="Checkpoint",
+        audience="Client",
+        purpose="Decision",
+        workflow_route="generate_from_project",  # type: ignore[arg-type]
+    )
+    assert request_to_dict(request)["workflow_route"] == "generate_from_project"
+
+
 def test_snapshot_state_is_json_safe() -> None:
     project_id = uuid4()
     presentation_id = uuid4()

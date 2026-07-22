@@ -37,11 +37,12 @@ def _dump_artifact(value: Any) -> Any:
 
 
 def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
+    workflow_route = PresentationWorkflowRoute(request.workflow_route)
     return {
         "title": request.title,
         "audience": request.audience,
         "purpose": request.purpose,
-        "workflow_route": request.workflow_route.value,
+        "workflow_route": workflow_route.value,
         "duration_minutes": request.duration_minutes,
         "target_slide_count": request.target_slide_count,
         "core_message": request.core_message,
