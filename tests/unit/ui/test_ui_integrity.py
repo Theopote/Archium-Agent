@@ -55,9 +55,69 @@ def test_bootstrap_avoids_inter_default_stack() -> None:
         Path(__file__).resolve().parents[3] / "archium" / "ui" / "bootstrap.py"
     ).read_text(encoding="utf-8")
     assert "Inter" not in css
-    assert "Source Sans 3" in css
+    assert "fonts.googleapis.com" not in css
+    assert "@import url" not in css
+    assert "--archium-font-sans" in css
     assert "--archium-ink" in css
     assert "status-chip" in css
+    assert "archium-page-header" in css
+    assert "archium-stepper" in css
+    assert "archium-callout" in css
+    assert "archium-empty" in css
+
+
+def test_ui_chrome_component_layer_exists() -> None:
+    from archium.ui.components import (
+        render_empty_state,
+        render_inspector_section,
+        render_page_header,
+        render_panel,
+        render_primary_action,
+        render_status_badge,
+        render_toolbar,
+        render_warning_callout,
+    )
+
+    chrome = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "components"
+        / "chrome.py"
+    ).read_text(encoding="utf-8")
+    for name in (
+        "render_page_header",
+        "render_panel",
+        "render_status_badge",
+        "render_empty_state",
+        "render_primary_action",
+        "render_warning_callout",
+        "render_inspector_section",
+        "render_toolbar",
+    ):
+        assert f"def {name}" in chrome
+    assert callable(render_page_header)
+    assert callable(render_panel)
+    assert callable(render_status_badge)
+    assert callable(render_empty_state)
+    assert callable(render_primary_action)
+    assert callable(render_warning_callout)
+    assert callable(render_inspector_section)
+    assert callable(render_toolbar)
+
+
+def test_flow_header_uses_chrome_primitives() -> None:
+    flow_src = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "pages"
+        / "flow"
+        / "__init__.py"
+    ).read_text(encoding="utf-8")
+    assert "render_page_header" in flow_src
+    assert "render_stepper" in flow_src
+    assert "render_warning_callout" in flow_src
 
 
 def test_nav_icons_module_covers_primary_pages() -> None:

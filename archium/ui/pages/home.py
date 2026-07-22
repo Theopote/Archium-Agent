@@ -41,11 +41,19 @@ def _resolve_primary(snapshots: list[ProjectProgressSnapshot]) -> ProjectProgres
 
 
 def _render_empty_state() -> None:
-    st.markdown(f"### {greeting_for_now()}，开始第一个项目")
-    st.caption("创建项目后，按资料 → 大纲 → 生成 → 工作室 → 交付推进汇报。")
-    if st.button("新建项目", type="primary", key="home_new_project_empty"):
+    from archium.ui.components.chrome import render_empty_state
+
+    def _go_create() -> None:
         st.session_state.show_create_form = True
         st.switch_page(get_app_page("project-management"))
+
+    render_empty_state(
+        f"{greeting_for_now()}，开始第一个项目",
+        "创建项目后，按资料 → 大纲 → 生成 → 工作室 → 交付推进汇报。",
+        primary_label="新建项目",
+        primary_key="home_new_project_empty",
+        on_primary=_go_create,
+    )
     with st.expander("五阶段说明（首次使用）", expanded=True):
         st.caption(f"推荐主流程：{product_flow_chain()}")
         for index, line in enumerate(product_flow_home_steps(), start=1):
@@ -59,13 +67,21 @@ def _render_empty_state() -> None:
 
 
 def _render_load_failed(exc: Exception) -> None:
-    logger.exception("Failed to load home project snapshots: %s", exc)
-    st.error("项目列表暂时无法加载，请重试。")
-    st.caption("这通常是数据或连接问题，并不表示你没有项目。")
-    if st.button("重试", type="primary", key="home_retry_load"):
-        st.rerun()
     from archium.ui import icons
+    from archium.ui.components.chrome import (
+        render_empty_state,
+        render_error_callout,
+        render_primary_action,
+    )
 
+    logger.exception("Failed to load home project snapshots: %s", exc)
+    render_error_callout("项目列表暂时无法加载，请重试。")
+    render_empty_state(
+        "无法加载项目",
+        "这通常是数据或连接问题，并不表示你没有项目。",
+    )
+    if render_primary_action("重试", key="home_retry_load", use_container_width=False):
+        st.rerun()
     st.page_link(
         get_app_page("project-management"),
         label="前往项目管理",

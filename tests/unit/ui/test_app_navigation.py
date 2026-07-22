@@ -282,7 +282,8 @@ def test_edit_stage_embeds_studio_without_inner_header() -> None:
     assert "show_export=False" in edit_text
     assert "show_progress=True" in edit_text
     assert "show_header: bool | None = None" in studio_text
-    assert 'st.markdown("### 工作室")' in studio_text
+    assert "render_page_header" in studio_text
+    assert '"工作室"' in studio_text
     assert "_render_studio_info_menus" in studio_text
     assert "_render_deck_issue_list" in studio_text
     assert "_render_bottom_dock" not in studio_text

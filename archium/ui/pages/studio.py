@@ -77,11 +77,13 @@ def _render_inspector_tabs(
     presentation_id: UUID,
 ) -> None:
     """Right-column inspector — lazy by active tab (not st.tabs)."""
+    from archium.ui.components.chrome import render_inspector_section
     from archium.ui.llm_settings import get_ui_effective_settings
     from archium.ui.studio.scene_repair_prompt_panel import render_deferred_scene_repair_panel
 
     active = _select_inspector_tab()
     if active == "属性":
+        render_inspector_section("属性")
         render_slide_properties(
             slide_snapshot=slide_snapshot,
             advanced=advanced,
@@ -89,12 +91,15 @@ def _render_inspector_tabs(
         )
         return
     if active == "布局":
+        render_inspector_section("布局")
         render_layout_candidates_panel(slide_snapshot=slide_snapshot, advanced=advanced)
         return
     if active == "内容":
+        render_inspector_section("内容")
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
         return
     if active == "AI":
+        render_inspector_section("AI")
         render_ai_workspace(
             slide_snapshot=slide_snapshot,
             presentation_id=presentation_id,
@@ -102,15 +107,14 @@ def _render_inspector_tabs(
         )
         return
 
-    st.markdown("**检查**")
-    st.caption(
-        "自动安全修复（越界 / contain / 缺省 / 无损对齐）可静默应用；"
-        "其余归入修改建议，需确认。"
+    render_inspector_section(
+        "检查",
+        "自动安全修复可静默应用；其余归入修改建议，需确认。",
     )
     st.markdown("`安全修复 · 可自动应用`　　`AI / QA 修改 · 需确认`")
     render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
     st.divider()
-    st.markdown("**人工复核**")
+    render_inspector_section("人工复核")
     render_human_review_panel(
         presentation_id=presentation_id,
         slide_snapshot=slide_snapshot,
@@ -254,8 +258,9 @@ def render(
         show_progress = not embedded
 
     if show_header:
-        st.markdown("### 工作室")
-        st.caption("页面列表 · 主画布 · 检查器。状态 / 问题 / 历史在顶部菜单。")
+        from archium.ui.components.chrome import render_page_header
+
+        render_page_header("工作室", "页面列表 · 主画布 · 检查器。状态 / 问题 / 历史在顶部菜单。")
 
     critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
     context = render_studio_selection(

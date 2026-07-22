@@ -7,6 +7,13 @@ from dataclasses import dataclass, field
 import streamlit as st
 
 from archium.ui.app_navigation import get_app_page
+from archium.ui.components.chrome import (
+    render_page_header,
+    render_primary_action,
+    render_secondary_action,
+    render_stepper,
+    render_warning_callout,
+)
 from archium.ui.product_flow import (
     get_stage,
     next_stage,
@@ -183,6 +190,8 @@ def _stage_statuses(
 
 def render_flow_stepper(current_stage_id: str) -> None:
     """Visual stepper replacing the repeated plain-text flow chain."""
+    import html
+
     snapshot = None
     try:
         snapshot = load_project_progress_snapshot()
@@ -193,17 +202,17 @@ def render_flow_stepper(current_stage_id: str) -> None:
     parts: list[str] = []
     for stage in primary_stages():
         marker = _stage_marker(statuses[stage.id])
+        title = html.escape(stage.title)
         if stage.id == current_stage_id:
-            parts.append(f"**{marker} {stage.title}**")
+            parts.append(f"<strong>{marker} {title}</strong>")
         else:
-            parts.append(f"{marker} {stage.title}")
-    st.caption(" ─ ".join(parts))
+            parts.append(f"{marker} {title}")
+    render_stepper(" ─ ".join(parts))
 
 
 def render_stage_header(stage_id: str) -> None:
     stage = get_stage(stage_id)
-    st.markdown(f"### {stage.title}")
-    st.caption(stage.caption)
+    render_page_header(stage.title, stage.caption)
     render_flow_stepper(stage_id)
 
 
@@ -285,32 +294,29 @@ def render_stage_nav(
     st.divider()
     if include_next:
         if gate.blockers:
-            st.warning(
-                "进入下一阶段前还需完成：\n"
-                + "\n".join(f"• {item}" for item in gate.blockers)
+            render_warning_callout(
+                "进入下一阶段前还需完成："
+                + "；".join(gate.blockers)
             )
         elif gate.warnings:
             for item in gate.warnings:
-                st.caption(f"提示：{item}")
+                render_warning_callout(item)
 
     left, right = st.columns([1, 1.4])
     with left:
         if prev is not None and not primary_only:
-            if st.button(
+            if render_secondary_action(
                 f"← 上一阶段：{prev.title}",
                 key=f"stage_prev_{stage_id}",
-                use_container_width=True,
             ):
                 st.switch_page(get_app_page(prev.page_key))
     with right:
         if nxt is None:
             return
         label = _NEXT_ACTION_LABELS.get(stage_id, f"下一阶段：{nxt.title} →")
-        if st.button(
+        if render_primary_action(
             label,
-            type="primary",
-            use_container_width=True,
-            disabled=gate.has_blockers,
             key=f"stage_next_{stage_id}",
+            disabled=gate.has_blockers,
         ):
             st.switch_page(get_app_page(nxt.page_key))
