@@ -118,6 +118,7 @@ markers = [
     "streamlit_smoke: Streamlit startup smoke tests",
     "calibration: Visual QA labeled corpus calibration (optional, not in default CI)",
     "visual_regression: PNG preview baseline checks for key Golden Cases (requires Marp CLI)",
+    "layout_pptx_screenshot: LayoutPlan PPTX screenshot regression (LibreOffice or PowerPoint)",
     "architectural_benchmark: Architectural slide visual benchmark cases (LayoutPlan + PNG baselines)",
     "real_project_acceptance: Five desensitized real-project end-to-end acceptance scenarios",
     "phase7_acceptance: Phase 7 cultural village and renovation acceptance scaffolds",

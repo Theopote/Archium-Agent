@@ -1,0 +1,11 @@
+{
+  "case_id": "v7_hybrid_canvas",
+  "layout_family": "hybrid_canvas",
+  "layout_variant": "freeform",
+  "screenshot": {
+    "file": "pptx_screenshot.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "0303fff1f0f3ffff"
+  }
+}

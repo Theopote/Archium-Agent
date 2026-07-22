@@ -60,9 +60,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if not screenshot_tools_available():
         print(
-            "ERROR: LibreOffice (soffice) and pdftoppm must be installed.\n"
-            "  Ubuntu/CI: sudo apt-get install -y libreoffice poppler-utils\n"
-            "  macOS: brew install libreoffice poppler",
+            "ERROR: PPTX screenshot tools unavailable.\n"
+            "  Linux/CI: sudo apt-get install -y libreoffice poppler-utils\n"
+            "  macOS: brew install libreoffice poppler\n"
+            "  Windows: install Microsoft PowerPoint (COM) or LibreOffice + Poppler",
             file=sys.stderr,
         )
         return 1

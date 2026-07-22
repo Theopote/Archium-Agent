@@ -1,0 +1,11 @@
+{
+  "case_id": "v4_analytical_diagram",
+  "layout_family": "analytical_diagram",
+  "layout_variant": "diagram_with_callouts",
+  "screenshot": {
+    "file": "pptx_screenshot.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "0707fbf9f9f9ffff"
+  }
+}

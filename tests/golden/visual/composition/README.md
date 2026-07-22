@@ -35,20 +35,25 @@ Volatile UUIDs and timestamps are stripped so CI can catch layout regressions.
 
 Re-renders each case via PptxGenJS, rasterizes slide 1 with [`pptx_screenshot.py`](../../../archium/infrastructure/renderers/pptx_screenshot.py), and compares to committed PNG baselines (same tolerant checks as Marp visual regression: aHash, ≤5% pixel diff, margin ink).
 
-Requires **Node.js**, **PptxGenJS** (`npm ci` in `archium/infrastructure/renderers/pptxgen`), **LibreOffice**, and **pdftoppm** (Poppler).
+Requires **Node.js**, **PptxGenJS** (`npm ci` in `archium/infrastructure/renderers/pptxgen`), and a rasterizer:
+
+- **Linux / CI:** LibreOffice + `pdftoppm` (Poppler)
+- **Windows:** Microsoft PowerPoint COM (fallback when LibreOffice is absent)
 
 ```bash
 pytest tests/golden/visual/composition/test_pptx_screenshot_regression.py -v -m layout_pptx_screenshot
 ```
 
-Included in CI job **layout pptx screenshot regression** (Ubuntu + `libreoffice` + `poppler-utils`).
+Included in CI job **layout pptx screenshot regression** (Ubuntu + `libreoffice` + `poppler-utils`). Missing committed baselines fail the job — CI does **not** auto-bootstrap.
+
+Prefer regenerating baselines on **Linux** so they match CI LiberOffice output; Windows PowerPoint baselines may need a one-time Linux refresh if aHash/pixel tolerance fails in CI.
 
 ### Update screenshot baselines (intentional renderer / theme change)
 
 ```bash
 # Windows PowerShell
 $env:UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS="1"
-python scripts/update_layout_pptx_screenshot_baselines.py
+py -c "from scripts.update_layout_pptx_screenshot_baselines import main; raise SystemExit(main())"
 Remove-Item Env:UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS
 ```
 
@@ -58,8 +63,6 @@ UPDATE_LAYOUT_PPTX_SCREENSHOT_GOLDENS=1 python scripts/update_layout_pptx_screen
 ```
 
 Commit `pptx_screenshot.png` and `pptx_screenshot_manifest.json` under each `v*/` directory.
-
-**First-time bootstrap:** run the update script on Linux (or CI) once, then commit the generated files. Until baselines are committed, regression tests fail with an explicit message.
 
 ## Update baselines (intentional geometry change)
 

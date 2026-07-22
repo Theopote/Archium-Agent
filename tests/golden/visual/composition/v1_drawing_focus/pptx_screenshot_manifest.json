@@ -1,0 +1,11 @@
+{
+  "case_id": "v1_drawing_focus",
+  "layout_family": "drawing_focus",
+  "layout_variant": "drawing_with_metrics",
+  "screenshot": {
+    "file": "pptx_screenshot.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "0707fff9f9ff1fff"
+  }
+}

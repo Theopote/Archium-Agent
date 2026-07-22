@@ -86,16 +86,25 @@ def test_layout_pptx_screenshot_matches_baseline(
 
 
 def test_screenshot_case_manifests_exist() -> None:
+    from tests.golden.visual.composition.screenshot_baseline import load_screenshot_manifest
+
+    missing: list[str] = []
     for case_id in SCREENSHOT_CASE_IDS:
         case_dir = GOLDEN_ROOT / case_id
         baseline = screenshot_baseline_path(case_dir)
-        if not baseline.is_file():
-            pytest.skip(f"Screenshot baselines not committed yet (missing {baseline})")
-        from tests.golden.visual.composition.screenshot_baseline import load_screenshot_manifest
-
+        manifest_file = case_dir / "pptx_screenshot_manifest.json"
+        if not baseline.is_file() or not manifest_file.is_file():
+            missing.append(case_id)
+            continue
         manifest = load_screenshot_manifest(case_dir)
         assert manifest.case_id == case_id
         assert manifest.screenshot.file == baseline.name
+
+    assert not missing, (
+        "Missing committed screenshot baselines for: "
+        + ", ".join(missing)
+        + f". Run: {UPDATE_ENV}=1 python scripts/update_layout_pptx_screenshot_baselines.py"
+    )
 
 
 def test_update_env_documented() -> None:

@@ -1,0 +1,11 @@
+{
+  "case_id": "v5_process_narrative",
+  "layout_family": "process_narrative",
+  "layout_variant": "steps_horizontal",
+  "screenshot": {
+    "file": "pptx_screenshot.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "0707ffff15ffbfff"
+  }
+}

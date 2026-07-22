@@ -1,0 +1,11 @@
+{
+  "case_id": "v3_comparative_matrix",
+  "layout_family": "comparative_matrix",
+  "layout_variant": "matrix_with_insight",
+  "screenshot": {
+    "file": "pptx_screenshot.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "8303ffff2b2983ff"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "case_id": "v2_evidence_board",
+  "layout_family": "evidence_board",
+  "layout_variant": "numbered_grid",
+  "screenshot": {
+    "file": "pptx_screenshot.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "0301ffffffffffff"
+  }
+}

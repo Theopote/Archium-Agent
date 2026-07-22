@@ -178,12 +178,8 @@ jobs:
       - name: Install screenshot tools (LibreOffice + Poppler)
         run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils
 
-      - name: Bootstrap screenshot baselines when not committed
-        run: |
-          if [ ! -f tests/golden/visual/composition/v1_drawing_focus/pptx_screenshot.png ]; then
-            echo "No committed baselines — generating in CI workspace (commit artifacts after review)"
-            python scripts/update_layout_pptx_screenshot_baselines.py
-          fi
+      - name: Composition JSON golden cases
+        run: pytest tests/golden/visual/composition/test_golden_cases.py -v
 
       - name: LayoutPlan PPTX screenshot regression
         run: pytest tests/golden/visual/composition/test_pptx_screenshot_regression.py -v

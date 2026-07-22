@@ -1,0 +1,11 @@
+{
+  "case_id": "v6_metric_dashboard",
+  "layout_family": "metric_dashboard",
+  "layout_variant": "metric_with_chart",
+  "screenshot": {
+    "file": "pptx_screenshot.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "07078185a7ffffff"
+  }
+}

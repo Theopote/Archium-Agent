@@ -1,8 +1,4 @@
-"""Deterministic builders for visual composition golden cases V1–V7.
-
-Icon-focused exploratory cases live below but are intentionally excluded from
-the committed screenshot baseline registry until their PNG goldens are added.
-"""
+"""Deterministic builders for visual composition golden cases V1–V9."""
 
 from __future__ import annotations
 

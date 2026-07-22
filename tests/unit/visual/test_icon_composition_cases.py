@@ -57,7 +57,7 @@ def test_icon_metric_case_emits_decorative_icon_images(intent_service: VisualInt
     assert not case.report.has_critical()
 
 
-def test_icon_cases_are_not_yet_in_screenshot_registry() -> None:
+def test_icon_cases_are_in_screenshot_registry() -> None:
     assert set(ICON_CASE_IDS).issubset(SCREENSHOT_CASE_IDS)
 
 

@@ -61,19 +61,26 @@ class TextMeasurementService:
         *,
         style: TextStyleToken | None = None,
     ) -> float:
-        if style is not None:
-            effective_style = (
-                style
-                if font_size_pt is None
-                else style.model_copy(update={"font_size": font_size_pt})
+        if style is None:
+            if font_size_pt is None:
+                msg = "measure_width_pt requires font_size_pt or style"
+                raise ValueError(msg)
+            style = TextStyleToken(
+                font_family="Microsoft YaHei",
+                font_family_latin="Arial",
+                font_size=font_size_pt,
+                font_weight=400,
+                line_height=font_size_pt * 1.2,
+                color_token="text.primary",
             )
-            if self._can_use_real_metrics():
-                return self._measure_width_pt_real(text, effective_style)
-            return sum(self.char_width_em(ch) for ch in text) * effective_style.font_size
-        if font_size_pt is None:
-            msg = "measure_width_pt requires font_size_pt or style"
-            raise ValueError(msg)
-        return sum(self.char_width_em(ch) for ch in text) * font_size_pt
+        effective_style = (
+            style
+            if font_size_pt is None
+            else style.model_copy(update={"font_size": font_size_pt})
+        )
+        if self._can_use_real_metrics():
+            return self._measure_width_pt_real(text, effective_style)
+        return sum(self.char_width_em(ch) for ch in text) * effective_style.font_size
 
     def estimate_lines(
         self,
