@@ -235,6 +235,23 @@ class InductionArchitecturalTemplatePublisher:
         )
         repo = ArchitecturalTemplateRepository(session)
         saved = repo.save(result.template.model_copy(update={"project_id": project_id}))
+        from archium.application.visual.template_usage_brief_service import (
+            TemplateUsageBriefService,
+        )
+        from archium.infrastructure.database.visual_repositories import (
+            DesignSystemRepository,
+        )
+
+        design = None
+        if saved.design_system_id is not None:
+            design = DesignSystemRepository(session).get(saved.design_system_id)
+        TemplateUsageBriefService().write_for_template(
+            workspace,
+            saved,
+            design_system=design,
+            induction=induction,
+            session=session,
+        )
         session.commit()
         return InductionTemplatePublishResult(
             template=saved,

@@ -138,6 +138,10 @@ class SlideDesignBrief(DomainModel):
     forbidden_content: list[str] = Field(default_factory=list)
     protection_rules: list[str] = Field(default_factory=list)
 
+    # Bound TemplateUsageBrief snapshot used when this page brief was generated.
+    template_usage_brief_id: UUID | None = None
+    template_usage_brief_version: int | None = Field(default=None, ge=1)
+
     status: BriefStatus = BriefStatus.DRAFT
 
     def approve(self) -> None:

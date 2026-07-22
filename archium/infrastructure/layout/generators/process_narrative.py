@@ -89,7 +89,12 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
         step_ids: list[str] = []
         arrow_ids: list[str] = []
         visual_ids: list[str] = []
-        icon_refs = list(getattr(context.content, "icon_refs", []) or [])
+        from archium.application.visual.icon_usage import filter_icon_refs
+
+        icon_refs = filter_icon_refs(
+            list(getattr(context.content, "icon_refs", []) or []),
+            layout_family=LayoutFamily.PROCESS_NARRATIVE,
+        )
 
         use_horizontal = (
             context.variant == "steps_horizontal" or context.content.hero_asset_ref is None

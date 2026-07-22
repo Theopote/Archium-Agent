@@ -499,17 +499,18 @@ open-slide 把「可用高度 = 页高 − 顶底边距」写进 Agent 规则；
 
 ## TemplateUsageBrief 设计契约（已接线）
 
-Template Induction 物化后写出可读设计契约，避免主题规则只埋在代码里。
+Template Induction 物化后写出可读设计契约，并被运行时模块真正消费。
 
 **已实现**
-- `TemplateUsageBrief`：品牌特征 / 标题行为 / 字体层级 / 页边距 / 内容密度 / 图片与图纸处理 / 页码 / 重复装饰 / 禁用模式
-- 双产物：`TemplateUsageBrief.md`（人与 Agent）+ `template_usage_brief.json`（程序）
-- `InductionArchitecturalTemplatePublisher` 与 `export_artifacts` 在写出 `architectural_template.json` 后同步生成
-- 图纸硬规则在 brief 中显式可见：contain、禁止 cover/crop
+- `TemplateUsageBrief`：Identified + Versioned；品牌 / 标题 / 字体 / 边距 / 密度 / 图片与图纸 / 页码 / 装饰 / 禁用模式
+- 双产物：`TemplateUsageBrief.md` + `template_usage_brief.json`；DB 表 `template_usage_briefs`（每次重新归纳插入新版本行）
+- `ArtDirection.template_usage_brief_id` + `template_usage_brief_version`：旧汇报钉住当时 Brief，不随最新归纳漂移
+- 消费方：`SlideDesignBriefService`、`LayoutPlanningService`、`IconSelectionService`、`ImageTreatmentPlanningService`、`VisualCriticService`、`ThemeProposalService`
+- `template_usage_brief_context`：`constraints_from_brief` / `load_brief_for_art_direction` / `bind_brief_to_art_direction`
 
 **尚未做**
-- 从 DesignSystem 变更自动重写 brief
-- Agent Skill 强制把 brief 当作生成前置约束的独立校验门
+- Studio 独立 Brief 版本对比 UI
+- Agent Skill 强制把 brief prompt_block 注入所有 LLM 阶段的统一门控
 
 ## Agent Skill Runtime Registry（已接线）
 

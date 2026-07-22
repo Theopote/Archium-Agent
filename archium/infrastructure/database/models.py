@@ -835,6 +835,10 @@ class ArtDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     deliverable_id: Mapped[str | None] = mapped_column(String(200))
     design_system_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    template_usage_brief_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
+    template_usage_brief_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
     payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
@@ -1088,4 +1092,20 @@ class ThemeChangeProposalORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     decided_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
+class TemplateUsageBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Immutable versioned TemplateUsageBrief rows (re-induction creates a new id)."""
+
+    __tablename__ = "template_usage_briefs"
+    __table_args__ = (
+        Index("ix_template_usage_briefs_template_id", "template_id"),
+        Index("ix_template_usage_briefs_project_id", "project_id"),
+    )
+
+    template_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    template_name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    project_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)

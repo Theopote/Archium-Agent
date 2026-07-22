@@ -19,11 +19,18 @@ from archium.domain.visual.critic import (
     CRITIC_MECHANICAL,
     CRITIC_PAGE_REPETITION,
     CRITIC_READING_ORDER_AWKWARD,
+    CRITIC_TEMPLATE_BRIEF_VIOLATION,
     VisualCriticDimensions,
     VisualCriticFinding,
     VisualCriticReport,
 )
-from archium.domain.visual.enums import LayoutElementRole, LayoutIssueSeverity
+from archium.domain.visual.enums import (
+    ImageFit,
+    LayoutContentType,
+    LayoutElementRole,
+    LayoutFamily,
+    LayoutIssueSeverity,
+)
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.infrastructure.layout.geometry import Rect
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -84,6 +91,8 @@ class VisualCriticService:
         image_path: str | Path | None = None,
         page_area: float | None = None,
         peer_plans: list[LayoutPlan] | None = None,
+        usage_brief=None,
+        usage_constraints=None,
     ) -> VisualCriticReport:
         findings: list[VisualCriticFinding] = []
         notes: list[str] = []
@@ -97,6 +106,22 @@ class VisualCriticService:
         color = None
         repetition = self._score_repetition(plan, peer_plans or [])
         method = _METHOD
+
+        if usage_brief is not None or usage_constraints is not None:
+            findings.extend(
+                self._findings_from_usage_brief(
+                    plan, usage_brief=usage_brief, usage_constraints=usage_constraints
+                )
+            )
+            if usage_brief is not None:
+                notes.append(
+                    f"TemplateUsageBrief {usage_brief.id} v{usage_brief.version}"
+                )
+            elif usage_constraints is not None:
+                notes.append(
+                    f"TemplateUsageBrief {usage_constraints.brief_id} "
+                    f"v{usage_constraints.brief_version}"
+                )
 
         if focus < 0.55:
             findings.append(
@@ -428,7 +453,55 @@ class VisualCriticService:
             for el in sorted(plan.elements, key=lambda item: item.id)
         ]
 
-    @staticmethod
+    def _findings_from_usage_brief(
+        self,
+        plan: LayoutPlan,
+        *,
+        usage_brief=None,
+        usage_constraints=None,
+    ) -> list[VisualCriticFinding]:
+        from archium.application.visual.template_usage_brief_context import (
+            constraints_from_brief,
+        )
+
+        constraints = usage_constraints
+        if constraints is None and usage_brief is not None:
+            constraints = constraints_from_brief(usage_brief)
+        if constraints is None:
+            return []
+        findings: list[VisualCriticFinding] = []
+        if constraints.forbid_drawing_cover_crop:
+            for element in plan.elements:
+                if element.role not in {
+                    LayoutElementRole.HERO_VISUAL,
+                    LayoutElementRole.SUPPORTING_VISUAL,
+                }:
+                    continue
+                fit = element.fit_mode
+                if fit is not None and fit != ImageFit.CONTAIN:
+                    # Drawing-focus pages must not use cover when brief forbids it.
+                    if plan.layout_family == LayoutFamily.DRAWING_FOCUS or (
+                        element.content_type == LayoutContentType.DRAWING
+                    ):
+                        findings.append(
+                            VisualCriticFinding(
+                                rule_code=CRITIC_TEMPLATE_BRIEF_VIOLATION,
+                                severity=LayoutIssueSeverity.ERROR,
+                                message=(
+                                    f"Element `{element.id}` fit={fit.value} violates "
+                                    f"TemplateUsageBrief v{constraints.brief_version} "
+                                    "drawing contain rule."
+                                ),
+                                suggestion="Set drawing fit_mode=contain; forbid cover/crop.",
+                                evidence={
+                                    "template_usage_brief_id": str(constraints.brief_id),
+                                    "template_usage_brief_version": constraints.brief_version,
+                                    "element_id": element.id,
+                                },
+                            )
+                        )
+        return findings
+
     def _fingerprint_similarity(
         left: list[tuple[Any, ...]], right: list[tuple[Any, ...]]
     ) -> float:

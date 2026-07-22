@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
 from archium.application.asset_matching_service import AssetMatchingService
@@ -45,6 +46,32 @@ def test_embedding_fallback_for_paraphrase() -> None:
     match = ArchitecturalIconMatcher().match("campus school learning")
     assert match is not None
     assert match.icon.canonical_name == "education"
+
+
+def test_query_embedding_computed_once(monkeypatch) -> None:
+    calls: list[str] = []
+
+    def _track(text: str) -> list[float]:
+        calls.append(text)
+        from archium.infrastructure.embeddings.local_lexical import lexical_embed
+
+        return lexical_embed(text)
+
+    matcher = ArchitecturalIconMatcher(embed_query=_track)
+    matcher.match("something_unrelated_xyz_for_embedding_scan")
+    assert len(calls) == 1
+
+
+def test_offline_embeddings_file_loaded() -> None:
+    from archium.application.visual import architectural_icon_registry as reg
+
+    pack = reg.default_icon_pack_root()
+    assert (pack / "embeddings.json").is_file()
+    registry = reg.load_architectural_icon_registry(pack)
+    assert all(len(icon.embedding) >= 128 for icon in registry.all())
+    source = Path(reg.__file__).read_text(encoding="utf-8")
+    assert "from archium.infrastructure.embeddings.mock" not in source
+    assert "MockEmbeddingProvider()" not in source
 
 
 def test_asset_matching_binds_icon_id(db_session) -> None:

@@ -536,6 +536,8 @@ def _slide_design_brief_from_update(update: SlideDesignBriefUpdate) -> SlideDesi
         required_content=[item.strip() for item in update.required_content if item.strip()],
         forbidden_content=[item.strip() for item in update.forbidden_content if item.strip()],
         protection_rules=[item.strip() for item in update.protection_rules if item.strip()],
+        template_usage_brief_id=update.template_usage_brief_id,
+        template_usage_brief_version=update.template_usage_brief_version,
         status=status,
     )
 

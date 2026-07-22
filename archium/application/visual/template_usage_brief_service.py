@@ -78,11 +78,19 @@ class TemplateUsageBriefService:
             evidence.append(f"induction_id={induction.id}")
 
         brand_traits = self._brand_traits(template, palette, fonts, evidence)
+        photo_policy = "subtle_unify"
+        drawing_fit = "contain"
+        icon_style = "line"
+        if design_system is not None:
+            photo_policy = design_system.image_style.photo_treatment.value
+            drawing_fit = "contain"
+            evidence.append(f"photo_treatment_policy={photo_policy}")
 
         return TemplateUsageBrief(
             template_id=str(template.id),
             template_name=template.name,
             source_filename=source_name,
+            project_id=template.project_id,
             brand_traits=brand_traits,
             title_behavior=title_behavior,
             typography_hierarchy=typography,
@@ -97,12 +105,17 @@ class TemplateUsageBriefService:
             fonts=fonts,
             motion_principles=list(_DEFAULT_MOTION),
             evidence=evidence,
+            preferred_icon_style=icon_style,
+            photo_treatment_policy=photo_policy,
+            drawing_fit_policy=drawing_fit,
         )
 
     def render_markdown(self, brief: TemplateUsageBrief) -> str:
         lines: list[str] = [
             f"# Template Usage Brief — {brief.template_name}",
             "",
+            f"- brief_id: `{brief.id}`",
+            f"- brief_version: `{brief.version}`",
             f"- template_id: `{brief.template_id}`",
         ]
         if brief.source_filename:
@@ -188,12 +201,53 @@ class TemplateUsageBriefService:
         *,
         design_system: DesignSystem | None = None,
         induction: TemplateInductionResult | None = None,
+        session=None,
+        bind_art_direction_id=None,
     ) -> tuple[TemplateUsageBrief, dict[str, Path]]:
         brief = self.build_brief(
             template, design_system=design_system, induction=induction
         )
+        if session is not None:
+            from archium.application.visual.template_usage_brief_context import (
+                bind_brief_to_art_direction,
+            )
+            from archium.infrastructure.database.visual_repositories import (
+                ArtDirectionRepository,
+                TemplateUsageBriefRepository,
+            )
+
+            brief = TemplateUsageBriefRepository(session).save_new_version(brief)
+            if bind_art_direction_id is not None:
+                arts = ArtDirectionRepository(session)
+                art = arts.get(bind_art_direction_id)
+                if art is not None:
+                    arts.save(bind_brief_to_art_direction(art, brief))
         paths = self.write_artifacts(workspace, brief)
         return brief, paths
+
+    def persist_and_bind(
+        self,
+        session,
+        brief: TemplateUsageBrief,
+        *,
+        art_direction_id=None,
+    ) -> TemplateUsageBrief:
+        """Persist a new immutable version and optionally pin ArtDirection."""
+        from archium.application.visual.template_usage_brief_context import (
+            bind_brief_to_art_direction,
+        )
+        from archium.infrastructure.database.visual_repositories import (
+            ArtDirectionRepository,
+            TemplateUsageBriefRepository,
+        )
+
+        saved = TemplateUsageBriefRepository(session).save_new_version(brief)
+        if art_direction_id is not None:
+            arts = ArtDirectionRepository(session)
+            art = arts.get(art_direction_id)
+            if art is not None:
+                arts.save(bind_brief_to_art_direction(art, saved))
+        return saved
 
     @staticmethod
     def section_titles() -> tuple[str, ...]:

@@ -17,6 +17,7 @@ from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal, ThemeProposalStatus
+from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import visual_mappers
@@ -28,6 +29,7 @@ from archium.infrastructure.database.models import (
     LayoutPlanORM,
     RenderSceneORM,
     SceneChangeProposalORM,
+    TemplateUsageBriefORM,
     ThemeChangeProposalORM,
     VisualIntentORM,
 )
@@ -512,5 +514,57 @@ class ArchitecturalTemplateRepository:
         )
         return [
             visual_mappers.architectural_template_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
+
+class TemplateUsageBriefRepository:
+    """Immutable brief versions — re-induction inserts a new id/version row."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def save_new_version(self, brief: TemplateUsageBrief) -> TemplateUsageBrief:
+        """Always insert; bumps version based on existing rows for template_id."""
+        try:
+            next_version = self.next_version_for_template(brief.template_id)
+            to_save = brief.model_copy(update={"version": next_version})
+            to_save.touch()
+            orm = visual_mappers.template_usage_brief_to_orm(to_save)
+            self._session.add(orm)
+            self._session.flush()
+            return visual_mappers.template_usage_brief_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("save template usage brief", exc)
+            raise
+
+    def get(self, brief_id: UUID) -> TemplateUsageBrief | None:
+        orm = self._session.get(TemplateUsageBriefORM, brief_id)
+        return visual_mappers.template_usage_brief_to_domain(orm) if orm else None
+
+    def get_latest_for_template(self, template_id: str) -> TemplateUsageBrief | None:
+        stmt = (
+            select(TemplateUsageBriefORM)
+            .where(TemplateUsageBriefORM.template_id == template_id)
+            .order_by(TemplateUsageBriefORM.version.desc())
+            .limit(1)
+        )
+        orm = self._session.scalars(stmt).first()
+        return visual_mappers.template_usage_brief_to_domain(orm) if orm else None
+
+    def next_version_for_template(self, template_id: str) -> int:
+        latest = self.get_latest_for_template(template_id)
+        if latest is None:
+            return 1
+        return latest.version + 1
+
+    def list_for_template(self, template_id: str) -> list[TemplateUsageBrief]:
+        stmt = (
+            select(TemplateUsageBriefORM)
+            .where(TemplateUsageBriefORM.template_id == template_id)
+            .order_by(TemplateUsageBriefORM.version.asc())
+        )
+        return [
+            visual_mappers.template_usage_brief_to_domain(row)
             for row in self._session.scalars(stmt)
         ]

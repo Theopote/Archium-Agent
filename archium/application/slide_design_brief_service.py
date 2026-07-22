@@ -110,12 +110,14 @@ class SlideDesignBriefService:
 
     def generate_all(self, outline_id: UUID) -> list[SlideDesignBrief]:
         outline = self._require_outline(outline_id)
+        usage = self._resolve_usage_brief(outline)
         briefs = [
             self._generate_from_intent(
                 intent,
                 bindings=index_page_asset_bindings(outline.page_asset_bindings).get(
                     intent.order, []
                 ),
+                usage_brief=usage,
             )
             for intent in sorted(outline.page_intents, key=lambda item: item.order)
         ]
@@ -130,10 +132,12 @@ class SlideDesignBriefService:
         if intent is None:
             raise WorkflowError(f"页面 {page_order + 1} 无对应 SlideIntent。")
         existing = index_design_briefs(outline.page_design_briefs).get(page_order)
+        usage = self._resolve_usage_brief(outline)
         brief = self._generate_from_intent(
             intent,
             bindings=index_page_asset_bindings(outline.page_asset_bindings).get(page_order, []),
             preserve_status=False,
+            usage_brief=usage,
         )
         if existing is not None and existing.status == BriefStatus.APPROVED:
             brief.status = BriefStatus.CHANGES_PENDING
@@ -197,6 +201,16 @@ class SlideDesignBriefService:
             required_content=list(update.required_content),
             forbidden_content=list(update.forbidden_content),
             protection_rules=list(update.protection_rules) or list(previous.protection_rules),
+            template_usage_brief_id=(
+                update.template_usage_brief_id
+                if update.template_usage_brief_id is not None
+                else previous.template_usage_brief_id
+            ),
+            template_usage_brief_version=(
+                update.template_usage_brief_version
+                if update.template_usage_brief_version is not None
+                else previous.template_usage_brief_version
+            ),
             status=next_status,
         )
         saved = self._persist_briefs(outline, briefs)
@@ -249,7 +263,17 @@ class SlideDesignBriefService:
         *,
         bindings: list[SlideAssetBinding],
         preserve_status: bool = False,
+        usage_brief=None,
     ) -> SlideDesignBrief:
+        from archium.application.visual.image_treatment_planning_service import (
+            ImageTreatmentPlanningService,
+        )
+        from archium.application.visual.template_usage_brief_context import (
+            constraints_from_brief,
+        )
+        from archium.domain.visual.enums import ImageFit
+        from archium.domain.visual.template_usage_brief import TemplateUsageBrief
+
         primary_visual = infer_primary_visual_type(intent.expected_layout)
         primary_assets: list[UUID] = []
         supporting_assets: list[UUID] = []
@@ -268,6 +292,34 @@ class SlideDesignBriefService:
             else None
         )
 
+        brief_id = None
+        brief_version = None
+        if isinstance(usage_brief, TemplateUsageBrief):
+            brief_id = usage_brief.id
+            brief_version = usage_brief.version
+            constraints = constraints_from_brief(usage_brief)
+            treatment = ImageTreatmentPlanningService().plan(
+                content_type=primary_visual,
+                brief=usage_brief,
+                constraints=constraints,
+            )
+            if primary_visual == "drawing" or treatment.forbid_cover_crop:
+                drawing_policy = default_drawing_policy()
+                if treatment.fit_mode == ImageFit.CONTAIN:
+                    drawing_policy = drawing_policy.model_copy(
+                        update={
+                            "fit_mode": "contain",
+                            "forbid_cover_crop": True,
+                            "show_legend": treatment.show_legend,
+                            "show_north_arrow": treatment.show_north_arrow,
+                            "show_scale_bar": treatment.show_scale_bar,
+                        }
+                    )
+            if image_policy is not None and not treatment.forbid_cover_crop:
+                image_policy = image_policy.model_copy(
+                    update={"fit_mode": treatment.fit_mode.value}
+                )
+
         forbidden = list(intent.forbidden_content)
         if primary_visual == "drawing":
             forbidden.extend(
@@ -278,11 +330,19 @@ class SlideDesignBriefService:
                 )
                 if item not in forbidden
             )
+        if isinstance(usage_brief, TemplateUsageBrief):
+            for pattern in usage_brief.forbidden_patterns:
+                if pattern and pattern not in forbidden:
+                    forbidden.append(pattern)
 
         protection_rules = default_protection_rules_for_page(
             primary_visual_type=primary_visual,
             drawing_policy=drawing_policy,
         )
+        if isinstance(usage_brief, TemplateUsageBrief):
+            protection_rules.append(
+                f"TemplateUsageBrief v{usage_brief.version} ({usage_brief.id})"
+            )
 
         required_content: list[str] = []
         if intent.required_evidence:
@@ -305,7 +365,23 @@ class SlideDesignBriefService:
             required_content=required_content,
             forbidden_content=forbidden,
             protection_rules=protection_rules,
+            template_usage_brief_id=brief_id,
+            template_usage_brief_version=brief_version,
             status=BriefStatus.READY_FOR_REVIEW if not preserve_status else BriefStatus.DRAFT,
+        )
+
+    def _resolve_usage_brief(self, outline: OutlinePlan):
+        presentation = self._presentations.get_presentation(outline.presentation_id)
+        if presentation is None:
+            return None
+        from archium.application.visual.template_usage_brief_context import (
+            resolve_brief_for_presentation,
+        )
+
+        return resolve_brief_for_presentation(
+            self._session,
+            project_id=presentation.project_id,
+            presentation_id=presentation.id,
         )
 
     def _persist_briefs(
@@ -427,5 +503,7 @@ def _brief_to_update(brief: SlideDesignBrief) -> SlideDesignBriefUpdate:
         required_content=list(brief.required_content),
         forbidden_content=list(brief.forbidden_content),
         protection_rules=list(brief.protection_rules),
+        template_usage_brief_id=brief.template_usage_brief_id,
+        template_usage_brief_version=brief.template_usage_brief_version,
         status=brief.status.value,
     )

@@ -126,6 +126,8 @@ class SlideDesignBriefUpdate:
     required_content: list[str] = field(default_factory=list)
     forbidden_content: list[str] = field(default_factory=list)
     protection_rules: list[str] = field(default_factory=list)
+    template_usage_brief_id: UUID | None = None
+    template_usage_brief_version: int | None = None
     status: str = "draft"
 
 

@@ -35,6 +35,9 @@ class ArtDirection(IdentifiedModel, VersionedModel, TimestampedModel):
     consistency_rules: list[str] = Field(default_factory=list)
     forbidden_styles: list[str] = Field(default_factory=list)
     design_system_id: UUID | None = None
+    # Bound TemplateUsageBrief snapshot — survives template re-induction.
+    template_usage_brief_id: UUID | None = None
+    template_usage_brief_version: int | None = Field(default=None, ge=1)
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 
     def approve(self) -> None:

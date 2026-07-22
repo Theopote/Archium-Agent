@@ -91,7 +91,12 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
             gap_y=spacing.md,
         )
         metric_ids: list[str] = []
-        icon_refs = list(getattr(context.content, "icon_refs", []) or [])
+        from archium.application.visual.icon_usage import filter_icon_refs
+
+        icon_refs = filter_icon_refs(
+            list(getattr(context.content, "icon_refs", []) or []),
+            layout_family=LayoutFamily.METRIC_DASHBOARD,
+        )
         for index, (cell, metric) in enumerate(zip(cells, metrics, strict=False)):
             mid = f"metric_{index}"
             metric_ids.append(mid)

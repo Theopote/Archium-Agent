@@ -152,6 +152,28 @@ class LayoutPlanningService:
             raise ValueError(f"DesignSystem {design_system_id} not found")
         art = self._art.get(art_direction_id) if art_direction_id else None
 
+        from archium.application.visual.template_usage_brief_context import (
+            constraints_from_brief,
+            load_brief_for_art_direction,
+        )
+
+        usage_brief = load_brief_for_art_direction(self._session, art)
+        usage_constraints = (
+            constraints_from_brief(usage_brief) if usage_brief is not None else None
+        )
+        if usage_constraints is not None:
+            self._warnings.append(
+                {
+                    "code": "TEMPLATE_USAGE_BRIEF.BOUND",
+                    "detail": (
+                        f"consuming TemplateUsageBrief "
+                        f"{usage_constraints.brief_id} v{usage_constraints.brief_version}"
+                    ),
+                    "template_usage_brief_id": str(usage_constraints.brief_id),
+                    "template_usage_brief_version": usage_constraints.brief_version,
+                }
+            )
+
         capacity = self._capacity.estimate(
             slide,
             design,
@@ -238,6 +260,15 @@ class LayoutPlanningService:
             VisualContentType.SECTION,
             VisualContentType.ELEVATION,
         }
+        if usage_constraints is not None and usage_constraints.forbid_drawing_cover_crop and drawing:
+            self._warnings.append(
+                {
+                    "code": "TEMPLATE_USAGE_BRIEF.DRAWING_CONTAIN",
+                    "detail": "brief forbids drawing cover/crop — contain required",
+                    "template_usage_brief_id": str(usage_constraints.brief_id),
+                    "template_usage_brief_version": usage_constraints.brief_version,
+                }
+            )
 
         results: list[tuple[LayoutPlan, LayoutValidationReport]] = []
         for decision in decisions:

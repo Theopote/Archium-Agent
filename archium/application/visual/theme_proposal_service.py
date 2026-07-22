@@ -155,6 +155,19 @@ class ThemeProposalService:
         for issue in integrity:
             qa_by_slide.setdefault("_theme_integrity", []).append(issue)
 
+        from archium.application.visual.template_usage_brief_context import (
+            constraints_from_brief,
+            load_brief_for_art_direction,
+        )
+
+        usage_brief = load_brief_for_art_direction(self._session, art)
+        if usage_brief is not None:
+            constraints = constraints_from_brief(usage_brief)
+            brief_issues = _theme_brief_gate(proposed, constraints)
+            qa_summary.extend(brief_issues)
+            for issue in brief_issues:
+                qa_by_slide.setdefault("_template_usage_brief", []).append(issue)
+
         status = ThemeProposalStatus.READY
         if any(issue.severity == IssueSeverity.BLOCKER for issue in qa_summary):
             status = ThemeProposalStatus.READY_WITH_WARNINGS
@@ -390,3 +403,54 @@ def _dedupe_issues(issues: list[QualityIssue]) -> list[QualityIssue]:
         seen.add(key)
         result.append(issue)
     return result
+
+
+def _theme_brief_gate(proposed, constraints) -> list[QualityIssue]:
+    """Ensure ThemeChangeProposal does not violate the bound TemplateUsageBrief."""
+    from archium.domain.visual.enums import ImageFit, PhotoTreatment
+    from archium.domain.visual.page_quality import (
+        IssueCategory,
+        IssueSeverity,
+        QualityIssue,
+        QualityIssueSource,
+    )
+
+    issues: list[QualityIssue] = []
+    if constraints.forbid_drawing_cover_crop and (
+        proposed.image_style.default_fit != ImageFit.CONTAIN
+        or not proposed.image_style.drawing_preserve_aspect_ratio
+    ):
+        issues.append(
+            QualityIssue(
+                code="THEME.TEMPLATE_USAGE_BRIEF",
+                severity=IssueSeverity.BLOCKER,
+                category=IssueCategory.ARCHITECTURAL,
+                message=(
+                    f"主题提案违反已绑定 TemplateUsageBrief "
+                    f"v{constraints.brief_version} 的图纸 contain 规则。"
+                ),
+                evidence=[
+                    str(constraints.brief_id),
+                    str(constraints.brief_version),
+                    proposed.image_style.default_fit.value,
+                ],
+                source=QualityIssueSource.AUTO,
+                suggested_fix="保持 default_fit=contain 与 drawing_preserve_aspect_ratio。",
+            )
+        )
+    if constraints.photo_treatment_policy == PhotoTreatment.NONE.value:
+        # Brief prefers none — historical is still flagged by integrity QA.
+        pass
+    for pattern in constraints.forbidden_patterns:
+        if "cover" in pattern.lower() and proposed.image_style.default_fit == ImageFit.COVER:
+            issues.append(
+                QualityIssue(
+                    code="THEME.TEMPLATE_USAGE_BRIEF",
+                    severity=IssueSeverity.MAJOR,
+                    category=IssueCategory.ARCHITECTURAL,
+                    message=f"主题 default_fit=cover 触及 Brief 禁用模式：{pattern}",
+                    evidence=[str(constraints.brief_id), pattern],
+                    source=QualityIssueSource.AUTO,
+                )
+            )
+    return issues

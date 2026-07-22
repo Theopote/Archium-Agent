@@ -18,6 +18,7 @@ from archium.domain.visual.scene_change_proposal import (
     ProposalStatus,
     SceneChangeProposal,
 )
+from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,
     ThemeProposalDecision,
@@ -32,6 +33,7 @@ from archium.infrastructure.database.models import (
     LayoutPlanORM,
     RenderSceneORM,
     SceneChangeProposalORM,
+    TemplateUsageBriefORM,
     ThemeChangeProposalORM,
     VisualIntentORM,
 )
@@ -66,6 +68,8 @@ def art_direction_to_orm(
     orm.presentation_id = domain.presentation_id
     orm.deliverable_id = domain.deliverable_id
     orm.design_system_id = domain.design_system_id
+    orm.template_usage_brief_id = domain.template_usage_brief_id
+    orm.template_usage_brief_version = domain.template_usage_brief_version
     orm.version = domain.version
     orm.approval_status = domain.approval_status.value
     orm.payload_json = model_to_dict(domain)
@@ -428,3 +432,23 @@ def theme_change_proposal_to_domain(
 
 def architectural_template_to_domain(orm: ArchitecturalTemplateORM) -> ArchitecturalTemplate:
     return ArchitecturalTemplate.model_validate(orm.payload_json)
+
+
+def template_usage_brief_to_orm(
+    domain: TemplateUsageBrief,
+    target: TemplateUsageBriefORM | None = None,
+) -> TemplateUsageBriefORM:
+    orm = target or TemplateUsageBriefORM(id=domain.id)
+    orm.id = domain.id
+    orm.template_id = domain.template_id
+    orm.template_name = domain.template_name
+    orm.project_id = domain.project_id
+    orm.version = domain.version
+    orm.payload_json = model_to_dict(domain)
+    orm.created_at = domain.created_at
+    orm.updated_at = domain.updated_at
+    return orm
+
+
+def template_usage_brief_to_domain(orm: TemplateUsageBriefORM) -> TemplateUsageBrief:
+    return TemplateUsageBrief.model_validate(orm.payload_json)
