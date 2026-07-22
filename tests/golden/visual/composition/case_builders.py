@@ -1,4 +1,8 @@
-"""Deterministic builders for visual composition golden cases V1–V7."""
+"""Deterministic builders for visual composition golden cases V1–V7.
+
+Icon-focused exploratory cases live below but are intentionally excluded from
+the committed screenshot baseline registry until their PNG goldens are added.
+"""
 
 from __future__ import annotations
 
@@ -442,6 +446,162 @@ def build_v7_hybrid_canvas(intent_service: VisualIntentService) -> CompositionCa
     )
 
 
+def build_v8_process_narrative_icons(intent_service: VisualIntentService) -> CompositionCaseResult:
+    stage_assets = [uuid4() for _ in range(4)]
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="phasing-icons",
+        order=8,
+        title="门诊更新四阶段路径与关键动作",
+        message="阶段切换需要明确的动作锚点与空间提示，降低理解成本。",
+        key_points=["现状梳理", "动线分流", "分区施工", "恢复运营"],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.TIMELINE,
+                description=f"阶段{i + 1}",
+                preferred_asset_ids=[stage_assets[i]],
+            )
+            for i in range(4)
+        ]
+        + [
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="步行流线",
+                icon_canonical_name="pedestrian_flow",
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="公共交通换乘",
+                icon_canonical_name="public_transport",
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="停车组织",
+                icon_canonical_name="parking",
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="实施计划.pdf", page_number=4)
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    intent.dominant_content_type = VisualContentType.PROCESS
+    intent.preferred_layout_families = [LayoutFamily.PROCESS_NARRATIVE]
+    intent.supporting_asset_ids = list(stage_assets)
+    design = default_presentation_design_system()
+    content = LayoutContentBundle(
+        title=slide.title,
+        message=slide.message,
+        key_points=list(slide.key_points),
+        source_text="实施计划.pdf p.4",
+        supporting_asset_refs=[str(asset_id) for asset_id in stage_assets],
+        icon_refs=["icon:pedestrian_flow", "icon:public_transport", "icon:parking"],
+        insight="阶段之间用语义图标强化读者对转换动作的识别。",
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.PROCESS_NARRATIVE,
+        _context(
+            slide=slide,
+            intent=intent,
+            design=design,
+            variant="steps_horizontal",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v8_process_narrative_icons",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v9_metric_dashboard_icons(intent_service: VisualIntentService) -> CompositionCaseResult:
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="metrics-icons",
+        order=9,
+        title="门急诊体验指标与导视能力看板",
+        message="关键指标需要语义锚点，帮助读者快速识别不同维度。",
+        key_points=[
+            "日均到诊 860人",
+            "步行可达 6分钟",
+            "无障碍覆盖 92%",
+            "停车周转 1.4次",
+        ],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.CHART,
+                description="趋势图",
+                preferred_asset_ids=[uuid4()],
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="步行流线",
+                icon_canonical_name="pedestrian_flow",
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="无障碍",
+                icon_canonical_name="accessibility",
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="停车",
+                icon_canonical_name="parking",
+            ),
+            VisualRequirement(
+                type=VisualType.ICON,
+                description="节能",
+                icon_canonical_name="energy_saving",
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="运营数据月报.pdf", page_number=2)
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    intent.dominant_content_type = VisualContentType.METRICS
+    intent.preferred_layout_families = [LayoutFamily.METRIC_DASHBOARD]
+    design = default_presentation_design_system()
+    content = LayoutContentBundle(
+        title=slide.title,
+        message=slide.message,
+        key_points=[],
+        metrics=list(slide.key_points),
+        source_text="运营数据月报.pdf p.2",
+        icon_refs=[
+            "icon:pedestrian_flow",
+            "icon:accessibility",
+            "icon:parking",
+            "icon:energy_saving",
+        ],
+        insight="图标帮助区分人流、可达性、停车与能效四类指标。",
+    )
+    plan = LayoutSolver().generate(
+        LayoutFamily.METRIC_DASHBOARD,
+        _context(
+            slide=slide,
+            intent=intent,
+            design=design,
+            variant="metric_with_chart",
+            content=content,
+        ),
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v9_metric_dashboard_icons",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
 COMPOSITION_CASE_BUILDERS: dict[str, object] = {
     "v1_drawing_focus": build_v1_drawing_focus,
     "v2_evidence_board": build_v2_evidence_board,
@@ -456,6 +616,13 @@ COMPOSITION_CASE_IDS: tuple[str, ...] = tuple(COMPOSITION_CASE_BUILDERS.keys())
 
 # Calibrated single-slide layouts used for PPTX screenshot regression.
 SCREENSHOT_CASE_IDS: tuple[str, ...] = COMPOSITION_CASE_IDS
+
+ICON_CASE_BUILDERS: dict[str, object] = {
+    "v8_process_narrative_icons": build_v8_process_narrative_icons,
+    "v9_metric_dashboard_icons": build_v9_metric_dashboard_icons,
+}
+
+ICON_CASE_IDS: tuple[str, ...] = tuple(ICON_CASE_BUILDERS.keys())
 
 
 def build_composition_case(case_id: str, intent_service: VisualIntentService) -> CompositionCaseResult:
