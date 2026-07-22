@@ -136,14 +136,20 @@ class VisualCompositionService:
             next_slide=next_slide,
             use_llm=use_llm,
         )
+        presentation = self._presentations.get_presentation(slide.presentation_id)
+        project_id = presentation.project_id if presentation is not None else None
         candidates = self._layout.generate_candidates(
             slide=slide,
             visual_intent_id=intent.id,
             art_direction_id=art_direction.id,
             design_system_id=design_system.id,
             candidate_count=candidate_count,
+            project_id=project_id,
         )
-        best = self._layout.select_best(candidates)
+        best = self._layout.select_best(
+            candidates,
+            style_preference=self._layout.last_style_preference,
+        )
         saved = self._plans.save(best)
         report = next(
             (report for plan, report in candidates if plan.id == best.id),

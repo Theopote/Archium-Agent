@@ -12,8 +12,14 @@ from archium.application.visual.asset_reference import (
     content_refs_from_plan,
 )
 from archium.application.visual.layout_locked import preserve_locked_elements
+from archium.application.visual.layout_style_preference import (
+    LayoutStylePreference,
+    derive_layout_style_preference,
+    merge_preferred_families,
+)
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.config.settings import Settings, get_settings
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_composition import SlideCompositionDirective
@@ -22,6 +28,7 @@ from archium.domain.visual.enums import LayoutFamily, LayoutValidationStatus, Vi
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
@@ -68,14 +75,21 @@ class LayoutPlanningService:
         self._intents = VisualIntentRepository(session)
         self._art = ArtDirectionRepository(session)
         self._design = DesignSystemRepository(session)
+        self._projects = ProjectRepository(session)
         self._settings = settings or get_settings()
         self._warnings: list[dict[str, Any]] = []
+        self._last_style_preference: LayoutStylePreference = LayoutStylePreference()
 
     def drain_warnings(self) -> list[dict[str, Any]]:
         """Return and clear structured warnings collected during the last plan call."""
         warnings = list(self._warnings)
         self._warnings.clear()
         return warnings
+
+    @property
+    def last_style_preference(self) -> LayoutStylePreference:
+        """Style-driven layout preference from the most recent generate_candidates call."""
+        return self._last_style_preference
 
     def plan_slide(
         self,
@@ -85,6 +99,8 @@ class LayoutPlanningService:
         art_direction_id: UUID | None,
         design_system_id: UUID,
         candidate_count: int = 3,
+        project_id: UUID | None = None,
+        reference_style: ReferenceStyleProfile | None = None,
     ) -> LayoutPlan:
         candidates = self.generate_candidates(
             slide=slide,
@@ -92,8 +108,13 @@ class LayoutPlanningService:
             art_direction_id=art_direction_id,
             design_system_id=design_system_id,
             candidate_count=candidate_count,
+            project_id=project_id,
+            reference_style=reference_style,
         )
-        best = self.select_best(candidates)
+        best = self.select_best(
+            candidates,
+            style_preference=self._last_style_preference,
+        )
         saved = self._plans.save(best)
         return saved
 
@@ -108,6 +129,8 @@ class LayoutPlanningService:
         project_id: UUID | None = None,
         deck_directive: SlideCompositionDirective | None = None,
         previous_layout_plan: LayoutPlan | None = None,
+        reference_style: ReferenceStyleProfile | None = None,
+        style_preference: LayoutStylePreference | None = None,
     ) -> list[tuple[LayoutPlan, LayoutValidationReport]]:
         self._warnings.clear()
         intent = self._intents.get(visual_intent_id)
@@ -118,6 +141,17 @@ class LayoutPlanningService:
             raise ValueError(f"DesignSystem {design_system_id} not found")
         art = self._art.get(art_direction_id) if art_direction_id else None
 
+        resolved_style = reference_style
+        if resolved_style is None and project_id is not None:
+            resolved_style = self.resolve_reference_style(project_id)
+        style_pref = style_preference or derive_layout_style_preference(
+            reference_style=resolved_style,
+            art_direction=art,
+        )
+        self._last_style_preference = style_pref
+        for note in style_pref.notes:
+            self._warnings.append({"code": "LAYOUT.STYLE_PREFERENCE", "detail": note})
+
         decisions = self._decide_candidates(
             slide,
             intent,
@@ -125,6 +159,7 @@ class LayoutPlanningService:
             design,
             candidate_count,
             deck_directive=deck_directive,
+            style_preference=style_pref,
         )
         content = content_from_slide(slide, intent)
         drawing = intent.dominant_content_type in {
@@ -178,11 +213,13 @@ class LayoutPlanningService:
         *,
         deck_directive: SlideCompositionDirective | None = None,
         previous_layout_plan: LayoutPlan | None = None,
+        style_preference: LayoutStylePreference | None = None,
     ) -> LayoutPlan:
         return self.select_best_for_deck(
             candidates,
             deck_directive=deck_directive,
             previous_layout_plan=previous_layout_plan,
+            style_preference=style_preference,
         )
 
     def select_best_for_deck(
@@ -191,6 +228,7 @@ class LayoutPlanningService:
         *,
         deck_directive: SlideCompositionDirective | None = None,
         previous_layout_plan: LayoutPlan | None = None,
+        style_preference: LayoutStylePreference | None = None,
     ) -> LayoutPlan:
         if not candidates:
             raise ValueError("no layout candidates to select")
@@ -200,15 +238,42 @@ class LayoutPlanningService:
             if not report.has_critical()
         ]
         pool = non_critical or candidates
+        if style_preference is not None:
+            resolved_style = style_preference
+        else:
+            resolved_style = getattr(self, "_last_style_preference", None) or LayoutStylePreference()
         pool_sorted = sorted(
             pool,
             key=lambda item: self._selection_sort_key(
                 item,
                 deck_directive=deck_directive,
                 previous_layout_plan=previous_layout_plan,
+                style_preference=resolved_style,
             ),
         )
         return pool_sorted[0][0]
+
+    def resolve_reference_style(self, project_id: UUID) -> ReferenceStyleProfile | None:
+        profiles = self._projects.list_reference_style_profiles(project_id)
+        if not profiles:
+            return None
+        approved = [profile for profile in profiles if profile.is_approved]
+        return (approved or profiles)[0]
+
+    def resolve_style_preference(
+        self,
+        *,
+        project_id: UUID | None = None,
+        art_direction: ArtDirection | None = None,
+        reference_style: ReferenceStyleProfile | None = None,
+    ) -> LayoutStylePreference:
+        resolved = reference_style
+        if resolved is None and project_id is not None:
+            resolved = self.resolve_reference_style(project_id)
+        return derive_layout_style_preference(
+            reference_style=resolved,
+            art_direction=art_direction,
+        )
 
     @staticmethod
     def _selection_sort_key(
@@ -216,6 +281,7 @@ class LayoutPlanningService:
         *,
         deck_directive: SlideCompositionDirective | None,
         previous_layout_plan: LayoutPlan | None,
+        style_preference: LayoutStylePreference | None = None,
     ) -> tuple[float, float, float, str]:
         plan, report = item
         validity_rank = 0.0 if report.valid else 1.0
@@ -231,6 +297,12 @@ class LayoutPlanningService:
                 composition_bonus += 0.08
             elif preferred and plan.layout_family in preferred[1:]:
                 composition_bonus += 0.03
+
+        if style_preference is not None and not style_preference.is_empty:
+            composition_bonus += style_preference.selection_bonus(
+                plan.layout_family,
+                plan.layout_variant,
+            )
 
         if previous_layout_plan is not None:
             if plan.layout_family == previous_layout_plan.layout_family:
@@ -258,10 +330,19 @@ class LayoutPlanningService:
         design: DesignSystem,
         candidate_count: int,
         deck_directive: SlideCompositionDirective | None = None,
+        style_preference: LayoutStylePreference | None = None,
     ) -> list[LayoutDecisionDraft]:
+        _ = design  # reserved for future design-aware family filters
         asset_count = (
             (1 if intent.hero_asset_id else 0) + len(intent.supporting_asset_ids)
         ) or len(slide.visual_requirements)
+        style_pref = style_preference or LayoutStylePreference()
+        # Rank: deck rhythm → slide intent (user/explicit) → reference style cues.
+        preferred_for_registry = merge_preferred_families(
+            list(deck_directive.preferred_layout_families) if deck_directive else None,
+            list(intent.preferred_layout_families),
+            list(style_pref.preferred_families),
+        )
 
         if self._llm is not None:
             allowed = [
@@ -269,10 +350,14 @@ class LayoutPlanningService:
                 for item in self._registry.candidates_for(
                     intent.dominant_content_type,
                     asset_count=max(asset_count, 0),
-                    preferred=list(intent.preferred_layout_families),
+                    preferred=preferred_for_registry,
                 )
             ]
-            allowed = self._filter_allowed_families(allowed, deck_directive)
+            allowed = self._filter_allowed_families(
+                allowed,
+                deck_directive,
+                preferred_order=preferred_for_registry,
+            )
             try:
                 draft = self._llm.generate_structured(
                     LLMRequest(
@@ -294,6 +379,7 @@ class LayoutPlanningService:
                         asset_count,
                         candidate_count,
                         deck_directive=deck_directive,
+                        style_preference=style_pref,
                     )
                     merged = [primary]
                     for extra in extras:
@@ -304,9 +390,10 @@ class LayoutPlanningService:
                         merged.append(extra)
                         if len(merged) >= candidate_count:
                             break
-                    return self._apply_directive_to_decisions(
+                    return self._apply_preference_to_decisions(
                         merged[:candidate_count],
                         deck_directive,
+                        style_pref,
                         candidate_count,
                     )
                 fallback = self._rule_decisions(
@@ -314,6 +401,7 @@ class LayoutPlanningService:
                     asset_count,
                     candidate_count,
                     deck_directive=deck_directive,
+                    style_preference=style_pref,
                 )
                 self._record_llm_fallback(
                     error_type="DisallowedLayoutFamily",
@@ -327,6 +415,7 @@ class LayoutPlanningService:
                     asset_count,
                     candidate_count,
                     deck_directive=deck_directive,
+                    style_preference=style_pref,
                 )
                 self._record_llm_fallback(
                     error_type=type(exc).__name__,
@@ -339,6 +428,7 @@ class LayoutPlanningService:
             asset_count,
             candidate_count,
             deck_directive=deck_directive,
+            style_preference=style_pref,
         )
 
     def _record_llm_fallback(
@@ -395,25 +485,33 @@ class LayoutPlanningService:
         asset_count: int,
         candidate_count: int,
         deck_directive: SlideCompositionDirective | None = None,
+        style_preference: LayoutStylePreference | None = None,
     ) -> list[LayoutDecisionDraft]:
-        preferred = list(intent.preferred_layout_families)
-        if deck_directive is not None:
-            preferred = list(
-                dict.fromkeys([*deck_directive.preferred_layout_families, *preferred])
-            )
+        style_pref = style_preference or LayoutStylePreference()
+        preferred = merge_preferred_families(
+            list(deck_directive.preferred_layout_families) if deck_directive else None,
+            list(intent.preferred_layout_families),
+            list(style_pref.preferred_families),
+        )
         definitions = self._registry.candidates_for(
             intent.dominant_content_type,
             asset_count=max(asset_count, 0),
             preferred=preferred,
         )
         decisions: list[LayoutDecisionDraft] = []
+        pool_limit = max(candidate_count * 3, candidate_count, 6)
         for definition in definitions:
             if (
                 deck_directive is not None
                 and definition.family in deck_directive.forbidden_layout_families
             ):
                 continue
-            for variant in definition.supported_variants:
+            variants = self._order_variants(
+                definition.family,
+                definition.supported_variants,
+                style_pref,
+            )
+            for variant in variants:
                 decisions.append(
                     LayoutDecisionDraft(
                         layout_family=definition.family.value,
@@ -430,12 +528,8 @@ class LayoutPlanningService:
                         split_reason=None,
                     )
                 )
-                if len(decisions) >= candidate_count:
-                    return self._apply_directive_to_decisions(
-                        decisions,
-                        deck_directive,
-                        candidate_count,
-                    )
+            if len(decisions) >= pool_limit:
+                break
         if not decisions:
             decisions.append(
                 LayoutDecisionDraft(
@@ -445,19 +539,53 @@ class LayoutPlanningService:
                     density_adjustment=intent.density_level.value,
                 )
             )
-        return self._apply_directive_to_decisions(decisions, deck_directive, candidate_count)
+        return self._apply_preference_to_decisions(
+            decisions,
+            deck_directive,
+            style_pref,
+            candidate_count,
+        )
+
+    @staticmethod
+    def _order_variants(
+        family: LayoutFamily,
+        variants: tuple[str, ...],
+        style_preference: LayoutStylePreference,
+    ) -> list[str]:
+        if style_preference.is_empty:
+            return list(variants)
+        preferred = [
+            variant
+            for preferred_family, variant in style_preference.preferred_variants
+            if preferred_family == family and variant in variants
+        ]
+        ordered = list(dict.fromkeys([*preferred, *variants]))
+        return ordered
 
     @staticmethod
     def _filter_allowed_families(
         allowed: list[str],
         deck_directive: SlideCompositionDirective | None,
+        preferred_order: list[LayoutFamily] | None = None,
+        style_preference: LayoutStylePreference | None = None,
     ) -> list[str]:
-        if deck_directive is None:
-            return allowed
-        forbidden = {family.value for family in deck_directive.forbidden_layout_families}
-        filtered = [family for family in allowed if family not in forbidden]
-        if deck_directive.preferred_layout_families:
-            preferred = [family.value for family in deck_directive.preferred_layout_families]
+        filtered = list(allowed)
+        if deck_directive is not None:
+            forbidden = {family.value for family in deck_directive.forbidden_layout_families}
+            filtered = [family for family in filtered if family not in forbidden]
+        preferred: list[str] = []
+        if preferred_order:
+            preferred.extend(family.value for family in preferred_order)
+        else:
+            if deck_directive is not None and deck_directive.preferred_layout_families:
+                preferred.extend(
+                    family.value for family in deck_directive.preferred_layout_families
+                )
+            if style_preference is not None and style_preference.preferred_families:
+                preferred.extend(
+                    family.value for family in style_preference.preferred_families
+                )
+        if preferred:
             ordered = [family for family in preferred if family in filtered]
             ordered.extend(family for family in filtered if family not in ordered)
             return ordered or filtered or allowed
@@ -469,20 +597,53 @@ class LayoutPlanningService:
         deck_directive: SlideCompositionDirective | None,
         candidate_count: int,
     ) -> list[LayoutDecisionDraft]:
-        if deck_directive is None or not decisions:
-            return decisions[:candidate_count]
-        forbidden = {family.value for family in deck_directive.forbidden_layout_families}
-        filtered = [item for item in decisions if item.layout_family not in forbidden]
-        pool = filtered or list(decisions)
-        if deck_directive.preferred_layout_families:
-            preferred = [family.value for family in deck_directive.preferred_layout_families]
+        """Backward-compatible wrapper used by older tests."""
+        return LayoutPlanningService._apply_preference_to_decisions(
+            decisions,
+            deck_directive,
+            LayoutStylePreference(),
+            candidate_count,
+        )
 
-            def sort_key(item: LayoutDecisionDraft) -> tuple[int, str]:
-                if item.layout_family in preferred:
-                    return preferred.index(item.layout_family), item.layout_variant
-                return len(preferred), item.layout_family
+    @staticmethod
+    def _apply_preference_to_decisions(
+        decisions: list[LayoutDecisionDraft],
+        deck_directive: SlideCompositionDirective | None,
+        style_preference: LayoutStylePreference | None,
+        candidate_count: int,
+    ) -> list[LayoutDecisionDraft]:
+        if not decisions:
+            return []
+        style_pref = style_preference or LayoutStylePreference()
+        pool = list(decisions)
+        if deck_directive is not None:
+            forbidden = {family.value for family in deck_directive.forbidden_layout_families}
+            filtered = [item for item in pool if item.layout_family not in forbidden]
+            pool = filtered or list(decisions)
 
-            pool = sorted(pool, key=sort_key)
+        preferred_families = merge_preferred_families(
+            list(deck_directive.preferred_layout_families) if deck_directive else None,
+            list(style_pref.preferred_families),
+        )
+        # Style variants refine within families; deck family rank still wins.
+        preferred_family_values = [family.value for family in preferred_families]
+        preferred_variant_keys = [
+            (family.value, variant) for family, variant in style_pref.preferred_variants
+        ]
+
+        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, str, str]:
+            if preferred_family_values and item.layout_family in preferred_family_values:
+                family_rank = preferred_family_values.index(item.layout_family)
+            else:
+                family_rank = len(preferred_family_values)
+            variant_key = (item.layout_family, item.layout_variant)
+            if preferred_variant_keys and variant_key in preferred_variant_keys:
+                variant_rank = preferred_variant_keys.index(variant_key)
+            else:
+                variant_rank = len(preferred_variant_keys)
+            return family_rank, variant_rank, item.layout_family, item.layout_variant
+
+        pool = sorted(pool, key=sort_key)
         deduped: list[LayoutDecisionDraft] = []
         seen: set[tuple[str, str]] = set()
         for item in pool:

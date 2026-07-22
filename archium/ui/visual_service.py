@@ -536,18 +536,24 @@ def replan_slide(
     if previous_plan is None:
         listed = plans.list_by_slide(slide.id)
         previous_plan = listed[0] if listed else None
+    project_id = presentation.project_id if presentation is not None else None
     candidates = planner.generate_candidates(
         slide=slide,
         visual_intent_id=intent.id,
         art_direction_id=art.id if art else None,
         design_system_id=design.id,
         candidate_count=candidate_count,
+        project_id=project_id,
         previous_layout_plan=previous_plan,
     )
     saved_candidates: list[LayoutPlan] = []
     for plan, _report in candidates:
         saved_candidates.append(plans.save(plan))
-    best = planner.select_best(candidates, previous_layout_plan=previous_plan)
+    best = planner.select_best(
+        candidates,
+        previous_layout_plan=previous_plan,
+        style_preference=planner.last_style_preference,
+    )
     best = plans.save(best)
     slide.layout_plan_id = best.id
     presentations.save_slide(slide)

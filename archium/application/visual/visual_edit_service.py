@@ -582,9 +582,14 @@ class VisualEditService:
                 art_direction_id=art.id if art else None,
                 design_system_id=design.id,
                 candidate_count=candidate_count,
+                project_id=self._project_id_for_slide(target_slide),
                 previous_layout_plan=current_plan,
             )
-            best = planner.select_best(candidates, previous_layout_plan=current_plan)
+            best = planner.select_best(
+                candidates,
+                previous_layout_plan=current_plan,
+                style_preference=planner.last_style_preference,
+            )
             saved_plan = self._plans.save(best)
             target_slide.layout_plan_id = saved_plan.id
             self._presentations.save_slide(target_slide)
@@ -630,9 +635,14 @@ class VisualEditService:
                 art_direction_id=art.id if art else None,
                 design_system_id=design.id,
                 candidate_count=candidate_count,
+                project_id=self._project_id_for_slide(target_slide),
                 previous_layout_plan=current_plan,
             )
-            best = planner.select_best(candidates, previous_layout_plan=current_plan)
+            best = planner.select_best(
+                candidates,
+                previous_layout_plan=current_plan,
+                style_preference=planner.last_style_preference,
+            )
             saved_plan = self._plans.save(best)
             target_slide.layout_plan_id = saved_plan.id
             self._presentations.save_slide(target_slide)
@@ -919,12 +929,17 @@ class VisualEditService:
             art_direction_id=art.id if art else None,
             design_system_id=design.id,
             candidate_count=candidate_count,
+            project_id=self._project_id_for_slide(slide),
             previous_layout_plan=current_plan,
         )
         saved_candidates: list[LayoutPlan] = []
         for plan, _report in candidates:
             saved_candidates.append(self._plans.save(plan))
-        best = planner.select_best(candidates, previous_layout_plan=current_plan)
+        best = planner.select_best(
+            candidates,
+            previous_layout_plan=current_plan,
+            style_preference=planner.last_style_preference,
+        )
         best = self._plans.save(best)
         slide.layout_plan_id = best.id
         self._presentations.save_slide(slide)

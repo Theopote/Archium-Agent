@@ -55,11 +55,12 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | 上传参考后可识别颜色 / 字体 / 页面模式（上游） | **Partial**（抽取与匹配侧） |
 | Template Studio / 上游可影响 LayoutPlan 生成 | **Partial**（规划侧，非 Scene 编译） |
 | `RenderSceneCompiler` 应用 ReferenceStyle / ArtDirection 视觉覆盖 | **Passed (P1 deterministic)** — `style_overlay.apply_style_overlays`；可解析 hex / 字体 / 字号 / 色调启发写入 theme 与节点；持久化 DesignSystem 不改写 |
-| 用户上传模板风格差异反映到 RenderScene | **Partial** — 可解析 cue 会进 Scene；自由文本 / 布局 cue 仍不改坐标 |
+| 用户上传模板风格差异反映到 RenderScene | **Partial** — 可解析 cue 会进 Scene；自由文本 / 布局 cue 不改坐标 |
+| ReferenceStyle `layout_cues` → LayoutPlan 候选偏好 | **Passed (deterministic)** — `layout_style_preference.derive_layout_style_preference` 映射 family/variant；参与候选生成排序与 `select_best` 打分 |
 
-**影响：** Studio / 视觉修复工作流在编译 Scene 时会加载项目 ArtDirection 与 ReferenceStyleProfile，并覆盖 background/accent/title 等可解析令牌。
+**影响：** Studio / 视觉修复工作流在编译 Scene 时会加载项目 ArtDirection 与 ReferenceStyleProfile，并覆盖 background/accent/title 等可解析令牌。Layout 规划会把 layout cues（如 full-bleed、photo grid、图纸主导）提升为 preferred families/variants。
 
-**对外口径：** 参考风格 **已进入 RenderScene（确定性覆盖）**；不是完整品牌母版引擎，也不保证所有自然语言 strategy 都能映射。Layout cue（版式坐标）仍不由 style overlay 改写。
+**对外口径：** 参考风格 **已进入 RenderScene（确定性色/字覆盖）+ LayoutPlan 候选偏好**；不是完整品牌母版引擎，也不改写已生成坐标，只影响版式族/变体选择。
 
 ## Font system (2026-07-21)
 

@@ -597,10 +597,21 @@ class VisualWorkflowNodes:
                     if composition_plan is not None
                     else None
                 )
+                art = state.get("art_direction")
+                project_id = (
+                    UUID(str(state["project_id"])) if state.get("project_id") else None
+                )
+                style_preference = (
+                    self._runtime.layout_planning_service.resolve_style_preference(
+                        project_id=project_id,
+                        art_direction=art,
+                    )
+                )
                 best = self._runtime.layout_planning_service.select_best_for_deck(
                     pairs,
                     deck_directive=directive,
                     previous_layout_plan=previous_plan,
+                    style_preference=style_preference,
                 )
                 saved = self._runtime.layout_plans.save(best)
                 previous_plan = saved
