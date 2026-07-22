@@ -51,19 +51,19 @@
 
 README 中新增了以下文档的链接：
 
-1. **[Docker 快速启动指南](docs/deployment/docker-quickstart.md)**
+1. **[Docker 快速启动指南](deployment/docker-quickstart.md)**
    - 完整的 Docker 部署手册
    - 3000+ 字详细说明
 
-2. **[5分钟快速测试](DOCKER_QUICK_TEST.md)**
+2. **[5分钟快速测试](../DOCKER_QUICK_TEST.md)**
    - 快速验证 Docker 配置
    - 适合首次测试
 
-3. **[完整测试清单](docs/deployment/docker-test-checklist.md)**
+3. **[完整测试清单](deployment/docker-test-checklist.md)**
    - 12步完整验证流程
    - 故障排查指南
 
-4. **[跨平台优化方案](docs/deployment/CROSS_PLATFORM_OPTIMIZATION.md)**
+4. **[跨平台优化方案](deployment/CROSS_PLATFORM_OPTIMIZATION.md)**
    - 技术方案详解
    - 三种优化方案对比
 

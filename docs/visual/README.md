@@ -1,6 +1,6 @@
 # Architectural Visual Composition
 
-建筑视觉编排系统（Round 1）：让 Archium 回答「这些建筑内容应该如何被看见、理解和记住？」。
+建筑视觉编排与 Studio 场景编辑系统：让 Archium 回答「这些建筑内容应该如何被看见、理解、修改和交付？」。
 
 ## 文档索引
 
@@ -37,12 +37,17 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Golden V1–V7（composition） | ✅ |
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ 初版 |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
+| RenderScene 画布编辑（单选 / 多选 / 框选） | ✅ |
+| 元素评论 → 提案 → QA → Revision | ✅ |
+| 固定画布容量预算 / 内容适配 / 拆页建议 | ✅ |
+| 图片衍生处理（原图不可变） | ✅ 初版 |
+| 模板导入、归纳、发布与 Template Studio | ✅ 初版 |
 
-## Round 1 明确不做
+## 当前边界
 
-自动效果图生成、复杂约束求解器、**完整 LLM Visual Quality / 自动修图**、拖拽式 PPT 编辑器、组织品牌模板导入等。详见任务书「非目标」。
+仍未提供自动建筑效果图生成、通用复杂约束求解器或与 PowerPoint 完全等价的自由编辑体验。当前图片处理是受证据策略约束的衍生管线，不是生成式修图；画布编辑写入 RenderScene 修订，而不是直接修改任意 PPTX 内部对象。
 
-当前 **Layout Quality Score** 只覆盖结构与规则。`heuristic_v0` Visual Critic 提供只读视觉质量提示（可无截图时走几何先验；有 PNG 时补色彩），**不**自动修复、**不**阻断 PPTX。完整 screenshot / LLM Critic 与 deck-level QA 仍在后续。
+**Layout Quality Score** 主要覆盖结构与规则。`heuristic_v0` Visual Critic 提供只读视觉质量提示；确定性修复和需要确认的提案是两条不同路径。是否阻断导出由审核/导出策略决定，不能仅根据一个视觉分数推断。
 
 ## 与旧路径的关系
 

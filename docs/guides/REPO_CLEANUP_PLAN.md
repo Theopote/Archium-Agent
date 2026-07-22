@@ -423,10 +423,10 @@ $ ls docs/internal/history/
 
 ```markdown
 <!-- 旧链接 -->
-[CI 修复](../CI_FIX_SUMMARY.md)
+[CI 修复](../implementation/CI_FIX_SUMMARY.md)
 
 <!-- 需要更新为 -->
-[CI 修复](../docs/internal/history/2026-07-17-ci-fix-summary.md)
+[CI 修复](../implementation/CI_FIX_SUMMARY.md)
 ```
 
 **缓解措施**：

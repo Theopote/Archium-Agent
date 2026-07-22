@@ -52,4 +52,4 @@
 
 ## 维护规则
 
-修改用户可见行为、CLI、配置、数据流或支持矩阵时，代码变更应同步修改相应现行文档。详细规则和检查清单见 [文档维护指南](documentation-maintenance.md)。
+修改用户可见行为、CLI、配置、数据流或支持矩阵时，代码变更应同步修改相应现行文档。详细规则和检查清单见 [文档维护指南](documentation-maintenance.md)；归档候选与删除条件见[历史文档分类清单](historical-document-inventory.md)。

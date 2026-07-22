@@ -31,7 +31,7 @@
 
 - `docs/README.md`：文档中心，区分现行与历史资料。
 - `docs/architecture/current-system.md`：不依赖历史 Stage/Round 的当前架构快照。
-- `docs/studio-current-capabilities.md`：覆盖近期 Studio、容量、评论、图片和字体能力。
+- `docs/studio-user-guide.md`：已合并近期 Studio、容量、评论、图片和字体能力；临时补充文档已删除。
 - `docs/documentation-maintenance.md`：事实源、变更映射与提交前检查。
 
 ## 下一批执行顺序

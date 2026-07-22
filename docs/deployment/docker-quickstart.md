@@ -460,8 +460,8 @@ docker-compose exec -T archium sqlite3 /app/data/database/archium.db .dump > bac
 
 - 📖 [用户指南](../studio-user-guide.md)
 - 🔧 [配置参考](../configuration-reference.md)
-- 🐛 [问题排查](./troubleshooting.md)
-- 🚀 [生产部署最佳实践](./production-deployment.md)
+- 🐛 [Docker 测试与问题排查](./docker-test-checklist.md)
+- 🚀 [跨平台部署说明](./CROSS_PLATFORM_OPTIMIZATION.md)
 
 ---
 

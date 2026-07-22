@@ -72,6 +72,10 @@ Do not edit them manually.
 | `ASSET_VISION_RAG_ENABLED` | `true` | No | When true, generate heuristic or LLM vision captions for drawing/image assets at ingest and index them as searchable RAG chunks. |
 | `ASSET_VISION_LLM_ENABLED` | `false` | No | When true and LLM is configured, use multimodal vision to caption drawing assets at ingest (falls back to heuristic caption when unavailable). |
 | `ASSET_VISION_LLM_MODEL` | `*(unset)*` | No | Optional vision-capable model override for asset captioning at ingest. |
+| `SLIDE_RECOVERY_OCR_ENABLED` | `true` | No | When true, run OCR (pytesseract) for raster slide recovery inputs. |
+| `SLIDE_RECOVERY_VLM_ENABLED` | `true` | No | When true and LLM is configured, use vision LLM for non-text region detection during slide recovery (falls back to heuristic analysis). |
+| `SLIDE_RECOVERY_VLM_MODEL` | `*(unset)*` | No | Optional vision-capable model override for slide recovery VLM analysis. |
+| `SLIDE_RECOVERY_PPTX_PERCEPTUAL_ENABLED` | `true` | No | When true, rasterize PPTX slides (when tools available) and supplement structural parsing with OCR/VLM perceptual regions. |
 | `RETRIEVAL_KEYWORD_BOOST_ENABLED` | `true` | No | When true, rerank vector hits with keyword overlap (helps metrics, drawing captions, and proper nouns that pure embeddings may miss). |
 | `CHUNK_CONTEXT_MAX_CHARS` | `600` | No | Maximum characters injected per retrieved chunk into LLM context. |
 
@@ -131,6 +135,7 @@ Do not edit them manually.
 
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
+| `IMAGE_DERIVATIVES_ENABLED` | `true` | No | When true and Pillow is available, run ImageTreatmentSpec → ImageDerivative after RenderScene compile (cache under project/cache/derivatives). Never mutates originals; never applies filters inside PptxGenJS. |
 | `VISUAL_FALLBACK_ENABLED` | `true` | No | When true, export tries relaxed asset matching and programmatic diagram fallbacks. |
 | `VISUAL_FALLBACK_RELAXED_MATCHING` | `true` | No | When true, unmatched visuals may bind to the best available project asset at export time. |
 | `VISUAL_FALLBACK_RELAXED_MIN_SCORE` | `0.2` | No | Minimum score for relaxed asset fallback during export. |

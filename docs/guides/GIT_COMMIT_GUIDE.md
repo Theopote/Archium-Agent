@@ -273,9 +273,9 @@ alembic upgrade head
 
 ## 文档
 
-- [第一阶段优化总结](./优化总结.md)
-- [第二阶段优化总结](./第二阶段优化总结.md)
-- [项目审查报告](./Archium项目审查报告.md)
+- [第一阶段优化总结](../delivery/优化总结.md)
+- [第二阶段优化总结](../delivery/第二阶段优化总结.md)
+- [项目审查报告](../analysis/Archium项目审查报告.md)
 
 ## Checklist
 
