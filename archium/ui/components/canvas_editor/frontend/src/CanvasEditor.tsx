@@ -32,6 +32,7 @@ type CanvasEvent =
       y: number;
       width: number;
       height: number;
+      preserveAspectRatio?: boolean;
     }
   | { type: "editText"; elementId: string };
 
@@ -64,6 +65,7 @@ const ROLE_COLORS: Record<string, { border: string; background: string; label: s
 };
 
 const DRAG_THRESHOLD_PX = 4;
+const GEOMETRY_EPSILON = 0.05;
 
 const CanvasEditor: React.FC = () => {
   const [hoverElementId, setHoverElementId] = useState<string | null>(null);
@@ -92,6 +94,7 @@ const CanvasEditor: React.FC = () => {
     startHeight: number;
     currentWidth: number;
     currentHeight: number;
+    preserveAspectRatio: boolean;
   } | null>(null);
 
   const args = (window as any).streamlitArgs;
@@ -159,8 +162,16 @@ const CanvasEditor: React.FC = () => {
     const { x, y } = percentFromClient(event.clientX, event.clientY);
     const activeResize = resizeStateRef.current;
     if (activeResize) {
-      const nextWidth = Math.max(4, Math.min(100 - activeResize.startX, x - activeResize.startX));
-      const nextHeight = Math.max(4, Math.min(100 - activeResize.startY, y - activeResize.startY));
+      let nextWidth = Math.max(4, Math.min(100 - activeResize.startX, x - activeResize.startX));
+      let nextHeight = Math.max(4, Math.min(100 - activeResize.startY, y - activeResize.startY));
+      if (activeResize.preserveAspectRatio && activeResize.startHeight > 0) {
+        const aspect = activeResize.startWidth / activeResize.startHeight;
+        nextHeight = nextWidth / aspect;
+        if (nextHeight > 100 - activeResize.startY) {
+          nextHeight = 100 - activeResize.startY;
+          nextWidth = nextHeight * aspect;
+        }
+      }
       activeResize.currentWidth = nextWidth;
       activeResize.currentHeight = nextHeight;
       setDragElementId(activeResize.elementId);
@@ -209,6 +220,13 @@ const CanvasEditor: React.FC = () => {
       if (element) {
         const nextX = Math.max(0, Math.min(100 - element.width, x - element.width / 2));
         const nextY = Math.max(0, Math.min(100 - element.height, y - element.height / 2));
+        if (
+          Math.abs(nextX - element.x) < GEOMETRY_EPSILON &&
+          Math.abs(nextY - element.y) < GEOMETRY_EPSILON
+        ) {
+          emitEvent({ type: "select", elementId: activeDrag.elementId });
+          return;
+        }
         emitEvent({
           type: "move",
           elementId: activeDrag.elementId,
@@ -228,6 +246,14 @@ const CanvasEditor: React.FC = () => {
     setDragElementId(null);
     setResizePreview(null);
     if (!activeResize) return;
+    const element = elements.find((item) => item.id === activeResize.elementId);
+    if (
+      element &&
+      Math.abs(activeResize.currentWidth - element.width) < GEOMETRY_EPSILON &&
+      Math.abs(activeResize.currentHeight - element.height) < GEOMETRY_EPSILON
+    ) {
+      return;
+    }
     emitEvent({
       type: "resize",
       elementId: activeResize.elementId,
@@ -235,6 +261,7 @@ const CanvasEditor: React.FC = () => {
       y: activeResize.startY,
       width: activeResize.currentWidth,
       height: activeResize.currentHeight,
+      preserveAspectRatio: activeResize.preserveAspectRatio,
     });
   };
 
@@ -255,6 +282,7 @@ const CanvasEditor: React.FC = () => {
       startHeight: element.height,
       currentWidth: element.width,
       currentHeight: element.height,
+      preserveAspectRatio: event.shiftKey,
     };
     setResizePreview({
       x: element.x,
@@ -262,11 +290,11 @@ const CanvasEditor: React.FC = () => {
       width: element.width,
       height: element.height,
     });
-    const onMouseUp = () => {
-      window.removeEventListener("mouseup", onMouseUp);
+    const onPointerUp = (pointerEvent: PointerEvent) => {
+      window.removeEventListener("pointerup", onPointerUp);
       finishResize();
     };
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("pointerup", onPointerUp);
   };
 
   const handleElementMouseDown = (
@@ -286,11 +314,11 @@ const CanvasEditor: React.FC = () => {
       moved: false,
     };
 
-    const onMouseUp = (mouseupEvent: MouseEvent) => {
-      window.removeEventListener("mouseup", onMouseUp);
-      finishDrag(mouseupEvent);
+    const onPointerUp = (pointerEvent: PointerEvent) => {
+      window.removeEventListener("pointerup", onPointerUp);
+      finishDrag(pointerEvent);
     };
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("pointerup", onPointerUp);
   };
 
   const handleCanvasClick = () => {
@@ -396,7 +424,7 @@ const CanvasEditor: React.FC = () => {
               cursor: "nwse-resize",
               zIndex: 4,
             }}
-            title="拖拽调整尺寸"
+            title="拖拽调整尺寸（按住 Shift 保持比例）"
           />
         )}
       </div>

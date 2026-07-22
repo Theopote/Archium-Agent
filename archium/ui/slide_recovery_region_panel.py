@@ -251,7 +251,7 @@ def _render_interactive_region_canvas(
         st.caption(f"交互画布不可用：{format_user_error(exc)}")
         return False
 
-    event_kind, element_id, x_percent, y_percent, width_percent, height_percent = (
+    event_kind, element_id, x_percent, y_percent, width_percent, height_percent, _preserve = (
         parse_canvas_editor_event(canvas_event)
     )
 

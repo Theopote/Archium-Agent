@@ -14,17 +14,17 @@ from archium.ui.studio.element_labels import format_element_label
 from archium.ui.visual_service import SlideVisualSnapshot
 
 
-def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | None, float | None, float | None, float | None]:
-    """Return event kind, element id, and optional geometry in percent."""
+def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | None, float | None, float | None, float | None, bool]:
+    """Return event kind, element id, geometry in percent, and preserve-aspect flag."""
     from archium.ui.components.canvas_editor import parse_canvas_editor_event as _parse
 
     event = _parse(value)
     if event is None:
-        return "none", None, None, None, None, None
+        return "none", None, None, None, None, None, False
     if isinstance(event, str):
-        return "select", event, None, None, None, None
+        return "select", event, None, None, None, None, False
     if event["type"] == "move":
-        return "move", str(event["elementId"]), float(event["x"]), float(event["y"]), None, None
+        return "move", str(event["elementId"]), float(event["x"]), float(event["y"]), None, None, False
     if event["type"] == "resize":
         return (
             "resize",
@@ -33,10 +33,11 @@ def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | N
             float(event["y"]),
             float(event["width"]),
             float(event["height"]),
+            bool(event.get("preserveAspectRatio", False)),
         )
     if event["type"] == "editText":
-        return "editText", str(event["elementId"]), None, None, None, None
-    return "select", event.get("elementId"), None, None, None, None
+        return "editText", str(event["elementId"]), None, None, None, None, False
+    return "select", event.get("elementId"), None, None, None, None, False
 
 _SEVERITY_COLORS = {
     LayoutIssueSeverity.CRITICAL: "#b42318",
@@ -208,28 +209,15 @@ def _handle_canvas_move(
     x_percent: float,
     y_percent: float,
 ) -> None:
-    from archium.application.visual.element_geometry import layout_coords_from_percent
-    from archium.exceptions import WorkflowError
-    from archium.infrastructure.database.session import get_session
-    from archium.ui.error_handlers import format_user_error
-    from archium.ui.studio_service import apply_slide_element_move
+    from archium.ui.studio.canvas_command_bridge import apply_canvas_move_event
 
-    x, y = layout_coords_from_percent(plan, x_percent=x_percent, y_percent=y_percent)
-    try:
-        with st.spinner("正在保存元素位置…"), get_session() as session:
-            apply_slide_element_move(
-                session,
-                slide_id,  # type: ignore[arg-type]
-                element_id=element_id,
-                x=x,
-                y=y,
-            )
-        st.success("已更新元素位置。")
-        st.rerun()
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-    except Exception as exc:
-        st.error(format_user_error(exc))
+    apply_canvas_move_event(
+        slide_id=slide_id,  # type: ignore[arg-type]
+        plan=plan,
+        element_id=element_id,
+        x_percent=x_percent,
+        y_percent=y_percent,
+    )
 
 
 def _handle_canvas_resize(
@@ -241,37 +229,20 @@ def _handle_canvas_resize(
     y_percent: float,
     width_percent: float,
     height_percent: float,
+    preserve_aspect_ratio: bool = False,
 ) -> None:
-    from archium.application.visual.element_geometry import layout_bounds_from_percent
-    from archium.exceptions import WorkflowError
-    from archium.infrastructure.database.session import get_session
-    from archium.ui.error_handlers import format_user_error
-    from archium.ui.studio_service import apply_slide_element_resize
+    from archium.ui.studio.canvas_command_bridge import apply_canvas_resize_event
 
-    x, y, width, height = layout_bounds_from_percent(
-        plan,
+    apply_canvas_resize_event(
+        slide_id=slide_id,  # type: ignore[arg-type]
+        plan=plan,
+        element_id=element_id,
         x_percent=x_percent,
         y_percent=y_percent,
         width_percent=width_percent,
         height_percent=height_percent,
+        preserve_aspect_ratio=preserve_aspect_ratio,
     )
-    try:
-        with st.spinner("正在保存元素尺寸…"), get_session() as session:
-            apply_slide_element_resize(
-                session,
-                slide_id,  # type: ignore[arg-type]
-                element_id=element_id,
-                x=x,
-                y=y,
-                width=width,
-                height=height,
-            )
-        st.success("已更新元素尺寸。")
-        st.rerun()
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-    except Exception as exc:
-        st.error(format_user_error(exc))
 
 
 def _render_interactive_canvas(
@@ -287,14 +258,17 @@ def _render_interactive_canvas(
         canvas_editor_unavailable_reason,
     )
 
+    from archium.ui.studio.canvas_command_bridge import canvas_component_key
+
     try:
         canvas_event = canvas_editor(
             image_url=preview_path,
             layout_plan=plan,
+            render_scene=slide_snapshot.render_scene,
             selected_element_id=selected_element_id,
             show_labels=True,
             show_all_borders=True,
-            key=f"canvas_{slide_snapshot.slide.id}",
+            key=canvas_component_key(slide_snapshot.slide.id),
         )
     except CanvasEditorUnavailableError as exc:
         reason = canvas_editor_unavailable_reason() or str(exc)
@@ -304,9 +278,15 @@ def _render_interactive_canvas(
         st.warning(f"交互式画布加载失败，已切换为静态预览：{exc}")
         return False
 
-    event_kind, element_id, x_percent, y_percent, width_percent, height_percent = (
-        parse_canvas_editor_event(canvas_event)
-    )
+    (
+        event_kind,
+        element_id,
+        x_percent,
+        y_percent,
+        width_percent,
+        height_percent,
+        preserve_aspect_ratio,
+    ) = parse_canvas_editor_event(canvas_event)
     if event_kind == "move" and element_id and x_percent is not None and y_percent is not None:
         _handle_canvas_move(
             slide_id=slide_snapshot.slide.id,
@@ -333,6 +313,7 @@ def _render_interactive_canvas(
             y_percent=y_percent,
             width_percent=width_percent,
             height_percent=height_percent,
+            preserve_aspect_ratio=preserve_aspect_ratio,
         )
         return True
 

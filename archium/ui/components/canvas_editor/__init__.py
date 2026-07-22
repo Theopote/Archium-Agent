@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.render_scene import RenderScene
 from archium.ui.components.canvas_editor.runtime import (
     CanvasEditorUnavailableError,
     canvas_editor_available,
@@ -38,6 +39,7 @@ class CanvasResizeEvent(TypedDict):
     y: float
     width: float
     height: float
+    preserveAspectRatio: NotRequired[bool]
 
 
 class CanvasEditTextEvent(TypedDict):
@@ -89,6 +91,7 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
                     y=float(y),
                     width=float(width),
                     height=float(height),
+                    preserveAspectRatio=bool(value.get("preserveAspectRatio", False)),
                 )
         if event_type == "editText":
             element_id = value.get("elementId")
@@ -112,6 +115,7 @@ def canvas_editor(
     image_url: str,
     layout_plan: LayoutPlan,
     *,
+    render_scene: RenderScene | None = None,
     selected_element_id: str | None = None,
     show_labels: bool = True,
     show_all_borders: bool = True,
@@ -124,7 +128,7 @@ def canvas_editor(
         CanvasEditorUnavailableError: When the frontend build or dev server is missing.
     """
     component_func = get_canvas_editor_component()
-    elements = _convert_elements(layout_plan)
+    elements = convert_elements_for_canvas(layout_plan, render_scene=render_scene)
     component_value = component_func(
         imageUrl=image_url,
         elements=elements,
@@ -137,8 +141,13 @@ def canvas_editor(
     return parse_canvas_editor_event(component_value)
 
 
-def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
-    """Convert LayoutPlan elements to component format."""
+def convert_elements_for_canvas(
+    layout_plan: LayoutPlan,
+    *,
+    render_scene: RenderScene | None = None,
+) -> list[dict[str, Any]]:
+    """Convert layout/scene geometry to canvas overlay elements."""
+    from archium.application.visual.studio_command_executor import node_geometry_locked
     from archium.domain.visual.element_lock import canvas_geometry_locked
 
     page_width = float(layout_plan.page_width or 10.0)
@@ -146,6 +155,20 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
 
     elements: list[dict[str, Any]] = []
     for element in layout_plan.elements:
+        node = None
+        if render_scene is not None:
+            node = render_scene.node_by_layout_element_id(element.id) or render_scene.node_by_id(
+                element.id
+            )
+            if node is not None and not node.visible:
+                continue
+
+        x = node.x if node is not None else element.x
+        y = node.y if node is not None else element.y
+        width = node.width if node is not None else element.width
+        height = node.height if node is not None else element.height
+        locked = node_geometry_locked(node) if node is not None else canvas_geometry_locked(element)
+
         content_type = (
             element.content_type.value
             if hasattr(element.content_type, "value")
@@ -154,12 +177,12 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
         elements.append(
             {
                 "id": element.id,
-                "x": (element.x / page_width) * 100,
-                "y": (element.y / page_height) * 100,
-                "width": (element.width / page_width) * 100,
-                "height": (element.height / page_height) * 100,
+                "x": (x / page_width) * 100,
+                "y": (y / page_height) * 100,
+                "width": (width / page_width) * 100,
+                "height": (height / page_height) * 100,
                 "role": element.role.value if hasattr(element.role, "value") else str(element.role),
-                "locked": canvas_geometry_locked(element),
+                "locked": locked,
                 "content_type": content_type,
                 "text_content": element.text_content or "",
             }
@@ -167,11 +190,17 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
     return elements
 
 
+def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
+    """Backward-compatible wrapper for tests."""
+    return convert_elements_for_canvas(layout_plan)
+
+
 __all__ = [
     "CanvasEditorUnavailableError",
     "CanvasEditorEvent",
     "CanvasEditTextEvent",
     "CanvasMoveEvent",
+    "CanvasResizeEvent",
     "CanvasSelectEvent",
     "build_canvas_editor",
     "canvas_editor",
@@ -179,6 +208,7 @@ __all__ = [
     "canvas_editor_build_dir",
     "canvas_editor_release_mode",
     "canvas_editor_unavailable_reason",
+    "convert_elements_for_canvas",
     "is_canvas_editor_built",
     "parse_canvas_editor_event",
     "reset_canvas_editor_component_cache",

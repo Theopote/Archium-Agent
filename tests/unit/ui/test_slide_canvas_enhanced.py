@@ -58,8 +58,8 @@ def test_can_render_interactive_requires_plan_and_preview(tmp_path) -> None:  # 
 
 
 def test_parse_canvas_editor_event_supports_structured_move() -> None:
-    kind, element_id, x_percent, y_percent, width_percent, height_percent = parse_canvas_editor_event(
-        {"type": "move", "elementId": "hero", "x": 12.5, "y": 30.0}
+    kind, element_id, x_percent, y_percent, width_percent, height_percent, preserve = (
+        parse_canvas_editor_event({"type": "move", "elementId": "hero", "x": 12.5, "y": 30.0})
     )
     assert kind == "move"
     assert element_id == "hero"
@@ -67,10 +67,12 @@ def test_parse_canvas_editor_event_supports_structured_move() -> None:
     assert y_percent == 30.0
     assert width_percent is None
     assert height_percent is None
+    assert preserve is False
 
 
 def test_parse_canvas_editor_event_supports_structured_resize() -> None:
-    kind, element_id, x_percent, y_percent, width_percent, height_percent = parse_canvas_editor_event(
+    kind, element_id, x_percent, y_percent, width_percent, height_percent, preserve = (
+        parse_canvas_editor_event(
         {
             "type": "resize",
             "elementId": "hero",
@@ -78,16 +80,18 @@ def test_parse_canvas_editor_event_supports_structured_resize() -> None:
             "y": 20.0,
             "width": 40.0,
             "height": 30.0,
+            "preserveAspectRatio": True,
         }
-    )
+    ))
     assert kind == "resize"
     assert element_id == "hero"
     assert (x_percent, y_percent, width_percent, height_percent) == (10.0, 20.0, 40.0, 30.0)
+    assert preserve is True
 
 
 def test_parse_canvas_editor_event_supports_legacy_string_select() -> None:
-    kind, element_id, x_percent, y_percent, width_percent, height_percent = parse_canvas_editor_event(
-        "hero"
+    kind, element_id, x_percent, y_percent, width_percent, height_percent, preserve = (
+        parse_canvas_editor_event("hero")
     )
     assert kind == "select"
     assert element_id == "hero"
@@ -95,11 +99,12 @@ def test_parse_canvas_editor_event_supports_legacy_string_select() -> None:
     assert y_percent is None
     assert width_percent is None
     assert height_percent is None
+    assert preserve is False
 
 
 def test_parse_canvas_editor_event_supports_edit_text() -> None:
-    kind, element_id, x_percent, y_percent, width_percent, height_percent = parse_canvas_editor_event(
-        {"type": "editText", "elementId": "title"}
+    kind, element_id, x_percent, y_percent, width_percent, height_percent, preserve = (
+        parse_canvas_editor_event({"type": "editText", "elementId": "title"})
     )
     assert kind == "editText"
     assert element_id == "title"
@@ -107,3 +112,4 @@ def test_parse_canvas_editor_event_supports_edit_text() -> None:
     assert y_percent is None
     assert width_percent is None
     assert height_percent is None
+    assert preserve is False
