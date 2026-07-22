@@ -15,6 +15,24 @@ except ImportError:  # pragma: no cover - optional until documents/full extra in
 
 _FONT_ROOT = Path(__file__).resolve().parent / "fonts"
 
+# Shared with scene_fonts / FontManifest — keep names identical for PPTX + measurement.
+DEFAULT_CJK_FONT = "Microsoft YaHei"
+DEFAULT_LATIN_FONT = "Arial"
+CJK_FALLBACK_CHAIN: tuple[str, ...] = (
+    DEFAULT_CJK_FONT,
+    "PingFang SC",
+    "Noto Sans SC",
+    "Source Han Sans SC",
+    "SimHei",
+    "WenQuanYi Micro Hei",
+)
+LATIN_FALLBACK_CHAIN: tuple[str, ...] = (
+    DEFAULT_LATIN_FONT,
+    "Helvetica",
+    "Liberation Sans",
+    "DejaVu Sans",
+)
+
 
 class TruetypeFont(Protocol):
     def getbbox(self, text: str, /, *args: object, **kwargs: object) -> tuple[int, int, int, int]: ...
@@ -121,10 +139,18 @@ def resolve_font_file(family: str, *, bold: bool = False) -> ResolvedFont | None
 
 @lru_cache(maxsize=64)
 def load_truetype_font(family: str, *, bold: bool, size_px: int) -> TruetypeFont | None:
-    """Load a PIL FreeTypeFont for ``family`` at ``size_px``, or None when unavailable."""
+    """Load a PIL FreeTypeFont for ``family`` at ``size_px``, or None when unavailable.
+
+    Uses Pillow's FreeType backend (``ImageFont.truetype``). When the requested
+    logical family has no file, walks the shared CJK/Latin fallback chain from
+    ``font_manifest.resolve_font_with_policy``.
+    """
     if ImageFont is None or size_px <= 0:
         return None
-    resolved = resolve_font_file(family, bold=bold)
+    # Local import avoids cycle: font_manifest → font_resolver.
+    from archium.infrastructure.layout.font_manifest import resolve_font_with_policy
+
+    resolved, _resolved_family, _fallback_used = resolve_font_with_policy(family, bold=bold)
     if resolved is None:
         return None
     try:

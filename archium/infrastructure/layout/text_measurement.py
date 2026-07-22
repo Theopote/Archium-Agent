@@ -5,6 +5,12 @@ from __future__ import annotations
 import re
 
 from archium.domain.visual.design_system import TextStyleToken
+from archium.infrastructure.layout.font_manifest import (
+    MEASUREMENT_ENGINE_FREETYPE,
+    MEASUREMENT_ENGINE_HEURISTIC,
+    FontManifestBundle,
+    build_measurement_font_bundle,
+)
 from archium.infrastructure.layout.font_resolver import (
     TruetypeFont,
     fonts_available,
@@ -22,9 +28,12 @@ _BOLD_WEIGHT_THRESHOLD = 600
 class TextMeasurementService:
     """Estimate whether text fits a box given a typography token.
 
-    Uses PIL ``ImageFont.getbbox`` with resolved system/bundled fonts for mixed
-    Chinese/English copy. Falls back to character-class heuristics only when fonts
-    or Pillow are unavailable.
+    Real path: Pillow FreeType (``ImageFont.truetype`` → ``getbbox``) with the same
+    logical families PPTX uses (Microsoft YaHei + Arial), resolved via
+    ``FontManifest`` / platform fallbacks (Noto/Liberation on Linux CI).
+
+    Heuristic path: character-class width factors only when fonts or Pillow are
+    unavailable.
     """
 
     def __init__(
@@ -44,6 +53,19 @@ class TextMeasurementService:
     @property
     def uses_real_metrics(self) -> bool:
         return fonts_available()
+
+    @property
+    def measurement_engine(self) -> str:
+        if self._can_use_real_metrics():
+            return MEASUREMENT_ENGINE_FREETYPE
+        return MEASUREMENT_ENGINE_HEURISTIC
+
+    def font_manifest_bundle(self) -> FontManifestBundle:
+        """Provenance for fonts this service measures against (bind to visual baselines)."""
+        return build_measurement_font_bundle()
+
+    def font_manifest_hash(self) -> str:
+        return self.font_manifest_bundle().font_manifest_hash
 
     def char_width_em(self, char: str) -> float:
         if char.isspace():

@@ -12,25 +12,12 @@ from dataclasses import dataclass
 
 from archium.domain.visual.design_system import DesignSystem, TypographySystem
 from archium.domain.visual.render_scene import FontAsset, RenderNode, RenderScene, TextNode
-from archium.infrastructure.layout.font_resolver import resolve_font_file
-
-DEFAULT_CJK_FONT = "Microsoft YaHei"
-DEFAULT_LATIN_FONT = "Arial"
-
-# Shared fallback chains (order matters). Used by PNG, HTML, PPTX, and detection.
-CJK_FALLBACK_CHAIN: tuple[str, ...] = (
+from archium.infrastructure.layout.font_resolver import (
+    CJK_FALLBACK_CHAIN,
     DEFAULT_CJK_FONT,
-    "PingFang SC",
-    "Noto Sans SC",
-    "Source Han Sans SC",
-    "SimHei",
-    "WenQuanYi Micro Hei",
-)
-LATIN_FALLBACK_CHAIN: tuple[str, ...] = (
     DEFAULT_LATIN_FONT,
-    "Helvetica",
-    "Liberation Sans",
-    "DejaVu Sans",
+    LATIN_FALLBACK_CHAIN,
+    resolve_font_file,
 )
 
 _CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]")

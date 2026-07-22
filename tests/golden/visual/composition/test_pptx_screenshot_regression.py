@@ -132,6 +132,9 @@ def test_screenshot_case_manifests_exist() -> None:
         manifest = load_screenshot_manifest(case_dir)
         assert manifest.case_id == case_id
         assert manifest.screenshot.file == baseline.name
+        assert manifest.font_manifest_hash, f"{case_id} missing font_manifest_hash"
+        assert manifest.font_platform, f"{case_id} missing font_platform"
+        assert manifest.fonts, f"{case_id} missing fonts[] provenance"
 
     assert not missing, (
         "Missing committed screenshot baselines for: "

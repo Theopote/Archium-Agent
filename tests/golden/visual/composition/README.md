@@ -9,6 +9,14 @@ Two **separate** visual regression tracks — do not conflate them.
 
 Python PNG / CairoSVG preview validates **geometry boxes**. Final delivery must pass **PPTX screenshot** regression.
 
+## Font binding
+
+PPTX screenshot manifests include ``font_manifest_hash`` (Pillow FreeType file
+hashes for Microsoft YaHei + Arial regular/bold, with Noto/Liberation fallbacks
+on Linux). Same-platform hash drift fails as **font drift**, not a silent pixel
+diff. Approve baselines on the **CI platform (Linux)** so ``font_platform=linux``
+locks the CI font set.
+
 ## Cases
 
 | Case | Family | Focus | CI pptx baseline |

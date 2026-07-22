@@ -75,7 +75,10 @@ def test_approve_promotes_candidate(tmp_path: Path) -> None:
     assert approved.is_file()
     manifest = case_dir / "pptx_screenshot_manifest.json"
     assert manifest.is_file()
-    assert "pptx_screenshot.png" in manifest.read_text(encoding="utf-8")
+    text = manifest.read_text(encoding="utf-8")
+    assert "pptx_screenshot.png" in text
+    assert "font_manifest_hash" in text
+    assert "font_platform" in text
 
 
 def test_approve_without_candidate_raises(tmp_path: Path) -> None:

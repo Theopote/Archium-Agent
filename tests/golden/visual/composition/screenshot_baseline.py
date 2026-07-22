@@ -9,6 +9,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from archium.infrastructure.layout.font_manifest import (
+    build_measurement_font_bundle,
+    compare_font_manifest_binding,
+)
 from archium.infrastructure.renderers.pptx_screenshot import (
     export_pptx_slide_pngs,
     screenshot_tools_available,
@@ -48,6 +52,10 @@ class PptxScreenshotManifest:
     layout_family: str
     layout_variant: str
     screenshot: PptxScreenshotSnapshot
+    font_manifest_hash: str | None = None
+    font_platform: str | None = None
+    measurement_engine: str | None = None
+    fonts: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -55,11 +63,17 @@ class PptxScreenshotManifest:
             "layout_family": self.layout_family,
             "layout_variant": self.layout_variant,
             "screenshot": asdict(self.screenshot),
+            "font_manifest_hash": self.font_manifest_hash,
+            "font_platform": self.font_platform,
+            "measurement_engine": self.measurement_engine,
+            "fonts": list(self.fonts),
         }
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> PptxScreenshotManifest:
         screenshot = payload.get("screenshot") or {}
+        fonts_raw = payload.get("fonts") or []
+        fonts = tuple(dict(item) for item in fonts_raw if isinstance(item, dict))
         return cls(
             case_id=str(payload["case_id"]),
             layout_family=str(payload["layout_family"]),
@@ -70,6 +84,22 @@ class PptxScreenshotManifest:
                 height=int(screenshot["height"]),
                 average_hash=str(screenshot["average_hash"]),
             ),
+            font_manifest_hash=(
+                None
+                if payload.get("font_manifest_hash") in (None, "")
+                else str(payload.get("font_manifest_hash"))
+            ),
+            font_platform=(
+                None
+                if payload.get("font_platform") in (None, "")
+                else str(payload.get("font_platform"))
+            ),
+            measurement_engine=(
+                None
+                if payload.get("measurement_engine") in (None, "")
+                else str(payload.get("measurement_engine"))
+            ),
+            fonts=fonts,
         )
 
 
@@ -114,6 +144,7 @@ def _write_screenshot_pair(
     with Image.open(screenshot_path) as image:
         width, height = image.size
         image_hash = average_hash_hex(image.convert("RGB"))
+    font_bundle = build_measurement_font_bundle()
     manifest = PptxScreenshotManifest(
         case_id=case.case_id,
         layout_family=case.plan.layout_family.value,
@@ -124,6 +155,10 @@ def _write_screenshot_pair(
             height=height,
             average_hash=image_hash,
         ),
+        font_manifest_hash=font_bundle.font_manifest_hash,
+        font_platform=font_bundle.platform,
+        measurement_engine=font_bundle.measurement_engine,
+        fonts=tuple(font.to_dict() for font in font_bundle.fonts),
     )
     manifest_target.write_text(
         json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2) + "\n",
@@ -180,6 +215,13 @@ def approve_candidate_baseline(case_dir: Path) -> Path:
     payload = json.loads(candidate_manifest.read_text(encoding="utf-8"))
     if isinstance(payload.get("screenshot"), dict):
         payload["screenshot"]["file"] = PPTX_SCREENSHOT_NAME
+    # Ensure approve always binds fonts even for older candidates.
+    if not payload.get("font_manifest_hash"):
+        font_bundle = build_measurement_font_bundle()
+        payload["font_manifest_hash"] = font_bundle.font_manifest_hash
+        payload["font_platform"] = font_bundle.platform
+        payload["measurement_engine"] = font_bundle.measurement_engine
+        payload["fonts"] = [font.to_dict() for font in font_bundle.fonts]
     target_manifest.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -226,10 +268,28 @@ def compare_screenshot_to_baseline(case_dir: Path, actual_path: Path) -> list[st
         return [f"Missing screenshot manifest: {manifest_path(case_dir)}"]
 
     manifest = load_screenshot_manifest(case_dir)
-    issues = compare_preview_image(
-        baseline_path,
-        actual_path,
-        expected_hash=manifest.screenshot.average_hash,
+    font_issues = compare_font_manifest_binding(
+        baseline_hash=manifest.font_manifest_hash,
+        baseline_platform=manifest.font_platform,
+        baseline_fonts=list(manifest.fonts),
+    )
+    # Same-platform hash drift / missing hash fail before pixel noise.
+    font_blocking = [
+        issue
+        for issue in font_issues
+        if issue.startswith("Missing font_manifest_hash")
+        or issue.startswith("font_manifest_hash mismatch")
+    ]
+    if font_blocking:
+        return font_blocking
+
+    issues = list(font_issues)
+    issues.extend(
+        compare_preview_image(
+            baseline_path,
+            actual_path,
+            expected_hash=manifest.screenshot.average_hash,
+        )
     )
     with Image.open(actual_path) as actual_image:
         width, height = actual_image.size
