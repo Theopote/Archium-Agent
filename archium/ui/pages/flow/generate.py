@@ -12,7 +12,6 @@ from archium.ui.generate_queue import metrics_from_board, queue_row_status
 from archium.ui.page_status_board_panel import (
     load_page_status_board,
     render_compact_page_actions,
-    status_chip_html,
 )
 from archium.ui.pages.flow import render_stage_header, render_stage_nav
 from archium.ui.pages.workspace import render_generate_stage, render_project_picker
@@ -34,11 +33,12 @@ def _selected_presentation_id(project_id: UUID) -> UUID | None:
 
 
 def _render_queue_summary(metrics) -> None:
-    cols = st.columns(4)
-    cols[0].metric("总体", f"{metrics.complete}/{metrics.total}")
-    cols[1].metric("完成", metrics.complete)
-    cols[2].metric("待处理", metrics.pending)
-    cols[3].metric("失败", metrics.failed)
+    st.markdown(
+        f"**总体 {metrics.complete}/{metrics.total}**　"
+        f"完成 {metrics.complete}　"
+        f"待处理 {metrics.pending}　"
+        f"失败 {metrics.failed}"
+    )
 
 
 def _render_page_queue(project_id: UUID, presentation_id: UUID) -> bool:
@@ -54,18 +54,21 @@ def _render_page_queue(project_id: UUID, presentation_id: UUID) -> bool:
     st.markdown("#### 逐页队列")
     has_attention = False
     for row in board.rows:
-        if row.severity in {"warn", "error"}:
+        attention = row.severity in {"warn", "error"}
+        if attention:
             has_attention = True
         status = queue_row_status(row)
-        chip = status_chip_html(row)
-        title = row.title or f"第 {row.order + 1} 页"
-        with st.container(border=row.severity in {"warn", "error"}):
-            st.markdown(
-                f"**{row.order + 1:02d}  {title}**  {chip}  · {status}",
-                unsafe_allow_html=True,
-            )
-            if row.detail and row.severity in {"warn", "error"}:
+        title = (row.title or f"第 {row.order + 1} 页").strip()
+        # Spec shape: 01 封面              完成
+        line = f"`{row.order + 1:02d}`  **{title}**"
+        cols = st.columns([4.2, 1.4])
+        with cols[0]:
+            st.markdown(line)
+            if attention and row.detail:
                 st.caption(row.detail)
+        with cols[1]:
+            st.markdown(status)
+        if attention:
             render_compact_page_actions(
                 presentation_id=presentation_id,
                 project_id=project_id,
@@ -79,8 +82,13 @@ def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> No
     st.divider()
     cols = st.columns(2)
     with cols[0]:
-        label = "处理问题页" if has_attention else "查看问题页"
-        if st.button(label, type="primary" if has_attention else "secondary", use_container_width=True):
+        if st.button(
+            "处理问题页",
+            type="primary" if has_attention else "secondary",
+            use_container_width=True,
+            disabled=not has_attention,
+            help=None if has_attention else "当前没有需要处理的问题页",
+        ):
             st.session_state["studio_focus_attention"] = True
             st.switch_page(get_app_page("edit"))
     with cols[1]:

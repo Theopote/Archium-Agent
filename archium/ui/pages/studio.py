@@ -164,6 +164,7 @@ def render(
         deck_qa_report=deck_qa,
         preview_paths=previews,
         workflow_output_dir=workflow_output_dir,
+        compact=embedded,
     )
     if context is None:
         return

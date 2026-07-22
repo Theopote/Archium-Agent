@@ -160,7 +160,7 @@ def _render_overview(project_id: UUID) -> None:
     col4.metric("项目类型", PROJECT_TYPE_LABELS.get(overview.project.project_type, "其他"))
 
 
-def _render_documents(project_id: UUID) -> None:
+def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
     st.markdown("#### 项目资料")
     with get_session() as session:
         documents = list_project_documents(session, project_id)
@@ -179,13 +179,25 @@ def _render_documents(project_id: UUID) -> None:
     else:
         st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
 
+    if show_uploader:
+        _render_upload_controls(project_id, key_prefix="docs_upload")
+
+
+def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
+    """Primary materials upload action."""
     uploads = st.file_uploader(
-        "上传资料",
+        "选择文件",
         type=["pdf", "docx", "pptx", "xlsx", "png", "jpg", "jpeg", "webp"],
         accept_multiple_files=True,
-        key=f"upload_{project_id}",
+        key=f"{key_prefix}_{project_id}",
+        label_visibility="collapsed",
     )
-    if uploads and st.button("上传资料", type="primary", key=f"import_{project_id}"):
+    if uploads and st.button(
+        "上传资料",
+        type="primary",
+        use_container_width=True,
+        key=f"{key_prefix}_import_{project_id}",
+    ):
         results = []
         with get_session() as session:
             for upload in uploads:
@@ -214,7 +226,7 @@ def _render_documents(project_id: UUID) -> None:
         st.rerun()
 
     settings = get_ui_effective_settings()
-    if settings.asset_vision_rag_enabled:
+    if settings.asset_vision_rag_enabled and key_prefix.startswith("docs"):
         st.caption(
             "图档语义索引：导入时会为图纸/大图生成可检索描述并写入向量库。"
             "历史项目可点击下方按钮补建。"
@@ -686,28 +698,29 @@ def render_project_picker(*, allow_create: bool = True) -> UUID | None:
 
 
 def render_materials_stage(project_id: UUID) -> None:
-    """资料阶段：摘要指标 + 文件/事实/素材/缺口；高级工具收折。"""
+    """资料阶段：摘要指标 + 上传主操作 + 文件/事实/素材/缺口；高级工具收折。"""
     from archium.ui.materials_summary import load_materials_summary
 
     with get_session() as session:
         summary = load_materials_summary(session, project_id)
 
-    metric_cols = st.columns(4)
-    metric_cols[0].metric("文件", summary.file_count)
-    metric_cols[1].metric("事实", summary.fact_count)
-    metric_cols[2].metric("素材", summary.asset_count)
-    metric_cols[3].metric("待确认问题", summary.pending_confirm_count)
-
-    st.caption(
-        f"{summary.file_count} 个文件 · {summary.fact_count} 条事实 · "
-        f"{summary.asset_count} 项素材 · {summary.gap_count} 个资料缺口"
+    st.markdown(
+        f"**{summary.file_count} 个文件**　"
+        f"**{summary.fact_count} 条事实**　"
+        f"**{summary.asset_count} 项素材**　"
+        f"**{summary.pending_confirm_count} 个待确认问题**"
     )
+
+    with st.container(border=True):
+        st.markdown("**上传资料**")
+        st.caption("任务书、图纸、调研文档或图片。导入后自动进入文件 / 事实 / 素材整理。")
+        _render_upload_controls(project_id, key_prefix="materials_top")
 
     tab_files, tab_facts, tab_assets, tab_gaps = st.tabs(
         ["文件", "事实", "素材", "缺口"]
     )
     with tab_files:
-        _render_documents(project_id)
+        _render_documents(project_id, show_uploader=False)
     with tab_facts:
         render_fact_ledger_panel(project_id)
     with tab_assets:

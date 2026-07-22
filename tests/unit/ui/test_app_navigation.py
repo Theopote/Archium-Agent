@@ -143,6 +143,11 @@ def test_materials_stage_uses_four_tabs() -> None:
     assert '["文件", "事实", "素材", "缺口"]' in text
     assert "load_materials_summary" in text
     assert "更多工具" in text
+    assert "上传资料" in text
+    assert "个文件" in text
+    assert "条事实" in text
+    assert "项素材" in text
+    assert "个待确认问题" in text
 
 
 def test_outline_default_does_not_embed_mission_unconditionally() -> None:
@@ -160,8 +165,9 @@ def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     assert "outline_advanced_planning" in text
     assert "def _render_default_outline" in text
     assert "页面意图卡" in text
-    assert "章节与页面" in text
+    assert "章节与页面树" in text
     assert "叙事弧线" in text
+    assert "页面标题" in text
 
 
 def test_generate_stage_shows_page_queue() -> None:
@@ -195,7 +201,8 @@ def test_deliver_stage_is_export_focused() -> None:
     assert "render_export_panel" in text
     assert "render_benchmark" not in text
     assert "render_studio_selection" not in text
-    assert "_render_simple_selection" in text
+    assert "_resolve_deliver_context" in text
+    assert "切换汇报版本" in text
 
 
 def test_edit_stage_embeds_studio_without_inner_header() -> None:

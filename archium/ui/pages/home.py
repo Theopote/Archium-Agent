@@ -109,6 +109,27 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
         st.caption("尚无汇报版本。完成生成或导出后会显示在此。")
 
 
+def _task_statement_for(snapshot: ProjectProgressSnapshot) -> str:
+    """Prefer mission/brief task text; fall back to presentation title/type."""
+    try:
+        from archium.ui.pages import project_mission
+
+        planning = project_mission.load_planning_snapshot(snapshot.project_id)
+        if planning.mission is not None and planning.mission.task_statement.strip():
+            return planning.mission.task_statement.strip()
+        if planning.presentation_request is not None:
+            request = planning.presentation_request
+            bits = [request.title, request.purpose or request.core_message]
+            text = " — ".join(part for part in bits if part)
+            if text:
+                return text
+    except Exception:
+        pass
+    if snapshot.presentation_title:
+        return snapshot.presentation_title
+    return snapshot.presentation_type_label
+
+
 def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     header_l, header_r = st.columns([3.2, 1])
     with header_l:
@@ -118,8 +139,7 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         if st.button("切换项目", use_container_width=True, key="home_switch_project"):
             st.switch_page(get_app_page("project-management"))
 
-    task_title = snapshot.presentation_title or snapshot.presentation_type_label
-    st.markdown(f"**汇报任务**  \n{task_title}")
+    st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
 
     meta = st.columns(2)
     with meta[0]:

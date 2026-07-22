@@ -12,6 +12,7 @@ from archium.ui.app_navigation import get_app_page
 from archium.ui.pages.flow import render_stage_header, render_stage_nav
 from archium.ui.studio.export_panel import render_export_panel
 from archium.ui.studio_service import (
+    StudioPresentationContext,
     get_selected_slide_snapshot,
     list_studio_presentations,
     list_studio_projects,
@@ -30,8 +31,25 @@ def _workflow_artifacts() -> tuple[list[dict] | None, dict | None, list[str] | N
     return critics, deck_qa, previews, output_dir if isinstance(output_dir, str) else None
 
 
-def _render_simple_selection():
-    """Lightweight project + presentation pick — no Studio advanced chrome."""
+def _load_context(
+    project_id: UUID,
+    presentation_id: UUID,
+) -> StudioPresentationContext | None:
+    critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
+    with get_session() as session:
+        return load_studio_context(
+            session,
+            project_id=project_id,
+            presentation_id=presentation_id,
+            visual_critic_reports=critics,
+            deck_qa_report=deck_qa,
+            preview_paths=previews,
+            workflow_output_dir=workflow_output_dir,
+        )
+
+
+def _resolve_deliver_context() -> StudioPresentationContext | None:
+    """Use session selection; offer a compact switcher only when needed."""
     from archium.ui.pages.workspace import ensure_workspace_session
 
     ensure_workspace_session()
@@ -40,67 +58,81 @@ def _render_simple_selection():
     if not projects:
         return None
 
-    labels = {str(project.id): project.name for project in projects}
-    options = list(labels.keys())
-    default_index = 0
-    if st.session_state.get("selected_project_id") in options:
-        default_index = options.index(st.session_state.selected_project_id)
-
-    selected_project = st.selectbox(
-        "项目",
-        options=options,
-        index=default_index,
-        format_func=lambda value: labels[value],
-        key="deliver_project_select",
-    )
-    if selected_project != st.session_state.get("selected_project_id"):
-        st.session_state.selected_presentation_id = None
-    st.session_state.selected_project_id = selected_project
-    project_id = UUID(selected_project)
+    project_labels = {str(project.id): project.name for project in projects}
+    project_options = list(project_labels.keys())
+    selected_project = st.session_state.get("selected_project_id")
+    if selected_project not in project_options:
+        selected_project = project_options[0]
+        st.session_state.selected_project_id = selected_project
+    project_id = UUID(str(selected_project))
 
     with get_session() as session:
         presentations = list_studio_presentations(session, project_id)
     if not presentations:
-        st.caption("当前项目尚无汇报可导出。")
+        st.caption(f"项目「{project_labels[str(project_id)]}」尚无汇报可导出。")
+        with st.expander("切换项目", expanded=True):
+            picked = st.selectbox(
+                "项目",
+                options=project_options,
+                index=project_options.index(str(project_id)),
+                format_func=lambda value: project_labels[value],
+                key="deliver_switch_project",
+            )
+            if picked != str(project_id):
+                st.session_state.selected_project_id = picked
+                st.session_state.selected_presentation_id = None
+                st.rerun()
         return None
 
     presentation_labels = {
         str(item.id): f"{item.title} · {item.status.value}" for item in presentations
     }
     presentation_options = list(presentation_labels.keys())
-    default_presentation = 0
-    if st.session_state.get("selected_presentation_id") in presentation_options:
-        default_presentation = presentation_options.index(
-            st.session_state.selected_presentation_id
-        )
-    selected_presentation = st.selectbox(
-        "汇报版本",
-        options=presentation_options,
-        index=default_presentation,
-        format_func=lambda value: presentation_labels[value],
-        key="deliver_presentation_select",
+    selected_presentation = st.session_state.get("selected_presentation_id")
+    if selected_presentation not in presentation_options:
+        selected_presentation = presentation_options[0]
+        st.session_state.selected_presentation_id = selected_presentation
+
+    context = _load_context(project_id, UUID(str(selected_presentation)))
+    if context is None:
+        return None
+
+    st.caption(
+        f"当前导出：{project_labels[str(project_id)]} · "
+        f"{presentation_labels[str(selected_presentation)]}"
     )
-    st.session_state.selected_presentation_id = selected_presentation
+    with st.expander("切换汇报版本", expanded=False):
+        cols = st.columns(2)
+        with cols[0]:
+            picked_project = st.selectbox(
+                "项目",
+                options=project_options,
+                index=project_options.index(str(project_id)),
+                format_func=lambda value: project_labels[value],
+                key="deliver_switch_project",
+            )
+        with cols[1]:
+            if picked_project != str(project_id):
+                st.session_state.selected_project_id = picked_project
+                st.session_state.selected_presentation_id = None
+                st.rerun()
+            picked_presentation = st.selectbox(
+                "汇报版本",
+                options=presentation_options,
+                index=presentation_options.index(str(selected_presentation)),
+                format_func=lambda value: presentation_labels[value],
+                key="deliver_switch_presentation",
+            )
+        if picked_presentation != str(selected_presentation):
+            st.session_state.selected_presentation_id = picked_presentation
+            st.rerun()
+    return context
 
-    critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
-    with get_session() as session:
-        return load_studio_context(
-            session,
-            project_id=project_id,
-            presentation_id=UUID(selected_presentation),
-            visual_critic_reports=critics,
-            deck_qa_report=deck_qa,
-            preview_paths=previews,
-            workflow_output_dir=workflow_output_dir,
-        )
 
-
-def _render_readiness(context: object) -> None:
+def _render_readiness(context: StudioPresentationContext) -> None:
     st.markdown("#### 准备度")
-    ready = bool(getattr(context, "ready_for_export", False))
-    slide_count = int(getattr(context, "slide_count", 0) or 0)
-    layout_ready = int(getattr(context, "layout_ready_count", 0) or 0)
-    pending = max(0, slide_count - layout_ready)
+    ready = bool(context.ready_for_export)
+    pending = max(0, context.slide_count - context.layout_ready_count)
 
     warn_count = 0
     blocker_count = 0
@@ -142,7 +174,7 @@ def render() -> None:
     render_stage_header("deliver")
     st.caption("准备度、QA、导出与版本记录。不在此页做 Benchmark 或复杂工作室配置。")
 
-    context = _render_simple_selection()
+    context = _resolve_deliver_context()
     if context is None:
         st.warning("尚未选择可导出的汇报。请先在「生成」或「工作室」准备页面内容。")
         from archium.ui import icons

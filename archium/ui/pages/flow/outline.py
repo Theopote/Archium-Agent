@@ -136,22 +136,49 @@ def _render_chapter_tree(
     storyline: Storyline | None,
     cards: list[dict[str, str]],
 ) -> None:
-    st.markdown("**章节与页面**")
+    st.markdown("**章节与页面树**")
     if outline is not None and outline.sections:
+        page_index = 0
         for section in sorted(outline.sections, key=lambda item: item.order):
             mark = "▾" if section.expanded else "▸"
             st.markdown(f"{mark} **{section.title}** · {section.estimated_slide_count} 页")
-            st.caption(section.purpose)
+            count = max(1, section.estimated_slide_count) if section.expanded else 0
+            for _ in range(count):
+                if page_index < len(cards):
+                    title = cards[page_index]["title"]
+                    if st.button(
+                        f"　{page_index + 1:02d}  {title}",
+                        key=f"outline_tree_page_{page_index}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.outline_selected_card = page_index
+                        st.rerun()
+                page_index += 1
         return
     if storyline is not None and storyline.chapters:
-        for chapter in storyline.chapters:
+        for chapter in sorted(storyline.chapters, key=lambda item: item.order):
             st.markdown(f"▸ **{chapter.title}**")
             if chapter.purpose:
                 st.caption(chapter.purpose)
+        if cards:
+            for index, card in enumerate(cards):
+                if st.button(
+                    f"{index + 1:02d}  {card['title']}",
+                    key=f"outline_tree_page_{index}",
+                    use_container_width=True,
+                ):
+                    st.session_state.outline_selected_card = index
+                    st.rerun()
         return
     if cards:
-        for index, card in enumerate(cards, start=1):
-            st.markdown(f"{index:02d}  {card['title']}")
+        for index, card in enumerate(cards):
+            if st.button(
+                f"{index + 1:02d}  {card['title']}",
+                key=f"outline_tree_page_{index}",
+                use_container_width=True,
+            ):
+                st.session_state.outline_selected_card = index
+                st.rerun()
         return
     st.caption("生成大纲后将显示章节与页面树。")
 
@@ -161,20 +188,21 @@ def _render_intent_cards(cards: list[dict[str, str]]) -> None:
     if not cards:
         st.info("尚无页面意图。先描述汇报任务并生成大纲。")
         return
-    selected = st.session_state.get("outline_selected_card", 0)
-    selected = max(0, min(int(selected), len(cards) - 1))
+    selected = int(st.session_state.get("outline_selected_card", 0) or 0)
+    selected = max(0, min(selected, len(cards) - 1))
+    st.session_state.outline_selected_card = selected
     labels = [f"{index:02d} {card['title']}" for index, card in enumerate(cards, start=1)]
     choice = st.selectbox(
         "选择页面",
         options=list(range(len(cards))),
         index=selected,
         format_func=lambda value: labels[value],
-        key="outline_selected_card",
-        label_visibility="collapsed",
+        key="outline_card_select",
     )
+    st.session_state.outline_selected_card = int(choice)
     card = cards[int(choice)]
     with st.container(border=True):
-        st.markdown(f"### {card['title']}")
+        st.markdown(f"**页面标题**  \n{card['title']}")
         st.markdown(f"**中心结论**  \n{card['conclusion']}")
         st.markdown(f"**页面任务**  \n{card['task']}")
         st.markdown(f"**证据**  \n{card['evidence']}")
@@ -190,23 +218,22 @@ def _render_task_meta(
     outline: OutlinePlan | None,
     storyline: Storyline | None,
 ) -> None:
-    st.markdown("**汇报任务**")
     request = snapshot.presentation_request
     mission = snapshot.mission
 
     if outline is not None:
-        st.write(outline.title)
+        st.markdown(f"**汇报任务**  \n{outline.title}")
         st.caption(outline.purpose)
         st.markdown(f"**受众**  \n{outline.audience}")
         st.markdown(f"**页数**  \n{outline.target_slide_count}")
         arc = "—"
         if storyline is not None:
-            arc = storyline.narrative_pattern or storyline.thesis
+            arc = storyline.thesis or storyline.narrative_pattern
         st.markdown(f"**叙事弧线**  \n{arc}")
         return
 
     if request is not None:
-        st.write(request.title)
+        st.markdown(f"**汇报任务**  \n{request.title}")
         st.caption(request.purpose or request.core_message or "—")
         st.markdown(f"**受众**  \n{request.audience or '—'}")
         st.markdown(f"**页数**  \n{request.target_slide_count}")
@@ -216,7 +243,7 @@ def _render_task_meta(
         return
 
     if mission is not None:
-        st.write(mission.title)
+        st.markdown(f"**汇报任务**  \n{mission.title}")
         st.caption(mission.task_statement)
         audience = "、".join(s.name for s in mission.stakeholders[:4] if s.name) or "—"
         st.markdown(f"**受众**  \n{audience}")
@@ -225,7 +252,6 @@ def _render_task_meta(
         return
 
     st.caption("尚未确认汇报任务。")
-
 
 def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> None:
     has_mission = snapshot.mission is not None
