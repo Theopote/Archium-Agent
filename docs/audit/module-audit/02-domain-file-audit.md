@@ -29,7 +29,7 @@
 | 5 | DOM-004 | **done** | `visual/severity.py` | `IssueSeverity` 门禁权威 + 桥接 |
 | 6 | DOM-003 | refactor | `presentation_spec.py` | Spec 降为派生，Scene 渲染 SSOT |
 | 7 | DOM-018 | refactor | `enums.py` (~668) | 按限界上下文拆分 |
-| 8 | DOM-009 | partial | Brief→`ApprovalStatus`；余提案双枚举 | 审批/提案状态合一 |
+| 8 | DOM-009 | **done** | Brief→`ApprovalStatus`；`proposal_status.ProposalStatus` | 审批/提案状态合一 |
 
 职责边界（验收口径）：
 
@@ -106,8 +106,8 @@
 | 角色 | 设计 Brief 模型 + 策略默认值 |
 | 裁决 | keep（模型）；~~infer/format/protection~~ → `application/slide_design_brief_heuristics.py` |
 | 级别 | P1（DOM-014 **done**）；余 DOM-006 `layout_family` |
-| 问题 | `layout_family` 仍为自由字符串；Brief 审批已合 `ApprovalStatus` |
-| 方案 | family 受控词表另开 DOM-006 |
+| 问题 | `layout_family` 仍为自由字符串；~~BriefStatus / ThemeProposalStatus~~ 已合 |
+| 方案 | family 受控词表另开 DOM-006；状态见 DOM-009 |
 | 验收 | domain 无 layout 字符串启发式 |
 
 ### `content_adaptation.py`（DTO only；启发式已迁）
@@ -428,7 +428,7 @@
 3. ~~DOM-012~~ **done**  
 4. ~~DOM-014~~ **done**  
 5. ~~DOM-004~~ **done**（severity 桥）  
-6. DOM-009 提案状态  
+6. ~~DOM-009~~ **done**（提案共享 ProposalStatus）  
 7. DOM-003 Spec 降级策略  
 8. DOM-018 拆 `enums.py`
 

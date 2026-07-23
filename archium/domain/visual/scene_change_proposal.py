@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
@@ -12,18 +11,21 @@ from pydantic import Field
 from archium.domain._base import DomainModel, TimestampedModel, new_uuid, utc_now
 from archium.domain.visual.page_quality import QualityIssue
 from archium.domain.visual.partial_edit_preservation import PartialEditPreservationReport
+from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
 
-
-class ProposalStatus(StrEnum):
-    DRAFT = "draft"
-    READY = "ready"
-    READY_WITH_WARNINGS = "ready_with_warnings"
-    ACCEPTED = "accepted"
-    PARTIALLY_ACCEPTED = "partially_accepted"
-    REJECTED = "rejected"
-    SUPERSEDED = "superseded"
+__all__ = [
+    "CommandProposalResult",
+    "CommandProposalStatus",
+    "ProposalAcceptResult",
+    "ProposalDecision",
+    "ProposalQAComparison",
+    "ProposalStatus",
+    "SceneChangeProposal",
+    "SceneRevision",
+    "SceneRevisionSource",
+]
 
 
 CommandProposalStatus = Literal["applied", "skipped", "failed"]

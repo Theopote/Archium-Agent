@@ -15,9 +15,10 @@ from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.element_comment import ElementComment
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.render_scene import RenderScene
-from archium.domain.visual.scene_change_proposal import ProposalStatus, SceneChangeProposal
+from archium.domain.visual.scene_change_proposal import SceneChangeProposal
+from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
-from archium.domain.visual.theme_change_proposal import ThemeChangeProposal, ThemeProposalStatus
+from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import visual_mappers
@@ -405,9 +406,9 @@ class ElementCommentRepository:
 
 
 _ACTIVE_THEME_PROPOSAL_STATUSES = (
-    ThemeProposalStatus.DRAFT,
-    ThemeProposalStatus.READY,
-    ThemeProposalStatus.READY_WITH_WARNINGS,
+    ProposalStatus.DRAFT,
+    ProposalStatus.READY,
+    ProposalStatus.READY_WITH_WARNINGS,
 )
 
 
@@ -506,7 +507,7 @@ class ThemeProposalRepository:
         if exclude_proposal_id is not None:
             stmt = stmt.where(ThemeChangeProposalORM.id != exclude_proposal_id)
         for orm in self._session.scalars(stmt):
-            orm.status = ThemeProposalStatus.SUPERSEDED.value
+            orm.status = ProposalStatus.SUPERSEDED.value
 
     def _hydrate(self, orm: ThemeChangeProposalORM) -> ThemeChangeProposal | None:
         base = self._design_systems.get(orm.base_design_system_id)

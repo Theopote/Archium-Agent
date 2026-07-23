@@ -35,7 +35,7 @@
 | DOM-006 | P1 | open | `SlideDesignBrief.layout_family` 等为自由字符串 (D6) | `slide_design_brief.py`; SpecSlide.layout; RenderScene.source_layout_family | 无法校验 | 受控词表/`LayoutFamily` | 非法 family 拒绝 | `-` |
 | DOM-007 | P1 | open | `WorkflowStep` 过大耦合 (D7) | `enums.py` | 难演进 | 拆分阶段枚举 | 图定义不依赖巨枚举 | `-` |
 | DOM-008 | P1 | open | Fact 三模型弱关联 (D8) | `fact.py`; `project_knowledge.py`; `presentation_manuscript.py` | 引用断裂 | 显式 ID 链接 + 不变量 | 跨模型可追溯 | `-` |
-| DOM-009 | P2 | partial | 审批/提案状态克隆 (D9) | Brief → `ApprovalStatus`（`coerce_brief_approval_status`）；余 `ProposalStatus` vs `ThemeProposalStatus` | 状态漂移 | Brief 已合；提案状态映射或共享枚举 | Brief 无独立 BriefStatus；提案单一词表或显式映射 | `-` |
+| DOM-009 | P2 | done | 审批/提案状态克隆 (D9) | Brief→`ApprovalStatus`；Scene/Theme→共享 `proposal_status.ProposalStatus` | 状态漂移 | 单一提案词表；Brief 无 BriefStatus | `test_proposal_status`；无 `ThemeProposalStatus` | `-` |
 | DOM-010 | P2 | open | Chart/Table series 深拷贝语义不清 (D10) | Spec/Layout/Scene chart-table | 静默丢字段 | 明确 copy + 测试 | 变更不丢系列字段 | `-` |
 | DOM-011 | P0 | done | **双空间 SSOT**：LayoutPlan 与 RenderScene 均持 x/y/w/h/z/lock | `visual/layout.py`; `studio_scene_service.py`; `studio_scene_edit_service.py` | Studio 改 Scene 后 Plan 静默漂移 / ensure 覆盖编辑 | `geometry_authority` + sync 切 `render_scene`；ensure 非 force 不覆盖；layout refresh 收回权威 | 合同 + `test_ensure_scene_preserves_render_scene_geometry_authority` | `-` |
 | DOM-012 | P1 | done | Chart/Table **三份字段拷贝** | `structured_payload.py`; layout/scene/spec | 改一漏二 | 共享 `ChartDataPayload`/`TableDataPayload`；Layout/Spec 为别名 | `test_structured_payload_ssot` | `-` |
@@ -88,7 +88,7 @@
 | 项 | 文件 |
 |----|------|
 | `SlideVisualRequirement` / `SchemaVisualRequirement` | `slide.py` / `architectural_content_schema.py`（DOM-016 done） |
-| Brief 审批 | `ApprovalStatus`（BriefStatus 已移除）；余提案状态双枚举 |
+| Brief / 提案状态 | Brief→`ApprovalStatus`；Scene/Theme→`ProposalStatus`（DOM-009 done） |
 | Presentation vs PresentationSpec | `presentation.py`+`slide.py` / `presentation_spec.py` |
 | Chart/Table 共享 VO | `structured_payload.py`（DOM-012 done） |
 
@@ -102,7 +102,7 @@
 4. ~~**DOM-012**~~ **done**（`structured_payload` 共享 VO）  
 5. ~~**DOM-014**~~ **done**（parser/resolver/catalog 迁出）  
 6. ~~**DOM-004**~~ **done**（`IssueSeverity` 门禁权威 + severity 桥）  
-7. **DOM-009** — 提案状态合一（Brief 已合 ApprovalStatus）  
+7. ~~**DOM-009**~~ **done**（Brief→ApprovalStatus；提案共享 ProposalStatus）  
 8. **DOM-003** Spec 降级策略  
 9. **DOM-018** — 拆 `enums.py`（机械重构）
 

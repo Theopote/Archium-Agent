@@ -14,7 +14,8 @@ from archium.domain.visual.deck_theme_tokens import (
 )
 from archium.domain.visual.enums import PhotoTreatment
 from archium.domain.visual.page_quality import IssueSeverity
-from archium.domain.visual.theme_change_proposal import ThemeChangeProposal, ThemeProposalStatus
+from archium.domain.visual.proposal_status import ProposalStatus
+from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -182,9 +183,9 @@ def render_deck_theme_panel(
 
     proposal = stored_proposal
     if proposal.status not in {
-        ThemeProposalStatus.READY,
-        ThemeProposalStatus.READY_WITH_WARNINGS,
-        ThemeProposalStatus.DRAFT,
+        ProposalStatus.READY,
+        ProposalStatus.READY_WITH_WARNINGS,
+        ProposalStatus.DRAFT,
     }:
         st.caption(f"最近提案状态：`{proposal.status.value}`")
         return

@@ -24,12 +24,12 @@ from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
+from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,
     ThemeDeckImpactStats,
     ThemeProposalDecision,
-    ThemeProposalStatus,
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -173,9 +173,9 @@ class ThemeProposalService:
             for issue in brief_issues:
                 qa_by_slide.setdefault("_template_usage_brief", []).append(issue)
 
-        status = ThemeProposalStatus.READY
+        status = ProposalStatus.READY
         if any(issue.severity == IssueSeverity.BLOCKER for issue in qa_summary) or qa_summary:
-            status = ThemeProposalStatus.READY_WITH_WARNINGS
+            status = ProposalStatus.READY_WITH_WARNINGS
 
         proposal = ThemeChangeProposal(
             presentation_id=presentation_id,
@@ -215,7 +215,7 @@ class ThemeProposalService:
     ) -> ThemeChangeProposal:
         rejected = proposal.model_copy(
             update={
-                "status": ThemeProposalStatus.REJECTED,
+                "status": ProposalStatus.REJECTED,
                 "decided_at": utc_now(),
                 "decision": ThemeProposalDecision(
                     proposal_id=proposal.proposal_id,
@@ -233,9 +233,9 @@ class ThemeProposalService:
         allow_blockers: bool = False,
     ) -> ThemeChangeProposal:
         if proposal.status in {
-            ThemeProposalStatus.ACCEPTED,
-            ThemeProposalStatus.REJECTED,
-            ThemeProposalStatus.SUPERSEDED,
+            ProposalStatus.ACCEPTED,
+            ProposalStatus.REJECTED,
+            ProposalStatus.SUPERSEDED,
         }:
             raise WorkflowError(f"提案状态 `{proposal.status.value}` 不能接受。")
 
@@ -302,7 +302,7 @@ class ThemeProposalService:
 
         accepted = proposal.model_copy(
             update={
-                "status": ThemeProposalStatus.ACCEPTED,
+                "status": ProposalStatus.ACCEPTED,
                 "decided_at": utc_now(),
                 "decision": ThemeProposalDecision(
                     proposal_id=proposal.proposal_id,

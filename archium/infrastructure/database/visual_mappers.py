@@ -16,11 +16,11 @@ from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.element_comment import ElementComment, ElementCommentStatus
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.page_quality import QualityIssue
+from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.scene_change_proposal import (
     CommandProposalResult,
     ProposalDecision,
-    ProposalStatus,
     SceneChangeProposal,
 )
 from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
@@ -29,7 +29,6 @@ from archium.domain.visual.theme_change_proposal import (
     ThemeChangeProposal,
     ThemeDeckImpactStats,
     ThemeProposalDecision,
-    ThemeProposalStatus,
 )
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.models import (
@@ -495,7 +494,7 @@ def theme_change_proposal_to_domain(
         qa_by_slide=qa_by_slide,
         qa_summary=qa_summary,
         deck_impact=deck_impact,
-        status=ThemeProposalStatus(orm.status),
+        status=ProposalStatus(orm.status),
         decision=decision,
         decided_at=orm.decided_at,
         created_at=orm.created_at,

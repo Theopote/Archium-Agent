@@ -13,7 +13,7 @@ from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import ImageFit
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
-from archium.domain.visual.theme_change_proposal import ThemeProposalStatus
+from archium.domain.visual.proposal_status import ProposalStatus
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from archium.infrastructure.database.visual_repositories import (
@@ -76,8 +76,8 @@ def test_create_theme_proposal_persists_without_switching_art(
         DeckThemeTokens(primary="#112233", accent="#AABBCC"),
     )
     assert proposal.status in {
-        ThemeProposalStatus.READY,
-        ThemeProposalStatus.READY_WITH_WARNINGS,
+        ProposalStatus.READY,
+        ProposalStatus.READY_WITH_WARNINGS,
     }
     loaded = service.get(proposal.proposal_id)
     assert loaded is not None
@@ -98,7 +98,7 @@ def test_accept_switches_art_direction_design_system(db_session: Session) -> Non
         DeckThemeTokens(primary="#010101", title_font="SimSun"),
     )
     accepted = service.accept_proposal(proposal)
-    assert accepted.status == ThemeProposalStatus.ACCEPTED
+    assert accepted.status == ProposalStatus.ACCEPTED
     refreshed_art = ArtDirectionRepository(db_session).get(art.id)
     assert refreshed_art is not None
     assert refreshed_art.design_system_id == accepted.proposed_design_system_id
@@ -119,7 +119,7 @@ def test_reject_does_not_switch_design_system(db_session: Session) -> None:
         DeckThemeTokens(background="#F5F5F5"),
     )
     rejected = service.reject_proposal(proposal, notes="keep current")
-    assert rejected.status == ThemeProposalStatus.REJECTED
+    assert rejected.status == ProposalStatus.REJECTED
     refreshed_art = ArtDirectionRepository(db_session).get(art.id)
     assert refreshed_art is not None
     assert refreshed_art.design_system_id == original_ds_id
@@ -154,7 +154,7 @@ def test_accept_does_not_record_theme_scene_revisions(db_session: Session, monke
         _forbid_record,
     )
     accepted = service.accept_proposal(proposal)
-    assert accepted.status == ThemeProposalStatus.ACCEPTED
+    assert accepted.status == ProposalStatus.ACCEPTED
     assert recorded == []
     refreshed = ArtDirectionRepository(db_session).get(art.id)
     assert refreshed is not None
@@ -220,4 +220,4 @@ def test_accept_blockers_requires_allow_flag(db_session: Session) -> None:
     with pytest.raises(WorkflowError, match="Blocker"):
         service.accept_proposal(blocked)
     forced = service.accept_proposal(blocked, allow_blockers=True)
-    assert forced.status == ThemeProposalStatus.ACCEPTED
+    assert forced.status == ProposalStatus.ACCEPTED

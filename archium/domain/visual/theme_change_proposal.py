@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
 from uuid import UUID
 
 from pydantic import Field
@@ -12,15 +11,17 @@ from archium.domain._base import DomainModel, new_uuid, utc_now
 from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.page_quality import QualityIssue
+from archium.domain.visual.proposal_status import ProposalStatus
 
+# DOM-009: theme proposals share ProposalStatus (no separate ThemeProposalStatus).
+# Theme accept is all-or-nothing; PARTIALLY_ACCEPTED is unused here.
 
-class ThemeProposalStatus(StrEnum):
-    DRAFT = "draft"
-    READY = "ready"
-    READY_WITH_WARNINGS = "ready_with_warnings"
-    ACCEPTED = "accepted"
-    REJECTED = "rejected"
-    SUPERSEDED = "superseded"
+__all__ = [
+    "ProposalStatus",
+    "ThemeChangeProposal",
+    "ThemeDeckImpactStats",
+    "ThemeProposalDecision",
+]
 
 
 class ThemeProposalDecision(DomainModel):
@@ -68,7 +69,7 @@ class ThemeChangeProposal(DomainModel):
     qa_summary: list[QualityIssue] = Field(default_factory=list)
     deck_impact: ThemeDeckImpactStats = Field(default_factory=ThemeDeckImpactStats)
 
-    status: ThemeProposalStatus = ThemeProposalStatus.READY
+    status: ProposalStatus = ProposalStatus.READY
     decision: ThemeProposalDecision | None = None
     decided_at: datetime | None = None
     created_at: datetime = Field(default_factory=utc_now)
