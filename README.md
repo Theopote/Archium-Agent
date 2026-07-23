@@ -295,7 +295,7 @@ archium/infrastructure/renderers/pptxgen/
 | **CI matrix** | 3.11、3.12（Ubuntu） |
 | **mypy** | `python_version = 3.11`（与最低支持版本对齐） |
 
-> **依赖说明：** optional extras 互不嵌套自引用。开发者安装 `pip install -e ".[full,dev]"`；普通用户安装 `pip install -e ".[full]"` 即可。模块化 extras（`ui`、`documents` 等）仍可按需单独组合。
+> **依赖说明：** optional extras 互不嵌套自引用；`tests/unit/test_optional_extras.py` 保证 `full` ⊇ `ui|documents|workflow|vector|llm|postgres`。日常开发仍用 `pip install -e ".[full,dev]"`；Docker / 发布候选优先用 `requirements/*.lock`（`uv` 生成，见 `requirements/README.md`）。模块化 extras（`ui`、`documents` 等）仍可按需单独组合。
 
 PptxGenJS 原生 PPTX 还需 Node.js 20+，在 `archium/infrastructure/renderers/pptxgen` 运行 `npm install`。
 

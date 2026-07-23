@@ -34,7 +34,10 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[full,dev]"
+        run: |
+          PYTAG=$(echo "${{ matrix.python-version }}" | tr -d .)
+          pip install -r "requirements/full-py${PYTAG}.lock"
+          pip install -e ".[dev]" --constraint "requirements/full-py${PYTAG}.lock"
 
       - uses: actions/setup-node@v4
         with:
@@ -120,7 +123,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[full,dev]"
+        run: |
+          pip install -r requirements/full-py312.lock
+          pip install -e ".[dev]" --constraint requirements/full-py312.lock
 
       - uses: actions/setup-node@v4
         with:
@@ -163,7 +168,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[full,dev]"
+        run: |
+          pip install -r requirements/full-py312.lock
+          pip install -e ".[dev]" --constraint requirements/full-py312.lock
 
       - uses: actions/setup-node@v4
         with:
@@ -224,7 +231,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[full,dev]"
+        run: |
+          pip install -r requirements/full-py312.lock
+          pip install -e ".[dev]" --constraint requirements/full-py312.lock
 
       - uses: actions/setup-node@v4
         with:
@@ -282,7 +291,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[full,dev]"
+        run: |
+          pip install -r requirements/full-py312.lock
+          pip install -e ".[dev]" --constraint requirements/full-py312.lock
 
       - name: Alembic migration smoke test
         run: pytest tests/smoke/test_alembic_migration.py -v
@@ -301,7 +312,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[full,ui,dev]"
+        run: |
+          pip install -r requirements/full-py312.lock
+          pip install -e ".[dev]" --constraint requirements/full-py312.lock
 
       - uses: actions/setup-node@v4
         with:
@@ -340,7 +353,8 @@ jobs:
 
       - name: Install project and pip-audit
         run: |
-          pip install -e ".[full,dev]"
+          pip install -r requirements/full-py312.lock
+          pip install -e ".[dev]" --constraint requirements/full-py312.lock
           pip install "pip-audit>=2.8"
 
       - name: pip-audit (full report)

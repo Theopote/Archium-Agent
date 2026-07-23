@@ -40,7 +40,7 @@ dependencies = [
 Homepage = "https://github.com/Theopote/Archium-Agent"
 Repository = "https://github.com/Theopote/Archium-Agent"
 Issues = "https://github.com/Theopote/Archium-Agent/issues"
-Documentation = "https://github.com/Theopote/Archium-Agent/tree/main/docs"
+Documentation = "https://github.com/Theopote/Archium-Agent/tree/master/docs"
 Changelog = "https://github.com/Theopote/Archium-Agent/releases"
 
 [project.optional-dependencies]
