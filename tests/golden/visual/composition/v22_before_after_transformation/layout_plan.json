@@ -1,0 +1,97 @@
+{
+  "layout_family": "comparative_matrix",
+  "layout_variant": "before_after",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": null,
+  "reading_order": [
+    "title",
+    "case_image_0",
+    "case_image_1",
+    "case_label_0",
+    "case_label_1",
+    "insight",
+    "source"
+  ],
+  "balance_strategy": "before_after",
+  "whitespace_ratio": 0.3547,
+  "elements": [
+    {
+      "id": "case_image_0",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 1.191,
+      "w": 4.217,
+      "h": 2.702,
+      "fit_mode": "contain",
+      "crop_policy": "safe_trim"
+    },
+    {
+      "id": "case_image_1",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 5.083,
+      "y": 1.191,
+      "w": 4.217,
+      "h": 2.702,
+      "fit_mode": "cover",
+      "crop_policy": "safe_trim"
+    },
+    {
+      "id": "case_label_0",
+      "role": "caption",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 3.934,
+      "w": 4.217,
+      "h": 0.316,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "case_label_1",
+      "role": "caption",
+      "content_type": "text",
+      "x": 5.083,
+      "y": 3.934,
+      "w": 4.217,
+      "h": 0.316,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "insight",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.375,
+      "w": 8.6,
+      "h": 0.45,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.657,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

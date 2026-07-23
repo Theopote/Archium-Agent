@@ -16,13 +16,23 @@ from archium.infrastructure.embeddings.local_lexical import (
 )
 
 _TOKEN_PATTERN = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
-_PACK_ROOT = Path(__file__).resolve().parents[2] / "resources" / "architectural_icons"
+_LEGACY_PACK_ROOT = Path(__file__).resolve().parents[2] / "resources" / "architectural_icons"
 _EMBEDDINGS_NAME = "embeddings.json"
 _EMBEDDING_PROVIDER = LocalLexicalEmbeddingProvider()
 
+_ICON_FOLDERS = ("architecture", "environment", "traffic", "energy", "culture")
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
 
 def default_icon_pack_root() -> Path:
-    return _PACK_ROOT
+    """Prefer repo ``assets/icons``; fall back to legacy bundled pack."""
+    assets = _repo_root() / "assets" / "icons"
+    if (assets / "manifest.json").is_file():
+        return assets
+    return _LEGACY_PACK_ROOT
 
 
 def _normalize(text: str) -> str:
@@ -131,6 +141,10 @@ class ArchitecturalIconRegistry:
     def get_by_name(self, name: str) -> ArchitecturalIcon | None:
         return self._by_name.get(_normalize(name))
 
+    def icons_in_folder(self, folder: str) -> list[ArchitecturalIcon]:
+        target = _normalize(folder)
+        return [icon for icon in self._icons if _normalize(icon.folder) == target]
+
 
 @lru_cache(maxsize=1)
 def load_default_architectural_icon_registry() -> ArchitecturalIconRegistry:
@@ -149,6 +163,10 @@ def load_architectural_icon_registry(pack_root: Path) -> ArchitecturalIconRegist
         canonical = str(item["canonical_name"])
         icon_id = str(item["id"])
         description = str(item.get("description") or "")
+        svg_path = str(item["svg_path"])
+        folder = str(item.get("folder") or "")
+        if not folder and "/" in svg_path.replace("\\", "/"):
+            folder = svg_path.replace("\\", "/").split("/", 1)[0]
         # Prefer offline pack vectors; fall back to one-shot lexical embed at load.
         embedding = list(item.get("embedding") or []) or list(offline.get(icon_id) or [])
         if not embedding:
@@ -165,7 +183,8 @@ def load_architectural_icon_registry(pack_root: Path) -> ArchitecturalIconRegist
                 canonical_name=canonical,
                 aliases=aliases,
                 categories=categories,
-                svg_path=str(item["svg_path"]),
+                folder=folder,
+                svg_path=svg_path,
                 embedding=embedding,
                 license=str(item.get("license") or license_default),
                 description=description,

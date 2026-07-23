@@ -1,0 +1,109 @@
+{
+  "layout_family": "strategy_cards",
+  "layout_variant": "strategy_concept",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "concept",
+  "reading_order": [
+    "title",
+    "lead",
+    "card_0",
+    "card_1",
+    "card_2",
+    "concept",
+    "spatial_change",
+    "source"
+  ],
+  "balance_strategy": "strategy_concept",
+  "whitespace_ratio": 0.4481,
+  "elements": [
+    {
+      "id": "card_0",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 1.571,
+      "w": 2.783,
+      "h": 0.72,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "card_1",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 3.608,
+      "y": 1.571,
+      "w": 2.783,
+      "h": 0.72,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "card_2",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 6.517,
+      "y": 1.571,
+      "w": 2.783,
+      "h": 0.72,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "concept",
+      "role": "hero_visual",
+      "content_type": "drawing",
+      "x": 0.7,
+      "y": 2.416,
+      "w": 5.229,
+      "h": 1.776,
+      "fit_mode": "contain",
+      "crop_policy": null
+    },
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 1.149,
+      "w": 8.6,
+      "h": 0.38,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 5.16,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "spatial_change",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 6.095,
+      "y": 2.416,
+      "w": 3.205,
+      "h": 1.776,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.657,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

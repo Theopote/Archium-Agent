@@ -17,9 +17,10 @@ from archium.domain.slide import SlideSpec, VisualRequirement
 def test_registry_loads_bundled_icons() -> None:
     registry = load_default_architectural_icon_registry()
     icons = registry.all()
-    assert len(icons) >= 8
+    assert len(icons) >= 30
     pedestrian = registry.get_by_name("pedestrian_flow")
     assert pedestrian is not None
+    assert pedestrian.folder == "traffic"
     assert registry.resolve_svg_path(pedestrian).is_file()
 
 

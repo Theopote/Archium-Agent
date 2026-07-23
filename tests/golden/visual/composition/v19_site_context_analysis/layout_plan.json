@@ -1,0 +1,97 @@
+{
+  "layout_family": "hybrid_canvas",
+  "layout_variant": "site_context",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "hero",
+  "reading_order": [
+    "title",
+    "hero",
+    "traffic",
+    "metric_0",
+    "metric_1",
+    "conclusion",
+    "source"
+  ],
+  "balance_strategy": "site_context_split",
+  "whitespace_ratio": 0.4101,
+  "elements": [
+    {
+      "id": "conclusion",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 5.505,
+      "y": 3.85,
+      "w": 3.795,
+      "h": 0.695,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "hero",
+      "role": "hero_visual",
+      "content_type": "drawing",
+      "x": 0.7,
+      "y": 1.191,
+      "w": 4.638,
+      "h": 3.354,
+      "fit_mode": "contain",
+      "crop_policy": "forbidden"
+    },
+    {
+      "id": "metric_0",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 5.505,
+      "y": 2.494,
+      "w": 1.877,
+      "h": 0.9,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "metric_1",
+      "role": "metric",
+      "content_type": "metric",
+      "x": 7.423,
+      "y": 2.494,
+      "w": 1.877,
+      "h": 0.9,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.657,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "traffic",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 5.505,
+      "y": 1.191,
+      "w": 3.795,
+      "h": 1.22,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

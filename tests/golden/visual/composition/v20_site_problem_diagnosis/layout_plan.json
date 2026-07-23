@@ -1,0 +1,85 @@
+{
+  "layout_family": "evidence_board",
+  "layout_variant": "diagnosis_split",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "photo_0",
+  "reading_order": [
+    "title",
+    "photo_0",
+    "photo_1",
+    "problem_tags",
+    "analysis",
+    "source"
+  ],
+  "balance_strategy": "diagnosis_split",
+  "whitespace_ratio": 0.3468,
+  "elements": [
+    {
+      "id": "analysis",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.375,
+      "w": 8.6,
+      "h": 0.45,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "photo_0",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 1.191,
+      "w": 2.404,
+      "h": 3.101,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "photo_1",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 3.187,
+      "y": 1.191,
+      "w": 2.404,
+      "h": 3.101,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "problem_tags",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 5.758,
+      "y": 1.191,
+      "w": 3.542,
+      "h": 3.101,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.657,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

@@ -1,0 +1,328 @@
+{
+  "pack_name": "archium_architectural_icons_v2_1",
+  "license": "MIT",
+  "style": "lucide_compatible_stroke",
+  "style_notes": "24x24 viewBox, stroke #1a1a1a, fill none — bundled SVGs (not npm Lucide). Custom architectural pictograms extend Lucide-like line weight.",
+  "folders": ["architecture", "environment", "traffic", "energy", "culture"],
+  "domain_packs": {
+    "hospital": {
+      "label": "医院 / 医疗建筑",
+      "icons": [
+        "healthcare",
+        "public_transport",
+        "healing_garden",
+        "green_landscape",
+        "pedestrian_flow"
+      ]
+    },
+    "village": {
+      "label": "村庄 / 乡土更新",
+      "icons": [
+        "heritage",
+        "local_industry",
+        "ecology",
+        "tourism",
+        "community"
+      ]
+    }
+  },
+  "icons": [
+    {
+      "id": "icon.pedestrian_flow",
+      "canonical_name": "pedestrian_flow",
+      "folder": "traffic",
+      "aliases": ["步行流线", "人行", "流线", "pedestrian", "footpath", "circulation"],
+      "categories": ["circulation", "traffic"],
+      "svg_path": "traffic/pedestrian_flow.svg",
+      "description": "步行与人行流线"
+    },
+    {
+      "id": "icon.emergency_access",
+      "canonical_name": "emergency_access",
+      "folder": "traffic",
+      "aliases": ["消防通道", "应急通道", "疏散", "evacuation", "egress", "fire_access"],
+      "categories": ["safety", "circulation", "traffic"],
+      "svg_path": "traffic/emergency_access.svg",
+      "description": "应急与消防通道"
+    },
+    {
+      "id": "icon.public_transport",
+      "canonical_name": "public_transport",
+      "folder": "traffic",
+      "aliases": ["公交", "轨道交通", "交通", "transit", "bus", "metro"],
+      "categories": ["traffic", "urban"],
+      "svg_path": "traffic/public_transport.svg",
+      "description": "公共交通"
+    },
+    {
+      "id": "icon.parking",
+      "canonical_name": "parking",
+      "folder": "traffic",
+      "aliases": ["停车", "停车场", "car_park", "garage"],
+      "categories": ["traffic", "parking"],
+      "svg_path": "traffic/parking.svg",
+      "description": "停车设施"
+    },
+    {
+      "id": "icon.road_network",
+      "canonical_name": "road_network",
+      "folder": "traffic",
+      "aliases": ["道路", "路网", "road", "street", "network", "通达"],
+      "categories": ["traffic", "urban"],
+      "svg_path": "traffic/road_network.svg",
+      "description": "道路与路网"
+    },
+    {
+      "id": "icon.healing_garden",
+      "canonical_name": "healing_garden",
+      "folder": "environment",
+      "aliases": ["疗愈花园", "疗愈", "景观", "landscape", "garden", "康复花园"],
+      "categories": ["landscape", "healthcare", "environment"],
+      "svg_path": "environment/healing_garden.svg",
+      "description": "景观与疗愈空间"
+    },
+    {
+      "id": "icon.green_landscape",
+      "canonical_name": "green_landscape",
+      "folder": "environment",
+      "aliases": ["绿化", "绿地", "green", "landscape", "open_space", "公园"],
+      "categories": ["landscape", "environment", "green"],
+      "svg_path": "environment/green_landscape.svg",
+      "description": "绿化与开放空间"
+    },
+    {
+      "id": "icon.ecology",
+      "canonical_name": "ecology",
+      "folder": "environment",
+      "aliases": ["生态", "环境", "ecological", "biodiversity", "自然"],
+      "categories": ["environment", "ecology", "sustainability"],
+      "svg_path": "environment/ecology.svg",
+      "description": "生态与环境"
+    },
+    {
+      "id": "icon.healthcare",
+      "canonical_name": "healthcare",
+      "folder": "architecture",
+      "aliases": ["医疗", "医院", "medical", "clinic", "health", "诊疗"],
+      "categories": ["healthcare", "program", "architecture"],
+      "svg_path": "architecture/healthcare.svg",
+      "description": "医疗功能"
+    },
+    {
+      "id": "icon.education",
+      "canonical_name": "education",
+      "folder": "architecture",
+      "aliases": ["教育", "学校", "school", "campus", "学习"],
+      "categories": ["education", "program", "architecture"],
+      "svg_path": "architecture/education.svg",
+      "description": "教育功能"
+    },
+    {
+      "id": "icon.smart_systems",
+      "canonical_name": "smart_systems",
+      "folder": "architecture",
+      "aliases": ["智慧化", "智能化", "smart", "iot", "digital"],
+      "categories": ["smart", "technology", "architecture"],
+      "svg_path": "architecture/smart_systems.svg",
+      "description": "智慧化系统"
+    },
+    {
+      "id": "icon.accessibility",
+      "canonical_name": "accessibility",
+      "folder": "architecture",
+      "aliases": ["无障碍", "barrier_free", "accessible", "通行便利"],
+      "categories": ["accessibility", "inclusive", "architecture"],
+      "svg_path": "architecture/accessibility.svg",
+      "description": "无障碍通行"
+    },
+    {
+      "id": "icon.building_program",
+      "canonical_name": "building_program",
+      "folder": "architecture",
+      "aliases": ["建筑功能", "program", "building", "功能分区", "体量"],
+      "categories": ["architecture", "program"],
+      "svg_path": "architecture/building_program.svg",
+      "description": "建筑功能与程序"
+    },
+    {
+      "id": "icon.energy_saving",
+      "canonical_name": "energy_saving",
+      "folder": "energy",
+      "aliases": ["节能", "低碳", "energy", "sustainability", "绿色能源"],
+      "categories": ["sustainability", "energy"],
+      "svg_path": "energy/energy_saving.svg",
+      "description": "节能与可持续"
+    },
+    {
+      "id": "icon.solar_power",
+      "canonical_name": "solar_power",
+      "folder": "energy",
+      "aliases": ["太阳能", "光伏", "solar", "renewable", "清洁能源"],
+      "categories": ["energy", "sustainability"],
+      "svg_path": "energy/solar_power.svg",
+      "description": "太阳能与光伏"
+    },
+    {
+      "id": "icon.heritage",
+      "canonical_name": "heritage",
+      "folder": "culture",
+      "aliases": ["历史", "文化", "heritage", "historic", "传统", "文脉"],
+      "categories": ["culture", "heritage", "history"],
+      "svg_path": "culture/heritage.svg",
+      "description": "历史与文化文脉"
+    },
+    {
+      "id": "icon.local_industry",
+      "canonical_name": "local_industry",
+      "folder": "culture",
+      "aliases": ["产业", "工业", "industry", "工坊", "生产", "经济"],
+      "categories": ["culture", "industry", "economy"],
+      "svg_path": "culture/local_industry.svg",
+      "description": "地方产业"
+    },
+    {
+      "id": "icon.tourism",
+      "canonical_name": "tourism",
+      "folder": "culture",
+      "aliases": ["旅游", "文旅", "tourism", "visitor", "目的地"],
+      "categories": ["culture", "tourism"],
+      "svg_path": "culture/tourism.svg",
+      "description": "旅游与文旅"
+    },
+    {
+      "id": "icon.community",
+      "canonical_name": "community",
+      "folder": "culture",
+      "aliases": ["社区", "村民", "community", "public", "社交", "聚落"],
+      "categories": ["culture", "community", "social"],
+      "svg_path": "culture/community.svg",
+      "description": "社区与公共生活"
+    },
+    {
+      "id": "icon.residential",
+      "canonical_name": "residential",
+      "folder": "architecture",
+      "aliases": ["住宅", "居住", "housing", "residential", "公寓", "社区住宅"],
+      "categories": ["architecture", "program", "housing"],
+      "svg_path": "architecture/residential.svg",
+      "description": "住宅与居住功能"
+    },
+    {
+      "id": "icon.commercial",
+      "canonical_name": "commercial",
+      "folder": "architecture",
+      "aliases": ["商业", "零售", "commercial", "retail", "商铺", "商办"],
+      "categories": ["architecture", "program", "commercial"],
+      "svg_path": "architecture/commercial.svg",
+      "description": "商业与零售功能"
+    },
+    {
+      "id": "icon.office_tower",
+      "canonical_name": "office_tower",
+      "folder": "architecture",
+      "aliases": ["办公", "写字楼", "office", "tower", "总部"],
+      "categories": ["architecture", "program", "office"],
+      "svg_path": "architecture/office_tower.svg",
+      "description": "办公与写字楼"
+    },
+    {
+      "id": "icon.structural_system",
+      "canonical_name": "structural_system",
+      "folder": "architecture",
+      "aliases": ["结构", "框架", "structure", "structural", "柱网", "承重"],
+      "categories": ["architecture", "structure", "technical"],
+      "svg_path": "architecture/structural_system.svg",
+      "description": "结构与框架体系"
+    },
+    {
+      "id": "icon.water_system",
+      "canonical_name": "water_system",
+      "folder": "environment",
+      "aliases": ["水环境", "雨水", "排水", "water", "stormwater", "海绵"],
+      "categories": ["environment", "water", "landscape"],
+      "svg_path": "environment/water_system.svg",
+      "description": "水系统与雨洪管理"
+    },
+    {
+      "id": "icon.natural_ventilation",
+      "canonical_name": "natural_ventilation",
+      "folder": "environment",
+      "aliases": ["自然通风", "通风", "ventilation", "airflow", "风环境"],
+      "categories": ["environment", "comfort", "climate"],
+      "svg_path": "environment/natural_ventilation.svg",
+      "description": "自然通风与风环境"
+    },
+    {
+      "id": "icon.acoustic_comfort",
+      "canonical_name": "acoustic_comfort",
+      "folder": "environment",
+      "aliases": ["声环境", "噪声", "acoustic", "noise", "隔音", "安静"],
+      "categories": ["environment", "comfort", "acoustic"],
+      "svg_path": "environment/acoustic_comfort.svg",
+      "description": "声环境与噪声控制"
+    },
+    {
+      "id": "icon.bicycle_lane",
+      "canonical_name": "bicycle_lane",
+      "folder": "traffic",
+      "aliases": ["自行车", "骑行", "慢行", "bicycle", "bike", "绿道"],
+      "categories": ["traffic", "circulation", "slow_mobility"],
+      "svg_path": "traffic/bicycle_lane.svg",
+      "description": "自行车与慢行交通"
+    },
+    {
+      "id": "icon.drop_off_zone",
+      "canonical_name": "drop_off_zone",
+      "folder": "traffic",
+      "aliases": ["落客", "上下客", "drop_off", "pickup", "临停"],
+      "categories": ["traffic", "access"],
+      "svg_path": "traffic/drop_off_zone.svg",
+      "description": "落客与临停区"
+    },
+    {
+      "id": "icon.wind_power",
+      "canonical_name": "wind_power",
+      "folder": "energy",
+      "aliases": ["风电", "风力", "wind", "renewable", "清洁能源"],
+      "categories": ["energy", "sustainability", "renewable"],
+      "svg_path": "energy/wind_power.svg",
+      "description": "风力与可再生能源"
+    },
+    {
+      "id": "icon.water_efficiency",
+      "canonical_name": "water_efficiency",
+      "folder": "energy",
+      "aliases": ["节水", "中水", "water_efficiency", "reuse", "资源循环"],
+      "categories": ["energy", "water", "sustainability"],
+      "svg_path": "energy/water_efficiency.svg",
+      "description": "节水与水资源效率"
+    },
+    {
+      "id": "icon.public_space",
+      "canonical_name": "public_space",
+      "folder": "culture",
+      "aliases": ["公共空间", "广场", "plaza", "public_space", "开放空间"],
+      "categories": ["culture", "public", "urban"],
+      "svg_path": "culture/public_space.svg",
+      "description": "广场与公共空间"
+    },
+    {
+      "id": "icon.traditional_craft",
+      "canonical_name": "traditional_craft",
+      "folder": "culture",
+      "aliases": ["手工艺", "非遗", "craft", "artisan", "传统技艺"],
+      "categories": ["culture", "heritage", "craft"],
+      "svg_path": "culture/traditional_craft.svg",
+      "description": "传统手工艺"
+    },
+    {
+      "id": "icon.cultural_event",
+      "canonical_name": "cultural_event",
+      "folder": "culture",
+      "aliases": ["节庆", "活动", "event", "festival", "文化活动"],
+      "categories": ["culture", "event", "social"],
+      "svg_path": "culture/cultural_event.svg",
+      "description": "节庆与文化活动"
+    }
+  ]
+}

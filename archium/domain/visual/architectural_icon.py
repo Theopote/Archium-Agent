@@ -18,7 +18,8 @@ class ArchitecturalIcon(DomainModel):
     canonical_name: str = Field(min_length=1, max_length=200)
     aliases: list[str] = Field(default_factory=list)
     categories: list[str] = Field(default_factory=list)
-    svg_path: str = Field(min_length=1)  # workspace/package-relative
+    folder: str = ""  # architecture | environment | traffic | energy | culture
+    svg_path: str = Field(min_length=1)  # pack-relative path under assets/icons
     embedding: list[float] = Field(default_factory=list)
     license: str = Field(default="MIT", min_length=1)
     description: str = ""

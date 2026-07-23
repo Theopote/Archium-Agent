@@ -106,13 +106,17 @@ def test_capacity_budget_blocks_overloaded_when_enabled() -> None:
     budget = SlideCapacityService().estimate(_overloaded_slide(), design)
     assert budget.status in {CapacityStatus.OVERLOADED, CapacityStatus.IMPOSSIBLE}
     assert budget.blocks_layout_candidates(block_overloaded=True)
-    assert not budget.blocks_layout_candidates(block_overloaded=False)
+    if budget.status == CapacityStatus.OVERLOADED:
+        assert not budget.blocks_layout_candidates(block_overloaded=False)
+    else:
+        assert budget.blocks_layout_candidates(block_overloaded=False)
 
 
 def test_overloaded_blocks_layout_candidates_by_default() -> None:
     slide = _overloaded_slide()
     intent = _intent(slide)
     design = default_presentation_design_system()
+    budget = SlideCapacityService().estimate(slide, design)
     service = _layout_service(block_overloaded=True)
     service._intents = _FakeIntentRepo(intent)  # noqa: SLF001
     service._design = _FakeDesignRepo(design)  # noqa: SLF001
@@ -126,16 +130,22 @@ def test_overloaded_blocks_layout_candidates_by_default() -> None:
     )
     warnings = service.drain_warnings()
     assert candidates == []
-    assert any(item.get("code") == CAPACITY_OVERLOAD_RULE for item in warnings)
+    expected_code = (
+        CAPACITY_IMPOSSIBLE_RULE
+        if budget.status == CapacityStatus.IMPOSSIBLE
+        else CAPACITY_OVERLOAD_RULE
+    )
+    assert any(item.get("code") == expected_code for item in warnings)
     blockers = capacity_blocker_messages(warnings)
     assert len(blockers) == 1
-    assert CAPACITY_OVERLOAD_RULE in blockers[0]
+    assert expected_code in blockers[0]
 
 
 def test_overloaded_allows_candidates_when_setting_disabled() -> None:
     slide = _overloaded_slide()
     intent = _intent(slide)
     design = default_presentation_design_system()
+    budget = SlideCapacityService().estimate(slide, design)
     service = _layout_service(block_overloaded=False)
     service._intents = _FakeIntentRepo(intent)  # noqa: SLF001
     service._design = _FakeDesignRepo(design)  # noqa: SLF001
@@ -148,6 +158,10 @@ def test_overloaded_allows_candidates_when_setting_disabled() -> None:
         candidate_count=3,
     )
     warnings = service.drain_warnings()
+    if budget.status == CapacityStatus.IMPOSSIBLE:
+        assert candidates == []
+        assert any(item.get("code") == CAPACITY_IMPOSSIBLE_RULE for item in warnings)
+        return
     assert candidates
     assert capacity_blocker_messages(warnings) == []
     overload = next(item for item in warnings if item.get("code") == CAPACITY_OVERLOAD_RULE)

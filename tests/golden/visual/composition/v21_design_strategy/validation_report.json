@@ -1,0 +1,8 @@
+{
+  "valid": true,
+  "score": 0.975,
+  "has_critical": false,
+  "rule_codes": [
+    "LAYOUT.INCONSISTENT_ALIGNMENT"
+  ]
+}
