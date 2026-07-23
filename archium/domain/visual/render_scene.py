@@ -1,12 +1,9 @@
 """RenderScene — unified final visual scene for all renderers.
 
-**Scope (V1):** minimal node loop for Phase 0–2 — ``Text`` / ``Image`` /
-``Drawing`` / ``Shape`` only. This is **not** a Presenton-class full scene
-model: there is no ``TableNode``, ``ChartNode``, ``GroupNode``,
-``ContainerNode``, ``IconNode``, or ``LineNode`` yet.
-
-Do **not** claim “完整 RenderScene 已完成” or “完整可编辑图表/表格已完成”.
-Accurate status: **RenderScene V1 最小节点闭环完成**.
+Supports Text / Image / Drawing / Shape plus optional Chart / Table nodes for
+dual chart-export strategy (``ChartExportMode``). Chart/Table nodes carry
+structured data so exporters can choose cross-app stable shapes/images or
+native PowerPoint Chart/Table objects with embedded workbooks.
 """
 
 from __future__ import annotations
@@ -280,17 +277,54 @@ class ShapeNode(BaseRenderNode):
     corner_radius: float = Field(default=0, ge=0)
 
 
+class ChartSeriesData(DomainModel):
+    """One data series for a native or shape-baked chart."""
+
+    name: str = Field(min_length=1)
+    labels: list[str] = Field(default_factory=list)
+    values: list[float] = Field(default_factory=list)
+
+
+class ChartNode(BaseRenderNode):
+    """Structured chart with series data (dual export: native vs cross-app stable)."""
+
+    node_type: Literal["chart"] = "chart"
+    chart_type: str = Field(default="bar", min_length=1)
+    title: str | None = None
+    series: list[ChartSeriesData] = Field(default_factory=list)
+    show_legend: bool = True
+    show_value: bool = False
+    preview_storage_uri: str = ""
+    preview_resolved_path: str | None = Field(default=None, exclude=True)
+
+    @property
+    def has_series_data(self) -> bool:
+        return any(series.values for series in self.series)
+
+
+class TableNode(BaseRenderNode):
+    """Structured table grid (dual export: native table vs shape/text grid)."""
+
+    node_type: Literal["table"] = "table"
+    headers: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+
+    @property
+    def has_grid_data(self) -> bool:
+        return bool(self.headers) and bool(self.rows)
+
+
 RenderNode = Annotated[
-    TextNode | ImageNode | DrawingNode | ShapeNode,
+    TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode,
     Field(discriminator="node_type"),
 ]
 
 
 class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
-    """Unified visual scene — single source of truth for all renderers (V1).
+    """Unified visual scene — single source of truth for all renderers.
 
-    V1 supports Text / Image / Drawing / Shape only. Charts and tables from
-    LayoutPlan are degraded by the compiler (see ``RenderSceneCompiler``).
+    Supports Text / Image / Drawing / Shape plus optional Chart / Table nodes
+    for ``ChartExportMode`` dual export (cross-app stable vs native data-backed).
 
     Theme model: persist geometry + token references; resolve colors/fonts from
     the active DesignSystem at compile / preview time

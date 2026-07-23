@@ -213,11 +213,13 @@ def export_presentation_from_studio(
     presentation_id: UUID,
     *,
     settings: object | None = None,
+    chart_export_mode: object | None = None,
 ) -> RenderResult:
     return export_presentation_pptx_from_layout_plans(
         session,
         presentation_id,
         settings=settings,  # type: ignore[arg-type]
+        chart_export_mode=chart_export_mode,  # type: ignore[arg-type]
     )
 
 

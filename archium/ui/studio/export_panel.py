@@ -206,6 +206,7 @@ def _export_pptx(
                 session,
                 presentation_id,
                 settings=settings,
+                chart_export_mode=policy.chart_export_mode,
             )
         path = pptx_export_result.editable_pptx_path
         if path:

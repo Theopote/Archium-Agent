@@ -13,6 +13,7 @@ from archium.domain.visual.pptx_structure import (
     PresentationStructureSpec,
     PptxStructureMode,
 )
+from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.render_scene import RenderScene
 from archium.infrastructure.renderers.pptx_master_expander import expand_masters_from_structure
 from archium.infrastructure.renderers.pptx_ooxml_structure import require_structured_ooxml
@@ -35,13 +36,16 @@ class PptxRenderer:
         scenes: list[tuple[RenderScene, str | None]],
         structure_mode: PptxStructureMode | None = None,
         structure: PresentationStructureSpec | None = None,
+        chart_export_mode: ChartExportMode | None = None,
     ) -> dict[str, Any]:
         mode = structure_mode or self._default_structure_mode()
+        chart_mode = chart_export_mode or self._default_chart_export_mode()
         return self._adapter.render_deck(
             title=title,
             scenes=scenes,
             structure_mode=mode,
             structure=structure,
+            chart_export_mode=chart_mode,
         )
 
     def export_pptx(
@@ -53,6 +57,7 @@ class PptxRenderer:
         speaker_notes: str | None = None,
         structure_mode: PptxStructureMode | None = None,
         structure: PresentationStructureSpec | None = None,
+        chart_export_mode: ChartExportMode | None = None,
         validate_ooxml: bool | None = None,
     ) -> Path:
         deck = self.build_instruction_deck(
@@ -60,6 +65,7 @@ class PptxRenderer:
             scenes=[(scene, speaker_notes)],
             structure_mode=structure_mode,
             structure=structure,
+            chart_export_mode=chart_export_mode,
         )
         return self.export_deck(deck, output_path, validate_ooxml=validate_ooxml)
 
@@ -96,6 +102,7 @@ class PptxRenderer:
         output_path: Path,
         structure_mode: PptxStructureMode | None = None,
         structure: PresentationStructureSpec | None = None,
+        chart_export_mode: ChartExportMode | None = None,
         validate_ooxml: bool | None = None,
     ) -> Path:
         deck = self.build_instruction_deck(
@@ -103,6 +110,7 @@ class PptxRenderer:
             scenes=scenes,
             structure_mode=structure_mode,
             structure=structure,
+            chart_export_mode=chart_export_mode,
         )
         return self.export_deck(deck, output_path, validate_ooxml=validate_ooxml)
 
@@ -115,6 +123,13 @@ class PptxRenderer:
             return PptxStructureMode(str(raw).strip().lower())
         except ValueError:
             return PptxStructureMode.FLAT
+
+    def _default_chart_export_mode(self) -> ChartExportMode:
+        raw = getattr(self._settings, "pptx_chart_export_mode", "cross_app_stable")
+        try:
+            return ChartExportMode(str(raw).strip().lower())
+        except ValueError:
+            return ChartExportMode.CROSS_APP_STABLE
 
     def _structure_from_deck(self, deck: dict[str, Any]) -> PresentationStructureSpec | None:
         raw = deck.get("structure")
@@ -148,6 +163,7 @@ def maybe_export_scene_pptx(
     settings: Settings | None = None,
     structure_mode: PptxStructureMode | None = None,
     structure: PresentationStructureSpec | None = None,
+    chart_export_mode: ChartExportMode | None = None,
 ) -> Path | None:
     """Export PPTX from RenderScene when Node/PptxGenJS is available."""
     if shutil.which("node") is None:
@@ -162,4 +178,5 @@ def maybe_export_scene_pptx(
         speaker_notes=speaker_notes,
         structure_mode=structure_mode,
         structure=structure,
+        chart_export_mode=chart_export_mode,
     )

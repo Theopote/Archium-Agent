@@ -8,7 +8,13 @@ from typing import cast
 from pydantic import Field
 
 from archium.domain._base import DomainModel
-from archium.domain.visual.render_scene import BaseRenderNode, ImageNode, ShapeNode
+from archium.domain.visual.render_scene import (
+    BaseRenderNode,
+    ChartNode,
+    ImageNode,
+    ShapeNode,
+    TableNode,
+)
 
 
 class PowerPointFidelity(StrEnum):
@@ -74,6 +80,26 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
         limitations=["V1 preserves the architectural drawing as a picture object."],
         validation_rules=["node_identity_preserved", "asset_resolved", "drawing_crop_policy"],
     ),
+    "chart": PowerPointCapabilityMapping(
+        scene_node_type="chart",
+        pptx_object_type="c:chart (native) or p:sp bake (cross-app)",
+        fidelity=PowerPointFidelity.NATIVE_STABLE,
+        limitations=[
+            "NATIVE_DATA_BACKED emits PowerPoint charts with embedded workbook data.",
+            "CROSS_APP_STABLE bakes series as shapes/images for cross-renderer fidelity.",
+        ],
+        validation_rules=["node_identity_preserved", "chart_series_preserved"],
+    ),
+    "table": PowerPointCapabilityMapping(
+        scene_node_type="table",
+        pptx_object_type="a:tbl (native) or p:sp/text grid (cross-app)",
+        fidelity=PowerPointFidelity.NATIVE_STABLE,
+        limitations=[
+            "NATIVE_DATA_BACKED emits editable PowerPoint tables.",
+            "CROSS_APP_STABLE renders headers/rows as shape+text grids.",
+        ],
+        validation_rules=["node_identity_preserved", "table_grid_preserved"],
+    ),
 }
 
 
@@ -105,6 +131,14 @@ def capability_for_scene_node(node: str | BaseRenderNode) -> PowerPointCapabilit
     if isinstance(node, ImageNode) and (node.corner_radius or node.border or node.shadow):
         fidelity = PowerPointFidelity.APPROXIMATE
         limitations.append("V1 PPTX picture export does not preserve corner, border, or shadow styling.")
+
+    if isinstance(node, ChartNode) and not node.has_series_data:
+        fidelity = PowerPointFidelity.APPROXIMATE
+        limitations.append("ChartNode without series data cannot emit a data-backed chart.")
+
+    if isinstance(node, TableNode) and not node.has_grid_data:
+        fidelity = PowerPointFidelity.APPROXIMATE
+        limitations.append("TableNode without headers/rows cannot emit a native table.")
 
     return cast(
         PowerPointCapabilityMapping,

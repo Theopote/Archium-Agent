@@ -19,6 +19,24 @@ from archium.domain.visual.enums import (
     LayoutValidationStatus,
     OverflowPolicy,
 )
+from archium.domain.visual.render_scene import ChartSeriesData
+
+
+class LayoutChartData(DomainModel):
+    """Optional structured chart payload on a LayoutElement."""
+
+    chart_type: str = Field(default="bar", min_length=1)
+    title: str | None = None
+    series: list[ChartSeriesData] = Field(default_factory=list)
+    show_legend: bool = True
+    show_value: bool = False
+
+
+class LayoutTableData(DomainModel):
+    """Optional structured table payload on a LayoutElement."""
+
+    headers: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
 
 
 class LayoutElement(DomainModel):
@@ -29,6 +47,8 @@ class LayoutElement(DomainModel):
     content_type: LayoutContentType
     content_ref: str | None = None
     text_content: str | None = None
+    chart_data: LayoutChartData | None = None
+    table_data: LayoutTableData | None = None
     x: float
     y: float
     width: float = Field(gt=0)

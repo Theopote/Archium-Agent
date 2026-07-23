@@ -411,6 +411,14 @@ class Settings(BaseSettings):
             "'structured' (native slide masters/layouts/placeholders)."
         ),
     )
+    pptx_chart_export_mode: str = Field(
+        default="cross_app_stable",
+        validation_alias=AliasChoices("PPTX_CHART_EXPORT_MODE"),
+        description=(
+            "Chart/table PPTX strategy: 'cross_app_stable' (shapes/images) or "
+            "'native_data_backed' (PowerPoint Chart/Table with embedded workbook)."
+        ),
+    )
 
     # ── visual.* ─────────────────────────────────────────────────────────────
     visual_fallback_enabled: bool = Field(

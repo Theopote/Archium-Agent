@@ -11,10 +11,12 @@ from archium.application.visual.scene_fonts import (
     text_has_cjk,
 )
 from archium.domain.visual.render_scene import (
+    ChartNode,
     DrawingNode,
     ImageNode,
     RenderScene,
     ShapeNode,
+    TableNode,
     TextNode,
 )
 from archium.domain.visual.pptx_structure import (
@@ -22,6 +24,7 @@ from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
     default_archium_structure_spec,
 )
+from archium.domain.export_fidelity import ChartExportMode
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import RenderedSlideInstruction
 
 
@@ -74,6 +77,7 @@ class RenderScenePptxAdapter:
         design_system_id: UUID | None = None,
         structure_mode: PptxStructureMode = PptxStructureMode.FLAT,
         structure: PresentationStructureSpec | None = None,
+        chart_export_mode: ChartExportMode = ChartExportMode.CROSS_APP_STABLE,
     ) -> dict[str, Any]:
         instructions: list[dict[str, Any]] = []
         for scene, notes in scenes:
@@ -88,6 +92,7 @@ class RenderScenePptxAdapter:
             "schema": "archium.render_scene.v1",
             "slides": instructions,
             "structure_mode": structure_mode.value,
+            "chart_export_mode": chart_export_mode.value,
         }
         resolved = self._resolve_structure(
             structure_mode=structure_mode,
@@ -139,7 +144,54 @@ class RenderScenePptxAdapter:
             return self._drawing_instruction(node)
         if isinstance(node, ShapeNode):
             return self._shape_instruction(node)
+        if isinstance(node, ChartNode):
+            return self._chart_instruction(node)
+        if isinstance(node, TableNode):
+            return self._table_instruction(node)
         raise TypeError(f"unsupported render node: {type(node)!r}")
+
+    def _chart_instruction(self, node: ChartNode) -> dict[str, Any]:
+        instruction: dict[str, Any] = {
+            "id": node.id,
+            "role": node.semantic_role or "chart",
+            "content_type": "chart",
+            "x": node.x,
+            "y": node.y,
+            "w": node.width,
+            "h": node.height,
+            "z_index": node.z_index,
+            "chart_type": node.chart_type,
+            "show_legend": node.show_legend,
+            "show_value": node.show_value,
+            "series": [
+                {
+                    "name": series.name,
+                    "labels": list(series.labels),
+                    "values": list(series.values),
+                }
+                for series in node.series
+            ],
+        }
+        if node.title:
+            instruction["title"] = node.title
+        path = node.preview_resolved_path or node.preview_storage_uri
+        if path:
+            instruction["path"] = path
+        return instruction
+
+    def _table_instruction(self, node: TableNode) -> dict[str, Any]:
+        return {
+            "id": node.id,
+            "role": node.semantic_role or "table",
+            "content_type": "table",
+            "x": node.x,
+            "y": node.y,
+            "w": node.width,
+            "h": node.height,
+            "z_index": node.z_index,
+            "headers": list(node.headers),
+            "rows": [list(row) for row in node.rows],
+        }
 
     def _text_instruction(self, node: TextNode, scene: RenderScene) -> dict[str, Any]:
         content_type = "metric" if node.semantic_role == "metric" else "text"

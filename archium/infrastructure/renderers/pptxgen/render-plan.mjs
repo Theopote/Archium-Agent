@@ -74,6 +74,10 @@ async function main() {
 
   const structure =
     deck.structure && typeof deck.structure === "object" ? deck.structure : null;
+  const chartExportMode =
+    typeof deck.chart_export_mode === "string" && deck.chart_export_mode
+      ? deck.chart_export_mode
+      : "cross_app_stable";
 
   const pres = new pptxgen();
   pres.author = "Archium";
@@ -83,7 +87,7 @@ async function main() {
   applyPlanLayout(pres, tokens, structure);
 
   for (const slide of deck.slides) {
-    renderSlideFromPlan(pres, slide, deck.theme ?? null, structure);
+    renderSlideFromPlan(pres, slide, deck.theme ?? null, structure, chartExportMode);
   }
 
   await pres.writeFile({ fileName: outputPath });

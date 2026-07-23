@@ -19,10 +19,12 @@ from archium.domain.export_fidelity import (
 )
 from archium.domain.powerpoint_capability import PowerPointFidelity, assess_scene_node
 from archium.domain.visual.render_scene import (
+    ChartNode,
     DrawingNode,
     ImageNode,
     RenderScene,
     ShapeNode,
+    TableNode,
     TextNode,
 )
 from archium.exceptions import WorkflowError
@@ -40,6 +42,8 @@ class ExportPolicyService:
         shape_nodes = [n for n in visible_nodes if isinstance(n, ShapeNode)]
         drawing_nodes = [n for n in visible_nodes if isinstance(n, DrawingNode)]
         image_nodes = [n for n in visible_nodes if isinstance(n, ImageNode)]
+        chart_nodes = [n for n in visible_nodes if isinstance(n, ChartNode)]
+        table_nodes = [n for n in visible_nodes if isinstance(n, TableNode)]
         capability_counts = {level: 0 for level in PowerPointFidelity}
         capability_limitations: list[str] = []
         for node in visible_nodes:
@@ -49,6 +53,8 @@ class ExportPolicyService:
 
         native_text = sum(1 for n in text_nodes if n.text.strip())
         native_shapes = len(shape_nodes)
+        native_charts = sum(1 for n in chart_nodes if n.has_series_data)
+        native_tables = sum(1 for n in table_nodes if n.has_grid_data)
         bitmap_count = len(drawing_nodes) + len(image_nodes)
 
         blockers: list[str] = []
@@ -78,7 +84,7 @@ class ExportPolicyService:
 
         fidelity = self._classify_fidelity(
             native_text=native_text,
-            native_shapes=native_shapes,
+            native_shapes=native_shapes + native_charts + native_tables,
             bitmap_count=bitmap_count,
             scene=scene,
             page_area=page_area,
@@ -90,6 +96,8 @@ class ExportPolicyService:
             fidelity_level=fidelity,
             native_text_count=native_text,
             native_shape_count=native_shapes,
+            native_chart_count=native_charts,
+            native_table_count=native_tables,
             bitmap_asset_count=bitmap_count,
             powerpoint_capability_counts=capability_counts,
             powerpoint_capability_limitations=list(dict.fromkeys(capability_limitations)),

@@ -46,7 +46,7 @@ export function applyPlanLayout(pres, tokens, structure = null) {
  * @param {object} [deckTheme] optional deck-level theme fallback
  * @param {object | null} [structure] PresentationStructureSpec payload
  */
-export function renderSlideFromPlan(pres, slideInstruction, deckTheme = null, structure = null) {
+export function renderSlideFromPlan(pres, slideInstruction, deckTheme = null, structure = null, chartExportMode = "cross_app_stable") {
   const layout = resolveLayoutForFamily(structure, slideInstruction.layout_family);
   const masterName = layout?.name || "ARCHIUM_PLAN_MASTER";
   const page = pres.addSlide({ masterName });
@@ -63,7 +63,15 @@ export function renderSlideFromPlan(pres, slideInstruction, deckTheme = null, st
     if (placeholderName) {
       usedPlaceholders.add(placeholderName);
     }
-    renderElement(pres, page, element, slideInstruction, deckTheme, placeholderName);
+    renderElement(
+      pres,
+      page,
+      element,
+      slideInstruction,
+      deckTheme,
+      placeholderName,
+      chartExportMode,
+    );
   }
 
   if (slideInstruction.speaker_notes) {
@@ -78,8 +86,9 @@ export function renderSlideFromPlan(pres, slideInstruction, deckTheme = null, st
  * @param {object} slideInstruction
  * @param {object | null} deckTheme
  * @param {string | null} placeholderName
+ * @param {string} chartExportMode
  */
-function renderElement(pres, page, element, slideInstruction, deckTheme, placeholderName) {
+function renderElement(pres, page, element, slideInstruction, deckTheme, placeholderName, chartExportMode) {
   const contentType = element.content_type ?? "text";
   if (contentType === "image" || contentType === "drawing") {
     renderImageElement(pres, page, element, slideInstruction, deckTheme, placeholderName);
@@ -90,12 +99,233 @@ function renderElement(pres, page, element, slideInstruction, deckTheme, placeho
     renderShapeElement(pres, page, element, slideInstruction);
     return;
   }
-  if (contentType === "chart" || contentType === "table") {
-    renderPlaceholderBox(pres, page, element, slideInstruction, contentType, placeholderName);
+  if (contentType === "chart") {
+    renderChartElement(pres, page, element, slideInstruction, deckTheme, placeholderName, chartExportMode);
+    return;
+  }
+  if (contentType === "table") {
+    renderTableElement(pres, page, element, slideInstruction, deckTheme, placeholderName, chartExportMode);
     return;
   }
   // text | metric | default
   renderTextElement(page, element, placeholderName);
+}
+
+/**
+ * @param {import('pptxgenjs').default} pres
+ * @param {object} page
+ * @param {object} element
+ * @param {object} slideInstruction
+ * @param {object | null} deckTheme
+ * @param {string | null} placeholderName
+ * @param {string} chartExportMode
+ */
+function renderChartElement(
+  pres,
+  page,
+  element,
+  slideInstruction,
+  deckTheme,
+  placeholderName,
+  chartExportMode,
+) {
+  const series = Array.isArray(element.series) ? element.series : [];
+  const hasData = series.some(
+    (item) => Array.isArray(item?.values) && item.values.length > 0,
+  );
+  const native = chartExportMode === "native_data_backed" && hasData && !placeholderName;
+
+  if (native) {
+    const colors = slideInstruction.theme_tokens?.colors ?? deckTheme?.colors ?? {};
+    page.addChart(
+      element.chart_type || "bar",
+      series.map((item) => ({
+        name: item.name || "Series",
+        labels: item.labels || [],
+        values: item.values || [],
+      })),
+      {
+        x: Number(element.x) || 0,
+        y: Number(element.y) || 0,
+        w: Number(element.w) || 1,
+        h: Number(element.h) || 1,
+        showLegend: element.show_legend !== false,
+        showValue: Boolean(element.show_value),
+        showTitle: Boolean(element.title),
+        title: element.title || "",
+        chartColors: [
+          _stripHash(colors.primary || "1F3A5F"),
+          _stripHash(colors.accent || "2E6DA4"),
+          _stripHash(colors.secondary || colors.muted || "666666"),
+        ],
+      },
+    );
+    return;
+  }
+
+  // CROSS_APP_STABLE: prefer preview image, else bake simple bar shapes from data.
+  if (element.path && !placeholderName) {
+    renderImageElement(pres, page, element, slideInstruction, deckTheme, null);
+    return;
+  }
+  if (hasData && !placeholderName) {
+    renderChartAsShapes(pres, page, element, slideInstruction);
+    return;
+  }
+  renderPlaceholderBox(pres, page, element, slideInstruction, "chart", placeholderName);
+}
+
+/**
+ * @param {import('pptxgenjs').default} pres
+ * @param {object} page
+ * @param {object} element
+ * @param {object} slideInstruction
+ */
+function renderChartAsShapes(pres, page, element, slideInstruction) {
+  const series = Array.isArray(element.series) ? element.series : [];
+  const primary = series[0] || { values: [], labels: [] };
+  const values = (primary.values || []).map((v) => Number(v) || 0);
+  const labels = primary.labels || [];
+  const colors = slideInstruction.theme_tokens?.colors ?? {};
+  const fill = _stripHash(colors.primary || colors.accent || "1F3A5F");
+  const muted = _stripHash(colors.muted_text || colors.muted || "666666");
+  const x0 = Number(element.x) || 0;
+  const y0 = Number(element.y) || 0;
+  const w = Number(element.w) || 1;
+  const h = Number(element.h) || 1;
+  const maxVal = Math.max(...values, 1);
+  const gap = 0.08;
+  const barW = values.length ? (w - gap * (values.length + 1)) / values.length : w;
+  const chartBottom = y0 + h - 0.35;
+  const chartTop = y0 + 0.15;
+  const chartH = Math.max(0.4, chartBottom - chartTop);
+
+  page.addShape(pres.shapes.RECTANGLE, {
+    x: x0,
+    y: y0,
+    w,
+    h,
+    fill: { color: _stripHash(colors.surface || colors.light || "F4F6F8") },
+    line: { color: _stripHash(colors.border || "D9D5CF"), width: 0.5 },
+  });
+
+  values.forEach((value, index) => {
+    const barH = (Math.abs(value) / maxVal) * chartH;
+    const bx = x0 + gap + index * (barW + gap);
+    const by = chartBottom - barH;
+    page.addShape(pres.shapes.RECTANGLE, {
+      x: bx,
+      y: by,
+      w: Math.max(0.05, barW),
+      h: Math.max(0.05, barH),
+      fill: { color: fill },
+      line: { color: fill, width: 0 },
+    });
+    const label = labels[index] != null ? String(labels[index]) : String(value);
+    page.addText(label, {
+      x: bx,
+      y: chartBottom + 0.02,
+      w: Math.max(0.05, barW),
+      h: 0.28,
+      fontSize: 9,
+      color: muted,
+      align: "center",
+      valign: "top",
+    });
+  });
+}
+
+/**
+ * @param {import('pptxgenjs').default} pres
+ * @param {object} page
+ * @param {object} element
+ * @param {object} slideInstruction
+ * @param {object | null} deckTheme
+ * @param {string | null} placeholderName
+ * @param {string} chartExportMode
+ */
+function renderTableElement(
+  pres,
+  page,
+  element,
+  slideInstruction,
+  deckTheme,
+  placeholderName,
+  chartExportMode,
+) {
+  const headers = Array.isArray(element.headers) ? element.headers : [];
+  const rows = Array.isArray(element.rows) ? element.rows : [];
+  const hasData = headers.length > 0 && rows.length > 0;
+  const native = chartExportMode === "native_data_backed" && hasData && !placeholderName;
+
+  if (native) {
+    const colors = slideInstruction.theme_tokens?.colors ?? deckTheme?.colors ?? {};
+    const tableWidth = Number(element.w) || 1;
+    const headerRow = headers.map((header) => ({
+      text: String(header ?? ""),
+      options: {
+        bold: true,
+        fill: { color: _stripHash(colors.surface || colors.light || "F4F6F8") },
+        color: _stripHash(colors.primary || colors.primary_text || "1A1A1A"),
+        fontSize: 12,
+      },
+    }));
+    const bodyRows = rows.map((row) =>
+      (Array.isArray(row) ? row : [row]).map((cell) => ({
+        text: String(cell ?? ""),
+        options: {
+          color: _stripHash(colors.primary_text || colors.text || "1A1A1A"),
+          fontSize: 11,
+        },
+      })),
+    );
+    page.addTable([headerRow, ...bodyRows], {
+      x: Number(element.x) || 0,
+      y: Number(element.y) || 0,
+      w: tableWidth,
+      colW: Array(headers.length).fill(tableWidth / Math.max(headers.length, 1)),
+      border: {
+        type: "solid",
+        pt: 0.5,
+        color: _stripHash(colors.border || colors.muted || "999999"),
+      },
+      margin: 0.04,
+    });
+    return;
+  }
+
+  if (hasData && !placeholderName) {
+    renderTableAsTextGrid(page, element, slideInstruction);
+    return;
+  }
+  renderPlaceholderBox(pres, page, element, slideInstruction, "table", placeholderName);
+}
+
+/**
+ * @param {object} page
+ * @param {object} element
+ * @param {object} slideInstruction
+ */
+function renderTableAsTextGrid(page, element, slideInstruction) {
+  const headers = element.headers || [];
+  const rows = element.rows || [];
+  const colors = slideInstruction.theme_tokens?.colors ?? {};
+  const lines = [
+    headers.map((h) => String(h ?? "")).join(" | "),
+    ...rows.map((row) =>
+      (Array.isArray(row) ? row : [row]).map((cell) => String(cell ?? "")).join(" | "),
+    ),
+  ];
+  page.addText(lines.join("\n"), {
+    x: Number(element.x) || 0,
+    y: Number(element.y) || 0,
+    w: Number(element.w) || 1,
+    h: Number(element.h) || 1,
+    fontSize: 11,
+    color: _stripHash(colors.primary_text || colors.text || "1A1A1A"),
+    fontFace: element.font_family_cjk || element.font_family || "Microsoft YaHei",
+    valign: "top",
+  });
 }
 
 /** @param {object} page @param {object} element @param {string | null} placeholderName */

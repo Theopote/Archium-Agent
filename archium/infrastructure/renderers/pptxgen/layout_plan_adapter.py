@@ -14,6 +14,7 @@ from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
     default_archium_structure_spec,
 )
+from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.text_style import resolve_text_style
 
 
@@ -179,6 +180,27 @@ class PptxLayoutPlanAdapter:
             )
         if element.role == LayoutElementRole.PAGE_NUMBER and bundle.page_number is not None:
             instruction["text"] = str(bundle.page_number)
+        if element.chart_data is not None:
+            instruction["chart_type"] = element.chart_data.chart_type
+            instruction["show_legend"] = element.chart_data.show_legend
+            instruction["show_value"] = element.chart_data.show_value
+            if element.chart_data.title:
+                instruction["title"] = element.chart_data.title
+            instruction["series"] = [
+                {
+                    "name": series.name,
+                    "labels": list(series.labels),
+                    "values": list(series.values),
+                }
+                for series in element.chart_data.series
+            ]
+            # Structured chart data clears unresolved-asset placeholder noise.
+            if instruction.get("series"):
+                instruction.pop("asset_unresolved", None)
+                instruction.pop("asset_error", None)
+        if element.table_data is not None:
+            instruction["headers"] = list(element.table_data.headers)
+            instruction["rows"] = [list(row) for row in element.table_data.rows]
         return instruction
 
     def render_deck(
@@ -188,6 +210,7 @@ class PptxLayoutPlanAdapter:
         slides: list[tuple[LayoutPlan, DesignSystem, SlideContentBundle | None]],
         structure_mode: PptxStructureMode = PptxStructureMode.FLAT,
         structure: PresentationStructureSpec | None = None,
+        chart_export_mode: ChartExportMode = ChartExportMode.CROSS_APP_STABLE,
     ) -> dict[str, Any]:
         """Build a deck JSON payload for `render-plan.mjs`."""
         instructions: list[dict[str, Any]] = []
@@ -201,6 +224,7 @@ class PptxLayoutPlanAdapter:
             "schema": "archium.layout_instructions.v1",
             "slides": instructions,
             "structure_mode": structure_mode.value,
+            "chart_export_mode": chart_export_mode.value,
         }
         resolved = self._resolve_structure(
             structure_mode=structure_mode,

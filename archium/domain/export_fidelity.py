@@ -21,6 +21,27 @@ class ExportFidelityLevel(StrEnum):
     FAILED = "failed"
 
 
+class ChartExportMode(StrEnum):
+    """Dual strategy for charts and tables in PPTX delivery.
+
+    Inspired by ppt-master's default shape/SVG route vs ``--native-charts-and-tables``:
+
+    - ``CROSS_APP_STABLE`` — shapes / images / text grids that render consistently
+      across PowerPoint, Keynote, LibreOffice, and WPS (no embedded workbook).
+    - ``NATIVE_DATA_BACKED`` — real PowerPoint Chart / Table objects with editable
+      data (PptxGenJS embeds an Excel workbook for charts).
+    """
+
+    CROSS_APP_STABLE = "cross_app_stable"
+    NATIVE_DATA_BACKED = "native_data_backed"
+
+
+CHART_EXPORT_MODE_LABELS_ZH: dict[ChartExportMode, str] = {
+    ChartExportMode.CROSS_APP_STABLE: "跨应用稳定（形状/图片）",
+    ChartExportMode.NATIVE_DATA_BACKED: "原生数据图表（Chart/Table + 内嵌工作簿）",
+}
+
+
 _FIDELITY_RANK: dict[ExportFidelityLevel, int] = {
     ExportFidelityLevel.FULLY_EDITABLE: 0,
     ExportFidelityLevel.HYBRID_EDITABLE: 1,
@@ -63,6 +84,8 @@ class ExportPolicy(DomainModel):
     fail_on_reference_leakage: bool = True
     fail_on_drawing_crop: bool = True
 
+    chart_export_mode: ChartExportMode = ChartExportMode.CROSS_APP_STABLE
+
 
 class SlideExportResult(DomainModel):
     """Per-slide export fidelity assessment."""
@@ -72,6 +95,7 @@ class SlideExportResult(DomainModel):
 
     native_text_count: int = Field(default=0, ge=0)
     native_shape_count: int = Field(default=0, ge=0)
+    native_chart_count: int = Field(default=0, ge=0)
     native_table_count: int = Field(default=0, ge=0)
     bitmap_asset_count: int = Field(default=0, ge=0)
     powerpoint_capability_counts: dict[PowerPointFidelity, int] = Field(default_factory=dict)
@@ -116,6 +140,14 @@ class DeckExportManifest(DomainModel):
                 counts[level] += count
         return counts
 
+    @property
+    def native_chart_count(self) -> int:
+        return sum(slide.native_chart_count for slide in self.slides)
+
+    @property
+    def native_table_count(self) -> int:
+        return sum(slide.native_table_count for slide in self.slides)
+
     def summary_lines_zh(self) -> list[str]:
         """Human-readable per-level counts for delivery UI."""
         lines: list[str] = []
@@ -123,6 +155,12 @@ class DeckExportManifest(DomainModel):
             count = self.fidelity_counts[level]
             if count:
                 lines.append(f"{FIDELITY_LABELS_ZH[level]}：{count} 页")
+        mode = self.requested_policy.chart_export_mode
+        lines.append(f"图表/表格策略：{CHART_EXPORT_MODE_LABELS_ZH[mode]}")
+        if self.native_chart_count:
+            lines.append(f"原生图表：{self.native_chart_count}")
+        if self.native_table_count:
+            lines.append(f"原生表格：{self.native_table_count}")
         for capability_level, count in self.powerpoint_capability_counts.items():
             if count:
                 lines.append(f"PowerPoint {capability_level.value}: {count} objects")

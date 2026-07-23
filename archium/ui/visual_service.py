@@ -21,6 +21,7 @@ from archium.application.visual.visual_workflow_service import (
     VisualWorkflowService,
 )
 from archium.config.settings import Settings
+from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
@@ -184,6 +185,7 @@ def export_presentation_pptx_from_layout_plans(
     presentation_id: UUID,
     *,
     settings: Settings | None = None,
+    chart_export_mode: ChartExportMode | None = None,
 ) -> RenderResult:
     """Export editable PPTX from RenderScene compiled from saved LayoutPlans."""
     resolved = _resolve_runtime_settings(settings)
@@ -227,6 +229,7 @@ def export_presentation_pptx_from_layout_plans(
         title=brief.title,
         scenes=ordered_scenes,
         output_path=pptx_path,
+        chart_export_mode=chart_export_mode,
     )
     return RenderResult(editable_pptx_path=rendered)
 

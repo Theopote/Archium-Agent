@@ -10,6 +10,10 @@ def test_export_policy_panel_source() -> None:
     assert "strict_native" in source
     assert "allow_raster" in source
     assert "get_session_export_policy" in source
+    assert "ChartExportMode" in source
+    assert "图表 / 表格导出" in source
+    assert "NATIVE_DATA_BACKED" in source
+    assert "CROSS_APP_STABLE" in source
 
 
 def test_fidelity_report_panel_discloses_fallback() -> None:

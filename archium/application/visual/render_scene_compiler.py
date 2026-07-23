@@ -1,21 +1,11 @@
 """Compile LayoutPlan + content into a renderer-neutral RenderScene.
 
-**V1 degradations (intentional, not full structured edit):**
+Chart / table handling:
 
-- ``CHART`` → ``ImageNode`` (may be a rasterized chart asset; not ``ChartNode``)
-- ``TABLE`` / ``METRIC`` → ``TextNode`` (tabular data as text; not ``TableNode``)
-
-**Style application:**
-
-- Base tokens come from ``DesignSystem``.
-- When provided, ``art_direction`` and ``reference_style`` are merged via
-  :func:`archium.application.visual.style_overlay.apply_style_overlays`
-  (in-memory only; persisted DesignSystem rows are unchanged).
-- ReferenceStyle color/typography cues with resolvable hex / font / size win
-  over ArtDirection tone heuristics.
-
-Phase 0–2 only requires Text / Image / Drawing / Shape. Do not describe V1 as
-a complete editable chart/table scene model.
+- When ``LayoutElement.chart_data`` / ``table_data`` is present, emit
+  ``ChartNode`` / ``TableNode`` (dual export via ``ChartExportMode``).
+- Otherwise ``CHART`` without data still binds as ``ImageNode`` (raster preview);
+  ``TABLE`` without grid data still binds as ``TextNode``.
 """
 
 from __future__ import annotations
@@ -37,6 +27,8 @@ from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import (
     BackgroundStyle,
     BoxSpacing,
+    ChartNode,
+    ChartSeriesData,
     DrawingFitMode,
     DrawingNode,
     DrawingType,
@@ -44,6 +36,7 @@ from archium.domain.visual.render_scene import (
     RenderScene,
     SceneAssetReference,
     ShapeNode,
+    TableNode,
     TextNode,
     TextParagraph,
     ThemeTokens,
@@ -101,7 +94,7 @@ class RenderSceneCompiler:
         bundle = content_bundle or SlideContentBundle()
         warnings: list[str] = list(overlay.warnings)
         asset_manifest: list[SceneAssetReference] = []
-        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
+        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode] = []
         drawing_type = self._infer_drawing_type(slide, visual_intent)
 
         bg_color = effective.colors.resolve("background")
@@ -219,23 +212,103 @@ class RenderSceneCompiler:
         drawing_type: DrawingType,
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
-    ) -> list[TextNode | ImageNode | DrawingNode | ShapeNode]:
-        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
+    ) -> list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode]:
+        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode] = []
         if element.content_type == LayoutContentType.DRAWING:
             nodes = list(self._compile_drawing(element, bundle, drawing_type, asset_manifest, warnings))
-        elif element.content_type in {LayoutContentType.IMAGE, LayoutContentType.CHART}:
-            # V1: CHART has no ChartNode — bind as ImageNode (often a raster asset).
+        elif element.content_type == LayoutContentType.CHART:
+            chart_nodes = self._compile_chart(element, bundle, asset_manifest, warnings)
+            if chart_nodes:
+                nodes = list(chart_nodes)
+            else:
+                nodes = list(self._compile_image(element, bundle, asset_manifest, warnings))
+        elif element.content_type == LayoutContentType.IMAGE:
             nodes = list(self._compile_image(element, bundle, asset_manifest, warnings))
+        elif element.content_type == LayoutContentType.TABLE:
+            table_nodes = self._compile_table(element)
+            if table_nodes:
+                nodes = list(table_nodes)
+            else:
+                nodes = list(self._compile_text(element, design_system, bundle, warnings))
         elif element.content_type in {
             LayoutContentType.TEXT,
             LayoutContentType.METRIC,
-            LayoutContentType.TABLE,
         }:
-            # V1: TABLE has no TableNode — emit TextNode (not an editable grid).
             nodes = list(self._compile_text(element, design_system, bundle, warnings))
         elif element.content_type == LayoutContentType.SHAPE:
             nodes = list(self._compile_shape(element, design_system))
         return nodes
+
+    def _compile_chart(
+        self,
+        element: LayoutElement,
+        bundle: SlideContentBundle,
+        asset_manifest: list[SceneAssetReference],
+        warnings: list[str],
+    ) -> list[ChartNode]:
+        data = element.chart_data
+        if data is None or not data.series:
+            return []
+        preview_uri = ""
+        preview_path: str | None = None
+        if element.content_ref:
+            path = bundle.asset_paths.get(element.content_ref)
+            if path:
+                preview_path = path
+                preview_uri = path
+        return [
+            ChartNode(
+                id=element.id,
+                semantic_role=element.role.value,
+                source_layout_element_id=element.id,
+                x=element.x,
+                y=element.y,
+                width=element.width,
+                height=element.height,
+                z_index=element.z_index,
+                chart_type=data.chart_type,
+                title=data.title,
+                series=[
+                    ChartSeriesData(
+                        name=series.name,
+                        labels=list(series.labels),
+                        values=list(series.values),
+                    )
+                    for series in data.series
+                ],
+                show_legend=data.show_legend,
+                show_value=data.show_value,
+                preview_storage_uri=preview_uri,
+                preview_resolved_path=preview_path,
+            )
+        ]
+
+    def _compile_table(self, element: LayoutElement) -> list[TableNode]:
+        data = element.table_data
+        if data is None:
+            parsed = _parse_table_from_text(element.text_content)
+            if parsed is None:
+                return []
+            headers, rows = parsed
+        else:
+            headers = list(data.headers)
+            rows = [list(row) for row in data.rows]
+        if not headers or not rows:
+            return []
+        return [
+            TableNode(
+                id=element.id,
+                semantic_role=element.role.value,
+                source_layout_element_id=element.id,
+                x=element.x,
+                y=element.y,
+                width=element.width,
+                height=element.height,
+                z_index=element.z_index,
+                headers=headers,
+                rows=rows,
+            )
+        ]
 
     def _compile_text(
         self,
@@ -456,6 +529,31 @@ def _typography_token_for_role(role: LayoutElementRole) -> str:
         LayoutElementRole.ANNOTATION: "caption",
     }
     return mapping.get(role, "body")
+
+
+def _parse_table_from_text(text: str | None) -> tuple[list[str], list[list[str]]] | None:
+    """Parse a simple pipe/tab/CSV-ish text grid into headers + rows."""
+    if not text or not str(text).strip():
+        return None
+    lines = [line.strip() for line in str(text).splitlines() if line.strip()]
+    if len(lines) < 2:
+        return None
+
+    def _split(line: str) -> list[str]:
+        if "|" in line:
+            return [cell.strip() for cell in line.split("|") if cell.strip() != ""]
+        if "\t" in line:
+            return [cell.strip() for cell in line.split("\t")]
+        if "," in line:
+            return [cell.strip() for cell in line.split(",")]
+        return [line]
+
+    rows = [_split(line) for line in lines]
+    width = max(len(row) for row in rows)
+    if width < 2:
+        return None
+    normalized = [row + [""] * (width - len(row)) for row in rows]
+    return normalized[0], normalized[1:]
 
 
 def new_render_scene_id() -> UUID:

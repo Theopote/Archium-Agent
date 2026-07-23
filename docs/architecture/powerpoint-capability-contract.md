@@ -30,6 +30,8 @@ delivery artifact is accepted.
 | shape | `p:sp` | feature-dependent | simple rectangle is stable; other V1 shapes currently normalize to rectangle |
 | image | `p:pic` | native stable | pixels remain raster |
 | drawing | `p:pic` | native stable | drawing is not native CAD/vector geometry in V1 |
+| chart | `c:chart` or shape bake | mode-dependent | `NATIVE_DATA_BACKED` embeds workbook; `CROSS_APP_STABLE` uses shapes/images |
+| table | `a:tbl` or text grid | mode-dependent | `NATIVE_DATA_BACKED` is editable table; `CROSS_APP_STABLE` is text/shape grid |
 
 Unknown node types fail closed. Fidelity is deliberately more precise than deck-level labels
 such as “fully editable”: it describes the actual PowerPoint representation of each construct.
@@ -57,6 +59,19 @@ Archium extracts master/layout metadata and durable placeholder bindings, and ca
 Default export remains `FLAT` (absolute freeform shapes) for backward compatibility.
 Set `PPTX_STRUCTURE_MODE=structured` or pass `structure_mode=STRUCTURED` on
 `PptxRenderer` / deck adapters to opt in.
+
+### Chart / table dual export
+
+`ChartExportMode` selects how charts and tables are packaged:
+
+| Mode | Behavior |
+| --- | --- |
+| `CROSS_APP_STABLE` (default) | Shape-baked bars / text grids / preview images — stable across apps |
+| `NATIVE_DATA_BACKED` | PptxGenJS `addChart` / `addTable` with editable data (charts embed a workbook) |
+
+Delivery UI exposes the choice under **导出策略 → 图表/表格导出**. Scene nodes
+`ChartNode` / `TableNode` carry series and grid payloads; without data, export
+falls back to image/text placeholders.
 
 `FILL_NATIVE_TEMPLATE` remains Partial: structured *generation* is available, but
 filling an existing enterprise template while preserving that file's original
