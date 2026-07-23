@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.design_brief_intent import apply_design_brief_to_intent
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.slide import SlideSpec
+from archium.domain.slide_design_brief import BriefStatus, SlideDesignBrief
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.enums import (
     ContinuityRole,
@@ -21,6 +23,10 @@ from archium.infrastructure.llm.visual_schemas import VisualIntentDraft
 from archium.prompts.visual_intent import (
     VISUAL_INTENT_SYSTEM_PROMPT,
     build_visual_intent_user_prompt,
+)
+
+_USABLE_BRIEF_STATUSES = frozenset(
+    {BriefStatus.APPROVED, BriefStatus.READY_FOR_REVIEW}
 )
 
 _VISUAL_TYPE_MAP: dict[VisualType, VisualContentType] = {
@@ -99,6 +105,7 @@ class VisualIntentService:
         art_direction: ArtDirection | None = None,
         previous_slide: SlideSpec | None = None,
         next_slide: SlideSpec | None = None,
+        design_brief: SlideDesignBrief | None = None,
         use_llm: bool = True,
     ) -> VisualIntent:
         draft: VisualIntentDraft | None = None
@@ -151,6 +158,8 @@ class VisualIntentService:
             continuity_role=draft.continuity_role,
             approval_status=ApprovalStatus.PENDING,
         )
+        if design_brief is not None and design_brief.status in _USABLE_BRIEF_STATUSES:
+            intent = apply_design_brief_to_intent(intent, design_brief)
         return self._intents.save(intent)
 
     @staticmethod

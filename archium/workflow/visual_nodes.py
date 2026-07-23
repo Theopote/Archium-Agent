@@ -23,6 +23,7 @@ from archium.application.visual.enhanced_deck_composition_service import (
 from archium.application.visual.layout_locked import preserve_locked_elements
 from archium.application.visual.layout_planning_service import (
     LayoutPlanningService,
+    capacity_blocker_messages,
     format_layout_decision_warnings,
 )
 from archium.application.visual.layout_repair_service import LayoutRepairService
@@ -36,6 +37,7 @@ from archium.application.visual.visual_scene_repair_workflow_service import (
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
+from archium.domain.slide_design_brief import BriefStatus, SlideDesignBrief
 from archium.domain.visual.deck_composition import DeckCompositionPlan
 from archium.domain.visual.enums import LayoutValidationStatus
 from archium.domain.visual.layout import LayoutPlan
@@ -390,16 +392,21 @@ class VisualWorkflowNodes:
         try:
             slides = list(state.get("slides") or [])
             art = state.get("art_direction")
+            briefs_by_slide_id, briefs_by_order = self._load_design_briefs(
+                UUID(str(state["presentation_id"]))
+            )
             intent_ids: list[str] = []
             updated_slides = []
             for index, slide in enumerate(slides):
                 previous = slides[index - 1] if index > 0 else None
                 nxt = slides[index + 1] if index + 1 < len(slides) else None
+                brief = briefs_by_slide_id.get(slide.id) or briefs_by_order.get(slide.order)
                 intent = self._runtime.visual_intent_service.generate_for_slide(
                     slide,
                     art_direction=art,
                     previous_slide=previous,
                     next_slide=nxt,
+                    design_brief=brief,
                     use_llm=bool(state.get("use_llm", False)),
                 )
                 slide.visual_intent_id = intent.id
@@ -419,6 +426,26 @@ class VisualWorkflowNodes:
         except Exception as exc:
             logger.exception("generate_visual_intents failed: %s", exc)
             return {"errors": [str(exc)], "current_step": step}
+
+    def _load_design_briefs(
+        self, presentation_id: UUID
+    ) -> tuple[dict[UUID, SlideDesignBrief], dict[int, SlideDesignBrief]]:
+        by_slide: dict[UUID, SlideDesignBrief] = {}
+        by_order: dict[int, SlideDesignBrief] = {}
+        presentation = self._runtime.presentations.get_presentation(presentation_id)
+        if presentation is None or presentation.current_outline_id is None:
+            return by_slide, by_order
+        outline = self._runtime.presentations.get_outline(presentation.current_outline_id)
+        if outline is None:
+            return by_slide, by_order
+        usable = {BriefStatus.APPROVED, BriefStatus.READY_FOR_REVIEW}
+        for brief in outline.page_design_briefs:
+            if brief.status not in usable:
+                continue
+            if brief.slide_id is not None:
+                by_slide[brief.slide_id] = brief
+            by_order[brief.page_order] = brief
+        return by_slide, by_order
 
     def generate_deck_composition_plan(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
@@ -525,11 +552,15 @@ class VisualWorkflowNodes:
                     deck_directive=directive,
                     previous_layout_plan=previous_plan,
                 )
-                decision_warnings.extend(
-                    format_layout_decision_warnings(
-                        self._runtime.layout_planning_service.drain_warnings()
-                    )
-                )
+                drained = self._runtime.layout_planning_service.drain_warnings()
+                decision_warnings.extend(format_layout_decision_warnings(drained))
+                blockers = capacity_blocker_messages(drained)
+                if blockers:
+                    return {
+                        "errors": blockers,
+                        "warnings": list(dict.fromkeys(decision_warnings)),
+                        "current_step": step,
+                    }
                 ids: list[str] = []
                 for plan, _report in candidates:
                     saved = self._runtime.layout_plans.save(plan)
@@ -746,12 +777,22 @@ class VisualWorkflowNodes:
                     from archium.infrastructure.database.repositories import (
                         PresentationRepository,
                     )
+                    from archium.infrastructure.database.visual_repositories import (
+                        VisualIntentRepository,
+                    )
 
                     slide = PresentationRepository(self._runtime.session).get_slide(
                         plan.slide_id
                     )
                     if slide is not None and design is not None:
-                        capacity = SlideCapacityService().estimate(slide, design)
+                        intent = VisualIntentRepository(self._runtime.session).get(
+                            plan.visual_intent_id
+                        )
+                        capacity = SlideCapacityService().estimate(
+                            slide,
+                            design,
+                            visual_intent=intent,
+                        )
                 except Exception:
                     capacity = None
                 result = self._runtime.layout_repair_service.repair(

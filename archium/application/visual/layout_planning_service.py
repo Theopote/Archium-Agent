@@ -797,14 +797,32 @@ def format_layout_decision_warnings(warnings: list[dict[str, Any]]) -> list[str]
     """Human-readable lines for workflow / UI warning lists."""
     lines: list[str] = []
     for item in warnings:
-        if item.get("code") != LAYOUT_DECISION_LLM_FALLBACK:
+        code = str(item.get("code") or "")
+        if code == LAYOUT_DECISION_LLM_FALLBACK:
+            lines.append(
+                f"{LAYOUT_DECISION_LLM_FALLBACK} "
+                f"provider={item.get('provider', '?')} "
+                f"model={item.get('model', '?')} "
+                f"error_type={item.get('error_type', '?')} "
+                f"fallback_family={item.get('fallback_family', '?')}"
+                + (f" detail={item['detail']}" if item.get("detail") else "")
+            )
             continue
-        lines.append(
-            f"{LAYOUT_DECISION_LLM_FALLBACK} "
-            f"provider={item.get('provider', '?')} "
-            f"model={item.get('model', '?')} "
-            f"error_type={item.get('error_type', '?')} "
-            f"fallback_family={item.get('fallback_family', '?')}"
-            + (f" detail={item['detail']}" if item.get("detail") else "")
-        )
+        if code.startswith("CAPACITY."):
+            severity = item.get("severity", "info")
+            detail = item.get("detail") or code
+            action = item.get("recommended_action")
+            suffix = f" action={action}" if action else ""
+            lines.append(f"{code} [{severity}] {detail}{suffix}")
     return lines
+
+
+def capacity_blocker_messages(warnings: list[dict[str, Any]]) -> list[str]:
+    """Hard-stop messages for CAPACITY.IMPOSSIBLE (no layout candidates allowed)."""
+    messages: list[str] = []
+    for item in warnings:
+        if item.get("code") != CAPACITY_IMPOSSIBLE_RULE:
+            continue
+        detail = item.get("detail") or CAPACITY_IMPOSSIBLE_RULE
+        messages.append(f"{CAPACITY_IMPOSSIBLE_RULE}: {detail}")
+    return messages

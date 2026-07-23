@@ -61,6 +61,8 @@ _DRAWING_PAGE_TYPES = frozenset(
 _PHOTO_PAGE_TYPES = frozenset(
     {
         "photo_evidence_grid",
+        "evidence_board",
+        "evidence_grid",
         "hero_image",
         "comparison",
     }

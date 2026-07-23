@@ -51,7 +51,8 @@ Studio 的编辑闭环不是直接覆写导出文件：
 
 ## 视觉与编辑现状
 
-- 固定画布先计算 `SlideCapacityBudget`。状态为 `fits`、`tight`、`overloaded`、`impossible`；超载后禁止继续缩小字体，改走内容适配或拆页。
+- 固定画布先计算 `SlideCapacityBudget`。状态为 `fits`、`tight`、`overloaded`、`impossible`；超载后禁止继续缩小字体，改走内容适配或拆页。`CAPACITY.*` 警告会写入工作流 warnings；`CAPACITY.IMPOSSIBLE` 会硬阻断 layout candidates。
+- 已批准 / 待确认的 `SlideDesignBrief` 会注入 `VisualIntent`（layout family、density、资产与图面策略）。Brief 中的 `photo_evidence_grid` 等别名归一为 `LayoutFamily` 枚举值（如 `evidence_board`）。
 - Layout family generator 负责确定坐标；Renderer 只执行 LayoutPlan/RenderScene，不重新选择版式。
 - Canvas 支持点击、Shift 多选、框选、文字/图片编辑，以及多选对齐、分布和等宽高。
 - 元素评论支持单节点、多选、包围盒区域和整页作用域，并通过 Inbox 管理状态。

@@ -36,14 +36,14 @@ from archium.infrastructure.database.repositories import PresentationRepository
 
 _LAYOUT_FAMILY_BY_VISUAL: dict[str, str] = {
     "drawing": "drawing_focus",
-    "photo": "photo_evidence_grid",
+    "photo": "evidence_board",
     "metric": "metric_dashboard",
     "title": "hero",
     "comparison": "comparative_matrix",
     "content": "process_narrative",
 }
 
-
+# Brief density literals → Layout DensityLevel values.
 _DENSITY_BY_TYPE: dict[str, str] = {
     "title": "low",
     "drawing": "medium",
@@ -52,6 +52,30 @@ _DENSITY_BY_TYPE: dict[str, str] = {
     "comparison": "high",
     "content": "medium",
 }
+
+_BRIEF_LAYOUT_ALIASES: dict[str, str] = {
+    "photo_evidence_grid": "evidence_board",
+    "evidence_grid": "evidence_board",
+    "drawing": "drawing_focus",
+    "site_plan": "drawing_focus",
+    "floor_plan": "drawing_focus",
+    "elevation": "drawing_focus",
+    "section": "drawing_focus",
+    "metric": "metric_dashboard",
+    "data": "metric_dashboard",
+    "title": "hero",
+    "comparison": "comparative_matrix",
+    "content": "process_narrative",
+    "textual": "textual_argument",
+}
+
+
+def _normalize_layout_family(raw: str) -> str:
+    key = (raw or "").strip().lower()
+    if not key:
+        return ""
+    return _BRIEF_LAYOUT_ALIASES.get(key, key)
+
 
 
 @dataclass(frozen=True)
@@ -194,7 +218,7 @@ class SlideDesignBriefService:
             primary_asset_ids=list(update.primary_asset_ids),
             supporting_asset_ids=list(update.supporting_asset_ids),
             evidence_ids=list(update.evidence_ids),
-            layout_family=update.layout_family.strip(),
+            layout_family=_normalize_layout_family(update.layout_family),
             expected_density=update.expected_density,  # type: ignore[arg-type]
             drawing_policy=drawing_policy,
             image_policy=image_policy,
@@ -356,8 +380,10 @@ class SlideDesignBriefService:
             primary_visual_type=primary_visual,
             primary_asset_ids=primary_assets,
             supporting_asset_ids=supporting_assets,
-            layout_family=intent.expected_layout.strip()
-            or _LAYOUT_FAMILY_BY_VISUAL.get(primary_visual, "process_narrative"),
+            layout_family=_normalize_layout_family(
+                intent.expected_layout.strip()
+                or _LAYOUT_FAMILY_BY_VISUAL.get(primary_visual, "process_narrative")
+            ),
             expected_density=_DENSITY_BY_TYPE.get(primary_visual, "medium"),  # type: ignore[arg-type]
             drawing_policy=drawing_policy,
             image_policy=image_policy,
