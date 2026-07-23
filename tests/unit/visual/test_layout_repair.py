@@ -251,7 +251,7 @@ class TestLayoutRepairService:
         ).issues_for(LAYOUT_FONT_TOO_SMALL)
 
     def test_compact_tokens_never_increase_font_size(self) -> None:
-        from archium.domain.visual.text_style import smaller_compliant_tokens
+        from archium.application.visual.text_style_resolve import smaller_compliant_tokens
 
         design = default_presentation_design_system()
         element = LayoutElement(

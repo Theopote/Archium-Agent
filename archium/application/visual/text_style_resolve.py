@@ -1,4 +1,7 @@
-"""Resolve effective text styles from DesignSystem typography + element overrides."""
+"""Resolve effective text styles from DesignSystem typography + element overrides.
+
+Relocated from ``archium.domain.visual.text_style`` (DOM-014).
+"""
 
 from __future__ import annotations
 

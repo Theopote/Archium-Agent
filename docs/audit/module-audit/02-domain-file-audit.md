@@ -23,13 +23,13 @@
 | 优先 | 编号 | 裁决 | 文件 | 一句话 |
 |------|------|------|------|--------|
 | 1 | DOM-017 | **done** | ~~`visual/post_render_qa.py`~~ | 死重复 `PostRenderCheckCode` 已删 |
-| 2 | DOM-016 | refactor | `slide.py` + `visual/architectural_content_schema.py` | 同名 `VisualRequirement` 消歧 |
-| 3 | DOM-012 | merge | `layout.py` ↔ `render_scene.py` | Chart/Table 载荷单 VO |
-| 4 | DOM-004 | merge | `enums.py` + visual severity | 严重级别词表统一 |
-| 5 | DOM-014 | relocate | `edit_intent.py` 等 | NL/parser/normalize 迁出 domain |
+| 2 | DOM-016 | **done** | `slide.py` + schema | `VisualRequirement` 消歧 |
+| 3 | DOM-012 | **done** | `structured_payload.py` | Chart/Table 载荷单 VO |
+| 4 | DOM-014 | **done** | edit_intent / brief / text / pptx catalog | parser/resolver/catalog 迁出 domain |
+| 5 | DOM-004 | merge | `enums.py` + visual severity | 严重级别词表统一 |
 | 6 | DOM-003 | refactor | `presentation_spec.py` | Spec 降为派生，Scene 渲染 SSOT |
 | 7 | DOM-018 | refactor | `enums.py` (~668) | 按限界上下文拆分 |
-| 8 | DOM-009 | merge | `BriefStatus` ≈ `ApprovalStatus` | 审批状态合一 |
+| 8 | DOM-009 | partial | Brief→`ApprovalStatus`；余提案双枚举 | 审批/提案状态合一 |
 
 职责边界（验收口径）：
 
@@ -99,19 +99,16 @@
 | 方案 | 全局改名 + 导入更新 |
 | 验收 | 全仓唯一类名；mypy 绿 |
 
-### `slide_design_brief.py` (~209)
+### `slide_design_brief.py`（模型 only；启发式已迁）
 
 | 字段 | 内容 |
 |------|------|
-| 角色 | 设计 Brief + 推断/格式化 helper |
-| 裁决 | relocate（helper）/ keep（模型） |
-| 级别 | P1（DOM-014 部分） |
-| 问题 | `infer_primary_visual_type`、`format_design_brief_card` 偏应用；~~BriefStatus~~ → `ApprovalStatus`（DOM-009 partial）；`layout_family` 自由字符串 |
-| 删除 | helper 可迁 |
-| 合并 | Brief 审批已合；余提案双枚举 |
-| 重构 | layout_family 受控（DOM-006） |
-| 方案 | 模型留 domain；推断迁 application |
-| 验收 | domain 无 layout 字符串启发式；非法 family 拒绝 |
+| 角色 | 设计 Brief 模型 + 策略默认值 |
+| 裁决 | keep（模型）；~~infer/format/protection~~ → `application/slide_design_brief_heuristics.py` |
+| 级别 | P1（DOM-014 **done**）；余 DOM-006 `layout_family` |
+| 问题 | `layout_family` 仍为自由字符串；Brief 审批已合 `ApprovalStatus` |
+| 方案 | family 受控词表另开 DOM-006 |
+| 验收 | domain 无 layout 字符串启发式 |
 
 ### `content_adaptation.py`（DTO only；启发式已迁）
 
@@ -312,15 +309,15 @@
 | 方案 | 门禁以 IssueSeverity 为准；布局映射 |
 | 验收 | 导出门禁单故事 |
 
-### `edit_intent.py` / `parsed_intent.py` / `placeholder_binding.py` / `semantic_block.py` / `text_style.py`
+### `edit_intent.py` / `parsed_intent.py` / `placeholder_binding.py` / `semantic_block.py`
 
 | 字段 | 内容 |
 |------|------|
-| 裁决 | keep（枚举/DTO）；~~NL parse~~ → `application/visual/nlp_parser.py`；余 relocate |
-| 级别 | P1–P2（DOM-014 **NL slice done**） |
-| 问题 | 余 normalize / `text_style.resolve_*` 仍在 domain |
-| 方案 | 续迁 application/compilers |
-| 验收 | domain 无 keyword NL；无 OOXML normalize |
+| 裁决 | keep（枚举/DTO）；helpers → application |
+| 级别 | P1（DOM-014 **done**） |
+| 问题 | ~~NL / normalize / text_style~~ 已迁；`text_style.py` 已删 |
+| 方案 | `nlp_parser` / `placeholder_binding_normalize` / `text_style_resolve` |
+| 验收 | domain 无 keyword NL / OOXML normalize / resolve_* |
 
 ### `atomic_operation.py` / `studio_command.py` / `element_edit_intent.py` / `element_lock.py` / `slide_edit_command.py`
 
@@ -332,15 +329,15 @@
 | 方案 | 命名消歧；文档化 Layout 事务 vs Studio 命令矩阵 |
 | 验收 | 无歧义导入；路由表单测 |
 
-### `pptx_structure.py` (~580)
+### `pptx_structure.py`（模型 only；catalog 已迁）
 
 | 字段 | 内容 |
 |------|------|
-| 裁决 | refactor / relocate factories |
-| 级别 | P1 |
-| 问题 | 巨型默认目录 + `to_pptxgen_payload`；spike 死函数 |
-| 方案 | 模型留；工厂迁 infra；删 spike |
-| 验收 | domain 文件显著变瘦；导出仍绿 |
+| 裁决 | keep（Spec/枚举）；~~factories / payload~~ → `infrastructure/renderers/pptx_structure_catalog.py` |
+| 级别 | P1（DOM-014 **done**） |
+| 问题 | 曾含巨型默认目录 + `to_pptxgen_payload` |
+| 方案 | 已迁；domain 仅图验证与 lookup |
+| 验收 | domain 无 catalog 工厂；导出仍绿 |
 
 ### `style_binding.py` (~65)
 
@@ -430,10 +427,10 @@
 ## G. 建议执行顺序（代码改动）
 
 1. ~~DOM-017 删死模块~~ **done**  
-2. DOM-016 重命名 `VisualRequirement`  
-3. DOM-012 共享 Chart/Table VO  
-4. DOM-014 迁出 parser（分 PR）  
-5. DOM-004 / DOM-009 severity 与审批状态  
+2. ~~DOM-016~~ **done**  
+3. ~~DOM-012~~ **done**  
+4. ~~DOM-014~~ **done**  
+5. DOM-004 / DOM-009 severity 与提案状态  
 6. DOM-003 Spec 降级策略  
 7. DOM-018 拆 `enums.py`
 

@@ -18,7 +18,7 @@ from archium.domain.visual.enums import (
     LayoutIssueSeverity,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.text_style import resolve_text_style, role_min_font_pt
+from archium.application.visual.text_style_resolve import resolve_text_style, role_min_font_pt
 from archium.domain.visual.validation import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,

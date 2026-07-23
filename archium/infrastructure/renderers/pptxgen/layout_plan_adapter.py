@@ -10,12 +10,15 @@ from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
     PresentationStructureSpec,
-    default_archium_structure_spec,
 )
-from archium.domain.visual.text_style import resolve_text_style
+from archium.infrastructure.renderers.pptx_structure_catalog import (
+    default_archium_structure_spec,
+    structure_spec_to_pptxgen_payload,
+)
 
 
 @dataclass
@@ -232,7 +235,7 @@ class PptxLayoutPlanAdapter:
             slides=slides,
         )
         if resolved is not None:
-            deck["structure"] = resolved.to_pptxgen_payload()
+            deck["structure"] = structure_spec_to_pptxgen_payload(resolved)
         return deck
 
     def _resolve_structure(

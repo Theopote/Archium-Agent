@@ -14,7 +14,10 @@ from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
     PresentationStructureSpec,
+)
+from archium.infrastructure.renderers.pptx_structure_catalog import (
     default_archium_structure_spec,
+    structure_spec_to_pptxgen_payload,
 )
 from archium.domain.visual.render_scene import (
     ChartNode,
@@ -100,7 +103,7 @@ class RenderScenePptxAdapter:
             scenes=[scene for scene, _ in scenes],
         )
         if resolved is not None:
-            deck["structure"] = resolved.to_pptxgen_payload()
+            deck["structure"] = structure_spec_to_pptxgen_payload(resolved)
         return deck
 
     def _resolve_structure(

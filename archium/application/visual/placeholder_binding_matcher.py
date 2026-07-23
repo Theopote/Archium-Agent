@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from archium.application.visual.placeholder_binding_normalize import normalize_placeholder_type
 from archium.domain.visual.placeholder_binding import (
     PLACEHOLDER_MATCH_PRIORITY,
     PlaceholderBindingSignature,
     PlaceholderBindingTarget,
-    normalize_placeholder_type,
 )
 from archium.domain.visual.reference_slide import ReferenceElement
 

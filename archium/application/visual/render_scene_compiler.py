@@ -42,7 +42,7 @@ from archium.domain.visual.render_scene import (
     TextParagraph,
     ThemeTokens,
 )
-from archium.domain.visual.text_style import resolve_text_style
+from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
 

@@ -8,11 +8,8 @@ from uuid import uuid4
 
 import pytest
 from archium.config.settings import Settings
-from archium.domain.visual.pptx_structure import (
-    PlaceholderKind,
-    PptxStructureMode,
-    p0_structured_spike_spec,
-)
+from archium.domain.visual.pptx_structure import PlaceholderKind, PptxStructureMode
+from archium.infrastructure.renderers.pptx_structure_catalog import p0_structured_spike_spec
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.infrastructure.renderers.pptx_ooxml_structure import (
     inspect_pptx_ooxml_structure,

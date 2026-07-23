@@ -6,12 +6,14 @@ from archium.application.visual.placeholder_binding_matcher import (
     match_placeholder,
     score_placeholder_candidate,
 )
+from archium.application.visual.placeholder_binding_normalize import (
+    build_placeholder_binding_signature,
+    semantic_role_from_placeholder_type,
+)
 from archium.domain.visual.placeholder_binding import (
     PLACEHOLDER_MATCH_PRIORITY,
     PlaceholderBindingSignature,
     PlaceholderBindingTarget,
-    build_placeholder_binding_signature,
-    semantic_role_from_placeholder_type,
 )
 from archium.domain.visual.reference_slide import ReferenceElement, ReferenceElementType
 

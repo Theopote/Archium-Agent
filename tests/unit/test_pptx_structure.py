@@ -14,7 +14,10 @@ from archium.domain.visual.pptx_structure import (
     PresentationStructureSpec,
     SlideLayoutSpec,
     SlideMasterSpec,
+)
+from archium.infrastructure.renderers.pptx_structure_catalog import (
     default_archium_structure_spec,
+    p0_structured_spike_spec,
 )
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.infrastructure.renderers.pptx_ooxml_structure import (
@@ -37,8 +40,6 @@ def test_default_structure_catalog_is_structured_and_linked() -> None:
 
 
 def test_p0_spike_spec_has_one_master_three_layouts_and_required_placeholders() -> None:
-    from archium.domain.visual.pptx_structure import p0_structured_spike_spec
-
     spec = p0_structured_spike_spec()
     assert len(spec.masters) == 1
     assert len(spec.layouts) == 3

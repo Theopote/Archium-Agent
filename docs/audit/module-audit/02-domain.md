@@ -17,7 +17,7 @@
 | 空间 SSOT | **P0**：LayoutPlan.elements 与 RenderScene.nodes 双持几何 |
 | 结构化数据 | Chart/Table 在 Spec / Layout / Scene **三份拷贝** |
 | 同义枚举 | Severity ≥4；页类型/布局族/密度/叙事角色多套 |
-| Service 逻辑在 Domain | NL / content-adaptation 启发式已迁出；余 style resolve、pptx payload、brief helpers |
+| Service 逻辑在 Domain | DOM-014 **done**：NL / 适配 / brief 启发式 / text resolve / placeholder normalize / pptx catalog 已迁出 |
 
 包结构：根模块约 61 个 `.py` + `visual/` 52；非多级子包。超大非 visual 文件：`enums.py`（~668）、`powerpoint_capability.py`（~420）。
 
@@ -40,7 +40,7 @@
 | DOM-011 | P0 | done | **双空间 SSOT**：LayoutPlan 与 RenderScene 均持 x/y/w/h/z/lock | `visual/layout.py`; `studio_scene_service.py`; `studio_scene_edit_service.py` | Studio 改 Scene 后 Plan 静默漂移 / ensure 覆盖编辑 | `geometry_authority` + sync 切 `render_scene`；ensure 非 force 不覆盖；layout refresh 收回权威 | 合同 + `test_ensure_scene_preserves_render_scene_geometry_authority` | `-` |
 | DOM-012 | P1 | done | Chart/Table **三份字段拷贝** | `structured_payload.py`; layout/scene/spec | 改一漏二 | 共享 `ChartDataPayload`/`TableDataPayload`；Layout/Spec 为别名 | `test_structured_payload_ssot` | `-` |
 | DOM-013 | P1 | open | 主张/要点链无类型化链接 | SlideIntent → Brief → SlideSpec → SpecSlide 平行字符串 | 文案漂移 | 单一内容 SSOT + FK | 改 claim 可追溯下游 | `-` |
-| DOM-014 | P1 | partial | Domain 内仍有 parser/resolver/导出工厂 | NL → `nlp_parser`；适配启发式 → `content_adaptation_heuristics`；余 `text_style` / `pptx_structure` / brief helpers | 分层回潮 | 续迁 application；domain 留 DTO | domain 无 keyword NL / suggest；无 pptx payload 工厂 | `-` |
+| DOM-014 | P1 | done | Domain 内 parser/resolver/导出工厂 | NL→`nlp_parser`；适配→`content_adaptation_heuristics`；brief→`slide_design_brief_heuristics`；字体→`text_style_resolve`；placeholder normalize→`placeholder_binding_normalize`；pptx catalog→`pptx_structure_catalog` | 分层回潮 | domain 仅 DTO/不变量 | domain 无 keyword NL / suggest / resolve_* / pptx payload 工厂；相关单测绿 | `-` |
 | DOM-015 | P1 | open | 废弃 `asset_path` 仍与 `storage_uri` 双写 | `render_scene.py` nodes; SpecImagePlacement | 可移植性与 schema v2 拖延 | 只持久化 storage_uri；迁移读路径 | 新写入无 asset_path；读兼容一期 | `-` |
 | DOM-016 | P1 | done | 同名异义 `VisualRequirement` | `slide.py`; `visual/architectural_content_schema.py` | 导入歧义、评审混淆 | `SlideVisualRequirement` + `SchemaVisualRequirement`；slide 保留别名 | `test_visual_requirement_type_names_are_disambiguated` | `-` |
 | DOM-017 | P1 | done | `PostRenderCheckCode` 双定义 | ~~`visual/post_render_qa.py`~~; `visual/scene_qa.py` | 枚举漂移 | 删除死模块；保留 `scene_qa` | `rg PostRenderCheckCode` 仅 scene_qa；服务导入不变 | `-` |
@@ -81,7 +81,7 @@
 
 ### Service 逻辑仍在 Domain（抽样）
 
-~~`edit_intent.parse_natural_language`~~ → `application.visual.nlp_parser`；~~`content_adaptation.suggest_*`~~ → `application.content_adaptation_heuristics`。余：`text_style.resolve_*`、`pptx_structure` 工厂、`slide_design_brief.infer_*` → **DOM-014** 未完。
+~~DOM-014 service helpers~~ 已迁：`nlp_parser`、`content_adaptation_heuristics`、`slide_design_brief_heuristics`、`text_style_resolve`、`placeholder_binding_normalize`、`pptx_structure_catalog`。
 
 ### 非 visual 重复
 
@@ -100,7 +100,7 @@
 2. ~~**DOM-017**~~ **done**（删 `post_render_qa.py`）  
 3. ~~**DOM-016**~~ **done**（`SlideVisualRequirement` / `SchemaVisualRequirement`）  
 4. ~~**DOM-012**~~ **done**（`structured_payload` 共享 VO）  
-5. **DOM-014** — 续迁 `text_style` / `pptx_structure` / brief helpers（NL+适配启发式已迁）  
+5. ~~**DOM-014**~~ **done**（parser/resolver/catalog 迁出）  
 6. **DOM-004** / **DOM-009** — 门禁词表；提案状态合一（Brief 已合 ApprovalStatus）  
 7. **DOM-003** Spec 降级策略  
 8. **DOM-018** — 拆 `enums.py`（机械重构）

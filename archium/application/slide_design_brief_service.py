@@ -18,6 +18,10 @@ from archium.application.review_service import PresentationReviewService
 from archium.domain.enums import ApprovalStatus, SlideAssetBindingRole
 from archium.domain.outline import OutlinePlan
 from archium.domain.slide_asset_binding import SlideAssetBinding, index_page_asset_bindings
+from archium.application.slide_design_brief_heuristics import (
+    default_protection_rules_for_page,
+    infer_primary_visual_type,
+)
 from archium.domain.slide_design_brief import (
     DrawingDisplayPolicy,
     ImageDisplayPolicy,
@@ -25,9 +29,7 @@ from archium.domain.slide_design_brief import (
     coerce_brief_approval_status,
     default_drawing_policy,
     default_image_policy,
-    default_protection_rules_for_page,
     index_design_briefs,
-    infer_primary_visual_type,
 )
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief

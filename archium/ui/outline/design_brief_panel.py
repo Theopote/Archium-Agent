@@ -14,10 +14,10 @@ from archium.application.slide_design_brief_service import (
 )
 from archium.domain.outline import OutlinePlan
 from archium.domain.enums import ApprovalStatus
+from archium.application.slide_design_brief_heuristics import format_design_brief_card
 from archium.domain.slide_design_brief import (
     BRIEF_STATUS_LABELS_ZH,
     SlideDesignBrief,
-    format_design_brief_card,
     index_design_briefs,
 )
 from archium.domain.slide_intent import SlideIntent
