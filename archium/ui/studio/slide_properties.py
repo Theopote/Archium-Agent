@@ -16,7 +16,12 @@ from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label, layout_family_implemented
 from archium.ui.studio.canvas_command_bridge import set_studio_selection
 from archium.ui.studio.element_labels import CONTENT_TYPE_LABELS, ROLE_LABELS, format_element_label
-from archium.ui.studio_service import SlideVisualSnapshot, apply_slide_visual_edit
+from archium.ui.studio_service import (
+    SlideVisualSnapshot,
+    apply_slide_element_asset,
+    apply_slide_element_style,
+    apply_slide_element_text,
+)
 
 
 def _element_ids_for_panel(slide_snapshot: SlideVisualSnapshot) -> list[str]:
@@ -339,6 +344,35 @@ def _render_element_properties(
             height=100 if focus_text else 80,
             key=f"studio_element_text_{slide_snapshot.slide.id}_{element.id}",
         )
+        scene_node = None
+        if slide_snapshot.render_scene is not None:
+            scene_node = (
+                slide_snapshot.render_scene.node_by_layout_element_id(element.id)
+                or slide_snapshot.render_scene.node_by_id(element.id)
+            )
+        current_color = "#111111"
+        current_font = 16.0
+        if scene_node is not None and hasattr(scene_node, "color"):
+            current_color = str(getattr(scene_node, "color", None) or "#111111")
+        if scene_node is not None and hasattr(scene_node, "font_size"):
+            current_font = float(getattr(scene_node, "font_size", None) or 16.0)
+
+        style_cols = st.columns(2)
+        with style_cols[0]:
+            color_value = st.color_picker(
+                "文字颜色",
+                value=current_color if current_color.startswith("#") else "#111111",
+                key=f"studio_element_color_{slide_snapshot.slide.id}_{element.id}",
+            )
+        with style_cols[1]:
+            font_size_value = st.number_input(
+                "字号",
+                min_value=8.0,
+                max_value=96.0,
+                value=float(current_font),
+                step=1.0,
+                key=f"studio_element_font_{slide_snapshot.slide.id}_{element.id}",
+            )
         if st.button(
             "保存文字",
             use_container_width=True,
@@ -347,14 +381,32 @@ def _render_element_properties(
         ):
             try:
                 with get_session() as session:
-                    apply_slide_visual_edit(
+                    apply_slide_element_text(
                         session,
                         slide_snapshot.slide.id,
-                        intent="update_element_text",
-                        params={"element_id": element.id, "text": edited_text},
+                        element_id=element.id,
+                        text=edited_text,
                     )
                 st.session_state.pop("studio_focus_text_edit", None)
                 st.success("已更新元素文字。")
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
+        if st.button(
+            "应用颜色 / 字号",
+            use_container_width=True,
+            key=f"studio_save_element_style_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            try:
+                with get_session() as session:
+                    apply_slide_element_style(
+                        session,
+                        slide_snapshot.slide.id,
+                        element_id=element.id,
+                        color=color_value,
+                        font_size=float(font_size_value),
+                    )
+                st.success("已更新文字样式。")
                 st.rerun()
             except Exception as exc:
                 st.error(format_user_error(exc))
@@ -390,14 +442,11 @@ def _render_element_properties(
                 ):
                     try:
                         with get_session() as session:
-                            apply_slide_visual_edit(
+                            apply_slide_element_asset(
                                 session,
                                 slide_snapshot.slide.id,
-                                intent="set_element_asset",
-                                params={
-                                    "element_id": element.id,
-                                    "content_ref": selected_asset,
-                                },
+                                element_id=element.id,
+                                asset_id=UUID(selected_asset),
                             )
                         st.success("已更新元素素材。")
                         st.rerun()
@@ -413,6 +462,41 @@ def _render_element_properties(
             st.write(f"适配方式：`{element.fit_mode.value}`")
         if element.crop_policy is not None:
             st.write(f"裁切策略：`{element.crop_policy.value}`")
+
+    # Shape fill color when scene has a ShapeNode for this element
+    if slide_snapshot.render_scene is not None:
+        from archium.domain.visual.render_scene import ShapeNode
+
+        shape_node = (
+            slide_snapshot.render_scene.node_by_layout_element_id(element.id)
+            or slide_snapshot.render_scene.node_by_id(element.id)
+        )
+        if isinstance(shape_node, ShapeNode):
+            fill_default = shape_node.fill_color or "#CCCCCC"
+            if not str(fill_default).startswith("#"):
+                fill_default = "#CCCCCC"
+            fill_value = st.color_picker(
+                "色块填充",
+                value=fill_default,
+                key=f"studio_element_fill_{slide_snapshot.slide.id}_{element.id}",
+            )
+            if st.button(
+                "应用填充色",
+                use_container_width=True,
+                key=f"studio_apply_fill_{slide_snapshot.slide.id}_{element.id}",
+            ):
+                try:
+                    with get_session() as session:
+                        apply_slide_element_style(
+                            session,
+                            slide_snapshot.slide.id,
+                            element_id=element.id,
+                            fill_color=fill_value,
+                        )
+                    st.success("已更新色块颜色。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
 
     if not element_locked:
         multi_ids = [

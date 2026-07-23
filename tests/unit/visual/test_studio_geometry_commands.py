@@ -480,3 +480,61 @@ def test_page_box_center_alignment() -> None:
     node = _text_node(node_id="title", x=0.0, y=0.0, width=2.0, height=1.0)
     align_nodes([node], "center", reference=page_box(10.0, 5.625))
     assert node.x == pytest.approx(4.0)
+
+
+def test_update_node_style_changes_text_color_and_font() -> None:
+    from archium.domain.visual.studio_command import UpdateNodeStyleCommand
+
+    scene = _scene(_text_node(node_id="title", x=1.0, y=1.0))
+    command = UpdateNodeStyleCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        target_node_ids=["title"],
+        node_id="title",
+        color="#E63946",
+        font_size=28.0,
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("title")
+    assert isinstance(node, TextNode)
+    assert node.color == "#E63946"
+    assert node.font_size == pytest.approx(28.0)
+
+
+def test_update_node_style_shape_fill() -> None:
+    from archium.domain.visual.render_scene import ShapeNode
+    from archium.domain.visual.studio_command import UpdateNodeStyleCommand
+
+    shape = ShapeNode(
+        id="block",
+        source_layout_element_id="block",
+        x=1.0,
+        y=1.0,
+        width=2.0,
+        height=1.0,
+        z_index=1,
+        fill_color="#CCCCCC",
+    )
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[shape],
+    )
+    command = UpdateNodeStyleCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        target_node_ids=["block"],
+        node_id="block",
+        fill_color="#112233",
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success
+    assert result.candidate_scene is not None
+    node = result.candidate_scene.node_by_id("block")
+    assert isinstance(node, ShapeNode)
+    assert node.fill_color == "#112233"

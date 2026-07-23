@@ -31,14 +31,17 @@ from archium.domain.visual.studio_command import (
     NodeMoveTarget,
     NodeReorderDirection,
     ReorderNodeCommand,
+    ReplaceAssetCommand,
     ResizeNodeCommand,
+    RewriteTextCommand,
     ScenePatchAction,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     StudioCommand,
+    UpdateNodeStyleCommand,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.database.repositories import AssetRepository, PresentationRepository
 from archium.infrastructure.database.visual_repositories import (
     LayoutPlanRepository,
     RenderSceneRepository,
@@ -70,6 +73,7 @@ class StudioSceneEditService:
         self._presentations = PresentationRepository(session)
         self._plans = LayoutPlanRepository(session)
         self._scenes = RenderSceneRepository(session)
+        self._assets = AssetRepository(session)
         self._scene_history = SceneHistoryService(session)
         self._visual_history = VisualHistoryService(session)
         self._studio_scene = StudioSceneService(session, settings=self._settings)
@@ -221,8 +225,6 @@ class StudioSceneEditService:
         element_id: str,
         new_text: str,
     ) -> SceneEditResult:
-        from archium.domain.visual.studio_command import RewriteTextCommand
-
         node_id = self._resolve_node_id(slide_id, element_id)
         slide = self._require_slide(slide_id)
         command = RewriteTextCommand(
@@ -231,7 +233,60 @@ class StudioSceneEditService:
             target_node_ids=[node_id],
             node_id=node_id,
             new_text=new_text,
-            reason="canvas rewrite text",
+            reason="rewrite text",
+        )
+        return self.apply_command(slide.id, command)
+
+    def replace_layout_element_asset(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        asset_id: UUID,
+    ) -> SceneEditResult:
+        """Replace image asset via ReplaceAssetCommand (Studio command chain)."""
+        from archium.application.visual.asset_path_resolver import storage_asset_uri
+
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        asset = self._assets.get_by_id(asset_id)
+        if asset is None:
+            raise WorkflowError(f"素材不存在：{asset_id}")
+        project_id = self._project_id_for_slide(slide) or asset.project_id
+        storage_uri = storage_asset_uri(project_id, asset.path)
+        command = ReplaceAssetCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            node_id=node_id,
+            asset_id=asset.id,
+            storage_uri=storage_uri,
+            asset_origin="project_upload",
+            reason="replace asset",
+        )
+        return self.apply_command(slide.id, command)
+
+    def update_layout_element_style(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        color: str | None = None,
+        font_size: float | None = None,
+        fill_color: str | None = None,
+    ) -> SceneEditResult:
+        """Update text color / font size or shape fill via UpdateNodeStyleCommand."""
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        command = UpdateNodeStyleCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            node_id=node_id,
+            color=color,
+            font_size=font_size,
+            fill_color=fill_color,
+            reason="update node style",
         )
         return self.apply_command(slide.id, command)
 
@@ -381,7 +436,7 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
     ``ensure_scene_for_slide`` will not overwrite Studio edits by recompiling
     from a stale LayoutPlan (DOM-011).
     """
-    from archium.domain.visual.render_scene import TextNode
+    from archium.domain.visual.render_scene import ImageNode, TextNode
 
     patched = plan.model_copy(deep=True)
     visible_layout_ids: set[str] = set()
@@ -400,6 +455,8 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
         element.lock_scopes = _layout_lock_scopes(node.lock_scopes)
         if isinstance(node, TextNode):
             element.text_content = node.text
+        if isinstance(node, ImageNode) and node.asset_id is not None:
+            element.content_ref = str(node.asset_id)
         visible_layout_ids.add(element.id)
     next_elements = [element for element in patched.elements if element.id in visible_layout_ids]
     next_reading_order = [

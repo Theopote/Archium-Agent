@@ -71,6 +71,11 @@ class CanvasCommitReplaceAssetEvent(TypedDict):
     assetId: str
 
 
+class CanvasCommitDeleteEvent(TypedDict):
+    type: Literal["commitDelete"]
+    elementId: str
+
+
 class CanvasRequestReplaceAssetEvent(TypedDict):
     type: Literal["requestReplaceAsset"]
     elementId: str
@@ -85,6 +90,7 @@ CanvasEditorEvent = (
     | CanvasEditTextEvent
     | CanvasCommitTextEvent
     | CanvasCommitReplaceAssetEvent
+    | CanvasCommitDeleteEvent
     | CanvasRequestReplaceAssetEvent
     | None
 )
@@ -173,6 +179,13 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
                     type="commitReplaceAsset",
                     elementId=str(element_id),
                     assetId=str(asset_id),
+                )
+        if event_type == "commitDelete":
+            element_id = value.get("elementId")
+            if element_id is not None:
+                return CanvasCommitDeleteEvent(
+                    type="commitDelete",
+                    elementId=str(element_id),
                 )
         if event_type == "requestReplaceAsset":
             element_id = value.get("elementId")

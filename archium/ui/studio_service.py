@@ -666,7 +666,7 @@ def apply_slide_element_text(
     element_id: str,
     text: str,
 ) -> object:
-    """Rewrite element text via Studio command chain (canvas inline edit)."""
+    """Rewrite element text via Studio command chain (canvas / properties)."""
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -674,6 +674,48 @@ def apply_slide_element_text(
     return StudioSceneEditService(
         session, settings=_resolve_runtime_settings(None)
     ).rewrite_layout_element_text(slide_id, element_id=element_id, new_text=text)
+
+
+def apply_slide_element_asset(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    asset_id: UUID,
+) -> object:
+    """Replace image asset via Studio ReplaceAssetCommand."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).replace_layout_element_asset(slide_id, element_id=element_id, asset_id=asset_id)
+
+
+def apply_slide_element_style(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    color: str | None = None,
+    font_size: float | None = None,
+    fill_color: str | None = None,
+) -> object:
+    """Update text/shape style via UpdateNodeStyleCommand."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).update_layout_element_style(
+        slide_id,
+        element_id=element_id,
+        color=color,
+        font_size=font_size,
+        fill_color=fill_color,
+    )
 
 
 def apply_slide_element_resize(

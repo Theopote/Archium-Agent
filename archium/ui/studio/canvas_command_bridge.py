@@ -221,21 +221,21 @@ def apply_canvas_commit_replace_asset_event(
     element_id: str,
     asset_id: str,
 ) -> bool:
-    """Persist canvas image replace via set_element_asset intent."""
+    """Persist canvas image replace via ReplaceAssetCommand."""
     fingerprint = f"commitReplaceAsset:{element_id}:{asset_id}"
     if _already_applied(slide_id, fingerprint):
         return False
     try:
-        from archium.ui.studio.undo_stack import clear_visual_redo_stack
-        from archium.ui.studio_service import apply_slide_visual_edit
+        from uuid import UUID as _UUID
 
-        clear_visual_redo_stack(slide_id)
+        from archium.ui.studio_service import apply_slide_element_asset
+
         with get_session() as session:
-            apply_slide_visual_edit(
+            apply_slide_element_asset(
                 session,
                 slide_id,
-                intent="set_element_asset",
-                params={"element_id": element_id, "content_ref": asset_id},
+                element_id=element_id,
+                asset_id=_UUID(asset_id),
             )
     except WorkflowError as exc:
         st.error(format_user_error(exc))
@@ -246,6 +246,34 @@ def apply_canvas_commit_replace_asset_event(
 
     _mark_applied(slide_id, fingerprint)
     set_studio_selection([element_id])
+    bump_canvas_generation(slide_id)
+    st.rerun()
+    return True
+
+
+def apply_canvas_delete_event(
+    *,
+    slide_id: UUID,
+    element_id: str,
+) -> bool:
+    """Persist canvas Delete/Backspace as DeleteNodeCommand."""
+    fingerprint = f"commitDelete:{element_id}"
+    if _already_applied(slide_id, fingerprint):
+        return False
+    try:
+        from archium.ui.studio_service import apply_slide_element_delete
+
+        with get_session() as session:
+            apply_slide_element_delete(session, slide_id, element_id=element_id)
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+        return False
+    except Exception as exc:
+        st.error(format_user_error(exc))
+        return False
+
+    _mark_applied(slide_id, fingerprint)
+    set_studio_selection([])
     bump_canvas_generation(slide_id)
     st.rerun()
     return True

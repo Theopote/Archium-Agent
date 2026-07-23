@@ -45,6 +45,8 @@ def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | N
         return "commitText", str(event["elementId"]), None, None, None, None, False
     if event["type"] == "commitReplaceAsset":
         return "commitReplaceAsset", str(event["elementId"]), None, None, None, None, False
+    if event["type"] == "commitDelete":
+        return "commitDelete", str(event["elementId"]), None, None, None, None, False
     if event["type"] == "requestReplaceAsset":
         return "requestReplaceAsset", str(event["elementId"]), None, None, None, None, False
     if event["type"] == "moveMany":
@@ -317,6 +319,7 @@ def _render_interactive_canvas(
     from archium.ui.studio.canvas_command_bridge import (
         apply_canvas_commit_replace_asset_event,
         apply_canvas_commit_text_event,
+        apply_canvas_delete_event,
         apply_canvas_move_event,
         apply_canvas_move_many_event,
         apply_canvas_resize_event,
@@ -396,6 +399,13 @@ def _render_interactive_canvas(
                 slide_id=slide_id,
                 element_id=str(typed["elementId"]),
                 asset_id=str(typed["assetId"]),
+            )
+            return True
+
+        elif typed["type"] == "commitDelete":
+            apply_canvas_delete_event(
+                slide_id=slide_id,
+                element_id=str(typed["elementId"]),
             )
             return True
 

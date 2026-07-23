@@ -139,3 +139,10 @@ def test_parse_canvas_editor_event_supports_move_many_and_commit_text() -> None:
     )
     assert kind == "commitReplaceAsset"
     assert element_id == "photo"
+
+    from archium.ui.components.canvas_editor import parse_canvas_editor_event as parse_typed
+
+    typed = parse_typed({"type": "commitDelete", "elementId": "title"})
+    assert typed is not None and not isinstance(typed, str)
+    assert typed["type"] == "commitDelete"
+    assert typed["elementId"] == "title"

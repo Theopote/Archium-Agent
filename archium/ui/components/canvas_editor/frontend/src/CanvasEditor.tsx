@@ -58,6 +58,7 @@ type CanvasEvent =
   | { type: "editText"; elementId: string }
   | { type: "commitText"; elementId: string; text: string }
   | { type: "commitReplaceAsset"; elementId: string; assetId: string }
+  | { type: "commitDelete"; elementId: string }
   | { type: "requestReplaceAsset"; elementId: string };
 
 const ROLE_COLORS: Record<string, { border: string; background: string; label: string }> = {
@@ -208,6 +209,34 @@ const CanvasEditor: React.FC = () => {
     textareaRef.current.focus();
     textareaRef.current.select();
   }, [inlineEditElementId]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (inlineEdit || assetPicker) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "TEXTAREA" ||
+          target.tagName === "INPUT" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const selected = localSelectedIds.length
+        ? localSelectedIds
+        : selectedIdsProp;
+      if (!selected.length) return;
+      const elementId = selected[0];
+      const element = elements.find((item) => item.id === elementId);
+      if (!element || element.locked) return;
+      event.preventDefault();
+      emitEvent({ type: "commitDelete", elementId });
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [inlineEdit, assetPicker, localSelectedIds, selectedIdsProp, elements]);
 
   const emitEvent = (event: CanvasEvent) => {
     Streamlit.setComponentValue(event);
