@@ -19,14 +19,18 @@ masters/layouts, package sidecars, or perform an explicitly disclosed safe degra
 not invent titles, icons, decoration, assets, or wording.
 
 The capability mapping declares `one_to_one`, `one_to_many`, or `many_to_one` cardinality.
-Multiple objects from one node are valid only for a declared `one_to_many` mapping, and each
-must carry a role and unique sequence. Duplicate emission identities, missing source nodes,
-untraceable emissions, and cardinality violations are contract failures. `many_to_one` is
-reserved but intentionally rejected by the V1 single-source emission schema.
+Multiple objects from one node are valid for a declared `one_to_many` mapping (each with a
+role and unique sequence) — they must **not** be treated as duplicate errors. `many_to_one`
+is supported when an emission lists multiple sources via `additional_source_node_ids`.
+Duplicate emission identities, missing source nodes, untraceable emissions, and cardinality
+violations remain contract failures.
 
-The executable check lives in `PowerPointContractService.validate_scene_closure`. Renderer
-adapters should report `RendererEmission` records and call `require_scene_closure` before the
-delivery artifact is accepted.
+`PowerPointContractService.plan_emissions` expands CROSS_APP_STABLE chart/table bakes into
+traceable `one_to_many` emissions (backdrop / bars / labels or header / cell grids). Native
+data-backed mode stays `one_to_one` (`c:chart` / `a:tbl`). Renderer adapters and
+`PptxRenderer.export_presentation` call `require_scene_closure` before the delivery
+artifact is accepted. Export also runs the capability gate (`UNSUPPORTED` /
+`BAKE_REQUIRED`) and object-type checks, then records them on the `DeckExportManifest`.
 
 ## V1 scene-node capability mapping
 

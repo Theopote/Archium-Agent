@@ -36,6 +36,21 @@ def test_default_structure_catalog_is_structured_and_linked() -> None:
     assert any(ph.placeholder_type == PlaceholderKind.IMAGE for ph in drawing.placeholder_specs)
 
 
+def test_p0_spike_spec_has_one_master_three_layouts_and_required_placeholders() -> None:
+    from archium.domain.visual.pptx_structure import p0_structured_spike_spec
+
+    spec = p0_structured_spike_spec()
+    assert len(spec.masters) == 1
+    assert len(spec.layouts) == 3
+    kinds = {ph.placeholder_type for layout in spec.layouts for ph in layout.placeholder_specs}
+    assert kinds >= {
+        PlaceholderKind.TITLE,
+        PlaceholderKind.BODY,
+        PlaceholderKind.IMAGE,
+        PlaceholderKind.SLIDE_NUMBER,
+    }
+
+
 def test_structure_spec_rejects_orphan_layout() -> None:
     with pytest.raises(ValidationError, match="unknown master_id"):
         PresentationStructureSpec(

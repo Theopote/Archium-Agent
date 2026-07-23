@@ -104,7 +104,29 @@ class PptxRenderer:
         structure: PresentationStructureSpec | None = None,
         chart_export_mode: ChartExportMode | None = None,
         validate_ooxml: bool | None = None,
+        enforce_capability_contract: bool = True,
     ) -> Path:
+        if enforce_capability_contract:
+            from archium.application.powerpoint_contract_service import PowerPointContractService
+
+            contracts = PowerPointContractService()
+            chart_mode = (
+                chart_export_mode or self._default_chart_export_mode()
+            ).value
+            for scene, _notes in scenes:
+                contracts.require_capability_export_gate(
+                    scene, chart_export_mode=chart_mode
+                )
+                emissions = contracts.plan_emissions(
+                    scene, chart_export_mode=chart_mode
+                )
+                contracts.require_scene_closure(
+                    scene, emissions, chart_export_mode=chart_mode
+                )
+                contracts.require_emission_object_types(
+                    scene, emissions, chart_export_mode=chart_mode
+                )
+
         deck = self.build_instruction_deck(
             title=title,
             scenes=scenes,

@@ -99,6 +99,22 @@ class WorkflowRouteService:
             )
         return registration
 
+    def require_executable(self, route: PresentationWorkflowRoute) -> WorkflowRouteRegistration:
+        """Allow AVAILABLE and PARTIAL routes that have a registered handler key.
+
+        Product availability (`require_available`) stays stricter so PARTIAL routes
+        are not advertised as complete; dispatch still needs an executable path.
+        """
+        registration = self.registration(route)
+        if registration.status == RouteImplementationStatus.PLANNED:
+            details = "; ".join(registration.limitations) or "No executable handler is registered."
+            raise WorkflowError(
+                f"Workflow route {route.value} is planned only: {details}"
+            )
+        if registration.handler_key is None:
+            raise WorkflowError(f"Workflow route {route.value} has no registered handler")
+        return registration
+
     def available_routes(self) -> list[WorkflowRouteRegistration]:
         return [
             registration
@@ -106,12 +122,20 @@ class WorkflowRouteService:
             if registration.status == RouteImplementationStatus.AVAILABLE
         ]
 
+    def executable_routes(self) -> list[WorkflowRouteRegistration]:
+        return [
+            registration
+            for registration in WORKFLOW_ROUTE_REGISTRY.values()
+            if registration.status != RouteImplementationStatus.PLANNED
+            and registration.handler_key is not None
+        ]
+
     def resolve_handler_key(
         self,
         route: PresentationWorkflowRoute,
         available_inputs: set[str] | frozenset[str],
     ) -> str:
-        registration = self.require_available(route)
+        registration = self.require_executable(route)
         self.validate_inputs(route, available_inputs)
         if registration.handler_key is None:
             raise WorkflowError(f"Workflow route {route.value} has no registered handler")
@@ -213,6 +237,7 @@ class PresentationWorkflowRouter:
         available_inputs: set[str] | frozenset[str],
     ) -> Any:
         """Validate, dispatch, then verify the route's preservation promises."""
+        self._routes.require_executable(route)
         handler = self._handlers.get(route)
         if handler is None:
             registration = self._routes.registration(route)
@@ -231,3 +256,17 @@ class PresentationWorkflowRouter:
         after = dict(snapshotter(result)) if snapshotter is not None else {}
         self._routes.validate_after(route, before, after)
         return result
+
+
+def build_presentation_workflow_router(
+    handlers: Mapping[PresentationWorkflowRoute, WorkflowRouteHandler],
+    *,
+    snapshotters: Mapping[PresentationWorkflowRoute, PreservationSnapshotter] | None = None,
+    route_service: WorkflowRouteService | None = None,
+) -> PresentationWorkflowRouter:
+    """Composition helper: bind route handlers + preservation snapshotters."""
+    return PresentationWorkflowRouter(
+        handlers,
+        snapshotters=snapshotters,
+        route_service=route_service,
+    )

@@ -101,6 +101,12 @@ class SlideExportResult(DomainModel):
     powerpoint_capability_counts: dict[PowerPointFidelity, int] = Field(default_factory=dict)
     powerpoint_capability_limitations: list[str] = Field(default_factory=list)
 
+    emission_count: int = Field(default=0, ge=0)
+    closure_valid: bool = True
+    unsupported_node_ids: list[str] = Field(default_factory=list)
+    bake_required_node_ids: list[str] = Field(default_factory=list)
+    emission_object_type_mismatches: list[str] = Field(default_factory=list)
+
     font_substitutions: list[str] = Field(default_factory=list)
     unresolved_assets: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
@@ -124,6 +130,9 @@ class DeckExportManifest(DomainModel):
     qa_status: str = "unknown"
     fallback_used: bool = False
     fallback_reason: str | None = None
+    closure_valid: bool = True
+    capability_gate_valid: bool = True
+    total_emission_count: int = Field(default=0, ge=0)
 
     @property
     def fidelity_counts(self) -> dict[ExportFidelityLevel, int]:
@@ -164,6 +173,12 @@ class DeckExportManifest(DomainModel):
         for capability_level, count in self.powerpoint_capability_counts.items():
             if count:
                 lines.append(f"PowerPoint {capability_level.value}: {count} objects")
+        if self.total_emission_count:
+            lines.append(f"Renderer emissions：{self.total_emission_count}")
+        if not self.closure_valid:
+            lines.append("Closure：未通过")
+        if not self.capability_gate_valid:
+            lines.append("Capability gate：存在 unsupported 节点")
         return lines
 
 

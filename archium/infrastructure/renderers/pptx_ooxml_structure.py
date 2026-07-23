@@ -107,11 +107,8 @@ def inspect_pptx_ooxml_structure(pptx_path: Path | str) -> PptxOoxmlStructureRep
                         f"{layout_part} → master target missing: {master_target}"
                     )
 
-            if len(master_parts) < 2:
-                warnings.append(
-                    f"only {len(master_parts)} slide master(s); structured catalogs "
-                    "typically emit multiple masters"
-                )
+            if len(master_parts) < 1:
+                warnings.append("no slide masters found")
             if len(layout_parts) < 2:
                 warnings.append(
                     f"only {len(layout_parts)} slide layout(s); structured catalogs "
@@ -128,7 +125,7 @@ def inspect_pptx_ooxml_structure(pptx_path: Path | str) -> PptxOoxmlStructureRep
         )
 
     structured = (
-        len(master_parts) >= 2
+        len(master_parts) >= 1
         and len(layout_parts) >= 2
         and bool(slide_to_layout)
         and bool(layout_to_master)

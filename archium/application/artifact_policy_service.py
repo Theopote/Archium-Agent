@@ -25,6 +25,7 @@ class ArtifactMutationOperation(StrEnum):
     IMPORT_EXTERNAL = "import_external"
     OVERWRITE_CANONICAL = "overwrite_canonical"
     RECONCILE_ACCEPTED = "reconcile_accepted"
+    INGEST_REFERENCE = "ingest_reference"
 
 
 class ReconciliationProposalStatus(StrEnum):
@@ -64,7 +65,26 @@ class ArtifactMutationGuard:
             )
         if operation == ArtifactMutationOperation.RECONCILE_ACCEPTED and not contract.reconcile_required:
             raise WorkflowError(f"{kind.value} has no reconciliation contract")
+        if (
+            operation == ArtifactMutationOperation.INGEST_REFERENCE
+            and kind not in {ArtifactKind.PPTX, ArtifactKind.PROJECT_KNOWLEDGE}
+        ):
+            raise WorkflowError(f"{kind.value} cannot be ingested as a reference artifact")
         return contract
+
+    def require_entry(
+        self,
+        kind: ArtifactKind,
+        operation: ArtifactMutationOperation,
+        *,
+        entrypoint: str,
+    ) -> ArtifactOwnershipContract:
+        """Named write-entry gate used by Import / Recovery / Restore / Fill / Reconcile."""
+        require_artifact_write_entrypoint(entrypoint)
+        try:
+            return self.require_writable(kind, operation)
+        except WorkflowError as exc:
+            raise WorkflowError(f"{entrypoint}: {exc}") from exc
 
     def require_reconcile(self, kind: ArtifactKind) -> ArtifactOwnershipContract:
         contract = ownership_for(kind)
@@ -133,7 +153,83 @@ def save_render_scene(
     scene: RenderScene,
     *,
     operation: ArtifactMutationOperation = ArtifactMutationOperation.CREATE,
+    entrypoint: str = "save_render_scene",
 ) -> RenderScene:
     """The single policy-enforced gateway for canonical RenderScene writes."""
-    ArtifactMutationGuard().require_writable(ArtifactKind.RENDER_SCENE, operation)
+    ArtifactMutationGuard().require_entry(
+        ArtifactKind.RENDER_SCENE,
+        operation,
+        entrypoint=entrypoint,
+    )
     return writer.save(scene)
+
+
+def save_reconciled_render_scene(
+    writer: RenderSceneWriter,
+    scene: RenderScene,
+    proposal: ArtifactReconciliationProposal,
+) -> tuple[RenderScene, ArtifactReconciliationProposal]:
+    """Accept a PPTX→scene reconciliation proposal, then write RenderScene.
+
+    Proposal acceptance gates PPTX ``RECONCILE_ACCEPTED``; the scene write uses
+    ``OVERWRITE_CANONICAL`` because RenderScene is authored state (not
+    reconcile_required itself).
+    """
+    accepted = ArtifactMutationGuard().accept_reconciliation(proposal)
+    saved = save_render_scene(
+        writer,
+        scene,
+        operation=ArtifactMutationOperation.OVERWRITE_CANONICAL,
+        entrypoint="pptx.reconcile.accept",
+    )
+    return saved, accepted
+
+
+# Named write entrypoints that must go through ArtifactMutationGuard.
+ARTIFACT_WRITE_ENTRYPOINTS: frozenset[str] = frozenset(
+    {
+        "template_studio.import_pptx",
+        "slide_recovery.import_external_scene",
+        "scene_revision.restore",
+        "reference_slide_editing.generate_scene",
+        "pptx.reconcile.accept",
+        "save_render_scene",
+        "delivery.record_pptx_export",
+    }
+)
+
+
+def require_artifact_write_entrypoint(entrypoint: str) -> str:
+    """Fail closed when a write path uses an unregistered ownership entrypoint."""
+    key = entrypoint.strip()
+    if key not in ARTIFACT_WRITE_ENTRYPOINTS:
+        raise WorkflowError(
+            f"Unregistered artifact write entrypoint: {entrypoint!r}. "
+            f"Register it in ARTIFACT_WRITE_ENTRYPOINTS."
+        )
+    return key
+
+
+def reconcile_pptx_into_scene(
+    writer: RenderSceneWriter,
+    scene: RenderScene,
+    *,
+    project_id: UUID,
+    presentation_id: UUID,
+    source_artifact_id: UUID,
+    base_revision_id: UUID,
+    diff: dict[str, object] | None = None,
+) -> tuple[RenderScene, ArtifactReconciliationProposal]:
+    """Product path: propose → accept → save reconciled RenderScene from PPTX import."""
+    guard = ArtifactMutationGuard()
+    proposal = guard.propose_reconciliation(
+        project_id=project_id,
+        presentation_id=presentation_id,
+        source_artifact_id=source_artifact_id,
+        source_kind=ArtifactKind.PPTX,
+        target_kind=ArtifactKind.RENDER_SCENE,
+        base_revision_id=base_revision_id,
+        diff=diff or {},
+    )
+    return save_reconciled_render_scene(writer, scene, proposal)
+

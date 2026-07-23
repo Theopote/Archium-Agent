@@ -71,12 +71,18 @@ export function defineStructuredMasters(pres, structure, page = {}) {
     );
     /** @type {object[]} */
     const objects = [];
+    let enableSlideNumber = false;
     for (const placeholder of layout.placeholder_specs || []) {
+      const kind = placeholder.placeholder_type || "body";
+      if (kind === "slideNumber") {
+        enableSlideNumber = true;
+        continue;
+      }
       objects.push({
         placeholder: {
           options: {
             name: placeholder.name,
-            type: placeholder.placeholder_type || "body",
+            type: kind,
             x: Number(placeholder.x) || 0,
             y: Number(placeholder.y) || 0,
             w: Number(placeholder.width) || 1,
@@ -87,11 +93,23 @@ export function defineStructuredMasters(pres, structure, page = {}) {
       });
     }
     // Deep-copy objects: pptxgenjs mutates placeholder config in place.
-    pres.defineSlideMaster({
+    /** @type {Record<string, unknown>} */
+    const masterDef = {
       title: layout.name,
       background: { color: background },
       objects: JSON.parse(JSON.stringify(objects)),
-    });
+    };
+    if (enableSlideNumber) {
+      masterDef.slideNumber = {
+        x: width - 1.0,
+        y: height - 0.4,
+        w: 0.7,
+        h: 0.3,
+        color: "666666",
+        fontSize: 10,
+      };
+    }
+    pres.defineSlideMaster(masterDef);
   }
 }
 

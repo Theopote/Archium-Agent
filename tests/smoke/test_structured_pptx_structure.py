@@ -8,7 +8,11 @@ from uuid import uuid4
 
 import pytest
 from archium.config.settings import Settings
-from archium.domain.visual.pptx_structure import PptxStructureMode
+from archium.domain.visual.pptx_structure import (
+    PlaceholderKind,
+    PptxStructureMode,
+    p0_structured_spike_spec,
+)
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.infrastructure.renderers.pptx_ooxml_structure import (
     inspect_pptx_ooxml_structure,
@@ -107,14 +111,64 @@ def test_structured_pptx_emits_masters_layouts_and_placeholders(tmp_path: Path) 
             ),
         ],
     )
+    picture_scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10.0,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        source_layout_family="drawing_focus",
+        nodes=[
+            TextNode(
+                id="title",
+                x=0.5,
+                y=0.4,
+                width=9.0,
+                height=0.7,
+                text="Picture Layout",
+                font_family="Arial",
+                font_size=24,
+                color="#111111",
+                line_height=1.2,
+                semantic_role="title",
+            ),
+            TextNode(
+                id="caption",
+                x=7.0,
+                y=1.3,
+                width=2.5,
+                height=3.5,
+                text="Caption beside picture placeholder.",
+                font_family="Arial",
+                font_size=14,
+                color="#333333",
+                line_height=1.2,
+                semantic_role="caption",
+            ),
+        ],
+    )
+
+    spike = p0_structured_spike_spec()
+    assert len(spike.masters) == 1
+    assert len(spike.layouts) == 3
+    kinds = {ph.placeholder_type for layout in spike.layouts for ph in layout.placeholder_specs}
+    assert PlaceholderKind.TITLE in kinds
+    assert PlaceholderKind.BODY in kinds
+    assert PlaceholderKind.IMAGE in kinds
+    assert PlaceholderKind.SLIDE_NUMBER in kinds
 
     output_path = (tmp_path / "structured.editable.pptx").resolve()
     renderer = PptxRenderer(Settings(_env_file=None))
     rendered = renderer.export_presentation(
         title="Archium Structured Structure Smoke",
-        scenes=[(title_scene, "title notes"), (content_scene, "body notes")],
+        scenes=[
+            (title_scene, "title notes"),
+            (content_scene, "body notes"),
+            (picture_scene, "picture notes"),
+        ],
         output_path=output_path,
         structure_mode=PptxStructureMode.STRUCTURED,
+        structure=spike,
         validate_ooxml=True,
     )
 
@@ -122,16 +176,16 @@ def test_structured_pptx_emits_masters_layouts_and_placeholders(tmp_path: Path) 
     report = inspect_pptx_ooxml_structure(rendered)
     assert report.valid
     assert report.structure_mode == PptxStructureMode.STRUCTURED
-    assert len(report.master_parts) >= 2
-    assert len(report.layout_parts) >= 2
+    # P0-5: one Master, three Layouts after expander consolidation.
+    assert len(report.master_parts) == 1
+    assert len(report.layout_parts) == 3
     assert report.slide_to_layout
     assert report.layout_to_master
     assert report.placeholder_count >= 1
     require_structured_ooxml(rendered)
 
     presentation = Presentation(rendered)
-    assert len(presentation.slides) == 2
-    # python-pptx should see the slide → layout inheritance chain.
+    assert len(presentation.slides) == 3
     assert presentation.slides[0].slide_layout is not None
     assert presentation.slides[0].slide_layout.slide_master is not None
 

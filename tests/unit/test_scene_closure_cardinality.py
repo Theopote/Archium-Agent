@@ -48,6 +48,75 @@ def test_one_to_many_contract_allows_multiple_traceable_objects() -> None:
     assert report.valid
 
 
+def test_plan_emissions_expands_cross_app_chart_bake_as_one_to_many() -> None:
+    from archium.domain.visual.render_scene import ChartNode, ChartSeriesData
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#ffffff"),
+        nodes=[
+            ChartNode(
+                id="chart1",
+                x=1,
+                y=1,
+                width=4,
+                height=3,
+                series=[
+                    ChartSeriesData(
+                        name="Series",
+                        labels=["A", "B"],
+                        values=[10.0, 20.0],
+                    )
+                ],
+            )
+        ],
+    )
+    contracts = PowerPointContractService()
+    emissions = contracts.plan_emissions(scene, chart_export_mode="cross_app_stable")
+    # backdrop + 2 bars + 2 labels
+    assert len(emissions) == 5
+    roles = [item.role for item in emissions]
+    assert roles.count("chart_bar") == 2
+    assert roles.count("chart_label") == 2
+    contracts.require_scene_closure(
+        scene, emissions, chart_export_mode="cross_app_stable"
+    )
+
+
+def test_plan_emissions_native_chart_stays_one_to_one() -> None:
+    from archium.domain.visual.render_scene import ChartNode, ChartSeriesData
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#ffffff"),
+        nodes=[
+            ChartNode(
+                id="chart1",
+                x=1,
+                y=1,
+                width=4,
+                height=3,
+                series=[
+                    ChartSeriesData(name="Series", labels=["A"], values=[1.0])
+                ],
+            )
+        ],
+    )
+    contracts = PowerPointContractService()
+    emissions = contracts.plan_emissions(scene, chart_export_mode="native_data_backed")
+    assert len(emissions) == 1
+    assert emissions[0].pptx_object_type == "c:chart"
+    contracts.require_scene_closure(
+        scene, emissions, chart_export_mode="native_data_backed"
+    )
+
+
 def test_one_to_one_contract_rejects_multiple_objects() -> None:
     report = PowerPointContractService().validate_scene_closure(
         _scene(),
@@ -89,4 +158,54 @@ def test_one_to_many_requires_unique_sequence_values() -> None:
     )
     assert not report.valid
     assert "duplicate sequence" in report.cardinality_violations[0]
+
+
+def test_many_to_one_accepts_multi_source_emission() -> None:
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=13.333,
+        page_height=7.5,
+        background=BackgroundStyle(color="#ffffff"),
+        nodes=[
+            ShapeNode(id="a", x=1, y=1, width=1, height=1),
+            ShapeNode(id="b", x=2, y=1, width=1, height=1),
+        ],
+    )
+    many = PowerPointCapabilityMapping(
+        scene_node_type="shape",
+        pptx_object_type="p:sp",
+        fidelity=PowerPointFidelity.NATIVE_NORMALIZED,
+        mapping_cardinality=MappingCardinality.MANY_TO_ONE,
+    )
+    emission = RendererEmission(
+        emission_id="merged",
+        source_scene_node_id="a",
+        additional_source_node_ids=["b"],
+        pptx_object_type="p:sp",
+        role="merged",
+        sequence=0,
+    )
+    report = PowerPointContractService().validate_scene_closure(
+        scene,
+        [emission],
+        capability_overrides={"a": many, "b": many},
+    )
+    assert report.valid
+
+
+def test_many_to_one_rejects_single_source_schema() -> None:
+    mapping = PowerPointCapabilityMapping(
+        scene_node_type="shape",
+        pptx_object_type="p:sp",
+        fidelity=PowerPointFidelity.NATIVE_NORMALIZED,
+        mapping_cardinality=MappingCardinality.MANY_TO_ONE,
+    )
+    report = PowerPointContractService().validate_scene_closure(
+        _scene(),
+        [_emission("only", 0)],
+        capability_overrides={"icon": mapping},
+    )
+    assert not report.valid
+    assert any("multi-source" in item for item in report.cardinality_violations)
 

@@ -63,8 +63,10 @@ class DeliveryRecordService:
     ) -> DeliveryRecord:
         artifact_kind = ArtifactKind.PPTX if format.lower() == "pptx" else None
         if artifact_kind is not None:
-            self._artifact_guard.require_writable(
-                artifact_kind, ArtifactMutationOperation.DERIVE
+            self._artifact_guard.require_entry(
+                artifact_kind,
+                ArtifactMutationOperation.DERIVE,
+                entrypoint="delivery.record_pptx_export",
             )
             self._artifact_guard.validate_derivation(
                 ArtifactKind.RENDER_SCENE, artifact_kind

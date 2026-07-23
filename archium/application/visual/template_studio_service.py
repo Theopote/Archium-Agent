@@ -158,6 +158,18 @@ class TemplateStudioService:
         if source.suffix.lower() not in {".pptx", ".pptm"}:
             raise WorkflowError("仅支持 .pptx / .pptm 模板文件。")
 
+        from archium.application.artifact_policy_service import (
+            ArtifactMutationGuard,
+            ArtifactMutationOperation,
+        )
+        from archium.domain.artifact_ownership import ArtifactKind
+
+        ArtifactMutationGuard().require_entry(
+            ArtifactKind.PPTX,
+            ArtifactMutationOperation.INGEST_REFERENCE,
+            entrypoint="template_studio.import_pptx",
+        )
+
         template_id = uuid4()
         workspace = self.workspace_root(template_id)
         stored_pptx = workspace / "source.pptx"

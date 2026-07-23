@@ -48,6 +48,11 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | 完整 RenderScene / Presenton 式全节点模型 | **Not done** — no GroupNode / ContainerNode / Connector / Freeform |
 | 深度原生 PowerPoint / ppt-master 级对象模型 | **Not done** — capability *map* exists; most depth inventory rows are empty |
 | Connector / Preset Shape / Freeform / Group / Gradient / Pattern / Glow / Transition | **Not implemented** (see `POWERPOINT_NATIVE_DEPTH_INVENTORY`) |
+| P0 Closure Cardinality (`one_to_one` / `one_to_many` / `many_to_one`) | **Done** — bake charts/tables plan multi-emissions; not treated as duplicate errors |
+| P0 Workflow Route dispatch + preservation | **Partial** — `execute_fill_native_template` + router wired; FILL fingerprints are template-derived (not in-place OOXML yet) |
+| P0 Capability Contract → export / manifest | **Done** — pre-export gate + closure + object-type → `DeckExportManifest` |
+| P0 Artifact Ownership write entrypoints | **Done** — registered Import / Recovery / Restore / Fill / Reconcile / Delivery gates |
+| P0 Structured PPTX spike (1 master / 3 layouts / title·body·picture·sldNum) | **Done** — `p0_structured_spike_spec` + OOXML smoke |
 
 **对外口径：** RenderScene V1 最小节点闭环完成；图表/表格为可选双导出。不得对外宣称「完整 RenderScene」「深度原生 PowerPoint」或「与 PowerPoint / ppt-master 对象模型等价」。
 

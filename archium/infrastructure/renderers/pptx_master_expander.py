@@ -52,7 +52,7 @@ def expand_masters_from_structure(
     """Clone slide masters so each structure master_id has a real OOXML part."""
     source = Path(pptx_path)
     target = Path(output_path) if output_path is not None else source
-    if structure.mode != PptxStructureMode.STRUCTURED or len(structure.masters) < 2:
+    if structure.mode != PptxStructureMode.STRUCTURED or not structure.masters:
         if target != source:
             target.write_bytes(source.read_bytes())
         return target
@@ -60,6 +60,7 @@ def expand_masters_from_structure(
     layout_name_to_master_id = {
         layout.name: layout.master_id for layout in structure.layouts
     }
+    declared_layout_names = {layout.name for layout in structure.layouts}
     master_id_order = [master.id for master in structure.masters]
 
     with zipfile.ZipFile(source, "r") as zin:
@@ -73,6 +74,23 @@ def expand_masters_from_structure(
     )
     if "ppt/slideMasters/slideMaster1.xml" not in names:
         raise ValueError("PPTX has no slideMaster1.xml to clone")
+
+    # Drop layouts that are not in the declared catalog (e.g. PptxGen blank default).
+    kept_layouts: list[str] = []
+    for layout_part in layout_parts:
+        root = ET.fromstring(files[layout_part])
+        c_sld = root.find(f"{{{_NS['p']}}}cSld")
+        layout_name = c_sld.attrib.get("name", "") if c_sld is not None else ""
+        if declared_layout_names and layout_name not in declared_layout_names:
+            files.pop(layout_part, None)
+            files.pop(_rels_path_for(layout_part), None)
+            continue
+        kept_layouts.append(layout_part)
+    layout_parts = kept_layouts
+    if declared_layout_names and not layout_parts:
+        raise ValueError(
+            "No slide layouts remain after pruning to PresentationStructureSpec names"
+        )
 
     base_master_xml = files["ppt/slideMasters/slideMaster1.xml"]
     master_id_to_part: dict[str, str] = {}
@@ -129,6 +147,7 @@ def expand_masters_from_structure(
         files["[Content_Types].xml"] = _rewrite_content_types(
             files["[Content_Types].xml"],
             list(master_id_to_part.values()),
+            layout_parts=layout_parts,
         )
 
     buffer = io.BytesIO()
@@ -277,8 +296,23 @@ def _rewrite_presentation_masters(
     return _serialize_xml(root)
 
 
-def _rewrite_content_types(content_types_xml: bytes, master_parts: list[str]) -> bytes:
+def _rewrite_content_types(
+    content_types_xml: bytes,
+    master_parts: list[str],
+    *,
+    layout_parts: list[str] | None = None,
+) -> bytes:
     root = ET.fromstring(content_types_xml)
+    kept_parts = {part.lstrip("/") for part in master_parts}
+    if layout_parts is not None:
+        kept_parts.update(part.lstrip("/") for part in layout_parts)
+        # Remove Override entries for pruned slide layouts / masters.
+        for node in list(root.findall(f"{{{_NS['ct']}}}Override")):
+            part_name = node.attrib.get("PartName", "").lstrip("/")
+            if part_name.startswith("ppt/slideLayouts/") and part_name not in kept_parts:
+                root.remove(node)
+            if part_name.startswith("ppt/slideMasters/") and part_name not in kept_parts:
+                root.remove(node)
     existing = {
         node.attrib.get("PartName", "").lstrip("/")
         for node in root.findall(f"{{{_NS['ct']}}}Override")

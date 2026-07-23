@@ -34,6 +34,7 @@ class PlaceholderKind(StrEnum):
     CHART = "chart"
     TABLE = "table"
     MEDIA = "media"
+    SLIDE_NUMBER = "slideNumber"
 
 
 class PlaceholderSpec(DomainModel):
@@ -404,4 +405,176 @@ def default_archium_structure_spec(
         masters=masters,
         layouts=layouts,
         default_layout_id="layout.title_content",
+    )
+
+
+def p0_structured_spike_spec(
+    *,
+    page_width: float = 10.0,
+    page_height: float = 5.625,
+    background_color: str = "FFFFFF",
+) -> PresentationStructureSpec:
+    """P0-5 spike: one Master, three Layouts, required placeholder kinds.
+
+    Required placeholders across the package:
+    Title, Body, Picture (image), Slide Number.
+    """
+    margin_x = 0.5
+    margin_y = 0.35
+    content_w = max(1.0, page_width - margin_x * 2)
+    title_h = 0.7
+    body_y = margin_y + title_h + 0.15
+    body_h = max(1.0, page_height - body_y - 0.55)
+    bg = background_color.lstrip("#").upper() or "FFFFFF"
+    master = SlideMasterSpec(
+        id="master.spike",
+        name="ARCHIUM_SPIKE_MASTER",
+        fixed_scene_node_ids=["chrome.page_number"],
+        background_color=bg,
+        description="P0 structured spike — single shared master",
+    )
+    layouts = [
+        SlideLayoutSpec(
+            id="layout.spike_title",
+            master_id=master.id,
+            name="ARCHIUM_SPIKE_TITLE",
+            layout_families=["hero"],
+            description="Title layout with title + body + slide number",
+            placeholder_specs=[
+                PlaceholderSpec(
+                    id="ph.title",
+                    name="title",
+                    placeholder_type=PlaceholderKind.TITLE,
+                    semantic_role="title",
+                    x=margin_x,
+                    y=page_height * 0.32,
+                    width=content_w,
+                    height=1.0,
+                    idx=0,
+                ),
+                PlaceholderSpec(
+                    id="ph.subtitle",
+                    name="subtitle",
+                    placeholder_type=PlaceholderKind.BODY,
+                    semantic_role="subtitle",
+                    x=margin_x,
+                    y=page_height * 0.32 + 1.15,
+                    width=content_w,
+                    height=0.7,
+                    idx=1,
+                ),
+                PlaceholderSpec(
+                    id="ph.sldNum",
+                    name="slide_number",
+                    placeholder_type=PlaceholderKind.SLIDE_NUMBER,
+                    semantic_role="slide_number",
+                    x=page_width - 1.2,
+                    y=page_height - 0.4,
+                    width=0.7,
+                    height=0.3,
+                    idx=12,
+                ),
+            ],
+        ),
+        SlideLayoutSpec(
+            id="layout.spike_content",
+            master_id=master.id,
+            name="ARCHIUM_SPIKE_CONTENT",
+            layout_families=["textual_argument"],
+            description="Title + body + slide number",
+            placeholder_specs=[
+                PlaceholderSpec(
+                    id="ph.title",
+                    name="title",
+                    placeholder_type=PlaceholderKind.TITLE,
+                    semantic_role="title",
+                    x=margin_x,
+                    y=margin_y,
+                    width=content_w,
+                    height=title_h,
+                    idx=0,
+                ),
+                PlaceholderSpec(
+                    id="ph.body",
+                    name="body",
+                    placeholder_type=PlaceholderKind.BODY,
+                    semantic_role="body",
+                    x=margin_x,
+                    y=body_y,
+                    width=content_w,
+                    height=body_h,
+                    idx=1,
+                ),
+                PlaceholderSpec(
+                    id="ph.sldNum",
+                    name="slide_number",
+                    placeholder_type=PlaceholderKind.SLIDE_NUMBER,
+                    semantic_role="slide_number",
+                    x=page_width - 1.2,
+                    y=page_height - 0.4,
+                    width=0.7,
+                    height=0.3,
+                    idx=12,
+                ),
+            ],
+        ),
+        SlideLayoutSpec(
+            id="layout.spike_picture",
+            master_id=master.id,
+            name="ARCHIUM_SPIKE_PICTURE",
+            layout_families=["drawing_focus", "evidence_board"],
+            description="Title + picture + body + slide number",
+            placeholder_specs=[
+                PlaceholderSpec(
+                    id="ph.title",
+                    name="title",
+                    placeholder_type=PlaceholderKind.TITLE,
+                    semantic_role="title",
+                    x=margin_x,
+                    y=margin_y,
+                    width=content_w,
+                    height=title_h,
+                    idx=0,
+                ),
+                PlaceholderSpec(
+                    id="ph.picture",
+                    name="picture",
+                    placeholder_type=PlaceholderKind.IMAGE,
+                    semantic_role="hero_image",
+                    x=margin_x,
+                    y=body_y,
+                    width=content_w * 0.62,
+                    height=body_h,
+                    idx=1,
+                ),
+                PlaceholderSpec(
+                    id="ph.caption",
+                    name="caption",
+                    placeholder_type=PlaceholderKind.BODY,
+                    semantic_role="caption",
+                    x=margin_x + content_w * 0.62 + 0.2,
+                    y=body_y,
+                    width=content_w * 0.38 - 0.2,
+                    height=body_h,
+                    idx=2,
+                ),
+                PlaceholderSpec(
+                    id="ph.sldNum",
+                    name="slide_number",
+                    placeholder_type=PlaceholderKind.SLIDE_NUMBER,
+                    semantic_role="slide_number",
+                    x=page_width - 1.2,
+                    y=page_height - 0.4,
+                    width=0.7,
+                    height=0.3,
+                    idx=12,
+                ),
+            ],
+        ),
+    ]
+    return PresentationStructureSpec(
+        mode=PptxStructureMode.STRUCTURED,
+        masters=[master],
+        layouts=layouts,
+        default_layout_id="layout.spike_content",
     )

@@ -6,9 +6,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.powerpoint_contract_service import PowerPointContractService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import Settings, get_settings
 from archium.domain.export_fidelity import (
+    ChartExportMode,
     DeckExportManifest,
     ExportFidelityLevel,
     ExportPolicy,
@@ -35,8 +37,17 @@ _FULL_PAGE_AREA_RATIO = 0.85
 class ExportPolicyService:
     """Assess slide fidelity, build manifests, and enforce export policy."""
 
-    def assess_scene_fidelity(self, scene: RenderScene) -> SlideExportResult:
+    def __init__(self, contract_service: PowerPointContractService | None = None) -> None:
+        self._contracts = contract_service or PowerPointContractService()
+
+    def assess_scene_fidelity(
+        self,
+        scene: RenderScene,
+        *,
+        chart_export_mode: ChartExportMode | None = None,
+    ) -> SlideExportResult:
         """Derive per-slide fidelity from a RenderScene (pre/post export)."""
+        mode = (chart_export_mode or ChartExportMode.CROSS_APP_STABLE).value
         visible_nodes = [node for node in scene.nodes if node.visible]
         text_nodes = [n for n in visible_nodes if isinstance(n, TextNode)]
         shape_nodes = [n for n in visible_nodes if isinstance(n, ShapeNode)]
@@ -47,7 +58,7 @@ class ExportPolicyService:
         capability_counts = {level: 0 for level in PowerPointFidelity}
         capability_limitations: list[str] = []
         for node in visible_nodes:
-            assessment = assess_scene_node(node)
+            assessment = assess_scene_node(node, chart_export_mode=mode)
             capability_counts[assessment.mapping.fidelity] += 1
             capability_limitations.extend(assessment.mapping.limitations)
 
@@ -82,6 +93,37 @@ class ExportPolicyService:
             if font.resolved_family and font.resolved_family != font.family:
                 font_subs.append(f"{font.family}→{font.resolved_family}")
 
+        gate = self._contracts.validate_capability_export_gate(
+            scene, chart_export_mode=mode
+        )
+        emissions = self._contracts.plan_emissions(scene, chart_export_mode=mode)
+        closure = self._contracts.validate_scene_closure(
+            scene, emissions, chart_export_mode=mode
+        )
+        object_types = self._contracts.validate_emission_object_types(
+            scene, emissions, chart_export_mode=mode
+        )
+        if gate.unsupported_node_ids:
+            blockers.extend(
+                f"capability_unsupported:{node_id}" for node_id in gate.unsupported_node_ids
+            )
+        if gate.bake_required_node_ids:
+            warnings.extend(
+                f"capability_bake_required:{node_id}" for node_id in gate.bake_required_node_ids
+            )
+        if not closure.valid:
+            blockers.append(
+                "scene_closure:"
+                + ",".join(
+                    closure.missing_node_ids
+                    + closure.unexpected_node_ids
+                    + closure.duplicate_emission_ids
+                    + closure.cardinality_violations
+                )
+            )
+        if object_types.mismatches:
+            blockers.extend(f"emission_type:{item}" for item in object_types.mismatches)
+
         fidelity = self._classify_fidelity(
             native_text=native_text,
             native_shapes=native_shapes + native_charts + native_tables,
@@ -101,6 +143,11 @@ class ExportPolicyService:
             bitmap_asset_count=bitmap_count,
             powerpoint_capability_counts=capability_counts,
             powerpoint_capability_limitations=list(dict.fromkeys(capability_limitations)),
+            emission_count=len(emissions),
+            closure_valid=closure.valid,
+            unsupported_node_ids=list(gate.unsupported_node_ids),
+            bake_required_node_ids=list(gate.bake_required_node_ids),
+            emission_object_type_mismatches=list(object_types.mismatches),
             font_substitutions=font_subs,
             unresolved_assets=unresolved,
             warnings=warnings,
@@ -153,6 +200,11 @@ class ExportPolicyService:
             qa_status=qa_status,
             fallback_used=fallback_used,
             fallback_reason=fallback_reason,
+            closure_valid=all(slide.closure_valid for slide in slide_results),
+            capability_gate_valid=not any(
+                slide.unsupported_node_ids for slide in slide_results
+            ),
+            total_emission_count=sum(slide.emission_count for slide in slide_results),
         )
 
     def enforce_export_policy(
@@ -165,6 +217,21 @@ class ExportPolicyService:
         active = policy or manifest.requested_policy
 
         for slide in manifest.slides:
+            if slide.unsupported_node_ids:
+                raise WorkflowError(
+                    f"页面 {slide.slide_id} 存在 Capability Contract 不支持的节点："
+                    + "；".join(slide.unsupported_node_ids)
+                )
+            if not slide.closure_valid:
+                raise WorkflowError(
+                    f"页面 {slide.slide_id} 未通过 RenderScene Closure 校验，禁止导出。"
+                )
+            if slide.emission_object_type_mismatches:
+                raise WorkflowError(
+                    f"页面 {slide.slide_id} 排放对象类型与 Capability Mapping 不一致："
+                    + "；".join(slide.emission_object_type_mismatches)
+                )
+
             if slide.blockers and active.fail_on_drawing_crop:
                 crop_blockers = [b for b in slide.blockers if b.startswith("drawing:")]
                 if crop_blockers:

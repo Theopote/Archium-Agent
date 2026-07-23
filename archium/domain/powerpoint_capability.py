@@ -126,9 +126,10 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
         scene_node_type="chart",
         pptx_object_type="c:chart (native) or p:sp bake (cross-app)",
         fidelity=PowerPointFidelity.NATIVE_STABLE,
+        mapping_cardinality=MappingCardinality.ONE_TO_ONE,
         limitations=[
             "NATIVE_DATA_BACKED emits PowerPoint charts with embedded workbook data.",
-            "CROSS_APP_STABLE bakes series as shapes/images for cross-renderer fidelity.",
+            "CROSS_APP_STABLE bakes series as shapes/images (one_to_many emissions).",
             "Chart depth is dual-mode export only — not a full chartEx / style effect surface.",
         ],
         validation_rules=["node_identity_preserved", "chart_series_preserved"],
@@ -137,9 +138,10 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
         scene_node_type="table",
         pptx_object_type="a:tbl (native) or p:sp/text grid (cross-app)",
         fidelity=PowerPointFidelity.NATIVE_STABLE,
+        mapping_cardinality=MappingCardinality.ONE_TO_ONE,
         limitations=[
             "NATIVE_DATA_BACKED emits editable PowerPoint tables.",
-            "CROSS_APP_STABLE renders headers/rows as shape+text grids.",
+            "CROSS_APP_STABLE renders headers/rows as shape+text grids (one_to_many).",
             "Table styling depth (merged cells, theme table styles) is limited.",
         ],
         validation_rules=["node_identity_preserved", "table_grid_preserved"],
@@ -270,8 +272,16 @@ POWERPOINT_NATIVE_DEPTH_INVENTORY: tuple[PowerPointDepthEntry, ...] = (
 )
 
 
-def capability_for_scene_node(node: str | BaseRenderNode) -> PowerPointCapabilityMapping:
-    """Resolve fidelity from a node instance, or return the type-level baseline."""
+def capability_for_scene_node(
+    node: str | BaseRenderNode,
+    *,
+    chart_export_mode: str | None = None,
+) -> PowerPointCapabilityMapping:
+    """Resolve fidelity / cardinality from a node instance, or return the type baseline.
+
+    ``chart_export_mode`` accepts ChartExportMode values as plain strings to avoid
+    an import cycle with ``export_fidelity``.
+    """
     node_type = node if isinstance(node, str) else node.node_type
     try:
         baseline = RENDER_SCENE_V1_CAPABILITIES[node_type]
@@ -281,7 +291,10 @@ def capability_for_scene_node(node: str | BaseRenderNode) -> PowerPointCapabilit
         return baseline
 
     fidelity = baseline.fidelity
+    cardinality = baseline.mapping_cardinality
+    pptx_object_type = baseline.pptx_object_type
     limitations = list(baseline.limitations)
+    mode = (chart_export_mode or "cross_app_stable").strip().lower()
     if node.rotation != 0 or node.opacity != 1:
         fidelity = PowerPointFidelity.APPROXIMATE
         limitations.append("V1 PPTX instructions do not preserve node rotation or opacity.")
@@ -296,26 +309,68 @@ def capability_for_scene_node(node: str | BaseRenderNode) -> PowerPointCapabilit
             )
 
     if isinstance(node, ImageNode) and (node.corner_radius or node.border or node.shadow):
-        fidelity = PowerPointFidelity.APPROXIMATE
-        limitations.append("V1 PPTX picture export does not preserve corner, border, or shadow styling.")
+        if node.shadow:
+            fidelity = PowerPointFidelity.BAKE_REQUIRED
+            limitations.append(
+                "Image shadow has no native PPTX effect model in V1; bake or drop required."
+            )
+        else:
+            fidelity = PowerPointFidelity.APPROXIMATE
+            limitations.append(
+                "V1 PPTX picture export does not preserve corner or border styling."
+            )
 
-    if isinstance(node, ChartNode) and not node.has_series_data:
-        fidelity = PowerPointFidelity.APPROXIMATE
-        limitations.append("ChartNode without series data cannot emit a data-backed chart.")
+    if isinstance(node, ChartNode):
+        if not node.has_series_data:
+            fidelity = PowerPointFidelity.APPROXIMATE
+            limitations.append("ChartNode without series data cannot emit a data-backed chart.")
+        elif mode == "native_data_backed":
+            fidelity = PowerPointFidelity.NATIVE_STABLE
+            cardinality = MappingCardinality.ONE_TO_ONE
+            pptx_object_type = "c:chart"
+        else:
+            # CROSS_APP_STABLE shape bake: one node → backdrop + bars + labels.
+            fidelity = PowerPointFidelity.BAKE_REQUIRED
+            cardinality = MappingCardinality.ONE_TO_MANY
+            pptx_object_type = "p:sp"
+            limitations.append(
+                "CROSS_APP_STABLE chart bake emits multiple p:sp objects (one_to_many)."
+            )
 
-    if isinstance(node, TableNode) and not node.has_grid_data:
-        fidelity = PowerPointFidelity.APPROXIMATE
-        limitations.append("TableNode without headers/rows cannot emit a native table.")
+    if isinstance(node, TableNode):
+        if not node.has_grid_data:
+            fidelity = PowerPointFidelity.APPROXIMATE
+            limitations.append("TableNode without headers/rows cannot emit a native table.")
+        elif mode == "native_data_backed":
+            fidelity = PowerPointFidelity.NATIVE_STABLE
+            cardinality = MappingCardinality.ONE_TO_ONE
+            pptx_object_type = "a:tbl"
+        else:
+            fidelity = PowerPointFidelity.BAKE_REQUIRED
+            cardinality = MappingCardinality.ONE_TO_MANY
+            pptx_object_type = "p:sp"
+            limitations.append(
+                "CROSS_APP_STABLE table bake emits a shape/text grid (one_to_many)."
+            )
 
     return cast(
         PowerPointCapabilityMapping,
         baseline.model_copy(
-            update={"fidelity": fidelity, "limitations": list(dict.fromkeys(limitations))}
+            update={
+                "fidelity": fidelity,
+                "mapping_cardinality": cardinality,
+                "pptx_object_type": pptx_object_type,
+                "limitations": list(dict.fromkeys(limitations)),
+            }
         ),
     )
 
 
-def assess_scene_node(node: BaseRenderNode) -> PowerPointNodeAssessment:
+def assess_scene_node(
+    node: BaseRenderNode,
+    *,
+    chart_export_mode: str | None = None,
+) -> PowerPointNodeAssessment:
     features = [f"rotation:{node.rotation}"] if node.rotation else []
     if node.opacity != 1:
         features.append(f"opacity:{node.opacity}")
@@ -329,10 +384,12 @@ def assess_scene_node(node: BaseRenderNode) -> PowerPointNodeAssessment:
             features.append("shadow")
         if node.border:
             features.append("border")
+    if isinstance(node, ChartNode) and chart_export_mode:
+        features.append(f"chart_export_mode:{chart_export_mode}")
     return PowerPointNodeAssessment(
         node_id=node.id,
         node_type=node.node_type,
-        mapping=capability_for_scene_node(node),
+        mapping=capability_for_scene_node(node, chart_export_mode=chart_export_mode),
         detected_features=features,
     )
 

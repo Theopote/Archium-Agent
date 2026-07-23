@@ -8,7 +8,12 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from archium.application.artifact_policy_service import (
+    ArtifactMutationGuard,
+    ArtifactMutationOperation,
+)
 from archium.application.visual.placeholder_binding_matcher import effective_semantic_role
+from archium.domain.artifact_ownership import ArtifactKind
 from archium.application.visual.scene_fonts import (
     collect_font_assets,
     resolve_text_fonts,
@@ -100,6 +105,11 @@ class ReferenceSlideEditingService:
         presentation_id: UUID | None = None,
         generation_context: SlideGenerationContext | None = None,
     ) -> ReferenceSlideEditResult:
+        ArtifactMutationGuard().require_entry(
+            ArtifactKind.RENDER_SCENE,
+            ArtifactMutationOperation.DERIVE,
+            entrypoint="reference_slide_editing.generate_scene",
+        )
         actions: list[
             ReplaceTextAction
             | ReplaceAssetAction

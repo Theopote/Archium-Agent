@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from archium.application.artifact_policy_service import (
+    ArtifactMutationOperation,
     save_render_scene,
 )
 from archium.application.delivery_record_service import DeliveryRecordService
@@ -212,7 +213,12 @@ class SlideRecoveryDeliveryService:
                 "layout_plan_id": plan.id,
             }
         )
-        saved_scene = save_render_scene(self._scenes, imported_scene)
+        saved_scene = save_render_scene(
+            self._scenes,
+            imported_scene,
+            operation=ArtifactMutationOperation.IMPORT_EXTERNAL,
+            entrypoint="slide_recovery.import_external_scene",
+        )
 
         slide = self._presentations.save_slide(
             slide.model_copy(update={"layout_plan_id": plan.id})
