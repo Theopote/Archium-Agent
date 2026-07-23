@@ -174,7 +174,7 @@ class RenderScenePptxAdapter:
         }
         if node.title:
             instruction["title"] = node.title
-        path = node.preview_resolved_path or node.preview_storage_uri
+        path = _filesystem_export_path(node.preview_resolved_path, node.preview_storage_uri)
         if path:
             instruction["path"] = path
         return instruction
@@ -231,8 +231,9 @@ class RenderScenePptxAdapter:
             "z_index": node.z_index,
             "fit_mode": node.fit_mode,
         }
-        if node.asset_path and not node.asset_unresolved:
-            instruction["path"] = node.asset_path
+        path = _filesystem_export_path(node.resolved_path, node.asset_path)
+        if path and not node.asset_unresolved:
+            instruction["path"] = path
         else:
             instruction["asset_unresolved"] = True
             instruction["asset_error"] = "LAYOUT.UNRESOLVED_ASSET_PATH"
@@ -251,8 +252,9 @@ class RenderScenePptxAdapter:
             "fit_mode": "contain",
             "drawing_type": node.drawing_type,
         }
-        if node.asset_path and not node.asset_unresolved:
-            instruction["path"] = node.asset_path
+        path = _filesystem_export_path(node.resolved_path, node.asset_path)
+        if path and not node.asset_unresolved:
+            instruction["path"] = path
         else:
             instruction["asset_unresolved"] = True
             instruction["asset_error"] = "LAYOUT.TECHNICAL_DRAWING_MISSING"
@@ -302,3 +304,16 @@ class RenderScenePptxAdapter:
             if isinstance(family, str) and family:
                 return family
         return DEFAULT_CJK_FONT
+
+
+_PORTABLE_URI_PREFIXES = ("storage://", "project://", "benchmark://")
+
+
+def _filesystem_export_path(*candidates: str | None) -> str | None:
+    """Pick the first host filesystem path; never pass portable URIs to Node."""
+    for raw in candidates:
+        text = (raw or "").strip()
+        if not text or text.startswith(_PORTABLE_URI_PREFIXES):
+            continue
+        return text
+    return None

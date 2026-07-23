@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from archium.domain.visual.render_scene import (
+    ChartNode,
     DrawingNode,
     ImageNode,
     RenderNode,
@@ -202,6 +203,17 @@ class AssetPathResolver:
                         update={
                             "asset_path": absolute,
                             "resolved_path": absolute if resolved is not None else None,
+                        }
+                    )
+                )
+            elif isinstance(node, ChartNode) and node.preview_storage_uri:
+                resolved = self.resolve(node.preview_storage_uri, ctx)
+                nodes.append(
+                    node.model_copy(
+                        update={
+                            "preview_resolved_path": (
+                                str(resolved) if resolved is not None else None
+                            ),
                         }
                     )
                 )

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from archium.config.settings import Settings, get_settings
 from archium.domain.export_fidelity import ChartExportMode
@@ -19,6 +21,8 @@ from archium.infrastructure.renderers.pptx_master_expander import expand_masters
 from archium.infrastructure.renderers.pptx_ooxml_structure import require_structured_ooxml
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from archium.infrastructure.renderers.scene_pptx_adapter import RenderScenePptxAdapter
+
+logger = logging.getLogger(__name__)
 
 
 class PptxRenderer:
@@ -37,12 +41,17 @@ class PptxRenderer:
         structure_mode: PptxStructureMode | None = None,
         structure: PresentationStructureSpec | None = None,
         chart_export_mode: ChartExportMode | None = None,
+        project_id: UUID | None = None,
     ) -> dict[str, Any]:
         mode = structure_mode or self._default_structure_mode()
         chart_mode = chart_export_mode or self._default_chart_export_mode()
+        resolved_scenes = [
+            (self._resolve_for_export(scene, project_id=project_id), notes)
+            for scene, notes in scenes
+        ]
         return self._adapter.render_deck(
             title=title,
-            scenes=scenes,
+            scenes=resolved_scenes,
             structure_mode=mode,
             structure=structure,
             chart_export_mode=chart_mode,
@@ -59,6 +68,7 @@ class PptxRenderer:
         structure: PresentationStructureSpec | None = None,
         chart_export_mode: ChartExportMode | None = None,
         validate_ooxml: bool | None = None,
+        project_id: UUID | None = None,
     ) -> Path:
         deck = self.build_instruction_deck(
             title=title or "Archium Slide",
@@ -66,6 +76,7 @@ class PptxRenderer:
             structure_mode=structure_mode,
             structure=structure,
             chart_export_mode=chart_export_mode,
+            project_id=project_id,
         )
         return self.export_deck(deck, output_path, validate_ooxml=validate_ooxml)
 
@@ -105,7 +116,12 @@ class PptxRenderer:
         chart_export_mode: ChartExportMode | None = None,
         validate_ooxml: bool | None = None,
         enforce_capability_contract: bool = True,
+        project_id: UUID | None = None,
     ) -> Path:
+        resolved_pairs = [
+            (self._resolve_for_export(scene, project_id=project_id), notes)
+            for scene, notes in scenes
+        ]
         if enforce_capability_contract:
             from archium.application.powerpoint_contract_service import PowerPointContractService
 
@@ -113,7 +129,7 @@ class PptxRenderer:
             chart_mode = (
                 chart_export_mode or self._default_chart_export_mode()
             ).value
-            for scene, _notes in scenes:
+            for scene, _notes in resolved_pairs:
                 contracts.require_capability_export_gate(
                     scene, chart_export_mode=chart_mode
                 )
@@ -127,17 +143,43 @@ class PptxRenderer:
                     scene, emissions, chart_export_mode=chart_mode
                 )
 
-        deck = self.build_instruction_deck(
+        mode = structure_mode or self._default_structure_mode()
+        chart_mode = chart_export_mode or self._default_chart_export_mode()
+        deck = self._adapter.render_deck(
             title=title,
-            scenes=scenes,
-            structure_mode=structure_mode,
+            scenes=resolved_pairs,
+            structure_mode=mode,
             structure=structure,
-            chart_export_mode=chart_export_mode,
+            chart_export_mode=chart_mode,
         )
         return self.export_deck(deck, output_path, validate_ooxml=validate_ooxml)
 
     def font_fallbacks(self, scene: RenderScene) -> list[str]:
         return self._adapter.font_fallbacks(scene)
+
+    def _resolve_for_export(
+        self,
+        scene: RenderScene,
+        *,
+        project_id: UUID | None,
+    ) -> RenderScene:
+        from archium.application.visual.asset_path_resolver import (
+            AssetPathResolveContext,
+            AssetPathResolver,
+        )
+
+        resolved_project = project_id
+        if resolved_project is None and scene.presentation_id is not None:
+            # Best-effort: presentation_id alone cannot resolve project storage,
+            # but project_id from callers is preferred.
+            pass
+        return AssetPathResolver().resolve_scene(
+            scene,
+            AssetPathResolveContext(
+                project_id=resolved_project,
+                project_storage_root=self._settings.project_storage_path,
+            ),
+        )
 
     def _default_structure_mode(self) -> PptxStructureMode:
         raw = getattr(self._settings, "pptx_structure_mode", "flat")
@@ -176,6 +218,18 @@ class PptxRenderer:
         return mode == PptxStructureMode.STRUCTURED.value
 
 
+def scene_pptx_unavailable_reason(settings: Settings | None = None) -> str | None:
+    """Return why Scene→PPTX cannot run, or None when the toolchain is ready."""
+    if shutil.which("node") is None:
+        return "node executable not found on PATH"
+    renderer = PptxRenderer(settings)
+    if not renderer._cli.is_available():
+        return "PptxGenJS CLI / npm dependencies unavailable"
+    if not renderer._cli.layout_plan_script_path.exists():
+        return f"missing render-plan script: {renderer._cli.layout_plan_script_path}"
+    return None
+
+
 def maybe_export_scene_pptx(
     scene: RenderScene,
     output_path: Path,
@@ -186,13 +240,14 @@ def maybe_export_scene_pptx(
     structure_mode: PptxStructureMode | None = None,
     structure: PresentationStructureSpec | None = None,
     chart_export_mode: ChartExportMode | None = None,
+    project_id: UUID | None = None,
 ) -> Path | None:
     """Export PPTX from RenderScene when Node/PptxGenJS is available."""
-    if shutil.which("node") is None:
+    reason = scene_pptx_unavailable_reason(settings)
+    if reason is not None:
+        logger.warning("Scene PPTX export skipped: %s", reason)
         return None
     renderer = PptxRenderer(settings)
-    if not renderer._cli.is_available() or not renderer._cli.layout_plan_script_path.exists():
-        return None
     return renderer.export_pptx(
         scene,
         output_path,
@@ -201,4 +256,5 @@ def maybe_export_scene_pptx(
         structure_mode=structure_mode,
         structure=structure,
         chart_export_mode=chart_export_mode,
+        project_id=project_id,
     )

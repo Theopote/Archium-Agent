@@ -227,6 +227,7 @@ def export_presentation_pptx_from_layout_plans(
         scenes=ordered_scenes,
         output_path=pptx_path,
         chart_export_mode=chart_export_mode,
+        project_id=presentation.project_id,
     )
     return RenderResult(editable_pptx_path=rendered)
 

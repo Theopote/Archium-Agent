@@ -146,6 +146,7 @@ class SlideRecoveryDeliveryService:
             output_path,
             title=f"Recovery · {source_page_id}",
             settings=self._settings,
+            project_id=project_id,
         )
         pptx_export_skipped = exported is None
         if exported is not None:

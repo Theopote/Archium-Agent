@@ -57,7 +57,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 已批准 / 待确认的 `SlideDesignBrief` 会注入 `VisualIntent`（layout family、density、资产与图面策略）。Brief 中的 `photo_evidence_grid` 等别名归一为 `LayoutFamily` 枚举值（如 `evidence_board`）。
 - Layout family generator 负责确定坐标；Renderer 只执行 LayoutPlan/RenderScene，不重新选择版式。
 - Visual workflow 与 Studio 共用 `SceneCompilerChain` + `ImageDerivativeService` 编译 RenderScene；按 `layout_plan_id` 复用 scene id / version。`LayoutPlan.overflow_policy`（默认 WARN）映射为 TextNode `error`，使 `SEMANTIC.TEXT_OVERFLOW` 可被检出并修复。
-- 主导出仍可走 LayoutPlan PPTX；Scene 修复步骤可另写 `presentation_from_scenes.pptx`（双轨收敛见 backlog）。
+- **正式 Studio 交付物**为 RenderScene → `presentation.pptx`（导出前 `AssetPathResolver.resolve_scene`）。Workflow 的 `presentation.layout_plan.pptx` 供 critic / 布局轨；可选 `presentation_from_scenes.pptx` 做 Scene 轨校验，工具链不可用时写入 warnings。
 - Canvas 支持点击、Shift 多选、框选、文字/图片编辑，以及多选对齐、分布和等宽高。
 - 元素评论支持单节点、多选、包围盒区域和整页作用域，并通过 Inbox 管理状态。
 - 图片处理保存原图，`ImageTreatmentSpec` 生成不可变 derivative；项目图纸和证据照片只允许 `safe_normalize`，不能使用表达性统一处理。

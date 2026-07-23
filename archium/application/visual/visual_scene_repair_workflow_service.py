@@ -240,7 +240,10 @@ class VisualSceneRepairWorkflowService:
                 if slide.id in scene_by_slide
             ]
             if len(pairs) == 1:
-                from archium.infrastructure.renderers.pptx_renderer import maybe_export_scene_pptx
+                from archium.infrastructure.renderers.pptx_renderer import (
+                    maybe_export_scene_pptx,
+                    scene_pptx_unavailable_reason,
+                )
 
                 exported = maybe_export_scene_pptx(
                     pairs[0][0],
@@ -248,20 +251,33 @@ class VisualSceneRepairWorkflowService:
                     title=deck_title,
                     speaker_notes=pairs[0][1],
                     settings=self._settings,
+                    project_id=project_id,
                 )
                 if exported is not None:
                     scene_pptx_path = str(exported)
+                else:
+                    reason = scene_pptx_unavailable_reason(self._settings) or "unknown"
+                    warnings.append(f"Scene PPTX export skipped: {reason}")
             elif pairs:
-                from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
+                from archium.infrastructure.renderers.pptx_renderer import (
+                    PptxRenderer,
+                    scene_pptx_unavailable_reason,
+                )
 
-                renderer = PptxRenderer(self._settings)
-                if renderer._cli.is_available():
+                reason = scene_pptx_unavailable_reason(self._settings)
+                if reason is not None:
+                    warnings.append(f"Scene PPTX export skipped: {reason}")
+                else:
+                    renderer = PptxRenderer(self._settings)
                     exported = renderer.export_presentation(
                         title=deck_title,
                         scenes=pairs,
                         output_path=output_dir / "presentation_from_scenes.pptx",
+                        project_id=project_id,
                     )
                     scene_pptx_path = str(exported)
+        elif export_scene_pptx and not persisted:
+            warnings.append("Scene PPTX export skipped: no persisted scenes")
 
         return VisualSceneRepairWorkflowResult(
             scenes=persisted,
