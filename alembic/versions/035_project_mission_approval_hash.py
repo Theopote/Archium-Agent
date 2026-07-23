@@ -16,8 +16,23 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("project_missions", sa.Column("approval_hash", sa.String(64), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "project_missions" not in set(inspector.get_table_names()):
+        return
+    columns = {column["name"] for column in inspector.get_columns("project_missions")}
+    if "approval_hash" not in columns:
+        op.add_column(
+            "project_missions",
+            sa.Column("approval_hash", sa.String(64), nullable=True),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("project_missions", "approval_hash")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "project_missions" not in set(inspector.get_table_names()):
+        return
+    columns = {column["name"] for column in inspector.get_columns("project_missions")}
+    if "approval_hash" in columns:
+        op.drop_column("project_missions", "approval_hash")
