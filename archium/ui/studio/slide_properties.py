@@ -14,6 +14,7 @@ from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label, layout_family_implemented
+from archium.ui.studio.canvas_command_bridge import set_studio_selection
 from archium.ui.studio.element_labels import CONTENT_TYPE_LABELS, ROLE_LABELS, format_element_label
 from archium.ui.studio_service import SlideVisualSnapshot, apply_slide_visual_edit
 
@@ -268,7 +269,7 @@ def _render_element_properties(
     )
     if not isinstance(selected_from_ui, str):
         return
-    st.session_state.studio_selected_element_id = selected_from_ui
+    set_studio_selection([selected_from_ui])
 
     element = plan.element_by_id(selected_from_ui)
     is_visible = _element_visibility(slide_snapshot, selected_from_ui)
@@ -573,6 +574,8 @@ def _render_element_properties(
                         element_id=element.id,
                     )
                 st.session_state.pop("studio_selected_element_id", None)
+                st.session_state.pop("studio_selected_element_ids", None)
+                set_studio_selection([])
                 st.success("已删除元素。")
                 st.rerun()
             except Exception as exc:

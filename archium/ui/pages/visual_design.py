@@ -577,7 +577,7 @@ def render() -> None:
     st.markdown("### 视觉设计")
     st.caption(
         f"为已有{entity_label('SlideSpec')}生成{visual_pipeline_chain()}；"
-        f"导出时按{entity_label('LayoutPlan')}坐标执行 PPTX（不重排版式）。"
+        "导出时按 RenderScene 执行 PPTX（不重排版式）。"
     )
     render_visual_engine_scope()
 

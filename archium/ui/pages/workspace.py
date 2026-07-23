@@ -485,7 +485,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
 
     st.markdown("#### 导出 PPTX")
     st.caption(
-        f"推荐路径：先完成视觉编排，再按{entity_label('LayoutPlan')}坐标导出可编辑 PPTX。"
+        "推荐路径：先完成视觉编排，再按 RenderScene 导出可编辑 PPTX。"
         "也可跳过视觉编排，直接使用旧版 PresentationSpec 模板。"
     )
 
@@ -505,7 +505,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
             st.session_state.pop(prompt_key, None)
             try:
                 with (
-                    st.spinner(f"正在按{entity_label('LayoutPlan')}导出 PPTX…"),
+                    st.spinner("正在按 RenderScene 导出 PPTX…"),
                     get_session() as session,
                 ):
                     export_result = export_presentation_pptx_from_layout_plans(
@@ -614,9 +614,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
             except Exception as exc:
                 st.error(format_user_error(exc))
     elif has_visual_layout:
-        st.caption(
-            f"当前汇报已具备视觉版式，点击上方按钮将按{entity_label('LayoutPlan')}导出。"
-        )
+        st.caption("当前汇报已具备视觉版式，点击上方按钮将按 RenderScene 导出。")
 
     cached_export_result: RenderResult | None = st.session_state.get("last_pptx_export_result")
     if cached_export_result is not None:

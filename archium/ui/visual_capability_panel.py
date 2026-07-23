@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from archium.ui.label_map import entity_label, visual_quality_pair
+from archium.ui.label_map import visual_quality_pair
 from archium.ui.layout_family_ui import (
     FAMILY_SCENARIOS,
     format_layout_family_label,
@@ -34,7 +34,7 @@ def render_visual_engine_scope(*, expanded: bool = False) -> None:
         st.markdown(
             "**Round 1 工作原理：** 为每页选择最匹配的版式族与变体，"
             "再由确定性 generator 按固定规则生成元素坐标；"
-            f"PPTX 导出按{entity_label('LayoutPlan')}执行，不会重新求解版式。"
+            "PPTX 导出按已编译的 RenderScene 执行，不会重新求解版式。"
         )
 
         st.markdown(f"**已可用（{implemented_count} 类）：**")

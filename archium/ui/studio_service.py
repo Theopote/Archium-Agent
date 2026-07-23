@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 from pathlib import Path
 from uuid import UUID
@@ -47,6 +48,8 @@ from archium.ui.workspace_service import (
     list_projects,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class StudioPresentationContext:
@@ -59,6 +62,7 @@ class StudioPresentationContext:
     slide_count: int
     layout_ready_count: int
     preview_ready_count: int
+    warnings: tuple[str, ...] = ()
 
 
 def list_studio_projects(session: Session) -> list[Project]:
@@ -135,13 +139,29 @@ def load_studio_context(
     scene_service = StudioSceneService(session, settings=settings)
     scene_preview_by_index: dict[int, str | None] = {}
     enriched_with_scenes: list[SlideVisualSnapshot] = []
+    scene_warnings: list[str] = []
     for index, item in enumerate(snapshot.slides):
         scene_result = None
         if item.layout_plan is not None:
+            compile_failed = False
             try:
                 scene_result = scene_service.ensure_scene_for_slide(item.slide.id)
-            except Exception:
+            except Exception as exc:
+                compile_failed = True
+                logger.warning(
+                    "ensure_scene_for_slide failed for slide %s: %s",
+                    item.slide.id,
+                    exc,
+                    exc_info=True,
+                )
+                scene_warnings.append(
+                    f"第 {item.slide.order + 1} 页 RenderScene 编译失败：{exc}"
+                )
                 scene_result = None
+            if scene_result is None and not compile_failed:
+                scene_warnings.append(
+                    f"第 {item.slide.order + 1} 页有版式但未能得到 RenderScene"
+                )
         if scene_result is not None:
             scene_preview_by_index[index] = str(scene_result.preview_path)
             enriched_with_scenes.append(
@@ -194,6 +214,7 @@ def load_studio_context(
         slide_count=len(snapshot.slides),
         layout_ready_count=layout_ready_count,
         preview_ready_count=preview_ready_count,
+        warnings=tuple(scene_warnings),
     )
 
 
@@ -229,7 +250,7 @@ def export_presentation_pdf_from_studio(
     *,
     settings: object | None = None,
 ) -> RenderResult:
-    """Export PDF by rendering LayoutPlan PPTX then converting with LibreOffice."""
+    """Export PDF by rendering Scene PPTX then converting with LibreOffice."""
     pptx_result = export_presentation_from_studio(
         session,
         presentation_id,

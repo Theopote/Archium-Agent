@@ -8,6 +8,7 @@ import streamlit as st
 
 from archium.infrastructure.database.session import get_session
 from archium.ui.label_map import STATUS_LABELS, entity_label
+from archium.ui.studio.canvas_command_bridge import set_studio_selection
 from archium.ui.studio.onboarding_panel import (
     render_studio_import_panel,
     render_studio_no_presentation_hint,
@@ -28,6 +29,7 @@ def _init_studio_session_state() -> None:
         "selected_presentation_id": None,
         "studio_selected_slide_index": 0,
         "studio_selected_element_id": None,
+        "studio_selected_element_ids": [],
         "studio_advanced_mode": False,
         "studio_scene_preset": "client_review",
         "last_visual_workflow_result": None,
@@ -90,7 +92,7 @@ def render_studio_selection(
         if selected_project != st.session_state.selected_project_id:
             st.session_state.selected_presentation_id = None
             st.session_state.studio_selected_slide_index = 0
-            st.session_state.studio_selected_element_id = None
+            set_studio_selection([])
         st.session_state.selected_project_id = selected_project
 
     project_id = UUID(selected_project)
@@ -159,7 +161,7 @@ def render_studio_selection(
             )
         if selected_presentation != st.session_state.selected_presentation_id:
             st.session_state.studio_selected_slide_index = 0
-            st.session_state.studio_selected_element_id = None
+            set_studio_selection([])
         st.session_state.selected_presentation_id = selected_presentation
 
     presentation_id = UUID(selected_presentation)
@@ -177,6 +179,9 @@ def render_studio_selection(
     if context is None:
         st.error("无法加载汇报上下文。")
         return None
+
+    for warning in context.warnings[:5]:
+        st.warning(warning)
 
     if not compact:
         readiness = studio_readiness_label(context)

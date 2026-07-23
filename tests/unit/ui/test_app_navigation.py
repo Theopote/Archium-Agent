@@ -61,7 +61,7 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     }
     assert len(sections[PROJECT_SECTION]) == 2
     assert len(sections[MAKE_SECTION]) == 5
-    assert len(sections[RESOURCE_SECTION]) == 3
+    assert len(sections[RESOURCE_SECTION]) == 2
     assert len(sections[SYSTEM_SECTION]) == 1
 
     # Stage titles come from product_flow (st.Page.title needs ScriptRunContext).

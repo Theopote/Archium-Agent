@@ -184,14 +184,17 @@ def export_presentation_pptx_from_layout_plans(
     settings: Settings | None = None,
     chart_export_mode: ChartExportMode | None = None,
 ) -> RenderResult:
-    """Export editable PPTX from RenderScene compiled from saved LayoutPlans."""
+    """Export editable PPTX from RenderScenes (compiled from LayoutPlans).
+
+    Kept name for callers; formal deliverable is Scene → presentation.pptx.
+    """
     resolved = _resolve_runtime_settings(settings)
     presentations = PresentationRepository(session)
     presentation = presentations.get_presentation(presentation_id)
     if presentation is None:
         raise WorkflowError(f"Presentation {presentation_id} not found")
     if not presentation_has_visual_layout(session, presentation_id):
-        raise WorkflowError("尚未生成视觉版式，无法按 LayoutPlan 导出 PPTX。")
+        raise WorkflowError("尚未生成视觉版式，无法导出基于 RenderScene 的 PPTX。")
 
     brief = None
     if presentation.current_brief_id is not None:
