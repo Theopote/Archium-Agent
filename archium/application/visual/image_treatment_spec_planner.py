@@ -1,9 +1,10 @@
-"""Plan ``ImageTreatmentSpec`` from asset class + DesignSystem (no pixels)."""
+"""Plan ``ImageTreatmentSpec`` from asset class + DesignSystem (policy only)."""
 
 from __future__ import annotations
 
 from uuid import UUID
 
+from archium.application.visual.image_processor import ImageProcessor
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.visual.design_system import DesignSystem
@@ -11,9 +12,12 @@ from archium.domain.visual.enums import PhotoTreatment
 from archium.domain.visual.image_derivative import (
     FocalPoint,
     ImageAssetClass,
+    ImageCropStrategy,
+    ImageEnhanceParams,
     ImageOverlaySpec,
     ImageTreatmentMode,
     ImageTreatmentSpec,
+    ImageUnifyParams,
     mode_allowed_for_asset_class,
 )
 from archium.domain.visual.render_scene import DrawingNode, ImageNode, Point
@@ -52,7 +56,14 @@ def photo_treatment_to_mode(treatment: PhotoTreatment) -> ImageTreatmentMode:
 
 
 class ImageTreatmentSpecPlanner:
-    """Build per-asset treatment specs. Policy only — no pixel I/O."""
+    """Build per-asset treatment specs. Policy only — no pixel I/O.
+
+    Heuristic focus enrichment happens later in ``ImageDerivativeService`` via
+    ``ImageProcessor.enrich_spec_with_focus``.
+    """
+
+    def __init__(self, processor: ImageProcessor | None = None) -> None:
+        self._processor = processor or ImageProcessor()
 
     def plan_for_node(
         self,
@@ -67,9 +78,11 @@ class ImageTreatmentSpecPlanner:
             return None
 
         asset_class = asset_class_for_node(node, asset=asset)
+        treatment = PhotoTreatment.NONE
         requested = ImageTreatmentMode.NONE
         if design_system is not None:
-            requested = photo_treatment_to_mode(design_system.image_style.photo_treatment)
+            treatment = design_system.image_style.photo_treatment
+            requested = photo_treatment_to_mode(treatment)
 
         if isinstance(node, DrawingNode):
             # Drawings: never expressive unify; optional safe normalize later.
@@ -95,23 +108,45 @@ class ImageTreatmentSpecPlanner:
             focal = _focal_from_point(node.focus_point)
 
         overlay = ImageOverlaySpec()
-        if (
-            mode == ImageTreatmentMode.PRESENTATION_UNIFY
-            and asset_class
-            not in {ImageAssetClass.PROJECT_DRAWING, ImageAssetClass.PROJECT_EVIDENCE_PHOTO}
-        ):
+        unify = ImageUnifyParams()
+        enhance = ImageEnhanceParams()
+        crop_strategy = ImageCropStrategy.NONE
+        auto_subject_crop = False
+
+        if mode == ImageTreatmentMode.PRESENTATION_UNIFY and asset_class not in {
+            ImageAssetClass.PROJECT_DRAWING,
+            ImageAssetClass.PROJECT_EVIDENCE_PHOTO,
+        }:
             overlay = ImageOverlaySpec(kind="soft_vignette", opacity=0.22)
+            unify = self._processor.build_unify_params(treatment)
+            enhance = self._processor.build_enhance_params(treatment)
+            if focal.source == "manual" and focal.confidence >= 0.5:
+                crop_strategy = ImageCropStrategy.FOCAL
+                auto_subject_crop = True
+            else:
+                tags = list(asset.tags) if asset is not None else []
+                hint = self._processor.focus_hint_from_tags(tags)
+                if hint == "skyline":
+                    crop_strategy = ImageCropStrategy.SKYLINE_HEURISTIC
+                else:
+                    crop_strategy = ImageCropStrategy.SUBJECT_HEURISTIC
+                auto_subject_crop = True
+                rationale = f"{rationale}; crop={crop_strategy.value}"
+        elif mode == ImageTreatmentMode.DOCUMENT_SCAN:
+            enhance = self._processor.build_enhance_params(PhotoTreatment.DOCUMENT_SCAN)
+        elif mode == ImageTreatmentMode.SAFE_NORMALIZE:
+            # Evidence / clamped path: mild sharpen only, no unify / expressive crop.
+            enhance = ImageEnhanceParams(sharpen=True)
 
         return ImageTreatmentSpec(
             original_asset_id=asset_id,
             asset_class=asset_class,
             mode=mode,
             focal_point=focal,
-            auto_subject_crop=(
-                mode == ImageTreatmentMode.PRESENTATION_UNIFY
-                and focal.source == "manual"
-                and focal.confidence >= 0.5
-            ),
+            auto_subject_crop=auto_subject_crop,
+            crop_strategy=crop_strategy,
+            unify=unify,
+            enhance=enhance,
             overlay=overlay,
             target_max_edge_px=2400 if mode != ImageTreatmentMode.NONE else None,
             rationale=rationale,

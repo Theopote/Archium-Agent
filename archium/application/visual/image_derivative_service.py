@@ -13,10 +13,11 @@ from archium.application.visual.asset_path_resolver import (
     AssetPathResolver,
 )
 from archium.application.visual.image_derivative_executor import ImageDerivativeExecutor
+from archium.application.visual.image_processor import ImageProcessor
 from archium.application.visual.image_treatment_spec_planner import ImageTreatmentSpecPlanner
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.image_derivative import ImageDerivative
+from archium.domain.visual.image_derivative import ImageCropStrategy, ImageDerivative
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -51,10 +52,12 @@ class ImageDerivativeService:
         executor: ImageDerivativeExecutor | None = None,
         storage: LocalProjectStorage | None = None,
         resolver: AssetPathResolver | None = None,
+        processor: ImageProcessor | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
-        self._planner = planner or ImageTreatmentSpecPlanner()
+        self._processor = processor or ImageProcessor()
+        self._planner = planner or ImageTreatmentSpecPlanner(processor=self._processor)
         self._executor = executor or ImageDerivativeExecutor(storage=storage)
         self._storage = storage or LocalProjectStorage()
         self._resolver = resolver or AssetPathResolver()
@@ -133,6 +136,20 @@ class ImageDerivativeService:
         if original_path is None or not original_path.is_file():
             logger.info("Skip derivative; unresolved original for node %s", node.id)
             return node, None
+
+        if isinstance(node, ImageNode) and (
+            spec.crop_strategy
+            in {
+                ImageCropStrategy.SUBJECT_HEURISTIC,
+                ImageCropStrategy.SKYLINE_HEURISTIC,
+            }
+            or (spec.auto_subject_crop and spec.focal_point.source != "manual")
+        ):
+            tags = list(asset.tags) if asset is not None else []
+            hint = self._processor.focus_hint_from_tags(tags)
+            if spec.crop_strategy == ImageCropStrategy.SKYLINE_HEURISTIC:
+                hint = "skyline"
+            spec = self._processor.enrich_spec_with_focus(spec, original_path, hint=hint)
 
         try:
             derivative = self._executor.execute(

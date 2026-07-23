@@ -380,3 +380,126 @@ def test_presentation_unify_changes_pixels_evidence_stays_untreated(
         overlay=ImageOverlaySpec(kind="soft_vignette", opacity=0.3),
     )
     assert executor.execute(evidence, project_id=project_id, original_path=original) is None
+
+
+def test_unify_params_change_params_hash_and_pixels(tmp_path: Path) -> None:
+    from archium.domain.visual.image_derivative import ImageUnifyParams
+
+    executor = ImageDerivativeExecutor()
+    if not executor.is_available():
+        pytest.skip("Pillow unavailable")
+
+    project_id = uuid4()
+    settings = Settings(_env_file=None, project_storage_path=tmp_path)
+    storage = LocalProjectStorage(settings=settings)
+    layout = storage.ensure_project_layout(project_id)
+    original = layout["assets"] / "temp.jpg"
+    Image.new("RGB", (120, 80), color=(200, 140, 80)).save(original, format="JPEG")
+    executor = ImageDerivativeExecutor(storage=storage)
+    asset_id = uuid4()
+    cool = ImageTreatmentSpec(
+        original_asset_id=asset_id,
+        mode=ImageTreatmentMode.PRESENTATION_UNIFY,
+        unify=ImageUnifyParams(temperature=-0.2, saturation=0.8, contrast=1.1),
+        target_max_edge_px=120,
+    )
+    warm = ImageTreatmentSpec(
+        original_asset_id=asset_id,
+        mode=ImageTreatmentMode.PRESENTATION_UNIFY,
+        unify=ImageUnifyParams(temperature=0.2, saturation=1.1, contrast=0.95),
+        target_max_edge_px=120,
+    )
+    d_cool = executor.execute(cool, project_id=project_id, original_path=original)
+    d_warm = executor.execute(warm, project_id=project_id, original_path=original)
+    assert d_cool is not None and d_warm is not None
+    assert d_cool.params_hash != d_warm.params_hash
+
+
+def test_enhance_flags_change_params_hash(tmp_path: Path) -> None:
+    from archium.domain.visual.image_derivative import ImageEnhanceParams
+
+    executor = ImageDerivativeExecutor()
+    if not executor.is_available():
+        pytest.skip("Pillow unavailable")
+
+    project_id = uuid4()
+    settings = Settings(_env_file=None, project_storage_path=tmp_path)
+    storage = LocalProjectStorage(settings=settings)
+    layout = storage.ensure_project_layout(project_id)
+    original = layout["assets"] / "sharp.jpg"
+    Image.new("RGB", (100, 80), color=(90, 90, 90)).save(original, format="JPEG")
+    executor = ImageDerivativeExecutor(storage=storage)
+    asset_id = uuid4()
+    plain = ImageTreatmentSpec(
+        original_asset_id=asset_id,
+        mode=ImageTreatmentMode.SAFE_NORMALIZE,
+        target_max_edge_px=100,
+    )
+    sharpened = ImageTreatmentSpec(
+        original_asset_id=asset_id,
+        mode=ImageTreatmentMode.SAFE_NORMALIZE,
+        enhance=ImageEnhanceParams(sharpen=True, denoise=True),
+        target_max_edge_px=100,
+    )
+    d1 = executor.execute(plain, project_id=project_id, original_path=original)
+    d2 = executor.execute(sharpened, project_id=project_id, original_path=original)
+    assert d1 is not None and d2 is not None
+    assert d1.params_hash != d2.params_hash
+    assert original.read_bytes()  # original untouched
+
+
+def test_heuristic_focus_biases_away_from_center(tmp_path: Path) -> None:
+    from archium.application.visual.image_focus_detector import (
+        ImageFocusDetector,
+        MIN_CROP_CONFIDENCE,
+    )
+    from archium.domain.visual.image_derivative import ImageCropStrategy
+
+    # High-contrast block in lower-left → subject focal should leave center.
+    img = Image.new("RGB", (200, 160), color=(20, 20, 20))
+    block = Image.new("RGB", (50, 50), color=(240, 240, 240))
+    img.paste(block, (10, 100))
+    path = tmp_path / "subject.jpg"
+    img.save(path, format="JPEG")
+
+    result = ImageFocusDetector().detect(
+        path, strategy=ImageCropStrategy.SUBJECT_HEURISTIC
+    )
+    assert result is not None
+    focal = result.focal_point
+    assert focal.source == "heuristic"
+    assert focal.confidence >= MIN_CROP_CONFIDENCE
+    assert focal.x < 0.45
+    assert focal.y > 0.45
+
+
+def test_planner_historical_sets_restore_enhance() -> None:
+    from archium.domain.visual.image_derivative import ImageCropStrategy
+
+    design = default_presentation_design_system()
+    design = design.model_copy(
+        update={
+            "image_style": design.image_style.model_copy(
+                update={"photo_treatment": PhotoTreatment.HISTORICAL}
+            )
+        }
+    )
+    node = ImageNode(
+        id="old",
+        x=0,
+        y=0,
+        width=2,
+        height=2,
+        z_index=1,
+        asset_id=uuid4(),
+        storage_uri="project://assets/x",
+        asset_origin="project_upload",
+    )
+    spec = ImageTreatmentSpecPlanner().plan_for_node(node, design_system=design)
+    assert spec is not None
+    assert spec.mode == ImageTreatmentMode.PRESENTATION_UNIFY
+    assert spec.enhance.historical_restore is True
+    assert spec.enhance.denoise is True
+    assert spec.crop_strategy == ImageCropStrategy.SUBJECT_HEURISTIC
+    assert spec.auto_subject_crop is True
+    assert abs(spec.unify.saturation - 0.85) < 1e-6

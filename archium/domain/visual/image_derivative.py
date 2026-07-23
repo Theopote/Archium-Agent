@@ -1,15 +1,16 @@
-"""Image derivative pipeline domain contract (Sprint 3).
+"""Image derivative pipeline domain contract (Sprint 3 / Image Intelligence).
 
 Pipeline:
 
     OriginalAsset
-      → ImageTreatmentSpec (plan: mode, focal point, crops, overlays)
+      → ImageTreatmentSpec (plan: mode, focal, unify, enhance, crops)
       → ImageDerivative (immutable processed bytes + params_hash)
       → RenderScene asset reference (storage_uri of derivative)
 
 Execution: Pillow via ``ImageDerivativeExecutor`` (SAFE_NORMALIZE /
-PRESENTATION_UNIFY / DOCUMENT_SCAN). Auto subject crop / Sharp advanced ops
-remain deferred. Do **not** add filters inside PptxGenJS.
+PRESENTATION_UNIFY / DOCUMENT_SCAN) plus heuristic focus, tunable unify,
+and mild enhance. Model-level subject detection and generative restore remain
+deferred. Do **not** add filters inside PptxGenJS.
 
 Related (not this pipeline):
 - ``ImageTreatmentPlanningService`` — layout fit/policy only
@@ -46,6 +47,15 @@ class ImageAssetClass(StrEnum):
     UNKNOWN = "unknown"
 
 
+class ImageCropStrategy(StrEnum):
+    """Pixel crop policy — never silent center-crop without a focus signal."""
+
+    NONE = "none"
+    FOCAL = "focal"
+    SUBJECT_HEURISTIC = "subject_heuristic"
+    SKYLINE_HEURISTIC = "skyline_heuristic"
+
+
 class FocalPoint(DomainModel):
     """Normalized focal point in the original image (0–1)."""
 
@@ -71,6 +81,28 @@ class ImageOverlaySpec(DomainModel):
     opacity: float = Field(ge=0.0, le=1.0, default=0.0)
 
 
+class ImageUnifyParams(DomainModel):
+    """Deck-shared presentation look (relative to identity = 1.0 / temp 0)."""
+
+    temperature: float = Field(
+        default=0.0,
+        ge=-0.35,
+        le=0.35,
+        description="Warm (+R/−B) vs cool (−R/+B) bias",
+    )
+    saturation: float = Field(default=1.0, ge=0.4, le=1.6)
+    contrast: float = Field(default=1.0, ge=0.6, le=1.6)
+    brightness: float = Field(default=1.0, ge=0.6, le=1.6)
+
+
+class ImageEnhanceParams(DomainModel):
+    """Mild Pillow enhance flags — not generative restore."""
+
+    sharpen: bool = False
+    denoise: bool = False
+    historical_restore: bool = False
+
+
 class ImageTreatmentSpec(DomainModel):
     """Declarative treatment plan for one original asset (no pixels)."""
 
@@ -81,6 +113,9 @@ class ImageTreatmentSpec(DomainModel):
     focal_point: FocalPoint = Field(default_factory=FocalPoint)
     crop: ImageCropBox | None = None
     auto_subject_crop: bool = False
+    crop_strategy: ImageCropStrategy = ImageCropStrategy.NONE
+    unify: ImageUnifyParams = Field(default_factory=ImageUnifyParams)
+    enhance: ImageEnhanceParams = Field(default_factory=ImageEnhanceParams)
     overlay: ImageOverlaySpec = Field(default_factory=ImageOverlaySpec)
     target_max_edge_px: int | None = Field(default=None, gt=0)
     rationale: str = ""
@@ -117,3 +152,22 @@ def mode_allowed_for_asset_class(
     }:
         return mode == ImageTreatmentMode.SAFE_NORMALIZE
     return True
+
+
+def default_presentation_unify_params() -> ImageUnifyParams:
+    """Shared deck defaults for SUBTLE_UNIFY (slight cool correction for warm phone JPEGs)."""
+    return ImageUnifyParams(
+        temperature=-0.04,
+        saturation=0.92,
+        contrast=1.06,
+        brightness=1.02,
+    )
+
+
+def default_historical_unify_params() -> ImageUnifyParams:
+    return ImageUnifyParams(
+        temperature=-0.02,
+        saturation=0.85,
+        contrast=1.08,
+        brightness=1.0,
+    )

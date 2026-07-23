@@ -5,10 +5,11 @@ Original assets are never overwritten. Derivatives land under
 
 Pipeline steps (in order):
 1. EXIF orientation + convert toward sRGB/RGB
-2. Mode normalize (safe / presentation_unify / document_scan)
-3. Explicit crop or focal-centered crop (when requested)
-4. Soft overlay (vignette) when allowed for asset class
-5. Max-edge downscale
+2. Mode normalize / tunable unify (temperature, sat, contrast, brightness)
+3. Mild enhance (sharpen / denoise / historical_restore)
+4. Explicit crop or focal-centered crop (when requested)
+5. Soft overlay (vignette) when allowed for asset class
+6. Max-edge downscale
 """
 
 from __future__ import annotations
@@ -28,13 +29,17 @@ from archium.domain.visual.image_derivative import (
     ImageAssetClass,
     ImageCropBox,
     ImageDerivative,
+    ImageEnhanceParams,
     ImageTreatmentSpec,
+    ImageUnifyParams,
     mode_allowed_for_asset_class,
 )
 from archium.infrastructure.storage.local_storage import LocalProjectStorage, compute_file_hash
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="image_derivative")
+
+PIPELINE_VERSION = "exif_srgb_v3_intelligence"
 
 
 class ImageDerivativeNotImplementedError(NotImplementedError):
@@ -66,9 +71,12 @@ class ImageDerivativeExecutor:
             "focal": spec.focal_point.model_dump(mode="json"),
             "crop": spec.crop.model_dump(mode="json") if spec.crop else None,
             "auto_subject_crop": spec.auto_subject_crop,
+            "crop_strategy": spec.crop_strategy.value,
+            "unify": spec.unify.model_dump(mode="json"),
+            "enhance": spec.enhance.model_dump(mode="json"),
             "overlay": spec.overlay.model_dump(mode="json"),
             "target_max_edge_px": spec.target_max_edge_px,
-            "pipeline": "exif_srgb_v2",
+            "pipeline": PIPELINE_VERSION,
             "original_file_hash": original_file_hash,
         }
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -82,7 +90,7 @@ class ImageDerivativeExecutor:
         original_path: Path,
     ) -> ImageDerivative | None:
         """Return a derivative, or None when mode is NONE / pass-through."""
-        if spec.mode.value == "none" and not _has_geometry_ops(spec):
+        if spec.mode.value == "none" and not _has_geometry_ops(spec) and not _has_enhance_ops(spec):
             return None
         if not self.is_available():
             logger.info("Pillow unavailable — skipping image derivative")
@@ -146,6 +154,11 @@ def _has_geometry_ops(spec: ImageTreatmentSpec) -> bool:
     )
 
 
+def _has_enhance_ops(spec: ImageTreatmentSpec) -> bool:
+    e = spec.enhance
+    return bool(e.sharpen or e.denoise or e.historical_restore)
+
+
 def _image_size(path: Path) -> tuple[int | None, int | None]:
     try:
         from PIL import Image
@@ -177,9 +190,9 @@ def _process_image(
         image = ImageOps.grayscale(image).convert("RGB")
         image = ImageOps.autocontrast(image, cutoff=2.0)
     elif mode == "presentation_unify":
-        image = ImageEnhance.Color(image).enhance(0.92)
-        image = ImageEnhance.Contrast(image).enhance(1.06)
-        image = ImageEnhance.Brightness(image).enhance(1.02)
+        image = _apply_unify(image, spec.unify)
+
+    image = _apply_enhance(image, spec.enhance, mode=mode)
 
     if spec.crop is not None:
         image = _apply_norm_crop(image, spec.crop)
@@ -207,6 +220,61 @@ def _process_image(
 
     width, height = image.size
     return image, width, height
+
+
+def _apply_unify(image: PILImage.Image, unify: ImageUnifyParams) -> PILImage.Image:
+    from PIL import ImageEnhance
+
+    image = _apply_temperature(image, unify.temperature)
+    image = ImageEnhance.Color(image).enhance(unify.saturation)
+    image = ImageEnhance.Contrast(image).enhance(unify.contrast)
+    image = ImageEnhance.Brightness(image).enhance(unify.brightness)
+    return image
+
+
+def _apply_temperature(image: PILImage.Image, temperature: float) -> PILImage.Image:
+    """Linear RGB gain: warm = +R/−B, cool = −R/+B."""
+    from PIL import Image
+
+    t = max(-0.35, min(0.35, float(temperature)))
+    if abs(t) < 1e-6:
+        return image
+    r_gain = 1.0 + t
+    b_gain = 1.0 - t
+    # split → scale → merge keeps Pillow-only path
+    r, g, b = image.split()
+    r = r.point(lambda p: max(0, min(255, int(p * r_gain))))
+    b = b.point(lambda p: max(0, min(255, int(p * b_gain))))
+    return Image.merge("RGB", (r, g, b))
+
+
+def _apply_enhance(
+    image: PILImage.Image,
+    enhance: ImageEnhanceParams,
+    *,
+    mode: str,
+) -> PILImage.Image:
+    from PIL import ImageEnhance, ImageFilter
+
+    if enhance.historical_restore:
+        # Mild "album" restore — not generative inpainting.
+        image = image.filter(ImageFilter.MedianFilter(size=3))
+        image = ImageEnhance.Color(image).enhance(0.9)
+        image = ImageEnhance.Contrast(image).enhance(1.05)
+        image = image.filter(
+            ImageFilter.UnsharpMask(radius=1.2, percent=80, threshold=3)
+        )
+        return image
+
+    if enhance.denoise:
+        image = image.filter(ImageFilter.MedianFilter(size=3))
+    if enhance.sharpen:
+        # Safer on SAFE_NORMALIZE evidence: gentler unsharp.
+        percent = 90 if mode == "safe_normalize" else 120
+        image = image.filter(
+            ImageFilter.UnsharpMask(radius=1.4, percent=percent, threshold=2)
+        )
+    return image
 
 
 def _load_oriented_srgb(opened: PILImage.Image) -> PILImage.Image:
@@ -262,6 +330,7 @@ def _focal_center_crop(
 
 def _apply_soft_vignette(image: PILImage.Image, *, opacity: float) -> PILImage.Image:
     from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+
     opacity = max(0.0, min(1.0, opacity))
     if opacity <= 1e-6:
         return image
