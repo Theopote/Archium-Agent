@@ -6,18 +6,18 @@
     "file": "pptx_screenshot.png",
     "width": 1920,
     "height": 1080,
-    "average_hash": "8303ffff2b2983ff"
+    "average_hash": "8383ffff29a983ff"
   },
-  "font_manifest_hash": "sha256:de9f713aa6a555d787f32dda79a17c976d460fcab47a82e9d06372e846e83a98",
-  "font_platform": "win32",
+  "font_manifest_hash": "sha256:d1a059ce0f7f0f1e9b392a7704d330ba3b273d9df2e606464e3ac82837990133",
+  "font_platform": "linux",
   "measurement_engine": "pillow_freetype",
   "fonts": [
     {
       "requested_family": "Microsoft YaHei",
       "resolved_family": "Microsoft YaHei",
-      "source_uri": "file:///C:/Windows/Fonts/msyh.ttc",
-      "file_hash": "sha256:d79c55e68b1131eea0cc1c47be4f572d964f28c682e143db2ad09c1e4cb07a3f:index=0",
-      "platform": "win32",
+      "source_uri": "file:///usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+      "file_hash": "sha256:b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a:index=0",
+      "platform": "linux",
       "fallback_used": false,
       "bold": false,
       "measurement_engine": "pillow_freetype"
@@ -25,9 +25,9 @@
     {
       "requested_family": "Microsoft YaHei",
       "resolved_family": "Microsoft YaHei",
-      "source_uri": "file:///C:/Windows/Fonts/msyhbd.ttc",
-      "file_hash": "sha256:4508821b3dffe01f0ef5e5326a3e60df705a44633858811f67b6982dce3f6ee6:index=0",
-      "platform": "win32",
+      "source_uri": "file:///usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+      "file_hash": "sha256:faa5f3656a78b2e2d450d27fe8382c778bc2b6bb5ea29c986664a6a435056ceb:index=0",
+      "platform": "linux",
       "fallback_used": false,
       "bold": true,
       "measurement_engine": "pillow_freetype"
@@ -35,9 +35,9 @@
     {
       "requested_family": "Arial",
       "resolved_family": "Arial",
-      "source_uri": "file:///C:/Windows/Fonts/arial.ttf",
-      "file_hash": "sha256:b3658eadae55e682b5f69eb64c439c1ecc8f196c0bb8d4756d145d13bc86476a:index=0",
-      "platform": "win32",
+      "source_uri": "file:///usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+      "file_hash": "sha256:4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144:index=0",
+      "platform": "linux",
       "fallback_used": false,
       "bold": false,
       "measurement_engine": "pillow_freetype"
@@ -45,9 +45,9 @@
     {
       "requested_family": "Arial",
       "resolved_family": "Arial",
-      "source_uri": "file:///C:/Windows/Fonts/arialbd.ttf",
-      "file_hash": "sha256:e8f4e3baf6cc35fed6fcce3a540e8b39e8f6cda1d22a28f2ec8f526fef7a43f5:index=0",
-      "platform": "win32",
+      "source_uri": "file:///usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+      "file_hash": "sha256:3973aa5054fb467dd5627245d3dc82e37bf16fe075756156a570455871351582:index=0",
+      "platform": "linux",
       "fallback_used": false,
       "bold": true,
       "measurement_engine": "pillow_freetype"
