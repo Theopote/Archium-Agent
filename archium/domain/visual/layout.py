@@ -20,30 +20,17 @@ from archium.domain.visual.enums import (
     LayoutValidationStatus,
     OverflowPolicy,
 )
-from archium.domain.visual.render_scene import ChartSeriesData
+from archium.domain.visual.structured_payload import (
+    ChartSeriesData,
+    LayoutChartData,
+    LayoutTableData,
+)
 
 # Post-compile spatial SSOT (DOM-011):
 # - layout_plan: geometry owned by layout engine / LayoutPlan (compile source)
 # - render_scene: geometry owned by RenderScene after Studio/scene mutation;
 #   LayoutPlan is a synced mirror until the next layout-engine rewrite.
 GeometryAuthority = Literal["layout_plan", "render_scene"]
-
-
-class LayoutChartData(DomainModel):
-    """Optional structured chart payload on a LayoutElement."""
-
-    chart_type: str = Field(default="bar", min_length=1)
-    title: str | None = None
-    series: list[ChartSeriesData] = Field(default_factory=list)
-    show_legend: bool = True
-    show_value: bool = False
-
-
-class LayoutTableData(DomainModel):
-    """Optional structured table payload on a LayoutElement."""
-
-    headers: list[str] = Field(default_factory=list)
-    rows: list[list[str]] = Field(default_factory=list)
 
 
 class LayoutElement(DomainModel):

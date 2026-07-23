@@ -12,7 +12,8 @@ from archium.application.visual.layout_planning_service import (
     capacity_blocker_messages,
     format_layout_decision_warnings,
 )
-from archium.domain.slide_design_brief import BriefStatus, SlideDesignBrief
+from archium.domain.enums import ApprovalStatus
+from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualContentType
 from archium.domain.visual.slide_capacity_budget import (
     CAPACITY_IMPOSSIBLE_RULE,
@@ -78,7 +79,7 @@ def test_apply_design_brief_overrides_intent_preferences() -> None:
         primary_visual_type="photo",
         layout_family="photo_evidence_grid",
         expected_density="high",
-        status=BriefStatus.APPROVED,
+        status=ApprovalStatus.APPROVED,
     )
     updated = apply_design_brief_to_intent(intent, brief)
     assert updated.preferred_layout_families[0] == LayoutFamily.EVIDENCE_BOARD

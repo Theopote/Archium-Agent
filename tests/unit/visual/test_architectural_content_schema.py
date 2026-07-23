@@ -125,7 +125,7 @@ def test_photo_analysis_schema_semantic_contract_roundtrip() -> None:
         ArchitecturalContentSchema,
         ContentRequirement,
         ContentRole,
-        VisualRequirement,
+        SchemaVisualRequirement,
     )
 
     schema = ArchitecturalContentSchema(
@@ -136,7 +136,7 @@ def test_photo_analysis_schema_semantic_contract_roundtrip() -> None:
             ContentRequirement(role=ContentRole.EVIDENCE, required=True, min_count=2, max_count=4),
         ],
         visual_requirements=[
-            VisualRequirement(
+            SchemaVisualRequirement(
                 role="supporting_image",
                 required=True,
                 min_count=2,

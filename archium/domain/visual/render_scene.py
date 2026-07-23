@@ -14,6 +14,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
+from archium.domain.visual.structured_payload import ChartSeriesData
 
 
 class BoxSpacing(DomainModel):
@@ -277,16 +278,11 @@ class ShapeNode(BaseRenderNode):
     corner_radius: float = Field(default=0, ge=0)
 
 
-class ChartSeriesData(DomainModel):
-    """One data series for a native or shape-baked chart."""
-
-    name: str = Field(min_length=1)
-    labels: list[str] = Field(default_factory=list)
-    values: list[float] = Field(default_factory=list)
-
-
 class ChartNode(BaseRenderNode):
-    """Structured chart with series data (dual export: native vs cross-app stable)."""
+    """Structured chart with series data (dual export: native vs cross-app stable).
+
+    Data fields mirror ``ChartDataPayload`` (DOM-012 shared VO).
+    """
 
     node_type: Literal["chart"] = "chart"
     chart_type: str = Field(default="bar", min_length=1)
@@ -303,7 +299,10 @@ class ChartNode(BaseRenderNode):
 
 
 class TableNode(BaseRenderNode):
-    """Structured table grid (dual export: native table vs shape/text grid)."""
+    """Structured table grid (dual export: native table vs shape/text grid).
+
+    Data fields mirror ``TableDataPayload`` (DOM-012 shared VO).
+    """
 
     node_type: Literal["table"] = "table"
     headers: list[str] = Field(default_factory=list)

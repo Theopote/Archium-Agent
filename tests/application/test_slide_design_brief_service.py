@@ -13,7 +13,7 @@ from archium.application.slide_design_brief_service import (
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
-from archium.domain.slide_design_brief import BriefStatus
+from archium.domain.enums import ApprovalStatus
 from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
@@ -88,11 +88,11 @@ def test_edit_approved_brief_becomes_changes_pending(db_session: Session) -> Non
             page_task="修改后的任务",
             central_claim="新结论",
             primary_visual_type="photo",
-            status=BriefStatus.APPROVED.value,
+            status=ApprovalStatus.APPROVED.value,
         ),
     )
     db_session.commit()
-    assert updated.status == BriefStatus.CHANGES_PENDING
+    assert updated.status == ApprovalStatus.CHANGES_PENDING
 
 
 def test_design_briefs_ready_requires_all_approved(db_session: Session) -> None:
@@ -123,7 +123,7 @@ def test_regenerate_single_page(db_session: Session) -> None:
     brief = service.regenerate_page(saved_outline.id, page_order=1)
     db_session.commit()
     assert brief.page_order == 1
-    assert brief.status == BriefStatus.READY_FOR_REVIEW
+    assert brief.status == ApprovalStatus.PENDING
 
 
 def test_regenerate_missing_page_raises(db_session: Session) -> None:

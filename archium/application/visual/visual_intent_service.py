@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from archium.application.visual.design_brief_intent import apply_design_brief_to_intent
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.slide import SlideSpec
-from archium.domain.slide_design_brief import BriefStatus, SlideDesignBrief
+from archium.domain.slide_design_brief import SlideDesignBrief
+from archium.domain.enums import ApprovalStatus
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.enums import (
     ContinuityRole,
@@ -25,9 +26,7 @@ from archium.prompts.visual_intent import (
     build_visual_intent_user_prompt,
 )
 
-_USABLE_BRIEF_STATUSES = frozenset(
-    {BriefStatus.APPROVED, BriefStatus.READY_FOR_REVIEW}
-)
+_USABLE_BRIEF_STATUSES = frozenset({ApprovalStatus.APPROVED, ApprovalStatus.PENDING})
 
 _VISUAL_TYPE_MAP: dict[VisualType, VisualContentType] = {
     VisualType.SITE_PLAN: VisualContentType.SITE_PLAN,

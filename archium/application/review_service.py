@@ -44,7 +44,10 @@ from archium.domain.presentation_manuscript import ManuscriptStatus, Presentatio
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_asset_binding import SlideAssetBinding
-from archium.domain.slide_design_brief import BriefStatus, SlideDesignBrief
+from archium.domain.slide_design_brief import (
+    SlideDesignBrief,
+    coerce_brief_approval_status,
+)
 from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
@@ -553,9 +556,9 @@ def _slide_design_brief_from_update(update: SlideDesignBriefUpdate) -> SlideDesi
     from archium.domain.slide_design_brief import DrawingDisplayPolicy, ImageDisplayPolicy
 
     try:
-        status = BriefStatus(update.status.strip().casefold())
+        status = coerce_brief_approval_status(update.status.strip().casefold())
     except ValueError:
-        status = BriefStatus.DRAFT
+        status = coerce_brief_approval_status("draft")
     drawing_policy = (
         DrawingDisplayPolicy.model_validate(update.drawing_policy)
         if update.drawing_policy

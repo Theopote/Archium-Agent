@@ -13,9 +13,9 @@ from archium.application.slide_design_brief_service import (
     summarize_design_briefs,
 )
 from archium.domain.outline import OutlinePlan
+from archium.domain.enums import ApprovalStatus
 from archium.domain.slide_design_brief import (
     BRIEF_STATUS_LABELS_ZH,
-    BriefStatus,
     SlideDesignBrief,
     format_design_brief_card,
     index_design_briefs,
@@ -228,7 +228,7 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
                 saved = SlideDesignBriefService(session).update_brief(outline_id, update)
                 session.commit()
             st.success("设计摘要已保存。")
-            if saved.status == BriefStatus.CHANGES_PENDING:
+            if saved.status == ApprovalStatus.CHANGES_PENDING:
                 st.warning("已批准页面被修改，状态变为「待重新确认」。")
             st.rerun()
         except WorkflowError as exc:

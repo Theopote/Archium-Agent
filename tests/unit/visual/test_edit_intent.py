@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from archium.domain.visual.edit_intent import VisualEditIntent, parse_natural_language
+from archium.application.visual.nlp_parser import parse_natural_language
+from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
 
 

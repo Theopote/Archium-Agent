@@ -12,7 +12,7 @@ from archium.domain.visual.architectural_content_schema import (
     ContentRequirement,
     ContentRole,
     UsageCondition,
-    VisualRequirement,
+    SchemaVisualRequirement,
 )
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
@@ -103,7 +103,7 @@ def test_schema_supports_drawing_from_visual_evidence() -> None:
         name="content/plan",
         page_purpose="图纸",
         visual_evidence=[
-            VisualRequirement(role="drawing", required=True, min_count=1),
+            SchemaVisualRequirement(role="drawing", required=True, min_count=1),
         ],
     )
     assert schema_supports_drawing(schema) is True

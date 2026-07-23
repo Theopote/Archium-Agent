@@ -61,7 +61,7 @@ from archium.domain.project_mission import (
     Stakeholder,
 )
 from archium.domain.review import ReviewIssue
-from archium.domain.slide import SlideSpec, VisualRequirement
+from archium.domain.slide import SlideSpec, SlideVisualRequirement, VisualRequirement
 from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream, WorkstreamPlan
 
@@ -122,6 +122,7 @@ __all__ = [
     "UncertaintyLevel",
     "UserPreference",
     "VerificationStatus",
+    "SlideVisualRequirement",
     "VisualRequirement",
     "VisualType",
     "Workstream",

@@ -41,7 +41,27 @@ def test_domain_does_not_import_infra_libraries() -> None:
     assert hits == [], "domain must not import infra libraries:\n" + "\n".join(hits)
 
 
+def test_visual_requirement_type_names_are_disambiguated() -> None:
+    """DOM-016: slide vs schema requirements must not share a class name."""
+    root = _domain_root()
+    defining: list[str] = []
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        if "class VisualRequirement(" in text or "class VisualRequirement:" in text:
+            defining.append(str(path.relative_to(root.parent.parent)))
+    assert defining == [], f"bare VisualRequirement class still defined in: {defining}"
+
+    from archium.domain.slide import SlideVisualRequirement, VisualRequirement
+    from archium.domain.visual.architectural_content_schema import SchemaVisualRequirement
+
+    assert SlideVisualRequirement is VisualRequirement
+    assert SchemaVisualRequirement is not SlideVisualRequirement
+    assert SchemaVisualRequirement.__name__ == "SchemaVisualRequirement"
+    assert SlideVisualRequirement.__name__ == "SlideVisualRequirement"
+
+
 def test_scene_semantic_qa_duplicate_module_removed() -> None:
     root = _domain_root() / "visual"
     assert not (root / "scene_semantic_qa.py").exists()
+    assert not (root / "post_render_qa.py").exists()
     assert (root / "scene_qa.py").exists()

@@ -16,7 +16,7 @@ def build_slide_logical_key(chapter_id: str, order: int) -> str:
     return f"{chapter_id.strip()}-p{order}"
 
 
-class VisualRequirement(DomainModel):
+class SlideVisualRequirement(DomainModel):
     """Visual asset requirement for a slide."""
 
     type: VisualType
@@ -49,6 +49,10 @@ class VisualRequirement(DomainModel):
         return ordered
 
 
+# Deprecated alias for checkpoints / older imports (DOM-016).
+VisualRequirement = SlideVisualRequirement
+
+
 class SlideSpec(IdentifiedModel, VersionedModel):
     """Specification for a single presentation slide."""
 
@@ -62,7 +66,7 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     slide_type: SlideType = SlideType.CONTENT
     layout_id: str = Field(default="default", min_length=1)
     key_points: list[str] = Field(default_factory=list)
-    visual_requirements: list[VisualRequirement] = Field(default_factory=list)
+    visual_requirements: list[SlideVisualRequirement] = Field(default_factory=list)
     source_citations: list[Citation] = Field(default_factory=list)
     speaker_notes: str | None = None
     status: SlideStatus = SlideStatus.PLANNED

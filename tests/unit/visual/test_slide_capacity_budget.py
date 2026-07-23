@@ -9,10 +9,8 @@ from archium.application.visual.slide_capacity_service import (
     SlideCapacityService,
     detect_slide_language,
 )
-from archium.domain.content_adaptation import (
-    ContentAdaptationAction,
-    suggest_content_adaptations,
-)
+from archium.application.content_adaptation_heuristics import suggest_content_adaptations
+from archium.domain.content_adaptation import ContentAdaptationAction
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.defaults import default_presentation_design_system

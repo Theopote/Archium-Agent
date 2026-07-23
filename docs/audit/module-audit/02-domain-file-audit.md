@@ -106,26 +106,23 @@
 | 角色 | 设计 Brief + 推断/格式化 helper |
 | 裁决 | relocate（helper）/ keep（模型） |
 | 级别 | P1（DOM-014 部分） |
-| 问题 | `infer_primary_visual_type`、`format_design_brief_card` 偏应用；`BriefStatus`≈`ApprovalStatus`；`layout_family` 自由字符串 |
+| 问题 | `infer_primary_visual_type`、`format_design_brief_card` 偏应用；~~BriefStatus~~ → `ApprovalStatus`（DOM-009 partial）；`layout_family` 自由字符串 |
 | 删除 | helper 可迁 |
-| 合并 | BriefStatus → ApprovalStatus（DOM-009） |
+| 合并 | Brief 审批已合；余提案双枚举 |
 | 重构 | layout_family 受控（DOM-006） |
 | 方案 | 模型留 domain；推断迁 application |
 | 验收 | domain 无 layout 字符串启发式；非法 family 拒绝 |
 
-### `content_adaptation.py` (~214)
+### `content_adaptation.py`（DTO only；启发式已迁）
 
 | 字段 | 内容 |
 |------|------|
-| 角色 | 内容适配动作 + **建议引擎** |
-| 裁决 | relocate |
-| 级别 | P1（DOM-014） |
-| 问题 | `parse_*` / `suggest_content_adaptations` 是服务逻辑 |
-| 删除 | 否（动作枚举保留） |
-| 合并 | 否 |
-| 重构 | 是 |
-| 方案 | 枚举+DTO 留；suggest/parse → application |
-| 验收 | domain 无 suggest 实现；Studio 适配仍可用 |
+| 角色 | 内容适配动作枚举 + Suggestion DTO |
+| 裁决 | keep（模型）；~~suggest/parse~~ → `application/content_adaptation_heuristics.py` |
+| 级别 | P1（DOM-014 **slice done**） |
+| 问题 | 曾含服务逻辑 |
+| 方案 | 已迁；调用方改 application import |
+| 验收 | domain 无 suggest/parse；相关单测绿 |
 
 ### `render.py` (~78)
 
@@ -319,11 +316,11 @@
 
 | 字段 | 内容 |
 |------|------|
-| 裁决 | relocate（函数）/ keep（模型） |
-| 级别 | P1–P2（DOM-014） |
-| 问题 | NL parse、normalize、resolve 在 domain |
-| 方案 | 迁 application/compilers |
-| 验收 | domain 无 keyword 表 / OOXML normalize |
+| 裁决 | keep（枚举/DTO）；~~NL parse~~ → `application/visual/nlp_parser.py`；余 relocate |
+| 级别 | P1–P2（DOM-014 **NL slice done**） |
+| 问题 | 余 normalize / `text_style.resolve_*` 仍在 domain |
+| 方案 | 续迁 application/compilers |
+| 验收 | domain 无 keyword NL；无 OOXML normalize |
 
 ### `atomic_operation.py` / `studio_command.py` / `element_edit_intent.py` / `element_lock.py` / `slide_edit_command.py`
 

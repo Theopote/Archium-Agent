@@ -37,7 +37,8 @@ from archium.application.visual.visual_scene_repair_workflow_service import (
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
-from archium.domain.slide_design_brief import BriefStatus, SlideDesignBrief
+from archium.domain.enums import ApprovalStatus
+from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.deck_composition import DeckCompositionPlan
 from archium.domain.visual.enums import LayoutValidationStatus
 from archium.domain.visual.layout import LayoutPlan
@@ -438,7 +439,7 @@ class VisualWorkflowNodes:
         outline = self._runtime.presentations.get_outline(presentation.current_outline_id)
         if outline is None:
             return by_slide, by_order
-        usable = {BriefStatus.APPROVED, BriefStatus.READY_FOR_REVIEW}
+        usable = {ApprovalStatus.APPROVED, ApprovalStatus.PENDING}
         for brief in outline.page_design_briefs:
             if brief.status not in usable:
                 continue

@@ -37,11 +37,8 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.atomic_operation import AtomicOperation, OperationType
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.edit_intent import (
-    VisualEditIntent,
-    intent_from_preset,
-    parse_natural_language,
-)
+from archium.application.visual.nlp_parser import parse_natural_language
+from archium.domain.visual.edit_intent import VisualEditIntent, intent_from_preset
 from archium.domain.visual.element_lock import (
     ElementEditOperation,
     assert_element_editable,

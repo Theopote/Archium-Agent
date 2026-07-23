@@ -11,7 +11,7 @@ from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,
     ContentRole,
-    VisualRequirement,
+    SchemaVisualRequirement,
 )
 from archium.domain.visual.reference_slide import (
     REFERENCE_TEMPLATE_ASSET_ORIGIN,
@@ -49,7 +49,7 @@ def _schema(*, with_visual: bool = True) -> ArchitecturalContentSchema:
     )
     if with_visual:
         schema.visual_requirements = [
-            VisualRequirement(role="hero_image", required=True, min_count=1, max_count=1),
+            SchemaVisualRequirement(role="hero_image", required=True, min_count=1, max_count=1),
         ]
     return schema
 
@@ -75,7 +75,7 @@ def _drawing_schema() -> ArchitecturalContentSchema:
             ),
         ],
         visual_requirements=[
-            VisualRequirement(role="drawing", required=True, min_count=1, max_count=1, fit_mode="contain"),
+            SchemaVisualRequirement(role="drawing", required=True, min_count=1, max_count=1, fit_mode="contain"),
         ],
     )
 

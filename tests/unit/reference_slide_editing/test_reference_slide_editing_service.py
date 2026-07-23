@@ -15,7 +15,7 @@ from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,
     ContentRole,
-    VisualRequirement,
+    SchemaVisualRequirement,
 )
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
@@ -281,7 +281,7 @@ def _semantic_schema() -> ArchitecturalContentSchema:
             ),
         ],
         visual_evidence=[
-            VisualRequirement(
+            SchemaVisualRequirement(
                 role="hero_image",
                 required=True,
                 min_count=1,
@@ -415,7 +415,7 @@ def test_generate_scene_maps_multiple_image_slots_to_evidence_depth() -> None:
             ),
         ],
         visual_evidence=[
-            VisualRequirement(
+            SchemaVisualRequirement(
                 role="hero_image",
                 required=True,
                 min_count=1,

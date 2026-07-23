@@ -2,28 +2,37 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.enums import ApprovalStatus
 
-
-class BriefStatus(StrEnum):
-    DRAFT = "draft"
-    READY_FOR_REVIEW = "ready_for_review"
-    APPROVED = "approved"
-    CHANGES_PENDING = "changes_pending"
-
-
-BRIEF_STATUS_LABELS_ZH: dict[BriefStatus, str] = {
-    BriefStatus.DRAFT: "草稿",
-    BriefStatus.READY_FOR_REVIEW: "待确认",
-    BriefStatus.APPROVED: "已批准",
-    BriefStatus.CHANGES_PENDING: "待重新确认",
+# Brief UI labels keyed by ApprovalStatus (DOM-009).
+# Legacy persisted value ``ready_for_review`` coerces to ``pending``.
+BRIEF_STATUS_LABELS_ZH: dict[ApprovalStatus, str] = {
+    ApprovalStatus.DRAFT: "草稿",
+    ApprovalStatus.PENDING: "待确认",
+    ApprovalStatus.APPROVED: "已批准",
+    ApprovalStatus.CHANGES_PENDING: "待重新确认",
+    ApprovalStatus.REJECTED: "已驳回",
 }
+
+_LEGACY_BRIEF_STATUS = {
+    "ready_for_review": ApprovalStatus.PENDING,
+}
+
+
+def coerce_brief_approval_status(value: object) -> ApprovalStatus:
+    """Accept ApprovalStatus, legacy brief strings, or ApprovalStatus values."""
+    if isinstance(value, ApprovalStatus):
+        return value
+    raw = str(value).strip().casefold()
+    if raw in _LEGACY_BRIEF_STATUS:
+        return _LEGACY_BRIEF_STATUS[raw]
+    return ApprovalStatus(raw)
 
 
 class DrawingDisplayPolicy(DomainModel):
@@ -144,22 +153,31 @@ class SlideDesignBrief(DomainModel):
     template_usage_brief_id: UUID | None = None
     template_usage_brief_version: int | None = Field(default=None, ge=1)
 
-    status: BriefStatus = BriefStatus.DRAFT
+    status: ApprovalStatus = ApprovalStatus.DRAFT
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _coerce_legacy_brief_status(cls, value: object) -> object:
+        if isinstance(value, str):
+            key = value.strip().casefold()
+            if key in _LEGACY_BRIEF_STATUS:
+                return _LEGACY_BRIEF_STATUS[key]
+        return value
 
     def approve(self) -> None:
-        self.status = BriefStatus.APPROVED
+        self.status = ApprovalStatus.APPROVED
 
     def mark_changes_pending(self) -> None:
-        if self.status == BriefStatus.APPROVED:
-            self.status = BriefStatus.CHANGES_PENDING
+        if self.status == ApprovalStatus.APPROVED:
+            self.status = ApprovalStatus.CHANGES_PENDING
 
     def mark_ready_for_review(self) -> None:
-        if self.status == BriefStatus.DRAFT:
-            self.status = BriefStatus.READY_FOR_REVIEW
+        if self.status == ApprovalStatus.DRAFT:
+            self.status = ApprovalStatus.PENDING
 
     @property
     def is_approved(self) -> bool:
-        return self.status == BriefStatus.APPROVED
+        return self.status == ApprovalStatus.APPROVED
 
 
 def index_design_briefs(briefs: list[SlideDesignBrief]) -> dict[int, SlideDesignBrief]:

@@ -92,7 +92,7 @@ flowchart LR
 | 模板归纳 | `template_induction_service.py`、`reference_slide_matcher.py` |
 | Co-plan | `outline_template_co_planning_service.py`（outline section ↔ schema affinity） |
 | 问题—策略 | `renovation_issue_planner.py`、review `architectural.py` |
-| Domain | `ContentRole`、`VisualRequirement`、`ArchitecturalTemplate` |
+| Domain | `ContentRole`、`SchemaVisualRequirement`、`ArchitecturalTemplate` |
 
 **输出契约**：`ArchitecturalContentSchema` 描述「这页需要 central_claim / evidence / visual_evidence」，**不**绑定参考 PPT 里的案例文字或 `reference_template` 资产。
 

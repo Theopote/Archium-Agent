@@ -926,10 +926,8 @@ def apply_slide_content_adaptation(
     action: str | None = None,
 ) -> object:
     from archium.application.content_adaptation_service import ContentAdaptationService
-    from archium.domain.content_adaptation import (
-        action_from_value,
-        parse_content_adaptation_text,
-    )
+    from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
+    from archium.domain.content_adaptation import action_from_value
     from archium.ui.studio.undo_stack import clear_content_redo_stack
 
     clear_content_redo_stack(slide_id)

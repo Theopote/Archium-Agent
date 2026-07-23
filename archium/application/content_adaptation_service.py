@@ -18,10 +18,10 @@ from archium.application.slide_repair_policy import (
 )
 from archium.application.slide_split_planner import build_split_plan
 from archium.application.visual.visual_edit_service import VisualEditService
+from archium.application.content_adaptation_heuristics import suggest_content_adaptations
 from archium.domain.content_adaptation import (
     ContentAdaptationAction,
     ContentAdaptationSuggestion,
-    suggest_content_adaptations,
 )
 from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.revision import EntityRevision

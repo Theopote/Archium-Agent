@@ -40,7 +40,7 @@ class ContentRequirement(DomainModel):
     label: str = ""
 
 
-class VisualRequirement(DomainModel):
+class SchemaVisualRequirement(DomainModel):
     role: Literal[
         "hero_image",
         "supporting_image",
@@ -110,13 +110,13 @@ class ArchitecturalContentSchema(TimestampedModel):
     reference_paragraphs: list[str] = Field(default_factory=list)
     central_claim: ContentRequirement | None = None
     evidence_items: list[ContentRequirement] = Field(default_factory=list)
-    visual_evidence: list[VisualRequirement] = Field(default_factory=list)
+    visual_evidence: list[SchemaVisualRequirement] = Field(default_factory=list)
     interpretation: ContentRequirement | None = None
     decision_request: ContentRequirement | None = None
 
     required_content: list[ContentRequirement] = Field(default_factory=list)
     optional_content: list[ContentRequirement] = Field(default_factory=list)
-    visual_requirements: list[VisualRequirement] = Field(default_factory=list)
+    visual_requirements: list[SchemaVisualRequirement] = Field(default_factory=list)
     evidence_requirements: list[EvidenceRequirement] = Field(default_factory=list)
 
     allowed_asset_origins: list[str] = Field(

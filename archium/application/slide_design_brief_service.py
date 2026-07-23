@@ -15,14 +15,14 @@ from archium.application.review_models import (
     SlideIntentUpdate,
 )
 from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import SlideAssetBindingRole
+from archium.domain.enums import ApprovalStatus, SlideAssetBindingRole
 from archium.domain.outline import OutlinePlan
 from archium.domain.slide_asset_binding import SlideAssetBinding, index_page_asset_bindings
 from archium.domain.slide_design_brief import (
-    BriefStatus,
     DrawingDisplayPolicy,
     ImageDisplayPolicy,
     SlideDesignBrief,
+    coerce_brief_approval_status,
     default_drawing_policy,
     default_image_policy,
     default_protection_rules_for_page,
@@ -100,7 +100,7 @@ def design_briefs_ready(outline: OutlinePlan) -> tuple[bool, list[str]]:
     if not briefs:
         missing.append("请生成页面设计摘要")
         return False, missing
-    unapproved = [b for b in briefs if b.status != BriefStatus.APPROVED]
+    unapproved = [b for b in briefs if b.status != ApprovalStatus.APPROVED]
     if unapproved:
         orders = ", ".join(str(b.page_order + 1) for b in unapproved[:6])
         suffix = "…" if len(unapproved) > 6 else ""
@@ -111,13 +111,13 @@ def design_briefs_ready(outline: OutlinePlan) -> tuple[bool, list[str]]:
 
 def summarize_design_briefs(outline: OutlinePlan) -> DesignBriefSummary:
     briefs = _ensure_briefs_aligned(outline)
-    approved = sum(1 for b in briefs if b.status == BriefStatus.APPROVED)
+    approved = sum(1 for b in briefs if b.status == ApprovalStatus.APPROVED)
     pending = sum(
         1
         for b in briefs
-        if b.status in {BriefStatus.READY_FOR_REVIEW, BriefStatus.CHANGES_PENDING}
+        if b.status in {ApprovalStatus.PENDING, ApprovalStatus.CHANGES_PENDING}
     )
-    draft = sum(1 for b in briefs if b.status == BriefStatus.DRAFT)
+    draft = sum(1 for b in briefs if b.status == ApprovalStatus.DRAFT)
     return DesignBriefSummary(
         total=len(briefs),
         approved=approved,
@@ -163,8 +163,8 @@ class SlideDesignBriefService:
             preserve_status=False,
             usage_brief=usage,
         )
-        if existing is not None and existing.status == BriefStatus.APPROVED:
-            brief.status = BriefStatus.CHANGES_PENDING
+        if existing is not None and existing.status == ApprovalStatus.APPROVED:
+            brief.status = ApprovalStatus.CHANGES_PENDING
         briefs = list(outline.page_design_briefs)
         briefs = [b for b in briefs if b.page_order != page_order]
         briefs.append(brief)
@@ -192,11 +192,11 @@ class SlideDesignBriefService:
             raise WorkflowError(f"页面 {update.page_order + 1} 尚无设计摘要。")
 
         previous = briefs[index]
-        next_status = BriefStatus(update.status) if update.status else previous.status
-        if previous.status == BriefStatus.APPROVED and self._brief_content_changed(
+        next_status = coerce_brief_approval_status(update.status) if update.status else previous.status
+        if previous.status == ApprovalStatus.APPROVED and self._brief_content_changed(
             previous, update
         ):
-            next_status = BriefStatus.CHANGES_PENDING
+            next_status = ApprovalStatus.CHANGES_PENDING
 
         drawing_policy = (
             DrawingDisplayPolicy.model_validate(update.drawing_policy)
@@ -392,7 +392,7 @@ class SlideDesignBriefService:
             protection_rules=protection_rules,
             template_usage_brief_id=brief_id,
             template_usage_brief_version=brief_version,
-            status=BriefStatus.READY_FOR_REVIEW if not preserve_status else BriefStatus.DRAFT,
+            status=ApprovalStatus.PENDING if not preserve_status else ApprovalStatus.DRAFT,
         )
 
     def _resolve_usage_brief(self, outline: OutlinePlan) -> TemplateUsageBrief | None:

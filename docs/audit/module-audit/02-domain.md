@@ -17,7 +17,7 @@
 | 空间 SSOT | **P0**：LayoutPlan.elements 与 RenderScene.nodes 双持几何 |
 | 结构化数据 | Chart/Table 在 Spec / Layout / Scene **三份拷贝** |
 | 同义枚举 | Severity ≥4；页类型/布局族/密度/叙事角色多套 |
-| Service 逻辑在 Domain | NL parser、style resolve、pptx payload 工厂等仍在 domain |
+| Service 逻辑在 Domain | NL / content-adaptation 启发式已迁出；余 style resolve、pptx payload、brief helpers |
 
 包结构：根模块约 61 个 `.py` + `visual/` 52；非多级子包。超大非 visual 文件：`enums.py`（~668）、`powerpoint_capability.py`（~420）。
 
@@ -35,14 +35,14 @@
 | DOM-006 | P1 | open | `SlideDesignBrief.layout_family` 等为自由字符串 (D6) | `slide_design_brief.py`; SpecSlide.layout; RenderScene.source_layout_family | 无法校验 | 受控词表/`LayoutFamily` | 非法 family 拒绝 | `-` |
 | DOM-007 | P1 | open | `WorkflowStep` 过大耦合 (D7) | `enums.py` | 难演进 | 拆分阶段枚举 | 图定义不依赖巨枚举 | `-` |
 | DOM-008 | P1 | open | Fact 三模型弱关联 (D8) | `fact.py`; `project_knowledge.py`; `presentation_manuscript.py` | 引用断裂 | 显式 ID 链接 + 不变量 | 跨模型可追溯 | `-` |
-| DOM-009 | P2 | open | 审批/提案状态克隆 (D9) | `ApprovalStatus` vs `BriefStatus`; `ProposalStatus` vs `ThemeProposalStatus` | 状态漂移 | 合并或 1:1 映射 | 单一状态机文档 | `-` |
+| DOM-009 | P2 | partial | 审批/提案状态克隆 (D9) | Brief → `ApprovalStatus`（`coerce_brief_approval_status`）；余 `ProposalStatus` vs `ThemeProposalStatus` | 状态漂移 | Brief 已合；提案状态映射或共享枚举 | Brief 无独立 BriefStatus；提案单一词表或显式映射 | `-` |
 | DOM-010 | P2 | open | Chart/Table series 深拷贝语义不清 (D10) | Spec/Layout/Scene chart-table | 静默丢字段 | 明确 copy + 测试 | 变更不丢系列字段 | `-` |
 | DOM-011 | P0 | done | **双空间 SSOT**：LayoutPlan 与 RenderScene 均持 x/y/w/h/z/lock | `visual/layout.py`; `studio_scene_service.py`; `studio_scene_edit_service.py` | Studio 改 Scene 后 Plan 静默漂移 / ensure 覆盖编辑 | `geometry_authority` + sync 切 `render_scene`；ensure 非 force 不覆盖；layout refresh 收回权威 | 合同 + `test_ensure_scene_preserves_render_scene_geometry_authority` | `-` |
-| DOM-012 | P1 | open | Chart/Table **三份字段拷贝** | `presentation_spec.py`; `layout.py`; `render_scene.py` | 改一漏二 | 单一结构化数据类型；其余投影 | 一处修改三处一致的测试或单类型 | `-` |
+| DOM-012 | P1 | done | Chart/Table **三份字段拷贝** | `structured_payload.py`; layout/scene/spec | 改一漏二 | 共享 `ChartDataPayload`/`TableDataPayload`；Layout/Spec 为别名 | `test_structured_payload_ssot` | `-` |
 | DOM-013 | P1 | open | 主张/要点链无类型化链接 | SlideIntent → Brief → SlideSpec → SpecSlide 平行字符串 | 文案漂移 | 单一内容 SSOT + FK | 改 claim 可追溯下游 | `-` |
-| DOM-014 | P1 | open | Domain 内仍有 parser/resolver/导出工厂 | `edit_intent.py`; `content_adaptation.py`; `text_style.py`; `pptx_structure.py`; `slide_design_brief.py` | 分层回潮 | 迁 application；domain 留 DTO | domain 无 NL parse / pptx payload | `-` |
+| DOM-014 | P1 | partial | Domain 内仍有 parser/resolver/导出工厂 | NL → `nlp_parser`；适配启发式 → `content_adaptation_heuristics`；余 `text_style` / `pptx_structure` / brief helpers | 分层回潮 | 续迁 application；domain 留 DTO | domain 无 keyword NL / suggest；无 pptx payload 工厂 | `-` |
 | DOM-015 | P1 | open | 废弃 `asset_path` 仍与 `storage_uri` 双写 | `render_scene.py` nodes; SpecImagePlacement | 可移植性与 schema v2 拖延 | 只持久化 storage_uri；迁移读路径 | 新写入无 asset_path；读兼容一期 | `-` |
-| DOM-016 | P1 | open | 同名异义 `VisualRequirement` | `slide.py`; `visual/architectural_content_schema.py` | 导入歧义、评审混淆 | 重命名其一（如 Slide vs Schema） | 全仓唯一类名 | `-` |
+| DOM-016 | P1 | done | 同名异义 `VisualRequirement` | `slide.py`; `visual/architectural_content_schema.py` | 导入歧义、评审混淆 | `SlideVisualRequirement` + `SchemaVisualRequirement`；slide 保留别名 | `test_visual_requirement_type_names_are_disambiguated` | `-` |
 | DOM-017 | P1 | done | `PostRenderCheckCode` 双定义 | ~~`visual/post_render_qa.py`~~; `visual/scene_qa.py` | 枚举漂移 | 删除死模块；保留 `scene_qa` | `rg PostRenderCheckCode` 仅 scene_qa；服务导入不变 | `-` |
 | DOM-018 | P1 | open | `enums.py` 巨型（~668 行） | `archium/domain/enums.py` | 难审难演进 | 按限界上下文拆分 | 单文件可维护；无环依赖 | `-` |
 | DOM-019 | P2 | open | 密度/叙事/角色等同义枚举丛 | DensityLevel vs expected_density vs PageDensityToken; NarrativeStage vs ContinuityRole vs PacingRole; ImageFit 多 Literal | 映射错误 | 映射表或收敛 | 文档列出唯一权威枚举 | `-` |
@@ -81,15 +81,16 @@
 
 ### Service 逻辑仍在 Domain（抽样）
 
-`edit_intent.parse_natural_language`、`content_adaptation.suggest_content_adaptations`、`text_style.resolve_*`、`pptx_structure.to_pptxgen_payload` / `default_archium_structure_spec`、`slide_design_brief.infer_primary_visual_type` → **DOM-014**。
+~~`edit_intent.parse_natural_language`~~ → `application.visual.nlp_parser`；~~`content_adaptation.suggest_*`~~ → `application.content_adaptation_heuristics`。余：`text_style.resolve_*`、`pptx_structure` 工厂、`slide_design_brief.infer_*` → **DOM-014** 未完。
 
 ### 非 visual 重复
 
 | 项 | 文件 |
 |----|------|
-| `VisualRequirement`×2 | `slide.py` / `architectural_content_schema.py` |
-| `BriefStatus` ≈ `ApprovalStatus` | `slide_design_brief.py` / `enums.py` |
+| `SlideVisualRequirement` / `SchemaVisualRequirement` | `slide.py` / `architectural_content_schema.py`（DOM-016 done） |
+| Brief 审批 | `ApprovalStatus`（BriefStatus 已移除）；余提案状态双枚举 |
 | Presentation vs PresentationSpec | `presentation.py`+`slide.py` / `presentation_spec.py` |
+| Chart/Table 共享 VO | `structured_payload.py`（DOM-012 done） |
 
 ---
 
@@ -97,10 +98,11 @@
 
 1. ~~**DOM-011**（空间 SSOT）~~ **done**  
 2. ~~**DOM-017**~~ **done**（删 `post_render_qa.py`）  
-3. **DOM-016** — `VisualRequirement` 消歧  
-4. **DOM-012** / **DOM-015** — 数据拷贝与 URI  
-5. **DOM-004** / **DOM-020** — 门禁词表  
-6. **DOM-014** — 迁出 parser（可分 PR）  
-7. **DOM-018** — 拆 `enums.py`（机械重构）
+3. ~~**DOM-016**~~ **done**（`SlideVisualRequirement` / `SchemaVisualRequirement`）  
+4. ~~**DOM-012**~~ **done**（`structured_payload` 共享 VO）  
+5. **DOM-014** — 续迁 `text_style` / `pptx_structure` / brief helpers（NL+适配启发式已迁）  
+6. **DOM-004** / **DOM-009** — 门禁词表；提案状态合一（Brief 已合 ApprovalStatus）  
+7. **DOM-003** Spec 降级策略  
+8. **DOM-018** — 拆 `enums.py`（机械重构）
 
 逐文件明细：[02-domain-file-audit.md](02-domain-file-audit.md) · 第一阶段验收：[00-phase1-acceptance-2026-07-23.md](00-phase1-acceptance-2026-07-23.md)

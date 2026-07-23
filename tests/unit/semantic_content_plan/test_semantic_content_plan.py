@@ -20,7 +20,7 @@ from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,
     ContentRole,
-    VisualRequirement,
+    SchemaVisualRequirement,
 )
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,
@@ -42,7 +42,7 @@ def test_expand_visual_evidence_roles_aligns_with_evidence_min_count() -> None:
             )
         ],
         visual_evidence=[
-            VisualRequirement(
+            SchemaVisualRequirement(
                 role="hero_image",
                 required=True,
                 min_count=1,
@@ -60,7 +60,7 @@ def test_expand_visual_evidence_roles_honors_visual_min_count() -> None:
         name="content/photo_grid",
         page_purpose="展示多图",
         visual_evidence=[
-            VisualRequirement(
+            SchemaVisualRequirement(
                 role="supporting_image",
                 required=True,
                 min_count=2,

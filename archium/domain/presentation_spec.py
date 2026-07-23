@@ -6,6 +6,16 @@ from pydantic import Field
 
 from archium.domain._base import DomainModel
 from archium.domain.plan_overlay import PlanOverlayMetadata
+from archium.domain.visual.structured_payload import (
+    ChartDataPayload,
+    ChartSeriesData,
+    TableDataPayload,
+)
+
+# DOM-012: Spec chart/table payloads share the canonical VO with Layout/Scene.
+SpecChartSeries = ChartSeriesData
+SpecChart = ChartDataPayload
+SpecTable = TableDataPayload
 
 
 class SpecImagePlacement(DomainModel):
@@ -43,31 +53,6 @@ class SpecMetric(DomainModel):
 
     label: str = Field(min_length=1)
     value: str = Field(min_length=1)
-
-
-class SpecChartSeries(DomainModel):
-    """One data series for a native PptxGenJS chart."""
-
-    name: str = Field(min_length=1)
-    labels: list[str] = Field(default_factory=list)
-    values: list[float] = Field(default_factory=list)
-
-
-class SpecChart(DomainModel):
-    """Native chart payload for the chart layout."""
-
-    chart_type: str = Field(default="bar", min_length=1)
-    title: str | None = None
-    series: list[SpecChartSeries] = Field(default_factory=list)
-    show_legend: bool = True
-    show_value: bool = False
-
-
-class SpecTable(DomainModel):
-    """Native table payload for the table layout."""
-
-    headers: list[str] = Field(default_factory=list)
-    rows: list[list[str]] = Field(default_factory=list)
 
 
 class SpecSlide(DomainModel):

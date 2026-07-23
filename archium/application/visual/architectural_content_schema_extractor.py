@@ -9,7 +9,7 @@ from archium.domain.visual.architectural_content_schema import (
     ContentRequirement,
     ContentRole,
     EvidenceRequirement,
-    VisualRequirement,
+    SchemaVisualRequirement,
 )
 from archium.domain.visual.reference_slide import (
     ReferenceElementType,
@@ -156,7 +156,7 @@ def _build_semantic_contract(
     content_type: ArchitecturalContentType,
     functional: FunctionalSlideType,
     required_content: list[ContentRequirement],
-    visual: list[VisualRequirement],
+    visual: list[SchemaVisualRequirement],
     image_count: int,
     caption_count: int,
     body_count: int,
@@ -166,7 +166,7 @@ def _build_semantic_contract(
 ) -> tuple[
     ContentRequirement | None,
     list[ContentRequirement],
-    list[VisualRequirement],
+    list[SchemaVisualRequirement],
     ContentRequirement | None,
     ContentRequirement | None,
 ]:
@@ -404,7 +404,7 @@ class ArchitecturalContentSchemaExtractor:
             )
         )
         optional_content: list[ContentRequirement] = []
-        visual: list[VisualRequirement] = []
+        visual: list[SchemaVisualRequirement] = []
         evidence_reqs: list[EvidenceRequirement] = []
         constraints: list[str] = []
 
@@ -526,7 +526,7 @@ class ArchitecturalContentSchemaExtractor:
         # Visual requirements — distinguish drawing vs photo.
         if supports_drawing:
             visual.append(
-                VisualRequirement(
+                SchemaVisualRequirement(
                     role="drawing",
                     required=True,
                     min_count=1,
@@ -550,7 +550,7 @@ class ArchitecturalContentSchemaExtractor:
         if content_type == ArchitecturalContentType.PHOTO_ANALYSIS:
             photo_min = max(1, min(2, int(stats.get("image_min", image_count)), image_count))
             visual.append(
-                VisualRequirement(
+                SchemaVisualRequirement(
                     role="supporting_image",
                     required=True,
                     min_count=photo_min,
@@ -590,7 +590,7 @@ class ArchitecturalContentSchemaExtractor:
 
         if content_type == ArchitecturalContentType.BEFORE_AFTER:
             visual.append(
-                VisualRequirement(
+                SchemaVisualRequirement(
                     role="before_after_pair",
                     required=True,
                     min_count=2,
@@ -602,7 +602,7 @@ class ArchitecturalContentSchemaExtractor:
 
         if content_type == ArchitecturalContentType.CASE_COMPARISON:
             visual.append(
-                VisualRequirement(
+                SchemaVisualRequirement(
                     role="supporting_image",
                     required=True,
                     min_count=2,
@@ -624,7 +624,7 @@ class ArchitecturalContentSchemaExtractor:
 
         if content_type == ArchitecturalContentType.MULTI_IMAGE_GRID:
             visual.append(
-                VisualRequirement(
+                SchemaVisualRequirement(
                     role="multi_image_grid",
                     required=True,
                     min_count=4,
@@ -636,7 +636,7 @@ class ArchitecturalContentSchemaExtractor:
 
         if image_count > 0 and not visual:
             visual.append(
-                VisualRequirement(
+                SchemaVisualRequirement(
                     role="hero_image" if image_count == 1 else "supporting_image",
                     required=True,
                     min_count=1,

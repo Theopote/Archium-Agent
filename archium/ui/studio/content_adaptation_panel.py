@@ -6,11 +6,11 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
 from archium.domain.content_adaptation import (
     ACTION_USER_LABELS,
     ContentAdaptationAction,
     ContentAdaptationSuggestion,
-    parse_content_adaptation_text,
 )
 from archium.domain.slide_split import SlideSplitProposal
 from archium.domain.visual.slide_capacity_budget import (
