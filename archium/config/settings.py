@@ -403,6 +403,14 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("PPTXGEN_SCRIPT_PATH"),
         description="Path to render.mjs. Defaults to bundled archium/infrastructure/renderers/pptxgen/render.mjs.",
     )
+    pptx_structure_mode: str = Field(
+        default="flat",
+        validation_alias=AliasChoices("PPTX_STRUCTURE_MODE"),
+        description=(
+            "PPTX package structure mode: 'flat' (absolute freeform shapes) or "
+            "'structured' (native slide masters/layouts/placeholders)."
+        ),
+    )
 
     # ── visual.* ─────────────────────────────────────────────────────────────
     visual_fallback_enabled: bool = Field(

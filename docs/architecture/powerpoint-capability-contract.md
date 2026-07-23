@@ -44,10 +44,27 @@ narration, transitions, and timing.
 
 ## Current boundary
 
-Archium already extracts master/layout metadata and durable placeholder bindings. Structured
-master/layout generation is not yet claimed: it requires explicit template declarations plus
-OOXML relationship validation. Canonical SVG may be explored as a renderer backend, but it must
-not replace `RenderScene` as authored state.
+Archium extracts master/layout metadata and durable placeholder bindings, and can
+**emit** structured PPTX packages when `PptxStructureMode.STRUCTURED` is selected:
 
-Design ideas were informed by the MIT-licensed `hugohe3/ppt-master` project; this implementation
-uses Archium's own domain model and contains no copied converter code.
+- Domain specs: `SlideMasterSpec`, `SlideLayoutSpec`, `PlaceholderSpec`
+- PptxGenJS defines multiple named layouts with placeholders
+- A post-export expander clones masters so each `SlideMasterSpec` is a real
+  `ppt/slideMasters/slideMasterN.xml` part (PptxGenJS alone collapses to one master)
+- OOXML validation reads `presentation.xml`, `ppt/slideMasters/`,
+  `ppt/slideLayouts/`, and `ppt/slides/_rels/` (Slide → Layout → Master)
+
+Default export remains `FLAT` (absolute freeform shapes) for backward compatibility.
+Set `PPTX_STRUCTURE_MODE=structured` or pass `structure_mode=STRUCTURED` on
+`PptxRenderer` / deck adapters to opt in.
+
+`FILL_NATIVE_TEMPLATE` remains Partial: structured *generation* is available, but
+filling an existing enterprise template while preserving that file's original
+OOXML master/layout identities in place is not yet complete.
+
+Canonical SVG may be explored as a renderer backend, but it must not replace
+`RenderScene` as authored state.
+
+Design ideas were informed by the MIT-licensed `hugohe3/ppt-master` project; this
+implementation uses Archium's own domain model and contains no copied converter
+code.

@@ -52,7 +52,10 @@ WORKFLOW_ROUTE_REGISTRY: dict[PresentationWorkflowRoute, WorkflowRouteRegistrati
         status=RouteImplementationStatus.PARTIAL,
         handler_key="reference_slide_editing",
         limitations=[
-            "Current fill produces RenderScene output but does not yet preserve native OOXML masters."
+            "Structured master/layout/placeholder emission exists "
+            "(PptxStructureMode.STRUCTURED + OOXML validation); "
+            "FILL_NATIVE still rebuilds via RenderScene and does not yet "
+            "clone/preserve an input template's original OOXML master parts in place."
         ],
     ),
     PresentationWorkflowRoute.BEAUTIFY_EXISTING_DECK: WorkflowRouteRegistration(

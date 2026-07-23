@@ -17,6 +17,11 @@ from archium.domain.visual.render_scene import (
     ShapeNode,
     TextNode,
 )
+from archium.domain.visual.pptx_structure import (
+    PresentationStructureSpec,
+    PptxStructureMode,
+    default_archium_structure_spec,
+)
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import RenderedSlideInstruction
 
 
@@ -67,6 +72,8 @@ class RenderScenePptxAdapter:
         title: str,
         scenes: list[tuple[RenderScene, str | None]],
         design_system_id: UUID | None = None,
+        structure_mode: PptxStructureMode = PptxStructureMode.FLAT,
+        structure: PresentationStructureSpec | None = None,
     ) -> dict[str, Any]:
         instructions: list[dict[str, Any]] = []
         for scene, notes in scenes:
@@ -76,11 +83,48 @@ class RenderScenePptxAdapter:
                 speaker_notes=notes,
             )
             instructions.append(instruction.to_dict())
-        return {
+        deck: dict[str, Any] = {
             "title": title,
             "schema": "archium.render_scene.v1",
             "slides": instructions,
+            "structure_mode": structure_mode.value,
         }
+        resolved = self._resolve_structure(
+            structure_mode=structure_mode,
+            structure=structure,
+            scenes=[scene for scene, _ in scenes],
+        )
+        if resolved is not None:
+            deck["structure"] = resolved.to_pptxgen_payload()
+        return deck
+
+    def _resolve_structure(
+        self,
+        *,
+        structure_mode: PptxStructureMode,
+        structure: PresentationStructureSpec | None,
+        scenes: list[RenderScene],
+    ) -> PresentationStructureSpec | None:
+        if structure_mode == PptxStructureMode.FLAT and structure is None:
+            return None
+        if structure is not None:
+            if structure.mode == PptxStructureMode.FLAT and structure_mode == PptxStructureMode.STRUCTURED:
+                return structure.model_copy(update={"mode": PptxStructureMode.STRUCTURED})
+            return structure
+        if structure_mode != PptxStructureMode.STRUCTURED:
+            return None
+        page_width = scenes[0].page_width if scenes else 10.0
+        page_height = scenes[0].page_height if scenes else 5.625
+        background = "FFFFFF"
+        if scenes and scenes[0].background.color:
+            background = scenes[0].background.color
+        elif scenes:
+            background = scenes[0].theme_tokens.colors.get("background", "FFFFFF")
+        return default_archium_structure_spec(
+            page_width=page_width,
+            page_height=page_height,
+            background_color=str(background),
+        )
 
     def font_fallbacks(self, scene: RenderScene) -> list[str]:
         """Return recorded font substitutions (CJK-on-Latin, missing files)."""

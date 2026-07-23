@@ -9,7 +9,13 @@ from pathlib import Path
 from typing import Any
 
 from archium.config.settings import Settings, get_settings
+from archium.domain.visual.pptx_structure import (
+    PresentationStructureSpec,
+    PptxStructureMode,
+)
 from archium.domain.visual.render_scene import RenderScene
+from archium.infrastructure.renderers.pptx_master_expander import expand_masters_from_structure
+from archium.infrastructure.renderers.pptx_ooxml_structure import require_structured_ooxml
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from archium.infrastructure.renderers.scene_pptx_adapter import RenderScenePptxAdapter
 
@@ -27,8 +33,16 @@ class PptxRenderer:
         *,
         title: str,
         scenes: list[tuple[RenderScene, str | None]],
+        structure_mode: PptxStructureMode | None = None,
+        structure: PresentationStructureSpec | None = None,
     ) -> dict[str, Any]:
-        return self._adapter.render_deck(title=title, scenes=scenes)
+        mode = structure_mode or self._default_structure_mode()
+        return self._adapter.render_deck(
+            title=title,
+            scenes=scenes,
+            structure_mode=mode,
+            structure=structure,
+        )
 
     def export_pptx(
         self,
@@ -37,14 +51,25 @@ class PptxRenderer:
         *,
         title: str | None = None,
         speaker_notes: str | None = None,
+        structure_mode: PptxStructureMode | None = None,
+        structure: PresentationStructureSpec | None = None,
+        validate_ooxml: bool | None = None,
     ) -> Path:
-        deck = self._adapter.render_deck(
+        deck = self.build_instruction_deck(
             title=title or "Archium Slide",
             scenes=[(scene, speaker_notes)],
+            structure_mode=structure_mode,
+            structure=structure,
         )
-        return self.export_deck(deck, output_path)
+        return self.export_deck(deck, output_path, validate_ooxml=validate_ooxml)
 
-    def export_deck(self, deck: dict[str, Any], output_path: Path) -> Path:
+    def export_deck(
+        self,
+        deck: dict[str, Any],
+        output_path: Path,
+        *,
+        validate_ooxml: bool | None = None,
+    ) -> Path:
         """Write a pre-built instruction deck to PPTX."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory() as tmp:
@@ -53,7 +78,15 @@ class PptxRenderer:
                 json.dumps(deck, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
-            return self._cli.render_layout_instructions(deck_path, output_path)
+            rendered = self._cli.render_layout_instructions(deck_path, output_path)
+
+        structure = self._structure_from_deck(deck)
+        if structure is not None and structure.mode == PptxStructureMode.STRUCTURED:
+            expand_masters_from_structure(rendered, structure, output_path=rendered)
+
+        if self._should_validate_ooxml(deck, validate_ooxml):
+            require_structured_ooxml(rendered)
+        return rendered
 
     def export_presentation(
         self,
@@ -61,12 +94,49 @@ class PptxRenderer:
         title: str,
         scenes: list[tuple[RenderScene, str | None]],
         output_path: Path,
+        structure_mode: PptxStructureMode | None = None,
+        structure: PresentationStructureSpec | None = None,
+        validate_ooxml: bool | None = None,
     ) -> Path:
-        deck = self.build_instruction_deck(title=title, scenes=scenes)
-        return self.export_deck(deck, output_path)
+        deck = self.build_instruction_deck(
+            title=title,
+            scenes=scenes,
+            structure_mode=structure_mode,
+            structure=structure,
+        )
+        return self.export_deck(deck, output_path, validate_ooxml=validate_ooxml)
 
     def font_fallbacks(self, scene: RenderScene) -> list[str]:
         return self._adapter.font_fallbacks(scene)
+
+    def _default_structure_mode(self) -> PptxStructureMode:
+        raw = getattr(self._settings, "pptx_structure_mode", "flat")
+        try:
+            return PptxStructureMode(str(raw).strip().lower())
+        except ValueError:
+            return PptxStructureMode.FLAT
+
+    def _structure_from_deck(self, deck: dict[str, Any]) -> PresentationStructureSpec | None:
+        raw = deck.get("structure")
+        if not isinstance(raw, dict):
+            return None
+        try:
+            return PresentationStructureSpec.model_validate(raw)
+        except Exception:
+            return None
+
+    def _should_validate_ooxml(
+        self,
+        deck: dict[str, Any],
+        validate_ooxml: bool | None,
+    ) -> bool:
+        if validate_ooxml is not None:
+            return validate_ooxml
+        mode = str(deck.get("structure_mode") or "").lower()
+        structure = deck.get("structure")
+        if isinstance(structure, dict) and str(structure.get("mode", "")).lower() == "structured":
+            return True
+        return mode == PptxStructureMode.STRUCTURED.value
 
 
 def maybe_export_scene_pptx(
@@ -76,6 +146,8 @@ def maybe_export_scene_pptx(
     title: str,
     speaker_notes: str | None = None,
     settings: Settings | None = None,
+    structure_mode: PptxStructureMode | None = None,
+    structure: PresentationStructureSpec | None = None,
 ) -> Path | None:
     """Export PPTX from RenderScene when Node/PptxGenJS is available."""
     if shutil.which("node") is None:
@@ -88,4 +160,6 @@ def maybe_export_scene_pptx(
         output_path,
         title=title,
         speaker_notes=speaker_notes,
+        structure_mode=structure_mode,
+        structure=structure,
     )

@@ -9,6 +9,11 @@ from uuid import UUID
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.pptx_structure import (
+    PresentationStructureSpec,
+    PptxStructureMode,
+    default_archium_structure_spec,
+)
 from archium.domain.visual.text_style import resolve_text_style
 
 
@@ -181,6 +186,8 @@ class PptxLayoutPlanAdapter:
         *,
         title: str,
         slides: list[tuple[LayoutPlan, DesignSystem, SlideContentBundle | None]],
+        structure_mode: PptxStructureMode = PptxStructureMode.FLAT,
+        structure: PresentationStructureSpec | None = None,
     ) -> dict[str, Any]:
         """Build a deck JSON payload for `render-plan.mjs`."""
         instructions: list[dict[str, Any]] = []
@@ -189,11 +196,51 @@ class PptxLayoutPlanAdapter:
             if bundle is not None and bundle.speaker_notes:
                 instruction.speaker_notes = bundle.speaker_notes
             instructions.append(instruction.to_dict())
-        return {
+        deck: dict[str, Any] = {
             "title": title,
             "schema": "archium.layout_instructions.v1",
             "slides": instructions,
+            "structure_mode": structure_mode.value,
         }
+        resolved = self._resolve_structure(
+            structure_mode=structure_mode,
+            structure=structure,
+            slides=slides,
+        )
+        if resolved is not None:
+            deck["structure"] = resolved.to_pptxgen_payload()
+        return deck
+
+    def _resolve_structure(
+        self,
+        *,
+        structure_mode: PptxStructureMode,
+        structure: PresentationStructureSpec | None,
+        slides: list[tuple[LayoutPlan, DesignSystem, SlideContentBundle | None]],
+    ) -> PresentationStructureSpec | None:
+        if structure_mode == PptxStructureMode.FLAT and structure is None:
+            return None
+        if structure is not None:
+            if (
+                structure.mode == PptxStructureMode.FLAT
+                and structure_mode == PptxStructureMode.STRUCTURED
+            ):
+                return structure.model_copy(update={"mode": PptxStructureMode.STRUCTURED})
+            return structure
+        if structure_mode != PptxStructureMode.STRUCTURED:
+            return None
+        first_plan = slides[0][0] if slides else None
+        first_ds = slides[0][1] if slides else None
+        page_width = first_plan.page_width if first_plan else 10.0
+        page_height = first_plan.page_height if first_plan else 5.625
+        background = "FFFFFF"
+        if first_ds is not None:
+            background = first_ds.colors.background or "FFFFFF"
+        return default_archium_structure_spec(
+            page_width=page_width,
+            page_height=page_height,
+            background_color=str(background),
+        )
 
 
 def _is_supported_layout_image_path(path: str) -> bool:

@@ -72,15 +72,18 @@ async function main() {
     height: first?.page_height ?? tokens.page?.height ?? 5.625,
   };
 
+  const structure =
+    deck.structure && typeof deck.structure === "object" ? deck.structure : null;
+
   const pres = new pptxgen();
   pres.author = "Archium";
   pres.company = "Archium";
   pres.subject = deck.title ?? "Archium Visual Composition";
   pres.title = deck.title ?? "Archium Visual Composition";
-  applyPlanLayout(pres, tokens);
+  applyPlanLayout(pres, tokens, structure);
 
   for (const slide of deck.slides) {
-    renderSlideFromPlan(pres, slide, deck.theme ?? null);
+    renderSlideFromPlan(pres, slide, deck.theme ?? null, structure);
   }
 
   await pres.writeFile({ fileName: outputPath });

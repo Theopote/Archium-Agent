@@ -36,7 +36,7 @@ def test_partial_native_template_fill_is_not_claimed_available() -> None:
     service = WorkflowRouteService()
     registration = service.registration(PresentationWorkflowRoute.FILL_NATIVE_TEMPLATE)
     assert registration.status == RouteImplementationStatus.PARTIAL
-    with pytest.raises(WorkflowError, match="does not yet preserve native OOXML masters"):
+    with pytest.raises(WorkflowError, match="does not yet clone/preserve"):
         service.require_available(PresentationWorkflowRoute.FILL_NATIVE_TEMPLATE)
 
 
