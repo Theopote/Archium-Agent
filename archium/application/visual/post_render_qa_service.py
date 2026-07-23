@@ -30,7 +30,7 @@ def run_post_render_qa(
     pptx_screenshots: dict[UUID, Path] | None = None,
     slide_orders: dict[UUID, int] | None = None,
 ) -> ArchitectureSlideSemanticQA:
-    """Analyze page screenshots; soft-skips missing files."""
+    """Analyze page screenshots; missing/unloadable PNGs emit IMAGE_NOT_LOADED."""
     findings: list[SlideSemanticFinding] = []
     orders = slide_orders or {}
     scenes = scenes_by_slide or {}
@@ -38,10 +38,22 @@ def run_post_render_qa(
     loaded: list[tuple[UUID, object, Path]] = []
 
     for slide_id, path in screenshots:
+        order = orders.get(slide_id, 0)
         image = load_image(path)
         if image is None:
+            findings.append(
+                SlideSemanticFinding(
+                    check_code=PostRenderCheckCode.IMAGE_NOT_LOADED,
+                    slide_order=order,
+                    slide_id=slide_id,
+                    severity="high",
+                    title="渲染截图无法加载",
+                    description=f"截图缺失或无法读取：{path}",
+                    suggestion="重新生成幻灯片预览后再跑 Post-Render QA。",
+                    evidence_refs=[str(path)],
+                )
+            )
             continue
-        order = orders.get(slide_id, 0)
         for check in analyze_slide_screenshot(image):
             if check.passed:
                 continue
@@ -66,7 +78,7 @@ def run_post_render_qa(
         presentation_id=presentation_id,
         project_id=project_id,
         findings=findings,
-        checked_slide_count=len(loaded),
+        checked_slide_count=len(screenshots),
         analyzer_version=_ANALYZER_VERSION,
     )
 

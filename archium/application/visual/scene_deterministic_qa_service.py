@@ -260,15 +260,24 @@ def _quality_issue(
 
 
 def _dedupe_issues(issues: list[QualityIssue]) -> list[QualityIssue]:
-    seen: set[tuple[str, tuple[str, ...]]] = set()
-    ordered: list[QualityIssue] = []
+    """Keep one issue per (code, evidence), preferring the highest severity."""
+    rank = {
+        IssueSeverity.BLOCKER: 3,
+        IssueSeverity.MAJOR: 2,
+        IssueSeverity.MINOR: 1,
+    }
+    best: dict[tuple[str, tuple[str, ...]], QualityIssue] = {}
+    order: list[tuple[str, tuple[str, ...]]] = []
     for issue in issues:
         key = (issue.code, tuple(sorted(issue.evidence)))
-        if key in seen:
+        existing = best.get(key)
+        if existing is None:
+            best[key] = issue
+            order.append(key)
             continue
-        seen.add(key)
-        ordered.append(issue)
-    return ordered
+        if rank.get(issue.severity, 0) > rank.get(existing.severity, 0):
+            best[key] = issue
+    return [best[key] for key in order]
 
 
 def summarize_layer_counts(layers: dict[str, tuple[QualityIssue, ...]]) -> dict[str, int]:

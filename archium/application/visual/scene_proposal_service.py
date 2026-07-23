@@ -522,15 +522,19 @@ class SceneProposalService:
 
     @staticmethod
     def _proposal_qa_status(accepted_qa: ProposalSceneQAResult) -> str:
-        blockers = sum(
-            1
-            for issue in accepted_qa.issues
-            if getattr(issue, "severity", None) is not None
-            and str(getattr(issue.severity, "value", issue.severity))
-            in {"blocker", "major", "BLOCKER", "MAJOR"}
-        )
-        if blockers:
-            return "pass_with_warnings"
+        has_blocker = False
+        has_major = False
+        for issue in accepted_qa.issues:
+            severity = getattr(issue, "severity", None)
+            value = str(getattr(severity, "value", severity) or "").lower()
+            if value == "blocker":
+                has_blocker = True
+            elif value == "major":
+                has_major = True
+        if has_blocker:
+            return "blocked"
+        if has_major:
+            return "needs_review"
         if accepted_qa.issues:
             return "pass_with_warnings"
         return "passed"

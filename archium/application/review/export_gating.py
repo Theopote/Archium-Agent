@@ -16,8 +16,15 @@ def export_blocking_open_issues(issues: list[ReviewIssue]) -> list[ReviewIssue]:
         {
             ReviewRuleCode.SEMANTIC_IMAGE_NOT_RENDERED,
             ReviewRuleCode.SEMANTIC_AI_IMAGE_PRESENTED_AS_REAL_PROJECT,
+            ReviewRuleCode.SEMANTIC_STOCK_IMAGE_PRESENTED_AS_PROJECT,
+            ReviewRuleCode.SEMANTIC_TEXT_OVERFLOW,
+            ReviewRuleCode.SEMANTIC_SCENE_PPTX_NODE_MISMATCH,
+            ReviewRuleCode.SEMANTIC_DRAWING_COVER_MODE_FORBIDDEN,
             ReviewRuleCode.POST_RENDER_BLANK_PAGE,
             ReviewRuleCode.POST_RENDER_ALL_PAGES_IDENTICAL,
+            ReviewRuleCode.POST_RENDER_BLACK_BLOCK,
+            ReviewRuleCode.POST_RENDER_IMAGE_NOT_LOADED,
+            ReviewRuleCode.POST_RENDER_PNG_PPTX_DIFF,
         }
     )
     blocking: list[ReviewIssue] = []

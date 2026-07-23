@@ -62,6 +62,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 元素评论支持单节点、多选、包围盒区域和整页作用域，并通过 Inbox 管理状态。
 - 图片处理保存原图，`ImageTreatmentSpec` 生成不可变 derivative；项目图纸和证据照片只允许 `safe_normalize`，不能使用表达性统一处理。
 - 字体资产、回退链与 Scene 语义 QA 共同检查潜在重排风险。
+- 正式导出 readiness：ReviewIssue 导出门控 + 内存 Scene semantic BLOCKER + DeckQA `blocker_count`（CRITICAL/ERROR）。提案接受后的 `qa_status`：blocker→`blocked`，major→`needs_review`。Post-render 截图缺失会发出 `POST_RENDER.IMAGE_NOT_LOADED`，不再静默跳过。
 
 ## 持久化与迁移
 

@@ -143,6 +143,11 @@ class AutomatedReviewService:
         project_id: UUID | None = None,
         pptx_paths_by_slide: dict[UUID, Path] | None = None,
     ) -> list[ReviewIssue]:
+        """Map RenderScene semantic QA into ReviewIssues.
+
+        Live Studio proposal path uses QualityIssue via ``run_proposal_scene_qa``.
+        Call this when formal ReviewIssue export gates should include scene findings.
+        """
         return self._scene_semantic.run(
             presentation_id,
             slides,
@@ -161,6 +166,7 @@ class AutomatedReviewService:
         scenes_by_slide: dict[UUID, RenderScene] | None = None,
         pptx_screenshots: dict[UUID, Path] | None = None,
     ) -> list[ReviewIssue]:
+        """Map post-render screenshot QA into ReviewIssues for export gating."""
         return self._post_render.run(
             presentation_id,
             slides,

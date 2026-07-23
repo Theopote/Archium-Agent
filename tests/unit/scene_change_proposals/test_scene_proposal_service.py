@@ -747,7 +747,7 @@ def test_project_id_for_presentation() -> None:
     assert service._project_id_for_presentation(uuid4()) is None
 
 
-def test_proposal_qa_status_blocker_counts_as_warning() -> None:
+def test_proposal_qa_status_blocker_is_blocked() -> None:
     from archium.application.visual.scene_deterministic_qa_service import ProposalSceneQAResult
     from archium.application.visual.scene_proposal_service import SceneProposalService
     from archium.domain.visual.page_quality import IssueSeverity, QualityIssue, QualityIssueSource
@@ -764,7 +764,21 @@ def test_proposal_qa_status_blocker_counts_as_warning() -> None:
         layers={},
         preview_render_success=True,
     )
-    assert SceneProposalService._proposal_qa_status(blocker_qa) == "pass_with_warnings"
+    assert SceneProposalService._proposal_qa_status(blocker_qa) == "blocked"
+
+    major_qa = ProposalSceneQAResult(
+        issues=(
+            QualityIssue(
+                code="major",
+                message="major",
+                severity=IssueSeverity.MAJOR,
+                source=QualityIssueSource.AUTO,
+            ),
+        ),
+        layers={},
+        preview_render_success=True,
+    )
+    assert SceneProposalService._proposal_qa_status(major_qa) == "needs_review"
 
 
 def test_record_proposal_decision_full_accept() -> None:
@@ -1066,7 +1080,7 @@ def test_proposal_accept_summary_and_qa_status() -> None:
         layers={},
         preview_render_success=True,
     )
-    assert SceneProposalService._proposal_qa_status(blocker_qa) == "pass_with_warnings"
+    assert SceneProposalService._proposal_qa_status(blocker_qa) == "blocked"
 
 
 def test_apply_patch_actions_geometry_and_visibility() -> None:

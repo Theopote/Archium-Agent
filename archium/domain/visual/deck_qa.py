@@ -60,3 +60,14 @@ class DeckQAReport(DomainModel):
     @property
     def finding_codes(self) -> list[str]:
         return sorted({item.rule_code for item in self.findings})
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def blocker_count(self) -> int:
+        """CRITICAL/ERROR findings — used by delivery readiness gating."""
+        return sum(
+            1
+            for item in self.findings
+            if item.severity
+            in {LayoutIssueSeverity.CRITICAL, LayoutIssueSeverity.ERROR}
+        )

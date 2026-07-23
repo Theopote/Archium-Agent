@@ -128,6 +128,14 @@ def resolve_delivery_readiness(
         except Exception:
             blockers.append("质量检查状态无法验证")
 
+        for message in _scene_export_blocker_messages(
+            session,
+            presentation_id=presentation_id,
+            project_id=project_id,
+        ):
+            blockers.append(message)
+            review_blocker_count += 1
+
     if isinstance(deck_qa_report, dict):
         deck_qa_blocker_count = int(deck_qa_report.get("blocker_count") or 0)
         if deck_qa_blocker_count > 0:
@@ -217,3 +225,48 @@ def latest_presentation_revision_id(
         presentation_id
     )
     return outline_revisions[0].id if outline_revisions else None
+
+
+def _scene_export_blocker_messages(
+    session: Session,
+    *,
+    presentation_id: UUID,
+    project_id: UUID,
+) -> list[str]:
+    """In-memory Scene semantic blockers for formal export (no ReviewIssue spam)."""
+    try:
+        from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
+        from archium.domain.visual.page_quality import IssueSeverity
+        from archium.domain.visual.quality_issue_catalog import default_severity_for_auto_code
+        from archium.infrastructure.database.repositories import PresentationRepository
+        from archium.infrastructure.database.visual_repositories import RenderSceneRepository
+
+        slides = PresentationRepository(session).list_slides(presentation_id)
+        scenes_repo = RenderSceneRepository(session)
+        scenes = []
+        orders: dict[UUID, int] = {}
+        for slide in slides:
+            orders[slide.id] = slide.order
+            if slide.layout_plan_id is None:
+                continue
+            scene = scenes_repo.get_by_layout_plan(slide.layout_plan_id)
+            if scene is not None:
+                scenes.append(scene)
+        if not scenes:
+            return []
+        report = run_scene_semantic_qa(
+            presentation_id,
+            scenes,
+            project_id=project_id,
+            slide_orders=orders,
+        )
+        messages: list[str] = []
+        for finding in report.findings:
+            if default_severity_for_auto_code(finding.check_code) != IssueSeverity.BLOCKER:
+                continue
+            messages.append(f"[scene] {finding.title}")
+            if len(messages) >= 5:
+                break
+        return messages
+    except Exception:
+        return []
