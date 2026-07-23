@@ -63,7 +63,7 @@ archium                            # 启动项目工作台（Streamlit UI）
 
 开发者额外依赖：`pip install -e ".[full,dev]"`。Legacy 源码仍在 `legacy/`，但不进入 setuptools 安装面；运行需仓库根目录在 `PYTHONPATH`（可编辑安装后一般仍可从检出根运行）。
 
-当前发布状态与剩余 blocker 以 [v0.2 Beta 发布决策](docs/v0.2-beta-release-decision.md)为准；历史 Stage/Round 编号不再作为架构版本。完整导航见[文档中心](docs/README.md)。
+当前发布状态与剩余 blocker 以 [v0.2 Beta 发布决策](docs/v0.2-beta-release-decision.md)为准；历史 Stage/Round 编号不再作为架构版本。完整导航见[文档中心](docs/README.md)。工程收敛与模块 Issue 台账见 [`docs/audit/module-audit/`](docs/audit/module-audit/README.md)。
 
 ### 完整主链
 

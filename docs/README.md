@@ -37,6 +37,7 @@
 - [关键用户任务剧本 A–E](user-task-playbooks.md)。
 - [v0.2 Beta 发布决策](v0.2-beta-release-decision.md)。
 - [模块检查台账](audit/module-audit/README.md)：按模块与 Issue ID 跟踪架构/质量问题（不用 Stage/Round/Phase）。
+- [第一阶段验收（2026-07-23）](audit/module-audit/00-phase1-acceptance-2026-07-23.md) · [Domain 逐文件审计](audit/module-audit/02-domain-file-audit.md)。
 
 ## 历史材料
 

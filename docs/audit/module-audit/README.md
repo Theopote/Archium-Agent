@@ -9,8 +9,10 @@
 | 文件 | 模块 | 前缀 |
 |------|------|------|
 | [00-round1-judgment.md](00-round1-judgment.md) | 第一轮最终判断（工程收敛） | — |
+| [00-phase1-acceptance-2026-07-23.md](00-phase1-acceptance-2026-07-23.md) | 第一阶段验收通过报告 | — |
 | [01-project-foundation.md](01-project-foundation.md) | 工程骨架 / 打包 / CI / 文档契约 | `PF-` |
-| [02-domain.md](02-domain.md) | Domain 模型与分层（含逐文件检查） | `DOM-` |
+| [02-domain.md](02-domain.md) | Domain 模型与分层（Issue 台账） | `DOM-` |
+| [02-domain-file-audit.md](02-domain-file-audit.md) | Domain 逐文件深查（删/并/重构） | — |
 | [03-application.md](03-application.md) | Application 服务 | `APP-` |
 | [04-workflow.md](04-workflow.md) | LangGraph 工作流 | `WF-` |
 | [05-database.md](05-database.md) | ORM / 会话 / 迁移 | `DB-` |
@@ -88,4 +90,4 @@
 
 P0 已关闭但仍需关注：`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 
-Domain 下一优先：`DOM-017`/`DOM-016` → `DOM-012`（见 [02-domain.md](02-domain.md) 建议顺序）。`DOM-011` 已关闭。
+Domain 下一优先：`DOM-016` → `DOM-012`（见 [02-domain.md](02-domain.md)）。`DOM-011`/`DOM-017` 已关闭。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。

@@ -43,7 +43,7 @@
 | DOM-014 | P1 | open | Domain 内仍有 parser/resolver/导出工厂 | `edit_intent.py`; `content_adaptation.py`; `text_style.py`; `pptx_structure.py`; `slide_design_brief.py` | 分层回潮 | 迁 application；domain 留 DTO | domain 无 NL parse / pptx payload | `-` |
 | DOM-015 | P1 | open | 废弃 `asset_path` 仍与 `storage_uri` 双写 | `render_scene.py` nodes; SpecImagePlacement | 可移植性与 schema v2 拖延 | 只持久化 storage_uri；迁移读路径 | 新写入无 asset_path；读兼容一期 | `-` |
 | DOM-016 | P1 | open | 同名异义 `VisualRequirement` | `slide.py`; `visual/architectural_content_schema.py` | 导入歧义、评审混淆 | 重命名其一（如 Slide vs Schema） | 全仓唯一类名 | `-` |
-| DOM-017 | P1 | open | `PostRenderCheckCode` 双定义 | `visual/scene_qa.py`; `visual/post_render_qa.py` | 枚举漂移 | 合并单一定义 | 仅一处定义；引用统一 | `-` |
+| DOM-017 | P1 | done | `PostRenderCheckCode` 双定义 | ~~`visual/post_render_qa.py`~~; `visual/scene_qa.py` | 枚举漂移 | 删除死模块；保留 `scene_qa` | `rg PostRenderCheckCode` 仅 scene_qa；服务导入不变 | `-` |
 | DOM-018 | P1 | open | `enums.py` 巨型（~668 行） | `archium/domain/enums.py` | 难审难演进 | 按限界上下文拆分 | 单文件可维护；无环依赖 | `-` |
 | DOM-019 | P2 | open | 密度/叙事/角色等同义枚举丛 | DensityLevel vs expected_density vs PageDensityToken; NarrativeStage vs ContinuityRole vs PacingRole; ImageFit 多 Literal | 映射错误 | 映射表或收敛 | 文档列出唯一权威枚举 | `-` |
 | DOM-020 | P2 | open | Overflow 词表不一致 | Layout `OverflowPolicy` vs TextNode Literal（含 `error` vs `warn`） | QA/渲染行为分歧 | 对齐词表 + 合同 | arch-contract 与节点 Literal 一致 | `-` |
@@ -95,9 +95,12 @@
 
 ## 建议修复顺序（Domain）
 
-1. ~~**DOM-011**（空间 SSOT）~~ **done** — `geometry_authority` + ensure 保护  
-2. **DOM-017** + **DOM-016** — 低成本消歧  
-3. **DOM-012** / **DOM-015** — 数据拷贝与 URI  
-4. **DOM-004** / **DOM-020** — 门禁词表  
-5. **DOM-014** — 迁出 parser（可分 PR）  
-6. **DOM-018** — 拆 `enums.py`（机械重构）
+1. ~~**DOM-011**（空间 SSOT）~~ **done**  
+2. ~~**DOM-017**~~ **done**（删 `post_render_qa.py`）  
+3. **DOM-016** — `VisualRequirement` 消歧  
+4. **DOM-012** / **DOM-015** — 数据拷贝与 URI  
+5. **DOM-004** / **DOM-020** — 门禁词表  
+6. **DOM-014** — 迁出 parser（可分 PR）  
+7. **DOM-018** — 拆 `enums.py`（机械重构）
+
+逐文件明细：[02-domain-file-audit.md](02-domain-file-audit.md) · 第一阶段验收：[00-phase1-acceptance-2026-07-23.md](00-phase1-acceptance-2026-07-23.md)

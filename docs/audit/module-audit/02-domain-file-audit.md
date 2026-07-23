@@ -1,0 +1,443 @@
+# Domain 逐文件审计（2026-07-23）
+
+**范围：** `archium/domain/`（根 61 + `visual/` 原 52，本轮已删 1）  
+**依据：** [第一阶段验收](00-phase1-acceptance-2026-07-23.md) · [台账](02-domain.md)  
+**DOM-011：** 几何权威 **已关闭**（不重开）  
+**本轮已执行：** 删除死模块 `visual/post_render_qa.py` → **DOM-017 done**
+
+## 输出字段说明
+
+| 字段 | 含义 |
+|------|------|
+| 裁决 | keep / delete / merge / refactor / relocate |
+| 删除 | 是否删文件或符号 |
+| 合并 | 是否并入他处 |
+| 重构 | 是否改结构/拆分 |
+| 方案 | 拟定改动 |
+| 验收 | 可测通过条件 |
+
+---
+
+## A. 优先行动清单（按严重级别）
+
+| 优先 | 编号 | 裁决 | 文件 | 一句话 |
+|------|------|------|------|--------|
+| 1 | DOM-017 | **done** | ~~`visual/post_render_qa.py`~~ | 死重复 `PostRenderCheckCode` 已删 |
+| 2 | DOM-016 | refactor | `slide.py` + `visual/architectural_content_schema.py` | 同名 `VisualRequirement` 消歧 |
+| 3 | DOM-012 | merge | `layout.py` ↔ `render_scene.py` | Chart/Table 载荷单 VO |
+| 4 | DOM-004 | merge | `enums.py` + visual severity | 严重级别词表统一 |
+| 5 | DOM-014 | relocate | `edit_intent.py` 等 | NL/parser/normalize 迁出 domain |
+| 6 | DOM-003 | refactor | `presentation_spec.py` | Spec 降为派生，Scene 渲染 SSOT |
+| 7 | DOM-018 | refactor | `enums.py` (~668) | 按限界上下文拆分 |
+| 8 | DOM-009 | merge | `BriefStatus` ≈ `ApprovalStatus` | 审批状态合一 |
+
+职责边界（验收口径）：
+
+| 对象 | 职责 |
+|------|------|
+| SlideSpec | 表达什么（内容主张） |
+| LayoutPlan | 怎么排（编译期几何） |
+| RenderScene | 怎么执行/编辑（渲染与 Studio SSOT） |
+
+---
+
+## B. 根模块 — 有问题项
+
+### `enums.py` (~668)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 全仓 StrEnum 总库 |
+| 裁决 | refactor |
+| 级别 | P1 |
+| 问题 | 巨型；`ReviewSeverity`/`ValidationSeverity` 与 visual 门禁枚举并列；`WorkflowStep` 过胖 |
+| 删除 | 否 |
+| 合并 | 部分 severity → 统一 catalog（DOM-004） |
+| 重构 | 是 — 按 project/review/workflow/knowledge 拆文件 |
+| 方案 | 拆包 `domain/enums/`；保留 re-export；映射表单测 |
+| 验收 | 单文件 <250 行；导出门禁只认一套 severity |
+
+### `powerpoint_capability.py` (~420)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | PPT 能力矩阵常量 |
+| 裁决 | refactor |
+| 级别 | P2 |
+| 问题 | 过大；偏静态目录 |
+| 删除 | 否 |
+| 合并 | 否 |
+| 重构 | 是 — 数据驱动或拆分 |
+| 方案 | JSON/分模块；代码变薄 |
+| 验收 | 能力查询行为不变；文件可维护 |
+
+### `presentation_spec.py` (~100)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 遗留 Spec 导出模型 |
+| 裁决 | refactor（长期 delete/freeze） |
+| 级别 | P1（DOM-003） |
+| 问题 | 与 SlideSpec/RenderScene 双/三真相 |
+| 删除 | 暂否（兼容） |
+| 合并 | 字段向 SlideSpec/Scene 投影 |
+| 重构 | 是 — 标明 derived-only |
+| 方案 | 正式交付禁 Spec 直出；文档 + 导出门禁 |
+| 验收 | 正式 PPTX 只从 Scene；Spec 仅兼容测试 |
+
+### `slide.py` (~107)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | SlideSpec + VisualRequirement（页内容） |
+| 裁决 | refactor |
+| 级别 | P1（DOM-016） |
+| 问题 | `VisualRequirement` 与 schema 同名异义 |
+| 删除 | 否 |
+| 合并 | 否 |
+| 重构 | 是 — 重命名为 `SlideVisualRequirement` |
+| 方案 | 全局改名 + 导入更新 |
+| 验收 | 全仓唯一类名；mypy 绿 |
+
+### `slide_design_brief.py` (~209)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 设计 Brief + 推断/格式化 helper |
+| 裁决 | relocate（helper）/ keep（模型） |
+| 级别 | P1（DOM-014 部分） |
+| 问题 | `infer_primary_visual_type`、`format_design_brief_card` 偏应用；`BriefStatus`≈`ApprovalStatus`；`layout_family` 自由字符串 |
+| 删除 | helper 可迁 |
+| 合并 | BriefStatus → ApprovalStatus（DOM-009） |
+| 重构 | layout_family 受控（DOM-006） |
+| 方案 | 模型留 domain；推断迁 application |
+| 验收 | domain 无 layout 字符串启发式；非法 family 拒绝 |
+
+### `content_adaptation.py` (~214)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 内容适配动作 + **建议引擎** |
+| 裁决 | relocate |
+| 级别 | P1（DOM-014） |
+| 问题 | `parse_*` / `suggest_content_adaptations` 是服务逻辑 |
+| 删除 | 否（动作枚举保留） |
+| 合并 | 否 |
+| 重构 | 是 |
+| 方案 | 枚举+DTO 留；suggest/parse → application |
+| 验收 | domain 无 suggest 实现；Studio 适配仍可用 |
+
+### `render.py` (~78)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | RenderResult 路径聚合 |
+| 裁决 | relocate |
+| 级别 | P2（DOM-021） |
+| 问题 | 持 `pathlib.Path`；legacy marp 字段 |
+| 删除 | 否 |
+| 合并 | 否 |
+| 重构 | 迁 application DTO |
+| 方案 | 新类型在 application；domain 停增长 |
+| 验收 | 新代码不在 domain 扩 Path 结果 |
+
+### `fact.py` / `project_knowledge.py` / `presentation_manuscript.py` / `citation.py`
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 事实→知识→文稿链 |
+| 裁决 | refactor |
+| 级别 | P1（DOM-008） |
+| 问题 | 弱关联；多套 citation 形状 |
+| 删除 | 否 |
+| 合并 | citation 类型收敛 |
+| 重构 | 显式 FK + 不变量 |
+| 方案 | 文档化链路；禁止第四套 claim 类型 |
+| 验收 | 跨模型引用可测 |
+
+### `slide_intent.py` (~96)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 页任务卡 |
+| 裁决 | keep（与 Brief 边界文档化） |
+| 级别 | P2 |
+| 问题 | 与 Brief 平行字符串（主张链 DOM-013） |
+| 删除 | 否 |
+| 合并 | 否 |
+| 重构 | 主张链加 FK |
+| 方案 | 见 DOM-013 |
+| 验收 | claim 变更可追溯 |
+
+### `review.py` / `review_rules.py` / `visual_qa.py` / `slide_semantic_qa.py`
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 审核与语义 QA 模型 |
+| 裁决 | merge（severity）/ keep |
+| 级别 | P1（DOM-004） |
+| 问题 | 多套 severity / QA 报告形状 |
+| 删除 | 否 |
+| 合并 | 映射到 `IssueSeverity` 或统一 Finding |
+| 重构 | 可选公共基类 |
+| 方案 | 新代码只用门禁 severity |
+| 验收 | 导出门禁单枚举 |
+
+### `deck_delivery.py` (~192)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 交付聚合 |
+| 裁决 | relocate（`aggregate_*`）若含策略 |
+| 级别 | P2 |
+| 问题 | 聚合策略可下沉 application |
+| 删除 | 否 |
+| 合并 | 否 |
+| 重构 | 薄 DTO |
+| 方案 | 策略函数迁出 |
+| 验收 | domain 仅模型 |
+
+### `slide_recovery.py` (~242)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 页面复活领域模型 |
+| 裁决 | keep |
+| 级别 | none–P2 |
+| 问题 | 体量偏大但角色清晰 |
+| 删除 | 否 |
+| 合并 | 否 |
+| 重构 | 可选拆分 |
+| 方案 | 维持；防塞入 IO |
+| 验收 | 无 parser/IO 进入 |
+
+### `workflow_route.py` / `workflow.py` / `planning_session.py` / `workstream.py` / `deliverable.py` / `project_mission.py` / `outline.py`
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | Mission/规划/工作流路由 |
+| 裁决 | keep |
+| 级别 | none–P2（WF-006 死常量另见 workflow 台账） |
+| 问题 | 个别死标签在应用层 |
+| 删除 | 否（domain 模型） |
+| 合并 | 否 |
+| 重构 | 否 |
+| 方案 | 保持 |
+| 验收 | 分层测试绿 |
+
+---
+
+## C. 根模块 — 保持（无强制动作）
+
+| 文件 | ~LOC | 角色 | 裁决 |
+|------|------|------|------|
+| `_base.py` | 59 | Domain 基类 | keep |
+| `__init__.py` | 134 | 导出 | keep（可收紧 `__all__`） |
+| `project.py` | 35 | 项目 | keep |
+| `document.py` | 63 | 文档 | keep |
+| `asset.py` | 44 | 资产 | keep |
+| `memory.py` | 22 | 记忆 | keep |
+| `llm_profile.py` | 27 | LLM 配置 DTO | keep |
+| `fallback_image.py` | 19 | 回退图 | keep |
+| `studio_errors.py` | 23 | Studio 错误码 | keep |
+| `revision.py` | 49 | 修订 | keep |
+| `slide_history.py` | 44 | 页历史 | keep |
+| `slide_repair.py` | 30 | 页修复 DTO | keep |
+| `slide_generation_context.py` | 38 | 生成上下文 | keep |
+| `slide_split.py` | 76 | 拆页 | keep |
+| `slide_asset_binding.py` | 161 | 资产绑定 | keep |
+| `page_pipeline_status.py` | 100 | 页管线状态 | keep |
+| `outline_approval_record.py` | 27 | 大纲批准记录 | keep |
+| `plan_overlay.py` | 86 | Plan 叠加元数据 | keep |
+| `delivery_record.py` | 30 | 交付记录 | keep |
+| `export_fidelity.py` | 197 | 导出保真策略 | keep |
+| `export_round_trip.py` | 90 | 往返导出 | keep |
+| `artifact_ownership.py` | 154 | 制品所有权 | keep |
+| `knowledge_gap.py` | 158 | 知识缺口 | keep |
+| `fact_ledger.py` | 47 | 事实账本策略 | keep（弃用字段见 DOM-015 类） |
+| `narrative_arc.py` | 81 | 叙事弧 | keep |
+| `architectural_narrative_mode.py` | 128 | 叙事模式 | keep |
+| `cultural_narrative.py` | 117 | 文化叙事 | keep |
+| `renovation_issue.py` | 81 | 更新议题 | keep |
+| `reference_style.py` | 74 | 参考风格 | keep |
+| `deck_coherence.py` | 39 | 整册连贯 | keep |
+| `model_roles.py` | 111 | 模型角色 | keep |
+| `pipeline_role_mapping.py` | 107 | 管线角色映射 | keep |
+| `agent_skill.py` | 90 | Agent Skill | keep |
+| `project_acceptance.py` | 139 | 项目验收 | keep |
+| `scene_revision_summary.py` | 75 | Scene 修订摘要 | keep |
+| `presentation.py` | 113 | Presentation/Brief/Storyline | keep |
+
+---
+
+## D. `visual/` — 有问题项
+
+### ~~`post_render_qa.py`~~ — **已删除**
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | delete **done** |
+| 级别 | P0 → closed |
+| 验收 | `scene_qa.PostRenderCheckCode` 唯一；服务仍从 `scene_qa` 导入 |
+
+### `scene_qa.py` (~55)
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 语义/post-render 检查码（现唯一） |
+| 裁决 | keep |
+| 级别 | none |
+| 方案 | 保持唯一码表 |
+| 验收 | 无第二份 PostRenderCheckCode |
+
+### `layout.py` / `render_scene.py`
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | LayoutPlan；RenderScene |
+| 裁决 | refactor（载荷）/ keep（几何权威 API） |
+| 级别 | P1（DOM-012/015）；DOM-011 **done** |
+| 问题 | Chart/Table 字段双拷；`asset_path` 双写；lock_scopes 类型不一致 |
+| 删除 | 否 |
+| 合并 | 共享 ChartData/TableData VO |
+| 重构 | URI schema v2；typed locks |
+| 方案 | 抽 VO；停止镜像 asset_path |
+| 验收 | 一处改载荷；geometry_authority 行为不变 |
+
+### `enums.py`（visual）/ `page_quality.py`
+
+| 字段 | 内容 |
+|------|------|
+| 角色 | 布局枚举；门禁 IssueSeverity |
+| 裁决 | merge severity |
+| 级别 | P1（DOM-004/020） |
+| 问题 | LayoutIssueSeverity vs IssueSeverity；overflow 词表 |
+| 方案 | 门禁以 IssueSeverity 为准；布局映射 |
+| 验收 | 导出门禁单故事 |
+
+### `edit_intent.py` / `parsed_intent.py` / `placeholder_binding.py` / `semantic_block.py` / `text_style.py`
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | relocate（函数）/ keep（模型） |
+| 级别 | P1–P2（DOM-014） |
+| 问题 | NL parse、normalize、resolve 在 domain |
+| 方案 | 迁 application/compilers |
+| 验收 | domain 无 keyword 表 / OOXML normalize |
+
+### `atomic_operation.py` / `studio_command.py` / `element_edit_intent.py` / `element_lock.py` / `slide_edit_command.py`
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | merge / refactor |
+| 级别 | P1 |
+| 问题 | 多套编辑协议；`ElementEditOperation` 同名异义（Literal vs StrEnum） |
+| 方案 | 命名消歧；文档化 Layout 事务 vs Studio 命令矩阵 |
+| 验收 | 无歧义导入；路由表单测 |
+
+### `pptx_structure.py` (~580)
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | refactor / relocate factories |
+| 级别 | P1 |
+| 问题 | 巨型默认目录 + `to_pptxgen_payload`；spike 死函数 |
+| 方案 | 模型留；工厂迁 infra；删 spike |
+| 验收 | domain 文件显著变瘦；导出仍绿 |
+
+### `style_binding.py` (~65)
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | wire or delete |
+| 级别 | P1 |
+| 问题 | 生产未接线，仅单测 |
+| 方案 | 接到 TextNode 或删除抽象 |
+| 验收 | 无未用公共 API |
+
+### `benchmark.py` / `e2e_benchmark.py`
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | refactor |
+| 级别 | P2 |
+| 问题 | 过大；`E2EBenchmarkScenario(str)` 非真枚举 |
+| 方案 | 拆分；改 StrEnum |
+| 验收 | 类型安全；runner 不变 |
+
+### QA 报告簇 `deck_qa` / `critic` / `validation`
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | merge Finding 形状 |
+| 级别 | P2 |
+| 方案 | 公共 QaFinding + severity 桥 |
+| 验收 | 字段一致 |
+
+### `architectural_content_schema.py`
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | refactor（改名 VisualRequirement） |
+| 级别 | P1（DOM-016） |
+| 方案 | `SchemaVisualRequirement` |
+| 验收 | 与 slide 侧类名不冲突 |
+
+### `__init__.py`（visual ~245）
+
+| 字段 | 内容 |
+|------|------|
+| 裁决 | refactor |
+| 级别 | P2 |
+| 问题 | barrel 不完整/过大 |
+| 方案 | 明确公开面或缩小 |
+| 验收 | `__all__` = 文档公开 API |
+
+---
+
+## E. `visual/` — 保持
+
+| 文件 | 角色 | 裁决 |
+|------|------|------|
+| `art_direction.py` | 整册视觉语言 | keep |
+| `visual_intent.py` | 内容→布局桥 | keep |
+| `preferences.py` / `scene_presets.py` | 偏好/预设 | keep |
+| `deck_composition.py` | 节奏 | keep |
+| `deck_repair.py` / `scene_repair.py` | 修复 DTO | keep |
+| `icon_usage_policy.py` / `architectural_icon.py` | 图标 | keep |
+| `template_match.py` / `template_usage_brief.py` | 模板匹配 | keep |
+| `slide_capacity_budget.py` | 容量门禁 | keep |
+| `partial_edit_preservation.py` | 局部编辑合同 | keep |
+| `design_system.py` / `defaults.py` | 设计系统 | keep |
+| `image_derivative.py` | 衍图合同 | keep |
+| `quality_issue_catalog.py` | 问题目录 | keep |
+| `scene_change_proposal.py` / `theme_change_proposal.py` | 提案 | keep（状态可合并） |
+| `reference_slide*.py` | 参考页 | keep |
+| `architectural_template.py` / `template_induction.py` | 模板归纳 | keep（分类枚举映射 P2） |
+| `deck_theme_tokens.py` | 主题面板 token | keep（密度词对齐 P2） |
+| `element_comment.py` | 评论 | keep（Literal 可去） |
+| `slide_edit_snapshot.py` | 事务快照 | keep |
+
+---
+
+## F. 依赖方向（抽检结果）
+
+| 检查 | 结果 |
+|------|------|
+| domain → application/infrastructure/ui | **0**（守卫通过） |
+| domain → sqlalchemy/streamlit/chromadb | **0**（守卫通过） |
+| ORM 表定义在 domain | **无** |
+
+---
+
+## G. 建议执行顺序（代码改动）
+
+1. ~~DOM-017 删死模块~~ **done**  
+2. DOM-016 重命名 `VisualRequirement`  
+3. DOM-012 共享 Chart/Table VO  
+4. DOM-014 迁出 parser（分 PR）  
+5. DOM-004 / DOM-009 severity 与审批状态  
+6. DOM-003 Spec 降级策略  
+7. DOM-018 拆 `enums.py`
+
+台账同步：[02-domain.md](02-domain.md)
