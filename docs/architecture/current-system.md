@@ -11,7 +11,7 @@
 
 启动时环境变量、日志、数据库与页面注册统一由 `archium.bootstrap` 完成（`.env` 固定读仓库根，不依赖进程 cwd）。`archium.ui.bootstrap` 仅保留样式 / 品牌与兼容用的 `init_app()`。
 
-依赖：`full` extra 必须覆盖全部 runtime extras（测试守卫）；可复现安装用 `requirements/*.lock`（`uv` 生成）。Documentation URL 指向默认分支 `master`。CI 分层为 `compatibility`（3.11/3.12 unit+mypy）与 `quality-full`（3.12 integration/golden/render）；安全审计见 `docs/security/`。
+依赖：`full` extra 必须覆盖全部 runtime extras（测试守卫）；可复现安装用 `requirements/*.lock`（`uv` 生成）。Documentation URL 指向默认分支 `master`。CI 分层为 `compatibility`（3.11/3.12 unit+mypy）与 `quality-full`（3.12 integration/golden/render）；安全审计见 `docs/security/`。能力完成度以 [发布等级矩阵](../release-capability-matrix.md) 为准；发版须过 [用户任务剧本 A–E](../user-task-playbooks.md)，不得仅凭模块测试宣称 Stable。
 
 `legacy/` 保留在仓库中供开发者按需运行（`python -m legacy.main` / `python main.py`），**不**随 `archium-agent` 安装，**不**被 `archium.*` 导入，也不出现在主导航。**状态冻结**：不再接受功能修改；Ruff/Mypy/CI 不检查 `legacy/` 与根 shim。验收：`rg "from legacy|import legacy" archium` 必须为空。静态检查：`ignore_missing_imports = false`，仅对无 stub 的第三方包在 overrides 中忽略。
 

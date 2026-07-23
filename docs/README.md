@@ -11,7 +11,7 @@
 | 视觉与模板人员 | [视觉编排文档](visual/README.md) |
 | 部署维护人员 | [配置参考](configuration-reference.md) · [跨平台支持](beta-platform-support-matrix.md) |
 | 开发者 | [当前系统架构](architecture/current-system.md) · [管线角色](architecture/pipeline-roles.md) · [贡献指南](../CONTRIBUTING.md) |
-| Beta 验收 | [发布决策](v0.2-beta-release-decision.md) · [演练流程](v0.2-beta-rehearsal.md) |
+| Beta 验收 | [发布决策](v0.2-beta-release-decision.md) · [演练流程](v0.2-beta-rehearsal.md) · [用户任务剧本](user-task-playbooks.md) |
 
 ## 现行文档
 
@@ -33,6 +33,8 @@
 - [Docker 快速启动](deployment/docker-quickstart.md)与[测试清单](deployment/docker-test-checklist.md)。
 - [跨平台验证](cross-platform-validation.md)与[Beta 平台支持矩阵](beta-platform-support-matrix.md)。
 - [真实项目验证准备](real-project-validation-preparation.md)。
+- [发布等级与能力矩阵](release-capability-matrix.md)。
+- [关键用户任务剧本 A–E](user-task-playbooks.md)。
 - [v0.2 Beta 发布决策](v0.2-beta-release-decision.md)。
 
 ## 历史材料

@@ -110,50 +110,27 @@ pytest tests/unit/visual tests/integration/visual tests/golden/visual/compositio
 
 跨平台说明见 [`docs/cross-platform-validation.md`](docs/cross-platform-validation.md) 与 Beta 支持矩阵 [`docs/beta-platform-support-matrix.md`](docs/beta-platform-support-matrix.md)。Windows 实机 smoke： nightly [`.github/workflows/windows-smoke.yml`](.github/workflows/windows-smoke.yml)。Real Project Validation 清单见 [`docs/real-project-validation-preparation.md`](docs/real-project-validation-preparation.md)。
 
-## 能力矩阵
+## 能力与发布等级
 
-| 功能 | 已实现 | 有测试 | 已接主流程 | 可稳定使用 |
-|------|:------:|:------:|:----------:|:----------:|
-| 项目工作台（Streamlit UI） | ✅ | ✅ | ✅ | ⚠️ |
-| **项目任务 / Mission Planning** | ✅ | ✅ | ✅ | ⚠️ |
-| 动态 Workstream / DeliverablePlan | ✅ | ✅ | ✅ | ⚠️ |
-| Mission → PresentationRequest 适配 | ✅ | ✅ | ✅ | ⚠️ |
-| 文档导入（PDF/DOCX/PPTX/XLSX/图片） | ✅ | ✅ | ✅ | ⚠️ |
-| 语义分块与资料片段编辑 | ✅ | ✅ | ✅ | ⚠️ |
-| 向量检索（Chroma + Embedding） | ✅ | ⚠️ | ✅ | ⚠️ |
-| LangGraph 多阶段工作流 | ✅ | ✅ | ✅ | ⚠️ |
-| Brief / Storyline / SlideSpec 审核 | ✅ | ✅ | ✅ | ⚠️ |
-| 统一修订历史（Brief / Storyline / SlideSpec lineage） | ✅ | ✅ | ✅ | ⚠️ |
-| SlideSpec 字段 diff | ✅ | ✅ | ✅ | ⚠️ |
-| JSON 导出 | ✅ | ✅ | ✅ | ⚠️ |
-| Marp Markdown 导出 | ✅ | ✅ | ✅ | ⚠️ |
-| PPTX 导出（Marp CLI） | ✅ | ⚠️ | ✅ | ❌ |
-| 原生元素 PPTX 导出（PptxGenJS） | ✅ | ✅ | ✅ | ⚠️ |
-| PresentationSpec JSON | ✅ | ✅ | ✅ | ⚠️ |
-| PDF 导出（Marp CLI） | ✅ | ⚠️ | ✅ | ❌ |
-| 幻灯片预览图（Marp `--images` PNG） | ✅ | ✅ | ✅ | ⚠️ |
-| 项目事实账本（Fact Ledger） | ✅ | ✅ | ✅ | ⚠️ |
-| 素材看板（Asset Board） | ✅ | ✅ | ✅ | ⚠️ |
-| 四层质量审核（内容/证据/建筑/版面） | ✅ | ✅ | ✅ | ⚠️ |
-| 视觉 QA（图像可读性 / 指北针 / 图例） | ✅ | ✅ | ✅ | ⚠️ |
-| **建筑视觉编排（DesignSystem / ArtDirection / LayoutPlan）** | ✅ | ✅ | ✅ | ⚠️ |
-| 视觉设计 UI（ArtDirection 审核 / 候选版式） | ✅ | ✅ | ✅ | ⚠️ |
-| Studio 画布编辑（多选 / 框选 / 批量几何操作） | ✅ | ✅ | ✅ | ⚠️ |
-| 元素评论与提案 Inbox（版本固定 / rebase） | ✅ | ✅ | ✅ | ⚠️ |
-| 固定画布容量预算与内容适配门禁 | ✅ | ✅ | ✅ | ⚠️ |
-| 图片衍生处理（保留原图 / 证据策略约束） | ✅ | ✅ | ✅ | ⚠️ |
-| LayoutPlan → 原生 PPTX（execute-only） | ✅ | ✅ | ✅ | ⚠️ |
-| 叙事感知拆页（SlideSplitPlan） | ✅ | ✅ | ✅ | ⚠️ |
-| 拆页引用保护 | ✅ | ✅ | ✅ | ⚠️ |
-| 拆页素材重匹配 | ✅ | ✅ | ✅ | ⚠️ |
-| 质量审核与导出阻断 | ✅ | ✅ | ✅ | ⚠️ |
-| Marp 导出 smoke（PPTX / PDF / PNG） | ✅ | ✅ | — | ⚠️ |
-| Streamlit 启动 smoke | ✅ | ✅ | — | ⚠️ |
-| Alembic migration smoke | ✅ | ✅ | — | ⚠️ |
-| Legacy CLI（仓库内 `legacy/`，不随包安装） | ✅ | ⚠️ | — | ❌ |
-| 遗留实验模块（文件整理） | ✅ | ⚠️ | — | ❌ |
+> **不要把「有代码 + 有测试」读成「用户可稳定使用」。**  
+> 完整矩阵与等级定义见 [`docs/release-capability-matrix.md`](docs/release-capability-matrix.md)。  
+> 发版必须跑的用户任务见 [`docs/user-task-playbooks.md`](docs/user-task-playbooks.md)（剧本 A–E）。
 
-图例：✅ 已满足 · ⚠️ 部分满足或依赖外部工具 · ❌ 未满足或不稳定
+| 能力 | 代码 | 自动测试 | 真实项目验收 | 发布等级 |
+|------|:----:|:--------:|:------------:|:--------:|
+| 项目工作台 / Mission 主链 | ✅ | ✅ | ⚠️ | Preview |
+| 文档导入与事实账本 | ✅ | ✅ | ⚠️ | Preview / Experimental |
+| 原生元素 PPTX（PptxGen / LayoutPlan） | ✅ | ✅ | ⚠️ | Preview |
+| Studio 拖拽 / 多选 / 评论 Inbox | ✅ | ✅ | ⚠️ / ❌ | Experimental |
+| 页面复活 | ✅ | ✅ | ❌ | Experimental |
+| Visual QA / 拆页 / 图片衍生 | ✅ | ✅ | ❌ | Experimental |
+| Marp PPTX/PDF（依赖 CLI） | ✅ | ⚠️ | ❌ | Experimental |
+| Legacy CLI | ✅ | ⚠️ | ❌ | Deprecated |
+
+发布等级：`Prototype` → `Experimental` → `Preview` → `Beta` → `Stable`（另有 `Deprecated`）。  
+**仅 Beta/Stable 接近「可稳定使用」**；当前产品整体仍以 Preview / Experimental 为主，与 [发布决策](docs/v0.2-beta-release-decision.md) 一致（暂不打 Beta 标签）。
+
+图例：✅ 满足 · ⚠️ 部分或依赖外部工具/人工 · ❌ 未满足
 
 ## 应用入口
 
