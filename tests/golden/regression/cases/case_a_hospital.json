@@ -43,6 +43,10 @@
     "min_slides": 4,
     "workflow_status": "completed",
     "review_layers": ["evidence", "architectural", "layout"],
+    "min_review_issues": 1,
+    "min_facts": 2,
+    "min_conflict_count": 1,
+    "require_conflicted_status": true,
     "fact_conflict_keys": ["site_area", "land_area"],
     "issue_title_contains_any": ["缺少引用来源", "数值结论缺少依据", "交通流线图", "缺少匹配素材"],
     "issue_rule_code_groups": [

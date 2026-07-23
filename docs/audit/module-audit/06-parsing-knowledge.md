@@ -13,4 +13,4 @@
 | KN-004 | P1 | open | LLM 任意键写入事实 (K4) | parsing/extraction | schema 污染 | 白名单键 | 未知键拒绝或进 quarantine | `-` |
 | KN-005 | P1 | open | 重解析与 `needs_ocr` 行为不清 (K5/K6) | parsers | 重复/漏 OCR | 状态机 + 文档 | 重跑幂等；OCR 标志可测 | `-` |
 | KN-006 | P2 | open | DOCX 页码语义弱；CitationORM 死 (K7/K8) | documents; models | 引用不准 | 页映射策略；删死表 | 页码断言 + 无死 ORM | `-` |
-| KN-007 | P0 | open | Golden 缺事实账本 + review issues（Beta B9） | golden / beta | 主链质量不可见 | 补 golden 断言 | B9 关闭 | `-` |
+| KN-007 | P0 | done | Golden 缺事实账本 + review issues（Beta B9） | golden assertions / case_a | 主链质量不可见 | Ledger 计数 + CONFLICTED 状态 + review issue 下限 | B9 关闭；case_a 断言绿 | `-` |

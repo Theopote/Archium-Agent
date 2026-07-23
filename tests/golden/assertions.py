@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from archium.application.fact_ledger_service import FactLedgerService
 from archium.application.workflow_models import WorkflowRunResult
-from archium.domain.enums import ReviewLayer, WorkflowStatus
+from archium.domain.enums import ReviewLayer, VerificationStatus, WorkflowStatus
 from archium.domain.review import ReviewIssue
 from sqlalchemy.orm import Session
 from tests.golden.regression.loader import conflicting_fact_keys
@@ -33,11 +34,38 @@ def assert_workflow_expectations(
         for layer_name in expected_layers:
             assert ReviewLayer(layer_name) in layers
 
-    conflict_keys = expectations.get("fact_conflict_keys", [])
+    min_review_issues = expectations.get("min_review_issues")
+    if min_review_issues is not None:
+        assert len(issues) >= int(min_review_issues)
+
+    conflict_keys = list(expectations.get("fact_conflict_keys", []))
     if conflict_keys:
         detected = conflicting_fact_keys(session, project_id)
         for key in conflict_keys:
-            assert key in detected
+            assert key in detected, f"expected conflict key {key!r} in {sorted(detected)}"
+
+    # KN-007 / B9: Fact Ledger visibility (counts + conflicted status).
+    min_facts = expectations.get("min_facts")
+    min_conflict_count = expectations.get("min_conflict_count")
+    require_conflicted_status = bool(expectations.get("require_conflicted_status", False))
+    if min_facts is not None or min_conflict_count is not None or require_conflicted_status:
+        ledger = FactLedgerService(session).get_ledger(project_id)
+        facts = [entry.fact for entry in ledger.entries if entry.fact is not None]
+        facts.extend(ledger.extra_facts)
+        if min_facts is not None:
+            assert len(facts) >= int(min_facts)
+        if min_conflict_count is not None:
+            assert ledger.conflict_count >= int(min_conflict_count)
+        if require_conflicted_status:
+            conflicted = {
+                fact.key
+                for fact in facts
+                if fact.verification_status == VerificationStatus.CONFLICTED
+            }
+            for key in conflict_keys:
+                assert key in conflicted, (
+                    f"expected {key!r} marked CONFLICTED, got {sorted(conflicted)}"
+                )
 
     title_fragments = expectations.get("issue_title_contains_any", [])
     if title_fragments:

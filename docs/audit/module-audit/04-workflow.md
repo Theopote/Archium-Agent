@@ -13,4 +13,4 @@
 | WF-005 | P1 | open | Route GENERATE_FROM_PROJECT vs bypass 分叉 (W4) | route dispatch | 路径不可预期 | 单一路由表 + 测试 | 每 route 有显式节点序列断言 | `-` |
 | WF-006 | P1 | open | Plan 审批缺内容哈希 (W5) | DeliverablePlan | 内容被改仍算已批 | 写入 content hash；变更作废 | hash 变则 approval 空 | `-` |
 | WF-007 | P2 | open | 死 STEP_LABELS / 路由表残留 (W6) | workflow | 误导维护者 | 删除或生成自图定义 | 无死常量 | `-` |
-| WF-008 | P0 | open | Golden 未覆盖 interrupt + continue_after_review（Beta B7） | `tests/golden/`; beta backlog | 主链回归不足 | 增加 golden/fixture | B7 关闭；相关 golden 绿 | `-` |
+| WF-008 | P0 | done | Golden 未覆盖 interrupt + continue_after_review（Beta B7） | `tests/golden/regression/test_interrupt_continue.py` | 主链回归不足 | case_a brief 门禁 interrupt → approve → continue | B7 关闭；golden regression 绿 | `-` |
