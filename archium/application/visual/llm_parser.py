@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
-from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
+from archium.domain.visual.parsed_intent import Modifier, ModifierType, ParsedIntent
 from archium.infrastructure.llm.base import LLMRequest
 
 if TYPE_CHECKING:
@@ -122,14 +122,13 @@ class LLMIntentParser:
         request = LLMRequest(
             system_prompt=self.SYSTEM_PROMPT,
             user_prompt=self.USER_PROMPT_TEMPLATE.format(instruction=text),
-            temperature=0.1,  # 低温度以获得更确定的输出
+            temperature=0.1,
             max_tokens=800,
             json_mode=True,
         )
         try:
             draft = self._llm.generate_structured(request, _IntentParseDraft)
         except Exception as exc:
-            # 记录错误但不抛出，让调用方回退到规则解析
             logger.warning("LLM intent parsing failed: %s", exc)
             return None
 
@@ -149,13 +148,8 @@ class LLMIntentParser:
         except ValueError:
             return None
 
-        # 解析参数
         params = self._parse_params(draft.params)
-
-        # 解析修饰符
         modifiers = self._parse_modifiers(draft.modifiers)
-
-        # 推断复杂度类型
         complexity = self._infer_complexity(modifiers)
 
         return ParsedIntent(
@@ -170,33 +164,26 @@ class LLMIntentParser:
         """Parse and validate parameters."""
         params: dict[str, Any] = {}
 
-        # 版式类型
         if "layout_family" in params_data:
             with suppress(ValueError):
                 params["layout_family"] = LayoutFamily(params_data["layout_family"])
 
-        # 元素 ID
         if "element_id" in params_data:
             params["element_id"] = str(params_data["element_id"])
 
-        # 调整强度
         if "adjustment_strength" in params_data:
             strength = float(params_data["adjustment_strength"])
             params["adjustment_strength"] = max(0.0, min(1.0, strength))
 
-        # 约束条件
         if "constraints" in params_data:
             params["constraints"] = params_data["constraints"]
 
-        # 多步骤操作
         if "multi_step_operations" in params_data:
             params["multi_step_operations"] = params_data["multi_step_operations"]
 
-        # 语义操作
         if "semantic_operations" in params_data:
             params["semantic_operations"] = params_data["semantic_operations"]
 
-        # 复制其他参数
         for key, value in params_data.items():
             if key not in params:
                 params[key] = value
@@ -228,10 +215,8 @@ class LLMIntentParser:
         if not modifiers:
             return None
 
-        # 统计每种类型的出现次数
         type_counts: dict[ModifierType, int] = {}
         for modifier in modifiers:
             type_counts[modifier.type] = type_counts.get(modifier.type, 0) + 1
 
-        # 返回最常见的类型
         return max(type_counts, key=lambda modifier_type: type_counts[modifier_type])

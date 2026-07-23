@@ -47,9 +47,9 @@ from archium.domain.visual.element_lock import (
     assert_element_editable,
 )
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
-from archium.domain.visual.hybrid_parser import create_hybrid_parser
+from archium.application.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.nlp_parser import ParsedIntent
+from archium.domain.visual.parsed_intent import ParsedIntent
 from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError

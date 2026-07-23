@@ -9,7 +9,7 @@ from archium.domain.visual.atomic_operation import (
 )
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
-from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
+from archium.domain.visual.parsed_intent import Modifier, ModifierType, ParsedIntent
 
 
 class TestOperationDecomposition:

@@ -27,7 +27,7 @@ from archium.domain.visual.enums import (
     VisualContentType,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.domain.visual.nlp_parser import Modifier, ModifierType, ParsedIntent
+from archium.domain.visual.parsed_intent import Modifier, ModifierType, ParsedIntent
 from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository

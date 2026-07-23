@@ -19,7 +19,7 @@ from archium.domain.visual.atomic_operation import (
 )
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
-from archium.domain.visual.nlp_parser import ModifierType, ParsedIntent
+from archium.domain.visual.parsed_intent import ModifierType, ParsedIntent
 from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.exceptions import WorkflowError
 

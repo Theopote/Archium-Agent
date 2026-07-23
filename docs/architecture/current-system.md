@@ -42,7 +42,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 
 | 层 | 目录 | 职责 |
 |---|---|---|
-| 领域模型 | `archium/domain/` | Pydantic 模型、枚举、不变量；视觉模型在 `domain/visual/` |
+| 领域模型 | `archium/domain/` | Pydantic 模型、枚举、不变量；视觉模型在 `domain/visual/`；**不**依赖 application / infrastructure / UI。自然语言解析器位于 `application/visual/`，domain 仅保留 `ParsedIntent` 等 DTO |
 | 应用服务 | `archium/application/` | 用例编排、审核、版本、导出、视觉编辑和修复 |
 | 工作流 | `archium/workflow/` | Planning、Presentation、Visual 的可暂停流程 |
 | 基础设施 | `archium/infrastructure/` | 数据库、解析、LLM、检索、布局、渲染、存储、视觉分析 |

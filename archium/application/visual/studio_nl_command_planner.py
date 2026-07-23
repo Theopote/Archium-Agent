@@ -8,8 +8,8 @@ from uuid import UUID
 
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.edit_intent import VisualEditIntent, parse_natural_language
-from archium.domain.visual.hybrid_parser import create_hybrid_parser
-from archium.domain.visual.nlp_parser import ParsedIntent
+from archium.application.visual.hybrid_parser import create_hybrid_parser
+from archium.domain.visual.parsed_intent import ParsedIntent
 from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
 from archium.domain.visual.render_scene import RenderScene, TextNode
 from archium.domain.visual.studio_command import (

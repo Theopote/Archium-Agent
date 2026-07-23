@@ -5,7 +5,8 @@ from __future__ import annotations
 import pytest
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
-from archium.domain.visual.nlp_parser import EnhancedNLPParser, ModifierType
+from archium.application.visual.nlp_parser import EnhancedNLPParser
+from archium.domain.visual.parsed_intent import ModifierType
 
 
 class TestEnhancedNLPParser:
@@ -99,7 +100,7 @@ class TestHybridParser:
 
     def test_simple_instruction_uses_rules(self) -> None:
         """Simple instructions should use rule-based parser."""
-        from archium.domain.visual.hybrid_parser import HybridIntentParser
+        from archium.application.visual.hybrid_parser import HybridIntentParser
 
         parser = HybridIntentParser(llm_parser=None)
         result = parser.parse("放大主图")
@@ -113,7 +114,7 @@ class TestHybridParser:
         """Test heuristic for determining if LLM is needed."""
         from unittest.mock import MagicMock
 
-        from archium.domain.visual.hybrid_parser import HybridIntentParser
+        from archium.application.visual.hybrid_parser import HybridIntentParser
 
         parser_without_llm = HybridIntentParser(llm_parser=None)
         assert not parser_without_llm.should_use_llm("放大主图")
@@ -123,7 +124,7 @@ class TestHybridParser:
 
     def test_fallback_when_llm_unavailable(self) -> None:
         """When LLM is unavailable, should fall back to rules."""
-        from archium.domain.visual.hybrid_parser import HybridIntentParser
+        from archium.application.visual.hybrid_parser import HybridIntentParser
 
         parser = HybridIntentParser(llm_parser=None)
         result = parser.parse("稍微放大主图")
