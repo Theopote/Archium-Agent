@@ -1,6 +1,8 @@
 # 历史文档分类清单
 
-本清单用于后续归档，不表示应立即删除文件。移动或删除前必须先通过 `python scripts/check_markdown_links.py`，并确认内容已被现行文档或版本历史覆盖。
+本清单用于后续归档，**不表示应立即删除文件**。移动或删除前必须先通过 `python scripts/check_markdown_links.py`，并确认内容已被现行文档或版本历史覆盖。
+
+会话与一次性总结的归档目标目录是 **`.dev-notes/docs-history/`**（与仓库 hygiene / sessions README 一致），**不是** `docs/archive/`。
 
 ## 默认保留但退出主导航
 
@@ -10,17 +12,18 @@
 | `docs/delivery/` | 阶段交付 | 保留审计记录；不得作为当前能力依据 |
 | `docs/implementation/` | 实现/修复总结 | 保留复盘；稳定知识应迁入架构或维护指南 |
 | `docs/review/` | 审查快照 | 保留审查时点与结论，不持续维护 |
-| `docs/sessions/` | 会话记录 | 按日期保存，不进入用户导航 |
 | `docs/roadmap/` | 路线与验收草案 | 对照发布决策标明 active/superseded |
+| `.dev-notes/docs-history/sessions/` | 会话记录 | 已从 `docs/sessions/` 迁出；不进入用户导航 |
 
-## 顶层历史文件
+## 顶层 / 根目录历史文件
 
-以下文件属于一次性总结，应从现行入口中移除，后续可统一迁入 `docs/archive/`：
+以下文件属于一次性总结，应从现行入口中移除（已迁或待迁）：
 
-- `docs/sessions/2026-07-20/README_UPDATE_SUMMARY.md`
-- `docs/sessions/2026-07-20/SESSION_SUMMARY_2026-07-20.md`
-- `docs/sessions/2026-07-20/COMPLETE_DELIVERY_SUMMARY.md`
+- `.dev-notes/docs-history/sessions/2026-07-20/README_UPDATE_SUMMARY.md`
+- `.dev-notes/docs-history/sessions/2026-07-20/SESSION_SUMMARY_2026-07-20.md`
+- `.dev-notes/docs-history/sessions/2026-07-20/COMPLETE_DELIVERY_SUMMARY.md`
 - `docs/QUALITY_GATE_STATUS.md`（保留时必须标记生成/检查日期）
+- 根目录残留的一次性修复笔记（如曾存在的 `CASCADE_DELETE_FIX.md`）→ `.dev-notes/docs-history/`
 
 ## 归档判定
 
@@ -32,3 +35,5 @@
 4. 移动后 Markdown 链接检查通过。
 
 只有同时满足“内容已合并”和“版本历史可恢复”时才删除；否则使用归档而不是删除。
+
+`docs/guides/REPO_CLEANUP_PLAN.md` 已 **superseded**：不得按其中的根目录 `mv`/`rm` 命令执行。

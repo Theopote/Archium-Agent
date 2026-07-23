@@ -466,10 +466,6 @@ npm install -g @marp-team/marp-cli
 marp --version
 ```
 
-+
-
-+未安装 Marp 时，应用仍可启动并完成 JSON / Marp Markdown 导出；勾选 PPTX 或 PDF 时会在 `RenderResult.warnings` 中提示。
-
 未安装 Marp 时，应用仍可启动并完成 JSON / Marp Markdown 导出；勾选 PPTX 或 PDF 时会在 `RenderResult.warnings` 中提示。
 
 ## 支持的文档格式

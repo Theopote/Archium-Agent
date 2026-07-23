@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from uuid import uuid4
 
@@ -23,7 +22,7 @@ from archium.domain.visual.e2e_benchmark import (
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
 from tests.fixtures.mock_llm import pipeline_mock_selector
-from tests.golden.fixtures.loader import materialize_inline_docx
+from tests.golden.fixtures.loader import materialize_inline_docx, materialize_inline_image
 
 
 @pytest.fixture
@@ -66,17 +65,10 @@ def sample_docx_file(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def sample_image_file(tmp_path: Path) -> Path:
-    source = (
-        Path(__file__).resolve().parents[2]
-        / "calibration"
-        / "visual_qa"
-        / "corpus"
-        / "images"
-        / "photo_005.png"
+    return materialize_inline_image(
+        tmp_path / "hero_candidate.png",
+        {"width": 640, "height": 480, "color": [120, 140, 160]},
     )
-    target = tmp_path / "hero_candidate.png"
-    shutil.copy(source, target)
-    return target
 
 
 @pytest.fixture

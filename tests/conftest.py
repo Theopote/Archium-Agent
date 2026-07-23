@@ -66,6 +66,8 @@ _TIER_MARKERS = frozenset({"unit", "integration", "e2e", "benchmark", "smoke"})
 _TIER_PATH_PREFIXES: tuple[tuple[str, str], ...] = (
     ("tests/unit/", "unit"),
     ("tests/ui/", "unit"),
+    ("tests/domain/", "unit"),
+    ("tests/spike/", "unit"),
     ("tests/application/", "integration"),
     ("tests/integration/", "integration"),
     ("tests/benchmark/", "benchmark"),

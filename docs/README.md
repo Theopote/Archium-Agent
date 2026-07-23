@@ -45,10 +45,10 @@
 | `delivery/` | 阶段性交付总结 |
 | `implementation/` | 实现记录和修复复盘 |
 | `review/` | 代码/测试审查快照 |
-| `sessions/` | 工作会话记录 |
 | `roadmap/` | 规划与验收草案；是否仍有效需对照发布决策 |
+| `.dev-notes/docs-history/sessions/` | 工作会话记录（已从 `docs/sessions/` 迁出） |
 
-带日期的 session summary、README 更新与一次性交付总结统一归入 `sessions/YYYY-MM-DD/`。
+`docs/sessions/README.md` 仅为指针页。带日期的 session summary 与一次性交付总结统一归入 `.dev-notes/docs-history/`。
 
 ## 维护规则
 

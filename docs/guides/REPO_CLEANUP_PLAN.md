@@ -1,5 +1,15 @@
 # 仓库根目录清理计划
 
+> **SUPERSEDED（2026-07-23）— 禁止执行本文中的 `mv` / `rm` 命令。**
+>
+> 根目录总结文档已部分迁入 `docs/delivery|implementation|analysis|…`；会话记录迁入
+> `.dev-notes/docs-history/sessions/`。现行归档规则见
+> [historical-document-inventory.md](../historical-document-inventory.md) 与
+> [MIGRATION_CANDIDATES.md](../../.dev-notes/docs-history/MIGRATION_CANDIDATES.md)。
+> 本文仅保留为历史计划快照。
+>
+> 状态：~~待执行~~ → **已废弃**
+
 ## 问题诊断
 
 ### 当前根目录混乱状态
@@ -462,4 +472,4 @@ $ ls docs/internal/history/
 
 生成时间：2026-07-19  
 作者：Kiro (Claude Sonnet 5)  
-状态：待执行
+状态：**已废弃（superseded 2026-07-23）** — 勿执行

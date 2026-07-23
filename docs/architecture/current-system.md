@@ -76,6 +76,23 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 所有配置字段以 `archium/config/settings.py` 为事实源，生成物见 [配置参考](../configuration-reference.md)。
 - 凭证优先级：会话 → OS keyring（`archium-agent`）→ 环境变量。`storage://` / `project://` / `benchmark://` 解析必须落在 `project_storage` 或 benchmark 根目录内；资产写入文件名经 basename 净化。`FIELD_DOMAINS` 必须覆盖全部 Settings 字段。
 
+## 测试分层
+
+| 层 | 路径 / 标记 | CI |
+|---|---|---|
+| unit | `tests/unit`、`tests/ui`、`tests/domain`、`tests/spike`（路径自动标 `unit`） | `pytest -m unit` |
+| integration | `tests/integration`、`tests/application` | `pytest -m "integration and not e2e"` |
+| golden | `tests/golden/*`（按路径跑，不强制主 tier 标记） | regression / mission / fixtures / visual jobs |
+| e2e / benchmark / smoke | 对应目录 | nightly 或专用 job |
+
+集成 gate 的样例图用 `materialize_inline_image` 生成，不依赖 `tests/calibration` 语料二进制。
+
+## 文档分层
+
+- 现行入口：`README.md`、`docs/README.md`、`docs/architecture/current-system.md`、Studio / Visual 指南。
+- 过程性会话与 `COMPLETE_*` / `FINAL_*` / `SESSION_SUMMARY_*` 归档到 `.dev-notes/docs-history/`，不进入产品导航。
+- 配置事实源为 `Settings` + 生成脚本；禁止手改 `docs/configuration-reference.md` / `.env.example`。
+
 ## 相关文档
 
 - [文档中心](../README.md)

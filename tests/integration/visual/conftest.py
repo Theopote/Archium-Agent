@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pytest
@@ -10,6 +9,7 @@ from archium.application.visual.e2e_benchmark_service import E2EBenchmarkService
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
 from tests.fixtures.mock_llm import pipeline_mock_selector
+from tests.golden.fixtures.loader import materialize_inline_docx, materialize_inline_image
 
 
 @pytest.fixture
@@ -19,8 +19,6 @@ def mock_llm() -> MockLLMProvider:
 
 @pytest.fixture
 def sample_docx_file(tmp_path: Path) -> Path:
-    from tests.golden.fixtures.loader import materialize_inline_docx
-
     return materialize_inline_docx(
         tmp_path / "source.docx",
         {
@@ -34,18 +32,11 @@ def sample_docx_file(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def sample_image_file(tmp_path: Path) -> Path:
-    source = (
-        Path(__file__).resolve().parents[2]
-        / "calibration"
-        / "visual_qa"
-        / "corpus"
-        / "images"
-        / "photo_005.png"
+    # Inline image keeps gate fixtures independent of optional calibration corpus binaries.
+    return materialize_inline_image(
+        tmp_path / "hero_candidate.png",
+        {"width": 640, "height": 480, "color": [120, 140, 160]},
     )
-    target = tmp_path / "hero_candidate.png"
-    shutil.copy(source, target)
-    return target
-
 
 @pytest.fixture
 def always_valid_layouts(monkeypatch: pytest.MonkeyPatch) -> None:

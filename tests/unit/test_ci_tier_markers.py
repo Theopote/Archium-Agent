@@ -21,12 +21,15 @@ def test_tier_path_prefixes_map_to_known_markers() -> None:
     [
         ("tests/unit/test_settings.py", "unit"),
         ("tests/ui/test_navigation_structure.py", "unit"),
+        ("tests/domain/test_export_fidelity.py", "unit"),
+        ("tests/spike/test_slide_recovery_spike.py", "unit"),
         ("tests/application/visual/test_composite_operations.py", "integration"),
         ("tests/integration/visual/test_e2e_benchmark_service.py", "integration"),
         ("tests/benchmark/architectural_slides/test_architectural_benchmark.py", "benchmark"),
         ("tests/e2e/real_projects/test_real_project_acceptance.py", "e2e"),
         ("tests/smoke/test_pptxgen_render.py", "smoke"),
         ("tests/golden/regression/test_regression_cases.py", None),
+        ("tests/calibration/visual_qa/test_calibration_runner.py", None),
     ],
 )
 def test_tier_marker_for_path(relative_path: str, expected_tier: str | None) -> None:

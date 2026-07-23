@@ -109,8 +109,8 @@ filterwarnings = [
     "default::DeprecationWarning:archium",
 ]
 markers = [
-    "unit: Fast isolated tests (tests/unit, tests/application); CI job: pytest -m unit",
-    "integration: Service wiring tests (tests/integration); CI job: pytest -m \"integration and not e2e\"",
+    "unit: Fast isolated tests (tests/unit, tests/ui, tests/domain, tests/spike); CI job: pytest -m unit",
+    "integration: Service wiring tests (tests/integration, tests/application); CI job: pytest -m \"integration and not e2e\"",
     "e2e: Full workflow gates (nightly); excluded from PR integration via \"not e2e\"",
     "e2e_pipeline: Nightly deliverable pipeline gate; may bypass in-workflow layout validation",
     "e2e_quality: Nightly layout quality gate; real LayoutValidationService only",
@@ -120,6 +120,9 @@ markers = [
     "migration_smoke: Alembic migration smoke tests",
     "streamlit_smoke: Streamlit startup smoke tests",
     "calibration: Visual QA labeled corpus calibration (optional, not in default CI)",
+    "regression: Layer 1 deterministic workflow regression (tests/golden/regression; CI by path)",
+    "fixture_acceptance: Layer 2 real parser + cached/mock LLM (CI when fixtures present)",
+    "live_llm: Layer 3 live model evaluation (manual / scheduled only, not default CI)",
     "visual_regression: PNG preview baseline checks for key Golden Cases (requires Marp CLI)",
     "preview_visual_regression: LayoutPlan Python wireframe preview.png + JSON geometry goldens",
     "pptx_visual_regression: LayoutPlan → PPTX → LibreOffice/PowerPoint screenshot vs baseline",
