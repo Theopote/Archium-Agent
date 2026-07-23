@@ -289,7 +289,11 @@ def _render_generation_form(project_id: UUID) -> None:
             export_editable_pptx = spec_col2.checkbox(
                 "导出可编辑 PPTX（正式：RenderScene）",
                 value=False,
-                help="有视觉版式时走 RenderScene → presentation.pptx；否则回退遗留 Spec 模板并写入警告。",
+                help=(
+                    "有视觉版式时走 RenderScene → presentation.pptx。"
+                    "无版式时默认失败；需遗留 Spec 回退时在配置中启用 "
+                    "allow_legacy_presentation_spec_pptx_fallback。"
+                ),
             )
             export_preview_images = st.checkbox(
                 "生成幻灯片预览图 PNG（需 Marp CLI）",

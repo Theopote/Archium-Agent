@@ -129,6 +129,7 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "pptxgen_script_path": ConfigDomain.RENDER,
     "pptx_structure_mode": ConfigDomain.RENDER,
     "pptx_chart_export_mode": ConfigDomain.RENDER,
+    "allow_legacy_presentation_spec_pptx_fallback": ConfigDomain.RENDER,
     "visual_fallback_enabled": ConfigDomain.VISUAL,
     "visual_fallback_relaxed_matching": ConfigDomain.VISUAL,
     "visual_fallback_relaxed_min_score": ConfigDomain.VISUAL,

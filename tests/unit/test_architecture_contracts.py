@@ -178,6 +178,27 @@ def test_documented_formal_export_authority_is_render_scene(
     assert "PresentationSpec" in prose
 
 
+def test_documented_legacy_spec_pptx_fallback_default_is_false(
+    contracts: dict[str, list[str]],
+) -> None:
+    from archium.config.settings import Settings
+
+    assert contracts["legacy-spec-pptx-fallback-default"] == ["false"]
+    assert Settings().allow_legacy_presentation_spec_pptx_fallback is False
+
+
+def test_formal_export_call_sites_do_not_force_legacy_spec_fallback() -> None:
+    """Delivery paths must not opt into Spec PPTX unless settings explicitly allow."""
+    roots = (
+        _ROOT / "archium" / "workflow" / "nodes" / "export.py",
+        _ROOT / "archium" / "application" / "export_service.py",
+        _ROOT / "archium" / "ui" / "workspace_service.py",
+    )
+    for path in roots:
+        source = path.read_text(encoding="utf-8")
+        assert "allow_legacy_spec_fallback=True" not in source, path.name
+
+
 def test_documented_canvas_capabilities_exist_in_runtime(
     contracts: dict[str, list[str]],
 ) -> None:

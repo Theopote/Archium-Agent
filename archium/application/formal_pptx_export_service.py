@@ -46,8 +46,12 @@ class FormalPptxExportService:
         presentation_id: UUID,
         *,
         chart_export_mode: ChartExportMode | None = None,
-        allow_legacy_spec_fallback: bool = True,
+        allow_legacy_spec_fallback: bool | None = None,
     ) -> FormalPptxExportResult:
+        if allow_legacy_spec_fallback is None:
+            allow_legacy_spec_fallback = (
+                self._settings.allow_legacy_presentation_spec_pptx_fallback
+            )
         from archium.application.visual.layout_readiness import presentation_has_visual_layout
         from archium.application.visual.studio_scene_service import StudioSceneService
         from archium.infrastructure.renderers.pptx_renderer import PptxRenderer

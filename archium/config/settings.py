@@ -419,6 +419,14 @@ class Settings(BaseSettings):
             "'native_data_backed' (PowerPoint Chart/Table with embedded workbook)."
         ),
     )
+    allow_legacy_presentation_spec_pptx_fallback: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("ALLOW_LEGACY_PRESENTATION_SPEC_PPTX_FALLBACK"),
+        description=(
+            "When true, editable PPTX export may fall back to legacy PresentationSpec "
+            "templates if no visual LayoutPlan exists. Formal delivery prefers RenderScene."
+        ),
+    )
 
     # ── visual.* ─────────────────────────────────────────────────────────────
     visual_fallback_enabled: bool = Field(

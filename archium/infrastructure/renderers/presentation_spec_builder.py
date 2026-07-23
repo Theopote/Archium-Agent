@@ -1,4 +1,10 @@
-"""Build PresentationSpec from domain presentation artifacts."""
+"""Build PresentationSpec from domain presentation artifacts (compat-only).
+
+Formal editable PPTX authority is RenderScene (DOM-003). This module encodes
+legacy template layout heuristics for ``presentation.spec.json`` and optional
+Spec-template PPTX fallback. Do not add new layout/business logic here — use
+LayoutPlan / VisualIntent instead. Not for formal client delivery.
+"""
 
 from __future__ import annotations
 
