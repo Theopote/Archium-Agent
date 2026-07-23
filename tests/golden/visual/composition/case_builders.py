@@ -1217,6 +1217,7 @@ COMPOSITION_CASE_BUILDERS: dict[str, object] = {
 ICON_BASELINE_CASE_BUILDERS: dict[str, object] = {
     "v8_process_narrative_icons": build_v8_process_narrative_icons,
     "v9_metric_dashboard_icons": build_v9_metric_dashboard_icons,
+    "v14_icons_stroke_recolor": build_v14_icons_stroke_recolor,
 }
 
 # Expanded icon cases — builders + unit tests first; pptx baselines via approve flow.
@@ -1225,7 +1226,6 @@ ICON_EXPANSION_CASE_BUILDERS: dict[str, object] = {
     "v11_icons_dark_theme": build_v11_icons_dark_theme,
     "v12_icons_light_theme": build_v12_icons_light_theme,
     "v13_icons_small_size": build_v13_icons_small_size,
-    "v14_icons_stroke_recolor": build_v14_icons_stroke_recolor,
     "v15_icons_aspect_4x3": build_v15_icons_aspect_4x3,
     "v16_icons_missing_fallback": build_v16_icons_missing_fallback,
     "v17_icons_illegal_ref": build_v17_icons_illegal_ref,

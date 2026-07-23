@@ -25,7 +25,8 @@ locks the CI font set.
 | `v19_site_context_analysis` … `v22_before_after_transformation` | grammar archetypes | 区位 / 现状问题 / 设计策略 / 改造前后 | preview JSON only (promote later) |
 | `v8_process_narrative_icons` | `process_narrative` | 语义图标箭头 | yes |
 | `v9_metric_dashboard_icons` | `metric_dashboard` | 指标装饰图标 | yes |
-| `v10` … `v18` | icon expansion | 长标题 / 深浅主题 / 小尺寸 / stroke 待定 / 4:3 / 缺失与非法 ref / 8 步密集 | builders + unit tests; promote via approve |
+| `v14_icons_stroke_recolor` | `metric_dashboard` | accent 主题描边 recolor | yes |
+| `v10`–`v13`, `v15`–`v18` | icon expansion | 长标题 / 深浅主题 / 小尺寸 / 4:3 / 缺失与非法 ref / 8 步密集 | builders + unit tests; promote via approve |
 
 ## PPTX screenshot update (human review required)
 

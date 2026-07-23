@@ -1,7 +1,7 @@
 """Unit coverage for icon composition cases V8–V18 (builders + policy).
 
-PPTX screenshot baselines for V8–V9 are CI-gated. V10–V18 builders are covered
-here; promote to pptx_visual_regression via candidate → approve-baseline.
+PPTX screenshot baselines for V8–V9 and V14 (stroke recolor) are CI-gated.
+Remaining expansion cases: promote via candidate → approve-baseline.
 """
 
 from __future__ import annotations
