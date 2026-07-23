@@ -1,7 +1,17 @@
 # Environment
 .env
 .venv/
+.venv-*/
 venv/
+
+# Local security-audit scratch (never commit)
+.tmp-pip-audit*.json
+pip-audit-enforce.json
+pip-audit-enforce.txt
+pip-audit-report.json
+pip-audit-report.txt
+npm-audit-enforce.txt
+npm-audit-report.txt
 
 # Python
 __pycache__/

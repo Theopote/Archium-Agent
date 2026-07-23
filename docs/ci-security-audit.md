@@ -41,6 +41,8 @@ Each run uploads `security-audit-reports` (7-day retention), including allowlist
 ## Local reproduction
 
 ```bash
+# Prefer a clean venv so local torch/setuptools pollution is not audited.
+pip install "setuptools>=83.0.0"
 pip install -r requirements/full-py312.lock
 pip install -e ".[dev]" --constraint requirements/full-py312.lock
 pip install "pip-audit>=2.8"
@@ -49,3 +51,5 @@ python scripts/ci_security_audit_gate.py false pip
 cd archium/infrastructure/renderers/pptxgen && npm ci
 python ../../../../scripts/ci_security_audit_gate.py false npm --omit=dev --prefix archium/infrastructure/renderers/pptxgen
 ```
+
+`torch` is **not** in `requirements/*.lock`. If a developer env still reports torch CVEs, upgrade to `torch>=2.13.0` or uninstall it; do not allowlist it for CI.

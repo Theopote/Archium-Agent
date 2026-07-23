@@ -86,8 +86,18 @@ def _pip_findings() -> list[dict[str, Any]]:
     return findings
 
 
+def _npm_executable() -> str:
+    import shutil
+
+    for name in ("npm.cmd", "npm"):
+        found = shutil.which(name)
+        if found:
+            return found
+    return "npm"
+
+
 def _npm_findings(extra_args: list[str]) -> tuple[int, str]:
-    cmd = ["npm", "audit", "--audit-level=high", *extra_args]
+    cmd = [_npm_executable(), "audit", "--audit-level=high", *extra_args]
     proc = subprocess.run(cmd, cwd=_ROOT, capture_output=True, text=True)
     out = (proc.stdout or "") + (proc.stderr or "")
     path = _ROOT / "npm-audit-enforce.txt"

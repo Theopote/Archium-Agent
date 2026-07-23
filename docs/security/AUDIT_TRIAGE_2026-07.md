@@ -16,16 +16,16 @@ When enforcement is on, CI fails on any **non-allowlisted** finding from:
 Allowlist file: [`dependency-allowlist.json`](dependency-allowlist.json)  
 Gate: `python scripts/ci_security_audit_gate.py <enforce:true|false> pip|npm …`
 
-## Current snapshot (local, 2026-07-23)
+## Current snapshot (lock-aligned, 2026-07-23)
 
-`pip-audit` against the developer env reported **24** advisories in **4** packages (not yet all pinned to the lockfile set):
+Clean venv from `requirements/full-py312.lock` + editable: **1** finding (`chromadb` / CVE-2026-45829), covered by allowlist. Developer envs that also install `torch`/`setuptools` may report extra CVEs that are **not** in the product lock.
 
-| Package | Example IDs | Proposed action | Owner | Due |
-|---------|-------------|-----------------|-------|-----|
-| `pillow` 12.2.0 | CVE-2026-54059 / GHSA-8v84-… (many) | Bump floor + recompile locks | maintainers | 2026-08-01 |
-| `chromadb` 1.5.5+ | CVE-2026-45829 / GHSA-f4j7-… | Upgrade chromadb or document accepted risk | maintainers | 2026-08-01 |
-| `setuptools` | CVE-2026-59890 | Ensure CI uses patched setuptools (build tool) | maintainers | 2026-08-01 |
-| `torch` (transitive) | CVE-2025-3000 | Confirm whether needed at runtime; upgrade or exclude | maintainers | 2026-08-01 |
+| Package | Status | Action taken |
+|---------|--------|--------------|
+| `pillow` | **Cleared** at `12.3.0` in `full-py31{1,2}.lock` | Floor `Pillow>=12.0`; locks recompiled |
+| `chromadb` `1.5.9` | **Allowlisted** `GHSA-f4j7-r4q5-qw2c` / CVE-2026-45829 until 2026-10-01 | No newer PyPI release; product uses local `PersistentClient` only (no FastAPI HTTP server) |
+| `setuptools` | **CI pin** `>=83.0.0` in `security-scan` + `build-system` | Fixes CVE-2026-59890; not a runtime lock pin |
+| `torch` | **Not in product locks** | Local/dev pollution (e.g. torchvision); upgrade to `>=2.13.0` or uninstall if present outside CI |
 
 `npm audit --omit=dev` (PptxGenJS): **0** vulnerabilities (2026-07-23).
 
@@ -41,9 +41,9 @@ Do **not** dump the current pillow/chromadb list into the allowlist without atte
 
 ## Checklist before enforcement
 
-- [ ] Recompile `requirements/full-py311.lock` / `full-py312.lock` after Pillow/chromadb bumps
-- [ ] Green `python scripts/ci_security_audit_gate.py true pip` locally
-- [ ] Green npm gate locally
-- [ ] Allowlist empty **or** every entry has expiry ≤ 2026-10-01 and an owner
+- [x] Recompile `requirements/full-py311.lock` / `full-py312.lock` after Pillow/chromadb bumps
+- [x] Green `python scripts/ci_security_audit_gate.py true pip` on a **clean lock install** (allowlist covers chromadb only)
+- [x] Green npm gate locally (`found 0 vulnerabilities`, 2026-07-23)
+- [x] Allowlist empty **or** every entry has expiry ≤ 2026-10-01 and an owner
 - [ ] Branch protection requires `security audit` after flipping enforce
 - [ ] Optional early flip: set `SECURITY_AUDIT_ENFORCE: "true"` once green

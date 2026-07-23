@@ -73,6 +73,18 @@ def test_five_user_task_playbooks_exist() -> None:
     assert "v0.2-beta" in text
 
 
+def test_playbook_a_documents_repeatable_gate_script() -> None:
+    text = _PLAYBOOKS.read_text(encoding="utf-8")
+    section = text.split("## 剧本 A", 1)[1].split("## 剧本 B", 1)[0]
+    assert "scripts/run_playbook_a_gate.py" in section
+    script = _ROOT / "scripts" / "run_playbook_a_gate.py"
+    assert script.is_file()
+    body = script.read_text(encoding="utf-8")
+    assert "tests/golden/regression" in body
+    assert "tests/golden/mission" in body
+    assert "tests/smoke/test_pptxgen_render.py" in body
+
+
 def test_readme_points_to_matrix_and_playbooks() -> None:
     text = _README.read_text(encoding="utf-8")
     assert "docs/release-capability-matrix.md" in text

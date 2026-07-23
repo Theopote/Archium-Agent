@@ -5,5 +5,16 @@
     "risk_owner": "Archium maintainers",
     "notes": "Entries expire on expires_on (UTC). Empty allowlist means every finding fails when enforcement is on. Prefer upgrading deps over allowlisting."
   },
-  "entries": []
+  "entries": [
+    {
+      "id": "GHSA-f4j7-r4q5-qw2c",
+      "aliases": ["CVE-2026-45829", "PYSEC-2026-311"],
+      "package": "chromadb",
+      "installed": "1.5.9",
+      "risk_owner": "Archium maintainers",
+      "expires_on": "2026-10-01",
+      "ticket": "https://github.com/chroma-core/chroma/issues/7226",
+      "rationale": "No fixed PyPI release beyond 1.5.9 (last_affected). Archium uses chromadb.PersistentClient on a local path only (archium/infrastructure/vector/chroma_store.py); it does not expose the Chroma FastAPI HTTP collection endpoint that CVE-2026-45829 targets. Revisit when upstream ships a patched release."
+    }
+  ]
 }

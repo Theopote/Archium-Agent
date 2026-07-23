@@ -34,6 +34,14 @@
 
 **自动化映射（不足以代替真人验收）：**
 
+```bash
+# 可重复门禁（默认：golden regression + mission + PptxGen smoke）
+python scripts/run_playbook_a_gate.py
+
+# 加上真实项目验收（更慢）
+python scripts/run_playbook_a_gate.py --with-real-projects
+```
+
 - `tests/golden/regression`、`tests/golden/mission`
 - `tests/e2e/real_projects/test_real_project_acceptance.py`
 - `tests/smoke/test_pptxgen_render.py` / layout-plan PPTX smoke

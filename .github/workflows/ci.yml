@@ -391,6 +391,8 @@ jobs:
 
       - name: Install project and pip-audit
         run: |
+          # Patched setuptools (CVE-2026-59890); not a lock runtime pin.
+          pip install "setuptools>=83.0.0"
           pip install -r requirements/full-py312.lock
           pip install -e ".[dev]" --constraint requirements/full-py312.lock
           pip install "pip-audit>=2.8"
