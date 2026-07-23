@@ -6,9 +6,10 @@ Users can set page_count (via outline/brief) and page-level instructions
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
 
 
 class SlideIntent(DomainModel):
@@ -28,8 +29,17 @@ class SlideIntent(DomainModel):
     forbidden_content: list[str] = Field(default_factory=list)
     # 期望版式（如 photo_evidence_grid / drawing_focus）
     expected_layout: str = Field(default="", max_length=200)
+    # Visual Grammar archetype (VG-002); optional until recognition / user sets it.
+    page_archetype: PageArchetype | None = None
     # 备注 / 自由说明（对应外部 API 的 page_instructions 条目）
     notes: str = Field(default="", max_length=2000)
+
+    @field_validator("page_archetype", mode="before")
+    @classmethod
+    def _coerce_page_archetype(cls, value: object) -> object:
+        if value is None or value == "":
+            return None
+        return coerce_page_archetype(value) or value
 
     def effective_page_intent(self) -> str:
         """Single-line intent used when a compact string is required."""
@@ -61,6 +71,8 @@ def format_slide_intent_card(intent: SlideIntent) -> str:
             lines.append(f"- {item}")
     if intent.expected_layout.strip():
         lines.append(f"期望版式：{intent.expected_layout.strip()}")
+    if intent.page_archetype is not None:
+        lines.append(f"视觉语法原型：{intent.page_archetype.value}")
     if intent.notes.strip():
         lines.append(f"备注：{intent.notes.strip()}")
     return "\n".join(lines)

@@ -48,6 +48,22 @@ VisualIntent (+ ArtDirection hints)
 
 内容映射：`content_from_slide()` 把 SlideSpec + VisualIntent 的标题、要点、指标、`hero_asset_id` 等填入 generator。
 
+## Visual Grammar vs LayoutFamily
+
+**Grammar**（[`visual_grammar.py`](../../archium/domain/visual/visual_grammar.py)）回答「这一页讲什么故事、要哪些证据角色」；
+
+**Family** 回答「这些角色如何落到坐标」。
+
+| Archetype | 强制组合（语义） | 偏好 Family |
+|-----------|------------------|-------------|
+| `narrative_opening` | 历史/语境照 + 矛盾 + 空间问题 + 更新目标 | `hybrid_canvas` / `hero` |
+| `site_context_analysis` | 地图 + 交通 + 尺度 + 结论 | `hybrid_canvas` / `drawing_focus` |
+| `site_problem_diagnosis` | 照片 + 编号标签 + 分析 | `evidence_board` |
+| `design_strategy` | 关键词 + 概念图 + 逻辑回指问题 | `strategy_cards` / `analytical_diagram` |
+| `before_after_transformation` | Before + After + 洞察 | `comparative_matrix` |
+
+SlideSpec 写入 `page_archetype` + `required_evidence_slots`；缺槽位 → `GRAMMAR.MISSING_EVIDENCE_SLOT`。
+
 ## 图纸与照片
 
 | 内容 | fit | crop |

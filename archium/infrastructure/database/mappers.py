@@ -68,6 +68,7 @@ from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logic
 from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.visual.visual_grammar import coerce_page_archetype
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
@@ -827,6 +828,10 @@ def slide_to_domain(orm: SlideORM) -> SlideSpec:
         version=orm.version,
         visual_intent_id=getattr(orm, "visual_intent_id", None),
         layout_plan_id=getattr(orm, "layout_plan_id", None),
+        page_archetype=coerce_page_archetype(getattr(orm, "page_archetype", None)),
+        required_evidence_slots=list(
+            getattr(orm, "required_evidence_slots_json", None) or []
+        ),
     )
 
 
@@ -851,6 +856,10 @@ def slide_to_orm(domain: SlideSpec, orm: SlideORM | None = None) -> SlideORM:
     target.logical_key = domain.logical_key or build_slide_logical_key(domain.chapter_id, domain.order)
     target.visual_intent_id = domain.visual_intent_id
     target.layout_plan_id = domain.layout_plan_id
+    target.page_archetype = (
+        domain.page_archetype.value if domain.page_archetype is not None else None
+    )
+    target.required_evidence_slots_json = list(domain.required_evidence_slots)
     return target
 
 

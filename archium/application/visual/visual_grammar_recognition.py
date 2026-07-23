@@ -1,10 +1,10 @@
-"""Recognize architectural page archetypes from SlideSpec signals."""
+"""Recognize architectural page archetypes from SlideSpec signals (VG-002)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from archium.domain.enums import SlideType, VisualType
+from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.visual_grammar import (
     PageArchetype,
@@ -76,11 +76,29 @@ def _score_recipe(
         score += 1.5
         evidence.append(f"slide_type:{slide.slide_type.value}")
 
+    # Page-order is only a tie-breaker / boost when other signals already fired.
+    if (
+        recipe.preferred_page_orders
+        and slide.order in recipe.preferred_page_orders
+        and score >= 1.0
+    ):
+        score += 1.8
+        evidence.append(f"page_order:{slide.order}")
+
     return score, evidence
 
 
 def recognize_page_archetype(slide: SlideSpec) -> ArchetypeRecognition:
     """Score all recipes and return the best-matching archetype."""
+    if slide.page_archetype is not None and slide.page_archetype != PageArchetype.GENERIC:
+        recipe = get_visual_grammar_registry()[slide.page_archetype]
+        return ArchetypeRecognition(
+            archetype=slide.page_archetype,
+            confidence=10.0,
+            evidence=("slide.page_archetype",),
+            recipe=recipe,
+        )
+
     registry = get_visual_grammar_registry()
     blob = _slide_blob(slide)
     visual_types = _primary_visual_types(slide)

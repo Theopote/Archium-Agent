@@ -10,6 +10,7 @@ from archium.application.visual.visual_grammar_intent import (
     apply_grammar_to_intent,
 )
 from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
+from archium.application.visual.visual_grammar_slots import ensure_evidence_slots_on_slide
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.slide import SlideSpec
@@ -159,6 +160,20 @@ class VisualIntentService:
         recognition = recognize_page_archetype(slide)
         if recognition.archetype != PageArchetype.GENERIC:
             draft = apply_grammar_to_draft(draft, recognition.recipe)
+
+        stamped = ensure_evidence_slots_on_slide(
+            slide,
+            archetype=recognition.archetype,
+            recipe=recognition.recipe,
+        )
+        if stamped is not slide and (
+            stamped.page_archetype != slide.page_archetype
+            or stamped.required_evidence_slots != slide.required_evidence_slots
+            or len(stamped.visual_requirements) != len(slide.visual_requirements)
+        ):
+            from archium.infrastructure.database.repositories import PresentationRepository
+
+            slide = PresentationRepository(self._session).save_slide(stamped)
 
         hero_asset_id = draft.hero_asset_id
         supporting = list(draft.supporting_asset_ids)

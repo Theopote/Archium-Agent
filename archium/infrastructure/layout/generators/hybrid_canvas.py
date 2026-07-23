@@ -22,7 +22,7 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
     family = LayoutFamily.HYBRID_CANVAS
 
     def generate(self, context: LayoutGeneratorContext) -> LayoutPlan:
-        if context.variant == "site_context":
+        if context.variant in {"site_context", "narrative_opening"}:
             return self._generate_site_context(context)
         return self._generate_freeform(context)
 
@@ -212,7 +212,11 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             constraints=constraints,
             hero_element_id="hero",
             reading_order=reading,
-            balance_strategy="site_context_split",
+            balance_strategy=(
+                "narrative_opening_split"
+                if context.variant == "narrative_opening"
+                else "site_context_split"
+            ),
         )
 
     def _generate_freeform(self, context: LayoutGeneratorContext) -> LayoutPlan:

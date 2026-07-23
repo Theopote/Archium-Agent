@@ -19,6 +19,8 @@ from archium.application.slide_generation_context_service import SlideGeneration
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
 from archium.application.slide_plan_slots import SlidePlanSlot, build_slide_plan_slots
+from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
+from archium.application.visual.visual_grammar_slots import ensure_evidence_slots_on_slide
 from archium.config.settings import Settings, get_settings
 from archium.domain.deck_delivery import mark_slide_delivery
 from archium.domain.enums import RevisionSource, SlideDeliveryStatus, SlideType
@@ -131,6 +133,12 @@ class SlidePlanner:
         saved: list[SlideSpec] = []
         history = SlideHistoryService(self._session)
         for slide in slides:
+            recognition = recognize_page_archetype(slide)
+            slide = ensure_evidence_slots_on_slide(
+                slide,
+                archetype=recognition.archetype,
+                recipe=recognition.recipe,
+            )
             saved.append(self._presentations.save_slide(slide))
             history.record_snapshot(saved[-1], RevisionSource.GENERATED)
         return saved

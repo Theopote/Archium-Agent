@@ -229,7 +229,7 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         },
         min_assets=0,
         max_assets=6,
-        variants=("freeform", "site_context"),
+        variants=("freeform", "site_context", "narrative_opening"),
         default="freeform",
         required=(LayoutElementRole.TITLE, LayoutElementRole.HERO_VISUAL),
         optional=(

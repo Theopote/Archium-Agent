@@ -406,6 +406,10 @@ class SlideORM(UUIDPrimaryKeyMixin, Base):
     logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     visual_intent_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     layout_plan_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    page_archetype: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    required_evidence_slots_json: Mapped[list[str]] = mapped_column(
+        "required_evidence_slots", JSON, default=list
+    )
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="slides")
 

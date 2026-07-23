@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.review.base import SKIPPABLE_SLIDE_TYPES, ReviewRunnerBase
 from archium.application.review.llm_helpers import run_llm_multi_layer_review
+from archium.application.visual.visual_grammar_slots import missing_evidence_slots
 from archium.application.visual_qa_service import VisualQAService
 from archium.domain.asset import Asset
 from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, VisualType
@@ -14,6 +16,7 @@ from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.visual_grammar import PageArchetype
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="automated_review")
@@ -129,6 +132,8 @@ class LayoutReviewer(ReviewRunnerBase):
                     )
                 )
 
+            issues.extend(self._grammar_issues(presentation_id, slide))
+
             for requirement in slide.visual_requirements:
                 if requirement.type == VisualType.TEXT_ONLY:
                     continue
@@ -210,6 +215,57 @@ class LayoutReviewer(ReviewRunnerBase):
             issues.extend(self._run_visual_qa_review(presentation_id, slides, assets_by_id))
 
         return self._persist(presentation_id, issues)
+
+    def _grammar_issues(
+        self,
+        presentation_id: UUID,
+        slide: SlideSpec,
+    ) -> list[ReviewIssue]:
+        """VG-002: missing evidence slots and strategy→problem back-reference."""
+        issues: list[ReviewIssue] = []
+        for slot in missing_evidence_slots(slide):
+            issues.append(
+                self._issue(
+                    presentation_id,
+                    slide,
+                    layer=ReviewLayer.LAYOUT,
+                    category=ReviewCategory.VISUAL,
+                    severity=ReviewSeverity.HIGH,
+                    rule_code=ReviewRuleCode.GRAMMAR_MISSING_EVIDENCE_SLOT,
+                    title="视觉语法证据槽位缺失",
+                    description=(
+                        f"第 {slide.order + 1} 页（{slide.page_archetype}）缺少必需证据角色 "
+                        f"'{slot.role}': {slot.description}."
+                    ),
+                    suggestion="补充对应素材或在要点中写明该角色内容。",
+                    auto_fixable=False,
+                )
+            )
+
+        if slide.page_archetype == PageArchetype.DESIGN_STRATEGY:
+            blob = " ".join([slide.title, slide.message, *slide.key_points])
+            if not re.search(
+                r"问题\s*[0-9一二三四五六七八九十]|编号\s*[0-9]|#\s*\d+|issue\s*\d+",
+                blob,
+                re.I,
+            ):
+                issues.append(
+                    self._issue(
+                        presentation_id,
+                        slide,
+                        layer=ReviewLayer.LAYOUT,
+                        category=ReviewCategory.CONSISTENCY,
+                        severity=ReviewSeverity.MEDIUM,
+                        rule_code=ReviewRuleCode.GRAMMAR_STRATEGY_WITHOUT_PROBLEM_REF,
+                        title="策略未回指问题",
+                        description=(
+                            f"第 {slide.order + 1} 页为设计策略原型，但未显式回指前文问题编号。"
+                        ),
+                        suggestion="在要点中写明对应问题编号（如「回应问题1」）。",
+                        auto_fixable=False,
+                    )
+                )
+        return issues
 
     def _run_visual_qa_review(
         self,

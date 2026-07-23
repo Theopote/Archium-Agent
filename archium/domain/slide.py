@@ -9,6 +9,7 @@ from pydantic import Field, field_validator, model_validator
 from archium.domain._base import DomainModel, IdentifiedModel, VersionedModel
 from archium.domain.citation import Citation
 from archium.domain.enums import SlideDeliveryStatus, SlideStatus, SlideType, VisualType
+from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
 
 
 def build_slide_logical_key(chapter_id: str, order: int) -> str:
@@ -76,6 +77,16 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     # Optional links into the visual composition pipeline (external relation preferred long-term).
     visual_intent_id: UUID | None = None
     layout_plan_id: UUID | None = None
+    # Visual Grammar (VG-002): page archetype + required evidence slot roles.
+    page_archetype: PageArchetype | None = None
+    required_evidence_slots: list[str] = Field(default_factory=list)
+
+    @field_validator("page_archetype", mode="before")
+    @classmethod
+    def _coerce_page_archetype(cls, value: object) -> object:
+        if value is None or value == "":
+            return None
+        return coerce_page_archetype(value) or value
 
     @model_validator(mode="after")
     def _ensure_lineage_defaults(self) -> SlideSpec:

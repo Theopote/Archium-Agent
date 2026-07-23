@@ -11,6 +11,7 @@ from archium.domain._base import DomainModel
 from archium.domain.enums import ApprovalStatus
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout_family_normalize import coerce_layout_family
+from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
 
 # Brief UI labels keyed by ApprovalStatus (DOM-009).
 # Legacy persisted value ``ready_for_review`` coerces to ``pending``.
@@ -83,6 +84,8 @@ class SlideDesignBrief(DomainModel):
 
     layout_family: LayoutFamily | None = None
     expected_density: Literal["low", "medium", "high"] = "medium"
+    # Visual Grammar archetype (VG-002).
+    page_archetype: PageArchetype | None = None
 
     drawing_policy: DrawingDisplayPolicy | None = None
     image_policy: ImageDisplayPolicy | None = None
@@ -101,6 +104,13 @@ class SlideDesignBrief(DomainModel):
     @classmethod
     def _coerce_layout_family(cls, value: object) -> object:
         return coerce_layout_family(value)
+
+    @field_validator("page_archetype", mode="before")
+    @classmethod
+    def _coerce_page_archetype(cls, value: object) -> object:
+        if value is None or value == "":
+            return None
+        return coerce_page_archetype(value) or value
 
     @field_validator("status", mode="before")
     @classmethod
