@@ -129,7 +129,7 @@ def conflicting_fact_keys(session: Session, project_id: UUID) -> set[str]:
     keys: set[str] = set()
     by_key: dict[str, set[str]] = {}
     for fact in facts:
-        if fact.conflict_group or fact.verification_status == VerificationStatus.CONFLICTED:
+        if fact.verification_status == VerificationStatus.CONFLICTED:
             keys.add(fact.key)
         by_key.setdefault(fact.key, set()).add(fact.value.strip())
     keys.update(key for key, values in by_key.items() if len(values) > 1)

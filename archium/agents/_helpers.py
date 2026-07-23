@@ -381,7 +381,7 @@ def _citation_from_draft(
     *,
     document_names: dict[UUID, str] | None = None,
     context_chunks: list[DocumentChunk] | None = None,
-) -> Citation:
+) -> Citation | None:
     return citation_from_draft(
         item,
         session,
@@ -418,13 +418,17 @@ def slide_from_draft(
         key_points=list(draft.key_points[:5]),
         visual_requirements=[_visual_from_draft(v) for v in draft.visual_requirements],
         source_citations=[
-            _citation_from_draft(
-                citation,
-                session,
-                document_names=document_names,
-                context_chunks=context_chunks,
+            citation
+            for citation in (
+                _citation_from_draft(
+                    item,
+                    session,
+                    document_names=document_names,
+                    context_chunks=context_chunks,
+                )
+                for item in draft.source_citations
             )
-            for citation in draft.source_citations
+            if citation is not None
         ],
         speaker_notes=draft.speaker_notes,
         version=version,

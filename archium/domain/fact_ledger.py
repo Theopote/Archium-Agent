@@ -10,6 +10,8 @@ class FactKeyDefinition:
     key: str
     label: str
     category: str
+    # Deprecated catalog field — do not pre-stamp on facts. Runtime conflict_group
+    # is set only when validation/upsert detects an actual conflict (alias:/key:/empty:).
     conflict_group: str | None = None
 
 
@@ -18,15 +20,15 @@ STANDARD_FACT_KEYS: tuple[FactKeyDefinition, ...] = (
     FactKeyDefinition("location", "项目位置", "identity"),
     FactKeyDefinition("client", "甲方", "identity"),
     FactKeyDefinition("project_stage", "项目阶段", "identity"),
-    FactKeyDefinition("site_area", "用地面积", "area", conflict_group="area"),
-    FactKeyDefinition("building_area", "建筑面积", "area", conflict_group="area"),
-    FactKeyDefinition("plot_ratio", "容积率", "ratio", conflict_group="plot_ratio"),
-    FactKeyDefinition("building_density", "建筑密度", "ratio", conflict_group="density"),
-    FactKeyDefinition("green_ratio", "绿地率", "ratio", conflict_group="density"),
-    FactKeyDefinition("height", "建筑高度", "dimension", conflict_group="height"),
-    FactKeyDefinition("floors", "层数", "dimension", conflict_group="floors"),
-    FactKeyDefinition("bed_count", "床位数", "capacity", conflict_group="capacity"),
-    FactKeyDefinition("parking_count", "停车数", "capacity", conflict_group="capacity"),
+    FactKeyDefinition("site_area", "用地面积", "area"),
+    FactKeyDefinition("building_area", "建筑面积", "area"),
+    FactKeyDefinition("plot_ratio", "容积率", "ratio"),
+    FactKeyDefinition("building_density", "建筑密度", "ratio"),
+    FactKeyDefinition("green_ratio", "绿地率", "ratio"),
+    FactKeyDefinition("height", "建筑高度", "dimension"),
+    FactKeyDefinition("floors", "层数", "dimension"),
+    FactKeyDefinition("bed_count", "床位数", "capacity"),
+    FactKeyDefinition("parking_count", "停车数", "capacity"),
     FactKeyDefinition("main_function", "主要功能", "program"),
     FactKeyDefinition("client_requirements", "甲方要求", "constraints"),
     FactKeyDefinition("constraints", "限制条件", "constraints"),

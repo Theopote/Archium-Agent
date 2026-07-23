@@ -44,7 +44,7 @@ def test_confirm_fact_clears_conflict_group(db_session: Session) -> None:
             label="用地面积",
             value="12.5",
             unit="公顷",
-            conflict_group="area",
+            conflict_group="key:site_area",
         )
     )
     fact.mark_conflicted()
@@ -53,6 +53,38 @@ def test_confirm_fact_clears_conflict_group(db_session: Session) -> None:
 
     assert confirmed.is_confirmed
     assert confirmed.conflict_group is None
+
+
+def test_distinct_area_metrics_do_not_conflict(db_session: Session) -> None:
+    project = _seed_project(db_session)
+    repo = FactRepository(db_session)
+    repo.create(
+        ProjectFact(
+            project_id=project.id,
+            key="site_area",
+            label="用地面积",
+            value="12.5",
+            unit="公顷",
+        )
+    )
+    repo.create(
+        ProjectFact(
+            project_id=project.id,
+            key="building_area",
+            label="建筑面积",
+            value="85000",
+            unit="平方米",
+        )
+    )
+
+    result = FactValidationService(db_session).validate(project.id)
+
+    assert not any("冲突组" in issue for issue in result.issues)
+    assert all(
+        fact.verification_status != VerificationStatus.CONFLICTED for fact in result.facts
+    )
+    ledger = FactLedgerService(db_session).get_ledger(project.id)
+    assert ledger.conflict_count == 0
 
 
 def test_semantic_alias_conflict_detection(db_session: Session) -> None:

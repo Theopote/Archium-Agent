@@ -22,8 +22,11 @@ def citation_from_draft(
     *,
     document_names: dict[UUID, str] | None = None,
     context_chunks: list[DocumentChunk] | None = None,
-) -> Citation:
-    """Resolve a citation draft to a persisted domain citation."""
+) -> Citation | None:
+    """Resolve a citation draft to a persisted domain citation.
+
+    Returns None when the document/chunk cannot be resolved — never fabricates ids.
+    """
     repo = DocumentRepository(session)
     names = document_names or {}
 
@@ -53,6 +56,8 @@ def citation_from_draft(
             )
 
     document_id = _resolve_document_id(item.document_name, names)
+    if document_id is None:
+        return None
     return Citation(
         document_id=document_id,
         document_name=item.document_name,
@@ -127,13 +132,11 @@ def _match_chunk_by_quote(quote: str | None, chunks: list[DocumentChunk]) -> Doc
     return None
 
 
-def _resolve_document_id(document_name: str, names: dict[UUID, str]) -> UUID:
+def _resolve_document_id(document_name: str, names: dict[UUID, str]) -> UUID | None:
     for document_id, filename in names.items():
         if filename == document_name:
             return document_id
-    from uuid import uuid4
-
-    return uuid4()
+    return None
 
 
 def _parse_uuid(value: str) -> UUID:

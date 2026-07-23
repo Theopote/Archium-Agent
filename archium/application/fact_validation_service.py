@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import FactValue, ProjectFact
-from archium.domain.fact_ledger import SEMANTIC_ALIAS_GROUPS, STANDARD_FACT_KEY_MAP
+from archium.domain.fact_ledger import SEMANTIC_ALIAS_GROUPS
 from archium.infrastructure.database.repositories import FactRepository
 from archium.logging import get_logger
 
@@ -35,9 +35,6 @@ class FactValidationService:
         for fact in facts:
             if fact.verification_status == VerificationStatus.REJECTED:
                 continue
-            definition = STANDARD_FACT_KEY_MAP.get(fact.key)
-            if definition and definition.conflict_group and not fact.conflict_group:
-                fact.conflict_group = definition.conflict_group
 
             if _is_empty_value(fact.value):
                 issues.append(f"事实「{fact.label}」值为空")
@@ -86,13 +83,12 @@ class FactValidationService:
 
         grouped: dict[str, list[ProjectFact]] = {}
         for fact in by_key.values():
-            if not fact.conflict_group:
+            group = fact.conflict_group
+            if not group or group.startswith(("alias:", "empty:", "key:")):
                 continue
-            grouped.setdefault(fact.conflict_group, []).append(fact)
+            grouped.setdefault(group, []).append(fact)
 
         for group_name, group_facts in grouped.items():
-            if group_name.startswith("alias:") or group_name.startswith("empty:"):
-                continue
             values = {_normalize_value(fact.value) for fact in group_facts}
             if len(values) <= 1:
                 continue

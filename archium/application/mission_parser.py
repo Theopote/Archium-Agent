@@ -94,7 +94,7 @@ def validate_mission_draft(
     conflicted_keys = {
         fact.key
         for fact in active_facts
-        if fact.verification_status == VerificationStatus.CONFLICTED or fact.conflict_group
+        if fact.verification_status == VerificationStatus.CONFLICTED
     }
 
     if len(draft.clarifying_questions) > MAX_CLARIFYING_QUESTIONS:

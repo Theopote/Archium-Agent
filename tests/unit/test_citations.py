@@ -79,7 +79,21 @@ def test_citation_from_draft_matches_quote_in_context(db_session: Session) -> No
         document_names=names,
         context_chunks=[chunk],
     )
+    assert citation is not None
     assert citation.chunk_id == chunk.id
+
+
+def test_citation_from_draft_skips_unresolved_document(db_session: Session) -> None:
+    citation = citation_from_draft(
+        CitationDraft(
+            document_name="未知资料.pdf",
+            quote="无法匹配",
+        ),
+        db_session,
+        document_names={},
+        context_chunks=[],
+    )
+    assert citation is None
 
 
 def test_enrich_slide_citations_auto_links_from_retrieval(

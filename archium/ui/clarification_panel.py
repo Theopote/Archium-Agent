@@ -167,7 +167,7 @@ def _build_buckets(
     conflicted_facts = [
         f
         for f in facts
-        if f.verification_status == VerificationStatus.CONFLICTED or f.conflict_group
+        if f.verification_status == VerificationStatus.CONFLICTED
     ]
     pending_facts = [
         f

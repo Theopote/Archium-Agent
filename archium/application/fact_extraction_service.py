@@ -16,7 +16,7 @@ from archium.domain.citation import Citation
 from archium.domain.document import DocumentChunk
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import ProjectFact
-from archium.domain.fact_ledger import STANDARD_FACT_KEY_MAP, STANDARD_FACT_KEYS
+from archium.domain.fact_ledger import STANDARD_FACT_KEYS
 from archium.infrastructure.database.repositories import FactRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import (
@@ -154,7 +154,6 @@ class FactExtractionService:
         chunk: DocumentChunk,
         document_name: str,
     ) -> ProjectFact:
-        definition = STANDARD_FACT_KEY_MAP.get(metric.key)
         return ProjectFact(
             project_id=project_id,
             key=metric.key,
@@ -163,7 +162,6 @@ class FactExtractionService:
             unit=metric.unit,
             category=metric.category,
             confidence=metric.confidence,
-            conflict_group=definition.conflict_group if definition else None,
             source_citations=[
                 Citation(
                     document_id=chunk.document_id,
@@ -185,19 +183,19 @@ class FactExtractionService:
         key = item.key.strip().lower().replace(" ", "_")
         citations = []
         if item.chunk_id or item.quote:
-            citations.append(
-                citation_from_draft(
-                    CitationDraft(
-                        document_name="项目资料",
-                        chunk_id=item.chunk_id,
-                        quote=item.quote,
-                        confidence=item.confidence,
-                    ),
-                    self._session,
-                    document_names=context_bundle.document_names,
-                    context_chunks=context_bundle.chunks,
-                )
+            resolved = citation_from_draft(
+                CitationDraft(
+                    document_name="项目资料",
+                    chunk_id=item.chunk_id,
+                    quote=item.quote,
+                    confidence=item.confidence,
+                ),
+                self._session,
+                document_names=context_bundle.document_names,
+                context_chunks=context_bundle.chunks,
             )
+            if resolved is not None:
+                citations.append(resolved)
         return ProjectFact(
             project_id=project_id,
             key=key,
@@ -206,9 +204,6 @@ class FactExtractionService:
             unit=item.unit.strip() if item.unit else None,
             category=item.category.strip() or "general",
             confidence=item.confidence,
-            conflict_group=STANDARD_FACT_KEY_MAP[key].conflict_group
-            if key in STANDARD_FACT_KEY_MAP
-            else None,
             source_citations=citations,
         )
 
@@ -225,7 +220,7 @@ class FactExtractionService:
                     return self._facts.update(merged), "merged"
                 return existing, "skipped"
             existing.mark_conflicted()
-            existing.conflict_group = existing.conflict_group or incoming.conflict_group
+            existing.conflict_group = existing.conflict_group or f"key:{incoming.key}"
             return self._facts.update(existing), "conflicted"
 
         if _normalize_value(existing.value) == _normalize_value(incoming.value):
@@ -238,12 +233,12 @@ class FactExtractionService:
             incoming.id = existing.id
             incoming.verification_status = VerificationStatus.EXTRACTED
             incoming.mark_conflicted()
-            incoming.conflict_group = incoming.conflict_group or existing.conflict_group
+            incoming.conflict_group = incoming.conflict_group or f"key:{incoming.key}"
             incoming.source_citations = self._combined_citations(existing, incoming)
             return self._facts.update(incoming), "updated"
 
         existing.mark_conflicted()
-        existing.conflict_group = existing.conflict_group or incoming.conflict_group
+        existing.conflict_group = existing.conflict_group or f"key:{incoming.key}"
         return self._facts.update(existing), "conflicted"
 
     @staticmethod

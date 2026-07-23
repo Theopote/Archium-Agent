@@ -84,7 +84,7 @@ class FactLedgerService:
             conflict_count=sum(
                 1
                 for fact in active
-                if fact.verification_status == VerificationStatus.CONFLICTED or fact.conflict_group
+                if fact.verification_status == VerificationStatus.CONFLICTED
             ),
             pending_count=sum(
                 1
