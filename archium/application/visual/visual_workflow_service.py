@@ -101,12 +101,17 @@ class VisualWorkflowService:
         )
 
     def close(self) -> None:
-        self._checkpointer_manager.close()
+        if self._owns_checkpointer:
+            self._checkpointer_manager.close()
 
     def __del__(self) -> None:
         if getattr(self, "_owns_checkpointer", False):
             with suppress(Exception):
                 self.close()
+
+    def _invoke_graph(self, *args: object, thread_id: str, **kwargs: object):
+        with self._checkpointer_manager.serialized_execution(thread_id):
+            return self._graph.invoke(*args, thread_id=thread_id, **kwargs)
 
     def run(
         self,
@@ -162,7 +167,7 @@ class VisualWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(workflow_run.id))
+            final_state = self._invoke_graph(initial_state, thread_id=str(workflow_run.id))
         except Exception as exc:
             logger.exception("Visual workflow failed: %s", exc)
             workflow_run.errors = [str(exc)]
@@ -214,7 +219,7 @@ class VisualWorkflowService:
         self._workflow_runs.update(run)
 
         try:
-            final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
+            final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
             logger.exception("Visual workflow continue-after-approval failed: %s", exc)
             run.errors = [str(exc)]
@@ -262,7 +267,7 @@ class VisualWorkflowService:
         self._workflow_runs.update(run)
 
         try:
-            final_state = self._graph.invoke(
+            final_state = self._invoke_graph(
                 None,
                 thread_id=str(run.id),
                 resume=True,
@@ -328,7 +333,7 @@ class VisualWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
+            final_state = self._invoke_graph(initial_state, thread_id=str(run.id))
         except Exception as exc:
             logger.exception("Visual workflow resume failed: %s", exc)
             run.errors = [str(exc)]

@@ -75,11 +75,10 @@
 2. 填满十个字段；`open` 时 SHA 为 `-`。
 3. 合入后把状态改为 `done` 并填 SHA；同步更新本 README「开放 P0 一览」若涉及 P0。
 
-## 开放 P0 一览（2026-07-23）
+## 开放 P0 一览（2026-07-24）
 
 | 编号 | 模块 | 一句话 |
 |------|------|--------|
-| [WF-002](04-workflow.md) | workflow | Sqlite checkpoint + 后台 continue 竞态 |
 | [DB-001](05-database.md) | database | TransactionExecutor 会话中途 `commit` |
 | [DB-002](05-database.md) | database | `create_all` + Alembic 001 no-op 冷启动 |
 | [DB-003](05-database.md) | database | 失败路径 rollback 后再 commit |
@@ -88,6 +87,6 @@
 | [QD-010](12-qa-delivery.md) | qa-delivery | 正式人工视觉门禁未过 |
 | [TS-010](14-tests-security.md) | tests-security | 非开发者剧本 A + 修改成本（Beta B10） |
 
-P0 已关闭但仍需关注：`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
+P0 已关闭：`WF-002`（checkpoint 串行化）；`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 
-Domain 台账主线已收敛；余项见 [02-domain.md](02-domain.md)（如 DOM-008/013…）。已关闭：`DOM-003`/`DOM-004`/`DOM-005`/`DOM-006`/`DOM-007`/`DOM-009`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-016`/`DOM-017`/`DOM-018`。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。
+Domain 台账主线已收敛；余项见 [02-domain.md](02-domain.md)（如 DOM-008/013…）。已关闭：`DOM-003`/`DOM-004`/`DOM-005`/`DOM-006`/`DOM-007`/`DOM-009`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-015`/`DOM-016`/`DOM-017`/`DOM-018`/`DOM-020`。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。

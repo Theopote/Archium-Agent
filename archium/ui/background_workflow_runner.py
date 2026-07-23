@@ -296,6 +296,23 @@ def submit_continue_after_review(
 ) -> BackgroundWorkflowJob:
     """Continue a paused presentation workflow in the background."""
     resolved = _resolve_settings(settings)
+    # WF-002: refuse duplicate continue jobs for the same run while one is active.
+    with _LOCK:
+        for existing in _REGISTRY.values():
+            if (
+                existing.workflow_run_id == workflow_run_id
+                and existing.status
+                in {BackgroundJobStatus.PENDING, BackgroundJobStatus.RUNNING}
+                and existing.kind == "presentation"
+            ):
+                raise WorkflowError(
+                    f"工作流 {workflow_run_id} 已有后台 continue 在执行中，请勿重复提交"
+                )
+    manager = get_workflow_checkpointer_manager(resolved)
+    if manager.is_run_busy(str(workflow_run_id)):
+        raise WorkflowError(
+            f"工作流 {workflow_run_id} 正在执行中，请等待完成后再继续"
+        )
     job = BackgroundWorkflowJob(
         job_id=str(uuid4()),
         project_id=project_id,

@@ -69,13 +69,19 @@ class PresentationWorkflowService:
         )
 
     def close(self) -> None:
-        """Close the LangGraph SQLite checkpointer connection."""
-        self._checkpointer_manager.close()
+        """Close the LangGraph SQLite checkpointer when this service owns it."""
+        if self._owns_checkpointer:
+            self._checkpointer_manager.close()
 
     def __del__(self) -> None:
         if getattr(self, "_owns_checkpointer", False):
             with suppress(Exception):
                 self.close()
+
+    def _invoke_graph(self, *args: object, thread_id: str, **kwargs: object):
+        """Invoke LangGraph under WF-002 checkpoint serialization."""
+        with self._checkpointer_manager.serialized_execution(thread_id):
+            return self._graph.invoke(*args, thread_id=thread_id, **kwargs)
 
     def run(
         self,
@@ -199,7 +205,7 @@ class PresentationWorkflowService:
         initial_state = self._build_initial_state(run, request, presentation)
 
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
+            final_state = self._invoke_graph(initial_state, thread_id=str(run.id))
         except Exception as exc:
             logger.exception("Workflow graph execution failed: %s", exc)
             run.errors = [str(exc)]
@@ -240,7 +246,7 @@ class PresentationWorkflowService:
             self._session.commit()
 
         try:
-            final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
+            final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
             logger.exception("Workflow continue-after-review failed: %s", exc)
             run.errors = [str(exc)]
@@ -291,7 +297,7 @@ class PresentationWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
+            final_state = self._invoke_graph(initial_state, thread_id=str(run.id))
         except Exception as exc:
             logger.exception("Workflow resume failed: %s", exc)
             run.errors = [str(exc)]

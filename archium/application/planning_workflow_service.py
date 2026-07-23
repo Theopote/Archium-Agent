@@ -120,12 +120,17 @@ class PlanningWorkflowService:
         )
 
     def close(self) -> None:
-        self._checkpointer_manager.close()
+        if self._owns_checkpointer:
+            self._checkpointer_manager.close()
 
     def __del__(self) -> None:
         if getattr(self, "_owns_checkpointer", False):
             with suppress(Exception):
                 self.close()
+
+    def _invoke_graph(self, *args: object, thread_id: str, **kwargs: object):
+        with self._checkpointer_manager.serialized_execution(thread_id):
+            return self._graph.invoke(*args, thread_id=thread_id, **kwargs)
 
     def run(
         self,
@@ -182,7 +187,7 @@ class PlanningWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(workflow_run.id))
+            final_state = self._invoke_graph(initial_state, thread_id=str(workflow_run.id))
         except Exception as exc:
             logger.exception("Planning workflow graph execution failed: %s", exc)
             workflow_run.errors = [str(exc)]
@@ -372,7 +377,7 @@ class PlanningWorkflowService:
         self._set_session_status(run, session_status, mission_id=mission_id)
 
         try:
-            final_state = self._graph.invoke(None, thread_id=str(run.id), resume=True)
+            final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
             logger.exception("Planning continue-after-%s failed: %s", log_label, exc)
             run.errors = [str(exc)]
@@ -431,7 +436,7 @@ class PlanningWorkflowService:
         )
 
         try:
-            final_state = self._graph.invoke(initial_state, thread_id=str(run.id))
+            final_state = self._invoke_graph(initial_state, thread_id=str(run.id))
         except Exception as exc:
             logger.exception("Planning workflow resume failed: %s", exc)
             run.errors = [str(exc)]
