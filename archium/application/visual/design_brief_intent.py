@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from archium.application.visual.visual_grammar_intent import apply_grammar_to_intent
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualContentType
 from archium.domain.visual.layout_family_normalize import coerce_layout_family
+from archium.domain.visual.visual_grammar import PageArchetype
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 
@@ -58,7 +60,9 @@ def apply_design_brief_to_intent(
 
     if brief.primary_asset_ids:
         updates["hero_asset_id"] = brief.primary_asset_ids[0]
-        supporting = list(dict.fromkeys([*brief.primary_asset_ids[1:], *brief.supporting_asset_ids]))
+        supporting = list(
+            dict.fromkeys([*brief.primary_asset_ids[1:], *brief.supporting_asset_ids])
+        )
         updates["supporting_asset_ids"] = supporting
     elif brief.supporting_asset_ids:
         updates["supporting_asset_ids"] = list(brief.supporting_asset_ids)
@@ -75,6 +79,10 @@ def apply_design_brief_to_intent(
     if brief.page_task.strip():
         updates["communication_goal"] = brief.page_task.strip()
 
-    if not updates:
-        return intent
-    return intent.model_copy(update=updates)
+    result = intent.model_copy(update=updates) if updates else intent
+    if brief.page_archetype is not None and brief.page_archetype != PageArchetype.GENERIC:
+        result = apply_grammar_to_intent(
+            result,
+            page_archetype=brief.page_archetype,
+        )
+    return result

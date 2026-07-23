@@ -127,6 +127,18 @@ class SlideDesignBriefService:
             )
             for intent in sorted(outline.page_intents, key=lambda item: item.order)
         ]
+        # Stamp recognized archetype back onto SlideIntent cards for downstream SlideSpec.
+        stamped_intents = []
+        briefs_by_order = {brief.page_order: brief for brief in briefs}
+        for intent in outline.page_intents:
+            brief = briefs_by_order.get(intent.order)
+            if brief is not None and brief.page_archetype is not None:
+                stamped_intents.append(
+                    intent.model_copy(update={"page_archetype": brief.page_archetype})
+                )
+            else:
+                stamped_intents.append(intent)
+        outline = outline.model_copy(update={"page_intents": stamped_intents})
         return self._persist_briefs(outline, briefs)
 
     def regenerate_page(self, outline_id: UUID, page_order: int) -> SlideDesignBrief:
@@ -202,6 +214,7 @@ class SlideDesignBriefService:
             evidence_ids=list(update.evidence_ids),
             layout_family=coerce_layout_family(update.layout_family),
             expected_density=update.expected_density,  # type: ignore[arg-type]
+            page_archetype=previous.page_archetype,
             drawing_policy=drawing_policy,
             image_policy=image_policy,
             required_content=list(update.required_content),
@@ -355,6 +368,45 @@ class SlideDesignBriefService:
         if intent.central_conclusion.strip():
             required_content.insert(0, intent.central_conclusion.strip())
 
+        from archium.application.visual.visual_grammar_recognition import (
+            recognize_page_archetype_from_intent,
+        )
+        from archium.domain.visual.visual_grammar import PageArchetype
+
+        recognition = recognize_page_archetype_from_intent(intent)
+        page_archetype = (
+            recognition.archetype
+            if recognition.archetype != PageArchetype.GENERIC
+            else intent.page_archetype
+        )
+        grammar_families = recognition.recipe.preferred_layout_families
+        layout_from_grammar = None
+        if page_archetype is not None and page_archetype != PageArchetype.GENERIC:
+            for slot in recognition.recipe.required_evidence_slots:
+                if not slot.required:
+                    continue
+                label = f"[grammar:{slot.role}] {slot.description}"
+                if label not in required_content and slot.role not in " ".join(required_content):
+                    required_content.append(label)
+            if grammar_families and not intent.expected_layout.strip():
+                layout_from_grammar = grammar_families[0]
+
+        resolved_layout = coerce_layout_family(
+            intent.expected_layout.strip()
+            or (
+                layout_from_grammar.value
+                if layout_from_grammar is not None
+                else _LAYOUT_FAMILY_BY_VISUAL.get(primary_visual, "process_narrative")
+            )
+        )
+        if page_archetype is not None and page_archetype != PageArchetype.GENERIC:
+            forbidden_families = recognition.recipe.forbidden_layout_families
+            if resolved_layout in forbidden_families:
+                if layout_from_grammar is not None:
+                    resolved_layout = layout_from_grammar
+                elif grammar_families:
+                    resolved_layout = grammar_families[0]
+
         return SlideDesignBrief(
             page_order=intent.order,
             page_task=intent.page_task.strip() or "待填写页面任务",
@@ -362,11 +414,9 @@ class SlideDesignBriefService:
             primary_visual_type=primary_visual,
             primary_asset_ids=primary_assets,
             supporting_asset_ids=supporting_assets,
-            layout_family=coerce_layout_family(
-                intent.expected_layout.strip()
-                or _LAYOUT_FAMILY_BY_VISUAL.get(primary_visual, "process_narrative")
-            ),
+            layout_family=resolved_layout,
             expected_density=_DENSITY_BY_TYPE.get(primary_visual, "medium"),  # type: ignore[arg-type]
+            page_archetype=page_archetype,
             drawing_policy=drawing_policy,
             image_policy=image_policy,
             required_content=required_content,
@@ -470,6 +520,7 @@ def _outline_update_from_plan(
                 required_assets=list(intent.required_assets),
                 forbidden_content=list(intent.forbidden_content),
                 expected_layout=intent.expected_layout,
+                page_archetype=intent.page_archetype.value if intent.page_archetype else None,
                 notes=intent.notes,
             )
             for intent in outline.page_intents
@@ -503,6 +554,7 @@ def _brief_to_update(brief: SlideDesignBrief) -> SlideDesignBriefUpdate:
         evidence_ids=list(brief.evidence_ids),
         layout_family=layout_family_value(brief.layout_family),
         expected_density=brief.expected_density,
+        page_archetype=brief.page_archetype.value if brief.page_archetype else None,
         drawing_policy=brief.drawing_policy.model_dump(mode="json")
         if brief.drawing_policy
         else None,

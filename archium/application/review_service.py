@@ -530,6 +530,7 @@ def _slide_intent_from_update(update: SlideIntentUpdate) -> SlideIntent:
         required_assets=[item.strip() for item in update.required_assets if item.strip()],
         forbidden_content=[item.strip() for item in update.forbidden_content if item.strip()],
         expected_layout=update.expected_layout.strip(),
+        page_archetype=update.page_archetype,
         notes=update.notes.strip(),
     )
 
@@ -580,6 +581,7 @@ def _slide_design_brief_from_update(update: SlideDesignBriefUpdate) -> SlideDesi
         evidence_ids=list(update.evidence_ids),
         layout_family=update.layout_family,
         expected_density=density,  # type: ignore[arg-type]
+        page_archetype=update.page_archetype,
         drawing_policy=drawing_policy,
         image_policy=image_policy,
         required_content=[item.strip() for item in update.required_content if item.strip()],

@@ -93,6 +93,7 @@ class SlideIntentUpdate:
     required_assets: list[str] = field(default_factory=list)
     forbidden_content: list[str] = field(default_factory=list)
     expected_layout: str = ""
+    page_archetype: str | None = None
     notes: str = ""
 
 
@@ -121,6 +122,7 @@ class SlideDesignBriefUpdate:
     evidence_ids: list[UUID] = field(default_factory=list)
     layout_family: str = ""
     expected_density: str = "medium"
+    page_archetype: str | None = None
     drawing_policy: dict[str, object] | None = None
     image_policy: dict[str, object] | None = None
     required_content: list[str] = field(default_factory=list)

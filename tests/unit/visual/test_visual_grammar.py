@@ -126,6 +126,22 @@ def test_recognize_generic_when_signals_weak() -> None:
     assert result.confidence == 0.0
 
 
+def test_recognize_from_slide_intent_opening() -> None:
+    from archium.application.visual.visual_grammar_recognition import (
+        recognize_page_archetype_from_intent,
+    )
+    from archium.domain.slide_intent import SlideIntent
+
+    intent = SlideIntent(
+        order=0,
+        page_task="医院老院区更新开篇",
+        central_conclusion="历史照片揭示矛盾，更新目标是可持续运营。",
+        required_evidence=["历史照片", "更新目标"],
+    )
+    result = recognize_page_archetype_from_intent(intent)
+    assert result.archetype == PageArchetype.NARRATIVE_OPENING
+
+
 def test_ensure_evidence_slots_stamps_opening_roles() -> None:
     from archium.application.visual.visual_grammar_slots import (
         ensure_evidence_slots_on_slide,

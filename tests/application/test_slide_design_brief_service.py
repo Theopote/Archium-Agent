@@ -131,3 +131,60 @@ def test_regenerate_missing_page_raises(db_session: Session) -> None:
     service = SlideDesignBriefService(db_session)
     with pytest.raises(WorkflowError, match="SlideIntent"):
         service.regenerate_page(saved_outline.id, page_order=99)
+
+
+def test_generate_all_assigns_grammar_archetype_for_problem_page(
+    db_session: Session,
+) -> None:
+    project = ProjectRepository(db_session).create(Project(name="Grammar Brief"))
+    presentation = PresentationRepository(db_session).create_presentation(
+        Presentation(project_id=project.id, title="医院汇报")
+    )
+    outline = OutlinePlan(
+        id=uuid4(),
+        presentation_id=presentation.id,
+        title="医院汇报",
+        thesis="老院区更新需要回应现状问题并给出可实施策略。",
+        audience="院领导",
+        purpose="方案汇报",
+        sections=[
+            OutlineSection(
+                id="s1",
+                title="现状",
+                purpose="诊断",
+                key_message="问题清晰",
+                order=0,
+            )
+        ],
+        page_intents=[
+            SlideIntent(
+                order=0,
+                page_task="老院区更新开篇：历史与目标",
+                central_conclusion="历史院区面临矛盾，更新目标是可持续运营。",
+                expected_layout="",
+            ),
+            SlideIntent(
+                order=3,
+                page_task="现状问题诊断",
+                central_conclusion="急诊流线交叉导致拥堵。",
+                required_evidence=["现场照片", "问题编号"],
+                expected_layout="photo_evidence_grid",
+            ),
+        ],
+    )
+    saved = PresentationRepository(db_session).save_outline(outline)
+    briefs = SlideDesignBriefService(db_session).generate_all(saved.id)
+    refreshed = PresentationRepository(db_session).get_outline(saved.id)
+    assert refreshed is not None
+
+    opening = next(b for b in briefs if b.page_order == 0)
+    diagnosis = next(b for b in briefs if b.page_order == 3)
+    assert opening.page_archetype is not None
+    assert opening.page_archetype.value == "narrative_opening"
+    assert diagnosis.page_archetype is not None
+    assert diagnosis.page_archetype.value == "site_problem_diagnosis"
+    assert any("grammar:" in item for item in diagnosis.required_content)
+
+    intent_diag = next(i for i in refreshed.page_intents if i.order == 3)
+    assert intent_diag.page_archetype is not None
+    assert intent_diag.page_archetype.value == "site_problem_diagnosis"

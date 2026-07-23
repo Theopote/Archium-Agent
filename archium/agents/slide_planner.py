@@ -132,7 +132,24 @@ class SlidePlanner:
             apply_slide_lineage(slides, existing)
         saved: list[SlideSpec] = []
         history = SlideHistoryService(self._session)
+        brief_by_order = {
+            item.page_order: item
+            for item in (outline.page_design_briefs if outline is not None else [])
+            if item.page_archetype is not None
+        }
+        intent_by_order = {
+            item.order: item
+            for item in (outline.page_intents if outline is not None else [])
+            if item.page_archetype is not None
+        }
         for slide in slides:
+            explicit = None
+            if slide.order in brief_by_order:
+                explicit = brief_by_order[slide.order].page_archetype
+            elif slide.order in intent_by_order:
+                explicit = intent_by_order[slide.order].page_archetype
+            if explicit is not None:
+                slide = slide.model_copy(update={"page_archetype": explicit})
             recognition = recognize_page_archetype(slide)
             slide = ensure_evidence_slots_on_slide(
                 slide,

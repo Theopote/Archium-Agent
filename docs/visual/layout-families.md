@@ -64,6 +64,12 @@ VisualIntent (+ ArtDirection hints)
 
 SlideSpec 写入 `page_archetype` + `required_evidence_slots`；缺槽位 → `GRAMMAR.MISSING_EVIDENCE_SLOT`。
 
+规划上游（VG-002）：
+
+1. `SlideIntent` / `SlideDesignBrief` 生成时识别 archetype 并写回
+2. `SlideSpec` 优先继承 Brief/Intent 的 archetype，再补证据槽位
+3. `apply_design_brief_to_intent` 用 Grammar 覆盖 VisualIntent 的 family / reading_order
+
 ## 图纸与照片
 
 | 内容 | fit | crop |

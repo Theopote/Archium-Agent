@@ -120,6 +120,7 @@ def _intent_updates(intents: list[SlideIntent]) -> list[SlideIntentUpdate]:
             required_assets=list(intent.required_assets),
             forbidden_content=list(intent.forbidden_content),
             expected_layout=intent.expected_layout,
+            page_archetype=intent.page_archetype.value if intent.page_archetype else None,
             notes=intent.notes,
         )
         for intent in sorted(intents, key=lambda item: item.order)
