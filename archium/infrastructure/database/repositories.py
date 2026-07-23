@@ -13,7 +13,7 @@ from archium.domain.asset import Asset
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
-from archium.domain.enums import ProjectStatus, RevisionEntityType
+from archium.domain.enums import ProjectStatus, ReviewStatus, RevisionEntityType
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
 from archium.domain.outline_approval_record import OutlineApprovalRecord
@@ -815,6 +815,25 @@ class ReviewRepository:
         except SQLAlchemyError as exc:
             _handle_error("update review issue", exc)
             raise
+
+    def resolve_open_for_presentation(
+        self,
+        presentation_id: UUID,
+        *,
+        exclude_ids: set[UUID] | frozenset[UUID] | None = None,
+    ) -> int:
+        """Mark OPEN issues RESOLVED so a repair → re-review cycle starts clean (B8)."""
+        skip = exclude_ids or set()
+        resolved = 0
+        for issue in self.list_by_presentation(presentation_id):
+            if issue.status != ReviewStatus.OPEN:
+                continue
+            if issue.id in skip:
+                continue
+            issue.resolve()
+            self.update(issue)
+            resolved += 1
+        return resolved
 
 
 class VisualQAReportRepository:

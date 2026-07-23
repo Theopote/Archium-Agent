@@ -190,7 +190,9 @@ def test_rule_repair_defers_when_protected_numbers_cannot_be_trimmed(
 
     refreshed_issue = ReviewRepository(db_session).get_by_id(issue.id)
     assert refreshed_issue is not None
-    assert refreshed_issue.status == ReviewStatus.OPEN
+    # B8: prior OPEN issues are cleared before four-layer re-review; pending stays open.
+    assert refreshed_issue.status == ReviewStatus.RESOLVED
+    assert all(item.status == ReviewStatus.OPEN for item in manual)
 
 
 def test_repair_updates_slide_and_resolves_issue(

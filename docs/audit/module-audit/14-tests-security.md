@@ -15,6 +15,6 @@
 | TS-007 | P1 | done | 剧本 A 无可重复自动门禁命令 | `scripts/run_playbook_a_gate.py`; playbooks | 发版无固定命令 | 脚本 + 文档 + 守卫 | `test_playbook_a_documents_repeatable_gate_script` 绿 | `-` |
 | TS-008 | P1 | mitigated | chromadb CVE-2026-45829 无修复版 | `docs/security/dependency-allowlist.json` | 审计红；理论 RCE（HTTP 服务） | allowlist 至 2026-10-01；仅 PersistentClient | `ci_security_audit_gate true pip` 清洁锁环境绿；到期前升级 | `-` |
 | TS-009 | P1 | open | 分支保护未要求 security audit；enforce 未提前开 | `.github/workflows/ci.yml`; triage | Aug 8 突然变红或无人看 | 保护规则 + 可选提前 enforce | triage checklist 剩余项勾完 | `-` |
-| TS-010 | P0 | open | 非开发者剧本 A + 修改成本（Beta B10） | playbooks; release decision | 不能宣称 beta 可用 | 真人 rehearsal 记录 | B10 关闭；有 session 记录 | `-` |
+| TS-010 | P0 | open | 非开发者剧本 A + 修改成本（Beta B10） | playbooks; rehearsal tooling | 不能宣称 beta 可用 | 工具链就绪（`new_beta_session` + meta + summarize）；**待真人 session 数据** | B10 关闭；有 session 记录 | `-` |
 | TS-011 | P1 | done | setuptools CVE：CI/build 未钉补丁版 | `pyproject.toml`; ci security-scan | 构建链漏洞 | `setuptools>=83` | security-scan 安装步骤含 pin | `-` |
 | TS-012 | P2 | open | 开发机 torch 等非 lock 包污染本地 audit | 本地 env | 误报 | 清洁 venv 审计；勿 allowlist torch | 文档已说明；CI 无 torch | `-` |

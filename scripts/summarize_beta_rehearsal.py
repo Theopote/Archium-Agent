@@ -36,6 +36,7 @@ def _collect_session_dirs(root: Path) -> list[Path]:
 def summarize_session(session_dir: Path) -> dict[str, object]:
     edit_rows = _read_csv_rows(session_dir / "beta-edit-cost-sheet.csv")
     issue_rows = _read_csv_rows(session_dir / "beta-issue-triage.csv")
+    meta = _read_session_meta(session_dir / "session-meta.json")
 
     minutes_by_category: Counter[str] = Counter()
     minutes_by_participant: Counter[str] = Counter()
@@ -73,11 +74,22 @@ def summarize_session(session_dir: Path) -> dict[str, object]:
                 }
             )
 
-    session_id = edit_rows[0]["session_id"] if edit_rows else session_dir.name
+    session_id = (
+        str(meta.get("session_id") or "").strip()
+        or (edit_rows[0]["session_id"] if edit_rows else session_dir.name)
+    )
     total_minutes = sum(minutes_by_category.values())
+    non_dev_from_meta = [
+        p
+        for p in meta.get("participants", [])
+        if isinstance(p, dict) and p.get("is_non_developer") is True
+    ]
     return {
         "session_id": session_id,
         "session_dir": session_dir.as_posix(),
+        "status": meta.get("status", ""),
+        "playbook": meta.get("playbook", "A"),
+        "non_dev_participants_declared": len(non_dev_from_meta),
         "edit_rows": len(edit_rows),
         "slides_logged": slide_count,
         "total_edit_minutes": round(total_minutes, 2),
@@ -89,6 +101,16 @@ def summarize_session(session_dir: Path) -> dict[str, object]:
     }
 
 
+def _read_session_meta(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def summarize_root(root: Path) -> dict[str, object]:
     session_dirs = _collect_session_dirs(root)
     session_summaries = [summarize_session(path) for path in session_dirs]
@@ -97,19 +119,27 @@ def summarize_root(root: Path) -> dict[str, object]:
         for summary in session_summaries
         for participant in summary.get("minutes_by_participant", {})
     }
+    declared_non_dev = sum(
+        int(summary.get("non_dev_participants_declared", 0) or 0)
+        for summary in session_summaries
+    )
 
     open_blockers: list[dict[str, str]] = []
     for summary in session_summaries:
         open_blockers.extend(summary.get("open_beta_blockers", []))
 
     total_minutes = sum(float(s.get("total_edit_minutes", 0)) for s in session_summaries)
+    # Prefer edit-sheet participants; fall back to session-meta declarations.
+    participants_non_dev = max(len(participants), declared_non_dev)
     return {
         "sessions": session_summaries,
-        "participants_non_dev": len(participants),
+        "participants_non_dev": participants_non_dev,
         "total_edit_minutes": round(total_minutes, 2),
         "open_beta_blocker_count": len(open_blockers),
         "open_beta_blockers": open_blockers,
-        "beta_ready_by_user_data": len(participants) >= 1 and total_minutes > 0 and len(open_blockers) == 0,
+        "beta_ready_by_user_data": (
+            participants_non_dev >= 1 and total_minutes > 0 and len(open_blockers) == 0
+        ),
     }
 
 

@@ -62,14 +62,18 @@ def has_repairable_open_issues(
     issues: list[ReviewIssue],
     settings: Settings,
 ) -> bool:
-    """Return True when automated slide repair should run for open review issues."""
-    if not settings.slide_repair_enabled:
-        return False
+    """Return True when automated slide repair should run for open review issues.
+
+    Rule-based ``auto_fixable`` issues are always eligible. LLM CRITICAL/HIGH
+    repairs require ``slide_repair_enabled``.
+    """
     for issue in issues:
         if issue.status != ReviewStatus.OPEN:
             continue
         if issue.auto_fixable and issue.slide_id is not None:
             return True
+        if not settings.slide_repair_enabled:
+            continue
         if (
             issue.slide_id is not None
             and issue.category in _REPAIRABLE_CATEGORIES
@@ -137,8 +141,10 @@ class SlideRepairService:
         slides_by_id = {slide.id: slide for slide in updated_slides}
         repaired += rule_count
         records.extend(rule_records)
+        keep_open_ids: set[UUID] = set()
         for pending in pending_issues:
-            self._reviews.create(pending)
+            stored = self._reviews.create(pending)
+            keep_open_ids.add(stored.id)
 
         if self._settings.slide_repair_enabled and self._llm is not None:
             open_issues = [issue for issue in issues if issue.status == ReviewStatus.OPEN]
@@ -157,12 +163,20 @@ class SlideRepairService:
             repaired += llm_count
             records.extend(llm_records)
             for pending in llm_pending:
-                self._reviews.create(pending)
+                stored = self._reviews.create(pending)
+                keep_open_ids.add(stored.id)
 
         updated_slides = self._rematch_assets_after_splits(
             updated_slides,
             records,
             project_id=project_id,
+        )
+
+        # B8 / QD-006: clear prior OPEN issues so four-layer re-review starts clean.
+        # Keep only newly created pending confirmation issues.
+        self._reviews.resolve_open_for_presentation(
+            presentation_id,
+            exclude_ids=keep_open_ids,
         )
 
         return updated_slides, repaired, records

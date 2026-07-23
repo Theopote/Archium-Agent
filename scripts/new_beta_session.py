@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Scaffold a Beta rehearsal session directory with CSV templates."""
+"""Scaffold a Beta rehearsal session directory with CSV templates + meta."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -12,17 +13,40 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _TEMPLATES = _PROJECT_ROOT / "docs" / "templates"
 _SESSIONS_ROOT = _PROJECT_ROOT / "docs" / "rehearsal" / "sessions"
 
+_SESSION_META_TEMPLATE = {
+    "session_id": "",
+    "date": "",
+    "facilitator": "",
+    "project_label_redacted": "",
+    "participants": [
+        {
+            "participant_id": "P1",
+            "role": "",
+            "is_non_developer": True,
+            "notes": "",
+        }
+    ],
+    "playbook": "A",
+    "status": "scheduled",
+    "b10_checklist": {
+        "import_generate_edit_export": False,
+        "edit_cost_coverage_gte_80pct": False,
+        "critical_high_triaged": False,
+        "summary_json_written": False,
+    },
+}
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "session_id",
-        help="Session folder name, e.g. 2026-07-18-session1",
+        help="Session folder name, e.g. 2026-07-24-session1",
     )
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite existing CSV templates in the session folder",
+        help="Overwrite existing CSV / meta templates in the session folder",
     )
     args = parser.parse_args(argv)
 
@@ -39,12 +63,24 @@ def main(argv: list[str] | None = None) -> int:
         shutil.copy2(source, target)
         copied.append(name)
 
+    meta_path = session_dir / "session-meta.json"
+    if not meta_path.exists() or args.force:
+        meta = dict(_SESSION_META_TEMPLATE)
+        meta["session_id"] = args.session_id
+        meta_path.write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        copied.append("session-meta.json")
+
     readme = session_dir / "README.txt"
     if not readme.exists() or args.force:
         readme.write_text(
             f"Session: {args.session_id}\n"
-            "Fill beta-edit-cost-sheet.csv and beta-issue-triage.csv during rehearsal.\n"
-            f"Then: python scripts/summarize_beta_rehearsal.py {session_dir.as_posix()}\n",
+            "1. Fill session-meta.json (non-dev participant role).\n"
+            "2. Fill beta-edit-cost-sheet.csv and beta-issue-triage.csv during rehearsal.\n"
+            f"3. python scripts/summarize_beta_rehearsal.py {session_dir.as_posix()}\n"
+            "B10 requires a real non-developer participant — do not fabricate rows.\n",
             encoding="utf-8",
         )
 
@@ -62,9 +98,10 @@ def main(argv: list[str] | None = None) -> int:
         display = session_dir
     print(
         "\nNext:\n"
-        f"  1. Open docs/v0.2-beta-rehearsal-facilitator-checklist.md\n"
-        f"  2. Share docs/v0.2-beta-rehearsal-participant-guide.md with users\n"
-        f"  3. After session: python scripts/summarize_beta_rehearsal.py {display.as_posix()}"
+        "  1. Open docs/v0.2-beta-rehearsal-facilitator-checklist.md\n"
+        "  2. Share docs/v0.2-beta-rehearsal-participant-guide.md with users\n"
+        "  3. Fill session-meta.json (is_non_developer=true)\n"
+        f"  4. After session: python scripts/summarize_beta_rehearsal.py {display.as_posix()}"
     )
     return 0
 

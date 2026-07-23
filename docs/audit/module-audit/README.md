@@ -80,8 +80,8 @@
 | 编号 | 模块 | 一句话 |
 |------|------|--------|
 | [QD-010](12-qa-delivery.md) | qa-delivery | 正式人工视觉门禁未过 |
-| [TS-010](14-tests-security.md) | tests-security | 非开发者剧本 A + 修改成本（Beta B10） |
+| [TS-010](14-tests-security.md) | tests-security | 非开发者剧本 A + 修改成本（Beta B10；工具就绪，待真人） |
 
-P0 已关闭：`APP-003`；`WF-002`/`WF-008`；`DB-001`/`DB-002`/`DB-003`/`DB-005`/`DB-007`；`KN-001`/`KN-007`；`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
+P0 已关闭：`APP-003`；`QD-006`/`B8`；`WF-002`/`WF-008`；`DB-001`/`DB-002`/`DB-003`/`DB-005`/`DB-007`；`KN-001`/`KN-007`；`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 
 Domain 台账主线已收敛；余项见 [02-domain.md](02-domain.md)（如 DOM-008/013…）。已关闭：`DOM-003`/`DOM-004`/`DOM-005`/`DOM-006`/`DOM-007`/`DOM-009`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-015`/`DOM-016`/`DOM-017`/`DOM-018`/`DOM-020`。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。
