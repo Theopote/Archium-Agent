@@ -228,6 +228,7 @@ class StudioSceneService:
             presentation.project_id,
             slide.presentation_id,
             art_direction=art_direction,
+            layout_plan=plan,
         )
         reference_style = self._resolve_reference_style(presentation.project_id)
         intent = None
@@ -255,7 +256,8 @@ class StudioSceneService:
             project_id=presentation.project_id,
         )
         if existing is not None and not force_recompile:
-            comparable = scene.model_copy(
+            prepared_scene, repair_batch = self._run_scene_repair(scene, slide)
+            comparable = prepared_scene.model_copy(
                 update={
                     "id": existing.id,
                     "version": existing.version,
@@ -264,11 +266,10 @@ class StudioSceneService:
                 }
             )
             if compute_scene_hash(comparable) == compute_scene_hash(existing):
-                prepared, batch = self._run_scene_repair(existing, slide)
                 saved = existing
-                if compute_scene_hash(prepared) != compute_scene_hash(existing):
+                if compute_scene_hash(prepared_scene) != compute_scene_hash(existing):
                     saved = save_render_scene(self._scenes,
-                        prepared.model_copy(
+                        prepared_scene.model_copy(
                             update={
                                 "id": existing.id,
                                 "version": existing.version + 1,
@@ -276,7 +277,7 @@ class StudioSceneService:
                             }
                         )
                     )
-                    self._record_safe_auto_repair(slide, saved, batch)
+                    self._record_safe_auto_repair(slide, saved, repair_batch)
                     self.invalidate_preview_cache(
                         slide.presentation_id,
                         layout_plan_id=plan.id,
@@ -286,7 +287,7 @@ class StudioSceneService:
                     scene=saved,
                     preview_path=preview,
                     reused=True,
-                    batch=batch,
+                    batch=repair_batch,
                 )
 
         if existing is not None:
@@ -456,6 +457,7 @@ class StudioSceneService:
         presentation_id: UUID,
         *,
         art_direction: ArtDirection | None = None,
+        layout_plan: LayoutPlan | None = None,
     ) -> DesignSystem:
         resolved_art = art_direction or self._resolve_art_direction(
             project_id,
@@ -463,6 +465,10 @@ class StudioSceneService:
         )
         if resolved_art is not None and resolved_art.design_system_id is not None:
             design = self._design_repo.get(resolved_art.design_system_id)
+            if design is not None:
+                return design
+        if layout_plan is not None and layout_plan.design_system_id is not None:
+            design = self._design_repo.get(layout_plan.design_system_id)
             if design is not None:
                 return design
         return default_presentation_design_system()

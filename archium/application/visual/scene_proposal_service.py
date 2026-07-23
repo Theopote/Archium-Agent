@@ -379,11 +379,14 @@ class SceneProposalService:
         return self._proposals.save(updated, supersede_previous=False)
 
     def _sync_element_comments(self, proposal: SceneChangeProposal) -> None:
+        session = getattr(self, "_session", None)
+        if session is None:
+            return
         from archium.application.visual.element_comment_service import ElementCommentService
 
         ElementCommentService(
-            self._session,
-            settings=self._settings,
+            session,
+            settings=getattr(self, "_settings", None) or get_settings(),
         ).sync_from_proposal_decision(proposal)
 
     def _resolve_accepted_scene(

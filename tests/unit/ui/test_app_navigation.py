@@ -61,7 +61,7 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     }
     assert len(sections[PROJECT_SECTION]) == 2
     assert len(sections[MAKE_SECTION]) == 5
-    assert len(sections[RESOURCE_SECTION]) == 1
+    assert len(sections[RESOURCE_SECTION]) == 3
     assert len(sections[SYSTEM_SECTION]) == 1
 
     # Stage titles come from product_flow (st.Page.title needs ScriptRunContext).
@@ -329,9 +329,8 @@ def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
         / "studio.py"
     )
     text = studio_src.read_text(encoding="utf-8")
-    assert '["属性", "布局", "内容", "AI", "检查"]' in text or (
-        '"属性", "布局", "内容", "AI", "检查"' in text
-    )
+    assert "_INSPECTOR_TABS" in text
+    assert '("属性", "布局", "内容", "AI", "评论", "风格", "检查")' in text
     assert "def _render_inspector_tabs" in text
     assert "_select_inspector_tab" in text
     assert "st.tabs(" not in text

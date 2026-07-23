@@ -14,6 +14,7 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual import VisualContentType, default_presentation_design_system
 from archium.domain.visual.enums import DensityLevel, LayoutFamily
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.config.settings import get_settings
 from archium.exceptions import StructuredOutputError
 from archium.infrastructure.llm.base import LLMRequest
 from archium.infrastructure.llm.visual_schemas import LayoutDecisionDraft
@@ -85,6 +86,7 @@ def _service(llm: object) -> LayoutPlanningService:
     service._intents = None  # noqa: SLF001
     service._art = None  # noqa: SLF001
     service._design = None  # noqa: SLF001
+    service._settings = get_settings()  # noqa: SLF001
     service._warnings = []  # noqa: SLF001
     return service
 
