@@ -4,9 +4,17 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from archium.application.visual.visual_grammar_assets import (
+    find_requirement_for_grammar_slot,
+    format_grammar_requirement_description,
+    grammar_role_from_requirement,
+    preferred_grammar_slots_for_binding,
+    visual_types_compatible,
+)
 from archium.domain.asset import Asset
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.slide_asset_binding import SlideAssetBinding, index_page_asset_bindings
+from archium.domain.visual.visual_grammar import PageArchetype, get_recipe
 
 
 def apply_slide_asset_bindings(
@@ -19,6 +27,7 @@ def apply_slide_asset_bindings(
 
     Returns (slides, bindings_with_slide_id, applied_count).
     Explicit bindings are marked ``confirmed=True`` so auto-match will not overwrite them.
+    Grammar-tagged evidence slots are preferred targets when roles align.
     """
     if not bindings:
         return slides, [], 0
@@ -60,8 +69,12 @@ def _apply_one_binding(
     if not description:
         description = f"{binding.role_label()}（用户指定）"
 
+    grammar_role = _pick_grammar_slot_for_binding(slide, binding)
+    if grammar_role is not None:
+        description = format_grammar_requirement_description(grammar_role, description)
+
     instruction = f"user_binding:{binding.binding_role.value}:{binding.asset_id}"
-    requirement = _find_compatible_requirement(slide, binding)
+    requirement = _find_compatible_requirement(slide, binding, grammar_role=grammar_role)
     if requirement is None:
         requirement = VisualRequirement(
             type=binding.visual_type,
@@ -95,10 +108,14 @@ def _apply_one_binding(
     if requirement.match_score != 1.0:
         requirement.match_score = 1.0
         changed = True
-    if (
+    if grammar_role is not None and grammar_role_from_requirement(requirement) != grammar_role:
+        requirement.description = description
+        changed = True
+    elif (
         description
         and requirement.description != description
         and binding.user_description.strip()
+        and grammar_role_from_requirement(requirement) is None
     ):
         # Prefer user description when provided; otherwise keep planner text.
         requirement.description = description
@@ -109,11 +126,56 @@ def _apply_one_binding(
     return changed
 
 
+def _pick_grammar_slot_for_binding(
+    slide: SlideSpec,
+    binding: SlideAssetBinding,
+) -> str | None:
+    """Choose the best grammar evidence role for this binding on the slide."""
+    preferred = preferred_grammar_slots_for_binding(binding.binding_role)
+    if not preferred:
+        return None
+
+    required_roles: set[str] = set()
+    if slide.page_archetype is not None and slide.page_archetype != PageArchetype.GENERIC:
+        recipe = get_recipe(slide.page_archetype)
+        required_roles = {
+            slot.role
+            for slot in recipe.required_evidence_slots
+            if slot.required and slot.visual_types
+        }
+        if slide.required_evidence_slots:
+            required_roles |= set(slide.required_evidence_slots)
+
+    # Prefer empty grammar slots that are required by the recipe.
+    for role in preferred:
+        if required_roles and role not in required_roles:
+            continue
+        existing = find_requirement_for_grammar_slot(slide, role)
+        if existing is None or not existing.preferred_asset_ids or not existing.confirmed:
+            return role
+
+    for role in preferred:
+        if not required_roles or role in required_roles:
+            return role
+    return None
+
+
 def _find_compatible_requirement(
     slide: SlideSpec,
     binding: SlideAssetBinding,
+    *,
+    grammar_role: str | None = None,
 ) -> VisualRequirement | None:
-    """Prefer an existing unconfirmed requirement of the same visual type."""
+    """Prefer grammar-tagged slots, then unconfirmed same-type requirements."""
+    if grammar_role is not None:
+        tagged = find_requirement_for_grammar_slot(slide, grammar_role)
+        if tagged is not None and visual_types_compatible(tagged.type, binding.visual_type):
+            return tagged
+        for role in preferred_grammar_slots_for_binding(binding.binding_role):
+            tagged = find_requirement_for_grammar_slot(slide, role)
+            if tagged is not None and visual_types_compatible(tagged.type, binding.visual_type):
+                return tagged
+
     same_type = [
         req
         for req in slide.visual_requirements
@@ -121,6 +183,9 @@ def _find_compatible_requirement(
     ]
     for req in same_type:
         if binding.asset_id in req.preferred_asset_ids or binding.asset_id in req.candidate_asset_ids:
+            return req
+    for req in same_type:
+        if not req.confirmed and grammar_role_from_requirement(req) is not None:
             return req
     for req in same_type:
         if not req.confirmed:

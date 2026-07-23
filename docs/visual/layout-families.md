@@ -64,6 +64,8 @@ VisualIntent (+ ArtDirection hints)
 
 SlideSpec 写入 `page_archetype` + `required_evidence_slots`；缺槽位 → `GRAMMAR.MISSING_EVIDENCE_SLOT`。
 
+用户 `SlideAssetBinding` 优先落到带 `[grammar:role]` 的证据槽；开篇页 hero 优先取 `historic_or_context_photo` 已绑定资产，缺省仍渲染 `grammar:…` 占位。
+
 规划上游（VG-002）：
 
 1. `SlideIntent` / `SlideDesignBrief` 生成时识别 archetype 并写回

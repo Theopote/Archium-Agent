@@ -112,6 +112,81 @@ def test_apply_bindings_override_unconfirmed_match() -> None:
     assert req.confirmed is True
 
 
+def test_apply_bindings_fill_grammar_historic_slot() -> None:
+    historic_id = uuid4()
+    other_id = uuid4()
+    slides = [
+        SlideSpec(
+            presentation_id=uuid4(),
+            chapter_id="ch1",
+            order=0,
+            title="老院区更新开篇",
+            message="历史矛盾与更新目标。",
+            page_archetype="narrative_opening",
+            required_evidence_slots=["historic_or_context_photo", "problem_tension"],
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PHOTO,
+                    description="[grammar:historic_or_context_photo] 历史照片",
+                    preferred_asset_ids=[],
+                    confirmed=False,
+                    required=True,
+                ),
+                VisualRequirement(
+                    type=VisualType.SITE_PHOTO,
+                    description="无关配图",
+                    preferred_asset_ids=[other_id],
+                    confirmed=False,
+                ),
+            ],
+        )
+    ]
+    bindings = [
+        SlideAssetBinding(
+            page_order=0,
+            asset_id=historic_id,
+            binding_role=SlideAssetBindingRole.PROJECT_PHOTO,
+            user_description="院史老照片",
+        )
+    ]
+
+    updated, _, applied = apply_slide_asset_bindings(slides, bindings)
+    assert applied == 1
+    historic_req = updated[0].visual_requirements[0]
+    assert historic_req.preferred_asset_ids == [historic_id]
+    assert historic_req.confirmed is True
+    assert "[grammar:historic_or_context_photo]" in historic_req.description
+    assert updated[0].visual_requirements[1].preferred_asset_ids == [other_id]
+
+
+def test_resolve_grammar_hero_prefers_historic_slot() -> None:
+    from archium.application.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
+
+    historic_id = uuid4()
+    other_id = uuid4()
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="ch1",
+        order=0,
+        title="开篇",
+        message="更新目标",
+        page_archetype="narrative_opening",
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="普通照片",
+                preferred_asset_ids=[other_id],
+            ),
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="[grammar:historic_or_context_photo] 历史",
+                preferred_asset_ids=[historic_id],
+            ),
+        ],
+    )
+    assert resolve_grammar_hero_asset_id(slide) == historic_id
+
+
 def test_slots_include_asset_bindings_text() -> None:
     presentation_id = uuid4()
     asset_id = uuid4()

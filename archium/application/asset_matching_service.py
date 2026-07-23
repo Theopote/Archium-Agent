@@ -109,6 +109,13 @@ def score_asset_for_requirement(
 
     score += drawing_type_match_adjustment(requirement, qa_report)
 
+    from archium.application.visual.visual_grammar_assets import grammar_asset_match_bonus
+
+    score += grammar_asset_match_bonus(
+        requirement,
+        asset_search_text=_asset_search_text(asset),
+    )
+
     return max(score, 0.0)
 
 

@@ -11,6 +11,7 @@ from archium.application.visual.visual_grammar_intent import (
 )
 from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
 from archium.application.visual.visual_grammar_slots import ensure_evidence_slots_on_slide
+from archium.application.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.slide import SlideSpec
@@ -179,10 +180,20 @@ class VisualIntentService:
 
         hero_asset_id = draft.hero_asset_id
         supporting = list(draft.supporting_asset_ids)
-        if hero_asset_id is None and slide.visual_requirements:
+        grammar_hero = resolve_grammar_hero_asset_id(slide)
+        if grammar_hero is not None:
+            hero_asset_id = grammar_hero
+        elif hero_asset_id is None and slide.visual_requirements:
             hero_asset_id = slide.visual_requirements[0].primary_asset_id
             for req in slide.visual_requirements[1:]:
                 supporting.extend(req.bound_asset_ids())
+        if grammar_hero is not None:
+            for req in slide.visual_requirements:
+                supporting.extend(
+                    aid for aid in req.bound_asset_ids() if aid != grammar_hero
+                )
+            # Preserve order, drop duplicates.
+            supporting = list(dict.fromkeys(supporting))
 
         intent = VisualIntent(
             slide_id=slide.id,

@@ -146,13 +146,18 @@ def content_from_slide(
     source_text: str | None = None,
 ) -> LayoutContentBundle:
     """Build a content bundle from SlideSpec + VisualIntent asset refs."""
+    from archium.application.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
+
     hero = (
         str(visual_intent.hero_asset_id)
         if visual_intent.hero_asset_id is not None
         else None
     )
     supporting = [str(asset_id) for asset_id in visual_intent.supporting_asset_ids]
-    if hero is None and slide.visual_requirements:
+    grammar_hero = resolve_grammar_hero_asset_id(slide)
+    if grammar_hero is not None:
+        hero = str(grammar_hero)
+    elif hero is None and slide.visual_requirements:
         primary = slide.visual_requirements[0].primary_asset_id
         if primary is not None:
             hero = str(primary)
