@@ -4,13 +4,9 @@ from uuid import uuid4
 import pytest
 from archium.application.artifact_policy_service import (
     ARTIFACT_WRITE_ENTRYPOINTS,
-    ArtifactMutationGuard,
-    ArtifactMutationOperation,
     reconcile_pptx_into_scene,
     require_artifact_write_entrypoint,
-    save_render_scene,
 )
-from archium.domain.artifact_ownership import ArtifactKind
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.exceptions import WorkflowError
 

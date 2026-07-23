@@ -141,7 +141,7 @@ class PowerPointContractService:
                 )
             ]
             sequence = 1
-            for index in range(value_count):
+            for _index in range(value_count):
                 planned.append(
                     RendererEmission(
                         emission_id=f"{node.id}:{sequence}",
@@ -265,13 +265,15 @@ class PowerPointContractService:
                 visible[primary], chart_export_mode=chart_export_mode
             )
             expected = mapping.pptx_object_type
-            if emission.pptx_object_type != expected and expected not in emission.pptx_object_type:
-                # Allow emission type that is a specialization listed in mapping.
-                if emission.pptx_object_type not in expected:
-                    mismatches.append(
-                        f"{emission.emission_id}: got {emission.pptx_object_type!r}, "
-                        f"expected {expected!r}"
-                    )
+            if (
+                emission.pptx_object_type != expected
+                and expected not in emission.pptx_object_type
+                and emission.pptx_object_type not in expected
+            ):
+                mismatches.append(
+                    f"{emission.emission_id}: got {emission.pptx_object_type!r}, "
+                    f"expected {expected!r}"
+                )
         return EmissionObjectTypeReport(valid=not mismatches, mismatches=mismatches)
 
     def require_emission_object_types(

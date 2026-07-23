@@ -10,6 +10,12 @@ from archium.application.visual.scene_fonts import (
     detect_font_fallbacks,
     text_has_cjk,
 )
+from archium.domain.export_fidelity import ChartExportMode
+from archium.domain.visual.pptx_structure import (
+    PptxStructureMode,
+    PresentationStructureSpec,
+    default_archium_structure_spec,
+)
 from archium.domain.visual.render_scene import (
     ChartNode,
     DrawingNode,
@@ -19,12 +25,6 @@ from archium.domain.visual.render_scene import (
     TableNode,
     TextNode,
 )
-from archium.domain.visual.pptx_structure import (
-    PresentationStructureSpec,
-    PptxStructureMode,
-    default_archium_structure_spec,
-)
-from archium.domain.export_fidelity import ChartExportMode
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import RenderedSlideInstruction
 
 

@@ -10,8 +10,8 @@ import pytest
 from archium.domain.visual.pptx_structure import (
     PlaceholderKind,
     PlaceholderSpec,
-    PresentationStructureSpec,
     PptxStructureMode,
+    PresentationStructureSpec,
     SlideLayoutSpec,
     SlideMasterSpec,
     default_archium_structure_spec,

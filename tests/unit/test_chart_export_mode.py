@@ -19,8 +19,8 @@ from archium.domain.visual.render_scene import (
     RenderScene,
     TableNode,
 )
-from archium.infrastructure.renderers.scene_pptx_adapter import RenderScenePptxAdapter
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import PptxLayoutPlanAdapter
+from archium.infrastructure.renderers.scene_pptx_adapter import RenderScenePptxAdapter
 
 
 def test_chart_export_mode_enum_values() -> None:

@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from archium.config.settings import Settings, get_settings
-from archium.domain.visual.pptx_structure import (
-    PresentationStructureSpec,
-    PptxStructureMode,
-)
 from archium.domain.export_fidelity import ChartExportMode
+from archium.domain.visual.pptx_structure import (
+    PptxStructureMode,
+    PresentationStructureSpec,
+)
 from archium.domain.visual.render_scene import RenderScene
 from archium.infrastructure.renderers.pptx_master_expander import expand_masters_from_structure
 from archium.infrastructure.renderers.pptx_ooxml_structure import require_structured_ooxml

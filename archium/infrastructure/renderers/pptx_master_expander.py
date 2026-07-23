@@ -14,7 +14,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from archium.domain.visual.pptx_structure import PresentationStructureSpec, PptxStructureMode
+from archium.domain.visual.pptx_structure import PptxStructureMode, PresentationStructureSpec
 
 _NS = {
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -232,7 +232,7 @@ def _rewrite_presentation_rels(
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             f"{body}</Relationships>"
-        ).encode("utf-8")
+        ).encode()
         return xml, master_rids
 
     root = ET.fromstring(original)
@@ -248,8 +248,7 @@ def _rewrite_presentation_rels(
     # Prefer reclaiming low rIds starting at 1 for masters (PowerPoint convention).
     next_id = 1
     master_rids: list[str] = []
-    insert_at = 0
-    for master_part in master_parts:
+    for insert_at, master_part in enumerate(master_parts):
         while next_id in used_ids:
             next_id += 1
         rid_s = f"rId{next_id}"
@@ -264,7 +263,6 @@ def _rewrite_presentation_rels(
             },
         )
         root.insert(insert_at, elem)
-        insert_at += 1
         next_id += 1
 
     return _serialize_xml(root), master_rids

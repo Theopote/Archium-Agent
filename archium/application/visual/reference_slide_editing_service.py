@@ -13,7 +13,6 @@ from archium.application.artifact_policy_service import (
     ArtifactMutationOperation,
 )
 from archium.application.visual.placeholder_binding_matcher import effective_semantic_role
-from archium.domain.artifact_ownership import ArtifactKind
 from archium.application.visual.scene_fonts import (
     collect_font_assets,
     resolve_text_fonts,
@@ -26,6 +25,7 @@ from archium.application.visual.semantic_content_plan import (
     normalize_text_role_for_schema,
     replacement_text_for_role,
 )
+from archium.domain.artifact_ownership import ArtifactKind
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec

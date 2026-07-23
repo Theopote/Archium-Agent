@@ -17,14 +17,14 @@ from archium.application.workflow_route_service import (
     build_presentation_workflow_router,
 )
 from archium.domain._base import DomainModel
+from archium.domain.asset import Asset
+from archium.domain.slide import SlideSpec
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.reference_slide import ReferenceSlideSnapshot
 from archium.domain.visual.reference_slide_editing import ReferenceSlideEditResult
 from archium.domain.visual.render_scene import RenderScene
-from archium.domain.slide import SlideSpec
-from archium.domain.asset import Asset
 from archium.domain.workflow_route import PresentationWorkflowRoute
 from archium.exceptions import WorkflowError
 
