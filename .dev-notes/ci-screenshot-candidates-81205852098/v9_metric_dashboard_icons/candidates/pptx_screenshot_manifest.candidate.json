@@ -1,12 +1,12 @@
 {
-  "case_id": "v2_evidence_board",
-  "layout_family": "evidence_board",
-  "layout_variant": "numbered_grid",
+  "case_id": "v9_metric_dashboard_icons",
+  "layout_family": "metric_dashboard",
+  "layout_variant": "metric_with_chart",
   "screenshot": {
-    "file": "pptx_screenshot.png",
+    "file": "pptx_screenshot.candidate.png",
     "width": 1920,
     "height": 1080,
-    "average_hash": "0301ffffffffffff"
+    "average_hash": "83032129bfffffff"
   },
   "font_manifest_hash": "sha256:d1a059ce0f7f0f1e9b392a7704d330ba3b273d9df2e606464e3ac82837990133",
   "font_platform": "linux",
