@@ -8,10 +8,20 @@ from archium.infrastructure.renderers.png_renderer import PngRenderer
 from PIL import Image
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
 def test_png_renderer_rasterizes_svg_icon(tmp_path: Path) -> None:
-    svg_path = Path(
-        "C:/Users/navib/Desktop/development/Archium-Agent/archium/resources/architectural_icons/svg/pedestrian_flow.svg"
+    svg_path = (
+        _repo_root()
+        / "archium"
+        / "resources"
+        / "architectural_icons"
+        / "svg"
+        / "pedestrian_flow.svg"
     )
+    assert svg_path.is_file(), f"fixture SVG missing: {svg_path}"
     scene = RenderScene(
         slide_id=uuid4(),
         layout_plan_id=uuid4(),
