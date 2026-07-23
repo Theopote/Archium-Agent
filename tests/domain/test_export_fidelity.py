@@ -49,5 +49,5 @@ def test_manifest_summary_lines_zh() -> None:
         fallback_reason="hybrid_editable×1",
     )
     lines = manifest.summary_lines_zh()
-    assert any("原生可编辑" in line and "1" in line for line in lines)
+    assert any("支持范围内可编辑" in line and "1" in line for line in lines)
     assert any("混合可编辑" in line for line in lines)

@@ -44,11 +44,12 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | Claim | Status |
 |------|--------|
 | RenderScene V1 最小节点闭环（Text / Image / Drawing / Shape） | **Done** (Phase 0–2 requirement) |
-| 完整 RenderScene / Presenton 式全节点模型 | **Not done** — no TableNode / ChartNode / GroupNode / ContainerNode / IconNode / LineNode |
-| 完整可编辑图表 | **Not done** — compiler maps `CHART` → `ImageNode`（可栅格化） |
-| 完整可编辑表格 | **Not done** — compiler maps `TABLE` → `TextNode` |
+| ChartNode / TableNode + dual export mode | **Partial** — nodes + `ChartExportMode` exist; not full chart/table effect depth |
+| 完整 RenderScene / Presenton 式全节点模型 | **Not done** — no GroupNode / ContainerNode / Connector / Freeform |
+| 深度原生 PowerPoint / ppt-master 级对象模型 | **Not done** — capability *map* exists; most depth inventory rows are empty |
+| Connector / Preset Shape / Freeform / Group / Gradient / Pattern / Glow / Transition | **Not implemented** (see `POWERPOINT_NATIVE_DEPTH_INVENTORY`) |
 
-**对外口径：** RenderScene V1 最小节点闭环完成。不得对外宣称「完整 RenderScene 已完成」或「完整可编辑图表和表格已完成」。
+**对外口径：** RenderScene V1 最小节点闭环完成；图表/表格为可选双导出。不得对外宣称「完整 RenderScene」「深度原生 PowerPoint」或「与 PowerPoint / ppt-master 对象模型等价」。
 
 ## Reference Style / ArtDirection → RenderScene (honest) — P1 closed (deterministic overlay)
 

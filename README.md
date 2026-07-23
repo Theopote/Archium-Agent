@@ -522,6 +522,7 @@ Copyright (c) 2026 Theopote and Archium contributors
 - 当前版本仍是 Alpha：API、领域模型、数据库迁移和输出格式可能继续变化，不应未经人工复核直接用于正式交付。
 - Studio Canvas 编辑的是 Archium `RenderScene`，不是任意 PPTX 对象的全功能 PowerPoint 替代品。
 - 模板归纳、占位符绑定和 Template Studio 已有初版，但复杂母版、特殊矢量效果和第三方模板的高保真往返仍需人工验证。
+- 「原生元素 PPTX」指支持范围内可编辑的文本/形状/图片等导出对象，**不是** ppt-master 级深度原生对象模型（Connector / Freeform / Group / Gradient / Transition 等多数尚未建设；见 `docs/architecture/powerpoint-capability-contract.md`）。
 - 图片衍生管线保留原图并受证据策略约束；它不生成建筑效果图，也不对证据图进行表达性重绘。
 - Visual Critic、Deck QA 和自动修复由不同策略控制；启发式评分不能单独代表可交付性。
 - 原生元素 PPTX 依赖 Node.js 20 与 PptxGenJS；Marp PPTX/PDF 依赖 Marp CLI；截图级验证还可能需要 LibreOffice 或 PowerPoint。

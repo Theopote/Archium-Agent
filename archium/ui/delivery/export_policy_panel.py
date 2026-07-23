@@ -12,7 +12,7 @@ from archium.domain.export_fidelity import (
 )
 
 EXPORT_POLICY_PRESETS: dict[str, str] = {
-    "strict_native": "严格原生可编辑",
+    "strict_native": "严格：支持范围内可编辑",
     "allow_hybrid": "允许混合可编辑",
     "allow_text_bg": "允许文字可编辑背景",
     "allow_raster": "允许图片式降级",
@@ -58,7 +58,11 @@ def render_export_policy_panel(*, key_prefix: str = "deliver") -> ExportPolicy:
     policy = export_policy_from_preset(selected)
 
     hints = {
-        "strict_native": "所有页面必须为原生可编辑对象；禁止静默图片降级。",
+        "strict_native": (
+            "所有页面必须在当前已实现的对象范围内可编辑"
+            "（文本/基础形状/图片等）；禁止静默整页图片降级。"
+            "这不等于深度原生 PowerPoint 对象模型。"
+        ),
         "allow_hybrid": "允许部分页面保留 Bitmap 复杂视觉，但必须逐页披露。",
         "allow_text_bg": "允许背景为图片、文字为可编辑文本框的页面。",
         "allow_raster": "允许整页图片式 PPTX，但必须显式记录降级原因。",

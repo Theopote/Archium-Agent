@@ -4,6 +4,12 @@ Archium treats `RenderScene` as the canonical presentation scene language and th
 source of visible slide content. PPTX is a derived delivery artifact, not an independent
 authoring source.
 
+**Important:** having a capability *map* is not the same as PowerPoint native *depth*.
+Do **not** describe Archium as “深度原生 PowerPoint” / “deep native PowerPoint” / a
+PowerPoint-complete object model. That claim is forbidden until the depth inventory
+below is substantially implemented (`FORBIDDEN_NATIVE_DEPTH_CLAIMS` /
+`native_depth_is_shallow()` in `powerpoint_capability.py`).
+
 ## RenderScene closure invariant
 
 Every emitted object must have a unique `emission_id` and trace to a visible `RenderScene`
@@ -22,19 +28,50 @@ The executable check lives in `PowerPointContractService.validate_scene_closure`
 adapters should report `RendererEmission` records and call `require_scene_closure` before the
 delivery artifact is accepted.
 
-## V1 capability mapping
+## V1 scene-node capability mapping
 
 | Scene node | PowerPoint object | Fidelity | Important boundary |
 | --- | --- | --- | --- |
 | text | `p:sp` + `p:txBody` | native stable | font substitution can change wrapping |
-| shape | `p:sp` | feature-dependent | simple rectangle is stable; other V1 shapes currently normalize to rectangle |
-| image | `p:pic` | native stable | pixels remain raster |
+| shape | `p:sp` | feature-dependent | rectangle / ellipse / line / card only; others normalize |
+| image | `p:pic` | native stable | pixels remain raster; shadow/crop effects approximate |
 | drawing | `p:pic` | native stable | drawing is not native CAD/vector geometry in V1 |
-| chart | `c:chart` or shape bake | mode-dependent | `NATIVE_DATA_BACKED` embeds workbook; `CROSS_APP_STABLE` uses shapes/images |
-| table | `a:tbl` or text grid | mode-dependent | `NATIVE_DATA_BACKED` is editable table; `CROSS_APP_STABLE` is text/shape grid |
+| chart | `c:chart` or shape bake | mode-dependent | opt-in dual export; not full chart effect surface |
+| table | `a:tbl` or text grid | mode-dependent | opt-in dual export; styling depth limited |
 
 Unknown node types fail closed. Fidelity is deliberately more precise than deck-level labels
-such as “fully editable”: it describes the actual PowerPoint representation of each construct.
+such as “fully editable”: it describes the actual PowerPoint representation of each construct
+**within the shallow V1 surface**, not ppt-master-class native depth.
+
+## Native depth inventory (honest)
+
+Executable source: `POWERPOINT_NATIVE_DEPTH_INVENTORY` in
+`archium/domain/powerpoint_capability.py`.
+
+| Construct | Status |
+| --- | --- |
+| Text body | Implemented |
+| Basic shape (rect/ellipse/line/card) | Partial |
+| Picture | Implemented |
+| Native Chart + workbook | Partial (opt-in) |
+| Native Table | Partial (opt-in) |
+| Slide Master / Layout | Partial (STRUCTURED emit) |
+| Placeholder | Partial |
+| Speaker Notes | Implemented |
+| Connector | **Not implemented** |
+| Preset Shape library | **Not implemented** |
+| Freeform Path | **Not implemented** |
+| Group | **Not implemented** |
+| Gradient fill | **Not implemented** |
+| Pattern fill | **Not implemented** |
+| Shadow effect | **Not implemented** |
+| Glow effect | **Not implemented** |
+| Picture / shape crop model | **Not implemented** |
+| Slide Transition | **Not implemented** |
+
+Current verdict: **capability map exists; most of the map is still empty**.
+`native_depth_is_shallow()` remains true while unimplemented rows outnumber
+fully implemented ones.
 
 ## Workflow routes
 
@@ -82,4 +119,4 @@ Canonical SVG may be explored as a renderer backend, but it must not replace
 
 Design ideas were informed by the MIT-licensed `hugohe3/ppt-master` project; this
 implementation uses Archium's own domain model and contains no copied converter
-code.
+code. Inspiration does **not** imply feature parity with ppt-master native depth.

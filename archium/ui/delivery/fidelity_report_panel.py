@@ -77,7 +77,7 @@ def render_fidelity_report_panel(
             + (f" 原因：{resolved.fallback_reason}" if resolved.fallback_reason else "")
         )
     elif resolved.final_fidelity == ExportFidelityLevel.FULLY_EDITABLE:
-        st.success("全部页面均为原生可编辑，未发生静默降级。")
+        st.success("全部页面均在支持范围内可编辑，未发生静默降级。")
 
     with st.expander("逐页详情", expanded=False):
         for slide in resolved.slides:

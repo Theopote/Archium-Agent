@@ -47,7 +47,7 @@ def _render_filters() -> RadarFilter:
         query = st.text_input("搜索", placeholder="名称、概念、页面模型…", key="radar_filter_query")
 
     flags = st.columns(2)
-    editable_only = flags[0].checkbox("仅原生可编辑 PPTX", key="radar_filter_editable")
+    editable_only = flags[0].checkbox("仅支持范围内可编辑 PPTX", key="radar_filter_editable")
     local_llm_only = flags[1].checkbox("仅支持本地 LLM", key="radar_filter_local_llm")
 
     return RadarFilter(

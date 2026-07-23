@@ -51,7 +51,7 @@ _FIDELITY_RANK: dict[ExportFidelityLevel, int] = {
 }
 
 FIDELITY_LABELS_ZH: dict[ExportFidelityLevel, str] = {
-    ExportFidelityLevel.FULLY_EDITABLE: "原生可编辑",
+    ExportFidelityLevel.FULLY_EDITABLE: "支持范围内可编辑",
     ExportFidelityLevel.HYBRID_EDITABLE: "混合可编辑",
     ExportFidelityLevel.TEXT_EDITABLE: "文字可编辑",
     ExportFidelityLevel.RASTER_FALLBACK: "图片降级",
