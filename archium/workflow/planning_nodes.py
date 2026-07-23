@@ -447,6 +447,12 @@ class PlanningWorkflowNodes:
         )
 
         bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
+        if not is_mission_approval_current(bundle.mission):
+            return {
+                "current_step": WorkflowStep.FAILED.value,
+                "errors": ["任务理解审批已失效或不完整，无法继续下游规划"],
+                "mission": bundle.mission,
+            }
         resume_state = {
             **pause,
             "mission": bundle.mission,
@@ -565,6 +571,12 @@ class PlanningWorkflowNodes:
         interrupt({"gate": "plan_approval", "step": WorkflowStep.PLANNING_AWAIT_APPROVAL.value})
 
         plan = self._runtime.missions.get_deliverable_plan(plan.id) if plan is not None else None
+        if plan is None or plan.approval_status != ApprovalStatus.APPROVED:
+            return {
+                "current_step": WorkflowStep.FAILED.value,
+                "errors": ["成果计划尚未批准，无法继续"],
+                "deliverable_plan": plan,
+            }
         mission = self._runtime.missions.get_mission(mission_id)
         resume_state = {
             **pause,

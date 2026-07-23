@@ -171,6 +171,7 @@ class PresentationReviewService:
     def update_brief(self, brief_id: UUID, update: BriefUpdate) -> PresentationBrief:
         brief = self._require_brief(brief_id)
         self._brief_history.record_snapshot(brief, RevisionSource.MANUAL_EDIT)
+        previous_status = brief.approval_status
         brief.title = update.title.strip()
         brief.audience = update.audience.strip()
         brief.purpose = update.purpose.strip()
@@ -185,7 +186,10 @@ class PresentationReviewService:
         brief.excluded_topics = list(update.excluded_topics)
         brief.approval_status = ApprovalStatus.DRAFT
         brief.touch()
-        return self._presentations.save_brief(brief)
+        saved = self._presentations.save_brief(brief)
+        if previous_status in {ApprovalStatus.APPROVED, ApprovalStatus.CHANGES_PENDING}:
+            self._invalidate_downstream_after_brief_edit(saved.presentation_id)
+        return saved
 
     def approve_brief(self, brief_id: UUID) -> PresentationBrief:
         brief = self._require_brief(brief_id)
@@ -200,13 +204,17 @@ class PresentationReviewService:
     def update_storyline(self, storyline_id: UUID, update: StorylineUpdate) -> Storyline:
         storyline = self._require_storyline(storyline_id)
         self._storyline_history.record_snapshot(storyline, RevisionSource.MANUAL_EDIT)
+        previous_status = storyline.approval_status
         storyline.thesis = update.thesis.strip()
         storyline.narrative_pattern = update.narrative_pattern.strip() or "problem_solution"
         storyline.narrative_arc = _narrative_arc_from_update(update.narrative_arc)
         storyline.chapters = [_chapter_from_update(item) for item in update.chapters]
         storyline.approval_status = ApprovalStatus.DRAFT
         storyline.touch()
-        return self._presentations.save_storyline(storyline)
+        saved = self._presentations.save_storyline(storyline)
+        if previous_status in {ApprovalStatus.APPROVED, ApprovalStatus.CHANGES_PENDING}:
+            self._invalidate_downstream_after_storyline_edit(saved.presentation_id)
+        return saved
 
     def approve_storyline(self, storyline_id: UUID) -> Storyline:
         storyline = self._require_storyline(storyline_id)
@@ -411,6 +419,44 @@ class PresentationReviewService:
         if issue is None:
             raise WorkflowError(f"Review issue {issue_id} not found")
         return issue
+
+    def _invalidate_downstream_after_brief_edit(self, presentation_id: UUID) -> None:
+        """Mark approved storyline/outline stale after brief content changes."""
+        presentation = self._presentations.get_presentation(presentation_id)
+        if presentation is None:
+            return
+        if presentation.current_storyline_id is not None:
+            storyline = self._presentations.get_storyline(presentation.current_storyline_id)
+            if storyline is not None and storyline.approval_status in {
+                ApprovalStatus.APPROVED,
+                ApprovalStatus.CHANGES_PENDING,
+            }:
+                storyline.approval_status = ApprovalStatus.CHANGES_PENDING
+                storyline.touch()
+                self._presentations.save_storyline(storyline)
+        if presentation.current_outline_id is not None:
+            outline = self._presentations.get_outline(presentation.current_outline_id)
+            if outline is not None and outline.approval_status in {
+                ApprovalStatus.APPROVED,
+                ApprovalStatus.CHANGES_PENDING,
+            }:
+                outline.approval_status = ApprovalStatus.CHANGES_PENDING
+                outline.touch()
+                self._presentations.save_outline(outline)
+
+    def _invalidate_downstream_after_storyline_edit(self, presentation_id: UUID) -> None:
+        """Mark approved outline stale after storyline content changes."""
+        presentation = self._presentations.get_presentation(presentation_id)
+        if presentation is None or presentation.current_outline_id is None:
+            return
+        outline = self._presentations.get_outline(presentation.current_outline_id)
+        if outline is not None and outline.approval_status in {
+            ApprovalStatus.APPROVED,
+            ApprovalStatus.CHANGES_PENDING,
+        }:
+            outline.approval_status = ApprovalStatus.CHANGES_PENDING
+            outline.touch()
+            self._presentations.save_outline(outline)
 
 
 def _chapter_from_update(update: ChapterUpdate) -> Chapter:

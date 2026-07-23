@@ -14,9 +14,10 @@ from archium.application.deliverable_parser import (
 )
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.mission_history_service import DeliverablePlanHistoryService
+from archium.application.project_mission_service import ensure_mission_approval_current
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
-from archium.domain.enums import DeliverableType, RevisionSource
+from archium.domain.enums import ApprovalStatus, DeliverableType, RevisionSource
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
@@ -79,6 +80,7 @@ class DeliverablePlanningService:
     ) -> DeliverablePlanResult:
         mission = self._require_mission(mission_id)
         if require_ready:
+            ensure_mission_approval_current(mission)
             self._clarification.ensure_can_continue(mission_id)
 
         workstreams = self._missions.list_workstreams(mission_id)
@@ -161,18 +163,29 @@ class DeliverablePlanningService:
     ) -> DeliverablePlan:
         plan = self._require_plan(plan_id)
         selected_set = set(selected_ids)
+        changed = False
         for item in plan.deliverables:
-            if item.id in selected_set:
+            should_select = item.id in selected_set
+            if item.selected == should_select:
+                continue
+            changed = True
+            if should_select:
                 item.select()
             else:
                 item.deselect()
+        if not changed:
+            return plan
+        self._invalidate_plan_approval_if_needed(plan)
         plan.touch()
         return self._missions.save_deliverable_plan(plan)
 
     def select_deliverable(self, plan_id: UUID, deliverable_id: str) -> DeliverablePlan:
         plan = self._require_plan(plan_id)
         target = self._find_deliverable(plan, deliverable_id)
+        if target.selected:
+            return plan
         target.select()
+        self._invalidate_plan_approval_if_needed(plan)
         plan.touch()
         return self._missions.save_deliverable_plan(plan)
 
@@ -181,7 +194,10 @@ class DeliverablePlanningService:
         target = self._find_deliverable(plan, deliverable_id)
         if target.required:
             raise WorkflowError(f"必要成果「{target.title}」不能取消选择")
+        if not target.selected:
+            return plan
         target.deselect()
+        self._invalidate_plan_approval_if_needed(plan)
         plan.touch()
         return self._missions.save_deliverable_plan(plan)
 
@@ -294,3 +310,8 @@ class DeliverablePlanningService:
         if plan is None:
             raise WorkflowError(f"成果规划 {plan_id} 不存在")
         return plan
+
+    @staticmethod
+    def _invalidate_plan_approval_if_needed(plan: DeliverablePlan) -> None:
+        if plan.approval_status == ApprovalStatus.APPROVED:
+            plan.invalidate_approval()

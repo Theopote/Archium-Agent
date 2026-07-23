@@ -15,6 +15,7 @@ from archium.application.mission_snapshots import (
     mission_to_snapshot,
 )
 from archium.application.project_mission_service import ProjectMissionService
+from tests.fixtures.mission_approval import approve_generated_mission
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.domain.enums import RevisionEntityType, RevisionSource, WorkstreamType
 from archium.domain.project import Project
@@ -132,6 +133,8 @@ def test_workstream_recommendation_reason_persisted(
     project_id: UUID,
 ) -> None:
     mission = ProjectMissionService(db_session, llm).generate_mission(project_id, TEMPLE_TASK)
+    mission_service = ProjectMissionService(db_session, llm)
+    approve_generated_mission(mission_service, mission.mission)
     result = WorkstreamPlanningService(db_session, llm).plan_workstreams(mission.mission.id)
     historical = next(
         item for item in result.workstreams if item.workstream_type == WorkstreamType.HISTORICAL_RESEARCH

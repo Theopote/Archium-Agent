@@ -53,6 +53,16 @@ def test_workflow_gate_rejects_stale_approval_hash() -> None:
     assert not is_mission_approval_current(mission)
 
 
+def test_ensure_mission_approval_current_rejects_unapproved() -> None:
+    from archium.application.project_mission_service import ensure_mission_approval_current
+    from archium.exceptions import WorkflowError
+    import pytest
+
+    mission = _mission()
+    with pytest.raises(WorkflowError, match="尚未批准"):
+        ensure_mission_approval_current(mission)
+
+
 def test_narrative_mode_and_art_direction_are_independent_axes() -> None:
     assert "narrative_mode" not in ArtDirection.model_fields
     assert "art_direction" not in ProjectMission.model_fields

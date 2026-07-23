@@ -13,6 +13,7 @@ from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 from sqlalchemy.orm import Session
 
+from tests.fixtures.mission_approval import approve_generated_mission
 from tests.fixtures.mock_deliverable_responses import (
     GREEN_CAMPUS_DELIVERABLE_PLAN_JSON,
     TEMPLE_DELIVERABLE_PLAN_JSON,
@@ -77,6 +78,7 @@ def _prepare_temple_mission(
     project: Project,
 ):
     generated = mission_service.generate_mission(project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     workstream_service.plan_workstreams(generated.mission.id)
     return generated.mission
 
@@ -143,12 +145,45 @@ def test_select_deselect_and_approve(
     assert approved.approval_status == ApprovalStatus.APPROVED
 
 
+def test_selection_edit_invalidates_approved_plan(
+    mission_service: ProjectMissionService,
+    workstream_service: WorkstreamPlanningService,
+    deliverable_service: DeliverablePlanningService,
+    temple_project: Project,
+) -> None:
+    mission = _prepare_temple_mission(mission_service, workstream_service, temple_project)
+    result = deliverable_service.plan_deliverables(mission.id)
+    approved = deliverable_service.approve_plan(result.plan.id)
+    assert approved.approval_status == ApprovalStatus.APPROVED
+
+    optional = next(
+        (item for item in approved.deliverables if not item.required),
+        None,
+    )
+    assert optional is not None
+
+    if optional.selected:
+        updated = deliverable_service.deselect_deliverable(approved.id, optional.id)
+    else:
+        updated = deliverable_service.select_deliverable(approved.id, optional.id)
+
+    assert updated.approval_status == ApprovalStatus.DRAFT
+
+    # Idempotent re-apply must not keep a stale approved status after prior invalidation.
+    again = deliverable_service.set_deliverable_selection(
+        updated.id,
+        [item.id for item in updated.deliverables if item.selected],
+    )
+    assert again.approval_status == ApprovalStatus.DRAFT
+
+
 def test_requires_workstreams_first(
     mission_service: ProjectMissionService,
     deliverable_service: DeliverablePlanningService,
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     with pytest.raises(WorkflowError, match="工作路径"):
         deliverable_service.plan_deliverables(generated.mission.id)
 
@@ -171,6 +206,10 @@ def test_green_campus_prefers_report_not_scheme_ppt(
             task_statement="园区绿色低碳专项建议，out of scope：施工图、设备选型、正式碳认证、完整方案PPT",
             out_of_scope=["施工图", "设备选型", "正式碳认证", "完整建筑设计方案汇报"],
         ),
+    )
+    approve_generated_mission(
+        mission_service,
+        mission_service.get_mission_bundle(generated.mission.id).mission,
     )
     workstream_service.plan_workstreams(generated.mission.id)
     result = deliverable_service.plan_deliverables(generated.mission.id)

@@ -15,6 +15,7 @@ from archium.application.mission_to_presentation_request import (
     build_presentation_bridge,
 )
 from archium.application.project_mission_service import ProjectMissionService
+from tests.fixtures.mission_approval import approve_generated_mission
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
@@ -45,6 +46,7 @@ def test_mission_golden_case(
     deliverable_service = DeliverablePlanningService(db_session, llm, settings=test_settings)  # type: ignore[arg-type]
 
     generation = mission_service.generate_mission(project.id, case.task_description)
+    approve_generated_mission(mission_service, generation.mission)
     workstream_result = workstream_service.plan_workstreams(
         generation.mission.id,
         require_ready=True,

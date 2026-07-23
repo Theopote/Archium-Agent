@@ -52,6 +52,11 @@ class DeliverablePlan(IdentifiedModel, VersionedModel, TimestampedModel):
         self.approval_status = ApprovalStatus.APPROVED
         self.touch()
 
+    def invalidate_approval(self) -> None:
+        """Clear approval after plan content/selection changes."""
+        self.approval_status = ApprovalStatus.DRAFT
+        self.touch()
+
     def reject(self) -> None:
         self.approval_status = ApprovalStatus.REJECTED
         self.touch()

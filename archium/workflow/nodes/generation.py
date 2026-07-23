@@ -38,6 +38,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
         if existing is not None:
             refreshed = self._presentations.get_brief(existing.id)
             if refreshed is not None:
+                if (
+                    not state.get("require_brief_review")
+                    and refreshed.approval_status != ApprovalStatus.APPROVED
+                ):
+                    refreshed.approve()
+                    refreshed = self._presentations.save_brief(refreshed)
                 return {"brief": refreshed, "current_step": WorkflowStep.BRIEF.value}
 
         try:
@@ -241,6 +247,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
         if existing is not None:
             refreshed = self._presentations.get_storyline(existing.id)
             if refreshed is not None:
+                if (
+                    not state.get("require_storyline_review")
+                    and refreshed.approval_status != ApprovalStatus.APPROVED
+                ):
+                    refreshed.approve()
+                    refreshed = self._presentations.save_storyline(refreshed)
                 return {"storyline": refreshed, "current_step": WorkflowStep.STORYLINE.value}
 
         brief = state.get("brief")

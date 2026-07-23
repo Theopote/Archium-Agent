@@ -448,10 +448,18 @@ class ReviewNodesMixin(WorkflowNodeBase):
         ):
             gate = "manuscript"
             step = WorkflowStep.REVIEW_MANUSCRIPT.value
-        elif brief is not None and brief.approval_status != ApprovalStatus.APPROVED:
+        elif (
+            state.get("require_brief_review")
+            and brief is not None
+            and brief.approval_status != ApprovalStatus.APPROVED
+        ):
             gate = "brief"
             step = WorkflowStep.REVIEW_BRIEF.value
-        elif storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:
+        elif (
+            state.get("require_storyline_review")
+            and storyline is not None
+            and storyline.approval_status != ApprovalStatus.APPROVED
+        ):
             gate = "storyline"
             step = WorkflowStep.REVIEW_STORYLINE.value
         elif state.get("require_outline_review") and outline is not None and outline.approval_status != ApprovalStatus.APPROVED:

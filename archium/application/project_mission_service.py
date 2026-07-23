@@ -375,10 +375,21 @@ def suggest_narrative_mode(mission: ProjectMission) -> NarrativeModeSuggestion:
 
 
 def mission_approval_hash(mission: ProjectMission) -> str:
-    """Hash all approval-bearing Mission content, including narrative mode."""
+    """Hash human-approved Mission content, including narrative mode.
+
+    Downstream planning sync fields (recommended workstream/deliverable ids) are
+    excluded so workstream/deliverable planning does not invalidate approval.
+    """
     payload = mission.model_dump(
         mode="json",
-        exclude={"approval_hash", "approval_status", "created_at", "updated_at"},
+        exclude={
+            "approval_hash",
+            "approval_status",
+            "created_at",
+            "updated_at",
+            "recommended_workstream_ids",
+            "recommended_deliverable_ids",
+        },
     )
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -391,3 +402,13 @@ def is_mission_approval_current(mission: ProjectMission) -> bool:
         and mission.approval_hash is not None
         and mission.approval_hash == mission_approval_hash(mission)
     )
+
+
+def ensure_mission_approval_current(mission: ProjectMission) -> None:
+    """Raise when mission approval is missing, stale, or tampered."""
+    if is_mission_approval_current(mission):
+        return
+    if mission.approval_status != ApprovalStatus.APPROVED:
+        raise WorkflowError("任务理解尚未批准，无法继续下游规划。请先批准任务理解。")
+    raise WorkflowError("任务理解审批已失效（内容已变更或校验失败），请重新批准后再继续。")
+

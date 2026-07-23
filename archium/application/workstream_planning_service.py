@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from archium.agents._helpers import build_project_context, to_json
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.mission_history_service import WorkstreamHistoryService
+from archium.application.project_mission_service import ensure_mission_approval_current
 from archium.application.workstream_parser import (
     parse_workstream_plan_draft,
     validate_workstream_plan_draft,
@@ -70,6 +71,7 @@ class WorkstreamPlanningService:
     ) -> WorkstreamPlanResult:
         mission = self._require_mission(mission_id)
         if require_ready:
+            ensure_mission_approval_current(mission)
             self._clarification.ensure_can_continue(mission_id)
 
         gaps = self._missions.list_knowledge_gaps(mission_id)

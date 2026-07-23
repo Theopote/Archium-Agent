@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from archium.application.project_mission_service import ProjectMissionService
+from tests.fixtures.mission_approval import approve_generated_mission
 from archium.application.workstream_parser import parse_workstream_plan_draft
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.domain.enums import WorkstreamStatus, WorkstreamType
@@ -74,6 +75,7 @@ def test_plan_workstreams_for_temple_mission(
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     result = workstream_service.plan_workstreams(generated.mission.id)
     types = {item.workstream_type for item in result.workstreams}
     assert WorkstreamType.HISTORICAL_RESEARCH in types
@@ -89,6 +91,7 @@ def test_case_study_has_dependencies(
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     result = workstream_service.plan_workstreams(generated.mission.id)
     case_study = next(
         item for item in result.workstreams if item.workstream_type == WorkstreamType.CASE_STUDY
@@ -107,6 +110,7 @@ def test_select_and_deselect_workstream(
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     result = workstream_service.plan_workstreams(generated.mission.id)
     target = result.workstreams[0]
     deselected = workstream_service.deselect_workstream(target.id)
@@ -123,6 +127,7 @@ def test_set_workstream_selection(
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     result = workstream_service.plan_workstreams(generated.mission.id)
     keep = result.workstreams[0].id
     updated = workstream_service.set_workstream_selection(generated.mission.id, [keep])
@@ -136,6 +141,7 @@ def test_replace_existing_workstreams(
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     first = workstream_service.plan_workstreams(generated.mission.id)
     second = workstream_service.plan_workstreams(generated.mission.id, replace_existing=True)
     assert len(second.workstreams) == len(first.workstreams)
@@ -150,6 +156,7 @@ def test_add_custom_workstream(
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     workstream_service.plan_workstreams(generated.mission.id)
     custom = Workstream(
         project_id=temple_project.id,
@@ -186,6 +193,7 @@ def test_green_campus_avoids_full_design_pipeline(
             task_statement="园区绿色低碳专项建议，明确 out of scope：施工图、设备选型、正式碳认证",
         ),
     )
+    approve_generated_mission(mission_service, mission_service.get_mission_bundle(generated.mission.id).mission)
     result = workstream_service.plan_workstreams(generated.mission.id)
     types = {item.workstream_type for item in result.workstreams}
     assert WorkstreamType.SUSTAINABILITY in types or WorkstreamType.TECHNICAL_STUDY in types
@@ -212,6 +220,7 @@ def test_empty_plan_rejected(
     db_session: Session,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
 
     def empty_selector(request: LLMRequest) -> str | None:
         if "WorkstreamPlan JSON" in request.user_prompt:
@@ -231,6 +240,7 @@ def test_blocking_gap_indices_resolved(
     temple_project: Project,
 ) -> None:
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
     result = workstream_service.plan_workstreams(generated.mission.id)
     historical = next(
         item
