@@ -66,7 +66,7 @@ SlideSpec 写入 `page_archetype` + `required_evidence_slots`；缺槽位 → `G
 
 用户 `SlideAssetBinding` 优先落到带 `[grammar:role]` 的证据槽；开篇页 hero 优先取 `historic_or_context_photo` 已绑定资产，缺省仍渲染 `grammar:…` 占位。
 
-Outline / Review 意图卡可编辑 `page_archetype`（空=自动识别）；保存时合并原型证据槽提示到 `required_evidence`。
+Outline / Review 意图卡与 Design Brief 面板可编辑 `page_archetype`（空/auto=自动识别）；保存时合并原型证据槽提示，Brief 变更同步回 SlideIntent。
 
 规划上游（VG-002）：
 

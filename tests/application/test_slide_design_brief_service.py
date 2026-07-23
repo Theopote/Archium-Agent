@@ -188,3 +188,32 @@ def test_generate_all_assigns_grammar_archetype_for_problem_page(
     intent_diag = next(i for i in refreshed.page_intents if i.order == 3)
     assert intent_diag.page_archetype is not None
     assert intent_diag.page_archetype.value == "site_problem_diagnosis"
+
+
+def test_update_brief_sets_page_archetype_and_syncs_intent(db_session: Session) -> None:
+    saved_outline = _seed_outline(db_session)
+    service = SlideDesignBriefService(db_session)
+    service.generate_all(saved_outline.id)
+    updated = service.update_brief(
+        saved_outline.id,
+        SlideDesignBriefUpdate(
+            page_order=0,
+            page_task="老院区更新开篇",
+            central_claim="建立叙事张力",
+            primary_visual_type="photo",
+            page_archetype="narrative_opening",
+            required_content=["历史语境"],
+            status=ApprovalStatus.PENDING.value,
+        ),
+    )
+    db_session.commit()
+    assert updated.page_archetype is not None
+    assert updated.page_archetype.value == "narrative_opening"
+    assert any("historic_or_context_photo" in item for item in updated.required_content)
+
+    outline = PresentationRepository(db_session).get_outline(saved_outline.id)
+    assert outline is not None
+    intent = next(item for item in outline.page_intents if item.order == 0)
+    assert intent.page_archetype is not None
+    assert intent.page_archetype.value == "narrative_opening"
+

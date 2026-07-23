@@ -15,12 +15,21 @@ from archium.application.slide_design_brief_service import (
 from archium.domain.outline import OutlinePlan
 from archium.domain.enums import ApprovalStatus
 from archium.application.slide_design_brief_heuristics import format_design_brief_card
+from archium.application.visual.visual_grammar_labels import (
+    archetype_select_options,
+    coerce_archetype_selection,
+    format_archetype_option,
+    grammar_evidence_hints,
+    merge_grammar_evidence,
+    selection_value_for_intent,
+)
 from archium.domain.slide_design_brief import (
     BRIEF_STATUS_LABELS_ZH,
     SlideDesignBrief,
     index_design_briefs,
 )
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.visual.visual_grammar import PageArchetype
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -186,6 +195,31 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
             format_func=lambda value: _DENSITY_LABELS.get(value, value),
             key=f"brief_density_{outline_id}_{brief.page_order}",
         )
+        archetype_options = archetype_select_options()
+        current_archetype = selection_value_for_intent(brief.page_archetype)
+        if current_archetype not in archetype_options:
+            archetype_options = [current_archetype, *archetype_options]
+        archetype_choice = st.selectbox(
+            "视觉语法原型",
+            options=archetype_options,
+            index=archetype_options.index(current_archetype),
+            format_func=format_archetype_option,
+            key=f"brief_archetype_{outline_id}_{brief.page_order}",
+            help="决定证据槽位与版式偏好；与页面意图卡同步。",
+        )
+        selected_archetype = coerce_archetype_selection(archetype_choice)
+        hints = grammar_evidence_hints(selected_archetype)
+        if hints:
+            st.caption("原型证据槽：" + "；".join(hints))
+        elif selected_archetype == PageArchetype.GENERIC:
+            st.caption("通用原型：不强制证据槽。")
+        else:
+            st.caption("自动识别：保留当前识别结果或在重生成时再判定。")
+        required_content = st.text_area(
+            "必须内容（每行一条）",
+            value="\n".join(brief.required_content),
+            key=f"brief_required_{outline_id}_{brief.page_order}",
+        )
         forbidden = st.text_area(
             "禁止内容（每行一条）",
             value="\n".join(brief.forbidden_content),
@@ -198,6 +232,16 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
         )
 
     if st.button("保存设计摘要", type="primary", key=f"brief_save_{brief.page_order}"):
+        required_items = [
+            line.strip() for line in required_content.splitlines() if line.strip()
+        ]
+        required_items = merge_grammar_evidence(required_items, selected_archetype)
+        # Persist "auto" explicitly so service can clear archetype; None would mean keep.
+        archetype_payload = (
+            "auto"
+            if selected_archetype is None
+            else selected_archetype.value
+        )
         update = SlideDesignBriefUpdate(
             page_order=brief.page_order,
             page_task=page_task.strip(),
@@ -208,11 +252,12 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
             evidence_ids=list(brief.evidence_ids),
             layout_family=layout_family.strip(),
             expected_density=density,
+            page_archetype=archetype_payload,
             drawing_policy=brief.drawing_policy.model_dump(mode="json")
             if brief.drawing_policy
             else None,
             image_policy=brief.image_policy.model_dump(mode="json") if brief.image_policy else None,
-            required_content=list(brief.required_content),
+            required_content=required_items,
             forbidden_content=[line.strip() for line in forbidden.splitlines() if line.strip()],
             protection_rules=[line.strip() for line in protection.splitlines() if line.strip()],
             status=brief.status.value,

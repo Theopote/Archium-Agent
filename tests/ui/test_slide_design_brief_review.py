@@ -10,6 +10,8 @@ def test_design_brief_panel_has_approve_actions() -> None:
     assert "批准本页" in source
     assert "批量批准" in source
     assert "重生成摘要" in source
+    assert "视觉语法原型" in source
+    assert "page_archetype" in source
 
 
 def test_outline_page_has_design_brief_tab() -> None:

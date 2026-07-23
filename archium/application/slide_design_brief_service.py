@@ -37,6 +37,8 @@ from archium.domain.visual.layout_family_normalize import (
     layout_family_value,
 )
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
+from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
+from archium.application.visual.visual_grammar_labels import merge_grammar_evidence
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 
@@ -202,6 +204,10 @@ class SlideDesignBriefService:
             if update.image_policy
             else previous.image_policy
         )
+        page_archetype = _resolve_page_archetype_update(previous, update)
+        required_content = list(update.required_content)
+        if page_archetype != previous.page_archetype:
+            required_content = merge_grammar_evidence(required_content, page_archetype)
 
         briefs[index] = SlideDesignBrief(
             slide_id=previous.slide_id,
@@ -214,10 +220,10 @@ class SlideDesignBriefService:
             evidence_ids=list(update.evidence_ids),
             layout_family=coerce_layout_family(update.layout_family),
             expected_density=update.expected_density,  # type: ignore[arg-type]
-            page_archetype=previous.page_archetype,
+            page_archetype=page_archetype,
             drawing_policy=drawing_policy,
             image_policy=image_policy,
-            required_content=list(update.required_content),
+            required_content=required_content,
             forbidden_content=list(update.forbidden_content),
             protection_rules=list(update.protection_rules) or list(previous.protection_rules),
             template_usage_brief_id=(
@@ -232,6 +238,18 @@ class SlideDesignBriefService:
             ),
             status=next_status,
         )
+        # Keep matching SlideIntent archetype in sync for planner inheritance.
+        stamped_intents = []
+        for intent in outline.page_intents:
+            if intent.order == update.page_order and page_archetype is not None:
+                stamped_intents.append(
+                    intent.model_copy(update={"page_archetype": page_archetype})
+                )
+            elif intent.order == update.page_order and page_archetype is None:
+                stamped_intents.append(intent.model_copy(update={"page_archetype": None}))
+            else:
+                stamped_intents.append(intent)
+        outline = outline.model_copy(update={"page_intents": stamped_intents})
         saved = self._persist_briefs(outline, briefs)
         return next(item for item in saved if item.page_order == update.page_order)
 
@@ -371,7 +389,6 @@ class SlideDesignBriefService:
         from archium.application.visual.visual_grammar_recognition import (
             recognize_page_archetype_from_intent,
         )
-        from archium.domain.visual.visual_grammar import PageArchetype
 
         recognition = recognize_page_archetype_from_intent(intent)
         page_archetype = (
@@ -472,8 +489,24 @@ class SlideDesignBriefService:
                 previous.primary_visual_type != update.primary_visual_type.strip(),
                 previous.layout_family != coerce_layout_family(update.layout_family),
                 list(previous.primary_asset_ids) != list(update.primary_asset_ids),
+                previous.page_archetype
+                != _resolve_page_archetype_update(previous, update),
             ]
         )
+
+
+def _resolve_page_archetype_update(
+    previous: SlideDesignBrief,
+    update: SlideDesignBriefUpdate,
+) -> PageArchetype | None:
+    """Apply archetype from update: None=keep, ''/'auto'=clear, else coerce."""
+    raw = update.page_archetype
+    if raw is None:
+        return previous.page_archetype
+    token = str(raw).strip()
+    if token == "" or token.casefold() == "auto":
+        return None
+    return coerce_page_archetype(token) or previous.page_archetype
 
 
 def _ensure_briefs_aligned(outline: OutlinePlan) -> list[SlideDesignBrief]:

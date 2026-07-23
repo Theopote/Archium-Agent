@@ -70,6 +70,11 @@ def infer_primary_visual_type(expected_layout: str) -> str:
 
 def format_design_brief_card(brief: SlideDesignBrief) -> str:
     """Human-readable block for UI and prompts."""
+    from archium.application.visual.visual_grammar_labels import (
+        archetype_label,
+        grammar_evidence_hints,
+    )
+
     lines = [
         f"第 {brief.page_order + 1:02d} 页设计摘要",
         "",
@@ -84,8 +89,16 @@ def format_design_brief_card(brief: SlideDesignBrief) -> str:
             f"中心视觉：{brief.primary_visual_type}",
             f"构图：{(brief.layout_family.value if brief.layout_family else None) or '—'}",
             f"密度：{brief.expected_density}",
+            f"视觉语法：{archetype_label(brief.page_archetype)}",
         ]
     )
+    slot_hints = grammar_evidence_hints(brief.page_archetype)
+    if slot_hints:
+        lines.extend(["", "证据槽位："] + [f"- {item}" for item in slot_hints])
+    if brief.required_content:
+        lines.extend(
+            ["", "必须内容："] + [f"- {item}" for item in brief.required_content[:8]]
+        )
     if brief.primary_asset_ids:
         lines.append("主视觉素材：" + "、".join(str(aid) for aid in brief.primary_asset_ids[:4]))
     if brief.supporting_asset_ids:
