@@ -45,7 +45,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 | 领域模型 | `archium/domain/` | Pydantic 模型、枚举、不变量；视觉模型在 `domain/visual/`；**不**依赖 application / infrastructure / UI。自然语言解析器位于 `application/visual/`，domain 仅保留 `ParsedIntent` 等 DTO |
 | 应用服务 | `archium/application/` | 用例编排、审核、版本、导出、视觉编辑和修复；**不**依赖 `archium.ui`（版式就绪判断见 `visual/layout_readiness.py`） |
 | 工作流 | `archium/workflow/` | Planning、Presentation、Visual 的可暂停流程；审批门与 `require_*_review` 标志一致；成果选择变更会使 DeliverablePlan 审批失效 |
-| 基础设施 | `archium/infrastructure/` | 数据库、解析、LLM、检索、布局、渲染、存储、视觉分析；Repository 封装 ORM，Application 不直接 import `models` |
+| 基础设施 | `archium/infrastructure/` | 数据库、解析、LLM、检索、布局、渲染、存储、视觉分析；Repository 封装 ORM，Application 不直接 import `models`。事实冲突组仅在检测到真实冲突时写入（alias:/key:/empty:），不同指标（如用地/建面）不共享 catalog 冲突组 |
 | UI | `archium/ui/` | Streamlit 页面、Studio 面板和 canvas component |
 | Agents/Prompts | `archium/agents/`、`archium/prompts/` | 结构化生成与提示词；不是全部业务逻辑所在层 |
 
