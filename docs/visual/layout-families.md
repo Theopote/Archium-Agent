@@ -17,7 +17,7 @@
 | `metric_dashboard` | 指标看板 | ✅ |
 | `strategy_cards` | 策略卡片 | ✅ |
 | `textual_argument` | 文字论述 | ✅ |
-| `hybrid_canvas` | 图文混合分栏 | ✅ |
+| `hybrid_canvas` | 图文混合分栏（含 `site_context` / `narrative_opening`） | ✅ |
 
 Solver：`LayoutSolver` 已对 **全部 10 个** LayoutFamily 注册确定性 generator。`hybrid_canvas` 仍是确定性分栏，**不是** LLM 自由坐标。
 
@@ -56,7 +56,7 @@ VisualIntent (+ ArtDirection hints)
 
 | Archetype | 强制组合（语义） | 偏好 Family |
 |-----------|------------------|-------------|
-| `narrative_opening` | 历史/语境照 + 矛盾 + 空间问题 + 更新目标 | `hybrid_canvas` / `hero` |
+| `narrative_opening` | 历史/语境照 + 矛盾 + 空间问题 + 更新目标 | `hybrid_canvas`（variant=`narrative_opening`）/ `hero` |
 | `site_context_analysis` | 地图 + 交通 + 尺度 + 结论 | `hybrid_canvas` / `drawing_focus` |
 | `site_problem_diagnosis` | 照片 + 编号标签 + 分析 | `evidence_board` |
 | `design_strategy` | 关键词 + 概念图 + 逻辑回指问题 | `strategy_cards` / `analytical_diagram` |

@@ -185,7 +185,7 @@ _VISUAL_GRAMMAR: dict[PageArchetype, VisualPageRecipe] = {
         ),
         visual_type_hints=frozenset({VisualType.SITE_PHOTO, VisualType.RENDERING}),
         slide_type_hints=frozenset({SlideType.TITLE, SlideType.CONTENT}),
-        preferred_page_orders=frozenset({0, 1}),
+        preferred_page_orders=frozenset({0}),
     ),
     PageArchetype.SITE_CONTEXT_ANALYSIS: VisualPageRecipe(
         archetype=PageArchetype.SITE_CONTEXT_ANALYSIS,

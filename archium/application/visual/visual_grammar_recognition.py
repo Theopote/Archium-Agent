@@ -66,9 +66,19 @@ def _score_recipe(
         evidence.append(f"slide_type:{slide_type.value}")
 
     # Page-order is only a boost when other signals already fired.
+    # Opening pages: require a title hit before order boost, so mid-deck
+    # diagnosis/context slides with photos are not stolen by order∈{0,1}.
     if recipe.preferred_page_orders and order in recipe.preferred_page_orders and score >= 1.0:
-        score += 1.8
-        evidence.append(f"page_order:{order}")
+        title_hit = any(item.startswith("title:") for item in evidence)
+        if (
+            recipe.archetype == PageArchetype.NARRATIVE_OPENING
+            and not title_hit
+            and order != 0
+        ):
+            pass
+        else:
+            score += 1.8
+            evidence.append(f"page_order:{order}")
 
     return score, evidence
 

@@ -1,0 +1,85 @@
+{
+  "layout_family": "hybrid_canvas",
+  "layout_variant": "narrative_opening",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "historic_photo",
+  "reading_order": [
+    "title",
+    "historic_photo",
+    "problem_tension",
+    "spatial_contradiction",
+    "renewal_goal",
+    "source"
+  ],
+  "balance_strategy": "narrative_opening_split",
+  "whitespace_ratio": 0.3843,
+  "elements": [
+    {
+      "id": "historic_photo",
+      "role": "hero_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 1.191,
+      "w": 4.638,
+      "h": 3.354,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "problem_tension",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 5.505,
+      "y": 1.191,
+      "w": 3.795,
+      "h": 1.063,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "renewal_goal",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 5.505,
+      "y": 3.482,
+      "w": 3.795,
+      "h": 1.063,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "spatial_contradiction",
+      "role": "body_text",
+      "content_type": "text",
+      "x": 5.505,
+      "y": 2.337,
+      "w": 3.795,
+      "h": 1.063,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.657,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

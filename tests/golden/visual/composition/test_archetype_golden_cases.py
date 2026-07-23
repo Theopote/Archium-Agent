@@ -1,4 +1,4 @@
-"""Golden visual composition cases V19–V22 — Architectural Visual Grammar archetypes."""
+"""Golden visual composition cases V19–V23 — Architectural Visual Grammar archetypes."""
 
 from __future__ import annotations
 
@@ -116,8 +116,31 @@ def test_v22_before_after_transformation(intent_service: VisualIntentService) ->
     )
 
 
+def test_v23_narrative_opening(intent_service: VisualIntentService) -> None:
+    case = build_composition_case("v23_narrative_opening", intent_service)
+    assert case.intent.page_archetype == PageArchetype.NARRATIVE_OPENING
+    assert case.plan.layout_family == LayoutFamily.HYBRID_CANVAS
+    assert case.plan.layout_variant == "narrative_opening"
+    assert case.plan.balance_strategy == "narrative_opening_split"
+    hero = case.plan.element_by_id("historic_photo")
+    assert hero is not None
+    assert hero.fit_mode == ImageFit.COVER
+    assert hero.crop_policy == CropPolicy.COVER_CROP
+    assert case.plan.element_by_id("problem_tension") is not None
+    assert case.plan.element_by_id("spatial_contradiction") is not None
+    assert case.plan.element_by_id("renewal_goal") is not None
+    assert not case.report.has_critical()
+    assert_or_update_baseline(
+        GOLDEN_ROOT / case.case_id,
+        plan=case.plan,
+        report=case.report,
+        design=case.design,
+        title=case.title,
+    )
+
+
 def test_archetype_case_registry() -> None:
-    assert len(ARCHETYPE_CASE_IDS) == 4
+    assert len(ARCHETYPE_CASE_IDS) == 5
 
 
 def test_update_env_documented() -> None:

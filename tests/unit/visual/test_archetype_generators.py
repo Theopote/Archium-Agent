@@ -88,9 +88,10 @@ def test_diagnosis_split_layout_roles() -> None:
     slide = SlideSpec(
         presentation_id=uuid4(),
         chapter_id="problem",
-        order=1,
+        order=3,
         title="现状问题诊断",
         message="结构老化与空间不足并存，需优先解决安全与流线。",
+        slide_type=SlideType.IMAGE,
         key_points=["结构老化", "空间不足", "流线混乱"],
         visual_requirements=[
             SlideVisualRequirement(
@@ -125,6 +126,89 @@ def test_diagnosis_split_layout_roles() -> None:
     assert LayoutElementRole.BODY_TEXT in roles
     assert LayoutElementRole.LEAD_STATEMENT in roles
     assert any(element.id == "problem_tags" for element in plan.elements)
+    assert report.valid
+
+
+def test_narrative_opening_hybrid_layout() -> None:
+    photo_id = uuid4()
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="opening",
+        order=0,
+        title="老院区更新汇报开篇",
+        message="历史院区面临流线交叉与空间矛盾，更新目标是可持续运营。",
+        key_points=["流线交叉拥堵", "后勤空间老化", "可持续运营"],
+        visual_requirements=[
+            SlideVisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="历史院区照片",
+                preferred_asset_ids=[photo_id],
+            ),
+        ],
+    )
+    recognition = recognize_page_archetype(slide)
+    assert recognition.archetype == PageArchetype.NARRATIVE_OPENING
+
+    intent = VisualIntent(
+        slide_id=slide.id,
+        presentation_id=slide.presentation_id,
+        page_archetype=PageArchetype.NARRATIVE_OPENING,
+        communication_goal="建立叙事张力",
+        audience_takeaway=slide.message,
+        visual_priority="photo",
+        dominant_content_type=VisualContentType.MIXED,
+        hero_asset_id=photo_id,
+        preferred_layout_families=[LayoutFamily.HYBRID_CANVAS],
+    )
+    plan, report = _generate(
+        slide, intent, LayoutFamily.HYBRID_CANVAS, "narrative_opening"
+    )
+    assert plan.layout_variant == "narrative_opening"
+    assert plan.balance_strategy == "narrative_opening_split"
+    hero = next(el for el in plan.elements if el.id == "historic_photo")
+    assert hero.role == LayoutElementRole.HERO_VISUAL
+    assert hero.content_ref == str(photo_id)
+    assert {el.id for el in plan.elements} >= {
+        "historic_photo",
+        "problem_tension",
+        "spatial_contradiction",
+        "renewal_goal",
+    }
+    assert plan.reading_order[:2] == ["title", "historic_photo"]
+    assert report.valid
+
+
+def test_narrative_opening_placeholder_when_photo_missing() -> None:
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="opening",
+        order=0,
+        title="开篇：更新课题",
+        message="历史矛盾与更新目标并置。",
+        key_points=["现状矛盾", "空间问题", "更新目标"],
+        page_archetype=PageArchetype.NARRATIVE_OPENING,
+        visual_requirements=[
+            SlideVisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="[grammar:historic_or_context_photo] 历史照片",
+            ),
+        ],
+    )
+    intent = VisualIntent(
+        slide_id=slide.id,
+        presentation_id=slide.presentation_id,
+        page_archetype=PageArchetype.NARRATIVE_OPENING,
+        communication_goal="开篇",
+        audience_takeaway=slide.message,
+        visual_priority="photo",
+        dominant_content_type=VisualContentType.MIXED,
+        preferred_layout_families=[LayoutFamily.HYBRID_CANVAS],
+    )
+    plan, report = _generate(
+        slide, intent, LayoutFamily.HYBRID_CANVAS, "narrative_opening"
+    )
+    hero = next(el for el in plan.elements if el.id == "historic_photo")
+    assert hero.content_ref == "grammar:historic_or_context_photo"
     assert report.valid
 
 

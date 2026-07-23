@@ -22,9 +22,135 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
     family = LayoutFamily.HYBRID_CANVAS
 
     def generate(self, context: LayoutGeneratorContext) -> LayoutPlan:
-        if context.variant in {"site_context", "narrative_opening"}:
+        if context.variant == "narrative_opening":
+            return self._generate_narrative_opening(context)
+        if context.variant == "site_context":
             return self._generate_site_context(context)
         return self._generate_freeform(context)
+
+    def _generate_narrative_opening(self, context: LayoutGeneratorContext) -> LayoutPlan:
+        """叙事开篇：左历史/语境照，右矛盾 / 空间问题 / 更新目标。"""
+        safe = self._safe(context.design_system)
+        spacing = context.design_system.spacing
+        elements: list[LayoutElement] = []
+
+        title_h = self._title_band_height(context)
+        elements.append(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content=context.content.title,
+                x=safe.x,
+                y=safe.y,
+                width=safe.width,
+                height=title_h,
+                style_token="title",
+            )
+        )
+
+        source_reserve = 0.28 if context.content.source_text else 0.0
+        body_top = safe.y + title_h + spacing.sm
+        body = Rect(
+            safe.x,
+            body_top,
+            safe.width,
+            max(1.2, safe.bottom - body_top - source_reserve),
+        )
+        photo_panel, story_panel = split_horizontal(body, left_ratio=0.55, gap=spacing.lg)
+
+        hero_ref = context.content.hero_asset_ref or "grammar:historic_or_context_photo"
+        elements.append(
+            LayoutElement(
+                id="historic_photo",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                content_ref=hero_ref,
+                x=photo_panel.x,
+                y=photo_panel.y,
+                width=photo_panel.width,
+                height=photo_panel.height,
+                fit_mode=ImageFit.COVER,
+                crop_policy=CropPolicy.COVER_CROP,
+                style_token="photo",
+                locked=True,
+            )
+        )
+
+        labels = (
+            ("problem_tension", "现状矛盾", LayoutElementRole.LEAD_STATEMENT, "subtitle"),
+            ("spatial_contradiction", "空间问题", LayoutElementRole.BODY_TEXT, "body"),
+            ("renewal_goal", "更新目标", LayoutElementRole.ANNOTATION, "caption"),
+        )
+        points = list(context.content.key_points)
+        if context.content.message and len(points) < 3:
+            points = [*points, context.content.message]
+        while len(points) < 3:
+            points.append("")
+
+        story_rows = grid_cells(
+            story_panel, rows=3, cols=1, gap_x=0.0, gap_y=spacing.sm
+        )
+        reading = ["title", "historic_photo"]
+        for (slot_id, label, role, style), row, point in zip(
+            labels, story_rows, points, strict=True
+        ):
+            text = point.strip() or label
+            if point.strip() and not point.strip().startswith(label):
+                text = f"{label}\n{point.strip()}"
+            elements.append(
+                LayoutElement(
+                    id=slot_id,
+                    role=role,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=text,
+                    x=row.x,
+                    y=row.y,
+                    width=row.width,
+                    height=row.height,
+                    style_token=style,
+                )
+            )
+            reading.append(slot_id)
+
+        if context.content.source_text:
+            page = context.design_system.page
+            elements.append(
+                LayoutElement(
+                    id="source",
+                    role=LayoutElementRole.SOURCE,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=context.content.source_text,
+                    x=safe.x,
+                    y=page.height - page.margin_bottom - 0.22,
+                    width=safe.width * 0.7,
+                    height=0.22,
+                    style_token="source",
+                )
+            )
+            reading.append("source")
+
+        constraints = [
+            LayoutConstraint(
+                constraint_type=LayoutConstraintType.CONTAIN_WITHIN_SAFE_AREA,
+                element_ids=[el.id for el in elements],
+                priority=ConstraintPriority.REQUIRED,
+            ),
+            LayoutConstraint(
+                constraint_type=LayoutConstraintType.NO_OVERLAP,
+                element_ids=[el.id for el in elements],
+                priority=ConstraintPriority.REQUIRED,
+            ),
+        ]
+
+        return self._build_plan(
+            context,
+            elements=elements,
+            constraints=constraints,
+            hero_element_id="historic_photo",
+            reading_order=reading,
+            balance_strategy="narrative_opening_split",
+        )
 
     def _generate_site_context(self, context: LayoutGeneratorContext) -> LayoutPlan:
         """区位分析页：左地图、右交通/尺度/结论。"""
@@ -212,11 +338,7 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             constraints=constraints,
             hero_element_id="hero",
             reading_order=reading,
-            balance_strategy=(
-                "narrative_opening_split"
-                if context.variant == "narrative_opening"
-                else "site_context_split"
-            ),
+            balance_strategy="site_context_split",
         )
 
     def _generate_freeform(self, context: LayoutGeneratorContext) -> LayoutPlan:

@@ -22,7 +22,7 @@ locks the CI font set.
 | Case | Family | Focus | CI pptx baseline |
 |------|--------|-------|------------------|
 | `v1_drawing_focus` … `v7_hybrid_canvas` | various | Layout families | yes |
-| `v19_site_context_analysis` … `v22_before_after_transformation` | grammar archetypes | 区位 / 现状问题 / 设计策略 / 改造前后 | preview JSON only (promote later) |
+| `v19_site_context_analysis` … `v23_narrative_opening` | grammar archetypes | 区位 / 现状问题 / 设计策略 / 改造前后 / 叙事开篇 | preview JSON only (promote later) |
 | `v8_process_narrative_icons` | `process_narrative` | 语义图标箭头 | yes |
 | `v9_metric_dashboard_icons` | `metric_dashboard` | 指标装饰图标 | yes |
 | `v14_icons_stroke_recolor` | `metric_dashboard` | accent 主题描边 recolor | yes |

@@ -31,7 +31,7 @@ from archium.infrastructure.layout.layout_solver import LayoutSolver
 
 DOCUMENT_ID = UUID("11111111-1111-1111-1111-111111111111")
 
-# Stable asset UUIDs for archetype golden cases V19–V22.
+# Stable asset UUIDs for archetype golden cases V19–V23.
 ARCHETYPE_MAP_ASSET = UUID("a0190001-0001-4001-8001-000000000001")
 ARCHETYPE_PHOTO_ASSETS = (
     UUID("a0200001-0001-4001-8001-000000000001"),
@@ -40,6 +40,7 @@ ARCHETYPE_PHOTO_ASSETS = (
 ARCHETYPE_CONCEPT_ASSET = UUID("a0210001-0001-4001-8001-000000000001")
 ARCHETYPE_BEFORE_ASSET = UUID("a0220001-0001-4001-8001-000000000001")
 ARCHETYPE_AFTER_ASSET = UUID("a0220002-0001-4001-8001-000000000002")
+ARCHETYPE_OPENING_PHOTO = UUID("a0230001-0001-4001-8001-000000000001")
 
 
 @dataclass(frozen=True)
@@ -1021,6 +1022,47 @@ def _generate_archetype_plan(
     )
 
 
+def build_v23_narrative_opening(
+    intent_service: VisualIntentService,
+) -> CompositionCaseResult:
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="opening",
+        order=0,
+        title="老院区更新汇报开篇",
+        message="历史院区面临流线交叉与空间矛盾，更新目标是可持续运营。",
+        key_points=["流线交叉拥堵", "后勤空间老化", "可持续运营"],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="历史院区照片",
+                preferred_asset_ids=[ARCHETYPE_OPENING_PHOTO],
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="院史资料.pdf", page_number=1),
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    design = default_presentation_design_system()
+    plan = _generate_archetype_plan(
+        slide=slide,
+        intent=intent,
+        family=LayoutFamily.HYBRID_CANVAS,
+        design=design,
+        fallback_variant="narrative_opening",
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v23_narrative_opening",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
 def build_v19_site_context_analysis(
     intent_service: VisualIntentService,
 ) -> CompositionCaseResult:
@@ -1199,6 +1241,7 @@ ARCHETYPE_CASE_BUILDERS: dict[str, object] = {
     "v20_site_problem_diagnosis": build_v20_site_problem_diagnosis,
     "v21_design_strategy": build_v21_design_strategy,
     "v22_before_after_transformation": build_v22_before_after_transformation,
+    "v23_narrative_opening": build_v23_narrative_opening,
 }
 
 ARCHETYPE_CASE_IDS: tuple[str, ...] = tuple(ARCHETYPE_CASE_BUILDERS.keys())
