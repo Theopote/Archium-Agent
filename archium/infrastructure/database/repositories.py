@@ -249,6 +249,30 @@ class ProjectRepository:
             _handle_error("set current reference style profile", exc)
             raise
 
+    def get_current_cultural_narrative(self, project_id: UUID) -> CulturalNarrativePlan | None:
+        orm = self._session.get(ProjectORM, project_id)
+        if orm is None or orm.current_cultural_narrative_id is None:
+            return None
+        return self.get_cultural_narrative(orm.current_cultural_narrative_id)
+
+    def get_current_renovation_issue_map(self, project_id: UUID) -> RenovationIssueMap | None:
+        orm = self._session.get(ProjectORM, project_id)
+        if orm is None or orm.current_renovation_issue_map_id is None:
+            return None
+        return self.get_renovation_issue_map(orm.current_renovation_issue_map_id)
+
+    def get_current_reference_style_profile(self, project_id: UUID) -> ReferenceStyleProfile | None:
+        orm = self._session.get(ProjectORM, project_id)
+        if orm is None or orm.current_reference_style_profile_id is None:
+            return None
+        return self.get_reference_style_profile(orm.current_reference_style_profile_id)
+
+    def get_current_reference_style_profile_id(self, project_id: UUID) -> UUID | None:
+        orm = self._session.get(ProjectORM, project_id)
+        if orm is None:
+            return None
+        return orm.current_reference_style_profile_id
+
 
 class DocumentRepository:
     """CRUD operations for source documents and chunks."""

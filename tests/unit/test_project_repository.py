@@ -71,3 +71,35 @@ def test_update_missing_project_raises(repo: ProjectRepository) -> None:
     project = Project(name="不存在")
     with pytest.raises(RepositoryError, match="not found"):
         repo.update(project)
+
+
+def test_get_current_project_artifact_pointers(repo: ProjectRepository) -> None:
+    from archium.domain.reference_style import ReferenceStyleProfile
+    from archium.domain.renovation_issue import RenovationIssueMap
+
+    project = repo.create(Project(name="指针测试"))
+    assert repo.get_current_renovation_issue_map(project.id) is None
+    assert repo.get_current_reference_style_profile(project.id) is None
+    assert repo.get_current_reference_style_profile_id(project.id) is None
+
+    renovation_map = RenovationIssueMap(
+        project_id=project.id,
+        building_summary="老旧院区",
+    )
+    saved_map = repo.save_renovation_issue_map(renovation_map)
+    repo.set_current_renovation_issue_map(project.id, saved_map.id)
+    current_map = repo.get_current_renovation_issue_map(project.id)
+    assert current_map is not None
+    assert current_map.id == saved_map.id
+
+    profile = ReferenceStyleProfile(
+        project_id=project.id,
+        style_name="参考风格",
+    )
+    saved_profile = repo.save_reference_style_profile(profile)
+    repo.set_current_reference_style_profile(project.id, saved_profile.id)
+    current_profile = repo.get_current_reference_style_profile(project.id)
+    assert current_profile is not None
+    assert current_profile.id == saved_profile.id
+    assert repo.get_current_reference_style_profile_id(project.id) == saved_profile.id
+

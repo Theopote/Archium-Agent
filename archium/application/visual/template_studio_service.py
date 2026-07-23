@@ -452,12 +452,9 @@ class TemplateStudioService:
         )
 
     def _current_reference_style_id(self, project_id: UUID) -> UUID | None:
-        from archium.infrastructure.database.models import ProjectORM
+        from archium.infrastructure.database.repositories import ProjectRepository
 
-        orm = self._session.get(ProjectORM, project_id)
-        if orm is None:
-            return None
-        return orm.current_reference_style_profile_id
+        return ProjectRepository(self._session).get_current_reference_style_profile_id(project_id)
 
     def _layout_plan_from_template_page(
         self,

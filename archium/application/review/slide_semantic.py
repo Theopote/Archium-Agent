@@ -133,21 +133,7 @@ class SlideSemanticReviewer(ReviewRunnerBase):
         return self._persist(presentation_id, issues)
 
     def _load_current_renovation_map(self, project_id: UUID) -> RenovationIssueMap | None:
-        from archium.infrastructure.database.models import ProjectORM
-
-        orm = self._session.get(ProjectORM, project_id)
-        if orm is None or orm.current_renovation_issue_map_id is None:
-            return None
-        return ProjectRepository(self._session).get_renovation_issue_map(
-            orm.current_renovation_issue_map_id
-        )
+        return ProjectRepository(self._session).get_current_renovation_issue_map(project_id)
 
     def _load_current_reference_style(self, project_id: UUID) -> ReferenceStyleProfile | None:
-        from archium.infrastructure.database.models import ProjectORM
-
-        orm = self._session.get(ProjectORM, project_id)
-        if orm is None or orm.current_reference_style_profile_id is None:
-            return None
-        return ProjectRepository(self._session).get_reference_style_profile(
-            orm.current_reference_style_profile_id
-        )
+        return ProjectRepository(self._session).get_current_reference_style_profile(project_id)
