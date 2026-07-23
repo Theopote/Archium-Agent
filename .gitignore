@@ -65,3 +65,7 @@ alerts.log
 .idea/
 .vscode/
 *.swp
+
+# Local dev notes — CI screenshot imports (never commit)
+.dev-notes/ci-screenshot*
+.dev-notes/_ci_candidates_import*
