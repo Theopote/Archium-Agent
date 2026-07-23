@@ -1,0 +1,43 @@
+PPTX screenshot baseline candidate generation — 2026-07-23
+
+Poppler installation
+----------------------
+Method: winget install --id oschwartz10612.Poppler -e --accept-package-agreements --accept-source-agreements
+Version: 25.07.0-0
+Install path: C:\Users\navib\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin
+User PATH updated by winget (pdftoppm.exe available after shell refresh).
+
+Screenshot tools verification
+-----------------------------
+Command:
+  py -3 -c "from archium.infrastructure.renderers.pptx_screenshot import find_libreoffice, find_pdftoppm, libreoffice_screenshot_tools_available; print(find_libreoffice()); print(find_pdftoppm()); print(libreoffice_screenshot_tools_available())"
+
+Output:
+  C:\Program Files\LibreOffice\program\soffice.exe
+  C:\Users\navib\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin\pdftoppm.EXE
+  True
+
+Candidate generation
+--------------------
+Command: py -3 scripts/update_layout_pptx_screenshot_baselines.py
+Exit code: 0
+Cases: v1–v9 (CI-gated pptx_visual_regression defaults)
+Runtime: ~86 seconds
+
+Generated candidates (9 PNGs)
+-----------------------------
+     72819  tests/golden/visual/composition/v1_drawing_focus/candidates/pptx_screenshot.candidate.png
+    127833  tests/golden/visual/composition/v2_evidence_board/candidates/pptx_screenshot.candidate.png
+    166383  tests/golden/visual/composition/v3_comparative_matrix/candidates/pptx_screenshot.candidate.png
+    119459  tests/golden/visual/composition/v4_analytical_diagram/candidates/pptx_screenshot.candidate.png
+    137785  tests/golden/visual/composition/v5_process_narrative/candidates/pptx_screenshot.candidate.png
+    121672  tests/golden/visual/composition/v6_metric_dashboard/candidates/pptx_screenshot.candidate.png
+    152806  tests/golden/visual/composition/v7_hybrid_canvas/candidates/pptx_screenshot.candidate.png
+    160535  tests/golden/visual/composition/v8_process_narrative_icons/candidates/pptx_screenshot.candidate.png
+    127431  tests/golden/visual/composition/v9_metric_dashboard_icons/candidates/pptx_screenshot.candidate.png
+
+Status: candidates written; NOT approved; NOT committed; thresholds unchanged.
+
+Next steps (manual):
+  1. Review PNGs under tests/golden/visual/composition/*/candidates/
+  2. Approve with: py -3 scripts/approve_layout_pptx_screenshot_baselines.py --case <id>

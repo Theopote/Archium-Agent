@@ -178,6 +178,11 @@ jobs:
       - name: Install screenshot tools (LibreOffice + Poppler)
         run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils
 
+      # PptxGen theme requests Microsoft YaHei; without Noto + fontconfig aliases,
+      # LibreOffice PDF export draws Chinese as tofu and candidates are unusable.
+      - name: Install CJK fonts for LibreOffice screenshot render
+        run: bash scripts/ci_setup_screenshot_fonts.sh
+
       - name: Composition JSON golden cases (preview_visual_regression)
         run: pytest tests/golden/visual/composition/test_golden_cases.py -v -m preview_visual_regression
 
@@ -232,7 +237,10 @@ jobs:
         run: npm ci
 
       - name: Install screenshot tools (LibreOffice + Poppler)
-        run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils fonts-noto-cjk
+        run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils
+
+      - name: Install CJK fonts for LibreOffice screenshot render
+        run: bash scripts/ci_setup_screenshot_fonts.sh
 
       - name: Materialize curated benchmark assets
         run: python scripts/materialize_benchmark_curated_assets.py --force --sync-cases

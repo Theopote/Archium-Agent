@@ -1,0 +1,56 @@
+{
+  "case_id": "v5_process_narrative",
+  "layout_family": "process_narrative",
+  "layout_variant": "steps_horizontal",
+  "screenshot": {
+    "file": "pptx_screenshot.candidate.png",
+    "width": 1920,
+    "height": 1080,
+    "average_hash": "1f01ffff01f5ff3f"
+  },
+  "font_manifest_hash": "sha256:94ca17a2abf8fb64dfe7dade5a940f93038e269166010281b01527f75f826b38",
+  "font_platform": "linux",
+  "measurement_engine": "heuristic",
+  "fonts": [
+    {
+      "requested_family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "source_uri": null,
+      "file_hash": null,
+      "platform": "linux",
+      "fallback_used": true,
+      "bold": false,
+      "measurement_engine": "heuristic"
+    },
+    {
+      "requested_family": "Microsoft YaHei",
+      "resolved_family": "Microsoft YaHei",
+      "source_uri": null,
+      "file_hash": null,
+      "platform": "linux",
+      "fallback_used": true,
+      "bold": true,
+      "measurement_engine": "heuristic"
+    },
+    {
+      "requested_family": "Arial",
+      "resolved_family": "Arial",
+      "source_uri": "file:///usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+      "file_hash": "sha256:4659bc0c58c5028dd488ec928d41d9265db43d9b669fc14ca8b0832daca7b144:index=0",
+      "platform": "linux",
+      "fallback_used": false,
+      "bold": false,
+      "measurement_engine": "pillow_freetype"
+    },
+    {
+      "requested_family": "Arial",
+      "resolved_family": "Arial",
+      "source_uri": "file:///usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+      "file_hash": "sha256:3973aa5054fb467dd5627245d3dc82e37bf16fe075756156a570455871351582:index=0",
+      "platform": "linux",
+      "fallback_used": false,
+      "bold": true,
+      "measurement_engine": "pillow_freetype"
+    }
+  ]
+}
