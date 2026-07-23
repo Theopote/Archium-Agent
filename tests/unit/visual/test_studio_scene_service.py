@@ -249,6 +249,43 @@ def test_ensure_scene_for_slide_returns_none_when_missing(db_session: Session) -
     assert service.ensure_scene_for_slide(uuid4()) is None
 
 
+def test_ensure_scene_for_slide_returns_none_when_plan_or_presentation_missing(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _presentation, slide, plan = _seed_slide_with_plan(db_session)
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    service = StudioSceneService(db_session, settings=settings)
+
+    monkeypatch.setattr(service._plans, "get", lambda _plan_id: None)
+    assert service.ensure_scene_for_slide(slide.id) is None
+
+    monkeypatch.setattr(service._plans, "get", LayoutPlanRepository(db_session).get)
+    monkeypatch.setattr(service._presentations, "get_presentation", lambda _pid: None)
+    assert service.ensure_scene_for_slide(slide.id) is None
+
+
+def test_ensure_scene_for_slide_reuses_recovery_import_scene(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    _presentation, slide, plan = _seed_slide_with_plan(db_session)
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    service = StudioSceneService(db_session, settings=settings)
+    first = service.ensure_scene_for_slide(slide.id)
+    assert first is not None
+
+    recovery_plan = LayoutPlanRepository(db_session).save(
+        plan.model_copy(update={"layout_variant": "recovery_import"})
+    )
+    second = service.ensure_scene_for_slide(slide.id)
+    assert second is not None
+    assert second.reused is True
+    assert second.scene.id == first.scene.id
+    assert recovery_plan.layout_variant == "recovery_import"
+
+
 def test_ensure_scenes_for_presentation_compiles_all_slides(
     db_session: Session,
     tmp_path: Path,

@@ -11,6 +11,7 @@ from archium.application.visual.scene_proposal_service import (
     SceneProposalService,
     apply_patch_actions,
     resolve_accepted_commands,
+    summarize_patch_action,
 )
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue, QualityIssueSource
 from archium.domain.visual.render_scene import (
@@ -994,6 +995,64 @@ def test_apply_patch_actions_geometry_and_visibility() -> None:
     assert caption.overflow_policy == "shrink"
 
 
+def test_summarize_patch_action_variants() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    base_hash = compute_scene_hash(scene)
+    action = lambda **fields: build_patch_action(scene, base_scene_hash=base_hash, **fields)
+
+    assert summarize_patch_action(action(action_type="replace_asset", node_id="photo")) == (
+        "替换图片 `photo`"
+    )
+    assert summarize_patch_action(action(action_type="replace_drawing", node_id="plan")) == (
+        "替换图纸 `plan`"
+    )
+    assert summarize_patch_action(action(action_type="enlarge_drawing", node_id="plan")) == (
+        "扩大图纸 `plan`"
+    )
+    assert summarize_patch_action(action(action_type="relocate_node", node_id="title")) == (
+        "移动节点 `title`"
+    )
+    assert summarize_patch_action(action(action_type="shorten_text", node_id="body")) == (
+        "缩短文本 `body`"
+    )
+    assert summarize_patch_action(action(action_type="set_overflow_shrink", node_id="body")) == (
+        "文本 `body` 改为自动缩小"
+    )
+    assert summarize_patch_action(
+        action(action_type="custom", node_id="x", reason="自定义调整")
+    ) == "自定义调整"
+
+
+def test_create_proposal_records_skipped_command(monkeypatch) -> None:
+    scene = _scene(_text_node(node_id="title", text="旧标题"))
+    presentation_id = uuid4()
+    service = _proposal_service()
+    command = RewriteTextCommand(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        node_id="title",
+        new_text="新标题",
+    )
+
+    class _SkippedResult:
+        success = True
+        candidate_scene = scene
+        applied_actions: tuple = ()
+        issues: tuple = ()
+
+    monkeypatch.setattr(service._executor, "execute", lambda *_args, **_kwargs: _SkippedResult())
+
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[command],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+
+    assert proposal.command_results[0].status == "skipped"
+    assert proposal.successful_commands == []
+
+
 def test_accept_proposal_rejects_terminal_statuses() -> None:
     from archium.domain.enums import SlideType
     from archium.domain.slide import SlideSpec
@@ -1105,3 +1164,23 @@ def test_count_issues_by_severity_and_remaining_patch_actions() -> None:
         QualityIssue(code="b", severity=IssueSeverity.MAJOR, message="M"),
     ]
     assert count_issues_by_severity(issues, IssueSeverity.MAJOR) == 1
+
+
+def test_summarize_patch_action_covers_remaining_types() -> None:
+    from archium.application.visual.scene_proposal_service import summarize_patch_action
+
+    scene = _scene(_drawing_node(node_id="plan"))
+    for action_type, expected_fragment in [
+        ("replace_asset", "替换图片"),
+        ("replace_drawing", "替换图纸"),
+        ("enlarge_drawing", "扩大图纸"),
+        ("relocate_node", "移动节点"),
+        ("shorten_text", "缩短文本"),
+    ]:
+        action = build_patch_action(
+            scene,
+            base_scene_hash=compute_scene_hash(scene),
+            node_id="plan",
+            action_type=action_type,
+        )
+        assert expected_fragment in summarize_patch_action(action)

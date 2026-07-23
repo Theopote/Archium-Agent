@@ -76,6 +76,28 @@ def test_validate_usage_conditions_evidence_count_and_section() -> None:
     assert any("section_category" in item for item in violations)
 
 
+def test_validate_usage_conditions_content_type_and_not_eq() -> None:
+    schema = ArchitecturalContentSchema(
+        name="content/photo",
+        page_purpose="照片",
+        usage_conditions=[
+            UsageCondition(
+                field="content_type",
+                operator="in",
+                value=["photo_analysis", "case_comparison"],
+            ),
+            UsageCondition(field="functional_type", operator="not_eq", value="appendix"),
+        ],
+    )
+    violations = validate_usage_conditions(
+        schema,
+        functional_type=FunctionalSlideType.APPENDIX,
+        content_type=ArchitecturalContentType.DRAWING_FOCUS,
+    )
+    assert any("content_type" in item for item in violations)
+    assert any("must not be" in item for item in violations)
+
+
 def test_schema_supports_drawing_from_visual_evidence() -> None:
     schema = ArchitecturalContentSchema(
         name="content/plan",

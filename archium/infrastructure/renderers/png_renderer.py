@@ -156,8 +156,8 @@ class PngRenderer:
 
         if node.asset_unresolved or not node.asset_path:
             return
-        path = Path(node.asset_path)
-        if not path.is_file():
+        path = self._resolve_existing_asset_path(node.asset_path)
+        if path is None:
             return
         box = self._box(node)
         target_w = box[2] - box[0]
@@ -192,8 +192,22 @@ class PngRenderer:
         cropped = resized.crop((left, top, left + target_w, top + target_h))
         canvas.paste(cropped, (box[0], box[1]), cropped)
 
+    @staticmethod
+    def _resolve_existing_asset_path(raw_path: str) -> Path | None:
+        path = Path(raw_path).expanduser()
+        if path.is_file():
+            return path
+        resolved = path.resolve()
+        if resolved.is_file():
+            return resolved
+        return None
+
     def _load_image_asset(self, path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
         from PIL import Image
+
+        resolved = self._resolve_existing_asset_path(str(path))
+        if resolved is not None:
+            path = resolved
 
         if path.suffix.lower() != ".svg":
             return Image.open(path).convert("RGBA")

@@ -440,6 +440,78 @@ def test_enforce_blocks_disallowed_fidelity_level() -> None:
         service.enforce_export_policy(manifest)
 
 
+def test_full_page_image_warning_when_no_text() -> None:
+    scene = _scene(
+        ImageNode(
+            id="full",
+            x=0,
+            y=0,
+            width=1920,
+            height=1080,
+            z_index=0,
+            storage_uri="asset://full.png",
+        ),
+    )
+    result = ExportPolicyService().assess_scene_fidelity(scene)
+    assert any("full_page_image" in warning for warning in result.warnings)
+
+
+def test_allow_hybrid_per_slide_fallback_succeeds() -> None:
+    service = ExportPolicyService()
+    native = service.assess_scene_fidelity(
+        _scene(
+            TextNode(
+                id="t1",
+                x=10,
+                y=10,
+                width=200,
+                height=40,
+                z_index=1,
+                text="native",
+                font_family="Arial",
+                font_size=18,
+                color="#000",
+                line_height=1.2,
+            ),
+        )
+    )
+    hybrid = service.assess_scene_fidelity(
+        _scene(
+            TextNode(
+                id="t2",
+                x=10,
+                y=10,
+                width=200,
+                height=40,
+                z_index=2,
+                text="hybrid",
+                font_family="Arial",
+                font_size=18,
+                color="#000",
+                line_height=1.2,
+            ),
+            ImageNode(
+                id="img",
+                x=400,
+                y=100,
+                width=600,
+                height=400,
+                z_index=1,
+                storage_uri="asset://photo.jpg",
+            ),
+        )
+    )
+    policy = ExportPolicy(allow_slide_level_fallback=True, allow_hybrid_editable=True)
+    manifest = service.build_deck_manifest(
+        presentation_id=uuid4(),
+        export_format="PPTX",
+        policy=policy,
+        slide_results=[native, hybrid],
+    )
+    service.enforce_export_policy(manifest, policy=policy)
+    assert manifest.fallback_used is True
+
+
 def test_export_policy_from_preset_maps_known_keys() -> None:
     strict = export_policy_from_preset("strict_native")
     hybrid = export_policy_from_preset("allow_hybrid")
