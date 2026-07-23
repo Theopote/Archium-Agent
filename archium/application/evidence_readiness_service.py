@@ -96,7 +96,7 @@ def resolve_delivery_readiness(
     presentation_id: UUID | None,
     deck_qa_report: dict | None = None,
 ) -> DeliveryReadinessReport:
-    from archium.ui.visual_service import presentation_has_visual_layout
+    from archium.application.visual.layout_readiness import presentation_has_visual_layout
 
     evidence = resolve_project_evidence(session, project_id)
     pptx_ready = False

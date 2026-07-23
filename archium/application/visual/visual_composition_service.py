@@ -44,7 +44,12 @@ class PresentationCompositionResult:
 
 
 class VisualCompositionService:
-    """Facade that wires visual services without becoming a god-object."""
+    """Facade that wires visual services without becoming a god-object.
+
+    .. deprecated::
+        Prefer ``VisualWorkflowService`` / LangGraph visual nodes. This facade is
+        retained for direct composition experiments and is no longer the product path.
+    """
 
     def __init__(
         self,

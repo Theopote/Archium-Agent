@@ -346,10 +346,15 @@ def reorder_studio_slide(
 def apply_slide_edit_command(session: Session, command: object) -> object:
     """Execute one unified SlideEditCommand."""
     from archium.application.visual.slide_edit_execution_service import SlideEditExecutionService
-    from archium.domain.visual.slide_edit_command import SlideEditCommand
+    from archium.domain.visual.slide_edit_command import SlideEditCommand, SlideEditScope
+    from archium.ui.studio.undo_stack import clear_content_redo_stack, clear_visual_redo_stack
 
     if not isinstance(command, SlideEditCommand):
         raise WorkflowError("无效的编辑命令。")
+    if command.scope == SlideEditScope.VISUAL:
+        clear_visual_redo_stack(command.slide_id)
+    elif command.scope == SlideEditScope.CONTENT:
+        clear_content_redo_stack(command.slide_id)
     return SlideEditExecutionService().execute(session, command)
 
 

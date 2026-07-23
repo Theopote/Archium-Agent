@@ -166,18 +166,15 @@ def continue_visual_after_layout_review(
 
 
 def presentation_has_visual_layout(session: Session, presentation_id: UUID) -> bool:
-    """Return True when every slide has a persisted LayoutPlan."""
-    presentations = PresentationRepository(session)
-    plans = LayoutPlanRepository(session)
-    slides = presentations.list_slides(presentation_id)
-    if not slides:
-        return False
-    for slide in slides:
-        if slide.layout_plan_id is None:
-            return False
-        if plans.get(slide.layout_plan_id) is None:
-            return False
-    return True
+    """Return True when every slide has a persisted LayoutPlan.
+
+    Implementation lives in application; this UI re-export keeps existing callers stable.
+    """
+    from archium.application.visual.layout_readiness import (
+        presentation_has_visual_layout as _impl,
+    )
+
+    return _impl(session, presentation_id)
 
 
 def export_presentation_pptx_from_layout_plans(
