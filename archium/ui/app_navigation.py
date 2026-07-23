@@ -30,7 +30,6 @@ def build_app_pages() -> dict[str, list[Any]]:
     from archium.ui.pages import (
         command_center,
         home,
-        presentation_technology_radar,
         project_management,
         project_mission,
         settings,
@@ -109,12 +108,6 @@ def build_app_pages() -> dict[str, list[Any]]:
         icon=icons.SLIDE_RECOVERY,
         url_path="slide-recovery",
     )
-    tech_radar_page = st.Page(
-        presentation_technology_radar.render,
-        title="技术雷达",
-        icon=icons.TECH_RADAR,
-        url_path="tech-radar",
-    )
     settings_page = st.Page(
         settings.render, title="设置", icon=icons.SETTINGS, url_path="settings"
     )
@@ -173,7 +166,6 @@ def build_app_pages() -> dict[str, list[Any]]:
     _PAGES.update(stage_pages)
     _PAGES.update({"template-library": template_library_page})
     _PAGES.update({"slide-recovery": slide_recovery_page})
-    _PAGES.update({"tech-radar": tech_radar_page})
     _PAGES.update({"settings": settings_page})
     _PAGES.update(hidden_pages)
     # Keep legacy deep-link key resolvable; do not put it in sidebar sections.
@@ -189,7 +181,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             stage_pages[PRODUCT_STUDIO_PAGE_KEY],
             stage_pages["deliver"],
         ],
-        RESOURCE_SECTION: [template_library_page, slide_recovery_page, tech_radar_page],
+        RESOURCE_SECTION: [template_library_page, slide_recovery_page],
         SYSTEM_SECTION: [settings_page],
     }
 

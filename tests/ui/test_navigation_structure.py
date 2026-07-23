@@ -62,10 +62,6 @@ def test_slide_recovery_page_is_registered() -> None:
     assert app_navigation.get_app_page("slide-recovery") is not None
 
 
-def test_tech_radar_page_is_registered() -> None:
-    assert app_navigation.get_app_page("tech-radar") is not None
-
-
 def test_bootstrap_is_not_diagnostics_home() -> None:
     text = (ROOT / "archium" / "ui" / "bootstrap.py").read_text(encoding="utf-8")
     assert "def init_app" in text

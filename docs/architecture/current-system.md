@@ -10,7 +10,7 @@
 | `streamlit run app.py` | `app.py` | 与 `archium` 等价的开发入口 |
 | `archium-legacy` | `legacy.main:main` | v0.1 实验 CLI，仅兼容保留 |
 
-应用页面由 `archium/ui/app_navigation.py` 注册。当前页面覆盖项目、任务规划、生成工作区、Studio、视觉设计、页面恢复、模板归纳、模板库、模板 Studio、技术雷达、设置等能力。
+应用页面由 `archium/ui/app_navigation.py` 注册。当前页面覆盖项目、任务规划、生成工作区、Studio、视觉设计、页面恢复、模板归纳、模板库、模板 Studio、设置等能力。
 
 ## 主数据流
 

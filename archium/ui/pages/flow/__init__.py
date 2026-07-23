@@ -59,9 +59,6 @@ def evaluate_stage_gate(
         blockers.append("先创建或选择一个项目")
         return StageGateResult(can_proceed=False, blockers=tuple(blockers))
 
-    adopt_blockers, adopt_warnings = _adopt_gate_messages(stage_id, snapshot)
-    warnings.extend(adopt_warnings)
-
     if stage_id == "materials":
         if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
             blockers.append("资料状态无法验证，请稍后重试或检查数据库连接")
@@ -106,7 +103,6 @@ def evaluate_stage_gate(
                 pending = snapshot.design_briefs_total - snapshot.design_briefs_approved_count
                 warnings.append(f"仍有 {pending} 页设计摘要未批准")
             blockers.append("全部页面设计摘要批准后方可进入生成")
-        blockers.extend(adopt_blockers)
         return StageGateResult(
             can_proceed=snapshot.outline_approved and snapshot.design_briefs_approved and not blockers,
             blockers=tuple(blockers),
@@ -118,7 +114,6 @@ def evaluate_stage_gate(
             blockers.append("先生成至少一页内容")
         elif snapshot.pending_count > 0:
             warnings.append(f"仍有 {snapshot.pending_count} 页版式待完成")
-        warnings.extend(adopt_warnings)
         return StageGateResult(
             can_proceed=not blockers,
             blockers=tuple(blockers),
@@ -140,7 +135,7 @@ def evaluate_stage_gate(
         return StageGateResult(
             can_proceed=not blockers,
             blockers=tuple(blockers),
-            warnings=tuple(warnings + adopt_warnings),
+            warnings=tuple(warnings),
         )
 
     if stage_id == "deliver":
@@ -159,35 +154,10 @@ def evaluate_stage_gate(
         return StageGateResult(
             can_proceed=not blockers,
             blockers=tuple(blockers),
-            warnings=tuple(warnings + adopt_warnings),
+            warnings=tuple(warnings),
         )
 
-    return StageGateResult(can_proceed=True, warnings=tuple(adopt_warnings))
-
-
-def _adopt_gate_messages(
-    stage_id: str,
-    snapshot: ProjectProgressSnapshot,
-) -> tuple[list[str], list[str]]:
-    """Merge radar adopt concept blockers/warnings into stage gates."""
-    from archium.application.main_chain_adopt_service import MainChainAdoptService
-    from archium.infrastructure.database.session import get_session
-
-    if snapshot.presentation_id is None:
-        return [], []
-
-    try:
-        with get_session() as session:
-            report = MainChainAdoptService(session).evaluate(
-                snapshot.project_id,
-                presentation_id=snapshot.presentation_id,
-            )
-    except Exception:
-        return [], []
-
-    blockers = list(report.stage_blockers(stage_id))  # type: ignore[arg-type]
-    warnings = list(report.stage_warnings(stage_id))  # type: ignore[arg-type]
-    return blockers, warnings
+    return StageGateResult(can_proceed=True)
 
 
 def _stage_marker(status: str) -> str:
@@ -356,24 +326,6 @@ def render_stage_header(stage_id: str) -> None:
     render_page_header(stage.title, stage.caption)
     render_flow_stepper(stage_id)
     render_concept_draft_banner()
-    _render_stage_adopt_panel(stage_id)
-
-
-def _render_stage_adopt_panel(stage_id: str) -> None:
-    try:
-        snapshot = load_project_progress_snapshot()
-    except Exception:
-        return
-    if snapshot is None or snapshot.presentation_id is None:
-        return
-    from archium.ui.main_chain_adopt_panel import render_main_chain_adopt_panel
-
-    render_main_chain_adopt_panel(
-        snapshot.project_id,
-        presentation_id=snapshot.presentation_id,
-        stage_id=stage_id,  # type: ignore[arg-type]
-        key_prefix=f"adopt_{stage_id}",
-    )
 
 
 def render_flow_project_context(
