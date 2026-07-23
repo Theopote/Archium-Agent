@@ -8,8 +8,9 @@
 
 | 文件 | 模块 | 前缀 |
 |------|------|------|
+| [00-round1-judgment.md](00-round1-judgment.md) | 第一轮最终判断（工程收敛） | — |
 | [01-project-foundation.md](01-project-foundation.md) | 工程骨架 / 打包 / CI / 文档契约 | `PF-` |
-| [02-domain.md](02-domain.md) | Domain 模型与分层 | `DOM-` |
+| [02-domain.md](02-domain.md) | Domain 模型与分层（含逐文件检查） | `DOM-` |
 | [03-application.md](03-application.md) | Application 服务 | `APP-` |
 | [04-workflow.md](04-workflow.md) | LangGraph 工作流 | `WF-` |
 | [05-database.md](05-database.md) | ORM / 会话 / 迁移 | `DB-` |
@@ -76,6 +77,7 @@
 
 | 编号 | 模块 | 一句话 |
 |------|------|--------|
+| [DOM-011](02-domain.md) | domain | LayoutPlan 与 RenderScene 双空间 SSOT |
 | [WF-002](04-workflow.md) | workflow | Sqlite checkpoint + 后台 continue 竞态 |
 | [DB-001](05-database.md) | database | TransactionExecutor 会话中途 `commit` |
 | [DB-002](05-database.md) | database | `create_all` + Alembic 001 no-op 冷启动 |
@@ -86,3 +88,5 @@
 | [TS-010](14-tests-security.md) | tests-security | 非开发者剧本 A + 修改成本（Beta B10） |
 
 P0 已关闭但仍需关注：`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
+
+Domain 下一优先：`DOM-011` → `DOM-017`/`DOM-016` → `DOM-012`（见 [02-domain.md](02-domain.md) 建议顺序）。
