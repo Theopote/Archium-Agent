@@ -27,7 +27,7 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 |------|--------|----------|
 | Runtime DBs / Phase 8 dumps not on main | **Remediated** | `.data/` removed from Git index; `.gitignore` covers `.data/`, `data/`, `output/`, `*.db`, `*.sqlite`, `*.sqlite3` |
 | Real-project run outputs | **CI artifacts / reviewed goldens only** | Do not commit full phase8/Studio run trees |
-| Architectural Benchmark binaries are Goldens | **Governed (P1)** | See `tests/benchmark/architectural_slides/README.md` § Golden 二进制治理；`test_golden_binary_budget.py`；render script requires `--write-goldens` |
+| Architectural Benchmark binaries are Goldens | **Governed (P1)** | See `tests/benchmark/architectural_slides/README.md` § Golden 二进制治理；`test_golden_binary_budget.py`；render script requires `--approve-goldens` (CI uses `--materialize-ci-samples`) |
 
 ## P2 asset fields — `storage_uri` vs `asset_path` (not blocking)
 
@@ -143,7 +143,7 @@ Only then expand exception review / screenshot regen to all 30 pages.
 
 ```bash
 # Regenerate pilot screenshots into Goldens (PowerPoint available on this host)
-python scripts/render_architectural_benchmark_visuals.py --write-goldens \
+python scripts/render_architectural_benchmark_visuals.py --approve-goldens \
   --case case_001_site_plan \
   --case case_002_site_photos \
   --case case_006_project_hero

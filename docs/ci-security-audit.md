@@ -1,13 +1,15 @@
 # CI Security Audit
 
-The `security-scan` job in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs **pip-audit** (Python deps from `pip install -e ".[full,dev]"`) and **npm audit** (PptxGenJS production deps).
+The `security-scan` job in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs **pip-audit** (Python env from `requirements/full-py312.lock`) and **npm audit** (PptxGenJS production deps).
+
+Triage status and allowlist: [`docs/security/`](security/).
 
 ## Two-phase policy
 
 | Phase | When | CI behavior |
 |-------|------|-------------|
-| **Observation** | Now → **2026-08-08** (UTC) | Full reports uploaded as artifacts; high/critical findings emit `::warning` but **do not fail** the job |
-| **Enforcement** | From **2026-08-08**, or earlier if toggled | high/critical findings **fail** the job and block merge (once branch protection requires this check) |
+| **Observation** | Now → **2026-08-08** (UTC) | Full reports uploaded as artifacts; findings emit `::warning` but **do not fail** the job |
+| **Enforcement** | From **2026-08-08**, or earlier if toggled | Non-allowlisted findings **fail** the job and block merge (once branch protection requires this check) |
 
 Workflow knobs (top of `ci.yml`):
 
@@ -17,69 +19,33 @@ env:
   SECURITY_AUDIT_ENFORCE_AFTER: "2026-08-08"
 ```
 
-After the observation window, enforcement also turns on automatically when the run date is on or after `SECURITY_AUDIT_ENFORCE_AFTER`.
+**Do not wait until Aug 8:** complete the [triage checklist](security/AUDIT_TRIAGE_2026-07.md) by **2026-08-01**.
 
-## Before external / user release (required)
+## Fail levels & allowlist
 
-1. Run `pip-audit --min-severity high` and `npm audit --audit-level=high` locally; upgrade or document every high/critical finding.
-2. Set `SECURITY_AUDIT_ENFORCE: "true"` in `ci.yml` **or** merge after **2026-08-08** when auto-enforcement starts.
-3. Add `security audit` to branch protection required checks.
-4. Confirm at least one green main-branch run with enforcement enabled before tagging a user-facing release.
+- **Python:** any `pip-audit` finding not listed in [`dependency-allowlist.json`](security/dependency-allowlist.json) (PyPI JSON often lacks severity, so we gate all reported vulns).
+- **Node:** `npm audit --audit-level=high`.
+- Allowlist entries require `id`/`aliases`, `risk_owner`, `expires_on`, and a short rationale. Expired entries are ignored.
 
-Until then, high/critical findings are visible in artifacts but **do not block merge** — acceptable for fast internal iteration only.
+Gate command:
 
-## What gets blocked
-
-Only **high** and **critical** severities:
-
-- Python: `pip-audit --min-severity high` (requires `pip-audit>=2.8`)
-- npm: `npm audit --audit-level=high --omit=dev` (PptxGenJS tree)
-
-Low/medium advisories stay in the full report artifact for triage but do not fail CI.
+```bash
+python scripts/ci_security_audit_gate.py true pip
+python scripts/ci_security_audit_gate.py true npm --omit=dev --prefix archium/infrastructure/renderers/pptxgen
+```
 
 ## Artifacts
 
-Each run uploads `security-audit-reports` (7-day retention):
-
-- `pip-audit-report.txt` — full pip-audit output (`--desc on`)
-- `pip-audit-enforce.txt` — high/critical gate output
-- `npm-audit-report.txt` — full npm audit
-- `npm-audit-enforce.txt` — high/critical gate output
-
-Download from the Actions run → **Artifacts** when investigating warnings during observation.
-
-## Observation checklist (before flipping enforcement)
-
-Run at least **2–3 weeks** of green main-branch CI and confirm:
-
-1. No recurring high/critical hits that are accepted false positives (transitive deps with no fix, dev-only noise misclassified, etc.).
-2. On-call knows how to read artifacts and open upgrade PRs within SLA.
-3. Branch protection lists `security audit` as a required check **after** enforcement is enabled.
-
-## Handling false positives
-
-Prefer fixing or upgrading dependencies. If a finding is a documented accepted risk:
-
-1. Record rationale in the PR that adds the ignore.
-2. Python: `pip-audit --ignore-vuln GHSA-…` in the gate step (narrow, advisory-specific).
-3. npm: `npm audit fix` or overrides in `package.json` / lockfile — avoid blanket `audit-level` downgrades.
-
-Re-evaluate ignores quarterly; remove when upstream fixes land.
+Each run uploads `security-audit-reports` (7-day retention), including allowlist snapshot and enforce outputs.
 
 ## Local reproduction
 
 ```bash
-pip install -e ".[full,dev]"
+pip install -r requirements/full-py312.lock
+pip install -e ".[dev]" --constraint requirements/full-py312.lock
 pip install "pip-audit>=2.8"
-pip-audit --desc on
-pip-audit --min-severity high --desc on
+python scripts/ci_security_audit_gate.py false pip
 
-cd archium/infrastructure/renderers/pptxgen
-npm ci
-npm audit --omit=dev
-npm audit --omit=dev --audit-level=high
-
-# Simulate CI gate (observation mode)
-bash scripts/ci_security_audit_gate.sh false pip
-bash scripts/ci_security_audit_gate.sh false npm --omit=dev --prefix archium/infrastructure/renderers/pptxgen
+cd archium/infrastructure/renderers/pptxgen && npm ci
+python ../../../../scripts/ci_security_audit_gate.py false npm --omit=dev --prefix archium/infrastructure/renderers/pptxgen
 ```

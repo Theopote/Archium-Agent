@@ -9,14 +9,17 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Security audit: report-only until observation ends, then block on high/critical.
+  # Security audit: report-only until observation ends, then block on findings.
   # Set SECURITY_AUDIT_ENFORCE=true to enforce early after triage (see docs/ci-security-audit.md).
   SECURITY_AUDIT_ENFORCE: "false"
   SECURITY_AUDIT_ENFORCE_AFTER: "2026-08-08"
 
 jobs:
-  test:
-    name: test (${{ matrix.python-version }})
+  # ---------------------------------------------------------------------------
+  # compatibility — both supported CPythons; cheap static + unit + thin integration
+  # ---------------------------------------------------------------------------
+  compatibility:
+    name: compatibility (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -39,6 +42,59 @@ jobs:
           pip install -r "requirements/full-py${PYTAG}.lock"
           pip install -e ".[dev]" --constraint "requirements/full-py${PYTAG}.lock"
 
+      - name: Ruff
+        if: matrix.python-version == '3.12'
+        run: ruff check archium tests
+
+      - name: Config reference sync
+        if: matrix.python-version == '3.12'
+        run: python scripts/generate_config_docs.py --check
+
+      - name: Mypy
+        run: mypy archium --python-version ${{ matrix.python-version }}
+
+      - name: Pytest (unit)
+        run: pytest -m unit --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
+
+      - name: Pytest (minimal integration)
+        run: |
+          pytest -m "integration and not e2e" \
+            tests/integration/test_ingestion_service.py \
+            tests/integration/test_presentation_workflow.py \
+            -q --tb=line
+          pytest tests/unit/test_import_smoke.py -q --tb=line
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-archium
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # quality-full — Python 3.12 only; heavy integration / golden / render smoke
+  # ---------------------------------------------------------------------------
+  quality-full:
+    name: quality-full
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements/full-py312.lock
+          pip install -e ".[dev]" --constraint requirements/full-py312.lock
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -52,20 +108,8 @@ jobs:
       - name: Install fonts for layout text measurement
         run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-liberation
 
-      - name: Ruff
-        run: ruff check archium tests
-
-      - name: Config reference sync
-        run: python scripts/generate_config_docs.py --check
-
-      - name: Mypy
-        run: mypy archium --python-version ${{ matrix.python-version }}
-
-      - name: Pytest (unit)
-        run: pytest -m unit --cov=archium --cov-report=term-missing --cov-report=xml --cov-fail-under=65
-
       - name: Pytest (integration)
-        run: pytest -m "integration and not e2e" --cov=archium --cov-append --cov-report=xml -v
+        run: pytest -m "integration and not e2e" --cov=archium --cov-report=xml -v
 
       - name: Critical module coverage gate
         run: python scripts/ci_critical_coverage_gate.py
@@ -76,16 +120,6 @@ jobs:
       - name: Pytest (golden regression)
         run: pytest tests/golden/regression tests/golden/mission tests/golden/fixtures -v
 
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage.xml
-          flags: unittests
-          name: codecov-archium
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
       - name: PptxGen smoke test
         env:
           ARCHIUM_SMOKE_ARTIFACT_DIR: tests/smoke/artifacts
@@ -95,7 +129,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: golden-artifacts-py${{ matrix.python-version }}
+          name: golden-artifacts-py312
           path: tests/golden/artifacts/
           if-no-files-found: ignore
           retention-days: 7
@@ -104,7 +138,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pptxgen-smoke-py${{ matrix.python-version }}
+          name: pptxgen-smoke-py312
           path: tests/smoke/artifacts/
           if-no-files-found: ignore
           retention-days: 7
@@ -185,8 +219,6 @@ jobs:
       - name: Install screenshot tools (LibreOffice + Poppler)
         run: sudo apt-get update && sudo apt-get install -y libreoffice poppler-utils
 
-      # PptxGen theme requests Microsoft YaHei; without Noto + fontconfig aliases,
-      # LibreOffice PDF export draws Chinese as tofu and candidates are unusable.
       - name: Install CJK fonts for LibreOffice screenshot render
         run: bash scripts/ci_setup_screenshot_fonts.sh
 
@@ -254,10 +286,14 @@ jobs:
       - name: Materialize curated benchmark assets
         run: python scripts/materialize_benchmark_curated_assets.py --force --sync-cases
 
-      - name: Render architectural benchmark visuals
-        # Ephemeral CI workspace only — regenerates sample renders for pipeline smoke + artifacts.
-        # Local golden updates still require an explicit --write-goldens / UPDATE_* env.
-        run: python scripts/render_architectural_benchmark_visuals.py --write-goldens --case case_001_site_plan --case case_002_site_photos
+      - name: Materialize CI sample renders
+        # Ephemeral checkout only — does NOT approve committed Goldens.
+        # Formal baselines: scripts/render_architectural_benchmark_visuals.py --approve-goldens
+        run: >
+          python scripts/render_architectural_benchmark_visuals.py
+          --materialize-ci-samples
+          --case case_001_site_plan
+          --case case_002_site_photos
 
       - name: Render pipeline tests
         run: pytest tests/benchmark/architectural_slides/test_render_pipeline.py -v
@@ -280,7 +316,7 @@ jobs:
   migration-smoke:
     name: alembic migration smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -290,10 +326,12 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install dependencies
+      # Minimal install: no Chroma / OpenAI / Cairo / Node.
+      - name: Install migration dependencies
         run: |
-          pip install -r requirements/full-py312.lock
-          pip install -e ".[dev]" --constraint requirements/full-py312.lock
+          pip install -r requirements/base.lock
+          pip install "alembic>=1.13" "pytest>=8.0"
+          pip install --no-deps -e .
 
       - name: Alembic migration smoke test
         run: pytest tests/smoke/test_alembic_migration.py -v
@@ -359,10 +397,10 @@ jobs:
 
       - name: pip-audit (full report)
         continue-on-error: true
-        run: pip-audit --desc on 2>&1 | tee pip-audit-report.txt
+        run: python -m pip_audit -f json --desc on -o pip-audit-report.json && python -m pip_audit --desc on 2>&1 | tee pip-audit-report.txt
 
-      - name: pip-audit (high/critical gate)
-        run: bash scripts/ci_security_audit_gate.sh "${{ steps.security_gate.outputs.enforce }}" pip
+      - name: pip-audit gate
+        run: python scripts/ci_security_audit_gate.py "${{ steps.security_gate.outputs.enforce }}" pip
 
       - uses: actions/setup-node@v4
         with:
@@ -378,8 +416,8 @@ jobs:
         continue-on-error: true
         run: npm audit --omit=dev --prefix archium/infrastructure/renderers/pptxgen 2>&1 | tee npm-audit-report.txt
 
-      - name: npm audit (high/critical gate)
-        run: bash scripts/ci_security_audit_gate.sh "${{ steps.security_gate.outputs.enforce }}" npm --omit=dev --prefix archium/infrastructure/renderers/pptxgen
+      - name: npm audit gate
+        run: python scripts/ci_security_audit_gate.py "${{ steps.security_gate.outputs.enforce }}" npm --omit=dev --prefix archium/infrastructure/renderers/pptxgen
 
       - name: Upload security audit reports
         if: always()
@@ -388,8 +426,11 @@ jobs:
           name: security-audit-reports
           path: |
             pip-audit-report.txt
+            pip-audit-report.json
             pip-audit-enforce.txt
+            pip-audit-enforce.json
             npm-audit-report.txt
             npm-audit-enforce.txt
+            docs/security/dependency-allowlist.json
           if-no-files-found: ignore
           retention-days: 7

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "policy": {
+    "fail_levels": ["high", "critical", "unknown"],
+    "risk_owner": "Archium maintainers",
+    "notes": "Entries expire on expires_on (UTC). Empty allowlist means every finding fails when enforcement is on. Prefer upgrading deps over allowlisting."
+  },
+  "entries": []
+}

@@ -41,7 +41,7 @@
 | 产物 | 生成方式 |
 |------|----------|
 | Layout JSON + wireframe/preview | `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` + `python scripts/update_architectural_benchmark_baselines.py` 或同环境 pytest |
-| Scene / PPTX / pptx_render / final_render / sidecars / manifest | 同上，或 `python scripts/render_architectural_benchmark_visuals.py --write-goldens` |
+| Scene / PPTX / pptx_render / final_render / sidecars / manifest | 同上，或 `python scripts/render_architectural_benchmark_visuals.py --approve-goldens` |
 | `reports/*` | 基线更新后会话钩子，或 `python scripts/build_architectural_benchmark_report.py` |
 | 便携 URI 归一化 | `python scripts/normalize_benchmark_scene_uris.py`（改 `scene.json` + manifest；仍属 Golden 变更） |
 
@@ -60,17 +60,17 @@ python scripts/update_architectural_benchmark_baselines.py
 **仅重渲 Scene / PPTX / 截图（不改 layout 指纹）：**
 
 ```bash
-python scripts/render_architectural_benchmark_visuals.py --write-goldens
-python scripts/render_architectural_benchmark_visuals.py --write-goldens --case case_002_site_photos
+python scripts/render_architectural_benchmark_visuals.py --approve-goldens
+python scripts/render_architectural_benchmark_visuals.py --approve-goldens --case case_002_site_photos
 ```
 
-未加 `--write-goldens` 时脚本**拒绝**写入已提交的 case 目录（防止普通本地跑刷爆 Git）。
+未加 `--approve-goldens`（或 CI 用的 `--materialize-ci-samples`）时脚本**拒绝**写入已提交的 case 目录（防止普通本地跑刷爆 Git）。
 
 **正式视觉用新鲜截图（推荐在有 PowerPoint/LibreOffice 的机器上）：**
 
 ```bash
 # 须 screenshot_tools_available；目标 manifest.pptx_screenshot_generated=true
-python scripts/render_architectural_benchmark_visuals.py --write-goldens
+python scripts/render_architectural_benchmark_visuals.py --approve-goldens
 ```
 
 ### 更新需要什么人工确认
@@ -90,7 +90,7 @@ python scripts/render_architectural_benchmark_visuals.py --write-goldens
 |------|------|
 | `assert_or_update_case_baseline` | 仅当 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` 时写盘；平时只比对指纹 |
 | `test_render_benchmark_visual_artifacts_*` | 写入 **`tmp_path`**，不碰仓库 case 目录 |
-| `render_architectural_benchmark_visuals.py` | 默认拒绝写 Golden；须 `--write-goldens` |
+| `render_architectural_benchmark_visuals.py` | 默认拒绝写 Golden；CI 用 `--materialize-ci-samples`；正式基线须 `--approve-goldens` |
 | CI 普通 / PR 测试 | **不得**设置 `UPDATE_ARCHITECTURAL_BENCHMARK_BASELINES=1` |
 | 本地调试 | 用 `tmp_path` 或复制 case 到沙箱目录再渲染 |
 

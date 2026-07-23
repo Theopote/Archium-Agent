@@ -47,3 +47,7 @@ def test_ci_ruff_mypy_commands_match_config_scope() -> None:
     assert re.search(r"^\s+run:\s+mypy archium\b", text, re.M)
     assert "ruff check archium legacy" not in text
     assert "mypy archium legacy" not in text
+    assert "compatibility" in text
+    assert "quality-full" in text
+    assert "--materialize-ci-samples" in text
+    assert "--write-goldens" not in text
