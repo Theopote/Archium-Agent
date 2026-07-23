@@ -194,6 +194,9 @@ class ImageNode(BaseRenderNode):
     caption_node_id: str | None = None
     asset_unresolved: bool = False
     resolved_path: str | None = Field(default=None, exclude=True)
+    # Architectural icon pack: token-bound stroke for theme re-resolution.
+    icon_stroke_color: str | None = None
+    icon_stroke_token: str = ""
 
     @model_validator(mode="before")
     @classmethod

@@ -14,6 +14,10 @@ from typing import Literal
 from uuid import UUID, uuid4
 
 from archium.application.visual.asset_reference import is_supported_layout_image_path
+from archium.application.visual.icon_stroke_resolve import (
+    resolve_icon_stroke_color,
+    resolve_icon_stroke_token,
+)
 from archium.application.visual.scene_fonts import (
     collect_font_assets,
     resolve_text_fonts,
@@ -42,6 +46,7 @@ from archium.domain.visual.render_scene import (
     TextParagraph,
     ThemeTokens,
 )
+from archium.application.visual.svg_icon_recolor import is_architectural_icon_ref
 from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
@@ -189,6 +194,8 @@ class RenderSceneCompiler:
         return "project_upload"
 
     def _image_semantic_role(self, element: LayoutElement, origin: str) -> str:
+        if is_architectural_icon_ref(element.content_ref):
+            return "icon"
         if origin in {"reference_case", "public_research"}:
             return "reference_case_photo"
         if element.role == LayoutElementRole.HERO_VISUAL:
@@ -224,9 +231,13 @@ class RenderSceneCompiler:
             if chart_nodes:
                 nodes = list(chart_nodes)
             else:
-                nodes = list(self._compile_image(element, bundle, asset_manifest, warnings))
+                nodes = list(
+                    self._compile_image(element, design_system, bundle, asset_manifest, warnings)
+                )
         elif element.content_type == LayoutContentType.IMAGE:
-            nodes = list(self._compile_image(element, bundle, asset_manifest, warnings))
+            nodes = list(
+                self._compile_image(element, design_system, bundle, asset_manifest, warnings)
+            )
         elif element.content_type == LayoutContentType.TABLE:
             table_nodes = self._compile_table(element)
             if table_nodes:
@@ -416,6 +427,7 @@ class RenderSceneCompiler:
     def _compile_image(
         self,
         element: LayoutElement,
+        design_system: DesignSystem,
         bundle: SlideContentBundle,
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
@@ -425,6 +437,11 @@ class RenderSceneCompiler:
         fit = "cover"
         if element.fit_mode is not None:
             fit = "contain" if element.fit_mode.value == "contain" else "cover"
+        icon_stroke_color: str | None = None
+        icon_stroke_token = ""
+        if is_architectural_icon_ref(element.content_ref):
+            icon_stroke_token = resolve_icon_stroke_token()
+            icon_stroke_color = resolve_icon_stroke_color(design_system)
         if path and not unresolved:
             asset_manifest.append(
                 SceneAssetReference(
@@ -450,6 +467,8 @@ class RenderSceneCompiler:
                 asset_origin=origin,  # type: ignore[arg-type]
                 fit_mode=fit,  # type: ignore[arg-type]
                 asset_unresolved=unresolved,
+                icon_stroke_color=icon_stroke_color,
+                icon_stroke_token=icon_stroke_token,
             )
         ]
 

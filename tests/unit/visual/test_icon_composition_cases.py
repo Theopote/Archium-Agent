@@ -6,7 +6,10 @@ here; promote to pptx_visual_regression via candidate → approve-baseline.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import (
@@ -25,7 +28,7 @@ from tests.golden.visual.composition.case_builders import (
     build_v11_icons_dark_theme,
     build_v12_icons_light_theme,
     build_v13_icons_small_size,
-    build_v14_icons_stroke_recolor_pending,
+    build_v14_icons_stroke_recolor,
     build_v15_icons_aspect_4x3,
     build_v16_icons_missing_fallback,
     build_v17_icons_illegal_ref,
@@ -47,9 +50,12 @@ class _FakeIntentRepo:
 
 @pytest.fixture
 def intent_service() -> VisualIntentService:
+    from archium.config.settings import get_settings
+
     service = VisualIntentService.__new__(VisualIntentService)
     service._session = None  # noqa: SLF001
     service._llm = None  # noqa: SLF001
+    service._settings = get_settings()  # noqa: SLF001
     service._intents = _FakeIntentRepo()  # noqa: SLF001
     return service
 
@@ -129,9 +135,27 @@ def test_v13_small_icons(intent_service: VisualIntentService) -> None:
     assert all(el.width <= 0.2 and el.height <= 0.2 for el in icons)
 
 
-def test_v14_stroke_recolor_pending_keeps_accent(intent_service: VisualIntentService) -> None:
-    case = build_v14_icons_stroke_recolor_pending(intent_service)
+def test_v14_stroke_recolor_applies_accent_to_icon_nodes(
+    intent_service: VisualIntentService,
+) -> None:
+    case = build_v14_icons_stroke_recolor(intent_service)
     assert case.design.colors.accent.upper() == "#E63946"
+    bundle = _bundle_with_icon_asset_paths(case.plan, SlideContentBundle(page_number=1))
+    payload = PptxLayoutPlanAdapter().render_deck(
+        title=case.title,
+        slides=[(case.plan, case.design, bundle)],
+    )
+    icon_elements = [
+        item
+        for item in payload["slides"][0]["elements"]
+        if str(item.get("content_ref", "")).startswith("icon:")
+    ]
+    assert icon_elements
+    assert all(item.get("icon_stroke_color") == "E63946" for item in icon_elements)
+    for item in icon_elements:
+        recolored = Path(str(item["path"]))
+        assert recolored.is_file()
+        assert 'stroke="#E63946"' in recolored.read_text(encoding="utf-8")
 
 
 def test_v15_aspect_4x3(intent_service: VisualIntentService) -> None:

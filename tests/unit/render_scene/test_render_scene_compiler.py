@@ -264,3 +264,61 @@ def test_reference_style_and_art_direction_affect_compiled_scene() -> None:
     # Baseline path remains untouched (no overlays).
     assert base_title.font_family != styled_title.font_family
     assert base_title.font_size != styled_title.font_size
+
+
+def test_compiler_sets_icon_stroke_from_design_accent() -> None:
+    from archium.application.visual.architectural_icon_registry import (
+        load_default_architectural_icon_registry,
+    )
+
+    registry = load_default_architectural_icon_registry()
+    icon = registry.get_by_name("pedestrian_flow")
+    assert icon is not None
+    svg_path = registry.resolve_svg_path(icon)
+
+    design = default_presentation_design_system().model_copy(deep=True)
+    design.colors.accent = "#E63946"
+    plan = LayoutPlan(
+        slide_id=uuid4(),
+        layout_family=LayoutFamily.METRIC_DASHBOARD,
+        layout_variant="metric_with_chart",
+        page_width=10,
+        page_height=5.625,
+        design_system_id=design.id,
+        visual_intent_id=uuid4(),
+        reading_order=["icon"],
+        elements=[
+            LayoutElement(
+                id="icon",
+                role=LayoutElementRole.DECORATION,
+                content_type=LayoutContentType.IMAGE,
+                content_ref="icon:pedestrian_flow",
+                x=1.0,
+                y=1.0,
+                width=0.2,
+                height=0.2,
+            ),
+        ],
+    )
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        title="指标",
+        message="说明",
+        chapter_id="metrics",
+        order=1,
+    )
+    scene = RenderSceneCompiler().compile(
+        slide=slide,
+        layout_plan=plan,
+        design_system=design,
+        content_bundle=SlideContentBundle(
+            asset_paths={"icon:pedestrian_flow": str(svg_path)},
+        ),
+    )
+    icon_node = scene.node_by_id("icon")
+    from archium.domain.visual.render_scene import ImageNode
+
+    assert isinstance(icon_node, ImageNode)
+    assert icon_node.icon_stroke_token == "accent"
+    assert icon_node.icon_stroke_color == "#E63946"
+    assert icon_node.semantic_role == "icon"

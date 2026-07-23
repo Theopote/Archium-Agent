@@ -88,6 +88,43 @@ def test_resolve_scene_updates_token_bound_colors_only() -> None:
     assert resolved.background.color == themed.colors.background
 
 
+def test_resolve_scene_updates_icon_stroke_token() -> None:
+    from archium.domain.visual.render_scene import ImageNode
+
+    design = default_presentation_design_system().model_copy(deep=True)
+    design.colors.accent = "#E63946"
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ImageNode(
+                id="icon",
+                semantic_role="icon",
+                x=1.0,
+                y=1.0,
+                width=0.2,
+                height=0.2,
+                storage_uri="assets/icons/traffic/pedestrian_flow.svg",
+                asset_path="assets/icons/traffic/pedestrian_flow.svg",
+                fit_mode="contain",
+                icon_stroke_color="#111111",
+                icon_stroke_token="accent",
+            )
+        ],
+    )
+    themed = apply_tokens_to_design_system(
+        design, DeckThemeTokens(accent="#6BA3D0")
+    )
+    resolved = resolve_scene_with_design_system(scene, themed)
+    icon = resolved.node_by_id("icon")
+    assert isinstance(icon, ImageNode)
+    assert icon.icon_stroke_color == "#6BA3D0"
+    assert icon.icon_stroke_token == "accent"
+
+
 def test_drawing_integrity_blocks_non_contain() -> None:
     base = default_presentation_design_system()
     proposed = base.model_copy(deep=True)

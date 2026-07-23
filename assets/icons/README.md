@@ -23,8 +23,25 @@ assets/icons/
 | 风格 | 24×24 viewBox，stroke `#1a1a1a`，`fill=none`，stroke-width 1.75 |
 | 许可 | MIT |
 | 引用 | `icon:{canonical_name}`，如 `icon:pedestrian_flow` |
+| 主题色 | 渲染时描边映射到 `DesignSystem.colors.accent`（源 SVG 保持 `#1a1a1a`） |
 
 Lucide 图标可作为**风格参考**；本库使用自研/定制 SVG，保证离线打包与 PPTX 矢量渲染稳定。
+
+## 主题描边 Recolor
+
+源 SVG 统一使用 pack 默认描边 `#1a1a1a`。导出/预览时按 **DesignSystem**（经 ArtDirection 绑定）动态换色：
+
+| 阶段 | 行为 |
+|------|------|
+| RenderScene 编译 | `ImageNode.icon_stroke_token = "accent"`，`icon_stroke_color` 解析自 `design.colors.accent` |
+| 主题切换 | `theme_scene_resolve.resolve_scene_with_design_system()` 重解析 token，无需改 layout |
+| PPTX 导出 | `materialize_recolored_icon()` 写入 `.data/icon_recolor_cache/` 缓存 |
+| PNG 预览 | `recolor_icon_svg_text()` 内存换色后 rasterize |
+
+代码入口：
+
+- `archium.application.visual.svg_icon_recolor`
+- `archium.application.visual.icon_stroke_resolve`
 
 ## 图标规模（v2.1）
 

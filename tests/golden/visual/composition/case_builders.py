@@ -799,20 +799,16 @@ def build_v13_icons_small_size(intent_service: VisualIntentService) -> Compositi
     )
 
 
-def build_v14_icons_stroke_recolor_pending(
+def build_v14_icons_stroke_recolor(
     intent_service: VisualIntentService,
 ) -> CompositionCaseResult:
-    """Documents stroke/theme recolor intent until IconNode ships.
-
-    Current pack SVGs use hardcoded stroke; this case still builds with accent
-    theme so future IconNode stroke remapping can lock a pptx baseline.
-    """
+    """Accent theme recolor — icon SVG strokes map to ``design.colors.accent``."""
     base = build_v9_metric_dashboard_icons(intent_service)
     design = base.design.model_copy(deep=True)
     design.colors.accent = "#E63946"
     design.colors.primary = "#E63946"
     return CompositionCaseResult(
-        case_id="v14_icons_stroke_recolor_pending",
+        case_id="v14_icons_stroke_recolor",
         slide=base.slide,
         intent=base.intent,
         design=design,
@@ -1229,7 +1225,7 @@ ICON_EXPANSION_CASE_BUILDERS: dict[str, object] = {
     "v11_icons_dark_theme": build_v11_icons_dark_theme,
     "v12_icons_light_theme": build_v12_icons_light_theme,
     "v13_icons_small_size": build_v13_icons_small_size,
-    "v14_icons_stroke_recolor_pending": build_v14_icons_stroke_recolor_pending,
+    "v14_icons_stroke_recolor": build_v14_icons_stroke_recolor,
     "v15_icons_aspect_4x3": build_v15_icons_aspect_4x3,
     "v16_icons_missing_fallback": build_v16_icons_missing_fallback,
     "v17_icons_illegal_ref": build_v17_icons_illegal_ref,

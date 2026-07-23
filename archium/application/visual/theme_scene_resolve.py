@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode, ThemeTokens
+from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, ImageNode, TextNode, ThemeTokens
 
 
 def resolve_scene_with_design_system(
@@ -56,6 +56,10 @@ def resolve_scene_with_design_system(
     )
 
     for node in resolved.nodes:
+        if isinstance(node, ImageNode) and node.icon_stroke_token:
+            with contextlib.suppress(KeyError):
+                node.icon_stroke_color = design_system.colors.resolve(node.icon_stroke_token)
+            continue
         if not isinstance(node, TextNode):
             continue
         if node.color_token:

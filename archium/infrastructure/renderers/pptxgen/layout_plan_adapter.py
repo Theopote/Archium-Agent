@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from archium.application.visual.icon_stroke_resolve import resolve_icon_stroke_color
+from archium.application.visual.svg_icon_recolor import (
+    is_architectural_icon_ref,
+    materialize_recolored_icon,
+)
 from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
@@ -144,8 +150,15 @@ class PptxLayoutPlanAdapter:
             instruction["content_ref"] = element.content_ref
             path = bundle.asset_paths.get(element.content_ref)
             if path:
-                instruction["path"] = path
-                if not _is_supported_layout_image_path(path):
+                export_path = path
+                if is_architectural_icon_ref(element.content_ref) and Path(path).suffix.lower() == ".svg":
+                    stroke = resolve_icon_stroke_color(design_system)
+                    instruction["icon_stroke_color"] = stroke.lstrip("#")
+                    export_path = str(
+                        materialize_recolored_icon(Path(path), stroke),
+                    )
+                instruction["path"] = export_path
+                if not _is_supported_layout_image_path(export_path):
                     instruction["asset_unresolved"] = True
                     instruction["asset_error"] = "LAYOUT.UNSUPPORTED_IMAGE_FORMAT"
             elif element.content_type in {

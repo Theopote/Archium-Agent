@@ -131,3 +131,48 @@ def test_render_deck_uses_render_scene_schema() -> None:
     deck = RenderScenePptxAdapter().render_deck(title="Deck", scenes=[(scene, None)])
     assert deck["schema"] == "archium.render_scene.v1"
     assert deck["slides"][0]["elements"][0]["text"] == "封面"
+
+
+def test_adapter_materializes_recolored_icon_svg(tmp_path: Path) -> None:
+    from archium.application.visual.architectural_icon_registry import (
+        load_default_architectural_icon_registry,
+    )
+    from archium.domain.visual.render_scene import BackgroundStyle, ImageNode, RenderScene
+
+    registry = load_default_architectural_icon_registry()
+    icon = registry.get_by_name("pedestrian_flow")
+    assert icon is not None
+    svg_path = registry.resolve_svg_path(icon)
+    design = default_presentation_design_system().model_copy(deep=True)
+    design.colors.accent = "#E63946"
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        design_system_id=design.id,
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ImageNode(
+                id="icon",
+                semantic_role="icon",
+                x=1.0,
+                y=1.0,
+                width=0.2,
+                height=0.2,
+                storage_uri=str(svg_path),
+                asset_path=str(svg_path),
+                fit_mode="contain",
+                icon_stroke_color="#E63946",
+                icon_stroke_token="accent",
+            )
+        ],
+    )
+    instruction = RenderScenePptxAdapter().render_slide(scene, design_system_id=design.id)
+    payload = instruction.to_dict()
+    icon_el = next(item for item in payload["elements"] if item["id"] == "icon")
+    assert icon_el["icon_stroke_color"] == "E63946"
+    recolored = Path(str(icon_el["path"]))
+    assert recolored.is_file()
+    assert recolored != svg_path
+    assert 'stroke="#E63946"' in recolored.read_text(encoding="utf-8")

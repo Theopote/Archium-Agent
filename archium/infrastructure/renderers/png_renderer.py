@@ -165,7 +165,13 @@ class PngRenderer:
         if target_w <= 0 or target_h <= 0:
             return
         try:
-            asset = self._load_image_asset(path, target_w=target_w, target_h=target_h)
+            icon_stroke_color = node.icon_stroke_color if isinstance(node, ImageNode) else None
+            asset = self._load_image_asset(
+                path,
+                target_w=target_w,
+                target_h=target_h,
+                icon_stroke_color=icon_stroke_color,
+            )
         except OSError:
             if path.suffix.lower() == ".svg":
                 self._draw_svg_placeholder(canvas, box)
@@ -202,8 +208,17 @@ class PngRenderer:
             return resolved
         return None
 
-    def _load_image_asset(self, path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
+    def _load_image_asset(
+        self,
+        path: Path,
+        *,
+        target_w: int,
+        target_h: int,
+        icon_stroke_color: str | None = None,
+    ) -> PILImage.Image:
         from PIL import Image
+
+        from archium.application.visual.svg_icon_recolor import recolor_icon_svg_text
 
         resolved = self._resolve_existing_asset_path(str(path))
         if resolved is not None:
@@ -211,13 +226,35 @@ class PngRenderer:
 
         if path.suffix.lower() != ".svg":
             return Image.open(path).convert("RGBA")
+        svg_text: str | None = None
+        if icon_stroke_color:
+            svg_text = recolor_icon_svg_text(
+                path.read_text(encoding="utf-8"),
+                icon_stroke_color,
+            )
         try:
-            return self._load_svg_via_cairosvg(path, target_w=target_w, target_h=target_h)
+            return self._load_svg_via_cairosvg(
+                path,
+                target_w=target_w,
+                target_h=target_h,
+                svg_text=svg_text,
+            )
         except Exception:
-            return self._load_svg_via_simple_parser(path, target_w=target_w, target_h=target_h)
+            return self._load_svg_via_simple_parser(
+                path,
+                target_w=target_w,
+                target_h=target_h,
+                svg_text=svg_text,
+            )
 
     @staticmethod
-    def _load_svg_via_cairosvg(path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
+    def _load_svg_via_cairosvg(
+        path: Path,
+        *,
+        target_w: int,
+        target_h: int,
+        svg_text: str | None = None,
+    ) -> PILImage.Image:
         from PIL import Image
 
         try:
@@ -225,15 +262,25 @@ class PngRenderer:
         except Exception as exc:  # pragma: no cover - platform/env dependent
             raise OSError("CairoSVG unavailable") from exc
 
-        png_bytes = cairosvg.svg2png(
-            url=str(path),
-            output_width=max(target_w * 2, 32),
-            output_height=max(target_h * 2, 32),
-        )
+        kwargs: dict[str, object] = {
+            "output_width": max(target_w * 2, 32),
+            "output_height": max(target_h * 2, 32),
+        }
+        if svg_text is not None:
+            kwargs["bytestring"] = svg_text.encode("utf-8")
+        else:
+            kwargs["url"] = str(path)
+        png_bytes = cairosvg.svg2png(**kwargs)
         return Image.open(BytesIO(png_bytes)).convert("RGBA")
 
     @staticmethod
-    def _load_svg_via_simple_parser(path: Path, *, target_w: int, target_h: int) -> PILImage.Image:
+    def _load_svg_via_simple_parser(
+        path: Path,
+        *,
+        target_w: int,
+        target_h: int,
+        svg_text: str | None = None,
+    ) -> PILImage.Image:
         from PIL import Image, ImageDraw
         from svg.path import parse_path
 
@@ -243,7 +290,7 @@ class PngRenderer:
         image = Image.new("RGBA", (canvas_w, canvas_h), (255, 255, 255, 0))
         draw = ImageDraw.Draw(image)
 
-        root = ET.fromstring(path.read_text(encoding="utf-8"))
+        root = ET.fromstring(svg_text if svg_text is not None else path.read_text(encoding="utf-8"))
         view_box = root.attrib.get("viewBox", "0 0 24 24").replace(",", " ").split()
         if len(view_box) != 4:
             raise OSError("unsupported SVG viewBox")

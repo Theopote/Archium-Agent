@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,7 @@ from archium.application.visual.scene_fonts import (
     detect_font_fallbacks,
     text_has_cjk,
 )
+from archium.application.visual.svg_icon_recolor import materialize_recolored_icon
 from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
@@ -238,7 +240,13 @@ class RenderScenePptxAdapter:
         }
         path = _filesystem_export_path(node.resolved_path, node.asset_path)
         if path and not node.asset_unresolved:
-            instruction["path"] = path
+            export_path = path
+            if node.icon_stroke_color and Path(path).suffix.lower() == ".svg":
+                export_path = str(
+                    materialize_recolored_icon(Path(path), node.icon_stroke_color),
+                )
+                instruction["icon_stroke_color"] = node.icon_stroke_color.lstrip("#")
+            instruction["path"] = export_path
         else:
             instruction["asset_unresolved"] = True
             instruction["asset_error"] = "LAYOUT.UNRESOLVED_ASSET_PATH"
