@@ -1,4 +1,18 @@
-"""Database session and engine management."""
+"""Database session and engine management.
+
+Commit ownership (APP-003 / DB-005)
+---------------------------------
+* :func:`get_session` is the default transaction boundary: commit on success
+  exit, rollback on exception. Repositories flush only.
+* UI must not call ``session.commit()``; rely on this boundary (or an
+  application use-case service that owns the commit).
+* Nested application helpers and infrastructure must flush only — never commit.
+* Allowed mid-session commits (use-case / visibility exceptions):
+  - ``TransactionExecutor`` success path (atomic visual edit)
+  - ``commit_workflow_checkpoint`` when the setting is enabled (cross-session poll)
+  - ``ProjectDeletionService`` staged delete protocol
+  - ``ProjectManagementService`` CRUD use-case entry points
+"""
 
 from __future__ import annotations
 

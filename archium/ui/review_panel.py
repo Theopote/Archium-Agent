@@ -475,7 +475,6 @@ def _render_manuscript_editor(context_presentation_id: UUID, workflow_run_id: UU
     if approve_clicked:
         with get_session() as session:
             PresentationReviewService(session).approve_manuscript(manuscript.id)
-            session.commit()
         st.success(f"{_MANUSCRIPT_LABEL} 已批准。")
         st.rerun()
 

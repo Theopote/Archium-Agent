@@ -169,7 +169,6 @@ def _outline_update_from(
 def _save_outline(outline_id: UUID, update: OutlineUpdate) -> OutlinePlan:
     with get_session() as session:
         saved = PresentationReviewService(session).update_outline(outline_id, update)
-        session.commit()
         return saved
 
 
@@ -707,7 +706,6 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                     try:
                         with get_session() as session:
                             SlideDesignBriefService(session).generate_all(outline.id)
-                            session.commit()
                         st.rerun()
                     except WorkflowError as exc:
                         st.error(format_user_error(exc))
@@ -773,7 +771,6 @@ def _confirm_outline(project_id: UUID, *, outline: OutlinePlan | None) -> None:
                 approved_by="user",
                 expected_revision=outline.version if outline is not None else None,
             )
-            session.commit()
         if result.presentation_id is not None:
             st.session_state.selected_presentation_id = str(result.presentation_id)
         st.success(result.message + " 请继续确认各页设计摘要。")

@@ -279,7 +279,6 @@ def _run_export(
                 source_page_id=result.source_page_id,
                 policy_preset=policy_preset,
             )
-            session.commit()
     except WorkflowError as exc:
         st.error(format_user_error(exc))
         return
@@ -324,7 +323,6 @@ def _run_import(
                 result.recovery_result,
                 presentation_id=presentation_id,
             )
-            session.commit()
     except WorkflowError as exc:
         st.error(format_user_error(exc))
         return
@@ -356,7 +354,6 @@ def _run_save_template(
                 source_page_id=result.source_page_id,
                 source_preview_path=delivery.resolve_source_preview_path(result),
             )
-            session.commit()
     except WorkflowError as exc:
         st.error(format_user_error(exc))
         return

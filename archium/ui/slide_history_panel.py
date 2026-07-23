@@ -128,7 +128,6 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
         ):
             with get_session() as session:
                 SlideHistoryService(session).restore_at_revision(UUID(restore_id))
-                session.commit()
             st.success("页面内容已恢复到所选版本。")
             st.rerun()
 

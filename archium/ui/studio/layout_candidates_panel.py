@@ -101,7 +101,6 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
                     slide_id=slide_id,
                     layout_plan_id=UUID(selected),
                 )
-                session.commit()
             st.success("已切换版式。")
             st.rerun()
         except (WorkflowError, ValueError) as exc:
@@ -152,7 +151,6 @@ def _render_template_match_controls(slide_snapshot: SlideVisualSnapshot) -> None
                     template_id=options[label],
                     candidate_count=3,
                 )
-                session.commit()
             st.success("已按模板生成候选版式并选中推荐方案。")
             st.rerun()
         except WorkflowError as exc:

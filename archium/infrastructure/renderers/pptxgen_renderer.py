@@ -90,8 +90,9 @@ class PptxGenPresentationRenderer:
                 base_paths=asset_paths,
                 facts=facts,
             )
+            # DB-007 / DB-005: infrastructure must not own transactions.
             if self._session.new:
-                self._session.commit()
+                self._session.flush()
         return build_presentation_spec(
             presentation_id=presentation_id,
             brief=brief,

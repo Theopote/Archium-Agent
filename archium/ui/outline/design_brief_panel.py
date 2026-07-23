@@ -64,7 +64,6 @@ def render_design_brief_panel(
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).generate_all(outline.id)
-                    session.commit()
                 st.success("已生成全部页面设计摘要。")
                 st.rerun()
             except WorkflowError as exc:
@@ -80,7 +79,6 @@ def render_design_brief_panel(
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
-                    session.commit()
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
@@ -111,7 +109,6 @@ def render_design_brief_panel(
                         page_order,
                         expected_version=outline.version,
                     )
-                    session.commit()
                 st.success(f"第 {page_order + 1} 页设计摘要已批准。")
                 st.rerun()
             except WorkflowError as exc:
@@ -121,7 +118,6 @@ def render_design_brief_panel(
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
-                    session.commit()
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
@@ -133,7 +129,6 @@ def render_design_brief_panel(
                         outline.id,
                         expected_version=outline.version,
                     )
-                    session.commit()
                 st.success("全部页面设计摘要已批准。")
                 st.rerun()
             except WorkflowError as exc:
@@ -143,7 +138,6 @@ def render_design_brief_panel(
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).generate_all(outline.id)
-                    session.commit()
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
@@ -226,7 +220,6 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
         try:
             with get_session() as session:
                 saved = SlideDesignBriefService(session).update_brief(outline_id, update)
-                session.commit()
             st.success("设计摘要已保存。")
             if saved.status == ApprovalStatus.CHANGES_PENDING:
                 st.warning("已批准页面被修改，状态变为「待重新确认」。")

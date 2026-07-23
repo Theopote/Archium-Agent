@@ -199,7 +199,6 @@ def render_slide_recovery_region_editor(
             with get_session() as session:
                 service = SlideRecoveryRegionEditService(session)
                 updated = service.apply_region_edits(run.id, regions)
-                session.commit()
         except WorkflowError as exc:
             st.error(format_user_error(exc))
             return None

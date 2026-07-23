@@ -91,8 +91,9 @@ def seed_acceptance_reviews_from_layout(
             settings=settings,
         )
         saved += 1
+    # DB-005: nested helper flushes only; acceptance use-case / get_session owns commit.
     if saved:
-        session.commit()
+        session.flush()
     return saved
 
 

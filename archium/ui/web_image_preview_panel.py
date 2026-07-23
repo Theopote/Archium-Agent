@@ -104,7 +104,6 @@ def render_web_image_preview_panel(
                             search_query=result.query,
                             confirm=True,
                         )
-                        session.commit()
                     st.session_state.pop(cache_key, None)
                     st.success("已采用配图并确认匹配。")
                     st.rerun()

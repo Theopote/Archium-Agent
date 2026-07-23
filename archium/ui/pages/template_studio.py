@@ -43,20 +43,18 @@ def _render_upload_panel() -> None:
         staging.mkdir(parents=True, exist_ok=True)
         staged = staging / uploaded.name
         staged.write_bytes(uploaded.getvalue())
-        with st.spinner("正在导入、截图并提取结构…"), get_session() as session:
-            service = TemplateStudioService(session)
-            try:
-                result = service.import_pptx(
+        try:
+            with st.spinner("正在导入、截图并提取结构…"), get_session() as session:
+                result = TemplateStudioService(session).import_pptx(
                     staged,
                     name=name.strip() or Path(uploaded.name).stem,
                 )
-                session.commit()
-            except WorkflowError as exc:
-                st.error(format_user_error(exc))
-                return
-            except Exception as exc:  # noqa: BLE001
-                st.error(format_user_error(exc))
-                return
+        except WorkflowError as exc:
+            st.error(format_user_error(exc))
+            return
+        except Exception as exc:  # noqa: BLE001
+            st.error(format_user_error(exc))
+            return
         st.session_state.template_studio_selected_id = str(result.template.id)
         st.success(
             f"已导入「{result.template.name}」：{len(result.template.layouts)} 页 · "
@@ -167,7 +165,6 @@ def _render_layout_editor(template_id: UUID) -> None:
                     layout_id,
                     TemplatePageType(page_type),
                 )
-                session.commit()
             st.success("已更新页面分类。")
             st.rerun()
 
@@ -220,7 +217,6 @@ def _render_layout_editor(template_id: UUID) -> None:
                             layout_id,
                             updated,
                         )
-                        session.commit()
                     st.success("槽位已保存。")
                     st.rerun()
                 if st.button("删除槽位", key=f"del_slot_{layout_id}_{slot.id}"):
@@ -230,7 +226,6 @@ def _render_layout_editor(template_id: UUID) -> None:
                             layout_id,
                             slot.id,
                         )
-                        session.commit()
                     st.rerun()
 
         with st.form(f"add_slot_{layout_id}"):
@@ -257,7 +252,6 @@ def _render_layout_editor(template_id: UUID) -> None:
                 )
                 with get_session() as session:
                     TemplateStudioService(session).upsert_slot(template_id, layout_id, new_slot)
-                    session.commit()
                 st.rerun()
 
     st.markdown("#### 5. 测试内容填充")
@@ -268,7 +262,6 @@ def _render_layout_editor(template_id: UUID) -> None:
                     template_id,
                     layout_id,
                 )
-                session.commit()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
                 return
@@ -281,7 +274,6 @@ def _render_layout_editor(template_id: UUID) -> None:
             with get_session() as session:
                 try:
                     published = TemplateStudioService(session).publish(template_id)
-                    session.commit()
                 except WorkflowError as exc:
                     st.error(format_user_error(exc))
                     return

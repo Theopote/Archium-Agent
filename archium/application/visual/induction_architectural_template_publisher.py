@@ -224,7 +224,8 @@ class InductionArchitecturalTemplatePublisher:
             induction=induction,
             session=session,
         )
-        session.commit()
+        # DB-005: nested helper flushes only; caller / get_session owns commit.
+        session.flush()
         return InductionTemplatePublishResult(
             template=saved,
             artifact_path=result.artifact_path,

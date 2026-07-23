@@ -163,7 +163,6 @@ def render() -> None:
                         persist=save_mode == "保存到本机安全凭据库",
                         session_store=cast(dict[str, object], st.session_state),
                     )
-                session.commit()
             reset_llm_provider_cache()
             st.success("AI 配置已保存")
             st.rerun()
@@ -174,7 +173,6 @@ def render() -> None:
             delete_service.delete_api_key(
                 draft_profile, session_store=cast(dict[str, object], st.session_state)
             )
-            session.commit()
         reset_llm_provider_cache()
         st.warning("已删除本机凭据库中的 API Key（环境变量不受影响）")
         st.rerun()
@@ -252,7 +250,6 @@ def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
                 save_registry = ModelRoleRegistryService(session)
                 save_registry.save_profiles(profiles)
                 save_registry.save_role_assignments(new_assignments)
-                session.commit()
             st.success("模型角色映射已保存")
             st.rerun()
 
@@ -367,7 +364,6 @@ def _render_image_search_settings() -> None:
                     enabled=enabled,
                     persist_to_library=persist_to_library,
                 )
-                session.commit()
             if pexels_key_input.strip():
                 save_pexels_api_key(
                     api_key=pexels_key_input.strip(),

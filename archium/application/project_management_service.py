@@ -43,6 +43,7 @@ class ProjectManagementService:
 
         project = Project(name=cleaned_name, description=cleaned_description)
         created = self._projects.create(project)
+        # APP-003: use-case boundary owns commit (UI must not).
         self._session.commit()
         logger.info("Created project %s", created.id)
         return created

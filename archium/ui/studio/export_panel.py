@@ -308,7 +308,6 @@ def _append_delivery_record(
                 revision_id=revision_id,
                 round_trip_report=round_trip_report,
             )
-            session.commit()
         result = DeliveryRecordResult(
             file_exported=True,
             record_persisted=True,
