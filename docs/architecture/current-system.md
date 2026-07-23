@@ -36,6 +36,8 @@ Studio 的编辑闭环不是直接覆写导出文件：
   -> SceneRevision / history / undo
 ```
 
+提案的 base/proposed 以独立 Scene 快照行持久化，接受后写回 live RenderScene 并同步 LayoutPlan；提案状态更新不得再覆写 live。UI `clear_proposal` 只清 session 缓存。Studio 几何编辑 / 修订恢复依赖外层 session 提交，服务内不再中途 `commit`。
+
 评论固定到创建时的 Scene revision、hash 与节点快照；版本已变化时进入 `needs_rebase`，避免静默应用到错误节点。
 
 ## 分层与目录

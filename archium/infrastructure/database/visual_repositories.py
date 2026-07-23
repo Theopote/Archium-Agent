@@ -222,11 +222,30 @@ class SceneProposalRepository:
                     exclude_proposal_id=proposal.proposal_id,
                 )
 
-            base_scene = self._scenes.save(proposal.base_scene)
+            orm = self._session.get(SceneChangeProposalORM, proposal.proposal_id)
+            # Status / decision updates must not rewrite scene rows — base_scene often
+            # shares the live layout-plan id; re-saving it after accept would revert.
+            if (
+                orm is not None
+                and proposal.base_scene_id is not None
+                and proposal.proposed_scene_id is not None
+            ):
+                visual_mappers.scene_change_proposal_to_orm(
+                    proposal,
+                    base_scene_id=proposal.base_scene_id,
+                    proposed_scene_id=proposal.proposed_scene_id,
+                    target=orm,
+                )
+                self._session.flush()
+                saved = self._hydrate(orm)
+                if saved is None:
+                    raise RuntimeError("failed to hydrate scene change proposal after save")
+                return saved
+
+            base_scene = self._scenes.save(self._base_scene_snapshot(proposal))
             proposed_scene = self._candidate_scene_snapshot(proposal)
             saved_proposed = self._scenes.save(proposed_scene)
 
-            orm = self._session.get(SceneChangeProposalORM, proposal.proposal_id)
             hydrated = proposal.model_copy(
                 update={
                     "base_scene": base_scene,
@@ -290,6 +309,13 @@ class SceneProposalRepository:
         elif proposed.id == proposal.base_scene.id:
             proposed = proposed.model_copy(update={"id": new_uuid()})
         return proposed
+
+    def _base_scene_snapshot(self, proposal: SceneChangeProposal) -> RenderScene:
+        """Persist an immutable base snapshot; never share the live scene row id."""
+        base = proposal.base_scene.model_copy(deep=True)
+        if proposal.base_scene_id is not None:
+            return base.model_copy(update={"id": proposal.base_scene_id})
+        return base.model_copy(update={"id": new_uuid()})
 
     def _supersede_active_for_slide(
         self,

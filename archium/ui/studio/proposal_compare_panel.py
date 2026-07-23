@@ -58,17 +58,7 @@ def store_proposal(proposal: SceneChangeProposal) -> None:
 
 
 def clear_proposal(slide_id: UUID) -> None:
-    proposal = get_stored_proposal(slide_id)
-    if proposal is not None and proposal.status in {
-        ProposalStatus.READY,
-        ProposalStatus.READY_WITH_WARNINGS,
-        ProposalStatus.DRAFT,
-    }:
-        with get_session() as session:
-            from archium.application.visual.scene_proposal_service import SceneProposalService
-
-            settings = get_settings()
-            SceneProposalService(session, settings=settings).mark_proposal_superseded(proposal)
+    """Drop UI cache only — never mutate terminal proposal status in the DB."""
     st.session_state.pop(_proposal_session_key(slide_id), None)
 
 

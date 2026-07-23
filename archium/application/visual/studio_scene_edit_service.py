@@ -122,7 +122,6 @@ class StudioSceneEditService:
             layout_plan_id=saved_scene.layout_plan_id,
         )
         self._studio_scene.render_scene_preview(slide.presentation_id, saved_scene)
-        self._session.commit()
 
         return SceneEditResult(
             slide_id=slide.id,

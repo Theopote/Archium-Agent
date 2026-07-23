@@ -55,6 +55,7 @@ from archium.domain.visual.studio_command import ScenePatchAction, StudioCommand
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.database.visual_repositories import (
+    LayoutPlanRepository,
     RenderSceneRepository,
     SceneProposalRepository,
 )
@@ -78,6 +79,7 @@ class SceneProposalService:
         self._scenes = RenderSceneRepository(session)
         self._proposals = SceneProposalRepository(session)
         self._presentations = PresentationRepository(session)
+        self._plans = LayoutPlanRepository(session)
         self._scene_history = SceneHistoryService(session)
         self._studio_scene = StudioSceneService(session, settings=self._settings)
 
@@ -322,6 +324,7 @@ class SceneProposalService:
             raise WorkflowError("不能接受预览渲染失败的 Scene 修改。")
 
         saved = self._persist_scene(slide, accepted_scene)
+        self._sync_layout_plan_from_scene(slide, saved)
         parent_revision_id = proposal.base_revision_id
         _, scene_revision = self._scene_history.record_scene(
             slide=slide,
@@ -341,6 +344,22 @@ class SceneProposalService:
         updated_proposal = self._record_proposal_decision(proposal, decision)
         self._sync_element_comments(updated_proposal)
         return ProposalAcceptResult(revision=scene_revision, proposal=updated_proposal)
+
+    def _sync_layout_plan_from_scene(self, slide: SlideSpec, scene: RenderScene) -> None:
+        if self._plans is None or slide.layout_plan_id is None:
+            return
+        plan = self._plans.get(slide.layout_plan_id)
+        if plan is None:
+            return
+        from archium.application.visual.studio_scene_edit_service import (
+            sync_layout_geometry_from_scene,
+        )
+
+        synced = sync_layout_geometry_from_scene(scene, plan)
+        saved_plan = self._plans.save(synced)
+        slide.layout_plan_id = saved_plan.id
+        if self._presentations is not None:
+            self._presentations.save_slide(slide)
 
     def _record_proposal_decision(
         self,

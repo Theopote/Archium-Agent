@@ -201,7 +201,6 @@ class SceneRevisionTimelineService:
         )
         with contextlib.suppress(MemoryError, OSError):
             self._studio_scene.render_scene_preview(slide.presentation_id, saved)
-        self._session.commit()
         summary = self._summary_from_revision(entity_revision)
         return SceneRevisionRestoreResult(
             summary=summary,
@@ -228,7 +227,6 @@ class SceneRevisionTimelineService:
         )
         with contextlib.suppress(MemoryError, OSError):
             self._studio_scene.render_scene_preview(slide.presentation_id, saved)
-        self._session.commit()
         summary = SceneRevisionSummary(
             revision_id=source_revision_id,
             scene_id=saved.id,

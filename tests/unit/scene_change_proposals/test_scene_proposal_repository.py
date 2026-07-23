@@ -158,12 +158,18 @@ def test_scene_proposal_repository_round_trip(db_session: Session) -> None:
     saved = repo.save(proposal)
 
     assert saved.proposal_id == proposal.proposal_id
-    assert saved.base_scene_id == base_scene.id
+    assert saved.base_scene_id is not None
+    assert saved.base_scene_id != base_scene.id
     assert saved.proposed_scene_id is not None
     assert saved.proposed_scene_id != base_scene.id
+    assert saved.proposed_scene_id != saved.base_scene_id
     assert saved.base_scene_hash == compute_scene_hash(base_scene)
     assert saved.proposed_scene.node_by_id("title").text == "新标题"  # type: ignore[union-attr]
     assert saved.status == ProposalStatus.READY
+    # Live canonical scene must remain untouched after proposal snapshotting.
+    live = RenderSceneRepository(db_session).get(base_scene.id)
+    assert live is not None
+    assert live.node_by_id("title").text == "旧标题"  # type: ignore[union-attr]
 
     loaded = repo.get(saved.proposal_id)
     assert loaded is not None
@@ -257,4 +263,41 @@ def test_scene_proposal_repository_superseded_status(db_session: Session) -> Non
     assert loaded.status == ProposalStatus.SUPERSEDED
     assert loaded.decided_at is not None
     assert updated.status == ProposalStatus.SUPERSEDED
+
+
+def test_accept_proposal_keeps_live_scene_as_proposed(db_session: Session) -> None:
+    """Accept must not be undone by the subsequent proposal metadata save."""
+    from archium.application.visual.scene_proposal_service import SceneProposalService
+    from archium.config.settings import Settings
+    from archium.domain.visual.studio_command import RewriteTextCommand
+
+    presentation, slide, base_scene = _seed_slide_with_scene(db_session)
+    service = SceneProposalService(db_session, settings=Settings())
+    proposal = service.create_proposal(
+        base_scene=base_scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation.id,
+                slide_id=slide.id,
+                node_id="title",
+                new_text="新标题",
+            )
+        ],
+        presentation_id=presentation.id,
+        slide_id=slide.id,
+    )
+    proposal = service.save_proposal(proposal)
+
+    result = service.accept_proposal(proposal, slide, current_scene=base_scene)
+    live = RenderSceneRepository(db_session).get(base_scene.id)
+    assert live is not None
+    title = live.node_by_id("title")
+    assert isinstance(title, TextNode)
+    assert title.text == "新标题"
+    assert result.proposal.status == ProposalStatus.ACCEPTED
+
+    plan = LayoutPlanRepository(db_session).get(slide.layout_plan_id)  # type: ignore[arg-type]
+    assert plan is not None
+    title_el = next(el for el in plan.elements if el.id == "title")
+    assert title_el.text_content == "新标题"
 
