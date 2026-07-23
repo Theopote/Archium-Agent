@@ -1275,7 +1275,11 @@ class VisualWorkflowNodes:
             return {"current_step": step}
 
         if not bool(getattr(self._runtime.settings, "scene_repair_enabled", True)):
-            return {"current_step": step, "scene_repair_report": None}
+            return {
+                "current_step": step,
+                "scene_repair_report": None,
+                "warnings": ["Scene repair skipped: scene_repair_enabled=false"],
+            }
 
         design = state.get("design_system")
         slides = list(state.get("slides") or [])
@@ -1329,11 +1333,15 @@ class VisualWorkflowNodes:
             "scene_paths": result.scene_paths,
             "scene_pptx_path": result.scene_pptx_path,
         }
-        warnings: list[str] = []
+        warnings: list[str] = list(result.warnings)
         render_paths = list(state.get("render_paths") or [])
         render_paths.extend(result.scene_paths)
         if result.scene_pptx_path:
             render_paths.append(result.scene_pptx_path)
+        if not result.scenes and plans:
+            warnings.append(
+                f"Scene repair produced 0 scenes from {len(plans)} layout plan(s)"
+            )
         if result.repair_actions:
             warnings.append(
                 f"Scene repair applied {result.repair_actions} patch(es) "

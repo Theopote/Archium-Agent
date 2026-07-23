@@ -266,25 +266,10 @@ class StudioSceneService:
                 }
             )
             if compute_scene_hash(comparable) == compute_scene_hash(existing):
-                saved = existing
-                if compute_scene_hash(prepared_scene) != compute_scene_hash(existing):
-                    saved = save_render_scene(self._scenes,
-                        prepared_scene.model_copy(
-                            update={
-                                "id": existing.id,
-                                "version": existing.version + 1,
-                                "created_at": existing.created_at,
-                            }
-                        )
-                    )
-                    self._record_safe_auto_repair(slide, saved, repair_batch)
-                    self.invalidate_preview_cache(
-                        slide.presentation_id,
-                        layout_plan_id=plan.id,
-                    )
-                preview = self._ensure_preview(slide.presentation_id, saved)
+                # Hash excludes id/version/timestamps — content-identical → reuse.
+                preview = self._ensure_preview(slide.presentation_id, existing)
                 return self._build_scene_result(
-                    scene=saved,
+                    scene=existing,
                     preview_path=preview,
                     reused=True,
                     batch=repair_batch,

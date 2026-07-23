@@ -10,6 +10,7 @@ Chart / table handling:
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID, uuid4
 
 from archium.application.visual.asset_reference import is_supported_layout_image_path
@@ -22,7 +23,7 @@ from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
+from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, OverflowPolicy
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import (
     BackgroundStyle,
@@ -106,6 +107,7 @@ class RenderSceneCompiler:
                 drawing_type=drawing_type,
                 asset_manifest=asset_manifest,
                 warnings=warnings,
+                overflow_policy=layout_plan.overflow_policy,
             )
             nodes.extend(compiled)
 
@@ -212,6 +214,7 @@ class RenderSceneCompiler:
         drawing_type: DrawingType,
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
+        overflow_policy: OverflowPolicy = OverflowPolicy.WARN,
     ) -> list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode]:
         nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode] = []
         if element.content_type == LayoutContentType.DRAWING:
@@ -229,12 +232,28 @@ class RenderSceneCompiler:
             if table_nodes:
                 nodes = list(table_nodes)
             else:
-                nodes = list(self._compile_text(element, design_system, bundle, warnings))
+                nodes = list(
+                    self._compile_text(
+                        element,
+                        design_system,
+                        bundle,
+                        warnings,
+                        overflow_policy=overflow_policy,
+                    )
+                )
         elif element.content_type in {
             LayoutContentType.TEXT,
             LayoutContentType.METRIC,
         }:
-            nodes = list(self._compile_text(element, design_system, bundle, warnings))
+            nodes = list(
+                self._compile_text(
+                    element,
+                    design_system,
+                    bundle,
+                    warnings,
+                    overflow_policy=overflow_policy,
+                )
+            )
         elif element.content_type == LayoutContentType.SHAPE:
             nodes = list(self._compile_shape(element, design_system))
         return nodes
@@ -316,6 +335,8 @@ class RenderSceneCompiler:
         design_system: DesignSystem,
         bundle: SlideContentBundle,
         warnings: list[str],
+        *,
+        overflow_policy: OverflowPolicy = OverflowPolicy.WARN,
     ) -> list[TextNode | ShapeNode]:
         typography = resolve_text_style(element, design_system.typography)
         color = design_system.colors.resolve(typography.color_token)
@@ -323,6 +344,7 @@ class RenderSceneCompiler:
         if not text and element.role == LayoutElementRole.PAGE_NUMBER and bundle.page_number:
             text = str(bundle.page_number)
         if not text:
+            warnings.append(f"EMPTY_TEXT_DROPPED:{element.id}")
             return []
 
         nodes: list[TextNode | ShapeNode] = []
@@ -386,6 +408,7 @@ class RenderSceneCompiler:
                 line_height=typography.line_height,
                 letter_spacing=typography.letter_spacing,
                 padding=BoxSpacing(left=4 / 96, right=4 / 96, top=2 / 96, bottom=2 / 96),
+                overflow_policy=_scene_overflow_policy(overflow_policy),
             )
         )
         return nodes
@@ -513,6 +536,20 @@ class RenderSceneCompiler:
             warnings.append(f"UNSUPPORTED_FORMAT:{element.content_ref}")
             return path, True
         return path, False
+
+
+def _scene_overflow_policy(
+    policy: OverflowPolicy,
+) -> Literal["error", "shrink", "clip", "continue"]:
+    """Map LayoutPlan OverflowPolicy onto TextNode.overflow_policy.
+
+    WARN/SPLIT → error so scene semantic QA can detect overflow and repair can act.
+    """
+    if policy == OverflowPolicy.SHRINK:
+        return "shrink"
+    if policy == OverflowPolicy.CLIP:
+        return "clip"
+    return "error"
 
 
 def _typography_token_for_role(role: LayoutElementRole) -> str:

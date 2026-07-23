@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
@@ -15,6 +15,11 @@ from archium.application.visual.asset_reference import (
     content_refs_from_plan,
 )
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
+from archium.application.visual.scene_compilers.base import SceneCompileContext
+from archium.application.visual.scene_compilers.chain import (
+    SceneCompilerChain,
+    default_scene_compilers,
+)
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
 from archium.domain.reference_style import ReferenceStyleProfile
@@ -43,6 +48,7 @@ class VisualSceneRepairWorkflowResult:
     repair_rounds: int
     remaining_issue_count: int
     scene_pptx_path: str | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 class VisualSceneRepairWorkflowService:
@@ -54,17 +60,23 @@ class VisualSceneRepairWorkflowService:
         *,
         settings: Settings | None = None,
         compiler: RenderSceneCompiler | None = None,
+        compiler_chain: SceneCompilerChain | None = None,
         scene_repair: SceneRepairService | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
-        self._compiler = compiler or RenderSceneCompiler()
+        inner = compiler or RenderSceneCompiler()
+        self._compiler = inner
+        self._compiler_chain = compiler_chain or SceneCompilerChain(
+            compilers=default_scene_compilers(inner=inner)
+        )
         self._scene_repair = scene_repair or SceneRepairService()
         self._presentations = PresentationRepository(session)
         self._projects = ProjectRepository(session)
         self._art_directions = ArtDirectionRepository(session)
         self._intents = VisualIntentRepository(session)
         self._scenes = RenderSceneRepository(session)
+        self._last_compile_warnings: list[str] = []
 
     def compile_scenes(
         self,
@@ -77,6 +89,7 @@ class VisualSceneRepairWorkflowService:
         art_direction: ArtDirection | None = None,
         reference_style: ReferenceStyleProfile | None = None,
     ) -> list[RenderScene]:
+        self._last_compile_warnings = []
         if art_direction is None:
             art_direction = self._resolve_art_direction(project_id, presentation_id)
         if reference_style is None:
@@ -86,6 +99,9 @@ class VisualSceneRepairWorkflowService:
         for plan in plans:
             slide = slide_by_id.get(plan.slide_id)
             if slide is None:
+                self._last_compile_warnings.append(
+                    f"SCENE_COMPILE_SKIPPED:missing_slide:{plan.slide_id}"
+                )
                 continue
             intent = None
             if slide.visual_intent_id is not None:
@@ -93,8 +109,8 @@ class VisualSceneRepairWorkflowService:
             if intent is None:
                 intent = self._intents.get_by_slide(slide.id)
             bundle = self._build_content_bundle(project_id=project_id, slide=slide, plan=plan)
-            compiled.append(
-                self._compiler.compile(
+            result = self._compiler_chain.compile(
+                SceneCompileContext(
                     slide=slide,
                     layout_plan=plan,
                     design_system=design_system,
@@ -105,6 +121,20 @@ class VisualSceneRepairWorkflowService:
                     presentation_id=presentation_id,
                 )
             )
+            scene = result.scene
+            from archium.application.visual.image_derivative_service import (
+                ImageDerivativeService,
+            )
+
+            applied = ImageDerivativeService(
+                self._session,
+                settings=self._settings,
+            ).apply_to_scene(
+                scene,
+                project_id=project_id,
+                design_system=design_system,
+            )
+            compiled.append(applied.scene)
         return compiled
 
     def _resolve_art_direction(
@@ -149,13 +179,19 @@ class VisualSceneRepairWorkflowService:
             presentation_id=presentation_id,
             project_id=project_id,
         )
+        warnings = list(self._last_compile_warnings)
         if not scenes:
+            if plans and not warnings:
+                warnings.append(
+                    "SCENE_COMPILE_EMPTY: no scenes produced from layout plans"
+                )
             return VisualSceneRepairWorkflowResult(
                 scenes=[],
                 scene_paths=[],
                 repair_actions=0,
                 repair_rounds=0,
                 remaining_issue_count=0,
+                warnings=warnings,
             )
 
         slide_orders = {slide.id: slide.order for slide in slides}
@@ -170,22 +206,33 @@ class VisualSceneRepairWorkflowService:
         scene_root.mkdir(parents=True, exist_ok=True)
         scene_paths: list[str] = []
         slide_by_id = {slide.id: slide for slide in slides}
+        persisted: list[RenderScene] = []
         for scene in batch.scenes:
             slide = slide_by_id.get(scene.slide_id)
             order = slide.order if slide is not None else 0
             rel_dir = scene_root / f"slide_{order + 1:02d}"
             rel_dir.mkdir(parents=True, exist_ok=True)
+            existing = self._scenes.get_by_layout_plan(scene.layout_plan_id)
+            if existing is not None:
+                scene = scene.model_copy(
+                    update={
+                        "id": existing.id,
+                        "version": existing.version + 1,
+                        "created_at": existing.created_at,
+                    }
+                )
             scene_path = rel_dir / "render_scene.json"
             scene_path.write_text(
                 json.dumps(scene.model_dump(mode="json"), ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
             scene_paths.append(str(scene_path))
-            save_render_scene(self._scenes, scene)
+            saved = save_render_scene(self._scenes, scene)
+            persisted.append(saved)
 
         scene_pptx_path: str | None = None
-        if export_scene_pptx and batch.scenes:
-            scene_by_slide = {scene.slide_id: scene for scene in batch.scenes}
+        if export_scene_pptx and persisted:
+            scene_by_slide = {scene.slide_id: scene for scene in persisted}
             ordered_slides = sorted(slides, key=lambda item: item.order)
             pairs = [
                 (scene_by_slide[slide.id], slide.speaker_notes or None)
@@ -217,12 +264,13 @@ class VisualSceneRepairWorkflowService:
                     scene_pptx_path = str(exported)
 
         return VisualSceneRepairWorkflowResult(
-            scenes=batch.scenes,
+            scenes=persisted,
             scene_paths=scene_paths,
             repair_actions=len(batch.actions),
             repair_rounds=batch.rounds,
             remaining_issue_count=batch.remaining_issue_count,
             scene_pptx_path=scene_pptx_path,
+            warnings=warnings,
         )
 
     def _build_content_bundle(
