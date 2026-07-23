@@ -44,6 +44,10 @@ def test_text_recall_detects_missing_strings() -> None:
     assert perfect == 1.0
     assert none_missing == []
 
+    whitespace_only, missing = _text_recall(("   ", "real"), ("real",))
+    assert whitespace_only == 1.0
+    assert missing == []
+
 
 def test_geometry_match_balances_node_and_image_counts() -> None:
     source = RendererSnapshot(
@@ -164,6 +168,17 @@ def test_derive_status_prioritizes_blockers_and_review_thresholds() -> None:
             warnings=[],
         )
         == RoundTripStatus.PASS
+    )
+    assert (
+        _derive_status(
+            text_match_rate=1.0,
+            geometry_match_rate=1.0,
+            similarity_score=0.5,
+            drawing_issues=[],
+            blockers=[],
+            warnings=[],
+        )
+        == RoundTripStatus.NEEDS_REVIEW
     )
 
 

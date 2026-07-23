@@ -168,6 +168,11 @@ def test_studio_scene_refresh_after_layout_edit(db_session: Session, tmp_path: P
     service = StudioSceneService(db_session, settings=settings)
     first = service.ensure_scene_for_slide(slide.id)
     assert first is not None
+    wireframe = (
+        settings.output_path / "studio-previews" / str(presentation.id) / f"{plan.id}.png"
+    )
+    wireframe.parent.mkdir(parents=True, exist_ok=True)
+    wireframe.write_bytes(b"stale")
 
     plans = LayoutPlanRepository(db_session)
     title = plan.element_by_id("title")
@@ -190,6 +195,7 @@ def test_studio_scene_refresh_after_layout_edit(db_session: Session, tmp_path: P
     assert refreshed.reused is False
     assert refreshed.scene_hash != first.scene_hash
     assert refreshed.preview_path.is_file()
+    assert not wireframe.is_file()
 
 
 def test_ensure_scene_runs_repair_before_preview(

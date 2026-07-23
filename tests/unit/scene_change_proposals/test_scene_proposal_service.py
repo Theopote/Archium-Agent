@@ -666,6 +666,7 @@ def test_create_proposal_raises_when_all_commands_fail() -> None:
 class _RecordingProposalRepository:
     def __init__(self) -> None:
         self.saved: SceneChangeProposal | None = None
+        self._items: dict[UUID, SceneChangeProposal] = {}
 
     def save(
         self,
@@ -673,8 +674,22 @@ class _RecordingProposalRepository:
         *,
         supersede_previous: bool = True,
     ) -> SceneChangeProposal:
+        del supersede_previous
         self.saved = proposal
+        self._items[proposal.proposal_id] = proposal
         return proposal
+
+    def get(self, proposal_id: UUID) -> SceneChangeProposal | None:
+        return self._items.get(proposal_id)
+
+    def get_active_for_slide(self, slide_id: UUID) -> SceneChangeProposal | None:
+        for proposal in self._items.values():
+            if proposal.slide_id == slide_id and proposal.status in {
+                ProposalStatus.READY,
+                ProposalStatus.READY_WITH_WARNINGS,
+            }:
+                return proposal
+        return None
 
 
 def _service_with_recording_repo() -> tuple[SceneProposalService, _RecordingProposalRepository]:
@@ -682,6 +697,74 @@ def _service_with_recording_repo() -> tuple[SceneProposalService, _RecordingProp
     repo = _RecordingProposalRepository()
     service._proposals = repo  # type: ignore[assignment]
     return service, repo
+
+
+def test_proposal_repository_delegates() -> None:
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    service, repo = _service_with_recording_repo()
+    proposal = _proposal_service().create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+
+    saved = service.save_proposal(proposal)
+    assert repo.saved is saved
+    assert service.load_proposal(proposal.proposal_id) is proposal
+    assert service.load_active_proposal(scene.slide_id) is proposal
+    comparison = service.qa_comparison(proposal)
+    assert comparison is not None
+    assert service.load_proposal(uuid4()) is None
+    assert service.load_active_proposal(uuid4()) is None
+
+
+def test_project_id_for_presentation() -> None:
+    from types import SimpleNamespace
+
+    service = _proposal_service()
+    assert service._project_id_for_presentation(uuid4()) is None
+
+    project_id = uuid4()
+    presentation_id = uuid4()
+
+    class _Presentations:
+        def get_presentation(self, pid: UUID):
+            if pid == presentation_id:
+                return SimpleNamespace(project_id=project_id)
+            return None
+
+    service._presentations = _Presentations()  # type: ignore[assignment]
+    assert service._project_id_for_presentation(presentation_id) == project_id
+    assert service._project_id_for_presentation(uuid4()) is None
+
+
+def test_proposal_qa_status_blocker_counts_as_warning() -> None:
+    from archium.application.visual.scene_deterministic_qa_service import ProposalSceneQAResult
+    from archium.application.visual.scene_proposal_service import SceneProposalService
+    from archium.domain.visual.page_quality import IssueSeverity, QualityIssue, QualityIssueSource
+
+    blocker_qa = ProposalSceneQAResult(
+        issues=(
+            QualityIssue(
+                code="block",
+                message="blocker",
+                severity=IssueSeverity.BLOCKER,
+                source=QualityIssueSource.AUTO,
+            ),
+        ),
+        layers={},
+        preview_render_success=True,
+    )
+    assert SceneProposalService._proposal_qa_status(blocker_qa) == "pass_with_warnings"
 
 
 def test_record_proposal_decision_full_accept() -> None:
@@ -900,6 +983,32 @@ def test_summarize_command_result_statuses() -> None:
     assert summarize_command_result(proposal, unknown_command).endswith("命令执行失败")
 
 
+def test_proposal_accept_summary_without_reasons_uses_command_type() -> None:
+    from archium.application.visual.scene_proposal_service import SceneProposalService
+
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    command = RewriteTextCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_id="title",
+        new_text="新",
+    )
+    proposal = SceneChangeProposal(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        base_scene_hash=compute_scene_hash(scene),
+        base_scene=scene,
+        proposed_scene=scene,
+        commands=[command],
+        requested_commands=[command],
+        successful_commands=[command],
+        patch_actions=[],
+        reasons=[],
+    )
+    summary = SceneProposalService._proposal_accept_summary(proposal, [command])
+    assert "rewrite_text" in summary
+
+
 def test_proposal_accept_summary_and_qa_status() -> None:
     from archium.application.visual.scene_deterministic_qa_service import ProposalSceneQAResult
     from archium.application.visual.scene_proposal_service import SceneProposalService
@@ -944,6 +1053,20 @@ def test_proposal_accept_summary_and_qa_status() -> None:
         preview_render_success=True,
     )
     assert SceneProposalService._proposal_qa_status(warned_qa) == "pass_with_warnings"
+
+    blocker_qa = ProposalSceneQAResult(
+        issues=(
+            QualityIssue(
+                code="block",
+                message="blocker",
+                severity=IssueSeverity.BLOCKER,
+                source=QualityIssueSource.AUTO,
+            ),
+        ),
+        layers={},
+        preview_render_success=True,
+    )
+    assert SceneProposalService._proposal_qa_status(blocker_qa) == "pass_with_warnings"
 
 
 def test_apply_patch_actions_geometry_and_visibility() -> None:
@@ -998,8 +1121,13 @@ def test_apply_patch_actions_geometry_and_visibility() -> None:
 def test_summarize_patch_action_variants() -> None:
     scene = _scene(_text_node(node_id="title", text="旧"))
     base_hash = compute_scene_hash(scene)
-    action = lambda **fields: build_patch_action(scene, base_scene_hash=base_hash, **fields)
 
+    def action(**fields: object):
+        return build_patch_action(scene, base_scene_hash=base_hash, **fields)
+
+    assert summarize_patch_action(action(action_type="rewrite_text", node_id="title")) == (
+        "改写文本 `title`"
+    )
     assert summarize_patch_action(action(action_type="replace_asset", node_id="photo")) == (
         "替换图片 `photo`"
     )
@@ -1021,6 +1149,26 @@ def test_summarize_patch_action_variants() -> None:
     assert summarize_patch_action(
         action(action_type="custom", node_id="x", reason="自定义调整")
     ) == "自定义调整"
+
+
+def test_summarize_command_type_labels() -> None:
+    from types import SimpleNamespace
+
+    from archium.application.visual.scene_proposal_service import summarize_command_type
+
+    for command_type, label in {
+        "rewrite_text": "改写文本",
+        "fix_overflow": "修复溢出",
+        "replace_asset": "替换图片",
+        "replace_drawing": "替换图纸",
+        "increase_drawing_readability": "提高图纸可读性",
+        "set_node_lock": "锁定设置",
+        "set_node_visibility": "显示设置",
+        "reorder_node": "图层顺序",
+        "custom_command": "custom_command",
+    }.items():
+        command = SimpleNamespace(command_type=command_type)
+        assert summarize_command_type(command) == label
 
 
 def test_create_proposal_records_skipped_command(monkeypatch) -> None:
@@ -1164,6 +1312,60 @@ def test_count_issues_by_severity_and_remaining_patch_actions() -> None:
         QualityIssue(code="b", severity=IssueSeverity.MAJOR, message="M"),
     ]
     assert count_issues_by_severity(issues, IssueSeverity.MAJOR) == 1
+
+    reorder_scene = _mixed_scene(_text_node(node_id="title", text="old"))
+    title = reorder_scene.node_by_id("title")
+    assert isinstance(title, TextNode)
+    title.z_index = 1
+    reordered = apply_patch_actions(
+        reorder_scene,
+        [
+            build_patch_action(
+                reorder_scene,
+                base_scene_hash=compute_scene_hash(reorder_scene),
+                node_id="title",
+                action_type="reorder_node",
+                after_value="5",
+            )
+        ],
+    )
+    reordered_title = reordered.node_by_id("title")
+    assert isinstance(reordered_title, TextNode)
+    assert reordered_title.z_index == 5
+
+    visibility_scene = _mixed_scene(_text_node(node_id="title", text="visible"))
+    visibility_scene.nodes[0].visible = True
+    hidden = apply_patch_actions(
+        visibility_scene,
+        [
+            build_patch_action(
+                visibility_scene,
+                base_scene_hash=compute_scene_hash(visibility_scene),
+                node_id="title",
+                action_type="set_node_visibility",
+                after_value="false",
+            )
+        ],
+    )
+    hidden_title = hidden.node_by_id("title")
+    assert isinstance(hidden_title, TextNode)
+    assert hidden_title.visible is False
+
+    shortened = apply_patch_actions(
+        hidden,
+        [
+            build_patch_action(
+                hidden,
+                base_scene_hash=compute_scene_hash(hidden),
+                node_id="title",
+                action_type="shorten_text",
+                after_value="短",
+            )
+        ],
+    )
+    shortened_title = shortened.node_by_id("title")
+    assert isinstance(shortened_title, TextNode)
+    assert shortened_title.text == "短"
 
 
 def test_summarize_patch_action_covers_remaining_types() -> None:
