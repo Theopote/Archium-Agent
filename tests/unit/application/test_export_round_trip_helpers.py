@@ -135,6 +135,17 @@ def test_derive_status_prioritizes_blockers_and_review_thresholds() -> None:
     assert (
         _derive_status(
             text_match_rate=1.0,
+            geometry_match_rate=0.5,
+            similarity_score=1.0,
+            drawing_issues=[],
+            blockers=[],
+            warnings=[],
+        )
+        == RoundTripStatus.NEEDS_REVIEW
+    )
+    assert (
+        _derive_status(
+            text_match_rate=1.0,
             geometry_match_rate=1.0,
             similarity_score=1.0,
             drawing_issues=["warn"],

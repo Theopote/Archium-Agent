@@ -275,3 +275,25 @@ def test_decompose_lock_and_unlock_by_element_id() -> None:
     )
     assert unlock_ops[0].target_element_id == caption_id
 
+
+def test_decompose_change_layout_with_layout_family() -> None:
+    layout_plan, _ = _caption_layout()
+    snapshot = SlideEditSnapshot(
+        slide_id=layout_plan.slide_id,
+        presentation_id=uuid4(),
+        visual_intent=None,
+        layout_plan=layout_plan,
+    )
+    operations = OperationDecomposer().decompose(
+        ParsedIntent(
+            intent=VisualEditIntent.CHANGE_LAYOUT,
+            params={"layout_family": LayoutFamily.HERO},
+            modifiers=[],
+            confidence=0.9,
+        ),
+        snapshot,
+    )
+    assert len(operations) == 1
+    assert operations[0].operation_type.value == "change_layout"
+
+

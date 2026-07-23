@@ -891,6 +891,13 @@ def test_summarize_command_result_statuses() -> None:
     )
     assert "失败" in summarize_command_result(proposal, failed)
 
+    unknown_command = CommandProposalResult(
+        command_id=uuid4(),
+        status="failed",
+        issues=[],
+    )
+    assert summarize_command_result(proposal, unknown_command).endswith("命令执行失败")
+
 
 def test_proposal_accept_summary_and_qa_status() -> None:
     from archium.application.visual.scene_deterministic_qa_service import ProposalSceneQAResult
