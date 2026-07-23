@@ -29,7 +29,7 @@
 |------|----------|------|------|------|------|----------|----------|----------|
 | DOM-001 | P0 | done | Domain 内含解析器实现（分层违规） | `archium/domain/`; parsers 迁出后 | Domain 依赖 IO | 解析迁 application；守卫 | domain layering 绿 | `-` |
 | DOM-002 | P0 | done | `scene_semantic_qa` 分叉残留 | `visual/scene_semantic_qa.py` | 双份语义 QA | 删除分叉 | 文件不存在；`scene_qa.py` 在 | `-` |
-| DOM-003 | P1 | open | `PresentationSpec` 与 `RenderScene`/`SlideSpec` 并存作导出真相 (D3) | `presentation_spec.py`; `slide.py`; `visual/render_scene.py` | 双/三 SSOT | Scene 为渲染 SSOT；Spec 派生或冻结 | 正式交付只认 Scene；文档一致 | `-` |
+| DOM-003 | P1 | done | `PresentationSpec` 与 `RenderScene`/`SlideSpec` 并存作导出真相 (D3) | `export_authority.py`；`presentation_spec` 标 derived；`FormalPptxExportService` | 双/三 SSOT | Scene 正式权威；Spec 遗留派生 | arch-contract `formal-export-authority`；可编辑 PPTX 优先 Scene | `-` |
 | DOM-004 | P1 | done | Severity 词汇表 ≥4 套 (D4) | `domain/visual/severity.py`；`IssueSeverity`=门禁权威；Layout/Review/Validation 桥接 | 门禁语义混乱 | 统一 catalog + 映射 | 导出门禁经 `review_to_gate` / `layout_is_gate_blocker`；`test_severity_bridge` | `-` |
 | DOM-005 | P1 | open | 页类型枚举重叠 (D5) | `SlideType`; `FunctionalSlideType`; `TemplatePageType`; SpecSlide.layout str | 规划/渲染错配 | 收敛或显式映射表 | 无隐式互转 | `-` |
 | DOM-006 | P1 | open | `SlideDesignBrief.layout_family` 等为自由字符串 (D6) | `slide_design_brief.py`; SpecSlide.layout; RenderScene.source_layout_family | 无法校验 | 受控词表/`LayoutFamily` | 非法 family 拒绝 | `-` |
@@ -89,7 +89,7 @@
 |----|------|
 | `SlideVisualRequirement` / `SchemaVisualRequirement` | `slide.py` / `architectural_content_schema.py`（DOM-016 done） |
 | Brief / 提案状态 | Brief→`ApprovalStatus`；Scene/Theme→`ProposalStatus`（DOM-009 done） |
-| Presentation vs PresentationSpec | `presentation.py`+`slide.py` / `presentation_spec.py` |
+| Presentation vs PresentationSpec | 正式 PPTX→Scene；Spec 遗留派生（DOM-003 done） |
 | Chart/Table 共享 VO | `structured_payload.py`（DOM-012 done） |
 
 ---
@@ -103,7 +103,7 @@
 5. ~~**DOM-014**~~ **done**（parser/resolver/catalog 迁出）  
 6. ~~**DOM-004**~~ **done**（`IssueSeverity` 门禁权威 + severity 桥）  
 7. ~~**DOM-009**~~ **done**（Brief→ApprovalStatus；提案共享 ProposalStatus）  
-8. **DOM-003** Spec 降级策略  
+8. ~~**DOM-003**~~ **done**（正式 PPTX 权威 RenderScene；Spec 遗留派生）  
 9. **DOM-018** — 拆 `enums.py`（机械重构）
 
 逐文件明细：[02-domain-file-audit.md](02-domain-file-audit.md) · 第一阶段验收：[00-phase1-acceptance-2026-07-23.md](00-phase1-acceptance-2026-07-23.md)

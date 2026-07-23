@@ -1,4 +1,12 @@
-"""Renderer-agnostic presentation specification for editable PPTX export."""
+"""Renderer-agnostic presentation specification for *legacy* template PPTX export.
+
+DOM-003: ``PresentationSpec`` is a **derived** compatibility artifact built from
+``SlideSpec`` (+ brief/storyline). It is **not** the formal delivery SSOT.
+
+Formal editable PPTX authority is ``RenderScene``
+(``archium.domain.export_authority.FORMAL_EDITABLE_PPTX_AUTHORITY``).
+Prefer Scene → ``presentation.pptx`` via ``PptxRenderer`` / Studio export.
+"""
 
 from __future__ import annotations
 
@@ -56,7 +64,7 @@ class SpecMetric(DomainModel):
 
 
 class SpecSlide(DomainModel):
-    """One slide in a PresentationSpec."""
+    """One slide in a legacy PresentationSpec."""
 
     order: int = Field(ge=0)
     layout: str = Field(min_length=1)
@@ -75,7 +83,11 @@ class SpecSlide(DomainModel):
 
 
 class PresentationSpec(DomainModel):
-    """Intermediate export format consumed by PptxGenJS templates."""
+    """Legacy intermediate format for PptxGenJS *template* export (derived-only).
+
+    Do not treat this model as the source of truth for Studio editing or formal
+    client delivery. Build from SlideSpec when needed for compat/tests only.
+    """
 
     presentation_id: str
     version: int = Field(ge=1)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from archium.application.render_export import export_marp_extras, export_pptxgen_extras
+from archium.application.render_export import export_marp_extras
 from archium.domain.enums import PresentationStatus, WorkflowStatus, WorkflowStep
 from archium.workflow.nodes.base import WorkflowNodeBase
 from archium.workflow.state import PresentationWorkflowState
@@ -58,7 +58,10 @@ class ExportNodesMixin(WorkflowNodeBase):
         logger = self._logger(state)
         if state.get("errors"):
             return {"current_step": WorkflowStep.PRESENTATION_SPEC.value}
-        if not state.get("export_presentation_spec", False):
+
+        want_spec = bool(state.get("export_presentation_spec", False))
+        want_editable = bool(state.get("export_editable_pptx", False))
+        if not want_spec and not want_editable:
             return {"current_step": WorkflowStep.PRESENTATION_SPEC.value}
 
         brief = state.get("brief")
@@ -73,35 +76,46 @@ class ExportNodesMixin(WorkflowNodeBase):
         try:
             presentation_id = UUID(state["presentation_id"])
             project_id = UUID(state["project_id"])
-            spec_path = self._runtime.pptxgen_renderer.render(
-                presentation_id=presentation_id,
-                project_id=project_id,
-                brief=brief,
-                storyline=storyline,
-                slides=slides,
-                version=brief.version,
-            )
             next_state: PresentationWorkflowState = {
-                "spec_path": str(spec_path),
                 "current_step": WorkflowStep.PRESENTATION_SPEC.value,
             }
-            if state.get("export_editable_pptx", False):
-                extras = export_pptxgen_extras(
-                    self._runtime.pptxgen_renderer,
-                    spec_path,
-                    export_editable_pptx=True,
+            warnings: list[str] = []
+
+            if want_spec:
+                spec_path = self._runtime.pptxgen_renderer.render(
+                    presentation_id=presentation_id,
+                    project_id=project_id,
+                    brief=brief,
+                    storyline=storyline,
+                    slides=slides,
+                    version=brief.version,
                 )
-                if extras.editable_pptx_path is not None:
-                    next_state["editable_pptx_path"] = str(extras.editable_pptx_path)
-                if extras.warnings:
-                    next_state["render_warnings"] = extras.warnings
+                next_state["spec_path"] = str(spec_path)
+                logger.info("Exported PresentationSpec to %s", spec_path)
+
+            if want_editable:
+                from archium.application.formal_pptx_export_service import FormalPptxExportService
+
+                formal = FormalPptxExportService(
+                    self._runtime.session,
+                    settings=self._runtime.settings,
+                ).export_editable_pptx(presentation_id)
+                next_state["editable_pptx_path"] = str(formal.path)
+                warnings.extend(formal.warnings)
+                logger.info(
+                    "Exported editable PPTX via %s to %s",
+                    formal.authority.value,
+                    formal.path,
+                )
+
+            if warnings:
+                next_state["render_warnings"] = warnings
 
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
-            logger.info("Exported PresentationSpec to %s", spec_path)
             return next_state
         except Exception as exc:
-            logger.exception("PresentationSpec export failed: %s", exc)
+            logger.exception("PresentationSpec / editable PPTX export failed: %s", exc)
             return {
                 "errors": [str(exc)],
                 "current_step": WorkflowStep.PRESENTATION_SPEC.value,

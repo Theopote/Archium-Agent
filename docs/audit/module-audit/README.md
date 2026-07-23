@@ -84,10 +84,10 @@
 | [DB-002](05-database.md) | database | `create_all` + Alembic 001 no-op 冷启动 |
 | [DB-003](05-database.md) | database | 失败路径 rollback 后再 commit |
 | [KN-001](06-parsing-knowledge.md) | knowledge | 事实主键冲突丢弃 alternate 值 |
-| [APP-002](03-application.md) | application | Spec vs Scene 双导出路径 |
+| [APP-003](03-application.md) | application | `session.commit` 所有权不一致 |
 | [QD-010](12-qa-delivery.md) | qa-delivery | 正式人工视觉门禁未过 |
 | [TS-010](14-tests-security.md) | tests-security | 非开发者剧本 A + 修改成本（Beta B10） |
 
 P0 已关闭但仍需关注：`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 
-Domain 下一优先：`DOM-003` Spec 降级 / `DOM-018` 拆 enums（见 [02-domain.md](02-domain.md)）。已关闭：`DOM-004`/`DOM-009`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-016`/`DOM-017`。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。
+Domain 下一优先：`DOM-018` 拆 enums（见 [02-domain.md](02-domain.md)）。已关闭：`DOM-003`/`DOM-004`/`DOM-009`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-016`/`DOM-017`。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。

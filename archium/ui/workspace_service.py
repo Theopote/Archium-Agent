@@ -365,7 +365,7 @@ def export_presentation_pptx_legacy(
     *,
     settings: Settings | None = None,
 ) -> RenderResult:
-    """Export editable PPTX via legacy PresentationSpec templates."""
+    """Export editable PPTX via FormalPptxExportService (Scene preferred; Spec fallback)."""
     resolved_settings = _resolve_runtime_settings(settings)
     return PresentationExportService(session, settings=resolved_settings).reexport(
         presentation_id,

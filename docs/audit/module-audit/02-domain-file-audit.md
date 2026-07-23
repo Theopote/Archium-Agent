@@ -27,7 +27,7 @@
 | 3 | DOM-012 | **done** | `structured_payload.py` | Chart/Table 载荷单 VO |
 | 4 | DOM-014 | **done** | edit_intent / brief / text / pptx catalog | parser/resolver/catalog 迁出 domain |
 | 5 | DOM-004 | **done** | `visual/severity.py` | `IssueSeverity` 门禁权威 + 桥接 |
-| 6 | DOM-003 | refactor | `presentation_spec.py` | Spec 降为派生，Scene 渲染 SSOT |
+| 6 | DOM-003 | **done** | `export_authority` + Spec derived | 正式 PPTX 认 Scene |
 | 7 | DOM-018 | refactor | `enums.py` (~668) | 按限界上下文拆分 |
 | 8 | DOM-009 | **done** | Brief→`ApprovalStatus`；`proposal_status.ProposalStatus` | 审批/提案状态合一 |
 
@@ -75,15 +75,12 @@
 
 | 字段 | 内容 |
 |------|------|
-| 角色 | 遗留 Spec 导出模型 |
-| 裁决 | refactor（长期 delete/freeze） |
-| 级别 | P1（DOM-003） |
-| 问题 | 与 SlideSpec/RenderScene 双/三真相 |
-| 删除 | 暂否（兼容） |
-| 合并 | 字段向 SlideSpec/Scene 投影 |
-| 重构 | 是 — 标明 derived-only |
-| 方案 | 正式交付禁 Spec 直出；文档 + 导出门禁 |
-| 验收 | 正式 PPTX 只从 Scene；Spec 仅兼容测试 |
+| 角色 | 遗留 Spec 导出模型（derived-only） |
+| 裁决 | keep（兼容）/ freeze |
+| 级别 | P1（DOM-003 **done**） |
+| 问题 | ~~与 Scene 双真相~~；仍可用于模板 compat |
+| 方案 | 正式交付禁 Spec 直出；`FormalPptxExportService` 优先 Scene |
+| 验收 | arch-contract formal-export-authority；可编辑 PPTX 优先 Scene |
 
 ### `slide.py` (~107)
 
@@ -429,7 +426,7 @@
 4. ~~DOM-014~~ **done**  
 5. ~~DOM-004~~ **done**（severity 桥）  
 6. ~~DOM-009~~ **done**（提案共享 ProposalStatus）  
-7. DOM-003 Spec 降级策略  
+7. ~~DOM-003~~ **done**（正式 PPTX → Scene）  
 8. DOM-018 拆 `enums.py`
 
 台账同步：[02-domain.md](02-domain.md)

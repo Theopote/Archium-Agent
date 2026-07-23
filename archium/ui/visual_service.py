@@ -43,8 +43,6 @@ from archium.infrastructure.database.visual_repositories import (
 )
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
-from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
-from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
 
@@ -184,55 +182,19 @@ def export_presentation_pptx_from_layout_plans(
     settings: Settings | None = None,
     chart_export_mode: ChartExportMode | None = None,
 ) -> RenderResult:
-    """Export editable PPTX from RenderScenes (compiled from LayoutPlans).
+    """Export formal editable PPTX from RenderScenes (DOM-003 authority)."""
+    from archium.application.formal_pptx_export_service import FormalPptxExportService
 
-    Kept name for callers; formal deliverable is Scene → presentation.pptx.
-    """
     resolved = _resolve_runtime_settings(settings)
-    presentations = PresentationRepository(session)
-    presentation = presentations.get_presentation(presentation_id)
-    if presentation is None:
-        raise WorkflowError(f"Presentation {presentation_id} not found")
-    if not presentation_has_visual_layout(session, presentation_id):
-        raise WorkflowError("尚未生成视觉版式，无法导出基于 RenderScene 的 PPTX。")
-
-    brief = None
-    if presentation.current_brief_id is not None:
-        brief = presentations.get_brief(presentation.current_brief_id)
-    if brief is None:
-        briefs = presentations.list_briefs(presentation_id)
-        brief = briefs[0] if briefs else None
-    if brief is None:
-        raise WorkflowError("Brief is required before export")
-
-    scene_service = StudioSceneService(session, settings=resolved)
-    scene_results = scene_service.ensure_scenes_for_presentation(
+    formal = FormalPptxExportService(session, settings=resolved).export_editable_pptx(
         presentation_id,
-        force_recompile=True,
-    )
-    if not scene_results:
-        raise WorkflowError("无法为当前汇报编译 RenderScene，请先完成视觉编排。")
-
-    slides = presentations.list_slides(presentation_id)
-    slides_by_id = {slide.id: slide for slide in slides}
-    ordered_scenes: list[tuple[RenderScene, str | None]] = []
-    for result in scene_results:
-        slide = slides_by_id.get(result.scene.slide_id)
-        notes = slide.speaker_notes if slide is not None else None
-        ordered_scenes.append((result.scene, notes or None))
-
-    renderer = PptxRenderer(resolved)
-    legacy = PptxGenPresentationRenderer(resolved, session=session)
-    output_dir = legacy.output_dir(presentation_id, version=brief.version)
-    pptx_path = output_dir / "presentation.pptx"
-    rendered = renderer.export_presentation(
-        title=brief.title,
-        scenes=ordered_scenes,
-        output_path=pptx_path,
         chart_export_mode=chart_export_mode,
-        project_id=presentation.project_id,
+        allow_legacy_spec_fallback=False,
     )
-    return RenderResult(editable_pptx_path=rendered)
+    return RenderResult(
+        editable_pptx_path=formal.path,
+        warnings=list(formal.warnings),
+    )
 
 
 def generate_visual_and_export_pptx(

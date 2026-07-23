@@ -130,7 +130,7 @@ def initial_workflow_state(
         "pdf_path": None,
         "preview_image_paths": [],
         "export_json": export_json,
-        "export_presentation_spec": export_presentation_spec or export_editable_pptx,
+        "export_presentation_spec": export_presentation_spec,
         "export_editable_pptx": export_editable_pptx,
         "export_marp": export_marp,
         "export_pptx": export_pptx,

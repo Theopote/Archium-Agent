@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.render_export import export_marp_extras, export_pptxgen_extras
+from archium.application.render_export import export_marp_extras
 from archium.config.settings import Settings, get_settings
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
@@ -17,7 +17,7 @@ from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentatio
 
 
 class PresentationExportService:
-    """Export JSON / Marp / PresentationSpec artifacts from persisted presentation data."""
+    """Export JSON / Marp / legacy Spec artifacts; formal PPTX prefers RenderScene."""
 
     def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
         self._session = session
@@ -72,7 +72,7 @@ class PresentationExportService:
                 slides=slides,
                 version=version,
             )
-        if export_presentation_spec or export_editable_pptx:
+        if export_presentation_spec:
             result.spec_path = self._pptxgen.render(
                 presentation_id=presentation_id,
                 project_id=presentation.project_id,
@@ -81,14 +81,26 @@ class PresentationExportService:
                 slides=slides,
                 version=version,
             )
-            if export_editable_pptx and result.spec_path is not None:
-                extras = export_pptxgen_extras(
-                    self._pptxgen,
-                    result.spec_path,
-                    export_editable_pptx=True,
+        if export_editable_pptx:
+            from archium.application.formal_pptx_export_service import FormalPptxExportService
+
+            formal = FormalPptxExportService(
+                self._session, settings=self._settings
+            ).export_editable_pptx(presentation_id)
+            result.editable_pptx_path = formal.path
+            result.warnings.extend(formal.warnings)
+            if result.spec_path is None and not formal.is_formal:
+                # Legacy Spec PPTX still wrote presentation.spec.json beside the deck.
+                from archium.infrastructure.renderers.pptxgen_renderer import (
+                    PptxGenPresentationRenderer,
                 )
-                result.editable_pptx_path = extras.editable_pptx_path
-                result.warnings.extend(extras.warnings)
+
+                out = PptxGenPresentationRenderer(
+                    self._settings, session=self._session
+                ).output_dir(presentation_id, version=version)
+                candidate = out / "presentation.spec.json"
+                if candidate.is_file():
+                    result.spec_path = candidate
         if export_marp:
             result.markdown_path = self._marp.render(
                 presentation_id=presentation_id,

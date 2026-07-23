@@ -163,7 +163,7 @@ class PresentationWorkflowService:
                     ],
                     "request": request_to_dict(request),
                     "export_json": export_json,
-                    "export_presentation_spec": export_presentation_spec or export_editable_pptx,
+                    "export_presentation_spec": export_presentation_spec,
                     "export_editable_pptx": export_editable_pptx,
                     "export_marp": export_marp,
                     "export_pptx": export_pptx,

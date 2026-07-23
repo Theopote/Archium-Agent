@@ -23,8 +23,8 @@ def render_visual_engine_scope(*, expanded: bool = False) -> None:
         f"当前版式引擎已可用 {implemented_count} 类常见建筑汇报场景"
         "（固定排布规则，非通用约束求解器）。"
         "并非针对任意数量、任意长宽比素材逐页计算「最优」排布；"
-        "超出范围时会尝试几何校验/修复或切换候选版式，"
-        "未运行视觉编排时导出可退回 PresentationSpec 通用模板。"
+        "超出范围时会尝试几何校验/修复或切换候选版式；"
+        "正式可编辑 PPTX 认 RenderScene；无视觉编排时仅允许遗留 PresentationSpec 回退（非正式）。"
     )
     if planned:
         summary += f"另有 {len(planned)} 类版式族已注册但尚未实现，界面会标注「即将支持」。"
@@ -61,7 +61,7 @@ def render_visual_engine_scope(*, expanded: bool = False) -> None:
             "- 编排流程内：尝试文字溢出修复、切换变体或候选方案，"
             "必要时自动降级到另一套仍可通过几何校验的版式\n"
             "- 仍无法通过版式审核时：工作流会暂停，需你在「单页视觉」中手动调整\n"
-            "- 跳过视觉编排或选择旧路径：使用 PresentationSpec 的 11 种硬编码通用模板导出"
+            "- 跳过视觉编排：可编辑 PPTX 仅允许遗留 PresentationSpec 模板回退（非正式，会写警告）"
         )
 
         st.markdown(

@@ -160,6 +160,24 @@ def test_documented_geometry_authority_values(
     assert layout_owned.synced_scene_version is None
 
 
+def test_documented_formal_export_authority_is_render_scene(
+    contracts: dict[str, list[str]],
+) -> None:
+    from archium.domain.export_authority import (
+        FORMAL_EDITABLE_PPTX_AUTHORITY,
+        FormalExportAuthority,
+        is_formal_editable_pptx_authority,
+    )
+
+    assert contracts["formal-export-authority"] == [FormalExportAuthority.RENDER_SCENE.value]
+    assert FORMAL_EDITABLE_PPTX_AUTHORITY == FormalExportAuthority.RENDER_SCENE
+    assert is_formal_editable_pptx_authority("render_scene")
+    assert not is_formal_editable_pptx_authority("presentation_spec")
+    prose = _ARCH_DOC.read_text(encoding="utf-8")
+    assert "DOM-003" in prose
+    assert "PresentationSpec" in prose
+
+
 def test_documented_canvas_capabilities_exist_in_runtime(
     contracts: dict[str, list[str]],
 ) -> None:
