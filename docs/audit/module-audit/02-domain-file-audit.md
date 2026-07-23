@@ -28,7 +28,7 @@
 | 4 | DOM-014 | **done** | edit_intent / brief / text / pptx catalog | parser/resolver/catalog 迁出 domain |
 | 5 | DOM-004 | **done** | `visual/severity.py` | `IssueSeverity` 门禁权威 + 桥接 |
 | 6 | DOM-003 | **done** | `export_authority` + Spec derived | 正式 PPTX 认 Scene |
-| 7 | DOM-018 | refactor | `enums.py` (~668) | 按限界上下文拆分 |
+| 7 | DOM-018 | **done** | `domain/enums/` 分包 | 按限界上下文拆分 |
 | 8 | DOM-009 | **done** | Brief→`ApprovalStatus`；`proposal_status.ProposalStatus` | 审批/提案状态合一 |
 
 职责边界（验收口径）：
@@ -43,19 +43,16 @@
 
 ## B. 根模块 — 有问题项
 
-### `enums.py` (~668)
+### `enums/` package（DOM-018 done）
 
 | 字段 | 内容 |
 |------|------|
-| 角色 | 全仓 StrEnum 总库 |
-| 裁决 | refactor |
+| 角色 | 全仓 StrEnum 分包 |
+| 裁决 | **done** — `project/document/knowledge/presentation/mission/assets/review/workflow` |
 | 级别 | P1 |
-| 问题 | 巨型；`ReviewSeverity`/`ValidationSeverity` 与 visual 门禁枚举并列；`WorkflowStep` 过胖 |
-| 删除 | 否 |
-| 合并 | 部分 severity → 统一 catalog（DOM-004） |
-| 重构 | 是 — 按 project/review/workflow/knowledge 拆文件 |
-| 方案 | 拆包 `domain/enums/`；保留 re-export；映射表单测 |
-| 验收 | 单文件 <250 行；导出门禁只认一套 severity |
+| 问题 | ~~巨型 monolith~~ |
+| 方案 | 包级 re-export 保持 `archium.domain.enums` 导入；单文件 <250 |
+| 验收 | `test_enums_package`；无 `enums.py` 单体 |
 
 ### `powerpoint_capability.py` (~420)
 
@@ -427,6 +424,6 @@
 5. ~~DOM-004~~ **done**（severity 桥）  
 6. ~~DOM-009~~ **done**（提案共享 ProposalStatus）  
 7. ~~DOM-003~~ **done**（正式 PPTX → Scene）  
-8. DOM-018 拆 `enums.py`
+8. ~~DOM-018~~ **done**（enums 分包）
 
 台账同步：[02-domain.md](02-domain.md)
