@@ -10,7 +10,7 @@
 |---|---|
 | CLI、安装依赖、启动方式 | `README.md`、`pyproject.toml`、部署文档 |
 | 页面、按钮、用户流程 | `docs/studio-user-guide.md` 或对应 feature guide |
-| 领域模型、主数据流、持久化边界 | `docs/architecture/current-system.md` 与专题架构文档 |
+| 领域模型、主数据流、持久化边界 | `docs/architecture/current-system.md` 与专题架构文档；若改枚举/策略须同步文末 `arch-contract:*` 锚点，并跑 `tests/unit/test_architecture_contracts.py` |
 | 视觉/画布/渲染 | `docs/visual/`、Studio 指南 |
 | `Settings` 字段 | 运行 `python scripts/generate_config_docs.py`，不要手改生成文件 |
 | 平台或外部工具支持 | 支持矩阵、跨平台验证、Quickstart |
