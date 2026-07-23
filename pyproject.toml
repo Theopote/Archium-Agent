@@ -92,12 +92,13 @@ dev = [
 
 [project.scripts]
 archium = "archium.cli:main"
-archium-legacy = "legacy.main:main"
 archium-build-canvas = "archium.ui.components.canvas_editor.build_frontend:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["archium*", "legacy*"]
+include = ["archium*"]
+# legacy/ stays in-tree for optional developer use (python -m legacy.main)
+# but is not installed with the archium-agent package.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -134,7 +135,7 @@ markers = [
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["archium", "legacy", "tests", "config.py"]
+src = ["archium", "tests", "config.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -150,10 +151,10 @@ warn_unused_ignores = true
 disallow_untyped_defs = true
 check_untyped_defs = true
 ignore_missing_imports = true
-packages = ["archium", "legacy"]
+packages = ["archium"]
 
 [[tool.mypy.overrides]]
-module = ["main", "app", "config", "ppt_generator", "file_manager"]
+module = ["main", "app", "config", "ppt_generator", "file_manager", "legacy", "legacy.*"]
 ignore_errors = true
 
 # chromadb → numpy ships 3.12-only stub syntax; skip third-party follow-imports.

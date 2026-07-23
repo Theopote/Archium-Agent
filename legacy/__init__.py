@@ -1,9 +1,12 @@
 """Legacy / experimental modules (v0.1).
 
-These modules are kept for backward compatibility and are decoupled from the
-main v0.2 presentation workflow. Prefer ``archium`` or ``streamlit run app.py``.
+Kept in-tree for optional developer use, but **not** installed with the
+``archium-agent`` package and **not** imported by ``archium.*``.
 
-Entry point: ``archium-legacy`` → ``legacy.main:main``
+Prefer ``archium`` or ``streamlit run app.py``. From a repo checkout::
+
+    python -m legacy.main
+    python main.py
 """
 
 from legacy.config import GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL, client, get_client

@@ -34,15 +34,6 @@ def module_status_marp_export() -> tuple[str, str]:
     return "green", "就绪"
 
 
-def module_status_legacy_ppt() -> tuple[str, str]:
-    settings = get_ui_effective_settings()
-    if not settings.llm_configured:
-        return "red", "缺少 API Key"
-    if not shutil.which(settings.marp_command):
-        return "yellow", "待安装 Marp CLI"
-    return "green", "就绪"
-
-
 def module_status_node_pptx() -> tuple[str, str]:
     """Check Node.js + bundled pptxgenjs install (via CLI runner, not renderer)."""
     from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
@@ -62,12 +53,10 @@ def render_system_diagnostics() -> None:
     """Developer-facing dependency checks for Settings → 系统诊断."""
     pipeline_c, pipeline_h = module_status_pipeline()
     marp_c, marp_h = module_status_marp_export()
-    legacy_c, legacy_h = module_status_legacy_ppt()
     node_c, node_h = module_status_node_pptx()
     render_status("LLM / AI 服务", pipeline_c, pipeline_h)
     render_status("Marp CLI（预览/降级导出）", marp_c, marp_h)
     render_status("Node.js / PptxGen（可编辑 PPTX）", node_c, node_h)
-    render_status("Legacy 快速 PPT", legacy_c, legacy_h)
 
 
 def render_module_status() -> None:

@@ -59,9 +59,9 @@ archium                            # 启动项目工作台（Streamlit UI）
 |------|------|------|
 | **主路径** | `archium` | 安装后的默认命令，启动 v0.2 项目工作台 |
 | 等价主路径 | `streamlit run app.py` | 与 `archium` 相同，适合已有 Streamlit 工作流的用户 |
-| Legacy（高级） | `archium-legacy` 或 `python main.py` | v0.1 实验 CLI（文件整理 / 快速 PPT），**不是**主产品 |
+| Legacy（仓库内） | `python -m legacy.main` 或 `python main.py` | v0.1 实验 CLI；**不随包安装**，仅仓库检出可用 |
 
-开发者额外依赖：`pip install -e ".[full,dev]"`。Legacy CLI 与主产品共用 `[full]`（至少需 `[llm]`）；详见下文「Legacy 入口」。
+开发者额外依赖：`pip install -e ".[full,dev]"`。Legacy 源码仍在 `legacy/`，但不进入 setuptools 安装面；运行需仓库根目录在 `PYTHONPATH`（可编辑安装后一般仍可从检出根运行）。
 
 当前发布状态与剩余 blocker 以 [v0.2 Beta 发布决策](docs/v0.2-beta-release-decision.md)为准；历史 Stage/Round 编号不再作为架构版本。完整导航见[文档中心](docs/README.md)。
 
@@ -150,7 +150,7 @@ pytest tests/unit/visual tests/integration/visual tests/golden/visual/compositio
 | Marp 导出 smoke（PPTX / PDF / PNG） | ✅ | ✅ | — | ⚠️ |
 | Streamlit 启动 smoke | ✅ | ✅ | — | ⚠️ |
 | Alembic migration smoke | ✅ | ✅ | — | ⚠️ |
-| CLI 指令中心（`main.py` / `archium-legacy`） | ✅ | ⚠️ | — | ❌ |
+| Legacy CLI（仓库内 `legacy/`，不随包安装） | ✅ | ⚠️ | — | ❌ |
 | 遗留实验模块（文件整理） | ✅ | ⚠️ | — | ❌ |
 
 图例：✅ 已满足 · ⚠️ 部分满足或依赖外部工具 · ❌ 未满足或不稳定
@@ -161,7 +161,7 @@ pytest tests/unit/visual tests/integration/visual tests/golden/visual/compositio
 |------|------|------|------|
 | **主入口** | `archium` | v0.2 正式路径 | 安装后的默认命令；启动 Streamlit 项目工作台与结构化汇报管线 |
 | **等价主入口** | `streamlit run app.py` | v0.2 正式路径 | 与 `archium` 相同，适合脚本或 IDE 直接调用 Streamlit |
-| **Legacy CLI** | `archium-legacy` 或 `python main.py` | 遗留/实验 | v0.1 自然语言路由（文件整理、快速 PPT） |
+| **Legacy CLI** | `python -m legacy.main` / `python main.py` | 遗留/实验（不安装） | 仓库内 v0.1 路由；不进入 `archium-agent` 安装包 |
 | **库 API** | `archium/` 包内服务 | v0.2 核心 | `PlanningWorkflowService`、`PresentationWorkflowService`、`VisualWorkflowService`、`IngestionService` 等 |
 
 `main.py` 与 `ppt_generator.py` 属于 **Legacy v0.1** 快速原型路径，**不等同**于项目工作台内的 Brief → Storyline → SlideSpec 主流程。
@@ -218,7 +218,7 @@ Project → SourceDocument → ProjectFact
 ```
 Archium-Agent/
 ├── app.py                  # Streamlit 前端（v0.2 主产品 UI）
-├── main.py                 # Legacy v0.1 CLI（`archium-legacy`）
+├── main.py                 # Legacy v0.1 CLI shim（`python -m legacy.main`）
 ├── config.py               # 向后兼容配置 shim
 ├── archium/                # v0.2 核心包
 │   ├── config/settings.py  # pydantic-settings
@@ -399,12 +399,12 @@ archium
 streamlit run app.py
 ```
 
-### Legacy 入口（高级 / 实验）
+### Legacy 入口（高级 / 实验，不随包安装）
 
-v0.1 自然语言 CLI，**不是** v0.2 主产品。需 `pip install -e ".[full]"`（或至少 `[llm]`；PPT 导出另需 Marp CLI）。
+v0.1 自然语言 CLI，**不是** v0.2 主产品。源码在 `legacy/`，**不**包含在 `pip install` 的包面中。需在仓库根目录运行，并已安装 `[llm]`（或 `[full]`；PPT 导出另需 Marp CLI）。
 
 ```bash
-archium-legacy
+python -m legacy.main
 # 或
 python main.py
 ```
@@ -526,8 +526,8 @@ Copyright (c) 2026 Theopote and Archium contributors
 - 图片衍生管线保留原图并受证据策略约束；它不生成建筑效果图，也不对证据图进行表达性重绘。
 - Visual Critic、Deck QA 和自动修复由不同策略控制；启发式评分不能单独代表可交付性。
 - 原生元素 PPTX 依赖 Node.js 20 与 PptxGenJS；Marp PPTX/PDF 依赖 Marp CLI；截图级验证还可能需要 LibreOffice 或 PowerPoint。
-- 指令中心的部分交互状态仍保存在浏览器 Session 中；正式项目、Scene、提案、评论与修订应通过数据库服务持久化。
-- `legacy/` 中的文件整理和快速 Marp 生成是兼容保留的实验功能，不属于 v0.2 主链。
+- 正式项目、Scene、提案、评论与修订应通过数据库服务持久化，不应只依赖浏览器 Session。
+- `legacy/` 仅仓库内保留（不随包安装、不被 `archium.*` 导入）；文件整理与快速 Marp 生成不属于 v0.2 主链。
 
 详细能力和操作边界见 [Studio 用户指南](docs/studio-user-guide.md)、[视觉编排文档](docs/visual/README.md)与[当前系统架构](docs/architecture/current-system.md)。
 
@@ -539,10 +539,10 @@ Copyright (c) 2026 Theopote and Archium contributors
 
 ## 遗留模块
 
-v0.1 实验性功能已移入 `legacy/` 包，根目录保留薄 shim（`main.py`、`config.py` 等）以兼容旧脚本。主产品入口：
+v0.1 实验性功能保留在仓库 `legacy/` 中，**不**随 `archium-agent` 安装，**不**被 `archium.*` 导入。根目录保留薄 shim（`main.py`、`config.py` 等）供检出内脚本使用。
 
 - **工作台**：`archium` 或 `streamlit run app.py`
-- **Legacy CLI**：`archium-legacy`（等价于 `python main.py`）
+- **Legacy CLI（仅检出）**：`python -m legacy.main` 或 `python main.py`
 
 Legacy 能力（与主 Brief → Storyline → SlideSpec 流程解耦）：
 
