@@ -36,6 +36,7 @@
 - [发布等级与能力矩阵](release-capability-matrix.md)。
 - [关键用户任务剧本 A–E](user-task-playbooks.md)。
 - [v0.2 Beta 发布决策](v0.2-beta-release-decision.md)。
+- [模块检查台账](audit/module-audit/README.md)：按模块与 Issue ID 跟踪架构/质量问题（不用 Stage/Round/Phase）。
 
 ## 历史材料
 
