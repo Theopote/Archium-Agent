@@ -37,7 +37,15 @@ def _dump_artifact(value: Any) -> Any:
 
 
 def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
-    workflow_route = PresentationWorkflowRoute(request.workflow_route)
+    workflow_route = request.workflow_route
+    if not isinstance(workflow_route, PresentationWorkflowRoute):
+        workflow_route = PresentationWorkflowRoute(workflow_route)
+    presentation_type = request.presentation_type
+    type_value = (
+        presentation_type.value
+        if hasattr(presentation_type, "value")
+        else str(presentation_type)
+    )
     return {
         "title": request.title,
         "audience": request.audience,
@@ -46,7 +54,7 @@ def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
         "duration_minutes": request.duration_minutes,
         "target_slide_count": request.target_slide_count,
         "core_message": request.core_message,
-        "presentation_type": request.presentation_type.value,
+        "presentation_type": type_value,
         "decisions_required": list(request.decisions_required),
         "audience_concerns": list(request.audience_concerns),
         "required_sections": list(request.required_sections),
