@@ -119,3 +119,40 @@ def test_extract_persists_new_facts(
     assert "site_area" in {fact.key for fact in facts}
     assert "bed_count" in {fact.key for fact in facts}
     assert len(mock_llm.calls) == 1
+
+
+def test_upsert_retains_alternate_value_on_key_conflict(
+    db_session: Session,
+    project: Project,
+) -> None:
+    """KN-001: unique (project_id, key) must not silently drop conflicting values."""
+    facts = FactRepository(db_session)
+    service = FactExtractionService(
+        db_session,
+        settings=Settings(_env_file=None, fact_extraction_enabled=True),
+    )
+    facts.create(
+        ProjectFact(
+            project_id=project.id,
+            key="plot_ratio",
+            label="容积率",
+            value="2.5",
+            confidence=0.6,
+            verification_status=VerificationStatus.EXTRACTED,
+        )
+    )
+    stored, action = service._upsert_fact(
+        ProjectFact(
+            project_id=project.id,
+            key="plot_ratio",
+            label="容积率",
+            value="2.8",
+            confidence=0.5,
+        )
+    )
+    assert action == "conflicted"
+    assert stored.value == "2.5"
+    assert "2.8" in {str(item) for item in stored.alternate_values}
+    reloaded = facts.get_by_project_key(project.id, "plot_ratio")
+    assert reloaded is not None
+    assert "2.8" in {str(item) for item in reloaded.alternate_values}

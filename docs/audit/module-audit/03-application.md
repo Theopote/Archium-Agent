@@ -8,7 +8,7 @@
 |------|----------|------|------|------|------|----------|----------|----------|
 | APP-001 | P0 | done | Application 泄漏 UI 依赖 (A1) | `layout_readiness.py`; layering 测试 | 无法无头复用 | 去掉 UI import；守卫 | `test_application_layering` 绿 | `-` |
 | APP-002 | P0 | done | 双 PPTX 导出路径 Spec vs Scene (A2) | `FormalPptxExportService`；workflow/export 解耦 | 同项目两种结果 | 正式可编辑 PPTX 优先 Scene；Spec 仅 JSON/回退 | 有版式走 Scene；无版式 Spec 回退+警告 | `-` |
-| APP-003 | P0 | open | `session.commit` 所有权不一致 (A3) | TransactionExecutor; Studio 相关 | 事务边界错乱 | 单一 commit 策略（见 DB-001） | 失败路径可测；无中途 commit | `-` |
+| APP-003 | P0 | mitigated | `session.commit` 所有权不一致 (A3) | TransactionExecutor; Studio 相关 | 事务边界错乱 | TransactionExecutor 失败路径已禁 commit（DB-001/003）；其余 app/UI 边界仍见 DB-005 | TE 失败无 commit；余路径待收拢 | `-` |
 | APP-004 | P1 | open | QA 多栈并存 (A4) | AutomatedReview / DeckQA / SceneSemantic / Critic | 重复告警、门禁不清 | 编排层统一，其余只产证据 | 导出只读统一 verdict | `-` |
 | APP-005 | P1 | open | 修复三路径并存 (A5) | SlideSpec / LayoutPlan / Scene repair | 修一处烂两处 | Scene 为修入口；其余适配 | repair 后 Scene+Plan 一致 | `-` |
 | APP-006 | P1 | open | God services（千行级）(A6) | StudioCommandExecutor; VisualEditService 等 | 难测难审 | 按用例拆服务 | 单文件 < 约定上限 + 单测边界清晰 | `-` |

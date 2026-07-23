@@ -626,3 +626,39 @@ def test_history_failure_does_not_leave_committed_mutation() -> None:
     assert result.success is False
     assert history.records == []
     assert repo.plan.elements[0].locked is original_locked
+    assert session.commits == 0
+    assert session.rollbacks >= 1
+
+
+def test_failure_path_never_commits() -> None:
+    """DB-003: rollback-only on failure — no trailing commit of restored state."""
+    plan = _sample_plan()
+    session = _TrackingSession()
+    slide = type(
+        "Slide",
+        (),
+        {"id": plan.slide_id, "layout_plan_id": plan.id, "visual_intent_id": plan.visual_intent_id},
+    )()
+
+    def _reject(_: LayoutPlan) -> None:
+        raise WorkflowError("layout invalid")
+
+    context = TransactionExecutionContext(
+        replan_layout_change=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError()),
+        validate_layout=_reject,
+    )
+    executor = TransactionExecutor(session, _FakeHistory())
+    result = executor.execute_transaction(
+        operations=[IncreaseWhitespaceOperation()],
+        slide_id=slide.id,
+        slide_snapshot=None,
+        intents_repo=_FakeIntentsRepo(),
+        plans_repo=_FakePlansRepo(plan),
+        presentations_repo=_FakePresentationsRepo(slide),
+        execution_context=context,
+    )
+    assert result.success is False
+    assert session.commits == 0
+    assert "rollback" in session.events
+    # Restore may flush in-memory snapshots; must not commit.
+    assert all(event != "commit" for event in session.events)

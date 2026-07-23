@@ -223,6 +223,9 @@ class TransactionExecutor:
             )
 
         except Exception as e:
+            # DB-001 / DB-003: failed transactions must not commit. Rollback undoes
+            # flushed mutations; restore checkpoints for in-memory repo consistency
+            # without opening a new committed write.
             self._session.rollback()
 
             if slide is not None:
@@ -232,7 +235,7 @@ class TransactionExecutor:
                     plans_repo=plans_repo,
                 )
                 try:
-                    self._session.commit()
+                    self._session.flush()
                 except Exception:
                     self._session.rollback()
 

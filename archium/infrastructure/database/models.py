@@ -134,6 +134,9 @@ class ProjectFactORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     verification_status: Mapped[str] = mapped_column(String(30), nullable=False, default="extracted")
     conflict_group: Mapped[str | None] = mapped_column(String(100))
+    alternate_values_json: Mapped[list[object]] = mapped_column(
+        "alternate_values", JSON, default=list
+    )
     source_citations_json: Mapped[list[dict[str, object]]] = mapped_column(
         "source_citations", JSON, default=list
     )

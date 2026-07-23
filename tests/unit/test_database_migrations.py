@@ -134,8 +134,12 @@ def test_init_database_initializes_custom_engine_when_global_is_migrated(
     reset_engine_cache()
     reset_settings()
     monkeypatch.setattr("archium.config.settings.get_settings", lambda: global_settings)
+    monkeypatch.setattr(
+        "archium.infrastructure.database.session.get_settings",
+        lambda: global_settings,
+    )
 
-    global_engine = get_engine()
+    global_engine = create_engine_from_settings(global_settings)
     init_database(global_engine)
     assert get_current_revision(global_engine) is not None
 

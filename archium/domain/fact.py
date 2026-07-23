@@ -26,6 +26,10 @@ class ProjectFact(IdentifiedModel, TimestampedModel):
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     verification_status: VerificationStatus = VerificationStatus.EXTRACTED
     conflict_group: str | None = Field(default=None, max_length=100)
+    alternate_values: list[FactValue] = Field(
+        default_factory=list,
+        description="Conflicting alternate values retained when key uniqueness blocks a second row (KN-001).",
+    )
     source_citations: list[Citation] = Field(default_factory=list)
 
     @field_validator("key")

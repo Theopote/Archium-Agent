@@ -15,7 +15,6 @@ from sqlalchemy.pool import Pool
 
 from archium.config.settings import Settings, get_settings
 from archium.exceptions import ConfigurationError
-from archium.infrastructure.database.base import Base
 
 _scoped_session_factory: scoped_session[Session] | None = None
 _session_factory: sessionmaker[Session] | None = None
@@ -198,31 +197,18 @@ def get_session(
 
 
 def init_database(engine: Engine | None = None) -> None:
-    """Initialize database schema.
+    """Initialize database schema via Alembic only (DB-002).
 
-    For new databases: creates all tables and applies migrations.
-    For existing databases: validates migrations are up to date.
-
-    Raises ConfigurationError if existing database has pending migrations.
+    Cold databases run ``alembic upgrade head`` (revision 001 creates the
+    SQLAlchemy metadata baseline). Existing databases still require pending
+    migrations to be applied explicitly when the revision lags behind head.
     """
     import archium.infrastructure.database.models  # noqa: F401
 
     target = engine or get_engine()
 
-    # Import here to avoid circular dependency
-    from archium.infrastructure.database.migrations import (
-        check_migrations_on_startup,
-        get_current_revision,
-    )
+    from archium.infrastructure.database.migrations import check_migrations_on_startup
 
-    # Check if database is brand new (no alembic_version table)
-    current_revision = get_current_revision(target)
-
-    if current_revision is None:
-        # Brand new database - create all tables then run migrations
-        Base.metadata.create_all(target)
-
-    # Validate and apply migrations on the target database
     check_migrations_on_startup(engine=target)
 
 

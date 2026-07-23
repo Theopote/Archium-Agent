@@ -239,6 +239,9 @@ def _render_conflict_bucket(buckets: _KnownUnknownBuckets, *, key_prefix: str) -
         with st.container(border=True):
             st.write(f"**{fact.label}**: {_fact_value(fact)}")
             st.caption(f"冲突组：{fact.conflict_group or '—'}")
+            if fact.alternate_values:
+                alts = " / ".join(str(item) for item in fact.alternate_values)
+                st.caption(f"备选值：{alts}")
             b1, b2 = st.columns(2)
             if b1.button(
                 "确认此项",

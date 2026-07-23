@@ -7,7 +7,7 @@
 | 编号 | 严重级别 | 状态 | 问题 | 文件 | 影响 | 修复方案 | 验收标准 | 提交 SHA |
 |------|----------|------|------|------|------|----------|----------|----------|
 | KN-000 | P0 | done | 假目录冲突；伪造 citation UUID | fact validation; citation_from_draft | 错误冲突 / 坏引用 | 校验修复；禁止假 UUID | 相关单测绿 | `-` |
-| KN-001 | P0 | open | 事实主键冲突丢弃 alternate 值 (K1) | `uq_fact_project_key`; fact 写入 | 真冲突被静默吞 | 保留多值或显式 conflict 记录 | 冲突可见且不丢值 | `-` |
+| KN-001 | P0 | done | 事实主键冲突丢弃 alternate 值 (K1) | `uq_fact_project_key`; fact 写入 | 真冲突被静默吞 | `alternate_values` 保留冲突备选值 | `test_upsert_retains_alternate_value_on_key_conflict` | `-` |
 | KN-002 | P1 | open | Fact/Knowledge/Manuscript 有损桥接 (K2) | knowledge services | 信息丢失 | 显式映射 + 丢字段告警 | 往返字段清单测试 | `-` |
 | KN-003 | P1 | open | 导出绕过 `filter_generation_facts` (K3) | `pptxgen_renderer` | 未审事实进稿 | 导出前统一过滤 | 过滤关则导出缺事实 / 开则一致 | `-` |
 | KN-004 | P1 | open | LLM 任意键写入事实 (K4) | parsing/extraction | schema 污染 | 白名单键 | 未知键拒绝或进 quarantine | `-` |

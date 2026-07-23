@@ -1,8 +1,13 @@
-"""Initial database schema."""
+"""Initial database schema.
+
+Creates the SQLAlchemy metadata baseline so a cold ``alembic upgrade head``
+works without a prior ``create_all`` (DB-002). Later revisions remain
+idempotent via table/column existence checks where they add objects that may
+already exist after this baseline.
+"""
 
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
 
 revision: str = "001_initial"
@@ -12,10 +17,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Tables are created via init_database() for SQLite dev workflow.
-    # This revision documents the baseline schema for Alembic tracking.
-    pass
+    import archium.infrastructure.database.models  # noqa: F401
+    from archium.infrastructure.database.base import Base
+
+    bind = op.get_bind()
+    Base.metadata.create_all(bind=bind)
 
 
 def downgrade() -> None:
-    pass
+    import archium.infrastructure.database.models  # noqa: F401
+    from archium.infrastructure.database.base import Base
+
+    bind = op.get_bind()
+    Base.metadata.drop_all(bind=bind)

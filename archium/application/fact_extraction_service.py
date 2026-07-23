@@ -219,9 +219,10 @@ class FactExtractionService:
                 if merged is not existing:
                     return self._facts.update(merged), "merged"
                 return existing, "skipped"
-            existing.mark_conflicted()
-            existing.conflict_group = existing.conflict_group or f"key:{incoming.key}"
-            return self._facts.update(existing), "conflicted"
+            return (
+                self._facts.update(self._retain_conflict_alternate(existing, incoming)),
+                "conflicted",
+            )
 
         if _normalize_value(existing.value) == _normalize_value(incoming.value):
             merged = self._merge_citations(existing, incoming)
@@ -233,13 +234,36 @@ class FactExtractionService:
             incoming.id = existing.id
             incoming.verification_status = VerificationStatus.EXTRACTED
             incoming.mark_conflicted()
-            incoming.conflict_group = incoming.conflict_group or f"key:{incoming.key}"
+            incoming.conflict_group = (
+                existing.conflict_group or incoming.conflict_group or f"key:{incoming.key}"
+            )
+            incoming.alternate_values = _merge_alternate_values(
+                primary=incoming.value,
+                candidates=[existing.value, *existing.alternate_values, *incoming.alternate_values],
+            )
             incoming.source_citations = self._combined_citations(existing, incoming)
             return self._facts.update(incoming), "updated"
 
+        return (
+            self._facts.update(self._retain_conflict_alternate(existing, incoming)),
+            "conflicted",
+        )
+
+    def _retain_conflict_alternate(
+        self,
+        existing: ProjectFact,
+        incoming: ProjectFact,
+    ) -> ProjectFact:
+        """Keep the row primary value but never drop a conflicting alternate (KN-001)."""
         existing.mark_conflicted()
         existing.conflict_group = existing.conflict_group or f"key:{incoming.key}"
-        return self._facts.update(existing), "conflicted"
+        existing.alternate_values = _merge_alternate_values(
+            primary=existing.value,
+            candidates=[*existing.alternate_values, incoming.value, *incoming.alternate_values],
+        )
+        existing.source_citations = self._combined_citations(existing, incoming)
+        existing.touch()
+        return existing
 
     @staticmethod
     def _merge_citations(existing: ProjectFact, incoming: ProjectFact) -> ProjectFact:
@@ -264,3 +288,21 @@ class FactExtractionService:
             combined.append(citation)
             seen.add(token)
         return combined
+
+
+def _merge_alternate_values(
+    *,
+    primary: object,
+    candidates: list[object],
+) -> list[object]:
+    """Deduplicate alternate values relative to the primary fact value."""
+    primary_norm = _normalize_value(primary)
+    merged: list[object] = []
+    seen = {primary_norm}
+    for candidate in candidates:
+        token = _normalize_value(candidate)
+        if token in seen:
+            continue
+        merged.append(candidate)
+        seen.add(token)
+    return merged

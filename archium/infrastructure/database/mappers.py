@@ -233,6 +233,7 @@ def document_chunk_to_orm(
 
 def project_fact_to_domain(orm: ProjectFactORM) -> ProjectFact:
     value: FactValue = orm.value_json  # type: ignore[assignment]
+    alternates = list(orm.alternate_values_json or [])
     return ProjectFact(
         id=orm.id,
         project_id=orm.project_id,
@@ -244,6 +245,7 @@ def project_fact_to_domain(orm: ProjectFactORM) -> ProjectFact:
         confidence=orm.confidence,
         verification_status=VerificationStatus(orm.verification_status),
         conflict_group=orm.conflict_group,
+        alternate_values=alternates,  # type: ignore[arg-type]
         source_citations=citations_from_json(orm.source_citations_json),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -261,6 +263,7 @@ def project_fact_to_orm(domain: ProjectFact, orm: ProjectFactORM | None = None) 
     target.confidence = domain.confidence
     target.verification_status = domain.verification_status.value
     target.conflict_group = domain.conflict_group
+    target.alternate_values_json = list(domain.alternate_values)
     target.source_citations_json = citations_to_json(domain.source_citations)
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
