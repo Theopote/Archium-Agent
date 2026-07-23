@@ -20,6 +20,7 @@ from archium.domain.visual.image_derivative import ImageDerivative
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
+    RenderNode,
     RenderScene,
     ShapeNode,
     TextNode,
@@ -80,7 +81,7 @@ class ImageDerivativeService:
 
         derivatives: list[ImageDerivative] = []
         skipped = 0
-        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
+        nodes: list[RenderNode] = []
         for node in scene.nodes:
             if not isinstance(node, (ImageNode, DrawingNode)):
                 nodes.append(node)

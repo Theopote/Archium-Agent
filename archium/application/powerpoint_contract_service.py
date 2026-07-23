@@ -165,7 +165,7 @@ class PowerPointContractService:
             return planned
 
         if isinstance(node, TableNode) and node.has_grid_data:
-            planned: list[RendererEmission] = []
+            planned = []
             sequence = 0
             for _header in node.headers:
                 planned.append(

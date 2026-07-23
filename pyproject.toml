@@ -138,7 +138,9 @@ markers = [
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["archium", "tests", "config.py"]
+# Legacy is frozen (not package surface, not CI-checked). Root shims like config.py
+# are legacy-only and excluded from lint scope.
+src = ["archium", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -153,14 +155,54 @@ warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
 check_untyped_defs = true
-ignore_missing_imports = true
+# Do not ignore missing imports globally — that hides bad archium import paths.
+# Third-party packages without stubs are listed in overrides below.
+ignore_missing_imports = false
 packages = ["archium"]
 
+# Frozen legacy + root shims: not type-checked (and not on the install surface).
 [[tool.mypy.overrides]]
 module = ["main", "app", "config", "ppt_generator", "file_manager", "legacy", "legacy.*"]
 ignore_errors = true
+
+# Domain / application: keep the same strict flags as the global config (explicit
+# so future package-level relaxations do not silently weaken these layers).
+[[tool.mypy.overrides]]
+module = ["archium.domain.*", "archium.application.*"]
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_return_any = true
+
+# Optional / stub-less third-party dependencies.
+[[tool.mypy.overrides]]
+module = [
+    "streamlit",
+    "streamlit.*",
+    "fitz",
+    "fitz.*",
+    "cairosvg",
+    "cairosvg.*",
+    "openpyxl",
+    "openpyxl.*",
+    "pandas",
+    "pandas.*",
+    "psycopg2",
+    "psycopg2.*",
+    "pytesseract",
+    "pytesseract.*",
+    "pptx",
+    "pptx.*",
+    "docx",
+    "docx.*",
+    "keyring",
+    "keyring.*",
+    "svg",
+    "svg.*",
+]
+ignore_missing_imports = true
 
 # chromadb → numpy ships 3.12-only stub syntax; skip third-party follow-imports.
 [[tool.mypy.overrides]]
 module = ["chromadb", "chromadb.*", "numpy", "numpy.*"]
 follow_imports = "skip"
+ignore_missing_imports = true

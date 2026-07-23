@@ -7,6 +7,7 @@ from archium.application.visual.scene_compilers.generic import GenericContentCom
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
+    RenderNode,
     RenderScene,
     ShapeNode,
     TextNode,
@@ -44,7 +45,7 @@ class DrawingFocusCompiler(_SpecializedCompilerBase):
 
     def _specialize(self, scene: RenderScene, context: SceneCompileContext) -> RenderScene:
         _ = context
-        nodes: list[DrawingNode | TextNode | ImageNode | ShapeNode] = []
+        nodes: list[RenderNode] = []
         for node in scene.nodes:
             if isinstance(node, DrawingNode):
                 nodes.append(

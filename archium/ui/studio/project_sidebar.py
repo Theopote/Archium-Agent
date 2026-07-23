@@ -24,7 +24,7 @@ from archium.ui.studio_service import (
 
 
 def _init_studio_session_state() -> None:
-    defaults = {
+    defaults: dict[str, object] = {
         "selected_project_id": None,
         "selected_presentation_id": None,
         "studio_selected_slide_index": 0,

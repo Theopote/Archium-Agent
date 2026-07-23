@@ -109,10 +109,10 @@ def expand_masters_from_structure(
         root = ET.fromstring(files[layout_part])
         c_sld = root.find(f"{{{_NS['p']}}}cSld")
         layout_name = c_sld.attrib.get("name", "") if c_sld is not None else ""
-        master_id = layout_name_to_master_id.get(layout_name)
+        resolved_master_id = layout_name_to_master_id.get(layout_name)
         master_part = (
-            master_id_to_part.get(master_id, default_master_part)
-            if master_id
+            master_id_to_part.get(resolved_master_id, default_master_part)
+            if resolved_master_id
             else default_master_part
         )
         layout_to_master_part[layout_part] = master_part
@@ -247,7 +247,7 @@ def _rewrite_presentation_rels(
     }
     # Prefer reclaiming low rIds starting at 1 for masters (PowerPoint convention).
     next_id = 1
-    master_rids: list[str] = []
+    master_rids = []
     for insert_at, master_part in enumerate(master_parts):
         while next_id in used_ids:
             next_id += 1
@@ -334,4 +334,4 @@ def _rewrite_content_types(
 def _serialize_xml(root: ET.Element) -> bytes:
     # Preserve XML declaration.
     payload = ET.tostring(root, encoding="utf-8", xml_declaration=True)
-    return payload
+    return payload if isinstance(payload, bytes) else payload.encode("utf-8")

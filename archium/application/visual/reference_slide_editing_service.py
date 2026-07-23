@@ -58,6 +58,7 @@ from archium.domain.visual.render_scene import (
     BoxSpacing,
     DrawingNode,
     ImageNode,
+    RenderNode,
     RenderScene,
     SceneAssetReference,
     ShapeNode,
@@ -118,7 +119,7 @@ class ReferenceSlideEditingService:
             | SkipUnsupportedAction
         ] = []
         warnings: list[str] = []
-        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
+        nodes: list[RenderNode] = []
         asset_manifest: list[SceneAssetReference] = []
         stripped_text = 0
         stripped_asset = 0

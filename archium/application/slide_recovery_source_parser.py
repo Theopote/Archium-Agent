@@ -12,6 +12,7 @@ from archium.domain.visual.render_scene import (
     BackgroundStyle,
     DrawingNode,
     ImageNode,
+    RenderNode,
     RenderScene,
     ShapeNode,
     TextNode,
@@ -170,7 +171,7 @@ def _parse_pptx_slide(
     if page_w <= 0 or page_h <= 0:
         raise WorkflowError("PPTX 页面尺寸无效。")
     slide = presentation.slides[slide_index]
-    nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode] = []
+    nodes: list[RenderNode] = []
     z_index = 0
 
     for shape_index, shape in enumerate(slide.shapes):

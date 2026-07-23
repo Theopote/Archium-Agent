@@ -13,7 +13,7 @@
 
 依赖：`full` extra 必须覆盖全部 runtime extras（测试守卫）；可复现安装用 `requirements/*.lock`（`uv` 生成）。Documentation URL 指向默认分支 `master`。
 
-`legacy/` 保留在仓库中供开发者按需运行（`python -m legacy.main` / `python main.py`），**不**随 `archium-agent` 安装，**不**被 `archium.*` 导入，也不出现在主导航。验收：`rg "from legacy|import legacy" archium` 必须为空。
+`legacy/` 保留在仓库中供开发者按需运行（`python -m legacy.main` / `python main.py`），**不**随 `archium-agent` 安装，**不**被 `archium.*` 导入，也不出现在主导航。**状态冻结**：不再接受功能修改；Ruff/Mypy/CI 不检查 `legacy/` 与根 shim。验收：`rg "from legacy|import legacy" archium` 必须为空。静态检查：`ignore_missing_imports = false`，仅对无 stub 的第三方包在 overrides 中忽略。
 
 应用页面由 `archium/ui/app_navigation.py` 注册。当前页面覆盖项目、任务规划、生成工作区、Studio、视觉设计、页面恢复、模板归纳、模板库、模板 Studio、设置等能力。
 

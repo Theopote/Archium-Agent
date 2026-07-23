@@ -535,12 +535,18 @@ Copyright (c) 2026 Theopote and Archium contributors
 
 ## 遗留模块
 
-v0.1 实验性功能保留在仓库 `legacy/` 中，**不**随 `archium-agent` 安装，**不**被 `archium.*` 导入。根目录保留薄 shim（`main.py`、`config.py` 等）供检出内脚本使用。
+v0.1 实验性功能保留在仓库 `legacy/` 中，**状态为冻结（frozen）**：
+
+- **不**随 `archium-agent` 安装，**不**被 `archium.*` 导入
+- **不再接受功能修改**；仅允许安全/阻塞性修复，且不得扩大与主产品的耦合
+- Ruff / Mypy / CI **不检查** `legacy/` 与根目录 shim（`main.py`、`config.py` 等）
+
+根目录保留薄 shim 供检出内脚本使用。
 
 - **工作台**：`archium` 或 `streamlit run app.py`
 - **Legacy CLI（仅检出）**：`python -m legacy.main` 或 `python main.py`
 
-Legacy 能力（与主 Brief → Storyline → SlideSpec 流程解耦）：
+Legacy 能力（与主 Brief → Storyline → SlideSpec 流程解耦；冻结）：
 
 - `legacy/file_manager.py` — AI 辅助文件整理（**CLI 中唯一会移动本地文件的路径**；执行前会展示分类方案并要求二次确认）
 - `legacy/ppt_generator.py` — 快速 Marp PPT 生成

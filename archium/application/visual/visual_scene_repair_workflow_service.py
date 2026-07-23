@@ -264,9 +264,9 @@ class VisualSceneRepairWorkflowService:
                     scene_pptx_unavailable_reason,
                 )
 
-                reason = scene_pptx_unavailable_reason(self._settings)
-                if reason is not None:
-                    warnings.append(f"Scene PPTX export skipped: {reason}")
+                skip_reason = scene_pptx_unavailable_reason(self._settings)
+                if skip_reason is not None:
+                    warnings.append(f"Scene PPTX export skipped: {skip_reason}")
                 else:
                     renderer = PptxRenderer(self._settings)
                     exported = renderer.export_presentation(
