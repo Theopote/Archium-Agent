@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from archium.domain.slide_semantic_qa import ArchitectureSlideSemanticQA, SlideSemanticFinding
+from archium.domain.visual.enums import overflow_triggers_text_overflow_qa
 from archium.domain.visual.render_scene import DrawingNode, ImageNode, RenderScene, TextNode
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode, is_project_presentation_role
 from archium.infrastructure.renderers.renderer_conformance import assert_renderer_conformance
@@ -210,7 +211,7 @@ def _check_text_overflow(scene: RenderScene, *, slide_order: int) -> list[SlideS
     for node in scene.nodes:
         if not isinstance(node, TextNode):
             continue
-        if node.overflow_policy != "error":
+        if not overflow_triggers_text_overflow_qa(node.overflow_policy):
             continue
         text = (node.text or "").strip()
         if not text:
@@ -228,9 +229,10 @@ def _check_text_overflow(scene: RenderScene, *, slide_order: int) -> list[SlideS
                     severity="medium",
                     title="Scene 文本可能溢出",
                     description=(
-                        f"文本节点 `{node.id}` 在 overflow_policy=error 下字符量可能超出框体。"
+                        f"文本节点 `{node.id}` 在 overflow_policy="
+                        f"{node.overflow_policy.value} 下字符量可能超出框体。"
                     ),
-                    suggestion="缩短文案、缩小字号策略改为 shrink，或扩大文本框。",
+                    suggestion="缩短文案、将策略改为 shrink，或扩大文本框。",
                     evidence_refs=[node.id],
                 )
             )

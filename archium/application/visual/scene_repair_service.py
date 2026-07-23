@@ -15,6 +15,7 @@ from uuid import UUID
 from archium.application.slide_repair_policy import smart_shorten_text
 from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
 from archium.domain.slide_semantic_qa import SlideSemanticFinding
+from archium.domain.visual.enums import OverflowPolicy
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -216,8 +217,8 @@ class SceneRepairService:
                     action_type="shorten_text",
                     reason=reason,
                 )
-            if node.overflow_policy == "error":
-                node.overflow_policy = "shrink"
+            if node.overflow_policy in {OverflowPolicy.WARN, OverflowPolicy.SPLIT}:
+                node.overflow_policy = OverflowPolicy.SHRINK
                 return SceneRepairAction(
                     scene_id=scene.slide_id,
                     node_id=node_id,

@@ -35,6 +35,7 @@ from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
 from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
+from archium.domain.visual.enums import OverflowPolicy
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
@@ -662,7 +663,7 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
             replace_text_node_content(node, action.after_value)
         return
     if action.action_type == "set_overflow_shrink" and isinstance(node, TextNode):
-        node.overflow_policy = "shrink"
+        node.overflow_policy = OverflowPolicy.SHRINK
         return
     if action.action_type == "set_fit_mode_contain" and isinstance(
         node, (DrawingNode, ImageNode)

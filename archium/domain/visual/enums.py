@@ -122,6 +122,38 @@ class OverflowPolicy(StrEnum):
     SPLIT = "split"
 
 
+# Legacy TextNode literals accepted on load (DOM-020).
+_OVERFLOW_POLICY_ALIASES: dict[str, OverflowPolicy] = {
+    "error": OverflowPolicy.WARN,
+    "continue": OverflowPolicy.SPLIT,
+}
+
+
+def coerce_overflow_policy(
+    value: object,
+    *,
+    default: OverflowPolicy = OverflowPolicy.SHRINK,
+) -> OverflowPolicy:
+    """Normalize LayoutPlan / TextNode overflow vocabulary to OverflowPolicy."""
+    if isinstance(value, OverflowPolicy):
+        return value
+    text = str(value or "").strip().lower()
+    if not text:
+        return default
+    if text in _OVERFLOW_POLICY_ALIASES:
+        return _OVERFLOW_POLICY_ALIASES[text]
+    try:
+        return OverflowPolicy(text)
+    except ValueError as exc:
+        raise ValueError(f"unsupported overflow_policy: {value!r}") from exc
+
+
+def overflow_triggers_text_overflow_qa(policy: OverflowPolicy | str) -> bool:
+    """WARN/SPLIT surface TEXT_OVERFLOW for semantic QA / repair."""
+    resolved = coerce_overflow_policy(policy, default=OverflowPolicy.WARN)
+    return resolved in {OverflowPolicy.WARN, OverflowPolicy.SPLIT}
+
+
 class LayoutValidationStatus(StrEnum):
     PENDING = "pending"
     VALID = "valid"

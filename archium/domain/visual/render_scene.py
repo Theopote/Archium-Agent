@@ -14,7 +14,7 @@ from uuid import UUID
 from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
-from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.enums import LayoutFamily, OverflowPolicy, coerce_overflow_policy
 from archium.domain.visual.layout_family_normalize import coerce_layout_family
 from archium.domain.visual.structured_payload import ChartSeriesData
 
@@ -157,8 +157,13 @@ class TextNode(BaseRenderNode):
     line_height: float = Field(gt=0)
     letter_spacing: float = 0
     padding: BoxSpacing = Field(default_factory=BoxSpacing)
-    overflow_policy: Literal["error", "shrink", "clip", "continue"] = "shrink"
+    overflow_policy: OverflowPolicy = OverflowPolicy.SHRINK
     minimum_font_size: float = Field(default=8, gt=0)
+
+    @field_validator("overflow_policy", mode="before")
+    @classmethod
+    def _coerce_overflow_policy(cls, value: object) -> object:
+        return coerce_overflow_policy(value, default=OverflowPolicy.SHRINK)
 
 
 def replace_text_node_content(node: TextNode, new_text: str) -> None:

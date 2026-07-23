@@ -300,8 +300,8 @@
 |------|------|
 | 角色 | 布局枚举；门禁经 severity 桥 → IssueSeverity |
 | 裁决 | keep + bridge via bridge |
-| 级别 | P1（DOM-004 **done** / DOM-020 overflow 仍开） |
-| 问题 | ~~多套 severity 无映射~~；余 overflow 词表 |
+| 级别 | P1（DOM-004 **done** / DOM-020 **done**） |
+| 问题 | ~~多套 severity 无映射~~；~~overflow 词表~~ |
 | 方案 | 门禁以 IssueSeverity 为准（`domain/visual/severity.py`） |
 | 验收 | 导出门禁经桥接；`test_severity_bridge` |
 

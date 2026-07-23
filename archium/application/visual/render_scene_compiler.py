@@ -27,7 +27,12 @@ from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, OverflowPolicy
+from archium.domain.visual.enums import (
+    LayoutContentType,
+    LayoutElementRole,
+    OverflowPolicy,
+    coerce_overflow_policy,
+)
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import (
     BackgroundStyle,
@@ -557,18 +562,9 @@ class RenderSceneCompiler:
         return path, False
 
 
-def _scene_overflow_policy(
-    policy: OverflowPolicy,
-) -> Literal["error", "shrink", "clip", "continue"]:
-    """Map LayoutPlan OverflowPolicy onto TextNode.overflow_policy.
-
-    WARN/SPLIT → error so scene semantic QA can detect overflow and repair can act.
-    """
-    if policy == OverflowPolicy.SHRINK:
-        return "shrink"
-    if policy == OverflowPolicy.CLIP:
-        return "clip"
-    return "error"
+def _scene_overflow_policy(policy: OverflowPolicy) -> OverflowPolicy:
+    """Pass LayoutPlan OverflowPolicy through to TextNode (DOM-020 identity)."""
+    return coerce_overflow_policy(policy)
 
 
 def _typography_token_for_role(role: LayoutElementRole) -> str:

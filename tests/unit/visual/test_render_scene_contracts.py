@@ -54,11 +54,11 @@ def _plan_with_text(
     )
 
 
-def test_scene_overflow_policy_maps_warn_to_error() -> None:
-    assert _scene_overflow_policy(OverflowPolicy.WARN) == "error"
-    assert _scene_overflow_policy(OverflowPolicy.SPLIT) == "error"
-    assert _scene_overflow_policy(OverflowPolicy.SHRINK) == "shrink"
-    assert _scene_overflow_policy(OverflowPolicy.CLIP) == "clip"
+def test_scene_overflow_policy_is_identity() -> None:
+    assert _scene_overflow_policy(OverflowPolicy.WARN) == OverflowPolicy.WARN
+    assert _scene_overflow_policy(OverflowPolicy.SPLIT) == OverflowPolicy.SPLIT
+    assert _scene_overflow_policy(OverflowPolicy.SHRINK) == OverflowPolicy.SHRINK
+    assert _scene_overflow_policy(OverflowPolicy.CLIP) == OverflowPolicy.CLIP
 
 
 def test_compile_text_uses_layout_overflow_policy() -> None:
@@ -77,7 +77,38 @@ def test_compile_text_uses_layout_overflow_policy() -> None:
     )
     text_nodes = [n for n in scene.nodes if isinstance(n, TextNode)]
     assert text_nodes
-    assert text_nodes[0].overflow_policy == "error"
+    assert text_nodes[0].overflow_policy == OverflowPolicy.WARN
+
+
+def test_text_node_coerces_legacy_overflow_literals() -> None:
+    node = TextNode(
+        id="body",
+        x=0,
+        y=0,
+        width=4,
+        height=1,
+        text="x",
+        font_family="Arial",
+        font_size=12,
+        color="#111",
+        line_height=1.2,
+        overflow_policy="error",  # type: ignore[arg-type]
+    )
+    assert node.overflow_policy == OverflowPolicy.WARN
+    continued = TextNode(
+        id="body2",
+        x=0,
+        y=0,
+        width=4,
+        height=1,
+        text="x",
+        font_family="Arial",
+        font_size=12,
+        color="#111",
+        line_height=1.2,
+        overflow_policy="continue",  # type: ignore[arg-type]
+    )
+    assert continued.overflow_policy == OverflowPolicy.SPLIT
 
 
 def test_empty_text_element_records_warning() -> None:

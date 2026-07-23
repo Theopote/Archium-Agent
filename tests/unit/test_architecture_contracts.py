@@ -131,6 +131,17 @@ def test_documented_overflow_policy_default_matches_layout_plan(
     assert LayoutPlan.model_fields["overflow_policy"].default == OverflowPolicy.WARN
 
 
+def test_documented_overflow_policy_values_match_enum(
+    contracts: dict[str, list[str]],
+) -> None:
+    from archium.domain.visual.render_scene import TextNode
+
+    documented = set(contracts["overflow-policy-values"])
+    actual = {item.value for item in OverflowPolicy}
+    assert documented == actual
+    assert TextNode.model_fields["overflow_policy"].annotation is OverflowPolicy
+
+
 def test_documented_geometry_authority_values(
     contracts: dict[str, list[str]],
 ) -> None:

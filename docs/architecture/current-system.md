@@ -60,7 +60,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 固定画布先计算 `SlideCapacityBudget`。状态为 `fits`、`tight`、`overloaded`、`impossible`；超载后禁止继续缩小字体，改走内容适配或拆页。`CAPACITY.*` 警告会写入工作流 warnings；`CAPACITY.IMPOSSIBLE` 会硬阻断 layout candidates。
 - 已批准 / 待确认的 `SlideDesignBrief` 会注入 `VisualIntent`（layout family、density、资产与图面策略）。Brief 中的 `photo_evidence_grid` 等别名归一为 `LayoutFamily` 枚举值（如 `evidence_board`）。
 - Layout family generator 负责确定坐标；Renderer 只执行 LayoutPlan/RenderScene，不重新选择版式。
-- Visual workflow 与 Studio 共用 `SceneCompilerChain` + `ImageDerivativeService` 编译 RenderScene；按 `layout_plan_id` 复用 scene id / version。`LayoutPlan.overflow_policy`（默认 WARN）映射为 TextNode `error`，使 `SEMANTIC.TEXT_OVERFLOW` 可被检出并修复。
+- Visual workflow 与 Studio 共用 `SceneCompilerChain` + `ImageDerivativeService` 编译 RenderScene；按 `layout_plan_id` 复用 scene id / version。`LayoutPlan.overflow_policy` 与 `TextNode.overflow_policy` 共用 `OverflowPolicy`（`clip`/`shrink`/`warn`/`split`，DOM-020）；默认 `warn`。`warn`/`split` 触发 `SEMANTIC.TEXT_OVERFLOW` 以便修复。旧字面量 `error`→`warn`、`continue`→`split`。
 - **导出 SSOT（DOM-003）：** 正式可编辑 PPTX 权威为 ``RenderScene`` → `presentation.pptx`。`PresentationSpec` 仅为由 `SlideSpec` 派生的遗留模板导出格式（兼容/测试），不再与 Scene 并列作为正式交付真相。无视觉版式时 **默认拒绝** Spec PPTX 回退；仅当 ``allow_legacy_presentation_spec_pptx_fallback=true`` 时才允许并写入警告。
 - **几何 SSOT（DOM-011）：** 版式引擎写出的 LayoutPlan 为 `geometry_authority=layout_plan`；Studio / Scene 修复改几何后同步 Plan 并将权威切为 `render_scene`。此后 `ensure_scene_for_slide`（非 force）不得用 Plan 重编译覆盖 Scene。布局引擎再次改写 Plan 时经 `refresh_after_layout_edit` 收回权威为 `layout_plan` 再 force 重编译。
 - **正式 Studio 交付物**为 RenderScene → `presentation.pptx`（导出前 `AssetPathResolver.resolve_scene`）。Visual workflow 在 compile/repair 后写入同名正式文件；Critic 截图绑定该文件（RP-003）。LayoutPlan 指令 JSON 为校验产物；可选 `export_layout_plan_validation_pptx=true` 时另写 `presentation.layout_plan.validation.pptx`（非正式交付）。
@@ -141,6 +141,13 @@ safe_normalize
 
 ```arch-contract:overflow-policy-default
 warn
+```
+
+```arch-contract:overflow-policy-values
+clip
+shrink
+warn
+split
 ```
 
 ```arch-contract:geometry-authority

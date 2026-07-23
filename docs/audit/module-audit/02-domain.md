@@ -46,7 +46,7 @@
 | DOM-017 | P1 | done | `PostRenderCheckCode` 双定义 | ~~`visual/post_render_qa.py`~~; `visual/scene_qa.py` | 枚举漂移 | 删除死模块；保留 `scene_qa` | `rg PostRenderCheckCode` 仅 scene_qa；服务导入不变 | `-` |
 | DOM-018 | P1 | done | `enums.py` 巨型（~668 行） | `domain/enums/` 分包（project/document/knowledge/presentation/mission/assets/review/workflow） | 难审难演进 | 按限界上下文拆分 + 包级 re-export | 单文件 <250；`from archium.domain.enums import X` 仍可用；`test_enums_package` | `-` |
 | DOM-019 | P2 | open | 密度/叙事/角色等同义枚举丛 | DensityLevel vs expected_density vs PageDensityToken; NarrativeStage vs ContinuityRole vs PacingRole; ImageFit 多 Literal | 映射错误 | 映射表或收敛 | 文档列出唯一权威枚举 | `-` |
-| DOM-020 | P2 | open | Overflow 词表不一致 | Layout `OverflowPolicy` vs TextNode Literal（含 `error` vs `warn`） | QA/渲染行为分歧 | 对齐词表 + 合同 | arch-contract 与节点 Literal 一致 | `-` |
+| DOM-020 | P2 | done | Overflow 词表不一致 | Layout `OverflowPolicy` vs TextNode Literal（含 `error` vs `warn`） | QA/渲染行为分歧 | TextNode 改用 `OverflowPolicy`；legacy `error`/`continue` 别名；QA 认 warn/split | arch-contract overflow-policy-values；`test_render_scene_contracts` | `-` |
 | DOM-021 | P2 | open | `RenderResult` 持 Path、legacy marp 字段 | `render.py` | Domain 沾文件系统 | 迁 application DTO | domain 无业务 Path 聚合 | `-` |
 | DOM-022 | P2 | open | `powerpoint_capability.py` 过大（~420） | 同文件 | 能力表难维护 | 拆分或数据驱动 | 单文件下降 | `-` |
 

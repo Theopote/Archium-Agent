@@ -13,7 +13,10 @@ from uuid import UUID, uuid4
 from PIL import Image
 from sqlalchemy.orm import Session
 
-from archium.application.visual.render_scene_compiler import RenderSceneCompiler
+from archium.application.visual.scene_compilers import (
+    SceneCompileContext,
+    SceneCompilerChain,
+)
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, SlideType
 from archium.domain.slide import SlideSpec
@@ -414,12 +417,15 @@ class TemplateStudioService:
         )
         # Template fill preview uses DesignSystem only (no project ArtDirection /
         # ReferenceStyle in this path). Project Studio compile path applies overlays.
-        scene = RenderSceneCompiler().compile(
-            slide=slide,
-            layout_plan=plan,
-            design_system=design,
-            presentation_id=slide.presentation_id,
-        )
+        # RS-006: same SceneCompilerChain as Studio / visual workflow.
+        scene = SceneCompilerChain().compile(
+            SceneCompileContext(
+                slide=slide,
+                layout_plan=plan,
+                design_system=design,
+                presentation_id=slide.presentation_id,
+            )
+        ).scene
         workspace = Path(template.workspace_dir or self.workspace_root(template.id))
         preview_dir = workspace / "fill-previews"
         preview_dir.mkdir(parents=True, exist_ok=True)
