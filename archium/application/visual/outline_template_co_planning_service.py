@@ -20,7 +20,6 @@ from archium.application.visual.semantic_content_plan import (
     expand_visual_evidence_roles,
     expected_text_evidence_count,
 )
-from archium.domain.enums import SlideType
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
@@ -28,6 +27,10 @@ from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
     ArchitecturalTemplateLayout,
     TemplatePageType,
+)
+from archium.domain.visual.page_type_catalog import (
+    slide_type_for_functional,
+    template_page_candidates_for_content,
 )
 from archium.domain.visual.reference_slide_matching import DeckContext
 from archium.domain.visual.template_induction import (
@@ -67,27 +70,6 @@ _SECTION_ID_TO_FUNCTIONAL: dict[str, FunctionalSlideType] = {
     "decision": FunctionalSlideType.DECISION,
     "closing": FunctionalSlideType.CLOSING,
     "appendix": FunctionalSlideType.APPENDIX,
-}
-
-_CONTENT_TO_PAGE: dict[ArchitecturalContentType, set[TemplatePageType]] = {
-    ArchitecturalContentType.COVER_VISUAL: {TemplatePageType.COVER},
-    ArchitecturalContentType.SECTION_VISUAL: {TemplatePageType.SECTION},
-    ArchitecturalContentType.DRAWING_FOCUS: {TemplatePageType.DRAWING_FOCUS},
-    ArchitecturalContentType.PHOTO_ANALYSIS: {TemplatePageType.PHOTO_GRID},
-    ArchitecturalContentType.CASE_COMPARISON: {TemplatePageType.CASE_COMPARISON},
-    ArchitecturalContentType.BEFORE_AFTER: {TemplatePageType.BEFORE_AFTER},
-    ArchitecturalContentType.METRIC_SUMMARY: {TemplatePageType.METRIC},
-    ArchitecturalContentType.STRATEGY: {TemplatePageType.TEXT_ARGUMENT},
-    ArchitecturalContentType.PROCESS: {TemplatePageType.PROCESS},
-    ArchitecturalContentType.TIMELINE: {TemplatePageType.TIMELINE},
-    ArchitecturalContentType.DIAGRAM: {TemplatePageType.DRAWING_FOCUS, TemplatePageType.PROCESS},
-    ArchitecturalContentType.TEXT_ARGUMENT: {TemplatePageType.TEXT_ARGUMENT, TemplatePageType.AGENDA},
-    ArchitecturalContentType.IMAGE_TEXT_HYBRID: {
-        TemplatePageType.PHOTO_GRID,
-        TemplatePageType.TEXT_ARGUMENT,
-    },
-    ArchitecturalContentType.MULTI_IMAGE_GRID: {TemplatePageType.PHOTO_GRID},
-    ArchitecturalContentType.CONCLUSION: {TemplatePageType.CLOSING, TemplatePageType.TEXT_ARGUMENT},
 }
 
 _DRAWING_ASSET_TOKENS = ("图纸", "总平面", "平面图", "剖面", "立面", "drawing", "plan", "section")
@@ -420,7 +402,7 @@ class OutlineTemplateCoPlanningService:
                 title=section.title,
                 message=(section.key_message or section.purpose or section.title).strip()
                 or section.title,
-                slide_type=self._slide_type_for_functional(functional_type, content_type),
+                slide_type=slide_type_for_functional(functional_type, content_type),
             )
             deck_context = DeckContext(
                 section_id=section.id,
@@ -444,7 +426,7 @@ class OutlineTemplateCoPlanningService:
             if preferred:
                 return layout_ids, preferred
 
-        preferred_pages = set(_CONTENT_TO_PAGE.get(content_type, set()))
+        preferred_pages = set(template_page_candidates_for_content(content_type))
         if functional_type == FunctionalSlideType.COVER:
             preferred_pages.add(TemplatePageType.COVER)
         elif functional_type == FunctionalSlideType.AGENDA:
@@ -464,33 +446,6 @@ class OutlineTemplateCoPlanningService:
         ids = [layout.id for layout in compatible]
         preferred = ids[0] if ids else None
         return ids, preferred
-
-    @staticmethod
-    def _slide_type_for_functional(
-        functional: FunctionalSlideType,
-        content: ArchitecturalContentType,
-    ) -> SlideType:
-        if functional == FunctionalSlideType.COVER:
-            return SlideType.TITLE
-        if functional == FunctionalSlideType.CLOSING:
-            return SlideType.CLOSING
-        if functional == FunctionalSlideType.EXECUTIVE_SUMMARY:
-            return SlideType.SUMMARY
-        if content == ArchitecturalContentType.METRIC_SUMMARY:
-            return SlideType.DATA
-        if content in {
-            ArchitecturalContentType.CASE_COMPARISON,
-            ArchitecturalContentType.BEFORE_AFTER,
-        }:
-            return SlideType.COMPARISON
-        if content == ArchitecturalContentType.TIMELINE:
-            return SlideType.TIMELINE
-        if content in {
-            ArchitecturalContentType.PHOTO_ANALYSIS,
-            ArchitecturalContentType.MULTI_IMAGE_GRID,
-        }:
-            return SlideType.IMAGE
-        return SlideType.CONTENT
 
     def _build_page_plan(
         self,

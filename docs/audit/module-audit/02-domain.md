@@ -16,7 +16,7 @@
 | `domain/visual` 体量 | **约 52 文件 / ~7.2k LOC**，偏膨胀；QA/主题多套并存 |
 | 空间 SSOT | **P0**：LayoutPlan.elements 与 RenderScene.nodes 双持几何 |
 | 结构化数据 | Chart/Table 在 Spec / Layout / Scene **三份拷贝** |
-| 同义枚举 | Severity ≥4；页类型/布局族/密度/叙事角色多套 |
+| 同义枚举 | Severity 已收敛（DOM-004）；页类型有显式 catalog（DOM-005）；布局族/密度/叙事角色多套仍开 |
 | Service 逻辑在 Domain | DOM-014 **done**：NL / 适配 / brief 启发式 / text resolve / placeholder normalize / pptx catalog 已迁出 |
 
 包结构：根模块约 61 个 `.py` + `visual/` 52 + `enums/` 分包；超大非 visual 文件：`powerpoint_capability.py`（~420）。
@@ -31,7 +31,7 @@
 | DOM-002 | P0 | done | `scene_semantic_qa` 分叉残留 | `visual/scene_semantic_qa.py` | 双份语义 QA | 删除分叉 | 文件不存在；`scene_qa.py` 在 | `-` |
 | DOM-003 | P1 | done | `PresentationSpec` 与 `RenderScene`/`SlideSpec` 并存作导出真相 (D3) | `export_authority.py`；`presentation_spec` 标 derived；`FormalPptxExportService` | 双/三 SSOT | Scene 正式权威；Spec 遗留派生 | arch-contract `formal-export-authority`；可编辑 PPTX 优先 Scene | `-` |
 | DOM-004 | P1 | done | Severity 词汇表 ≥4 套 (D4) | `domain/visual/severity.py`；`IssueSeverity`=门禁权威；Layout/Review/Validation 桥接 | 门禁语义混乱 | 统一 catalog + 映射 | 导出门禁经 `review_to_gate` / `layout_is_gate_blocker`；`test_severity_bridge` | `-` |
-| DOM-005 | P1 | open | 页类型枚举重叠 (D5) | `SlideType`; `FunctionalSlideType`; `TemplatePageType`; SpecSlide.layout str | 规划/渲染错配 | 收敛或显式映射表 | 无隐式互转 | `-` |
+| DOM-005 | P1 | done | 页类型枚举重叠 (D5) | `page_type_catalog.py`；co-plan / matcher / publisher / Spec layout 常量 | 规划/渲染错配 | 显式权威 + 映射表；禁隐式互转 | `test_page_type_catalog`；应用层经 catalog helpers | `-` |
 | DOM-006 | P1 | open | `SlideDesignBrief.layout_family` 等为自由字符串 (D6) | `slide_design_brief.py`; SpecSlide.layout; RenderScene.source_layout_family | 无法校验 | 受控词表/`LayoutFamily` | 非法 family 拒绝 | `-` |
 | DOM-007 | P1 | open | `WorkflowStep` 过大耦合 (D7) | `enums.py` | 难演进 | 拆分阶段枚举 | 图定义不依赖巨枚举 | `-` |
 | DOM-008 | P1 | open | Fact 三模型弱关联 (D8) | `fact.py`; `project_knowledge.py`; `presentation_manuscript.py` | 引用断裂 | 显式 ID 链接 + 不变量 | 跨模型可追溯 | `-` |

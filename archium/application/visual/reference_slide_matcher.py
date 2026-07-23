@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from archium.domain.asset import Asset
-from archium.domain.enums import AssetType, SlideType
+from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.architectural_template import (
@@ -11,8 +11,11 @@ from archium.domain.visual.architectural_template import (
     ArchitecturalTemplateLayout,
     TemplatePageType,
 )
+from archium.domain.visual.page_type_catalog import (
+    template_page_candidates_for_content,
+    template_page_candidates_for_slide_type,
+)
 from archium.domain.visual.reference_slide_matching import DeckContext, ReferenceSlideCandidate
-from archium.domain.visual.template_induction import ArchitecturalContentType
 
 _PATTERN_PAGE_BOOST: dict[str, set[TemplatePageType]] = {
     "hero_image": {TemplatePageType.COVER, TemplatePageType.PHOTO_GRID},
@@ -27,44 +30,6 @@ _PATTERN_PAGE_BOOST: dict[str, set[TemplatePageType]] = {
 _REUSE_PENALTY = 0.18
 _WEAK_MATCH = 0.35
 _FREE_COMPOSITION_SCORE = 0.12
-
-_CONTENT_TO_PAGE: dict[ArchitecturalContentType, set[TemplatePageType]] = {
-    ArchitecturalContentType.COVER_VISUAL: {TemplatePageType.COVER},
-    ArchitecturalContentType.SECTION_VISUAL: {TemplatePageType.SECTION},
-    ArchitecturalContentType.DRAWING_FOCUS: {TemplatePageType.DRAWING_FOCUS},
-    ArchitecturalContentType.PHOTO_ANALYSIS: {TemplatePageType.PHOTO_GRID},
-    ArchitecturalContentType.CASE_COMPARISON: {TemplatePageType.CASE_COMPARISON},
-    ArchitecturalContentType.BEFORE_AFTER: {TemplatePageType.BEFORE_AFTER},
-    ArchitecturalContentType.METRIC_SUMMARY: {TemplatePageType.METRIC},
-    ArchitecturalContentType.STRATEGY: {TemplatePageType.TEXT_ARGUMENT},
-    ArchitecturalContentType.PROCESS: {TemplatePageType.PROCESS},
-    ArchitecturalContentType.TIMELINE: {TemplatePageType.TIMELINE},
-    ArchitecturalContentType.DIAGRAM: {TemplatePageType.DRAWING_FOCUS, TemplatePageType.PROCESS},
-    ArchitecturalContentType.TEXT_ARGUMENT: {TemplatePageType.TEXT_ARGUMENT, TemplatePageType.AGENDA},
-    ArchitecturalContentType.IMAGE_TEXT_HYBRID: {
-        TemplatePageType.PHOTO_GRID,
-        TemplatePageType.TEXT_ARGUMENT,
-    },
-    ArchitecturalContentType.MULTI_IMAGE_GRID: {TemplatePageType.PHOTO_GRID},
-    ArchitecturalContentType.CONCLUSION: {TemplatePageType.CLOSING, TemplatePageType.TEXT_ARGUMENT},
-}
-
-_SLIDE_TYPE_TO_PAGE: dict[SlideType, set[TemplatePageType]] = {
-    SlideType.TITLE: {TemplatePageType.COVER, TemplatePageType.SECTION},
-    SlideType.SECTION: {TemplatePageType.SECTION},
-    SlideType.CONTENT: {
-        TemplatePageType.TEXT_ARGUMENT,
-        TemplatePageType.PHOTO_GRID,
-        TemplatePageType.DRAWING_FOCUS,
-        TemplatePageType.METRIC,
-    },
-    SlideType.IMAGE: {TemplatePageType.PHOTO_GRID},
-    SlideType.COMPARISON: {TemplatePageType.CASE_COMPARISON, TemplatePageType.BEFORE_AFTER},
-    SlideType.TIMELINE: {TemplatePageType.TIMELINE, TemplatePageType.PROCESS},
-    SlideType.DATA: {TemplatePageType.METRIC},
-    SlideType.SUMMARY: {TemplatePageType.CLOSING, TemplatePageType.TEXT_ARGUMENT},
-    SlideType.CLOSING: {TemplatePageType.CLOSING},
-}
 
 
 class ReferenceSlideMatcher:
@@ -161,8 +126,8 @@ class ReferenceSlideMatcher:
             score += 0.12
             reasons.append("suitable_content_types match")
 
-        preferred_pages = _CONTENT_TO_PAGE.get(content_schema.content_type, set())
-        preferred_pages |= _SLIDE_TYPE_TO_PAGE.get(slide_spec.slide_type, set())
+        preferred_pages = set(template_page_candidates_for_content(content_schema.content_type))
+        preferred_pages |= template_page_candidates_for_slide_type(slide_spec.slide_type)
         if layout.page_type in preferred_pages:
             score += 0.15
             reasons.append(f"page_type {layout.page_type.value}")

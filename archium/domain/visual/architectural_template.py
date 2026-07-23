@@ -21,6 +21,12 @@ class TemplateStatus(StrEnum):
 
 
 class TemplatePageType(StrEnum):
+    """Template Studio layout page kind.
+
+    Not interchangeable with ``SlideType`` or ``FunctionalSlideType``.
+    Cross-maps: ``archium.domain.visual.page_type_catalog`` (DOM-005).
+    """
+
     COVER = "cover"
     SECTION = "section"
     AGENDA = "agenda"

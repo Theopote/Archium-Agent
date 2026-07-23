@@ -57,6 +57,12 @@ class EvidenceAvailability(StrEnum):
     UNKNOWN = "unknown"
 
 class SlideType(StrEnum):
+    """SlideSpec rhetorical / content-planning type.
+
+    Not interchangeable with ``FunctionalSlideType`` or ``TemplatePageType``.
+    Cross-maps: ``archium.domain.visual.page_type_catalog`` (DOM-005).
+    """
+
     TITLE = "title"
     SECTION = "section"
     CONTENT = "content"

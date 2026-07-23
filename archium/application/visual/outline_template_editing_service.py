@@ -23,6 +23,7 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.defaults import default_presentation_design_system
+from archium.domain.visual.page_type_catalog import slide_type_for_functional
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.reference_slide import (
     ReferenceElementType,
@@ -140,7 +141,7 @@ class OutlineTemplateEditingService:
                 outline=outline,
                 section=section,
                 page=page,
-                slide_type_resolver=OutlineTemplateCoPlanningService._slide_type_for_functional,
+                slide_type_resolver=slide_type_for_functional,
             )
             generation_context = None
             if context_service is not None and project_id is not None:
@@ -273,7 +274,7 @@ class OutlineTemplateEditingService:
                     outline=outline,
                     section=section,
                     page=page,
-                    slide_type_resolver=OutlineTemplateCoPlanningService._slide_type_for_functional,
+                    slide_type_resolver=slide_type_for_functional,
                 )
             )
         return slides
@@ -289,7 +290,7 @@ class OutlineTemplateEditingService:
             outline=outline,
             section=section,
             page=page,
-            slide_type_resolver=OutlineTemplateCoPlanningService._slide_type_for_functional,
+            slide_type_resolver=slide_type_for_functional,
         )
 
     @staticmethod

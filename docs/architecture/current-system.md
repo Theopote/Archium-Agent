@@ -69,6 +69,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 图片处理保存原图，`ImageTreatmentSpec` 生成不可变 derivative；项目图纸和证据照片只允许 `safe_normalize`，不能使用表达性统一处理（`presentation_unify`）。
 - 字体资产、回退链与 Scene 语义 QA 共同检查潜在重排风险。
 - 正式导出 readiness：以 ``IssueSeverity``（blocker/major/minor）为导出门禁权威（DOM-004）；`ReviewSeverity` / `LayoutIssueSeverity` 经 `domain.visual.severity` 桥接。ReviewIssue 导出门控认 gate BLOCKER，以及 gate MAJOR 且命中资产加载 / Scene 阻断规则码；内存 Scene semantic 用 BLOCKER；DeckQA `blocker_count` 仅计 Layout CRITICAL（→ BLOCKER）。提案接受后的 `qa_status`：blocker→`blocked`，major→`needs_review`。Post-render 截图缺失会发出 `POST_RENDER.IMAGE_NOT_LOADED`，不再静默跳过。
+- **页类型权威（DOM-005）：** `SlideType` / `FunctionalSlideType` / `TemplatePageType` / Spec `layout` 字符串互不等价；交叉转换只经 `domain.visual.page_type_catalog`（co-plan、matcher、induction publisher、Spec layout 常量）。
 
 ## 持久化与迁移
 

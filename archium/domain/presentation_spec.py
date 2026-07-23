@@ -64,7 +64,11 @@ class SpecMetric(DomainModel):
 
 
 class SpecSlide(DomainModel):
-    """One slide in a legacy PresentationSpec."""
+    """One slide in a legacy PresentationSpec.
+
+    ``layout`` is a Spec template id string (see ``page_type_catalog.spec_layout_for_slide_type``),
+    not ``SlideType`` / ``TemplatePageType`` / ``LayoutFamily``.
+    """
 
     order: int = Field(ge=0)
     layout: str = Field(min_length=1)

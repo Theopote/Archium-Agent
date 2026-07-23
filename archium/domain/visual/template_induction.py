@@ -13,6 +13,12 @@ from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel
 
 
 class FunctionalSlideType(StrEnum):
+    """Deck narrative function (induction / schema).
+
+    Not interchangeable with ``SlideType`` or ``TemplatePageType``.
+    Cross-maps: ``archium.domain.visual.page_type_catalog`` (DOM-005).
+    """
+
     COVER = "cover"
     AGENDA = "agenda"
     SECTION_DIVIDER = "section_divider"

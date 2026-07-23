@@ -14,10 +14,13 @@ from archium.domain.visual.architectural_content_schema import ArchitecturalCont
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
     ArchitecturalTemplateLayout,
-    TemplatePageType,
     TemplateSlot,
     TemplateSlotRole,
     TemplateStatus,
+)
+from archium.domain.visual.page_type_catalog import (
+    template_page_for_content,
+    template_page_for_functional,
 )
 from archium.domain.visual.reference_slide import (
     ReferenceElement,
@@ -33,37 +36,6 @@ from archium.domain.visual.template_induction import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.visual_repositories import ArchitecturalTemplateRepository
-
-_CONTENT_TO_PAGE_TYPE: dict[ArchitecturalContentType, TemplatePageType] = {
-    ArchitecturalContentType.COVER_VISUAL: TemplatePageType.COVER,
-    ArchitecturalContentType.SECTION_VISUAL: TemplatePageType.SECTION,
-    ArchitecturalContentType.DRAWING_FOCUS: TemplatePageType.DRAWING_FOCUS,
-    ArchitecturalContentType.PHOTO_ANALYSIS: TemplatePageType.PHOTO_GRID,
-    ArchitecturalContentType.CASE_COMPARISON: TemplatePageType.CASE_COMPARISON,
-    ArchitecturalContentType.BEFORE_AFTER: TemplatePageType.BEFORE_AFTER,
-    ArchitecturalContentType.METRIC_SUMMARY: TemplatePageType.METRIC,
-    ArchitecturalContentType.STRATEGY: TemplatePageType.TEXT_ARGUMENT,
-    ArchitecturalContentType.PROCESS: TemplatePageType.PROCESS,
-    ArchitecturalContentType.TIMELINE: TemplatePageType.TIMELINE,
-    ArchitecturalContentType.DIAGRAM: TemplatePageType.DRAWING_FOCUS,
-    ArchitecturalContentType.TEXT_ARGUMENT: TemplatePageType.TEXT_ARGUMENT,
-    ArchitecturalContentType.IMAGE_TEXT_HYBRID: TemplatePageType.PHOTO_GRID,
-    ArchitecturalContentType.MULTI_IMAGE_GRID: TemplatePageType.PHOTO_GRID,
-    ArchitecturalContentType.CONCLUSION: TemplatePageType.CLOSING,
-    ArchitecturalContentType.UNKNOWN: TemplatePageType.UNKNOWN,
-}
-
-_FUNCTIONAL_TO_PAGE_TYPE: dict[FunctionalSlideType, TemplatePageType] = {
-    FunctionalSlideType.COVER: TemplatePageType.COVER,
-    FunctionalSlideType.AGENDA: TemplatePageType.AGENDA,
-    FunctionalSlideType.SECTION_DIVIDER: TemplatePageType.SECTION,
-    FunctionalSlideType.EXECUTIVE_SUMMARY: TemplatePageType.TEXT_ARGUMENT,
-    FunctionalSlideType.DECISION: TemplatePageType.TEXT_ARGUMENT,
-    FunctionalSlideType.CONTENT: TemplatePageType.UNKNOWN,
-    FunctionalSlideType.CLOSING: TemplatePageType.CLOSING,
-    FunctionalSlideType.APPENDIX: TemplatePageType.UNKNOWN,
-    FunctionalSlideType.UNKNOWN: TemplatePageType.UNKNOWN,
-}
 
 _SEMANTIC_TO_SLOT: dict[str, TemplateSlotRole] = {
     "title": TemplateSlotRole.TITLE,
@@ -268,9 +240,7 @@ class InductionArchitecturalTemplatePublisher:
         page_index: int,
         workspace: Path,
     ) -> ArchitecturalTemplateLayout:
-        page_type = _CONTENT_TO_PAGE_TYPE.get(
-            schema.content_type, TemplatePageType.UNKNOWN
-        )
+        page_type = template_page_for_content(schema.content_type)
         slots = self._slots_from_slide(slide, schema=schema)
         preview = self._preview_path(slide, workspace)
         return ArchitecturalTemplateLayout(
@@ -314,9 +284,7 @@ class InductionArchitecturalTemplatePublisher:
         page_index: int,
         workspace: Path,
     ) -> ArchitecturalTemplateLayout:
-        page_type = _FUNCTIONAL_TO_PAGE_TYPE.get(
-            cluster.functional_type, TemplatePageType.UNKNOWN
-        )
+        page_type = template_page_for_functional(cluster.functional_type)
         slots = self._slots_from_slide(slide, schema=None)
         preview = self._preview_path(slide, workspace)
         return ArchitecturalTemplateLayout(

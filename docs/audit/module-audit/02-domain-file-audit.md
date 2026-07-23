@@ -30,6 +30,7 @@
 | 6 | DOM-003 | **done** | `export_authority` + Spec derived | 正式 PPTX 认 Scene |
 | 7 | DOM-018 | **done** | `domain/enums/` 分包 | 按限界上下文拆分 |
 | 8 | DOM-009 | **done** | Brief→`ApprovalStatus`；`proposal_status.ProposalStatus` | 审批/提案状态合一 |
+| 9 | DOM-005 | **done** | `visual/page_type_catalog.py` | 页类型权威 + 显式交叉映射 |
 
 职责边界（验收口径）：
 
