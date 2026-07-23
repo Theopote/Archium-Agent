@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
 from archium.application.export_round_trip_service import (
     _citation_integrity_checks,
+    _combined_scene_hash,
     _derive_status,
     _drawing_integrity_checks,
+    _file_hash,
     _geometry_match,
     _text_recall,
 )
@@ -151,3 +154,16 @@ def test_derive_status_prioritizes_blockers_and_review_thresholds() -> None:
         )
         == RoundTripStatus.PASS
     )
+
+
+def test_combined_scene_hash_and_file_hash(tmp_path: Path) -> None:
+    scene_a = _scene()
+    scene_b = _scene()
+    combined = _combined_scene_hash([scene_b, scene_a])
+    assert len(combined) == 16
+    assert _combined_scene_hash([]) == ""
+
+    payload = tmp_path / "export.bin"
+    payload.write_bytes(b"round-trip")
+    assert len(_file_hash(payload)) == 16
+    assert _file_hash(tmp_path / "missing.bin") == ""

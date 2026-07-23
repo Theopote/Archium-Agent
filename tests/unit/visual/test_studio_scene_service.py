@@ -281,3 +281,43 @@ def test_compile_scene_resolves_project_from_presentation(
     )
     assert scene.slide_id == slide.id
     assert any(node.id == "title" for node in scene.nodes)
+
+
+def test_compile_scene_resolves_project_from_presentation_record(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    presentation, slide, plan = _seed_slide_with_plan(db_session)
+    design = DesignSystemRepository(db_session).get(plan.design_system_id)
+    assert design is not None
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    service = StudioSceneService(db_session, settings=settings)
+
+    scene = service.compile_scene(
+        slide=slide,
+        plan=plan,
+        design_system=design,
+        presentation_id=presentation.id,
+        project_id=None,
+    )
+    assert scene.slide_id == slide.id
+
+
+def test_build_pre_export_manifest_from_seeded_presentation(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    from archium.application.export_policy_service import build_pre_export_manifest
+    from archium.domain.export_fidelity import ExportPolicy
+
+    presentation, slide, _plan = _seed_slide_with_plan(db_session)
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    manifest = build_pre_export_manifest(
+        db_session,
+        presentation_id=presentation.id,
+        policy=ExportPolicy(allow_hybrid_editable=True, allow_slide_level_fallback=True),
+        settings=settings,
+    )
+    assert manifest.presentation_id == presentation.id
+    assert manifest.slides
+    assert manifest.slides[0].slide_id == slide.id

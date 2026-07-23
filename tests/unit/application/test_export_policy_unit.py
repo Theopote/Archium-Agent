@@ -398,6 +398,48 @@ def test_strict_policy_blocks_raster_export() -> None:
         service.enforce_export_policy(manifest)
 
 
+def test_enforce_blocks_disallowed_fidelity_level() -> None:
+    service = ExportPolicyService()
+    hybrid = service.assess_scene_fidelity(
+        _scene(
+            TextNode(
+                id="t1",
+                x=10,
+                y=10,
+                width=200,
+                height=40,
+                z_index=2,
+                text="hybrid",
+                font_family="Arial",
+                font_size=18,
+                color="#000",
+                line_height=1.2,
+            ),
+            ImageNode(
+                id="img",
+                x=400,
+                y=100,
+                width=600,
+                height=400,
+                z_index=1,
+                storage_uri="asset://photo.jpg",
+            ),
+        )
+    )
+    manifest = service.build_deck_manifest(
+        presentation_id=uuid4(),
+        export_format="PPTX",
+        policy=ExportPolicy(
+            required_fidelity=ExportFidelityLevel.FULLY_EDITABLE,
+            allow_hybrid_editable=False,
+            allow_slide_level_fallback=True,
+        ),
+        slide_results=[hybrid],
+    )
+    with pytest.raises(WorkflowError, match="超出当前导出策略"):
+        service.enforce_export_policy(manifest)
+
+
 def test_export_policy_from_preset_maps_known_keys() -> None:
     strict = export_policy_from_preset("strict_native")
     hybrid = export_policy_from_preset("allow_hybrid")

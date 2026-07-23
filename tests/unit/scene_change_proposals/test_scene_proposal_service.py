@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 import pytest
+from archium.application.visual.asset_path_resolver import project_asset_uri
 from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 from archium.application.visual.scene_proposal_service import (
     SceneProposalService,
@@ -1039,3 +1040,61 @@ def test_accept_proposal_rejects_terminal_statuses() -> None:
             proposal,
             invalid_decision,
         )
+
+
+def test_count_issues_by_severity_and_remaining_patch_actions() -> None:
+    from archium.application.visual.scene_proposal_service import (
+        apply_patch_actions,
+        count_issues_by_severity,
+    )
+
+    scene = _mixed_scene(
+        _text_node(node_id="title", text="old", width=2.0, height=0.4),
+        _drawing_node(node_id="plan"),
+    )
+    patched = apply_patch_actions(
+        scene,
+        [
+            build_patch_action(
+                scene,
+                base_scene_hash=compute_scene_hash(scene),
+                node_id="title",
+                action_type="delete_node",
+                after_value="false",
+            ),
+            build_patch_action(
+                scene,
+                base_scene_hash=compute_scene_hash(scene),
+                node_id="title",
+                action_type="relocate_node",
+                after_value="2.5",
+            ),
+            build_patch_action(
+                scene,
+                base_scene_hash=compute_scene_hash(scene),
+                node_id="title",
+                action_type="bump_font_size",
+                after_value="18",
+            ),
+            build_patch_action(
+                scene,
+                base_scene_hash=compute_scene_hash(scene),
+                node_id="plan",
+                action_type="set_fit_mode_contain",
+            ),
+        ],
+    )
+    title = patched.node_by_id("title")
+    plan = patched.node_by_id("plan")
+    assert isinstance(title, TextNode)
+    assert isinstance(plan, DrawingNode)
+    assert title.visible is False
+    assert title.y == 2.5
+    assert title.font_size >= 18
+    assert plan.fit_mode == "contain"
+
+    issues = [
+        QualityIssue(code="a", severity=IssueSeverity.MINOR, message="m"),
+        QualityIssue(code="b", severity=IssueSeverity.MAJOR, message="M"),
+    ]
+    assert count_issues_by_severity(issues, IssueSeverity.MAJOR) == 1
