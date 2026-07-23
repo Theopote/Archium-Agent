@@ -77,7 +77,6 @@
 
 | 编号 | 模块 | 一句话 |
 |------|------|--------|
-| [DOM-011](02-domain.md) | domain | LayoutPlan 与 RenderScene 双空间 SSOT |
 | [WF-002](04-workflow.md) | workflow | Sqlite checkpoint + 后台 continue 竞态 |
 | [DB-001](05-database.md) | database | TransactionExecutor 会话中途 `commit` |
 | [DB-002](05-database.md) | database | `create_all` + Alembic 001 no-op 冷启动 |
@@ -89,4 +88,4 @@
 
 P0 已关闭但仍需关注：`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 
-Domain 下一优先：`DOM-011` → `DOM-017`/`DOM-016` → `DOM-012`（见 [02-domain.md](02-domain.md) 建议顺序）。
+Domain 下一优先：`DOM-017`/`DOM-016` → `DOM-012`（见 [02-domain.md](02-domain.md) 建议顺序）。`DOM-011` 已关闭。

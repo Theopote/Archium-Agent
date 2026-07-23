@@ -404,6 +404,8 @@ def test_sync_layout_geometry_from_scene() -> None:
     assert title.y == pytest.approx(2.5)
     assert synced.element_by_id("body") is None
     assert synced.reading_order == ["title"]
+    assert synced.geometry_authority == "render_scene"
+    assert synced.synced_scene_version == scene.version
 
 
 def test_sync_layout_geometry_from_scene_syncs_lock_state() -> None:

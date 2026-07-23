@@ -131,6 +131,35 @@ def test_documented_overflow_policy_default_matches_layout_plan(
     assert LayoutPlan.model_fields["overflow_policy"].default == OverflowPolicy.WARN
 
 
+def test_documented_geometry_authority_values(
+    contracts: dict[str, list[str]],
+) -> None:
+    from uuid import uuid4
+
+    from archium.domain.visual.enums import LayoutFamily
+
+    documented = set(contracts["geometry-authority"])
+    assert documented == {"layout_plan", "render_scene"}
+    assert LayoutPlan.model_fields["geometry_authority"].default == "layout_plan"
+    plan = LayoutPlan(
+        slide_id=uuid4(),
+        layout_family=LayoutFamily.HERO,
+        layout_variant="centered",
+        page_width=10,
+        page_height=5.625,
+        whitespace_ratio=0.4,
+        elements=[],
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+    )
+    scene_owned = plan.with_scene_geometry_authority(3)
+    assert scene_owned.geometry_authority == "render_scene"
+    assert scene_owned.synced_scene_version == 3
+    layout_owned = scene_owned.with_layout_geometry_authority()
+    assert layout_owned.geometry_authority == "layout_plan"
+    assert layout_owned.synced_scene_version is None
+
+
 def test_documented_canvas_capabilities_exist_in_runtime(
     contracts: dict[str, list[str]],
 ) -> None:

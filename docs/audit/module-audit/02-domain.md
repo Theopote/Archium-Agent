@@ -37,7 +37,7 @@
 | DOM-008 | P1 | open | Fact 三模型弱关联 (D8) | `fact.py`; `project_knowledge.py`; `presentation_manuscript.py` | 引用断裂 | 显式 ID 链接 + 不变量 | 跨模型可追溯 | `-` |
 | DOM-009 | P2 | open | 审批/提案状态克隆 (D9) | `ApprovalStatus` vs `BriefStatus`; `ProposalStatus` vs `ThemeProposalStatus` | 状态漂移 | 合并或 1:1 映射 | 单一状态机文档 | `-` |
 | DOM-010 | P2 | open | Chart/Table series 深拷贝语义不清 (D10) | Spec/Layout/Scene chart-table | 静默丢字段 | 明确 copy + 测试 | 变更不丢系列字段 | `-` |
-| DOM-011 | P0 | open | **双空间 SSOT**：LayoutPlan 与 RenderScene 均持 x/y/w/h/z/lock | `visual/layout.py`; `visual/render_scene.py` | Studio 改 Scene 后 Plan 静默漂移 | 编译后几何以 Scene 为准；Plan 为输入或软缓存；编辑同步/作废 Plan | 合同测试：Scene 几何变更必同步或作废 Plan | `-` |
+| DOM-011 | P0 | done | **双空间 SSOT**：LayoutPlan 与 RenderScene 均持 x/y/w/h/z/lock | `visual/layout.py`; `studio_scene_service.py`; `studio_scene_edit_service.py` | Studio 改 Scene 后 Plan 静默漂移 / ensure 覆盖编辑 | `geometry_authority` + sync 切 `render_scene`；ensure 非 force 不覆盖；layout refresh 收回权威 | 合同 + `test_ensure_scene_preserves_render_scene_geometry_authority` | `-` |
 | DOM-012 | P1 | open | Chart/Table **三份字段拷贝** | `presentation_spec.py`; `layout.py`; `render_scene.py` | 改一漏二 | 单一结构化数据类型；其余投影 | 一处修改三处一致的测试或单类型 | `-` |
 | DOM-013 | P1 | open | 主张/要点链无类型化链接 | SlideIntent → Brief → SlideSpec → SpecSlide 平行字符串 | 文案漂移 | 单一内容 SSOT + FK | 改 claim 可追溯下游 | `-` |
 | DOM-014 | P1 | open | Domain 内仍有 parser/resolver/导出工厂 | `edit_intent.py`; `content_adaptation.py`; `text_style.py`; `pptx_structure.py`; `slide_design_brief.py` | 分层回潮 | 迁 application；domain 留 DTO | domain 无 NL parse / pptx payload | `-` |
@@ -95,7 +95,7 @@
 
 ## 建议修复顺序（Domain）
 
-1. **DOM-011**（空间 SSOT）— 最大断链风险  
+1. ~~**DOM-011**（空间 SSOT）~~ **done** — `geometry_authority` + ensure 保护  
 2. **DOM-017** + **DOM-016** — 低成本消歧  
 3. **DOM-012** / **DOM-015** — 数据拷贝与 URI  
 4. **DOM-004** / **DOM-020** — 门禁词表  

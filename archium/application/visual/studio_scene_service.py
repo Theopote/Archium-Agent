@@ -245,6 +245,22 @@ class StudioSceneService:
                 batch=None,
             )
 
+        # DOM-011: after Studio/scene mutation, RenderScene owns geometry.
+        # Do not recompile from LayoutPlan unless the caller explicitly force-recompiles
+        # (layout-engine refresh marks authority back to layout_plan first).
+        if (
+            existing is not None
+            and not force_recompile
+            and plan.geometry_authority == "render_scene"
+        ):
+            preview = self._ensure_preview(slide.presentation_id, existing)
+            return self._build_scene_result(
+                scene=existing,
+                preview_path=preview,
+                reused=True,
+                batch=None,
+            )
+
         scene = self.compile_scene(
             slide=slide,
             plan=plan,
@@ -306,16 +322,22 @@ class StudioSceneService:
         slide_id: UUID | None = None,
     ) -> StudioSceneResult | None:
         """Invalidate caches and recompile scene after LayoutPlan mutation."""
+        # Layout-engine rewrite reclaims geometry SSOT (DOM-011).
+        current = self._plans.get(plan.id) or plan
+        if current.geometry_authority != "layout_plan":
+            current = self._plans.save(current.with_layout_geometry_authority())
+        else:
+            current = plan
         wireframe = (
             self._settings.output_path
             / "studio-previews"
             / str(presentation_id)
-            / f"{plan.id}.png"
+            / f"{current.id}.png"
         )
         if wireframe.is_file():
             wireframe.unlink(missing_ok=True)
-        self.invalidate_preview_cache(presentation_id, layout_plan_id=plan.id)
-        target_slide_id = slide_id or plan.slide_id
+        self.invalidate_preview_cache(presentation_id, layout_plan_id=current.id)
+        target_slide_id = slide_id or current.slide_id
         return self.ensure_scene_for_slide(target_slide_id, force_recompile=True)
 
     def ensure_scenes_for_presentation(

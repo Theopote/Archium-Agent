@@ -375,7 +375,12 @@ class StudioSceneEditService:
 
 
 def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> LayoutPlan:
-    """Mirror scene node geometry (and text) back to linked layout elements."""
+    """Mirror scene node geometry (and text) back to linked layout elements.
+
+    After sync, ``geometry_authority`` is ``render_scene`` so
+    ``ensure_scene_for_slide`` will not overwrite Studio edits by recompiling
+    from a stale LayoutPlan (DOM-011).
+    """
     from archium.domain.visual.render_scene import TextNode
 
     patched = plan.model_copy(deep=True)
@@ -402,12 +407,13 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
         for element_id in (patched.reading_order or [])
         if element_id in visible_layout_ids
     ]
-    return patched.model_copy(
+    synced = patched.model_copy(
         update={
             "elements": next_elements,
             "reading_order": next_reading_order,
         }
     )
+    return synced.with_scene_geometry_authority(scene.version)
 
 
 def _layout_lock_scopes(raw_scopes: list[str]) -> list[ElementLockScope]:

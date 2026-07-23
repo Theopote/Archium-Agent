@@ -228,6 +228,19 @@ class VisualSceneRepairWorkflowService:
             )
             scene_paths.append(str(scene_path))
             saved = save_render_scene(self._scenes, scene)
+            # DOM-011: repair mutates scene geometry — keep LayoutPlan mirror in sync.
+            if slide is not None and slide.layout_plan_id is not None:
+                from archium.application.visual.studio_scene_edit_service import (
+                    sync_layout_geometry_from_scene,
+                )
+                from archium.infrastructure.database.visual_repositories import (
+                    LayoutPlanRepository,
+                )
+
+                plans = LayoutPlanRepository(self._session)
+                plan = plans.get(slide.layout_plan_id)
+                if plan is not None:
+                    plans.save(sync_layout_geometry_from_scene(saved, plan))
             persisted.append(saved)
 
         scene_pptx_path: str | None = None

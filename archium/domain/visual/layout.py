@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Literal, Self
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -20,6 +21,12 @@ from archium.domain.visual.enums import (
     OverflowPolicy,
 )
 from archium.domain.visual.render_scene import ChartSeriesData
+
+# Post-compile spatial SSOT (DOM-011):
+# - layout_plan: geometry owned by layout engine / LayoutPlan (compile source)
+# - render_scene: geometry owned by RenderScene after Studio/scene mutation;
+#   LayoutPlan is a synced mirror until the next layout-engine rewrite.
+GeometryAuthority = Literal["layout_plan", "render_scene"]
 
 
 class LayoutChartData(DomainModel):
@@ -111,6 +118,29 @@ class LayoutPlan(IdentifiedModel, VersionedModel, TimestampedModel):
     validation_status: LayoutValidationStatus = LayoutValidationStatus.PENDING
     source_template_id: UUID | None = None
     source_template_layout_id: str | None = None
+    geometry_authority: GeometryAuthority = "layout_plan"
+    synced_scene_version: int | None = Field(
+        default=None,
+        description="RenderScene.version last mirrored into this plan when authority is render_scene.",
+    )
+
+    def with_layout_geometry_authority(self) -> Self:
+        """Mark LayoutPlan as compile-time geometry source (layout engine rewrite)."""
+        return self.model_copy(
+            update={
+                "geometry_authority": "layout_plan",
+                "synced_scene_version": None,
+            }
+        )
+
+    def with_scene_geometry_authority(self, scene_version: int) -> Self:
+        """Mark RenderScene as spatial SSOT; plan elements are a synced mirror."""
+        return self.model_copy(
+            update={
+                "geometry_authority": "render_scene",
+                "synced_scene_version": scene_version,
+            }
+        )
 
     @model_validator(mode="after")
     def _validate_elements(self) -> LayoutPlan:

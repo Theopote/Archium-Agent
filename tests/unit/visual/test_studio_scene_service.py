@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from archium.application.visual.render_scene_compiler import RenderSceneCompiler
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.studio_scene_service import StudioSceneService
@@ -364,3 +365,54 @@ def test_build_pre_export_manifest_from_seeded_presentation(
     assert manifest.presentation_id == presentation.id
     assert manifest.slides
     assert manifest.slides[0].slide_id == slide.id
+
+
+def test_ensure_scene_preserves_render_scene_geometry_authority(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """DOM-011: Scene-owned geometry must not be overwritten by plan recompile."""
+    from archium.application.artifact_policy_service import save_render_scene
+    from archium.application.visual.studio_scene_edit_service import (
+        sync_layout_geometry_from_scene,
+    )
+
+    _presentation, slide, plan = _seed_slide_with_plan(db_session)
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    service = StudioSceneService(db_session, settings=settings)
+    first = service.ensure_scene_for_slide(slide.id)
+    assert first is not None
+
+    scenes = RenderSceneRepository(db_session)
+    plans = LayoutPlanRepository(db_session)
+    edited_nodes = []
+    for node in first.scene.nodes:
+        if node.source_layout_element_id == "title":
+            edited_nodes.append(node.model_copy(update={"x": 3.25, "y": 2.75}))
+        else:
+            edited_nodes.append(node)
+    edited = first.scene.model_copy(
+        update={"nodes": edited_nodes, "version": first.scene.version + 1}
+    )
+    saved_scene = save_render_scene(scenes, edited)
+    synced_plan = plans.save(sync_layout_geometry_from_scene(saved_scene, plan))
+    assert synced_plan.geometry_authority == "render_scene"
+
+    reused = service.ensure_scene_for_slide(slide.id)
+    assert reused is not None
+    assert reused.reused is True
+    title = reused.scene.node_by_layout_element_id("title")
+    assert title is not None
+    assert title.x == pytest.approx(3.25)
+    assert title.y == pytest.approx(2.75)
+
+    refreshed = service.refresh_after_layout_edit(
+        presentation_id=_presentation.id,
+        plan=synced_plan,
+        slide_id=slide.id,
+    )
+    assert refreshed is not None
+    assert refreshed.reused is False
+    reloaded_plan = plans.get(plan.id)
+    assert reloaded_plan is not None
+    assert reloaded_plan.geometry_authority == "layout_plan"
