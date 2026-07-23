@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.domain.citation import Citation
-from archium.domain.enums import VisualType
+from archium.domain.enums import SlideType, VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual import (
     LayoutFamily,
@@ -20,6 +20,8 @@ from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.application.visual.visual_grammar_intent import preferred_variant_for_intent
+from archium.domain.visual.visual_grammar import PageArchetype
 from archium.infrastructure.layout.generators.base import (
     LayoutContentBundle,
     LayoutGeneratorContext,
@@ -28,6 +30,16 @@ from archium.infrastructure.layout.generators.base import (
 from archium.infrastructure.layout.layout_solver import LayoutSolver
 
 DOCUMENT_ID = UUID("11111111-1111-1111-1111-111111111111")
+
+# Stable asset UUIDs for archetype golden cases V19–V22.
+ARCHETYPE_MAP_ASSET = UUID("a0190001-0001-4001-8001-000000000001")
+ARCHETYPE_PHOTO_ASSETS = (
+    UUID("a0200001-0001-4001-8001-000000000001"),
+    UUID("a0200002-0001-4001-8001-000000000002"),
+)
+ARCHETYPE_CONCEPT_ASSET = UUID("a0210001-0001-4001-8001-000000000001")
+ARCHETYPE_BEFORE_ASSET = UUID("a0220001-0001-4001-8001-000000000001")
+ARCHETYPE_AFTER_ASSET = UUID("a0220002-0001-4001-8001-000000000002")
 
 
 @dataclass(frozen=True)
@@ -998,6 +1010,203 @@ def build_v18_icons_dense_eight_steps(intent_service: VisualIntentService) -> Co
     )
 
 
+def _generate_archetype_plan(
+    *,
+    slide: SlideSpec,
+    intent: VisualIntent,
+    family: LayoutFamily,
+    design: DesignSystem,
+    fallback_variant: str,
+) -> LayoutPlan:
+    variant = preferred_variant_for_intent(intent, family) or fallback_variant
+    return LayoutSolver().generate(
+        family,
+        _context(slide=slide, intent=intent, design=design, variant=variant),
+    )
+
+
+def build_v19_site_context_analysis(
+    intent_service: VisualIntentService,
+) -> CompositionCaseResult:
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="context",
+        order=1,
+        title="区位与交通分析",
+        message="基地位于轨道站点 800m 辐射圈，主干道可达性良好。",
+        key_points=["地铁 800m", "主干道贯通", "服务半径 500m"],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.MAP,
+                description="区位地图",
+                preferred_asset_ids=[ARCHETYPE_MAP_ASSET],
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="区位分析.pdf", page_number=2),
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    design = default_presentation_design_system()
+    plan = _generate_archetype_plan(
+        slide=slide,
+        intent=intent,
+        family=LayoutFamily.HYBRID_CANVAS,
+        design=design,
+        fallback_variant="site_context",
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True, drawing_hero=True)
+    return CompositionCaseResult(
+        case_id="v19_site_context_analysis",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v20_site_problem_diagnosis(
+    intent_service: VisualIntentService,
+) -> CompositionCaseResult:
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="problem",
+        order=2,
+        title="现状问题诊断",
+        message="结构老化与空间不足并存，需优先解决安全与流线问题。",
+        key_points=["结构老化", "空间不足", "流线混乱"],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="现场照片1",
+                preferred_asset_ids=[ARCHETYPE_PHOTO_ASSETS[0]],
+            ),
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="现场照片2",
+                preferred_asset_ids=[ARCHETYPE_PHOTO_ASSETS[1]],
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="现场踏勘.pdf", page_number=5),
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    design = default_presentation_design_system()
+    plan = _generate_archetype_plan(
+        slide=slide,
+        intent=intent,
+        family=LayoutFamily.EVIDENCE_BOARD,
+        design=design,
+        fallback_variant="diagnosis_split",
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v20_site_problem_diagnosis",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v21_design_strategy(intent_service: VisualIntentService) -> CompositionCaseResult:
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="strategy",
+        order=3,
+        title="设计策略与原则",
+        message="以开放院落串联历史肌理与现代功能。",
+        key_points=["开放公共", "历史肌理", "现代功能", "空间渗透", "慢行系统"],
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.DIAGRAM,
+                description="概念示意",
+                preferred_asset_ids=[ARCHETYPE_CONCEPT_ASSET],
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="设计说明.pdf", page_number=8),
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    design = default_presentation_design_system()
+    plan = _generate_archetype_plan(
+        slide=slide,
+        intent=intent,
+        family=LayoutFamily.STRATEGY_CARDS,
+        design=design,
+        fallback_variant="strategy_concept",
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v21_design_strategy",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+def build_v22_before_after_transformation(
+    intent_service: VisualIntentService,
+) -> CompositionCaseResult:
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="transform",
+        order=4,
+        title="改造前后对比",
+        message="改造后公共界面与可达性显著提升。",
+        slide_type=SlideType.COMPARISON,
+        visual_requirements=[
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="改造前",
+                preferred_asset_ids=[ARCHETYPE_BEFORE_ASSET],
+            ),
+            VisualRequirement(
+                type=VisualType.SITE_PHOTO,
+                description="改造后",
+                preferred_asset_ids=[ARCHETYPE_AFTER_ASSET],
+            ),
+        ],
+        source_citations=[
+            Citation(document_id=DOCUMENT_ID, document_name="改造记录.pdf", page_number=3),
+        ],
+    )
+    intent = intent_service.generate_for_slide(slide, use_llm=False)
+    design = default_presentation_design_system()
+    plan = _generate_archetype_plan(
+        slide=slide,
+        intent=intent,
+        family=LayoutFamily.COMPARATIVE_MATRIX,
+        design=design,
+        fallback_variant="before_after",
+    )
+    report = LayoutValidationService().validate(plan, design, require_source=True)
+    return CompositionCaseResult(
+        case_id="v22_before_after_transformation",
+        slide=slide,
+        intent=intent,
+        design=design,
+        plan=plan,
+        report=report,
+    )
+
+
+# Visual Grammar archetype cases — JSON/preview baselines (builders + unit tests first).
+ARCHETYPE_CASE_BUILDERS: dict[str, object] = {
+    "v19_site_context_analysis": build_v19_site_context_analysis,
+    "v20_site_problem_diagnosis": build_v20_site_problem_diagnosis,
+    "v21_design_strategy": build_v21_design_strategy,
+    "v22_before_after_transformation": build_v22_before_after_transformation,
+}
+
+ARCHETYPE_CASE_IDS: tuple[str, ...] = tuple(ARCHETYPE_CASE_BUILDERS.keys())
+
 COMPOSITION_CASE_BUILDERS: dict[str, object] = {
     "v1_drawing_focus": build_v1_drawing_focus,
     "v2_evidence_board": build_v2_evidence_board,
@@ -1049,6 +1258,7 @@ SCREENSHOT_CASE_IDS: tuple[str, ...] = PPTX_VISUAL_REGRESSION_CASE_IDS
 def build_composition_case(case_id: str, intent_service: VisualIntentService) -> CompositionCaseResult:
     builder = (
         COMPOSITION_CASE_BUILDERS.get(case_id)
+        or ARCHETYPE_CASE_BUILDERS.get(case_id)
         or ICON_CASE_BUILDERS.get(case_id)
     )
     if builder is None:

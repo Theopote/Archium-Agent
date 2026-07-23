@@ -153,6 +153,12 @@ class SlideCapacityBudget(DomainModel):
     def is_blocked(self) -> bool:
         return self.status == CapacityStatus.IMPOSSIBLE
 
+    def blocks_layout_candidates(self, *, block_overloaded: bool = True) -> bool:
+        """Whether pre-layout capacity forbids emitting LayoutPlan candidates."""
+        if self.status == CapacityStatus.IMPOSSIBLE:
+            return True
+        return block_overloaded and self.status == CapacityStatus.OVERLOADED
+
     @property
     def requires_qa(self) -> bool:
         return self.status != CapacityStatus.FITS

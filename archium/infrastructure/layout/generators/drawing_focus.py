@@ -49,8 +49,13 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
         metrics = context.content.metrics[:3] or [
             point for point in context.content.key_points[:3]
         ]
+        annotations = (
+            list(context.content.key_points[:4])
+            if variant == "drawing_with_annotations"
+            else []
+        )
 
-        if variant == "full_canvas" or not metrics:
+        if variant == "full_canvas" or (not metrics and not annotations):
             drawing = Rect(safe.x, body_top, safe.width, body_h)
             side: Rect | None = None
         else:
@@ -77,7 +82,28 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
             )
         )
 
-        if side is not None and metrics:
+        if side is not None and annotations:
+            row_h = (
+                side.height - spacing.sm * (len(annotations) - 1)
+            ) / max(1, len(annotations))
+            annotation_ids: list[str] = []
+            for index, text in enumerate(annotations):
+                aid = f"annotation_{index}"
+                annotation_ids.append(aid)
+                elements.append(
+                    LayoutElement(
+                        id=aid,
+                        role=LayoutElementRole.ANNOTATION,
+                        content_type=LayoutContentType.TEXT,
+                        text_content=f"{index + 1}. {text}",
+                        x=side.x,
+                        y=side.y + index * (row_h + spacing.sm),
+                        width=side.width,
+                        height=row_h,
+                        style_token="caption",
+                    )
+                )
+        elif side is not None and metrics:
             metric_h = (side.height - spacing.sm * (len(metrics) - 1)) / len(metrics)
             for index, metric in enumerate(metrics):
                 y = side.y + index * (metric_h + spacing.sm)
@@ -133,6 +159,8 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
         )
 
         metric_ids = [el.id for el in elements if el.role == LayoutElementRole.METRIC]
+        annotation_ids = [el.id for el in elements if el.role == LayoutElementRole.ANNOTATION]
+        side_ids = metric_ids or annotation_ids
         constraints = [
             LayoutConstraint(
                 constraint_type=LayoutConstraintType.CONTAIN_WITHIN_SAFE_AREA,
@@ -150,28 +178,33 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
                 priority=ConstraintPriority.REQUIRED,
             ),
         ]
-        if len(metric_ids) >= 2:
+        if len(side_ids) >= 2:
             constraints.append(
                 LayoutConstraint(
                     constraint_type=LayoutConstraintType.EQUAL_WIDTH,
-                    element_ids=metric_ids,
+                    element_ids=side_ids,
                     priority=ConstraintPriority.HIGH,
                 )
             )
             constraints.append(
                 LayoutConstraint(
                     constraint_type=LayoutConstraintType.ALIGN_LEFT,
-                    element_ids=metric_ids,
+                    element_ids=side_ids,
                     priority=ConstraintPriority.HIGH,
                 )
             )
 
-        reading = ["title", "hero", *metric_ids, "caption", "source"]
+        reading = ["title", "hero", *side_ids, "caption", "source"]
+        balance = (
+            "drawing_annotated"
+            if variant == "drawing_with_annotations"
+            else "drawing_dominant"
+        )
         return self._build_plan(
             context,
             elements=elements,
             constraints=constraints,
             hero_element_id="hero",
             reading_order=reading,
-            balance_strategy="drawing_dominant",
+            balance_strategy=balance,
         )

@@ -92,8 +92,8 @@ _VISUAL_GRAMMAR: dict[PageArchetype, VisualPageRecipe] = {
             LayoutFamily.DRAWING_FOCUS,
         ),
         preferred_variants=(
+            (LayoutFamily.HYBRID_CANVAS, "site_context"),
             (LayoutFamily.DRAWING_FOCUS, "drawing_with_annotations"),
-            (LayoutFamily.HYBRID_CANVAS, "freeform"),
         ),
         forbidden_layout_families=frozenset(
             {LayoutFamily.HERO, LayoutFamily.STRATEGY_CARDS, LayoutFamily.METRIC_DASHBOARD}
@@ -131,8 +131,8 @@ _VISUAL_GRAMMAR: dict[PageArchetype, VisualPageRecipe] = {
             LayoutFamily.ANALYTICAL_DIAGRAM,
         ),
         preferred_variants=(
+            (LayoutFamily.EVIDENCE_BOARD, "diagnosis_split"),
             (LayoutFamily.EVIDENCE_BOARD, "numbered_grid"),
-            (LayoutFamily.EVIDENCE_BOARD, "journey_with_photos"),
         ),
         forbidden_layout_families=frozenset(
             {LayoutFamily.HERO, LayoutFamily.STRATEGY_CARDS, LayoutFamily.METRIC_DASHBOARD}
@@ -172,8 +172,8 @@ _VISUAL_GRAMMAR: dict[PageArchetype, VisualPageRecipe] = {
             LayoutFamily.PROCESS_NARRATIVE,
         ),
         preferred_variants=(
+            (LayoutFamily.STRATEGY_CARDS, "strategy_concept"),
             (LayoutFamily.STRATEGY_CARDS, "cards_with_lead"),
-            (LayoutFamily.STRATEGY_CARDS, "three_cards"),
             (LayoutFamily.ANALYTICAL_DIAGRAM, "diagram_with_callouts"),
         ),
         forbidden_layout_families=frozenset({LayoutFamily.HERO, LayoutFamily.EVIDENCE_BOARD}),

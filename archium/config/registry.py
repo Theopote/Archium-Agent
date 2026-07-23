@@ -133,6 +133,8 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "visual_fallback_relaxed_matching": ConfigDomain.VISUAL,
     "visual_fallback_relaxed_min_score": ConfigDomain.VISUAL,
     "visual_fallback_generate_diagrams": ConfigDomain.VISUAL,
+    "visual_capacity_block_overloaded": ConfigDomain.VISUAL,
+    "visual_require_approved_design_brief": ConfigDomain.VISUAL,
     "layout_min_body_font_pt": ConfigDomain.VISUAL,
     "layout_min_caption_font_pt": ConfigDomain.VISUAL,
     "layout_min_source_font_pt": ConfigDomain.VISUAL,

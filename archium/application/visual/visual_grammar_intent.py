@@ -91,6 +91,33 @@ def apply_grammar_to_intent(
     )
 
 
+def preferred_variant_for_intent(
+    intent: VisualIntent,
+    family: LayoutFamily,
+) -> str | None:
+    """Grammar-preferred variant for a layout family, if any."""
+    if intent.page_archetype is None or intent.page_archetype == PageArchetype.GENERIC:
+        return None
+    recipe = get_recipe(intent.page_archetype)
+    for pref_family, variant in recipe.preferred_variants:
+        if pref_family == family:
+            return variant
+    return None
+
+
+def order_variants_for_intent(
+    intent: VisualIntent,
+    family: LayoutFamily,
+    variants: tuple[str, ...] | list[str],
+) -> list[str]:
+    """Rank variants with grammar archetype preference first."""
+    ordered = list(variants)
+    grammar_variant = preferred_variant_for_intent(intent, family)
+    if grammar_variant and grammar_variant in ordered:
+        return [grammar_variant, *[v for v in ordered if v != grammar_variant]]
+    return ordered
+
+
 def forbidden_families_for_intent(intent: VisualIntent) -> frozenset[LayoutFamily]:
     """Layout families blocked by the slide's visual grammar archetype."""
     if intent.page_archetype is None or intent.page_archetype == PageArchetype.GENERIC:

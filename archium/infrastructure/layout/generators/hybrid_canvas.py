@@ -22,6 +22,200 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
     family = LayoutFamily.HYBRID_CANVAS
 
     def generate(self, context: LayoutGeneratorContext) -> LayoutPlan:
+        if context.variant == "site_context":
+            return self._generate_site_context(context)
+        return self._generate_freeform(context)
+
+    def _generate_site_context(self, context: LayoutGeneratorContext) -> LayoutPlan:
+        """区位分析页：左地图、右交通/尺度/结论。"""
+        safe = self._safe(context.design_system)
+        spacing = context.design_system.spacing
+        elements: list[LayoutElement] = []
+
+        title_h = self._title_band_height(context)
+        elements.append(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content=context.content.title,
+                x=safe.x,
+                y=safe.y,
+                width=safe.width,
+                height=title_h,
+                style_token="title",
+            )
+        )
+
+        source_reserve = 0.28 if context.content.source_text else 0.0
+        body_top = safe.y + title_h + spacing.sm
+        body = Rect(
+            safe.x,
+            body_top,
+            safe.width,
+            max(1.2, safe.bottom - body_top - source_reserve),
+        )
+        map_panel, info_panel = split_horizontal(body, left_ratio=0.55, gap=spacing.lg)
+
+        elements.append(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.DRAWING,
+                content_ref=context.content.hero_asset_ref,
+                x=map_panel.x,
+                y=map_panel.y,
+                width=map_panel.width,
+                height=map_panel.height,
+                fit_mode=ImageFit.CONTAIN,
+                crop_policy=CropPolicy.FORBIDDEN,
+                style_token="drawing",
+                locked=True,
+            )
+        )
+
+        traffic_points = [
+            point
+            for point in context.content.key_points
+            if point not in context.content.metrics
+        ][:4]
+        metrics = list(context.content.metrics[:3])
+        if not metrics:
+            metrics = [
+                point
+                for point in context.content.key_points
+                if any(ch.isdigit() for ch in point)
+            ][:3]
+
+        cursor_top = info_panel.y
+        if traffic_points:
+            traffic_text = "交通/可达\n" + "\n".join(f"· {item}" for item in traffic_points)
+            traffic_h = self._text_band_height(
+                context,
+                traffic_text,
+                "body",
+                box_width_in=info_panel.width,
+                min_height=0.5,
+            )
+            traffic_h = min(traffic_h, info_panel.height * 0.45)
+            elements.append(
+                LayoutElement(
+                    id="traffic",
+                    role=LayoutElementRole.BODY_TEXT,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=traffic_text,
+                    x=info_panel.x,
+                    y=cursor_top,
+                    width=info_panel.width,
+                    height=traffic_h,
+                    style_token="body",
+                )
+            )
+            cursor_top += traffic_h + spacing.sm
+
+        metric_ids: list[str] = []
+        if metrics and cursor_top < info_panel.bottom - 0.6:
+            metric_h = min(0.45 * len(metrics), info_panel.bottom - cursor_top - 0.55)
+            metric_area = Rect(info_panel.x, cursor_top, info_panel.width, metric_h)
+            cells = grid_cells(
+                metric_area,
+                rows=1,
+                cols=len(metrics),
+                gap_x=spacing.xs,
+                gap_y=0,
+            )
+            for index, (cell, metric) in enumerate(zip(cells, metrics, strict=True)):
+                mid = f"metric_{index}"
+                metric_ids.append(mid)
+                elements.append(
+                    LayoutElement(
+                        id=mid,
+                        role=LayoutElementRole.METRIC,
+                        content_type=LayoutContentType.METRIC,
+                        text_content=metric,
+                        x=cell.x,
+                        y=cell.y,
+                        width=cell.width,
+                        height=cell.height,
+                        style_token="metric",
+                        alignment="center",
+                    )
+                )
+            cursor_top = metric_area.bottom + spacing.sm
+
+        conclusion_h = self._text_band_height(
+            context,
+            context.content.message,
+            "subtitle",
+            box_width_in=info_panel.width,
+            min_height=0.35,
+        )
+        conclusion_h = min(conclusion_h, max(0.35, info_panel.bottom - cursor_top))
+        elements.append(
+            LayoutElement(
+                id="conclusion",
+                role=LayoutElementRole.LEAD_STATEMENT,
+                content_type=LayoutContentType.TEXT,
+                text_content=context.content.message,
+                x=info_panel.x,
+                y=info_panel.bottom - conclusion_h,
+                width=info_panel.width,
+                height=conclusion_h,
+                style_token="subtitle",
+            )
+        )
+
+        if context.content.source_text:
+            page = context.design_system.page
+            elements.append(
+                LayoutElement(
+                    id="source",
+                    role=LayoutElementRole.SOURCE,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=context.content.source_text,
+                    x=safe.x,
+                    y=page.height - page.margin_bottom - 0.22,
+                    width=safe.width * 0.7,
+                    height=0.22,
+                    style_token="source",
+                )
+            )
+
+        constraints = [
+            LayoutConstraint(
+                constraint_type=LayoutConstraintType.CONTAIN_WITHIN_SAFE_AREA,
+                element_ids=[el.id for el in elements],
+                priority=ConstraintPriority.REQUIRED,
+            ),
+            LayoutConstraint(
+                constraint_type=LayoutConstraintType.NO_OVERLAP,
+                element_ids=[el.id for el in elements],
+                priority=ConstraintPriority.REQUIRED,
+            ),
+            LayoutConstraint(
+                constraint_type=LayoutConstraintType.PRESERVE_ASPECT_RATIO,
+                element_ids=["hero"],
+                priority=ConstraintPriority.REQUIRED,
+            ),
+        ]
+        reading = ["title", "hero"]
+        if any(el.id == "traffic" for el in elements):
+            reading.append("traffic")
+        reading.extend(metric_ids)
+        reading.append("conclusion")
+        if context.content.source_text:
+            reading.append("source")
+
+        return self._build_plan(
+            context,
+            elements=elements,
+            constraints=constraints,
+            hero_element_id="hero",
+            reading_order=reading,
+            balance_strategy="site_context_split",
+        )
+
+    def _generate_freeform(self, context: LayoutGeneratorContext) -> LayoutPlan:
         safe = self._safe(context.design_system)
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []

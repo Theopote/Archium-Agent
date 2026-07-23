@@ -22,6 +22,7 @@ from archium.application.visual.visual_grammar_intent import (
     derive_grammar_layout_preference,
     forbidden_families_for_intent,
     merge_layout_style_preferences,
+    order_variants_for_intent,
 )
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.slide_capacity_service import SlideCapacityService
@@ -207,15 +208,24 @@ class LayoutPlanningService:
                 }
             )
         elif capacity.status == CapacityStatus.OVERLOADED:
+            overload_severity = (
+                "blocker"
+                if self._settings.visual_capacity_block_overloaded
+                else "major"
+            )
             self._warnings.append(
                 {
                     "code": CAPACITY_OVERLOAD_RULE,
-                    "severity": "major",
+                    "severity": overload_severity,
                     "detail": (
                         f"capacity_ratio={capacity.capacity_ratio:.2f}; "
                         f"status={capacity.status.value}; "
                         f"action={capacity.recommended_action}; "
-                        "forbid further font shrink — adapt or split"
+                        + (
+                            "blocked — adapt content or split before layout"
+                            if overload_severity == "blocker"
+                            else "forbid further font shrink — adapt or split"
+                        )
                     ),
                     "capacity_ratio": capacity.capacity_ratio,
                     "capacity_status": capacity.status.value,
@@ -239,8 +249,9 @@ class LayoutPlanningService:
                 }
             )
 
-        if capacity.is_blocked:
-            # IMPOSSIBLE → do not emit layout candidates; force adaptation gate.
+        if capacity.blocks_layout_candidates(
+            block_overloaded=self._settings.visual_capacity_block_overloaded,
+        ):
             return []
 
         resolved_style = reference_style
@@ -656,7 +667,11 @@ class LayoutPlanningService:
                 continue
             variants = self._order_variants(
                 definition.family,
-                definition.supported_variants,
+                order_variants_for_intent(
+                    intent,
+                    definition.family,
+                    definition.supported_variants,
+                ),
                 style_pref,
             )
             for variant in variants:
@@ -830,11 +845,14 @@ def format_layout_decision_warnings(warnings: list[dict[str, Any]]) -> list[str]
 
 
 def capacity_blocker_messages(warnings: list[dict[str, Any]]) -> list[str]:
-    """Hard-stop messages for CAPACITY.IMPOSSIBLE (no layout candidates allowed)."""
+    """Hard-stop messages for capacity gates that block layout candidates."""
     messages: list[str] = []
     for item in warnings:
-        if item.get("code") != CAPACITY_IMPOSSIBLE_RULE:
+        code = item.get("code")
+        if code not in {CAPACITY_IMPOSSIBLE_RULE, CAPACITY_OVERLOAD_RULE}:
             continue
-        detail = item.get("detail") or CAPACITY_IMPOSSIBLE_RULE
-        messages.append(f"{CAPACITY_IMPOSSIBLE_RULE}: {detail}")
+        if code == CAPACITY_OVERLOAD_RULE and item.get("severity") != "blocker":
+            continue
+        detail = item.get("detail") or code
+        messages.append(f"{code}: {detail}")
     return messages

@@ -10,9 +10,11 @@ from archium.application.visual.visual_grammar_intent import (
     apply_grammar_to_intent,
 )
 from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
+from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_design_brief import SlideDesignBrief
+from archium.exceptions import ValidationError
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.enums import (
     ContinuityRole,
@@ -97,10 +99,28 @@ class VisualIntentService:
         session: Session,
         *,
         llm: LLMProvider | None = None,
+        settings: Settings | None = None,
     ) -> None:
         self._session = session
         self._llm = llm
+        self._settings = settings or get_settings()
         self._intents = VisualIntentRepository(session)
+
+    @staticmethod
+    def _require_approved_design_brief(
+        slide: SlideSpec,
+        design_brief: SlideDesignBrief | None,
+        *,
+        required: bool,
+    ) -> None:
+        if not required:
+            return
+        if design_brief is None or design_brief.status != ApprovalStatus.APPROVED:
+            status = design_brief.status.value if design_brief is not None else "missing"
+            raise ValidationError(
+                "VisualIntent generation requires an approved SlideDesignBrief "
+                f"for slide {slide.id} (brief status={status})"
+            )
 
     def generate_for_slide(
         self,
@@ -112,6 +132,11 @@ class VisualIntentService:
         design_brief: SlideDesignBrief | None = None,
         use_llm: bool = True,
     ) -> VisualIntent:
+        self._require_approved_design_brief(
+            slide,
+            design_brief,
+            required=self._settings.visual_require_approved_design_brief,
+        )
         draft: VisualIntentDraft | None = None
         if use_llm and self._llm is not None:
             draft = self._llm.generate_structured(

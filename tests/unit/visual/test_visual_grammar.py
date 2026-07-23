@@ -140,6 +140,26 @@ def test_derive_grammar_layout_preference_ranks_variants() -> None:
     assert any(note.startswith("visual_grammar:") for note in pref.notes)
 
 
+def test_order_variants_for_intent_prioritizes_grammar() -> None:
+    from archium.application.visual.visual_grammar_intent import order_variants_for_intent
+
+    intent = VisualIntent(
+        slide_id=uuid4(),
+        page_archetype=PageArchetype.SITE_PROBLEM_DIAGNOSIS,
+        communication_goal="诊断",
+        audience_takeaway="问题",
+        visual_priority="photos",
+        dominant_content_type=VisualContentType.PHOTO_EVIDENCE,
+        preferred_layout_families=[LayoutFamily.EVIDENCE_BOARD],
+    )
+    ordered = order_variants_for_intent(
+        intent,
+        LayoutFamily.EVIDENCE_BOARD,
+        ("photo_grid", "numbered_grid", "diagnosis_split"),
+    )
+    assert ordered[0] == "diagnosis_split"
+
+
 def test_rule_decisions_respects_grammar_forbidden_families() -> None:
     from archium.application.visual.layout_planning_service import LayoutPlanningService
     from archium.config.settings import get_settings

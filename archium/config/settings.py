@@ -472,6 +472,20 @@ class Settings(BaseSettings):
         le=1.0,
         description="Maximum whitespace ratio for LayoutValidator.",
     )
+    visual_capacity_block_overloaded: bool = Field(
+        default=True,
+        description=(
+            "When true, CAPACITY.OVERLOAD slides do not emit LayoutPlan candidates "
+            "(force content adaptation / split before layout planning)."
+        ),
+    )
+    visual_require_approved_design_brief: bool = Field(
+        default=False,
+        description=(
+            "When true, VisualIntent generation requires an APPROVED SlideDesignBrief "
+            "for each slide (blocks skipping page design review)."
+        ),
+    )
     web_image_search_enabled: bool = Field(
         default=True,
         description=(

@@ -37,9 +37,12 @@ class _FakeIntentRepo:
 
 @pytest.fixture
 def intent_service(monkeypatch: pytest.MonkeyPatch) -> VisualIntentService:
+    from archium.config.settings import get_settings
+
     service = VisualIntentService.__new__(VisualIntentService)
     service._session = None  # noqa: SLF001
     service._llm = None  # noqa: SLF001
+    service._settings = get_settings()  # noqa: SLF001
     service._intents = _FakeIntentRepo()  # noqa: SLF001
     return service
 

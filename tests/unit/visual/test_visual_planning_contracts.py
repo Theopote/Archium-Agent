@@ -39,19 +39,24 @@ def test_format_layout_decision_warnings_includes_capacity() -> None:
     assert "adapt_content" in lines[0]
 
 
-def test_capacity_blocker_messages_only_impossible() -> None:
+def test_capacity_blocker_messages_only_impossible_or_overload_blocker() -> None:
     messages = capacity_blocker_messages(
         [
-            {"code": CAPACITY_OVERLOAD_RULE, "detail": "overloaded"},
+            {"code": CAPACITY_OVERLOAD_RULE, "severity": "major", "detail": "overloaded"},
+            {
+                "code": CAPACITY_OVERLOAD_RULE,
+                "severity": "blocker",
+                "detail": "blocked overload",
+            },
             {
                 "code": CAPACITY_IMPOSSIBLE_RULE,
                 "detail": "drawing exceeds canvas",
             },
         ]
     )
-    assert len(messages) == 1
-    assert CAPACITY_IMPOSSIBLE_RULE in messages[0]
-    assert "drawing exceeds canvas" in messages[0]
+    assert len(messages) == 2
+    assert any(CAPACITY_OVERLOAD_RULE in message for message in messages)
+    assert any(CAPACITY_IMPOSSIBLE_RULE in message for message in messages)
 
 
 def test_photo_evidence_grid_aliases_to_evidence_board() -> None:

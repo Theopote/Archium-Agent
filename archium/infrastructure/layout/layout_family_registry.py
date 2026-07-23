@@ -84,7 +84,7 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         content={VisualContentType.PHOTO_EVIDENCE, VisualContentType.MIXED},
         min_assets=2,
         max_assets=8,
-        variants=("photo_grid", "numbered_grid", "journey_with_photos"),
+        variants=("photo_grid", "numbered_grid", "journey_with_photos", "diagnosis_split"),
         default="numbered_grid",
         required=(
             LayoutElementRole.TITLE,
@@ -194,7 +194,7 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         content={VisualContentType.TEXT_ARGUMENT, VisualContentType.MIXED},
         min_assets=0,
         max_assets=3,
-        variants=("three_cards", "four_cards", "cards_with_lead"),
+        variants=("three_cards", "four_cards", "cards_with_lead", "strategy_concept"),
         default="three_cards",
         required=(LayoutElementRole.TITLE, LayoutElementRole.BODY_TEXT),
         optional=(
@@ -221,10 +221,15 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
     ),
     LayoutFamily.HYBRID_CANVAS: _def(
         LayoutFamily.HYBRID_CANVAS,
-        content={VisualContentType.MIXED},
+        content={
+            VisualContentType.MIXED,
+            VisualContentType.SITE_PLAN,
+            VisualContentType.PHOTO_EVIDENCE,
+            VisualContentType.TEXT_ARGUMENT,
+        },
         min_assets=0,
         max_assets=6,
-        variants=("freeform",),
+        variants=("freeform", "site_context"),
         default="freeform",
         required=(LayoutElementRole.TITLE, LayoutElementRole.HERO_VISUAL),
         optional=(
