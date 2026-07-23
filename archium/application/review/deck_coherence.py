@@ -17,21 +17,14 @@ from archium.domain.deck_coherence import (
     DECK_STRATEGY_WITHOUT_PROBLEM,
     DECK_WEAK_SECTION_EVIDENCE,
 )
-from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity
+from archium.domain.enums import ReviewCategory, ReviewLayer
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.enums import LayoutIssueSeverity
-
-_SEVERITY_MAP = {
-    LayoutIssueSeverity.CRITICAL: ReviewSeverity.CRITICAL,
-    LayoutIssueSeverity.ERROR: ReviewSeverity.HIGH,
-    LayoutIssueSeverity.WARNING: ReviewSeverity.MEDIUM,
-    LayoutIssueSeverity.INFO: ReviewSeverity.SUGGESTION,
-}
+from archium.domain.visual.severity import layout_to_review
 
 _RULE_MAP = {
     DECK_DUPLICATE_MESSAGE: ReviewRuleCode.DECK_DUPLICATE_MESSAGE,
@@ -80,9 +73,7 @@ class DeckCoherenceReviewer(ReviewRunnerBase):
                     anchor,
                     layer=ReviewLayer.CONTENT,
                     category=ReviewCategory.CONSISTENCY,
-                    severity=_SEVERITY_MAP.get(
-                        finding.severity, ReviewSeverity.MEDIUM
-                    ),
+                    severity=layout_to_review(finding.severity),
                     rule_code=_RULE_MAP.get(finding.rule_code, finding.rule_code),
                     title="Deck 论证一致性",
                     description=finding.message,

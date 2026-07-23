@@ -546,6 +546,8 @@ class ReviewCategory(StrEnum):
 
 
 class ReviewSeverity(StrEnum):
+    """Persisted review-issue severity. Convert via ``domain.visual.severity`` for gates."""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -553,7 +555,10 @@ class ReviewSeverity(StrEnum):
 
 
 class ValidationSeverity(StrEnum):
-    """Severity for MissionValidationIssue (mission planning, not slide review)."""
+    """Severity for MissionValidationIssue (mission planning, not slide export gates).
+
+    Map through ``domain.visual.severity.validation_to_gate`` if a gate view is needed.
+    """
 
     FATAL = "fatal"
     ERROR = "error"

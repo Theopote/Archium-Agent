@@ -43,7 +43,8 @@ from archium.domain.visual.element_lock import (
     ElementEditOperation,
     assert_element_editable,
 )
-from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
+from archium.domain.visual.enums import LayoutElementRole, LayoutFamily
+from archium.domain.visual.severity import layout_fails_validation
 from archium.application.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.parsed_intent import ParsedIntent
@@ -608,8 +609,7 @@ class VisualEditService:
                     (
                         issue.message
                         for issue in report.issues
-                        if issue.severity
-                        in {LayoutIssueSeverity.CRITICAL, LayoutIssueSeverity.ERROR}
+                        if layout_fails_validation(issue.severity)
                     ),
                     "版式不满足约束",
                 )

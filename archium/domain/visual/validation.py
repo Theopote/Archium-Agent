@@ -8,6 +8,7 @@ from pydantic import Field, computed_field
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import LayoutIssueSeverity
+from archium.domain.visual.severity import layout_fails_validation
 
 
 class LayoutValidationIssue(DomainModel):
@@ -69,10 +70,7 @@ class LayoutValidationReport(DomainModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def valid(self) -> bool:
-        return not any(
-            issue.severity in {LayoutIssueSeverity.CRITICAL, LayoutIssueSeverity.ERROR}
-            for issue in self.issues
-        )
+        return not any(layout_fails_validation(issue.severity) for issue in self.issues)
 
     @property
     def layout_quality_score(self) -> float:

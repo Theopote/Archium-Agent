@@ -20,7 +20,10 @@ class PageQualityStatus(StrEnum):
 
 
 class IssueSeverity(StrEnum):
-    """Three-tier severity for quality findings."""
+    """Canonical three-tier severity for quality findings and export gates (DOM-004).
+
+    Other severity enums must bridge through ``archium.domain.visual.severity``.
+    """
 
     BLOCKER = "blocker"
     MAJOR = "major"

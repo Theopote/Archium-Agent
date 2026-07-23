@@ -106,5 +106,6 @@ def test_deck_qa_report_blocker_count() -> None:
             ),
         ]
     )
-    assert report.blocker_count == 2
-    assert report.model_dump(mode="json")["blocker_count"] == 2
+    # DOM-004: only Layout CRITICAL maps to gate BLOCKER (ERROR → MAJOR).
+    assert report.blocker_count == 1
+    assert report.model_dump(mode="json")["blocker_count"] == 1

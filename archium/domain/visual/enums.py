@@ -146,6 +146,8 @@ class ConstraintPriority(StrEnum):
 
 
 class LayoutIssueSeverity(StrEnum):
+    """Layout / deck-QA finding severity. Gate mapping: ``domain.visual.severity``."""
+
     CRITICAL = "critical"
     ERROR = "error"
     WARNING = "warning"

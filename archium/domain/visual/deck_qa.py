@@ -10,6 +10,7 @@ from pydantic import Field, computed_field
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import LayoutIssueSeverity
+from archium.domain.visual.severity import layout_is_gate_blocker
 
 DECK_REPEATED_LAYOUT_FAMILY = "DECK.REPEATED_LAYOUT_FAMILY"
 DECK_FOOTER_INCONSISTENT = "DECK.FOOTER_INCONSISTENT"
@@ -64,10 +65,5 @@ class DeckQAReport(DomainModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def blocker_count(self) -> int:
-        """CRITICAL/ERROR findings — used by delivery readiness gating."""
-        return sum(
-            1
-            for item in self.findings
-            if item.severity
-            in {LayoutIssueSeverity.CRITICAL, LayoutIssueSeverity.ERROR}
-        )
+        """Findings that map to gate BLOCKER (Layout CRITICAL → IssueSeverity.BLOCKER)."""
+        return sum(1 for item in self.findings if layout_is_gate_blocker(item.severity))

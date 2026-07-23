@@ -90,4 +90,4 @@
 
 P0 已关闭但仍需关注：`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 
-Domain 下一优先：`DOM-004` / `DOM-009` 提案状态 / `DOM-003`（见 [02-domain.md](02-domain.md)）。已关闭：`DOM-011`/`DOM-012`/`DOM-014`/`DOM-016`/`DOM-017`；partial：`DOM-009`（Brief）。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。
+Domain 下一优先：`DOM-009` 提案状态 / `DOM-003` / `DOM-018`（见 [02-domain.md](02-domain.md)）。已关闭：`DOM-004`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-016`/`DOM-017`；partial：`DOM-009`（Brief）。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。

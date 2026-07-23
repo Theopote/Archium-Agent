@@ -1,10 +1,16 @@
-"""Export blocking rules for open review issues."""
+"""Export blocking rules for open review issues.
+
+Reasons about ``IssueSeverity`` (DOM-004 gate vocabulary) via
+``review_to_gate``; ``ReviewSeverity`` remains the persisted field.
+"""
 
 from __future__ import annotations
 
 from archium.application.visual_qa_service import asset_load_rule_codes
-from archium.domain.enums import ReviewSeverity, ReviewStatus
+from archium.domain.enums import ReviewStatus
 from archium.domain.review import ReviewIssue
+from archium.domain.visual.page_quality import IssueSeverity
+from archium.domain.visual.severity import is_gate_blocker, review_to_gate
 
 
 def export_blocking_open_issues(issues: list[ReviewIssue]) -> list[ReviewIssue]:
@@ -31,13 +37,14 @@ def export_blocking_open_issues(issues: list[ReviewIssue]) -> list[ReviewIssue]:
     for issue in issues:
         if issue.status != ReviewStatus.OPEN:
             continue
-        if issue.severity == ReviewSeverity.CRITICAL:
+        gate = review_to_gate(issue.severity)
+        if is_gate_blocker(gate):
             blocking.append(issue)
             continue
-        if issue.severity == ReviewSeverity.HIGH and issue.rule_code in asset_load_rules:
+        if gate == IssueSeverity.MAJOR and issue.rule_code in asset_load_rules:
             blocking.append(issue)
             continue
-        if issue.severity == ReviewSeverity.HIGH and issue.rule_code in scene_block_rules:
+        if gate == IssueSeverity.MAJOR and issue.rule_code in scene_block_rules:
             blocking.append(issue)
     return blocking
 

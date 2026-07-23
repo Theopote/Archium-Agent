@@ -12,30 +12,14 @@ from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.page_quality import IssueSeverity
 from archium.domain.visual.quality_issue_catalog import default_severity_for_auto_code
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_qa import PostRenderCheckCode, SceneSemanticCheckCode
-
-_SEVERITY_MAP = {
-    "critical": ReviewSeverity.CRITICAL,
-    "high": ReviewSeverity.HIGH,
-    "medium": ReviewSeverity.MEDIUM,
-    "suggestion": ReviewSeverity.SUGGESTION,
-}
-
-_ISSUE_TO_REVIEW = {
-    IssueSeverity.BLOCKER: ReviewSeverity.CRITICAL,
-    IssueSeverity.MAJOR: ReviewSeverity.HIGH,
-    IssueSeverity.MINOR: ReviewSeverity.MEDIUM,
-}
-
-_REVIEW_RANK = {
-    ReviewSeverity.SUGGESTION: 0,
-    ReviewSeverity.MEDIUM: 1,
-    ReviewSeverity.HIGH: 2,
-    ReviewSeverity.CRITICAL: 3,
-}
+from archium.domain.visual.severity import (
+    coerce_review_severity_label,
+    gate_to_review,
+    review_rank,
+)
 
 _SCENE_CHECK_TO_RULE: dict[str, str] = {
     SceneSemanticCheckCode.DRAWING_COVER_MODE_FORBIDDEN: (
@@ -175,11 +159,8 @@ class PostRenderReviewer(ReviewRunnerBase):
 
 def _review_severity_for_check(check_code: str, finding_severity: str) -> ReviewSeverity:
     """Prefer catalog severity; never demote below the finding's own severity."""
-    catalog = _ISSUE_TO_REVIEW.get(
-        default_severity_for_auto_code(check_code),
-        ReviewSeverity.HIGH,
-    )
-    emitted = _SEVERITY_MAP.get(str(finding_severity).lower(), ReviewSeverity.MEDIUM)
-    if _REVIEW_RANK.get(catalog, 0) >= _REVIEW_RANK.get(emitted, 0):
+    catalog = gate_to_review(default_severity_for_auto_code(check_code))
+    emitted = coerce_review_severity_label(finding_severity)
+    if review_rank(catalog) >= review_rank(emitted):
         return catalog
     return emitted

@@ -26,7 +26,7 @@
 | 2 | DOM-016 | **done** | `slide.py` + schema | `VisualRequirement` 消歧 |
 | 3 | DOM-012 | **done** | `structured_payload.py` | Chart/Table 载荷单 VO |
 | 4 | DOM-014 | **done** | edit_intent / brief / text / pptx catalog | parser/resolver/catalog 迁出 domain |
-| 5 | DOM-004 | merge | `enums.py` + visual severity | 严重级别词表统一 |
+| 5 | DOM-004 | **done** | `visual/severity.py` | `IssueSeverity` 门禁权威 + 桥接 |
 | 6 | DOM-003 | refactor | `presentation_spec.py` | Spec 降为派生，Scene 渲染 SSOT |
 | 7 | DOM-018 | refactor | `enums.py` (~668) | 按限界上下文拆分 |
 | 8 | DOM-009 | partial | Brief→`ApprovalStatus`；余提案双枚举 | 审批/提案状态合一 |
@@ -168,14 +168,11 @@
 | 字段 | 内容 |
 |------|------|
 | 角色 | 审核与语义 QA 模型 |
-| 裁决 | merge（severity）/ keep |
-| 级别 | P1（DOM-004） |
-| 问题 | 多套 severity / QA 报告形状 |
-| 删除 | 否 |
-| 合并 | 映射到 `IssueSeverity` 或统一 Finding |
-| 重构 | 可选公共基类 |
-| 方案 | 新代码只用门禁 severity |
-| 验收 | 导出门禁单枚举 |
+| 裁决 | keep；severity 经桥接 |
+| 级别 | P1（DOM-004 **done**） |
+| 问题 | ~~多套 severity 无映射~~；QA 报告形状仍多样（APP） |
+| 方案 | 门禁/导出经 `IssueSeverity`；`ReviewSeverity` 仅持久化 |
+| 验收 | `export_gating` + `test_severity_bridge` |
 
 ### `deck_delivery.py` (~192)
 
@@ -302,12 +299,12 @@
 
 | 字段 | 内容 |
 |------|------|
-| 角色 | 布局枚举；门禁 IssueSeverity |
-| 裁决 | merge severity |
-| 级别 | P1（DOM-004/020） |
-| 问题 | LayoutIssueSeverity vs IssueSeverity；overflow 词表 |
-| 方案 | 门禁以 IssueSeverity 为准；布局映射 |
-| 验收 | 导出门禁单故事 |
+| 角色 | 布局枚举；门禁经 severity 桥 → IssueSeverity |
+| 裁决 | keep + bridge via bridge |
+| 级别 | P1（DOM-004 **done** / DOM-020 overflow 仍开） |
+| 问题 | ~~多套 severity 无映射~~；余 overflow 词表 |
+| 方案 | 门禁以 IssueSeverity 为准（`domain/visual/severity.py`） |
+| 验收 | 导出门禁经桥接；`test_severity_bridge` |
 
 ### `edit_intent.py` / `parsed_intent.py` / `placeholder_binding.py` / `semantic_block.py`
 
@@ -430,8 +427,9 @@
 2. ~~DOM-016~~ **done**  
 3. ~~DOM-012~~ **done**  
 4. ~~DOM-014~~ **done**  
-5. DOM-004 / DOM-009 severity 与提案状态  
-6. DOM-003 Spec 降级策略  
-7. DOM-018 拆 `enums.py`
+5. ~~DOM-004~~ **done**（severity 桥）  
+6. DOM-009 提案状态  
+7. DOM-003 Spec 降级策略  
+8. DOM-018 拆 `enums.py`
 
 台账同步：[02-domain.md](02-domain.md)
