@@ -154,9 +154,7 @@ def _pick_grammar_slot_for_binding(
         if existing is None or not existing.preferred_asset_ids or not existing.confirmed:
             return role
 
-    for role in preferred:
-        if not required_roles or role in required_roles:
-            return role
+    # All matching grammar slots are already filled — bind as a free requirement.
     return None
 
 
@@ -169,11 +167,19 @@ def _find_compatible_requirement(
     """Prefer grammar-tagged slots, then unconfirmed same-type requirements."""
     if grammar_role is not None:
         tagged = find_requirement_for_grammar_slot(slide, grammar_role)
-        if tagged is not None and visual_types_compatible(tagged.type, binding.visual_type):
+        if (
+            tagged is not None
+            and visual_types_compatible(tagged.type, binding.visual_type)
+            and _requirement_accepts_binding(tagged, binding)
+        ):
             return tagged
         for role in preferred_grammar_slots_for_binding(binding.binding_role):
             tagged = find_requirement_for_grammar_slot(slide, role)
-            if tagged is not None and visual_types_compatible(tagged.type, binding.visual_type):
+            if (
+                tagged is not None
+                and visual_types_compatible(tagged.type, binding.visual_type)
+                and _requirement_accepts_binding(tagged, binding)
+            ):
                 return tagged
 
     same_type = [
@@ -194,3 +200,15 @@ def _find_compatible_requirement(
         if not req.preferred_asset_ids:
             return req
     return None
+
+
+def _requirement_accepts_binding(
+    requirement: VisualRequirement,
+    binding: SlideAssetBinding,
+) -> bool:
+    """Refuse to steal a confirmed slot already bound to a different asset."""
+    if binding.asset_id in requirement.preferred_asset_ids:
+        return True
+    if requirement.confirmed and requirement.preferred_asset_ids:
+        return False
+    return True

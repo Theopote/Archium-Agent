@@ -187,6 +187,58 @@ def test_resolve_grammar_hero_prefers_historic_slot() -> None:
     assert resolve_grammar_hero_asset_id(slide) == historic_id
 
 
+def test_apply_bindings_do_not_overwrite_confirmed_grammar_slot() -> None:
+    first_id = uuid4()
+    second_id = uuid4()
+    slides = [
+        SlideSpec(
+            presentation_id=uuid4(),
+            chapter_id="ch1",
+            order=3,
+            title="现状问题诊断",
+            message="流线交叉与后勤老化。",
+            page_archetype="site_problem_diagnosis",
+            required_evidence_slots=["site_photos"],
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PHOTO,
+                    description="[grammar:site_photos] 现场照片",
+                    preferred_asset_ids=[],
+                    confirmed=False,
+                ),
+                VisualRequirement(
+                    type=VisualType.SITE_PHOTO,
+                    description="现场照片2",
+                    preferred_asset_ids=[],
+                    confirmed=False,
+                ),
+            ],
+        )
+    ]
+    bindings = [
+        SlideAssetBinding(
+            page_order=3,
+            asset_id=first_id,
+            binding_role=SlideAssetBindingRole.PROJECT_PHOTO,
+            user_description="现场1",
+        ),
+        SlideAssetBinding(
+            page_order=3,
+            asset_id=second_id,
+            binding_role=SlideAssetBindingRole.SUPPORTING_PHOTO,
+            user_description="现场2",
+        ),
+    ]
+    updated, _, applied = apply_slide_asset_bindings(slides, bindings)
+    assert applied == 2
+    bound = {
+        aid
+        for req in updated[0].visual_requirements
+        for aid in req.preferred_asset_ids
+    }
+    assert bound == {first_id, second_id}
+
+
 def test_slots_include_asset_bindings_text() -> None:
     presentation_id = uuid4()
     asset_id = uuid4()

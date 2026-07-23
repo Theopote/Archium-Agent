@@ -68,6 +68,8 @@ SlideSpec 写入 `page_archetype` + `required_evidence_slots`；缺槽位 → `G
 
 Outline / Review 意图卡与 Design Brief 面板可编辑 `page_archetype`（空/auto=自动识别）；保存时合并原型证据槽提示，Brief 变更同步回 SlideIntent。
 
+case_a 真照片 E2E：`tests/golden/regression/test_visual_grammar_case_a_photos_e2e.py`（磁盘 JPEG → 绑定 → `narrative_opening` / `diagnosis_split` → `AssetReferenceContext` 校验）。
+
 规划上游（VG-002）：
 
 1. `SlideIntent` / `SlideDesignBrief` 生成时识别 archetype 并写回
