@@ -164,7 +164,7 @@ def _check_unresolved_assets(scene: RenderScene, *, slide_order: int) -> list[Sl
     for node in scene.nodes:
         if not isinstance(node, (ImageNode, DrawingNode)):
             continue
-        if node.asset_unresolved or not node.asset_path:
+        if node.asset_unresolved or not (node.storage_uri or node.asset_path):
             findings.append(
                 _finding(
                     check_code=SceneSemanticCheckCode.IMAGE_NOT_RENDERED,

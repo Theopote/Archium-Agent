@@ -14,7 +14,7 @@ from archium.domain.export_authority import (
     DerivedExportKind,
     FormalExportAuthority,
 )
-from archium.domain.export_fidelity import ChartExportMode
+from archium.domain.export_authority import FORMAL_DELIVERY_PPTX_FILENAME
 from archium.domain.visual.render_scene import RenderScene
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -88,7 +88,7 @@ class FormalPptxExportService:
                     self._settings, session=self._session
                 )
                 output_dir = legacy.output_dir(presentation_id, version=brief.version)
-                pptx_path = output_dir / "presentation.pptx"
+                pptx_path = output_dir / FORMAL_DELIVERY_PPTX_FILENAME
                 rendered = PptxRenderer(self._settings).export_presentation(
                     title=brief.title,
                     scenes=ordered_scenes,

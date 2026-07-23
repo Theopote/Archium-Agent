@@ -22,6 +22,16 @@ def test_formal_editable_pptx_authority_is_render_scene() -> None:
     assert LEGACY_TEMPLATE_EXPORT_KIND == DerivedExportKind.PRESENTATION_SPEC.value
 
 
+def test_formal_delivery_pptx_filename_constant() -> None:
+    from archium.domain.export_authority import (
+        FORMAL_DELIVERY_PPTX_FILENAME,
+        VALIDATION_LAYOUT_PLAN_PPTX_FILENAME,
+    )
+
+    assert FORMAL_DELIVERY_PPTX_FILENAME == "presentation.pptx"
+    assert VALIDATION_LAYOUT_PLAN_PPTX_FILENAME.endswith(".validation.pptx")
+
+
 def test_presentation_spec_module_marks_legacy_derived() -> None:
     module_doc = presentation_spec_module.__doc__ or ""
     assert "DOM-003" in module_doc

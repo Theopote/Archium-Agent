@@ -238,7 +238,9 @@ class RenderScenePptxAdapter:
             "z_index": node.z_index,
             "fit_mode": node.fit_mode,
         }
-        path = _filesystem_export_path(node.resolved_path, node.asset_path)
+        path = _filesystem_export_path(
+            node.resolved_path, node.asset_path, node.storage_uri
+        )
         if path and not node.asset_unresolved:
             export_path = path
             if node.icon_stroke_color and Path(path).suffix.lower() == ".svg":
@@ -265,7 +267,9 @@ class RenderScenePptxAdapter:
             "fit_mode": "contain",
             "drawing_type": node.drawing_type,
         }
-        path = _filesystem_export_path(node.resolved_path, node.asset_path)
+        path = _filesystem_export_path(
+            node.resolved_path, node.asset_path, node.storage_uri
+        )
         if path and not node.asset_unresolved:
             instruction["path"] = path
         else:

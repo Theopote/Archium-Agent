@@ -32,6 +32,10 @@ GEOMETRY_COMPILE_AUTHORITY = "layout_plan"
 RENDER_EDIT_AUTHORITY = FormalExportAuthority.RENDER_SCENE.value
 LEGACY_TEMPLATE_EXPORT_KIND = DerivedExportKind.PRESENTATION_SPEC.value
 
+# Delivery artifact filenames (RP-002).
+FORMAL_DELIVERY_PPTX_FILENAME = "presentation.pptx"
+VALIDATION_LAYOUT_PLAN_PPTX_FILENAME = "presentation.layout_plan.validation.pptx"
+
 
 def is_formal_editable_pptx_authority(value: str | FormalExportAuthority) -> bool:
     raw = value.value if isinstance(value, FormalExportAuthority) else str(value)

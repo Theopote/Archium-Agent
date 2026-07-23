@@ -10,6 +10,24 @@ PowerPoint-complete object model. That claim is forbidden until the depth invent
 below is substantially implemented (`FORBIDDEN_NATIVE_DEPTH_CLAIMS` /
 `native_depth_is_shallow()` in `powerpoint_capability.py`).
 
+## Canonical Presentation Model
+
+| Layer | Answers | Authority |
+| --- | --- | --- |
+| `SlideSpec` | What does this slide claim? | Content expression SSOT |
+| `LayoutPlan` | How is space organized? | Geometry compile (pre–Studio edit) |
+| `RenderScene` | Which visual objects exist? | Render / Studio / **formal editable PPTX** |
+| `PresentationSpec` | Legacy template execution payload | Derived-only compat; **no new layout logic** |
+
+Formal delivery filename is always `presentation.pptx` (`FORMAL_DELIVERY_PPTX_FILENAME`).
+LayoutPlan instruction PPTX is validation-only when enabled
+(`presentation.layout_plan.validation.pptx`). See `export_authority.py` and
+`docs/architecture/current-system.md` (DOM-003 / RP-002 / RP-003).
+
+`geometry_authority` on `LayoutPlan`: `layout_plan` after engine write; flips to
+`render_scene` after Studio/scene repair geometry edits; layout refresh reclaims
+`layout_plan` then force-recompiles.
+
 ## RenderScene closure invariant
 
 Every emitted object must have a unique `emission_id` and trace to a visible `RenderScene`

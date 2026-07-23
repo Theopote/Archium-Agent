@@ -154,9 +154,11 @@ class PngRenderer:
     ) -> None:
         from PIL import Image
 
-        if node.asset_unresolved or not node.asset_path:
+        if node.asset_unresolved:
             return
-        path = self._resolve_existing_asset_path(node.asset_path)
+        path = self._resolve_existing_asset_path(
+            node.resolved_path or node.asset_path or node.storage_uri
+        )
         if path is None:
             return
         box = self._box(node)

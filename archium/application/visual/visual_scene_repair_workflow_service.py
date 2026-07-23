@@ -22,7 +22,7 @@ from archium.application.visual.scene_compilers.chain import (
 )
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
-from archium.domain.reference_style import ReferenceStyleProfile
+from archium.domain.export_authority import FORMAL_DELIVERY_PPTX_FILENAME
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
@@ -260,7 +260,7 @@ class VisualSceneRepairWorkflowService:
 
                 exported = maybe_export_scene_pptx(
                     pairs[0][0],
-                    output_dir / "presentation_from_scenes.pptx",
+                    output_dir / FORMAL_DELIVERY_PPTX_FILENAME,
                     title=deck_title,
                     speaker_notes=pairs[0][1],
                     settings=self._settings,
@@ -285,7 +285,7 @@ class VisualSceneRepairWorkflowService:
                     exported = renderer.export_presentation(
                         title=deck_title,
                         scenes=pairs,
-                        output_path=output_dir / "presentation_from_scenes.pptx",
+                        output_path=output_dir / FORMAL_DELIVERY_PPTX_FILENAME,
                         project_id=project_id,
                     )
                     scene_pptx_path = str(exported)

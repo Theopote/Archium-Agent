@@ -81,18 +81,19 @@ class FontAsset(DomainModel):
 class SceneAssetReference(DomainModel):
     """Persisted asset pointer — portable URI; resolve at render time.
 
-    P2 (schema v2 plan): persist ``storage_uri`` only; drop mirrored
-    ``asset_path`` from JSON. ``resolved_path`` stays runtime-only (exclude=True).
-    Until then ``asset_path`` is kept as a same-URI alias for backward readers.
+    DOM-015 / schema v2: persist ``storage_uri`` only. ``asset_path`` is an
+    in-memory read alias (excluded from dump); load still accepts legacy JSON
+    that only has ``asset_path``. ``resolved_path`` is runtime-only.
     """
 
     asset_id: UUID | None = None
     storage_uri: str = ""
     asset_path: str = Field(
         default="",
+        exclude=True,
         description=(
-            "Deprecated alias of storage_uri (often a URI, not a filesystem path). "
-            "Remove from persistence in RenderScene schema_version >= 2."
+            "Deprecated in-memory alias of storage_uri (not persisted). "
+            "Prefer storage_uri; renderers use resolved_path after resolve_scene."
         ),
     )
     origin: str = "project_upload"
@@ -173,9 +174,10 @@ class ImageNode(BaseRenderNode):
     storage_uri: str = ""
     asset_path: str = Field(
         default="",
+        exclude=True,
         description=(
-            "Deprecated alias of storage_uri (portable URI, not a host path). "
-            "Schema v2: stop persisting; renderers use resolved Scene only."
+            "Deprecated in-memory alias of storage_uri (not persisted, DOM-015). "
+            "Renderers use resolved_path after AssetPathResolver.resolve_scene."
         ),
     )
     asset_origin: Literal[
@@ -237,9 +239,10 @@ class DrawingNode(BaseRenderNode):
     storage_uri: str = ""
     asset_path: str = Field(
         default="",
+        exclude=True,
         description=(
-            "Deprecated alias of storage_uri (portable URI, not a host path). "
-            "Schema v2: stop persisting; renderers use resolved Scene only."
+            "Deprecated in-memory alias of storage_uri (not persisted, DOM-015). "
+            "Renderers use resolved_path after AssetPathResolver.resolve_scene."
         ),
     )
     drawing_type: DrawingType = "site_plan"
@@ -335,12 +338,12 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
     (``Base scene + DesignSystem → Resolved scene``). Do not bake deck-wide
     theme accepts into per-node SceneRevision spam.
 
-    schema_version 1: ``storage_uri`` + mirrored ``asset_path`` (same URI).
-    Planned schema_version 2 (P2): persist ``storage_uri`` only; drop
-    ``asset_path`` from dump; keep ``resolved_path`` runtime-only.
+    schema_version 1: ``storage_uri`` + mirrored ``asset_path`` (legacy dumps).
+    schema_version 2 (DOM-015): persist ``storage_uri`` only; ``asset_path`` is
+    excluded from dump (in-memory alias); ``resolved_path`` runtime-only.
     """
 
-    schema_version: int = Field(default=1, ge=1)
+    schema_version: int = Field(default=2, ge=1)
     slide_id: UUID
     presentation_id: UUID | None = None
     layout_plan_id: UUID

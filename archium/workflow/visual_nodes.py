@@ -1118,44 +1118,48 @@ class VisualWorkflowNodes:
                 render_paths.append(str(reports_path))
 
             if export_pptx:
-                if not plans:
-                    warnings.append("Skipped PPTX export: no LayoutPlan available.")
-                else:
+                validation_pptx = bool(
+                    getattr(
+                        self._runtime.settings,
+                        "export_layout_plan_validation_pptx",
+                        False,
+                    )
+                )
+                if validation_pptx and plans:
+                    from archium.domain.export_authority import (
+                        VALIDATION_LAYOUT_PLAN_PPTX_FILENAME,
+                    )
+
                     try:
                         deck_path, pptx_path = (
                             self._runtime.pptxgen_renderer.export_pptx_from_layout_instructions(
                                 deck,
                                 output_dir=output_dir,
+                                pptx_name=VALIDATION_LAYOUT_PLAN_PPTX_FILENAME,
                             )
                         )
                         for path in (deck_path, pptx_path):
                             path_str = str(path)
                             if path_str not in render_paths:
                                 render_paths.append(path_str)
-                        if bool(
-                            getattr(
-                                self._runtime.settings,
-                                "visual_pptx_screenshots_enabled",
-                                True,
-                            )
-                        ):
-                            from archium.infrastructure.renderers.pptx_screenshot import (
-                                export_pptx_slide_pngs,
-                            )
-
-                            preview_dir = output_dir / "slide_previews"
-                            pngs = export_pptx_slide_pngs(pptx_path, preview_dir)
-                            if pngs:
-                                for png in pngs:
-                                    render_paths.append(str(png))
-                            else:
-                                warnings.append(
-                                    "PPTX screenshots skipped "
-                                    "(LibreOffice/pdftoppm unavailable or failed)."
-                                )
+                        warnings.append(
+                            "Wrote non-formal LayoutPlan validation PPTX "
+                            f"({VALIDATION_LAYOUT_PLAN_PPTX_FILENAME}); "
+                            "formal delivery is RenderScene → presentation.pptx."
+                        )
                     except Exception as pptx_exc:
-                        logger.warning("PPTX export failed (non-fatal): %s", pptx_exc)
-                        warnings.append(f"PPTX export failed: {pptx_exc}")
+                        logger.warning(
+                            "LayoutPlan validation PPTX export failed (non-fatal): %s",
+                            pptx_exc,
+                        )
+                        warnings.append(
+                            f"LayoutPlan validation PPTX export failed: {pptx_exc}"
+                        )
+                elif export_pptx and not plans:
+                    warnings.append(
+                        "Skipped formal PPTX export: no LayoutPlan available "
+                        "(Scene export runs after compile/repair)."
+                    )
 
             next_state: VisualWorkflowState = {
                 "render_paths": render_paths,
@@ -1329,19 +1333,40 @@ class VisualWorkflowNodes:
                 "warnings": [f"Scene repair skipped: {exc}"],
             }
 
+        warnings: list[str] = list(result.warnings)
+        render_paths = list(state.get("render_paths") or [])
+        render_paths.extend(result.scene_paths)
+        formal_pptx_path: str | None = None
+        if result.scene_pptx_path:
+            formal_pptx_path = result.scene_pptx_path
+            render_paths.append(formal_pptx_path)
+            if bool(
+                getattr(self._runtime.settings, "visual_pptx_screenshots_enabled", True)
+            ):
+                from archium.infrastructure.renderers.pptx_screenshot import (
+                    export_pptx_slide_pngs,
+                )
+
+                preview_dir = output_dir / "slide_previews"
+                pngs = export_pptx_slide_pngs(Path(formal_pptx_path), preview_dir)
+                if pngs:
+                    for png in pngs:
+                        render_paths.append(str(png))
+                else:
+                    warnings.append(
+                        "PPTX screenshots skipped "
+                        "(LibreOffice/pdftoppm unavailable or failed)."
+                    )
+
         report = {
             "scene_count": len(result.scenes),
             "repair_actions": result.repair_actions,
             "repair_rounds": result.repair_rounds,
             "remaining_issue_count": result.remaining_issue_count,
             "scene_paths": result.scene_paths,
-            "scene_pptx_path": result.scene_pptx_path,
+            "formal_pptx_path": formal_pptx_path,
+            "scene_pptx_path": formal_pptx_path,
         }
-        warnings: list[str] = list(result.warnings)
-        render_paths = list(state.get("render_paths") or [])
-        render_paths.extend(result.scene_paths)
-        if result.scene_pptx_path:
-            render_paths.append(result.scene_pptx_path)
         if not result.scenes and plans:
             warnings.append(
                 f"Scene repair produced 0 scenes from {len(plans)} layout plan(s)"
@@ -1369,6 +1394,8 @@ class VisualWorkflowNodes:
             "warnings": warnings,
             "current_step": step,
         }
+        if formal_pptx_path is not None:
+            next_state["formal_pptx_path"] = formal_pptx_path
         merged = cast(VisualWorkflowState, {**state, **next_state})
         self._persist(merged)
         logger.info(
@@ -1383,7 +1410,7 @@ class VisualWorkflowNodes:
     def _map_slide_preview_pngs(
         plans: list[LayoutPlan], render_paths: list[str]
     ) -> dict[str, str | Path]:
-        """Map layout_plan_id → slide_NN.png by render order when previews exist."""
+        """Map layout_plan_id → slide preview PNG from formal Scene PPTX export."""
         previews = sorted(
             [
                 Path(raw)

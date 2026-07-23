@@ -427,6 +427,14 @@ class Settings(BaseSettings):
             "templates if no visual LayoutPlan exists. Formal delivery prefers RenderScene."
         ),
     )
+    export_layout_plan_validation_pptx: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("EXPORT_LAYOUT_PLAN_VALIDATION_PPTX"),
+        description=(
+            "When true, visual workflow also writes presentation.layout_plan.validation.pptx "
+            "from LayoutPlan instructions (non-formal validation artifact)."
+        ),
+    )
 
     # ── visual.* ─────────────────────────────────────────────────────────────
     visual_fallback_enabled: bool = Field(

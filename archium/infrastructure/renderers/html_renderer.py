@@ -129,13 +129,14 @@ class HtmlRenderer:
 
     def _render_image(self, node: ImageNode) -> str:
         fit_class = "image-contain" if node.fit_mode == "contain" else "image-cover"
-        if node.asset_unresolved or not node.asset_path:
+        asset = (node.resolved_path or node.asset_path or node.storage_uri or "").strip()
+        if node.asset_unresolved or not asset:
             return (
                 f'<div class="node" id="{html.escape(node.id)}" '
                 f'style="{self._box_style(node)}background:#dde3ea;border:1px dashed #889;">'
                 f'<span style="font-size:11px;color:#666;padding:4px;">missing asset</span></div>'
             )
-        src = self._file_uri(node.asset_path)
+        src = self._file_uri(asset)
         return (
             f'<div class="node image-node {fit_class}" id="{html.escape(node.id)}" '
             f'style="{self._box_style(node)}">'
@@ -143,13 +144,14 @@ class HtmlRenderer:
         )
 
     def _render_drawing(self, node: DrawingNode) -> str:
-        if node.asset_unresolved or not node.asset_path:
+        asset = (node.resolved_path or node.asset_path or node.storage_uri or "").strip()
+        if node.asset_unresolved or not asset:
             return (
                 f'<div class="node" id="{html.escape(node.id)}" '
                 f'style="{self._box_style(node)}background:#eef2f6;border:2px solid #456;">'
                 f'<span style="font-size:11px;color:#345;padding:4px;">drawing missing</span></div>'
             )
-        src = self._file_uri(node.asset_path)
+        src = self._file_uri(asset)
         return (
             f'<div class="node image-node image-contain" id="{html.escape(node.id)}" '
             f'style="{self._box_style(node)}" data-drawing-type="{html.escape(node.drawing_type)}">'

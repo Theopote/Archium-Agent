@@ -92,3 +92,64 @@ def test_drawing_node_defaults_to_contain() -> None:
     )
     assert node.fit_mode == "contain"
     assert node.crop_allowed is False
+    assert node.storage_uri == "/tmp/plan.png"
+
+
+def test_dom015_persisted_scene_omits_asset_path_keeps_storage_uri() -> None:
+    """New dumps persist storage_uri only; legacy asset_path still loads."""
+    from archium.domain._base import model_to_dict
+    from archium.domain.visual.render_scene import ImageNode
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ImageNode(
+                id="hero",
+                x=1,
+                y=1,
+                width=4,
+                height=3,
+                storage_uri="project://plan.png",
+            )
+        ],
+    )
+    assert scene.schema_version == 2
+    payload = model_to_dict(scene)
+    image = next(n for n in payload["nodes"] if n["id"] == "hero")
+    assert image["storage_uri"] == "project://plan.png"
+    assert "asset_path" not in image
+
+    legacy = RenderScene.model_validate(
+        {
+            "schema_version": 1,
+            "slide_id": str(uuid4()),
+            "layout_plan_id": str(uuid4()),
+            "page_width": 10,
+            "page_height": 5.625,
+            "background": {"color": "#FFFFFF"},
+            "nodes": [
+                {
+                    "id": "legacy",
+                    "node_type": "drawing",
+                    "x": 0,
+                    "y": 0,
+                    "width": 5,
+                    "height": 3,
+                    "asset_path": "project://old.png",
+                    "drawing_type": "site_plan",
+                }
+            ],
+        }
+    )
+    drawing = legacy.node_by_id("legacy")
+    assert drawing is not None
+    assert drawing.storage_uri == "project://old.png"
+    assert drawing.asset_path == "project://old.png"
+    re_dump = model_to_dict(legacy)
+    re_node = next(n for n in re_dump["nodes"] if n["id"] == "legacy")
+    assert "asset_path" not in re_node
+    assert re_node["storage_uri"] == "project://old.png"

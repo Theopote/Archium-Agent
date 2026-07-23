@@ -41,7 +41,7 @@
 | DOM-012 | P1 | done | Chart/Table **三份字段拷贝** | `structured_payload.py`; layout/scene/spec | 改一漏二 | 共享 `ChartDataPayload`/`TableDataPayload`；Layout/Spec 为别名 | `test_structured_payload_ssot` | `-` |
 | DOM-013 | P1 | open | 主张/要点链无类型化链接 | SlideIntent → Brief → SlideSpec → SpecSlide 平行字符串 | 文案漂移 | 单一内容 SSOT + FK | 改 claim 可追溯下游 | `-` |
 | DOM-014 | P1 | done | Domain 内 parser/resolver/导出工厂 | NL→`nlp_parser`；适配→`content_adaptation_heuristics`；brief→`slide_design_brief_heuristics`；字体→`text_style_resolve`；placeholder normalize→`placeholder_binding_normalize`；pptx catalog→`pptx_structure_catalog` | 分层回潮 | domain 仅 DTO/不变量 | domain 无 keyword NL / suggest / resolve_* / pptx payload 工厂；相关单测绿 | `-` |
-| DOM-015 | P1 | open | 废弃 `asset_path` 仍与 `storage_uri` 双写 | `render_scene.py` nodes; SpecImagePlacement | 可移植性与 schema v2 拖延 | 只持久化 storage_uri；迁移读路径 | 新写入无 asset_path；读兼容一期 | `-` |
+| DOM-015 | P1 | done | 废弃 `asset_path` 仍与 `storage_uri` 双写 | `render_scene.py` nodes; SpecImagePlacement | 可移植性与 schema v2 拖延 | 只持久化 storage_uri；迁移读路径 | 新写入无 asset_path；读兼容一期 | `-` |
 | DOM-016 | P1 | done | 同名异义 `VisualRequirement` | `slide.py`; `visual/architectural_content_schema.py` | 导入歧义、评审混淆 | `SlideVisualRequirement` + `SchemaVisualRequirement`；slide 保留别名 | `test_visual_requirement_type_names_are_disambiguated` | `-` |
 | DOM-017 | P1 | done | `PostRenderCheckCode` 双定义 | ~~`visual/post_render_qa.py`~~; `visual/scene_qa.py` | 枚举漂移 | 删除死模块；保留 `scene_qa` | `rg PostRenderCheckCode` 仅 scene_qa；服务导入不变 | `-` |
 | DOM-018 | P1 | done | `enums.py` 巨型（~668 行） | `domain/enums/` 分包（project/document/knowledge/presentation/mission/assets/review/workflow） | 难审难演进 | 按限界上下文拆分 + 包级 re-export | 单文件 <250；`from archium.domain.enums import X` 仍可用；`test_enums_package` | `-` |
@@ -72,7 +72,7 @@
 
 | 位置 | 字段 |
 |------|------|
-| `render_scene.py` | `asset_path` ←→ `storage_uri`；`resolved_path` runtime-only |
+| `render_scene.py` | `asset_path` 内存别名（exclude）；持久化仅 `storage_uri`（DOM-015 done）；`resolved_path` runtime-only |
 | `architectural_content_schema.py` | `slide_purpose` ↔ `page_purpose`；legacy hydrate |
 | `page_quality.py` | `ScoringMode.LEGACY_FORMAL` |
 | `render.py` | `marp_*_path` legacy |

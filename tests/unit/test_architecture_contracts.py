@@ -187,6 +187,34 @@ def test_documented_legacy_spec_pptx_fallback_default_is_false(
     assert Settings().allow_legacy_presentation_spec_pptx_fallback is False
 
 
+def test_documented_formal_delivery_pptx_filename(
+    contracts: dict[str, list[str]],
+) -> None:
+    from archium.domain.export_authority import FORMAL_DELIVERY_PPTX_FILENAME
+
+    assert contracts["formal-delivery-pptx-filename"] == [FORMAL_DELIVERY_PPTX_FILENAME]
+    assert FORMAL_DELIVERY_PPTX_FILENAME == "presentation.pptx"
+
+
+def test_visual_workflow_graph_orders_scene_export_before_critic() -> None:
+    source = (
+        _ROOT / "archium" / "workflow" / "visual_graph.py"
+    ).read_text(encoding="utf-8")
+    # Edge targets (not add_node declaration order): render → repair → critique.
+    render_edge = '{"continue": "repair_render_scenes"'
+    critic_edge = '{"continue": "critique_visuals"'
+    assert source.index(render_edge) < source.index(critic_edge)
+    assert '"render_presentation"' in source
+    # repair_render_scenes routes to critique_visuals (RP-003).
+    assert '"continue": "critique_visuals"' in source
+    assert source.count('"continue": "critique_visuals"') >= 1
+    repair_block = source[
+        source.index('builder.add_conditional_edges(\n            "repair_render_scenes"') :
+        source.index('builder.add_conditional_edges(\n            "critique_visuals"')
+    ]
+    assert '"continue": "critique_visuals"' in repair_block
+
+
 def test_formal_export_call_sites_do_not_force_legacy_spec_fallback() -> None:
     """Delivery paths must not opt into Spec PPTX unless settings explicitly allow."""
     roots = (

@@ -177,15 +177,15 @@ class VisualWorkflowGraph:
         builder.add_conditional_edges(
             "render_presentation",
             _route_on_errors,
-            {"continue": "critique_visuals", "finalize": "finalize"},
-        )
-        builder.add_conditional_edges(
-            "critique_visuals",
-            _route_on_errors,
             {"continue": "repair_render_scenes", "finalize": "finalize"},
         )
         builder.add_conditional_edges(
             "repair_render_scenes",
+            _route_on_errors,
+            {"continue": "critique_visuals", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "critique_visuals",
             _route_on_errors,
             {"continue": "finalize", "finalize": "finalize"},
         )

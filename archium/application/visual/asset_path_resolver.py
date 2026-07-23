@@ -207,22 +207,19 @@ class AssetPathResolver:
         scene: RenderScene,
         ctx: AssetPathResolveContext,
     ) -> RenderScene:
-        """Return a copy with asset_path fields resolved to absolute filesystem paths.
+        """Return a copy with ``resolved_path`` filled for renderers.
 
-        The returned scene is for renderers only — do not persist it.
+        Keeps portable ``storage_uri`` intact — do not persist the returned scene.
         """
         nodes: list[RenderNode] = []
         for node in scene.nodes:
             if isinstance(node, (ImageNode, DrawingNode)):
                 uri = node.storage_uri or node.asset_path
                 resolved = self.resolve(uri, ctx) if uri else None
-                absolute = str(resolved) if resolved is not None else (node.asset_path or "")
+                absolute = str(resolved) if resolved is not None else None
                 nodes.append(
                     node.model_copy(
-                        update={
-                            "asset_path": absolute,
-                            "resolved_path": absolute if resolved is not None else None,
-                        }
+                        update={"resolved_path": absolute},
                     )
                 )
             elif isinstance(node, ChartNode) and node.preview_storage_uri:
@@ -241,15 +238,14 @@ class AssetPathResolver:
 
         manifest: list[SceneAssetReference] = []
         for ref in scene.asset_manifest:
-            uri = ref.storage_uri or ref.asset_path
+            uri = (ref.storage_uri or ref.asset_path or "").strip()
             resolved = self.resolve(uri, ctx) if uri else None
-            absolute = str(resolved) if resolved is not None else (ref.asset_path or uri)
+            absolute = str(resolved) if resolved is not None else None
             manifest.append(
                 ref.model_copy(
                     update={
                         "storage_uri": uri,
-                        "asset_path": absolute,
-                        "resolved_path": absolute if resolved is not None else None,
+                        "resolved_path": absolute,
                     }
                 )
             )

@@ -370,32 +370,27 @@ def test_visual_workflow_warning_only_may_export_pptx(
             score=0.85,
         )
 
-    def _fake_export(
+    def _fake_scene_pptx_export(
         self,
-        deck,
-        *,
-        output_dir,
-        pptx_name: str = "presentation.layout_plan.pptx",
-        deck_name: str = "presentation.layout_instructions.json",
+        title,
+        scenes,
+        output_path,
+        **kwargs,
     ):  # noqa: ANN001
         from pathlib import Path
 
-        out = Path(output_dir)
-        out.mkdir(parents=True, exist_ok=True)
-        deck_path = out / deck_name
-        if not deck_path.exists():
-            deck_path.write_text("{}", encoding="utf-8")
-        pptx_path = out / pptx_name
-        pptx_path.write_bytes(b"PK\x03\x04fake")
-        return deck_path, pptx_path
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"PK\x03\x04fake")
+        return path
 
     monkeypatch.setattr(
         "archium.application.visual.layout_validation_service.LayoutValidationService.validate",
         _warning_only,
     )
     monkeypatch.setattr(
-        "archium.infrastructure.renderers.pptxgen_renderer.PptxGenPresentationRenderer.export_pptx_from_layout_instructions",
-        _fake_export,
+        "archium.infrastructure.renderers.pptx_renderer.PptxRenderer.export_presentation",
+        _fake_scene_pptx_export,
     )
 
     project, presentation, _slides = seeded_presentation
@@ -417,7 +412,7 @@ def test_visual_workflow_warning_only_may_export_pptx(
             == WorkflowStep.VISUAL_FINALIZE.value
         )
         assert bool(result.workflow_run.state.get("export_pptx")) is True
-        assert any(str(path).endswith(".pptx") for path in result.render_paths)
+        assert any(str(path).endswith("presentation.pptx") for path in result.render_paths)
     finally:
         service.close()
 

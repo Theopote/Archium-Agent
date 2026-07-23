@@ -63,7 +63,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - Visual workflow 与 Studio 共用 `SceneCompilerChain` + `ImageDerivativeService` 编译 RenderScene；按 `layout_plan_id` 复用 scene id / version。`LayoutPlan.overflow_policy`（默认 WARN）映射为 TextNode `error`，使 `SEMANTIC.TEXT_OVERFLOW` 可被检出并修复。
 - **导出 SSOT（DOM-003）：** 正式可编辑 PPTX 权威为 ``RenderScene`` → `presentation.pptx`。`PresentationSpec` 仅为由 `SlideSpec` 派生的遗留模板导出格式（兼容/测试），不再与 Scene 并列作为正式交付真相。无视觉版式时 **默认拒绝** Spec PPTX 回退；仅当 ``allow_legacy_presentation_spec_pptx_fallback=true`` 时才允许并写入警告。
 - **几何 SSOT（DOM-011）：** 版式引擎写出的 LayoutPlan 为 `geometry_authority=layout_plan`；Studio / Scene 修复改几何后同步 Plan 并将权威切为 `render_scene`。此后 `ensure_scene_for_slide`（非 force）不得用 Plan 重编译覆盖 Scene。布局引擎再次改写 Plan 时经 `refresh_after_layout_edit` 收回权威为 `layout_plan` 再 force 重编译。
-- **正式 Studio 交付物**为 RenderScene → `presentation.pptx`（导出前 `AssetPathResolver.resolve_scene`）。Workflow 的 `presentation.layout_plan.pptx` 供 critic / 布局轨；可选 `presentation_from_scenes.pptx` 做 Scene 轨校验，工具链不可用时写入 warnings。
+- **正式 Studio 交付物**为 RenderScene → `presentation.pptx`（导出前 `AssetPathResolver.resolve_scene`）。Visual workflow 在 compile/repair 后写入同名正式文件；Critic 截图绑定该文件（RP-003）。LayoutPlan 指令 JSON 为校验产物；可选 `export_layout_plan_validation_pptx=true` 时另写 `presentation.layout_plan.validation.pptx`（非正式交付）。
 - Canvas 支持点击、Shift 多选、框选、文字/图片编辑，以及多选对齐、分布和等宽高。
 - 元素评论支持作用域：`node`（单节点）、`node_and_references`、`selection`（多选）、`region`（包围盒区域）、`slide`（整页），并通过 Inbox 管理状态。
 - 图片处理保存原图，`ImageTreatmentSpec` 生成不可变 derivative；项目图纸和证据照片只允许 `safe_normalize`，不能使用表达性统一处理（`presentation_unify`）。
@@ -154,6 +154,10 @@ render_scene
 
 ```arch-contract:legacy-spec-pptx-fallback-default
 false
+```
+
+```arch-contract:formal-delivery-pptx-filename
+presentation.pptx
 ```
 
 ```arch-contract:canvas-capabilities
