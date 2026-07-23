@@ -241,3 +241,43 @@ def test_ensure_scene_skips_repair_when_disabled(
     result = service.ensure_scene_for_slide(slide.id)
     assert result is not None
     assert calls == []
+
+
+def test_ensure_scene_for_slide_returns_none_when_missing(db_session: Session) -> None:
+    settings = Settings(_env_file=None, output_path=Path("/tmp/unused"))
+    service = StudioSceneService(db_session, settings=settings)
+    assert service.ensure_scene_for_slide(uuid4()) is None
+
+
+def test_ensure_scenes_for_presentation_compiles_all_slides(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    presentation, slide, _plan = _seed_slide_with_plan(db_session)
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    service = StudioSceneService(db_session, settings=settings)
+
+    results = service.ensure_scenes_for_presentation(presentation.id)
+    assert len(results) == 1
+    assert results[0].scene.slide_id == slide.id
+    assert results[0].preview_path.is_file()
+
+
+def test_compile_scene_resolves_project_from_presentation(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    presentation, slide, plan = _seed_slide_with_plan(db_session)
+    design = DesignSystemRepository(db_session).get(plan.design_system_id)
+    assert design is not None
+    settings = Settings(_env_file=None, output_path=tmp_path)
+    service = StudioSceneService(db_session, settings=settings)
+
+    scene = service.compile_scene(
+        slide=slide,
+        plan=plan,
+        design_system=design,
+        presentation_id=presentation.id,
+    )
+    assert scene.slide_id == slide.id
+    assert any(node.id == "title" for node in scene.nodes)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from archium.application.visual.asset_path_resolver import project_asset_uri
+import pytest
 from archium.application.visual.scene_proposal_qa import compare_proposal_qa
 from archium.application.visual.scene_proposal_service import (
     SceneProposalService,
@@ -811,3 +811,231 @@ def test_reject_proposal_persists_decision() -> None:
     assert updated.decision.notes == "defer"
     assert repo.saved is not None
     assert repo.saved.status == ProposalStatus.REJECTED
+
+
+def test_summarize_patch_action_labels() -> None:
+    from archium.application.visual.scene_proposal_service import summarize_patch_action
+    from archium.domain.visual.studio_command import build_patch_action
+
+    scene = _scene(_text_node(node_id="title", text="x"))
+    action = build_patch_action(
+        scene,
+        base_scene_hash=compute_scene_hash(scene),
+        node_id="title",
+        action_type="rewrite_text",
+        after_value="y",
+    )
+    assert summarize_patch_action(action) == "改写文本 `title`"
+    assert summarize_patch_action(
+        action.model_copy(update={"action_type": "set_overflow_shrink"})
+    ) == "文本 `title` 改为自动缩小"
+    assert summarize_patch_action(
+        action.model_copy(update={"action_type": "custom", "reason": "manual tweak"})
+    ) == "manual tweak"
+
+
+def test_summarize_command_result_statuses() -> None:
+    from archium.application.visual.scene_proposal_service import (
+        summarize_command_result,
+        summarize_command_type,
+    )
+    from archium.domain.visual.scene_change_proposal import CommandProposalResult
+    from archium.domain.visual.studio_command import RewriteTextCommand
+
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    proposal = _proposal_service().create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    command = proposal.commands[0]
+    assert summarize_command_type(command) == "改写文本"
+
+    applied = CommandProposalResult(
+        command_id=command.command_id,
+        status="applied",
+        action_ids=[proposal.patch_actions[0].action_id],
+    )
+    assert "已应用" in summarize_command_result(proposal, applied)
+
+    skipped = CommandProposalResult(command_id=command.command_id, status="skipped")
+    assert "已跳过" in summarize_command_result(proposal, skipped)
+
+    failed = CommandProposalResult(
+        command_id=command.command_id,
+        status="failed",
+        issues=[
+            __import__(
+                "archium.domain.visual.page_quality",
+                fromlist=["QualityIssue"],
+            ).QualityIssue(
+                code="x",
+                message="执行失败",
+                severity=__import__(
+                    "archium.domain.visual.page_quality",
+                    fromlist=["IssueSeverity"],
+                ).IssueSeverity.MINOR,
+                source=QualityIssueSource.AUTO,
+            )
+        ],
+    )
+    assert "失败" in summarize_command_result(proposal, failed)
+
+
+def test_proposal_accept_summary_and_qa_status() -> None:
+    from archium.application.visual.scene_deterministic_qa_service import ProposalSceneQAResult
+    from archium.application.visual.scene_proposal_service import SceneProposalService
+    from archium.domain.visual.page_quality import IssueSeverity, QualityIssue, QualityIssueSource
+    from archium.domain.visual.studio_command import RewriteTextCommand
+
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    command = RewriteTextCommand(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        node_id="title",
+        new_text="新",
+    )
+    proposal = SceneChangeProposal(
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+        base_scene_hash=compute_scene_hash(scene),
+        base_scene=scene,
+        proposed_scene=scene,
+        commands=[command],
+        requested_commands=[command],
+        successful_commands=[command],
+        patch_actions=[],
+        reasons=["提升标题可读性"],
+    )
+    assert SceneProposalService._proposal_accept_summary(proposal, [command]).startswith("AI 提案：")
+
+    clean_qa = ProposalSceneQAResult(issues=(), layers={}, preview_render_success=True)
+    assert SceneProposalService._proposal_qa_status(clean_qa) == "passed"
+
+    warned_qa = ProposalSceneQAResult(
+        issues=(
+            QualityIssue(
+                code="warn",
+                message="minor",
+                severity=IssueSeverity.MINOR,
+                source=QualityIssueSource.AUTO,
+            ),
+        ),
+        layers={},
+        preview_render_success=True,
+    )
+    assert SceneProposalService._proposal_qa_status(warned_qa) == "pass_with_warnings"
+
+
+def test_apply_patch_actions_geometry_and_visibility() -> None:
+    scene = _mixed_scene(
+        _drawing_node(node_id="plan"),
+        _text_node(node_id="caption", text="长文本", width=2.0, height=0.4),
+    )
+    plan_action = build_patch_action(
+        scene,
+        base_scene_hash=compute_scene_hash(scene),
+        node_id="plan",
+        action_type="enlarge_drawing",
+        after_value="0.1,0.2,9.0,5.0",
+    )
+    patched = apply_patch_actions(scene, [plan_action])
+    plan = patched.node_by_id("plan")
+    assert isinstance(plan, DrawingNode)
+    assert plan.width == 9.0
+
+    visibility_action = build_patch_action(
+        patched,
+        base_scene_hash=compute_scene_hash(patched),
+        node_id="caption",
+        action_type="set_node_visibility",
+        after_payload={"visible": False},
+    )
+    lock_action = build_patch_action(
+        patched,
+        base_scene_hash=compute_scene_hash(patched),
+        node_id="caption",
+        action_type="set_node_lock",
+        after_payload={"locked": True, "lock_scopes": ["geometry"]},
+    )
+    shrink_action = build_patch_action(
+        patched,
+        base_scene_hash=compute_scene_hash(patched),
+        node_id="caption",
+        action_type="set_overflow_shrink",
+    )
+    patched = apply_patch_actions(
+        patched,
+        [visibility_action, lock_action, shrink_action],
+    )
+    caption = patched.node_by_id("caption")
+    assert isinstance(caption, TextNode)
+    assert caption.visible is False
+    assert caption.locked is True
+    assert caption.lock_scopes == ["geometry"]
+    assert caption.overflow_policy == "shrink"
+
+
+def test_accept_proposal_rejects_terminal_statuses() -> None:
+    from archium.domain.enums import SlideType
+    from archium.domain.slide import SlideSpec
+    from archium.domain.visual.scene_change_proposal import ProposalDecision
+
+    scene = _scene(_text_node(node_id="title", text="旧"))
+    presentation_id = uuid4()
+    service = _proposal_service()
+    proposal = service.create_proposal(
+        base_scene=scene,
+        commands=[
+            RewriteTextCommand(
+                presentation_id=presentation_id,
+                slide_id=scene.slide_id,
+                node_id="title",
+                new_text="新",
+            )
+        ],
+        presentation_id=presentation_id,
+        slide_id=scene.slide_id,
+    )
+    slide = SlideSpec(
+        id=scene.slide_id,
+        presentation_id=presentation_id,
+        title="T",
+        slide_type=SlideType.CONTENT,
+        order=0,
+        chapter_id="ch1",
+        message="accept guards",
+        layout_plan_id=scene.layout_plan_id,
+    )
+
+    rejected = proposal.model_copy(update={"status": ProposalStatus.REJECTED})
+    with pytest.raises(WorkflowError, match="已拒绝"):
+        service.accept_proposal(rejected, slide)
+
+    accepted = proposal.model_copy(update={"status": ProposalStatus.ACCEPTED})
+    with pytest.raises(WorkflowError, match="已被接受"):
+        service.accept_proposal(accepted, slide)
+
+    superseded = proposal.model_copy(update={"status": ProposalStatus.SUPERSEDED})
+    with pytest.raises(WorkflowError, match="已过期"):
+        service.accept_proposal(superseded, slide)
+
+    invalid_decision = ProposalDecision(
+        proposal_id=proposal.proposal_id,
+        accepted_action_ids=[uuid4()],
+    )
+    with pytest.raises(WorkflowError, match="至少选择一项"):
+        service._resolve_accepted_scene(
+            proposal,
+            invalid_decision,
+        )
