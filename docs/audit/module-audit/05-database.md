@@ -1,0 +1,16 @@
+# 05 — Database
+
+模块：ORM / Session / Alembic  
+前缀：`DB-`  
+更新：2026-07-23
+
+| 编号 | 严重级别 | 状态 | 问题 | 文件 | 影响 | 修复方案 | 验收标准 | 提交 SHA |
+|------|----------|------|------|------|------|----------|----------|----------|
+| DB-001 | P0 | open | TransactionExecutor 会话中途 `commit` (DB1) | TransactionExecutor;（StudioSceneEdit 中途 commit 已去） | 部分提交、难回滚 | 外层一次 commit；内层 flush only | 失败整单回滚；无中途 commit | `-` |
+| DB-002 | P0 | open | `create_all` + migration 001 no-op → 冷 Alembic 坏 (DB2) | alembic; bootstrap | 新库迁移链断裂 | 001 真实建表或废弃 create_all 主路径 | 空目录仅 alembic upgrade 可起库 | `-` |
+| DB-003 | P0 | open | 失败路径 rollback 后再 commit (DB3) | TransactionExecutor | 脏数据落盘 | 失败只 rollback；禁止随后 commit | 单测覆盖 fail→无持久化 | `-` |
+| DB-004 | P1 | done | Application 直触 ORM (Batch 10) | repositories; layering 测试 | 分层破坏 | 经 Repository；守卫 | `test_application_does_not_import_orm_models` 绿 | `-` |
+| DB-005 | P1 | open | 冗余 commit 散布 app/UI (~12+~40) (DB4) | application; ui | 事务碎片 | 收拢到用例边界 | 抽查路径仅边界 commit | `-` |
+| DB-006 | P1 | open | `CitationORM` 疑似死表 (DB5) | models | 迁移噪音 | 确认后删或接线 | 无引用或正式 API | `-` |
+| DB-007 | P1 | open | llm/factory、pptxgen_renderer commit + 分层泄漏 (DB6) | infrastructure | infra 拥有事务 | 上移事务；infra 无 commit | infra 无 session.commit | `-` |
+| DB-008 | P2 | open | models 单体过大；UI→repo 捷径 (DB7/DB8) | `models.py`; ui | 难维护 | 拆分模型包；UI 只经 application | 分层测试扩展覆盖 | `-` |
