@@ -71,6 +71,12 @@ class ContinuityRole(StrEnum):
 
 
 class LayoutFamily(StrEnum):
+    """Geometry / composition family for layout planning (DOM-006).
+
+    Not a synonym of ``SlideType`` / Spec ``layout`` / ``TemplatePageType``.
+    Coercion + aliases: ``archium.domain.visual.layout_family_normalize``.
+    """
+
     HERO = "hero"
     EVIDENCE_BOARD = "evidence_board"
     DRAWING_FOCUS = "drawing_focus"

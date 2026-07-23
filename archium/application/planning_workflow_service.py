@@ -21,7 +21,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.project_mission_service import is_mission_approval_current
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, PlanningWorkflowStep, PresentationWorkflowStep
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -154,7 +154,7 @@ class PlanningWorkflowService:
                 state={
                     "workflow_kind": "planning",
                     "planning_session_id": str(planning_session.id),
-                    "current_step": WorkflowStep.INIT.value,
+                    "current_step": PresentationWorkflowStep.INIT.value,
                     "user_task_description": user_task_description,
                     "require_clarification": require_clarification,
                     "require_mission_approval": require_mission_approval,

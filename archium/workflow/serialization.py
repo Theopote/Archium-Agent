@@ -8,7 +8,7 @@ from uuid import UUID
 
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.cultural_narrative import CulturalNarrativePlan
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PresentationWorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -132,7 +132,7 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
     request = state.get("request")
 
     payload: dict[str, Any] = {
-        "current_step": state.get("current_step", WorkflowStep.INIT.value),
+        "current_step": state.get("current_step", PresentationWorkflowStep.INIT.value),
         "project_id": state.get("project_id"),
         "presentation_id": state.get("presentation_id"),
         "workflow_run_id": state.get("workflow_run_id"),

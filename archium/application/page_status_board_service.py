@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.application.regeneration_service import RegenerationService
 from archium.domain.deck_delivery import apply_deck_delivery_to_presentation, mark_slide_delivery
-from archium.domain.enums import SlideDeliveryStatus, VisualType, WorkflowStep
+from archium.domain.enums import (
+    PresentationWorkflowStep,
+    SlideDeliveryStatus,
+    VisualType,
+    VisualWorkflowStep,
+)
 from archium.domain.page_pipeline_status import (
     PAGE_ACTION_LABELS,
     PAGE_PHASE_LABELS,
@@ -268,7 +273,7 @@ def _derive_phase(
             "error",
         )
 
-    if workflow_step == WorkflowStep.MATCH_ASSETS.value and _needs_asset_binding(slide):
+    if workflow_step == PresentationWorkflowStep.MATCH_ASSETS.value and _needs_asset_binding(slide):
         label = _binding_label(slide)
         return PagePipelinePhase.BINDING_ASSETS, label, "", "info"
 
@@ -278,9 +283,9 @@ def _derive_phase(
 
     if slide.layout_plan_id is not None and not has_scene:
         if workflow_step in {
-            WorkflowStep.VISUAL_RENDER.value,
-            WorkflowStep.VISUAL_CRITIQUE.value,
-            WorkflowStep.MARP.value,
+            VisualWorkflowStep.VISUAL_RENDER.value,
+            VisualWorkflowStep.VISUAL_CRITIQUE.value,
+            PresentationWorkflowStep.MARP.value,
         }:
             return (
                 PagePipelinePhase.COMPILING_SCENE,
@@ -328,7 +333,7 @@ def _derive_phase(
     if has_scene and delivery == SlideDeliveryStatus.READY:
         return PagePipelinePhase.COMPLETE, PAGE_PHASE_LABELS[PagePipelinePhase.COMPLETE], "", "success"
 
-    if workflow_step == WorkflowStep.SLIDES.value:
+    if workflow_step == PresentationWorkflowStep.SLIDES.value:
         return (
             PagePipelinePhase.GENERATING,
             PAGE_PHASE_LABELS[PagePipelinePhase.GENERATING],

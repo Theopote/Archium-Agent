@@ -70,6 +70,8 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 字体资产、回退链与 Scene 语义 QA 共同检查潜在重排风险。
 - 正式导出 readiness：以 ``IssueSeverity``（blocker/major/minor）为导出门禁权威（DOM-004）；`ReviewSeverity` / `LayoutIssueSeverity` 经 `domain.visual.severity` 桥接。ReviewIssue 导出门控认 gate BLOCKER，以及 gate MAJOR 且命中资产加载 / Scene 阻断规则码；内存 Scene semantic 用 BLOCKER；DeckQA `blocker_count` 仅计 Layout CRITICAL（→ BLOCKER）。提案接受后的 `qa_status`：blocker→`blocked`，major→`needs_review`。Post-render 截图缺失会发出 `POST_RENDER.IMAGE_NOT_LOADED`，不再静默跳过。
 - **页类型权威（DOM-005）：** `SlideType` / `FunctionalSlideType` / `TemplatePageType` / Spec `layout` 字符串互不等价；交叉转换只经 `domain.visual.page_type_catalog`（co-plan、matcher、induction publisher、Spec layout 常量）。
+- **布局族受控（DOM-006）：** Brief / RenderScene 的 `layout_family` 为 `LayoutFamily | None`；别名归一与非法拒绝经 `layout_family_normalize`（空表示未设）。Spec `layout` 仍是 DOM-005 模板 id，不是布局族。
+- **工作流步骤（DOM-007）：** 阶段枚举 `Presentation` / `Planning` / `Visual` / `SlideRecovery`；LangGraph 图定义仅用字符串节点名；`WorkflowStep` 为由阶段合成的兼容词表（进度标签 / 角色映射）。
 
 ## 持久化与迁移
 

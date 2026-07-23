@@ -8,7 +8,7 @@ from typing import Annotated, TypedDict
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.cultural_narrative import CulturalNarrativePlan
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PresentationWorkflowStep
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -144,6 +144,6 @@ def initial_workflow_state(
         "require_slides_review": require_slides_review,
         "review_gate": None,
         "slide_review_issues": [],
-        "current_step": WorkflowStep.INIT.value,
+        "current_step": PresentationWorkflowStep.INIT.value,
         "errors": [],
     }

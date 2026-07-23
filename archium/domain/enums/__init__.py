@@ -72,6 +72,10 @@ from archium.domain.enums.workflow import (
     WorkflowStatus,
     PlanningSessionStatus,
     WorkflowStep,
+    PresentationWorkflowStep,
+    PlanningWorkflowStep,
+    VisualWorkflowStep,
+    SlideRecoveryWorkflowStep,
 )
 
 __all__ = [
@@ -129,4 +133,8 @@ __all__ = [
     "WorkflowStatus",
     "PlanningSessionStatus",
     "WorkflowStep",
+    "PresentationWorkflowStep",
+    "PlanningWorkflowStep",
+    "VisualWorkflowStep",
+    "SlideRecoveryWorkflowStep",
 ]

@@ -64,6 +64,7 @@ STEP_LABELS: dict[str, str] = {
     WorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value: "等待版式审核",
     WorkflowStep.VISUAL_RENDER.value: "渲染 PPTX",
     WorkflowStep.VISUAL_CRITIQUE.value: "视觉检查与整套一致性",
+    WorkflowStep.VISUAL_SCENE_REPAIR.value: "修复 Scene 语义问题",
     WorkflowStep.VISUAL_FINALIZE.value: "完成视觉编排",
     WorkflowStep.SLIDE_RECOVERY_QUEUED.value: "排队等待",
     WorkflowStep.SLIDE_RECOVERY_OCR.value: "OCR 文字识别",

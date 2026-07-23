@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PlanningWorkflowStep, PresentationWorkflowStep
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -23,7 +23,7 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
     plan = state.get("deliverable_plan")
     return {
         "workflow_kind": "planning",
-        "current_step": state.get("current_step", WorkflowStep.INIT.value),
+        "current_step": state.get("current_step", PresentationWorkflowStep.INIT.value),
         "project_id": state.get("project_id"),
         "planning_session_id": state.get("planning_session_id"),
         "presentation_id": state.get("presentation_id"),

@@ -18,7 +18,7 @@ from archium.application.slide_recovery_service import (
 )
 from archium.application.slide_recovery_source_parser import parse_source_page
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import WorkflowStatus, WorkflowStep
+from archium.domain.enums import WorkflowStatus, SlideRecoveryWorkflowStep
 from archium.domain.export_fidelity import ExportFidelityLevel
 from archium.domain.slide_recovery import (
     HybridRenderScene,
@@ -33,15 +33,15 @@ from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="slide_recovery_workflow")
 
-_RECOVERY_STEPS: tuple[WorkflowStep, ...] = (
-    WorkflowStep.SLIDE_RECOVERY_QUEUED,
-    WorkflowStep.SLIDE_RECOVERY_OCR,
-    WorkflowStep.SLIDE_RECOVERY_VLM_ANALYSIS,
-    WorkflowStep.SLIDE_RECOVERY_REGION_RECOVERY,
-    WorkflowStep.SLIDE_RECOVERY_HYBRID_SCENE,
-    WorkflowStep.SLIDE_RECOVERY_QA,
-    WorkflowStep.SLIDE_RECOVERY_AWAIT_REVIEW,
-    WorkflowStep.SLIDE_RECOVERY_FINALIZE,
+_RECOVERY_STEPS: tuple[SlideRecoveryWorkflowStep, ...] = (
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_QUEUED,
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_OCR,
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_VLM_ANALYSIS,
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_REGION_RECOVERY,
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_HYBRID_SCENE,
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_QA,
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_AWAIT_REVIEW,
+    SlideRecoveryWorkflowStep.SLIDE_RECOVERY_FINALIZE,
 )
 
 
@@ -104,7 +104,7 @@ class SlideRecoveryWorkflowService:
                 status=WorkflowStatus.RUNNING,
                 state={
                     "workflow_kind": "slide_recovery",
-                    "current_step": WorkflowStep.SLIDE_RECOVERY_QUEUED.value,
+                    "current_step": SlideRecoveryWorkflowStep.SLIDE_RECOVERY_QUEUED.value,
                     "step_log": [],
                     "source_path": str(source_path),
                     "slide_index": request.slide_index,
@@ -156,7 +156,7 @@ class SlideRecoveryWorkflowService:
 
         self._checkpoint(
             run,
-            WorkflowStep.SLIDE_RECOVERY_FINALIZE,
+            SlideRecoveryWorkflowStep.SLIDE_RECOVERY_FINALIZE,
             extra={"review_accepted": True},
         )
         run.status = WorkflowStatus.COMPLETED
@@ -175,7 +175,7 @@ class SlideRecoveryWorkflowService:
         workflow_run: WorkflowRun,
         request: SlideRecoveryWorkflowRequest,
     ) -> SlideRecoveryWorkflowResult:
-        self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_QUEUED)
+        self._checkpoint(workflow_run, SlideRecoveryWorkflowStep.SLIDE_RECOVERY_QUEUED)
         time.sleep(0.05)
 
         parsed = parse_source_page(
@@ -196,7 +196,7 @@ class SlideRecoveryWorkflowService:
         )
         self._checkpoint(
             workflow_run,
-            WorkflowStep.SLIDE_RECOVERY_OCR,
+            SlideRecoveryWorkflowStep.SLIDE_RECOVERY_OCR,
             extra={
                 "ocr_engine": region_analysis.ocr_engine,
                 "ocr_char_count": region_analysis.ocr_char_count,
@@ -207,7 +207,7 @@ class SlideRecoveryWorkflowService:
         page_kind = region_analysis.page_kind
         self._checkpoint(
             workflow_run,
-            WorkflowStep.SLIDE_RECOVERY_VLM_ANALYSIS,
+            SlideRecoveryWorkflowStep.SLIDE_RECOVERY_VLM_ANALYSIS,
             extra={
                 "page_kind": page_kind.value,
                 "source_page_id": source_page_id,
@@ -215,7 +215,7 @@ class SlideRecoveryWorkflowService:
             },
         )
 
-        self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_REGION_RECOVERY)
+        self._checkpoint(workflow_run, SlideRecoveryWorkflowStep.SLIDE_RECOVERY_REGION_RECOVERY)
         recovery_request = SlideRecoveryRequest(
             source_page_id=source_page_id,
             source_scene=source_scene,
@@ -233,12 +233,12 @@ class SlideRecoveryWorkflowService:
             },
         )
 
-        self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_HYBRID_SCENE)
+        self._checkpoint(workflow_run, SlideRecoveryWorkflowStep.SLIDE_RECOVERY_HYBRID_SCENE)
         recovery_result = self._recovery.recover_page(recovery_request)
 
         self._checkpoint(
             workflow_run,
-            WorkflowStep.SLIDE_RECOVERY_QA,
+            SlideRecoveryWorkflowStep.SLIDE_RECOVERY_QA,
             extra={
                 "recovery_result": recovery_result.model_dump(mode="json"),
                 "reconstruction_fidelity": recovery_result.reconstruction_fidelity.value,
@@ -254,12 +254,12 @@ class SlideRecoveryWorkflowService:
         if needs_review:
             self._checkpoint(
                 workflow_run,
-                WorkflowStep.SLIDE_RECOVERY_AWAIT_REVIEW,
+                SlideRecoveryWorkflowStep.SLIDE_RECOVERY_AWAIT_REVIEW,
                 extra={"review_gate": "recovery_review"},
             )
             workflow_run.status = WorkflowStatus.AWAITING_REVIEW
         else:
-            self._checkpoint(workflow_run, WorkflowStep.SLIDE_RECOVERY_FINALIZE)
+            self._checkpoint(workflow_run, SlideRecoveryWorkflowStep.SLIDE_RECOVERY_FINALIZE)
             workflow_run.status = WorkflowStatus.COMPLETED
 
         workflow_run.state = {
@@ -284,7 +284,7 @@ class SlideRecoveryWorkflowService:
     def _checkpoint(
         self,
         workflow_run: WorkflowRun,
-        step: WorkflowStep,
+        step: SlideRecoveryWorkflowStep,
         *,
         extra: dict[str, Any] | None = None,
     ) -> None:

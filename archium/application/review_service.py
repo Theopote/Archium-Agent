@@ -578,7 +578,7 @@ def _slide_design_brief_from_update(update: SlideDesignBriefUpdate) -> SlideDesi
         primary_asset_ids=list(update.primary_asset_ids),
         supporting_asset_ids=list(update.supporting_asset_ids),
         evidence_ids=list(update.evidence_ids),
-        layout_family=update.layout_family.strip(),
+        layout_family=update.layout_family,
         expected_density=density,  # type: ignore[arg-type]
         drawing_policy=drawing_policy,
         image_policy=image_policy,

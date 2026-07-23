@@ -9,6 +9,8 @@ from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
 from archium.domain.enums import ApprovalStatus
+from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.layout_family_normalize import coerce_layout_family
 
 # Brief UI labels keyed by ApprovalStatus (DOM-009).
 # Legacy persisted value ``ready_for_review`` coerces to ``pending``.
@@ -79,7 +81,7 @@ class SlideDesignBrief(DomainModel):
     supporting_asset_ids: list[UUID] = Field(default_factory=list)
     evidence_ids: list[UUID] = Field(default_factory=list)
 
-    layout_family: str = Field(default="", max_length=120)
+    layout_family: LayoutFamily | None = None
     expected_density: Literal["low", "medium", "high"] = "medium"
 
     drawing_policy: DrawingDisplayPolicy | None = None
@@ -94,6 +96,11 @@ class SlideDesignBrief(DomainModel):
     template_usage_brief_version: int | None = Field(default=None, ge=1)
 
     status: ApprovalStatus = ApprovalStatus.DRAFT
+
+    @field_validator("layout_family", mode="before")
+    @classmethod
+    def _coerce_layout_family(cls, value: object) -> object:
+        return coerce_layout_family(value)
 
     @field_validator("status", mode="before")
     @classmethod

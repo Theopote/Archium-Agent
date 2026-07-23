@@ -404,7 +404,7 @@ class ReferenceSlideEditingService:
             theme_tokens=theme,
             font_assets=font_assets,
             asset_manifest=asset_manifest,
-            source_layout_family=layout.name if layout else content_schema.name,
+            source_layout_family=None,
             source_layout_variant=layout.page_type.value if layout else content_schema.content_type.value,
             warnings=warnings,
         )

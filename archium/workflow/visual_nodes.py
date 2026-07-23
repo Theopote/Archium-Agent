@@ -36,8 +36,11 @@ from archium.application.visual.visual_scene_repair_workflow_service import (
 )
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
-from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
-from archium.domain.enums import ApprovalStatus
+from archium.domain.enums import (
+    ApprovalStatus,
+    VisualWorkflowStep,
+    WorkflowStatus,
+)
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.deck_composition import DeckCompositionPlan
 from archium.domain.visual.enums import LayoutValidationStatus
@@ -175,7 +178,7 @@ class VisualWorkflowNodes:
 
     def load_presentation_context(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_LOAD_CONTEXT.value
+        step = VisualWorkflowStep.VISUAL_LOAD_CONTEXT.value
         try:
             project_id = UUID(state["project_id"])
             presentation_id = UUID(state["presentation_id"])
@@ -251,7 +254,7 @@ class VisualWorkflowNodes:
 
     def load_or_create_design_system(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_LOAD_DESIGN_SYSTEM.value
+        step = VisualWorkflowStep.VISUAL_LOAD_DESIGN_SYSTEM.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -293,7 +296,7 @@ class VisualWorkflowNodes:
 
     def generate_art_direction(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_GENERATE_ART_DIRECTION.value
+        step = VisualWorkflowStep.VISUAL_GENERATE_ART_DIRECTION.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -333,7 +336,7 @@ class VisualWorkflowNodes:
 
     def await_art_direction_approval(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_AWAIT_ART_DIRECTION_APPROVAL.value
+        step = VisualWorkflowStep.VISUAL_AWAIT_ART_DIRECTION_APPROVAL.value
         if state.get("errors"):
             return {"current_step": step}
 
@@ -387,7 +390,7 @@ class VisualWorkflowNodes:
 
     def generate_visual_intents(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_GENERATE_INTENTS.value
+        step = VisualWorkflowStep.VISUAL_GENERATE_INTENTS.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -450,7 +453,7 @@ class VisualWorkflowNodes:
 
     def generate_deck_composition_plan(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_GENERATE_DECK_COMPOSITION.value
+        step = VisualWorkflowStep.VISUAL_GENERATE_DECK_COMPOSITION.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -515,7 +518,7 @@ class VisualWorkflowNodes:
 
     def generate_layout_candidates(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_GENERATE_LAYOUT_CANDIDATES.value
+        step = VisualWorkflowStep.VISUAL_GENERATE_LAYOUT_CANDIDATES.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -585,7 +588,7 @@ class VisualWorkflowNodes:
 
     def select_layouts(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_SELECT_LAYOUTS.value
+        step = VisualWorkflowStep.VISUAL_SELECT_LAYOUTS.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -667,7 +670,7 @@ class VisualWorkflowNodes:
 
     def validate_layouts(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_VALIDATE_LAYOUTS.value
+        step = VisualWorkflowStep.VISUAL_VALIDATE_LAYOUTS.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -740,7 +743,7 @@ class VisualWorkflowNodes:
 
     def repair_layouts(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_REPAIR_LAYOUTS.value
+        step = VisualWorkflowStep.VISUAL_REPAIR_LAYOUTS.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -841,7 +844,7 @@ class VisualWorkflowNodes:
     def apply_safe_fallback(self, state: VisualWorkflowState) -> VisualWorkflowState:
         """Replace still-blocking plans with the next valid candidate when possible."""
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_APPLY_SAFE_FALLBACK.value
+        step = VisualWorkflowStep.VISUAL_APPLY_SAFE_FALLBACK.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -957,7 +960,7 @@ class VisualWorkflowNodes:
     def await_layout_review(self, state: VisualWorkflowState) -> VisualWorkflowState:
         """Pause when ERROR/CRITICAL issues remain after repair + fallback."""
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value
+        step = VisualWorkflowStep.VISUAL_AWAIT_LAYOUT_REVIEW.value
         if state.get("errors"):
             return {"current_step": step}
 
@@ -1047,7 +1050,7 @@ class VisualWorkflowNodes:
 
     def render_presentation(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_RENDER.value
+        step = VisualWorkflowStep.VISUAL_RENDER.value
         if state.get("errors"):
             return {"current_step": step}
         try:
@@ -1171,7 +1174,7 @@ class VisualWorkflowNodes:
     def critique_visuals(self, state: VisualWorkflowState) -> VisualWorkflowState:
         """Read-only Visual Critic + Deck QA after render — never repairs/blocks PPTX."""
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_CRITIQUE.value
+        step = VisualWorkflowStep.VISUAL_CRITIQUE.value
         if state.get("errors"):
             return {"current_step": step}
 
@@ -1271,7 +1274,7 @@ class VisualWorkflowNodes:
     def repair_render_scenes(self, state: VisualWorkflowState) -> VisualWorkflowState:
         """Compile RenderScenes from layout plans and run semantic repair loop."""
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_SCENE_REPAIR.value
+        step = VisualWorkflowStep.VISUAL_SCENE_REPAIR.value
         if state.get("errors"):
             return {"current_step": step}
 
@@ -1411,7 +1414,7 @@ class VisualWorkflowNodes:
 
     def finalize(self, state: VisualWorkflowState) -> VisualWorkflowState:
         logger = self._logger(state)
-        step = WorkflowStep.VISUAL_FINALIZE.value
+        step = VisualWorkflowStep.VISUAL_FINALIZE.value
         errors = list(state.get("errors", []))
         status = WorkflowStatus.FAILED if errors else WorkflowStatus.COMPLETED
         next_state: VisualWorkflowState = {

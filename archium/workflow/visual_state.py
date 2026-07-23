@@ -5,7 +5,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, TypedDict
 
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PresentationWorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -87,7 +87,7 @@ def initial_visual_workflow_state(
         "candidate_plan_ids_by_slide": {},
         "render_paths": [],
         "validation_reports": [],
-        "current_step": WorkflowStep.INIT.value,
+        "current_step": PresentationWorkflowStep.INIT.value,
         "review_gate": None,
         "errors": [],
         "warnings": [],

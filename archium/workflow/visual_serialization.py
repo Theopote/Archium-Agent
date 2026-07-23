@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PresentationWorkflowStep
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -42,7 +42,7 @@ def snapshot_visual_state(state: VisualWorkflowState) -> dict[str, Any]:
 
     payload: dict[str, Any] = {
         "workflow_kind": "visual_composition",
-        "current_step": state.get("current_step", WorkflowStep.INIT.value),
+        "current_step": state.get("current_step", PresentationWorkflowStep.INIT.value),
         "project_id": state.get("project_id"),
         "presentation_id": state.get("presentation_id"),
         "workflow_run_id": state.get("workflow_run_id"),

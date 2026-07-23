@@ -14,7 +14,7 @@ from archium.application.automated_review_service import (
 from archium.application.presentation_manuscript_service import PresentationManuscriptService
 from archium.application.review_service import slides_are_approved
 from archium.application.slide_repair_service import SlideRepairService, split_affected_slide_ids
-from archium.domain.enums import ApprovalStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, WorkflowStatus, PresentationWorkflowStep
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
@@ -28,11 +28,11 @@ class ReviewNodesMixin(WorkflowNodeBase):
     def run_content_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.CONTENT_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.CONTENT_REVIEW.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
-            return {"current_step": WorkflowStep.CONTENT_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.CONTENT_REVIEW.value}
 
         try:
             presentation_id = UUID(state["presentation_id"])
@@ -50,7 +50,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 PresentationWorkflowState,
                 {
                     **self._merge_review_findings(state, content_issues, reviewer),
-                    "current_step": WorkflowStep.CONTENT_REVIEW.value,
+                    "current_step": PresentationWorkflowStep.CONTENT_REVIEW.value,
                 },
             )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
@@ -61,17 +61,17 @@ class ReviewNodesMixin(WorkflowNodeBase):
             logger.exception("Content review failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.CONTENT_REVIEW.value,
+                "current_step": PresentationWorkflowStep.CONTENT_REVIEW.value,
             }
 
     def run_evidence_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.EVIDENCE_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.EVIDENCE_REVIEW.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
-            return {"current_step": WorkflowStep.EVIDENCE_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.EVIDENCE_REVIEW.value}
 
         try:
             presentation_id = UUID(state["presentation_id"])
@@ -89,7 +89,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 PresentationWorkflowState,
                 {
                     **self._merge_review_findings(state, evidence_issues, reviewer),
-                    "current_step": WorkflowStep.EVIDENCE_REVIEW.value,
+                    "current_step": PresentationWorkflowStep.EVIDENCE_REVIEW.value,
                 },
             )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
@@ -100,17 +100,17 @@ class ReviewNodesMixin(WorkflowNodeBase):
             logger.exception("Evidence review failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.EVIDENCE_REVIEW.value,
+                "current_step": PresentationWorkflowStep.EVIDENCE_REVIEW.value,
             }
 
     def run_architectural_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.ARCHITECTURAL_REVIEW.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
-            return {"current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.ARCHITECTURAL_REVIEW.value}
 
         try:
             presentation_id = UUID(state["presentation_id"])
@@ -129,7 +129,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 PresentationWorkflowState,
                 {
                     **self._merge_review_findings(state, architectural_issues, reviewer),
-                    "current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value,
+                    "current_step": PresentationWorkflowStep.ARCHITECTURAL_REVIEW.value,
                 },
             )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
@@ -140,17 +140,17 @@ class ReviewNodesMixin(WorkflowNodeBase):
             logger.exception("Architectural review failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.ARCHITECTURAL_REVIEW.value,
+                "current_step": PresentationWorkflowStep.ARCHITECTURAL_REVIEW.value,
             }
 
     def run_layout_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.LAYOUT_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.LAYOUT_REVIEW.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
-            return {"current_step": WorkflowStep.LAYOUT_REVIEW.value}
+            return {"current_step": PresentationWorkflowStep.LAYOUT_REVIEW.value}
 
         try:
             presentation_id = UUID(state["presentation_id"])
@@ -174,7 +174,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 PresentationWorkflowState,
                 {
                     **self._merge_review_findings(state, layout_issues, reviewer),
-                    "current_step": WorkflowStep.LAYOUT_REVIEW.value,
+                    "current_step": PresentationWorkflowStep.LAYOUT_REVIEW.value,
                 },
             )
             merged = cast(PresentationWorkflowState, {**state, **next_state})
@@ -185,7 +185,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
             logger.exception("Layout review failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.LAYOUT_REVIEW.value,
+                "current_step": PresentationWorkflowStep.LAYOUT_REVIEW.value,
             }
 
     def run_professional_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
@@ -195,11 +195,11 @@ class ReviewNodesMixin(WorkflowNodeBase):
     def repair_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.REPAIR_SLIDES.value}
+            return {"current_step": PresentationWorkflowStep.REPAIR_SLIDES.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
-            return {"current_step": WorkflowStep.REPAIR_SLIDES.value}
+            return {"current_step": PresentationWorkflowStep.REPAIR_SLIDES.value}
 
         try:
             presentation_id = UUID(state["presentation_id"])
@@ -236,7 +236,7 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 "matched_asset_count": matched_asset_count,
                 "review_issues": [],
                 "slide_review_issues": [],
-                "current_step": WorkflowStep.REPAIR_SLIDES.value,
+                "current_step": PresentationWorkflowStep.REPAIR_SLIDES.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -246,20 +246,20 @@ class ReviewNodesMixin(WorkflowNodeBase):
             logger.exception("Slide repair failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.REPAIR_SLIDES.value,
+                "current_step": PresentationWorkflowStep.REPAIR_SLIDES.value,
             }
 
     def review_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         """Summarize automated review findings before export or human review."""
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.SLIDE_VALIDATION.value}
+            return {"current_step": PresentationWorkflowStep.SLIDE_VALIDATION.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
             return {
                 "errors": ["Cannot review slides without a slide plan"],
-                "current_step": WorkflowStep.SLIDE_VALIDATION.value,
+                "current_step": PresentationWorkflowStep.SLIDE_VALIDATION.value,
             }
 
         review_issues = list(state.get("review_issues", []))
@@ -280,12 +280,12 @@ class ReviewNodesMixin(WorkflowNodeBase):
             return {
                 "errors": block_errors,
                 "slide_review_issues": slide_review_issues,
-                "current_step": WorkflowStep.SLIDE_VALIDATION.value,
+                "current_step": PresentationWorkflowStep.SLIDE_VALIDATION.value,
             }
 
         next_state: PresentationWorkflowState = {
             "slide_review_issues": slide_review_issues,
-            "current_step": WorkflowStep.SLIDE_VALIDATION.value,
+            "current_step": PresentationWorkflowStep.SLIDE_VALIDATION.value,
         }
         merged = cast(PresentationWorkflowState, {**state, **next_state})
         self._persist_checkpoint(merged)
@@ -400,11 +400,11 @@ class ReviewNodesMixin(WorkflowNodeBase):
     def pause_for_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         review_steps = {
-            WorkflowStep.REVIEW_MANUSCRIPT.value,
-            WorkflowStep.REVIEW_BRIEF.value,
-            WorkflowStep.REVIEW_STORYLINE.value,
-            WorkflowStep.REVIEW_OUTLINE.value,
-            WorkflowStep.REVIEW_SLIDES.value,
+            PresentationWorkflowStep.REVIEW_MANUSCRIPT.value,
+            PresentationWorkflowStep.REVIEW_BRIEF.value,
+            PresentationWorkflowStep.REVIEW_STORYLINE.value,
+            PresentationWorkflowStep.REVIEW_OUTLINE.value,
+            PresentationWorkflowStep.REVIEW_SLIDES.value,
         }
 
         workflow_run_id = state.get("workflow_run_id")
@@ -447,29 +447,29 @@ class ReviewNodesMixin(WorkflowNodeBase):
             and manuscript.status != ManuscriptStatus.READY
         ):
             gate = "manuscript"
-            step = WorkflowStep.REVIEW_MANUSCRIPT.value
+            step = PresentationWorkflowStep.REVIEW_MANUSCRIPT.value
         elif (
             state.get("require_brief_review")
             and brief is not None
             and brief.approval_status != ApprovalStatus.APPROVED
         ):
             gate = "brief"
-            step = WorkflowStep.REVIEW_BRIEF.value
+            step = PresentationWorkflowStep.REVIEW_BRIEF.value
         elif (
             state.get("require_storyline_review")
             and storyline is not None
             and storyline.approval_status != ApprovalStatus.APPROVED
         ):
             gate = "storyline"
-            step = WorkflowStep.REVIEW_STORYLINE.value
+            step = PresentationWorkflowStep.REVIEW_STORYLINE.value
         elif state.get("require_outline_review") and outline is not None and outline.approval_status != ApprovalStatus.APPROVED:
             gate = "outline"
-            step = WorkflowStep.REVIEW_OUTLINE.value
+            step = PresentationWorkflowStep.REVIEW_OUTLINE.value
         elif slides and state.get("require_slides_review") and not slides_are_approved(slides):
             gate = "slides"
-            step = WorkflowStep.REVIEW_SLIDES.value
+            step = PresentationWorkflowStep.REVIEW_SLIDES.value
         else:
-            return {"current_step": WorkflowStep.FINALIZE.value}
+            return {"current_step": PresentationWorkflowStep.FINALIZE.value}
 
         next_state: PresentationWorkflowState = {
             "current_step": step,

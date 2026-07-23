@@ -31,6 +31,10 @@
 | 7 | DOM-018 | **done** | `domain/enums/` 分包 | 按限界上下文拆分 |
 | 8 | DOM-009 | **done** | Brief→`ApprovalStatus`；`proposal_status.ProposalStatus` | 审批/提案状态合一 |
 | 9 | DOM-005 | **done** | `visual/page_type_catalog.py` | 页类型权威 + 显式交叉映射 |
+| 10 | DOM-006 | **done** | `layout_family_normalize` + Brief/Scene | `LayoutFamily` 受控；非法拒绝 |
+| 11 | DOM-007 | **done** | `enums/workflow_steps/` | 阶段枚举；图定义不依赖巨枚举 |
+| 10 | DOM-006 | **done** | `visual/layout_family_normalize.py` | layout_family 受控词表；非法拒绝 |
+| 11 | DOM-007 | **done** | `enums/workflow_steps/` | 阶段 WorkflowStep；图定义无巨枚举 |
 
 职责边界（验收口径）：
 
@@ -100,9 +104,9 @@
 |------|------|
 | 角色 | 设计 Brief 模型 + 策略默认值 |
 | 裁决 | keep（模型）；~~infer/format/protection~~ → `application/slide_design_brief_heuristics.py` |
-| 级别 | P1（DOM-014 **done**）；余 DOM-006 `layout_family` |
-| 问题 | `layout_family` 仍为自由字符串；~~BriefStatus / ThemeProposalStatus~~ 已合 |
-| 方案 | family 受控词表另开 DOM-006；状态见 DOM-009 |
+| 级别 | P1（DOM-014 **done**；DOM-006 **done**） |
+| 问题 | ~~`layout_family` 自由字符串~~；~~BriefStatus / ThemeProposalStatus~~ 已合 |
+| 方案 | family 经 `layout_family_normalize`；状态见 DOM-009 |
 | 验收 | domain 无 layout 字符串启发式 |
 
 ### `content_adaptation.py`（DTO only；启发式已迁）

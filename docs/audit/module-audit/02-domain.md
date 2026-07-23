@@ -32,8 +32,8 @@
 | DOM-003 | P1 | done | `PresentationSpec` 与 `RenderScene`/`SlideSpec` 并存作导出真相 (D3) | `export_authority.py`；`presentation_spec` 标 derived；`FormalPptxExportService` | 双/三 SSOT | Scene 正式权威；Spec 遗留派生 | arch-contract `formal-export-authority`；可编辑 PPTX 优先 Scene | `-` |
 | DOM-004 | P1 | done | Severity 词汇表 ≥4 套 (D4) | `domain/visual/severity.py`；`IssueSeverity`=门禁权威；Layout/Review/Validation 桥接 | 门禁语义混乱 | 统一 catalog + 映射 | 导出门禁经 `review_to_gate` / `layout_is_gate_blocker`；`test_severity_bridge` | `-` |
 | DOM-005 | P1 | done | 页类型枚举重叠 (D5) | `page_type_catalog.py`；co-plan / matcher / publisher / Spec layout 常量 | 规划/渲染错配 | 显式权威 + 映射表；禁隐式互转 | `test_page_type_catalog`；应用层经 catalog helpers | `-` |
-| DOM-006 | P1 | open | `SlideDesignBrief.layout_family` 等为自由字符串 (D6) | `slide_design_brief.py`; SpecSlide.layout; RenderScene.source_layout_family | 无法校验 | 受控词表/`LayoutFamily` | 非法 family 拒绝 | `-` |
-| DOM-007 | P1 | open | `WorkflowStep` 过大耦合 (D7) | `enums.py` | 难演进 | 拆分阶段枚举 | 图定义不依赖巨枚举 | `-` |
+| DOM-006 | P1 | done | `SlideDesignBrief.layout_family` 等为自由字符串 (D6) | `layout_family_normalize.py`；Brief/Scene 字段；`SpecSlide.layout` 仍属 DOM-005 | 无法校验 | `LayoutFamily` + alias coerce；非法拒绝 | `test_layout_family_normalize`；空=未设 | `-` |
+| DOM-007 | P1 | done | `WorkflowStep` 过大耦合 (D7) | `enums/workflow_steps/*`；节点用阶段枚举；`WorkflowStep` 派生兼容 | 难演进 | 拆分阶段枚举 | 图定义无 step 枚举；阶段覆盖 mega | `-` |
 | DOM-008 | P1 | open | Fact 三模型弱关联 (D8) | `fact.py`; `project_knowledge.py`; `presentation_manuscript.py` | 引用断裂 | 显式 ID 链接 + 不变量 | 跨模型可追溯 | `-` |
 | DOM-009 | P2 | done | 审批/提案状态克隆 (D9) | Brief→`ApprovalStatus`；Scene/Theme→共享 `proposal_status.ProposalStatus` | 状态漂移 | 单一提案词表；Brief 无 BriefStatus | `test_proposal_status`；无 `ThemeProposalStatus` | `-` |
 | DOM-010 | P2 | open | Chart/Table series 深拷贝语义不清 (D10) | Spec/Layout/Scene chart-table | 静默丢字段 | 明确 copy + 测试 | 变更不丢系列字段 | `-` |

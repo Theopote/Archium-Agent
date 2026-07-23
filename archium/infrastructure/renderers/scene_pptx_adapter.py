@@ -63,7 +63,9 @@ class RenderScenePptxAdapter:
         return RenderedSlideInstruction(
             layout_plan_id=scene.layout_plan_id,
             design_system_id=design_system_id or scene.layout_plan_id,
-            layout_family=scene.source_layout_family,
+            layout_family=(
+                scene.source_layout_family.value if scene.source_layout_family else ""
+            ),
             layout_variant=scene.source_layout_variant,
             page_width=scene.page_width,
             page_height=scene.page_height,

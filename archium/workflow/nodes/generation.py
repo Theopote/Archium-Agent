@@ -8,7 +8,7 @@ from uuid import UUID
 from archium.agents._helpers import build_project_context_bundle, build_retrieval_query_from_request
 from archium.agents.citations import enrich_slide_citations
 from archium.application.asset_matching_service import AssetMatchingService
-from archium.domain.enums import ApprovalStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, PresentationWorkflowStep
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.slide import SlideSpec
 from archium.workflow.nodes.base import WorkflowNodeBase
@@ -32,7 +32,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
     def generate_brief(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.BRIEF.value}
+            return {"current_step": PresentationWorkflowStep.BRIEF.value}
 
         existing = state.get("brief")
         if existing is not None:
@@ -44,7 +44,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 ):
                     refreshed.approve()
                     refreshed = self._presentations.save_brief(refreshed)
-                return {"brief": refreshed, "current_step": WorkflowStep.BRIEF.value}
+                return {"brief": refreshed, "current_step": PresentationWorkflowStep.BRIEF.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -65,7 +65,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
             next_state: PresentationWorkflowState = {
                 "brief": brief,
-                "current_step": WorkflowStep.BRIEF.value,
+                "current_step": PresentationWorkflowStep.BRIEF.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -75,7 +75,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Brief generation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.BRIEF.value,
+                "current_step": PresentationWorkflowStep.BRIEF.value,
             }
 
     def generate_cultural_narrative(
@@ -83,7 +83,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
     ) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.CULTURAL_NARRATIVE.value}
+            return {"current_step": PresentationWorkflowStep.CULTURAL_NARRATIVE.value}
 
         existing = state.get("cultural_narrative")
         if existing is not None:
@@ -93,12 +93,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
             if refreshed is not None:
                 return {
                     "cultural_narrative": refreshed,
-                    "current_step": WorkflowStep.CULTURAL_NARRATIVE.value,
+                    "current_step": PresentationWorkflowStep.CULTURAL_NARRATIVE.value,
                 }
 
         brief = state.get("brief")
         if brief is None:
-            return {"current_step": WorkflowStep.CULTURAL_NARRATIVE.value}
+            return {"current_step": PresentationWorkflowStep.CULTURAL_NARRATIVE.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -107,7 +107,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 brief,
             )
             next_state: PresentationWorkflowState = {
-                "current_step": WorkflowStep.CULTURAL_NARRATIVE.value,
+                "current_step": PresentationWorkflowStep.CULTURAL_NARRATIVE.value,
             }
             if narrative is not None:
                 from archium.infrastructure.database.repositories import ProjectRepository
@@ -127,7 +127,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Cultural narrative generation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.CULTURAL_NARRATIVE.value,
+                "current_step": PresentationWorkflowStep.CULTURAL_NARRATIVE.value,
             }
 
     def generate_renovation_issue_map(
@@ -135,7 +135,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
     ) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value}
+            return {"current_step": PresentationWorkflowStep.RENOVATION_ISSUE_MAP.value}
 
         existing = state.get("renovation_issue_map")
         if existing is not None:
@@ -145,12 +145,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
             if refreshed is not None:
                 return {
                     "renovation_issue_map": refreshed,
-                    "current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value,
+                    "current_step": PresentationWorkflowStep.RENOVATION_ISSUE_MAP.value,
                 }
 
         brief = state.get("brief")
         if brief is None:
-            return {"current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value}
+            return {"current_step": PresentationWorkflowStep.RENOVATION_ISSUE_MAP.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -159,7 +159,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 brief,
             )
             next_state: PresentationWorkflowState = {
-                "current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value,
+                "current_step": PresentationWorkflowStep.RENOVATION_ISSUE_MAP.value,
             }
             if issue_map is not None:
                 from archium.infrastructure.database.repositories import ProjectRepository
@@ -179,7 +179,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Renovation issue map generation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.RENOVATION_ISSUE_MAP.value,
+                "current_step": PresentationWorkflowStep.RENOVATION_ISSUE_MAP.value,
             }
 
     def generate_reference_style_profile(
@@ -187,7 +187,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
     ) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value}
+            return {"current_step": PresentationWorkflowStep.REFERENCE_STYLE_PROFILE.value}
 
         existing = state.get("reference_style_profile")
         if existing is not None:
@@ -199,12 +199,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
             if refreshed is not None:
                 return {
                     "reference_style_profile": refreshed,
-                    "current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value,
+                    "current_step": PresentationWorkflowStep.REFERENCE_STYLE_PROFILE.value,
                 }
 
         brief = state.get("brief")
         if brief is None:
-            return {"current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value}
+            return {"current_step": PresentationWorkflowStep.REFERENCE_STYLE_PROFILE.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -213,7 +213,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 brief,
             )
             next_state: PresentationWorkflowState = {
-                "current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value,
+                "current_step": PresentationWorkflowStep.REFERENCE_STYLE_PROFILE.value,
             }
             if profile is not None:
                 from archium.infrastructure.database.repositories import ProjectRepository
@@ -235,13 +235,13 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Reference style profile generation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.REFERENCE_STYLE_PROFILE.value,
+                "current_step": PresentationWorkflowStep.REFERENCE_STYLE_PROFILE.value,
             }
 
     def generate_storyline(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.STORYLINE.value}
+            return {"current_step": PresentationWorkflowStep.STORYLINE.value}
 
         existing = state.get("storyline")
         if existing is not None:
@@ -253,13 +253,13 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 ):
                     refreshed.approve()
                     refreshed = self._presentations.save_storyline(refreshed)
-                return {"storyline": refreshed, "current_step": WorkflowStep.STORYLINE.value}
+                return {"storyline": refreshed, "current_step": PresentationWorkflowStep.STORYLINE.value}
 
         brief = state.get("brief")
         if brief is None:
             return {
                 "errors": ["Cannot generate storyline without brief"],
-                "current_step": WorkflowStep.STORYLINE.value,
+                "current_step": PresentationWorkflowStep.STORYLINE.value,
             }
 
         try:
@@ -281,7 +281,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
             next_state: PresentationWorkflowState = {
                 "storyline": storyline,
-                "current_step": WorkflowStep.STORYLINE.value,
+                "current_step": PresentationWorkflowStep.STORYLINE.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -291,26 +291,26 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Storyline generation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.STORYLINE.value,
+                "current_step": PresentationWorkflowStep.STORYLINE.value,
             }
 
     def generate_outline(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.OUTLINE.value}
+            return {"current_step": PresentationWorkflowStep.OUTLINE.value}
 
         existing = state.get("outline")
         if existing is not None:
             refreshed = self._presentations.get_outline(existing.id)
             if refreshed is not None:
-                return {"outline": refreshed, "current_step": WorkflowStep.OUTLINE.value}
+                return {"outline": refreshed, "current_step": PresentationWorkflowStep.OUTLINE.value}
 
         brief = state.get("brief")
         storyline = state.get("storyline")
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot generate outline without brief and storyline"],
-                "current_step": WorkflowStep.OUTLINE.value,
+                "current_step": PresentationWorkflowStep.OUTLINE.value,
             }
 
         try:
@@ -353,7 +353,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
             next_state: PresentationWorkflowState = {
                 "outline": outline,
-                "current_step": WorkflowStep.OUTLINE.value,
+                "current_step": PresentationWorkflowStep.OUTLINE.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -363,20 +363,20 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Outline generation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.OUTLINE.value,
+                "current_step": PresentationWorkflowStep.OUTLINE.value,
             }
 
     def generate_slides(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.SLIDES.value}
+            return {"current_step": PresentationWorkflowStep.SLIDES.value}
 
         presentation_id = UUID(state["presentation_id"])
         existing = state.get("slides") or []
         if existing:
             slides = self._presentations.list_slides(presentation_id)
             if slides:
-                return {"slides": slides, "current_step": WorkflowStep.SLIDES.value}
+                return {"slides": slides, "current_step": PresentationWorkflowStep.SLIDES.value}
 
         brief = state.get("brief")
         storyline = state.get("storyline")
@@ -384,12 +384,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot generate slides without brief and storyline"],
-                "current_step": WorkflowStep.SLIDES.value,
+                "current_step": PresentationWorkflowStep.SLIDES.value,
             }
         if outline is None or outline.approval_status != ApprovalStatus.APPROVED:
             return {
                 "errors": ["Cannot generate slides without an approved outline plan"],
-                "current_step": WorkflowStep.SLIDES.value,
+                "current_step": PresentationWorkflowStep.SLIDES.value,
             }
 
         try:
@@ -432,7 +432,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
             next_state: PresentationWorkflowState = {
                 "slides": reviewed_slides,
-                "current_step": WorkflowStep.SLIDES.value,
+                "current_step": PresentationWorkflowStep.SLIDES.value,
             }
             if delivery.failed_count and delivery.allows_draft_export:
                 # Soft-fail: keep going with partial deck; do not set state errors.
@@ -446,7 +446,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                         "All slides failed delivery; cannot continue with an empty deck"
                     ],
                     "slides": reviewed_slides,
-                    "current_step": WorkflowStep.SLIDES.value,
+                    "current_step": PresentationWorkflowStep.SLIDES.value,
                 }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -461,17 +461,17 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Slide planning failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.SLIDES.value,
+                "current_step": PresentationWorkflowStep.SLIDES.value,
             }
 
     def resolve_citations(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.RESOLVE_CITATIONS.value}
+            return {"current_step": PresentationWorkflowStep.RESOLVE_CITATIONS.value}
 
         slides = self._load_slides_for_export(state)
         if not slides:
-            return {"current_step": WorkflowStep.RESOLVE_CITATIONS.value}
+            return {"current_step": PresentationWorkflowStep.RESOLVE_CITATIONS.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -499,7 +499,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
             next_state: PresentationWorkflowState = {
                 "slides": resolved,
-                "current_step": WorkflowStep.RESOLVE_CITATIONS.value,
+                "current_step": PresentationWorkflowStep.RESOLVE_CITATIONS.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -509,13 +509,13 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Citation resolution failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.RESOLVE_CITATIONS.value,
+                "current_step": PresentationWorkflowStep.RESOLVE_CITATIONS.value,
             }
 
     def match_assets(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.MATCH_ASSETS.value}
+            return {"current_step": PresentationWorkflowStep.MATCH_ASSETS.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -525,7 +525,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
             next_state: PresentationWorkflowState = {
                 "slides": slides,
                 "matched_asset_count": match_count,
-                "current_step": WorkflowStep.MATCH_ASSETS.value,
+                "current_step": PresentationWorkflowStep.MATCH_ASSETS.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -535,5 +535,5 @@ class GenerationNodesMixin(WorkflowNodeBase):
             logger.exception("Asset matching failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.MATCH_ASSETS.value,
+                "current_step": PresentationWorkflowStep.MATCH_ASSETS.value,
             }

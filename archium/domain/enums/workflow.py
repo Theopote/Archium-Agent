@@ -1,6 +1,15 @@
-"""Domain enumerations — workflow bounded context (DOM-018)."""
+"""Domain enumerations — workflow bounded context (DOM-018 / DOM-007)."""
 
 from enum import StrEnum
+
+from archium.domain.enums.workflow_steps import (
+    PlanningWorkflowStep,
+    PresentationWorkflowStep,
+    SlideRecoveryWorkflowStep,
+    VisualWorkflowStep,
+    build_workflow_step_enum,
+)
+
 
 class WorkflowStatus(StrEnum):
     RUNNING = "running"
@@ -22,79 +31,16 @@ class PlanningSessionStatus(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
 
-class WorkflowStep(StrEnum):
-    INIT = "init"
-    LOAD_PROJECT = "load_project"
-    VALIDATE_SOURCES = "validate_sources"
-    RETRIEVE_CONTEXT = "retrieve_context"
-    EXTRACT_FACTS = "extract_facts"
-    VALIDATE_FACTS = "validate_facts"
-    BUILD_MANUSCRIPT = "build_manuscript"
-    REVIEW_MANUSCRIPT = "review_manuscript"
-    BRIEF = "brief"
-    REVIEW_BRIEF = "review_brief"
-    CULTURAL_NARRATIVE = "cultural_narrative"
-    RENOVATION_ISSUE_MAP = "renovation_issue_map"
-    REFERENCE_STYLE_PROFILE = "reference_style_profile"
-    STORYLINE = "storyline"
-    REVIEW_STORYLINE = "review_storyline"
-    OUTLINE = "outline"
-    REVIEW_OUTLINE = "review_outline"
-    REVIEW_SLIDES = "review_slides"
-    SLIDES = "slides"
-    RESOLVE_CITATIONS = "resolve_citations"
-    MATCH_ASSETS = "match_assets"
-    CONTENT_REVIEW = "content_review"
-    EVIDENCE_REVIEW = "evidence_review"
-    ARCHITECTURAL_REVIEW = "architectural_review"
-    LAYOUT_REVIEW = "layout_review"
-    PROFESSIONAL_REVIEW = "professional_review"
-    REPAIR_SLIDES = "repair_slides"
-    SLIDE_VALIDATION = "slide_validation"
-    EXPORT = "export"
-    PRESENTATION_SPEC = "presentation_spec"
-    MARP = "marp"
-    FINALIZE = "finalize"
-    FAILED = "failed"
-    # Planning workflow (mission-first chain; not presentation Stage renumbering)
-    PLANNING_LOAD_CONTEXT = "planning_load_context"
-    PLANNING_ANALYZE_TASK = "planning_analyze_task"
-    PLANNING_VALIDATE_MISSION = "planning_validate_mission"
-    PLANNING_AWAIT_MISSION_CORRECTION = "planning_await_mission_correction"
-    PLANNING_AWAIT_CLARIFICATION = "planning_await_clarification"
-    PLANNING_REVISE_MISSION = "planning_revise_mission"
-    PLANNING_VALIDATE_REVISED_MISSION = "planning_validate_revised_mission"
-    PLANNING_AWAIT_MISSION_APPROVAL = "planning_await_mission_approval"
-    PLANNING_WORKSTREAMS = "planning_workstreams"
-    PLANNING_DELIVERABLES = "planning_deliverables"
-    PLANNING_AWAIT_APPROVAL = "planning_await_approval"
-    PLANNING_PREPARE_ARTIFACTS = "planning_prepare_artifacts"
-    # Legacy alias — old checkpoints may still store this string.
-    PLANNING_PREPARE_PRESENTATION = "planning_prepare_presentation"
-    PLANNING_FINALIZE = "planning_finalize"
-    # Visual composition workflow (independent of presentation generation chain)
-    VISUAL_LOAD_CONTEXT = "visual_load_context"
-    VISUAL_LOAD_DESIGN_SYSTEM = "visual_load_design_system"
-    VISUAL_GENERATE_ART_DIRECTION = "visual_generate_art_direction"
-    VISUAL_AWAIT_ART_DIRECTION_APPROVAL = "visual_await_art_direction_approval"
-    VISUAL_GENERATE_INTENTS = "visual_generate_intents"
-    VISUAL_GENERATE_DECK_COMPOSITION = "visual_generate_deck_composition"
-    VISUAL_GENERATE_LAYOUT_CANDIDATES = "visual_generate_layout_candidates"
-    VISUAL_SELECT_LAYOUTS = "visual_select_layouts"
-    VISUAL_VALIDATE_LAYOUTS = "visual_validate_layouts"
-    VISUAL_REPAIR_LAYOUTS = "visual_repair_layouts"
-    VISUAL_APPLY_SAFE_FALLBACK = "visual_apply_safe_fallback"
-    VISUAL_AWAIT_LAYOUT_REVIEW = "visual_await_layout_review"
-    VISUAL_RENDER = "visual_render"
-    VISUAL_CRITIQUE = "visual_critique"
-    VISUAL_SCENE_REPAIR = "visual_scene_repair"
-    VISUAL_FINALIZE = "visual_finalize"
-    # Slide recovery tool (standalone; not main generation chain)
-    SLIDE_RECOVERY_QUEUED = "slide_recovery_queued"
-    SLIDE_RECOVERY_OCR = "slide_recovery_ocr"
-    SLIDE_RECOVERY_VLM_ANALYSIS = "slide_recovery_vlm_analysis"
-    SLIDE_RECOVERY_REGION_RECOVERY = "slide_recovery_region_recovery"
-    SLIDE_RECOVERY_HYBRID_SCENE = "slide_recovery_hybrid_scene"
-    SLIDE_RECOVERY_QA = "slide_recovery_qa"
-    SLIDE_RECOVERY_AWAIT_REVIEW = "slide_recovery_await_review"
-    SLIDE_RECOVERY_FINALIZE = "slide_recovery_finalize"
+# Derived mega-enum for persisted current_step + cross-pipeline maps (DOM-007).
+# Prefer stage-specific enums in graph nodes / services.
+WorkflowStep = build_workflow_step_enum()
+
+__all__ = [
+    "WorkflowStatus",
+    "PlanningSessionStatus",
+    "WorkflowStep",
+    "PresentationWorkflowStep",
+    "PlanningWorkflowStep",
+    "VisualWorkflowStep",
+    "SlideRecoveryWorkflowStep",
+]

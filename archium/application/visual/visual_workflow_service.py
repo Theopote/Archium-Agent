@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import WorkflowStatus, WorkflowStep
+from archium.domain.enums import PresentationWorkflowStep, WorkflowStatus
 from archium.domain.presentation import Presentation
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -135,7 +135,7 @@ class VisualWorkflowService:
                 status=WorkflowStatus.RUNNING,
                 state={
                     "workflow_kind": "visual_composition",
-                    "current_step": WorkflowStep.INIT.value,
+                    "current_step": PresentationWorkflowStep.INIT.value,
                     "require_art_direction_review": require_art_direction_review,
                     "use_llm": use_llm,
                     "export_pptx": export_pptx,

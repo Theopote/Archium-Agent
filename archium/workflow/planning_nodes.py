@@ -18,7 +18,7 @@ from archium.application.project_mission_service import (
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
-from archium.domain.enums import ApprovalStatus, QuestionStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, QuestionStatus, WorkflowStatus, PlanningWorkflowStep, PresentationWorkflowStep
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
@@ -77,11 +77,11 @@ class PlanningWorkflowNodes:
         project = self._runtime.projects.get_by_id(UUID(state["project_id"]))
         if project is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": [f"项目 {state['project_id']} 不存在"],
             }
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_LOAD_CONTEXT.value,
+            "current_step": PlanningWorkflowStep.PLANNING_LOAD_CONTEXT.value,
             "project_name": project.name,
             "project_context": project.description or "",
         }
@@ -96,11 +96,11 @@ class PlanningWorkflowNodes:
             )
         except WorkflowError as exc:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": [str(exc)],
             }
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_ANALYZE_TASK.value,
+            "current_step": PlanningWorkflowStep.PLANNING_ANALYZE_TASK.value,
             "mission_id": str(result.mission.id),
             "mission": result.mission,
             "knowledge_gaps": result.knowledge_gaps,
@@ -116,7 +116,7 @@ class PlanningWorkflowNodes:
         """Initial mission consistency check before clarification."""
         return self._validate_mission_state(
             state,
-            current_step=WorkflowStep.PLANNING_VALIDATE_MISSION,
+            current_step=PlanningWorkflowStep.PLANNING_VALIDATE_MISSION,
             refresh_from_db=False,
             phase="initial",
         )
@@ -125,7 +125,7 @@ class PlanningWorkflowNodes:
         """Re-validate after clarification revision — does not loop back to clarification."""
         return self._validate_mission_state(
             state,
-            current_step=WorkflowStep.PLANNING_VALIDATE_REVISED_MISSION,
+            current_step=PlanningWorkflowStep.PLANNING_VALIDATE_REVISED_MISSION,
             refresh_from_db=True,
             phase="revised",
         )
@@ -134,7 +134,7 @@ class PlanningWorkflowNodes:
         self,
         state: PlanningWorkflowState,
         *,
-        current_step: WorkflowStep,
+        current_step: PlanningWorkflowStep | PresentationWorkflowStep,
         refresh_from_db: bool,
         phase: str,
         persist: bool = True,
@@ -157,7 +157,7 @@ class PlanningWorkflowNodes:
 
         if mission is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["任务理解缺失，无法校验"],
                 "needs_mission_correction": False,
                 "mission_validation_phase": phase,
@@ -184,7 +184,7 @@ class PlanningWorkflowNodes:
         if report.is_fatal:
             return {
                 **artifacts,
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": list(report.fatal_errors),
                 "warnings": list(report.warnings)
                 + list(report.suggestions)
@@ -224,7 +224,7 @@ class PlanningWorkflowNodes:
         mission_id = planning_mission_id(state)
         if mission_id is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
                 "needs_mission_correction": False,
             }
@@ -234,7 +234,7 @@ class PlanningWorkflowNodes:
 
         while True:
             pause: PlanningWorkflowState = {
-                "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
+                "current_step": PlanningWorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
                 "review_gate": "mission_correction",
                 "needs_mission_correction": True,
                 "mission_validation_phase": phase,
@@ -255,13 +255,13 @@ class PlanningWorkflowNodes:
             interrupt(
                 {
                     "gate": "mission_correction",
-                    "step": WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
+                    "step": PlanningWorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
                 }
             )
 
             validated = self._validate_mission_state(
                 merged,
-                current_step=WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION,
+                current_step=PlanningWorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION,
                 refresh_from_db=True,
                 phase=phase,
                 persist=False,
@@ -274,7 +274,7 @@ class PlanningWorkflowNodes:
                 next_state: PlanningWorkflowState = {
                     **validated,
                     "review_gate": None,
-                    "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
+                    "current_step": PlanningWorkflowStep.PLANNING_AWAIT_MISSION_CORRECTION.value,
                     "needs_mission_correction": False,
                 }
                 self._persist({**merged, **next_state}, status=WorkflowStatus.RUNNING)
@@ -290,7 +290,7 @@ class PlanningWorkflowNodes:
         mission_id = planning_mission_id(state)
         if mission_id is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
             }
 
@@ -304,7 +304,7 @@ class PlanningWorkflowNodes:
         ):
             bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
             resume_state: PlanningWorkflowState = {
-                "current_step": WorkflowStep.PLANNING_AWAIT_CLARIFICATION.value,
+                "current_step": PlanningWorkflowStep.PLANNING_AWAIT_CLARIFICATION.value,
                 "review_gate": "clarification",
                 "mission": bundle.mission,
                 "knowledge_gaps": bundle.knowledge_gaps,
@@ -317,17 +317,17 @@ class PlanningWorkflowNodes:
             return resume_state
 
         if not state.get("require_clarification", True):
-            return {"current_step": WorkflowStep.PLANNING_AWAIT_CLARIFICATION.value}
+            return {"current_step": PlanningWorkflowStep.PLANNING_AWAIT_CLARIFICATION.value}
 
         # Always pause once so the user can confirm/answer/assume before planning.
         pause: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_AWAIT_CLARIFICATION.value,
+            "current_step": PlanningWorkflowStep.PLANNING_AWAIT_CLARIFICATION.value,
             "review_gate": "clarification",
         }
         merged = cast(PlanningWorkflowState, {**state, **pause})
         self._persist(merged, status=WorkflowStatus.AWAITING_REVIEW)
         logger.info("Planning workflow paused for clarification on mission %s", mission_id)
-        interrupt({"gate": "clarification", "step": WorkflowStep.PLANNING_AWAIT_CLARIFICATION.value})
+        interrupt({"gate": "clarification", "step": PlanningWorkflowStep.PLANNING_AWAIT_CLARIFICATION.value})
 
         bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
         resume_state = {
@@ -345,7 +345,7 @@ class PlanningWorkflowNodes:
         mission_id = planning_mission_id(state)
         if mission_id is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
             }
         questions = self._runtime.missions.list_clarifying_questions(mission_id)
@@ -362,7 +362,7 @@ class PlanningWorkflowNodes:
         ]
         if not answered:
             # Nothing to revise; keep current mission.
-            return {"current_step": WorkflowStep.PLANNING_REVISE_MISSION.value}
+            return {"current_step": PlanningWorkflowStep.PLANNING_REVISE_MISSION.value}
 
         try:
             result = self._runtime.clarification_service.revise_mission_after_clarification(
@@ -371,11 +371,11 @@ class PlanningWorkflowNodes:
             )
         except WorkflowError as exc:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": [str(exc)],
             }
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_REVISE_MISSION.value,
+            "current_step": PlanningWorkflowStep.PLANNING_REVISE_MISSION.value,
             "mission": result.mission,
             "knowledge_gaps": result.knowledge_gaps,
             "assumptions": result.assumptions,
@@ -392,14 +392,14 @@ class PlanningWorkflowNodes:
         mission_id = planning_mission_id(state)
         if mission_id is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
             }
 
         mission = self._runtime.missions.get_mission(mission_id)
         if mission is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": [f"Mission {mission_id} 不存在"],
             }
 
@@ -411,7 +411,7 @@ class PlanningWorkflowNodes:
         ):
             bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
             resume_state: PlanningWorkflowState = {
-                "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+                "current_step": PlanningWorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
                 "review_gate": "mission_approval",
                 "mission": bundle.mission,
                 "knowledge_gaps": bundle.knowledge_gaps,
@@ -427,12 +427,12 @@ class PlanningWorkflowNodes:
             if not is_mission_approval_current(mission):
                 mission = self._runtime.mission_service.approve_mission(mission_id)
             return {
-                "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+                "current_step": PlanningWorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
                 "mission": mission,
             }
 
         pause: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+            "current_step": PlanningWorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
             "review_gate": "mission_approval",
             "mission": mission,
         }
@@ -442,14 +442,14 @@ class PlanningWorkflowNodes:
         interrupt(
             {
                 "gate": "mission_approval",
-                "step": WorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
+                "step": PlanningWorkflowStep.PLANNING_AWAIT_MISSION_APPROVAL.value,
             }
         )
 
         bundle = self._runtime.mission_service.get_mission_bundle(mission_id)
         if not is_mission_approval_current(bundle.mission):
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["任务理解审批已失效或不完整，无法继续下游规划"],
                 "mission": bundle.mission,
             }
@@ -468,7 +468,7 @@ class PlanningWorkflowNodes:
         mission_id = planning_mission_id(state)
         if mission_id is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
             }
         try:
@@ -478,11 +478,11 @@ class PlanningWorkflowNodes:
             )
         except WorkflowError as exc:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": [str(exc)],
             }
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_WORKSTREAMS.value,
+            "current_step": PlanningWorkflowStep.PLANNING_WORKSTREAMS.value,
             "mission": result.mission,
             "workstreams": result.workstreams,
             "warnings": list(result.warnings),
@@ -494,7 +494,7 @@ class PlanningWorkflowNodes:
         mission_id = planning_mission_id(state)
         if mission_id is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
             }
         try:
@@ -504,11 +504,11 @@ class PlanningWorkflowNodes:
             )
         except WorkflowError as exc:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": [str(exc)],
             }
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_DELIVERABLES.value,
+            "current_step": PlanningWorkflowStep.PLANNING_DELIVERABLES.value,
             "mission": result.mission,
             "deliverable_plan": result.plan,
             "workstreams": result.workstreams,
@@ -522,7 +522,7 @@ class PlanningWorkflowNodes:
         mission_id = planning_mission_id(state)
         if mission_id is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
             }
 
@@ -541,7 +541,7 @@ class PlanningWorkflowNodes:
         ):
             mission = self._runtime.missions.get_mission(mission_id)
             resume_state: PlanningWorkflowState = {
-                "current_step": WorkflowStep.PLANNING_AWAIT_APPROVAL.value,
+                "current_step": PlanningWorkflowStep.PLANNING_AWAIT_APPROVAL.value,
                 "review_gate": "plan_approval",
                 "deliverable_plan": plan,
                 "mission": mission,
@@ -556,24 +556,24 @@ class PlanningWorkflowNodes:
                 plan.approve()
                 plan = self._runtime.missions.save_deliverable_plan(plan)
             return {
-                "current_step": WorkflowStep.PLANNING_AWAIT_APPROVAL.value,
+                "current_step": PlanningWorkflowStep.PLANNING_AWAIT_APPROVAL.value,
                 "deliverable_plan": plan,
             }
 
         pause: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_AWAIT_APPROVAL.value,
+            "current_step": PlanningWorkflowStep.PLANNING_AWAIT_APPROVAL.value,
             "review_gate": "plan_approval",
             "deliverable_plan": plan,
         }
         merged = cast(PlanningWorkflowState, {**state, **pause})
         self._persist(merged, status=WorkflowStatus.AWAITING_REVIEW)
         logger.info("Planning workflow paused for plan approval")
-        interrupt({"gate": "plan_approval", "step": WorkflowStep.PLANNING_AWAIT_APPROVAL.value})
+        interrupt({"gate": "plan_approval", "step": PlanningWorkflowStep.PLANNING_AWAIT_APPROVAL.value})
 
         plan = self._runtime.missions.get_deliverable_plan(plan.id) if plan is not None else None
         if plan is None or plan.approval_status != ApprovalStatus.APPROVED:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["成果计划尚未批准，无法继续"],
                 "deliverable_plan": plan,
             }
@@ -599,7 +599,7 @@ class PlanningWorkflowNodes:
         plan = state.get("deliverable_plan")
         if mission is None:
             return {
-                "current_step": WorkflowStep.FAILED.value,
+                "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少任务理解，无法准备成果执行计划"],
             }
 
@@ -636,7 +636,7 @@ class PlanningWorkflowNodes:
                 warnings.append("未选择任何成果；未生成成果执行计划。")
 
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_PREPARE_ARTIFACTS.value,
+            "current_step": PlanningWorkflowStep.PLANNING_PREPARE_ARTIFACTS.value,
             "presentation_request_draft": draft,
             "artifact_execution_plans": [item.to_dict() for item in execution_plans],
             "warnings": warnings,
@@ -651,9 +651,9 @@ class PlanningWorkflowNodes:
         errors = list(state.get("errors", []))
         status = WorkflowStatus.FAILED if errors else WorkflowStatus.COMPLETED
         next_state: PlanningWorkflowState = {
-            "current_step": WorkflowStep.PLANNING_FINALIZE.value
+            "current_step": PlanningWorkflowStep.PLANNING_FINALIZE.value
             if not errors
-            else WorkflowStep.FAILED.value,
+            else PresentationWorkflowStep.FAILED.value,
         }
         self._persist({**state, **next_state}, status=status)
         return next_state

@@ -4,33 +4,9 @@ from __future__ import annotations
 
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualContentType
+from archium.domain.visual.layout_family_normalize import coerce_layout_family
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
-
-_BRIEF_LAYOUT_ALIASES: dict[str, LayoutFamily] = {
-    "hero": LayoutFamily.HERO,
-    "evidence_board": LayoutFamily.EVIDENCE_BOARD,
-    "photo_evidence_grid": LayoutFamily.EVIDENCE_BOARD,
-    "evidence_grid": LayoutFamily.EVIDENCE_BOARD,
-    "drawing_focus": LayoutFamily.DRAWING_FOCUS,
-    "drawing": LayoutFamily.DRAWING_FOCUS,
-    "site_plan": LayoutFamily.DRAWING_FOCUS,
-    "floor_plan": LayoutFamily.DRAWING_FOCUS,
-    "elevation": LayoutFamily.DRAWING_FOCUS,
-    "section": LayoutFamily.DRAWING_FOCUS,
-    "comparative_matrix": LayoutFamily.COMPARATIVE_MATRIX,
-    "comparison": LayoutFamily.COMPARATIVE_MATRIX,
-    "process_narrative": LayoutFamily.PROCESS_NARRATIVE,
-    "analytical_diagram": LayoutFamily.ANALYTICAL_DIAGRAM,
-    "metric_dashboard": LayoutFamily.METRIC_DASHBOARD,
-    "metric": LayoutFamily.METRIC_DASHBOARD,
-    "data": LayoutFamily.METRIC_DASHBOARD,
-    "strategy_cards": LayoutFamily.STRATEGY_CARDS,
-    "textual_argument": LayoutFamily.TEXTUAL_ARGUMENT,
-    "textual": LayoutFamily.TEXTUAL_ARGUMENT,
-    "hybrid_canvas": LayoutFamily.HYBRID_CANVAS,
-    "content": LayoutFamily.PROCESS_NARRATIVE,
-}
 
 _BRIEF_DENSITY_MAP: dict[str, DensityLevel] = {
     "low": DensityLevel.SPACIOUS,
@@ -51,16 +27,11 @@ _BRIEF_VISUAL_TO_CONTENT: dict[str, VisualContentType] = {
 }
 
 
-def resolve_brief_layout_family(raw: str) -> LayoutFamily | None:
-    key = (raw or "").strip().lower()
-    if not key:
-        return None
-    if key in _BRIEF_LAYOUT_ALIASES:
-        return _BRIEF_LAYOUT_ALIASES[key]
-    try:
-        return LayoutFamily(key)
-    except ValueError:
-        return None
+def resolve_brief_layout_family(raw: LayoutFamily | str | None) -> LayoutFamily | None:
+    """Resolve brief layout preference; blank → None. Illegal strings raise."""
+    if isinstance(raw, LayoutFamily):
+        return raw
+    return coerce_layout_family(raw)
 
 
 def apply_design_brief_to_intent(

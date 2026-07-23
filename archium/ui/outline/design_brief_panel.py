@@ -180,7 +180,7 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
         )
         layout_family = st.text_input(
             "构图 / 布局族",
-            value=brief.layout_family,
+            value=brief.layout_family.value if brief.layout_family else "",
             key=f"brief_layout_{outline_id}_{brief.page_order}",
         )
         density = st.selectbox(

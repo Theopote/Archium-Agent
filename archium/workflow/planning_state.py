@@ -6,7 +6,7 @@ import operator
 from typing import Annotated, Any, TypedDict
 
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PlanningWorkflowStep, PresentationWorkflowStep
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -86,7 +86,7 @@ def initial_planning_state(
         "review_gate": None,
         "needs_mission_correction": False,
         "mission_validation_phase": None,
-        "current_step": WorkflowStep.INIT.value,
+        "current_step": PresentationWorkflowStep.INIT.value,
         "errors": [],
         "warnings": [],
         "mission_validation": None,

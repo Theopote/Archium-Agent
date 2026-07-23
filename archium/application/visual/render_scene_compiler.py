@@ -159,7 +159,7 @@ class RenderSceneCompiler:
             theme_tokens=theme,
             font_assets=font_assets,
             asset_manifest=asset_manifest,
-            source_layout_family=layout_plan.layout_family.value,
+            source_layout_family=layout_plan.layout_family,
             source_layout_variant=layout_plan.layout_variant,
             warnings=warnings,
         )

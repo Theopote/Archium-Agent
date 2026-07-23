@@ -82,7 +82,7 @@ def format_design_brief_card(brief: SlideDesignBrief) -> str:
         [
             "",
             f"中心视觉：{brief.primary_visual_type}",
-            f"构图：{brief.layout_family or '—'}",
+            f"构图：{(brief.layout_family.value if brief.layout_family else None) or '—'}",
             f"密度：{brief.expected_density}",
         ]
     )

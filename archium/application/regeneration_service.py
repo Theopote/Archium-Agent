@@ -12,7 +12,7 @@ from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.config.settings import Settings, get_settings
 from archium.domain.deck_delivery import apply_deck_delivery_to_presentation
-from archium.domain.enums import ApprovalStatus, RevisionSource, WorkflowStatus, WorkflowStep
+from archium.domain.enums import ApprovalStatus, RevisionSource, WorkflowStatus, PresentationWorkflowStep
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec
@@ -66,7 +66,7 @@ class RegenerationService:
             presentation_id,
             workflow_run_id=workflow_run_id,
             gate="brief",
-            step=WorkflowStep.REVIEW_BRIEF,
+            step=PresentationWorkflowStep.REVIEW_BRIEF,
             brief=brief,
             storyline=None,
             outline=None,
@@ -99,7 +99,7 @@ class RegenerationService:
             presentation_id,
             workflow_run_id=workflow_run_id,
             gate="storyline",
-            step=WorkflowStep.REVIEW_STORYLINE,
+            step=PresentationWorkflowStep.REVIEW_STORYLINE,
             brief=context.brief,
             storyline=storyline,
             outline=None,
@@ -137,7 +137,7 @@ class RegenerationService:
             presentation_id,
             workflow_run_id=workflow_run_id,
             gate="outline",
-            step=WorkflowStep.REVIEW_OUTLINE,
+            step=PresentationWorkflowStep.REVIEW_OUTLINE,
             brief=context.brief,
             storyline=context.storyline,
             outline=outline,
@@ -183,7 +183,7 @@ class RegenerationService:
             presentation_id,
             workflow_run_id=workflow_run_id,
             gate="slides",
-            step=WorkflowStep.REVIEW_SLIDES,
+            step=PresentationWorkflowStep.REVIEW_SLIDES,
             brief=context.brief,
             storyline=context.storyline,
             outline=context.outline,
@@ -273,7 +273,7 @@ class RegenerationService:
         *,
         workflow_run_id: UUID | None,
         gate: str,
-        step: WorkflowStep,
+        step: PresentationWorkflowStep,
         brief: PresentationBrief | None,
         storyline: Storyline | None,
         outline: OutlinePlan | None,

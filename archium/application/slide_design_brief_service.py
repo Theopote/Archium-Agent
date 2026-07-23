@@ -15,13 +15,13 @@ from archium.application.review_models import (
     SlideIntentUpdate,
 )
 from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import ApprovalStatus, SlideAssetBindingRole
-from archium.domain.outline import OutlinePlan
-from archium.domain.slide_asset_binding import SlideAssetBinding, index_page_asset_bindings
 from archium.application.slide_design_brief_heuristics import (
     default_protection_rules_for_page,
     infer_primary_visual_type,
 )
+from archium.domain.enums import ApprovalStatus, SlideAssetBindingRole
+from archium.domain.outline import OutlinePlan
+from archium.domain.slide_asset_binding import SlideAssetBinding, index_page_asset_bindings
 from archium.domain.slide_design_brief import (
     DrawingDisplayPolicy,
     ImageDisplayPolicy,
@@ -32,6 +32,10 @@ from archium.domain.slide_design_brief import (
     index_design_briefs,
 )
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.visual.layout_family_normalize import (
+    coerce_layout_family,
+    layout_family_value,
+)
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -54,30 +58,6 @@ _DENSITY_BY_TYPE: dict[str, str] = {
     "comparison": "high",
     "content": "medium",
 }
-
-_BRIEF_LAYOUT_ALIASES: dict[str, str] = {
-    "photo_evidence_grid": "evidence_board",
-    "evidence_grid": "evidence_board",
-    "drawing": "drawing_focus",
-    "site_plan": "drawing_focus",
-    "floor_plan": "drawing_focus",
-    "elevation": "drawing_focus",
-    "section": "drawing_focus",
-    "metric": "metric_dashboard",
-    "data": "metric_dashboard",
-    "title": "hero",
-    "comparison": "comparative_matrix",
-    "content": "process_narrative",
-    "textual": "textual_argument",
-}
-
-
-def _normalize_layout_family(raw: str) -> str:
-    key = (raw or "").strip().lower()
-    if not key:
-        return ""
-    return _BRIEF_LAYOUT_ALIASES.get(key, key)
-
 
 
 @dataclass(frozen=True)
@@ -220,7 +200,7 @@ class SlideDesignBriefService:
             primary_asset_ids=list(update.primary_asset_ids),
             supporting_asset_ids=list(update.supporting_asset_ids),
             evidence_ids=list(update.evidence_ids),
-            layout_family=_normalize_layout_family(update.layout_family),
+            layout_family=coerce_layout_family(update.layout_family),
             expected_density=update.expected_density,  # type: ignore[arg-type]
             drawing_policy=drawing_policy,
             image_policy=image_policy,
@@ -382,7 +362,7 @@ class SlideDesignBriefService:
             primary_visual_type=primary_visual,
             primary_asset_ids=primary_assets,
             supporting_asset_ids=supporting_assets,
-            layout_family=_normalize_layout_family(
+            layout_family=coerce_layout_family(
                 intent.expected_layout.strip()
                 or _LAYOUT_FAMILY_BY_VISUAL.get(primary_visual, "process_narrative")
             ),
@@ -440,7 +420,7 @@ class SlideDesignBriefService:
                 previous.page_task != update.page_task.strip(),
                 previous.central_claim != update.central_claim.strip(),
                 previous.primary_visual_type != update.primary_visual_type.strip(),
-                previous.layout_family != update.layout_family.strip(),
+                previous.layout_family != coerce_layout_family(update.layout_family),
                 list(previous.primary_asset_ids) != list(update.primary_asset_ids),
             ]
         )
@@ -521,7 +501,7 @@ def _brief_to_update(brief: SlideDesignBrief) -> SlideDesignBriefUpdate:
         primary_asset_ids=list(brief.primary_asset_ids),
         supporting_asset_ids=list(brief.supporting_asset_ids),
         evidence_ids=list(brief.evidence_ids),
-        layout_family=brief.layout_family,
+        layout_family=layout_family_value(brief.layout_family),
         expected_density=brief.expected_density,
         drawing_policy=brief.drawing_policy.model_dump(mode="json")
         if brief.drawing_policy

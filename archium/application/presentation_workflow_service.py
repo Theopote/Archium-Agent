@@ -15,7 +15,7 @@ from archium.application.review_service import PresentationReviewService
 from archium.application.workflow_models import WorkflowRunResult
 from archium.application.workflow_route_service import WorkflowRouteService
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import WorkflowStatus, WorkflowStep
+from archium.domain.enums import WorkflowStatus, PresentationWorkflowStep
 from archium.domain.presentation import Presentation
 from archium.domain.render import RenderResult
 from archium.domain.workflow import WorkflowRun
@@ -154,10 +154,10 @@ class PresentationWorkflowService:
                 presentation_id=presentation.id,
                 status=WorkflowStatus.RUNNING,
                 state={
-                    "current_step": WorkflowStep.INIT.value,
+                    "current_step": PresentationWorkflowStep.INIT.value,
                     "step_log": [
                         {
-                            "step": WorkflowStep.INIT.value,
+                            "step": PresentationWorkflowStep.INIT.value,
                             "at": datetime.now(UTC).isoformat(),
                         }
                     ],

@@ -8,7 +8,7 @@ from uuid import UUID
 from archium.agents._helpers import build_project_context_bundle, build_retrieval_query_from_request
 from archium.application.fact_extraction_service import FactExtractionService
 from archium.application.fact_validation_service import FactValidationService
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PresentationWorkflowStep
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
     FactRepository,
@@ -24,7 +24,7 @@ class IngestionNodesMixin(WorkflowNodeBase):
     def load_project(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.LOAD_PROJECT.value}
+            return {"current_step": PresentationWorkflowStep.LOAD_PROJECT.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -32,12 +32,12 @@ class IngestionNodesMixin(WorkflowNodeBase):
             if project is None:
                 return {
                     "errors": [f"Project {project_id} not found"],
-                    "current_step": WorkflowStep.LOAD_PROJECT.value,
+                    "current_step": PresentationWorkflowStep.LOAD_PROJECT.value,
                 }
 
             next_state: PresentationWorkflowState = {
                 "project_name": project.name,
-                "current_step": WorkflowStep.LOAD_PROJECT.value,
+                "current_step": PresentationWorkflowStep.LOAD_PROJECT.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -47,13 +47,13 @@ class IngestionNodesMixin(WorkflowNodeBase):
             logger.exception("Project load failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.LOAD_PROJECT.value,
+                "current_step": PresentationWorkflowStep.LOAD_PROJECT.value,
             }
 
     def validate_sources(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.VALIDATE_SOURCES.value}
+            return {"current_step": PresentationWorkflowStep.VALIDATE_SOURCES.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -69,7 +69,7 @@ class IngestionNodesMixin(WorkflowNodeBase):
                 "source_document_count": len(documents),
                 "source_chunk_count": len(chunks),
                 "source_validation_issues": issues,
-                "current_step": WorkflowStep.VALIDATE_SOURCES.value,
+                "current_step": PresentationWorkflowStep.VALIDATE_SOURCES.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -91,17 +91,17 @@ class IngestionNodesMixin(WorkflowNodeBase):
             logger.exception("Source validation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.VALIDATE_SOURCES.value,
+                "current_step": PresentationWorkflowStep.VALIDATE_SOURCES.value,
             }
 
     def retrieve_context(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.RETRIEVE_CONTEXT.value}
+            return {"current_step": PresentationWorkflowStep.RETRIEVE_CONTEXT.value}
 
         existing = state.get("context_bundle")
         if existing is not None and existing.chunks:
-            return {"context_bundle": existing, "current_step": WorkflowStep.RETRIEVE_CONTEXT.value}
+            return {"context_bundle": existing, "current_step": PresentationWorkflowStep.RETRIEVE_CONTEXT.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -115,7 +115,7 @@ class IngestionNodesMixin(WorkflowNodeBase):
             )
             next_state: PresentationWorkflowState = {
                 "context_bundle": bundle,
-                "current_step": WorkflowStep.RETRIEVE_CONTEXT.value,
+                "current_step": PresentationWorkflowStep.RETRIEVE_CONTEXT.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -129,13 +129,13 @@ class IngestionNodesMixin(WorkflowNodeBase):
             logger.exception("Context retrieval failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.RETRIEVE_CONTEXT.value,
+                "current_step": PresentationWorkflowStep.RETRIEVE_CONTEXT.value,
             }
 
     def extract_facts(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.EXTRACT_FACTS.value}
+            return {"current_step": PresentationWorkflowStep.EXTRACT_FACTS.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -151,7 +151,7 @@ class IngestionNodesMixin(WorkflowNodeBase):
             next_state: PresentationWorkflowState = {
                 "project_facts": facts,
                 "extracted_fact_count": created,
-                "current_step": WorkflowStep.EXTRACT_FACTS.value,
+                "current_step": PresentationWorkflowStep.EXTRACT_FACTS.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -161,13 +161,13 @@ class IngestionNodesMixin(WorkflowNodeBase):
             logger.exception("Fact extraction failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.EXTRACT_FACTS.value,
+                "current_step": PresentationWorkflowStep.EXTRACT_FACTS.value,
             }
 
     def validate_facts(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.VALIDATE_FACTS.value}
+            return {"current_step": PresentationWorkflowStep.VALIDATE_FACTS.value}
 
         try:
             project_id = UUID(state["project_id"])
@@ -175,7 +175,7 @@ class IngestionNodesMixin(WorkflowNodeBase):
             next_state: PresentationWorkflowState = {
                 "project_facts": result.facts,
                 "fact_validation_issues": result.issues,
-                "current_step": WorkflowStep.VALIDATE_FACTS.value,
+                "current_step": PresentationWorkflowStep.VALIDATE_FACTS.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -192,5 +192,5 @@ class IngestionNodesMixin(WorkflowNodeBase):
             logger.exception("Fact validation failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.VALIDATE_FACTS.value,
+                "current_step": PresentationWorkflowStep.VALIDATE_FACTS.value,
             }

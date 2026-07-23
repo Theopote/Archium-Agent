@@ -6,7 +6,7 @@ from typing import cast
 from uuid import UUID
 
 from archium.application.presentation_manuscript_service import PresentationManuscriptService
-from archium.domain.enums import WorkflowStep
+from archium.domain.enums import PresentationWorkflowStep
 from archium.domain.presentation_manuscript import ManuscriptStatus
 from archium.workflow.nodes.base import WorkflowNodeBase
 from archium.workflow.state import PresentationWorkflowState
@@ -18,11 +18,11 @@ class ManuscriptNodesMixin(WorkflowNodeBase):
     def build_manuscript(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.BUILD_MANUSCRIPT.value}
+            return {"current_step": PresentationWorkflowStep.BUILD_MANUSCRIPT.value}
 
         request = state.get("request")
         if request is None or not request.use_manuscript_pipeline:
-            return {"current_step": WorkflowStep.BUILD_MANUSCRIPT.value}
+            return {"current_step": PresentationWorkflowStep.BUILD_MANUSCRIPT.value}
 
         existing = state.get("manuscript")
         if existing is not None:
@@ -30,7 +30,7 @@ class ManuscriptNodesMixin(WorkflowNodeBase):
             if refreshed is not None:
                 return {
                     "manuscript": refreshed,
-                    "current_step": WorkflowStep.BUILD_MANUSCRIPT.value,
+                    "current_step": PresentationWorkflowStep.BUILD_MANUSCRIPT.value,
                 }
 
         try:
@@ -49,7 +49,7 @@ class ManuscriptNodesMixin(WorkflowNodeBase):
                 manuscript = service.save(manuscript)
             next_state: PresentationWorkflowState = {
                 "manuscript": manuscript,
-                "current_step": WorkflowStep.BUILD_MANUSCRIPT.value,
+                "current_step": PresentationWorkflowStep.BUILD_MANUSCRIPT.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -63,7 +63,7 @@ class ManuscriptNodesMixin(WorkflowNodeBase):
             logger.exception("Manuscript build failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.BUILD_MANUSCRIPT.value,
+                "current_step": PresentationWorkflowStep.BUILD_MANUSCRIPT.value,
             }
 
     def sync_manuscript_from_storyline(
@@ -80,14 +80,14 @@ class ManuscriptNodesMixin(WorkflowNodeBase):
             or manuscript is None
             or storyline is None
         ):
-            return {"current_step": WorkflowStep.STORYLINE.value}
+            return {"current_step": PresentationWorkflowStep.STORYLINE.value}
 
         try:
             service = PresentationManuscriptService(self._runtime.session)
             updated = service.apply_storyline_sections(manuscript, storyline)
             next_state: PresentationWorkflowState = {
                 "manuscript": updated,
-                "current_step": WorkflowStep.STORYLINE.value,
+                "current_step": PresentationWorkflowStep.STORYLINE.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -97,7 +97,7 @@ class ManuscriptNodesMixin(WorkflowNodeBase):
             logger.exception("Manuscript sync failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.STORYLINE.value,
+                "current_step": PresentationWorkflowStep.STORYLINE.value,
             }
 
     @staticmethod

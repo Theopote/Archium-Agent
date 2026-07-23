@@ -11,9 +11,11 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
+from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.layout_family_normalize import coerce_layout_family
 from archium.domain.visual.structured_payload import ChartSeriesData
 
 
@@ -347,9 +349,14 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
     theme_tokens: ThemeTokens = Field(default_factory=ThemeTokens)
     font_assets: list[FontAsset] = Field(default_factory=list)
     asset_manifest: list[SceneAssetReference] = Field(default_factory=list)
-    source_layout_family: str = ""
+    source_layout_family: LayoutFamily | None = None
     source_layout_variant: str = ""
     warnings: list[str] = Field(default_factory=list)
+
+    @field_validator("source_layout_family", mode="before")
+    @classmethod
+    def _coerce_source_layout_family(cls, value: object) -> object:
+        return coerce_layout_family(value)
 
     @model_validator(mode="after")
     def _validate_unique_node_ids(self) -> RenderScene:

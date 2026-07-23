@@ -6,7 +6,7 @@ from typing import cast
 from uuid import UUID
 
 from archium.application.render_export import export_marp_extras
-from archium.domain.enums import PresentationStatus, WorkflowStatus, WorkflowStep
+from archium.domain.enums import PresentationStatus, WorkflowStatus, PresentationWorkflowStep
 from archium.workflow.nodes.base import WorkflowNodeBase
 from archium.workflow.state import PresentationWorkflowState
 
@@ -17,9 +17,9 @@ class ExportNodesMixin(WorkflowNodeBase):
     def export_json(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.EXPORT.value}
+            return {"current_step": PresentationWorkflowStep.EXPORT.value}
         if not state.get("export_json", True):
-            return {"current_step": WorkflowStep.EXPORT.value}
+            return {"current_step": PresentationWorkflowStep.EXPORT.value}
 
         brief = state.get("brief")
         storyline = state.get("storyline")
@@ -27,7 +27,7 @@ class ExportNodesMixin(WorkflowNodeBase):
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot export JSON without brief and storyline"],
-                "current_step": WorkflowStep.EXPORT.value,
+                "current_step": PresentationWorkflowStep.EXPORT.value,
             }
 
         try:
@@ -41,7 +41,7 @@ class ExportNodesMixin(WorkflowNodeBase):
             )
             next_state: PresentationWorkflowState = {
                 "json_path": str(json_path),
-                "current_step": WorkflowStep.EXPORT.value,
+                "current_step": PresentationWorkflowStep.EXPORT.value,
             }
             merged = cast(PresentationWorkflowState, {**state, **next_state})
             self._persist_checkpoint(merged)
@@ -51,18 +51,18 @@ class ExportNodesMixin(WorkflowNodeBase):
             logger.exception("JSON export failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.EXPORT.value,
+                "current_step": PresentationWorkflowStep.EXPORT.value,
             }
 
     def export_presentation_spec(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.PRESENTATION_SPEC.value}
+            return {"current_step": PresentationWorkflowStep.PRESENTATION_SPEC.value}
 
         want_spec = bool(state.get("export_presentation_spec", False))
         want_editable = bool(state.get("export_editable_pptx", False))
         if not want_spec and not want_editable:
-            return {"current_step": WorkflowStep.PRESENTATION_SPEC.value}
+            return {"current_step": PresentationWorkflowStep.PRESENTATION_SPEC.value}
 
         brief = state.get("brief")
         storyline = state.get("storyline")
@@ -70,14 +70,14 @@ class ExportNodesMixin(WorkflowNodeBase):
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot export PresentationSpec without brief and storyline"],
-                "current_step": WorkflowStep.PRESENTATION_SPEC.value,
+                "current_step": PresentationWorkflowStep.PRESENTATION_SPEC.value,
             }
 
         try:
             presentation_id = UUID(state["presentation_id"])
             project_id = UUID(state["project_id"])
             next_state: PresentationWorkflowState = {
-                "current_step": WorkflowStep.PRESENTATION_SPEC.value,
+                "current_step": PresentationWorkflowStep.PRESENTATION_SPEC.value,
             }
             warnings: list[str] = []
 
@@ -118,15 +118,15 @@ class ExportNodesMixin(WorkflowNodeBase):
             logger.exception("PresentationSpec / editable PPTX export failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.PRESENTATION_SPEC.value,
+                "current_step": PresentationWorkflowStep.PRESENTATION_SPEC.value,
             }
 
     def export_marp(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         logger = self._logger(state)
         if state.get("errors"):
-            return {"current_step": WorkflowStep.MARP.value}
+            return {"current_step": PresentationWorkflowStep.MARP.value}
         if not state.get("export_marp", False):
-            return {"current_step": WorkflowStep.MARP.value}
+            return {"current_step": PresentationWorkflowStep.MARP.value}
 
         brief = state.get("brief")
         storyline = state.get("storyline")
@@ -134,7 +134,7 @@ class ExportNodesMixin(WorkflowNodeBase):
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot export Marp without brief and storyline"],
-                "current_step": WorkflowStep.MARP.value,
+                "current_step": PresentationWorkflowStep.MARP.value,
             }
 
         try:
@@ -148,7 +148,7 @@ class ExportNodesMixin(WorkflowNodeBase):
             )
             next_state: PresentationWorkflowState = {
                 "marp_md_path": str(marp_md_path),
-                "current_step": WorkflowStep.MARP.value,
+                "current_step": PresentationWorkflowStep.MARP.value,
             }
             export_pptx = bool(state.get("export_pptx", False))
             export_pdf = bool(state.get("export_pdf", False))
@@ -180,7 +180,7 @@ class ExportNodesMixin(WorkflowNodeBase):
             logger.exception("Marp export failed: %s", exc)
             return {
                 "errors": [str(exc)],
-                "current_step": WorkflowStep.MARP.value,
+                "current_step": PresentationWorkflowStep.MARP.value,
             }
 
     def finalize(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
@@ -199,20 +199,20 @@ class ExportNodesMixin(WorkflowNodeBase):
             if awaiting_review:
                 presentation.status = PresentationStatus.IN_PROGRESS
                 status = WorkflowStatus.AWAITING_REVIEW
-                step = WorkflowStep.FINALIZE.value
+                step = PresentationWorkflowStep.FINALIZE.value
             elif has_exports:
                 presentation.status = PresentationStatus.EXPORTED
                 status = WorkflowStatus.COMPLETED
-                step = WorkflowStep.FINALIZE.value
+                step = PresentationWorkflowStep.FINALIZE.value
             else:
                 presentation.status = PresentationStatus.REVIEW
                 status = WorkflowStatus.COMPLETED
-                step = WorkflowStep.FINALIZE.value
+                step = PresentationWorkflowStep.FINALIZE.value
 
             presentation = self._presentations.update_presentation(presentation)
         else:
             status = WorkflowStatus.FAILED
-            step = WorkflowStep.FAILED.value
+            step = PresentationWorkflowStep.FAILED.value
 
         next_state: PresentationWorkflowState = {
             "presentation": presentation,
