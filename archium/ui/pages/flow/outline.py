@@ -14,9 +14,19 @@ from archium.application.review_models import (
     SlideIntentUpdate,
 )
 from archium.application.review_service import PresentationReviewService
+from archium.application.visual.visual_grammar_labels import (
+    archetype_label,
+    archetype_select_options,
+    coerce_archetype_selection,
+    format_archetype_option,
+    grammar_evidence_hints,
+    merge_grammar_evidence,
+    selection_value_for_intent,
+)
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Storyline
 from archium.domain.slide_intent import SlideIntent, slide_intents_from_page_instructions
+from archium.domain.visual.visual_grammar import PageArchetype
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.pages import project_mission
@@ -237,6 +247,8 @@ def _intent_cards_from_sources(
                         "evidence": "、".join(section.evidence_requirements[:4]) or "—",
                         "assets": "、".join(section.required_assets[:4]) or "—",
                         "page_type": section.category or "general",
+                        "page_archetype": "自动识别",
+                        "grammar_slots": "—",
                         "status": "已规划",
                     }
                 )
@@ -263,6 +275,8 @@ def _intent_cards_from_sources(
                 "evidence": "—",
                 "assets": "—",
                 "page_type": str(getattr(slide, "slide_type", None) or "—"),
+                "page_archetype": archetype_label(getattr(slide, "page_archetype", None)),
+                "grammar_slots": "—",
                 "status": "已有页面",
             }
         )
@@ -273,6 +287,7 @@ def _card_from_slide_intent(intent: SlideIntent, *, title_fallback: str) -> dict
     title = intent.notes.strip() or intent.page_task.strip() or title_fallback
     if len(title) > 40:
         title = title[:40] + "…"
+    slots = grammar_evidence_hints(intent.page_archetype)
     return {
         "title": title,
         "conclusion": intent.central_conclusion.strip() or "—",
@@ -280,6 +295,8 @@ def _card_from_slide_intent(intent: SlideIntent, *, title_fallback: str) -> dict
         "evidence": "、".join(intent.required_evidence[:4]) or "—",
         "assets": "、".join(intent.required_assets[:4]) or "—",
         "page_type": intent.expected_layout.strip() or "—",
+        "page_archetype": archetype_label(intent.page_archetype),
+        "grammar_slots": "、".join(slots) if slots else "—",
         "status": "意图已设",
     }
 
@@ -446,9 +463,13 @@ def _render_intent_cards(
             st.markdown(f"**页面任务**  \n{card['task']}")
             st.markdown(f"**证据**  \n{card['evidence']}")
             st.markdown(f"**指定素材**  \n{card['assets']}")
-            meta = st.columns(2)
+            meta = st.columns(3)
             meta[0].markdown(f"**页面类型**  \n{page_type_label(str(card['page_type']))}")
-            meta[1].markdown(f"**状态**  \n{card['status']}")
+            meta[1].markdown(f"**视觉语法**  \n{card.get('page_archetype', '自动识别')}")
+            meta[2].markdown(f"**状态**  \n{card['status']}")
+            slots = card.get("grammar_slots") or "—"
+            if slots != "—":
+                st.caption(f"证据槽位：{slots}")
         return
 
     intent = intents[int(choice)]
@@ -499,27 +520,55 @@ def _render_intent_cards(
                 return f"{label}（{value}）"
             return label
 
-        page_type = st.selectbox(
-            "页面类型",
-            options=page_type_options,
-            index=page_type_options.index(current_type),
-            format_func=_format_page_type,
-            key=f"outline_intent_type_{outline.id}_{intent.order}",
-        )
+        type_cols = st.columns(2)
+        with type_cols[0]:
+            page_type = st.selectbox(
+                "页面类型",
+                options=page_type_options,
+                index=page_type_options.index(current_type),
+                format_func=_format_page_type,
+                key=f"outline_intent_type_{outline.id}_{intent.order}",
+            )
+        archetype_options = archetype_select_options()
+        current_archetype = selection_value_for_intent(intent.page_archetype)
+        if current_archetype not in archetype_options:
+            archetype_options = [current_archetype, *archetype_options]
+        with type_cols[1]:
+            archetype_choice = st.selectbox(
+                "视觉语法原型",
+                options=archetype_options,
+                index=archetype_options.index(current_archetype),
+                format_func=format_archetype_option,
+                key=f"outline_intent_archetype_{outline.id}_{intent.order}",
+                help="决定证据槽位与版式偏好；选「自动识别」则在生成时按内容判定。",
+            )
+        selected_archetype = coerce_archetype_selection(archetype_choice)
+        hints = grammar_evidence_hints(selected_archetype)
+        if hints:
+            st.caption("原型证据槽：" + "；".join(hints))
+        elif selected_archetype == PageArchetype.GENERIC:
+            st.caption("通用原型：不强制证据槽。")
+        else:
+            st.caption("自动识别：生成时根据标题与证据文案判定原型。")
 
     actions = st.columns(4)
     with actions[0]:
         if st.button("保存当前页", type="primary", use_container_width=True, key="outline_intent_save"):
+            evidence_items = merge_grammar_evidence(
+                _split_items(evidence),
+                selected_archetype,
+            )
             updated = list(intents)
             updated[int(choice)] = SlideIntent(
                 order=intent.order,
                 chapter_id=intent.chapter_id,
                 page_task=(task.strip() or title.strip() or "待填写页面任务")[:500],
                 central_conclusion=conclusion.strip()[:1000],
-                required_evidence=_split_items(evidence),
+                required_evidence=evidence_items,
                 required_assets=_split_items(assets),
                 forbidden_content=list(intent.forbidden_content),
                 expected_layout=str(page_type),
+                page_archetype=selected_archetype,
                 notes=(title.strip() or intent.notes)[:2000],
             )
             _persist_intents(outline, updated)

@@ -668,6 +668,11 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             "required_assets": st.column_config.TextColumn("指定素材", width="medium"),
             "forbidden_content": st.column_config.TextColumn("禁止内容", width="medium"),
             "expected_layout": st.column_config.TextColumn("期望版式", width="small"),
+            "page_archetype": st.column_config.TextColumn(
+                "视觉语法",
+                width="small",
+                help="如 narrative_opening / site_problem_diagnosis；空=自动识别",
+            ),
             "notes": st.column_config.TextColumn("备注", width="medium"),
             "chapter_id": st.column_config.TextColumn("章节ID", width="small"),
         },
@@ -762,6 +767,11 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
                                 required_assets=list(intent.required_assets),
                                 forbidden_content=list(intent.forbidden_content),
                                 expected_layout=intent.expected_layout,
+                                page_archetype=(
+                                    intent.page_archetype.value
+                                    if intent.page_archetype
+                                    else None
+                                ),
                                 notes=intent.notes,
                             )
                             for intent in saved.page_intents
@@ -1189,6 +1199,9 @@ def _outline_intent_rows(outline: object) -> list[dict[str, object]]:
                 "required_assets": _join_list_items(list(intent.required_assets)),
                 "forbidden_content": _join_list_items(list(intent.forbidden_content)),
                 "expected_layout": intent.expected_layout,
+                "page_archetype": (
+                    intent.page_archetype.value if intent.page_archetype else ""
+                ),
                 "notes": intent.notes,
             }
             for intent in sorted(intents, key=lambda item: item.order)
@@ -1204,6 +1217,7 @@ def _outline_intent_rows(outline: object) -> list[dict[str, object]]:
             "required_assets": "",
             "forbidden_content": "",
             "expected_layout": "",
+            "page_archetype": "",
             "notes": "",
         }
         for index in range(target)
@@ -1228,6 +1242,11 @@ def _slide_intent_updates_from_editor(edited_intents: pd.DataFrame) -> list[Slid
                 required_assets=parse_multiline_items(str(row.get("required_assets", "") or "")),
                 forbidden_content=parse_multiline_items(str(row.get("forbidden_content", "") or "")),
                 expected_layout=str(row.get("expected_layout", "") or "").strip(),
+                page_archetype=(
+                    raw_archetype
+                    if (raw_archetype := str(row.get("page_archetype", "") or "").strip())
+                    else None
+                ),
                 notes=notes,
             )
         )
