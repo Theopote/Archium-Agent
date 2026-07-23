@@ -48,9 +48,12 @@ def _is_hidden(path: Path) -> bool:
         return True
     if os.name == "nt":
         try:
-            attrs = path.stat().st_file_attributes
+            # st_file_attributes is Windows-only; missing on POSIX stubs (mypy).
+            attrs = getattr(path.stat(), "st_file_attributes", None)
+            if attrs is None:
+                return False
             return bool(attrs & stat.FILE_ATTRIBUTE_HIDDEN)
-        except (AttributeError, OSError):
+        except OSError:
             pass
     return False
 

@@ -14,37 +14,44 @@ down_revision: str | None = "035_project_mission_approval_hash"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-
-def upgrade() -> None:
-    op.add_column(
-        "delivery_records",
-        sa.Column("artifact_kind", sa.String(50), nullable=False, server_default="pptx"),
-    )
-    op.add_column(
-        "delivery_records",
+_COLUMNS: tuple[tuple[str, sa.Column], ...] = (
+    ("artifact_kind", sa.Column("artifact_kind", sa.String(50), nullable=False, server_default="pptx")),
+    (
+        "derived_from_artifact_ids",
         sa.Column("derived_from_artifact_ids", sa.JSON(), nullable=False, server_default="[]"),
-    )
-    op.add_column(
-        "delivery_records",
+    ),
+    (
+        "generator_version",
         sa.Column(
             "generator_version",
             sa.String(100),
             nullable=False,
             server_default="archium-unknown",
         ),
-    )
-    op.add_column("delivery_records", sa.Column("font_manifest_hash", sa.String(128)))
-    op.add_column("delivery_records", sa.Column("theme_version", sa.String(100)))
-    op.add_column("delivery_records", sa.Column("export_policy", sa.String(100)))
+    ),
+    ("font_manifest_hash", sa.Column("font_manifest_hash", sa.String(128))),
+    ("theme_version", sa.Column("theme_version", sa.String(100))),
+    ("export_policy", sa.Column("export_policy", sa.String(100))),
+)
+
+
+def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "delivery_records" not in set(inspector.get_table_names()):
+        return
+    columns = {column["name"] for column in inspector.get_columns("delivery_records")}
+    for name, column in _COLUMNS:
+        if name not in columns:
+            op.add_column("delivery_records", column)
 
 
 def downgrade() -> None:
-    for column in (
-        "export_policy",
-        "theme_version",
-        "font_manifest_hash",
-        "generator_version",
-        "derived_from_artifact_ids",
-        "artifact_kind",
-    ):
-        op.drop_column("delivery_records", column)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "delivery_records" not in set(inspector.get_table_names()):
+        return
+    columns = {column["name"] for column in inspector.get_columns("delivery_records")}
+    for name, _column in reversed(_COLUMNS):
+        if name in columns:
+            op.drop_column("delivery_records", name)
