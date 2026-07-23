@@ -152,16 +152,16 @@ def test_home_is_project_cockpit_not_welcome_wall() -> None:
 
 
 def test_sidebar_uses_project_progress_not_module_status() -> None:
-    app_src = Path(__file__).resolve().parents[3] / "app.py"
+    boot_src = Path(__file__).resolve().parents[3] / "archium" / "bootstrap.py"
     settings_src = (
         Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "settings.py"
     )
-    app_text = app_src.read_text(encoding="utf-8")
+    boot_text = boot_src.read_text(encoding="utf-8")
     settings_text = settings_src.read_text(encoding="utf-8")
-    assert "render_project_progress_card" in app_text
-    assert "render_module_status" not in app_text
-    assert "render_version_footer" in app_text
-    assert "建筑 · 归档 · 智能" not in app_text
+    assert "render_project_progress_card" in boot_text
+    assert "render_module_status" not in boot_text
+    assert "render_version_footer" in boot_text
+    assert "建筑 · 归档 · 智能" not in boot_text
     assert "_render_system_diagnostics" in settings_text
     assert "render_system_diagnostics" in settings_text
     assert "_render_about" in settings_text

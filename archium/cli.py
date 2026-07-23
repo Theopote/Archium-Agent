@@ -6,11 +6,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Absolute path so Windows / non-repo cwd still target the same app.py.
 _APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
 
 
 def main() -> None:
-    """Launch the Streamlit project workspace (v0.2 product entry point)."""
+    """Launch Streamlit against ``app.py`` (thin wrapper → ``create_application``)."""
     try:
         import streamlit  # noqa: F401
     except ImportError as exc:

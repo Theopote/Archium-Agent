@@ -1,18 +1,8 @@
-"""Shared Streamlit UI bootstrap and styling."""
+"""Shared Streamlit UI styling and branding helpers."""
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import streamlit as st
-from dotenv import load_dotenv
-
-from archium.config import get_settings
-from archium.infrastructure.database.session import close_scoped_session, init_database
-from archium.logging import setup_logging
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-ENV_PATH = PROJECT_ROOT / ".env"
 
 ARCHIUM_CSS = """
 <style>
@@ -389,13 +379,18 @@ button[kind="secondary"][aria-pressed="true"] {
 
 
 def init_app() -> None:
-    """Initialize environment, logging, and database once per session."""
+    """Initialize environment, logging, and database once per session.
+
+    Prefer :func:`archium.bootstrap.create_application` for the full product
+    shell. This helper remains for pages/tests that only need runtime init.
+    """
+    from archium.bootstrap import bootstrap_runtime
+    from archium.infrastructure.database.session import close_scoped_session
+
     close_scoped_session()
     if st.session_state.get("_archium_initialized"):
         return
-    load_dotenv()
-    setup_logging(get_settings())
-    init_database()
+    bootstrap_runtime()
     st.session_state._archium_initialized = True
 
 

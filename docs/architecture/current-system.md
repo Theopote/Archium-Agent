@@ -6,8 +6,10 @@
 
 | 入口 | 实现 | 用途 |
 |---|---|---|
-| `archium` | `archium.cli:main` | 启动 Streamlit 主产品 |
-| `streamlit run app.py` | `app.py` | 与 `archium` 等价的开发入口 |
+| `archium` | `archium.cli:main` | 薄包装：`streamlit run app.py` |
+| `streamlit run app.py` | `app.py` → `archium.bootstrap.create_application()` | 与 `archium` 同一 Streamlit shell |
+
+启动时环境变量、日志、数据库与页面注册统一由 `archium.bootstrap` 完成（`.env` 固定读仓库根，不依赖进程 cwd）。`archium.ui.bootstrap` 仅保留样式 / 品牌与兼容用的 `init_app()`。
 
 `legacy/` 保留在仓库中供开发者按需运行（`python -m legacy.main` / `python main.py`），**不**随 `archium-agent` 安装，**不**被 `archium.*` 导入，也不出现在主导航。验收：`rg "from legacy|import legacy" archium` 必须为空。
 
