@@ -5,10 +5,14 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from archium.application.visual.design_brief_intent import apply_design_brief_to_intent
+from archium.application.visual.visual_grammar_intent import (
+    apply_grammar_to_draft,
+    apply_grammar_to_intent,
+)
+from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_design_brief import SlideDesignBrief
-from archium.domain.enums import ApprovalStatus
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.enums import (
     ContinuityRole,
@@ -17,6 +21,7 @@ from archium.domain.visual.enums import (
     VisualContentType,
 )
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.domain.visual.visual_grammar import PageArchetype
 from archium.infrastructure.database.visual_repositories import VisualIntentRepository
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -126,6 +131,10 @@ class VisualIntentService:
         if draft is None:
             draft = self._rule_based_draft(slide)
 
+        recognition = recognize_page_archetype(slide)
+        if recognition.archetype != PageArchetype.GENERIC:
+            draft = apply_grammar_to_draft(draft, recognition.recipe)
+
         hero_asset_id = draft.hero_asset_id
         supporting = list(draft.supporting_asset_ids)
         if hero_asset_id is None and slide.visual_requirements:
@@ -157,6 +166,12 @@ class VisualIntentService:
             continuity_role=draft.continuity_role,
             approval_status=ApprovalStatus.PENDING,
         )
+        if recognition.archetype != PageArchetype.GENERIC:
+            intent = apply_grammar_to_intent(
+                intent,
+                page_archetype=recognition.archetype,
+                recipe=recognition.recipe,
+            )
         if design_brief is not None and design_brief.status in _USABLE_BRIEF_STATUSES:
             intent = apply_design_brief_to_intent(intent, design_brief)
         return self._intents.save(intent)

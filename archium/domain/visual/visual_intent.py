@@ -14,6 +14,7 @@ from archium.domain.visual.enums import (
     LayoutFamily,
     VisualContentType,
 )
+from archium.domain.visual.visual_grammar import PageArchetype
 
 
 class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
@@ -38,6 +39,7 @@ class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
     density_level: DensityLevel = DensityLevel.BALANCED
     emotional_tone: str = ""
     continuity_role: ContinuityRole = ContinuityRole.EXPLANATION
+    page_archetype: PageArchetype | None = None
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 
     def approve(self) -> None:

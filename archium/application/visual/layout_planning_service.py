@@ -18,6 +18,11 @@ from archium.application.visual.layout_style_preference import (
     derive_layout_style_preference,
     merge_preferred_families,
 )
+from archium.application.visual.visual_grammar_intent import (
+    derive_grammar_layout_preference,
+    forbidden_families_for_intent,
+    merge_layout_style_preferences,
+)
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.slide_capacity_service import SlideCapacityService
 from archium.config.settings import Settings, get_settings
@@ -241,9 +246,13 @@ class LayoutPlanningService:
         resolved_style = reference_style
         if resolved_style is None and project_id is not None:
             resolved_style = self.resolve_reference_style(project_id)
-        style_pref = style_preference or derive_layout_style_preference(
-            reference_style=resolved_style,
-            art_direction=art,
+        grammar_pref = derive_grammar_layout_preference(intent)
+        style_pref = style_preference or merge_layout_style_preferences(
+            grammar_pref,
+            derive_layout_style_preference(
+                reference_style=resolved_style,
+                art_direction=art,
+            ),
         )
         self._last_style_preference = style_pref
         for note in style_pref.notes:
@@ -634,6 +643,7 @@ class LayoutPlanningService:
             asset_count=max(asset_count, 0),
             preferred=preferred,
         )
+        grammar_forbidden = forbidden_families_for_intent(intent)
         decisions: list[LayoutDecisionDraft] = []
         pool_limit = max(candidate_count * 3, candidate_count, 6)
         for definition in definitions:
@@ -641,6 +651,8 @@ class LayoutPlanningService:
                 deck_directive is not None
                 and definition.family in deck_directive.forbidden_layout_families
             ):
+                continue
+            if definition.family in grammar_forbidden:
                 continue
             variants = self._order_variants(
                 definition.family,
