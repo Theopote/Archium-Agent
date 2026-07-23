@@ -127,6 +127,8 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "marp_preview_image_format": ConfigDomain.RENDER,
     "pptxgen_node_command": ConfigDomain.RENDER,
     "pptxgen_script_path": ConfigDomain.RENDER,
+    "pptx_structure_mode": ConfigDomain.RENDER,
+    "pptx_chart_export_mode": ConfigDomain.RENDER,
     "visual_fallback_enabled": ConfigDomain.VISUAL,
     "visual_fallback_relaxed_matching": ConfigDomain.VISUAL,
     "visual_fallback_relaxed_min_score": ConfigDomain.VISUAL,

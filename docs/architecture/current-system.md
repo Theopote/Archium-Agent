@@ -74,6 +74,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - PDF/DOCX/PPTX/XLSX/图片解析由可选 `documents` extra 提供。
 - 原生 PPTX 使用 Node.js/PptxGenJS；PDF 与真实截图还可能需要 LibreOffice、PowerPoint 或相关转换工具。
 - 所有配置字段以 `archium/config/settings.py` 为事实源，生成物见 [配置参考](../configuration-reference.md)。
+- 凭证优先级：会话 → OS keyring（`archium-agent`）→ 环境变量。`storage://` / `project://` / `benchmark://` 解析必须落在 `project_storage` 或 benchmark 根目录内；资产写入文件名经 basename 净化。`FIELD_DOMAINS` 必须覆盖全部 Settings 字段。
 
 ## 相关文档
 

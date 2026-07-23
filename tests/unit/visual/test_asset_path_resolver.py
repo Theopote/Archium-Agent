@@ -117,3 +117,38 @@ def test_portableize_scene_excludes_absolute_from_hash(tmp_path: Path) -> None:
     assert "\\" not in portable.nodes[0].asset_path
     digest = compute_scene_hash(portable)
     assert len(digest) == 64
+
+
+def test_storage_uri_rejects_path_traversal(tmp_path: Path) -> None:
+    root = tmp_path / "projects"
+    project_id = uuid4()
+    project_dir = root / str(project_id)
+    project_dir.mkdir(parents=True)
+    (project_dir / "ok.png").write_bytes(b"ok")
+    escaped = AssetPathResolver().resolve(
+        f"storage://projects/{project_id}/../../outside.png",
+        AssetPathResolveContext(project_storage_root=root),
+    )
+    assert escaped is None
+    ok = AssetPathResolver().resolve(
+        f"storage://projects/{project_id}/ok.png",
+        AssetPathResolveContext(project_storage_root=root),
+    )
+    assert ok is not None
+    assert ok.resolve() == (project_dir / "ok.png").resolve()
+
+
+def test_benchmark_uri_rejects_path_traversal(tmp_path: Path) -> None:
+    case_dir = tmp_path / "case_x"
+    assets = case_dir / "assets"
+    assets.mkdir(parents=True)
+    (assets / "a.png").write_bytes(b"a")
+    escaped = AssetPathResolver().resolve(
+        "benchmark://case_x/../secret.txt",
+        AssetPathResolveContext(
+            case_dir=case_dir,
+            case_id="case_x",
+            benchmark_root=tmp_path,
+        ),
+    )
+    assert escaped is None

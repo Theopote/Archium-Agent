@@ -71,7 +71,7 @@ def has_pending_migrations(engine: Engine | None = None) -> bool:
 def _configure_alembic_for_engine(config: Config, engine: Engine | None) -> None:
     if engine is None:
         return
-    url = engine.url.render_as_string(hide_password=False)
+    url = engine.url.render_as_string(hide_password=True)
     config.set_main_option("sqlalchemy.url", url)
     # env.py reads this attribute to target the passed engine instead of the
     # global settings database.

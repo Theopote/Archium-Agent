@@ -59,6 +59,25 @@ def is_machine_absolute_path(value: str) -> bool:
         return False
 
 
+def resolve_under(root: Path, *parts: str) -> Path | None:
+    """Join ``parts`` under ``root``; return None if the result escapes the root."""
+    try:
+        base = root.resolve()
+        candidate = (root.joinpath(*parts)).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return None
+    try:
+        if not candidate.is_relative_to(base):
+            return None
+    except AttributeError:
+        # Python < 3.9 fallback (repo targets 3.12+, keep defensive).
+        try:
+            candidate.relative_to(base)
+        except ValueError:
+            return None
+    return candidate
+
+
 def benchmark_asset_uri(case_id: str, relative_path: str) -> str:
     rel = relative_path.replace("\\", "/").lstrip("/")
     return f"{BENCHMARK_SCHEME}{case_id}/{rel}"
@@ -309,17 +328,18 @@ class AssetPathResolver:
         if len(parts) != 2 or not parts[0] or not parts[1]:
             return None
         case_id, relative = parts[0], parts[1]
+        rel_parts = [item for item in relative.replace("\\", "/").split("/") if item]
         if ctx.case_dir is not None and (ctx.case_id is None or ctx.case_id == case_id):
-            candidate = ctx.case_dir / relative
-            if candidate.is_file():
+            candidate = resolve_under(ctx.case_dir, *rel_parts)
+            if candidate is not None and candidate.is_file():
                 return candidate
         if ctx.benchmark_root is not None:
-            candidate = ctx.benchmark_root / case_id / relative
-            if candidate.is_file():
+            candidate = resolve_under(ctx.benchmark_root, case_id, *rel_parts)
+            if candidate is not None and candidate.is_file():
                 return candidate
         if ctx.assets_dir is not None:
-            candidate = ctx.assets_dir / Path(relative).name
-            if candidate.is_file():
+            candidate = resolve_under(ctx.assets_dir, Path(relative).name)
+            if candidate is not None and candidate.is_file():
                 return candidate
         return None
 
@@ -331,18 +351,34 @@ class AssetPathResolver:
         asset_id = parts[1]
         mapped = ctx.project_asset_files.get(asset_id)
         if mapped is not None and mapped.is_file():
+            if ctx.project_storage_root is not None and ctx.project_id is not None:
+                root = resolve_under(ctx.project_storage_root, str(ctx.project_id))
+                if root is None:
+                    return None
+                try:
+                    if not mapped.resolve().is_relative_to(root.resolve()):
+                        return None
+                except (OSError, RuntimeError, ValueError):
+                    return None
             return mapped
         if ctx.project_id and ctx.project_storage_root is not None:
-            # Fallback: look under project root by asset id filename patterns.
-            root = ctx.project_storage_root / str(ctx.project_id)
+            root = resolve_under(ctx.project_storage_root, str(ctx.project_id))
+            if root is None:
+                return None
             if len(parts) >= 3:
-                candidate = root / "/".join(parts[2:])
-                if candidate.is_file():
+                candidate = resolve_under(root, *parts[2:])
+                if candidate is not None and candidate.is_file():
                     return candidate
             for pattern in (f"{asset_id}.*", f"**/{asset_id}.*"):
                 matches = list(root.glob(pattern)) if root.is_dir() else []
-                if matches:
-                    return matches[0]
+                for match in matches:
+                    try:
+                        relative = match.resolve().relative_to(root.resolve())
+                    except ValueError:
+                        continue
+                    confined = resolve_under(root, *relative.parts)
+                    if confined is not None and confined.is_file():
+                        return confined
         return None
 
     def _resolve_storage(self, remainder: str, ctx: AssetPathResolveContext) -> Path | None:
@@ -353,8 +389,8 @@ class AssetPathResolver:
         project_id, relative = parts[1], parts[2]
         if ctx.project_storage_root is None:
             return None
-        candidate = ctx.project_storage_root / project_id / relative
-        return candidate if candidate.is_file() else candidate
+        rel_parts = [item for item in relative.replace("\\", "/").split("/") if item]
+        return resolve_under(ctx.project_storage_root, project_id, *rel_parts)
 
 
 def dump_scene_for_persistence(scene: RenderScene) -> dict[str, Any]:

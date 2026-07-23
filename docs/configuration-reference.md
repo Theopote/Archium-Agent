@@ -130,6 +130,8 @@ Do not edit them manually.
 | `MARP_PREVIEW_IMAGE_FORMAT` | `png` | No | Image format for Marp --images export (png or jpeg). |
 | `PPTXGEN_NODE_COMMAND` | `node` | No | Node.js executable used for PptxGenJS editable PPTX export. |
 | `PPTXGEN_SCRIPT_PATH` | `*(unset)*` | No | Path to render.mjs. Defaults to bundled archium/infrastructure/renderers/pptxgen/render.mjs. |
+| `PPTX_STRUCTURE_MODE` | `flat` | No | PPTX package structure mode: 'flat' (absolute freeform shapes) or 'structured' (native slide masters/layouts/placeholders). |
+| `PPTX_CHART_EXPORT_MODE` | `cross_app_stable` | No | Chart/table PPTX strategy: 'cross_app_stable' (shapes/images) or 'native_data_backed' (PowerPoint Chart/Table with embedded workbook). |
 
 ## Visual fallback, layout thresholds & web image search {#visual}
 
