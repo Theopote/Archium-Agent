@@ -484,11 +484,8 @@ class PlanningWorkflowService:
         """Return PresentationRequest mapped from a completed planning run."""
         run = self._require_planning_run(workflow_run_id)
         draft = run.state.get("presentation_request_draft")
-        if isinstance(draft, dict) and draft.get("mission_id") and user_overrides is None:
-            return bridge_from_draft(draft)
-
-        mission_id = self._mission_id_from_run(run)
         missions = MissionRepository(self._session)
+        mission_id = self._mission_id_from_run(run)
         mission = missions.get_mission(mission_id)
         if mission is None:
             raise WorkflowError(f"Mission {mission_id} not found")
@@ -496,6 +493,16 @@ class PlanningWorkflowService:
         plan_data = run.state.get("deliverable_plan")
         if isinstance(plan_data, dict) and plan_data.get("id"):
             plan = missions.get_deliverable_plan(UUID(str(plan_data["id"])))
+        # Prefer draft only when the live plan is still approved (selection edits invalidate).
+        if (
+            isinstance(draft, dict)
+            and draft.get("mission_id")
+            and user_overrides is None
+            and plan is not None
+            and plan.approval_status == ApprovalStatus.APPROVED
+        ):
+            return bridge_from_draft(draft)
+
         workstreams = missions.list_workstreams(mission_id)
         return build_presentation_bridge(
             mission,
@@ -518,8 +525,9 @@ class PlanningWorkflowService:
             raise WorkflowError(f"Mission {mission_id} not found")
         plan = missions.get_approved_deliverable_plan(mission_id)
         if plan is None:
-            plans = missions.list_deliverable_plans(mission_id)
-            plan = plans[0] if plans else None
+            raise WorkflowError(
+                "尚未批准成果规划，无法生成汇报请求。请先完成 DeliverablePlan 审批。"
+            )
         workstreams = missions.list_workstreams(mission_id)
         return build_presentation_bridge(
             mission,

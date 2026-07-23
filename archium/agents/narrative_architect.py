@@ -23,7 +23,10 @@ from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.infrastructure.database.mission_repositories import MissionRepository
-from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.database.repositories import (
+    PlanningSessionRepository,
+    PresentationRepository,
+)
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import StorylineDraft
 from archium.prompts.storyline import STORYLINE_SYSTEM_PROMPT, build_storyline_user_prompt
@@ -44,6 +47,7 @@ class NarrativeArchitect:
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
         self._missions = MissionRepository(session)
+        self._planning_sessions = PlanningSessionRepository(session)
         self._history = StorylineHistoryService(session)
 
     def generate(
@@ -74,7 +78,13 @@ class NarrativeArchitect:
             settings=self._settings,
         )
         missions = self._missions.list_missions_by_project(project_id)
-        mission = missions[0] if missions else None
+        mission = None
+        planning = self._planning_sessions.get_by_presentation_id(brief.presentation_id)
+        if planning is not None and planning.current_mission_id is not None:
+            mission = self._missions.get_mission(planning.current_mission_id)
+        if mission is None and missions:
+            # Fallback for shortcut Brief paths without a planning session link.
+            mission = missions[0]
         narrative_mode = mission.narrative_mode if mission is not None else None
         draft = self._llm.generate_structured(
             LLMRequest(

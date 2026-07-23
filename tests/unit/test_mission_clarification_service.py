@@ -223,6 +223,28 @@ def test_revise_mission_after_clarification_keeps_mission_id(
     )
     # Existing clarification records remain attached to the same mission.
     assert any(q.status == QuestionStatus.ASSUMED for q in revised.clarifying_questions)
+    assert revised.mission.approval_status.value == "draft"
+    assert revised.mission.approval_hash is None
+
+
+def test_clarification_answer_invalidates_approved_mission(
+    mission_service: ProjectMissionService,
+    clarification_service: MissionClarificationService,
+    temple_project: Project,
+) -> None:
+    from archium.domain.enums import ApprovalStatus
+    from tests.fixtures.mission_approval import approve_generated_mission
+
+    generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
+    approved = mission_service.get_mission_bundle(generated.mission.id).mission
+    assert approved.approval_status == ApprovalStatus.APPROVED
+    assert approved.approval_hash is not None
+
+    question = next(q for q in generated.clarifying_questions if q.status == QuestionStatus.OPEN)
+    result = clarification_service.answer_question(question.id, "补充澄清答案")
+    assert result.mission.approval_status == ApprovalStatus.DRAFT
+    assert result.mission.approval_hash is None
 
 
 def test_empty_answer_rejected(

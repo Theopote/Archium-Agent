@@ -249,3 +249,41 @@ def test_blocking_gap_indices_resolved(
     )
     if len(generated.knowledge_gaps) > 1:
         assert generated.knowledge_gaps[1].id in historical.blocking_gaps
+
+
+def test_workstream_selection_invalidates_approved_deliverable_plan(
+    mission_service: ProjectMissionService,
+    workstream_service: WorkstreamPlanningService,
+    temple_project: Project,
+    db_session: Session,
+    llm: MockLLMProvider,
+) -> None:
+    from archium.application.deliverable_planning_service import DeliverablePlanningService
+    from archium.domain.enums import ApprovalStatus
+    from tests.fixtures.mock_deliverable_responses import TEMPLE_DELIVERABLE_PLAN_JSON
+
+    def selector(request: LLMRequest) -> str | None:
+        prompt = request.user_prompt
+        if "DeliverablePlan JSON" in prompt:
+            return TEMPLE_DELIVERABLE_PLAN_JSON
+        return workstream_mock_selector(request)
+
+    generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)
+    approve_generated_mission(mission_service, generated.mission)
+    workstream_service.plan_workstreams(generated.mission.id)
+    deliverables = DeliverablePlanningService(
+        db_session, MockLLMProvider(selector=selector)
+    )
+    plan_result = deliverables.plan_deliverables(generated.mission.id)
+    approved = deliverables.approve_plan(plan_result.plan.id)
+    assert approved.approval_status == ApprovalStatus.APPROVED
+
+    optional = next(
+        (item for item in workstream_service.list_workstreams(generated.mission.id) if item.selected),
+        None,
+    )
+    assert optional is not None
+    workstream_service.deselect_workstream(optional.id)
+    refreshed = deliverables.get_plan(generated.mission.id)
+    assert refreshed is not None
+    assert refreshed.approval_status == ApprovalStatus.DRAFT

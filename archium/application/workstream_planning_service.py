@@ -16,7 +16,7 @@ from archium.application.workstream_parser import (
     validate_workstream_plan_draft,
 )
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import RevisionSource, WorkstreamStatus
+from archium.domain.enums import ApprovalStatus, RevisionSource, WorkstreamStatus
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
@@ -135,15 +135,21 @@ class WorkstreamPlanningService:
 
     def select_workstream(self, workstream_id: UUID) -> Workstream:
         workstream = self._require_workstream(workstream_id)
+        if workstream.selected:
+            return workstream
         workstream.select()
         saved = self._missions.save_workstream(workstream)
+        self._invalidate_downstream_plan(saved.mission_id)
         self._history.record_snapshot(saved, RevisionSource.MANUAL_EDIT, note="选中工作路径")
         return saved
 
     def deselect_workstream(self, workstream_id: UUID) -> Workstream:
         workstream = self._require_workstream(workstream_id)
+        if not workstream.selected:
+            return workstream
         workstream.deselect()
         saved = self._missions.save_workstream(workstream)
+        self._invalidate_downstream_plan(saved.mission_id)
         self._history.record_snapshot(saved, RevisionSource.MANUAL_EDIT, note="取消选中工作路径")
         return saved
 
@@ -154,12 +160,20 @@ class WorkstreamPlanningService:
     ) -> list[Workstream]:
         selected_set = set(selected_ids)
         updated: list[Workstream] = []
+        changed = False
         for workstream in self.list_workstreams(mission_id):
-            if workstream.id in selected_set:
+            should_select = workstream.id in selected_set
+            if workstream.selected == should_select:
+                updated.append(workstream)
+                continue
+            changed = True
+            if should_select:
                 workstream.select()
             else:
                 workstream.deselect()
             updated.append(self._missions.save_workstream(workstream))
+        if changed:
+            self._invalidate_downstream_plan(mission_id)
         return updated
 
     def add_workstream(self, workstream: Workstream) -> Workstream:
@@ -222,3 +236,11 @@ class WorkstreamPlanningService:
         if workstream is None:
             raise WorkflowError(f"工作路径 {workstream_id} 不存在")
         return workstream
+
+    def _invalidate_downstream_plan(self, mission_id: UUID) -> None:
+        """Workstream selection feeds deliverable planning — clear stale plan approval."""
+        for plan in self._missions.list_deliverable_plans(mission_id):
+            if plan.approval_status != ApprovalStatus.APPROVED:
+                continue
+            plan.invalidate_approval()
+            self._missions.save_deliverable_plan(plan)

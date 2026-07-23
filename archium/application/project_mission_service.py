@@ -292,6 +292,7 @@ class ProjectMissionService:
 
     def _clear_mission_artifacts(self, mission_id: UUID) -> None:
         self._missions.delete_workstreams_for_mission(mission_id)
+        self._missions.delete_deliverable_plans_for_mission(mission_id)
 
     def _build_context(self, project_id: UUID, query: str) -> str:
         return build_project_context(

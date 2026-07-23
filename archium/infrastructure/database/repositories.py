@@ -970,6 +970,16 @@ class PlanningSessionRepository:
         orm = self._session.scalar(stmt)
         return mappers.planning_session_to_domain(orm) if orm else None
 
+    def get_by_presentation_id(self, presentation_id: UUID) -> PlanningSession | None:
+        stmt = (
+            select(PlanningSessionORM)
+            .where(PlanningSessionORM.presentation_id == presentation_id)
+            .order_by(PlanningSessionORM.updated_at.desc())
+            .limit(1)
+        )
+        orm = self._session.scalar(stmt)
+        return mappers.planning_session_to_domain(orm) if orm else None
+
     def list_by_project(self, project_id: UUID) -> list[PlanningSession]:
         stmt = (
             select(PlanningSessionORM)

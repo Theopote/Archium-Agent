@@ -378,10 +378,9 @@ class MissionClarificationService:
                 "lineage_id": previous.lineage_id,
                 "logical_key": previous.logical_key,
                 "created_at": previous.created_at,
-                "approval_status": ApprovalStatus.DRAFT,
             }
         )
-        revised.touch()
+        revised.invalidate_approval()
         saved = self._missions.save_mission(revised)
         self._history.record_snapshot(
             saved,
@@ -456,6 +455,7 @@ class MissionClarificationService:
                 "decisions_required": decisions,
             }
         )
+        self._invalidate_mission_approval_if_needed(updated)
         updated.touch()
         return self._missions.save_mission(updated)
 
@@ -477,6 +477,7 @@ class MissionClarificationService:
                 )
             )
         updated = mission.model_copy(update={"known_constraints": constraints})
+        self._invalidate_mission_approval_if_needed(updated)
         updated.touch()
         return self._missions.save_mission(updated)
 
@@ -500,6 +501,7 @@ class MissionClarificationService:
         updated = mission.model_copy(
             update={"key_unknowns": unknowns, "known_constraints": constraints}
         )
+        self._invalidate_mission_approval_if_needed(updated)
         updated.touch()
         return self._missions.save_mission(updated)
 
@@ -508,6 +510,11 @@ class MissionClarificationService:
         if mission is None:
             raise WorkflowError(f"任务理解 {mission_id} 不存在")
         return mission
+
+    @staticmethod
+    def _invalidate_mission_approval_if_needed(mission: ProjectMission) -> None:
+        if mission.approval_status == ApprovalStatus.APPROVED:
+            mission.invalidate_approval()
 
     def _require_question(self, question_id: UUID) -> ClarifyingQuestion:
         question = self._missions.get_clarifying_question(question_id)

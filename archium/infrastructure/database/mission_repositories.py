@@ -236,6 +236,18 @@ class MissionRepository:
             _handle_error("delete workstreams", exc)
             raise
 
+    def delete_deliverable_plans_for_mission(self, mission_id: UUID) -> int:
+        try:
+            stmt = select(DeliverablePlanORM).where(DeliverablePlanORM.mission_id == mission_id)
+            rows = list(self._session.scalars(stmt))
+            for row in rows:
+                self._session.delete(row)
+            self._session.flush()
+            return len(rows)
+        except SQLAlchemyError as exc:
+            _handle_error("delete deliverable plans", exc)
+            raise
+
     # ── DeliverablePlan ────────────────────────────────────────────
 
     def save_deliverable_plan(self, plan: DeliverablePlan) -> DeliverablePlan:
