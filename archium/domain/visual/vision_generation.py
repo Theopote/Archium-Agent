@@ -83,6 +83,12 @@ class ImageRequest(DomainModel):
         default=True,
         description="Apply soft presentation unify (Derivative-spirit) before persist.",
     )
+    denoising_strength: float | None = Field(
+        default=None,
+        ge=0.05,
+        le=1.0,
+        description="img2img strength for local_sd / edit backends (None = provider default).",
+    )
 
 
 class VisionInputEvaluation(DomainModel):

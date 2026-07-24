@@ -705,6 +705,7 @@ def generate_slide_vision_illustration(
     base_element_id: str | None = None,
     overlay_cues: list[str] | None = None,
     generation_mode: str = "text_to_image",
+    denoising_strength: float | None = None,
 ) -> object:
     """Compile + generate an illustrative asset; optionally bind to an image element.
 
@@ -792,6 +793,7 @@ def generate_slide_vision_illustration(
         base_image_path=base_image_path,
         overlay_cues=cues,
         mode=resolved_mode,
+        denoising_strength=denoising_strength,
     )
     settings = _resolve_runtime_settings(None)
     result = VisionImageGenerationService(session, settings=settings).generate_for_intent(

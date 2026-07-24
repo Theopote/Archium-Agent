@@ -207,13 +207,16 @@ class Settings(BaseSettings):
     vision_image_generation_enabled: bool = Field(
         default=False,
         description=(
-            "When true, Vision Engine may call an external image API "
-            "(openai_compatible). When false or unavailable, uses Pillow stub."
+            "When true, Vision Engine may call an external/local image backend "
+            "(openai_compatible | local_sd). When false or unavailable, uses Pillow stub."
         ),
     )
     vision_image_generation_provider: str = Field(
         default="stub",
-        description="Vision Engine image backend: stub | openai_compatible.",
+        description=(
+            "Vision Engine image backend: stub | openai_compatible | local_sd "
+            "(A1111/Forge sdapi aliases: a1111, forge, automatic1111)."
+        ),
     )
     vision_image_generation_model: str = Field(
         default="dall-e-3",
@@ -231,6 +234,44 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("VISION_IMAGE_GENERATION_BASE_URL"),
         description="Optional OpenAI-compatible base URL for image generation.",
+    )
+    vision_local_sd_base_url: str = Field(
+        default="http://127.0.0.1:7860",
+        validation_alias=AliasChoices("VISION_LOCAL_SD_BASE_URL"),
+        description="AUTOMATIC1111 / Forge WebUI base URL for local_sd provider.",
+    )
+    vision_local_sd_model: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_LOCAL_SD_MODEL"),
+        description="Optional checkpoint name override for local_sd (sd_model_checkpoint).",
+    )
+    vision_local_sd_steps: int = Field(
+        default=24,
+        ge=5,
+        le=80,
+        description="Local SD sampling steps for txt2img / img2img.",
+    )
+    vision_local_sd_cfg_scale: float = Field(
+        default=6.5,
+        ge=1.0,
+        le=20.0,
+        description="Local SD CFG scale.",
+    )
+    vision_local_sd_denoising_strength: float = Field(
+        default=0.55,
+        ge=0.05,
+        le=1.0,
+        description="Default img2img denoising strength for local_sd conditioned edit.",
+    )
+    vision_local_sd_sampler: str = Field(
+        default="Euler a",
+        description="Local SD sampler name (A1111/Forge).",
+    )
+    vision_local_sd_timeout_seconds: float = Field(
+        default=180.0,
+        ge=10.0,
+        le=900.0,
+        description="HTTP timeout for local_sd txt2img/img2img calls.",
     )
     slide_recovery_ocr_enabled: bool = Field(
         default=True,
@@ -662,6 +703,16 @@ class Settings(BaseSettings):
             self.vision_image_generation_enabled
             and self.vision_image_generation_provider == "openai_compatible"
             and self.effective_vision_image_api_key
+        )
+
+    @property
+    def vision_local_sd_configured(self) -> bool:
+        """True when local_sd (A1111/Forge) provider is enabled with a base URL."""
+        provider = (self.vision_image_generation_provider or "").strip().lower()
+        return bool(
+            self.vision_image_generation_enabled
+            and provider in {"local_sd", "a1111", "forge", "automatic1111"}
+            and (self.vision_local_sd_base_url or "").strip()
         )
 
     @property

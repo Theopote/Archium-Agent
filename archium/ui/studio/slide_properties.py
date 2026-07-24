@@ -256,11 +256,39 @@ def _render_vision_illustration_panel(
         "不会当作现场证据。场地/流线可底图叠加；照片可条件改图（示意改造意象）。"
     )
     slide = slide_snapshot.slide
+    suggested = (
+        slide_snapshot.visual_intent.image_request
+        if slide_snapshot.visual_intent is not None
+        else None
+    )
     default_subject = (slide.message or slide.title or "").strip() or "architectural concept illustration"
+    if suggested is not None and suggested.subject.strip():
+        default_subject = suggested.subject.strip()
+    subject_key = f"studio_vision_subject_{slide.id}"
+    type_key = f"studio_vision_type_{slide.id}"
+    style_key = f"studio_vision_style_{slide.id}"
+    mode_key = f"studio_vision_mode_{slide.id}"
+    if subject_key not in st.session_state:
+        st.session_state[subject_key] = default_subject
+    if suggested is not None:
+        if type_key not in st.session_state:
+            st.session_state[type_key] = suggested.image_type.value
+        if mode_key not in st.session_state:
+            st.session_state[mode_key] = suggested.mode.value
+        if style_key not in st.session_state and suggested.style is not None:
+            style_val = (
+                suggested.style.value
+                if hasattr(suggested.style, "value")
+                else str(suggested.style)
+            )
+            st.session_state[style_key] = style_val
+        st.caption(
+            f"已根据页原型建议示意：`{suggested.image_type.value}` · "
+            f"{suggested.mode.value}（仅示意，不进证据槽）"
+        )
     subject = st.text_input(
         "生成主题",
-        value=default_subject,
-        key=f"studio_vision_subject_{slide.id}",
+        key=subject_key,
     )
     mode_options = {
         "text_to_image": "文生图 / 底图叠加",
@@ -271,7 +299,7 @@ def _render_vision_illustration_panel(
         "模式",
         options=list(mode_options.keys()),
         format_func=lambda key: mode_options[key],
-        key=f"studio_vision_mode_{slide.id}",
+        key=mode_key,
     )
     type_options = {
         "flow_diagram": "流线分析图",
@@ -287,7 +315,7 @@ def _render_vision_illustration_panel(
         "图类",
         options=list(type_options.keys()),
         format_func=lambda key: type_options[key],
-        key=f"studio_vision_type_{slide.id}",
+        key=type_key,
     )
     style_options = {
         "": "（按图类默认）",
@@ -303,7 +331,7 @@ def _render_vision_illustration_panel(
         "风格",
         options=list(style_options.keys()),
         format_func=lambda key: style_options[key],
-        key=f"studio_vision_style_{slide.id}",
+        key=style_key,
     )
     overlay_raw = st.text_input(
         "叠加标注（逗号分隔，可选）",
@@ -312,6 +340,19 @@ def _render_vision_illustration_panel(
         help="例如：入口, 风雨连廊, 门诊大厅",
     )
     overlay_cues = [part.strip() for part in overlay_raw.split(",") if part.strip()]
+    denoising_strength: float | None = None
+    if generation_mode in {"edit_from_photo", "edit_from_drawing"}:
+        denoising_strength = float(
+            st.slider(
+                "改图强度（img2img denoising）",
+                min_value=0.15,
+                max_value=0.85,
+                value=0.55,
+                step=0.05,
+                key=f"studio_vision_denoise_{slide.id}",
+                help="仅 local_sd / 支持 edit 的后端生效；越高改动越大，越低越保留底图。",
+            )
+        )
 
     plan = slide_snapshot.layout_plan
     image_elements = [
@@ -380,6 +421,7 @@ def _render_vision_illustration_panel(
                     base_element_id=base_element_id,
                     overlay_cues=overlay_cues,
                     generation_mode=generation_mode,
+                    denoising_strength=denoising_strength,
                 )
             warnings = []
             if result.input_evaluation is not None:

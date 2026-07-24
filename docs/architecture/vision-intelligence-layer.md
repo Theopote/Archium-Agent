@@ -99,7 +99,7 @@ archium/
     image_generation_service.py
     image_evaluator.py
     style_preset_registry.py
-  infrastructure/vision_gen/         # provider adapters（可插拔）
+  infrastructure/vision_gen/         # stub | openai_compatible | local_sd (A1111)
 ```
 
 **不**新增 Pipeline 产品席位；内部可标 `PipelineRole.VISUAL`。
@@ -109,8 +109,8 @@ archium/
 | # | 类型 | 用途 | v0.1 | v0.2 | v0.3 |
 |---|------|------|------|------|------|
 | 1 | **Concept** | 早期意象 / 概念草图 | ○ | ● 模板默认 | ● |
-| 2 | **Architectural Diagram** | 流线、策略、庭院切开、before–after 示意 | ○ 文生图示意 | ● 底图+Pillow 叠加 | ● 图纸条件改图 |
-| 3 | **Style Transfer / Edit** | 老照片→改造意象、材料/夜景变体 | – | – | ● 照片条件改图 |
+| 2 | **Architectural Diagram** | 流线、策略、庭院切开、before–after 示意 | ○ 文生图示意 | ● 底图+Pillow 叠加 | ● 图纸条件改图 / local img2img |
+| 3 | **Style Transfer / Edit** | 老照片→改造意象、材料/夜景变体 | – | – | ● 照片条件改图 + local_sd img2img |
 | 4 | **Atmosphere / Background** | 封面与氛围底图 | ● | ● | ● |
 | 5 | **Sketch** | 手绘/马克笔/铅笔感（非商业摄影） | ● 风格预设 | ● 风格包注册表 | ● |
 | 6 | **Presentation Illustration** | 页级抽象插图，服务 PPT | ● | ● | ● |
@@ -194,12 +194,26 @@ VISION_IMAGE_GENERATION_API_KEY=...
 VISION_IMAGE_GENERATION_BASE_URL=https://api.openai.com/v1
 ```
 
+启用本地 SD（AUTOMATIC1111 / Forge `sdapi`）：
+
+```text
+VISION_IMAGE_GENERATION_ENABLED=true
+VISION_IMAGE_GENERATION_PROVIDER=local_sd
+VISION_LOCAL_SD_BASE_URL=http://127.0.0.1:7860
+# 可选：指定 checkpoint
+VISION_LOCAL_SD_MODEL=your-architecture-checkpoint.safetensors
+VISION_LOCAL_SD_STEPS=24
+VISION_LOCAL_SD_CFG_SCALE=6.5
+VISION_LOCAL_SD_DENOISING_STRENGTH=0.55
+VISION_LOCAL_SD_SAMPLER=Euler a
+```
+
 路径：
 
 ```text
 ImageRequest (+ VisionGenerationContext)
   → VisionPromptCompiler
-  → VisionImageGenerator (stub | openai_compatible)
+  → VisionImageGenerator (stub | openai_compatible | local_sd)
   → assets/vision_generated/* + optional Asset(origin=ai_generated)
   → Studio ReplaceAsset（人工选择目标图）
 ```
@@ -207,7 +221,7 @@ ImageRequest (+ VisionGenerationContext)
 服务入口：`archium.application.visual.vision.VisionImageGenerationService`  
 Studio 入口：`generate_slide_vision_illustration` / 属性面板「Vision 示意生成」
 
-**验收（当前）**：风雨连廊类请求可编译 prompt；stub 或 API 产出 PNG；Studio 可入库并可选应用到图片元素；证据语义仍拒绝静默冒充。
+**验收（当前）**：风雨连廊类请求可编译 prompt；stub / API / 本地 SD 产出 PNG；Studio 可入库并可选应用到图片元素；证据语义仍拒绝静默冒充。
 
 ### Vision Engine v0.2 — **PARTIAL（模板 + 底图叠加已落地）**
 
@@ -239,9 +253,13 @@ base site/plan image
 | 底图 Photo QA（sharpness / exposure，软门禁） | **已做** `image_evaluator.py` |
 | 本地条件改图（Pillow，示意改造意象） | **已做** `conditioned_editor.py` |
 | OpenAI-compatible `images.edit`（失败回退本地） | **已做** |
-| 生成后软统一（Derivative 精神：色度/对比微调） | **已做** `soft_harmonize_png` |
+| 生成后软统一（Derivative 精神：色度/对比微调） | **已做** → 现升级为正式 `PRESENTATION_UNIFY` |
 | Studio 模式切换 + 底图 QA 警告 | **已做** |
-| 完整图生图本地 SD / 主体检测 | **未做**（后续） |
+| VisualIntent 按页原型自动建议 `image_request` | **已做** `intent_suggester.py`（诊断页不建议） |
+| 入库后走 `ImageDerivativeExecutor` | **已做**（`*_harmonized.jpg` + cache/derivatives） |
+| 本地 SD（A1111/Forge sdapi）txt2img + img2img | **已做** `local_sd.py`（不捆绑权重） |
+| Studio 改图强度滑条（denoising） | **已做** |
+| ComfyUI 工作流 / 自托管权重包 | **未做**（后续） |
 
 Edit 路径：
 
@@ -249,9 +267,18 @@ Edit 路径：
 base photo/drawing
   → VisionImageEvaluator (warn blur/overexpose; block tiny)
   → VisionPromptCompiler (edit semantics + evidence avoid)
-  → provider.edit OR conditioned_editor
-  → soft_harmonize_png (optional)
-  → Asset(origin=ai_generated, illustrative)
+  → local_sd img2img | openai edit | conditioned_editor(fallback)
+  → persist Asset(origin=ai_generated)
+  → ImageDerivative PRESENTATION_UNIFY → *_harmonized.jpg
+```
+
+意图建议（非证据页）：
+
+```text
+PageArchetype
+  → suggest_image_request_for_slide
+  → VisualIntent.image_request
+  → Studio 预填示意主题/图类
 ```
 
 ## 9. 质量与诚信
@@ -273,8 +300,9 @@ Vision Engine 作为 **下一条战略主线** 立项，不阻塞 Studio V1 / Im
 1. 收口 Studio + 图片统一 + Grammar（进行中）
 2. Vision Engine v0.1 — **已完成**
 3. Vision Engine v0.2 建筑图类模板 + 底图叠加 — **已完成**
-4. Vision Engine v0.3 条件改图 + QA/软统一 — **本轮部分完成**
-5. 后续：本地模型 / 更强图生图 / 与 Scene Derivative 全量复用
+4. Vision Engine v0.3 条件改图 + QA + Derivative 统一 + Intent 建议 — **已完成**
+5. 本地 SD / 更强图生图（A1111 img2img）— **本轮完成**
+6. 后续：ComfyUI 工作流、建筑专用 LoRA 包、主体检测
 
 ## 11. 一句话决策
 

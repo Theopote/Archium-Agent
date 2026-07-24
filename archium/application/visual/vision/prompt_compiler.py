@@ -180,6 +180,7 @@ class VisionPromptCompiler:
                 "edit_mode": edit_mode,
                 "generation_mode": request.mode.value,
                 "harmonize_output": request.harmonize_output,
+                "denoising_strength": request.denoising_strength,
                 "type_label_zh": template.label_zh,
             },
         )

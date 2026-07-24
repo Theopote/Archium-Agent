@@ -6,6 +6,7 @@ from archium.application.visual.vision.image_evaluator import VisionImageEvaluat
 from archium.application.visual.vision.image_generation_service import (
     VisionImageGenerationService,
 )
+from archium.application.visual.vision.intent_suggester import suggest_image_request_for_slide
 from archium.application.visual.vision.prompt_compiler import VisionPromptCompiler
 from archium.application.visual.vision.style_preset_registry import (
     DEFAULT_STYLE_REGISTRY,
@@ -20,4 +21,5 @@ __all__ = [
     "VisionImageGenerationService",
     "VisionPromptCompiler",
     "VisionStylePresetRegistry",
+    "suggest_image_request_for_slide",
 ]

@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.image_derivative_executor import ImageDerivativeExecutor
 from archium.application.visual.vision.conditioned_editor import (
     ConditionedEditRequest,
     VisionConditionedEditor,
@@ -22,6 +23,12 @@ from archium.application.visual.vision.prompt_compiler import VisionPromptCompil
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType
+from archium.domain.visual.image_derivative import (
+    ImageAssetClass,
+    ImageTreatmentMode,
+    ImageTreatmentSpec,
+    default_presentation_unify_params,
+)
 from archium.domain.visual.vision_generation import (
     GenerationSpec,
     ImageRequest,
@@ -58,6 +65,7 @@ class VisionImageGenerationService:
         diagram_composer: VisionDiagramComposer | None = None,
         conditioned_editor: VisionConditionedEditor | None = None,
         evaluator: VisionImageEvaluator | None = None,
+        derivative_executor: ImageDerivativeExecutor | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
@@ -67,6 +75,7 @@ class VisionImageGenerationService:
         self._composer = diagram_composer or VisionDiagramComposer()
         self._editor = conditioned_editor or VisionConditionedEditor()
         self._evaluator = evaluator or VisionImageEvaluator()
+        self._derivative = derivative_executor or ImageDerivativeExecutor(storage=self._storage)
         self._assets = AssetRepository(session) if session is not None else None
 
     def compile(
@@ -146,7 +155,15 @@ class VisionImageGenerationService:
         harmonized = False
         data = payload.data
         mime_type = payload.mime_type
-        if request.harmonize_output and "png" in mime_type:
+        # Prefer formal ImageDerivative PRESENTATION_UNIFY after persist; soft
+        # harmonize only when we will not run the derivative pipeline.
+        use_derivative = (
+            request.harmonize_output
+            and persist_asset
+            and project_id is not None
+            and self._derivative.is_available()
+        )
+        if request.harmonize_output and not use_derivative and "png" in mime_type:
             try:
                 data = soft_harmonize_png(data)
                 harmonized = True
@@ -168,6 +185,23 @@ class VisionImageGenerationService:
                 harmonized=harmonized,
                 input_evaluation=input_eval,
             )
+            if use_derivative and storage_path:
+                layout = self._storage.ensure_project_layout(project_id)
+                original = layout["root"] / Path(storage_path)
+                if not original.is_file():
+                    original = Path(storage_path)
+                applied = self._apply_presentation_unify(
+                    project_id=project_id,
+                    asset_id=asset_id or uuid4(),
+                    original_path=original,
+                    spec=spec,
+                )
+                if applied is not None:
+                    new_path, mime_type, new_asset_id = applied
+                    storage_path = new_path
+                    harmonized = True
+                    if asset_id is not None and new_asset_id is not None:
+                        asset_id = new_asset_id
 
         return VisionGenerationResult(
             success=True,
@@ -353,3 +387,73 @@ class VisionImageGenerationService:
             saved = self._assets.create(asset)
             asset_id = saved.id
         return relative, asset_id
+
+    def _apply_presentation_unify(
+        self,
+        *,
+        project_id: UUID,
+        asset_id: UUID,
+        original_path: Path,
+        spec: GenerationSpec,
+    ) -> tuple[str, str, UUID | None] | None:
+        """Run ImageDerivative PRESENTATION_UNIFY; return (rel_path, mime, asset_id)."""
+        if not original_path.is_file():
+            return None
+        treatment = ImageTreatmentSpec(
+            original_asset_id=asset_id,
+            asset_class=ImageAssetClass.PRESENTATION,
+            mode=ImageTreatmentMode.PRESENTATION_UNIFY,
+            unify=default_presentation_unify_params(),
+            rationale="vision_engine_post_harmonize",
+        )
+        try:
+            derivative = self._derivative.execute(
+                treatment,
+                project_id=project_id,
+                original_path=original_path,
+            )
+        except Exception as exc:  # pragma: no cover
+            logger.info("Vision derivative unify failed: %s", exc)
+            return None
+        if derivative is None or not derivative.storage_uri:
+            return None
+
+        layout = self._storage.ensure_project_layout(project_id)
+        prefix = f"storage://projects/{project_id}/"
+        uri = derivative.storage_uri
+        if not uri.startswith(prefix):
+            return None
+        der_path = layout["root"] / uri[len(prefix) :]
+        if not der_path.is_file():
+            return None
+
+        vision_dir = layout["assets"] / "vision_generated"
+        vision_dir.mkdir(parents=True, exist_ok=True)
+        final_name = f"vision_{spec.image_type.value}_{spec.prompt_hash}_harmonized.jpg"
+        final_path = vision_dir / final_name
+        final_path.write_bytes(der_path.read_bytes())
+        relative = str(Path("assets") / "vision_generated" / final_name)
+
+        if self._assets is not None:
+            asset = self._assets.get_by_id(asset_id)
+            if asset is not None:
+                meta = dict(asset.metadata or {})
+                meta.update(
+                    {
+                        "harmonized": True,
+                        "harmonize_pipeline": "image_derivative_presentation_unify",
+                        "derivative_params_hash": derivative.params_hash,
+                        "derivative_storage_uri": derivative.storage_uri,
+                        "original_vision_path": str(original_path),
+                    }
+                )
+                updated = asset.model_copy(
+                    update={
+                        "path": str(final_path.resolve()),
+                        "filename": final_name,
+                        "metadata": meta,
+                    }
+                )
+                saved = self._assets.update(updated)
+                return relative, "image/jpeg", saved.id
+        return relative, "image/jpeg", asset_id
