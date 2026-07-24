@@ -554,6 +554,122 @@ M6_GREEN_CAMPUS_MISSION_JSON = """{
 }"""
 
 
+M7_CONCEPT_CULTURAL_CENTER_MISSION_JSON = """{
+  "title": "黄土高原文化中心概念探索",
+  "task_statement": "探索一种嵌入黄土高原地域文化、服务村民与游客的小型文化中心概念方向",
+  "task_natures": ["planning", "research"],
+  "domains": ["culture", "architecture"],
+  "intervention_scales": ["village", "site"],
+  "requested_service_depths": ["concept_planning", "preliminary_research", "presentation_production"],
+  "project_context": "仅有初步想法，无任务书与精确指标",
+  "current_situation": "项目处于概念萌芽阶段，地点与规模待确认",
+  "primary_problems": ["项目定位不清", "缺少基础资料", "目标用户与体验未定义"],
+  "desired_changes": ["建立可讨论的概念方向", "明确设计使命与假设", "形成概念汇报框架"],
+  "in_scope": ["概念策划", "地域文化研究", "概念汇报"],
+  "out_of_scope": ["施工图设计", "精确面积指标"],
+  "stakeholders": [
+    {"name": "村民", "role": "在地使用者", "concerns": ["社区归属", "日常可用性"]},
+    {"name": "游客", "role": "外来体验者", "concerns": ["文化体验", "可达性"]}
+  ],
+  "decision_context": "需先确认概念方向再进入方案深化",
+  "decisions_required": ["项目定位", "核心体验策略"],
+  "known_constraints": [],
+  "key_unknowns": ["精确用地", "建设规模", "投资来源"],
+  "research_questions": ["关中乡村公共文化空间有哪些可借鉴模式？"],
+  "design_question_summaries": ["如何让文化中心同时服务村民日常与游客体验？"],
+  "evaluation_criteria": [{"name": "概念可讨论性", "description": "方向清晰且留有验证空间", "weight": 0.4}],
+  "uncertainty_level": "high",
+  "confidence": 0.45,
+  "design_intent": {
+    "theme": "黄土高原地域文化再生",
+    "problem_statement": "在缺乏完整任务书时，如何建立可讨论的文化中心概念方向？",
+    "social_background": "乡村人口外流与本土文化记忆断层",
+    "cultural_context": "窑洞、台地景观与关中民俗",
+    "target_users": ["村民", "游客"],
+    "desired_experience": "在地认同与开放交流并存",
+    "core_questions": ["建筑如何成为社区生活的延伸？"],
+    "research_needed": ["同类乡村文化空间案例", "人口与游客趋势"],
+    "working_assumptions": ["假定位于陕西关中乡村，规模约 500–800㎡，待确认"]
+  },
+  "knowledge_gaps": [
+    {"category": "site", "question": "具体用地与可达性条件？", "why_it_matters": "影响概念尺度", "priority": "medium", "blocking": false}
+  ],
+  "assumptions": [
+    {"statement": "假定项目位于陕西关中乡村", "reason": "用户未提供精确地点", "requires_confirmation": true}
+  ],
+  "clarifying_questions": [
+    {"question": "更优先服务村民日常还是游客体验？", "why_asked": "影响功能重心", "blocking": false, "can_assume": true, "suggested_assumption": "两者并重，日常与节庆兼顾"}
+  ],
+  "design_questions": [
+    {"question": "如何用低信息密度启动高价值概念讨论？", "related_problem": "资料缺失", "desired_outcome": "可迭代的概念框架"}
+  ]
+}"""
+
+M7_CONCEPT_CULTURAL_CENTER_WORKSTREAM_JSON = """{
+  "workstreams": [
+    {
+      "title": "地域文化与社会背景研究",
+      "workstream_type": "case_study",
+      "objective": "梳理黄土高原地域文化与使用情境",
+      "questions": ["哪些文化要素应进入空间策略？"],
+      "inputs_required": ["用户想法"],
+      "activities": ["文献与案例研究"],
+      "outputs": ["文化语境摘要"],
+      "dependency_indices": [],
+      "priority": "high",
+      "effort_level": "medium",
+      "recommended": true,
+      "reason": "概念探索需先建立语境"
+    },
+    {
+      "title": "概念策划与体验框架",
+      "workstream_type": "programming",
+      "objective": "形成概念定位、用户与体验假设",
+      "questions": ["核心体验是什么？"],
+      "inputs_required": ["文化语境摘要"],
+      "activities": ["概念框架", "假设清单"],
+      "outputs": ["概念策划 v0.1"],
+      "dependency_indices": [0],
+      "priority": "critical",
+      "effort_level": "high",
+      "recommended": true,
+      "reason": "建立可讨论的概念方向"
+    },
+    {
+      "title": "概念汇报制作",
+      "workstream_type": "presentation",
+      "objective": "输出概念探索汇报",
+      "inputs_required": ["概念策划 v0.1"],
+      "activities": ["叙事组织"],
+      "outputs": ["概念汇报"],
+      "dependency_indices": [1],
+      "priority": "high",
+      "effort_level": "medium",
+      "recommended": true,
+      "reason": "用户需要汇报载体"
+    }
+  ],
+  "notes": "概念探索工作路径"
+}"""
+
+M7_CONCEPT_CULTURAL_CENTER_DELIVERABLE_JSON = """{
+  "deliverables": [
+    {
+      "id": "del-concept-ppt",
+      "title": "文化中心概念探索汇报",
+      "deliverable_type": "presentation",
+      "purpose": "呈现概念方向、假设与待研究项",
+      "audience": "委托方/团队内部",
+      "content_scope": ["设计使命", "文化语境", "概念框架", "待确认假设"],
+      "expected_length": "15-20页",
+      "required": true,
+      "selected": true,
+      "notes": "概念草稿，非正式交付"
+    }
+  ]
+}"""
+
+
 CASE_MOCKS: dict[str, dict[str, str]] = {
     "case_m1_temple": {
         "mission": TEMPLE_MISSION_JSON,
@@ -584,6 +700,11 @@ CASE_MOCKS: dict[str, dict[str, str]] = {
         "mission": M6_GREEN_CAMPUS_MISSION_JSON,
         "workstream": GREEN_CAMPUS_WORKSTREAM_PLAN_JSON,
         "deliverable": GREEN_CAMPUS_DELIVERABLE_PLAN_JSON,
+    },
+    "case_m7_concept_cultural_center": {
+        "mission": M7_CONCEPT_CULTURAL_CENTER_MISSION_JSON,
+        "workstream": M7_CONCEPT_CULTURAL_CENTER_WORKSTREAM_JSON,
+        "deliverable": M7_CONCEPT_CULTURAL_CENTER_DELIVERABLE_JSON,
     },
 }
 

@@ -1,4 +1,4 @@
-"""Loader for mission golden scenarios M1–M6."""
+"""Loader for mission golden scenarios M1–M7."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from archium.domain.document import DocumentChunk, SourceDocument
-from archium.domain.enums import DocumentType, ProcessingStatus, ProjectType
+from archium.domain.enums import DocumentType, ProcessingStatus, ProjectOriginMode, ProjectType
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import (
@@ -60,11 +60,15 @@ def _document_hash(case_id: str, index: int) -> str:
 def seed_mission_case(session: Session, path: Path) -> tuple[MissionGoldenCase, Project]:
     case = load_mission_case(path)
     payload = case.raw
+    project_payload = payload["project"]
     project = ProjectRepository(session).create(
         Project(
             name=case.project_name,
             project_type=case.project_type,
             description=case.project_description or None,
+            origin_mode=ProjectOriginMode(
+                str(project_payload.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value))
+            ),
         )
     )
     doc_repo = DocumentRepository(session)

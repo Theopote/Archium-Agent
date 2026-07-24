@@ -44,6 +44,29 @@ def assert_mission_expectations(
     for nature in expectations.get("task_natures_none") or []:
         assert nature not in natures, f"unexpected task nature {nature}"
 
+    if expectations.get("clarifying_questions_all_non_blocking"):
+        assert all(not question.blocking for question in generation.clarifying_questions)
+
+    intent = mission.design_intent
+    if intent is not None:
+        intent_blob = " ".join(
+            [
+                intent.theme,
+                intent.problem_statement,
+                intent.social_background,
+                intent.cultural_context,
+                intent.desired_experience,
+                " ".join(intent.core_questions),
+            ]
+        )
+        needles = expectations.get("design_intent_theme_contains_any") or []
+        if needles:
+            assert _contains_any(intent_blob, needles), (
+                f"design_intent missing {needles}: {intent_blob}"
+            )
+    elif expectations.get("design_intent_theme_contains_any"):
+        raise AssertionError("expected design_intent on mission but none was generated")
+
     for scale in expectations.get("intervention_scales_any") or []:
         assert scale in scales, f"expected scale {scale} in {scales}"
 

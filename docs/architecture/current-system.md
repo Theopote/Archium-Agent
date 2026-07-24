@@ -33,6 +33,16 @@ Project (origin_mode: concept | existing)
 
 概念草稿（无资料）可走完 Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
 
+### 意图驱动路线图（v0.3+）
+
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| P0/P1 | `ProjectOriginMode` 双入口、`DesignIntent`、概念模式 Planning、Genesis UI | 已落地 |
+| P2 | Autonomous Research — 从 `research_needed` 检索公开资料，写入 `ProjectKnowledgeItem` | 规划中 |
+| P2 | Research/Programming 第三入口（投资人策划模式） | 规划中 |
+| P3 | Design Iteration — 多方案概念推演（Visual / Vision Engine） | 规划中 |
+| P3 | 四模式 Architectural Workspace | 规划中 |
+
 Studio 的编辑闭环不是直接覆写导出文件：
 
 ```text

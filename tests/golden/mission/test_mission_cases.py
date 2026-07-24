@@ -1,4 +1,4 @@
-"""Golden scenarios M1–M6 for mission-first adaptive planning."""
+"""Golden scenarios M1–M7 for mission-first adaptive planning."""
 
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ def test_mission_golden_case(
 
 def test_mission_golden_manifests_load() -> None:
     paths = list_mission_case_paths()
-    assert len(paths) == 6
+    assert len(paths) == 7
     ids = {load_mission_case(path).id for path in paths}
     assert ids == set(CASE_MOCKS)
     assert ids == {
@@ -106,4 +106,5 @@ def test_mission_golden_manifests_load() -> None:
         "case_m4_village",
         "case_m5_fire_station",
         "case_m6_green_campus",
+        "case_m7_concept_cultural_center",
     }

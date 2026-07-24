@@ -1,0 +1,22 @@
+{
+  "id": "case_m7_concept_cultural_center",
+  "name": "黄土高原文化中心概念探索",
+  "project": {
+    "name": "黄土高原文化中心",
+    "project_type": "culture",
+    "description": "从一句话想法起步的概念探索",
+    "origin_mode": "concept_exploration"
+  },
+  "documents": [],
+  "facts": [],
+  "task_description": "我想在黄土高原做一个面向村民与游客的小型文化中心，目前只有想法，没有任务书和面积数据，希望先形成概念策划与汇报方向。",
+  "expectations": {
+    "task_natures_any": ["planning", "research"],
+    "design_intent_theme_contains_any": ["文化", "黄土", "地域"],
+    "max_clarifying_questions": 3,
+    "clarifying_questions_all_non_blocking": true,
+    "workstream_title_contains_any": ["研究", "概念", "策划"],
+    "deliverable_type_any": ["presentation"],
+    "presentation_deliverable_required": true
+  }
+}
