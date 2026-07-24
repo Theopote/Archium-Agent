@@ -306,6 +306,43 @@ class Settings(BaseSettings):
         le=10.0,
         description="Polling interval when waiting for ComfyUI /history.",
     )
+    vision_comfyui_workflow_txt2img_path: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_COMFYUI_WORKFLOW_TXT2IMG_PATH"),
+        description=(
+            "Optional path to a ComfyUI API-format JSON workflow for txt2img. "
+            "Supports {{prompt}} {{negative_prompt}} {{width}} {{height}} {{steps}} "
+            "{{cfg}} {{seed}} {{checkpoint}} {{sampler}} {{scheduler}} {{lora_name}} …"
+        ),
+    )
+    vision_comfyui_workflow_img2img_path: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_COMFYUI_WORKFLOW_IMG2IMG_PATH"),
+        description=(
+            "Optional path to a ComfyUI API-format JSON workflow for img2img. "
+            "Supports {{image}} / {{denoise}} plus the txt2img placeholders."
+        ),
+    )
+    vision_comfyui_lora: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_COMFYUI_LORA"),
+        description=(
+            "Optional LoRA filename for builtin Comfy graphs (LoraLoader). "
+            "Also available as {{lora_name}} in custom workflows."
+        ),
+    )
+    vision_comfyui_lora_strength_model: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=2.0,
+        description="LoRA strength_model for builtin Comfy graphs.",
+    )
+    vision_comfyui_lora_strength_clip: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=2.0,
+        description="LoRA strength_clip for builtin Comfy graphs.",
+    )
     slide_recovery_ocr_enabled: bool = Field(
         default=True,
         description="When true, run OCR (pytesseract) for raster slide recovery inputs.",

@@ -218,7 +218,17 @@ VISION_COMFYUI_CHECKPOINT=your-architecture-checkpoint.safetensors
 # steps / cfg / denoise 复用 VISION_LOCAL_SD_* 同名字段
 VISION_COMFYUI_SAMPLER=euler
 VISION_COMFYUI_SCHEDULER=normal
+# 可选：自定义 API 工作流（占位符见 example JSON）
+VISION_COMFYUI_WORKFLOW_TXT2IMG_PATH=archium/infrastructure/vision_gen/workflows/txt2img_api.example.json
+VISION_COMFYUI_WORKFLOW_IMG2IMG_PATH=archium/infrastructure/vision_gen/workflows/img2img_api.example.json
+# 可选：内置图挂 LoRA（需已放入 ComfyUI models/loras）
+VISION_COMFYUI_LORA=arch_marker_sketch.safetensors
+VISION_COMFYUI_LORA_STRENGTH_MODEL=0.8
+VISION_COMFYUI_LORA_STRENGTH_CLIP=0.8
 ```
+
+自定义工作流须为 **API 格式**（Save → API Format），支持占位符：  
+`{{prompt}}` `{{negative_prompt}}` `{{width}}` `{{height}}` `{{steps}}` `{{cfg}}` `{{seed}}` `{{checkpoint}}` `{{sampler}}` `{{scheduler}}` `{{denoise}}` `{{image}}` `{{lora_name}}` …
 
 路径：
 
@@ -271,8 +281,10 @@ base site/plan image
 | 入库后走 `ImageDerivativeExecutor` | **已做**（`*_harmonized.jpg` + cache/derivatives） |
 | 本地 SD（A1111/Forge sdapi）txt2img + img2img | **已做** `local_sd.py`（不捆绑权重） |
 | ComfyUI 内置 txt2img / img2img 工作流 | **已做** `comfyui.py` |
+| 自定义 Comfy API 工作流 JSON 挂载 + 占位符 | **已做** `comfyui_workflows.py` + example JSON |
+| 内置图可选 LoRA（`VISION_COMFYUI_LORA`） | **已做** |
 | Studio 改图强度滑条（denoising） | **已做** |
-| 自定义 Comfy 工作流 JSON / 建筑 LoRA 包分发 | **未做**（后续） |
+| 建筑 LoRA 权重包分发 / 市场 | **未做**（后续产品化） |
 
 Edit 路径：
 
@@ -315,8 +327,9 @@ Vision Engine 作为 **下一条战略主线** 立项，不阻塞 Studio V1 / Im
 3. Vision Engine v0.2 建筑图类模板 + 底图叠加 — **已完成**
 4. Vision Engine v0.3 条件改图 + QA + Derivative 统一 + Intent 建议 — **已完成**
 5. 本地 SD / 更强图生图（A1111 img2img）— **已完成**
-6. ComfyUI 内置工作流 — **本轮完成**
-7. 后续：自定义 Comfy 工作流挂载、建筑专用 LoRA 包、主体检测
+6. ComfyUI 内置工作流 — **已完成**
+7. 自定义工作流挂载 + LoRA 挂钩 — **本轮完成**
+8. 后续：建筑专用 LoRA 包分发、主体检测
 
 ## 11. 一句话决策
 

@@ -82,9 +82,14 @@ def build_txt2img_workflow(
     sampler_name: str,
     scheduler: str,
     seed: int = 0,
+    lora_name: str = "",
+    lora_strength_model: float = 0.8,
+    lora_strength_clip: float = 0.8,
 ) -> dict[str, Any]:
     """Minimal SD1.x/SDXL-compatible txt2img graph (CheckpointLoaderSimple)."""
-    return {
+    from archium.infrastructure.vision_gen.comfyui_workflows import apply_lora_to_checkpoint_graph
+
+    graph = {
         "4": {
             "class_type": "CheckpointLoaderSimple",
             "inputs": {"ckpt_name": checkpoint},
@@ -125,6 +130,14 @@ def build_txt2img_workflow(
             "inputs": {"filename_prefix": "archium_vision", "images": ["8", 0]},
         },
     }
+    if lora_name.strip():
+        return apply_lora_to_checkpoint_graph(
+            graph,
+            lora_name=lora_name,
+            strength_model=lora_strength_model,
+            strength_clip=lora_strength_clip,
+        )
+    return graph
 
 
 def build_img2img_workflow(
@@ -141,9 +154,14 @@ def build_img2img_workflow(
     scheduler: str,
     denoise: float,
     seed: int = 0,
+    lora_name: str = "",
+    lora_strength_model: float = 0.8,
+    lora_strength_clip: float = 0.8,
 ) -> dict[str, Any]:
     """Minimal img2img graph: LoadImage → VAEEncode → KSampler → VAEDecode."""
-    return {
+    from archium.infrastructure.vision_gen.comfyui_workflows import apply_lora_to_checkpoint_graph
+
+    graph = {
         "4": {
             "class_type": "CheckpointLoaderSimple",
             "inputs": {"ckpt_name": checkpoint},
@@ -188,6 +206,14 @@ def build_img2img_workflow(
             "inputs": {"filename_prefix": "archium_vision_edit", "images": ["8", 0]},
         },
     }
+    if lora_name.strip():
+        return apply_lora_to_checkpoint_graph(
+            graph,
+            lora_name=lora_name,
+            strength_model=lora_strength_model,
+            strength_clip=lora_strength_clip,
+        )
+    return graph
 
 
 class ComfyUiVisionImageGenerator:
@@ -233,25 +259,50 @@ class ComfyUiVisionImageGenerator:
             raise RuntimeError("ComfyUI is not configured")
         width = _clamp_dim(spec.width)
         height = _clamp_dim(spec.height)
-        workflow = build_txt2img_workflow(
-            checkpoint=self.model,
-            prompt=spec.prompt[:3500],
-            negative_prompt=(spec.negative_prompt or "")[:1500],
+        seed = abs(hash(spec.prompt_hash)) % (2**31)
+        values = self._placeholder_values(
+            spec,
             width=width,
             height=height,
-            steps=self._settings.vision_local_sd_steps,
-            cfg=self._settings.vision_local_sd_cfg_scale,
-            sampler_name=self._settings.vision_comfyui_sampler,
-            scheduler=self._settings.vision_comfyui_scheduler,
-            seed=abs(hash(spec.prompt_hash)) % (2**31),
+            seed=seed,
+            denoise=1.0,
+            image="",
         )
-        logger.info(
-            "ComfyUI txt2img checkpoint=%s size=%sx%s hash=%s",
-            self.model,
-            width,
-            height,
-            spec.prompt_hash,
-        )
+        custom_path = (self._settings.vision_comfyui_workflow_txt2img_path or "").strip()
+        if custom_path:
+            from archium.infrastructure.vision_gen.comfyui_workflows import render_custom_workflow
+
+            workflow = render_custom_workflow(custom_path, values=values)
+            logger.info(
+                "ComfyUI txt2img custom_workflow=%s checkpoint=%s hash=%s",
+                custom_path,
+                self.model,
+                spec.prompt_hash,
+            )
+        else:
+            workflow = build_txt2img_workflow(
+                checkpoint=self.model,
+                prompt=str(values["prompt"]),
+                negative_prompt=str(values["negative_prompt"]),
+                width=width,
+                height=height,
+                steps=int(values["steps"]),
+                cfg=float(values["cfg"]),
+                sampler_name=str(values["sampler"]),
+                scheduler=str(values["scheduler"]),
+                seed=seed,
+                lora_name=str(values["lora_name"]),
+                lora_strength_model=float(values["lora_strength_model"]),
+                lora_strength_clip=float(values["lora_strength_clip"]),
+            )
+            logger.info(
+                "ComfyUI txt2img checkpoint=%s size=%sx%s hash=%s lora=%s",
+                self.model,
+                width,
+                height,
+                spec.prompt_hash,
+                values["lora_name"] or "-",
+            )
         return self._run_workflow(workflow)
 
     def edit(self, spec: GenerationSpec, *, base_image_path: str) -> GeneratedImageBytes:
@@ -273,29 +324,83 @@ class ComfyUiVisionImageGenerator:
         except (TypeError, ValueError):
             denoise = self._settings.vision_local_sd_denoising_strength
         denoise = max(0.05, min(denoise, 1.0))
+        seed = abs(hash(spec.prompt_hash)) % (2**31)
+        values = self._placeholder_values(
+            spec,
+            width=width,
+            height=height,
+            seed=seed,
+            denoise=denoise,
+            image=image_name,
+        )
+        custom_path = (self._settings.vision_comfyui_workflow_img2img_path or "").strip()
+        if custom_path:
+            from archium.infrastructure.vision_gen.comfyui_workflows import render_custom_workflow
 
-        workflow = build_img2img_workflow(
-            checkpoint=self.model,
-            image_name=image_name,
+            workflow = render_custom_workflow(custom_path, values=values)
+            logger.info(
+                "ComfyUI img2img custom_workflow=%s denoise=%.2f hash=%s",
+                custom_path,
+                denoise,
+                spec.prompt_hash,
+            )
+        else:
+            workflow = build_img2img_workflow(
+                checkpoint=self.model,
+                image_name=image_name,
+                prompt=str(values["prompt"]),
+                negative_prompt=str(values["negative_prompt"]),
+                width=width,
+                height=height,
+                steps=int(values["steps"]),
+                cfg=float(values["cfg"]),
+                sampler_name=str(values["sampler"]),
+                scheduler=str(values["scheduler"]),
+                denoise=denoise,
+                seed=seed,
+                lora_name=str(values["lora_name"]),
+                lora_strength_model=float(values["lora_strength_model"]),
+                lora_strength_clip=float(values["lora_strength_clip"]),
+            )
+            logger.info(
+                "ComfyUI img2img checkpoint=%s denoise=%.2f hash=%s base=%s lora=%s",
+                self.model,
+                denoise,
+                spec.prompt_hash,
+                path.name,
+                values["lora_name"] or "-",
+            )
+        return self._run_workflow(workflow)
+
+    def _placeholder_values(
+        self,
+        spec: GenerationSpec,
+        *,
+        width: int,
+        height: int,
+        seed: int,
+        denoise: float,
+        image: str,
+    ) -> dict[str, Any]:
+        from archium.infrastructure.vision_gen.comfyui_workflows import placeholder_values
+
+        return placeholder_values(
             prompt=spec.prompt[:3500],
             negative_prompt=(spec.negative_prompt or "")[:1500],
             width=width,
             height=height,
             steps=self._settings.vision_local_sd_steps,
             cfg=self._settings.vision_local_sd_cfg_scale,
-            sampler_name=self._settings.vision_comfyui_sampler,
-            scheduler=self._settings.vision_comfyui_scheduler,
+            seed=seed,
+            checkpoint=self.model,
             denoise=denoise,
-            seed=abs(hash(spec.prompt_hash)) % (2**31),
+            image=image,
+            sampler=self._settings.vision_comfyui_sampler,
+            scheduler=self._settings.vision_comfyui_scheduler,
+            lora_name=(self._settings.vision_comfyui_lora or "").strip(),
+            lora_strength_model=self._settings.vision_comfyui_lora_strength_model,
+            lora_strength_clip=self._settings.vision_comfyui_lora_strength_clip,
         )
-        logger.info(
-            "ComfyUI img2img checkpoint=%s denoise=%.2f hash=%s base=%s",
-            self.model,
-            denoise,
-            spec.prompt_hash,
-            path.name,
-        )
-        return self._run_workflow(workflow)
 
     def _run_workflow(self, workflow: dict[str, Any]) -> GeneratedImageBytes:
         queued = self._post_json(
