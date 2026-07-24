@@ -118,3 +118,71 @@ def test_assess_and_persist_writes_knowledge_and_evolution(db_session) -> None:
 def test_assess_empty_raises() -> None:
     with pytest.raises(WorkflowError, match="描述"):
         ContextIntelligenceService(MagicMock(), MagicMock()).assess_text("  ")
+
+
+def test_resolve_action_target_maps_pages() -> None:
+    explore = ContextIntelligenceService.resolve_action_target(
+        NextBestActionType.EXPLORE_DIRECTIONS
+    )
+    assert explore.page_key == "concept-exploration"
+    materials = ContextIntelligenceService.resolve_action_target(
+        NextBestActionType.UPLOAD_MATERIALS
+    )
+    assert materials.page_key == "materials"
+    ask = ContextIntelligenceService.resolve_action_target(NextBestActionType.ASK)
+    assert ask.page_key == "project-mission"
+    assert ask.mission_step == 3
+
+
+def test_reassess_refreshes_without_duplicate_seed(db_session) -> None:
+    project = ProjectRepository(db_session).create(
+        Project(name="文化中心", description="西安青年文化中心想法")
+    )
+    db_session.commit()
+    llm = MagicMock()
+    llm.generate_structured.return_value = ContextAssessmentDraft(
+        completeness_score=0.3,
+        maturity_stage="concept_formation",
+        evidence_ratio=0.05,
+        assumption_ratio=0.9,
+        known={"location": "西安"},
+        unknown=["规模"],
+        missing_information=["规模"],
+        suggested_origin_mode="concept_exploration",
+        understanding_summary="初次理解。",
+        actions=[
+            NextBestActionDraft(action="explore_directions", reason="推演", priority=0)
+        ],
+    )
+    service = ContextIntelligenceService(db_session, llm)
+    service.assess_and_persist(project.id, "西安青年文化中心想法")
+    before = ProjectRepository(db_session).get_by_id(project.id)
+    assert before is not None
+    seed_events = [
+        e for e in before.intent_evolution.events if e.kind.value == "seed"
+    ]
+    assert len(seed_events) == 1
+
+    llm.generate_structured.return_value = ContextAssessmentDraft(
+        completeness_score=0.4,
+        maturity_stage="concept_formation",
+        evidence_ratio=0.1,
+        assumption_ratio=0.8,
+        known={"location": "西安", "type": "文化"},
+        unknown=["投资"],
+        missing_information=["投资"],
+        suggested_origin_mode="concept_exploration",
+        understanding_summary="刷新后的理解。",
+        actions=[
+            NextBestActionDraft(action="research", reason="补背景", priority=0)
+        ],
+    )
+    refreshed = service.reassess(project.id)
+    assert refreshed.knowledge_state.source == "refresh"
+    after = ProjectRepository(db_session).get_by_id(project.id)
+    assert after is not None
+    seed_events_after = [
+        e for e in after.intent_evolution.events if e.kind.value == "seed"
+    ]
+    assert len(seed_events_after) == 1
+    assert any("[刷新]" in e.summary for e in after.intent_evolution.events)

@@ -57,7 +57,7 @@ def render() -> None:
         exploration = get_latest_exploration_for_project(session, project_id)
 
     if exploration is None:
-        st.warning("当前项目尚无探索会话。请从「开始项目 → 从想法开始」重新进入。")
+        st.warning("当前项目尚无探索会话。请从「开始项目」重新描述想法进入。")
         st.page_link(get_app_page("project-genesis"), label="返回开始项目", icon=":material/arrow_back:")
         return
 
@@ -67,6 +67,7 @@ def render() -> None:
             st.warning(warning)
 
     _render_idea_seed(exploration)
+    _render_knowledge_and_evolution(project_id)
 
     status_label = {
         ExplorationSessionStatus.EXPLORING: "探索中",
@@ -85,6 +86,27 @@ def render() -> None:
         return
 
     settings = get_ui_effective_settings()
+    if st.button("刷新知识状态", key="explore_reassess", use_container_width=True):
+        from archium.ui.planning_service import reassess_project_context
+
+        with st.spinner("正在重新评估知识状态…"):
+            try:
+                with get_session() as session:
+                    result = reassess_project_context(
+                        session,
+                        project_id,
+                        user_text=exploration.idea_text,
+                        settings=settings,
+                    )
+                for warning in result.warnings:
+                    st.warning(warning)
+                st.success(result.knowledge_state.summary_line())
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(report_user_error(exc))
+
     seed = exploration.idea_seed or IdeaSeed.from_raw(exploration.idea_text)
     if not seed.is_enriched:
         st.info("想法尚未结构化解读。配置 LLM 后可点击下方按钮重新解读。")
@@ -241,3 +263,19 @@ def _render_idea_seed(exploration: ExplorationSession) -> None:
         if seed.keywords:
             st.markdown("**关键词**：" + "、".join(seed.keywords))
         st.caption(f"想象尺度：{seed.imagination_level}")
+
+
+def _render_knowledge_and_evolution(project_id: UUID) -> None:
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    with get_session() as session:
+        project = ProjectRepository(session).get_by_id(project_id)
+    if project is None:
+        return
+    if project.knowledge_state is not None:
+        st.caption(project.knowledge_state.summary_line())
+    latest = (
+        project.intent_evolution.latest_summary() if project.intent_evolution else None
+    )
+    if latest:
+        st.caption(f"意图演进：{latest}")

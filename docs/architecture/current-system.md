@@ -34,7 +34,7 @@ User opens Archium
   -> JSON / Marp / editable PPTX / PDF / preview images
 ```
 
-**核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextIntelligenceService` 评估已知/未知并建议下一步（探索方向、研究、澄清、上传部分资料、进入 Mission）。`origin_mode` 由评估内部派生。概念草稿（无资料）可走完 Exploration → Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
+**核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextIntelligenceService` 评估已知/未知并建议下一步（探索方向、研究、澄清、上传部分资料、进入 Mission）。评估可刷新；研究写回 / 选定方向 / 提交 Mission 会追加 `IntentEvolution`。`origin_mode` 由评估内部派生。概念草稿（无资料）可走完 Exploration → Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
 
 ### 意图驱动路线图（v0.3+）
 

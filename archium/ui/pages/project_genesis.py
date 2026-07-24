@@ -188,6 +188,37 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
             _dispatch_action(action.action)
             return
 
+    settings = get_ui_effective_settings()
+    if st.button(
+        "刷新知识状态",
+        key="genesis_reassess",
+        use_container_width=True,
+    ):
+        from archium.ui.planning_service import reassess_project_context
+        from uuid import UUID
+
+        with st.spinner("正在重新评估知识状态…"):
+            try:
+                with get_session() as session:
+                    assessment = reassess_project_context(
+                        session,
+                        UUID(project_id),
+                        user_text=st.session_state.get("genesis_task_description"),
+                        settings=settings,
+                    )
+                st.session_state[_ASSESSMENT_KEY] = {
+                    "understanding_summary": assessment.understanding_summary,
+                    "knowledge_state": assessment.knowledge_state.model_dump(mode="json"),
+                    "actions": [a.model_dump(mode="json") for a in assessment.actions],
+                    "suggested_origin_mode": assessment.suggested_origin_mode.value,
+                    "warnings": list(assessment.warnings),
+                }
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(report_user_error(exc))
+
     st.markdown("---")
     link_cols = st.columns(3)
     with link_cols[0]:
@@ -207,36 +238,17 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 
 
 def _action_label(action: NextBestActionType) -> str:
-    return {
-        NextBestActionType.RESEARCH: "启动研究补充背景",
-        NextBestActionType.ASK: "先澄清关键问题",
-        NextBestActionType.EXPLORE_DIRECTIONS: "推演概念方向",
-        NextBestActionType.UPLOAD_MATERIALS: "上传 / 整理资料",
-        NextBestActionType.GENERATE_MISSION: "生成项目任务",
-        NextBestActionType.OPEN_MISSION: "打开项目任务",
-    }.get(action, action.value)
+    from archium.application.context_intelligence_service import ContextIntelligenceService
+
+    return ContextIntelligenceService.resolve_action_target(action).label or action.value
 
 
 def _dispatch_action(action: NextBestActionType) -> None:
+    from archium.application.context_intelligence_service import ContextIntelligenceService
+
     st.session_state.pop(_ASSESSMENT_KEY, None)
     st.session_state.pop(_PROJECT_KEY, None)
-    if action in {
-        NextBestActionType.EXPLORE_DIRECTIONS,
-        NextBestActionType.RESEARCH,
-        NextBestActionType.ASK,
-    }:
-        if action == NextBestActionType.ASK:
-            st.session_state.mission_step = 3
-            st.switch_page(get_app_page("project-mission"))
-            return
-        if action == NextBestActionType.RESEARCH:
-            st.session_state.mission_step = 2
-            st.switch_page(get_app_page("project-mission"))
-            return
-        st.switch_page(get_app_page("concept-exploration"))
-        return
-    if action == NextBestActionType.UPLOAD_MATERIALS:
-        st.switch_page(get_app_page("materials"))
-        return
-    st.session_state.mission_step = 1
-    st.switch_page(get_app_page("project-mission"))
+    target = ContextIntelligenceService.resolve_action_target(action)
+    if target.mission_step is not None:
+        st.session_state.mission_step = target.mission_step
+    st.switch_page(get_app_page(target.page_key))

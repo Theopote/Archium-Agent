@@ -126,6 +126,7 @@ class MissionResearchEnrichmentService:
             RevisionSource.CLARIFICATION,
             note=f"公开研究写回（{len(pending)} 条）",
         )
+        self._append_research_evolution(mission.project_id, len(pending))
         needs_reapproval = was_approved
         return MissionResearchEnrichmentResult(
             mission=mission,
@@ -283,6 +284,22 @@ class MissionResearchEnrichmentService:
             payload,
             description="Mission IDs enriched with confirmed public research knowledge items",
         )
+
+    def _append_research_evolution(self, project_id: UUID, items_enriched: int) -> None:
+        from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        projects = ProjectRepository(self._session)
+        project = projects.get_by_id(project_id)
+        if project is None:
+            return
+        evo = project.intent_evolution or IntentEvolution()
+        project.intent_evolution = evo.append(
+            IntentEvolutionKind.RESEARCH,
+            f"公开研究写回任务理解（{items_enriched} 条）",
+        )
+        project.touch()
+        projects.update(project)
 
     def _require_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._missions.get_mission(mission_id)

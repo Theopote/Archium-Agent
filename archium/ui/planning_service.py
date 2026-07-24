@@ -511,6 +511,28 @@ def assess_project_context(
     )
 
 
+def reassess_project_context(
+    session: Session,
+    project_id: UUID,
+    *,
+    user_text: str | None = None,
+    settings: Settings | None = None,
+):
+    from archium.application.context_intelligence_service import ContextIntelligenceService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ContextIntelligenceService(session, llm, settings=runtime).reassess(
+        project_id, user_text=user_text
+    )
+
+
+def resolve_next_best_action_target(action):
+    from archium.application.context_intelligence_service import ContextIntelligenceService
+
+    return ContextIntelligenceService.resolve_action_target(action)
+
+
 def assess_entry_context(
     user_text: str,
     *,

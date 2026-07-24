@@ -40,6 +40,15 @@ class ContextAssessment:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class ActionDispatch:
+    """Where the UI should send the user for a NextBestAction."""
+
+    page_key: str
+    mission_step: int | None = None
+    label: str = ""
+
+
 class ContextIntelligenceService:
     """Judge what the project knows and what to do next (not content generation)."""
 
@@ -128,6 +137,76 @@ class ContextIntelligenceService:
         self._projects.update(project)
         self._session.commit()
         return assessment
+
+    def reassess(
+        self,
+        project_id: UUID,
+        *,
+        user_text: str | None = None,
+    ) -> ContextAssessment:
+        """Refresh KnowledgeState after new evidence; append understanding event only."""
+        project = self._projects.get_by_id(project_id)
+        if project is None:
+            raise WorkflowError(f"Project {project_id} not found")
+        text = (user_text or project.description or project.name or "").strip()
+        if not text:
+            raise WorkflowError("缺少可用于重评估的项目描述")
+        assessment = self.assess_and_persist(
+            project_id,
+            text,
+            write_evolution=False,
+        )
+        if assessment.understanding_summary.strip():
+            self.append_evolution(
+                project_id,
+                IntentEvolutionKind.AI_UNDERSTANDING,
+                f"[刷新] {assessment.understanding_summary.strip()[:480]}",
+            )
+            # append_evolution commits; refresh assessment from DB is optional
+        assessment.knowledge_state = assessment.knowledge_state.model_copy(
+            update={"source": "refresh"}
+        )
+        # Persist refreshed source stamp
+        project = self._projects.get_by_id(project_id)
+        if project is not None:
+            project.knowledge_state = assessment.knowledge_state
+            project.touch()
+            self._projects.update(project)
+            self._session.commit()
+        return assessment
+
+    @staticmethod
+    def resolve_action_target(action: NextBestActionType) -> ActionDispatch:
+        """Map NBA to an existing product page (no new pipeline)."""
+        if action == NextBestActionType.EXPLORE_DIRECTIONS:
+            return ActionDispatch(
+                page_key="concept-exploration",
+                label="推演概念方向",
+            )
+        if action == NextBestActionType.UPLOAD_MATERIALS:
+            return ActionDispatch(page_key="materials", label="上传 / 整理资料")
+        if action == NextBestActionType.RESEARCH:
+            return ActionDispatch(
+                page_key="project-mission",
+                mission_step=2,
+                label="启动研究补充背景",
+            )
+        if action == NextBestActionType.ASK:
+            return ActionDispatch(
+                page_key="project-mission",
+                mission_step=3,
+                label="先澄清关键问题",
+            )
+        if action in {
+            NextBestActionType.GENERATE_MISSION,
+            NextBestActionType.OPEN_MISSION,
+        }:
+            return ActionDispatch(
+                page_key="project-mission",
+                mission_step=1,
+                label="打开项目任务",
+            )
+        return ActionDispatch(page_key="project-mission", mission_step=1, label=action.value)
 
     def append_evolution(
         self,
