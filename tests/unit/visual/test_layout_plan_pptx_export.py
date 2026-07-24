@@ -120,7 +120,7 @@ def test_renderer_writes_deck_and_invokes_layout_cli(tmp_path: Path) -> None:
     mock_render.assert_called_once()
 
 
-def test_renderer_resolves_icon_refs_via_asset_context() -> None:
+def test_renderer_resolves_icon_refs_via_asset_context(tmp_path: Path) -> None:
     design = default_presentation_design_system()
     plan = _sample_plan(design.id)
     plan.elements.append(
@@ -137,13 +137,18 @@ def test_renderer_resolves_icon_refs_via_asset_context() -> None:
         )
     )
     slide = _sample_slide(plan.slide_id)
+    icon_path = tmp_path / "pedestrian_flow.svg"
+    icon_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" stroke="#1A1A1A"><path d="M0 0"/></svg>',
+        encoding="utf-8",
+    )
     renderer = PptxGenPresentationRenderer(
         Settings(_env_file=None),
         session=MagicMock(),
     )
     fake_context = MagicMock()
     fake_context.resolved_paths = {
-        "icon:pedestrian_flow": "C:/icons/pedestrian_flow.svg",
+        "icon:pedestrian_flow": str(icon_path),
     }
     with patch(
         "archium.application.visual.asset_reference.build_asset_reference_context",
@@ -159,7 +164,9 @@ def test_renderer_resolves_icon_refs_via_asset_context() -> None:
     mocked.assert_called_once()
     elements = deck["slides"][0]["elements"]
     icon_el = next(item for item in elements if item["id"] == "metric_icon")
-    assert icon_el["path"] == "C:/icons/pedestrian_flow.svg"
+    # Accent recolor materializes a sibling cache file; path must still resolve.
+    assert Path(icon_el["path"]).is_file()
+    assert Path(icon_el["path"]).suffix.lower() == ".svg"
 
 
 def test_cli_render_layout_instructions_invokes_render_plan(tmp_path: Path) -> None:

@@ -16,7 +16,7 @@ def test_non_rectangle_shape_discloses_backend_normalization() -> None:
     assert any("normalizes ellipse geometry" in item for item in assessment.mapping.limitations)
 
 
-def test_unpreserved_picture_effects_are_approximate() -> None:
+def test_unpreserved_picture_effects_are_bake_required() -> None:
     node = ImageNode(
         id="photo",
         x=0,
@@ -27,6 +27,8 @@ def test_unpreserved_picture_effects_are_approximate() -> None:
         shadow=ShadowStyle(),
     )
     assessment = assess_scene_node(node)
-    assert assessment.mapping.fidelity == PowerPointFidelity.APPROXIMATE
+    # ImageNode.shadow has no native PPTX effect model in V1 — bake or drop.
+    assert assessment.mapping.fidelity == PowerPointFidelity.BAKE_REQUIRED
     assert "shadow" in assessment.detected_features
+
 

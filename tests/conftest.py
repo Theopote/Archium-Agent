@@ -37,6 +37,9 @@ def test_settings(tmp_path: Path) -> Settings:
         llm_api_key=None,
         embedding_provider="mock",
         retrieval_enabled=True,
+        # Unit fixtures use compact SITE_PLAN slides; keep layout candidates available
+        # so edit/UI tests exercise planning rather than the capacity hard-stop gate.
+        visual_capacity_block_overloaded=False,
     )
 
 

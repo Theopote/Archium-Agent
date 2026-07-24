@@ -58,7 +58,14 @@ def materialize_recolored_icon(
     *,
     cache_dir: Path | None = None,
 ) -> Path:
-    """Write a cached recolored SVG and return its path (idempotent per source+color)."""
+    """Write a cached recolored SVG and return its path (idempotent per source+color).
+
+    Missing sources are returned unchanged without ``Path.resolve()`` so Windows-style
+    absolute paths (``C:/…``) are not rewritten into cwd-relative paths on Linux.
+    """
+    if not source_path.is_file():
+        return source_path
+
     resolved = source_path.resolve()
     target = normalize_icon_stroke_color(stroke_color)
     if target.upper() == PACK_DEFAULT_STROKE:
@@ -74,3 +81,4 @@ def materialize_recolored_icon(
     text = recolor_icon_svg_text(resolved.read_text(encoding="utf-8"), target)
     out_path.write_text(text, encoding="utf-8")
     return out_path
+

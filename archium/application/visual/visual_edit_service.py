@@ -573,7 +573,7 @@ class VisualEditService:
             self._presentations.save_slide(target_slide)
 
             llm = create_llm_provider(self._settings) if self._use_llm else None
-            planner = LayoutPlanningService(self._session, llm=llm)
+            planner = LayoutPlanningService(self._session, llm=llm, settings=self._settings)
             art, design = self._resolve_art_and_design(target_slide, updated_intent)
             candidates = planner.generate_candidates(
                 slide=target_slide,
@@ -625,7 +625,7 @@ class VisualEditService:
             self._presentations.save_slide(target_slide)
 
             llm = create_llm_provider(self._settings) if self._use_llm else None
-            planner = LayoutPlanningService(self._session, llm=llm)
+            planner = LayoutPlanningService(self._session, llm=llm, settings=self._settings)
             art, design = self._resolve_art_and_design(target_slide, intent)
             candidates = planner.generate_candidates(
                 slide=target_slide,
@@ -930,7 +930,7 @@ class VisualEditService:
 
         art, design = self._resolve_art_and_design(slide, intent)
         llm = create_llm_provider(self._settings) if self._use_llm else None
-        planner = LayoutPlanningService(self._session, llm=llm)
+        planner = LayoutPlanningService(self._session, llm=llm, settings=self._settings)
         current_plan = self._load_plan(slide)
         candidates = planner.generate_candidates(
             slide=slide,

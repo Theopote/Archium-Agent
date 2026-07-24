@@ -76,9 +76,10 @@ def slide_with_visual(db_session: Session) -> SlideSpec:
 
 def test_apply_reduce_text_records_revision_and_replans(
     db_session: Session,
+    test_settings: object,
     slide_with_visual: SlideSpec,
 ) -> None:
-    service = VisualEditService(db_session)
+    service = VisualEditService(db_session, settings=test_settings)  # type: ignore[arg-type]
     first = service.apply_intent(slide_with_visual.id, VisualEditIntent.REDUCE_TEXT)
     assert first.layout_plan is not None
     assert first.visual_intent is not None
@@ -94,18 +95,20 @@ def test_apply_reduce_text_records_revision_and_replans(
 
 def test_restore_previous_without_history_raises(
     db_session: Session,
+    test_settings: object,
     slide_with_visual: SlideSpec,
 ) -> None:
-    service = VisualEditService(db_session)
+    service = VisualEditService(db_session, settings=test_settings)  # type: ignore[arg-type]
     with pytest.raises(WorkflowError, match="没有可恢复"):
         service.restore_previous(slide_with_visual.id)
 
 
 def test_apply_text_uses_preset_parser_fallback(
     db_session: Session,
+    test_settings: object,
     slide_with_visual: SlideSpec,
 ) -> None:
-    service = VisualEditService(db_session)
+    service = VisualEditService(db_session, settings=test_settings)  # type: ignore[arg-type]
     result = service.apply_text(slide_with_visual.id, "减少文字")
     assert result.layout_plan is not None
     assert result.intent == VisualEditIntent.REDUCE_TEXT
@@ -113,18 +116,20 @@ def test_apply_text_uses_preset_parser_fallback(
 
 def test_apply_intent_enlarge_hero(
     db_session: Session,
+    test_settings: object,
     slide_with_visual: SlideSpec,
 ) -> None:
-    service = VisualEditService(db_session)
+    service = VisualEditService(db_session, settings=test_settings)  # type: ignore[arg-type]
     result = service.apply_intent(slide_with_visual.id, VisualEditIntent.ENLARGE_HERO)
     assert result.layout_plan is not None
 
 
 def test_apply_intent_restore_previous_after_edit(
     db_session: Session,
+    test_settings: object,
     slide_with_visual: SlideSpec,
 ) -> None:
-    service = VisualEditService(db_session)
+    service = VisualEditService(db_session, settings=test_settings)  # type: ignore[arg-type]
     service.apply_intent(slide_with_visual.id, VisualEditIntent.REDUCE_TEXT)
     restored = service.apply_intent(slide_with_visual.id, VisualEditIntent.RESTORE_PREVIOUS)
     assert restored.restored is True
@@ -132,17 +137,19 @@ def test_apply_intent_restore_previous_after_edit(
 
 def test_apply_intent_unsupported_raises(
     db_session: Session,
+    test_settings: object,
     slide_with_visual: SlideSpec,
 ) -> None:
-    service = VisualEditService(db_session)
+    service = VisualEditService(db_session, settings=test_settings)  # type: ignore[arg-type]
     with pytest.raises(WorkflowError, match="Unsupported"):
         service.apply_intent(slide_with_visual.id, "not-a-real-intent")
 
 
 def test_apply_text_unrecognized_raises(
     db_session: Session,
+    test_settings: object,
     slide_with_visual: SlideSpec,
 ) -> None:
-    service = VisualEditService(db_session)
+    service = VisualEditService(db_session, settings=test_settings)  # type: ignore[arg-type]
     with pytest.raises(WorkflowError, match="无法识别"):
         service.apply_text(slide_with_visual.id, "随便说点什么没有意图")

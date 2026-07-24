@@ -510,7 +510,7 @@ def replan_slide(
         design = design_repo.save(default_presentation_design_system())
 
     llm = create_llm_provider(resolved) if use_llm and resolved.llm_configured else None
-    planner = LayoutPlanningService(session, llm=llm)
+    planner = LayoutPlanningService(session, llm=llm, settings=resolved)
     previous_plan = None
     if slide.layout_plan_id is not None:
         previous_plan = plans.get(slide.layout_plan_id)

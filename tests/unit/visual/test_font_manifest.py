@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from archium.application.visual.scene_fonts import DEFAULT_CJK_FONT, DEFAULT_LATIN_FONT
 from archium.domain.visual import default_presentation_design_system
@@ -38,27 +40,28 @@ def test_font_manifest_uses_freetype_files() -> None:
 
 
 @pytest.mark.unit
-def test_fallback_when_family_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fallback_when_family_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     from archium.infrastructure.layout import font_manifest as fm
+    from archium.infrastructure.layout import font_resolver as fr
 
-    real_resolve = fm.resolve_font_file
+    empty_root = tmp_path / "fonts"
+    empty_root.mkdir()
+    monkeypatch.setattr(fr, "_FONT_ROOT", empty_root)
+    monkeypatch.setattr(fr, "_FONT_CANDIDATES", {})
+    monkeypatch.setattr(fr, "_BOLD_SUFFIX_CANDIDATES", {})
+    fr.load_truetype_font.cache_clear()
 
-    def _fake(family: str, *, bold: bool = False):  # noqa: ANN001
-        if family == "MissingFamilyXYZ":
-            return None
-        return real_resolve(family, bold=bold)
-
-    monkeypatch.setattr(fm, "resolve_font_file", _fake)
     resolved, resolved_family, fallback_used = resolve_font_with_policy(
         "MissingFamilyXYZ", bold=False
     )
-    if fonts_available():
-        assert resolved is not None
-        assert fallback_used
-        assert resolved_family != "MissingFamilyXYZ"
-    else:
-        assert resolved is None
-        assert fallback_used
+    assert resolved is None
+    assert resolved_family == "MissingFamilyXYZ"
+    assert fallback_used
+    # Ensure the policy walked fallbacks instead of short-circuiting on a system font.
+    assert fm.resolve_font_file("Arial", bold=False) is None
 
 
 @pytest.mark.unit

@@ -122,6 +122,7 @@ def test_run_visual_workflow_and_snapshot(
 
 def test_presentation_has_visual_layout(
     db_session: Session,
+    test_settings: object,
     presentation_with_slides: tuple[Project, Presentation],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -144,6 +145,7 @@ def test_presentation_has_visual_layout(
         presentation.id,
         require_art_direction_review=False,
         use_llm=False,
+        settings=test_settings,  # type: ignore[arg-type]
     )
     assert presentation_has_visual_layout(db_session, presentation.id) is True
 
