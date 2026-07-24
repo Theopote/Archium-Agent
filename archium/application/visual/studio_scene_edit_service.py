@@ -25,6 +25,7 @@ from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     DeleteNodeCommand,
+    DuplicateNodesCommand,
     MoveNodeCommand,
     MoveNodesCommand,
     NodeAlignment,
@@ -217,6 +218,60 @@ class StudioSceneEditService:
             reason="delete element",
         )
         return self.apply_command(slide.id, command)
+
+    def duplicate_layout_elements(
+        self,
+        slide_id: UUID,
+        *,
+        element_ids: list[str],
+        offset_x: float = 0.25,
+        offset_y: float = 0.25,
+    ) -> SceneEditResult:
+        """Copy selected layout/scene elements with a small offset (one Revision)."""
+        if not element_ids:
+            raise WorkflowError("没有可复制的元素。")
+        slide, plan, _scene = self._require_scene_context(slide_id)
+        node_ids: list[str] = []
+        source_layout_by_node: dict[str, str] = {}
+        for element_id in element_ids:
+            node_id = self._resolve_node_id(slide_id, element_id)
+            node_ids.append(node_id)
+            source_layout_by_node[node_id] = element_id
+
+        command = DuplicateNodesCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=list(node_ids),
+            node_ids=list(node_ids),
+            offset_x=offset_x,
+            offset_y=offset_y,
+            reason="duplicate element",
+        )
+        result = self.apply_command(slide.id, command)
+
+        # Clone LayoutElements for canvas hit-targets; sync also recreates orphans on redo.
+        if plan is not None and result.scene is not None and result.applied_actions:
+            slide = self._require_slide(slide_id)
+            _, plan, scene = self._require_scene_context(slide_id)
+            if plan is not None:
+                plan = _append_cloned_layout_elements(
+                    plan,
+                    scene=scene,
+                    source_layout_by_node=source_layout_by_node,
+                    insert_actions=list(result.applied_actions),
+                )
+                plan = sync_layout_geometry_from_scene(scene, plan)
+                plan = self._plans.save(plan)
+                slide.layout_plan_id = plan.id
+                self._presentations.save_slide(slide)
+                result = SceneEditResult(
+                    slide_id=result.slide_id,
+                    scene=scene,
+                    layout_plan=plan,
+                    applied_actions=result.applied_actions,
+                    message=result.message,
+                )
+        return result
 
     def rewrite_layout_element_text(
         self,
@@ -435,11 +490,15 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
     After sync, ``geometry_authority`` is ``render_scene`` so
     ``ensure_scene_for_slide`` will not overwrite Studio edits by recompiling
     from a stale LayoutPlan (DOM-011).
+
+    Also recreates LayoutElements for visible scene nodes that are missing from
+    the plan (needed after Undo→Redo of Duplicate).
     """
     from archium.domain.visual.render_scene import ImageNode, TextNode
 
     patched = plan.model_copy(deep=True)
     visible_layout_ids: set[str] = set()
+    elements_by_id = {element.id: element for element in patched.elements}
     for element in patched.elements:
         node = scene.node_by_layout_element_id(element.id) or scene.node_by_id(element.id)
         if node is None:
@@ -458,12 +517,27 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
         if isinstance(node, ImageNode) and node.asset_id is not None:
             element.content_ref = str(node.asset_id)
         visible_layout_ids.add(element.id)
+
     next_elements = [element for element in patched.elements if element.id in visible_layout_ids]
+    for node in scene.nodes:
+        if not node.visible:
+            continue
+        layout_id = (node.source_layout_element_id or node.id).strip()
+        if not layout_id or layout_id in visible_layout_ids:
+            continue
+        if layout_id in elements_by_id and elements_by_id[layout_id] in next_elements:
+            continue
+        next_elements.append(_layout_element_from_scene_node(node, layout_id))
+        visible_layout_ids.add(layout_id)
+
     next_reading_order = [
         element_id
         for element_id in (patched.reading_order or [])
         if element_id in visible_layout_ids
     ]
+    for element_id in visible_layout_ids:
+        if element_id not in next_reading_order:
+            next_reading_order.append(element_id)
     synced = patched.model_copy(
         update={
             "elements": next_elements,
@@ -471,6 +545,122 @@ def sync_layout_geometry_from_scene(scene: RenderScene, plan: LayoutPlan) -> Lay
         }
     )
     return synced.with_scene_geometry_authority(scene.version)
+
+
+def _append_cloned_layout_elements(
+    plan: LayoutPlan,
+    *,
+    scene: RenderScene,
+    source_layout_by_node: dict[str, str],
+    insert_actions: list[ScenePatchAction],
+) -> LayoutPlan:
+    """Clone source LayoutElements for newly inserted duplicate nodes when possible."""
+    existing = {element.id for element in plan.elements}
+    extras = list(plan.elements)
+    reading = list(plan.reading_order or [])
+    # Match insert actions to source nodes by order within the duplicate command.
+    source_ids = list(source_layout_by_node.keys())
+    insert_index = 0
+    for action in insert_actions:
+        if action.action_type != "insert_node":
+            continue
+        new_id = action.node_id[:100]
+        source_node_id = source_ids[insert_index] if insert_index < len(source_ids) else ""
+        insert_index += 1
+        source_layout_id = source_layout_by_node.get(source_node_id, "")
+        source_element = next((item for item in plan.elements if item.id == source_layout_id), None)
+        node = scene.node_by_id(action.node_id)
+        if source_element is None and new_id in existing:
+            continue
+        if source_element is not None:
+            cloned = source_element.model_copy(
+                deep=True,
+                update={
+                    "id": new_id,
+                    "x": node.x if node is not None else source_element.x,
+                    "y": node.y if node is not None else source_element.y,
+                    "z_index": node.z_index if node is not None else source_element.z_index + 1,
+                    "locked": False,
+                    "lock_scopes": [],
+                },
+            )
+            extras = [item for item in extras if item.id != new_id]
+        elif node is not None:
+            cloned = _layout_element_from_scene_node(node, new_id)
+        else:
+            continue
+        extras.append(cloned)
+        existing.add(cloned.id)
+        if cloned.id not in reading:
+            reading.append(cloned.id)
+    return plan.model_copy(update={"elements": extras, "reading_order": reading})
+
+
+def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElement:
+    from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
+    from archium.domain.visual.layout import LayoutElement
+    from archium.domain.visual.render_scene import (
+        ChartNode,
+        DrawingNode,
+        ImageNode,
+        ShapeNode,
+        TableNode,
+        TextNode,
+    )
+
+    role = LayoutElementRole.BODY_TEXT
+    content_type = LayoutContentType.TEXT
+    text_content: str | None = None
+    content_ref: str | None = None
+    semantic = str(getattr(node, "semantic_role", "") or "").strip()
+    if semantic:
+        try:
+            role = LayoutElementRole(semantic)
+        except ValueError:
+            pass
+
+    if isinstance(node, TextNode):
+        content_type = LayoutContentType.TEXT
+        text_content = node.text
+        if not semantic:
+            role = LayoutElementRole.BODY_TEXT
+    elif isinstance(node, ImageNode):
+        content_type = LayoutContentType.IMAGE
+        content_ref = str(node.asset_id) if node.asset_id is not None else None
+        if not semantic:
+            role = LayoutElementRole.SUPPORTING_VISUAL
+    elif isinstance(node, DrawingNode):
+        content_type = LayoutContentType.DRAWING
+        content_ref = str(node.asset_id) if getattr(node, "asset_id", None) is not None else None
+        if not semantic:
+            role = LayoutElementRole.HERO_VISUAL
+    elif isinstance(node, ShapeNode):
+        content_type = LayoutContentType.SHAPE
+        if not semantic:
+            role = LayoutElementRole.DECORATION
+    elif isinstance(node, ChartNode):
+        content_type = LayoutContentType.CHART
+        if not semantic:
+            role = LayoutElementRole.SUPPORTING_VISUAL
+    elif isinstance(node, TableNode):
+        content_type = LayoutContentType.TABLE
+        if not semantic:
+            role = LayoutElementRole.BODY_TEXT
+
+    return LayoutElement(
+        id=element_id[:100],
+        role=role,
+        content_type=content_type,
+        content_ref=content_ref,
+        text_content=text_content,
+        x=float(getattr(node, "x", 0.0)),
+        y=float(getattr(node, "y", 0.0)),
+        width=max(float(getattr(node, "width", 1.0)), 0.05),
+        height=max(float(getattr(node, "height", 0.5)), 0.05),
+        z_index=int(getattr(node, "z_index", 0)),
+        locked=bool(getattr(node, "locked", False)),
+        lock_scopes=_layout_lock_scopes(list(getattr(node, "lock_scopes", []) or [])),
+    )
 
 
 def _layout_lock_scopes(raw_scopes: list[str]) -> list[ElementLockScope]:

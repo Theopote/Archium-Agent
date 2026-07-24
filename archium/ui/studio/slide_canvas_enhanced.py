@@ -47,6 +47,8 @@ def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | N
         return "commitReplaceAsset", str(event["elementId"]), None, None, None, None, False
     if event["type"] == "commitDelete":
         return "commitDelete", str(event["elementId"]), None, None, None, None, False
+    if event["type"] == "commitDuplicate":
+        return "commitDuplicate", None, None, None, None, None, False
     if event["type"] == "requestReplaceAsset":
         return "requestReplaceAsset", str(event["elementId"]), None, None, None, None, False
     if event["type"] == "moveMany":
@@ -320,6 +322,7 @@ def _render_interactive_canvas(
         apply_canvas_commit_replace_asset_event,
         apply_canvas_commit_text_event,
         apply_canvas_delete_event,
+        apply_canvas_duplicate_event,
         apply_canvas_move_event,
         apply_canvas_move_many_event,
         apply_canvas_resize_event,
@@ -406,6 +409,13 @@ def _render_interactive_canvas(
             apply_canvas_delete_event(
                 slide_id=slide_id,
                 element_id=str(typed["elementId"]),
+            )
+            return True
+
+        elif typed["type"] == "commitDuplicate":
+            apply_canvas_duplicate_event(
+                slide_id=slide_id,
+                element_ids=[str(item) for item in typed.get("elementIds") or []],
             )
             return True
 

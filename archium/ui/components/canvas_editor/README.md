@@ -288,21 +288,20 @@ bash build.sh
 
 ## 未来改进
 
-### 短期（1-2 周）
-- [ ] 添加键盘快捷键（Delete, Esc）
-- [ ] 显示元素尺寸信息
-- [ ] 添加缩放控制
+### V1 已接通（命令链）
+- [x] 选择 / Shift 多选 / 框选
+- [x] 拖拽移动（pointermove 本地预览，pointerup 一次 Command）
+- [x] SE 缩放 + Shift 保比例
+- [x] Delete / Backspace 删除
+- [x] Ctrl/Cmd+C → V 与 Ctrl/Cmd+D 复制
+- [x] 双击改字 / 换图
+- [x] Undo/Redo（工具栏；沿 Scene Revision）
 
-### 中期（1-2 月）
-- [ ] 拖拽调整位置
-- [ ] 调整元素尺寸
-- [x] 多选支持（Shift 多选与框选）
-
-### 长期（3-6 月）
-- [ ] 撤销/重做
-- [ ] 对齐辅助线
-- [ ] 吸附网格
-- [ ] 复制粘贴
+### 后续增强
+- [ ] 八向缩放手柄
+- [ ] 对齐辅助线 / 吸附网格
+- [ ] 画布 Ctrl+Z（目前走工具栏）
+- [ ] 显示元素尺寸信息 / 画布缩放控制
 
 ## 许可证
 
@@ -311,4 +310,5 @@ bash build.sh
 ## 相关文档
 
 - [STUDIO_INTERACTION_ROADMAP.md](../../../STUDIO_INTERACTION_ROADMAP.md) - 完整的交互改进路线图
+- [docs/roadmap/visual-quality-and-editing-sprint.md](../../../docs/roadmap/visual-quality-and-editing-sprint.md) Sprint 2
 - [Streamlit Components API](https://docs.streamlit.io/library/components/components-api) - Streamlit 组件开发文档

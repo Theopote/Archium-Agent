@@ -599,6 +599,23 @@ def resolve_accepted_commands(
 
 
 def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
+    if action.action_type == "insert_node":
+        if scene.node_by_id(action.node_id) is not None:
+            return
+        payload = action.after_payload or {}
+        if not payload:
+            return
+        from pydantic import TypeAdapter
+
+        from archium.domain.visual.render_scene import RenderNode as RenderNodeUnion
+
+        try:
+            cloned = TypeAdapter(RenderNodeUnion).validate_python(payload)
+        except Exception:
+            return
+        scene.nodes = list(scene.nodes) + [cloned]
+        return
+
     node = scene.node_by_id(action.node_id)
     if node is None:
         return

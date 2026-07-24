@@ -59,6 +59,7 @@ type CanvasEvent =
   | { type: "commitText"; elementId: string; text: string }
   | { type: "commitReplaceAsset"; elementId: string; assetId: string }
   | { type: "commitDelete"; elementId: string }
+  | { type: "commitDuplicate"; elementIds: string[] }
   | { type: "requestReplaceAsset"; elementId: string };
 
 const ROLE_COLORS: Record<string, { border: string; background: string; label: string }> = {
@@ -210,6 +211,8 @@ const CanvasEditor: React.FC = () => {
     textareaRef.current.select();
   }, [inlineEditElementId]);
 
+  const clipboardIdsRef = useRef<string[]>([]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (inlineEdit || assetPicker) return;
@@ -223,10 +226,44 @@ const CanvasEditor: React.FC = () => {
       ) {
         return;
       }
-      if (event.key !== "Delete" && event.key !== "Backspace") return;
       const selected = localSelectedIds.length
         ? localSelectedIds
         : selectedIdsProp;
+      const mod = event.metaKey || event.ctrlKey;
+
+      if (mod && (event.key === "c" || event.key === "C")) {
+        if (!selected.length) return;
+        clipboardIdsRef.current = [...selected];
+        event.preventDefault();
+        return;
+      }
+      if (mod && (event.key === "d" || event.key === "D")) {
+        if (!selected.length) return;
+        const unlocked = selected.filter((id) => {
+          const element = elements.find((item) => item.id === id);
+          return element && !element.locked;
+        });
+        if (!unlocked.length) return;
+        event.preventDefault();
+        emitEvent({ type: "commitDuplicate", elementIds: unlocked });
+        return;
+      }
+      if (mod && (event.key === "v" || event.key === "V")) {
+        const source =
+          clipboardIdsRef.current.length > 0
+            ? clipboardIdsRef.current
+            : selected;
+        const unlocked = source.filter((id) => {
+          const element = elements.find((item) => item.id === id);
+          return element && !element.locked;
+        });
+        if (!unlocked.length) return;
+        event.preventDefault();
+        emitEvent({ type: "commitDuplicate", elementIds: unlocked });
+        return;
+      }
+
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
       if (!selected.length) return;
       const elementId = selected[0];
       const element = elements.find((item) => item.id === elementId);

@@ -21,6 +21,7 @@ from archium.domain.visual.render_scene import (
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     DeleteNodeCommand,
+    DuplicateNodesCommand,
     FixOverflowCommand,
     IncreaseDrawingReadabilityCommand,
     MoveNodeCommand,
@@ -58,6 +59,7 @@ def command_target_node_ids(command: StudioCommand) -> set[str]:
             MoveNodeCommand,
             ResizeNodeCommand,
             DeleteNodeCommand,
+            DuplicateNodesCommand,
             ReorderNodeCommand,
             SetNodeLockCommand,
             SetNodeVisibilityCommand,
@@ -67,6 +69,9 @@ def command_target_node_ids(command: StudioCommand) -> set[str]:
         targets.add(command.node_id)
     elif isinstance(command, AlignNodesCommand):
         targets.update(command.node_ids)
+    elif isinstance(command, DuplicateNodesCommand):
+        targets.update(command.node_ids)
+        targets.update(command.new_node_ids)
     return {node_id for node_id in targets if node_id.strip()}
 
 

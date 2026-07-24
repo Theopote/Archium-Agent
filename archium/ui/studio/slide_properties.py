@@ -644,6 +644,31 @@ def _render_element_properties(
             _run_visibility(slide_snapshot.slide.id, element.id, visible=False)
 
         if st.button(
+            "复制此元素",
+            use_container_width=True,
+            key=f"studio_duplicate_element_{slide_snapshot.slide.id}_{element.id}",
+        ):
+            try:
+                with get_session() as session:
+                    from archium.ui.studio_service import apply_slide_element_duplicate
+
+                    result = apply_slide_element_duplicate(
+                        session,
+                        slide_snapshot.slide.id,
+                        element_ids=[element.id],
+                    )
+                new_ids = [
+                    action.node_id
+                    for action in getattr(result, "applied_actions", ())
+                    if getattr(action, "action_type", "") == "insert_node"
+                ]
+                set_studio_selection(new_ids or [element.id])
+                st.success("已复制元素。")
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
+        if st.button(
             "删除此元素",
             use_container_width=True,
             key=f"studio_delete_element_{slide_snapshot.slide.id}_{element.id}",

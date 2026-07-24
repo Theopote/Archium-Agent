@@ -76,6 +76,11 @@ class CanvasCommitDeleteEvent(TypedDict):
     elementId: str
 
 
+class CanvasCommitDuplicateEvent(TypedDict):
+    type: Literal["commitDuplicate"]
+    elementIds: list[str]
+
+
 class CanvasRequestReplaceAssetEvent(TypedDict):
     type: Literal["requestReplaceAsset"]
     elementId: str
@@ -91,6 +96,7 @@ CanvasEditorEvent = (
     | CanvasCommitTextEvent
     | CanvasCommitReplaceAssetEvent
     | CanvasCommitDeleteEvent
+    | CanvasCommitDuplicateEvent
     | CanvasRequestReplaceAssetEvent
     | None
 )
@@ -186,6 +192,19 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
                 return CanvasCommitDeleteEvent(
                     type="commitDelete",
                     elementId=str(element_id),
+                )
+        if event_type == "commitDuplicate":
+            raw_ids = value.get("elementIds")
+            element_ids: list[str] = []
+            if isinstance(raw_ids, list):
+                element_ids = [str(item) for item in raw_ids if item]
+            single = value.get("elementId")
+            if not element_ids and single is not None:
+                element_ids = [str(single)]
+            if element_ids:
+                return CanvasCommitDuplicateEvent(
+                    type="commitDuplicate",
+                    elementIds=element_ids,
                 )
         if event_type == "requestReplaceAsset":
             element_id = value.get("elementId")
@@ -318,6 +337,8 @@ def _convert_elements(layout_plan: LayoutPlan) -> list[dict[str, Any]]:
 __all__ = [
     "CanvasEditorUnavailableError",
     "CanvasEditorEvent",
+    "CanvasCommitDeleteEvent",
+    "CanvasCommitDuplicateEvent",
     "CanvasCommitReplaceAssetEvent",
     "CanvasCommitTextEvent",
     "CanvasEditTextEvent",

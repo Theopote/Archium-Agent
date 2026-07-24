@@ -145,4 +145,11 @@ def test_parse_canvas_editor_event_supports_move_many_and_commit_text() -> None:
     typed = parse_typed({"type": "commitDelete", "elementId": "title"})
     assert typed is not None and not isinstance(typed, str)
     assert typed["type"] == "commitDelete"
+
+    typed_dup = parse_typed(
+        {"type": "commitDuplicate", "elementIds": ["title", "hero"]}
+    )
+    assert typed_dup is not None and not isinstance(typed_dup, str)
+    assert typed_dup["type"] == "commitDuplicate"
+    assert typed_dup["elementIds"] == ["title", "hero"]
     assert typed["elementId"] == "title"

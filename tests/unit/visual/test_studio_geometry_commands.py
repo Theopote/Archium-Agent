@@ -136,6 +136,82 @@ def test_delete_node_hides_node() -> None:
     assert node.visible is False
 
 
+def test_duplicate_nodes_clones_with_offset_and_patch_replay() -> None:
+    from archium.domain.visual.studio_command import DuplicateNodesCommand
+
+    scene = _scene(_text_node(node_id="title", x=1.0, y=1.0, z_index=2))
+    command = DuplicateNodesCommand(
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        node_ids=["title"],
+        new_node_ids=["title__dup_test"],
+        offset_x=0.5,
+        offset_y=0.25,
+    )
+    result = StudioCommandExecutor().execute(scene, command, _context(scene))
+    assert result.success is True
+    assert result.candidate_scene is not None
+    assert len(result.candidate_scene.nodes) == 2
+    clone = result.candidate_scene.node_by_id("title__dup_test")
+    assert clone is not None
+    assert clone.x == pytest.approx(1.5)
+    assert clone.y == pytest.approx(1.25)
+    assert clone.z_index == 3
+    assert clone.locked is False
+    assert clone.source_layout_element_id == "title__dup_test"
+    assert result.applied_actions[0].action_type == "insert_node"
+
+    replayed = apply_patch_actions(scene, list(result.applied_actions))
+    assert replayed.node_by_id("title__dup_test") is not None
+    assert replayed.node_by_id("title") is not None
+
+
+def test_sync_layout_recreates_orphan_duplicate_element() -> None:
+    from archium.application.visual.studio_scene_edit_service import (
+        sync_layout_geometry_from_scene,
+    )
+    from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
+    from archium.domain.visual.layout import LayoutElement, LayoutPlan
+
+    scene = _scene(
+        _text_node(node_id="title", x=1.0, y=1.0),
+        _text_node(
+            node_id="title__dup_a",
+            x=1.25,
+            y=1.25,
+            source_layout_element_id="title__dup_a",
+            z_index=5,
+        ),
+    )
+    plan = LayoutPlan(
+        slide_id=scene.slide_id,
+        layout_family=LayoutFamily.HERO,
+        layout_variant="default",
+        page_width=10,
+        page_height=5.625,
+        elements=[
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="标题",
+                x=1.0,
+                y=1.0,
+                width=2.0,
+                height=0.5,
+            )
+        ],
+        reading_order=["title"],
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+    )
+    synced = sync_layout_geometry_from_scene(scene, plan)
+    assert {element.id for element in synced.elements} == {"title", "title__dup_a"}
+    dup = next(element for element in synced.elements if element.id == "title__dup_a")
+    assert dup.x == pytest.approx(1.25)
+    assert dup.role == LayoutElementRole.BODY_TEXT
+
+
 def test_set_node_visibility_updates_visible_state() -> None:
     scene = _scene(_text_node(node_id="title", visible=True))
     command = SetNodeVisibilityCommand(

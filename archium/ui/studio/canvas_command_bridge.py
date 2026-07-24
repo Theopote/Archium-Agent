@@ -279,6 +279,42 @@ def apply_canvas_delete_event(
     return True
 
 
+def apply_canvas_duplicate_event(
+    *,
+    slide_id: UUID,
+    element_ids: list[str],
+) -> bool:
+    """Persist canvas Copy/Paste or Ctrl+D as DuplicateNodesCommand."""
+    ids = [item for item in element_ids if item]
+    if not ids:
+        return False
+    fingerprint = f"commitDuplicate:{','.join(ids)}"
+    if _already_applied(slide_id, fingerprint):
+        return False
+    try:
+        from archium.ui.studio_service import apply_slide_element_duplicate
+
+        with get_session() as session:
+            result = apply_slide_element_duplicate(session, slide_id, element_ids=ids)
+    except WorkflowError as exc:
+        st.error(format_user_error(exc))
+        return False
+    except Exception as exc:
+        st.error(format_user_error(exc))
+        return False
+
+    _mark_applied(slide_id, fingerprint)
+    new_ids = [
+        action.node_id
+        for action in getattr(result, "applied_actions", ())
+        if getattr(action, "action_type", "") == "insert_node"
+    ]
+    set_studio_selection(new_ids or ids)
+    bump_canvas_generation(slide_id)
+    st.rerun()
+    return True
+
+
 def _generation_key(slide_id: UUID) -> str:
     return f"studio_canvas_gen_{slide_id}"
 

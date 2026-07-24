@@ -29,11 +29,14 @@ from archium.domain.visual.page_quality import (
 from archium.domain.visual.reference_slide import REFERENCE_TEMPLATE_ASSET_ORIGIN
 from archium.domain.visual.render_scene import (
     BaseRenderNode,
+    ChartNode,
     DrawingNode,
     ImageNode,
+    RenderNode,
     RenderScene,
     SceneAssetReference,
     ShapeNode,
+    TableNode,
     TextNode,
     compute_scene_hash,
     replace_text_node_content,
@@ -43,6 +46,7 @@ from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairApp
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     DeleteNodeCommand,
+    DuplicateNodesCommand,
     FixOverflowCommand,
     IncreaseDrawingReadabilityCommand,
     MoveNodeCommand,
@@ -150,6 +154,8 @@ class StudioCommandExecutor:
             return self._execute_resize_node(scene, command, base_hash)
         if isinstance(command, DeleteNodeCommand):
             return self._execute_delete_node(scene, command, base_hash)
+        if isinstance(command, DuplicateNodesCommand):
+            return self._execute_duplicate_nodes(scene, command, base_hash)
         if isinstance(command, SetNodeLockCommand):
             return self._execute_set_node_lock(scene, command, base_hash)
         if isinstance(command, SetNodeVisibilityCommand):
@@ -765,6 +771,79 @@ class StudioCommandExecutor:
             applied_actions=(action,),
         )
 
+    def _execute_duplicate_nodes(
+        self,
+        scene: RenderScene,
+        command: DuplicateNodesCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        from uuid import uuid4
+
+        patched = scene.model_copy(deep=True)
+        actions: list[ScenePatchAction] = []
+        max_z = max((node.z_index for node in patched.nodes), default=0)
+        explicit_ids = list(command.new_node_ids)
+        for index, node_id in enumerate(command.node_ids):
+            source = patched.node_by_id(node_id)
+            if source is None:
+                return _node_not_found(base_hash, node_id)
+            if node_geometry_locked(source):
+                return _locked_result(
+                    base_hash=base_hash,
+                    command_type="duplicate_nodes",
+                    node_id=node_id,
+                    lock_kind="geometry",
+                )
+            if index < len(explicit_ids) and explicit_ids[index].strip():
+                new_id = explicit_ids[index].strip()
+            else:
+                new_id = f"{source.id}__dup_{uuid4().hex[:8]}"
+            if len(new_id) > 100:
+                new_id = f"dup_{uuid4().hex[:12]}"
+            if patched.node_by_id(new_id) is not None:
+                return CommandExecutionResult(
+                    success=False,
+                    base_scene_hash=base_hash,
+                    issues=(
+                        _issue(
+                            code="STUDIO.DUPLICATE_ID_COLLISION",
+                            message=f"duplicate node id already exists: {new_id}",
+                            severity=IssueSeverity.BLOCKER,
+                        ),
+                    ),
+                )
+            max_z += 1
+            cloned = _clone_render_node(
+                source,
+                new_id=new_id,
+                offset_x=command.offset_x,
+                offset_y=command.offset_y,
+                z_index=max_z,
+                page_width=scene.page_width,
+                page_height=scene.page_height,
+            )
+            patched.nodes = list(patched.nodes) + [cloned]
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=new_id,
+                    action_type="insert_node",
+                    property_name="nodes",
+                    before_value=None,
+                    after_value=new_id,
+                    after_payload=cloned.model_dump(mode="json"),
+                    reason=command.reason or f"duplicate {node_id}",
+                )
+            )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=tuple(actions),
+        )
+
     def _execute_align_nodes(
         self,
         scene: RenderScene,
@@ -1073,6 +1152,35 @@ class StudioCommandExecutor:
                 evidence=[str(asset_id), storage_uri.strip()],
             )
         return None
+
+
+def _clone_render_node(
+    source: RenderNode,
+    *,
+    new_id: str,
+    offset_x: float,
+    offset_y: float,
+    z_index: int,
+    page_width: float,
+    page_height: float,
+) -> RenderNode:
+    """Deep-clone a node with new identity, unlocked, offset within page bounds."""
+    cloned = source.model_copy(deep=True)
+    updates: dict[str, object] = {
+        "id": new_id,
+        "source_layout_element_id": new_id,
+        "z_index": z_index,
+        "locked": False,
+        "lock_scopes": [],
+        "visible": True,
+    }
+    width = max(float(source.width), 0.05)
+    height = max(float(source.height), 0.05)
+    max_x = max(page_width - width, 0.0)
+    max_y = max(page_height - height, 0.0)
+    updates["x"] = min(max(float(source.x) + offset_x, 0.0), max_x)
+    updates["y"] = min(max(float(source.y) + offset_y, 0.0), max_y)
+    return cloned.model_copy(update=updates)
 
 
 def _node_not_found(base_hash: str, node_id: str) -> CommandExecutionResult:

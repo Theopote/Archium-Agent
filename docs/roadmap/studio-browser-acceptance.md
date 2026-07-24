@@ -20,9 +20,10 @@ Run against a real Streamlit Studio session — unit tests alone are insufficien
 4. Lock the drawing
 5. Replace a photo (double-click or properties)
 6. Edit title (double-click canvas text → commitText)
-7. Undo twice
-8. Redo once
-9. Export PPTX and compare positions to Studio
+7. Duplicate title (**Ctrl/Cmd+D** or Copy→Paste); confirm offset clone + selection moves to copy
+8. Undo thrice (include duplicate)
+9. Redo once
+10. Export PPTX and compare positions to Studio
 
 ## Pass criteria
 
@@ -31,13 +32,15 @@ Run against a real Streamlit Studio session — unit tests alone are insufficien
 | Drag gesture | Exactly **one** Scene Revision per pointerup |
 | Selection | Not lost after commit / rerun |
 | Canvas | No Streamlit flash during pointermove |
-| Lock | Locked node cannot drag/resize |
+| Lock | Locked node cannot drag/resize/duplicate |
+| Duplicate | New node + LayoutElement; Undo removes both; Redo restores hit-target |
 | Undo branch | Does not overwrite sibling history (`parent_revision_id`) |
 | PPTX | Exported geometry matches Studio scene |
 
 ## Multi-select extras
 
 - Marquee / Shift multi-select → group move one Revision
+- Multi-select → Ctrl/Cmd+D duplicates all unlocked in one Revision
 - Align / distribute / equal width / height from properties
 - Comment Inbox tab: counts + filters; comments show `scene_revision_id` / hash
 

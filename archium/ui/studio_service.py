@@ -786,6 +786,22 @@ def apply_slide_element_delete(
     ).delete_layout_element(slide_id, element_id=element_id)
 
 
+def apply_slide_element_duplicate(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_ids: list[str],
+) -> object:
+    """Duplicate layout element(s) through the Studio command chain."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).duplicate_layout_elements(slide_id, element_ids=element_ids)
+
+
 def apply_slide_element_visibility(
     session: Session,
     slide_id: UUID,

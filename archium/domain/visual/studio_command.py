@@ -142,6 +142,17 @@ class DeleteNodeCommand(StudioCommandBase):
     node_id: str = Field(min_length=1)
 
 
+class DuplicateNodesCommand(StudioCommandBase):
+    """Clone one or more render nodes with a small page offset (Studio Copy)."""
+
+    command_type: Literal["duplicate_nodes"] = "duplicate_nodes"
+    node_ids: list[str] = Field(min_length=1)
+    offset_x: float = 0.25
+    offset_y: float = 0.25
+    # Optional deterministic ids (tests); otherwise executor allocates ``{id}__dup_{hex}``.
+    new_node_ids: list[str] = Field(default_factory=list)
+
+
 class SetNodeLockCommand(StudioCommandBase):
     """Lock/unlock a render node and optionally set lock scopes."""
 
@@ -196,6 +207,7 @@ StudioCommand = Annotated[
     | MoveNodesCommand
     | ResizeNodeCommand
     | DeleteNodeCommand
+    | DuplicateNodesCommand
     | SetNodeLockCommand
     | SetNodeVisibilityCommand
     | AlignNodesCommand
