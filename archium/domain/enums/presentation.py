@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+
 class NarrativeStage(StrEnum):
     """Position of a section/page on the deck argument arc."""
 

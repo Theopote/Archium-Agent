@@ -5,6 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from archium.application.visual.text_style_resolve import (
+    clamp_font_size_override,
+    next_larger_token,
+    resolve_text_style,
+    role_min_font_pt,
+    smaller_compliant_tokens,
+    typography_tokens_by_size,
+)
 from archium.domain.visual.design_system import DesignSystem, LayoutThresholds, TextStyleToken
 from archium.domain.visual.element_lock import ElementEditOperation, element_is_editable
 from archium.domain.visual.enums import (
@@ -17,14 +25,6 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
-from archium.application.visual.text_style_resolve import (
-    clamp_font_size_override,
-    next_larger_token,
-    resolve_text_style,
-    role_min_font_pt,
-    smaller_compliant_tokens,
-    typography_tokens_by_size,
-)
 from archium.domain.visual.validation import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,

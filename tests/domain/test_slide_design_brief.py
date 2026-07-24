@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from archium.domain.enums import ApprovalStatus
 from archium.application.slide_design_brief_heuristics import infer_primary_visual_type
+from archium.domain.enums import ApprovalStatus
 from archium.domain.slide_design_brief import (
     SlideDesignBrief,
     default_drawing_policy,

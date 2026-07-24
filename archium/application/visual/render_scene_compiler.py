@@ -10,7 +10,6 @@ Chart / table handling:
 
 from __future__ import annotations
 
-from typing import Literal
 from uuid import UUID, uuid4
 
 from archium.application.visual.asset_reference import is_supported_layout_image_path
@@ -23,6 +22,8 @@ from archium.application.visual.scene_fonts import (
     resolve_text_fonts,
 )
 from archium.application.visual.style_overlay import apply_style_overlays
+from archium.application.visual.svg_icon_recolor import is_architectural_icon_ref
+from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -51,8 +52,6 @@ from archium.domain.visual.render_scene import (
     TextParagraph,
     ThemeTokens,
 )
-from archium.application.visual.svg_icon_recolor import is_architectural_icon_ref
-from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
 

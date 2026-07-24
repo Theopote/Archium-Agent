@@ -12,7 +12,12 @@ from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
 from archium.config.settings import Settings, get_settings
 from archium.domain.deck_delivery import apply_deck_delivery_to_presentation
-from archium.domain.enums import ApprovalStatus, RevisionSource, WorkflowStatus, PresentationWorkflowStep
+from archium.domain.enums import (
+    ApprovalStatus,
+    PresentationWorkflowStep,
+    RevisionSource,
+    WorkflowStatus,
+)
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec

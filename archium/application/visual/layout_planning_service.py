@@ -18,14 +18,14 @@ from archium.application.visual.layout_style_preference import (
     derive_layout_style_preference,
     merge_preferred_families,
 )
+from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.slide_capacity_service import SlideCapacityService
 from archium.application.visual.visual_grammar_intent import (
     derive_grammar_layout_preference,
     forbidden_families_for_intent,
     merge_layout_style_preferences,
     order_variants_for_intent,
 )
-from archium.application.visual.layout_validation_service import LayoutValidationService
-from archium.application.visual.slide_capacity_service import SlideCapacityService
 from archium.config.settings import Settings, get_settings
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec

@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+
 class TaskNature(StrEnum):
     """Nature of the architectural task — distinct from :class:`ProjectType`."""
 

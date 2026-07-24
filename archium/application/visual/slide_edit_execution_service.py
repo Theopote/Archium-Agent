@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.application.visual.visual_edit_service import VisualEditService
 from archium.config.settings import get_settings
-from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
 from archium.domain.content_adaptation import action_from_value
 from archium.domain.visual.edit_intent import intent_from_preset
 from archium.domain.visual.slide_edit_command import SlideEditCommand, SlideEditScope

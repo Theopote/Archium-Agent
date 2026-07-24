@@ -108,7 +108,6 @@ def test_init_database_initializes_custom_engine_when_global_is_migrated(
     from archium.config.settings import Settings, reset_settings
     from archium.infrastructure.database.session import (
         create_engine_from_settings,
-        get_engine,
         init_database,
         reset_engine_cache,
     )

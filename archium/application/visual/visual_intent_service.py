@@ -5,18 +5,17 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from archium.application.visual.design_brief_intent import apply_design_brief_to_intent
+from archium.application.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
 from archium.application.visual.visual_grammar_intent import (
     apply_grammar_to_draft,
     apply_grammar_to_intent,
 )
 from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
 from archium.application.visual.visual_grammar_slots import ensure_evidence_slots_on_slide
-from archium.application.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_design_brief import SlideDesignBrief
-from archium.exceptions import ValidationError
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.enums import (
     ContinuityRole,
@@ -24,8 +23,9 @@ from archium.domain.visual.enums import (
     LayoutFamily,
     VisualContentType,
 )
-from archium.domain.visual.visual_intent import VisualIntent
 from archium.domain.visual.visual_grammar import PageArchetype
+from archium.domain.visual.visual_intent import VisualIntent
+from archium.exceptions import ValidationError
 from archium.infrastructure.database.visual_repositories import VisualIntentRepository
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest

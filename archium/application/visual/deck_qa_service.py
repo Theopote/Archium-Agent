@@ -11,6 +11,7 @@ from collections import Counter
 from collections.abc import Sequence
 from uuid import UUID
 
+from archium.application.visual.text_style_resolve import TYPOGRAPHY_TOKEN_NAMES
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.deck_composition import DeckCompositionPlan
@@ -31,7 +32,6 @@ from archium.domain.visual.deck_qa import (
 from archium.domain.visual.design_system import DesignSystem, TypographySystem
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutIssueSeverity
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.application.visual.text_style_resolve import TYPOGRAPHY_TOKEN_NAMES
 
 _METHOD = "deck_heuristic_v0"
 _CHROME_ROLES = frozenset(

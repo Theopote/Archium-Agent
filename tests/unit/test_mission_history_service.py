@@ -15,7 +15,6 @@ from archium.application.mission_snapshots import (
     mission_to_snapshot,
 )
 from archium.application.project_mission_service import ProjectMissionService
-from tests.fixtures.mission_approval import approve_generated_mission
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.domain.enums import RevisionEntityType, RevisionSource, WorkstreamType
 from archium.domain.project import Project
@@ -26,6 +25,7 @@ from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 from sqlalchemy.orm import Session
 
+from tests.fixtures.mission_approval import approve_generated_mission
 from tests.fixtures.mock_mission_responses import TEMPLE_MISSION_JSON
 from tests.fixtures.mock_workstream_responses import TEMPLE_WORKSTREAM_PLAN_JSON
 

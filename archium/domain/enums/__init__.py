@@ -3,79 +3,79 @@
 Prefer importing from ``archium.domain.enums``; submodules are the split SSOT.
 """
 
-from archium.domain.enums.project import (
-    ProjectType,
-    ProjectStage,
-    ProjectStatus,
-    ProjectDomain,
+from archium.domain.enums.assets import (
+    AssetType,
+    SlideAssetBindingRole,
+    VisualType,
 )
 from archium.domain.enums.document import (
+    DocumentPurpose,
     DocumentType,
     ProcessingStatus,
     VerificationStatus,
-    DocumentPurpose,
 )
 from archium.domain.enums.knowledge import (
+    AssumptionStatus,
     InformationOrigin,
     InformationReliability,
-    KnowledgeItemStatus,
     KnowledgeGapCategory,
     KnowledgeGapStatus,
-    ResolutionMethod,
-    AssumptionStatus,
+    KnowledgeItemStatus,
     QuestionAnswerType,
     QuestionStatus,
-)
-from archium.domain.enums.presentation import (
-    NarrativeStage,
-    OutlineAudienceMode,
-    PresentationType,
-    PresentationStatus,
-    ApprovalStatus,
-    EvidenceAvailability,
-    SlideType,
-    SlideStatus,
-    SlideDeliveryStatus,
-    DeckDeliveryStatus,
-    RevisionSource,
-    SlideChangeSource,
-    SlideRepairTier,
-    SlideRepairSource,
-    RevisionEntityType,
+    ResolutionMethod,
 )
 from archium.domain.enums.mission import (
-    TaskNature,
-    InterventionScale,
-    ServiceDepth,
-    UncertaintyLevel,
-    Priority,
-    EffortLevel,
     ConstraintSource,
-    WorkstreamType,
-    WorkstreamStatus,
     DeliverableType,
+    EffortLevel,
+    InterventionScale,
+    Priority,
+    ServiceDepth,
+    TaskNature,
+    UncertaintyLevel,
+    WorkstreamStatus,
+    WorkstreamType,
 )
-from archium.domain.enums.assets import (
-    VisualType,
-    AssetType,
-    SlideAssetBindingRole,
+from archium.domain.enums.presentation import (
+    ApprovalStatus,
+    DeckDeliveryStatus,
+    EvidenceAvailability,
+    NarrativeStage,
+    OutlineAudienceMode,
+    PresentationStatus,
+    PresentationType,
+    RevisionEntityType,
+    RevisionSource,
+    SlideChangeSource,
+    SlideDeliveryStatus,
+    SlideRepairSource,
+    SlideRepairTier,
+    SlideStatus,
+    SlideType,
+)
+from archium.domain.enums.project import (
+    ProjectDomain,
+    ProjectStage,
+    ProjectStatus,
+    ProjectType,
 )
 from archium.domain.enums.review import (
     PipelineRole,
-    ReviewLayer,
     ReviewCategory,
+    ReviewLayer,
     ReviewSeverity,
-    ValidationSeverity,
     ReviewStatus,
+    ValidationSeverity,
 )
 from archium.domain.enums.workflow import (
-    WorkflowStatus,
     PlanningSessionStatus,
-    WorkflowStep,
-    PresentationWorkflowStep,
     PlanningWorkflowStep,
-    VisualWorkflowStep,
+    PresentationWorkflowStep,
     SlideRecoveryWorkflowStep,
+    VisualWorkflowStep,
+    WorkflowStatus,
+    WorkflowStep,
 )
 
 __all__ = [

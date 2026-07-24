@@ -128,16 +128,20 @@ def grammar_asset_match_bonus(
     if role is None:
         return 0.0
     blob = asset_search_text.casefold()
-    if role == "historic_or_context_photo":
-        if any(hint in blob for hint in _HISTORIC_HINTS):
-            return 0.18
-    if role in {"site_photos", "problem_tension"}:
-        if any(token in blob for token in ("现场", "现状", "问题", "site", "problem")):
-            return 0.12
-    if role == "map_hero":
-        if any(token in blob for token in ("区位", "地图", "map", "交通", "site_plan")):
-            return 0.15
-    if role == "concept_diagram":
-        if any(token in blob for token in ("概念", "策略", "diagram", "concept")):
-            return 0.12
+    if role == "historic_or_context_photo" and any(
+        hint in blob for hint in _HISTORIC_HINTS
+    ):
+        return 0.18
+    if role in {"site_photos", "problem_tension"} and any(
+        token in blob for token in ("现场", "现状", "问题", "site", "problem")
+    ):
+        return 0.12
+    if role == "map_hero" and any(
+        token in blob for token in ("区位", "地图", "map", "交通", "site_plan")
+    ):
+        return 0.15
+    if role == "concept_diagram" and any(
+        token in blob for token in ("概念", "策略", "diagram", "concept")
+    ):
+        return 0.12
     return 0.0

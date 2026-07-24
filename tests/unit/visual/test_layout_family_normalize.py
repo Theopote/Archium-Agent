@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-from pydantic import ValidationError
+from uuid import uuid4
 
+import pytest
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.layout_family_normalize import (
@@ -12,7 +12,7 @@ from archium.domain.visual.layout_family_normalize import (
     layout_family_value,
 )
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene
-from uuid import uuid4
+from pydantic import ValidationError
 
 
 def test_coerce_aliases_and_unset() -> None:

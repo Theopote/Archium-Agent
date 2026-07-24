@@ -209,6 +209,4 @@ def _requirement_accepts_binding(
     """Refuse to steal a confirmed slot already bound to a different asset."""
     if binding.asset_id in requirement.preferred_asset_ids:
         return True
-    if requirement.confirmed and requirement.preferred_asset_ids:
-        return False
-    return True
+    return not (requirement.confirmed and requirement.preferred_asset_ids)

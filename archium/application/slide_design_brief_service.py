@@ -19,6 +19,7 @@ from archium.application.slide_design_brief_heuristics import (
     default_protection_rules_for_page,
     infer_primary_visual_type,
 )
+from archium.application.visual.visual_grammar_labels import merge_grammar_evidence
 from archium.domain.enums import ApprovalStatus, SlideAssetBindingRole
 from archium.domain.outline import OutlinePlan
 from archium.domain.slide_asset_binding import SlideAssetBinding, index_page_asset_bindings
@@ -38,7 +39,6 @@ from archium.domain.visual.layout_family_normalize import (
 )
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
-from archium.application.visual.visual_grammar_labels import merge_grammar_evidence
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 

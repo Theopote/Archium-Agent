@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.content_adaptation_heuristics import suggest_content_adaptations
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_repair_policy import (
     _MAX_BULLET_LENGTH,
@@ -18,7 +19,6 @@ from archium.application.slide_repair_policy import (
 )
 from archium.application.slide_split_planner import build_split_plan
 from archium.application.visual.visual_edit_service import VisualEditService
-from archium.application.content_adaptation_heuristics import suggest_content_adaptations
 from archium.domain.content_adaptation import (
     ContentAdaptationAction,
     ContentAdaptationSuggestion,

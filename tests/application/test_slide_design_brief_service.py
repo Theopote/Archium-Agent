@@ -10,10 +10,10 @@ from archium.application.slide_design_brief_service import (
     SlideDesignBriefService,
     design_briefs_ready,
 )
+from archium.domain.enums import ApprovalStatus
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
-from archium.domain.enums import ApprovalStatus
 from archium.domain.slide_intent import SlideIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (

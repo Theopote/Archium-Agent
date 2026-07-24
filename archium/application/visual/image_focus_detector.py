@@ -91,7 +91,7 @@ class ImageFocusDetector:
 
 def _edge_energy(gray: object) -> object:
     """Return L-mode image with simple |∇| energy (Pillow only)."""
-    from PIL import Image, ImageChops, ImageFilter
+    from PIL import ImageChops, ImageFilter
 
     image = gray.filter(ImageFilter.SMOOTH)
     left = ImageChops.offset(image, 1, 0)

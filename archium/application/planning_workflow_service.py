@@ -21,7 +21,12 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.project_mission_service import is_mission_approval_current
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import ApprovalStatus, PlanningSessionStatus, WorkflowStatus, PlanningWorkflowStep, PresentationWorkflowStep
+from archium.domain.enums import (
+    ApprovalStatus,
+    PlanningSessionStatus,
+    PresentationWorkflowStep,
+    WorkflowStatus,
+)
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,

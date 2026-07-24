@@ -13,7 +13,12 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
 from archium.infrastructure.layout.generators.base import LayoutGenerator, LayoutGeneratorContext
-from archium.infrastructure.layout.geometry import Rect, grid_cells, split_horizontal, split_vertical
+from archium.infrastructure.layout.geometry import (
+    Rect,
+    grid_cells,
+    split_horizontal,
+    split_vertical,
+)
 
 
 class EvidenceBoardLayoutGenerator(LayoutGenerator):

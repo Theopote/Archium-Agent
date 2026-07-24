@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import pytest
 from archium.application.project_mission_service import ProjectMissionService
-from tests.fixtures.mission_approval import approve_generated_mission
 from archium.application.workstream_parser import parse_workstream_plan_draft
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.domain.enums import WorkstreamStatus, WorkstreamType
@@ -18,6 +17,7 @@ from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 from archium.infrastructure.llm.workstream_schemas import WorkstreamPlanDraft
 from sqlalchemy.orm import Session
 
+from tests.fixtures.mission_approval import approve_generated_mission
 from tests.fixtures.mock_mission_responses import TEMPLE_MISSION_JSON
 from tests.fixtures.mock_workstream_responses import (
     CYCLIC_WORKSTREAM_PLAN_JSON,
@@ -260,6 +260,7 @@ def test_workstream_selection_invalidates_approved_deliverable_plan(
 ) -> None:
     from archium.application.deliverable_planning_service import DeliverablePlanningService
     from archium.domain.enums import ApprovalStatus
+
     from tests.fixtures.mock_deliverable_responses import TEMPLE_DELIVERABLE_PLAN_JSON
 
     def selector(request: LLMRequest) -> str | None:

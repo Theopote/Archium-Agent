@@ -10,7 +10,6 @@ from uuid import uuid4
 
 from archium.domain.visual.render_scene import (
     BackgroundStyle,
-    DrawingNode,
     ImageNode,
     RenderNode,
     RenderScene,

@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+
 class ProjectType(StrEnum):
     RESIDENTIAL = "residential"
     COMMERCIAL = "commercial"

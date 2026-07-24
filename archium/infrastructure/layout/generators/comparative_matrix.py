@@ -58,10 +58,7 @@ class ComparativeMatrixLayoutGenerator(LayoutGenerator):
         refs = list(context.content.supporting_asset_refs)
         if context.content.hero_asset_ref:
             refs = [context.content.hero_asset_ref, *refs]
-        if len(refs) >= 2:
-            refs = refs[:2]
-        else:
-            refs = (refs + [f"before_ref", "after_ref"])[:2]
+        refs = refs[:2] if len(refs) >= 2 else (refs + ["before_ref", "after_ref"])[:2]
 
         labels = context.content.case_labels[:2]
         if len(labels) < 2:

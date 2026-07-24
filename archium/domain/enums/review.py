@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+
 class PipelineRole(StrEnum):
     """Logical pipeline roles — annotation vocabulary, not runtime Agent classes.
 

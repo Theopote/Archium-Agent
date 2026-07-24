@@ -6,15 +6,14 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from archium.application.visual.visual_grammar_intent import forbidden_families_for_intent
 from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
 from archium.application.visual.visual_grammar_slots import ensure_evidence_slots_on_slide
 from archium.domain.enums import SlideType, VisualType
 from archium.domain.slide import SlideSpec, SlideVisualRequirement
-from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from archium.domain.visual.visual_grammar import PageArchetype, get_recipe
-from archium.application.visual.visual_grammar_intent import forbidden_families_for_intent
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.domain.visual.enums import VisualContentType
 
 pytestmark = pytest.mark.regression
 

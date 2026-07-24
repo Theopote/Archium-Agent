@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from archium.application.visual.icon_stroke_resolve import (
     ICON_STROKE_TOKEN,
     resolve_icon_stroke_color,

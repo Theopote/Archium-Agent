@@ -6,7 +6,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from PIL import Image
 from archium.application.visual.image_source_classifier import ImageSourceClassifier
 from archium.application.visual.image_style_matcher import ImageStyleMatcher
 from archium.application.visual.image_treatment_spec_planner import ImageTreatmentSpecPlanner
@@ -21,6 +20,7 @@ from archium.domain.visual.image_derivative import (
     default_presentation_unify_params,
 )
 from archium.domain.visual.render_scene import ImageNode
+from PIL import Image
 
 
 def test_classify_wechat_export_by_filename() -> None:

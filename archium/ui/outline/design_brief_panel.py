@@ -7,14 +7,12 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.review_models import SlideDesignBriefUpdate
+from archium.application.slide_design_brief_heuristics import format_design_brief_card
 from archium.application.slide_design_brief_service import (
     SlideDesignBriefService,
     design_briefs_ready,
     summarize_design_briefs,
 )
-from archium.domain.outline import OutlinePlan
-from archium.domain.enums import ApprovalStatus
-from archium.application.slide_design_brief_heuristics import format_design_brief_card
 from archium.application.visual.visual_grammar_labels import (
     archetype_select_options,
     coerce_archetype_selection,
@@ -23,6 +21,8 @@ from archium.application.visual.visual_grammar_labels import (
     merge_grammar_evidence,
     selection_value_for_intent,
 )
+from archium.domain.enums import ApprovalStatus
+from archium.domain.outline import OutlinePlan
 from archium.domain.slide_design_brief import (
     BRIEF_STATUS_LABELS_ZH,
     SlideDesignBrief,

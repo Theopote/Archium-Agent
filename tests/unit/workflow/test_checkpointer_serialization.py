@@ -31,9 +31,11 @@ def test_serialized_execution_rejects_concurrent_same_run(tmp_path: Path) -> Non
     t.start()
     assert entered.wait(timeout=5)
 
-    with pytest.raises(WorkflowError, match="WF-002|正在执行"):
-        with manager.serialized_execution(thread_id):
-            pass
+    with (
+        pytest.raises(WorkflowError, match="WF-002|正在执行"),
+        manager.serialized_execution(thread_id),
+    ):
+        pass
 
     release.set()
     t.join(timeout=5)

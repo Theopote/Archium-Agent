@@ -5,7 +5,6 @@ from __future__ import annotations
 from archium.config.settings import Settings
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.llm.mock import MockLLMProvider
-from archium.infrastructure.llm.openai_compatible import OpenAICompatibleProvider
 
 
 def _resolve_provider_settings(settings: Settings | None) -> Settings:
@@ -39,6 +38,8 @@ def create_llm_provider(
         return MockLLMProvider()
 
     if name in {"openai_compatible", "openai", "gemini"}:
+        from archium.infrastructure.llm.openai_compatible import OpenAICompatibleProvider
+
         return OpenAICompatibleProvider(resolved)
 
     raise ValueError(f"Unknown LLM provider: {name}")

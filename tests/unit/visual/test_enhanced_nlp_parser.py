@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from archium.application.visual.nlp_parser import EnhancedNLPParser
 from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.enums import LayoutFamily
-from archium.application.visual.nlp_parser import EnhancedNLPParser
 from archium.domain.visual.parsed_intent import ModifierType
 
 

@@ -174,7 +174,7 @@ def _process_image(
     path: Path,
     spec: ImageTreatmentSpec,
 ) -> tuple[PILImage.Image, int, int] | None:
-    from PIL import Image, ImageEnhance, ImageOps
+    from PIL import Image, ImageOps
 
     try:
         with Image.open(path) as opened:

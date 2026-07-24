@@ -14,9 +14,9 @@ from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.element_comment import ElementComment
 from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.scene_change_proposal import SceneChangeProposal
-from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.domain.visual.visual_intent import VisualIntent

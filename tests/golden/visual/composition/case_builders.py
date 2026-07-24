@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.visual_grammar_intent import preferred_variant_for_intent
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.domain.citation import Citation
 from archium.domain.enums import SlideType, VisualType
@@ -20,8 +21,6 @@ from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.application.visual.visual_grammar_intent import preferred_variant_for_intent
-from archium.domain.visual.visual_grammar import PageArchetype
 from archium.infrastructure.layout.generators.base import (
     LayoutContentBundle,
     LayoutGeneratorContext,

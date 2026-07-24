@@ -7,7 +7,6 @@ from uuid import uuid4
 from archium.application.visual.visual_grammar_intent import (
     apply_grammar_to_draft,
     derive_grammar_layout_preference,
-    forbidden_families_for_intent,
 )
 from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
 from archium.domain.enums import SlideType, VisualType

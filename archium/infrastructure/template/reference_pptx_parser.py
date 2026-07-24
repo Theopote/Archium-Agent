@@ -19,7 +19,9 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Emu
 
 from archium.application.visual.drawing_inference_service import DrawingInferenceService
-from archium.application.visual.placeholder_binding_normalize import build_placeholder_binding_signature
+from archium.application.visual.placeholder_binding_normalize import (
+    build_placeholder_binding_signature,
+)
 from archium.domain.visual.reference_slide import (
     REFERENCE_TEMPLATE_ASSET_ORIGIN,
     ReferenceAsset,

@@ -8,10 +8,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from archium.application.visual.image_focus_detector import (
+    MIN_CROP_CONFIDENCE,
     FocusDetectionResult,
     FocusHint,
     ImageFocusDetector,
-    MIN_CROP_CONFIDENCE,
 )
 from archium.application.visual.image_source_classifier import (
     ImageSourceClassification,

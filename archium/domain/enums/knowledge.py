@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+
 class InformationOrigin(StrEnum):
     """Provenance of a knowledge item or claim."""
 

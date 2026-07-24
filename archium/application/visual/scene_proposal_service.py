@@ -33,9 +33,9 @@ from archium.config.settings import Settings, get_settings
 from archium.domain._base import utc_now
 from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.enums import OverflowPolicy
 from archium.domain.visual.page_quality import IssueSeverity, QualityIssue
 from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
-from archium.domain.visual.enums import OverflowPolicy
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,

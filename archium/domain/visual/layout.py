@@ -21,7 +21,6 @@ from archium.domain.visual.enums import (
     OverflowPolicy,
 )
 from archium.domain.visual.structured_payload import (
-    ChartSeriesData,
     LayoutChartData,
     LayoutTableData,
 )

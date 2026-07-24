@@ -14,7 +14,7 @@ from archium.application.automated_review_service import (
 from archium.application.presentation_manuscript_service import PresentationManuscriptService
 from archium.application.review_service import slides_are_approved
 from archium.application.slide_repair_service import SlideRepairService, split_affected_slide_ids
-from archium.domain.enums import ApprovalStatus, WorkflowStatus, PresentationWorkflowStep
+from archium.domain.enums import ApprovalStatus, PresentationWorkflowStep, WorkflowStatus
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript

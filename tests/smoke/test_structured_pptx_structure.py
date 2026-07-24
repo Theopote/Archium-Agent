@@ -9,13 +9,13 @@ from uuid import uuid4
 import pytest
 from archium.config.settings import Settings
 from archium.domain.visual.pptx_structure import PlaceholderKind, PptxStructureMode
-from archium.infrastructure.renderers.pptx_structure_catalog import p0_structured_spike_spec
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.infrastructure.renderers.pptx_ooxml_structure import (
     inspect_pptx_ooxml_structure,
     require_structured_ooxml,
 )
 from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
+from archium.infrastructure.renderers.pptx_structure_catalog import p0_structured_spike_spec
 from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from pptx import Presentation
 from tests.smoke.artifact_publish import publish_smoke_artifact

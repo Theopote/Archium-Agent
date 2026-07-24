@@ -23,8 +23,8 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.architectural_template import ArchitecturalTemplate
 from archium.domain.visual.defaults import default_presentation_design_system
-from archium.domain.visual.page_type_catalog import slide_type_for_functional
 from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.page_type_catalog import slide_type_for_functional
 from archium.domain.visual.reference_slide import (
     ReferenceElementType,
     ReferencePresentation,

@@ -16,8 +16,10 @@ from archium.application.visual.asset_reference import (
 from archium.application.visual.composite_operation_policy import (
     assert_composite_operations_supported,
 )
+from archium.application.visual.hybrid_parser import create_hybrid_parser
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
+from archium.application.visual.nlp_parser import parse_natural_language
 from archium.application.visual.operation_decomposer import OperationDecomposer
 from archium.application.visual.transaction_executor import (
     TransactionExecutionContext,
@@ -37,17 +39,15 @@ from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.atomic_operation import AtomicOperation, OperationType
 from archium.domain.visual.design_system import DesignSystem
-from archium.application.visual.nlp_parser import parse_natural_language
 from archium.domain.visual.edit_intent import VisualEditIntent, intent_from_preset
 from archium.domain.visual.element_lock import (
     ElementEditOperation,
     assert_element_editable,
 )
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily
-from archium.domain.visual.severity import layout_fails_validation
-from archium.application.visual.hybrid_parser import create_hybrid_parser
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.parsed_intent import ParsedIntent
+from archium.domain.visual.severity import layout_fails_validation
 from archium.domain.visual.slide_edit_snapshot import SlideEditSnapshot
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError

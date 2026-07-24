@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from archium.application.content_adaptation_heuristics import suggest_content_adaptations
 from archium.application.visual.layout_repair_service import LayoutRepairService
 from archium.application.visual.slide_capacity_service import (
     SlideCapacityService,
     detect_slide_language,
 )
-from archium.application.content_adaptation_heuristics import suggest_content_adaptations
 from archium.domain.content_adaptation import ContentAdaptationAction
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec

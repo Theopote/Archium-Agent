@@ -6,11 +6,8 @@ from archium.application.visual.scene_compilers.base import SceneCompileContext
 from archium.application.visual.scene_compilers.generic import GenericContentCompiler
 from archium.domain.visual.render_scene import (
     DrawingNode,
-    ImageNode,
     RenderNode,
     RenderScene,
-    ShapeNode,
-    TextNode,
 )
 from archium.domain.visual.semantic_block import SemanticBlockType
 

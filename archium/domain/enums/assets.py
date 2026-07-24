@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 
+
 class VisualType(StrEnum):
     SITE_PLAN = "site_plan"
     FLOOR_PLAN = "floor_plan"

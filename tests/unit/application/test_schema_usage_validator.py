@@ -11,8 +11,8 @@ from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRequirement,
     ContentRole,
-    UsageCondition,
     SchemaVisualRequirement,
+    UsageCondition,
 )
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,

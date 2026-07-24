@@ -12,11 +12,11 @@ from archium.application.visual.svg_icon_recolor import (
     is_architectural_icon_ref,
     materialize_recolored_icon,
 )
+from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
     PresentationStructureSpec,

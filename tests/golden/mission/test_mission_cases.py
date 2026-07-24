@@ -15,12 +15,12 @@ from archium.application.mission_to_presentation_request import (
     build_presentation_bridge,
 )
 from archium.application.project_mission_service import ProjectMissionService
-from tests.fixtures.mission_approval import approve_generated_mission
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
+from tests.fixtures.mission_approval import approve_generated_mission
 from tests.fixtures.mock_mission_golden import CASE_MOCKS, make_mission_case_selector
 from tests.golden.mission.assertions import assert_mission_expectations
 from tests.golden.mission.loader import (

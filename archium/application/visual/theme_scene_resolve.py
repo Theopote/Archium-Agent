@@ -5,7 +5,13 @@ from __future__ import annotations
 import contextlib
 
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, ImageNode, TextNode, ThemeTokens
+from archium.domain.visual.render_scene import (
+    BackgroundStyle,
+    ImageNode,
+    RenderScene,
+    TextNode,
+    ThemeTokens,
+)
 
 
 def resolve_scene_with_design_system(

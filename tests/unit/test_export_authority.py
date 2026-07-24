@@ -19,7 +19,7 @@ def test_formal_editable_pptx_authority_is_render_scene() -> None:
     assert RENDER_EDIT_AUTHORITY == "render_scene"
     assert CONTENT_EXPRESSION_AUTHORITY == "slide_spec"
     assert GEOMETRY_COMPILE_AUTHORITY == "layout_plan"
-    assert LEGACY_TEMPLATE_EXPORT_KIND == DerivedExportKind.PRESENTATION_SPEC.value
+    assert DerivedExportKind.PRESENTATION_SPEC.value == LEGACY_TEMPLATE_EXPORT_KIND
 
 
 def test_formal_delivery_pptx_filename_constant() -> None:

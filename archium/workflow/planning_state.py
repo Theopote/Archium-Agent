@@ -6,7 +6,7 @@ import operator
 from typing import Annotated, Any, TypedDict
 
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import PlanningWorkflowStep, PresentationWorkflowStep
+from archium.domain.enums import PresentationWorkflowStep
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,

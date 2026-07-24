@@ -337,7 +337,6 @@ def select_layout_candidate(
     layout_plan_id: UUID,
 ) -> LayoutPlan:
     from archium.application.visual.layout_locked import preserve_locked_elements
-    from archium.application.visual.studio_scene_service import StudioSceneService
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.domain.enums import RevisionSource
 
@@ -398,7 +397,6 @@ def apply_template_to_slide(
     settings: Settings | None = None,
 ) -> SlideVisualSnapshot:
     """Match a published template to the slide, fill content, and select the best plan."""
-    from archium.application.visual.studio_scene_service import StudioSceneService
     from archium.application.visual.template_composition_service import TemplateCompositionService
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.domain.enums import RevisionSource

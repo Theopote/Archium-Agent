@@ -17,10 +17,6 @@ from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
     PresentationStructureSpec,
 )
-from archium.infrastructure.renderers.pptx_structure_catalog import (
-    default_archium_structure_spec,
-    structure_spec_to_pptxgen_payload,
-)
 from archium.domain.visual.render_scene import (
     ChartNode,
     DrawingNode,
@@ -29,6 +25,10 @@ from archium.domain.visual.render_scene import (
     ShapeNode,
     TableNode,
     TextNode,
+)
+from archium.infrastructure.renderers.pptx_structure_catalog import (
+    default_archium_structure_spec,
+    structure_spec_to_pptxgen_payload,
 )
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import RenderedSlideInstruction
 

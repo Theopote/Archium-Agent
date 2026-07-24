@@ -6,10 +6,10 @@ import re
 from dataclasses import dataclass
 from uuid import UUID
 
-from archium.config.settings import Settings, get_settings
-from archium.application.visual.nlp_parser import parse_natural_language
-from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.application.visual.hybrid_parser import create_hybrid_parser
+from archium.application.visual.nlp_parser import parse_natural_language
+from archium.config.settings import Settings, get_settings
+from archium.domain.visual.edit_intent import VisualEditIntent
 from archium.domain.visual.parsed_intent import ParsedIntent
 from archium.domain.visual.partial_edit_preservation import PARTIAL_EDIT_INTERACTION_RULE
 from archium.domain.visual.render_scene import RenderScene, TextNode

@@ -450,8 +450,8 @@ def test_enhance_flags_change_params_hash(tmp_path: Path) -> None:
 
 def test_heuristic_focus_biases_away_from_center(tmp_path: Path) -> None:
     from archium.application.visual.image_focus_detector import (
-        ImageFocusDetector,
         MIN_CROP_CONFIDENCE,
+        ImageFocusDetector,
     )
     from archium.domain.visual.image_derivative import ImageCropStrategy
 

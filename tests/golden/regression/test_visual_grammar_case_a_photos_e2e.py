@@ -6,7 +6,6 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
-from PIL import Image, ImageDraw
 from archium.application.slide_asset_binding_service import apply_slide_asset_bindings
 from archium.application.visual.asset_reference import AssetReferenceContext
 from archium.application.visual.layout_validation_service import LayoutValidationService
@@ -34,6 +33,7 @@ from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.generators.base import LayoutGeneratorContext, content_from_slide
 from archium.infrastructure.layout.layout_solver import LayoutSolver
 from archium.infrastructure.visual.layout_preview_renderer import render_layout_preview_png
+from PIL import Image, ImageDraw
 
 pytestmark = pytest.mark.regression
 

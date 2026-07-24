@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.orm import Session
-
 from archium.application.model_role_router import ModelRoleRegistryService, ModelRoleRouter
 from archium.domain.model_roles import ModelProfile, ModelRole, ModelRoleAssignment
 from archium.exceptions import ConfigurationError
+from sqlalchemy.orm import Session
 
 
 def test_resolve_structured_output_from_default_llm(db_session: Session) -> None:

@@ -54,9 +54,9 @@ def test_workflow_gate_rejects_stale_approval_hash() -> None:
 
 
 def test_ensure_mission_approval_current_rejects_unapproved() -> None:
+    import pytest
     from archium.application.project_mission_service import ensure_mission_approval_current
     from archium.exceptions import WorkflowError
-    import pytest
 
     mission = _mission()
     with pytest.raises(WorkflowError, match="尚未批准"):

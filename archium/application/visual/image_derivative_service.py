@@ -19,7 +19,11 @@ from archium.application.visual.image_treatment_spec_planner import ImageTreatme
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import PhotoTreatment
-from archium.domain.visual.image_derivative import ImageCropStrategy, ImageDerivative, ImageUnifyParams
+from archium.domain.visual.image_derivative import (
+    ImageCropStrategy,
+    ImageDerivative,
+    ImageUnifyParams,
+)
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,

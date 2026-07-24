@@ -6,16 +6,19 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from PIL import Image, ImageDraw
 from archium.application.visual.image_derivative_executor import ImageDerivativeExecutor
 from archium.application.visual.image_derivative_service import ImageDerivativeService
 from archium.application.visual.image_source_classifier import ImageSourceClassifier
 from archium.config.settings import Settings
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import PhotoTreatment
-from archium.domain.visual.image_derivative import ImageSourceKind, default_presentation_unify_params
+from archium.domain.visual.image_derivative import (
+    ImageSourceKind,
+    default_presentation_unify_params,
+)
 from archium.domain.visual.render_scene import BackgroundStyle, ImageNode, RenderScene
 from archium.infrastructure.storage.local_storage import LocalProjectStorage
+from PIL import Image, ImageDraw
 
 pytestmark = pytest.mark.regression
 

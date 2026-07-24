@@ -9,6 +9,7 @@ from archium.application.visual.asset_reference import (
     is_supported_layout_image_path,
     is_technical_drawing_asset_type,
 )
+from archium.application.visual.text_style_resolve import resolve_text_style, role_min_font_pt
 from archium.domain.visual.design_system import DesignSystem, LayoutThresholds, TypographySystem
 from archium.domain.visual.enums import (
     CropPolicy,
@@ -18,7 +19,6 @@ from archium.domain.visual.enums import (
     LayoutIssueSeverity,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.application.visual.text_style_resolve import resolve_text_style, role_min_font_pt
 from archium.domain.visual.validation import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,

@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import (

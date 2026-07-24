@@ -15,14 +15,14 @@ from archium.domain.visual.pptx_structure import (
     SlideLayoutSpec,
     SlideMasterSpec,
 )
-from archium.infrastructure.renderers.pptx_structure_catalog import (
-    default_archium_structure_spec,
-    p0_structured_spike_spec,
-)
 from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode
 from archium.infrastructure.renderers.pptx_ooxml_structure import (
     inspect_pptx_ooxml_structure,
     require_structured_ooxml,
+)
+from archium.infrastructure.renderers.pptx_structure_catalog import (
+    default_archium_structure_spec,
+    p0_structured_spike_spec,
 )
 from archium.infrastructure.renderers.scene_pptx_adapter import RenderScenePptxAdapter
 from pydantic import ValidationError

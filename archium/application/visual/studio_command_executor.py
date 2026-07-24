@@ -29,14 +29,12 @@ from archium.domain.visual.page_quality import (
 from archium.domain.visual.reference_slide import REFERENCE_TEMPLATE_ASSET_ORIGIN
 from archium.domain.visual.render_scene import (
     BaseRenderNode,
-    ChartNode,
     DrawingNode,
     ImageNode,
     RenderNode,
     RenderScene,
     SceneAssetReference,
     ShapeNode,
-    TableNode,
     TextNode,
     compute_scene_hash,
     replace_text_node_content,

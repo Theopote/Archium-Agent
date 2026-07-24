@@ -18,7 +18,7 @@ from archium.application.slide_recovery_service import (
 )
 from archium.application.slide_recovery_source_parser import parse_source_page
 from archium.config.settings import Settings, get_settings
-from archium.domain.enums import WorkflowStatus, SlideRecoveryWorkflowStep
+from archium.domain.enums import SlideRecoveryWorkflowStep, WorkflowStatus
 from archium.domain.export_fidelity import ExportFidelityLevel
 from archium.domain.slide_recovery import (
     HybridRenderScene,

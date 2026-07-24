@@ -9,7 +9,7 @@ from archium.application.formal_pptx_export_service import FormalPptxExportServi
 from archium.config.settings import Settings
 from archium.domain.citation import Citation
 from archium.domain.enums import ApprovalStatus, SlideType, VisualType
-from archium.domain.export_authority import DerivedExportKind, FormalExportAuthority
+from archium.domain.export_authority import DerivedExportKind
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec, VisualRequirement

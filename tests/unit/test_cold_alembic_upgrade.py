@@ -5,9 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from alembic import command
-from sqlalchemy import create_engine, inspect, text
-
 from archium.infrastructure.database.migrations import get_alembic_config
+from sqlalchemy import create_engine, inspect, text
 
 
 def test_cold_alembic_upgrade_creates_core_tables(tmp_path: Path) -> None:

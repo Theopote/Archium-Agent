@@ -233,6 +233,7 @@ def test_clarification_answer_invalidates_approved_mission(
     temple_project: Project,
 ) -> None:
     from archium.domain.enums import ApprovalStatus
+
     from tests.fixtures.mission_approval import approve_generated_mission
 
     generated = mission_service.generate_mission(temple_project.id, TEMPLE_TASK)

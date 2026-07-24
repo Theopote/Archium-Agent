@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -613,10 +614,8 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
     content_ref: str | None = None
     semantic = str(getattr(node, "semantic_role", "") or "").strip()
     if semantic:
-        try:
+        with contextlib.suppress(ValueError):
             role = LayoutElementRole(semantic)
-        except ValueError:
-            pass
 
     if isinstance(node, TextNode):
         content_type = LayoutContentType.TEXT

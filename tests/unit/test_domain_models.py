@@ -33,7 +33,6 @@ from archium.domain import (
     Storyline,
     UserPreference,
     VerificationStatus,
-    SlideVisualRequirement,
     VisualRequirement,
     VisualType,
 )
