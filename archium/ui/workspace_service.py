@@ -153,6 +153,18 @@ def list_project_presentations(session: Session, project_id: UUID) -> list[Prese
     return PresentationRepository(session).list_by_project(project_id)
 
 
+@dataclass(frozen=True)
+class UploadKnowledgeTip:
+    """UI-facing snapshot after materials import refreshes KnowledgeState."""
+
+    summary_line: str
+    understanding_summary: str = ""
+    missing_information: tuple[str, ...] = ()
+    next_action_labels: tuple[str, ...] = ()
+    primary_action: str | None = None
+    primary_action_label: str = ""
+
+
 def import_uploaded_file(
     session: Session,
     project_id: UUID,
@@ -160,6 +172,7 @@ def import_uploaded_file(
     filename: str,
     data: bytes,
     settings: Settings | None = None,
+    reassess: bool = True,
 ) -> ImportItemResult:
     suffix = Path(filename).suffix
     with NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
@@ -171,16 +184,17 @@ def import_uploaded_file(
         )
     finally:
         temp_path.unlink(missing_ok=True)
-    _best_effort_reassess_after_upload(session, project_id, settings=settings)
+    if reassess:
+        reassess_knowledge_after_upload(session, project_id, settings=settings)
     return result
 
 
-def _best_effort_reassess_after_upload(
+def reassess_knowledge_after_upload(
     session: Session,
     project_id: UUID,
     *,
     settings: Settings | None = None,
-) -> None:
+) -> UploadKnowledgeTip | None:
     """Refresh KnowledgeState after new evidence; never fail the import path."""
     try:
         from archium.application.context_intelligence_service import (
@@ -190,10 +204,38 @@ def _best_effort_reassess_after_upload(
 
         resolved = _resolve_runtime_settings(settings)
         llm = create_llm_provider(resolved)
-        ContextIntelligenceService(session, llm, settings=resolved).reassess(project_id)
+        assessment = ContextIntelligenceService(
+            session, llm, settings=resolved
+        ).reassess(project_id)
     except Exception:
-        return
+        return None
 
+    actions = sorted(assessment.actions, key=lambda item: item.priority)
+    labels: list[str] = []
+    primary_action: str | None = None
+    primary_label = ""
+    for item in actions[:3]:
+        if item.action.value == "upload_materials":
+            continue
+        dispatch = ContextIntelligenceService.resolve_action_target(item.action)
+        label = dispatch.label or item.action.value
+        if item.reason.strip():
+            labels.append(f"{label}（{item.reason.strip()[:48]}）")
+        else:
+            labels.append(label)
+        if primary_action is None:
+            primary_action = item.action.value
+            primary_label = label
+    return UploadKnowledgeTip(
+        summary_line=assessment.knowledge_state.summary_line(),
+        understanding_summary=assessment.understanding_summary.strip(),
+        missing_information=tuple(
+            assessment.knowledge_state.missing_information[:5]
+        ),
+        next_action_labels=tuple(labels),
+        primary_action=primary_action,
+        primary_action_label=primary_label,
+    )
 
 def backfill_project_asset_vision(
     session: Session,

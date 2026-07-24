@@ -47,6 +47,7 @@ from archium.ui.workflow_progress_panel import (
     set_active_job_id,
 )
 from archium.ui.workspace_service import (
+    UploadKnowledgeTip,
     backfill_project_asset_vision,
     build_presentation_request,
     create_project,
@@ -56,7 +57,10 @@ from archium.ui.workspace_service import (
     list_project_documents,
     list_project_presentations,
     list_projects,
+    reassess_knowledge_after_upload,
 )
+
+_UPLOAD_FEEDBACK_KEY = "materials_upload_feedback"
 
 PROJECT_TYPE_LABELS = {
     ProjectType.HEALTHCARE: "医疗建筑",
@@ -195,8 +199,83 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
         _render_upload_controls(project_id, key_prefix="docs_upload")
 
 
+def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
+    """Show import + knowledge tip persisted across the post-upload rerun."""
+    payload = st.session_state.get(_UPLOAD_FEEDBACK_KEY)
+    if not isinstance(payload, dict):
+        return
+    if payload.get("project_id") != str(project_id):
+        return
+
+    for item in payload.get("file_messages", []):
+        level = item.get("level", "success")
+        text = item.get("text", "")
+        if not text:
+            continue
+        if level == "error":
+            st.error(text)
+        elif level == "warning":
+            st.warning(text)
+        else:
+            st.success(text)
+
+    tip_data = payload.get("knowledge")
+    tip: UploadKnowledgeTip | None = None
+    if isinstance(tip_data, dict) and tip_data.get("summary_line"):
+        tip = UploadKnowledgeTip(
+            summary_line=str(tip_data.get("summary_line") or ""),
+            understanding_summary=str(tip_data.get("understanding_summary") or ""),
+            missing_information=tuple(tip_data.get("missing_information") or ()),
+            next_action_labels=tuple(tip_data.get("next_action_labels") or ()),
+            primary_action=tip_data.get("primary_action"),
+            primary_action_label=str(tip_data.get("primary_action_label") or ""),
+        )
+        lines = [f"知识状态已更新：{tip.summary_line}"]
+        if tip.understanding_summary:
+            lines.append(tip.understanding_summary)
+        if tip.missing_information:
+            lines.append("仍缺：" + "；".join(tip.missing_information))
+        if tip.next_action_labels:
+            lines.append("建议下一步：" + " · ".join(tip.next_action_labels))
+        st.info("\n\n".join(lines))
+
+    cols = st.columns(2 if tip and tip.primary_action and tip.primary_action_label else 1)
+    if tip and tip.primary_action and tip.primary_action_label:
+        from archium.domain.intent.next_best_action import NextBestActionType
+        from archium.ui.app_navigation import get_app_page
+        from archium.ui.planning_service import resolve_next_best_action_target
+
+        try:
+            action = NextBestActionType(tip.primary_action)
+        except ValueError:
+            action = None
+        if action is not None and cols[0].button(
+            tip.primary_action_label,
+            key=f"{key_prefix}_ks_next_{project_id}",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.session_state.pop(_UPLOAD_FEEDBACK_KEY, None)
+            target = resolve_next_best_action_target(action)
+            if target.mission_step is not None:
+                st.session_state.mission_step = target.mission_step
+            st.switch_page(get_app_page(target.page_key))
+            return
+
+    dismiss_col = cols[-1]
+    if dismiss_col.button(
+        "收起提示",
+        key=f"{key_prefix}_ks_dismiss_{project_id}",
+        use_container_width=True,
+    ):
+        st.session_state.pop(_UPLOAD_FEEDBACK_KEY, None)
+        st.rerun()
+
+
 def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
     """Primary materials upload action."""
+    _consume_upload_feedback(project_id, key_prefix=key_prefix)
+
     uploads = st.file_uploader(
         "选择文件",
         type=["pdf", "docx", "pptx", "xlsx", "png", "jpg", "jpeg", "webp"],
@@ -211,6 +290,8 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
         key=f"{key_prefix}_import_{project_id}",
     ):
         results = []
+        knowledge_tip: UploadKnowledgeTip | None = None
+        settings = get_ui_effective_settings()
         with get_session() as session:
             for upload in uploads:
                 results.append(
@@ -219,13 +300,24 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
                         project_id,
                         filename=upload.name,
                         data=upload.getvalue(),
+                        settings=settings,
+                        reassess=False,
                     )
                 )
+            if any(not result.error for result in results):
+                knowledge_tip = reassess_knowledge_after_upload(
+                    session, project_id, settings=settings
+                )
+
+        file_messages: list[dict[str, str]] = []
         for result in results:
+            name = result.source_path.name
             if result.error:
-                st.error(f"{result.source_path.name}: {result.error}")
+                file_messages.append({"level": "error", "text": f"{name}: {result.error}"})
             elif result.duplicate:
-                st.warning(f"{result.source_path.name}: 已存在相同文件，已跳过")
+                file_messages.append(
+                    {"level": "warning", "text": f"{name}: 已存在相同文件，已跳过"}
+                )
             else:
                 chunk_count = len(result.chunks)
                 asset_captions = sum(
@@ -234,9 +326,25 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
                 detail = f"{chunk_count} 个片段"
                 if asset_captions:
                     detail += f"（含 {asset_captions} 个图档语义索引）"
-                st.success(f"{result.source_path.name}: 导入成功（{detail}）")
-        st.rerun()
+                file_messages.append(
+                    {"level": "success", "text": f"{name}: 导入成功（{detail}）"}
+                )
 
+        feedback: dict[str, object] = {
+            "project_id": str(project_id),
+            "file_messages": file_messages,
+        }
+        if knowledge_tip is not None:
+            feedback["knowledge"] = {
+                "summary_line": knowledge_tip.summary_line,
+                "understanding_summary": knowledge_tip.understanding_summary,
+                "missing_information": list(knowledge_tip.missing_information),
+                "next_action_labels": list(knowledge_tip.next_action_labels),
+                "primary_action": knowledge_tip.primary_action,
+                "primary_action_label": knowledge_tip.primary_action_label,
+            }
+        st.session_state[_UPLOAD_FEEDBACK_KEY] = feedback
+        st.rerun()
     settings = get_ui_effective_settings()
     if settings.asset_vision_rag_enabled and key_prefix.startswith("docs"):
         st.caption(
@@ -690,7 +798,7 @@ def render_materials_stage(project_id: UUID) -> None:
 
     with st.container(border=True):
         st.markdown("**上传资料**")
-        st.caption("任务书、图纸、调研文档或图片。导入后自动进入文件 / 事实 / 素材整理。")
+        st.caption("任务书、图纸、调研文档或图片。导入成功后会刷新知识状态并提示下一步。")
         _render_upload_controls(project_id, key_prefix="materials_top")
 
     tab_files, tab_facts, tab_assets, tab_gaps = st.tabs(
