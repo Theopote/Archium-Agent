@@ -95,6 +95,22 @@ class SceneRevisionTimelineService:
             ]
         return summaries
 
+    def count_summaries(
+        self,
+        slide: SlideSpec,
+        *,
+        include_rejected_proposals: bool = True,
+    ) -> int:
+        """Count timeline entries without building full summary payloads."""
+        count = len(self._scene_history.list_slide_scene_revisions(slide))
+        if include_rejected_proposals:
+            count += sum(
+                1
+                for proposal in self._proposals.list_by_slide(slide.id)
+                if proposal.status == ProposalStatus.REJECTED
+            )
+        return count
+
     def _current_revision_id(
         self,
         slide: SlideSpec,

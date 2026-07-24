@@ -200,32 +200,41 @@ def continue_after_plan_approval(
     return approve_and_continue(session, workflow_run_id, settings=settings)
 
 
-def get_planning_snapshot(
-    session: Session,
+@dataclass
+class _PlanningRunState:
+    mission_id: UUID | None = None
+    presentation_request: PresentationRequest | None = None
+    review_gate: str | None = None
+    mission_validation: dict | None = None
+    artifact_execution_plans: list[dict] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+def _resolve_planning_session(
+    sessions: PlanningSessionRepository,
     *,
-    planning_session_id: UUID | None = None,
-    workflow_run_id: UUID | None = None,
-    mission_id: UUID | None = None,
-    project_id: UUID | None = None,
-    settings: Settings | None = None,
-) -> PlanningSnapshot:
-    """Load the best available planning snapshot for the UI."""
-    runtime = _resolve_runtime_settings(settings)
-    runs = WorkflowRunRepository(session)
-    sessions = PlanningSessionRepository(session)
-    missions = MissionRepository(session)
-    llm = create_llm_provider(runtime)
-    clarification = MissionClarificationService(session, llm, settings=runtime)
-
-    planning_session: PlanningSession | None = None
+    planning_session_id: UUID | None,
+    workflow_run_id: UUID | None,
+    project_id: UUID | None,
+) -> PlanningSession | None:
     if planning_session_id is not None:
-        planning_session = sessions.get_by_id(planning_session_id)
-    elif workflow_run_id is not None:
-        planning_session = sessions.get_by_workflow_run_id(workflow_run_id)
-    elif project_id is not None:
+        return sessions.get_by_id(planning_session_id)
+    if workflow_run_id is not None:
+        return sessions.get_by_workflow_run_id(workflow_run_id)
+    if project_id is not None:
         project_sessions = sessions.list_by_project(project_id)
-        planning_session = project_sessions[0] if project_sessions else None
+        return project_sessions[0] if project_sessions else None
+    return None
 
+
+def _resolve_planning_run(
+    runs: WorkflowRunRepository,
+    sessions: PlanningSessionRepository,
+    *,
+    workflow_run_id: UUID | None,
+    planning_session: PlanningSession | None,
+    project_id: UUID | None,
+) -> tuple[WorkflowRun | None, PlanningSession | None]:
     run: WorkflowRun | None = None
     if workflow_run_id is not None:
         run = runs.get_by_id(workflow_run_id)
@@ -236,75 +245,64 @@ def get_planning_snapshot(
         run = planning_runs[0] if planning_runs else None
         if planning_session is None and run is not None:
             planning_session = sessions.get_by_workflow_run_id(run.id)
+    return run, planning_session
 
-    resolved_mission_id = mission_id
-    if resolved_mission_id is None and planning_session is not None:
-        resolved_mission_id = planning_session.current_mission_id
-    warnings: list[str] = []
-    presentation_request = None
-    review_gate = None
-    mission_validation: dict | None = None
-    artifact_execution_plans: list[dict] = []
 
-    if run is not None:
-        review_gate = run.state.get("review_gate") if isinstance(run.state.get("review_gate"), str) else None
-        raw_validation = run.state.get("mission_validation")
-        if isinstance(raw_validation, dict):
-            mission_validation = raw_validation
-        if resolved_mission_id is None:
-            raw = run.state.get("mission_id")
-            if raw:
-                resolved_mission_id = UUID(str(raw))
-            elif isinstance(run.state.get("mission"), dict) and run.state["mission"].get("id"):
-                resolved_mission_id = UUID(str(run.state["mission"]["id"]))
-        draft = run.state.get("presentation_request_draft")
-        if isinstance(draft, dict) and draft.get("mission_id"):
-            from archium.application.mission_to_presentation_request import bridge_from_draft
+def _extract_planning_run_state(run: WorkflowRun | None) -> _PlanningRunState:
+    state = _PlanningRunState()
+    if run is None:
+        return state
 
-            try:
-                bridge = bridge_from_draft(draft)
-                presentation_request = bridge.request
-                warnings.extend(bridge.warnings)
-            except WorkflowError:
-                pass
-        raw_plans = run.state.get("artifact_execution_plans")
-        if isinstance(raw_plans, list):
-            artifact_execution_plans = [item for item in raw_plans if isinstance(item, dict)]
-        warnings.extend(
-            item for item in (run.state.get("warnings") or []) if isinstance(item, str)
-        )
+    review_gate = run.state.get("review_gate")
+    state.review_gate = review_gate if isinstance(review_gate, str) else None
+    raw_validation = run.state.get("mission_validation")
+    if isinstance(raw_validation, dict):
+        state.mission_validation = raw_validation
 
-    if resolved_mission_id is None and project_id is not None:
-        project_missions = missions.list_missions_by_project(project_id)
-        if project_missions:
-            resolved_mission_id = project_missions[0].id
+    raw = run.state.get("mission_id")
+    if raw:
+        state.mission_id = UUID(str(raw))
+    elif isinstance(run.state.get("mission"), dict) and run.state["mission"].get("id"):
+        state.mission_id = UUID(str(run.state["mission"]["id"]))
 
-    if resolved_mission_id is None:
-        return PlanningSnapshot(
-            planning_session=planning_session,
-            workflow_run=run,
-            review_gate=review_gate,
-            mission_validation=mission_validation,
-            artifact_execution_plans=artifact_execution_plans,
-            warnings=warnings,
-        )
+    draft = run.state.get("presentation_request_draft")
+    if isinstance(draft, dict) and draft.get("mission_id"):
+        from archium.application.mission_to_presentation_request import bridge_from_draft
 
-    mission = missions.get_mission(resolved_mission_id)
-    if mission is None:
-        return PlanningSnapshot(
-            planning_session=planning_session,
-            workflow_run=run,
-            review_gate=review_gate,
-            mission_validation=mission_validation,
-            artifact_execution_plans=artifact_execution_plans,
-            warnings=warnings,
-        )
+        try:
+            bridge = bridge_from_draft(draft)
+            state.presentation_request = bridge.request
+            state.warnings.extend(bridge.warnings)
+        except WorkflowError:
+            pass
 
-    plans = missions.list_deliverable_plans(resolved_mission_id)
+    raw_plans = run.state.get("artifact_execution_plans")
+    if isinstance(raw_plans, list):
+        state.artifact_execution_plans = [
+            item for item in raw_plans if isinstance(item, dict)
+        ]
+    state.warnings.extend(
+        item for item in (run.state.get("warnings") or []) if isinstance(item, str)
+    )
+    return state
+
+
+def _build_mission_planning_snapshot(
+    session: Session,
+    missions: MissionRepository,
+    *,
+    mission: ProjectMission,
+    planning_session: PlanningSession | None,
+    run: WorkflowRun | None,
+    run_state: _PlanningRunState,
+) -> PlanningSnapshot:
+    mission_id = mission.id
+    plans = missions.list_deliverable_plans(mission_id)
     plan = plans[0] if plans else None
-    readiness = clarification.get_readiness(resolved_mission_id)
-    project_facts = FactRepository(session).list_by_project(mission.project_id)
-    workstreams = missions.list_workstreams(resolved_mission_id)
+    workstreams = missions.list_workstreams(mission_id)
+    clarifying_questions = missions.list_clarifying_questions(mission_id)
+    knowledge_gaps = missions.list_knowledge_gaps(mission_id)
+    artifact_execution_plans = list(run_state.artifact_execution_plans)
 
     if not artifact_execution_plans and plan is not None:
         from archium.application.deliverable_execution import DeliverableExecutionRouter
@@ -320,18 +318,91 @@ def get_planning_snapshot(
         planning_session=planning_session,
         workflow_run=run,
         mission=mission,
-        knowledge_gaps=missions.list_knowledge_gaps(resolved_mission_id),
-        assumptions=missions.list_assumptions(resolved_mission_id),
-        clarifying_questions=missions.list_clarifying_questions(resolved_mission_id),
+        knowledge_gaps=knowledge_gaps,
+        assumptions=missions.list_assumptions(mission_id),
+        clarifying_questions=clarifying_questions,
         workstreams=workstreams,
         deliverable_plan=plan,
-        project_facts=project_facts,
-        presentation_request=presentation_request,
+        project_facts=FactRepository(session).list_by_project(mission.project_id),
+        presentation_request=run_state.presentation_request,
         artifact_execution_plans=artifact_execution_plans,
-        readiness=readiness,
-        review_gate=review_gate if isinstance(review_gate, str) else None,
-        mission_validation=mission_validation,
-        warnings=warnings,
+        readiness=MissionClarificationService.build_readiness(
+            clarifying_questions,
+            knowledge_gaps,
+        ),
+        review_gate=run_state.review_gate,
+        mission_validation=run_state.mission_validation,
+        warnings=list(run_state.warnings),
+    )
+
+
+def get_planning_snapshot(
+    session: Session,
+    *,
+    planning_session_id: UUID | None = None,
+    workflow_run_id: UUID | None = None,
+    mission_id: UUID | None = None,
+    project_id: UUID | None = None,
+    settings: Settings | None = None,
+) -> PlanningSnapshot:
+    """Load the best available planning snapshot for the UI."""
+    runs = WorkflowRunRepository(session)
+    sessions = PlanningSessionRepository(session)
+    missions = MissionRepository(session)
+
+    planning_session = _resolve_planning_session(
+        sessions,
+        planning_session_id=planning_session_id,
+        workflow_run_id=workflow_run_id,
+        project_id=project_id,
+    )
+    run, planning_session = _resolve_planning_run(
+        runs,
+        sessions,
+        workflow_run_id=workflow_run_id,
+        planning_session=planning_session,
+        project_id=project_id,
+    )
+
+    run_state = _extract_planning_run_state(run)
+    resolved_mission_id = mission_id
+    if resolved_mission_id is None and planning_session is not None:
+        resolved_mission_id = planning_session.current_mission_id
+    if resolved_mission_id is None:
+        resolved_mission_id = run_state.mission_id
+    if resolved_mission_id is None and project_id is not None:
+        project_missions = missions.list_missions_by_project(project_id)
+        if project_missions:
+            resolved_mission_id = project_missions[0].id
+
+    if resolved_mission_id is None:
+        return PlanningSnapshot(
+            planning_session=planning_session,
+            workflow_run=run,
+            review_gate=run_state.review_gate,
+            mission_validation=run_state.mission_validation,
+            artifact_execution_plans=run_state.artifact_execution_plans,
+            warnings=list(run_state.warnings),
+        )
+
+    mission = missions.get_mission(resolved_mission_id)
+    if mission is None:
+        return PlanningSnapshot(
+            planning_session=planning_session,
+            workflow_run=run,
+            review_gate=run_state.review_gate,
+            mission_validation=run_state.mission_validation,
+            artifact_execution_plans=run_state.artifact_execution_plans,
+            warnings=list(run_state.warnings),
+        )
+
+    return _build_mission_planning_snapshot(
+        session,
+        missions,
+        mission=mission,
+        planning_session=planning_session,
+        run=run,
+        run_state=run_state,
     )
 
 

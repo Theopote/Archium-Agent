@@ -289,17 +289,17 @@ class MissionClarificationService:
 
     # ── Readiness & revision ───────────────────────────────────────
 
-    def get_readiness(self, mission_id: UUID) -> ClarificationReadiness:
-        self._require_mission(mission_id)
-        questions = self._missions.list_clarifying_questions(mission_id)
-        gaps = self._missions.list_knowledge_gaps(mission_id)
-
+    @staticmethod
+    def build_readiness(
+        questions: list[ClarifyingQuestion],
+        gaps: list[KnowledgeGap],
+    ) -> ClarificationReadiness:
+        """Pure readiness from already-loaded clarification rows (no LLM)."""
         open_questions = [q for q in questions if q.status == QuestionStatus.OPEN]
         open_blocking_questions = [q for q in open_questions if q.blocking]
         open_blocking_gaps = [
             g for g in gaps if g.blocking and g.status == KnowledgeGapStatus.OPEN
         ]
-
         return ClarificationReadiness(
             can_continue=not open_blocking_questions and not open_blocking_gaps,
             open_blocking_questions=open_blocking_questions,
@@ -311,6 +311,24 @@ class MissionClarificationService:
             + sum(1 for g in gaps if g.status == KnowledgeGapStatus.ASSUMED),
             answered_count=sum(1 for q in questions if q.status == QuestionStatus.ANSWERED)
             + sum(1 for g in gaps if g.status == KnowledgeGapStatus.ANSWERED),
+        )
+
+    @classmethod
+    def readiness_for_mission(cls, session: Session, mission_id: UUID) -> ClarificationReadiness:
+        """Load clarification rows and compute readiness without an LLM provider."""
+        missions = MissionRepository(session)
+        if missions.get_mission(mission_id) is None:
+            raise WorkflowError(f"任务理解 {mission_id} 不存在")
+        return cls.build_readiness(
+            missions.list_clarifying_questions(mission_id),
+            missions.list_knowledge_gaps(mission_id),
+        )
+
+    def get_readiness(self, mission_id: UUID) -> ClarificationReadiness:
+        self._require_mission(mission_id)
+        return self.build_readiness(
+            self._missions.list_clarifying_questions(mission_id),
+            self._missions.list_knowledge_gaps(mission_id),
         )
 
     def ensure_can_continue(self, mission_id: UUID) -> ClarificationReadiness:

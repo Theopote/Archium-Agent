@@ -106,6 +106,13 @@ class VisualHistoryService:
             if revision.snapshot.get("kind") == VISUAL_STATE_SNAPSHOT_KIND
         ]
 
+    def count_slide_visual_revisions(self, slide: SlideSpec) -> int:
+        return sum(
+            1
+            for revision in self._revisions.list_by_lineage(slide.lineage_id)
+            if revision.snapshot.get("kind") == VISUAL_STATE_SNAPSHOT_KIND
+        )
+
     def restore_at_revision(
         self,
         slide_id: UUID,

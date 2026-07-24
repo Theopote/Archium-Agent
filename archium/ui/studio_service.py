@@ -1184,7 +1184,7 @@ def count_visual_revisions(session: Session, slide_id: UUID) -> int:
     slide = PresentationRepository(session).get_slide(slide_id)
     if slide is None:
         return 0
-    return len(VisualHistoryService(session).list_slide_visual_revisions(slide))
+    return VisualHistoryService(session).count_slide_visual_revisions(slide)
 
 
 def count_scene_revisions(session: Session, slide_id: UUID) -> int:
@@ -1194,11 +1194,9 @@ def count_scene_revisions(session: Session, slide_id: UUID) -> int:
     slide = PresentationRepository(session).get_slide(slide_id)
     if slide is None:
         return 0
-    return len(
-        SceneRevisionTimelineService(session).list_summaries(
-            slide,
-            include_rejected_proposals=False,
-        )
+    return SceneRevisionTimelineService(session).count_summaries(
+        slide,
+        include_rejected_proposals=False,
     )
 
 
