@@ -1,0 +1,31 @@
+---
+description: Fixed six logical pipeline roles — do not proliferate Agents
+alwaysApply: true
+---
+
+# Agent roster (fixed)
+
+Do **not** keep adding Agent classes or numbered forks.
+
+Forbidden examples: `ArchitectureAgent2`, `VisualAgent3`, `LayoutAgent4`,
+`ResearchAgent`, `LayoutAgent`, `RenderAgent`, `CriticAgent`.
+
+## Allowed product roles (exactly these six)
+
+| Role | Responsibility (one line) |
+|------|---------------------------|
+| **Research** | Facts, sources, citations — not rhetoric |
+| **Planning** | Mission / deliverables / workstreams — not slide geometry |
+| **Narrative** | Outline, storyline, page intent / `SlideSpec` |
+| **Visual** | Intent, composition, layout, grammar, image treatment (services) |
+| **Render** | Execute approved scene → PPTX/PDF/PNG (no re-planning) |
+| **Critic** | Actionable findings only — does not silently rewrite the deck |
+
+## Implementation rule
+
+- Prefer **Service + Domain artifact + Workflow node**.
+- `archium/agents/` may hold a few LLM *planners* under Narrative/Research;
+  new capability belongs in an existing role’s services, not a new Agent.
+- Internal stages (Architecture schema, Composition, Layout) are **sub-steps of Visual**, not new Agents.
+
+Canonical doc: `docs/architecture/pipeline-roles.md`.

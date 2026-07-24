@@ -6,12 +6,20 @@ from enum import StrEnum
 class PipelineRole(StrEnum):
     """Logical pipeline roles — annotation vocabulary, not runtime Agent classes.
 
-    See ``docs/architecture/pipeline-roles.md``. Services and workflow nodes
-    implement these roles; do not add one Agent class per role.
+    Product-facing Agent roster is fixed at six
+    (Research / Planning / Narrative / Visual / Render / Critic).
+    See ``docs/architecture/pipeline-roles.md`` and ``to_product_agent_role``.
+
+    ``architecture`` / ``composition`` / ``layout`` are **internal Visual
+    substages** for E2E and workflow mapping — not permission to add Agents.
     """
 
     RESEARCH = "research"
+    PLANNING = "planning"
     NARRATIVE = "narrative"
+    # Product umbrella for visual work (prefer this in product language).
+    VISUAL = "visual"
+    # Internal Visual substages (keep for fine-grained mapping).
     ARCHITECTURE = "architecture"
     COMPOSITION = "composition"
     LAYOUT = "layout"

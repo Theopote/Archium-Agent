@@ -4,6 +4,25 @@ from __future__ import annotations
 
 from archium.domain.enums import PipelineRole, ReviewLayer, WorkflowStep
 
+# Product-facing Agent roster — hard cap. Do not grow this set.
+PRODUCT_AGENT_ROLES: tuple[PipelineRole, ...] = (
+    PipelineRole.RESEARCH,
+    PipelineRole.PLANNING,
+    PipelineRole.NARRATIVE,
+    PipelineRole.VISUAL,
+    PipelineRole.RENDER,
+    PipelineRole.CRITIC,
+)
+
+_VISUAL_INTERNAL_ROLES: frozenset[PipelineRole] = frozenset(
+    {
+        PipelineRole.VISUAL,
+        PipelineRole.ARCHITECTURE,
+        PipelineRole.COMPOSITION,
+        PipelineRole.LAYOUT,
+    }
+)
+
 # E2E Phase 7 acceptance stage → logical role (see project_profile.json).
 E2E_PIPELINE_STAGE_TO_ROLE: dict[str, PipelineRole] = {
     "ingest": PipelineRole.RESEARCH,
@@ -20,10 +39,12 @@ E2E_PIPELINE_STAGE_TO_ROLE: dict[str, PipelineRole] = {
 
 _PIPELINE_ROLE_LABELS_ZH: dict[PipelineRole, str] = {
     PipelineRole.RESEARCH: "Research · 事实与来源",
+    PipelineRole.PLANNING: "Planning · 任务与成果",
     PipelineRole.NARRATIVE: "Narrative · 大纲与叙事",
-    PipelineRole.ARCHITECTURE: "Architecture · 建筑语义",
-    PipelineRole.COMPOSITION: "Composition · Deck 节奏",
-    PipelineRole.LAYOUT: "Layout · 页面版式",
+    PipelineRole.VISUAL: "Visual · 视觉编排",
+    PipelineRole.ARCHITECTURE: "Visual/Architecture · 建筑语义（内部）",
+    PipelineRole.COMPOSITION: "Visual/Composition · Deck 节奏（内部）",
+    PipelineRole.LAYOUT: "Visual/Layout · 页面版式（内部）",
     PipelineRole.RENDER: "Render · 导出与场景",
     PipelineRole.CRITIC: "Critic · 问题发现",
 }
@@ -68,6 +89,25 @@ _WORKFLOW_STEP_TO_ROLE: dict[WorkflowStep, PipelineRole] = {
 }
 
 
+def _register_planning_workflow_steps() -> None:
+    """Map planning_* WorkflowStep values onto the Planning product seat."""
+    for step in WorkflowStep:
+        if str(step.value).startswith("planning_"):
+            _WORKFLOW_STEP_TO_ROLE[step] = PipelineRole.PLANNING
+
+
+_register_planning_workflow_steps()
+
+
+def to_product_agent_role(role: PipelineRole) -> PipelineRole:
+    """Collapse internal Visual substages onto the fixed six-seat roster."""
+    if role in _VISUAL_INTERNAL_ROLES:
+        return PipelineRole.VISUAL
+    if role in PRODUCT_AGENT_ROLES:
+        return role
+    return PipelineRole.NARRATIVE
+
+
 def pipeline_role_label(role: PipelineRole) -> str:
     """Short bilingual label for UI captions."""
     return _PIPELINE_ROLE_LABELS_ZH.get(role, role.value)
@@ -87,6 +127,19 @@ def pipeline_roles_for_e2e_stages(stages: list[str]) -> list[PipelineRole]:
             continue
         seen.add(role)
         ordered.append(role)
+    return ordered
+
+
+def product_agent_roles_for_e2e_stages(stages: list[str]) -> list[PipelineRole]:
+    """E2E stages → ordered unique **product** seats (Visual collapses internals)."""
+    seen: set[PipelineRole] = set()
+    ordered: list[PipelineRole] = []
+    for role in pipeline_roles_for_e2e_stages(stages):
+        product = to_product_agent_role(role)
+        if product in seen:
+            continue
+        seen.add(product)
+        ordered.append(product)
     return ordered
 
 
