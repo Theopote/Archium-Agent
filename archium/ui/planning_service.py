@@ -509,6 +509,42 @@ def get_latest_visual_concept_brief(session: Session, direction_id: UUID):
     )
 
 
+def get_design_iteration_progress(session: Session, mission_id: UUID):
+    from archium.application.design_iteration_status import summarize_design_iteration
+
+    return summarize_design_iteration(session, mission_id)
+
+
+def preview_presentation_request_from_mission(session: Session, mission_id: UUID):
+    """Build a PresentationRequest preview from mission + selected direction/visual brief."""
+    from archium.application.mission_context_bridge import (
+        resolve_selected_concept_direction,
+        resolve_visual_concept_brief_for_mission,
+    )
+    from archium.application.mission_to_presentation_request import build_presentation_request
+    from archium.infrastructure.database.mission_repositories import MissionRepository
+
+    mission = MissionRepository(session).get_mission(mission_id)
+    if mission is None:
+        raise WorkflowError(f"Mission {mission_id} not found")
+    return build_presentation_request(
+        mission,
+        concept_direction=resolve_selected_concept_direction(session, mission_id),
+        visual_concept_brief=resolve_visual_concept_brief_for_mission(session, mission_id),
+    )
+
+
+def refresh_presentation_request_draft(
+    session: Session,
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> MissionPresentationBridge:
+    runtime = _resolve_runtime_settings(settings)
+    service = _create_planning_service(session, runtime)
+    return service.refresh_presentation_request_draft(workflow_run_id)
+
+
 def answer_clarifying_question(
     session: Session,
     question_id: UUID,
@@ -642,11 +678,16 @@ def get_presentation_bridge(
     workflow_run_id: UUID,
     *,
     user_overrides: PresentationOverrides | None = None,
+    force_refresh: bool = False,
     settings: Settings | None = None,
 ) -> MissionPresentationBridge:
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
-    return service.get_presentation_bridge(workflow_run_id, user_overrides=user_overrides)
+    return service.get_presentation_bridge(
+        workflow_run_id,
+        user_overrides=user_overrides,
+        force_refresh=force_refresh,
+    )
 
 
 def run_artifact_job(

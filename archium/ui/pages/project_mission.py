@@ -609,6 +609,28 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         return
 
     st.markdown("**将进入现有汇报主链的 PresentationRequest 预览**")
+    if st.button(
+        "用当前概念方向 / 视觉简报刷新预览",
+        key="mission_refresh_presentation_preview",
+        use_container_width=True,
+    ):
+        try:
+            from archium.ui.planning_service import refresh_presentation_request_draft
+
+            with get_session() as session:
+                bridge = refresh_presentation_request_draft(
+                    session,
+                    UUID(st.session_state.planning_workflow_run_id),
+                )
+            request = bridge.request
+            st.success("已按当前方向与视觉简报刷新汇报请求草稿。")
+        except WorkflowError as exc:
+            st.error(format_user_error(exc))
+            return
+        except Exception as exc:
+            st.error(format_user_error(exc))
+            return
+
     st.write(f"- 标题：{request.title}")
     st.write(f"- 对象：{request.audience}")
     st.write(f"- 目的：{request.purpose}")
@@ -622,6 +644,8 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
     if request.user_notes:
         with st.expander("生成上下文（含设计命题与工作路径）", expanded=False):
             st.text(request.user_notes)
+            if "当前概念方向:" in request.user_notes or "视觉概念简报:" in request.user_notes:
+                st.caption("已包含当前概念方向 / 视觉概念简报注入。")
 
     export_json = st.checkbox("导出 JSON", value=True)
     export_marp = st.checkbox("导出 Marp Markdown", value=True)

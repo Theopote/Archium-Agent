@@ -515,6 +515,7 @@ class PlanningWorkflowService:
         workflow_run_id: UUID,
         *,
         user_overrides: PresentationOverrides | None = None,
+        force_refresh: bool = False,
     ) -> MissionPresentationBridge:
         """Return PresentationRequest mapped from a completed planning run."""
         run = self._require_planning_run(workflow_run_id)
@@ -530,7 +531,8 @@ class PlanningWorkflowService:
             plan = missions.get_deliverable_plan(UUID(str(plan_data["id"])))
         # Prefer draft only when the live plan is still approved (selection edits invalidate).
         if (
-            isinstance(draft, dict)
+            not force_refresh
+            and isinstance(draft, dict)
             and draft.get("mission_id")
             and user_overrides is None
             and plan is not None
@@ -554,6 +556,21 @@ class PlanningWorkflowService:
                 self._session, mission_id
             ),
         )
+
+    def refresh_presentation_request_draft(
+        self,
+        workflow_run_id: UUID,
+    ) -> MissionPresentationBridge:
+        """Rebuild PresentationRequest from current direction/visual brief and persist draft."""
+        bridge = self.get_presentation_bridge(workflow_run_id, force_refresh=True)
+        run = self._require_planning_run(workflow_run_id)
+        next_state = dict(run.state or {})
+        next_state["presentation_request_draft"] = bridge.to_draft()
+        run.state = next_state
+        run.touch()
+        self._workflow_runs.update(run)
+        self._session.commit()
+        return bridge
 
     def build_presentation_request_for_mission(
         self,

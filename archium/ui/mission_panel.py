@@ -418,13 +418,20 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     """Minimal design-iteration UI: generate and select 2–3 concept direction drafts."""
     from pathlib import Path
 
+    from archium.application.design_iteration_status import (
+        format_vision_user_warning,
+        visual_brief_status_label,
+    )
     from archium.domain.enums import ConceptDirectionStatus
     from archium.ui.llm_settings import get_ui_effective_settings
     from archium.ui.planning_service import (
         archive_concept_direction,
         generate_concept_directions,
+        get_design_iteration_progress,
         get_latest_visual_concept_brief,
         list_concept_directions,
+        preview_presentation_request_from_mission,
+        refresh_presentation_request_draft,
         select_concept_direction,
         synthesize_visual_concept_brief,
     )
@@ -432,11 +439,14 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     st.markdown("**概念方向草稿**")
     st.caption(
         "同一任务下推演 2–3 个可比较方向；选中后写入设计使命。"
-        "可为方向生成视觉概念简报（示意，非现场证据）。"
+        "可为方向生成视觉概念简报（示意，非现场证据），并注入 Brief / 汇报请求。"
     )
 
     with get_session() as session:
         directions = list_concept_directions(session, mission.id)
+        progress = get_design_iteration_progress(session, mission.id)
+
+    st.info(progress.summary_line())
 
     if st.button(
         "推演概念方向（2–3 个草稿）",
@@ -468,6 +478,64 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     if not directions:
         st.caption("尚未生成概念方向。")
         return
+
+    selected = next(
+        (item for item in directions if item.status == ConceptDirectionStatus.SELECTED),
+        None,
+    )
+    if selected is not None and progress.injectable:
+        action_cols = st.columns(2)
+        if action_cols[0].button(
+            "预览：用当前方向生成汇报请求",
+            key=f"{key_prefix}_preview_request",
+            use_container_width=True,
+        ):
+            try:
+                with get_session() as session:
+                    request = preview_presentation_request_from_mission(session, mission.id)
+                st.session_state[f"{key_prefix}_direction_request_preview"] = request
+                st.success("已生成预览（含当前概念方向与视觉简报）。")
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
+        run_id_raw = st.session_state.get("planning_workflow_run_id")
+        if run_id_raw and action_cols[1].button(
+            "写入规划：刷新汇报请求草稿",
+            key=f"{key_prefix}_refresh_draft",
+            use_container_width=True,
+            help="用当前已选方向与视觉简报覆盖 planning 中的 PresentationRequest 草稿。",
+        ):
+            try:
+                with get_session() as session:
+                    bridge = refresh_presentation_request_draft(
+                        session, UUID(str(run_id_raw))
+                    )
+                st.session_state[f"{key_prefix}_direction_request_preview"] = bridge.request
+                st.success(
+                    f"已刷新汇报请求草稿：「{bridge.request.title}」"
+                    "（含当前概念方向 / 视觉简报）。"
+                )
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
+    preview = st.session_state.get(f"{key_prefix}_direction_request_preview")
+    if preview is not None:
+        with st.expander("汇报请求预览（设计迭代）", expanded=True):
+            st.write(f"- 标题：{preview.title}")
+            st.write(f"- 目的：{preview.purpose}")
+            st.write(f"- 核心信息：{preview.core_message}")
+            if preview.user_notes:
+                st.caption("生成上下文节选")
+                notes = preview.user_notes
+                st.text(notes[:1200] + ("…" if len(notes) > 1200 else ""))
+                if "当前概念方向:" in notes or "视觉概念简报:" in notes:
+                    st.success("已注入当前概念方向 / 视觉概念简报。")
+                else:
+                    st.warning("预览中尚未看到概念方向或视觉简报注入，请确认已选中方向。")
 
     for direction in directions:
         badge = {
@@ -529,7 +597,9 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             with get_session() as session:
                 visual_brief = get_latest_visual_concept_brief(session, direction.id)
             if visual_brief is not None:
-                st.caption(f"状态：{visual_brief.status} · {visual_brief.title}")
+                st.caption(
+                    f"{visual_brief_status_label(visual_brief.status)} · {visual_brief.title}"
+                )
                 if visual_brief.composition_intent:
                     st.markdown(f"**构图意图**：{visual_brief.composition_intent}")
                 if visual_brief.atmosphere:
@@ -544,7 +614,9 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                     else:
                         st.caption(f"示意路径：{visual_brief.image_path}")
                 if visual_brief.error_message:
-                    st.warning(visual_brief.error_message)
+                    st.warning(format_vision_user_warning(visual_brief.error_message))
+            else:
+                st.caption("尚未生成视觉简报。")
 
             vision_cols = st.columns(2)
             if vision_cols[0].button(
@@ -567,7 +639,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                             )
                         st.success(f"已生成视觉简报「{result.brief.title}」。")
                         for warning in result.warnings:
-                            st.warning(warning)
+                            st.warning(format_vision_user_warning(warning))
                         st.rerun()
                     except WorkflowError as exc:
                         st.error(str(exc))
@@ -582,6 +654,11 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 if not settings.llm_configured:
                     st.error("未配置 LLM API Key。请前往设置配置。")
                     return
+                if not settings.vision_image_generation_enabled:
+                    st.warning(
+                        "当前未开启 Vision 图像生成。将先保存文字简报；"
+                        "若要出图，请在设置中开启 vision_image_generation_enabled。"
+                    )
                 with st.spinner("正在合成视觉简报并尝试示意出图…"):
                     try:
                         with get_session() as session:
@@ -592,11 +669,13 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                                 settings=settings,
                             )
                         if result.image_succeeded:
-                            st.success(f"已生成视觉简报并完成示意出图：「{result.brief.title}」。")
+                            st.success(
+                                f"已生成视觉简报并完成示意出图：「{result.brief.title}」。"
+                            )
                         else:
                             st.success(f"已生成视觉简报「{result.brief.title}」。")
                         for warning in result.warnings:
-                            st.warning(warning)
+                            st.warning(format_vision_user_warning(warning))
                         st.rerun()
                     except WorkflowError as exc:
                         st.error(str(exc))
