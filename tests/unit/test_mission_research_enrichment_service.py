@@ -99,6 +99,49 @@ def test_enrich_mission_with_llm_updates_context(
     assert result.mission.current_situation.startswith("概念阶段")
 
 
+def test_revise_mission_from_written_research_updates_task_fields(
+    db_session,
+    mission_with_confirmed_research,
+) -> None:
+    from unittest.mock import MagicMock
+
+    from archium.infrastructure.llm.mission_enrichment_schemas import MissionResearchRevisionDraft
+
+    _, mission, _ = mission_with_confirmed_research
+    service = MissionResearchEnrichmentService(db_session, llm=None)
+    service.enrich_mission(mission.id, prefer_llm=False)
+
+    llm = MagicMock()
+    llm.generate_structured.return_value = MissionResearchRevisionDraft(
+        task_statement="探索黄土高原文化中心，并参考关中乡村公共文化空间公开案例。",
+        key_unknowns=["具体用地与规模待确认"],
+        research_questions=["哪些功能应优先复合？"],
+    )
+    revision_service = MissionResearchEnrichmentService(
+        db_session,
+        llm,
+        settings=Settings(_env_file=None, llm_api_key="test-key"),
+    )
+
+    result = revision_service.revise_mission_from_written_research(mission.id)
+
+    assert result.mission_revised is True
+    assert "公开案例" in result.mission.task_statement
+    assert result.mission.key_unknowns == ["具体用地与规模待确认"]
+
+
+def test_list_written_back_items_tracks_enrichment(db_session, mission_with_confirmed_research) -> None:
+    _, mission, item = mission_with_confirmed_research
+    service = MissionResearchEnrichmentService(db_session, llm=None)
+    service.enrich_mission(mission.id, prefer_llm=False)
+
+    written = service.list_written_back_items(mission.id)
+
+    assert len(written) == 1
+    assert written[0].id == item.id
+    assert str(item.id) in service.get_enriched_item_ids(mission.id)
+
+
 def test_enrich_mission_requires_confirmed_items(db_session, mission_with_confirmed_research) -> None:
     _, mission, item = mission_with_confirmed_research
     service = MissionResearchEnrichmentService(db_session, llm=None)

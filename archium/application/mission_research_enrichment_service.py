@@ -23,11 +23,16 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.user_preference_repository import UserPreferenceRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
-from archium.infrastructure.llm.mission_enrichment_schemas import MissionResearchEnrichmentDraft
+from archium.infrastructure.llm.mission_enrichment_schemas import (
+    MissionResearchEnrichmentDraft,
+    MissionResearchRevisionDraft,
+)
 from archium.infrastructure.llm.mock import MockLLMProvider
 from archium.prompts.mission_research_enrichment import (
     MISSION_RESEARCH_ENRICHMENT_SYSTEM_PROMPT,
+    MISSION_RESEARCH_REVISION_SYSTEM_PROMPT,
     build_mission_research_enrichment_prompt,
+    build_mission_research_revision_prompt,
     format_confirmed_research_block,
 )
 
@@ -42,6 +47,7 @@ class MissionResearchEnrichmentResult:
     used_llm: bool = False
     warnings: list[str] = field(default_factory=list)
     needs_reapproval: bool = False
+    mission_revised: bool = False
 
 
 class MissionResearchEnrichmentService:
@@ -70,12 +76,24 @@ class MissionResearchEnrichmentService:
 
     def list_pending_items(self, mission_id: UUID) -> list[ProjectKnowledgeItem]:
         mission = self._require_mission(mission_id)
-        enriched_ids = self._enriched_item_ids(mission_id)
+        enriched_ids = self.get_enriched_item_ids(mission_id)
         return [
             item
             for item in self._confirmed_research_items(mission.project_id)
             if str(item.id) not in enriched_ids
         ]
+
+    def list_written_back_items(self, mission_id: UUID) -> list[ProjectKnowledgeItem]:
+        mission = self._require_mission(mission_id)
+        enriched_ids = self.get_enriched_item_ids(mission_id)
+        return [
+            item
+            for item in self._confirmed_research_items(mission.project_id)
+            if str(item.id) in enriched_ids
+        ]
+
+    def get_enriched_item_ids(self, mission_id: UUID) -> set[str]:
+        return self._enriched_item_ids(mission_id)
 
     def enrich_mission(
         self,
@@ -115,6 +133,52 @@ class MissionResearchEnrichmentService:
             used_llm=used_llm,
             warnings=warnings,
             needs_reapproval=needs_reapproval,
+        )
+
+    def revise_mission_from_written_research(self, mission_id: UUID) -> MissionResearchEnrichmentResult:
+        """Lightweight LLM revision of task_statement / open questions after research write-back."""
+        if self._llm is None or not self._settings.llm_configured:
+            raise WorkflowError("配置 LLM 后可使用 AI 修订任务理解")
+
+        mission = self._require_mission(mission_id)
+        written_back = self.list_written_back_items(mission_id)
+        if not written_back:
+            raise WorkflowError("尚无已写回 Mission 的公开研究，请先写回任务理解")
+
+        was_approved = is_mission_approval_current(mission)
+        draft = self._llm.generate_structured(
+            LLMRequest(
+                system_prompt=MISSION_RESEARCH_REVISION_SYSTEM_PROMPT,
+                user_prompt=build_mission_research_revision_prompt(
+                    current_mission_json=to_json(mission),
+                    written_research_block=format_confirmed_research_block(written_back),
+                ),
+                temperature=0.25,
+                json_mode=True,
+            ),
+            MissionResearchRevisionDraft,
+        )
+        patch = MissionPatch(
+            task_statement=draft.task_statement.strip()
+            if draft.task_statement and draft.task_statement.strip()
+            else None,
+            key_unknowns=draft.key_unknowns or None,
+            research_questions=draft.research_questions or None,
+        )
+        if not patch.model_dump(exclude_none=True):
+            raise WorkflowError("AI 未建议任何任务理解修订")
+
+        mission = self._mission_service.update_mission(mission.id, patch)
+        self._history.record_snapshot(
+            mission,
+            RevisionSource.CLARIFICATION,
+            note="公开研究写回后的轻量任务修订",
+        )
+        return MissionResearchEnrichmentResult(
+            mission=mission,
+            used_llm=True,
+            mission_revised=True,
+            needs_reapproval=was_approved,
         )
 
     def _enrich_with_llm(

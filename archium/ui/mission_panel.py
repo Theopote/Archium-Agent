@@ -298,6 +298,76 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
             st.error(format_user_error(exc))
 
 
+def _render_written_back_research_summary(mission: ProjectMission, *, key_prefix: str) -> None:
+    from archium.application.mission_research_enrichment_service import (
+        MissionResearchEnrichmentService,
+    )
+    from archium.infrastructure.llm.factory import create_llm_provider
+    from archium.ui.llm_settings import get_ui_effective_settings
+
+    settings = get_ui_effective_settings()
+    with get_session() as session:
+        written = MissionResearchEnrichmentService(
+            session,
+            create_llm_provider(settings) if settings.llm_configured else None,
+            settings=settings,
+        ).list_written_back_items(mission.id)
+
+    if not written:
+        return
+
+    st.markdown("**已写回任务理解**")
+    for item in written[:5]:
+        st.markdown(f"- {_truncate_statement(item.statement)}")
+    if len(written) > 5:
+        st.caption(f"另有 {len(written) - 5} 条，见工作台「资料与事实」。")
+
+
+def _render_mission_revision_action(mission: ProjectMission, *, key_prefix: str) -> None:
+    from archium.application.mission_research_enrichment_service import (
+        MissionResearchEnrichmentService,
+    )
+    from archium.infrastructure.llm.factory import create_llm_provider
+    from archium.ui.llm_settings import get_ui_effective_settings
+
+    settings = get_ui_effective_settings()
+    if not settings.llm_configured:
+        return
+
+    with get_session() as session:
+        service = MissionResearchEnrichmentService(
+            session,
+            create_llm_provider(settings),
+            settings=settings,
+        )
+        if not service.list_written_back_items(mission.id):
+            return
+
+    if st.button(
+        "AI 修订任务理解",
+        key=f"{key_prefix}_revise_mission_research",
+        use_container_width=True,
+        help="基于已写回公开研究，轻量更新任务陈述与开放问题。",
+    ):
+        try:
+            with get_session() as session:
+                service = MissionResearchEnrichmentService(
+                    session,
+                    create_llm_provider(settings),
+                    settings=settings,
+                )
+                result = service.revise_mission_from_written_research(mission.id)
+                session.commit()
+            st.success("已根据公开研究修订任务理解。")
+            if result.needs_reapproval:
+                st.warning("任务理解审批已失效，请重新批准。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+
 def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: str) -> None:
     from archium.application.mission_research_enrichment_service import (
         MissionResearchEnrichmentService,
@@ -366,6 +436,8 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
 
     _render_research_knowledge_preview(mission.project_id, key_prefix=key_prefix)
     _render_research_enrichment_action(mission, key_prefix=key_prefix)
+    _render_written_back_research_summary(mission, key_prefix=key_prefix)
+    _render_mission_revision_action(mission, key_prefix=key_prefix)
     _render_mission_reapproval_prompt(mission, key_prefix=key_prefix)
 
     st.caption("确认后的公开资料可 enrich 任务理解与汇报；完整列表见工作台「资料与事实」。")

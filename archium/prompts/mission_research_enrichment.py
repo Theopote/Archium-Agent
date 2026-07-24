@@ -44,3 +44,27 @@ def build_mission_research_enrichment_prompt(
         "返回更新后的 project_context（完整文本，不是增量片段）。"
         "如 current_situation 需要补充公开背景，可一并更新；否则返回 null。"
     )
+
+
+MISSION_RESEARCH_REVISION_SYSTEM_PROMPT = MISSION_SYSTEM_PROMPT + """\
+本轮任务：在公开研究已写入 project_context 后，轻量修订 ProjectMission 的任务陈述与开放问题。
+
+原则：
+- 仅基于【当前任务理解】与【已写回公开研究】做措辞级修订，不得编造面积、造价、规范或用地指标。
+- task_statement 保持原任务性质，可补充「基于公开案例/背景」等研究语境，但不要改成完全不同的任务。
+- key_unknowns / research_questions 应反映仍待项目确认的问题；已能被公开研究部分回答的问题应移出或降格表述。
+- 不得把公开研究结论写成已核实项目事实。
+"""
+
+
+def build_mission_research_revision_prompt(
+    *,
+    current_mission_json: str,
+    written_research_block: str,
+) -> str:
+    return (
+        "请根据已写回 Mission 的公开研究，生成 MissionResearchRevisionDraft JSON。\n\n"
+        f"【当前任务理解】\n{current_mission_json}\n\n"
+        f"【已写回公开研究】\n{written_research_block or '（无）'}\n\n"
+        "仅返回需要更新的字段；task_statement 若无需改动可返回 null。"
+    )

@@ -38,7 +38,7 @@ Project (origin_mode: concept | existing)
 | 阶段 | 内容 | 状态 |
 |------|------|------|
 | P0/P1 | `ProjectOriginMode` 双入口、`DesignIntent`、概念模式 Planning、Genesis UI | 已落地 |
-| P2 | Autonomous Research — 联网检索 → 知识条目 → 写回 Mission；Brief/Storyline/Outline 注入 `project_context`；写回后提示重新批准 | 已落地 |
+| P2 | Autonomous Research — 联网检索 → 知识 → 写回/AI 修订 Mission → Brief/Storyline 注入；资料面板标记「已写回 Mission」 | 已落地 |
 | P2 | Research/Programming 第三入口（投资人策划模式） | 规划中 |
 | P3 | Design Iteration — 多方案概念推演（Visual / Vision Engine） | 规划中 |
 | P3 | 四模式 Architectural Workspace | 规划中 |

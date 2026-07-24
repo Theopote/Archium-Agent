@@ -15,3 +15,12 @@ class MissionResearchEnrichmentDraft(BaseModel):
     current_situation: str | None = None
     key_unknowns: list[str] = Field(default_factory=list)
     note: str = ""
+
+
+class MissionResearchRevisionDraft(BaseModel):
+    """Lightweight mission field updates after research is written back."""
+
+    task_statement: str | None = None
+    key_unknowns: list[str] = Field(default_factory=list)
+    research_questions: list[str] = Field(default_factory=list)
+    note: str = ""

@@ -45,6 +45,17 @@ def render_knowledge_panel(project_id: UUID) -> None:
         service = ProjectKnowledgeService(session)
         view = service.get_view(project_id)
         documents = DocumentRepository(session).list_by_project(project_id)
+        from archium.application.mission_context_bridge import resolve_project_mission
+        from archium.application.mission_research_enrichment_service import (
+            MissionResearchEnrichmentService,
+        )
+
+        mission = resolve_project_mission(session, project_id)
+        enriched_item_ids: set[str] = set()
+        if mission is not None:
+            enriched_item_ids = MissionResearchEnrichmentService(session).get_enriched_item_ids(
+                mission.id
+            )
 
     if view.gap_report is not None:
         gap_count = view.gap_report.gap_count
@@ -67,7 +78,11 @@ def render_knowledge_panel(project_id: UUID) -> None:
             continue
         with st.expander(f"{section.title}（{len(section.items)}）", expanded=section.key == "pending"):
             for item in section.items[:30]:
-                _render_item_row(item, service_available=True)
+                _render_item_row(
+                    item,
+                    service_available=True,
+                    written_back_to_mission=str(item.id) in enriched_item_ids,
+                )
 
     if documents:
         st.markdown("##### 资料角色标记")
@@ -128,11 +143,19 @@ def render_knowledge_panel(project_id: UUID) -> None:
             st.rerun()
 
 
-def _render_item_row(item: ProjectKnowledgeItem, *, service_available: bool) -> None:
+def _render_item_row(
+    item: ProjectKnowledgeItem,
+    *,
+    service_available: bool,
+    written_back_to_mission: bool = False,
+) -> None:
     origin = ORIGIN_LABELS.get(item.origin, item.origin.value)
     reliability = RELIABILITY_LABELS.get(item.reliability, item.reliability.value)
     st.markdown(f"**{item.statement}**")
-    st.caption(f"{origin} · {reliability}")
+    caption_parts = [origin, reliability]
+    if written_back_to_mission:
+        caption_parts.append("已写回 Mission")
+    st.caption(" · ".join(caption_parts))
     if item.source_citations:
         for citation in item.source_citations[:2]:
             if citation.url:
