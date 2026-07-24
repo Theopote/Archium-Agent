@@ -52,19 +52,32 @@ def build_exploration_direction_user_prompt(
     idea_text: str,
     count: int,
     idea_seed_block: str = "",
+    verified_constraints_block: str = "",
 ) -> str:
     seed_block = idea_seed_block.strip() or f"原始想法: {idea_text}"
+    constraints = verified_constraints_block.strip()
+    constraints_section = (
+        f"""
+【已证实 / 已提取约束】（推演时视为硬约束，不得编造与之冲突的指标）
+{constraints}
+"""
+        if constraints
+        else """
+【已证实 / 已提取约束】
+（暂无）不要假装已有任务书、面积或现场证据。
+"""
+    )
     return f"""请为一句建筑想法生成 {count} 个概念方向草稿。此时尚无正式 Mission。
 
 项目名称：{project_name or "（未命名）"}
 想法种子（IdeaSeed）：
 {seed_block}
-
+{constraints_section}
 要求：
 1. 恰好输出 {count} 个方向（或在信息极不足时不少于 2 个）。
 2. 各方向是可比较的「可能世界」，差异点必须清晰。
 3. 每个方向包含 title, summary, theme, spatial_idea, experience_focus,
    differentiator, open_questions, risks。
-4. 不要假装已有任务书、面积或现场证据。
+4. 若有已证实约束，方向必须尊重；未知项写入 open_questions，勿捏造数值。
 5. 方向应回应 IdeaSeed 中的主题、灵感与关键词。
 """

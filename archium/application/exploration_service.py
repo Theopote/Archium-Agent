@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.context_evidence import build_verified_constraints_block
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
@@ -186,6 +187,9 @@ class ExplorationService:
                     self._directions.update(existing)
 
         seed = exploration.idea_seed or IdeaSeed.from_raw(exploration.idea_text)
+        verified_constraints = build_verified_constraints_block(
+            self._session, exploration.project_id
+        )
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=CONCEPT_DIRECTION_SYSTEM_PROMPT,
@@ -194,6 +198,7 @@ class ExplorationService:
                     idea_text=seed.raw_input,
                     idea_seed_block=seed.to_prompt_block(),
                     count=target_count,
+                    verified_constraints_block=verified_constraints,
                 ),
                 temperature=0.5,
                 json_mode=True,
