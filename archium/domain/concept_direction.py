@@ -38,3 +38,27 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
     def archive(self) -> None:
         self.status = ConceptDirectionStatus.ARCHIVED
         self.touch()
+
+    def to_prompt_block(self) -> str:
+        """Compact text for Brief / Storyline / Outline generation context."""
+        sections: list[str] = [f"方向：{self.title}"]
+        if self.theme.strip():
+            sections.append(f"主题：{self.theme.strip()}")
+        if self.summary.strip():
+            sections.append(f"摘要：{self.summary.strip()}")
+        if self.spatial_idea.strip():
+            sections.append(f"空间想法：{self.spatial_idea.strip()}")
+        if self.experience_focus.strip():
+            sections.append(f"体验焦点：{self.experience_focus.strip()}")
+        if self.differentiator.strip():
+            sections.append(f"差异点：{self.differentiator.strip()}")
+        if self.open_questions:
+            sections.append(
+                "开放问题：\n"
+                + "\n".join(f"- {item}" for item in self.open_questions if item.strip())
+            )
+        if self.risks:
+            sections.append(
+                "风险：\n" + "\n".join(f"- {item}" for item in self.risks if item.strip())
+            )
+        return "\n".join(sections)

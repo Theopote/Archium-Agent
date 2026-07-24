@@ -539,11 +539,16 @@ class PlanningWorkflowService:
             return bridge_from_draft(draft)
 
         workstreams = missions.list_workstreams(mission_id)
+        from archium.application.mission_context_bridge import (
+            resolve_selected_concept_direction,
+        )
+
         return build_presentation_bridge(
             mission,
             plan=plan,
             workstreams=workstreams,
             user_overrides=user_overrides,
+            concept_direction=resolve_selected_concept_direction(self._session, mission_id),
         )
 
     def build_presentation_request_for_mission(
@@ -564,12 +569,17 @@ class PlanningWorkflowService:
                 "尚未批准成果规划，无法生成汇报请求。请先完成 DeliverablePlan 审批。"
             )
         workstreams = missions.list_workstreams(mission_id)
+        from archium.application.mission_context_bridge import (
+            resolve_selected_concept_direction,
+        )
+
         return build_presentation_bridge(
             mission,
             plan=plan,
-            deliverable_id=deliverable_id,
             workstreams=workstreams,
+            deliverable_id=deliverable_id,
             user_overrides=user_overrides,
+            concept_direction=resolve_selected_concept_direction(self._session, mission_id),
         )
 
     def _require_planning_run(self, workflow_run_id: UUID) -> WorkflowRun:

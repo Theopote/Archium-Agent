@@ -12,7 +12,7 @@ from archium.agents._helpers import (
     to_json,
 )
 from archium.application.mission_context_bridge import (
-    merge_mission_project_context,
+    enrich_mission_generation_context,
     resolve_project_mission,
 )
 from archium.application.artifact_history_service import OutlineHistoryService
@@ -118,7 +118,11 @@ class OutlinePlanner:
             project_id,
             presentation_id=brief.presentation_id,
         )
-        project_context = merge_mission_project_context(project_context, mission)
+        project_context = enrich_mission_generation_context(
+            self._session,
+            project_context,
+            mission,
+        )
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=OUTLINE_PLAN_SYSTEM_PROMPT,

@@ -700,9 +700,22 @@ class PlanningWorkflowNodes:
             }
 
         workstreams = list(state.get("workstreams") or [])
+        from archium.application.mission_context_bridge import (
+            resolve_selected_concept_direction,
+        )
+
+        concept_direction = resolve_selected_concept_direction(
+            self._runtime.session,
+            mission.id,
+        )
         router = DeliverableExecutionRouter()
         execution_plans = (
-            router.route_plan(mission, plan, workstreams=workstreams)
+            router.route_plan(
+                mission,
+                plan,
+                workstreams=workstreams,
+                concept_direction=concept_direction,
+            )
             if plan is not None
             else []
         )

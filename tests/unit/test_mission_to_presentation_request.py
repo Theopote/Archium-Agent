@@ -104,6 +104,31 @@ def test_build_presentation_request_includes_project_context_in_user_notes() -> 
     assert "关中乡村" in request.user_notes
 
 
+def test_build_presentation_request_includes_concept_direction() -> None:
+    from archium.domain.concept_direction import ConceptDirection
+    from archium.domain.enums import ConceptDirectionStatus
+
+    mission = _temple_mission()
+    direction = ConceptDirection(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        title="窑洞再生",
+        summary="以窑洞原型转译公共空间",
+        theme="窑洞当代化",
+        experience_focus="庇护与仪式感",
+        spatial_idea="半地下拱廊",
+        status=ConceptDirectionStatus.SELECTED,
+    )
+
+    request = build_presentation_request(mission, concept_direction=direction)
+
+    assert request.core_message == "庇护与仪式感"
+    assert request.purpose == "以窑洞原型转译公共空间"
+    assert "当前概念方向:" in request.user_notes
+    assert "窑洞再生" in request.user_notes
+    assert "半地下拱廊" in request.user_notes
+
+
 def test_build_presentation_request_field_mapping() -> None:
     mission = _temple_mission()
     deliverable = _presentation_deliverable()

@@ -210,6 +210,7 @@ class DeliverableExecutionRouter:
         *,
         workstreams: list[Workstream] | None = None,
         user_overrides: PresentationOverrides | None = None,
+        concept_direction=None,
     ) -> ArtifactExecutionPlan:
         kind = _TYPE_TO_KIND.get(deliverable.deliverable_type, "other")
         if deliverable.deliverable_type == DeliverableType.PRESENTATION:
@@ -218,6 +219,7 @@ class DeliverableExecutionRouter:
                 deliverable,
                 workstreams=workstreams,
                 user_overrides=user_overrides,
+                concept_direction=concept_direction,
             )
             return ArtifactExecutionPlan(
                 mission_id=mission.id,
@@ -264,6 +266,7 @@ class DeliverableExecutionRouter:
         workstreams: list[Workstream] | None = None,
         user_overrides: PresentationOverrides | None = None,
         selected_only: bool = True,
+        concept_direction=None,
     ) -> list[ArtifactExecutionPlan]:
         items = plan.selected_deliverables() if selected_only else list(plan.deliverables)
         return [
@@ -272,6 +275,7 @@ class DeliverableExecutionRouter:
                 item,
                 workstreams=workstreams,
                 user_overrides=user_overrides,
+                concept_direction=concept_direction,
             )
             for item in items
         ]
@@ -284,6 +288,7 @@ class DeliverableExecutionRouter:
         workstreams: list[Workstream] | None = None,
         deliverable_id: str | None = None,
         user_overrides: PresentationOverrides | None = None,
+        concept_direction=None,
     ) -> ArtifactExecutionPlan:
         """Return the PRESENTATION execution plan or raise — never fall back."""
         if deliverable_id is not None:
@@ -302,6 +307,7 @@ class DeliverableExecutionRouter:
                     item,
                     workstreams=workstreams,
                     user_overrides=user_overrides,
+                    concept_direction=concept_direction,
                 )
             raise WorkflowError(f"成果 {deliverable_id} 不存在于交付计划中")
 
@@ -326,6 +332,7 @@ class DeliverableExecutionRouter:
             presentations[0],
             workstreams=workstreams,
             user_overrides=user_overrides,
+            concept_direction=concept_direction,
         )
 
 

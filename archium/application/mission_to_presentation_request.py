@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, replace
 from uuid import UUID
 
 from archium.application.presentation_models import PresentationRequest
+from archium.domain.concept_direction import ConceptDirection
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import DeliverableType, PresentationType, ServiceDepth, TaskNature
 from archium.domain.project_mission import ProjectMission
@@ -73,6 +74,7 @@ def build_presentation_request(
     *,
     workstreams: list[Workstream] | None = None,
     user_overrides: PresentationOverrides | None = None,
+    concept_direction: ConceptDirection | None = None,
 ) -> PresentationRequest:
     """Map mission (+ optional presentation deliverable) to PresentationRequest.
 
@@ -102,6 +104,13 @@ def build_presentation_request(
             core_message = mission.design_intent.desired_experience.strip()
         elif mission.design_intent.theme.strip():
             core_message = mission.design_intent.theme.strip()
+    if concept_direction is not None:
+        if concept_direction.experience_focus.strip():
+            core_message = concept_direction.experience_focus.strip()
+        elif concept_direction.theme.strip():
+            core_message = concept_direction.theme.strip()
+        if concept_direction.summary.strip():
+            purpose = concept_direction.summary.strip()
     decisions = list(mission.decisions_required)
     concerns = [
         concern
@@ -111,7 +120,12 @@ def build_presentation_request(
     ]
     required_sections = _resolve_required_sections(mission, primary)
     excluded = list(mission.out_of_scope)
-    user_notes = _build_user_notes(mission, workstreams or [], primary)
+    user_notes = _build_user_notes(
+        mission,
+        workstreams or [],
+        primary,
+        concept_direction=concept_direction,
+    )
     presentation_type = infer_presentation_type(mission, primary)
     slide_count, duration = _infer_length(primary)
 
@@ -142,6 +156,7 @@ def build_presentation_bridge(
     deliverable_id: str | None = None,
     workstreams: list[Workstream] | None = None,
     user_overrides: PresentationOverrides | None = None,
+    concept_direction: ConceptDirection | None = None,
 ) -> MissionPresentationBridge:
     """Build PresentationRequest only for PRESENTATION deliverables.
 
@@ -159,6 +174,7 @@ def build_presentation_bridge(
             workstreams=workstreams,
             deliverable_id=deliverable_id,
             user_overrides=user_overrides,
+            concept_direction=concept_direction,
         )
         assert execution.presentation_request is not None
         return MissionPresentationBridge(
@@ -185,6 +201,7 @@ def build_presentation_bridge(
         primary,
         workstreams=workstreams,
         user_overrides=user_overrides,
+        concept_direction=concept_direction,
     )
     return MissionPresentationBridge(
         request=request,
@@ -350,6 +367,8 @@ def _build_user_notes(
     mission: ProjectMission,
     workstreams: list[Workstream],
     deliverable: PlannedDeliverable | None,
+    *,
+    concept_direction: ConceptDirection | None = None,
 ) -> str:
     sections: list[str] = []
 
@@ -357,6 +376,11 @@ def _build_user_notes(
         block = mission.design_intent.to_prompt_block()
         if block.strip():
             sections.append("设计使命:\n" + block)
+
+    if concept_direction is not None:
+        block = concept_direction.to_prompt_block()
+        if block.strip():
+            sections.append("当前概念方向:\n" + block)
 
     if mission.project_context.strip():
         sections.append("项目语境:\n" + mission.project_context.strip())

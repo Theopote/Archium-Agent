@@ -307,11 +307,17 @@ def _build_mission_planning_snapshot(
 
     if not artifact_execution_plans and plan is not None:
         from archium.application.deliverable_execution import DeliverableExecutionRouter
+        from archium.application.mission_context_bridge import (
+            resolve_selected_concept_direction,
+        )
 
         artifact_execution_plans = [
             item.to_dict()
             for item in DeliverableExecutionRouter().route_plan(
-                mission, plan, workstreams=workstreams
+                mission,
+                plan,
+                workstreams=workstreams,
+                concept_direction=resolve_selected_concept_direction(session, mission_id),
             )
         ]
 

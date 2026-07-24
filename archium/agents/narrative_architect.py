@@ -23,7 +23,7 @@ from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.application.mission_context_bridge import (
-    merge_mission_project_context,
+    enrich_mission_generation_context,
     resolve_project_mission,
 )
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -80,15 +80,15 @@ class NarrativeArchitect:
             project_id,
             presentation_id=brief.presentation_id,
         )
-        project_context = merge_mission_project_context(project_context, mission)
+        project_context = enrich_mission_generation_context(
+            self._session,
+            project_context,
+            mission,
+        )
         narrative_mode = mission.narrative_mode if mission is not None else None
         design_intent_block = ""
         if mission is not None and mission.design_intent is not None:
             design_intent_block = mission.design_intent.to_prompt_block()
-            if design_intent_block.strip():
-                project_context = (
-                    f"{project_context}\n\n【设计使命】\n{design_intent_block}".strip()
-                )
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=STORYLINE_SYSTEM_PROMPT,

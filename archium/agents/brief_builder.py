@@ -13,7 +13,7 @@ from archium.agents._helpers import (
     resolve_design_context_text,
 )
 from archium.application.mission_context_bridge import (
-    merge_mission_project_context,
+    enrich_mission_generation_context,
     resolve_project_mission,
 )
 from archium.application.artifact_history_service import BriefHistoryService
@@ -75,7 +75,11 @@ class BriefBuilder:
             project_id,
             presentation_id=presentation_id,
         )
-        project_context = merge_mission_project_context(project_context, mission)
+        project_context = enrich_mission_generation_context(
+            self._session,
+            project_context,
+            mission,
+        )
         request_context = build_request_context(request)
         draft = self._llm.generate_structured(
             LLMRequest(
