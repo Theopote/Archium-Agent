@@ -6,7 +6,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from archium.application.visual.architectural_icon_registry import default_icon_pack_root
+from archium.application.visual.architectural_icon_registry import (
+    ArchitecturalIconRegistry,
+    default_icon_pack_root,
+)
 from archium.domain.visual.architectural_icon import ArchitecturalIcon
 
 
@@ -49,7 +52,7 @@ def icons_for_domain(
     domain: str,
     *,
     pack_root: Path | None = None,
-    registry=None,  # noqa: ANN001
+    registry: ArchitecturalIconRegistry | None = None,
 ) -> list[ArchitecturalIcon]:
     """Resolve domain pack icon names to registry icons."""
     from archium.application.visual.architectural_icon_registry import (

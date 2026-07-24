@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -712,7 +713,7 @@ class LayoutPlanningService:
     @staticmethod
     def _order_variants(
         family: LayoutFamily,
-        variants: tuple[str, ...],
+        variants: Sequence[str],
         style_preference: LayoutStylePreference,
     ) -> list[str]:
         if style_preference.is_empty:

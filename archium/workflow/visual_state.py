@@ -60,6 +60,8 @@ class VisualWorkflowState(TypedDict, total=False):
     deck_qa_report: dict | None
     scene_repair_report: dict | None
     output_dir: str | None
+    formal_pptx_path: str | None
+    scene_pptx_path: str | None
 
 
 def initial_visual_workflow_state(

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from archium.domain.visual.image_derivative import FocalPoint, ImageCropBox, ImageCropStrategy
 from archium.logging import get_logger
+
+if TYPE_CHECKING:
+    from PIL.Image import Image as PilImage
 
 logger = get_logger(__name__, operation="image_focus_detector")
 
@@ -89,7 +92,7 @@ class ImageFocusDetector:
         )
 
 
-def _edge_energy(gray: object) -> object:
+def _edge_energy(gray: PilImage) -> PilImage:
     """Return L-mode image with simple |∇| energy (Pillow only)."""
     from PIL import ImageChops, ImageFilter
 
@@ -101,17 +104,17 @@ def _edge_energy(gray: object) -> object:
     return ImageChops.add(dx, dy, scale=1.0, offset=0)
 
 
-def _pixels(energy: object) -> list[int]:
+def _pixels(energy: PilImage) -> list[int]:
     # Pillow 14 deprecates getdata; prefer get_flattened_data when present.
     flattened = getattr(energy, "get_flattened_data", None)
     if callable(flattened):
         return list(flattened())
-    return list(energy.getdata())  # type: ignore[attr-defined]
+    return list(energy.getdata())
 
 
-def _subject_focal(energy: object) -> FocalPoint:
+def _subject_focal(energy: PilImage) -> FocalPoint:
     """Building-ish subject: energy centroid in mid/lower band (avoid sky)."""
-    w, h = energy.size  # type: ignore[attr-defined]
+    w, h = energy.size
     data = _pixels(energy)
     total = 0.0
     sx = 0.0
@@ -150,9 +153,9 @@ def _subject_focal(energy: object) -> FocalPoint:
     )
 
 
-def _skyline_focal(energy: object) -> FocalPoint:
+def _skyline_focal(energy: PilImage) -> FocalPoint:
     """Prefer upper third where horizontal structure (skyline) is strong."""
-    w, h = energy.size  # type: ignore[attr-defined]
+    w, h = energy.size
     data = _pixels(energy)
     band = max(1, int(h * 0.34))
     total = 0.0
@@ -179,9 +182,9 @@ def _skyline_focal(energy: object) -> FocalPoint:
     )
 
 
-def _people_focal(energy: object) -> FocalPoint:
+def _people_focal(energy: PilImage) -> FocalPoint:
     """Weak people cue: vertical mid-band energy centroid."""
-    w, h = energy.size  # type: ignore[attr-defined]
+    w, h = energy.size
     data = _pixels(energy)
     x0, x1 = int(w * 0.25), int(w * 0.75)
     y0, y1 = int(h * 0.15), int(h * 0.85)

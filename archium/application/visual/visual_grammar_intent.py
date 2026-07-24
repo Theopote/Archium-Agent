@@ -140,7 +140,7 @@ def derive_grammar_layout_preference(intent: VisualIntent) -> LayoutStylePrefere
         for family, variant in recipe.preferred_variants
         if family in implemented
     )
-    notes = (f"visual_grammar:{intent.page_archetype.value}",)
+    notes: tuple[str, ...] = (f"visual_grammar:{intent.page_archetype.value}",)
     if intent.composition_strategy:
         notes = (*notes, f"visual_grammar:strategy:{intent.composition_strategy[:80]}")
     return LayoutStylePreference(
