@@ -13,6 +13,7 @@ from archium.domain.enums import (
     TaskNature,
     UncertaintyLevel,
 )
+from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.project_mission import (
     EvaluationCriterion,
     MissionConstraint,
@@ -185,11 +186,24 @@ def _parse_criteria(text: str) -> list[EvaluationCriterion]:
     return result
 
 
+def _default_design_intent(mission: ProjectMission) -> DesignIntent:
+    return mission.design_intent or DesignIntent()
+
+
 def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission") -> None:
     """Render structured mission understanding with per-field editing."""
     st.markdown("#### 我对任务的理解")
     st.caption(f"{mission.title} · v{mission.version} · 置信度 {mission.confidence:.0%}")
     st.caption("可纠正 AI 对任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
+
+    intent = _default_design_intent(mission)
+    if mission.design_intent is not None or intent.theme or intent.problem_statement:
+        with st.expander("设计使命", expanded=mission.design_intent is not None):
+            st.caption("概念探索的核心：问题、社会文化语境、目标体验与待研究项。")
+            if intent.working_assumptions:
+                st.markdown("**工作假设（待确认）**")
+                for item in intent.working_assumptions:
+                    st.markdown(f"- {item}")
 
     narrative_suggestion = suggest_narrative_mode(mission)
     st.info(
@@ -247,6 +261,60 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
             if mission.narrative_mode in narrative_options
             else narrative_options.index(narrative_suggestion.mode),
             format_func=lambda item: NARRATIVE_MODE_LABELS[item],
+        )
+
+        st.markdown("##### 设计使命")
+        intent_theme = st.text_input("主题", value=intent.theme, key=f"{key_prefix}_intent_theme")
+        intent_problem = st.text_area(
+            "问题陈述",
+            value=intent.problem_statement,
+            height=70,
+            key=f"{key_prefix}_intent_problem",
+        )
+        col_intent_a, col_intent_b = st.columns(2)
+        with col_intent_a:
+            intent_social = st.text_area(
+                "社会背景",
+                value=intent.social_background,
+                height=70,
+                key=f"{key_prefix}_intent_social",
+            )
+            intent_users = st.text_area(
+                "目标用户（每行一项）",
+                value=_list_to_lines(intent.target_users),
+                height=70,
+                key=f"{key_prefix}_intent_users",
+            )
+            intent_core_q = st.text_area(
+                "核心追问（每行一项）",
+                value=_list_to_lines(intent.core_questions),
+                height=70,
+                key=f"{key_prefix}_intent_core_q",
+            )
+        with col_intent_b:
+            intent_cultural = st.text_area(
+                "文化语境",
+                value=intent.cultural_context,
+                height=70,
+                key=f"{key_prefix}_intent_cultural",
+            )
+            intent_experience = st.text_area(
+                "期望体验",
+                value=intent.desired_experience,
+                height=70,
+                key=f"{key_prefix}_intent_experience",
+            )
+            intent_research = st.text_area(
+                "待研究项（每行一项）",
+                value=_list_to_lines(intent.research_needed),
+                height=70,
+                key=f"{key_prefix}_intent_research",
+            )
+        intent_assumptions = st.text_area(
+            "工作假设（每行一项，待后续确认）",
+            value=_list_to_lines(intent.working_assumptions),
+            height=70,
+            key=f"{key_prefix}_intent_assumptions",
         )
 
         current_situation = st.text_area(
@@ -308,6 +376,17 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
         patch = MissionPatch(
             title=title.strip() or None,
             task_statement=task_statement.strip() or None,
+            design_intent=DesignIntent(
+                theme=intent_theme.strip(),
+                problem_statement=intent_problem.strip(),
+                social_background=intent_social.strip(),
+                cultural_context=intent_cultural.strip(),
+                target_users=_lines_to_list(intent_users),
+                desired_experience=intent_experience.strip(),
+                core_questions=_lines_to_list(intent_core_q),
+                research_needed=_lines_to_list(intent_research),
+                working_assumptions=_lines_to_list(intent_assumptions),
+            ),
             current_situation=current_situation.strip() or None,
             primary_problems=_lines_to_list(primary_problems),
             desired_changes=_lines_to_list(desired_changes),

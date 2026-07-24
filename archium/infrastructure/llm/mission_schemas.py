@@ -70,6 +70,18 @@ class DesignQuestionDraft(BaseModel):
     priority: str = "medium"
 
 
+class DesignIntentDraft(BaseModel):
+    theme: str = ""
+    problem_statement: str = ""
+    social_background: str = ""
+    cultural_context: str = ""
+    target_users: list[str] = Field(default_factory=list)
+    desired_experience: str = ""
+    core_questions: list[str] = Field(default_factory=list)
+    research_needed: list[str] = Field(default_factory=list)
+    working_assumptions: list[str] = Field(default_factory=list)
+
+
 class MissionGenerationDraft(BaseModel):
     """LLM output for task understanding and initial planning artifacts."""
 
@@ -99,3 +111,4 @@ class MissionGenerationDraft(BaseModel):
     assumptions: list[AssumptionDraft] = Field(default_factory=list)
     clarifying_questions: list[ClarifyingQuestionDraft] = Field(default_factory=list)
     design_questions: list[DesignQuestionDraft] = Field(default_factory=list)
+    design_intent: DesignIntentDraft | None = None

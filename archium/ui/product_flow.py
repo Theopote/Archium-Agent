@@ -35,14 +35,14 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
     ProductStage(
         id="materials",
         title="资料",
-        caption="上传文件、整理事实与素材，确认资料缺口。",
+        caption="可选：上传资料 enrich 任务理解，整理事实与素材。",
         page_key="materials",
         icon=icons.MATERIALS,
     ),
     ProductStage(
         id="outline",
         title="大纲",
-        caption="描述汇报任务，确认结构、页数与必须出现的内容。",
+        caption="描述设计意图，确认结构、页数与必须出现的内容。",
         page_key="outline",
         icon=icons.OUTLINE,
     ),

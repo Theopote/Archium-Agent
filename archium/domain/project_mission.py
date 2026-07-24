@@ -8,6 +8,7 @@ from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
+from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.enums import (
     ApprovalStatus,
     ConstraintSource,
@@ -75,6 +76,7 @@ class ProjectMission(IdentifiedModel, VersionedModel, TimestampedModel):
     decision_context: str = ""
     decisions_required: list[str] = Field(default_factory=list)
     narrative_mode: ArchitecturalNarrativeMode | None = None
+    design_intent: DesignIntent | None = None
     approval_hash: str | None = Field(default=None, max_length=64)
     known_constraints: list[MissionConstraint] = Field(default_factory=list)
     key_unknowns: list[str] = Field(default_factory=list)

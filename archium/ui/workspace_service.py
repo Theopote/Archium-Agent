@@ -23,7 +23,7 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.application.llm_settings_resolver import get_effective_settings
 from archium.config.settings import Settings
 from archium.domain.document import DocumentChunk, SourceDocument
-from archium.domain.enums import PresentationType, ProjectType
+from archium.domain.enums import PresentationType, ProjectOriginMode, ProjectType
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
@@ -88,11 +88,13 @@ def create_project(
     name: str,
     project_type: ProjectType,
     description: str = "",
+    origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
 ) -> Project:
     project = Project(
         name=name.strip(),
         project_type=project_type,
         description=description.strip() or None,
+        origin_mode=origin_mode,
     )
     return ProjectRepository(session).create(project)
 

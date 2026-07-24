@@ -331,6 +331,35 @@ class MissionClarificationService:
             self._missions.list_knowledge_gaps(mission_id),
         )
 
+    def auto_assume_concept_defaults(self, mission_id: UUID) -> ClarificationReadiness:
+        """Accept suggested assumptions for concept exploration without user interrupt."""
+        self._require_mission(mission_id)
+        questions = self._missions.list_clarifying_questions(mission_id)
+        for question in questions:
+            if question.status != QuestionStatus.OPEN:
+                continue
+            if question.blocking:
+                continue
+            text = (question.suggested_assumption or "").strip()
+            if not text:
+                continue
+            try:
+                self.assume_question(question.id, assumption_text=text, apply_to_mission=True)
+            except WorkflowError:
+                continue
+
+        gaps = self._missions.list_knowledge_gaps(mission_id)
+        for gap in gaps:
+            if gap.status != KnowledgeGapStatus.OPEN or gap.blocking:
+                continue
+            fallback = f"概念探索工作假设：{gap.question}"
+            try:
+                self.assume_gap(gap.id, fallback)
+            except WorkflowError:
+                continue
+
+        return self.get_readiness(mission_id)
+
     def ensure_can_continue(self, mission_id: UUID) -> ClarificationReadiness:
         readiness = self.get_readiness(mission_id)
         if not readiness.can_continue:

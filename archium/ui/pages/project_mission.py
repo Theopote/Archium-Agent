@@ -9,7 +9,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.config.settings import Settings
-from archium.domain.enums import DeliverableType
+from archium.domain.enums import DeliverableType, ProjectOriginMode
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
@@ -146,7 +146,9 @@ def _project_selector(*, key: str = "mission_project_selector") -> UUID | None:
     with get_session() as session:
         projects = list_projects(session)
     if not projects:
-        st.info("还没有项目。请先到「资料」阶段创建项目并导入资料。")
+        st.info("还没有项目。")
+        if st.button("从想法或资料开始", type="primary"):
+            st.switch_page(get_app_page("project-genesis"))
         return None
 
     labels = {str(p.id): p.name for p in projects}
@@ -232,7 +234,18 @@ def _render_step_nav(*, key: str = "mission_step_nav") -> int:
 
 def _render_describe(project_id: UUID) -> None:
     st.markdown("### 告诉 Archium 你接到了什么任务")
-    st.caption("资料不完整也没关系。可以描述项目背景、甲方要求、现状问题，以及你希望最终完成什么。")
+    with get_session() as session:
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        project = ProjectRepository(session).get_by_id(project_id)
+    if project is not None and project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+        st.info(
+            "当前为概念探索草稿 — 假设可随研究修正；正式交付需后续补充资料。"
+        )
+    else:
+        st.caption(
+            "资料不完整也没关系。可以描述项目背景、甲方要求、现状问题，以及你希望最终完成什么。"
+        )
 
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
@@ -241,6 +254,9 @@ def _render_describe(project_id: UUID) -> None:
 
     if "mission_task_draft" not in st.session_state:
         st.session_state.mission_task_draft = ""
+    genesis_task = st.session_state.pop("genesis_task_description", None)
+    if genesis_task and not st.session_state.mission_task_draft:
+        st.session_state.mission_task_draft = genesis_task
     example = st.selectbox(
         "示例（可选，不会限制你的描述）",
         options=["（不使用示例）", *TASK_EXAMPLE_PROMPTS],

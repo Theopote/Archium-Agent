@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.domain.enums import ProjectStatus
+from archium.domain.enums import ProjectOriginMode, ProjectStatus
 from archium.domain.project import Project
 from archium.exceptions import ProjectNotFoundError, ValidationError, WorkflowError
 from archium.infrastructure.database.repositories import ProjectRepository
@@ -32,7 +32,13 @@ class ProjectManagementService:
             raise ProjectNotFoundError(project_id)
         return project
 
-    def create_project(self, name: str, description: str | None = None) -> Project:
+    def create_project(
+        self,
+        name: str,
+        description: str | None = None,
+        *,
+        origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
+    ) -> Project:
         cleaned_name = name.strip()
         if not cleaned_name:
             raise ValidationError("项目名称不能为空")
@@ -41,7 +47,11 @@ class ProjectManagementService:
         if cleaned_description == "":
             cleaned_description = None
 
-        project = Project(name=cleaned_name, description=cleaned_description)
+        project = Project(
+            name=cleaned_name,
+            description=cleaned_description,
+            origin_mode=origin_mode,
+        )
         created = self._projects.create(project)
         # APP-003: use-case boundary owns commit (UI must not).
         self._session.commit()

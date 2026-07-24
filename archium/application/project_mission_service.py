@@ -25,11 +25,13 @@ from archium.domain.enums import (
     ApprovalStatus,
     InterventionScale,
     ProjectDomain,
+    ProjectOriginMode,
     RevisionSource,
     ServiceDepth,
     TaskNature,
     UncertaintyLevel,
 )
+from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -81,6 +83,7 @@ class MissionPatch(DomainModel):
     evaluation_criteria: list[EvaluationCriterion] | None = None
     uncertainty_level: UncertaintyLevel | None = None
     narrative_mode: ArchitecturalNarrativeMode | None = None
+    design_intent: DesignIntent | None = None
 
 
 @dataclass
@@ -115,29 +118,47 @@ class ProjectMissionService:
         self,
         project_id: UUID,
         user_task_description: str,
+        *,
+        origin_mode: ProjectOriginMode | None = None,
     ) -> MissionGenerationResult:
         project = self._require_project(project_id)
         if not user_task_description.strip():
             raise WorkflowError("任务描述不能为空")
 
+        resolved_origin = origin_mode or project.origin_mode
+        concept_mode = resolved_origin == ProjectOriginMode.CONCEPT_EXPLORATION
         context = self._build_context(project_id, user_task_description)
         fact_summary = self._build_fact_summary(project_id)
+        from archium.prompts.project_mission import (
+            build_concept_mission_addendum,
+            build_mission_user_prompt,
+        )
+
+        user_prompt = build_mission_user_prompt(
+            user_task_description=user_task_description,
+            project_context=context,
+            fact_ledger_summary=fact_summary,
+            project_name=project.name,
+            project_type=project.project_type.value,
+            concept_mode=concept_mode,
+        )
+        if concept_mode:
+            user_prompt += build_concept_mission_addendum()
+
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=MISSION_SYSTEM_PROMPT,
-                user_prompt=build_mission_user_prompt(
-                    user_task_description=user_task_description,
-                    project_context=context,
-                    fact_ledger_summary=fact_summary,
-                    project_name=project.name,
-                    project_type=project.project_type.value,
-                ),
+                user_prompt=user_prompt,
                 temperature=0.3,
                 json_mode=True,
             ),
             MissionGenerationDraft,
         )
-        return self._persist_generation(project_id, draft)
+        return self._persist_generation(
+            project_id,
+            draft,
+            concept_mode=concept_mode,
+        )
 
     def regenerate_mission(
         self,
@@ -251,13 +272,14 @@ class ProjectMissionService:
         *,
         previous: ProjectMission | None = None,
         change_source: RevisionSource = RevisionSource.GENERATED,
+        concept_mode: bool = False,
     ) -> MissionGenerationResult:
         facts = self._fact_ledger.get_ledger(project_id)
         fact_models = [
             entry.fact for entry in facts.entries if entry.fact is not None
         ] + list(facts.extra_facts)
 
-        validation = validate_mission_draft(draft, fact_models)
+        validation = validate_mission_draft(draft, fact_models, concept_mode=concept_mode)
         if not validation.ok:
             raise WorkflowError("; ".join(validation.errors))
 
@@ -267,6 +289,7 @@ class ProjectMissionService:
             project_id=project_id,
             facts=fact_models,
             version=version,
+            concept_mode=concept_mode,
         )
         apply_mission_lineage(parsed.mission, previous)
         saved_mission = self._missions.save_mission(parsed.mission)

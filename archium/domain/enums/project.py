@@ -33,6 +33,13 @@ class ProjectStatus(StrEnum):
     DELETING = "deleting"
     DELETED = "deleted"
 
+
+class ProjectOriginMode(StrEnum):
+    """How the project was started — drives default planning and navigation."""
+
+    CONCEPT_EXPLORATION = "concept_exploration"
+    EXISTING_PROJECT = "existing_project"
+
 class ProjectDomain(StrEnum):
     """Subject domain of the task — background context, not workflow driver."""
 

@@ -30,6 +30,7 @@ def build_app_pages() -> dict[str, list[Any]]:
     from archium.ui.pages import (
         command_center,
         home,
+        project_genesis,
         project_management,
         project_mission,
         settings,
@@ -95,6 +96,12 @@ def build_app_pages() -> dict[str, list[Any]]:
         title="项目",
         icon=icons.PROJECT,
         url_path="project-management",
+    )
+    genesis_page = st.Page(
+        project_genesis.render,
+        title="开始项目",
+        icon=icons.PROJECT,
+        url_path="project-genesis",
     )
     template_library_page = st.Page(
         template_library.render,
@@ -168,12 +175,13 @@ def build_app_pages() -> dict[str, list[Any]]:
     _PAGES.update({"slide-recovery": slide_recovery_page})
     _PAGES.update({"settings": settings_page})
     _PAGES.update(hidden_pages)
+    _PAGES["project-genesis"] = genesis_page
     # Keep legacy deep-link key resolvable; do not put it in sidebar sections.
     _PAGES[LEGACY_STUDIO_PAGE_KEY] = hidden_pages[LEGACY_STUDIO_PAGE_KEY]
     _PAGES.setdefault(PRODUCT_STUDIO_PAGE_KEY, stage_pages[PRODUCT_STUDIO_PAGE_KEY])
 
     return {
-        PROJECT_SECTION: [home_page, project_page],
+        PROJECT_SECTION: [home_page, genesis_page, project_page],
         MAKE_SECTION: [
             stage_pages["materials"],
             stage_pages["outline"],

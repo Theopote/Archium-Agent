@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import Field
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
-from archium.domain.enums import ProjectStage, ProjectStatus, ProjectType
+from archium.domain.enums import ProjectOriginMode, ProjectStage, ProjectStatus, ProjectType
 
 
 class Project(IdentifiedModel, TimestampedModel):
@@ -19,6 +19,7 @@ class Project(IdentifiedModel, TimestampedModel):
     location: str | None = None
     client: str | None = None
     status: ProjectStatus = ProjectStatus.ACTIVE
+    origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT
 
     def archive(self) -> None:
         """Mark the project as archived."""

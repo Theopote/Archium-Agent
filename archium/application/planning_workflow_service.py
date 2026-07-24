@@ -25,6 +25,7 @@ from archium.domain.enums import (
     ApprovalStatus,
     PlanningSessionStatus,
     PresentationWorkflowStep,
+    ProjectOriginMode,
     WorkflowStatus,
 )
 from archium.domain.knowledge_gap import (
@@ -148,18 +149,31 @@ class PlanningWorkflowService:
         project_id: UUID,
         user_task_description: str,
         *,
-        require_clarification: bool = True,
+        origin_mode: ProjectOriginMode | None = None,
+        require_clarification: bool | None = None,
         require_mission_approval: bool = True,
         require_plan_approval: bool = True,
     ) -> PlanningWorkflowResult:
         if not user_task_description.strip():
             raise WorkflowError("任务描述不能为空")
 
+        project = self._runtime.projects.get_by_id(project_id)
+        if project is None:
+            raise WorkflowError(f"项目 {project_id} 不存在")
+
+        resolved_origin = origin_mode or project.origin_mode
+        resolved_clarification = (
+            require_clarification
+            if require_clarification is not None
+            else resolved_origin != ProjectOriginMode.CONCEPT_EXPLORATION
+        )
+
         planning_session = self._planning_sessions.create(
             PlanningSession(
                 project_id=project_id,
                 status=PlanningSessionStatus.DRAFT,
                 user_task_description=user_task_description.strip(),
+                origin_mode=resolved_origin,
             )
         )
         workflow_run = self._workflow_runs.create(
@@ -172,7 +186,8 @@ class PlanningWorkflowService:
                     "planning_session_id": str(planning_session.id),
                     "current_step": PresentationWorkflowStep.INIT.value,
                     "user_task_description": user_task_description,
-                    "require_clarification": require_clarification,
+                    "origin_mode": resolved_origin.value,
+                    "require_clarification": resolved_clarification,
                     "require_mission_approval": require_mission_approval,
                     "require_plan_approval": require_plan_approval,
                 },
@@ -192,9 +207,10 @@ class PlanningWorkflowService:
             planning_session_id=str(planning_session.id),
             user_task_description=user_task_description,
             presentation_id=None,
-            require_clarification=require_clarification,
+            require_clarification=resolved_clarification,
             require_mission_approval=require_mission_approval,
             require_plan_approval=require_plan_approval,
+            origin_mode=resolved_origin,
         )
 
         try:
@@ -440,6 +456,9 @@ class PlanningWorkflowService:
             require_clarification=bool(run.state.get("require_clarification", True)),
             require_mission_approval=bool(run.state.get("require_mission_approval", True)),
             require_plan_approval=bool(run.state.get("require_plan_approval", True)),
+            origin_mode=ProjectOriginMode(
+                str(run.state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value))
+            ),
         )
         initial_state = cast(
             PlanningWorkflowState,

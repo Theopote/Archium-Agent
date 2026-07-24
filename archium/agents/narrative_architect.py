@@ -86,6 +86,13 @@ class NarrativeArchitect:
             # Fallback for shortcut Brief paths without a planning session link.
             mission = missions[0]
         narrative_mode = mission.narrative_mode if mission is not None else None
+        design_intent_block = ""
+        if mission is not None and mission.design_intent is not None:
+            design_intent_block = mission.design_intent.to_prompt_block()
+            if design_intent_block.strip():
+                project_context = (
+                    f"{project_context}\n\n【设计使命】\n{design_intent_block}".strip()
+                )
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=STORYLINE_SYSTEM_PROMPT,
@@ -99,6 +106,7 @@ class NarrativeArchitect:
                     if renovation_issue_map is not None
                     else None,
                     narrative_mode=narrative_mode,
+                    design_intent_block=design_intent_block or None,
                 ),
                 temperature=0.4,
             ),

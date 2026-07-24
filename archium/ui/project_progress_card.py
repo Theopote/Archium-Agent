@@ -9,7 +9,7 @@ from uuid import UUID
 import streamlit as st
 from sqlalchemy.orm import Session
 
-from archium.domain.enums import EvidenceAvailability
+from archium.domain.enums import EvidenceAvailability, ProjectOriginMode
 from archium.domain.project import Project
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
@@ -48,6 +48,8 @@ class ProjectProgressSnapshot:
     export_blocker_count: int = 0
     pptx_ready: bool = False
     pdf_ready: bool = False
+    origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT
+    has_mission_or_task: bool = False
 
     @property
     def pending_count(self) -> int:
@@ -120,10 +122,26 @@ class ProjectProgressSnapshot:
     @property
     def current_stage_id(self) -> str:
         """Best next product-flow stage for「继续工作」."""
-        if (
-            self.evidence_availability == EvidenceAvailability.UNKNOWN
-            or self.document_count <= 0
-        ):
+        if self.evidence_availability == EvidenceAvailability.UNKNOWN:
+            if self.has_mission_or_task:
+                return "outline"
+            return "materials"
+
+        if self.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+            if not self.outline_approved:
+                return "outline"
+            if not self.design_briefs_approved and self.has_outline:
+                return "outline"
+            if self.slide_count <= 0 or self.pending_count > 0:
+                return "generate" if self.has_outline or self.has_brief else "outline"
+            if not self.ready_for_export:
+                return "edit"
+            return "deliver"
+
+        if self.document_count <= 0 and self.has_mission_or_task:
+            if not self.outline_approved:
+                return "outline"
+        if self.document_count <= 0:
             return "materials"
         if not self.outline_approved:
             return "outline"
@@ -194,7 +212,11 @@ def _snapshot_for_project(
         resolve_project_evidence,
     )
     from archium.domain.enums import ApprovalStatus
-    from archium.infrastructure.database.repositories import PresentationRepository
+    from archium.infrastructure.database.mission_repositories import MissionRepository
+    from archium.infrastructure.database.repositories import (
+        PlanningSessionRepository,
+        PresentationRepository,
+    )
     from archium.ui.visual_service import presentation_has_visual_layout
 
     try:
@@ -274,6 +296,12 @@ def _snapshot_for_project(
         export_blocker_count = readiness.export_blocker_count
         updated_at = max(project.updated_at, presentation.updated_at)
 
+    missions = MissionRepository(session).list_missions_by_project(project.id)
+    planning_sessions = PlanningSessionRepository(session).list_by_project(project.id)
+    has_mission_or_task = bool(missions) or any(
+        session_item.user_task_description.strip() for session_item in planning_sessions
+    )
+
     return ProjectProgressSnapshot(
         project_id=project.id,
         project_name=project.name,
@@ -296,6 +324,8 @@ def _snapshot_for_project(
         export_blocker_count=export_blocker_count,
         pptx_ready=pptx_ready,
         pdf_ready=pdf_ready,
+        origin_mode=project.origin_mode,
+        has_mission_or_task=has_mission_or_task,
     )
 
 

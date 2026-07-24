@@ -22,6 +22,7 @@ from archium.domain.enums import (
     ApprovalStatus,
     PlanningWorkflowStep,
     PresentationWorkflowStep,
+    ProjectOriginMode,
     QuestionStatus,
     WorkflowStatus,
 )
@@ -90,15 +91,20 @@ class PlanningWorkflowNodes:
             "current_step": PlanningWorkflowStep.PLANNING_LOAD_CONTEXT.value,
             "project_name": project.name,
             "project_context": project.description or "",
+            "origin_mode": project.origin_mode.value,
         }
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state
 
     def analyze_task(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+        origin_mode = ProjectOriginMode(
+            state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value)
+        )
         try:
             result = self._runtime.mission_service.generate_mission(
                 UUID(state["project_id"]),
                 state["user_task_description"],
+                origin_mode=origin_mode,
             )
         except WorkflowError as exc:
             return {
@@ -299,6 +305,12 @@ class PlanningWorkflowNodes:
                 "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["缺少 mission_id"],
             }
+
+        origin_mode = ProjectOriginMode(
+            state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value)
+        )
+        if origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+            self._runtime.clarification_service.auto_assume_concept_defaults(mission_id)
 
         # Resume path: clarification already handled and readiness allows continue.
         readiness = self._runtime.clarification_service.get_readiness(mission_id)

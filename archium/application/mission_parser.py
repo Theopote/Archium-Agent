@@ -28,6 +28,7 @@ from archium.domain.knowledge_gap import (
     DesignQuestion,
     KnowledgeGap,
 )
+from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.project_mission import (
     EvaluationCriterion,
     MissionConstraint,
@@ -61,6 +62,7 @@ _NUMERIC_CLAIM_RE = re.compile(
 )
 
 MAX_CLARIFYING_QUESTIONS = 5
+MAX_CONCEPT_CLARIFYING_QUESTIONS = 3
 
 
 @dataclass
@@ -86,6 +88,8 @@ class MissionValidationResult:
 def validate_mission_draft(
     draft: MissionGenerationDraft,
     facts: list[ProjectFact],
+    *,
+    concept_mode: bool = False,
 ) -> MissionValidationResult:
     """Check draft for fabrication, conflict mishandling, and question limits."""
     result = MissionValidationResult()
@@ -97,10 +101,20 @@ def validate_mission_draft(
         if fact.verification_status == VerificationStatus.CONFLICTED
     }
 
-    if len(draft.clarifying_questions) > MAX_CLARIFYING_QUESTIONS:
+    max_questions = (
+        MAX_CONCEPT_CLARIFYING_QUESTIONS if concept_mode else MAX_CLARIFYING_QUESTIONS
+    )
+    if len(draft.clarifying_questions) > max_questions:
         result.warnings.append(
-            f"clarifying_questions 超过 {MAX_CLARIFYING_QUESTIONS} 个，将截断"
+            f"clarifying_questions 超过 {max_questions} 个，将截断"
         )
+
+    if concept_mode:
+        for index, question in enumerate(draft.clarifying_questions):
+            if question.blocking:
+                result.warnings.append(
+                    f"概念探索模式下 clarifying_questions[{index}] 不应阻塞，将视为非阻塞"
+                )
 
     for key in conflicted_keys:
         if _draft_claims_resolved_conflict(draft, key):
@@ -132,9 +146,10 @@ def parse_mission_draft(
     project_id: UUID,
     facts: list[ProjectFact],
     version: int = 1,
+    concept_mode: bool = False,
 ) -> MissionParseResult:
     """Convert LLM draft to domain models with fact-aware sanitization."""
-    validation = validate_mission_draft(draft, facts)
+    validation = validate_mission_draft(draft, facts, concept_mode=concept_mode)
     if not validation.ok:
         raise ValueError("; ".join(validation.errors))
 
@@ -167,6 +182,11 @@ def parse_mission_draft(
             EvaluationCriterion.model_validate(item.model_dump())
             for item in draft.evaluation_criteria
         ],
+        design_intent=(
+            DesignIntent.model_validate(draft.design_intent.model_dump())
+            if draft.design_intent is not None
+            else None
+        ),
         uncertainty_level=_parse_enum(draft.uncertainty_level, UncertaintyLevel, UncertaintyLevel.MEDIUM),
         confidence=draft.confidence,
         version=version,
@@ -182,7 +202,7 @@ def parse_mission_draft(
             why_it_matters=item.why_it_matters,
             impact_if_unresolved=item.impact_if_unresolved,
             priority=_parse_enum(item.priority, Priority, Priority.MEDIUM),
-            blocking=item.blocking,
+            blocking=False if concept_mode else item.blocking,
         )
         for item in draft.knowledge_gaps
     ]
@@ -202,12 +222,16 @@ def parse_mission_draft(
         for item in draft.assumptions
     ]
 
-    capped_questions = draft.clarifying_questions[:MAX_CLARIFYING_QUESTIONS]
+    max_questions = (
+        MAX_CONCEPT_CLARIFYING_QUESTIONS if concept_mode else MAX_CLARIFYING_QUESTIONS
+    )
+    capped_questions = draft.clarifying_questions[:max_questions]
     clarifying = []
     for item in capped_questions:
         gap_id = None
         if item.knowledge_gap_index is not None and 0 <= item.knowledge_gap_index < len(gaps):
             gap_id = gaps[item.knowledge_gap_index].id
+        blocking = False if concept_mode else item.blocking
         clarifying.append(
             ClarifyingQuestion(
                 project_id=project_id,
@@ -218,8 +242,8 @@ def parse_mission_draft(
                 answer_type=_parse_enum(item.answer_type, QuestionAnswerType, QuestionAnswerType.TEXT),
                 options=list(item.options),
                 priority=_parse_enum(item.priority, Priority, Priority.MEDIUM),
-                blocking=item.blocking,
-                can_assume=item.can_assume,
+                blocking=blocking,
+                can_assume=item.can_assume if not concept_mode else True,
                 suggested_assumption=item.suggested_assumption,
             )
         )

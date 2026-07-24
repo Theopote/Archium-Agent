@@ -30,7 +30,7 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import DeliverableType, KnowledgeGapStatus, QuestionStatus
+from archium.domain.enums import DeliverableType, KnowledgeGapStatus, ProjectOriginMode, QuestionStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
 from archium.domain.planning_session import PlanningSession
@@ -122,10 +122,11 @@ def start_planning(
     task_description: str,
     *,
     settings: Settings | None = None,
+    origin_mode: ProjectOriginMode | None = None,
 ) -> PlanningWorkflowResult:
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
-    return service.run(project_id, task_description)
+    return service.run(project_id, task_description, origin_mode=origin_mode)
 
 
 def continue_after_clarification(

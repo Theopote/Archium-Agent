@@ -90,11 +90,18 @@ def build_presentation_request(
     title = (primary.title if primary and primary.title.strip() else mission.title).strip()
     audience = _resolve_audience(mission, primary)
     purpose = mission.task_statement.strip()
+    if mission.design_intent is not None and mission.design_intent.problem_statement.strip():
+        purpose = mission.design_intent.problem_statement.strip()
     core_message = (
         mission.desired_changes[0].strip()
         if mission.desired_changes
         else (mission.decision_context.strip() or mission.title)
     )
+    if mission.design_intent is not None:
+        if mission.design_intent.desired_experience.strip():
+            core_message = mission.design_intent.desired_experience.strip()
+        elif mission.design_intent.theme.strip():
+            core_message = mission.design_intent.theme.strip()
     decisions = list(mission.decisions_required)
     concerns = [
         concern
@@ -250,6 +257,11 @@ def infer_presentation_type(
     mission: ProjectMission,
     deliverable: PlannedDeliverable | None = None,
 ) -> PresentationType:
+    if mission.design_intent is not None and (
+        mission.design_intent.theme.strip() or mission.design_intent.problem_statement.strip()
+    ):
+        return PresentationType.CONCEPT
+
     title = ((deliverable.title if deliverable else "") + " " + mission.title).lower()
     depths = set(mission.requested_service_depths)
     natures = set(mission.task_natures)
@@ -340,6 +352,11 @@ def _build_user_notes(
     deliverable: PlannedDeliverable | None,
 ) -> str:
     sections: list[str] = []
+
+    if mission.design_intent is not None:
+        block = mission.design_intent.to_prompt_block()
+        if block.strip():
+            sections.append("设计使命:\n" + block)
 
     if mission.design_questions:
         sections.append(

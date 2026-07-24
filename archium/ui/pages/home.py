@@ -46,12 +46,12 @@ def _render_empty_state() -> None:
 
     def _go_create() -> None:
         st.session_state.show_create_form = True
-        st.switch_page(get_app_page("project-management"))
+        st.switch_page(get_app_page("project-genesis"))
 
     render_empty_state(
         f"{greeting_for_now()}，开始第一个项目",
-        "创建项目后，按资料 → 大纲 → 生成 → 工作室 → 交付推进汇报。",
-        primary_label="新建项目",
+        "从一句话想法探索设计使命，或从已有资料整理汇报。",
+        primary_label="开始项目",
         primary_key="home_new_project_empty",
         on_primary=_go_create,
     )

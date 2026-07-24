@@ -25,6 +25,7 @@ from archium.domain.enums import (
     PresentationStatus,
     PresentationType,
     ProcessingStatus,
+    ProjectOriginMode,
     ProjectStage,
     ProjectStatus,
     ProjectType,
@@ -137,6 +138,7 @@ def project_to_domain(orm: ProjectORM) -> Project:
         location=orm.location,
         client=orm.client,
         status=ProjectStatus(orm.status),
+        origin_mode=ProjectOriginMode(getattr(orm, "origin_mode", "existing_project")),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -152,6 +154,7 @@ def project_to_orm(domain: Project, orm: ProjectORM | None = None) -> ProjectORM
     target.location = domain.location
     target.client = domain.client
     target.status = domain.status.value
+    target.origin_mode = domain.origin_mode.value
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target
@@ -1036,6 +1039,7 @@ def planning_session_to_domain(orm: PlanningSessionORM) -> PlanningSession:
         workflow_run_id=orm.workflow_run_id,
         presentation_id=orm.presentation_id,
         user_task_description=orm.user_task_description or "",
+        origin_mode=ProjectOriginMode(getattr(orm, "origin_mode", "existing_project")),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -1052,6 +1056,7 @@ def planning_session_to_orm(
     target.workflow_run_id = domain.workflow_run_id
     target.presentation_id = domain.presentation_id
     target.user_task_description = domain.user_task_description
+    target.origin_mode = domain.origin_mode.value
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

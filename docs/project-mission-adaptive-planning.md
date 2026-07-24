@@ -14,9 +14,13 @@
 推荐主路径：
 
 ```
-自由任务描述 + 项目资料
+项目起源（ProjectOriginMode）
+  ├─ concept_exploration：一句话想法 → DesignIntent v0.1
+  └─ existing_project：资料 enrich → 事实账本
         ↓
-ProjectMission（任务理解）
+自由任务描述 + （可选）项目资料
+        ↓
+ProjectMission（任务理解 + design_intent）
         ↓
 KnowledgeGap / Assumption / ClarifyingQuestion
         ↓
@@ -31,6 +35,19 @@ PresentationRequest 适配
 Brief → Storyline → SlideSpec → 审核 → 导出
 ```
 
+### 双模式入口（v0.3 首期）
+
+| 模式 | 入口 | 默认行为 |
+|------|------|----------|
+| **概念探索** | 侧边栏 **开始项目 → 从想法开始** | 无资料可生成 Mission v0.1；澄清默认跳过；假设自动写入；正式交付仍要求资料 |
+| **已有项目** | **开始项目 → 从已有资料开始** | 进入资料阶段；Mission 由资料 enrich；澄清闸门保持 |
+
+领域字段 `DesignIntent`（嵌于 `ProjectMission.design_intent`）：
+
+- `theme`, `problem_statement`, `social_background`, `cultural_context`
+- `target_users`, `desired_experience`
+- `core_questions`, `research_needed`, `working_assumptions`
+
 快捷路径（仍保留）：在「项目工作台」直接填写 Brief 表单跑汇报管线。
 
 ---
@@ -40,8 +57,9 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 ### 入口
 
 1. 启动：`archium` 或 `streamlit run app.py`
-2. 侧边栏打开 **项目任务**
-3. 选择已有项目（可先在「项目工作台」创建并导入资料）
+2. 侧边栏 **开始项目** — 选择「从想法开始」或「从已有资料开始」
+3. 概念探索会进入 **项目任务** 并预填一句话；已有项目进入 **资料**
+4. 亦可在 **项目任务** 中为已有项目描述任务（资料可选 enrich）
 
 ### 六步体验
 

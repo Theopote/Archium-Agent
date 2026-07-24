@@ -34,6 +34,9 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     location: Mapped[str | None] = mapped_column(String(500))
     client: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    origin_mode: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="existing_project"
+    )
     current_cultural_narrative_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_renovation_issue_map_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_reference_style_profile_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
@@ -569,6 +572,9 @@ class PlanningSessionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=True,
     )
     user_task_description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    origin_mode: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="existing_project"
+    )
 
 
 
@@ -615,6 +621,9 @@ class ProjectMissionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     decision_context: Mapped[str] = mapped_column(Text, nullable=False, default="")
     decisions_required_json: Mapped[list[str]] = mapped_column("decisions_required", JSON, default=list)
     narrative_mode: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    design_intent_json: Mapped[dict[str, object] | None] = mapped_column(
+        "design_intent", JSON, nullable=True
+    )
     approval_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     known_constraints_json: Mapped[list[dict[str, object]]] = mapped_column(
         "known_constraints", JSON, default=list

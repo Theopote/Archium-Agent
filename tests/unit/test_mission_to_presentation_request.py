@@ -261,3 +261,18 @@ def test_infer_presentation_type_defaults() -> None:
         task_statement="确认方向",
     )
     assert infer_presentation_type(mission) == PresentationType.CLIENT_REVIEW
+
+
+def test_infer_presentation_type_concept_from_design_intent() -> None:
+    from archium.domain.intent.design_intent import DesignIntent
+
+    mission = ProjectMission(
+        project_id=uuid4(),
+        title="黄土高原文化中心",
+        task_statement="探索地域文化再生",
+        design_intent=DesignIntent(
+            theme="地域文化再生",
+            problem_statement="如何在缺乏任务书时建立设计方向？",
+        ),
+    )
+    assert infer_presentation_type(mission) == PresentationType.CONCEPT

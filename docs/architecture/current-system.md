@@ -20,14 +20,18 @@
 ## 主数据流
 
 ```text
-Project + SourceDocument
+Project (origin_mode: concept | existing)
+  -> user intent / one-line idea
+  -> DesignIntent v0.1 (concept) + optional SourceDocument
   -> Chunk / ProjectFact / FactLedger / Asset
-  -> ProjectMission -> Workstream -> DeliverablePlan
+  -> ProjectMission (+ design_intent) -> Workstream -> DeliverablePlan
   -> PresentationBrief -> Storyline -> SlideSpec
   -> SlideDesignBrief -> VisualIntent -> LayoutPlan
   -> RenderScene -> Scene QA / Proposal / Revision
   -> JSON / Marp / editable PPTX / PDF / preview images
 ```
+
+概念草稿（无资料）可走完 Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
 
 Studio 的编辑闭环不是直接覆写导出文件：
 

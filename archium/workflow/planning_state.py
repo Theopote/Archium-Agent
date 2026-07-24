@@ -6,7 +6,7 @@ import operator
 from typing import Annotated, Any, TypedDict
 
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import PresentationWorkflowStep
+from archium.domain.enums import PresentationWorkflowStep, ProjectOriginMode
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
@@ -41,6 +41,7 @@ class PlanningWorkflowState(TypedDict, total=False):
     require_clarification: bool
     require_mission_approval: bool
     require_plan_approval: bool
+    origin_mode: str
     review_gate: str | None
     needs_mission_correction: bool
     mission_validation_phase: str | None
@@ -60,6 +61,7 @@ def initial_planning_state(
     require_clarification: bool = True,
     require_mission_approval: bool = True,
     require_plan_approval: bool = True,
+    origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
 ) -> PlanningWorkflowState:
     return {
         "workflow_kind": "planning",
@@ -83,6 +85,7 @@ def initial_planning_state(
         "require_clarification": require_clarification,
         "require_mission_approval": require_mission_approval,
         "require_plan_approval": require_plan_approval,
+        "origin_mode": origin_mode.value,
         "review_gate": None,
         "needs_mission_correction": False,
         "mission_validation_phase": None,

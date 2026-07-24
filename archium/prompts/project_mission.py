@@ -31,8 +31,24 @@ title, task_statement, task_natures, domains, intervention_scales, requested_ser
 project_context, current_situation, primary_problems, desired_changes, in_scope, out_of_scope,
 stakeholders, decision_context, decisions_required, known_constraints, key_unknowns,
 research_questions, design_question_summaries, evaluation_criteria, uncertainty_level, confidence,
-knowledge_gaps, assumptions, clarifying_questions, design_questions
+knowledge_gaps, assumptions, clarifying_questions, design_questions, design_intent
 """
+
+CONCEPT_MISSION_ADDENDUM = """
+【概念探索模式 — 设计使命 v0.1】
+- 这是从 0 到 1 的概念探索，不是「生成 N 页 PPT」的任务说明。
+- 必须输出 design_intent 对象，包含 theme, problem_statement, social_background,
+  cultural_context, target_users, desired_experience, core_questions, research_needed,
+  working_assumptions。
+- 缺失地点、规模、用户等信息时：写入 assumptions（requires_confirmation=true）和
+  design_intent.working_assumptions，并列出 research_questions / research_needed。
+- clarifying_questions 最多 3 个，全部 blocking=false，can_assume=true，并提供 suggested_assumption。
+- task_statement 应表达设计使命（探索什么问题、创造什么体验），而非交付页数。
+"""
+
+
+def build_concept_mission_addendum() -> str:
+    return CONCEPT_MISSION_ADDENDUM
 
 
 def build_mission_user_prompt(
@@ -42,18 +58,23 @@ def build_mission_user_prompt(
     fact_ledger_summary: str,
     project_name: str = "",
     project_type: str = "",
+    concept_mode: bool = False,
 ) -> str:
     header = "请基于以下信息生成 ProjectMission JSON。\n\n"
     meta = ""
     if project_name or project_type:
         meta = f"【项目基础信息】\n名称: {project_name or '未命名'}\n类型: {project_type or 'other'}\n\n"
+    mode_hint = ""
+    if concept_mode:
+        mode_hint = "【模式】概念探索 — 资料可空，优先建立设计使命与假设。\n\n"
     return (
         header
+        + mode_hint
         + meta
         + f"【用户任务描述】\n{user_task_description.strip()}\n\n"
         + f"【已导入资料摘要】\n{project_context.strip() or '暂无资料'}\n\n"
         + f"【项目事实账本】\n{fact_ledger_summary.strip() or '暂无已提取事实'}\n\n"
-        + "若资料不足，请通过 knowledge_gaps 和 clarifying_questions 明确未知项，"
+        + "若资料不足，请通过 knowledge_gaps、assumptions 和 design_intent 明确未知项与假设，"
         + "不要编造面积、高度、预算或规范条文。"
     )
 

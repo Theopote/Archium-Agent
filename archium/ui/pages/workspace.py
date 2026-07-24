@@ -8,7 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.workflow_models import WorkflowRunResult
-from archium.domain.enums import ProjectType
+from archium.domain.enums import ProjectOriginMode, ProjectType
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
@@ -179,7 +179,14 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
         ]
         st.dataframe(rows, use_container_width=True, hide_index=True)
     else:
-        st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
+        with get_session() as session:
+            from archium.infrastructure.database.repositories import ProjectRepository
+
+            project = ProjectRepository(session).get_by_id(project_id)
+        if project is not None and project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+            st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
+        else:
+            st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
 
     if show_uploader:
         _render_upload_controls(project_id, key_prefix="docs_upload")
