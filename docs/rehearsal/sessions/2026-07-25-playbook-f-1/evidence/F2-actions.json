@@ -1,0 +1,19 @@
+{
+  "actions": [
+    {
+      "action": "ask",
+      "reason": "甲方尚未说清功能分区",
+      "priority": 0
+    },
+    {
+      "action": "explore_directions",
+      "reason": "在已知约束内并行推演改造策略",
+      "priority": 1
+    },
+    {
+      "action": "upload_materials",
+      "reason": "可继续补充图纸与照片",
+      "priority": 2
+    }
+  ]
+}

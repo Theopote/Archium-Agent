@@ -1,0 +1,12 @@
+{
+  "known": {
+    "location": "西安",
+    "type": "医院改造"
+  },
+  "unknown": [
+    "功能分区",
+    "规模",
+    "投资"
+  ],
+  "document_count": 1
+}

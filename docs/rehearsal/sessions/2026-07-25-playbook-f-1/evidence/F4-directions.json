@@ -1,0 +1,16 @@
+{
+  "directions": [
+    {
+      "title": "微创更新",
+      "spatial_strategy": "保留南北主轴线，点状加建",
+      "formal_language": "新旧并置，克制体量",
+      "has_visual_prompt": true
+    },
+    {
+      "title": "片区重组",
+      "spatial_strategy": "入口外移，内部环形流线",
+      "formal_language": "清晰几何与开放灰空间",
+      "has_visual_prompt": true
+    }
+  ]
+}
