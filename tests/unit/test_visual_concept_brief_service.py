@@ -9,6 +9,8 @@ import pytest
 from archium.application.concept_direction_service import ConceptDirectionService
 from archium.application.visual.vision import VisualConceptBriefService
 from archium.config.settings import Settings
+from archium.domain.concept_visual_prompt import ConceptVisualPrompt
+from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import (
     ConceptDirectionStatus,
     ProjectOriginMode,
@@ -25,7 +27,10 @@ from archium.domain.visual.vision_generation import (
     VisionStylePreset,
 )
 from archium.infrastructure.database.mission_repositories import MissionRepository
-from archium.infrastructure.database.repositories import ProjectRepository
+from archium.infrastructure.database.repositories import (
+    ConceptDirectionRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionBatchDraft,
     ConceptDirectionDraft,
@@ -87,6 +92,33 @@ def draft_direction(db_session, concept_mission):
     )
     assert generated.directions[0].status == ConceptDirectionStatus.DRAFT
     return generated.directions[0]
+
+
+@pytest.fixture
+def seeded_direction(db_session, concept_mission):
+    direction = ConceptDirection(
+        project_id=concept_mission.project_id,
+        mission_id=concept_mission.id,
+        title="窑洞再生",
+        summary="以窑洞原型转译当代公共空间",
+        theme="窑洞当代化",
+        spatial_idea="半地下连续拱廊",
+        spatial_strategy="半地下拱廊轴线",
+        formal_language="厚重土墙与连续拱券",
+        material_strategy="夯土与石基",
+        reference_dna=["黄土高原窑洞类型"],
+        visual_prompt=ConceptVisualPrompt(
+            image_prompt="yaodong cultural center in loess plateau, continuous vaults",
+            camera="architectural axonometric",
+            style="concept sketch",
+        ),
+        experience_focus="庇护与仪式感",
+        differentiator="窑洞构造作为主叙事",
+        status=ConceptDirectionStatus.DRAFT,
+    )
+    created = ConceptDirectionRepository(db_session).create(direction)
+    db_session.commit()
+    return created
 
 
 def test_synthesize_visual_brief_text_only(db_session, draft_direction) -> None:
@@ -162,6 +194,7 @@ def test_synthesize_visual_brief_with_image_when_enabled(
     assert result.brief.status == "imaged"
     assert result.brief.image_path == "projects/demo/vision/atmosphere.png"
     image_service.generate.assert_called_once()
+    assert image_service.generate.call_args.kwargs.get("direction") is not None
 
 
 def test_synthesize_skips_image_when_disabled(db_session, draft_direction) -> None:
@@ -186,3 +219,17 @@ def test_synthesize_skips_image_when_disabled(db_session, draft_direction) -> No
     assert result.image_attempted is False
     assert any("vision_image_generation_enabled" in item for item in result.warnings)
     image_service.generate.assert_not_called()
+
+
+def test_synthesize_uses_direction_seed_without_llm(db_session, seeded_direction) -> None:
+    llm = MagicMock()
+    settings = Settings(vision_image_generation_enabled=False)
+    service = VisualConceptBriefService(db_session, llm, settings=settings)
+
+    result = service.synthesize_for_direction(seeded_direction.id, generate_image=False)
+
+    llm.generate_structured.assert_not_called()
+    assert any("visual_prompt" in item for item in result.warnings)
+    assert result.brief.extra_json.get("seed_source") == "concept_direction.visual_prompt"
+    assert "Primary scene seed" in result.brief.compiled_prompt or "yaodong" in result.brief.compiled_prompt.lower()
+    assert result.brief.extra_json.get("direction_seed") is True

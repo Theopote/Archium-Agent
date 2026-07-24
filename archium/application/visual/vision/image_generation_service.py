@@ -24,6 +24,7 @@ from archium.application.visual.vision.image_evaluator import VisionImageEvaluat
 from archium.application.visual.vision.prompt_compiler import VisionPromptCompiler
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
+from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import AssetType
 from archium.domain.visual.image_derivative import (
     ImageAssetClass,
@@ -87,8 +88,9 @@ class VisionImageGenerationService:
         request: ImageRequest,
         *,
         context: VisionGenerationContext | None = None,
+        direction: ConceptDirection | None = None,
     ) -> GenerationSpec:
-        return self._compiler.compile(request, context=context)
+        return self._compiler.compile(request, context=context, direction=direction)
 
     def generate(
         self,
@@ -97,8 +99,15 @@ class VisionImageGenerationService:
         context: VisionGenerationContext | None = None,
         project_id: UUID | None = None,
         persist_asset: bool = False,
+        direction: ConceptDirection | None = None,
     ) -> VisionGenerationResult:
         """Generate illustrative pixels. Never claims to be site evidence."""
+        if direction is not None:
+            from archium.application.visual.vision.concept_direction_visual_seed import (
+                apply_direction_seed_to_request,
+            )
+
+            request = apply_direction_seed_to_request(request, direction)
         if request.asset_policy not in {
             VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             VisionAssetPolicy.FORBIDDEN_FOR_EVIDENCE,
@@ -115,7 +124,7 @@ class VisionImageGenerationService:
         if request.base_image_path:
             input_eval = self._evaluator.evaluate_base_image(request.base_image_path)
             if input_eval.blocking:
-                spec = self.compile(request, context=context)
+                spec = self.compile(request, context=context, direction=direction)
                 return VisionGenerationResult(
                     success=False,
                     spec=spec,
@@ -125,7 +134,7 @@ class VisionImageGenerationService:
                     model="",
                 )
 
-        spec = self.compile(request, context=context)
+        spec = self.compile(request, context=context, direction=direction)
         if input_eval is not None and input_eval.warnings:
             spec.metadata = {
                 **spec.metadata,
@@ -327,6 +336,7 @@ class VisionImageGenerationService:
         project_type: str = "",
         audience: str = "",
         persist_asset: bool = True,
+        direction: ConceptDirection | None = None,
     ) -> VisionGenerationResult:
         """Convenience: SlideSpec/VisualIntent fields → generation."""
         context = VisionGenerationContext(
@@ -342,6 +352,7 @@ class VisionImageGenerationService:
             context=context,
             project_id=project_id,
             persist_asset=persist_asset,
+            direction=direction,
         )
 
     def fulfill_intent_image_request(
@@ -353,6 +364,7 @@ class VisionImageGenerationService:
         slide_message: str = "",
         page_archetype: str = "",
         persist: bool = True,
+        direction: ConceptDirection | None = None,
     ) -> tuple[VisualIntent, list[str]]:
         """Fulfill ``image_request`` into an illustrative Asset when hero is empty.
 
@@ -377,6 +389,7 @@ class VisionImageGenerationService:
             slide_message=slide_message,
             page_archetype=archetype,
             persist_asset=True,
+            direction=direction,
         )
         if not result.success or result.asset_id is None:
             warnings.append(result.error or "示意出图失败，已保留 image_request。")

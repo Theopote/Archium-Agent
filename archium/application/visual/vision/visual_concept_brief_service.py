@@ -7,6 +7,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.vision.concept_direction_visual_seed import (
+    apply_direction_seed_to_request,
+    direction_has_visual_seed,
+    visual_concept_brief_from_direction_seed,
+)
 from archium.application.visual.vision.image_generation_service import (
     VisionImageGenerationService,
 )
@@ -102,45 +107,54 @@ class VisualConceptBriefService:
         if mission is None:
             raise WorkflowError(f"Mission {direction.mission_id} not found")
 
-        draft = self._llm.generate_structured(
-            LLMRequest(
-                system_prompt=VISUAL_CONCEPT_BRIEF_SYSTEM_PROMPT,
-                user_prompt=build_visual_concept_brief_user_prompt(
-                    mission_title=mission.title,
-                    task_statement=mission.task_statement,
-                    direction_title=direction.title,
-                    direction_summary=direction.summary,
-                    theme=direction.theme,
-                    spatial_idea=direction.spatial_idea,
-                    experience_focus=direction.experience_focus,
-                    differentiator=direction.differentiator,
-                    spatial_strategy=direction.spatial_strategy,
-                    formal_language=direction.formal_language,
-                    material_strategy=direction.material_strategy,
-                    reference_dna="；".join(direction.reference_dna),
-                    visual_prompt_block=(
-                        direction.visual_prompt.to_prompt_block()
-                        if direction.visual_prompt is not None
-                        else ""
-                    ),
-                ),
-                temperature=0.45,
-                json_mode=True,
-            ),
-            VisualConceptBriefDraft,
-        )
-        brief = self._persist_brief(mission, direction, draft)
         warnings: list[str] = []
+        if direction_has_visual_seed(direction):
+            brief = self._briefs.create(
+                visual_concept_brief_from_direction_seed(mission, direction)
+            )
+            warnings.append(
+                "已使用概念方向 visual_prompt 直出视觉简报，跳过 LLM 扩写。"
+            )
+        else:
+            draft = self._llm.generate_structured(
+                LLMRequest(
+                    system_prompt=VISUAL_CONCEPT_BRIEF_SYSTEM_PROMPT,
+                    user_prompt=build_visual_concept_brief_user_prompt(
+                        mission_title=mission.title,
+                        task_statement=mission.task_statement,
+                        direction_title=direction.title,
+                        direction_summary=direction.summary,
+                        theme=direction.theme,
+                        spatial_idea=direction.spatial_idea,
+                        experience_focus=direction.experience_focus,
+                        differentiator=direction.differentiator,
+                        spatial_strategy=direction.spatial_strategy,
+                        formal_language=direction.formal_language,
+                        material_strategy=direction.material_strategy,
+                        reference_dna="；".join(direction.reference_dna),
+                        visual_prompt_block=(
+                            direction.visual_prompt.to_prompt_block()
+                            if direction.visual_prompt is not None
+                            else ""
+                        ),
+                    ),
+                    temperature=0.45,
+                    json_mode=True,
+                ),
+                VisualConceptBriefDraft,
+            )
+            brief = self._persist_brief(mission, direction, draft)
 
-        request = self._to_image_request(brief)
+        request = apply_direction_seed_to_request(self._to_image_request(brief), direction)
         context = self._to_context(mission, direction)
-        spec = self._compiler.compile(request, context=context)
+        spec = self._compiler.compile(request, context=context, direction=direction)
         brief.mark_ready(compiled_prompt=spec.prompt)
         brief.extra_json = {
             **brief.extra_json,
             "negative_prompt": spec.negative_prompt,
             "prompt_hash": spec.prompt_hash,
             "style_resolved": spec.style,
+            "direction_seed": spec.metadata.get("direction_seed", False),
         }
         brief = self._briefs.update(brief)
 
@@ -156,6 +170,7 @@ class VisualConceptBriefService:
                     context=context,
                     project_id=mission.project_id,
                     persist_asset=True,
+                    direction=direction,
                 )
                 if result.success:
                     image_succeeded = True

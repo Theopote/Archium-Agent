@@ -112,6 +112,59 @@ def test_fulfill_writes_hero_asset_when_enabled(tmp_path) -> None:
     service.generate_for_intent.assert_called_once()
 
 
+def test_fulfill_passes_direction_seed_to_compiler(tmp_path) -> None:
+    from archium.domain.concept_direction import ConceptDirection
+    from archium.domain.concept_visual_prompt import ConceptVisualPrompt
+
+    settings = Settings(
+        _env_file=None,
+        project_storage_path=tmp_path,
+        vision_image_generation_enabled=True,
+        vision_auto_fulfill_image_requests=True,
+    )
+    direction = ConceptDirection(
+        project_id=uuid4(),
+        mission_id=uuid4(),
+        title="台地聚落",
+        visual_prompt=ConceptVisualPrompt(
+            image_prompt="terraced cultural center",
+            camera="architectural axonometric",
+            style="concept sketch",
+        ),
+    )
+    service = VisionImageGenerationService(session=None, settings=settings)
+    captured: dict[str, object] = {}
+
+    def _fake_generate_for_intent(**kwargs):
+        captured.update(kwargs)
+        return VisionGenerationResult(
+            success=True,
+            spec=GenerationSpec(
+                image_type=ArchitectureImageType.CONCEPT_SKETCH,
+                style="marker_sketch",
+                prompt="compiled with seed",
+                asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
+                width=1280,
+                height=720,
+                metadata={"direction_seed": True},
+            ),
+            asset_id=uuid4(),
+        )
+
+    service.generate_for_intent = _fake_generate_for_intent  # type: ignore[method-assign]
+
+    intent, warnings = service.fulfill_intent_image_request(
+        _intent(),
+        project_id=uuid4(),
+        direction=direction,
+        persist=False,
+    )
+
+    assert intent.hero_asset_id is not None
+    assert warnings == []
+    assert captured.get("direction") is direction
+
+
 def test_fulfill_records_warning_on_failure(tmp_path) -> None:
     settings = Settings(
         _env_file=None,

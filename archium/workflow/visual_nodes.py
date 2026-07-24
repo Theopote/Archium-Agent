@@ -403,6 +403,21 @@ class VisualWorkflowNodes:
                 UUID(str(state["presentation_id"]))
             )
             project_id = UUID(str(state["project_id"]))
+            from archium.application.mission_context_bridge import (
+                resolve_project_mission,
+                resolve_selected_concept_direction,
+            )
+
+            mission = resolve_project_mission(
+                self._runtime.session,
+                project_id,
+                presentation_id=UUID(str(state["presentation_id"])),
+            )
+            concept_direction = (
+                resolve_selected_concept_direction(self._runtime.session, mission.id)
+                if mission is not None
+                else None
+            )
             intent_ids: list[str] = []
             updated_slides = []
             fulfill_warnings: list[str] = []
@@ -433,6 +448,7 @@ class VisualWorkflowNodes:
                                 else ""
                             )
                         ),
+                        direction=concept_direction,
                     )
                 )
                 for item in image_warnings:

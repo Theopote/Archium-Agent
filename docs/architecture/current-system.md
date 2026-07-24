@@ -25,7 +25,7 @@ User opens Archium
   -> Project (origin_mode derived; knowledge_state / intent_evolution on project)
   -> IdeaSeed + ExplorationSession -> ConceptDirections -> select   # when concept-leaning
      (ConceptDirection: spatial_strategy, formal_language, material_strategy,
-      reference_dna, visual_prompt for Vision Engine)
+      reference_dna, visual_prompt); VisionPromptCompiler / auto-fulfill read seed directly
      or materials / facts                                           # when evidence-leaning
   -> DesignIntent + ProjectMission (+ optional SourceDocument)
   -> Chunk / ProjectFact / FactLedger / Asset

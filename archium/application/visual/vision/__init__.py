@@ -1,5 +1,10 @@
 """Vision Engine package — Prompt Compiler + generation / edit service."""
 
+from archium.application.visual.vision.concept_direction_visual_seed import (
+    apply_direction_seed_to_request,
+    direction_has_visual_seed,
+    image_request_from_concept_direction,
+)
 from archium.application.visual.vision.conditioned_editor import VisionConditionedEditor
 from archium.application.visual.vision.diagram_composer import VisionDiagramComposer
 from archium.application.visual.vision.image_evaluator import VisionImageEvaluator
@@ -34,7 +39,10 @@ __all__ = [
     "VisionStylePresetRegistry",
     "VisualConceptBriefResult",
     "VisualConceptBriefService",
+    "apply_direction_seed_to_request",
     "apply_visual_concept_brief_to_intent",
+    "direction_has_visual_seed",
+    "image_request_from_concept_direction",
     "image_request_from_visual_concept_brief",
     "suggest_image_request_for_slide",
     "visual_concept_brief_applies",

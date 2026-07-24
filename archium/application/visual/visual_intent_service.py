@@ -229,7 +229,13 @@ class VisualIntentService:
             intent = apply_design_brief_to_intent(intent, design_brief)
         if intent.image_request is None:
             from archium.application.mission_context_bridge import (
+                resolve_project_mission,
+                resolve_selected_concept_direction,
                 resolve_visual_concept_brief_for_presentation,
+            )
+            from archium.application.visual.vision.concept_direction_visual_seed import (
+                direction_has_visual_seed,
+                image_request_from_concept_direction,
             )
             from archium.application.visual.vision.intent_suggester import (
                 suggest_image_request_for_slide,
@@ -238,6 +244,7 @@ class VisualIntentService:
                 apply_visual_concept_brief_to_intent,
                 visual_concept_brief_applies,
             )
+            from archium.infrastructure.database.repositories import PresentationRepository
 
             archetype = getattr(intent, "page_archetype", None) or recognition.archetype
             if (
@@ -249,6 +256,28 @@ class VisualIntentService:
                 )
                 if concept_brief is not None:
                     intent = apply_visual_concept_brief_to_intent(intent, concept_brief)
+                else:
+                    presentation = PresentationRepository(self._session).get_presentation(
+                        slide.presentation_id
+                    )
+                    if presentation is not None:
+                        mission = resolve_project_mission(
+                            self._session,
+                            presentation.project_id,
+                            presentation_id=presentation.id,
+                        )
+                        if mission is not None:
+                            direction = resolve_selected_concept_direction(
+                                self._session, mission.id
+                            )
+                            if direction is not None and direction_has_visual_seed(direction):
+                                intent = intent.model_copy(
+                                    update={
+                                        "image_request": image_request_from_concept_direction(
+                                            direction
+                                        )
+                                    }
+                                )
             if intent.image_request is None:
                 suggested = suggest_image_request_for_slide(
                     slide,

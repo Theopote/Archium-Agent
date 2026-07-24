@@ -38,21 +38,38 @@ class VisionPromptCompiler:
         request: ImageRequest,
         *,
         context: VisionGenerationContext | None = None,
+        direction: object | None = None,
     ) -> GenerationSpec:
         ctx = context or VisionGenerationContext()
-        template = self._registry.get_type_template(request.image_type)
+        working = request
+        seed_prompt = ""
+        if direction is not None:
+            from archium.application.visual.vision.concept_direction_visual_seed import (
+                apply_direction_seed_to_request,
+            )
+            from archium.domain.concept_direction import ConceptDirection
 
-        if request.style is None or (isinstance(request.style, str) and not request.style.strip()):
+            if isinstance(direction, ConceptDirection):
+                working = apply_direction_seed_to_request(request, direction)
+                vp = direction.visual_prompt
+                if vp is not None:
+                    seed_prompt = vp.image_prompt.strip()
+
+        template = self._registry.get_type_template(working.image_type)
+
+        if working.style is None or (
+            isinstance(working.style, str) and not str(working.style).strip()
+        ):
             style_key = template.default_style.value
-        elif isinstance(request.style, VisionStylePreset):
-            style_key = request.style.value
+        elif isinstance(working.style, VisionStylePreset):
+            style_key = working.style.value
         else:
-            style_key = str(request.style).strip()
+            style_key = str(working.style).strip()
 
         style_prose = self._registry.style_prose(style_key)
-        purpose = (request.purpose or "").strip() or template.purpose
+        purpose = (working.purpose or "").strip() or template.purpose
 
-        elements = [item.strip() for item in request.elements if item.strip()]
+        elements = [item.strip() for item in working.elements if item.strip()]
         for default in template.default_elements:
             if default not in elements and len(elements) < 8:
                 elements.append(default)
@@ -61,7 +78,7 @@ class VisionPromptCompiler:
         if ctx.page_message and len(elements) < 8:
             elements.append(f"message cue: {ctx.page_message[:120]}")
 
-        overlay_cues = [cue.strip() for cue in request.overlay_cues if cue.strip()]
+        overlay_cues = [cue.strip() for cue in working.overlay_cues if cue.strip()]
         for cue in overlay_cues:
             if cue not in elements and len(elements) < 10:
                 elements.append(f"overlay: {cue}")
@@ -69,13 +86,13 @@ class VisionPromptCompiler:
         avoid = list(
             dict.fromkeys(
                 [
-                    *request.avoid,
+                    *working.avoid,
                     *_DEFAULT_AVOID,
                     *self._registry.style_extra_avoid(style_key),
                 ]
             )
         )
-        if request.asset_policy in {
+        if working.asset_policy in {
             VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             VisionAssetPolicy.FORBIDDEN_FOR_EVIDENCE,
         }:
@@ -83,11 +100,13 @@ class VisionPromptCompiler:
 
         prompt_parts = [
             "Architectural visualization for a professional design presentation.",
-            f"Image category: {request.image_type.value.replace('_', ' ')}.",
+            f"Image category: {working.image_type.value.replace('_', ' ')}.",
             f"Purpose: {purpose}.",
-            f"Subject: {request.subject.strip()}.",
+            f"Subject: {working.subject.strip()}.",
             f"Style: {style_prose}.",
         ]
+        if seed_prompt:
+            prompt_parts.insert(4, f"Primary scene seed: {seed_prompt}.")
         if ctx.project_type:
             prompt_parts.append(f"Project type: {ctx.project_type}.")
         if ctx.project_phase:
@@ -102,11 +121,11 @@ class VisionPromptCompiler:
             prompt_parts.append("Include: " + "; ".join(elements[:8]) + ".")
 
         compose_mode = (
-            request.mode == VisionGenerationMode.TEXT_TO_IMAGE
-            and bool(request.base_image_path)
-            and self._registry.supports_base_overlay(request.image_type)
+            working.mode == VisionGenerationMode.TEXT_TO_IMAGE
+            and bool(working.base_image_path)
+            and self._registry.supports_base_overlay(working.image_type)
         )
-        edit_mode = request.mode in {
+        edit_mode = working.mode in {
             VisionGenerationMode.EDIT_FROM_PHOTO,
             VisionGenerationMode.EDIT_FROM_DRAWING,
         }
@@ -119,12 +138,12 @@ class VisionPromptCompiler:
         if edit_mode:
             kind = (
                 "photograph"
-                if request.mode == VisionGenerationMode.EDIT_FROM_PHOTO
+                if working.mode == VisionGenerationMode.EDIT_FROM_PHOTO
                 else "architectural drawing"
             )
             prompt_parts.append(
                 f"Edit mode: transform the provided {kind} into an illustrative "
-                f"architectural concept variant for: {request.subject.strip()}. "
+                f"architectural concept variant for: {working.subject.strip()}. "
                 "Preserve recognizable site structure; do not invent a different campus. "
                 "Output must read as a presentation illustration, not a site survey photo."
             )
@@ -143,43 +162,46 @@ class VisionPromptCompiler:
         prompt = re.sub(r"\s+", " ", prompt).strip()
         negative = "; ".join(avoid)
         prompt_hash = hashlib.sha256(
-            f"{prompt}|{negative}|{request.width}x{request.height}|"
-            f"{request.base_image_path or ''}|{request.mode.value}".encode()
+            f"{prompt}|{negative}|{working.width}x{working.height}|"
+            f"{working.base_image_path or ''}|{working.mode.value}|{seed_prompt}".encode()
         ).hexdigest()[:16]
 
         rationale = [
-            f"image_type={request.image_type.value}",
+            f"image_type={working.image_type.value}",
             f"style={style_key}",
-            f"mode={request.mode.value}",
-            f"asset_policy={request.asset_policy.value}",
+            f"mode={working.mode.value}",
+            f"asset_policy={working.asset_policy.value}",
             f"context_phase={ctx.project_phase or 'n/a'}",
         ]
+        if seed_prompt:
+            rationale.append("direction_seed=concept_direction.visual_prompt")
         if compose_mode:
             rationale.append("compose_mode=base_overlay")
         if edit_mode:
-            rationale.append(f"edit_mode={request.mode.value}")
+            rationale.append(f"edit_mode={working.mode.value}")
 
         return GenerationSpec(
-            image_type=request.image_type,
+            image_type=working.image_type,
             style=style_key,
             prompt=prompt,
             negative_prompt=negative,
-            width=request.width,
-            height=request.height,
-            asset_policy=request.asset_policy,
+            width=working.width,
+            height=working.height,
+            asset_policy=working.asset_policy,
             rationale=rationale,
             prompt_hash=prompt_hash,
             metadata={
                 "project_type": ctx.project_type,
                 "audience": ctx.audience,
                 "page_archetype": ctx.page_archetype,
-                "base_image_path": request.base_image_path,
+                "base_image_path": working.base_image_path,
                 "overlay_cues": list(overlay_cues),
                 "compose_mode": compose_mode,
                 "edit_mode": edit_mode,
-                "generation_mode": request.mode.value,
-                "harmonize_output": request.harmonize_output,
-                "denoising_strength": request.denoising_strength,
+                "generation_mode": working.mode.value,
+                "harmonize_output": working.harmonize_output,
+                "denoising_strength": working.denoising_strength,
                 "type_label_zh": template.label_zh,
+                "direction_seed": bool(seed_prompt),
             },
         )
