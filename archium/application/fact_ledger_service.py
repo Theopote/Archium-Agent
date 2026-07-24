@@ -38,6 +38,15 @@ class FactLedgerView:
     confirmed_count: int = 0
 
 
+@dataclass(frozen=True)
+class FactConfirmResult:
+    """Result of confirming a fact, optionally with refreshed KnowledgeState."""
+
+    fact: ProjectFact
+    knowledge_summary: str | None = None
+    understanding_summary: str | None = None
+
+
 class FactLedgerService:
     """Manage the project fact ledger used before Brief / Storyline generation."""
 
@@ -106,13 +115,20 @@ class FactLedgerService:
         )
         return extractor.extract_from_context(project_id, context_bundle)
 
-    def confirm_fact(self, fact_id: UUID) -> ProjectFact:
+    def confirm_fact(self, fact_id: UUID) -> FactConfirmResult:
         fact = self._require_fact(fact_id)
         fact.confirm()
         fact.conflict_group = None
         updated = self._facts.update(fact)
         self._record_confirmed_fact_evidence(updated)
-        return updated
+        summary, understanding = self._best_effort_reassess_after_confirm(
+            updated.project_id
+        )
+        return FactConfirmResult(
+            fact=updated,
+            knowledge_summary=summary,
+            understanding_summary=understanding,
+        )
 
     def reject_fact(self, fact_id: UUID) -> ProjectFact:
         fact = self._require_fact(fact_id)
@@ -162,6 +178,32 @@ class FactLedgerService:
         except Exception:
             # Provenance is best-effort; never block fact confirmation.
             return
+
+    def _best_effort_reassess_after_confirm(
+        self,
+        project_id: UUID,
+    ) -> tuple[str | None, str | None]:
+        """Refresh KnowledgeState after a confirmed fact; never fail confirm."""
+        try:
+            from archium.application.context_intelligence_service import (
+                ContextIntelligenceService,
+            )
+            from archium.infrastructure.llm.factory import create_llm_provider
+
+            llm = self._llm
+            if llm is None:
+                llm = create_llm_provider(self._settings)
+            assessment = ContextIntelligenceService(
+                self._session,
+                llm,
+                settings=self._settings,
+            ).reassess(project_id)
+            return (
+                assessment.knowledge_state.summary_line(),
+                assessment.understanding_summary.strip() or None,
+            )
+        except Exception:
+            return None, None
 
     def _require_fact(self, fact_id: UUID) -> ProjectFact:
         fact = self._facts.get_by_id(fact_id)

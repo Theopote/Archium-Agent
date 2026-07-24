@@ -21,12 +21,34 @@ STATUS_LABELS = {
     VerificationStatus.CONFLICTED: "冲突",
 }
 
+_FACT_CONFIRM_TIP_KEY = "fact_confirm_ks_tip"
+
+
+def _consume_fact_confirm_tip(project_id: UUID) -> None:
+    payload = st.session_state.get(_FACT_CONFIRM_TIP_KEY)
+    if not isinstance(payload, dict):
+        return
+    if payload.get("project_id") != str(project_id):
+        return
+    summary = str(payload.get("summary") or "").strip()
+    understanding = str(payload.get("understanding") or "").strip()
+    if summary:
+        lines = [f"知识状态已更新：{summary}"]
+        if understanding:
+            lines.append(understanding)
+        st.info("\n\n".join(lines))
+    if st.button("收起提示", key=f"fact_ks_dismiss_{project_id}"):
+        st.session_state.pop(_FACT_CONFIRM_TIP_KEY, None)
+        st.rerun()
+
 
 def render_fact_ledger_panel(
     project_id: UUID,
     *,
     highlight_pending: bool = False,
 ) -> None:
+    _consume_fact_confirm_tip(project_id)
+
     st.markdown("#### 项目事实账本")
     st.caption(
         f"结构化项目参数 · 确认后将优先注入 {content_pipeline_chain()} 生成上下文"
@@ -165,8 +187,18 @@ def render_fact_ledger_panel(
 
     if btn2.button("确认事实", key=f"confirm_fact_{selected.id}", use_container_width=True):
         with get_session() as session:
-            FactLedgerService(session).confirm_fact(selected.id)
-        st.success("事实已确认。")
+            result = FactLedgerService(
+                session,
+                llm=create_llm_provider(settings) if settings.llm_configured else None,
+                settings=settings,
+            ).confirm_fact(selected.id)
+        st.success("事实已确认，并已写入意图出处。")
+        if result.knowledge_summary:
+            st.session_state[_FACT_CONFIRM_TIP_KEY] = {
+                "project_id": str(project_id),
+                "summary": result.knowledge_summary,
+                "understanding": result.understanding_summary or "",
+            }
         st.rerun()
 
     if btn3.button("驳回事实", key=f"reject_fact_{selected.id}", use_container_width=True):

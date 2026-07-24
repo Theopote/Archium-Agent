@@ -52,8 +52,8 @@ def test_confirm_fact_clears_conflict_group(db_session: Session) -> None:
 
     confirmed = FactLedgerService(db_session).confirm_fact(fact.id)
 
-    assert confirmed.is_confirmed
-    assert confirmed.conflict_group is None
+    assert confirmed.fact.is_confirmed
+    assert confirmed.fact.conflict_group is None
     refreshed = ProjectRepository(db_session).get_by_id(project.id)
     assert refreshed is not None
     assert any(
@@ -94,6 +94,37 @@ def test_confirm_fact_writes_document_evidence_to_mission(db_session: Session) -
         mission.design_intent.evidence[0].source_type == IntentEvidenceSourceType.DOCUMENT
     )
     assert "西安" in mission.design_intent.evidence[0].statement
+
+
+def test_confirm_fact_triggers_reassess(db_session: Session) -> None:
+    from unittest.mock import MagicMock, patch
+
+    from archium.application.context_intelligence_service import ContextAssessment
+    from archium.domain.intent.knowledge_state import KnowledgeState
+
+    project = _seed_project(db_session)
+    fact = FactRepository(db_session).create(
+        ProjectFact(
+            project_id=project.id,
+            key="location",
+            label="地点",
+            value="西安",
+        )
+    )
+    fake = ContextAssessment(
+        knowledge_state=KnowledgeState(completeness_score=0.48),
+        understanding_summary="确认地点后完整度上升。",
+    )
+    with patch(
+        "archium.application.context_intelligence_service.ContextIntelligenceService.reassess",
+        return_value=fake,
+    ):
+        result = FactLedgerService(db_session, llm=MagicMock()).confirm_fact(fact.id)
+
+    assert result.fact.is_confirmed
+    assert result.knowledge_summary is not None
+    assert "48%" in result.knowledge_summary
+    assert result.understanding_summary and "地点" in result.understanding_summary
 
 
 def test_distinct_area_metrics_do_not_conflict(db_session: Session) -> None:

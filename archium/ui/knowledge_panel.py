@@ -167,8 +167,21 @@ def _render_item_row(
         if cols[0].button("确认", key=f"confirm_ki_{item.id}"):
             with get_session() as session:
                 from archium.application.fact_ledger_service import FactLedgerService
+                from archium.ui.llm_settings import get_ui_effective_settings
+                from archium.infrastructure.llm.factory import create_llm_provider
 
-                FactLedgerService(session).confirm_fact(item.linked_fact_id)
+                settings = get_ui_effective_settings()
+                result = FactLedgerService(
+                    session,
+                    llm=create_llm_provider(settings) if settings.llm_configured else None,
+                    settings=settings,
+                ).confirm_fact(item.linked_fact_id)
+                if result.knowledge_summary:
+                    st.session_state["fact_confirm_ks_tip"] = {
+                        "project_id": str(item.project_id),
+                        "summary": result.knowledge_summary,
+                        "understanding": result.understanding_summary or "",
+                    }
             st.rerun()
         if cols[1].button("驳回", key=f"reject_ki_{item.id}"):
             with get_session() as session:

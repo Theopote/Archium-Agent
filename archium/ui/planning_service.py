@@ -819,7 +819,7 @@ def defer_knowledge_gap(
     return MissionClarificationService(session, llm, settings=runtime).defer_gap(gap_id)
 
 
-def confirm_project_fact(session: Session, fact_id: UUID) -> ProjectFact:
+def confirm_project_fact(session: Session, fact_id: UUID):
     return FactLedgerService(session).confirm_fact(fact_id)
 
 
