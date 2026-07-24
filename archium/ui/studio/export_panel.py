@@ -28,6 +28,7 @@ from archium.ui.background_workflow_runner import (
     VisualJobAction,
     background_workflows_enabled,
     submit_visual_job,
+    warn_background_workflows_required,
 )
 from archium.ui.error_handlers import format_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -37,7 +38,7 @@ from archium.ui.studio_service import (
     export_presentation_from_studio,
     export_presentation_pdf_from_studio,
 )
-from archium.ui.visual_service import SlideVisualSnapshot, run_visual_workflow
+from archium.ui.visual_service import SlideVisualSnapshot
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
 
 
@@ -62,6 +63,7 @@ def _launch_visual_job(
     preferences: VisualPreferences | None = None,
 ) -> bool:
     if not background_workflows_enabled(settings):
+        warn_background_workflows_required()
         return False
     job = submit_visual_job(
         project_id,
@@ -110,36 +112,12 @@ def _run_generate_layouts(
     settings: Settings,
     preferences: VisualPreferences,
 ) -> None:
-    if _launch_visual_job(
+    _launch_visual_job(
         project_id,
         presentation_id,
         settings=settings,
         preferences=preferences,
-    ):
-        return
-    try:
-        with st.spinner("正在生成视觉版式…"), get_session() as session:
-            result = run_visual_workflow(
-                session,
-                project_id,
-                presentation_id,
-                require_art_direction_review=False,
-                use_llm=False,
-                export_pptx=True,
-                candidate_count=3,
-                preferences=preferences,
-            )
-        _apply_visual_result(result)
-        if result.succeeded:
-            st.success("视觉版式已生成。")
-        else:
-            detail = "；".join(result.errors) if result.errors else "未知错误"
-            st.error(f"生成未完成：{detail}")
-        st.rerun()
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-    except Exception as exc:
-        st.error(format_user_error(exc))
+    )
 
 
 def _deck_qa_report() -> dict | None:

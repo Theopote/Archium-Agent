@@ -14,8 +14,12 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_asset_metadata_panel
 from archium.ui.background_workflow_runner import (
+    VisualJobAction,
     background_workflows_enabled,
     submit_presentation_workflow,
+    submit_resume_workflow,
+    submit_visual_job,
+    warn_background_workflows_required,
 )
 from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
@@ -36,7 +40,6 @@ from archium.ui.review_analytics_panel import render_project_review_quality_dash
 from archium.ui.review_panel import render_review_panel
 from archium.ui.visual_service import (
     export_presentation_pptx_from_layout_plans,
-    generate_visual_and_export_pptx,
     presentation_has_visual_layout,
 )
 from archium.ui.workflow_progress_panel import (
@@ -53,7 +56,6 @@ from archium.ui.workspace_service import (
     list_project_documents,
     list_project_presentations,
     list_projects,
-    run_presentation_workflow,
 )
 
 PROJECT_TYPE_LABELS = {
@@ -361,34 +363,7 @@ def _render_generation_form(project_id: UUID) -> None:
         render_workflow_progress_panel(project_id, job_id=job.job_id)
         return
 
-    with st.spinner(f"正在运行 {content_pipeline_chain()} 工作流…"):
-        try:
-            with get_session() as session:
-                result = run_presentation_workflow(
-                    session,
-                    project_id,
-                    request,
-                    settings=settings,
-                    **export_kwargs,
-                )
-            st.session_state.last_workflow_result = result
-        except WorkflowError as exc:
-            st.error(format_user_error(exc))
-            return
-        except Exception as exc:
-            st.error(format_user_error(exc))
-            return
-
-    if result.awaiting_review:
-        st.warning(
-            f"工作流已暂停，请切换到「审核」标签页继续处理 {brief_storyline_pair()}。"
-        )
-    elif result.succeeded:
-        st.success(f"汇报已生成，共 {len(result.slides)} 页。")
-    else:
-        st.error("工作流完成但存在错误。")
-        for error in result.errors:
-            st.write(f"- {error}")
+    warn_background_workflows_required()
 
 
 def _render_review_section(project_id: UUID) -> None:
@@ -451,17 +426,28 @@ def _render_last_result() -> None:
     if result.errors:
         st.error("工作流未完成：" + "；".join(result.errors))
         workflow_run_id = result.workflow_run.id
+        project_id = (
+            result.presentation.project_id
+            if result.presentation is not None
+            else st.session_state.get("selected_project_id")
+        )
+        if project_id is None:
+            st.caption("缺少项目上下文，无法重试导出。")
+            return
         if st.button("重试工作流导出", key=f"retry_export_{workflow_run_id}"):
-            from archium.ui.workspace_service import resume_workflow
-
+            settings = get_ui_effective_settings()
+            if not background_workflows_enabled(settings):
+                warn_background_workflows_required()
+                return
             try:
-                retried = resume_workflow(workflow_run_id)
-                st.session_state.last_workflow_result = retried
-                if retried.succeeded:
-                    st.success("导出已完成。")
-                else:
-                    st.warning("仍有错误，请检查质量审核或继续编辑内容。")
-                st.rerun()
+                job = submit_resume_workflow(
+                    project_id,
+                    workflow_run_id,
+                    settings=settings,
+                )
+                set_active_job_id(project_id, job.job_id)
+                st.info("已在后台重试工作流导出，请查看进度。")
+                render_workflow_progress_panel(project_id, job_id=job.job_id)
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
             except Exception as exc:
@@ -540,56 +526,35 @@ def _render_pptx_export_section(project_id: UUID) -> None:
             key=f"export_pptx_generate_{presentation_id}",
         ):
             st.session_state.pop(prompt_key, None)
+            settings = get_ui_effective_settings()
+            if not background_workflows_enabled(settings):
+                warn_background_workflows_required()
+                return
             try:
-                with (
-                    st.spinner("正在生成视觉编排并导出 PPTX…"),
-                    get_session() as session,
-                ):
-                    visual_result = generate_visual_and_export_pptx(
-                        session,
-                        project_id,
-                        presentation_id,
-                    )
-                st.session_state.last_visual_workflow_result = visual_result
-                if visual_result.awaiting_review:
-                    if visual_result.review_gate == "layout_review":
-                        st.warning(
-                            "版式仍有 ERROR/CRITICAL 问题，已暂停 PPTX 导出。"
-                            "请前往「视觉设计 → 单页视觉」调整后继续，"
-                            "或使用旧版模板导出。"
-                        )
-                    else:
-                        st.info("已生成视觉方向，等待批准。请前往「视觉设计」继续。")
-                elif visual_result.succeeded:
-                    pptx_paths = [
-                        Path(path)
-                        for path in visual_result.render_paths
-                        if path.lower().endswith(".pptx")
-                    ]
-                    if pptx_paths:
-                        _store_pptx_export_result(
-                            RenderResult(
-                                editable_pptx_path=pptx_paths[-1],
-                                warnings=list(visual_result.warnings),
-                            )
-                        )
-                        st.success("视觉编排完成，PPTX 已导出。")
-                    else:
-                        with get_session() as session:
-                            export_result = export_presentation_pptx_from_layout_plans(
-                                session,
-                                presentation_id,
-                            )
-                        _store_pptx_export_result(export_result)
-                        st.success("视觉编排完成，PPTX 已导出。")
-                else:
-                    detail = (
-                        "；".join(visual_result.errors)
-                        if visual_result.errors
-                        else "未知错误"
-                    )
-                    st.error(f"视觉编排未完成：{detail}")
-                st.rerun()
+                job = submit_visual_job(
+                    project_id,
+                    presentation_id,
+                    VisualJobAction.RUN,
+                    settings=settings,
+                    require_art_direction_review=False,
+                    use_llm=False,
+                    export_pptx=True,
+                )
+                set_active_job_id(
+                    project_id,
+                    job.job_id,
+                    scope="visual",
+                    presentation_id=presentation_id,
+                )
+                st.info("已在后台生成视觉编排并导出 PPTX，请查看进度。")
+                render_workflow_progress_panel(
+                    project_id,
+                    scope="visual",
+                    presentation_id=presentation_id,
+                    job_id=job.job_id,
+                    result_session_key="last_visual_workflow_result",
+                    success_message="视觉编排完成。",
+                )
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
             except Exception as exc:

@@ -288,15 +288,8 @@ def submit_presentation_workflow(
     return job
 
 
-def submit_continue_after_review(
-    project_id: UUID,
-    workflow_run_id: UUID,
-    *,
-    settings: Settings | None = None,
-) -> BackgroundWorkflowJob:
-    """Continue a paused presentation workflow in the background."""
-    resolved = _resolve_settings(settings)
-    # WF-002: refuse duplicate continue jobs for the same run while one is active.
+def _refuse_duplicate_presentation_job(workflow_run_id: UUID, *, settings: Settings) -> None:
+    """Refuse a second active presentation job for the same run (WF-002)."""
     with _LOCK:
         for existing in _REGISTRY.values():
             if (
@@ -306,13 +299,24 @@ def submit_continue_after_review(
                 and existing.kind == "presentation"
             ):
                 raise WorkflowError(
-                    f"工作流 {workflow_run_id} 已有后台 continue 在执行中，请勿重复提交"
+                    f"工作流 {workflow_run_id} 已有后台任务在执行中，请勿重复提交"
                 )
-    manager = get_workflow_checkpointer_manager(resolved)
+    manager = get_workflow_checkpointer_manager(settings)
     if manager.is_run_busy(str(workflow_run_id)):
         raise WorkflowError(
             f"工作流 {workflow_run_id} 正在执行中，请等待完成后再继续"
         )
+
+
+def submit_continue_after_review(
+    project_id: UUID,
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> BackgroundWorkflowJob:
+    """Continue a paused presentation workflow in the background."""
+    resolved = _resolve_settings(settings)
+    _refuse_duplicate_presentation_job(workflow_run_id, settings=resolved)
     job = BackgroundWorkflowJob(
         job_id=str(uuid4()),
         project_id=project_id,
@@ -322,6 +326,52 @@ def submit_continue_after_review(
     start_background_thread(
         job,
         lambda: _run_continue_job(job, settings=resolved),
+    )
+    return job
+
+
+def _run_resume_job(job: BackgroundWorkflowJob, *, settings: Settings) -> None:
+    if job.workflow_run_id is None:
+        job.error = "缺少 workflow_run_id"
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+        return
+    _set_job_status(job, BackgroundJobStatus.RUNNING)
+    try:
+        with get_session(scoped=False) as session:
+            llm = create_llm_provider(settings)
+            service = _create_presentation_service(session, llm, settings)
+            try:
+                result = service.resume(job.workflow_run_id)
+                _set_presentation_job_result(job, result)
+            finally:
+                service.close()
+    except WorkflowError as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+    except Exception as exc:
+        job.error = str(exc)
+        _set_job_status(job, BackgroundJobStatus.FAILED)
+
+
+def submit_resume_workflow(
+    project_id: UUID,
+    workflow_run_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> BackgroundWorkflowJob:
+    """Resume or retry a presentation workflow from checkpoint in the background."""
+    resolved = _resolve_settings(settings)
+    _refuse_duplicate_presentation_job(workflow_run_id, settings=resolved)
+    job = BackgroundWorkflowJob(
+        job_id=str(uuid4()),
+        project_id=project_id,
+        workflow_run_id=workflow_run_id,
+        kind="presentation",
+        action="resume",
+    )
+    start_background_thread(
+        job,
+        lambda: _run_resume_job(job, settings=resolved),
     )
     return job
 
@@ -655,3 +705,14 @@ def load_visual_result(
 def background_workflows_enabled(settings: Settings | None = None) -> bool:
     resolved = _resolve_settings(settings)
     return resolved.streamlit_background_workflows_enabled
+
+
+def warn_background_workflows_required() -> None:
+    """Tell the user to enable background mode instead of freezing the Streamlit script."""
+    import streamlit as st
+
+    st.warning(
+        "后台工作流当前已关闭（`streamlit_background_workflows_enabled=false`）。"
+        "长耗时 LLM 管线不会在界面线程同步执行，以免冻结页面。"
+        "请在配置中开启后台工作流后重试。"
+    )

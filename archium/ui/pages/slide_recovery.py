@@ -22,6 +22,7 @@ from archium.ui.background_workflow_runner import (
     SlideRecoveryJobAction,
     background_workflows_enabled,
     submit_slide_recovery_job,
+    warn_background_workflows_required,
 )
 from archium.ui.error_handlers import format_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -120,20 +121,7 @@ def _launch_recovery_job(
         )
         return
 
-    with st.spinner("正在恢复页面…"), get_session() as session:
-        from archium.application.slide_recovery_workflow_service import (
-            SlideRecoveryWorkflowService,
-        )
-
-        service = SlideRecoveryWorkflowService(session, settings=settings)
-        result = service.run(project_id, request)
-    st.session_state.last_slide_recovery_result = result
-    if result.awaiting_review:
-        st.warning("恢复结果需人工复核。")
-    elif result.succeeded:
-        st.success("页面复活完成。")
-    else:
-        st.error("；".join(result.errors) or "页面复活失败。")
+    warn_background_workflows_required()
 
 
 def _render_review_actions(result: SlideRecoveryWorkflowResult, settings: Settings) -> None:
@@ -162,20 +150,7 @@ def _render_review_actions(result: SlideRecoveryWorkflowResult, settings: Settin
                 set_active_job_id(project_id, job.job_id, scope="slide_recovery")
                 st.rerun()
             else:
-                with get_session() as session:
-                    from archium.application.slide_recovery_workflow_service import (
-                        SlideRecoveryWorkflowService,
-                    )
-
-                    service = SlideRecoveryWorkflowService(session, settings=settings)
-                    finalized = service.continue_after_review(
-                        run.id,
-                        accepted=True,
-                        notes=notes or None,
-                    )
-                st.session_state.last_slide_recovery_result = finalized
-                st.success("已接受恢复结果。")
-                st.rerun()
+                warn_background_workflows_required()
 
     with col_reject:
         if st.button("拒绝", key="slide_recovery_reject"):
@@ -192,20 +167,7 @@ def _render_review_actions(result: SlideRecoveryWorkflowResult, settings: Settin
                 set_active_job_id(project_id, job.job_id, scope="slide_recovery")
                 st.rerun()
             else:
-                with get_session() as session:
-                    from archium.application.slide_recovery_workflow_service import (
-                        SlideRecoveryWorkflowService,
-                    )
-
-                    service = SlideRecoveryWorkflowService(session, settings=settings)
-                    finalized = service.continue_after_review(
-                        run.id,
-                        accepted=False,
-                        notes=notes or None,
-                    )
-                st.session_state.last_slide_recovery_result = finalized
-                st.warning("已拒绝本次恢复结果。")
-                st.rerun()
+                warn_background_workflows_required()
 
 
 def render() -> None:

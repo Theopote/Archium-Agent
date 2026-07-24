@@ -50,6 +50,8 @@ from archium.ui.asset_board_panel import render_asset_board_panel
 from archium.ui.background_workflow_runner import (
     background_workflows_enabled,
     submit_continue_after_review,
+    submit_resume_workflow,
+    warn_background_workflows_required,
 )
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import (
@@ -58,6 +60,7 @@ from archium.ui.label_map import (
     regenerate_label,
     regenerate_success_label,
 )
+from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.page_status_board_panel import render_page_status_board
 from archium.ui.review_analytics_panel import REPAIR_STRATEGY_LABELS, render_rule_code_stats
 from archium.ui.slide_history_panel import render_slide_history_panel
@@ -67,7 +70,6 @@ from archium.ui.workspace_service import (
     regenerate_outline_plan,
     regenerate_slide_plan,
     regenerate_storyline,
-    resume_workflow,
 )
 
 FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
@@ -210,6 +212,7 @@ def _export_block_summary(blockers: list[ReviewIssue]) -> str:
 
 def _render_critical_recovery_actions(
     *,
+    project_id: UUID,
     presentation_id: UUID,
     workflow_run_id: UUID | None,
     open_critical: list[ReviewIssue],
@@ -267,14 +270,19 @@ def _render_critical_recovery_actions(
         use_container_width=True,
         help="在解决或忽略严重问题后，从 checkpoint 重试导出。",
     ):
+        settings = get_ui_effective_settings()
+        if not background_workflows_enabled(settings):
+            warn_background_workflows_required()
+            return
         try:
-            result = resume_workflow(workflow_run_id)
-            st.session_state.last_workflow_result = result
-            if result.succeeded:
-                st.success("导出已完成。")
-            else:
-                st.error("工作流仍有错误，请继续处理质量审核问题。")
-            st.rerun()
+            job = submit_resume_workflow(
+                project_id,
+                workflow_run_id,
+                settings=settings,
+            )
+            set_active_job_id(project_id, job.job_id)
+            st.info("已在后台重试工作流导出，请查看进度。")
+            render_workflow_progress_panel(project_id, job_id=job.job_id)
         except WorkflowError as exc:
             st.error(format_user_error(exc))
         except Exception as exc:
@@ -899,6 +907,7 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
 def _render_review_issues_panel(
     presentation_id: UUID,
     *,
+    project_id: UUID,
     slides: list[SlideSpec],
     workflow_run_id: UUID | None,
 ) -> None:
@@ -957,6 +966,7 @@ def _render_review_issues_panel(
             "已阻断 JSON/Marp 导出。请处理后重新运行或继续工作流。"
         )
         _render_critical_recovery_actions(
+            project_id=project_id,
             presentation_id=presentation_id,
             workflow_run_id=workflow_run_id,
             open_critical=open_export_blockers,
@@ -966,6 +976,7 @@ def _render_review_issues_panel(
             f"存在 {_export_block_summary(open_export_blockers)}阻断问题（当前未启用导出阻断）。"
         )
         _render_critical_recovery_actions(
+            project_id=project_id,
             presentation_id=presentation_id,
             workflow_run_id=workflow_run_id,
             open_critical=open_export_blockers,
@@ -1105,6 +1116,7 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
     with tabs[tab_index]:
         _render_review_issues_panel(
             presentation_id,
+            project_id=context.presentation.project_id,
             slides=context.slides,
             workflow_run_id=workflow_run_id,
         )
@@ -1115,8 +1127,11 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         use_container_width=True,
     ):
         project_id = context.presentation.project_id
-        settings = get_settings()
-        if background_workflows_enabled(settings):
+        settings = get_ui_effective_settings()
+        if not background_workflows_enabled(settings):
+            warn_background_workflows_required()
+            return
+        try:
             job = submit_continue_after_review(
                 project_id,
                 workflow_run_id,
@@ -1125,19 +1140,6 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
             set_active_job_id(project_id, job.job_id)
             st.info("已在后台继续运行工作流，请查看进度。")
             render_workflow_progress_panel(project_id, job_id=job.job_id)
-            return
-        try:
-            from archium.ui.workspace_service import continue_workflow_after_review
-
-            result = continue_workflow_after_review(workflow_run_id, settings=settings)
-            st.session_state.last_workflow_result = result
-            if result.awaiting_review:
-                st.warning("工作流已进入下一审核节点，请继续审核。")
-            elif result.succeeded:
-                st.success(f"工作流已完成，共 {len(result.slides)} 页。")
-            else:
-                st.error("工作流继续执行时出现错误。")
-            st.rerun()
         except WorkflowError as exc:
             st.error(format_user_error(exc))
         except Exception as exc:

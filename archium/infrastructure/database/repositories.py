@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -304,6 +304,14 @@ class DocumentRepository:
         )
         return [mappers.source_document_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def count_by_project(self, project_id: UUID) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(SourceDocumentORM)
+            .where(SourceDocumentORM.project_id == project_id)
+        )
+        return int(self._session.scalar(stmt) or 0)
+
     def get_by_hash(self, project_id: UUID, file_hash: str) -> SourceDocument | None:
         stmt = select(SourceDocumentORM).where(
             SourceDocumentORM.project_id == project_id,
@@ -363,6 +371,14 @@ class DocumentRepository:
             .order_by(DocumentChunkORM.chunk_index)
         )
         return [mappers.document_chunk_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def count_chunks_by_project(self, project_id: UUID) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(DocumentChunkORM)
+            .where(DocumentChunkORM.project_id == project_id)
+        )
+        return int(self._session.scalar(stmt) or 0)
 
     def get_chunks_by_ids(self, chunk_ids: list[UUID]) -> list[DocumentChunk]:
         if not chunk_ids:
@@ -431,6 +447,14 @@ class PresentationRepository:
             .order_by(PresentationORM.updated_at.desc())
         )
         return [mappers.presentation_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def count_by_project(self, project_id: UUID) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(PresentationORM)
+            .where(PresentationORM.project_id == project_id)
+        )
+        return int(self._session.scalar(stmt) or 0)
 
     def update_presentation(self, presentation: Presentation) -> Presentation:
         try:

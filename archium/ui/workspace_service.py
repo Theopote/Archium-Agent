@@ -98,17 +98,16 @@ def create_project(
 
 
 def get_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:
+    documents = DocumentRepository(session)
+    presentations = PresentationRepository(session)
     project = ProjectRepository(session).get_by_id(project_id)
     if project is None:
         return None
-    documents = DocumentRepository(session).list_by_project(project_id)
-    chunks = DocumentRepository(session).list_chunks_by_project(project_id)
-    presentations = PresentationRepository(session).list_by_project(project_id)
     return ProjectOverview(
         project=project,
-        document_count=len(documents),
-        chunk_count=len(chunks),
-        presentation_count=len(presentations),
+        document_count=documents.count_by_project(project_id),
+        chunk_count=documents.count_chunks_by_project(project_id),
+        presentation_count=presentations.count_by_project(project_id),
     )
 
 

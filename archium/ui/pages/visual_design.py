@@ -26,6 +26,7 @@ from archium.ui.background_workflow_runner import (
     VisualJobAction,
     background_workflows_enabled,
     submit_visual_job,
+    warn_background_workflows_required,
 )
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import (
@@ -38,11 +39,7 @@ from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.slide_visual_panel import render_slide_visual_panel
 from archium.ui.visual_capability_panel import render_visual_engine_scope
-from archium.ui.visual_service import (
-    continue_visual_after_layout_review,
-    get_presentation_visual_snapshot,
-    run_visual_workflow,
-)
+from archium.ui.visual_service import get_presentation_visual_snapshot
 from archium.ui.workflow_progress_panel import (
     render_workflow_progress_panel,
     set_active_job_id,
@@ -263,6 +260,7 @@ def _launch_visual_job(
     awaiting_review_message: str | None = None,
 ) -> bool:
     if not background_workflows_enabled(settings):
+        warn_background_workflows_required()
         return False
     job = submit_visual_job(
         project_id,
@@ -303,7 +301,7 @@ def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
             "export_layout_instructions": True,
             "candidate_count": int(cast(int, options["candidate_count"])),
         }
-        if _launch_visual_job(
+        _launch_visual_job(
             project_id,
             presentation_id,
             VisualJobAction.RUN,
@@ -311,44 +309,8 @@ def _render_run_section(project_id: UUID, presentation_id: UUID) -> None:
             run_kwargs=run_kwargs,
             success_message="视觉编排完成。",
             awaiting_review_message="视觉编排已暂停，请审核视觉方向或版式后继续。",
-        ):
-            return
-        try:
-            with (
-                st.spinner("正在生成视觉方向与版式…"),
-                get_session() as session,
-            ):
-                result = run_visual_workflow(
-                    session,
-                    project_id,
-                    presentation_id,
-                    preferences=preferences,
-                    require_art_direction_review=bool(
-                        options["require_art_direction_review"]
-                    ),
-                    use_llm=bool(options["use_llm"]),
-                    export_pptx=bool(options["export_pptx"]),
-                    candidate_count=int(cast(int, options["candidate_count"])),
-                )
-            _apply_visual_result(result)
-            if result.awaiting_review:
-                if result.review_gate == "layout_review":
-                    st.warning(
-                        "版式仍有 ERROR/CRITICAL 问题，已暂停导出。"
-                        "请在「单页视觉」中调整后，于预览页继续。"
-                    )
-                else:
-                    st.info("已生成视觉方向，等待批准后继续。")
-            elif result.succeeded:
-                st.success("视觉编排完成。")
-            else:
-                detail = "；".join(result.errors) if result.errors else "未知错误"
-                st.error(f"视觉编排未完成：{detail}")
-            st.rerun()
-        except WorkflowError as exc:
-            st.error(format_user_error(exc))
-        except Exception as exc:
-            st.error(format_user_error(exc))
+        )
+        return
 
 
 def _render_result_summary(project_id: UUID, presentation_id: UUID) -> None:
@@ -389,7 +351,7 @@ def _render_result_summary(project_id: UUID, presentation_id: UUID) -> None:
         )
         if st.button("继续工作流（跳过无效 PPTX）", type="primary", use_container_width=True):
             settings = get_ui_effective_settings()
-            if _launch_visual_job(
+            _launch_visual_job(
                 project_id,
                 presentation_id,
                 VisualJobAction.CONTINUE_LAYOUT_REVIEW,
@@ -397,19 +359,8 @@ def _render_result_summary(project_id: UUID, presentation_id: UUID) -> None:
                 workflow_run_id=result.workflow_run.id,
                 allow_invalid_layout_export=True,
                 success_message="工作流已继续。",
-            ):
-                return
-            try:
-                with get_session() as session:
-                    continued = continue_visual_after_layout_review(
-                        session,
-                        result.workflow_run.id,
-                        allow_invalid_layout_export=True,
-                    )
-                _apply_visual_result(continued)
-                st.rerun()
-            except Exception as exc:
-                st.error(format_user_error(exc))
+            )
+            return
 
 
 def _render_quality_reports(result: VisualWorkflowResult) -> None:
