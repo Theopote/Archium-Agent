@@ -135,6 +135,14 @@ pytest tests/integration/test_partial_knowledge_project_flow.py tests/unit/test_
 
 **记录位置：** `docs/rehearsal/sessions/`（注明 partial-knowledge 场景）
 
+**人工走查清单（Facilitator 一页纸）：** [playbook-f-checklist.md](rehearsal/playbook-f-checklist.md)  
+**参与者说明（发给操作者）：** [playbook-f-participant-guide.md](rehearsal/playbook-f-participant-guide.md)
+
+```powershell
+python scripts/run_playbook_f_gate.py -q
+python scripts/new_playbook_f_session.py YYYY-MM-DD-playbook-f-1
+```
+
 ## 每次发版检查表
 
 复制到发版 PR 或 rehearsal session：
