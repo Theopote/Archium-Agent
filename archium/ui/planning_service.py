@@ -479,6 +479,32 @@ def archive_concept_direction(
     )
 
 
+def synthesize_visual_concept_brief(
+    session: Session,
+    direction_id: UUID,
+    *,
+    generate_image: bool = False,
+    settings: Settings | None = None,
+):
+    from archium.application.visual.vision import VisualConceptBriefService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return VisualConceptBriefService(session, llm, settings=runtime).synthesize_for_direction(
+        direction_id,
+        generate_image=generate_image,
+    )
+
+
+def get_latest_visual_concept_brief(session: Session, direction_id: UUID):
+    from archium.application.visual.vision import VisualConceptBriefService
+    from archium.infrastructure.llm.mock import MockLLMProvider
+
+    return VisualConceptBriefService(session, MockLLMProvider()).get_latest_for_direction(
+        direction_id
+    )
+
+
 def answer_clarifying_question(
     session: Session,
     question_id: UUID,

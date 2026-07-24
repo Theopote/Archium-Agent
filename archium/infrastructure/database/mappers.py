@@ -74,7 +74,9 @@ from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logic
 from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.domain.visual.visual_grammar import coerce_page_archetype
+from archium.domain.visual.vision_generation import ArchitectureImageType, VisionStylePreset
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
@@ -102,6 +104,7 @@ from archium.infrastructure.database.models import (
     SourceDocumentORM,
     StorylineORM,
     UserPreferenceORM,
+    VisualConceptBriefORM,
     VisualQAReportORM,
     WorkflowRunORM,
 )
@@ -1257,6 +1260,73 @@ def concept_direction_to_orm(
     target.status = domain.status.value
     target.sort_order = domain.sort_order
     target.source = domain.source
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def visual_concept_brief_to_domain(orm: VisualConceptBriefORM) -> VisualConceptBrief:
+    style = orm.style_preset or VisionStylePreset.SOFT_ATMOSPHERE.value
+    try:
+        style_preset: VisionStylePreset | str = VisionStylePreset(style)
+    except ValueError:
+        style_preset = style
+    return VisualConceptBrief(
+        id=orm.id,
+        project_id=orm.project_id,
+        mission_id=orm.mission_id,
+        concept_direction_id=orm.concept_direction_id,
+        title=orm.title,
+        composition_intent=orm.composition_intent or "",
+        atmosphere=orm.atmosphere or "",
+        diagram_intent=orm.diagram_intent or "",
+        image_type=ArchitectureImageType(orm.image_type or "concept_sketch"),
+        style_preset=style_preset,
+        subject=orm.subject or "",
+        elements=list(orm.elements_json or []),
+        avoid=list(orm.avoid_json or []),
+        compiled_prompt=orm.compiled_prompt or "",
+        status=orm.status or "draft",
+        asset_id=orm.asset_id,
+        image_path=orm.image_path,
+        error_message=orm.error_message,
+        generated_at=orm.generated_at,
+        extra_json=dict(orm.extra_json or {}),
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def visual_concept_brief_to_orm(
+    domain: VisualConceptBrief,
+    orm: VisualConceptBriefORM | None = None,
+) -> VisualConceptBriefORM:
+    target = orm or VisualConceptBriefORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.mission_id = domain.mission_id
+    target.concept_direction_id = domain.concept_direction_id
+    target.title = domain.title
+    target.composition_intent = domain.composition_intent
+    target.atmosphere = domain.atmosphere
+    target.diagram_intent = domain.diagram_intent
+    target.image_type = domain.image_type.value
+    target.style_preset = (
+        domain.style_preset.value
+        if isinstance(domain.style_preset, VisionStylePreset)
+        else str(domain.style_preset)
+    )
+    target.subject = domain.subject
+    target.elements_json = list(domain.elements)
+    target.avoid_json = list(domain.avoid)
+    target.compiled_prompt = domain.compiled_prompt
+    target.status = domain.status
+    target.asset_id = domain.asset_id
+    target.image_path = domain.image_path
+    target.error_message = domain.error_message
+    target.generated_at = domain.generated_at
+    target.extra_json = dict(domain.extra_json)
     if domain.created_at is not None:
         target.created_at = domain.created_at
     if domain.updated_at is not None:

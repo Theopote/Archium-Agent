@@ -13,6 +13,10 @@ from archium.application.visual.vision.style_preset_registry import (
     DEFAULT_STYLE_REGISTRY,
     VisionStylePresetRegistry,
 )
+from archium.application.visual.vision.visual_concept_brief_service import (
+    VisualConceptBriefResult,
+    VisualConceptBriefService,
+)
 
 __all__ = [
     "DEFAULT_STYLE_REGISTRY",
@@ -23,5 +27,7 @@ __all__ = [
     "VisionLoraPackService",
     "VisionPromptCompiler",
     "VisionStylePresetRegistry",
+    "VisualConceptBriefResult",
+    "VisualConceptBriefService",
     "suggest_image_request_for_slide",
 ]

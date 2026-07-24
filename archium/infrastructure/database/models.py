@@ -1100,6 +1100,47 @@ class ConceptDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source: Mapped[str] = mapped_column(String(40), nullable=False, default="generated")
 
 
+class VisualConceptBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "visual_concept_briefs"
+    __table_args__ = (
+        Index("ix_visual_concept_briefs_project_id", "project_id"),
+        Index("ix_visual_concept_briefs_mission_id", "mission_id"),
+        Index("ix_visual_concept_briefs_direction_id", "concept_direction_id"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_missions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    concept_direction_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("concept_directions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    composition_intent: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    atmosphere: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    diagram_intent: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    image_type: Mapped[str] = mapped_column(String(50), nullable=False, default="concept_sketch")
+    style_preset: Mapped[str] = mapped_column(String(80), nullable=False, default="soft_atmosphere")
+    subject: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    elements_json: Mapped[list[str]] = mapped_column("elements", JSON, nullable=False, default=list)
+    avoid_json: Mapped[list[str]] = mapped_column("avoid", JSON, nullable=False, default=list)
+    compiled_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    image_path: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generated_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    extra_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
+
+
 class OutlineApprovalRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "outline_approval_records"
     __table_args__ = (

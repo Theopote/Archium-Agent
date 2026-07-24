@@ -29,6 +29,7 @@ from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
 from archium.domain.revision import EntityRevision
 from archium.domain.slide import SlideSpec, build_slide_logical_key
+from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import RepositoryError
@@ -56,6 +57,7 @@ from archium.infrastructure.database.models import (
     SlideRevisionORM,
     SourceDocumentORM,
     StorylineORM,
+    VisualConceptBriefORM,
     VisualQAReportORM,
     WorkflowRunORM,
 )
@@ -1302,6 +1304,75 @@ class ConceptDirectionRepository:
             ConceptDirectionORM.created_at.asc(),
         )
         return [mappers.concept_direction_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class VisualConceptBriefRepository:
+    """CRUD for Vision Engine visual concept briefs."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, brief: VisualConceptBrief) -> VisualConceptBrief:
+        try:
+            orm = mappers.visual_concept_brief_to_orm(brief)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.visual_concept_brief_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create visual concept brief", exc)
+            raise
+
+    def update(self, brief: VisualConceptBrief) -> VisualConceptBrief:
+        try:
+            orm = self._session.get(VisualConceptBriefORM, brief.id)
+            if orm is None:
+                raise RepositoryError(f"Visual concept brief {brief.id} not found")
+            mappers.visual_concept_brief_to_orm(brief, orm)
+            self._session.flush()
+            return mappers.visual_concept_brief_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("update visual concept brief", exc)
+            raise
+
+    def get(self, brief_id: UUID) -> VisualConceptBrief | None:
+        orm = self._session.get(VisualConceptBriefORM, brief_id)
+        if orm is None:
+            return None
+        return mappers.visual_concept_brief_to_domain(orm)
+
+    def get_latest_for_direction(self, concept_direction_id: UUID) -> VisualConceptBrief | None:
+        stmt = (
+            select(VisualConceptBriefORM)
+            .where(VisualConceptBriefORM.concept_direction_id == concept_direction_id)
+            .order_by(VisualConceptBriefORM.created_at.desc())
+            .limit(1)
+        )
+        orm = self._session.scalars(stmt).first()
+        if orm is None:
+            return None
+        return mappers.visual_concept_brief_to_domain(orm)
+
+    def list_by_mission(self, mission_id: UUID) -> list[VisualConceptBrief]:
+        stmt = (
+            select(VisualConceptBriefORM)
+            .where(VisualConceptBriefORM.mission_id == mission_id)
+            .order_by(VisualConceptBriefORM.created_at.desc())
+        )
+        return [
+            mappers.visual_concept_brief_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
+    def list_by_direction(self, concept_direction_id: UUID) -> list[VisualConceptBrief]:
+        stmt = (
+            select(VisualConceptBriefORM)
+            .where(VisualConceptBriefORM.concept_direction_id == concept_direction_id)
+            .order_by(VisualConceptBriefORM.created_at.desc())
+        )
+        return [
+            mappers.visual_concept_brief_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
 
 
 class OutlineApprovalRecordRepository:
