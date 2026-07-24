@@ -22,11 +22,11 @@ from archium.domain.enums import RevisionSource
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
-from archium.infrastructure.database.mission_repositories import MissionRepository
-from archium.infrastructure.database.repositories import (
-    PlanningSessionRepository,
-    PresentationRepository,
+from archium.application.mission_context_bridge import (
+    merge_mission_project_context,
+    resolve_project_mission,
 )
+from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import StorylineDraft
 from archium.prompts.storyline import STORYLINE_SYSTEM_PROMPT, build_storyline_user_prompt
@@ -46,8 +46,6 @@ class NarrativeArchitect:
         self._llm = llm
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
-        self._missions = MissionRepository(session)
-        self._planning_sessions = PlanningSessionRepository(session)
         self._history = StorylineHistoryService(session)
 
     def generate(
@@ -77,14 +75,12 @@ class NarrativeArchitect:
             query=build_retrieval_query_from_brief(brief),
             settings=self._settings,
         )
-        missions = self._missions.list_missions_by_project(project_id)
-        mission = None
-        planning = self._planning_sessions.get_by_presentation_id(brief.presentation_id)
-        if planning is not None and planning.current_mission_id is not None:
-            mission = self._missions.get_mission(planning.current_mission_id)
-        if mission is None and missions:
-            # Fallback for shortcut Brief paths without a planning session link.
-            mission = missions[0]
+        mission = resolve_project_mission(
+            self._session,
+            project_id,
+            presentation_id=brief.presentation_id,
+        )
+        project_context = merge_mission_project_context(project_context, mission)
         narrative_mode = mission.narrative_mode if mission is not None else None
         design_intent_block = ""
         if mission is not None and mission.design_intent is not None:

@@ -12,6 +12,10 @@ from archium.agents._helpers import (
     build_retrieval_query_from_request,
     resolve_design_context_text,
 )
+from archium.application.mission_context_bridge import (
+    merge_mission_project_context,
+    resolve_project_mission,
+)
 from archium.application.artifact_history_service import BriefHistoryService
 from archium.application.artifact_lineage import apply_brief_lineage
 from archium.application.presentation_models import PresentationRequest
@@ -66,6 +70,12 @@ class BriefBuilder:
             query=build_retrieval_query_from_request(request),
             settings=self._settings,
         )
+        mission = resolve_project_mission(
+            self._session,
+            project_id,
+            presentation_id=presentation_id,
+        )
+        project_context = merge_mission_project_context(project_context, mission)
         request_context = build_request_context(request)
         draft = self._llm.generate_structured(
             LLMRequest(

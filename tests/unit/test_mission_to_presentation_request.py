@@ -94,6 +94,16 @@ def _workstreams(mission_id, project_id) -> list[Workstream]:
     ]
 
 
+def test_build_presentation_request_includes_project_context_in_user_notes() -> None:
+    mission = _temple_mission()
+    mission.project_context = "【已确认公开研究】\n- 关中乡村公共文化空间"
+
+    request = build_presentation_request(mission)
+
+    assert "项目语境:" in request.user_notes
+    assert "关中乡村" in request.user_notes
+
+
 def test_build_presentation_request_field_mapping() -> None:
     mission = _temple_mission()
     deliverable = _presentation_deliverable()
@@ -115,6 +125,10 @@ def test_build_presentation_request_field_mapping() -> None:
     assert "相关工作路径（生成上下文，非汇报章节大纲）" in request.user_notes
     assert "历史与案例研究" in request.user_notes
     assert "施工图准备" not in request.user_notes
+    mission.project_context = "【已确认公开研究】\n- 关中乡村公共文化空间"
+    request_with_context = build_presentation_request(mission, deliverable, workstreams=workstreams)
+    assert "项目语境" in request_with_context.user_notes
+    assert "关中乡村" in request_with_context.user_notes
     # Workstream titles must not become required_sections.
     assert "历史与案例研究" not in request.required_sections
     assert "概念生成" not in request.required_sections

@@ -11,6 +11,10 @@ from archium.agents._helpers import (
     resolve_design_context_text,
     to_json,
 )
+from archium.application.mission_context_bridge import (
+    merge_mission_project_context,
+    resolve_project_mission,
+)
 from archium.application.artifact_history_service import OutlineHistoryService
 from archium.application.artifact_lineage import apply_outline_lineage
 from archium.application.cultural_narrative_service import format_narrative_for_prompt
@@ -109,6 +113,12 @@ class OutlinePlanner:
             query=build_retrieval_query_from_storyline(brief, storyline),
             settings=self._settings,
         )
+        mission = resolve_project_mission(
+            self._session,
+            project_id,
+            presentation_id=brief.presentation_id,
+        )
+        project_context = merge_mission_project_context(project_context, mission)
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=OUTLINE_PLAN_SYSTEM_PROMPT,

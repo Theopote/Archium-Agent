@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 from archium.application._helpers import to_json
 from archium.application.mission_history_service import MissionHistoryService
 from archium.application.project_knowledge_service import ProjectKnowledgeService
-from archium.application.project_mission_service import MissionPatch, ProjectMissionService
+from archium.application.project_mission_service import (
+    MissionPatch,
+    ProjectMissionService,
+    is_mission_approval_current,
+)
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
 from archium.domain.project_knowledge import ProjectKnowledgeItem
@@ -37,6 +41,7 @@ class MissionResearchEnrichmentResult:
     items_enriched: int = 0
     used_llm: bool = False
     warnings: list[str] = field(default_factory=list)
+    needs_reapproval: bool = False
 
 
 class MissionResearchEnrichmentService:
@@ -84,6 +89,7 @@ class MissionResearchEnrichmentService:
         if not pending:
             raise WorkflowError("没有可写回的已确认公开研究")
 
+        was_approved = is_mission_approval_current(mission)
         warnings: list[str] = []
         used_llm = False
         if prefer_llm and self._llm is not None and self._settings.llm_configured:
@@ -102,11 +108,13 @@ class MissionResearchEnrichmentService:
             RevisionSource.CLARIFICATION,
             note=f"公开研究写回（{len(pending)} 条）",
         )
+        needs_reapproval = was_approved
         return MissionResearchEnrichmentResult(
             mission=mission,
             items_enriched=len(pending),
             used_llm=used_llm,
             warnings=warnings,
+            needs_reapproval=needs_reapproval,
         )
 
     def _enrich_with_llm(

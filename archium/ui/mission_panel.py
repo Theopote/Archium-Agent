@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import streamlit as st
-
 from uuid import UUID
+
+import streamlit as st
 
 from archium.application.project_mission_service import MissionPatch, suggest_narrative_mode
 from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
@@ -234,6 +234,70 @@ def _render_research_knowledge_preview(project_id: UUID, *, key_prefix: str) -> 
             st.rerun()
 
 
+def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: str) -> None:
+    from archium.application.project_mission_service import (
+        ProjectMissionService,
+        is_mission_approval_current,
+    )
+    from archium.domain.enums import ApprovalStatus
+    from archium.infrastructure.llm.factory import create_llm_provider
+    from archium.ui.llm_settings import get_ui_effective_settings
+    from archium.ui.planning_service import approve_mission_and_continue
+
+    if is_mission_approval_current(mission):
+        return
+
+    if mission.approval_status == ApprovalStatus.APPROVED:
+        st.warning("任务理解内容已变更，审批已失效。请重新批准后再继续下游规划。")
+    else:
+        st.info("建议批准任务理解，以便进入工作路径与汇报生成。")
+
+    settings = get_ui_effective_settings()
+    workflow_run_id = st.session_state.get("planning_workflow_run_id")
+    approve_col, continue_col = st.columns(2)
+
+    if approve_col.button(
+        "批准任务理解",
+        key=f"{key_prefix}_approve_mission",
+        use_container_width=True,
+    ):
+        try:
+            with get_session() as session:
+                ProjectMissionService(
+                    session,
+                    create_llm_provider(settings),
+                    settings=settings,
+                ).approve_mission(mission.id, note="研究写回后重新批准")
+                session.commit()
+            st.success("任务理解已批准。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+    if workflow_run_id and continue_col.button(
+        "批准并继续规划",
+        key=f"{key_prefix}_approve_mission_continue",
+        use_container_width=True,
+    ):
+        try:
+            with get_session() as session:
+                approve_mission_and_continue(
+                    session,
+                    UUID(str(workflow_run_id)),
+                    note="研究写回后重新批准",
+                    settings=settings,
+                )
+                session.commit()
+            st.success("任务理解已批准，规划工作流已继续。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+
 def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: str) -> None:
     from archium.application.mission_research_enrichment_service import (
         MissionResearchEnrichmentService,
@@ -269,6 +333,8 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
                 session.commit()
             mode = "AI 整合" if result.used_llm else "追加"
             st.success(f"已将 {result.items_enriched} 条公开研究写回任务理解（{mode}）。")
+            if result.needs_reapproval:
+                st.warning("任务理解审批已失效，请重新批准。")
             for warning in result.warnings:
                 st.warning(warning)
             st.rerun()
@@ -300,6 +366,7 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
 
     _render_research_knowledge_preview(mission.project_id, key_prefix=key_prefix)
     _render_research_enrichment_action(mission, key_prefix=key_prefix)
+    _render_mission_reapproval_prompt(mission, key_prefix=key_prefix)
 
     st.caption("确认后的公开资料可 enrich 任务理解与汇报；完整列表见工作台「资料与事实」。")
     settings = get_ui_effective_settings()

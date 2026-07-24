@@ -358,6 +358,9 @@ def _build_user_notes(
         if block.strip():
             sections.append("设计使命:\n" + block)
 
+    if mission.project_context.strip():
+        sections.append("项目语境:\n" + mission.project_context.strip())
+
     if mission.design_questions:
         sections.append(
             "设计命题:\n" + "\n".join(f"- {item}" for item in mission.design_questions if item.strip())

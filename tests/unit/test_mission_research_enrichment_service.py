@@ -55,9 +55,26 @@ def test_enrich_mission_appends_confirmed_research(db_session, mission_with_conf
 
     assert result.items_enriched == 1
     assert result.used_llm is False
+    assert result.needs_reapproval is False
     assert "【已确认公开研究】" in result.mission.project_context
     assert "关中" in result.mission.project_context
     assert service.list_pending_items(mission.id) == []
+
+
+def test_enrich_mission_marks_needs_reapproval_after_prior_approval(
+    db_session,
+    mission_with_confirmed_research,
+) -> None:
+    from archium.application.project_mission_service import ProjectMissionService
+    from archium.infrastructure.llm.mock import MockLLMProvider
+
+    _, mission, _ = mission_with_confirmed_research
+    ProjectMissionService(db_session, MockLLMProvider()).approve_mission(mission.id)
+    service = MissionResearchEnrichmentService(db_session, llm=None)
+
+    result = service.enrich_mission(mission.id, prefer_llm=False)
+
+    assert result.needs_reapproval is True
 
 
 def test_enrich_mission_with_llm_updates_context(
