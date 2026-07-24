@@ -343,6 +343,27 @@ class Settings(BaseSettings):
         le=2.0,
         description="LoRA strength_clip for builtin Comfy graphs.",
     )
+    vision_lora_pack_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_LORA_PACK_ID"),
+        description=(
+            "Active architectural LoRA pack id (see vision_gen/lora_packs). "
+            "Overrides VISION_COMFYUI_LORA when set."
+        ),
+    )
+    vision_lora_packs_dir: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_LORA_PACKS_DIR"),
+        description="Optional extra directory of LoRA packs (pack.json + weights/).",
+    )
+    vision_comfyui_loras_dir: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_COMFYUI_LORAS_DIR"),
+        description=(
+            "ComfyUI models/loras directory for pack install "
+            "(python -m archium.infrastructure.vision_gen.lora_packs install …)."
+        ),
+    )
     slide_recovery_ocr_enabled: bool = Field(
         default=True,
         description="When true, run OCR (pytesseract) for raster slide recovery inputs.",

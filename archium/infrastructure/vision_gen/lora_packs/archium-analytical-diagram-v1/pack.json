@@ -1,0 +1,21 @@
+{
+  "id": "archium-analytical-diagram-v1",
+  "name": "建筑分析图扁平风",
+  "version": "1.0.0",
+  "description": "场地/流线分析示意用扁平图示 LoRA 预设。权重需自行提供。",
+  "license": "BYO-weights",
+  "base_model": "sd15",
+  "publisher": "Archium",
+  "styles": ["flat_analytical_diagram", "axonometric_diagram"],
+  "image_types": ["site_diagram", "flow_diagram", "section_illustration"],
+  "loras": [
+    {
+      "id": "diagram_primary",
+      "filename": "arch_analytical_diagram.safetensors",
+      "role": "primary",
+      "default_strength_model": 0.78,
+      "default_strength_clip": 0.78,
+      "notes": "Place the safetensors file under weights/ before install_to_comfy."
+    }
+  ]
+}

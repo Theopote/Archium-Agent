@@ -225,7 +225,23 @@ VISION_COMFYUI_WORKFLOW_IMG2IMG_PATH=archium/infrastructure/vision_gen/workflows
 VISION_COMFYUI_LORA=arch_marker_sketch.safetensors
 VISION_COMFYUI_LORA_STRENGTH_MODEL=0.8
 VISION_COMFYUI_LORA_STRENGTH_CLIP=0.8
+# 产品化 LoRA 包（优先于上面的单文件 LORA）
+VISION_LORA_PACK_ID=archium-marker-sketch-v1
+VISION_COMFYUI_LORAS_DIR=C:/path/to/ComfyUI/models/loras
+# 可选：额外包目录
+# VISION_LORA_PACKS_DIR=D:/archium-lora-packs
 ```
+
+LoRA 包管理：
+
+```bash
+python -m archium.infrastructure.vision_gen.lora_packs list
+python -m archium.infrastructure.vision_gen.lora_packs show archium-marker-sketch-v1
+# 将 weights/*.safetensors 放入包目录后：
+python -m archium.infrastructure.vision_gen.lora_packs install archium-marker-sketch-v1
+```
+
+内置包清单（权重不进 git）：`archium-marker-sketch-v1`、`archium-analytical-diagram-v1`。
 
 自定义工作流须为 **API 格式**（Save → API Format），支持占位符：  
 `{{prompt}}` `{{negative_prompt}}` `{{width}}` `{{height}}` `{{steps}}` `{{cfg}}` `{{seed}}` `{{checkpoint}}` `{{sampler}}` `{{scheduler}}` `{{denoise}}` `{{image}}` `{{lora_name}}` …
@@ -283,8 +299,9 @@ base site/plan image
 | ComfyUI 内置 txt2img / img2img 工作流 | **已做** `comfyui.py` |
 | 自定义 Comfy API 工作流 JSON 挂载 + 占位符 | **已做** `comfyui_workflows.py` + example JSON |
 | 内置图可选 LoRA（`VISION_COMFYUI_LORA`） | **已做** |
+| 建筑 LoRA 包清单 + 安装到 ComfyUI + 激活 | **已做** `VisionLoraPackService` / `lora_packs` |
 | Studio 改图强度滑条（denoising） | **已做** |
-| 建筑 LoRA 权重包分发 / 市场 | **未做**（后续产品化） |
+| 在线 LoRA 市场 / 付费分发 | **未做**（后续商业化） |
 
 Edit 路径：
 
@@ -328,8 +345,9 @@ Vision Engine 作为 **下一条战略主线** 立项，不阻塞 Studio V1 / Im
 4. Vision Engine v0.3 条件改图 + QA + Derivative 统一 + Intent 建议 — **已完成**
 5. 本地 SD / 更强图生图（A1111 img2img）— **已完成**
 6. ComfyUI 内置工作流 — **已完成**
-7. 自定义工作流挂载 + LoRA 挂钩 — **本轮完成**
-8. 后续：建筑专用 LoRA 包分发、主体检测
+7. 自定义工作流挂载 + LoRA 挂钩 — **已完成**
+8. 建筑 LoRA 包产品化（manifest / install / activate）— **本轮完成**
+9. 后续：在线市场、主体检测
 
 ## 11. 一句话决策
 

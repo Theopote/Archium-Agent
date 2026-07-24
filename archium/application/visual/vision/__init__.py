@@ -7,6 +7,7 @@ from archium.application.visual.vision.image_generation_service import (
     VisionImageGenerationService,
 )
 from archium.application.visual.vision.intent_suggester import suggest_image_request_for_slide
+from archium.application.visual.vision.lora_pack_service import VisionLoraPackService
 from archium.application.visual.vision.prompt_compiler import VisionPromptCompiler
 from archium.application.visual.vision.style_preset_registry import (
     DEFAULT_STYLE_REGISTRY,
@@ -19,6 +20,7 @@ __all__ = [
     "VisionDiagramComposer",
     "VisionImageEvaluator",
     "VisionImageGenerationService",
+    "VisionLoraPackService",
     "VisionPromptCompiler",
     "VisionStylePresetRegistry",
     "suggest_image_request_for_slide",

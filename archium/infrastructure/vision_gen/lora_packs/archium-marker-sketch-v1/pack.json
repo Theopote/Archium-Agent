@@ -1,0 +1,22 @@
+{
+  "id": "archium-marker-sketch-v1",
+  "name": "建筑马克笔示意",
+  "version": "1.0.0",
+  "description": "竞赛/概念阶段马克笔感示意 LoRA 预设。权重不随仓库分发，请放入 weights/ 或配置 download_url。",
+  "license": "BYO-weights",
+  "base_model": "sd15",
+  "recommended_checkpoint": "",
+  "publisher": "Archium",
+  "styles": ["marker_sketch", "competition_concept_sketch", "sketch_note"],
+  "image_types": ["concept_sketch", "sketch_note", "presentation_illustration"],
+  "loras": [
+    {
+      "id": "marker_primary",
+      "filename": "arch_marker_sketch.safetensors",
+      "role": "primary",
+      "default_strength_model": 0.82,
+      "default_strength_clip": 0.75,
+      "notes": "Place the safetensors file under weights/ before install_to_comfy."
+    }
+  ]
+}

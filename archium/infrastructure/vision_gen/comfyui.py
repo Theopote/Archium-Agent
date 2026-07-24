@@ -382,7 +382,21 @@ class ComfyUiVisionImageGenerator:
         denoise: float,
         image: str,
     ) -> dict[str, Any]:
+        from archium.application.visual.vision.lora_pack_service import VisionLoraPackService
         from archium.infrastructure.vision_gen.comfyui_workflows import placeholder_values
+
+        lora_name = (self._settings.vision_comfyui_lora or "").strip()
+        lora_strength_model = self._settings.vision_comfyui_lora_strength_model
+        lora_strength_clip = self._settings.vision_comfyui_lora_strength_clip
+        try:
+            active = VisionLoraPackService(self._settings).resolve_active_lora()
+        except Exception as exc:  # pragma: no cover - pack misconfig
+            logger.warning("LoRA pack resolve failed: %s", exc)
+            active = None
+        if active is not None:
+            lora_name = active.filename
+            lora_strength_model = active.strength_model
+            lora_strength_clip = active.strength_clip
 
         return placeholder_values(
             prompt=spec.prompt[:3500],
@@ -397,9 +411,9 @@ class ComfyUiVisionImageGenerator:
             image=image,
             sampler=self._settings.vision_comfyui_sampler,
             scheduler=self._settings.vision_comfyui_scheduler,
-            lora_name=(self._settings.vision_comfyui_lora or "").strip(),
-            lora_strength_model=self._settings.vision_comfyui_lora_strength_model,
-            lora_strength_clip=self._settings.vision_comfyui_lora_strength_clip,
+            lora_name=lora_name,
+            lora_strength_model=lora_strength_model,
+            lora_strength_clip=lora_strength_clip,
         )
 
     def _run_workflow(self, workflow: dict[str, Any]) -> GeneratedImageBytes:
