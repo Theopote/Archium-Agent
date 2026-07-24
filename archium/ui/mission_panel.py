@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from uuid import UUID
+
 from archium.application.project_mission_service import MissionPatch, suggest_narrative_mode
 from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
 from archium.domain.enums import (
@@ -190,8 +192,95 @@ def _default_design_intent(mission: ProjectMission) -> DesignIntent:
     return mission.design_intent or DesignIntent()
 
 
-def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: str) -> None:
+def _truncate_statement(statement: str, *, max_chars: int = 160) -> str:
+    text = " ".join(statement.strip().split())
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1].rstrip() + "…"
+
+
+def _render_research_knowledge_preview(project_id: UUID, *, key_prefix: str) -> None:
+    from archium.application.project_knowledge_service import ProjectKnowledgeService
+
+    with get_session() as session:
+        items = ProjectKnowledgeService(session).list_research_knowledge_items(
+            project_id,
+            pending_only=True,
+            limit=5,
+        )
+
+    if not items:
+        return
+
+    st.markdown("**公开研究摘要（待确认）**")
+    for item in items:
+        summary = _truncate_statement(item.statement)
+        st.markdown(f"- {summary}")
+        if item.source_citations:
+            citation = item.source_citations[0]
+            if citation.url:
+                title = citation.source_title or citation.url
+                st.caption(f"来源：{title}")
+        cols = st.columns(2)
+        if cols[0].button("确认", key=f"{key_prefix}_confirm_research_{item.id}"):
+            with get_session() as session:
+                ProjectKnowledgeService(session).confirm_item(item.id)
+                session.commit()
+            st.rerun()
+        if cols[1].button("驳回", key=f"{key_prefix}_reject_research_{item.id}"):
+            with get_session() as session:
+                ProjectKnowledgeService(session).reject_item(item.id)
+                session.commit()
+            st.rerun()
+
+
+def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: str) -> None:
+    from archium.application.mission_research_enrichment_service import (
+        MissionResearchEnrichmentService,
+    )
+    from archium.infrastructure.llm.factory import create_llm_provider
+    from archium.ui.llm_settings import get_ui_effective_settings
+
+    settings = get_ui_effective_settings()
+    with get_session() as session:
+        pending = MissionResearchEnrichmentService(
+            session,
+            create_llm_provider(settings) if settings.llm_configured else None,
+            settings=settings,
+        ).list_pending_items(mission.id)
+
+    if not pending:
+        return
+
+    st.caption(f"已有 {len(pending)} 条已确认研究可写回任务理解。")
+    if st.button(
+        f"写回任务理解（{len(pending)} 条）",
+        key=f"{key_prefix}_enrich_mission_research",
+        use_container_width=True,
+    ):
+        try:
+            with get_session() as session:
+                service = MissionResearchEnrichmentService(
+                    session,
+                    create_llm_provider(settings) if settings.llm_configured else None,
+                    settings=settings,
+                )
+                result = service.enrich_mission(mission.id)
+                session.commit()
+            mode = "AI 整合" if result.used_llm else "追加"
+            st.success(f"已将 {result.items_enriched} 条公开研究写回任务理解（{mode}）。")
+            for warning in result.warnings:
+                st.warning(warning)
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+
+def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: str) -> None:
     from archium.application.autonomous_research_service import AutonomousResearchService
+    from archium.application.research_topics import collect_mission_research_topics
     from archium.application.web_research_settings_service import (
         WebResearchSettingsService,
         apply_web_research_preferences,
@@ -201,14 +290,18 @@ def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: s
     from archium.ui.llm_settings import get_ui_effective_settings
     from archium.ui.web_research_settings import session_tavily_api_key, tavily_credential_status
 
-    topics = list(mission.research_questions)
-    if mission.design_intent is not None:
-        topics.extend(mission.design_intent.research_needed)
-    topics = [item.strip() for item in topics if item.strip()]
+    topics = collect_mission_research_topics(mission)
     if not topics:
         return
 
-    st.caption("待研究项可在资料面板确认后 enrich 任务理解与汇报。")
+    st.markdown("**待研究项**")
+    for topic in topics:
+        st.markdown(f"- {topic}")
+
+    _render_research_knowledge_preview(mission.project_id, key_prefix=key_prefix)
+    _render_research_enrichment_action(mission, key_prefix=key_prefix)
+
+    st.caption("确认后的公开资料可 enrich 任务理解与汇报；完整列表见工作台「资料与事实」。")
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
         st.warning("配置 LLM 后可启动自主研究。")
@@ -250,7 +343,7 @@ def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: s
                 result = service.research_for_mission(mission.id)
                 session.commit()
             st.success(
-                f"已生成 {len(result.items)} 条公开研究摘要，请在资料/知识面板确认。"
+                f"已生成 {len(result.items)} 条公开研究摘要。"
                 + (
                     f"（联网检索 {result.search_hit_count} 条，来源：{result.search_provider}）"
                     if result.search_hit_count and result.search_provider
@@ -259,6 +352,7 @@ def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: s
             )
             for warning in result.warnings:
                 st.warning(warning)
+            st.rerun()
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
@@ -272,14 +366,24 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
     st.caption("可纠正 AI 对任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
 
     intent = _default_design_intent(mission)
-    if mission.design_intent is not None or intent.theme or intent.problem_statement:
+    from archium.application.research_topics import collect_mission_research_topics
+
+    research_topics = collect_mission_research_topics(mission)
+    has_design_block = (
+        mission.design_intent is not None or intent.theme or intent.problem_statement
+    )
+    if has_design_block:
         with st.expander("设计使命", expanded=mission.design_intent is not None):
             st.caption("概念探索的核心：问题、社会文化语境、目标体验与待研究项。")
             if intent.working_assumptions:
                 st.markdown("**工作假设（待确认）**")
                 for item in intent.working_assumptions:
                     st.markdown(f"- {item}")
-            _render_autonomous_research_action(mission, key_prefix=key_prefix)
+            if research_topics:
+                _render_autonomous_research_section(mission, key_prefix=key_prefix)
+    elif research_topics:
+        with st.expander("自主研究", expanded=True):
+            _render_autonomous_research_section(mission, key_prefix=key_prefix)
 
     narrative_suggestion = suggest_narrative_mode(mission)
     st.info(

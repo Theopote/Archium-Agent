@@ -158,6 +158,33 @@ class ProjectKnowledgeService:
         """Knowledge items safe for manuscript / design-stage consumption."""
         return self.get_view(project_id).generation_eligible_items
 
+    def list_research_knowledge_items(
+        self,
+        project_id: UUID,
+        *,
+        pending_only: bool = True,
+        limit: int = 5,
+    ) -> list[ProjectKnowledgeItem]:
+        """Return autonomous research items, newest first."""
+        items = [
+            item
+            for item in self._knowledge.list_by_project(project_id)
+            if item.category == "research"
+            and (not pending_only or (not item.is_confirmed and not item.is_rejected))
+        ]
+        items.sort(key=lambda item: item.updated_at, reverse=True)
+        return items[: max(1, limit)]
+
+    def list_confirmed_research_items(self, project_id: UUID) -> list[ProjectKnowledgeItem]:
+        """Return confirmed research knowledge items (including after user confirmation)."""
+        items = [
+            item
+            for item in self._knowledge.list_by_project(project_id)
+            if item.category == "research" and item.is_confirmed
+        ]
+        items.sort(key=lambda item: item.updated_at, reverse=True)
+        return items
+
     def _require_item(self, item_id: UUID) -> ProjectKnowledgeItem:
         item = self._knowledge.get_by_id(item_id)
         if item is None:
