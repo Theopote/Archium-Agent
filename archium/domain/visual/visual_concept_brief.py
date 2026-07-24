@@ -53,3 +53,36 @@ class VisualConceptBrief(IdentifiedModel, TimestampedModel):
         self.status = "failed"
         self.error_message = message
         self.touch()
+
+    def to_prompt_block(self) -> str:
+        """Compact text for Brief / Storyline / Outline generation context."""
+        style = (
+            self.style_preset.value
+            if hasattr(self.style_preset, "value")
+            else str(self.style_preset)
+        )
+        sections: list[str] = [
+            f"视觉简报：{self.title}",
+            f"图类：{self.image_type.value} · 风格：{style}",
+        ]
+        if self.subject.strip():
+            sections.append(f"主体：{self.subject.strip()}")
+        if self.composition_intent.strip():
+            sections.append(f"构图意图：{self.composition_intent.strip()}")
+        if self.atmosphere.strip():
+            sections.append(f"氛围：{self.atmosphere.strip()}")
+        if self.diagram_intent.strip():
+            sections.append(f"图示意图：{self.diagram_intent.strip()}")
+        if self.elements:
+            sections.append(
+                "要素：\n" + "\n".join(f"- {item}" for item in self.elements if item.strip())
+            )
+        if self.avoid:
+            sections.append(
+                "避免：\n" + "\n".join(f"- {item}" for item in self.avoid if item.strip())
+            )
+        if self.compiled_prompt.strip():
+            sections.append(f"编译提示（节选）：{self.compiled_prompt.strip()[:400]}")
+        if self.image_path:
+            sections.append(f"示意路径：{self.image_path}（illustrative only，非现场证据）")
+        return "\n".join(sections)

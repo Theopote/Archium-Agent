@@ -129,6 +129,44 @@ def test_build_presentation_request_includes_concept_direction() -> None:
     assert "半地下拱廊" in request.user_notes
 
 
+def test_build_presentation_request_includes_visual_concept_brief() -> None:
+    from archium.domain.concept_direction import ConceptDirection
+    from archium.domain.enums import ConceptDirectionStatus
+    from archium.domain.visual.vision_generation import ArchitectureImageType
+    from archium.domain.visual.visual_concept_brief import VisualConceptBrief
+
+    mission = _temple_mission()
+    direction = ConceptDirection(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        title="窑洞再生",
+        summary="以窑洞原型转译公共空间",
+        status=ConceptDirectionStatus.SELECTED,
+    )
+    brief = VisualConceptBrief(
+        project_id=mission.project_id,
+        mission_id=mission.id,
+        concept_direction_id=direction.id,
+        title="窑洞氛围示意",
+        composition_intent="侧光穿过拱廊",
+        atmosphere="温润黄土",
+        image_type=ArchitectureImageType.ATMOSPHERE_IMAGE,
+        subject="拱廊氛围",
+        status="ready",
+    )
+
+    request = build_presentation_request(
+        mission,
+        concept_direction=direction,
+        visual_concept_brief=brief,
+    )
+
+    assert "当前概念方向:" in request.user_notes
+    assert "视觉概念简报:" in request.user_notes
+    assert "窑洞氛围示意" in request.user_notes
+    assert "侧光穿过拱廊" in request.user_notes
+
+
 def test_build_presentation_request_field_mapping() -> None:
     mission = _temple_mission()
     deliverable = _presentation_deliverable()

@@ -11,13 +11,15 @@ from archium.application.visual.vision.image_generation_service import (
     VisionImageGenerationService,
 )
 from archium.application.visual.vision.prompt_compiler import VisionPromptCompiler
+from archium.application.visual.vision.visual_concept_brief_intent import (
+    image_request_from_visual_concept_brief,
+)
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.project_mission import ProjectMission
 from archium.domain.visual.vision_generation import (
     ArchitectureImageType,
     ImageRequest,
-    VisionAssetPolicy,
     VisionGenerationContext,
     VisionStylePreset,
 )
@@ -188,22 +190,9 @@ class VisualConceptBriefService:
         )
         return self._briefs.create(brief)
 
-    def _to_image_request(self, brief: VisualConceptBrief) -> ImageRequest:
-        purpose_parts = [
-            brief.composition_intent,
-            brief.atmosphere,
-            brief.diagram_intent,
-        ]
-        purpose = " ".join(part for part in purpose_parts if part).strip()[:500]
-        return ImageRequest(
-            image_type=brief.image_type,
-            subject=brief.subject or brief.title,
-            purpose=purpose or "concept visual exploration",
-            style=brief.style_preset,
-            elements=list(brief.elements),
-            avoid=list(brief.avoid),
-            asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
-        )
+    @staticmethod
+    def _to_image_request(brief: VisualConceptBrief) -> ImageRequest:
+        return image_request_from_visual_concept_brief(brief)
 
     def _to_context(
         self,

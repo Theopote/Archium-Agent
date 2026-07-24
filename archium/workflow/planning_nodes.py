@@ -702,9 +702,14 @@ class PlanningWorkflowNodes:
         workstreams = list(state.get("workstreams") or [])
         from archium.application.mission_context_bridge import (
             resolve_selected_concept_direction,
+            resolve_visual_concept_brief_for_mission,
         )
 
         concept_direction = resolve_selected_concept_direction(
+            self._runtime.session,
+            mission.id,
+        )
+        visual_concept_brief = resolve_visual_concept_brief_for_mission(
             self._runtime.session,
             mission.id,
         )
@@ -715,6 +720,7 @@ class PlanningWorkflowNodes:
                 plan,
                 workstreams=workstreams,
                 concept_direction=concept_direction,
+                visual_concept_brief=visual_concept_brief,
             )
             if plan is not None
             else []

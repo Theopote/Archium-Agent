@@ -309,6 +309,7 @@ def _build_mission_planning_snapshot(
         from archium.application.deliverable_execution import DeliverableExecutionRouter
         from archium.application.mission_context_bridge import (
             resolve_selected_concept_direction,
+            resolve_visual_concept_brief_for_mission,
         )
 
         artifact_execution_plans = [
@@ -318,6 +319,9 @@ def _build_mission_planning_snapshot(
                 plan,
                 workstreams=workstreams,
                 concept_direction=resolve_selected_concept_direction(session, mission_id),
+                visual_concept_brief=resolve_visual_concept_brief_for_mission(
+                    session, mission_id
+                ),
             )
         ]
 

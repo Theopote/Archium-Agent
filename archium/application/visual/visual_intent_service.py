@@ -228,16 +228,34 @@ class VisualIntentService:
         if design_brief is not None and design_brief.status in _USABLE_BRIEF_STATUSES:
             intent = apply_design_brief_to_intent(intent, design_brief)
         if intent.image_request is None:
+            from archium.application.mission_context_bridge import (
+                resolve_visual_concept_brief_for_presentation,
+            )
             from archium.application.visual.vision.intent_suggester import (
                 suggest_image_request_for_slide,
             )
-
-            suggested = suggest_image_request_for_slide(
-                slide,
-                page_archetype=getattr(intent, "page_archetype", None) or recognition.archetype,
+            from archium.application.visual.vision.visual_concept_brief_intent import (
+                apply_visual_concept_brief_to_intent,
+                visual_concept_brief_applies,
             )
-            if suggested is not None:
-                intent = intent.model_copy(update={"image_request": suggested})
+
+            archetype = getattr(intent, "page_archetype", None) or recognition.archetype
+            if (
+                slide.presentation_id is not None
+                and visual_concept_brief_applies(page_archetype=archetype)
+            ):
+                concept_brief = resolve_visual_concept_brief_for_presentation(
+                    self._session, slide.presentation_id
+                )
+                if concept_brief is not None:
+                    intent = apply_visual_concept_brief_to_intent(intent, concept_brief)
+            if intent.image_request is None:
+                suggested = suggest_image_request_for_slide(
+                    slide,
+                    page_archetype=archetype,
+                )
+                if suggested is not None:
+                    intent = intent.model_copy(update={"image_request": suggested})
         return self._intents.save(intent)
 
     @staticmethod

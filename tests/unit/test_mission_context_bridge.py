@@ -9,16 +9,20 @@ from archium.application.mission_context_bridge import (
     merge_concept_direction_context,
     merge_design_intent_context,
     merge_mission_project_context,
+    merge_visual_concept_brief_context,
 )
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import ConceptDirectionStatus, ProjectOriginMode
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.project import Project
 from archium.domain.project_mission import ProjectMission
+from archium.domain.visual.vision_generation import ArchitectureImageType
+from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
     ConceptDirectionRepository,
     ProjectRepository,
+    VisualConceptBriefRepository,
 )
 
 
@@ -112,3 +116,62 @@ def test_enrich_mission_generation_context_includes_selected_direction(
     assert "【当前概念方向】" in enriched
     assert "台地聚落" in enriched
     assert "分散院落" in enriched
+
+
+def test_enrich_includes_visual_concept_brief_for_selected_direction(db_session) -> None:
+    project = ProjectRepository(db_session).create(
+        Project(name="视觉注入", origin_mode=ProjectOriginMode.CONCEPT_EXPLORATION)
+    )
+    mission = MissionRepository(db_session).save_mission(
+        ProjectMission(
+            project_id=project.id,
+            title="文化中心",
+            task_statement="探索概念",
+            design_intent=DesignIntent(theme="初稿主题"),
+        )
+    )
+    direction = ConceptDirectionRepository(db_session).create(
+        ConceptDirection(
+            project_id=project.id,
+            mission_id=mission.id,
+            title="窑洞再生",
+            summary="窑洞原型转译",
+            theme="窑洞当代化",
+            status=ConceptDirectionStatus.SELECTED,
+        )
+    )
+    VisualConceptBriefRepository(db_session).create(
+        VisualConceptBrief(
+            project_id=project.id,
+            mission_id=mission.id,
+            concept_direction_id=direction.id,
+            title="窑洞拱廊草图",
+            composition_intent="低视角看向连续拱廊",
+            atmosphere="黄土色温",
+            image_type=ArchitectureImageType.CONCEPT_SKETCH,
+            subject="入口拱廊",
+            status="ready",
+            compiled_prompt="Architectural visualization of cave-dwelling arches",
+        )
+    )
+    db_session.commit()
+
+    enriched = enrich_mission_generation_context(db_session, "资料摘要", mission)
+    assert "【当前概念方向】" in enriched
+    assert "【视觉概念简报】" in enriched
+    assert "窑洞拱廊草图" in enriched
+    assert "低视角看向连续拱廊" in enriched
+
+    with_brief = merge_visual_concept_brief_context(
+        "base",
+        VisualConceptBrief(
+            project_id=project.id,
+            mission_id=mission.id,
+            concept_direction_id=direction.id,
+            title="仅测试",
+            composition_intent="中景",
+            subject="主体",
+        ),
+    )
+    assert "【视觉概念简报】" in with_brief
+    assert "仅测试" in with_brief

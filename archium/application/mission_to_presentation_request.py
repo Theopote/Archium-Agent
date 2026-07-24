@@ -8,6 +8,7 @@ from uuid import UUID
 
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import DeliverableType, PresentationType, ServiceDepth, TaskNature
 from archium.domain.project_mission import ProjectMission
@@ -75,6 +76,7 @@ def build_presentation_request(
     workstreams: list[Workstream] | None = None,
     user_overrides: PresentationOverrides | None = None,
     concept_direction: ConceptDirection | None = None,
+    visual_concept_brief: VisualConceptBrief | None = None,
 ) -> PresentationRequest:
     """Map mission (+ optional presentation deliverable) to PresentationRequest.
 
@@ -125,6 +127,7 @@ def build_presentation_request(
         workstreams or [],
         primary,
         concept_direction=concept_direction,
+        visual_concept_brief=visual_concept_brief,
     )
     presentation_type = infer_presentation_type(mission, primary)
     slide_count, duration = _infer_length(primary)
@@ -157,6 +160,7 @@ def build_presentation_bridge(
     workstreams: list[Workstream] | None = None,
     user_overrides: PresentationOverrides | None = None,
     concept_direction: ConceptDirection | None = None,
+    visual_concept_brief: VisualConceptBrief | None = None,
 ) -> MissionPresentationBridge:
     """Build PresentationRequest only for PRESENTATION deliverables.
 
@@ -175,6 +179,7 @@ def build_presentation_bridge(
             deliverable_id=deliverable_id,
             user_overrides=user_overrides,
             concept_direction=concept_direction,
+            visual_concept_brief=visual_concept_brief,
         )
         assert execution.presentation_request is not None
         return MissionPresentationBridge(
@@ -202,6 +207,7 @@ def build_presentation_bridge(
         workstreams=workstreams,
         user_overrides=user_overrides,
         concept_direction=concept_direction,
+        visual_concept_brief=visual_concept_brief,
     )
     return MissionPresentationBridge(
         request=request,
@@ -369,6 +375,7 @@ def _build_user_notes(
     deliverable: PlannedDeliverable | None,
     *,
     concept_direction: ConceptDirection | None = None,
+    visual_concept_brief: VisualConceptBrief | None = None,
 ) -> str:
     sections: list[str] = []
 
@@ -381,6 +388,11 @@ def _build_user_notes(
         block = concept_direction.to_prompt_block()
         if block.strip():
             sections.append("当前概念方向:\n" + block)
+
+    if visual_concept_brief is not None:
+        block = visual_concept_brief.to_prompt_block()
+        if block.strip():
+            sections.append("视觉概念简报:\n" + block)
 
     if mission.project_context.strip():
         sections.append("项目语境:\n" + mission.project_context.strip())

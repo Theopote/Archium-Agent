@@ -541,6 +541,7 @@ class PlanningWorkflowService:
         workstreams = missions.list_workstreams(mission_id)
         from archium.application.mission_context_bridge import (
             resolve_selected_concept_direction,
+            resolve_visual_concept_brief_for_mission,
         )
 
         return build_presentation_bridge(
@@ -549,6 +550,9 @@ class PlanningWorkflowService:
             workstreams=workstreams,
             user_overrides=user_overrides,
             concept_direction=resolve_selected_concept_direction(self._session, mission_id),
+            visual_concept_brief=resolve_visual_concept_brief_for_mission(
+                self._session, mission_id
+            ),
         )
 
     def build_presentation_request_for_mission(
@@ -571,6 +575,7 @@ class PlanningWorkflowService:
         workstreams = missions.list_workstreams(mission_id)
         from archium.application.mission_context_bridge import (
             resolve_selected_concept_direction,
+            resolve_visual_concept_brief_for_mission,
         )
 
         return build_presentation_bridge(
@@ -580,6 +585,9 @@ class PlanningWorkflowService:
             deliverable_id=deliverable_id,
             user_overrides=user_overrides,
             concept_direction=resolve_selected_concept_direction(self._session, mission_id),
+            visual_concept_brief=resolve_visual_concept_brief_for_mission(
+                self._session, mission_id
+            ),
         )
 
     def _require_planning_run(self, workflow_run_id: UUID) -> WorkflowRun:
