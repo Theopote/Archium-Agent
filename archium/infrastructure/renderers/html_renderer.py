@@ -6,8 +6,10 @@ import html
 from pathlib import Path
 from urllib.parse import quote
 
-from archium.application.visual.scene_fonts import (
+from archium.domain.visual.font_names import (
     DEFAULT_CJK_FONT,
+)
+from archium.domain.visual.scene_fonts import (
     css_font_stack,
 )
 from archium.domain.visual.render_scene import (

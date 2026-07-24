@@ -10,7 +10,7 @@ from uuid import UUID
 from pydantic import Field
 from sqlalchemy.orm import Session
 
-from archium.agents._helpers import build_project_context, to_json
+from archium.application._helpers import build_project_context, to_json
 from archium.application.fact_ledger_service import FactLedgerService
 from archium.application.mission_history_service import MissionHistoryService
 from archium.application.mission_lineage import apply_mission_lineage

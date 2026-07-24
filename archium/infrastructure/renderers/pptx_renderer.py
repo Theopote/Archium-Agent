@@ -163,7 +163,7 @@ class PptxRenderer:
         *,
         project_id: UUID | None,
     ) -> RenderScene:
-        from archium.application.visual.asset_path_resolver import (
+        from archium.infrastructure.storage.asset_path_resolver import (
             AssetPathResolveContext,
             AssetPathResolver,
         )

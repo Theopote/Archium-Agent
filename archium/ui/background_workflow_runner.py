@@ -95,7 +95,7 @@ def _resolve_settings(settings: Settings | None) -> Settings:
     except (ImportError, RuntimeError):
         # Streamlit not available or not in Streamlit context
         pass
-    from archium.config.llm_config import get_effective_settings
+    from archium.application.llm_settings_resolver import get_effective_settings
 
     return get_effective_settings()
 

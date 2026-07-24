@@ -146,7 +146,7 @@ def content_from_slide(
     source_text: str | None = None,
 ) -> LayoutContentBundle:
     """Build a content bundle from SlideSpec + VisualIntent asset refs."""
-    from archium.application.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
+    from archium.domain.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
 
     hero = (
         str(visual_intent.hero_asset_id)

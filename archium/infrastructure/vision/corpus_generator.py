@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from archium.application.visual_qa_calibration import CORPUS_CATEGORY_TARGETS
+from archium.infrastructure.vision.corpus_targets import CORPUS_CATEGORY_TARGETS
 
 try:
     from PIL import Image, ImageDraw, ImageFilter

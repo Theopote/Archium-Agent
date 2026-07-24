@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents._helpers import to_json
+from archium.application._helpers import to_json
 from archium.application.deliverable_parser import (
     parse_deliverable_plan_draft,
     validate_deliverable_plan_draft,

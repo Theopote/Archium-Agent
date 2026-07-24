@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections import Counter
 from uuid import UUID, uuid4
 
-from archium.agents._helpers import sanitize_slide_message
+from archium.application._helpers import sanitize_slide_message
 from archium.application.slide_repair_policy import loses_protected_content
-from archium.application.slide_split_planner import (
-    _allocate_citations,
-    _allocate_visuals,
+from archium.application.slide_split_allocators import (
+    allocate_citations,
+    allocate_visuals,
 )
 from archium.application.slide_split_validator import validate_split_plan
 from archium.config.settings import Settings, get_settings
@@ -238,14 +238,14 @@ def _apply_llm_resource_indices(
                 and index not in draft.continuation.citation_indices
             ]
             if unassigned:
-                source_citations, continuation_citations, citation_mapping = _allocate_citations(
+                source_citations, continuation_citations, citation_mapping = allocate_citations(
                     original,
                     source.model_copy(update={"source_citations": source_citations}),
                     continuation.model_copy(update={"source_citations": continuation_citations}),
                     draft.continuation.key_points,
                 )
         else:
-            source_citations, continuation_citations, citation_mapping = _allocate_citations(
+            source_citations, continuation_citations, citation_mapping = allocate_citations(
                 original,
                 source,
                 continuation,
@@ -273,14 +273,14 @@ def _apply_llm_resource_indices(
                 and index not in draft.continuation.visual_indices
             ]
             if unassigned:
-                source_visuals, continuation_visuals, asset_mapping = _allocate_visuals(
+                source_visuals, continuation_visuals, asset_mapping = allocate_visuals(
                     original,
                     source,
                     continuation,
                     draft.continuation.key_points,
                 )
         else:
-            source_visuals, continuation_visuals, asset_mapping = _allocate_visuals(
+            source_visuals, continuation_visuals, asset_mapping = allocate_visuals(
                 original,
                 source,
                 continuation,

@@ -91,7 +91,7 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
             gap_y=spacing.md,
         )
         metric_ids: list[str] = []
-        from archium.application.visual.icon_usage import filter_icon_refs
+        from archium.domain.visual.icon_usage import filter_icon_refs
 
         icon_refs = filter_icon_refs(
             list(getattr(context.content, "icon_refs", []) or []),

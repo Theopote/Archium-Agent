@@ -18,8 +18,8 @@ from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Emu
 
-from archium.application.visual.drawing_inference_service import DrawingInferenceService
-from archium.application.visual.placeholder_binding_normalize import (
+from archium.domain.visual.drawing_inference import DrawingInferenceService
+from archium.domain.visual.placeholder_binding_normalize import (
     build_placeholder_binding_signature,
 )
 from archium.domain.visual.reference_slide import (
@@ -568,7 +568,7 @@ class ReferencePptxParser:
 
         _mark_repeated_elements(slides)
 
-        from archium.application.visual.induction_screenshot_embedding import (
+        from archium.infrastructure.vision.induction_screenshot_embedding import (
             enrich_slide_screenshot_embeddings,
         )
 

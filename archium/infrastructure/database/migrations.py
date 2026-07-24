@@ -29,7 +29,7 @@ def get_current_revision(engine: Engine | None = None) -> str | None:
     """Get the current database revision."""
     from sqlalchemy import text
 
-    from archium.infrastructure.database.session import get_engine
+    from archium.infrastructure.database.engine import get_engine
 
     target = engine or get_engine()
     with target.connect() as conn:

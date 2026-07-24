@@ -383,7 +383,7 @@ class ComfyUiVisionImageGenerator:
         denoise: float,
         image: str,
     ) -> dict[str, Any]:
-        from archium.application.visual.vision.lora_pack_service import VisionLoraPackService
+        from archium.infrastructure.vision_gen.lora_packs.service import VisionLoraPackService
         from archium.infrastructure.vision_gen.comfyui_workflows import placeholder_values
 
         lora_name = (self._settings.vision_comfyui_lora or "").strip()

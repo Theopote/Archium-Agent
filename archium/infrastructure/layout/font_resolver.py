@@ -8,30 +8,19 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Protocol, cast
 
+from archium.domain.visual.font_names import (
+    CJK_FALLBACK_CHAIN,
+    DEFAULT_CJK_FONT,
+    DEFAULT_LATIN_FONT,
+    LATIN_FALLBACK_CHAIN,
+)
+
 try:
     from PIL import ImageFont
 except ImportError:  # pragma: no cover - optional until documents/full extra installed
     ImageFont = None  # type: ignore[assignment]
 
 _FONT_ROOT = Path(__file__).resolve().parent / "fonts"
-
-# Shared with scene_fonts / FontManifest — keep names identical for PPTX + measurement.
-DEFAULT_CJK_FONT = "Microsoft YaHei"
-DEFAULT_LATIN_FONT = "Arial"
-CJK_FALLBACK_CHAIN: tuple[str, ...] = (
-    DEFAULT_CJK_FONT,
-    "PingFang SC",
-    "Noto Sans SC",
-    "Source Han Sans SC",
-    "SimHei",
-    "WenQuanYi Micro Hei",
-)
-LATIN_FALLBACK_CHAIN: tuple[str, ...] = (
-    DEFAULT_LATIN_FONT,
-    "Helvetica",
-    "Liberation Sans",
-    "DejaVu Sans",
-)
 
 
 class TruetypeFont(Protocol):

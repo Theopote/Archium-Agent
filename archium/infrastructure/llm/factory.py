@@ -20,7 +20,7 @@ def _resolve_provider_settings(settings: Settings | None) -> Settings:
             return get_ui_effective_settings()
     except Exception:
         pass
-    from archium.config.llm_config import get_effective_settings
+    from archium.application.llm_settings_resolver import get_effective_settings
 
     return get_effective_settings()
 

@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from PIL import Image as PILImage
 
-from archium.application.visual.scene_fonts import (
+from archium.domain.visual.font_names import (
     CJK_FALLBACK_CHAIN,
     LATIN_FALLBACK_CHAIN,
+)
+from archium.domain.visual.scene_fonts import (
     text_has_cjk,
 )
 from archium.domain.visual.render_scene import (
@@ -220,7 +222,7 @@ class PngRenderer:
     ) -> PILImage.Image:
         from PIL import Image
 
-        from archium.application.visual.svg_icon_recolor import recolor_icon_svg_text
+        from archium.infrastructure.renderers.svg_icon_recolor import recolor_icon_svg_text
 
         resolved = self._resolve_existing_asset_path(str(path))
         if resolved is not None:

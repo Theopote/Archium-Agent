@@ -6,12 +6,14 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from archium.application.visual.scene_fonts import (
+from archium.domain.visual.font_names import (
     DEFAULT_CJK_FONT,
-    detect_font_fallbacks,
+)
+from archium.domain.visual.scene_fonts import (
     text_has_cjk,
 )
-from archium.application.visual.svg_icon_recolor import materialize_recolored_icon
+from archium.infrastructure.layout.scene_fonts import detect_font_fallbacks
+from archium.infrastructure.renderers.svg_icon_recolor import materialize_recolored_icon
 from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.pptx_structure import (
     PptxStructureMode,

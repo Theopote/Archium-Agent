@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from archium.config.llm_config import get_effective_settings
+from archium.application.llm_settings_resolver import get_effective_settings
 from archium.config.settings import Settings
 
 

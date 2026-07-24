@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from archium.config.llm_config import get_effective_settings
+from archium.application.llm_settings_resolver import get_effective_settings
 from archium.config.settings import Settings
 from archium.domain.llm_profile import LLMProfile
 from archium.infrastructure.credentials.resolver import resolve_llm_api_key
@@ -83,9 +83,12 @@ def test_get_effective_settings_loads_profile_from_database() -> None:
     store = MagicMock()
     store.get.return_value = "stored-key"
 
-    with patch("archium.config.llm_config.get_session") as mock_get_session:
+    with patch("archium.application.llm_settings_resolver.get_session") as mock_get_session:
         mock_get_session.return_value.__enter__.return_value = MagicMock()
-        with patch("archium.config.llm_config.LLMProfileService", return_value=mock_service):
+        with patch(
+            "archium.application.llm_settings_resolver.LLMProfileService",
+            return_value=mock_service,
+        ):
             effective = get_effective_settings(
                 base_settings=base,
                 credential_store=store,

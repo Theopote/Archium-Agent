@@ -12,7 +12,7 @@ import argparse
 import json
 import sys
 
-from archium.application.visual.vision.lora_pack_service import VisionLoraPackService
+from archium.infrastructure.vision_gen.lora_packs.service import VisionLoraPackService
 from archium.config.settings import get_settings
 
 

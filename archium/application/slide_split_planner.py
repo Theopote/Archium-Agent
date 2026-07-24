@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from archium.application.slide_repair_policy import contains_protected_signal
+from archium.application.slide_split_allocators import allocate_citations, allocate_visuals
 from archium.application.slide_split_validator import validate_split_plan
 from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.slide import SlideSpec, build_slide_logical_key
-from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan, citation_key
+from archium.domain.slide_split import GENERIC_CONTINUATION_MESSAGE, SlideSplitPlan
 from archium.infrastructure.llm.base import LLMProvider
 
 _STRATEGY_RE = re.compile(r"(?:策略|方案|措施|步骤|举措|路径)")
@@ -43,77 +44,6 @@ def derive_continuation_message(moved_points: list[str]) -> str:
     if contains_protected_signal(moved_text):
         return moved_points[0]
     return GENERIC_CONTINUATION_MESSAGE
-
-
-def _allocate_citations(
-    original: SlideSpec,
-    source: SlideSpec,
-    continuation: SlideSpec,
-    moved_points: list[str],
-) -> tuple[list, list, dict[str, UUID]]:
-    if not original.source_citations:
-        return list(source.source_citations), list(continuation.source_citations), {}
-
-    moved_text = " ".join(moved_points)
-    source_evidence = " ".join(source.key_points)
-    source_text = " ".join([source.message, *source.key_points])
-    mapping: dict[str, UUID] = {}
-    source_citations = []
-    continuation_citations = []
-
-    for index, citation in enumerate(original.source_citations):
-        key = citation_key(citation.document_id, citation.chunk_id, index)
-        quote = citation.quote or ""
-        quote_in_moved = bool(quote and quote in moved_text)
-        quote_in_source = bool(quote and quote in source_text)
-        moved_has_protected = contains_protected_signal(moved_text)
-        source_has_protected = contains_protected_signal(source_evidence)
-
-        if quote_in_moved or (moved_has_protected and not source_has_protected and not quote_in_source):
-            continuation_citations.append(citation)
-            mapping[key] = continuation.id
-        elif quote_in_source or source_has_protected:
-            source_citations.append(citation)
-            mapping[key] = source.id
-        elif moved_has_protected:
-            continuation_citations.append(citation)
-            mapping[key] = continuation.id
-        else:
-            source_citations.append(citation)
-            mapping[key] = source.id
-
-    return source_citations, continuation_citations, mapping
-
-
-def _allocate_visuals(
-    original: SlideSpec,
-    source: SlideSpec,
-    continuation: SlideSpec,
-    moved_points: list[str],
-) -> tuple[list, list, dict[int, UUID]]:
-    if not original.visual_requirements:
-        return [], [], {}
-
-    moved_text = " ".join(moved_points)
-    mapping: dict[int, UUID] = {}
-    visuals = list(original.visual_requirements)
-
-    if len(visuals) == 1:
-        if contains_protected_signal(moved_text):
-            mapping[0] = continuation.id
-            return [], visuals, mapping
-        mapping[0] = source.id
-        return visuals, [], mapping
-
-    split_at = max(1, len(visuals) // 2)
-    if contains_protected_signal(moved_text):
-        for index in range(split_at, len(visuals)):
-            mapping[index] = continuation.id
-        return visuals[:split_at], visuals[split_at:], mapping
-
-    for index, _ in enumerate(visuals):
-        mapping[index] = source.id
-    return visuals, [], mapping
 
 
 def build_split_plan(
@@ -187,13 +117,13 @@ def _build_rule_split_plan(
         status=original.status,
     )
 
-    source_citations, continuation_citations, citation_mapping = _allocate_citations(
+    source_citations, continuation_citations, citation_mapping = allocate_citations(
         original,
         source,
         continuation,
         moved_points,
     )
-    source_visuals, continuation_visuals, asset_mapping = _allocate_visuals(
+    source_visuals, continuation_visuals, asset_mapping = allocate_visuals(
         original,
         source,
         continuation,

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents._helpers import sanitize_slide_message
+from archium.application._helpers import sanitize_slide_message
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.application.slide_context_prompt import format_slide_generation_context
 from archium.application.slide_diff import slide_to_snapshot

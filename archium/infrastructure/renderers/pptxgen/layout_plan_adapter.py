@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from archium.application.visual.icon_stroke_resolve import resolve_icon_stroke_color
-from archium.application.visual.svg_icon_recolor import (
+from archium.domain.visual.icon_stroke_resolve import resolve_icon_stroke_color
+from archium.infrastructure.renderers.svg_icon_recolor import (
     is_architectural_icon_ref,
     materialize_recolored_icon,
 )
-from archium.application.visual.text_style_resolve import resolve_text_style
+from archium.domain.visual.text_style_resolve import resolve_text_style
 from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole

@@ -13,21 +13,13 @@ from archium.domain.review_rules import ReviewRuleCode
 from archium.domain.visual_qa import VisualQAReport
 from archium.infrastructure.vision.analyzer import analyze_image
 from archium.infrastructure.vision.analyzer_version import ANALYZER_VERSION
+from archium.infrastructure.vision.corpus_targets import CORPUS_CATEGORY_TARGETS
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MANIFEST_PATH = _PROJECT_ROOT / "tests/calibration/visual_qa/corpus/manifest.json"
 DEFAULT_REPORT_PATH = (
     _PROJECT_ROOT / "tests/calibration/visual_qa/corpus/calibration_report.json"
 )
-
-CORPUS_CATEGORY_TARGETS: dict[str, int] = {
-    "site_plan": 50,
-    "floor_plan": 50,
-    "section": 30,
-    "elevation": 30,
-    "diagram": 50,
-    "photo": 50,
-}
 
 PRECISION_TARGETS: dict[str, float] = {
     ReviewRuleCode.VISUAL_ASSET_FILE_NOT_FOUND: 0.99,

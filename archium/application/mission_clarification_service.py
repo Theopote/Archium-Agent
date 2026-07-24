@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents._helpers import to_json
+from archium.application._helpers import to_json
 from archium.application.mission_history_service import MissionHistoryService
 from archium.application.mission_parser import parse_mission_draft, validate_mission_draft
 from archium.application.project_mission_service import (
