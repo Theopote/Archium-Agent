@@ -699,6 +699,37 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("UNSPLASH_ACCESS_KEY"),
         description="Unsplash access key (reserved for future provider support).",
     )
+    web_research_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, autonomous research queries the web before LLM synthesis "
+            "and grounds citations in retrieved snippets."
+        ),
+    )
+    web_research_provider: str = Field(
+        default="tavily",
+        description=(
+            "Web research provider: tavily (recommended, requires API key) or "
+            "duckduckgo (no key, HTML fallback)."
+        ),
+    )
+    tavily_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TAVILY_API_KEY"),
+        description="Tavily API key for autonomous web research.",
+    )
+    web_research_max_results: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        description="Maximum web search hits to retrieve per research topic.",
+    )
+    web_research_timeout_seconds: float = Field(
+        default=20.0,
+        gt=0,
+        le=120.0,
+        description="HTTP timeout for web research search requests.",
+    )
 
     @model_validator(mode="after")
     def _validate_chunk_settings(self) -> Settings:

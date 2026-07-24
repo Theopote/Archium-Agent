@@ -190,6 +190,54 @@ def _default_design_intent(mission: ProjectMission) -> DesignIntent:
     return mission.design_intent or DesignIntent()
 
 
+def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: str) -> None:
+    from archium.application.autonomous_research_service import AutonomousResearchService
+    from archium.infrastructure.llm.factory import create_llm_provider
+    from archium.ui.llm_settings import get_ui_effective_settings
+
+    topics = list(mission.research_questions)
+    if mission.design_intent is not None:
+        topics.extend(mission.design_intent.research_needed)
+    topics = [item.strip() for item in topics if item.strip()]
+    if not topics:
+        return
+
+    st.caption("待研究项可在资料面板确认后 enrich 任务理解与汇报。")
+    settings = get_ui_effective_settings()
+    if not settings.llm_configured:
+        st.warning("配置 LLM 后可启动自主研究。")
+        return
+
+    if st.button(
+        "启动自主研究（写入公开资料）",
+        key=f"{key_prefix}_autonomous_research",
+        use_container_width=True,
+    ):
+        try:
+            with get_session() as session:
+                service = AutonomousResearchService(
+                    session,
+                    create_llm_provider(settings),
+                    settings=settings,
+                )
+                result = service.research_for_mission(mission.id)
+                session.commit()
+            st.success(
+                f"已生成 {len(result.items)} 条公开研究摘要，请在资料/知识面板确认。"
+                + (
+                    f"（联网检索 {result.search_hit_count} 条，来源：{result.search_provider}）"
+                    if result.search_hit_count and result.search_provider
+                    else ""
+                )
+            )
+            for warning in result.warnings:
+                st.warning(warning)
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+
 def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission") -> None:
     """Render structured mission understanding with per-field editing."""
     st.markdown("#### 我对任务的理解")
@@ -204,6 +252,7 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
                 st.markdown("**工作假设（待确认）**")
                 for item in intent.working_assumptions:
                     st.markdown(f"- {item}")
+            _render_autonomous_research_action(mission, key_prefix=key_prefix)
 
     narrative_suggestion = suggest_narrative_mode(mission)
     st.info(
