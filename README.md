@@ -75,7 +75,7 @@ archium                            # 启动项目工作台（Streamlit UI）
      → 四层审核 + 视觉 QA → 修复 → JSON / 原生元素 PPTX / PDF
 ```
 
-逻辑角色（Research / Narrative / Architecture / Composition / Layout / Render / Critic）与服务映射见 [`docs/architecture/pipeline-roles.md`](docs/architecture/pipeline-roles.md)——**角色 ≠ Agent 类**。
+逻辑角色固定六席（Research / Planning / Narrative / Visual / Render / Critic）与服务映射见 [`docs/architecture/pipeline-roles.md`](docs/architecture/pipeline-roles.md)——**角色 ≠ Agent 类**；Architecture / Composition / Layout 仅为 Visual 内部阶段，禁止再开编号 Agent。
 
 前置规划说明见 [`docs/project-mission-adaptive-planning.md`](docs/project-mission-adaptive-planning.md)。视觉编排说明见 [`docs/visual/README.md`](docs/visual/README.md)。工作台仍保留直接填 Brief 的快捷路径。
 
@@ -201,7 +201,7 @@ Archium-Agent/
 │   ├── config/settings.py  # pydantic-settings
 │   ├── domain/             # Pydantic 领域模型（含 domain/visual）
 │   ├── application/        # ingestion、presentation、visual、workflow 等
-│   ├── agents/             # Brief / Storyline / Slide 生成 Agent
+│   ├── agents/             # 少量 LLM planner（Narrative/Research）；非多 Agent 运行时
 │   ├── workflow/           # LangGraph（Planning / Presentation / Visual）
 │   ├── ui/                 # Streamlit 页面与服务（含视觉设计）
 │   ├── infrastructure/
