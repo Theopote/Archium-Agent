@@ -193,7 +193,9 @@ def _default_design_intent(mission: ProjectMission) -> DesignIntent:
 def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: str) -> None:
     from archium.application.autonomous_research_service import AutonomousResearchService
     from archium.infrastructure.llm.factory import create_llm_provider
+    from archium.infrastructure.research.web_search.service import WebResearchSearchService
     from archium.ui.llm_settings import get_ui_effective_settings
+    from archium.ui.web_research_settings import session_tavily_api_key, tavily_credential_status
 
     topics = list(mission.research_questions)
     if mission.design_intent is not None:
@@ -208,6 +210,13 @@ def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: s
         st.warning("配置 LLM 后可启动自主研究。")
         return
 
+    tavily_configured, _, _ = tavily_credential_status()
+    if settings.web_research_enabled:
+        if tavily_configured or (settings.tavily_api_key or "").strip():
+            st.caption("联网检索：Tavily")
+        else:
+            st.caption("联网检索：DuckDuckGo（未配置 Tavily，可在设置页配置 API Key）")
+
     if st.button(
         "启动自主研究（写入公开资料）",
         key=f"{key_prefix}_autonomous_research",
@@ -219,6 +228,10 @@ def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: s
                     session,
                     create_llm_provider(settings),
                     settings=settings,
+                    web_research=WebResearchSearchService(
+                        settings,
+                        session_tavily_api_key=session_tavily_api_key(),
+                    ),
                 )
                 result = service.research_for_mission(mission.id)
                 session.commit()

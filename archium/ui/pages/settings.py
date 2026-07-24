@@ -190,6 +190,8 @@ def render() -> None:
     st.divider()
     _render_about()
     st.divider()
+    _render_web_research_settings()
+    st.divider()
     _render_image_search_settings()
 
 
@@ -277,6 +279,79 @@ def _render_about() -> None:
     from archium.ui.branding import render_about_panel
 
     render_about_panel()
+
+
+def _render_web_research_settings() -> None:
+    from archium.config.settings import get_settings
+    from archium.ui.web_research_settings import (
+        delete_tavily_api_key,
+        save_tavily_api_key,
+        tavily_credential_status,
+    )
+
+    st.markdown("### 联网研究")
+    st.caption(
+        "任务理解中的「启动自主研究」会先检索公开网页，再基于真实摘要生成知识条目。"
+        "未配置 Tavily 时自动降级为 DuckDuckGo（无需 Key，稳定性较低）。"
+    )
+
+    base_settings = get_settings()
+    provider_label = {
+        "tavily": "Tavily",
+        "duckduckgo": "DuckDuckGo",
+    }.get(base_settings.web_research_provider.strip().lower(), base_settings.web_research_provider)
+    st.caption(
+        f"当前策略：{'已启用' if base_settings.web_research_enabled else '已禁用'}"
+        f" · 首选 {provider_label}"
+        f" · 每主题最多 {base_settings.web_research_max_results} 条"
+        "（可通过 `.env` 中 `WEB_RESEARCH_*` 调整）"
+    )
+
+    tavily_configured, tavily_masked, tavily_source = tavily_credential_status()
+    tavily_key_input = st.text_input(
+        "Tavily API Key",
+        type="password",
+        placeholder=f"已配置：{tavily_masked}" if tavily_masked else "输入 Tavily API Key",
+        help="在 https://tavily.com 申请。推荐用于自主研究的高质量检索。",
+        key="tavily_api_key_input",
+    )
+    tavily_save_mode = st.radio(
+        "Tavily 密钥保存方式",
+        ["保存到本机安全凭据库", "仅本次会话"],
+        horizontal=True,
+        key="tavily_save_mode",
+    )
+    st.caption(
+        f"Tavily 密钥来源：{_SOURCE_LABELS[tavily_source]}"
+        + (f"（{tavily_masked}）" if tavily_masked else "")
+    )
+
+    save_col, delete_col = st.columns(2)
+    save_clicked = save_col.button("保存联网研究配置", type="primary", use_container_width=True)
+    delete_clicked = delete_col.button("删除 Tavily 密钥", use_container_width=True)
+
+    if save_clicked:
+        if tavily_key_input.strip():
+            save_tavily_api_key(
+                api_key=tavily_key_input.strip(),
+                persist=tavily_save_mode == "保存到本机安全凭据库",
+                session_store=cast(dict[str, object], st.session_state),
+            )
+        st.success("联网研究配置已保存")
+        st.rerun()
+
+    if delete_clicked:
+        delete_tavily_api_key(session_store=cast(dict[str, object], st.session_state))
+        st.warning("已删除 Tavily API Key")
+        st.rerun()
+
+    if tavily_configured:
+        st.info("已配置 Tavily，自主研究将优先使用 Tavily 检索。")
+    elif base_settings.web_research_enabled:
+        st.warning(
+            "尚未配置 Tavily API Key，自主研究将使用 DuckDuckGo 降级检索。"
+            "可在本页配置，或在 `.env` 中设置 `TAVILY_API_KEY`。"
+        )
 
 
 def _render_image_search_settings() -> None:

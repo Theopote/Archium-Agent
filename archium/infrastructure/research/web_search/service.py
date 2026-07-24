@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from archium.config.settings import Settings, get_settings
+from archium.infrastructure.credentials.resolver import resolve_tavily_api_key
 from archium.infrastructure.research.web_search.duckduckgo import DuckDuckGoClient
 from archium.infrastructure.research.web_search.models import WebSearchResult
 from archium.infrastructure.research.web_search.tavily import TavilyClient
@@ -32,9 +33,11 @@ class WebResearchSearchService:
         self,
         settings: Settings | None = None,
         *,
+        session_tavily_api_key: str | None = None,
         providers: list[WebResearchProvider] | None = None,
     ) -> None:
         self._settings = settings or get_settings()
+        self._session_tavily_api_key = session_tavily_api_key
         self._providers = providers
 
     @property
@@ -74,10 +77,13 @@ class WebResearchSearchService:
             return self._providers
 
         timeout = self._settings.web_research_timeout_seconds
-        max_results = self._settings.web_research_max_results
         provider_name = (self._settings.web_research_provider or "tavily").strip().lower()
 
-        tavily_key = (self._settings.tavily_api_key or "").strip()
+        tavily_key, _ = resolve_tavily_api_key(
+            session_api_key=self._session_tavily_api_key,
+            env_api_key=self._settings.tavily_api_key,
+        )
+        tavily_key = (tavily_key or "").strip()
         if provider_name == "tavily" and tavily_key:
             return [
                 _NamedProvider(

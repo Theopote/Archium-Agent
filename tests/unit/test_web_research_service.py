@@ -44,3 +44,17 @@ def test_search_topics_disabled_returns_empty() -> None:
 
     assert hits == []
     assert name is None
+
+
+def test_build_providers_prefers_session_tavily_key() -> None:
+    settings = Settings(
+        web_research_enabled=True,
+        web_research_provider="tavily",
+        tavily_api_key=None,
+    )
+    service = WebResearchSearchService(settings, session_tavily_api_key="session-tvly")
+
+    providers = service._build_providers()
+
+    assert len(providers) == 1
+    assert providers[0].provider_name == "tavily"
