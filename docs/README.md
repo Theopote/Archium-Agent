@@ -24,7 +24,8 @@
 ### 架构与视觉
 
 - [当前系统架构](architecture/current-system.md)：代码目录、主数据流、界面与主要边界的当前快照。
-- [管线角色](architecture/pipeline-roles.md)：逻辑角色与应用服务的映射。
+- [管线角色](architecture/pipeline-roles.md)：逻辑角色与应用服务的映射（六席硬上限）。
+- [Vision Intelligence Layer](architecture/vision-intelligence-layer.md)：建筑语义驱动的概念/图示/氛围生成（Visual 席位；非 Midjourney 套壳）。
 - [视觉编排](visual/README.md)：VisualIntent、LayoutPlan、RenderScene、Studio 编辑与 QA。
 - [配置参考](configuration-reference.md)：由 `Settings` 自动生成，禁止手工修改。
 

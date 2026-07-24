@@ -98,7 +98,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 
 ## 文档分层
 
-- 现行入口：`README.md`、`docs/README.md`、`docs/architecture/current-system.md`、Studio / Visual 指南。
+- 现行入口：`README.md`、`docs/README.md`、`docs/architecture/current-system.md`、Studio / Visual 指南、[`vision-intelligence-layer.md`](vision-intelligence-layer.md)（战略：建筑语义生图）。
 - 过程性会话与 `COMPLETE_*` / `FINAL_*` / `SESSION_SUMMARY_*` 归档到 `.dev-notes/docs-history/`，不进入产品导航。
 - 配置事实源为 `Settings` + 生成脚本；禁止手改 `docs/configuration-reference.md` / `.env.example`。
 

@@ -57,7 +57,7 @@ flowchart LR
 | **Research** | 事实、资料、来源、可引用证据 | `Fact`、资料片段、`PresentationManuscript`、`Citation` | Service + ingestion workflow |
 | **Planning** | 任务澄清、工作路径、成果选择 | `Mission`、`PlanningSession`、`DeliverablePlan` | `planning_workflow_service` 等 |
 | **Narrative** | 大纲、故事线、章节节奏、页级意图 | `Brief`、`Storyline`、`OutlinePlan`、`SlideSpec` | 少量 `*Planner` + `presentation_service` |
-| **Visual** | 专业语义 + deck 节奏 + 单页几何 + 图片管线 | Schema / `VisualIntent` / `LayoutPlan` / Scene 结构 | `application/visual/*`（**非**新 Agent） |
+| **Visual** | 专业语义 + deck 节奏 + 单页几何 + 图片管线 + **Vision Engine（概念/图示/氛围生成）** | Schema / `VisualIntent` / `LayoutPlan` / Scene / `ai_generated` Asset | `application/visual/*`（**非**新 Agent） |
 | **Render** | 可打开的输出文件与场景实例化 | PPTX / PDF / PNG | PptxGen execute-only、scene compiler |
 | **Critic** | 发现**具体问题**（可修复项），非泛泛打分 | `ReviewFinding`、`LayoutIssue`、`VisualCritique` | `application/review/*`（与 Repair 分离授权） |
 
@@ -155,6 +155,11 @@ flowchart LR
 | WorkflowStep | `VISUAL_GENERATE_LAYOUT_CANDIDATES`、`VISUAL_SELECT_LAYOUTS`、… |
 
 **输出契约**：`LayoutPlan` / Scene 结构节点；项目内容来自 `SlideSpec`。
+
+#### 4d. Vision Engine（战略缺口 → 见专章）
+
+创造概念图 / 分析示意 / 氛围图 / 手绘感插图，经 Prompt Compiler → 可插拔 Image API → Asset（`ai_generated`）→ Studio/Layout。  
+**不是** Midjourney 套壳；证据槽默认禁止生成图冒充现场。详见 [`vision-intelligence-layer.md`](vision-intelligence-layer.md)。
 
 ---
 

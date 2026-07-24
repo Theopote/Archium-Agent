@@ -17,7 +17,7 @@ Forbidden examples: `ArchitectureAgent2`, `VisualAgent3`, `LayoutAgent4`,
 | **Research** | Facts, sources, citations — not rhetoric |
 | **Planning** | Mission / deliverables / workstreams — not slide geometry |
 | **Narrative** | Outline, storyline, page intent / `SlideSpec` |
-| **Visual** | Intent, composition, layout, grammar, image treatment (services) |
+| **Visual** | Intent, composition, layout, grammar, image treatment, **vision generation (concept/diagram/atmosphere)** |
 | **Render** | Execute approved scene → PPTX/PDF/PNG (no re-planning) |
 | **Critic** | Actionable findings only — does not silently rewrite the deck |
 

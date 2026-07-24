@@ -8,6 +8,7 @@
 |------|------|
 | [Studio User Guide](../studio-user-guide.md) | **汇报工作室** — 主编辑界面（浏览 / NL 编辑 / 导出） |
 | [Architecture](architecture.md) | 分层、数据流、工作流与边界 |
+| [Vision Intelligence Layer](../architecture/vision-intelligence-layer.md) | **战略缺口**：概念/图示/氛围生成（Visual 席位；非 Midjourney 套壳） |
 | [Design System](design-system.md) | DesignSystem 令牌与默认预设 |
 | [Layout Families](layout-families.md) | 10 个版式族、变体与 generator |
 | [Renderer](renderer.md) | LayoutPlan → PptxGenJS 执行路径 |
@@ -17,9 +18,10 @@
 
 ```
 SlideSpec → VisualIntent → ArtDirection → LayoutPlan → Validate/Repair → Render
+         ↘（战略规划）Vision Engine → ai_generated Asset → Studio / 非证据槽
 ```
 
-LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 生成**。Renderer **执行** LayoutPlan，不重新决定版式。
+LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 生成**。Renderer **执行** LayoutPlan，不重新决定版式。概念/分析示意生成见 [Vision Intelligence Layer](../architecture/vision-intelligence-layer.md)（未在当前 Visual Quality 冲刺内收口）。
 
 ## Round 1 已落地
 

@@ -204,6 +204,34 @@ class Settings(BaseSettings):
         default=None,
         description="Optional vision-capable model override for asset captioning at ingest.",
     )
+    vision_image_generation_enabled: bool = Field(
+        default=False,
+        description=(
+            "When true, Vision Engine may call an external image API "
+            "(openai_compatible). When false or unavailable, uses Pillow stub."
+        ),
+    )
+    vision_image_generation_provider: str = Field(
+        default="stub",
+        description="Vision Engine image backend: stub | openai_compatible.",
+    )
+    vision_image_generation_model: str = Field(
+        default="dall-e-3",
+        description="Image model id for openai_compatible Vision Engine provider.",
+    )
+    vision_image_generation_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "VISION_IMAGE_GENERATION_API_KEY",
+            "OPENAI_API_KEY",
+        ),
+        description="Optional API key for Vision Engine; falls back to LLM_API_KEY.",
+    )
+    vision_image_generation_base_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_IMAGE_GENERATION_BASE_URL"),
+        description="Optional OpenAI-compatible base URL for image generation.",
+    )
     slide_recovery_ocr_enabled: bool = Field(
         default=True,
         description="When true, run OCR (pytesseract) for raster slide recovery inputs.",
@@ -616,6 +644,25 @@ class Settings(BaseSettings):
     def llm_configured(self) -> bool:
         """Return True when an LLM API key is available."""
         return bool(self.llm_api_key)
+
+    @property
+    def effective_vision_image_api_key(self) -> str | None:
+        """Vision Engine key with fallback to the LLM key."""
+        return self.vision_image_generation_api_key or self.llm_api_key
+
+    @property
+    def effective_vision_image_base_url(self) -> str | None:
+        """Vision Engine base URL with fallback to the LLM base URL."""
+        return self.vision_image_generation_base_url or self.llm_base_url
+
+    @property
+    def vision_image_api_configured(self) -> bool:
+        """True when an external Vision Engine image API can be attempted."""
+        return bool(
+            self.vision_image_generation_enabled
+            and self.vision_image_generation_provider == "openai_compatible"
+            and self.effective_vision_image_api_key
+        )
 
     @property
     def effective_embedding_api_key(self) -> str | None:

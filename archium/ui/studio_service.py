@@ -693,6 +693,119 @@ def apply_slide_element_asset(
     ).replace_layout_element_asset(slide_id, element_id=element_id, asset_id=asset_id)
 
 
+def generate_slide_vision_illustration(
+    session: Session,
+    slide_id: UUID,
+    *,
+    project_id: UUID,
+    subject: str,
+    image_type: str = "flow_diagram",
+    style: str | None = None,
+    apply_to_element_id: str | None = None,
+    base_element_id: str | None = None,
+    overlay_cues: list[str] | None = None,
+) -> object:
+    """Compile + generate an illustrative asset; optionally bind to an image element.
+
+    Always tags provenance as ``ai_generated`` / illustrative — never evidence.
+    When ``base_element_id`` points at a resolvable image/drawing and image_type is a
+    diagram type, Vision v0.2 composes strategy overlays on that base (still illustrative).
+    """
+    from pathlib import Path
+
+    from archium.application.visual.vision import VisionImageGenerationService
+    from archium.domain.visual.render_scene import DrawingNode, ImageNode
+    from archium.domain.visual.vision_generation import (
+        ArchitectureImageType,
+        ImageRequest,
+        VisionStylePreset,
+    )
+    from archium.infrastructure.database.repositories import (
+        AssetRepository,
+        PresentationRepository,
+    )
+    from archium.infrastructure.database.visual_repositories import RenderSceneRepository
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    slide = PresentationRepository(session).get_slide(slide_id)
+    if slide is None:
+        raise WorkflowError("页面不存在。")
+
+    try:
+        resolved_type = ArchitectureImageType(image_type)
+    except ValueError:
+        resolved_type = ArchitectureImageType.PRESENTATION_ILLUSTRATION
+    resolved_style: VisionStylePreset | str | None
+    if style is None or not str(style).strip():
+        resolved_style = None
+    else:
+        try:
+            resolved_style = VisionStylePreset(style)
+        except ValueError:
+            resolved_style = style
+
+    base_image_path: str | None = None
+    if base_element_id:
+        scenes = RenderSceneRepository(session).list_by_slide(slide_id)
+        scene = scenes[0] if scenes else None
+        if scene is not None:
+            node = scene.node_by_layout_element_id(base_element_id) or scene.node_by_id(
+                base_element_id
+            )
+            if isinstance(node, (ImageNode, DrawingNode)):
+                candidates: list[str] = []
+                if getattr(node, "resolved_path", None):
+                    candidates.append(str(node.resolved_path))
+                if node.storage_uri:
+                    candidates.append(node.storage_uri)
+                if node.asset_id is not None:
+                    asset = AssetRepository(session).get_by_id(node.asset_id)
+                    if asset is not None and asset.path:
+                        candidates.append(asset.path)
+                for candidate in candidates:
+                    path = Path(candidate)
+                    if path.is_file():
+                        base_image_path = str(path.resolve())
+                        break
+
+    cues = [cue.strip() for cue in (overlay_cues or []) if cue.strip()]
+    request = ImageRequest(
+        image_type=resolved_type,
+        subject=subject.strip() or (slide.message or slide.title or "architectural illustration"),
+        purpose=slide.message or "",
+        style=resolved_style,
+        elements=[slide.title] if slide.title else [],
+        base_image_path=base_image_path,
+        overlay_cues=cues,
+    )
+    settings = _resolve_runtime_settings(None)
+    result = VisionImageGenerationService(session, settings=settings).generate_for_intent(
+        request=request,
+        project_id=project_id,
+        slide_title=slide.title or "",
+        slide_message=slide.message or "",
+        page_archetype=(
+            slide.page_archetype.value
+            if getattr(slide, "page_archetype", None) is not None
+            else ""
+        ),
+        persist_asset=True,
+    )
+    if not result.success or result.asset_id is None:
+        raise WorkflowError(result.error or "Vision Engine 生成失败。")
+
+    if apply_to_element_id:
+        clear_visual_redo_stack(slide_id)
+        from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+
+        StudioSceneEditService(session, settings=settings).replace_layout_element_asset(
+            slide_id,
+            element_id=apply_to_element_id,
+            asset_id=result.asset_id,
+        )
+    return result
+
+
 def apply_slide_element_style(
     session: Session,
     slide_id: UUID,

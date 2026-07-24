@@ -15,6 +15,7 @@ from archium.domain.visual.enums import (
     VisualContentType,
 )
 from archium.domain.visual.visual_grammar import PageArchetype
+from archium.domain.visual.vision_generation import ImageRequest
 
 
 class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
@@ -40,6 +41,7 @@ class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
     emotional_tone: str = ""
     continuity_role: ContinuityRole = ContinuityRole.EXPLANATION
     page_archetype: PageArchetype | None = None
+    image_request: ImageRequest | None = None
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 
     def approve(self) -> None:

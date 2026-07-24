@@ -21,6 +21,7 @@ from archium.ui.studio_service import (
     apply_slide_element_asset,
     apply_slide_element_style,
     apply_slide_element_text,
+    generate_slide_vision_illustration,
 )
 
 
@@ -220,6 +221,11 @@ def render_slide_properties(
                     for issue in validation.issues[:6]:
                         st.write(f"- {issue.severity.value} · {issue.message}")
 
+        _render_vision_illustration_panel(
+            slide_snapshot=slide_snapshot,
+            project_id=project_id,
+        )
+
         _render_element_properties(
             slide_snapshot=slide_snapshot,
             advanced=advanced,
@@ -232,6 +238,150 @@ def render_slide_properties(
         score_label = f"{total:.2f}" if isinstance(total, (int, float)) else "—"
         st.markdown(f"**{entity_label('Visual Critic', advanced=advanced)}**")
         st.write(f"评分：{score_label}")
+
+
+def _render_vision_illustration_panel(
+    *,
+    slide_snapshot: SlideVisualSnapshot,
+    project_id: UUID | None,
+) -> None:
+    """Vision Engine — generate illustrative image for the current slide (v0.2 templates)."""
+    if project_id is None:
+        return
+
+    st.divider()
+    st.markdown("**Vision 示意生成**")
+    st.caption(
+        "建筑语义 → Prompt Compiler → 图片。结果标记为 `ai_generated` / 仅示意，"
+        "不会当作现场证据。场地/流线图可选用页内底图叠加策略层（仍非 CAD）。"
+    )
+    slide = slide_snapshot.slide
+    default_subject = (slide.message or slide.title or "").strip() or "architectural concept illustration"
+    subject = st.text_input(
+        "生成主题",
+        value=default_subject,
+        key=f"studio_vision_subject_{slide.id}",
+    )
+    type_options = {
+        "flow_diagram": "流线分析图",
+        "site_diagram": "场地关系图",
+        "concept_sketch": "概念草图",
+        "section_illustration": "剖面示意",
+        "atmosphere_image": "氛围 / 封面",
+        "material_study": "材料研究",
+        "presentation_illustration": "页级插图",
+        "sketch_note": "手绘笔记感",
+    }
+    image_type = st.selectbox(
+        "图类",
+        options=list(type_options.keys()),
+        format_func=lambda key: type_options[key],
+        key=f"studio_vision_type_{slide.id}",
+    )
+    style_options = {
+        "": "（按图类默认）",
+        "axonometric_diagram": "轴测分析图",
+        "flat_analytical_diagram": "扁平分析图",
+        "competition_concept_sketch": "竞赛概念草图",
+        "marker_sketch": "马克笔",
+        "pencil_sketch": "铅笔手绘",
+        "soft_atmosphere": "柔和氛围",
+        "watercolor_note": "水彩笔记",
+    }
+    style = st.selectbox(
+        "风格",
+        options=list(style_options.keys()),
+        format_func=lambda key: style_options[key],
+        key=f"studio_vision_style_{slide.id}",
+    )
+    overlay_raw = st.text_input(
+        "叠加标注（逗号分隔，可选）",
+        value="",
+        key=f"studio_vision_cues_{slide.id}",
+        help="例如：入口, 风雨连廊, 门诊大厅",
+    )
+    overlay_cues = [part.strip() for part in overlay_raw.split(",") if part.strip()]
+
+    plan = slide_snapshot.layout_plan
+    image_elements = [
+        element
+        for element in (plan.elements if plan is not None else [])
+        if element.content_type == LayoutContentType.IMAGE and not canvas_geometry_locked(element)
+    ]
+    base_element_id: str | None = None
+    if image_type in {"flow_diagram", "site_diagram"} and image_elements:
+        base_labels = {
+            element.id: format_element_label(element_id=element.id, role=element.role)
+            for element in image_elements
+        }
+        base_choice = st.selectbox(
+            "底图（总平/图纸叠加，可选）",
+            options=["（不使用底图）", *list(base_labels.keys())],
+            format_func=lambda value: (
+                value if value.startswith("（") else base_labels.get(value, value)
+            ),
+            key=f"studio_vision_base_{slide.id}",
+        )
+        if not base_choice.startswith("（"):
+            base_element_id = base_choice
+
+    apply_target: str | None = None
+    if image_elements:
+        target_labels = {
+            element.id: format_element_label(element_id=element.id, role=element.role)
+            for element in image_elements
+        }
+        apply_target = st.selectbox(
+            "生成后应用到",
+            options=["（仅入库，不换图）", *list(target_labels.keys())],
+            format_func=lambda value: (
+                value if value.startswith("（") else target_labels.get(value, value)
+            ),
+            key=f"studio_vision_target_{slide.id}",
+        )
+        if apply_target.startswith("（"):
+            apply_target = None
+
+    if st.button(
+        "生成示意并入库",
+        use_container_width=True,
+        key=f"studio_vision_generate_{slide.id}",
+    ):
+        try:
+            with get_session() as session:
+                result = generate_slide_vision_illustration(
+                    session,
+                    slide.id,
+                    project_id=project_id,
+                    subject=subject,
+                    image_type=image_type,
+                    style=style or None,
+                    apply_to_element_id=apply_target,
+                    base_element_id=base_element_id,
+                    overlay_cues=overlay_cues,
+                )
+            st.session_state[f"studio_vision_last_{slide.id}"] = {
+                "asset_id": str(result.asset_id) if result.asset_id else None,
+                "provider": result.provider,
+                "prompt_hash": result.spec.prompt_hash,
+                "path": result.storage_path,
+                "compose": bool(result.spec.metadata.get("compose_mode")),
+            }
+            if apply_target:
+                st.success("已生成示意并应用到所选图片元素（仅示意，非现场证据）。")
+            else:
+                st.success("已生成示意并入库。可在「更换素材」中选用。")
+            st.rerun()
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+    last = st.session_state.get(f"studio_vision_last_{slide.id}")
+    if isinstance(last, dict) and last.get("asset_id"):
+        compose_note = " · 底图叠加" if last.get("compose") else ""
+        st.caption(
+            f"最近生成：asset `{last['asset_id']}` · {last.get('provider')} · "
+            f"hash `{last.get('prompt_hash')}`{compose_note}"
+        )
 
 
 def _render_element_properties(
