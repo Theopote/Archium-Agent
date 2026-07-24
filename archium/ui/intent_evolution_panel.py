@@ -22,6 +22,7 @@ _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.RESEARCH: "研究补充",
     IntentEvolutionKind.DIRECTION_SELECTED: "选定方向",
     IntentEvolutionKind.MISSION_COMMIT: "确认任务",
+    IntentEvolutionKind.EVIDENCE: "出处确认",
 }
 
 
@@ -128,15 +129,46 @@ def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
     st.markdown(f"**{kind_label}** · `{when}`")
     st.markdown(event.summary.strip())
     snapshot = event.design_intent_snapshot
-    if snapshot:
-        with st.expander("当时意图快照", expanded=False, key=f"{key}_snap"):
-            for field_name, value in snapshot.items():
-                if value in (None, "", [], {}):
+    if not snapshot:
+        return
+    with st.expander("当时意图快照", expanded=False, key=f"{key}_snap"):
+        evidence_rows = snapshot.get("evidence")
+        if isinstance(evidence_rows, list) and evidence_rows:
+            st.markdown("**出处**")
+            for row in evidence_rows[:8]:
+                if not isinstance(row, dict):
                     continue
-                if isinstance(value, list):
-                    text = "；".join(str(item) for item in value[:6] if str(item).strip())
-                    if not text:
-                        continue
-                    st.caption(f"{field_name}：{text}")
-                else:
-                    st.caption(f"{field_name}：{value}")
+                statement = str(row.get("statement") or "").strip()
+                if not statement:
+                    continue
+                source = str(row.get("source_type") or "")
+                try:
+                    from archium.domain.intent.intent_evidence import (
+                        IntentEvidenceSourceType,
+                    )
+
+                    source_label = {
+                        IntentEvidenceSourceType.USER_INPUT.value: "用户输入",
+                        IntentEvidenceSourceType.DOCUMENT.value: "项目资料",
+                        IntentEvidenceSourceType.PUBLIC_RESEARCH.value: "公开研究",
+                        IntentEvidenceSourceType.AI_INFERENCE.value: "AI 推理",
+                        IntentEvidenceSourceType.ARCHITECT_ASSUMPTION.value: "建筑师假设",
+                        IntentEvidenceSourceType.DIRECTION_SELECTION.value: "选定方向",
+                    }.get(source, source)
+                except Exception:
+                    source_label = source
+                materials = row.get("supporting_materials") or []
+                suffix = ""
+                if isinstance(materials, list) and materials:
+                    suffix = " · " + "；".join(str(item) for item in materials[:2])
+                st.caption(f"[{source_label}] {statement}{suffix}")
+        for field_name, value in snapshot.items():
+            if field_name == "evidence" or value in (None, "", [], {}):
+                continue
+            if isinstance(value, list):
+                text = "；".join(str(item) for item in value[:6] if str(item).strip())
+                if not text:
+                    continue
+                st.caption(f"{field_name}：{text}")
+            else:
+                st.caption(f"{field_name}：{value}")

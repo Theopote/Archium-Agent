@@ -103,3 +103,14 @@ def test_enrich_mission_writes_intent_evidence(db_session) -> None:
     assert intent.evidence
     assert intent.evidence[0].source_type == IntentEvidenceSourceType.PUBLIC_RESEARCH
     assert "关中" in intent.evidence[0].statement
+
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    project = ProjectRepository(db_session).get_by_id(result.mission.project_id)
+    assert project is not None
+    research_events = [
+        e for e in project.intent_evolution.events if e.kind.value == "research"
+    ]
+    assert research_events
+    assert research_events[-1].design_intent_snapshot
+    assert research_events[-1].design_intent_snapshot.get("evidence")

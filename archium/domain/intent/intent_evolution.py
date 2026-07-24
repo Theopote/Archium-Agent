@@ -16,6 +16,7 @@ class IntentEvolutionKind(StrEnum):
     RESEARCH = "research"
     DIRECTION_SELECTED = "direction_selected"
     MISSION_COMMIT = "mission_commit"
+    EVIDENCE = "evidence"
 
 
 class IntentEvolutionEvent(DomainModel):

@@ -45,7 +45,7 @@ User opens Archium
 | P2 | Research/Programming 第三入口（策划与可研 / 投资人沟通）— Genesis 第三 Tab、`RESEARCH_PROGRAMMING` 轻量 Planning | 已落地 |
 | P3 | Intent Router（显式取向）— 已被 KnowledgeState 入口取代 / 内化 | 已取代 |
 | P0 | Knowledge State + Context Intelligence — 评估吃事实账本 / chunk 摘录 / 知识缺口；探索方向注入已证实约束；Genesis 单一入口 + IntentEvolution 时间线 | 已落地 |
-| P1 | IntentEvidence — DesignIntent 意图出处（研究写回 / 选定方向）；Mission 设计使命展示出处 | 已落地 |
+| P1 | IntentEvidence — DesignIntent 意图出处（研究写回 / 选定方向 / **事实确认→DOCUMENT**）；IntentEvolution「出处确认」事件 + 时间线快照 | 已落地 |
 | P3 | Concept Exploration 前置 — `ExplorationSession` + 结构化 `IdeaSeed` → 多 `ConceptDirection` → 选定 → `DesignIntent` + `ProjectMission` | 已落地 |
 | P3 | Design Iteration — 概念方向 + 视觉概念简报注入；Vision Engine；Mission 进度条 | 演示闭环体验已加强 |
 | P3 | 四模式 Architectural Workspace — 已有项目 / 概念探索 / 研究策划 / 设计迭代 | 首期已落地 |

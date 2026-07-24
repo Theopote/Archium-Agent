@@ -110,7 +110,9 @@ class FactLedgerService:
         fact = self._require_fact(fact_id)
         fact.confirm()
         fact.conflict_group = None
-        return self._facts.update(fact)
+        updated = self._facts.update(fact)
+        self._record_confirmed_fact_evidence(updated)
+        return updated
 
     def reject_fact(self, fact_id: UUID) -> ProjectFact:
         fact = self._require_fact(fact_id)
@@ -141,6 +143,25 @@ class FactLedgerService:
             fact.mark_conflicted()
             fact.conflict_group = group
             self._facts.update(fact)
+
+    def _record_confirmed_fact_evidence(self, fact: ProjectFact) -> None:
+        try:
+            from archium.application.intent_evidence_helpers import (
+                evidence_from_confirmed_fact,
+                record_intent_evidence,
+            )
+
+            evidence = evidence_from_confirmed_fact(fact)
+            unit = f" {fact.unit}" if fact.unit else ""
+            record_intent_evidence(
+                self._session,
+                fact.project_id,
+                evidence,
+                summary=f"确认事实：{fact.label} = {fact.value}{unit}",
+            )
+        except Exception:
+            # Provenance is best-effort; never block fact confirmation.
+            return
 
     def _require_fact(self, fact_id: UUID) -> ProjectFact:
         fact = self._facts.get_by_id(fact_id)

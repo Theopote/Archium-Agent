@@ -48,11 +48,52 @@ def test_confirm_fact_clears_conflict_group(db_session: Session) -> None:
         )
     )
     fact.mark_conflicted()
+    FactRepository(db_session).update(fact)
 
     confirmed = FactLedgerService(db_session).confirm_fact(fact.id)
 
     assert confirmed.is_confirmed
     assert confirmed.conflict_group is None
+    refreshed = ProjectRepository(db_session).get_by_id(project.id)
+    assert refreshed is not None
+    assert any(
+        e.kind.value == "evidence" and "用地面积" in e.summary
+        for e in refreshed.intent_evolution.events
+    )
+
+
+def test_confirm_fact_writes_document_evidence_to_mission(db_session: Session) -> None:
+    from archium.domain.intent.design_intent import DesignIntent
+    from archium.domain.intent.intent_evidence import IntentEvidenceSourceType
+    from archium.domain.project_mission import ProjectMission
+    from archium.infrastructure.database.mission_repositories import MissionRepository
+
+    project = _seed_project(db_session)
+    MissionRepository(db_session).save_mission(
+        ProjectMission(
+            project_id=project.id,
+            title="任务",
+            task_statement="改造医院",
+            design_intent=DesignIntent(theme="既有更新"),
+        )
+    )
+    fact = FactRepository(db_session).create(
+        ProjectFact(
+            project_id=project.id,
+            key="location",
+            label="地点",
+            value="西安",
+            verification_status=VerificationStatus.EXTRACTED,
+        )
+    )
+    FactLedgerService(db_session).confirm_fact(fact.id)
+    mission = MissionRepository(db_session).list_missions_by_project(project.id)[0]
+    assert mission.design_intent is not None
+    assert mission.design_intent.evidence
+    assert (
+        mission.design_intent.evidence[0].source_type == IntentEvidenceSourceType.DOCUMENT
+    )
+    assert "西安" in mission.design_intent.evidence[0].statement
 
 
 def test_distinct_area_metrics_do_not_conflict(db_session: Session) -> None:
