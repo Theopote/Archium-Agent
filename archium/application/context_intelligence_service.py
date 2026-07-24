@@ -48,6 +48,7 @@ class ActionDispatch:
     page_key: str
     mission_step: int | None = None
     label: str = ""
+    focus: str | None = None
 
 
 class ContextIntelligenceService:
@@ -191,7 +192,12 @@ class ContextIntelligenceService:
         return assessment
 
     @staticmethod
-    def resolve_action_target(action: NextBestActionType) -> ActionDispatch:
+    def resolve_action_target(
+        action: NextBestActionType,
+        *,
+        pending_fact_count: int = 0,
+        conflict_fact_count: int = 0,
+    ) -> ActionDispatch:
         """Map NBA to an existing product page (no new pipeline)."""
         if action == NextBestActionType.EXPLORE_DIRECTIONS:
             return ActionDispatch(
@@ -207,6 +213,13 @@ class ContextIntelligenceService:
                 label="启动研究补充背景",
             )
         if action == NextBestActionType.ASK:
+            if pending_fact_count > 0 or conflict_fact_count > 0:
+                count = pending_fact_count + conflict_fact_count
+                return ActionDispatch(
+                    page_key="materials",
+                    label=f"确认待核实事实（{count}）",
+                    focus="pending_facts",
+                )
             return ActionDispatch(
                 page_key="project-mission",
                 mission_step=3,

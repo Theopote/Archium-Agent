@@ -256,9 +256,26 @@ def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
             use_container_width=True,
         ):
             st.session_state.pop(_UPLOAD_FEEDBACK_KEY, None)
-            target = resolve_next_best_action_target(action)
+            pending = 0
+            conflicts = 0
+            try:
+                from archium.application.fact_ledger_service import FactLedgerService
+
+                with get_session() as session:
+                    ledger = FactLedgerService(session).get_ledger(project_id)
+                pending = ledger.pending_count
+                conflicts = ledger.conflict_count
+            except Exception:
+                pass
+            target = resolve_next_best_action_target(
+                action,
+                pending_fact_count=pending,
+                conflict_fact_count=conflicts,
+            )
             if target.mission_step is not None:
                 st.session_state.mission_step = target.mission_step
+            if getattr(target, "focus", None):
+                st.session_state["materials_focus"] = target.focus
             st.switch_page(get_app_page(target.page_key))
             return
 
@@ -796,6 +813,15 @@ def render_materials_stage(project_id: UUID) -> None:
         f"**{summary.pending_confirm_count} 个待确认问题**"
     )
 
+    focus = st.session_state.pop("materials_focus", None)
+    if focus == "pending_facts":
+        st.info(
+            "建议先确认待核实 / 冲突事实，再继续概念探索或任务理解。"
+            "确认后会写入意图出处。"
+        )
+        with st.container(border=True):
+            render_fact_ledger_panel(project_id, highlight_pending=True)
+
     with st.container(border=True):
         st.markdown("**上传资料**")
         st.caption("任务书、图纸、调研文档或图片。导入成功后会刷新知识状态并提示下一步。")
@@ -807,7 +833,10 @@ def render_materials_stage(project_id: UUID) -> None:
     with tab_files:
         _render_documents(project_id, show_uploader=False)
     with tab_facts:
-        render_fact_ledger_panel(project_id)
+        if focus != "pending_facts":
+            render_fact_ledger_panel(project_id)
+        else:
+            st.caption("待确认事实已在上方突出显示。")
     with tab_assets:
         render_asset_metadata_panel(project_id)
     with tab_gaps:

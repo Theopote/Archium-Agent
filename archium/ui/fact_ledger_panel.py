@@ -22,10 +22,15 @@ STATUS_LABELS = {
 }
 
 
-def render_fact_ledger_panel(project_id: UUID) -> None:
+def render_fact_ledger_panel(
+    project_id: UUID,
+    *,
+    highlight_pending: bool = False,
+) -> None:
     st.markdown("#### 项目事实账本")
     st.caption(
         f"结构化项目参数 · 确认后将优先注入 {content_pipeline_chain()} 生成上下文"
+        "，并写入意图出处。"
     )
 
     settings = get_ui_effective_settings()
@@ -42,6 +47,31 @@ def render_fact_ledger_panel(project_id: UUID) -> None:
     summary_cols[1].metric("待确认", ledger.pending_count)
     summary_cols[2].metric("冲突", ledger.conflict_count)
     summary_cols[3].metric("标准项缺失", len(ledger.missing_standard_keys))
+
+    if highlight_pending and (ledger.pending_count or ledger.conflict_count):
+        pending_labels: list[str] = []
+        for entry in ledger.entries:
+            fact = entry.fact
+            if fact is None:
+                continue
+            if fact.verification_status in {
+                VerificationStatus.EXTRACTED,
+                VerificationStatus.INFERRED,
+                VerificationStatus.CONFLICTED,
+            }:
+                pending_labels.append(
+                    f"{entry.label}={fact.value}"
+                    + (f" {fact.unit}" if fact.unit else "")
+                )
+        for fact in ledger.extra_facts:
+            if fact.verification_status in {
+                VerificationStatus.EXTRACTED,
+                VerificationStatus.INFERRED,
+                VerificationStatus.CONFLICTED,
+            }:
+                pending_labels.append(f"{fact.label}={fact.value}")
+        if pending_labels:
+            st.warning("待核实：" + "；".join(pending_labels[:8]))
 
     if ledger.missing_standard_keys:
         missing_labels = [

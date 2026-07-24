@@ -145,6 +145,51 @@ def _default_name_from_prompt(prompt: str) -> str:
     return (line[:40] + ("…" if len(line) > 40 else "")) or "未命名项目"
 
 
+def _render_intent_evidence_summary(project_id: str) -> None:
+    from uuid import UUID
+
+    from archium.infrastructure.database.mission_repositories import MissionRepository
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        return
+
+    evidence_rows = []
+    with get_session() as session:
+        missions = MissionRepository(session).list_missions_by_project(project_uuid)
+        if missions and missions[0].design_intent is not None:
+            evidence_rows = list(missions[0].design_intent.evidence[-6:])
+        if not evidence_rows:
+            project = ProjectRepository(session).get_by_id(project_uuid)
+            if project and project.intent_evolution:
+                for event in reversed(project.intent_evolution.events):
+                    snapshot = event.design_intent_snapshot or {}
+                    rows = snapshot.get("evidence")
+                    if isinstance(rows, list) and rows:
+                        from archium.domain.intent.intent_evidence import IntentEvidence
+
+                        for row in rows[:6]:
+                            if isinstance(row, dict):
+                                try:
+                                    evidence_rows.append(IntentEvidence.model_validate(row))
+                                except Exception:
+                                    continue
+                        break
+
+    if not evidence_rows:
+        return
+
+    st.markdown("**意图出处**")
+    for entry in evidence_rows:
+        conf = int(round(entry.confidence * 100))
+        materials = ""
+        if entry.supporting_materials:
+            materials = " · " + "；".join(entry.supporting_materials[:2])
+        st.caption(f"[{entry.source_label()} {conf}%] {entry.statement}{materials}")
+
+
 def _render_assessment_card(project_id: str, payload: dict) -> None:
     from archium.domain.intent.knowledge_state import KnowledgeState
     from archium.domain.intent.next_best_action import NextBestAction
@@ -168,6 +213,8 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
         st.markdown("**尚不清楚**")
         for item in unknown[:8]:
             st.markdown(f"- {item}")
+
+    _render_intent_evidence_summary(project_id)
 
     st.markdown("**建议下一步**")
     actions = [NextBestAction.model_validate(item) for item in payload.get("actions") or []]
@@ -252,7 +299,40 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 def _action_label(action: NextBestActionType) -> str:
     from archium.application.context_intelligence_service import ContextIntelligenceService
 
-    return ContextIntelligenceService.resolve_action_target(action).label or action.value
+    pending, conflicts = _pending_fact_counts()
+    return (
+        ContextIntelligenceService.resolve_action_target(
+            action,
+            pending_fact_count=pending,
+            conflict_fact_count=conflicts,
+        ).label
+        or action.value
+    )
+
+
+def _pending_fact_counts() -> tuple[int, int]:
+    from uuid import UUID
+
+    from archium.application.fact_ledger_service import FactLedgerService
+
+    project_raw = st.session_state.get("selected_project_id") or st.session_state.get(
+        _PROJECT_KEY
+    )
+    if not project_raw:
+        return 0, 0
+    try:
+        with get_session() as session:
+            ledger = FactLedgerService(session).get_ledger(UUID(str(project_raw)))
+        return ledger.pending_count, ledger.conflict_count
+    except Exception:
+        return 0, 0
+
+
+def _apply_action_dispatch(target) -> None:
+    if target.mission_step is not None:
+        st.session_state.mission_step = target.mission_step
+    if getattr(target, "focus", None):
+        st.session_state["materials_focus"] = target.focus
 
 
 def _dispatch_action(action: NextBestActionType) -> None:
@@ -286,9 +366,13 @@ def _dispatch_action(action: NextBestActionType) -> None:
             except Exception as exc:
                 st.warning(report_user_error(exc))
 
+    pending, conflicts = _pending_fact_counts()
     st.session_state.pop(_ASSESSMENT_KEY, None)
     st.session_state.pop(_PROJECT_KEY, None)
-    target = ContextIntelligenceService.resolve_action_target(action)
-    if target.mission_step is not None:
-        st.session_state.mission_step = target.mission_step
+    target = ContextIntelligenceService.resolve_action_target(
+        action,
+        pending_fact_count=pending,
+        conflict_fact_count=conflicts,
+    )
+    _apply_action_dispatch(target)
     st.switch_page(get_app_page(target.page_key))

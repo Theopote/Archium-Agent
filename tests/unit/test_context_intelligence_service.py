@@ -132,6 +132,13 @@ def test_resolve_action_target_maps_pages() -> None:
     ask = ContextIntelligenceService.resolve_action_target(NextBestActionType.ASK)
     assert ask.page_key == "project-mission"
     assert ask.mission_step == 3
+    ask_facts = ContextIntelligenceService.resolve_action_target(
+        NextBestActionType.ASK,
+        pending_fact_count=2,
+    )
+    assert ask_facts.page_key == "materials"
+    assert ask_facts.focus == "pending_facts"
+    assert "待核实" in ask_facts.label
 
 
 def test_try_execute_research_without_mission(db_session) -> None:

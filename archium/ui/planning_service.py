@@ -527,10 +527,19 @@ def reassess_project_context(
     )
 
 
-def resolve_next_best_action_target(action):
+def resolve_next_best_action_target(
+    action,
+    *,
+    pending_fact_count: int = 0,
+    conflict_fact_count: int = 0,
+):
     from archium.application.context_intelligence_service import ContextIntelligenceService
 
-    return ContextIntelligenceService.resolve_action_target(action)
+    return ContextIntelligenceService.resolve_action_target(
+        action,
+        pending_fact_count=pending_fact_count,
+        conflict_fact_count=conflict_fact_count,
+    )
 
 
 def try_execute_research_for_project(

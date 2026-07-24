@@ -214,10 +214,24 @@ def reassess_knowledge_after_upload(
     labels: list[str] = []
     primary_action: str | None = None
     primary_label = ""
+    pending = 0
+    conflicts = 0
+    try:
+        from archium.application.fact_ledger_service import FactLedgerService
+
+        ledger = FactLedgerService(session).get_ledger(project_id)
+        pending = ledger.pending_count
+        conflicts = ledger.conflict_count
+    except Exception:
+        pass
     for item in actions[:3]:
         if item.action.value == "upload_materials":
             continue
-        dispatch = ContextIntelligenceService.resolve_action_target(item.action)
+        dispatch = ContextIntelligenceService.resolve_action_target(
+            item.action,
+            pending_fact_count=pending,
+            conflict_fact_count=conflicts,
+        )
         label = dispatch.label or item.action.value
         if item.reason.strip():
             labels.append(f"{label}（{item.reason.strip()[:48]}）")
