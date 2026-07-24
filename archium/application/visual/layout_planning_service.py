@@ -258,8 +258,18 @@ class LayoutPlanningService:
         resolved_style = reference_style
         if resolved_style is None and project_id is not None:
             resolved_style = self.resolve_reference_style(project_id)
+        intent_pref = LayoutStylePreference(
+            preferred_families=tuple(intent.preferred_layout_families),
+            notes=(
+                ("visual_intent:preferred_layout_families",)
+                if intent.preferred_layout_families
+                else ()
+            ),
+        )
         grammar_pref = derive_grammar_layout_preference(intent)
+        # Explicit intent preferences (Studio presets / user edits) outrank grammar defaults.
         style_pref = style_preference or merge_layout_style_preferences(
+            intent_pref,
             grammar_pref,
             derive_layout_style_preference(
                 reference_style=resolved_style,
@@ -706,7 +716,12 @@ class LayoutPlanningService:
         return self._apply_preference_to_decisions(
             decisions,
             deck_directive,
-            style_pref,
+            merge_layout_style_preferences(
+                LayoutStylePreference(
+                    preferred_families=tuple(intent.preferred_layout_families),
+                ),
+                style_pref,
+            ),
             candidate_count,
         )
 
