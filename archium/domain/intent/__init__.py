@@ -1,7 +1,6 @@
 """Design intent and project cognitive state."""
 
 from archium.domain.intent.design_intent import DesignIntent
-from archium.domain.intent.entry_intent import EntryIntentResult, EntryOrientation
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.intent.intent_evidence import IntentEvidence, IntentEvidenceSourceType
 from archium.domain.intent.intent_evolution import (
@@ -14,8 +13,6 @@ from archium.domain.intent.next_best_action import NextBestAction, NextBestActio
 
 __all__ = [
     "DesignIntent",
-    "EntryIntentResult",
-    "EntryOrientation",
     "IdeaSeed",
     "IntentEvidence",
     "IntentEvidenceSourceType",
