@@ -208,14 +208,14 @@ class Settings(BaseSettings):
         default=False,
         description=(
             "When true, Vision Engine may call an external/local image backend "
-            "(openai_compatible | local_sd). When false or unavailable, uses Pillow stub."
+            "(openai_compatible | local_sd | comfyui). When false or unavailable, uses Pillow stub."
         ),
     )
     vision_image_generation_provider: str = Field(
         default="stub",
         description=(
             "Vision Engine image backend: stub | openai_compatible | local_sd "
-            "(A1111/Forge sdapi aliases: a1111, forge, automatic1111)."
+            "(aliases: a1111, forge, automatic1111) | comfyui."
         ),
     )
     vision_image_generation_model: str = Field(
@@ -272,6 +272,39 @@ class Settings(BaseSettings):
         ge=10.0,
         le=900.0,
         description="HTTP timeout for local_sd txt2img/img2img calls.",
+    )
+    vision_comfyui_base_url: str = Field(
+        default="http://127.0.0.1:8188",
+        validation_alias=AliasChoices("VISION_COMFYUI_BASE_URL"),
+        description="ComfyUI server base URL for comfyui provider.",
+    )
+    vision_comfyui_checkpoint: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VISION_COMFYUI_CHECKPOINT"),
+        description=(
+            "Checkpoint filename for builtin ComfyUI graphs; "
+            "falls back to VISION_LOCAL_SD_MODEL / VISION_IMAGE_GENERATION_MODEL."
+        ),
+    )
+    vision_comfyui_sampler: str = Field(
+        default="euler",
+        description="ComfyUI KSampler sampler_name for builtin graphs.",
+    )
+    vision_comfyui_scheduler: str = Field(
+        default="normal",
+        description="ComfyUI KSampler scheduler for builtin graphs.",
+    )
+    vision_comfyui_timeout_seconds: float = Field(
+        default=300.0,
+        ge=10.0,
+        le=1800.0,
+        description="Total wait budget for ComfyUI prompt completion.",
+    )
+    vision_comfyui_poll_interval_seconds: float = Field(
+        default=1.0,
+        ge=0.2,
+        le=10.0,
+        description="Polling interval when waiting for ComfyUI /history.",
     )
     slide_recovery_ocr_enabled: bool = Field(
         default=True,
@@ -713,6 +746,16 @@ class Settings(BaseSettings):
             self.vision_image_generation_enabled
             and provider in {"local_sd", "a1111", "forge", "automatic1111"}
             and (self.vision_local_sd_base_url or "").strip()
+        )
+
+    @property
+    def vision_comfyui_configured(self) -> bool:
+        """True when comfyui provider is enabled with a base URL."""
+        provider = (self.vision_image_generation_provider or "").strip().lower()
+        return bool(
+            self.vision_image_generation_enabled
+            and provider == "comfyui"
+            and (self.vision_comfyui_base_url or "").strip()
         )
 
     @property

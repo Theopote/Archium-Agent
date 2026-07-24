@@ -99,7 +99,7 @@ archium/
     image_generation_service.py
     image_evaluator.py
     style_preset_registry.py
-  infrastructure/vision_gen/         # stub | openai_compatible | local_sd (A1111)
+  infrastructure/vision_gen/         # stub | openai_compatible | local_sd | comfyui
 ```
 
 **不**新增 Pipeline 产品席位；内部可标 `PipelineRole.VISUAL`。
@@ -208,12 +208,24 @@ VISION_LOCAL_SD_DENOISING_STRENGTH=0.55
 VISION_LOCAL_SD_SAMPLER=Euler a
 ```
 
+启用 ComfyUI（内置 txt2img / img2img 图，不捆绑权重）：
+
+```text
+VISION_IMAGE_GENERATION_ENABLED=true
+VISION_IMAGE_GENERATION_PROVIDER=comfyui
+VISION_COMFYUI_BASE_URL=http://127.0.0.1:8188
+VISION_COMFYUI_CHECKPOINT=your-architecture-checkpoint.safetensors
+# steps / cfg / denoise 复用 VISION_LOCAL_SD_* 同名字段
+VISION_COMFYUI_SAMPLER=euler
+VISION_COMFYUI_SCHEDULER=normal
+```
+
 路径：
 
 ```text
 ImageRequest (+ VisionGenerationContext)
   → VisionPromptCompiler
-  → VisionImageGenerator (stub | openai_compatible | local_sd)
+  → VisionImageGenerator (stub | openai_compatible | local_sd | comfyui)
   → assets/vision_generated/* + optional Asset(origin=ai_generated)
   → Studio ReplaceAsset（人工选择目标图）
 ```
@@ -258,8 +270,9 @@ base site/plan image
 | VisualIntent 按页原型自动建议 `image_request` | **已做** `intent_suggester.py`（诊断页不建议） |
 | 入库后走 `ImageDerivativeExecutor` | **已做**（`*_harmonized.jpg` + cache/derivatives） |
 | 本地 SD（A1111/Forge sdapi）txt2img + img2img | **已做** `local_sd.py`（不捆绑权重） |
+| ComfyUI 内置 txt2img / img2img 工作流 | **已做** `comfyui.py` |
 | Studio 改图强度滑条（denoising） | **已做** |
-| ComfyUI 工作流 / 自托管权重包 | **未做**（后续） |
+| 自定义 Comfy 工作流 JSON / 建筑 LoRA 包分发 | **未做**（后续） |
 
 Edit 路径：
 
@@ -267,7 +280,7 @@ Edit 路径：
 base photo/drawing
   → VisionImageEvaluator (warn blur/overexpose; block tiny)
   → VisionPromptCompiler (edit semantics + evidence avoid)
-  → local_sd img2img | openai edit | conditioned_editor(fallback)
+  → local_sd | comfyui img2img | openai edit | conditioned_editor(fallback)
   → persist Asset(origin=ai_generated)
   → ImageDerivative PRESENTATION_UNIFY → *_harmonized.jpg
 ```
@@ -301,8 +314,9 @@ Vision Engine 作为 **下一条战略主线** 立项，不阻塞 Studio V1 / Im
 2. Vision Engine v0.1 — **已完成**
 3. Vision Engine v0.2 建筑图类模板 + 底图叠加 — **已完成**
 4. Vision Engine v0.3 条件改图 + QA + Derivative 统一 + Intent 建议 — **已完成**
-5. 本地 SD / 更强图生图（A1111 img2img）— **本轮完成**
-6. 后续：ComfyUI 工作流、建筑专用 LoRA 包、主体检测
+5. 本地 SD / 更强图生图（A1111 img2img）— **已完成**
+6. ComfyUI 内置工作流 — **本轮完成**
+7. 后续：自定义 Comfy 工作流挂载、建筑专用 LoRA 包、主体检测
 
 ## 11. 一句话决策
 
