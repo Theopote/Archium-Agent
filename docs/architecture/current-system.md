@@ -44,7 +44,7 @@ User opens Archium
 | P2 | Autonomous Research — 联网检索 → 知识 → 写回/AI 修订 Mission → Brief/Storyline 注入；资料面板标记「已写回 Mission」 | 已落地 |
 | P2 | Research/Programming 第三入口（策划与可研 / 投资人沟通）— Genesis 第三 Tab、`RESEARCH_PROGRAMMING` 轻量 Planning | 已落地 |
 | P3 | Intent Router（显式取向）— 已被 KnowledgeState 入口取代 / 内化 | 已取代 |
-| P0 | Knowledge State + Context Intelligence — 单一输入评估 `KnowledgeState` / `IntentEvolution` / Next Best Action；Genesis/Home 对话入口；Mission 只读知识摘要 | 已落地 |
+| P0 | Knowledge State + Context Intelligence — 单一输入评估 `KnowledgeState` / `IntentEvolution` / Next Best Action；Genesis/Home 对话入口；Mission / 概念探索 / Genesis 展示意图演进时间线 | 已落地 |
 | P3 | Concept Exploration 前置 — `ExplorationSession` + 结构化 `IdeaSeed` → 多 `ConceptDirection` → 选定 → `DesignIntent` + `ProjectMission` | 已落地 |
 | P3 | Design Iteration — 概念方向 + 视觉概念简报注入；Vision Engine；Mission 进度条 | 演示闭环体验已加强 |
 | P3 | 四模式 Architectural Workspace — 已有项目 / 概念探索 / 研究策划 / 设计迭代 | 首期已落地 |

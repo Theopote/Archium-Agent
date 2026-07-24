@@ -189,22 +189,13 @@ def _parse_criteria(text: str) -> list[EvaluationCriterion]:
 
 
 def _render_knowledge_state_summary(project_id: UUID) -> None:
-    from archium.infrastructure.database.repositories import ProjectRepository
+    from archium.ui.intent_evolution_panel import render_project_knowledge_and_evolution
 
-    with get_session() as session:
-        project = ProjectRepository(session).get_by_id(project_id)
-    if project is None or project.knowledge_state is None:
-        return
-    state = project.knowledge_state
-    with st.expander("项目知识状态", expanded=False):
-        st.caption(state.summary_line())
-        latest = project.intent_evolution.latest_summary() if project.intent_evolution else None
-        if latest:
-            st.caption(f"意图演进：{latest}")
-        if state.known:
-            st.markdown("**已知**：" + "；".join(f"{k}={v}" for k, v in state.known.items()))
-        if state.unknown:
-            st.markdown("**未知**：" + "；".join(state.unknown[:6]))
+    render_project_knowledge_and_evolution(
+        project_id,
+        expanded=False,
+        key_prefix="mission_ks_evo",
+    )
 
 
 def _default_design_intent(mission: ProjectMission) -> DesignIntent:

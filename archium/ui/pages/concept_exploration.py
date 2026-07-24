@@ -266,16 +266,10 @@ def _render_idea_seed(exploration: ExplorationSession) -> None:
 
 
 def _render_knowledge_and_evolution(project_id: UUID) -> None:
-    from archium.infrastructure.database.repositories import ProjectRepository
+    from archium.ui.intent_evolution_panel import render_project_knowledge_and_evolution
 
-    with get_session() as session:
-        project = ProjectRepository(session).get_by_id(project_id)
-    if project is None:
-        return
-    if project.knowledge_state is not None:
-        st.caption(project.knowledge_state.summary_line())
-    latest = (
-        project.intent_evolution.latest_summary() if project.intent_evolution else None
+    render_project_knowledge_and_evolution(
+        project_id,
+        expanded=True,
+        key_prefix="explore_ks_evo",
     )
-    if latest:
-        st.caption(f"意图演进：{latest}")

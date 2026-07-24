@@ -219,6 +219,18 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
             except Exception as exc:
                 st.error(report_user_error(exc))
 
+    from uuid import UUID
+
+    from archium.ui.intent_evolution_panel import render_project_knowledge_and_evolution
+
+    render_project_knowledge_and_evolution(
+        UUID(project_id),
+        expanded=False,
+        key_prefix="genesis_ks_evo",
+        title="意图演进时间线",
+        show_knowledge=False,
+    )
+
     st.markdown("---")
     link_cols = st.columns(3)
     with link_cols[0]:

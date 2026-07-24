@@ -44,5 +44,5 @@ def test_concept_exploration_shows_knowledge_summary() -> None:
     )
     text = src.read_text(encoding="utf-8")
     assert "_render_knowledge_and_evolution" in text
-    assert "意图演进" in text
+    assert "render_project_knowledge_and_evolution" in text
     assert "刷新知识状态" in text
