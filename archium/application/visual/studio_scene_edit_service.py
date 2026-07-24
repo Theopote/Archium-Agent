@@ -20,7 +20,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.element_lock import ElementLockScope
-from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
@@ -598,7 +598,6 @@ def _append_cloned_layout_elements(
 
 def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElement:
     from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
-    from archium.domain.visual.layout import LayoutElement
     from archium.domain.visual.render_scene import (
         ChartNode,
         DrawingNode,

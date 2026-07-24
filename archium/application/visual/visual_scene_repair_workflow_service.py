@@ -23,6 +23,7 @@ from archium.application.visual.scene_compilers.chain import (
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.config.settings import Settings, get_settings
 from archium.domain.export_authority import FORMAL_DELIVERY_PPTX_FILENAME
+from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem

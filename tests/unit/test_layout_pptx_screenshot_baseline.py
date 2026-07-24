@@ -29,10 +29,12 @@ class _FakeIntentRepo:
 @pytest.fixture
 def intent_service():
     from archium.application.visual.visual_intent_service import VisualIntentService
+    from archium.config.settings import get_settings
 
     service = VisualIntentService.__new__(VisualIntentService)
     service._session = None  # noqa: SLF001
     service._llm = None  # noqa: SLF001
+    service._settings = get_settings()  # noqa: SLF001
     service._intents = _FakeIntentRepo()  # noqa: SLF001
     return service
 

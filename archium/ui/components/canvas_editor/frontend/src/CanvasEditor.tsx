@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 
 /**
@@ -162,13 +162,17 @@ const CanvasEditor: React.FC = () => {
 
   const args = (window as any).streamlitArgs;
   const imageUrl: string = args?.imageUrl || "";
-  const elements: Element[] = args?.elements || [];
+  const elements: Element[] = useMemo(
+    () => (args?.elements as Element[] | undefined) || [],
+    [args?.elements],
+  );
   const selectedId: string | null = args?.selectedId || null;
-  const selectedIdsProp: string[] = Array.isArray(args?.selectedIds)
-    ? args.selectedIds.map(String)
-    : selectedId
-      ? [selectedId]
-      : [];
+  const selectedIdsProp: string[] = useMemo(() => {
+    if (Array.isArray(args?.selectedIds)) {
+      return args.selectedIds.map(String);
+    }
+    return selectedId ? [selectedId] : [];
+  }, [args?.selectedIds, selectedId]);
   const showLabels: boolean = args?.showLabels ?? true;
   const showAllBorders: boolean = args?.showAllBorders ?? true;
   const assets: AssetOption[] = Array.isArray(args?.assets) ? args.assets : [];

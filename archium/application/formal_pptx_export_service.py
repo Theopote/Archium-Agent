@@ -10,11 +10,12 @@ from sqlalchemy.orm import Session
 
 from archium.config.settings import Settings, get_settings
 from archium.domain.export_authority import (
+    FORMAL_DELIVERY_PPTX_FILENAME,
     FORMAL_EDITABLE_PPTX_AUTHORITY,
     DerivedExportKind,
     FormalExportAuthority,
 )
-from archium.domain.export_authority import FORMAL_DELIVERY_PPTX_FILENAME
+from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.render_scene import RenderScene
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository

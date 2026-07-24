@@ -1,6 +1,7 @@
 """Domain enumerations — workflow bounded context (DOM-018 / DOM-007)."""
 
 from enum import StrEnum
+from typing import Any
 
 from archium.domain.enums.workflow_steps import (
     PlanningWorkflowStep,
@@ -33,7 +34,8 @@ class PlanningSessionStatus(StrEnum):
 
 # Derived mega-enum for persisted current_step + cross-pipeline maps (DOM-007).
 # Prefer stage-specific enums in graph nodes / services.
-WorkflowStep = build_workflow_step_enum()
+# Typed as Any so mypy accepts dynamic StrEnum members as a concrete type.
+WorkflowStep: Any = build_workflow_step_enum()
 
 __all__ = [
     "WorkflowStatus",

@@ -8,6 +8,7 @@ compatibility and cross-pipeline label maps.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
 from archium.domain.enums.workflow_steps.planning import PlanningWorkflowStep
 from archium.domain.enums.workflow_steps.presentation import PresentationWorkflowStep
@@ -31,7 +32,7 @@ WORKFLOW_STEP_STAGES: tuple[type[StrEnum], ...] = (
 )
 
 
-def build_workflow_step_enum() -> type[StrEnum]:
+def build_workflow_step_enum() -> Any:
     """Compose the legacy mega-enum from stage enums (identical string values)."""
     members: dict[str, str] = {}
     for stage in WORKFLOW_STEP_STAGES:
