@@ -35,6 +35,7 @@ Scaffold:
 ```bash
 python scripts/run_playbook_f_gate.py -q
 python scripts/new_playbook_f_session.py 2026-07-25-playbook-f-1
+python scripts/run_playbook_f_rehearsal.py 2026-07-25-playbook-f-1   # optional engineer dry-run
 ```
 
 Facilitator guide: [playbook-f-checklist.md](../rehearsal/playbook-f-checklist.md)  

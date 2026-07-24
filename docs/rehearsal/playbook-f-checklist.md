@@ -47,6 +47,7 @@ copy .env.example .env
 # 填入 LLM_API_KEY；F6 出图需 vision 相关配置
 python scripts/run_playbook_f_gate.py -q
 python scripts/new_playbook_f_session.py YYYY-MM-DD-playbook-f-1
+python scripts/run_playbook_f_rehearsal.py YYYY-MM-DD-playbook-f-1
 archium
 ```
 

@@ -1,0 +1,7 @@
+mission_title=西安某医院老院区改造
+task_statement=在部分资料条件下明确改造策略与待澄清问题
+design_intent_theme=最小干预
+selected_direction=微创更新
+intent_evolution=['seed', 'ai_understanding', 'ai_understanding', 'direction_selected', 'mission_commit']
+workspace_mode=design_iteration
+primary_page=project-mission

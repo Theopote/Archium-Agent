@@ -7,7 +7,6 @@ Mapped in ``docs/user-task-playbooks.md``. Does not replace human F1–F7 rehear
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 
@@ -26,8 +25,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "pytest_args",
-        nargs="*",
-        help="Extra args forwarded to pytest (after --).",
+        nargs=argparse.REMAINDER,
+        default=[],
+        help="Extra args forwarded to pytest (e.g. -- -q).",
     )
     args = parser.parse_args(argv)
 

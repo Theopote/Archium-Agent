@@ -1,0 +1,72 @@
+{
+  "session_id": "2026-07-25-playbook-f-1",
+  "date": "2026-07-25",
+  "playbook": "F",
+  "status": "engineer_service_rehearsal",
+  "facilitator": "Cursor agent (automated service rehearsal)",
+  "operator": "engineering dry-run",
+  "operator_is_non_developer": false,
+  "llm_configured": false,
+  "vision_image_enabled": false,
+  "scenario_prompt": "西安市某医院老院区改造，手头有一张老门诊楼照片、地址和一份旧院区介绍，甲方还没说清功能分区。",
+  "automated_gate": {
+    "command": "python scripts/run_playbook_f_gate.py -q",
+    "passed": true,
+    "run_date": "2026-07-25",
+    "commit": "f456c7e"
+  },
+  "steps": {
+    "F1": {
+      "pass": true,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "completeness=0.34, stage=research, legacy_origin=concept_exploration"
+    },
+    "F2": {
+      "pass": true,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "first_action=ask"
+    },
+    "F3": {
+      "pass": true,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "Seeded 1 DOCX + confirmed location fact before assess"
+    },
+    "F4": {
+      "pass": true,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "direction_count=2"
+    },
+    "F5": {
+      "pass": true,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "mission='西安某医院老院区改造'"
+    },
+    "F6": {
+      "pass": null,
+      "waived": true,
+      "waive_reason": "Not exercised in engineer service rehearsal",
+      "notes": ""
+    },
+    "F7": {
+      "pass": null,
+      "waived": true,
+      "waive_reason": "Not exercised in engineer service rehearsal",
+      "notes": ""
+    }
+  },
+  "overall_pass": true,
+  "blockers": [],
+  "rehearsal_mode": "service_layer_mock_llm",
+  "ui_walkthrough": false,
+  "pending_human_signoff": {
+    "required_for": "Context Intelligence full acceptance",
+    "missing": "Non-developer Streamlit F1–F4 with real LLM"
+  },
+  "overall_pass_scope": "F1-F5 service rehearsal only",
+  "completed_at": "2026-07-24T16:38:10+00:00"
+}

@@ -1,0 +1,3 @@
+first_action=ask
+- ask: 甲方尚未说清功能分区
+- explore_directions: 在已知约束内并行推演改造策略

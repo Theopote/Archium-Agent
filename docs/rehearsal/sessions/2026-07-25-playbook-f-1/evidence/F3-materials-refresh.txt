@@ -1,0 +1,4 @@
+before_completeness=0.34
+after_completeness=0.38
+known={'location': '西安', 'type': '医院改造', '现状': '1998年门诊楼'}
+unknown=['功能分区', '规模']

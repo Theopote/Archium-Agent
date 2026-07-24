@@ -1,0 +1,6 @@
+direction_count=2
+titles=['微创更新', '片区重组']
+spatial_strategy_sample=保留南北主轴线，点状加建
+formal_language_sample=新旧并置，克制体量
+visual_prompt_sample=hospital campus renovation axonometric
+compiled_preview_excerpt=Architectural visualization for a professional design presentation. Image category: site diagram. Purpose: 保留南北主轴线，点状加建 新旧并置，克制体量 流线清晰 流线清晰. Subject: hospital campus renovation axonometric. Primary scene seed: hospital campus renovation axonometric. Style: architectural competition concept sketch, restrained linework, professional presentation board quality. Design phase: concept. Include: camera/
