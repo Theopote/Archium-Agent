@@ -125,10 +125,23 @@ class ProjectMissionService:
         if not user_task_description.strip():
             raise WorkflowError("任务描述不能为空")
 
-        resolved_origin = origin_mode or project.origin_mode
-        concept_mode = resolved_origin == ProjectOriginMode.CONCEPT_EXPLORATION
-        programming_mode = resolved_origin == ProjectOriginMode.RESEARCH_PROGRAMMING
-        lightweight_mode = resolved_origin.skips_default_clarification
+        from archium.application.project_context_routing import (
+            is_concept_leaning,
+            is_research_programming,
+            legacy_origin_for_project,
+        )
+
+        resolved_origin = origin_mode or legacy_origin_for_project(self._session, project)
+        if origin_mode is None:
+            concept_mode = is_concept_leaning(
+                self._session, project
+            ) and not is_research_programming(self._session, project)
+            programming_mode = is_research_programming(self._session, project)
+            lightweight_mode = is_concept_leaning(self._session, project)
+        else:
+            concept_mode = resolved_origin == ProjectOriginMode.CONCEPT_EXPLORATION
+            programming_mode = resolved_origin == ProjectOriginMode.RESEARCH_PROGRAMMING
+            lightweight_mode = resolved_origin.skips_default_clarification
         context = self._build_context(project_id, user_task_description)
         fact_summary = self._build_fact_summary(project_id)
         from archium.prompts.project_mission import (

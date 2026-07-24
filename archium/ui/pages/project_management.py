@@ -9,7 +9,7 @@ import streamlit as st
 
 from archium.application.project_deletion_service import ProjectDeletionService
 from archium.application.project_management_service import ProjectManagementService
-from archium.domain.enums import ProjectOriginMode
+from archium.application.workspace_mode_service import WorkspaceModeService
 from archium.domain.project import Project
 from archium.exceptions import ProjectNotFoundError, ValidationError
 from archium.infrastructure.database.session import get_session
@@ -50,10 +50,11 @@ def _render_project_card(project: Project, index: int) -> None:
 
             if st.button("📂 打开", key=f"open_{project.id}", use_container_width=True, type="primary"):
                 st.session_state.selected_project_id = str(project.id)
-                if project.origin_mode.skips_default_clarification:
-                    st.switch_page(get_app_page("project-mission"))
-                else:
-                    st.switch_page(get_app_page("materials"))
+                with get_session() as session:
+                    page_key = WorkspaceModeService(session).resolve_primary_page_key(
+                        project.id
+                    )
+                st.switch_page(get_app_page(page_key))
 
         st.divider()
 

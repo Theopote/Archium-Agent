@@ -14,9 +14,11 @@
 推荐主路径：
 
 ```
-项目起源（ProjectOriginMode）
-  ├─ concept_exploration：一句话想法 → DesignIntent v0.1
-  └─ existing_project：资料 enrich → 事实账本
+Genesis 单一入口（用户描述 + 可选资料）
+        ↓
+ContextIntelligenceService → ProjectContext（KnowledgeState + 生命周期 + RecommendedWorkflow + NBA）
+        ↓
+WorkspaceModeService / Mission / Planning 路由（读 ProjectContext；origin_mode 仅兼容持久化）
         ↓
 自由任务描述 + （可选）项目资料
         ↓
@@ -35,12 +37,15 @@ PresentationRequest 适配
 Brief → Storyline → SlideSpec → 审核 → 导出
 ```
 
-### 双模式入口（v0.3 首期）
+### 入口（v0.3+）
 
-| 模式 | 入口 | 默认行为 |
-|------|------|----------|
-| **概念探索** | 侧边栏 **开始项目 → 从想法开始** | 无资料可生成 Mission v0.1；澄清默认跳过；假设自动写入；Mission 面板可 **启动自主研究**；正式交付仍要求资料 |
-| **已有项目** | **开始项目 → 从已有资料开始** | 进入资料阶段；Mission 由资料 enrich；澄清闸门保持 |
+| 路径 | 触发条件 | 默认行为 |
+|------|----------|----------|
+| **探索 / 轻量规划** | `ProjectContext.recommended_workflow` 为 explore / mission，或完整度低 | 可无资料生成 Mission v0.1；澄清可跳过；Mission 面板可 **启动自主研究**；正式交付仍要求资料 |
+| **资料优先** | 完整度高、证据充分 | 进入资料整理；Mission 由资料 enrich；澄清闸门保持 |
+| **部分资料** | 有描述 + 少量上传（如改造 + 简介） | 阶段≈研究/概念；NBA 优先澄清或探索；工作区可落在概念探索，主页面指向任务理解 |
+
+`origin_mode`（`concept_exploration` / `existing_project` / `research_programming`）由评估内部派生，**不再作为用户入口**。
 
 领域字段 `DesignIntent`（嵌于 `ProjectMission.design_intent`）：
 
@@ -57,8 +62,8 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 ### 入口
 
 1. 启动：`archium` 或 `streamlit run app.py`
-2. 侧边栏 **开始项目** — 选择「从想法开始」或「从已有资料开始」
-3. 概念探索会进入 **项目任务** 并预填一句话；已有项目进入 **资料**
+2. 侧边栏 **开始项目** — 在 Genesis 描述项目（一句话 + 可选资料）
+3. 系统评估 `ProjectContext` 后进入建议主页面（任务理解 / 资料 / 概念探索等）
 4. 亦可在 **项目任务** 中为已有项目描述任务（资料可选 enrich）
 
 ### 六步体验

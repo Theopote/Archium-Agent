@@ -17,7 +17,10 @@ DEFAULT_CONFIDENCE_THRESHOLD = 0.55
 
 
 class IntentClassifierService:
-    """Route genesis freeform input to an EntryOrientation (not an Agent)."""
+    """Deprecated entry router — superseded by ContextIntelligenceService / ProjectContext.
+
+    Kept for unit tests and backward-compatible API only; UI must not call this.
+    """
 
     def __init__(
         self,

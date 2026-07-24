@@ -90,6 +90,17 @@ def test_generate_compile_accepts_direction(tmp_path) -> None:
     assert "Primary scene seed" in spec.prompt
 
 
+def test_preview_compiled_prompt_for_direction() -> None:
+    direction = _seeded_direction()
+    from archium.application.visual.vision.concept_direction_visual_seed import (
+        preview_compiled_prompt_for_direction,
+    )
+
+    prompt = preview_compiled_prompt_for_direction(direction)
+    assert "Primary scene seed" in prompt
+    assert "terraced cultural center" in prompt
+
+
 def test_visual_brief_from_direction_seed() -> None:
     direction = _seeded_direction()
     mission = ProjectMission(

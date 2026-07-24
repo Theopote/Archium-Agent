@@ -101,8 +101,9 @@ def render_knowledge_and_evolution(
         return
 
     with st.expander(title, expanded=expanded):
-        if state is not None:
-            _render_knowledge_snapshot(state)
+    if state is not None:
+        _render_project_context_strip(project.id)
+        _render_knowledge_snapshot(state)
         if state is not None and has_events:
             st.divider()
         st.markdown("**意图演进**")
@@ -110,6 +111,37 @@ def render_knowledge_and_evolution(
             evolution,
             key_prefix=f"{key_prefix}_{project.id}",
         )
+
+
+def _render_project_context_strip(project_id: UUID) -> None:
+    from archium.application.project_context_builder import build_project_context
+    from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
+    from archium.domain.context.recommended_workflow import RecommendedWorkflow
+    from archium.infrastructure.database.session import get_session
+
+    with get_session() as session:
+        ctx = build_project_context(session, project_id)
+    if ctx is None:
+        return
+    stage_label = {
+        ProjectLifecycleStage.IDEA: "想法",
+        ProjectLifecycleStage.CONCEPT: "概念",
+        ProjectLifecycleStage.RESEARCH: "研究",
+        ProjectLifecycleStage.DESIGN: "设计",
+        ProjectLifecycleStage.DOCUMENTATION: "文档化",
+    }.get(ctx.lifecycle_stage, ctx.lifecycle_stage.value)
+    workflow_label = {
+        RecommendedWorkflow.EXPLORE: "概念探索",
+        RecommendedWorkflow.RESEARCH: "背景研究",
+        RecommendedWorkflow.MATERIALS: "整理资料",
+        RecommendedWorkflow.MISSION: "任务理解",
+        RecommendedWorkflow.DESIGN: "方案迭代",
+        RecommendedWorkflow.DELIVER: "正式交付",
+    }.get(ctx.recommended_workflow, ctx.recommended_workflow.value)
+    st.info(
+        f"阶段判断：**{stage_label}** · 建议优先 **{workflow_label}** "
+        f"· 把握度约 {int(round(ctx.confidence * 100))}%"
+    )
 
 
 def _render_knowledge_snapshot(state: KnowledgeState) -> None:

@@ -488,6 +488,14 @@ def classify_entry_intent(
     *,
     settings: Settings | None = None,
 ):
+    """Deprecated: use Context Intelligence (assess_project_context) instead."""
+    import warnings
+
+    warnings.warn(
+        "classify_entry_intent is deprecated; use assess_project_context / ContextIntelligenceService",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     from archium.application.intent_classifier_service import IntentClassifierService
 
     runtime = _resolve_runtime_settings(settings)

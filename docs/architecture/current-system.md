@@ -51,6 +51,8 @@ User opens Archium
 | P3 | Concept Exploration 前置 — `ExplorationSession` + 结构化 `IdeaSeed` → 多 `ConceptDirection` → 选定 → `DesignIntent` + `ProjectMission` | 已落地 |
 | P3 | Design Iteration — 概念方向 + 视觉概念简报注入；Vision Engine；Mission 进度条 | 演示闭环体验已加强 |
 | P3 | 四模式 Architectural Workspace — 已有项目 / 概念探索 / 研究策划 / 设计迭代 | 首期已落地 |
+| P0 | 部分资料项目（Playbook F）— Context 连续谱自动化 + 探索→Mission 结构化方向 | 自动化已落地；`scripts/run_playbook_f_gate.py` |
+| P1 | `origin_mode` 退位 — 路由读 `ProjectContext`；`KnowledgeState` 持久化 lifecycle/workflow | 已落地 |
 
 Studio 的编辑闭环不是直接覆写导出文件：
 

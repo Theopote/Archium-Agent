@@ -244,11 +244,18 @@ def _render_describe(project_id: UUID) -> None:
         from archium.infrastructure.database.repositories import ProjectRepository
 
         project = ProjectRepository(session).get_by_id(project_id)
-        if project is not None and project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+        from archium.application.project_context_routing import (
+            is_concept_leaning,
+            is_research_programming,
+        )
+
+        if project is not None and is_concept_leaning(session, project) and not is_research_programming(
+            session, project
+        ):
             st.info(
                 "当前为概念探索草稿 — 假设可随研究修正；正式交付需后续补充资料。"
             )
-        elif project is not None and project.origin_mode == ProjectOriginMode.RESEARCH_PROGRAMMING:
+        elif project is not None and is_research_programming(session, project):
             st.info(
                 "当前为策划与可研模式 — 重点梳理决策背景与未知项；"
                 "成果以问题清单、工作路径或备忘录为主；正式交付需后续补充资料。"
@@ -269,8 +276,15 @@ def _render_describe(project_id: UUID) -> None:
     if genesis_task and not st.session_state.mission_task_draft:
         st.session_state.mission_task_draft = genesis_task
     example_pool = TASK_EXAMPLE_PROMPTS
-    if project is not None and project.origin_mode == ProjectOriginMode.RESEARCH_PROGRAMMING:
-        example_pool = PROGRAMMING_TASK_EXAMPLE_PROMPTS
+    with get_session() as session:
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        project_for_examples = ProjectRepository(session).get_by_id(project_id)
+        if project_for_examples is not None:
+            from archium.application.project_context_routing import is_research_programming
+
+            if is_research_programming(session, project_for_examples):
+                example_pool = PROGRAMMING_TASK_EXAMPLE_PROMPTS
     example = st.selectbox(
         "示例（可选，不会限制你的描述）",
         options=["（不使用示例）", *example_pool],

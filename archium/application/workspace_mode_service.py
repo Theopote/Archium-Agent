@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.application.project_context_builder import build_project_context
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
@@ -134,29 +135,32 @@ def origin_to_default_workspace_mode(
     return mapping.get(origin, ArchitecturalWorkspaceMode.EXISTING_PROJECT)
 
 
-def workspace_mode_from_context(
-    context: ProjectContext,
-    *,
-    origin: ProjectOriginMode,
-) -> ArchitecturalWorkspaceMode:
-    """Route workspace from knowledge state + NBA, not origin alone."""
+def workspace_mode_from_context(context: ProjectContext) -> ArchitecturalWorkspaceMode:
+    """Route workspace from knowledge state + NBA."""
+    from archium.domain.context.legacy_origin import infer_legacy_origin_mode
+
+    context = apply_legacy_origin(context)
     workflow = context.recommended_workflow
     page = context.primary_page_key
+    legacy = infer_legacy_origin_mode(context)
     if workflow == RecommendedWorkflow.DESIGN:
         return ArchitecturalWorkspaceMode.DESIGN_ITERATION
     if workflow == RecommendedWorkflow.DELIVER:
         return ArchitecturalWorkspaceMode.EXISTING_PROJECT
-    if workflow == RecommendedWorkflow.MATERIALS:
+    if (
+        workflow == RecommendedWorkflow.MATERIALS
+        and context.knowledge_state.completeness_score >= 0.55
+    ):
         return ArchitecturalWorkspaceMode.EXISTING_PROJECT
     if workflow == RecommendedWorkflow.EXPLORE:
         return ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION
     if workflow in (RecommendedWorkflow.RESEARCH, RecommendedWorkflow.MISSION):
-        if origin == ProjectOriginMode.RESEARCH_PROGRAMMING:
+        if legacy == ProjectOriginMode.RESEARCH_PROGRAMMING:
             return ArchitecturalWorkspaceMode.RESEARCH_PROGRAMMING
-        if page == "materials":
+        if page == "materials" and context.knowledge_state.completeness_score >= 0.55:
             return ArchitecturalWorkspaceMode.EXISTING_PROJECT
         return ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION
-    return origin_to_default_workspace_mode(origin)
+    return ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION
 
 
 class WorkspaceModeService:
@@ -176,9 +180,9 @@ class WorkspaceModeService:
     ) -> ArchitecturalWorkspaceMode:
         project = self._require_project(project_id)
         if override is not None:
-            if not self._override_allowed(project.origin_mode, override):
+            if not self._override_allowed(project, override):
                 raise WorkflowError(
-                    f"当前项目起源（{project.origin_mode.value}）不能切换到 {override.value}"
+                    f"当前项目不能切换到 {override.value} 工作区模式"
                 )
             return override
 
@@ -187,10 +191,7 @@ class WorkspaceModeService:
 
         context = build_project_context(self._session, project)
         if context is not None:
-            return workspace_mode_from_context(
-                context,
-                origin=project.origin_mode,
-            )
+            return workspace_mode_from_context(context)
 
         return origin_to_default_workspace_mode(project.origin_mode)
 
@@ -215,14 +216,17 @@ class WorkspaceModeService:
         return self.resolve_profile(project_id, override=override).primary_page_key
 
     def available_modes(self, project_id: UUID) -> list[ArchitecturalWorkspaceMode]:
-        project = self._require_project(project_id)
-        base = origin_to_default_workspace_mode(project.origin_mode)
+        base = self.resolve_mode(project_id)
         modes = [base]
         if base in {
             ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION,
             ArchitecturalWorkspaceMode.RESEARCH_PROGRAMMING,
         }:
             modes.append(ArchitecturalWorkspaceMode.DESIGN_ITERATION)
+        elif base == ArchitecturalWorkspaceMode.EXISTING_PROJECT:
+            context = build_project_context(self._session, project_id)
+            if context is not None and apply_legacy_origin(context).suggested_origin_mode.skips_default_clarification:
+                modes.append(ArchitecturalWorkspaceMode.DESIGN_ITERATION)
         return modes
 
     def _has_concept_directions(self, project_id: UUID) -> bool:
@@ -236,13 +240,16 @@ class WorkspaceModeService:
 
     def _override_allowed(
         self,
-        origin: ProjectOriginMode,
+        project: Project,
         override: ArchitecturalWorkspaceMode,
     ) -> bool:
-        if override == origin_to_default_workspace_mode(origin):
+        from archium.application.project_context_routing import legacy_origin_for_project
+
+        legacy = legacy_origin_for_project(self._session, project)
+        if override == origin_to_default_workspace_mode(legacy):
             return True
         if override == ArchitecturalWorkspaceMode.DESIGN_ITERATION:
-            return origin.skips_default_clarification
+            return legacy.skips_default_clarification
         return False
 
     def _require_project(self, project_id: UUID) -> Project:

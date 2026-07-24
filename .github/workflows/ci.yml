@@ -64,6 +64,10 @@ jobs:
             -q --tb=line
           pytest tests/unit/test_import_smoke.py -q --tb=line
 
+      - name: Playbook F gate (partial-knowledge routing)
+        if: matrix.python-version == '3.12'
+        run: python scripts/run_playbook_f_gate.py -q --tb=line
+
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4

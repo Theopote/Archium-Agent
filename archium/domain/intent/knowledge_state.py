@@ -26,6 +26,9 @@ class KnowledgeState(DomainModel):
     known: dict[str, str] = Field(default_factory=dict)
     unknown: list[str] = Field(default_factory=list)
     missing_information: list[str] = Field(default_factory=list)
+    lifecycle_stage: str = ""
+    recommended_workflow: str = ""
+    primary_page_key: str = ""
     assessed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     source: str = Field(default="initial", max_length=40)
 

@@ -28,6 +28,15 @@ _STYLE_ALIASES: dict[str, VisionStylePreset] = {
 }
 
 
+def preview_compiled_prompt_for_direction(direction: ConceptDirection) -> str:
+    """Compile Vision prompt from direction seed without persisting a brief."""
+    from archium.application.visual.vision.prompt_compiler import VisionPromptCompiler
+
+    request = image_request_from_concept_direction(direction)
+    spec = VisionPromptCompiler().compile(request, direction=direction)
+    return spec.prompt
+
+
 def direction_has_visual_seed(direction: ConceptDirection) -> bool:
     """True when ConceptDirection carries a direct image generation seed."""
     vp = direction.visual_prompt

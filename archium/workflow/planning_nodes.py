@@ -87,11 +87,14 @@ class PlanningWorkflowNodes:
                 "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": [f"项目 {state['project_id']} 不存在"],
             }
+        from archium.application.project_context_routing import legacy_origin_for_project
+
+        legacy_origin = legacy_origin_for_project(self._runtime.session, project)
         next_state: PlanningWorkflowState = {
             "current_step": PlanningWorkflowStep.PLANNING_LOAD_CONTEXT.value,
             "project_name": project.name,
             "project_context": project.description or "",
-            "origin_mode": project.origin_mode.value,
+            "origin_mode": legacy_origin.value,
         }
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state
@@ -139,9 +142,9 @@ class PlanningWorkflowNodes:
             self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
             return next_state
 
-        origin_mode = ProjectOriginMode(
-            state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value)
-        )
+        from archium.application.project_context_routing import skips_default_clarification
+
+        project_id = UUID(state["project_id"])
         from archium.application.autonomous_research_service import AutonomousResearchService
         from archium.application.web_research_settings_service import (
             WebResearchSettingsService,
@@ -153,7 +156,7 @@ class PlanningWorkflowNodes:
             base_settings=self._runtime.settings,
         )
         if (
-            not origin_mode.skips_default_clarification
+            not skips_default_clarification(self._runtime.session, project_id)
             or not prefs.auto_on_concept_planning
         ):
             next_state = {"current_step": step, "warnings": warnings}
@@ -384,10 +387,11 @@ class PlanningWorkflowNodes:
                 "errors": ["缺少 mission_id"],
             }
 
-        origin_mode = ProjectOriginMode(
-            state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value)
-        )
-        if origin_mode.skips_default_clarification:
+        from archium.application.project_context_routing import skips_default_clarification
+
+        if skips_default_clarification(
+            self._runtime.session, UUID(state["project_id"])
+        ):
             self._runtime.clarification_service.auto_assume_concept_defaults(mission_id)
 
         # Resume path: clarification already handled and readiness allows continue.

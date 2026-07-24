@@ -12,6 +12,7 @@
 |----------|--------------|
 | 日常 PR | 不强制剧本；相关模块自动测试即可 |
 | 内部 Preview 演示 | 剧本 A 走通一次（可 Mock LLM） |
+| **Context Intelligence 验收** | 剧本 **F** 自动化 + 一次真人 partial-knowledge 走通 |
 | **v0.2-beta 标签** | 剧本 **A** 真人验收 + 修改成本记录 |
 | RC / 对外试用 | 剧本 A + 至少 B 或 E |
 | Stable 声明 | 剧本 **A–E** 均有脱敏验收记录 |
@@ -103,6 +104,37 @@ python scripts/run_playbook_a_gate.py --with-real-projects
 **自动化映射：** Studio unit/integration、scene proposal、undo tests、PPTX smoke  
 **真实验收：** ⚠️（需浏览器真人点选）→ 当前 Experimental / Preview 边界见矩阵
 
+## 剧本 F — 部分资料项目（Partial Knowledge）
+
+**目标：** 验证 Context Intelligence 连续谱——用户不必在「纯想法」与「完备资料」之间二选一。
+
+**典型输入：**
+
+> 西安市某医院老院区改造，手头有一张老门诊楼照片、地址和一份旧院区介绍，甲方还没说清功能分区。
+
+| 步骤 | 操作 | 通过标准 |
+|------|------|----------|
+| F1 | 「开始项目」描述上述情况（可不选手动模式） | 显示知识完整度约 20–45%；阶段判断为研究/概念；**不是**仅提示上传资料 |
+| F2 | 查看建议下一步 | 优先 **澄清 / 推演方向 / 任务理解** 之一；可并行建议补资料 |
+| F3 | 上传 1 份简介或 1 张照片（可选） | 知识状态刷新；已知含地点/类型；未知含功能或规模 |
+| F4 | 推演 2 个概念方向 | 含 `spatial_strategy`、`formal_language`、`visual_prompt` |
+| F5 | 选定方向并提交 Mission | Mission 与设计使命写回；IntentEvolution 有选定/提交记录 |
+| F6 | （可选）生成概念示意 | 有 `visual_prompt` 时跳过 LLM 简报扩写；compiled_prompt 含 scene seed |
+| F7 | 继续大纲 → 生成 | 草稿预览可出；**正式交付**仍提示补资料（evidence gate） |
+
+**自动化映射（不足以代替 F1/F4 真人感受）：**
+
+```bash
+python scripts/run_playbook_f_gate.py
+# or
+pytest tests/integration/test_partial_knowledge_project_flow.py tests/unit/test_knowledge_state_routing.py tests/unit/test_project_context_routing.py -q
+```
+
+- `tests/integration/test_partial_knowledge_project_flow.py` — 评估路由、规则降级、探索→Mission、结构化方向
+- 相关 unit：`test_project_context.py`、`test_workspace_mode_service.py`、`test_concept_direction_structure.py`
+
+**记录位置：** `docs/rehearsal/sessions/`（注明 partial-knowledge 场景）
+
 ## 每次发版检查表
 
 复制到发版 PR 或 rehearsal session：
@@ -113,6 +145,7 @@ python scripts/run_playbook_a_gate.py --with-real-projects
 [ ] 剧本 C 通过 / Waive 原因：____
 [ ] 剧本 D 通过 / Waive 原因：____
 [ ] 剧本 E 通过 / Waive 原因：____
+[ ] 剧本 F 通过（部分资料 / Context Intelligence：____ 日期：____）
 [ ] 能力矩阵等级已按验收结果下调或上调
 [ ] CI compatibility + quality-full 绿
 ```

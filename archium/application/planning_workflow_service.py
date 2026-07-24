@@ -161,11 +161,16 @@ class PlanningWorkflowService:
         if project is None:
             raise WorkflowError(f"项目 {project_id} 不存在")
 
-        resolved_origin = origin_mode or project.origin_mode
+        from archium.application.project_context_routing import (
+            legacy_origin_for_project,
+            skips_default_clarification,
+        )
+
+        resolved_origin = origin_mode or legacy_origin_for_project(self._runtime.session, project)
         resolved_clarification = (
             require_clarification
             if require_clarification is not None
-            else not resolved_origin.skips_default_clarification
+            else not skips_default_clarification(self._runtime.session, project)
         )
 
         planning_session = self._planning_sessions.create(

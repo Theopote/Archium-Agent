@@ -9,6 +9,7 @@ from archium.application.context_intelligence_service import (
     ContextAssessment,
     ContextIntelligenceService,
 )
+from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.project import Project
 from uuid import UUID
@@ -39,11 +40,41 @@ def build_project_context(
         actions=actions,
         suggested_origin_mode=project.origin_mode,
     )
-    return ContextIntelligenceService._compose_project_context(
+    ctx = ContextIntelligenceService._compose_project_context(
         assessment,
         evidence=evidence,
         user_text=(project.description or project.name or "").strip(),
     )
+    ctx = overlay_persisted_routing(ctx, project.knowledge_state)
+    return apply_legacy_origin(ctx)
+
+
+def overlay_persisted_routing(
+    ctx: ProjectContext,
+    knowledge_state,
+) -> ProjectContext:
+    """Prefer routing snapshot persisted at last assessment."""
+    from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
+    from archium.domain.context.recommended_workflow import RecommendedWorkflow
+
+    updates: dict[str, object] = {}
+    stage_raw = (knowledge_state.lifecycle_stage or "").strip()
+    if stage_raw:
+        try:
+            updates["lifecycle_stage"] = ProjectLifecycleStage(stage_raw)
+        except ValueError:
+            pass
+    workflow_raw = (knowledge_state.recommended_workflow or "").strip()
+    if workflow_raw:
+        try:
+            updates["recommended_workflow"] = RecommendedWorkflow(workflow_raw)
+        except ValueError:
+            pass
+    if knowledge_state.primary_page_key:
+        updates["primary_page_key"] = knowledge_state.primary_page_key
+    if not updates:
+        return ctx
+    return ctx.model_copy(update=updates)
 
 
 def input_sources_from_evidence(evidence: ProjectEvidencePack) -> list[str]:

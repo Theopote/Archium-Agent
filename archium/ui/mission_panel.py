@@ -451,10 +451,9 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
 
     with get_session() as session:
         project = ProjectRepository(session).get_by_id(mission.project_id)
-        concept_origin = (
-            project is not None
-            and project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION
-        )
+        from archium.application.project_context_routing import is_concept_leaning
+
+        concept_origin = project is not None and is_concept_leaning(session, project)
         directions = list_concept_directions(session, mission.id)
         progress = get_design_iteration_progress(session, mission.id)
 

@@ -13,6 +13,7 @@ from archium.application.context_evidence import (
     gather_project_evidence,
 )
 from archium.config.settings import Settings, get_settings
+from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
@@ -142,6 +143,16 @@ class ContextIntelligenceService:
             evidence=evidence,
             user_text=user_text.strip(),
         )
+        ContextIntelligenceService._finalize_assessment_context(assessment)
+        if assessment.project_context is not None:
+            pc = assessment.project_context
+            assessment.knowledge_state = assessment.knowledge_state.model_copy(
+                update={
+                    "lifecycle_stage": pc.lifecycle_stage.value,
+                    "recommended_workflow": pc.recommended_workflow.value,
+                    "primary_page_key": pc.primary_page_key,
+                }
+            )
         project.knowledge_state = assessment.knowledge_state
         project.origin_mode = assessment.suggested_origin_mode
         if write_evolution:
@@ -376,6 +387,7 @@ class ContextIntelligenceService:
             assessment,
             evidence=None,
         )
+        ContextIntelligenceService._finalize_assessment_context(assessment)
         return assessment
 
     def _rule_fallback(
@@ -489,7 +501,15 @@ class ContextIntelligenceService:
             evidence=pack,
             user_text=user_text,
         )
+        ContextIntelligenceService._finalize_assessment_context(assessment)
         return assessment
+
+    @staticmethod
+    def _finalize_assessment_context(assessment: ContextAssessment) -> None:
+        if assessment.project_context is None:
+            return
+        assessment.project_context = apply_legacy_origin(assessment.project_context)
+        assessment.suggested_origin_mode = assessment.project_context.suggested_origin_mode
 
     @staticmethod
     def _compose_project_context(

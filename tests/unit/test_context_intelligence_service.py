@@ -78,9 +78,11 @@ def test_assess_rule_fallback_existing_docs() -> None:
         "医院改扩建，手头有旧总平 PDF",
         document_count=3,
     )
-    assert result.suggested_origin_mode == ProjectOriginMode.EXISTING_PROJECT
+    # Rule fallback may tag EXISTING_PROJECT internally; legacy origin follows ProjectContext.
+    assert result.suggested_origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION
     assert result.knowledge_state.maturity_stage == KnowledgeMaturityStage.DESIGN_ANALYSIS
     assert result.knowledge_state.completeness_score >= 0.5
+    assert result.project_context is not None
 
 
 def test_assess_and_persist_writes_knowledge_and_evolution(db_session) -> None:

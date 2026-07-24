@@ -49,6 +49,7 @@ class ProjectProgressSnapshot:
     pptx_ready: bool = False
     pdf_ready: bool = False
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT
+    lightweight_mode: bool = False
     has_mission_or_task: bool = False
 
     @property
@@ -127,7 +128,7 @@ class ProjectProgressSnapshot:
                 return "outline"
             return "materials"
 
-        if self.origin_mode.skips_default_clarification:
+        if self.lightweight_mode:
             if not self.outline_approved:
                 return "outline"
             if not self.design_briefs_approved and self.has_outline:
@@ -211,6 +212,7 @@ def _snapshot_for_project(
         resolve_delivery_readiness,
         resolve_project_evidence,
     )
+    from archium.application.project_context_routing import skips_default_clarification
     from archium.domain.enums import ApprovalStatus
     from archium.infrastructure.database.mission_repositories import MissionRepository
     from archium.infrastructure.database.repositories import (
@@ -325,6 +327,7 @@ def _snapshot_for_project(
         pptx_ready=pptx_ready,
         pdf_ready=pdf_ready,
         origin_mode=project.origin_mode,
+        lightweight_mode=skips_default_clarification(session, project),
         has_mission_or_task=has_mission_or_task,
     )
 

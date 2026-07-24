@@ -91,20 +91,11 @@ def _render_entry_form() -> None:
                     prompt.strip(),
                     settings=settings if settings.llm_configured else settings,
                 )
-                # Reload origin after assess
-                from archium.infrastructure.database.repositories import ProjectRepository
-
-                refreshed = ProjectRepository(session).get_by_id(project.id)
-                origin = (
-                    refreshed.origin_mode
-                    if refreshed is not None
-                    else assessment.suggested_origin_mode
-                )
                 should_explore = (
                     assessment.project_context is not None
                     and assessment.project_context.recommended_workflow
                     == RecommendedWorkflow.EXPLORE
-                ) or origin == ProjectOriginMode.CONCEPT_EXPLORATION
+                )
                 if should_explore:
                     if settings.llm_configured:
                         seed_result = start_exploration_session(

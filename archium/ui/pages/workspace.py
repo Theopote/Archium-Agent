@@ -185,15 +185,20 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
     else:
         with get_session() as session:
             from archium.infrastructure.database.repositories import ProjectRepository
+            from archium.application.project_context_routing import (
+                is_concept_leaning,
+                is_research_programming,
+            )
 
             project = ProjectRepository(session).get_by_id(project_id)
-        if project is not None and project.origin_mode.skips_default_clarification:
-            if project.origin_mode == ProjectOriginMode.RESEARCH_PROGRAMMING:
+            if project is not None and is_concept_leaning(session, project) and not is_research_programming(
+                session, project
+            ):
+                st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
+            elif project is not None and is_research_programming(session, project):
                 st.caption("策划与可研中 — 资料可后续补充 enrich 任务理解。")
             else:
-                st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
-        else:
-            st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
+                st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
 
     if show_uploader:
         _render_upload_controls(project_id, key_prefix="docs_upload")

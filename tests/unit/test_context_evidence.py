@@ -9,6 +9,7 @@ from archium.application.context_evidence import (
     gather_project_evidence,
 )
 from archium.application.context_intelligence_service import ContextIntelligenceService
+from archium.domain.context.legacy_origin import infer_legacy_origin_mode
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import DocumentType, ProcessingStatus, ProjectOriginMode, VerificationStatus
 from archium.domain.fact import ProjectFact
@@ -153,7 +154,9 @@ def test_assess_and_persist_passes_materials_evidence(db_session) -> None:
     result = service.assess_and_persist(project.id, "医院旧楼改造")
 
     assert result.knowledge_state.source == "materials_aware"
-    assert result.suggested_origin_mode == ProjectOriginMode.EXISTING_PROJECT
+    refreshed = ProjectRepository(db_session).get_by_id(project.id)
+    assert refreshed is not None
+    assert refreshed.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION
     user_prompt = llm.generate_structured.call_args.args[0].user_prompt
     assert "西安" in user_prompt
     assert "【已提取/已确认事实】" in user_prompt
@@ -179,6 +182,7 @@ def test_rule_fallback_uses_confirmed_facts() -> None:
         project_name="医院",
         evidence=pack,
     )
-    assert result.suggested_origin_mode == ProjectOriginMode.EXISTING_PROJECT
+    assert result.project_context is not None
+    assert infer_legacy_origin_mode(result.project_context) == ProjectOriginMode.CONCEPT_EXPLORATION
     assert result.actions[0].action.value == "ask"
     assert any("建筑面积" in item for item in result.knowledge_state.unknown)
