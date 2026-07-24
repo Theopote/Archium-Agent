@@ -538,12 +538,13 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                                 )
                             st.session_state[cache_key] = output
                             count = output.payload.get("item_count")
+                            paths = [f"Markdown：{output.markdown_path}"]
+                            if getattr(output, "docx_path", None):
+                                paths.append(f"DOCX：{output.docx_path}")
                             if count is not None:
-                                st.success(
-                                    f"已生成 {count} 项。Markdown：{output.markdown_path}"
-                                )
+                                st.success(f"已生成 {count} 项。" + " ".join(paths))
                             else:
-                                st.success(f"已生成{kind_label}。Markdown：{output.markdown_path}")
+                                st.success(f"已生成{kind_label}。" + " ".join(paths))
                         except WorkflowError as exc:
                             st.error(format_user_error(exc))
                         except Exception as exc:
@@ -552,8 +553,12 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                 if cached is not None:
                     with st.expander(f"预览：{label}", expanded=False):
                         st.markdown(cached.markdown)
+                        if cached.markdown_path:
+                            st.caption(f"Markdown：{cached.markdown_path}")
                         if cached.json_path:
                             st.caption(f"JSON：{cached.json_path}")
+                        if getattr(cached, "docx_path", None):
+                            st.caption(f"DOCX：{cached.docx_path}")
 
     selected_presentations: list[object] = [
         item

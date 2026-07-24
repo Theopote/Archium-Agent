@@ -110,8 +110,18 @@ def test_question_list_reads_bundle_not_content_scope(tmp_path: Path) -> None:
     assert any("分期改造" in text for text in texts)
     assert "这不该成为唯一来源" not in texts
     assert "阻塞项" in output.markdown
+    assert output.payload["formats"] == ["json", "markdown", "docx"]
     assert output.json_path is not None and output.json_path.exists()
     assert output.markdown_path is not None and output.markdown_path.exists()
+    assert output.docx_path is not None and output.docx_path.exists()
+    assert output.docx_path.suffix == ".docx"
+    from docx import Document as DocumentFactory
+
+    doc = DocumentFactory(str(output.docx_path))
+    text = "\n".join(paragraph.text for paragraph in doc.paragraphs)
+    assert "提问清单" in text or "改造预算" in text
+    assert "阻塞项" in text
+    assert "改造预算上限是多少？" in text
 
 
 def test_work_plan_from_workstreams(tmp_path: Path) -> None:

@@ -1,7 +1,7 @@
 """Non-presentation artifact executors (Question List, Work Plan, Report, …).
 
 Router selects the executor; executors read the full mission bundle and write
-Markdown + JSON artifacts. DOCX is reserved for a later sprint.
+Markdown + JSON artifacts. Question List also writes DOCX.
 """
 
 from __future__ import annotations
@@ -12,6 +12,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
+
+from docx import Document as DocumentFactory
+from docx.shared import Pt
 
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import (
@@ -113,6 +116,7 @@ class ArtifactOutput:
     markdown: str
     json_path: Path | None = None
     markdown_path: Path | None = None
+    docx_path: Path | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -122,6 +126,7 @@ class ArtifactOutput:
             "markdown": self.markdown,
             "json_path": str(self.json_path) if self.json_path else None,
             "markdown_path": str(self.markdown_path) if self.markdown_path else None,
+            "docx_path": str(self.docx_path) if self.docx_path else None,
         }
 
 
@@ -155,6 +160,42 @@ def write_artifact_files(
     return output
 
 
+def write_question_list_docx(
+    *,
+    title: str,
+    mission: ProjectMission,
+    items: list[QuestionListItem],
+    path: Path,
+) -> Path:
+    """Write a Word document for a question list artifact."""
+    document = DocumentFactory()
+    document.add_heading(title, level=1)
+    document.add_paragraph(f"任务：{mission.task_statement}")
+    document.add_paragraph(f"共 {len(items)} 项。")
+
+    blocking = [item for item in items if item.blocking]
+    other = [item for item in items if not item.blocking]
+
+    def _add_section(heading: str, section_items: list[QuestionListItem]) -> None:
+        if not section_items:
+            return
+        document.add_heading(heading, level=2)
+        for idx, item in enumerate(section_items, start=1):
+            document.add_paragraph(f"{idx}. [{item.source}] {item.text}")
+            if item.notes:
+                note = document.add_paragraph(f"说明：{item.notes}")
+                note.paragraph_format.left_indent = Pt(18)
+
+    _add_section("阻塞项", blocking)
+    _add_section("其他待澄清", other)
+    if not items:
+        document.add_paragraph("当前无待澄清项。")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    document.save(str(path))
+    return path
+
+
 @dataclass(frozen=True)
 class QuestionListItem:
     source: str
@@ -170,10 +211,7 @@ class QuestionListItem:
 
 
 class QuestionListExecutor:
-    """Build a question list from mission bundle context (not deliverable.content_scope).
-
-    Future: DOCX export via the same payload.
-    """
+    """Build a question list from mission bundle context (not deliverable.content_scope)."""
 
     def execute(
         self,
@@ -205,8 +243,7 @@ class QuestionListExecutor:
             "generated_at": datetime.now(UTC).isoformat(),
             "item_count": len(items),
             "items": [item.to_dict() for item in items],
-            # Reserved for later DOCX export.
-            "formats": ["json", "markdown", "docx_pending"],
+            "formats": ["json", "markdown", "docx"],
         }
         markdown = self._to_markdown(title, mission, items)
         output = ArtifactOutput(
@@ -217,6 +254,12 @@ class QuestionListExecutor:
         )
         if output_dir is not None:
             write_artifact_files(output, output_dir, basename="question_list")
+            output.docx_path = write_question_list_docx(
+                title=title,
+                mission=mission,
+                items=items,
+                path=output_dir / "question_list.docx",
+            )
         return output
 
     def _collect_items(
