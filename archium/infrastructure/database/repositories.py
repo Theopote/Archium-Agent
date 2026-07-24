@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
+from archium.domain.concept_direction import ConceptDirection
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
@@ -35,6 +36,7 @@ from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
     ArtifactJobORM,
     AssetORM,
+    ConceptDirectionORM,
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
@@ -1248,6 +1250,58 @@ class ArtifactJobRepository:
             .limit(limit)
         )
         return [mappers.artifact_job_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class ConceptDirectionRepository:
+    """CRUD for concept design-iteration direction drafts."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, direction: ConceptDirection) -> ConceptDirection:
+        try:
+            orm = mappers.concept_direction_to_orm(direction)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.concept_direction_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create concept direction", exc)
+            raise
+
+    def update(self, direction: ConceptDirection) -> ConceptDirection:
+        try:
+            orm = self._session.get(ConceptDirectionORM, direction.id)
+            if orm is None:
+                raise RepositoryError(f"Concept direction {direction.id} not found")
+            mappers.concept_direction_to_orm(direction, orm)
+            self._session.flush()
+            return mappers.concept_direction_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("update concept direction", exc)
+            raise
+
+    def get(self, direction_id: UUID) -> ConceptDirection | None:
+        orm = self._session.get(ConceptDirectionORM, direction_id)
+        if orm is None:
+            return None
+        return mappers.concept_direction_to_domain(orm)
+
+    def list_by_mission(
+        self,
+        mission_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> list[ConceptDirection]:
+        stmt = select(ConceptDirectionORM).where(
+            ConceptDirectionORM.mission_id == mission_id
+        )
+        if not include_archived:
+            stmt = stmt.where(ConceptDirectionORM.status != "archived")
+        stmt = stmt.order_by(
+            ConceptDirectionORM.sort_order.asc(),
+            ConceptDirectionORM.created_at.asc(),
+        )
+        return [mappers.concept_direction_to_domain(row) for row in self._session.scalars(stmt)]
 
 
 class OutlineApprovalRecordRepository:

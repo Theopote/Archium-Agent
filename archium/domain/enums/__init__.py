@@ -37,6 +37,7 @@ from archium.domain.enums.mission import (
     WorkstreamStatus,
     WorkstreamType,
     ArtifactJobStatus,
+    ConceptDirectionStatus,
 )
 from archium.domain.enums.presentation import (
     ApprovalStatus,
@@ -125,6 +126,7 @@ __all__ = [
     "WorkstreamStatus",
     "DeliverableType",
     "ArtifactJobStatus",
+    "ConceptDirectionStatus",
     "VisualType",
     "AssetType",
     "SlideAssetBindingRole",

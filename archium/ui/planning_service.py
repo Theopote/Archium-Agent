@@ -419,6 +419,60 @@ def update_mission_fields(
     return ProjectMissionService(session, llm, settings=runtime).update_mission(mission_id, patch)
 
 
+def generate_concept_directions(
+    session: Session,
+    mission_id: UUID,
+    *,
+    count: int = 3,
+    settings: Settings | None = None,
+):
+    from archium.application.concept_direction_service import ConceptDirectionService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ConceptDirectionService(session, llm, settings=runtime).generate_directions(
+        mission_id,
+        count=count,
+    )
+
+
+def list_concept_directions(session: Session, mission_id: UUID):
+    from archium.application.concept_direction_service import ConceptDirectionService
+    from archium.infrastructure.llm.mock import MockLLMProvider
+
+    return ConceptDirectionService(session, MockLLMProvider()).list_directions(mission_id)
+
+
+def select_concept_direction(
+    session: Session,
+    direction_id: UUID,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.concept_direction_service import ConceptDirectionService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ConceptDirectionService(session, llm, settings=runtime).select_direction(
+        direction_id
+    )
+
+
+def archive_concept_direction(
+    session: Session,
+    direction_id: UUID,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.concept_direction_service import ConceptDirectionService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ConceptDirectionService(session, llm, settings=runtime).archive_direction(
+        direction_id
+    )
+
+
 def answer_clarifying_question(
     session: Session,
     question_id: UUID,

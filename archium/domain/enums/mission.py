@@ -139,3 +139,11 @@ class ArtifactJobStatus(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+
+class ConceptDirectionStatus(StrEnum):
+    """Lifecycle for concept design-iteration direction drafts."""
+
+    DRAFT = "draft"
+    SELECTED = "selected"
+    ARCHIVED = "archived"

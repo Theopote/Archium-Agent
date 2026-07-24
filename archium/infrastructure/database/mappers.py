@@ -7,6 +7,7 @@ from uuid import UUID
 from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
 from archium.domain.citation import Citation
+from archium.domain.concept_direction import ConceptDirection
 from archium.domain.cultural_narrative import (
     CULTURAL_NARRATIVE_LOGICAL_KEY,
     CulturalNarrativePlan,
@@ -17,6 +18,7 @@ from archium.domain.enums import (
     ApprovalStatus,
     ArtifactJobStatus,
     AssetType,
+    ConceptDirectionStatus,
     DeckDeliveryStatus,
     DeliverableType,
     DocumentType,
@@ -79,6 +81,7 @@ from archium.infrastructure.database.models import (
     ArtifactJobORM,
     AssetORM,
     ChapterORM,
+    ConceptDirectionORM,
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
@@ -1208,6 +1211,52 @@ def artifact_job_to_orm(
     target.error_message = domain.error_message
     target.started_at = domain.started_at
     target.completed_at = domain.completed_at
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
+    return ConceptDirection(
+        id=orm.id,
+        project_id=orm.project_id,
+        mission_id=orm.mission_id,
+        title=orm.title,
+        summary=orm.summary or "",
+        theme=orm.theme or "",
+        spatial_idea=orm.spatial_idea or "",
+        experience_focus=orm.experience_focus or "",
+        differentiator=orm.differentiator or "",
+        open_questions=list(orm.open_questions_json or []),
+        risks=list(orm.risks_json or []),
+        status=ConceptDirectionStatus(orm.status),
+        sort_order=orm.sort_order or 0,
+        source=orm.source or "generated",
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def concept_direction_to_orm(
+    domain: ConceptDirection,
+    orm: ConceptDirectionORM | None = None,
+) -> ConceptDirectionORM:
+    target = orm or ConceptDirectionORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.mission_id = domain.mission_id
+    target.title = domain.title
+    target.summary = domain.summary
+    target.theme = domain.theme
+    target.spatial_idea = domain.spatial_idea
+    target.experience_focus = domain.experience_focus
+    target.differentiator = domain.differentiator
+    target.open_questions_json = list(domain.open_questions)
+    target.risks_json = list(domain.risks)
+    target.status = domain.status.value
+    target.sort_order = domain.sort_order
+    target.source = domain.source
     if domain.created_at is not None:
         target.created_at = domain.created_at
     if domain.updated_at is not None:

@@ -414,6 +414,110 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
             st.error(format_user_error(exc))
 
 
+def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: str) -> None:
+    """Minimal design-iteration UI: generate and select 2–3 concept direction drafts."""
+    from archium.domain.enums import ConceptDirectionStatus
+    from archium.ui.llm_settings import get_ui_effective_settings
+    from archium.ui.planning_service import (
+        archive_concept_direction,
+        generate_concept_directions,
+        list_concept_directions,
+        select_concept_direction,
+    )
+
+    st.markdown("**概念方向草稿**")
+    st.caption("同一任务下推演 2–3 个可比较方向；选中后写入设计使命（非视觉出图）。")
+
+    with get_session() as session:
+        directions = list_concept_directions(session, mission.id)
+
+    if st.button(
+        "推演概念方向（2–3 个草稿）",
+        key=f"{key_prefix}_gen_concept_dirs",
+        use_container_width=True,
+    ):
+        settings = get_ui_effective_settings()
+        if not settings.llm_configured:
+            st.error("未配置 LLM API Key。请前往设置配置。")
+            return
+        with st.spinner("正在推演概念方向…"):
+            try:
+                with get_session() as session:
+                    result = generate_concept_directions(
+                        session,
+                        mission.id,
+                        count=3,
+                        settings=settings,
+                    )
+                st.success(f"已生成 {len(result.directions)} 个概念方向草稿。")
+                for warning in result.warnings:
+                    st.warning(warning)
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
+    if not directions:
+        st.caption("尚未生成概念方向。")
+        return
+
+    for direction in directions:
+        badge = {
+            ConceptDirectionStatus.SELECTED: "已选中",
+            ConceptDirectionStatus.DRAFT: "草稿",
+            ConceptDirectionStatus.ARCHIVED: "已归档",
+        }.get(direction.status, direction.status.value)
+        with st.expander(f"{direction.title} · {badge}", expanded=direction.status == ConceptDirectionStatus.SELECTED):
+            if direction.theme:
+                st.markdown(f"**主题**：{direction.theme}")
+            if direction.summary:
+                st.markdown(direction.summary)
+            if direction.spatial_idea:
+                st.markdown(f"**空间想法**：{direction.spatial_idea}")
+            if direction.experience_focus:
+                st.markdown(f"**体验焦点**：{direction.experience_focus}")
+            if direction.differentiator:
+                st.markdown(f"**差异点**：{direction.differentiator}")
+            if direction.open_questions:
+                st.markdown("**开放问题**")
+                for item in direction.open_questions:
+                    st.markdown(f"- {item}")
+            if direction.risks:
+                st.markdown("**风险**")
+                for item in direction.risks:
+                    st.markdown(f"- {item}")
+
+            cols = st.columns(2)
+            if direction.status != ConceptDirectionStatus.SELECTED and cols[0].button(
+                "选为当前方向",
+                key=f"{key_prefix}_select_dir_{direction.id}",
+                use_container_width=True,
+            ):
+                try:
+                    with get_session() as session:
+                        select_concept_direction(session, direction.id)
+                    st.success(f"已选中「{direction.title}」，并写回设计使命。")
+                    st.rerun()
+                except WorkflowError as exc:
+                    st.error(str(exc))
+                except Exception as exc:
+                    st.error(format_user_error(exc))
+            if direction.status == ConceptDirectionStatus.DRAFT and cols[1].button(
+                "归档",
+                key=f"{key_prefix}_archive_dir_{direction.id}",
+                use_container_width=True,
+            ):
+                try:
+                    with get_session() as session:
+                        archive_concept_direction(session, direction.id)
+                    st.rerun()
+                except WorkflowError as exc:
+                    st.error(str(exc))
+                except Exception as exc:
+                    st.error(format_user_error(exc))
+
+
 def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: str) -> None:
     from archium.application.autonomous_research_service import AutonomousResearchService
     from archium.application.research_topics import collect_mission_research_topics
@@ -518,11 +622,15 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
                 st.markdown("**工作假设（待确认）**")
                 for item in intent.working_assumptions:
                     st.markdown(f"- {item}")
+            _render_concept_direction_section(mission, key_prefix=key_prefix)
             if research_topics:
                 _render_autonomous_research_section(mission, key_prefix=key_prefix)
-    elif research_topics:
-        with st.expander("自主研究", expanded=True):
-            _render_autonomous_research_section(mission, key_prefix=key_prefix)
+    else:
+        with st.expander("概念方向草稿", expanded=False):
+            _render_concept_direction_section(mission, key_prefix=key_prefix)
+        if research_topics:
+            with st.expander("自主研究", expanded=True):
+                _render_autonomous_research_section(mission, key_prefix=key_prefix)
 
     narrative_suggestion = suggest_narrative_mode(mission)
     st.info(

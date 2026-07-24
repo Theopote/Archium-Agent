@@ -1069,6 +1069,37 @@ class ArtifactJobORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class ConceptDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "concept_directions"
+    __table_args__ = (
+        Index("ix_concept_directions_project_id", "project_id"),
+        Index("ix_concept_directions_mission_id", "mission_id"),
+        Index("ix_concept_directions_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_missions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    theme: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    spatial_idea: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    experience_focus: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    differentiator: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    open_questions_json: Mapped[list[str]] = mapped_column(
+        "open_questions", JSON, nullable=False, default=list
+    )
+    risks_json: Mapped[list[str]] = mapped_column("risks", JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    source: Mapped[str] = mapped_column(String(40), nullable=False, default="generated")
+
+
 class OutlineApprovalRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "outline_approval_records"
     __table_args__ = (
