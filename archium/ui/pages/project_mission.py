@@ -33,7 +33,11 @@ from archium.ui.planning_service import (
     PROGRAMMING_TASK_EXAMPLE_PROMPTS,
     TASK_EXAMPLE_PROMPTS,
     PlanningSnapshot,
+    generate_case_study_artifact,
+    generate_checklist_artifact,
+    generate_memo_artifact,
     generate_question_list_artifact,
+    generate_report_artifact,
     generate_work_plan_artifact,
     get_planning_snapshot,
     get_presentation_bridge,
@@ -473,73 +477,83 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             DeliverableType.IMPLEMENTATION_ROADMAP.value,
         }
     ]
+    report_plans = [
+        item
+        for item in execution_plans
+        if item.get("supported")
+        and item.get("deliverable_type")
+        in {
+            DeliverableType.REPORT.value,
+            DeliverableType.TECHNICAL_PROPOSAL.value,
+        }
+    ]
+    memo_plans = [
+        item
+        for item in execution_plans
+        if item.get("supported")
+        and item.get("deliverable_type") == DeliverableType.MEMO.value
+    ]
+    checklist_plans = [
+        item
+        for item in execution_plans
+        if item.get("supported")
+        and item.get("deliverable_type") == DeliverableType.CHECKLIST.value
+    ]
+    case_study_plans = [
+        item
+        for item in execution_plans
+        if item.get("supported")
+        and item.get("deliverable_type") == DeliverableType.CASE_STUDY.value
+    ]
 
-    if mission_id is not None and (question_plans or work_plan_plans):
+    text_artifact_groups = [
+        (question_plans, "提问清单", "gen_ql_", "artifact_ql_", "正在从 Mission 上下文生成提问清单…", generate_question_list_artifact),
+        (work_plan_plans, "工作大纲", "gen_wp_", "artifact_wp_", "正在生成工作大纲…", generate_work_plan_artifact),
+        (report_plans, "报告", "gen_report_", "artifact_report_", "正在生成报告提纲…", generate_report_artifact),
+        (memo_plans, "备忘录", "gen_memo_", "artifact_memo_", "正在生成备忘录…", generate_memo_artifact),
+        (checklist_plans, "清单", "gen_cl_", "artifact_cl_", "正在生成清单…", generate_checklist_artifact),
+        (case_study_plans, "案例研究", "gen_cs_", "artifact_cs_", "正在生成案例研究提纲…", generate_case_study_artifact),
+    ]
+    has_text_artifacts = any(group[0] for group in text_artifact_groups)
+
+    if mission_id is not None and has_text_artifacts:
         st.markdown("**非汇报成果生成**")
-        for item in question_plans:
-            label = item.get("deliverable_title") or "提问清单"
-            if st.button(
-                f"生成提问清单：{label}",
-                key=f"gen_ql_{item.get('deliverable_id')}",
-                use_container_width=True,
-            ):
-                with st.spinner("正在从 Mission 上下文生成提问清单…"):
-                    try:
-                        with get_session() as session:
-                            output = generate_question_list_artifact(
-                                session,
-                                mission_id,
-                                deliverable_id=str(item.get("deliverable_id") or "")
-                                or None,
-                            )
-                        st.session_state[f"artifact_ql_{item.get('deliverable_id')}"] = (
-                            output
-                        )
-                        st.success(
-                            f"已生成 {output.payload.get('item_count', 0)} 项。"
-                            f" Markdown：{output.markdown_path}"
-                        )
-                    except WorkflowError as exc:
-                        st.error(format_user_error(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
-            cached = st.session_state.get(f"artifact_ql_{item.get('deliverable_id')}")
-            if cached is not None:
-                with st.expander(f"预览：{label}", expanded=False):
-                    st.markdown(cached.markdown)
-                    if cached.json_path:
-                        st.caption(f"JSON：{cached.json_path}")
-
-        for item in work_plan_plans:
-            label = item.get("deliverable_title") or "工作大纲"
-            if st.button(
-                f"生成工作大纲：{label}",
-                key=f"gen_wp_{item.get('deliverable_id')}",
-                use_container_width=True,
-            ):
-                with st.spinner("正在生成工作大纲…"):
-                    try:
-                        with get_session() as session:
-                            output = generate_work_plan_artifact(
-                                session,
-                                mission_id,
-                                deliverable_id=str(item.get("deliverable_id") or "")
-                                or None,
-                            )
-                        st.session_state[f"artifact_wp_{item.get('deliverable_id')}"] = (
-                            output
-                        )
-                        st.success(f"已生成工作大纲。Markdown：{output.markdown_path}")
-                    except WorkflowError as exc:
-                        st.error(format_user_error(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
-            cached = st.session_state.get(f"artifact_wp_{item.get('deliverable_id')}")
-            if cached is not None:
-                with st.expander(f"预览：{label}", expanded=False):
-                    st.markdown(cached.markdown)
-                    if cached.json_path:
-                        st.caption(f"JSON：{cached.json_path}")
+        for plans, kind_label, btn_prefix, cache_prefix, spinner_text, generator in text_artifact_groups:
+            for item in plans:
+                label = item.get("deliverable_title") or kind_label
+                deliverable_id = str(item.get("deliverable_id") or "") or None
+                cache_key = f"{cache_prefix}{item.get('deliverable_id')}"
+                if st.button(
+                    f"生成{kind_label}：{label}",
+                    key=f"{btn_prefix}{item.get('deliverable_id')}",
+                    use_container_width=True,
+                ):
+                    with st.spinner(spinner_text):
+                        try:
+                            with get_session() as session:
+                                output = generator(
+                                    session,
+                                    mission_id,
+                                    deliverable_id=deliverable_id,
+                                )
+                            st.session_state[cache_key] = output
+                            count = output.payload.get("item_count")
+                            if count is not None:
+                                st.success(
+                                    f"已生成 {count} 项。Markdown：{output.markdown_path}"
+                                )
+                            else:
+                                st.success(f"已生成{kind_label}。Markdown：{output.markdown_path}")
+                        except WorkflowError as exc:
+                            st.error(format_user_error(exc))
+                        except Exception as exc:
+                            st.error(format_user_error(exc))
+                cached = st.session_state.get(cache_key)
+                if cached is not None:
+                    with st.expander(f"预览：{label}", expanded=False):
+                        st.markdown(cached.markdown)
+                        if cached.json_path:
+                            st.caption(f"JSON：{cached.json_path}")
 
     selected_presentations: list[object] = [
         item

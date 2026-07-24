@@ -116,7 +116,7 @@ load_project_context → analyze_task → validate_mission
 - Checkpoint：复用 `WorkflowCheckpointerManager`（SQLite）。
 - **`PlanningSession`** 是规划主键；`WorkflowRun.presentation_id` **可空**，规划启动时**不**创建 Presentation。
 - 仅当用户批准并启动已选 `PRESENTATION` 成果时，才由汇报管线创建真正的 Presentation，并写回 `PlanningSession.presentation_id`。
-- **下一阶段**：`ArtifactJob` 正式持久化（planned/ready/running/completed/…）；QUESTION_LIST DOCX；Report/Memo/Case Study 执行器。
+- **下一阶段**：`ArtifactJob` 正式持久化（planned/ready/running/completed/…）；QUESTION_LIST DOCX。
 ### Presentation 适配
 
 `DeliverableExecutionRouter` 按成果类型路由：
@@ -126,10 +126,10 @@ load_project_context → analyze_task → validate_mission
 | `PRESENTATION` | `PresentationRequest` | 支持（进入汇报主链） |
 | `QUESTION_LIST` | `QuestionListRequest` → Executor | 支持（Markdown / JSON；DOCX 后续） |
 | `WORK_PLAN` / `IMPLEMENTATION_ROADMAP` | `WorkPlanRequest` → Executor | 支持（Markdown / JSON） |
-| `REPORT` / `TECHNICAL_PROPOSAL` | `ReportRequest` | 规划完成，生成未支持 |
-| `MEMO` | `MemoRequest` | 规划完成，生成未支持 |
-| `CHECKLIST` | `ChecklistRequest`（`content_scope`→items） | 规划完成，生成未支持 |
-| `CASE_STUDY` | `CaseStudyRequest` | 规划完成，生成未支持 |
+| `REPORT` / `TECHNICAL_PROPOSAL` | `ReportRequest` → Executor | 支持（Markdown / JSON 提纲） |
+| `MEMO` | `MemoRequest` → Executor | 支持（Markdown / JSON） |
+| `CHECKLIST` | `ChecklistRequest` → Executor | 支持（Markdown / JSON） |
+| `CASE_STUDY` | `CaseStudyRequest` → Executor | 支持（Markdown / JSON 提纲） |
 | 其他 | — | 规划完成，生成未支持 |
 
 **禁止**将非 PPT 成果静默退化成 `PresentationRequest`。未支持类型显示：「该成果已完成规划，但当前版本尚未支持自动生成。」

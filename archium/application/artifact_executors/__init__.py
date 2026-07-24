@@ -1,4 +1,4 @@
-"""Non-presentation artifact executors (Question List, Work Plan, …).
+"""Non-presentation artifact executors (Question List, Work Plan, Report, …).
 
 Router selects the executor; executors read the full mission bundle and write
 Markdown + JSON artifacts. DOCX is reserved for a later sprint.
@@ -24,6 +24,83 @@ from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
 from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
+
+
+def _mission_context_payload(mission: ProjectMission) -> dict[str, Any]:
+    return {
+        "title": mission.title,
+        "task_statement": mission.task_statement,
+        "project_context": mission.project_context,
+        "current_situation": mission.current_situation,
+        "primary_problems": list(mission.primary_problems),
+        "desired_changes": list(mission.desired_changes),
+        "in_scope": list(mission.in_scope),
+        "out_of_scope": list(mission.out_of_scope),
+        "decisions_required": list(mission.decisions_required),
+        "key_unknowns": list(mission.key_unknowns),
+        "research_questions": list(mission.research_questions),
+        "decision_context": mission.decision_context,
+        "stakeholders": [
+            {
+                "name": item.name,
+                "role": item.role,
+                "concerns": list(item.concerns),
+            }
+            for item in mission.stakeholders
+        ],
+    }
+
+
+def _append_mission_context_markdown(lines: list[str], mission: ProjectMission) -> None:
+    lines.append(f"**任务陈述**：{mission.task_statement}")
+    lines.append("")
+    if mission.project_context.strip():
+        lines.append(f"**项目背景**：{mission.project_context.strip()}")
+        lines.append("")
+    if mission.current_situation.strip():
+        lines.append(f"**现状**：{mission.current_situation.strip()}")
+        lines.append("")
+    if mission.primary_problems:
+        lines.append("**主要问题**：")
+        for item in mission.primary_problems:
+            lines.append(f"- {item}")
+        lines.append("")
+    if mission.desired_changes:
+        lines.append("**期望变化**：")
+        for item in mission.desired_changes:
+            lines.append(f"- {item}")
+        lines.append("")
+    if mission.in_scope:
+        lines.append("**范围内**：" + "、".join(mission.in_scope))
+        lines.append("")
+    if mission.out_of_scope:
+        lines.append("**范围外**：" + "、".join(mission.out_of_scope))
+        lines.append("")
+    if mission.stakeholders:
+        lines.append("## 利益相关方")
+        lines.append("")
+        for stakeholder in mission.stakeholders:
+            concerns = "；".join(stakeholder.concerns) if stakeholder.concerns else "—"
+            lines.append(f"- **{stakeholder.name}**（{stakeholder.role}）：{concerns}")
+        lines.append("")
+    if mission.decisions_required:
+        lines.append("## 待决策")
+        lines.append("")
+        for decision in mission.decisions_required:
+            lines.append(f"- {decision}")
+        lines.append("")
+    if mission.key_unknowns:
+        lines.append("## 关键未知")
+        lines.append("")
+        for unknown in mission.key_unknowns:
+            lines.append(f"- {unknown}")
+        lines.append("")
+    if mission.research_questions:
+        lines.append("## 研究问题")
+        lines.append("")
+        for question in mission.research_questions:
+            lines.append(f"- {question}")
+        lines.append("")
 
 
 @dataclass
@@ -462,3 +539,324 @@ class WorkPlanExecutor:
             lines.append("")
 
         return "\n".join(lines)
+
+
+class ReportExecutor:
+    """Generate a structured report outline from Mission + deliverable scope."""
+
+    def execute(
+        self,
+        mission: ProjectMission,
+        *,
+        deliverable: PlannedDeliverable | None = None,
+        content_scope: list[str] | None = None,
+        purpose: str = "",
+        audience: str = "",
+        expected_length: str = "",
+        notes: str = "",
+        output_dir: Path | None = None,
+    ) -> ArtifactOutput:
+        scope = list(content_scope or [])
+        if deliverable is not None and not scope:
+            scope = list(deliverable.content_scope)
+        title = deliverable.title if deliverable is not None else f"{mission.title} — 报告"
+        purpose = purpose or (deliverable.purpose if deliverable else "") or ""
+        audience = audience or (deliverable.audience if deliverable else "") or ""
+        expected_length = expected_length or (
+            (deliverable.expected_length or "") if deliverable else ""
+        )
+        notes = notes or ((deliverable.notes or "") if deliverable else "")
+
+        sections = scope or [
+            "任务理解与背景",
+            "关键问题与约束",
+            "分析要点",
+            "建议与下一步",
+        ]
+        payload = {
+            "kind": "report",
+            "mission_id": str(mission.id),
+            "title": title,
+            "generated_at": datetime.now(UTC).isoformat(),
+            "purpose": purpose,
+            "audience": audience,
+            "expected_length": expected_length,
+            "notes": notes,
+            "sections": sections,
+            "mission": _mission_context_payload(mission),
+            "formats": ["json", "markdown"],
+        }
+        lines = [f"# {title}", ""]
+        if purpose:
+            lines.append(f"**目的**：{purpose}")
+            lines.append("")
+        if audience:
+            lines.append(f"**受众**：{audience}")
+            lines.append("")
+        if expected_length:
+            lines.append(f"**预期篇幅**：{expected_length}")
+            lines.append("")
+        _append_mission_context_markdown(lines, mission)
+        lines.append("## 报告结构")
+        lines.append("")
+        for idx, section in enumerate(sections, start=1):
+            lines.append(f"### {idx}. {section}")
+            lines.append("")
+            lines.append("_待基于 Mission 与后续研究填充。_")
+            lines.append("")
+        if notes:
+            lines.append("## 备注")
+            lines.append("")
+            lines.append(notes)
+            lines.append("")
+        output = ArtifactOutput(
+            kind="report",
+            title=title,
+            payload=payload,
+            markdown="\n".join(lines),
+        )
+        if output_dir is not None:
+            write_artifact_files(output, output_dir, basename="report")
+        return output
+
+
+class MemoExecutor:
+    """Generate a short planning memo from Mission context."""
+
+    def execute(
+        self,
+        mission: ProjectMission,
+        *,
+        deliverable: PlannedDeliverable | None = None,
+        content_scope: list[str] | None = None,
+        purpose: str = "",
+        audience: str = "",
+        notes: str = "",
+        output_dir: Path | None = None,
+    ) -> ArtifactOutput:
+        scope = list(content_scope or [])
+        if deliverable is not None and not scope:
+            scope = list(deliverable.content_scope)
+        title = deliverable.title if deliverable is not None else f"{mission.title} — 备忘录"
+        purpose = purpose or (deliverable.purpose if deliverable else "") or ""
+        audience = audience or (deliverable.audience if deliverable else "") or ""
+        notes = notes or ((deliverable.notes or "") if deliverable else "")
+
+        bullets = scope or list(mission.primary_problems[:5]) or list(mission.decisions_required[:5])
+        payload = {
+            "kind": "memo",
+            "mission_id": str(mission.id),
+            "title": title,
+            "generated_at": datetime.now(UTC).isoformat(),
+            "purpose": purpose,
+            "audience": audience,
+            "notes": notes,
+            "highlights": bullets,
+            "mission": _mission_context_payload(mission),
+            "formats": ["json", "markdown"],
+        }
+        lines = [f"# {title}", ""]
+        if purpose:
+            lines.append(f"**目的**：{purpose}")
+            lines.append("")
+        if audience:
+            lines.append(f"**受众**：{audience}")
+            lines.append("")
+        lines.append(f"**一句话任务**：{mission.task_statement}")
+        lines.append("")
+        if bullets:
+            lines.append("## 要点")
+            lines.append("")
+            for item in bullets:
+                lines.append(f"- {item}")
+            lines.append("")
+        if mission.decisions_required:
+            lines.append("## 需决策")
+            lines.append("")
+            for item in mission.decisions_required:
+                lines.append(f"- {item}")
+            lines.append("")
+        if mission.key_unknowns:
+            lines.append("## 待澄清")
+            lines.append("")
+            for item in mission.key_unknowns:
+                lines.append(f"- {item}")
+            lines.append("")
+        if notes:
+            lines.append("## 备注")
+            lines.append("")
+            lines.append(notes)
+            lines.append("")
+        output = ArtifactOutput(
+            kind="memo",
+            title=title,
+            payload=payload,
+            markdown="\n".join(lines),
+        )
+        if output_dir is not None:
+            write_artifact_files(output, output_dir, basename="memo")
+        return output
+
+
+class ChecklistExecutor:
+    """Generate a checklist from deliverable content_scope and mission decisions."""
+
+    def execute(
+        self,
+        mission: ProjectMission,
+        *,
+        deliverable: PlannedDeliverable | None = None,
+        items: list[str] | None = None,
+        purpose: str = "",
+        audience: str = "",
+        notes: str = "",
+        output_dir: Path | None = None,
+    ) -> ArtifactOutput:
+        checklist_items = list(items or [])
+        if deliverable is not None and not checklist_items:
+            checklist_items = list(deliverable.content_scope)
+        if not checklist_items:
+            checklist_items = list(mission.decisions_required) or list(mission.key_unknowns)
+        title = deliverable.title if deliverable is not None else f"{mission.title} — 清单"
+        purpose = purpose or (deliverable.purpose if deliverable else "") or ""
+        audience = audience or (deliverable.audience if deliverable else "") or ""
+        notes = notes or ((deliverable.notes or "") if deliverable else "")
+
+        payload = {
+            "kind": "checklist",
+            "mission_id": str(mission.id),
+            "title": title,
+            "generated_at": datetime.now(UTC).isoformat(),
+            "purpose": purpose,
+            "audience": audience,
+            "notes": notes,
+            "item_count": len(checklist_items),
+            "items": [{"text": text, "checked": False} for text in checklist_items],
+            "mission": {
+                "title": mission.title,
+                "task_statement": mission.task_statement,
+            },
+            "formats": ["json", "markdown"],
+        }
+        lines = [f"# {title}", ""]
+        if purpose:
+            lines.append(f"**目的**：{purpose}")
+            lines.append("")
+        if audience:
+            lines.append(f"**受众**：{audience}")
+            lines.append("")
+        lines.append(f"任务：{mission.task_statement}")
+        lines.append("")
+        lines.append(f"共 {len(checklist_items)} 项。")
+        lines.append("")
+        if checklist_items:
+            for item in checklist_items:
+                lines.append(f"- [ ] {item}")
+            lines.append("")
+        else:
+            lines.append("_当前无清单项。_")
+            lines.append("")
+        if notes:
+            lines.append("## 备注")
+            lines.append("")
+            lines.append(notes)
+            lines.append("")
+        output = ArtifactOutput(
+            kind="checklist",
+            title=title,
+            payload=payload,
+            markdown="\n".join(lines),
+        )
+        if output_dir is not None:
+            write_artifact_files(output, output_dir, basename="checklist")
+        return output
+
+
+class CaseStudyExecutor:
+    """Generate a case-study brief skeleton from Mission + research questions."""
+
+    def execute(
+        self,
+        mission: ProjectMission,
+        *,
+        deliverable: PlannedDeliverable | None = None,
+        content_scope: list[str] | None = None,
+        purpose: str = "",
+        audience: str = "",
+        expected_length: str = "",
+        notes: str = "",
+        output_dir: Path | None = None,
+    ) -> ArtifactOutput:
+        scope = list(content_scope or [])
+        if deliverable is not None and not scope:
+            scope = list(deliverable.content_scope)
+        title = (
+            deliverable.title if deliverable is not None else f"{mission.title} — 案例研究"
+        )
+        purpose = purpose or (deliverable.purpose if deliverable else "") or ""
+        audience = audience or (deliverable.audience if deliverable else "") or ""
+        expected_length = expected_length or (
+            (deliverable.expected_length or "") if deliverable else ""
+        )
+        notes = notes or ((deliverable.notes or "") if deliverable else "")
+
+        lenses = scope or [
+            "项目背景与问题",
+            "策略与空间组织",
+            "可借鉴要点",
+            "对本任务的启示",
+        ]
+        research = list(mission.research_questions)
+        if mission.design_intent is not None:
+            research = list(dict.fromkeys([*research, *mission.design_intent.research_needed]))
+
+        payload = {
+            "kind": "case_study",
+            "mission_id": str(mission.id),
+            "title": title,
+            "generated_at": datetime.now(UTC).isoformat(),
+            "purpose": purpose,
+            "audience": audience,
+            "expected_length": expected_length,
+            "notes": notes,
+            "lenses": lenses,
+            "research_questions": research,
+            "mission": _mission_context_payload(mission),
+            "formats": ["json", "markdown"],
+        }
+        lines = [f"# {title}", ""]
+        if purpose:
+            lines.append(f"**目的**：{purpose}")
+            lines.append("")
+        if audience:
+            lines.append(f"**受众**：{audience}")
+            lines.append("")
+        lines.append(f"**对照任务**：{mission.task_statement}")
+        lines.append("")
+        if research:
+            lines.append("## 研究问题")
+            lines.append("")
+            for item in research:
+                lines.append(f"- {item}")
+            lines.append("")
+        lines.append("## 分析框架")
+        lines.append("")
+        for idx, lens in enumerate(lenses, start=1):
+            lines.append(f"### {idx}. {lens}")
+            lines.append("")
+            lines.append("_待填入案例事实与可借鉴结论；不得编造未检索到的项目指标。_")
+            lines.append("")
+        if notes:
+            lines.append("## 备注")
+            lines.append("")
+            lines.append(notes)
+            lines.append("")
+        output = ArtifactOutput(
+            kind="case_study",
+            title=title,
+            payload=payload,
+            markdown="\n".join(lines),
+        )
+        if output_dir is not None:
+            write_artifact_files(output, output_dir, basename="case_study")
+        return output

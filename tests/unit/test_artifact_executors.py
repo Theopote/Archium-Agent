@@ -1,11 +1,18 @@
-"""Unit tests for QuestionListExecutor and WorkPlanExecutor."""
+"""Unit tests for QuestionListExecutor, WorkPlanExecutor, and text artifact executors."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from uuid import uuid4
 
-from archium.application.artifact_executors import QuestionListExecutor, WorkPlanExecutor
+from archium.application.artifact_executors import (
+    CaseStudyExecutor,
+    ChecklistExecutor,
+    MemoExecutor,
+    QuestionListExecutor,
+    ReportExecutor,
+    WorkPlanExecutor,
+)
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import (
     AssumptionStatus,
@@ -34,6 +41,9 @@ def _mission() -> ProjectMission:
         in_scope=["诊断"],
         out_of_scope=["施工图"],
         decisions_required=["是否分期改造"],
+        key_unknowns=["改造预算上限"],
+        research_questions=["同类医院环境提升案例"],
+        primary_problems=["候诊空间拥挤"],
     )
 
 
@@ -142,3 +152,53 @@ def test_work_plan_from_workstreams(tmp_path: Path) -> None:
     assert "走访" in output.markdown
     assert "诊断纪要" in output.markdown
     assert output.json_path is not None and output.json_path.exists()
+
+
+def test_report_executor_uses_content_scope(tmp_path: Path) -> None:
+    mission = _mission()
+    deliverable = PlannedDeliverable(
+        id="del-report",
+        title="专项诊断报告",
+        deliverable_type=DeliverableType.REPORT,
+        purpose="形成可讨论建议",
+        audience="院方",
+        content_scope=["问题诊断", "改造策略"],
+        selected=True,
+    )
+    output = ReportExecutor().execute(mission, deliverable=deliverable, output_dir=tmp_path)
+    assert output.payload["sections"] == ["问题诊断", "改造策略"]
+    assert "问题诊断" in output.markdown
+    assert "是否分期改造" in output.markdown
+    assert output.markdown_path is not None and output.markdown_path.exists()
+
+
+def test_memo_executor_highlights_mission_problems(tmp_path: Path) -> None:
+    mission = _mission()
+    output = MemoExecutor().execute(mission, output_dir=tmp_path)
+    assert "候诊空间拥挤" in output.markdown
+    assert "是否分期改造" in output.markdown
+    assert output.payload["kind"] == "memo"
+    assert output.json_path is not None and output.json_path.exists()
+
+
+def test_checklist_executor_falls_back_to_decisions(tmp_path: Path) -> None:
+    mission = _mission()
+    output = ChecklistExecutor().execute(mission, output_dir=tmp_path)
+    assert output.payload["item_count"] == 1
+    assert "- [ ] 是否分期改造" in output.markdown
+
+
+def test_case_study_executor_includes_research_questions(tmp_path: Path) -> None:
+    mission = _mission()
+    deliverable = PlannedDeliverable(
+        id="del-cs",
+        title="环境提升案例研究",
+        deliverable_type=DeliverableType.CASE_STUDY,
+        purpose="借鉴",
+        content_scope=["空间组织"],
+        selected=True,
+    )
+    output = CaseStudyExecutor().execute(mission, deliverable=deliverable, output_dir=tmp_path)
+    assert "同类医院环境提升案例" in output.markdown
+    assert "空间组织" in output.markdown
+    assert output.payload["kind"] == "case_study"

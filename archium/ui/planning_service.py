@@ -645,6 +645,86 @@ def generate_work_plan_artifact(
     )
 
 
+def _resolve_planned_deliverable(
+    session: Session,
+    mission_id: UUID,
+    deliverable_id: str | None,
+):
+    missions = MissionRepository(session)
+    mission = missions.get_mission(mission_id)
+    if mission is None:
+        raise WorkflowError(f"Mission {mission_id} not found")
+    plans = missions.list_deliverable_plans(mission_id)
+    plan = plans[0] if plans else None
+    deliverable = None
+    if plan is not None and deliverable_id:
+        for item in plan.deliverables:
+            if item.id == deliverable_id:
+                deliverable = item
+                break
+    return mission, deliverable
+
+
+def generate_report_artifact(
+    session: Session,
+    mission_id: UUID,
+    *,
+    deliverable_id: str | None = None,
+    settings: Settings | None = None,
+) -> ArtifactOutput:
+    from archium.application.artifact_executors import ReportExecutor, artifact_output_dir
+
+    runtime = _resolve_runtime_settings(settings)
+    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
+    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="report")
+    return ReportExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+
+
+def generate_memo_artifact(
+    session: Session,
+    mission_id: UUID,
+    *,
+    deliverable_id: str | None = None,
+    settings: Settings | None = None,
+) -> ArtifactOutput:
+    from archium.application.artifact_executors import MemoExecutor, artifact_output_dir
+
+    runtime = _resolve_runtime_settings(settings)
+    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
+    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="memo")
+    return MemoExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+
+
+def generate_checklist_artifact(
+    session: Session,
+    mission_id: UUID,
+    *,
+    deliverable_id: str | None = None,
+    settings: Settings | None = None,
+) -> ArtifactOutput:
+    from archium.application.artifact_executors import ChecklistExecutor, artifact_output_dir
+
+    runtime = _resolve_runtime_settings(settings)
+    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
+    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="checklist")
+    return ChecklistExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+
+
+def generate_case_study_artifact(
+    session: Session,
+    mission_id: UUID,
+    *,
+    deliverable_id: str | None = None,
+    settings: Settings | None = None,
+) -> ArtifactOutput:
+    from archium.application.artifact_executors import CaseStudyExecutor, artifact_output_dir
+
+    runtime = _resolve_runtime_settings(settings)
+    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
+    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="case_study")
+    return CaseStudyExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+
+
 def start_presentation_from_planning(
     session: Session,
     project_id: UUID,

@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from archium.application.deliverable_execution import (
+    SUPPORTED_GENERATION_MESSAGE,
     UNSUPPORTED_GENERATION_MESSAGE,
     DeliverableExecutionRouter,
     supports_auto_generation,
@@ -42,7 +43,7 @@ def test_router_presentation_is_supported() -> None:
     assert plan.presentation_request.title == "概念汇报"
 
 
-def test_router_report_is_typed_but_unsupported() -> None:
+def test_router_report_is_supported() -> None:
     mission = _mission()
     deliverable = PlannedDeliverable(
         id="del-report",
@@ -53,12 +54,12 @@ def test_router_report_is_typed_but_unsupported() -> None:
         selected=True,
     )
     plan = DeliverableExecutionRouter().route(mission, deliverable)
-    assert plan.supported is False
+    assert plan.supported is True
     assert plan.request_kind == "report"
     assert plan.presentation_request is None
     assert plan.report_request is not None
     assert plan.report_request.title == "绿色低碳专项建议报告"
-    assert plan.message == UNSUPPORTED_GENERATION_MESSAGE
+    assert plan.message == SUPPORTED_GENERATION_MESSAGE
 
 
 @pytest.mark.parametrize(
@@ -69,7 +70,7 @@ def test_router_report_is_typed_but_unsupported() -> None:
         (DeliverableType.CASE_STUDY, "case_study", "case_study_request"),
     ],
 )
-def test_router_other_types_are_unsupported(
+def test_router_text_artifacts_are_supported(
     dtype: DeliverableType,
     kind: str,
     attr: str,
@@ -83,9 +84,23 @@ def test_router_other_types_are_unsupported(
         selected=True,
     )
     plan = DeliverableExecutionRouter().route(mission, deliverable)
-    assert plan.supported is False
+    assert plan.supported is True
     assert plan.request_kind == kind
     assert getattr(plan, attr) is not None
+    assert plan.message == SUPPORTED_GENERATION_MESSAGE
+
+
+def test_router_risk_register_remains_unsupported() -> None:
+    mission = _mission()
+    deliverable = PlannedDeliverable(
+        id="del-risk",
+        title="风险登记",
+        deliverable_type=DeliverableType.RISK_REGISTER,
+        purpose="风险",
+        selected=True,
+    )
+    plan = DeliverableExecutionRouter().route(mission, deliverable)
+    assert plan.supported is False
     assert plan.message == UNSUPPORTED_GENERATION_MESSAGE
 
 
@@ -171,7 +186,8 @@ def test_route_plan_mixed_selection() -> None:
     routed = DeliverableExecutionRouter().route_plan(mission, plan)
     assert len(routed) == 2
     by_id = {item.deliverable_id: item for item in routed}
-    assert by_id["del-report"].supported is False
+    assert by_id["del-report"].supported is True
+    assert by_id["del-report"].report_request is not None
     assert by_id["del-ppt"].supported is True
     assert "del-memo" not in by_id
 
@@ -183,10 +199,11 @@ def test_route_plan_mixed_selection() -> None:
         (DeliverableType.QUESTION_LIST, True),
         (DeliverableType.WORK_PLAN, True),
         (DeliverableType.IMPLEMENTATION_ROADMAP, True),
-        (DeliverableType.REPORT, False),
-        (DeliverableType.MEMO, False),
-        (DeliverableType.CHECKLIST, False),
-        (DeliverableType.CASE_STUDY, False),
+        (DeliverableType.REPORT, True),
+        (DeliverableType.TECHNICAL_PROPOSAL, True),
+        (DeliverableType.MEMO, True),
+        (DeliverableType.CHECKLIST, True),
+        (DeliverableType.CASE_STUDY, True),
         (DeliverableType.RISK_REGISTER, False),
         (DeliverableType.OTHER, False),
     ],

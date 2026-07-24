@@ -1,8 +1,8 @@
 """Route planned deliverables to typed artifact execution plans.
 
-Presentation, Question List, and Work Plan are auto-generatable today.
-Other types receive typed request stubs and an explicit unsupported message —
-never a silent PresentationRequest fallback.
+Presentation, Question List, Work Plan, Report, Memo, Checklist, and Case Study
+are auto-generatable today. Remaining types receive typed request stubs and an
+explicit unsupported message — never a silent PresentationRequest fallback.
 """
 
 from __future__ import annotations
@@ -181,7 +181,17 @@ _TYPE_TO_KIND: dict[DeliverableType, ArtifactRequestKind] = {
     DeliverableType.OTHER: "other",
 }
 
-_SUPPORTED_KINDS = frozenset({"presentation", "question_list", "work_plan"})
+_SUPPORTED_KINDS = frozenset(
+    {
+        "presentation",
+        "question_list",
+        "work_plan",
+        "report",
+        "memo",
+        "checklist",
+        "case_study",
+    }
+)
 
 
 def supports_auto_generation(deliverable_type: DeliverableType) -> bool:
