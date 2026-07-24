@@ -21,12 +21,11 @@
 
 ```text
 User opens Archium
-  -> Intent Router (explicit orientation | freeform classifier)
-  -> Project (origin_mode: concept | research_programming | existing)
-  -> IdeaSeed (structured: raw_input / theme / keywords / inspiration)   # concept
-     or SourceDocument / materials                                      # existing
-  -> ExplorationSession -> ConceptDirections -> select                  # concept
-  -> DesignIntent + ProjectMission (commit) + optional SourceDocument
+  -> Context Intelligence (KnowledgeState + Next Best Actions)
+  -> Project (origin_mode derived; knowledge_state / intent_evolution on project)
+  -> IdeaSeed + ExplorationSession -> ConceptDirections -> select   # when concept-leaning
+     or materials / facts                                           # when evidence-leaning
+  -> DesignIntent + ProjectMission (+ optional SourceDocument)
   -> Chunk / ProjectFact / FactLedger / Asset
   -> Workstream -> DeliverablePlan
   -> PresentationBrief -> Storyline -> SlideSpec
@@ -35,7 +34,7 @@ User opens Archium
   -> JSON / Marp / editable PPTX / PDF / preview images
 ```
 
-入口 Router 表达的是**主路径取向**（想法优先 / 资料优先 / 策划），不是「零资料 vs 完备资料」二元开关：多数项目资料不完整，也至少有地点、名称或基本思路；两侧可后续交叉补充。概念草稿（无资料）可走完 Exploration → Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
+**核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextIntelligenceService` 评估已知/未知并建议下一步（探索方向、研究、澄清、上传部分资料、进入 Mission）。`origin_mode` 由评估内部派生。概念草稿（无资料）可走完 Exploration → Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
 
 ### 意图驱动路线图（v0.3+）
 
@@ -44,10 +43,11 @@ User opens Archium
 | P0/P1 | `ProjectOriginMode` 双入口、`DesignIntent`、概念模式 Planning、Genesis UI | 已落地 |
 | P2 | Autonomous Research — 联网检索 → 知识 → 写回/AI 修订 Mission → Brief/Storyline 注入；资料面板标记「已写回 Mission」 | 已落地 |
 | P2 | Research/Programming 第三入口（策划与可研 / 投资人沟通）— Genesis 第三 Tab、`RESEARCH_PROGRAMMING` 轻量 Planning | 已落地 |
-| P3 | Intent Router — Genesis 显式三取向 + 「说不清」`IntentClassifierService`；首页空态引导先选主路径 | 已落地 |
-| P3 | Concept Exploration 前置 — `ExplorationSession` + 结构化 `IdeaSeed`（start 时 LLM 扩充）→ 多 `ConceptDirection` → 选定 → 合成 `DesignIntent` + `ProjectMission`；Genesis 概念入口进探索页；Mission 面板对概念模式只读已提交方向 | 已落地 |
-| P3 | Design Iteration — 概念方向草稿 + 选中写回 `design_intent`；Brief/Storyline/Outline/`PresentationRequest` 注入【当前概念方向】+【视觉概念简报】；Vision Engine：`VisualConceptBrief` → 概念友好页 `VisualIntent.image_request`；Visual workflow 自动 `fulfill`；Mission 进度条 + 一键预览/刷新汇报请求 | 演示闭环体验已加强 |
-| P3 | 四模式 Architectural Workspace — 已有项目 / 概念探索 / 研究策划 / 设计迭代；模式解析 + Mission/五阶段/首页 chrome | 首期已落地 |
+| P3 | Intent Router（显式取向）— 已被 KnowledgeState 入口取代 / 内化 | 已取代 |
+| P0 | Knowledge State + Context Intelligence — 单一输入评估 `KnowledgeState` / `IntentEvolution` / Next Best Action；Genesis/Home 对话入口；Mission 只读知识摘要 | 已落地 |
+| P3 | Concept Exploration 前置 — `ExplorationSession` + 结构化 `IdeaSeed` → 多 `ConceptDirection` → 选定 → `DesignIntent` + `ProjectMission` | 已落地 |
+| P3 | Design Iteration — 概念方向 + 视觉概念简报注入；Vision Engine；Mission 进度条 | 演示闭环体验已加强 |
+| P3 | 四模式 Architectural Workspace — 已有项目 / 概念探索 / 研究策划 / 设计迭代 | 首期已落地 |
 
 Studio 的编辑闭环不是直接覆写导出文件：
 

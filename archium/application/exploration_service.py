@@ -18,6 +18,7 @@ from archium.domain.enums import (
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.idea_seed import IdeaSeed
+from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
 from archium.domain.project_mission import ProjectMission
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
@@ -246,10 +247,15 @@ class ExplorationService:
 
         exploration.mark_direction_selected(direction.id)
         exploration = self._explorations.update(exploration)
-        self._session.commit()
-
         refreshed = self._directions.get(direction_id)
         assert refreshed is not None
+        self._append_intent_evolution(
+            exploration.project_id,
+            IntentEvolutionKind.DIRECTION_SELECTED,
+            f"选定概念方向：{refreshed.title}",
+        )
+        self._session.commit()
+
         return ExplorationSelectionResult(
             exploration=exploration,
             direction=refreshed,
@@ -297,6 +303,16 @@ class ExplorationService:
 
         exploration.mark_committed(mission.id)
         exploration = self._explorations.update(exploration)
+        self._append_intent_evolution(
+            exploration.project_id,
+            IntentEvolutionKind.MISSION_COMMIT,
+            f"提交为 Mission：{mission.title}",
+            design_intent_snapshot=(
+                mission.design_intent.model_dump(mode="json")
+                if mission.design_intent is not None
+                else None
+            ),
+        )
         self._session.commit()
 
         refreshed = self._directions.get(direction.id)
@@ -344,6 +360,26 @@ class ExplorationService:
         except Exception as exc:  # noqa: BLE001 — degrade without blocking session
             warnings.append(f"想法解读未完成，已仅保存原文：{exc}")
             return IdeaSeed.from_raw(raw_input, source="user"), warnings
+
+    def _append_intent_evolution(
+        self,
+        project_id: UUID,
+        kind: IntentEvolutionKind,
+        summary: str,
+        *,
+        design_intent_snapshot: dict[str, object] | None = None,
+    ) -> None:
+        project = self._projects.get_by_id(project_id)
+        if project is None:
+            return
+        evo = project.intent_evolution or IntentEvolution()
+        project.intent_evolution = evo.append(
+            kind,
+            summary,
+            design_intent_snapshot=design_intent_snapshot,
+        )
+        project.touch()
+        self._projects.update(project)
 
     def _persist_draft(
         self,

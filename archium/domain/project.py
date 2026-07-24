@@ -6,6 +6,8 @@ from pydantic import Field
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
 from archium.domain.enums import ProjectOriginMode, ProjectStage, ProjectStatus, ProjectType
+from archium.domain.intent.intent_evolution import IntentEvolution
+from archium.domain.intent.knowledge_state import KnowledgeState
 
 
 class Project(IdentifiedModel, TimestampedModel):
@@ -20,6 +22,8 @@ class Project(IdentifiedModel, TimestampedModel):
     client: str | None = None
     status: ProjectStatus = ProjectStatus.ACTIVE
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT
+    knowledge_state: KnowledgeState | None = None
+    intent_evolution: IntentEvolution = Field(default_factory=IntentEvolution)
 
     def archive(self) -> None:
         """Mark the project as archived."""

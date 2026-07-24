@@ -50,15 +50,15 @@ def _render_empty_state() -> None:
 
     render_empty_state(
         f"{greeting_for_now()}，开始第一个项目",
-        "先选主路径：以想法为主，或以现有资料为主（资料不必齐全）。"
-        "说不清时可在「开始项目」里用几句话让系统建议。",
-        primary_label="开始项目（选主路径）",
+        "直接描述你的建筑想法或项目情况。"
+        "不必先准备齐资料，也不必选择「有资料 / 没资料」。",
+        primary_label="告诉我你的想法",
         primary_key="home_new_project_empty",
         on_primary=_go_create,
     )
     st.caption(
-        "多数建筑项目介于「只有思路」与「资料完备」之间："
-        "至少有地点、名称或基本想法；图纸也很少一次交齐。"
+        "Archium 会评估当前知识状态（已知 / 未知），并建议下一步："
+        "探索方向、补充研究、澄清问题或上传部分资料。"
     )
     with st.expander("五阶段说明（首次使用）", expanded=True):
         st.caption(f"推荐主流程：{product_flow_chain()}")

@@ -188,6 +188,25 @@ def _parse_criteria(text: str) -> list[EvaluationCriterion]:
     return result
 
 
+def _render_knowledge_state_summary(project_id: UUID) -> None:
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    with get_session() as session:
+        project = ProjectRepository(session).get_by_id(project_id)
+    if project is None or project.knowledge_state is None:
+        return
+    state = project.knowledge_state
+    with st.expander("项目知识状态", expanded=False):
+        st.caption(state.summary_line())
+        latest = project.intent_evolution.latest_summary() if project.intent_evolution else None
+        if latest:
+            st.caption(f"意图演进：{latest}")
+        if state.known:
+            st.markdown("**已知**：" + "；".join(f"{k}={v}" for k, v in state.known.items()))
+        if state.unknown:
+            st.markdown("**未知**：" + "；".join(state.unknown[:6]))
+
+
 def _default_design_intent(mission: ProjectMission) -> DesignIntent:
     return mission.design_intent or DesignIntent()
 
@@ -795,6 +814,8 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
     st.markdown("#### 我对任务的理解")
     st.caption(f"{mission.title} · v{mission.version} · 置信度 {mission.confidence:.0%}")
     st.caption("可纠正 AI 对任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
+
+    _render_knowledge_state_summary(mission.project_id)
 
     intent = _default_design_intent(mission)
     from archium.application.research_topics import collect_mission_research_topics

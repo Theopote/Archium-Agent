@@ -37,6 +37,12 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     origin_mode: Mapped[str] = mapped_column(
         String(50), nullable=False, default="existing_project"
     )
+    knowledge_state_json: Mapped[dict[str, object] | None] = mapped_column(
+        "knowledge_state", JSON, nullable=True
+    )
+    intent_evolution_json: Mapped[dict[str, object] | None] = mapped_column(
+        "intent_evolution", JSON, nullable=True
+    )
     current_cultural_narrative_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_renovation_issue_map_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_reference_style_profile_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))

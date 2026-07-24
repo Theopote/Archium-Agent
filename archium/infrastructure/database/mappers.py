@@ -142,6 +142,30 @@ def visual_requirements_from_json(data: list[dict[str, object]]) -> list[VisualR
 
 
 def project_to_domain(orm: ProjectORM) -> Project:
+    from archium.domain.intent.intent_evolution import IntentEvolution
+    from archium.domain.intent.knowledge_state import KnowledgeState
+
+    knowledge = None
+    raw_ks = getattr(orm, "knowledge_state_json", None)
+    if isinstance(raw_ks, dict) and raw_ks:
+        try:
+            knowledge = KnowledgeState.model_validate(raw_ks)
+        except Exception:
+            knowledge = None
+
+    evolution = IntentEvolution()
+    raw_ev = getattr(orm, "intent_evolution_json", None)
+    if isinstance(raw_ev, dict):
+        try:
+            evolution = IntentEvolution.model_validate(raw_ev)
+        except Exception:
+            evolution = IntentEvolution()
+    elif isinstance(raw_ev, list):
+        try:
+            evolution = IntentEvolution.model_validate({"events": raw_ev})
+        except Exception:
+            evolution = IntentEvolution()
+
     return Project(
         id=orm.id,
         name=orm.name,
@@ -153,6 +177,8 @@ def project_to_domain(orm: ProjectORM) -> Project:
         client=orm.client,
         status=ProjectStatus(orm.status),
         origin_mode=ProjectOriginMode(getattr(orm, "origin_mode", "existing_project")),
+        knowledge_state=knowledge,
+        intent_evolution=evolution,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -169,6 +195,10 @@ def project_to_orm(domain: Project, orm: ProjectORM | None = None) -> ProjectORM
     target.client = domain.client
     target.status = domain.status.value
     target.origin_mode = domain.origin_mode.value
+    target.knowledge_state_json = (
+        domain.knowledge_state.model_dump(mode="json") if domain.knowledge_state else None
+    )
+    target.intent_evolution_json = domain.intent_evolution.model_dump(mode="json")
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

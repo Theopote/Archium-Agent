@@ -495,6 +495,40 @@ def classify_entry_intent(
     return IntentClassifierService(llm, settings=runtime).classify(user_text)
 
 
+def assess_project_context(
+    session: Session,
+    project_id: UUID,
+    user_text: str,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.context_intelligence_service import ContextIntelligenceService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ContextIntelligenceService(session, llm, settings=runtime).assess_and_persist(
+        project_id, user_text
+    )
+
+
+def assess_entry_context(
+    user_text: str,
+    *,
+    project_name: str = "",
+    settings: Settings | None = None,
+):
+    """Assess before a project exists (no persistence)."""
+    from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.infrastructure.database.session import get_session
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    with get_session() as session:
+        return ContextIntelligenceService(session, llm, settings=runtime).assess_text(
+            user_text, project_name=project_name
+        )
+
+
 def start_exploration_session(
     session: Session,
     project_id: UUID,
