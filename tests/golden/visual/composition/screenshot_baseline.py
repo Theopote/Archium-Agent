@@ -18,7 +18,12 @@ from archium.infrastructure.renderers.pptx_screenshot import (
     screenshot_tools_available,
 )
 from PIL import Image
-from tests.golden.visual.baseline import average_hash_hex, compare_preview_image
+from tests.golden.visual.baseline import (
+    CROSS_PLATFORM_MAX_PIXEL_DIFF_RATIO,
+    MAX_PIXEL_DIFF_RATIO,
+    average_hash_hex,
+    compare_preview_image,
+)
 from tests.golden.visual.composition.artifacts import maybe_export_pptx
 from tests.golden.visual.composition.case_builders import (
     COMPOSITION_CASE_IDS,
@@ -267,6 +272,8 @@ def compare_screenshot_to_baseline(case_dir: Path, actual_path: Path) -> list[st
     if not manifest_path(case_dir).is_file():
         return [f"Missing screenshot manifest: {manifest_path(case_dir)}"]
 
+    from archium.infrastructure.layout.font_manifest import platform_key
+
     manifest = load_screenshot_manifest(case_dir)
     font_issues = compare_font_manifest_binding(
         baseline_hash=manifest.font_manifest_hash,
@@ -283,12 +290,17 @@ def compare_screenshot_to_baseline(case_dir: Path, actual_path: Path) -> list[st
     if font_blocking:
         return font_blocking
 
+    max_pixel_diff = MAX_PIXEL_DIFF_RATIO
+    if manifest.font_platform and manifest.font_platform != platform_key():
+        max_pixel_diff = CROSS_PLATFORM_MAX_PIXEL_DIFF_RATIO
+
     issues = list(font_issues)
     issues.extend(
         compare_preview_image(
             baseline_path,
             actual_path,
             expected_hash=manifest.screenshot.average_hash,
+            max_pixel_diff_ratio=max_pixel_diff,
         )
     )
     with Image.open(actual_path) as actual_image:

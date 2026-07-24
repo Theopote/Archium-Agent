@@ -18,6 +18,9 @@ VISUAL_CASE_IDS: tuple[str, ...] = (
 )
 MARP_THEME = "default"
 MAX_PIXEL_DIFF_RATIO = 0.05
+# Win32-approved PPTX screenshots vs Linux CI rasterizers (fonts/SVG AA) can
+# sit slightly above 5%. Prefer Linux approve; this only applies on platform mismatch.
+CROSS_PLATFORM_MAX_PIXEL_DIFF_RATIO = 0.06
 MAX_AHASH_HAMMING = 12
 MARGIN_OVERFLOW_RATIO = 0.05
 MARGIN_OVERFLOW_DELTA = 0.12
@@ -194,6 +197,7 @@ def compare_preview_image(
     actual_path: Path,
     *,
     expected_hash: str,
+    max_pixel_diff_ratio: float = MAX_PIXEL_DIFF_RATIO,
 ) -> list[str]:
     issues: list[str] = []
     with Image.open(baseline_path) as baseline_image, Image.open(actual_path) as actual_image:
@@ -215,9 +219,9 @@ def compare_preview_image(
             )
 
         ratio = _diff_pixel_ratio(base_rgb, act_rgb)
-        if ratio > MAX_PIXEL_DIFF_RATIO:
+        if ratio > max_pixel_diff_ratio:
             issues.append(
-                f"{actual_path.name}: pixel diff {ratio:.1%} exceeds {MAX_PIXEL_DIFF_RATIO:.1%}"
+                f"{actual_path.name}: pixel diff {ratio:.1%} exceeds {max_pixel_diff_ratio:.1%}"
             )
 
         for edge in ("bottom", "right"):

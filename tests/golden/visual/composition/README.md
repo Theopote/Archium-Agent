@@ -15,7 +15,8 @@ PPTX screenshot manifests include ``font_manifest_hash`` (Pillow FreeType file
 hashes for Microsoft YaHei + Arial regular/bold, with Noto/Liberation fallbacks
 on Linux). Same-platform hash drift fails as **font drift**, not a silent pixel
 diff. Approve baselines on the **CI platform (Linux)** so ``font_platform=linux``
-locks the CI font set.
+locks the CI font set. Until a case is re-approved on Linux, cross-platform
+pixel compare allows up to **6%** diff (same-platform remains **5%**).
 
 ## Cases
 
