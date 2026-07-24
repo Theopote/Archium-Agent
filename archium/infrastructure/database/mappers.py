@@ -8,6 +8,7 @@ from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
 from archium.domain.citation import Citation
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import (
     CULTURAL_NARRATIVE_LOGICAL_KEY,
     CulturalNarrativePlan,
@@ -19,6 +20,7 @@ from archium.domain.enums import (
     ArtifactJobStatus,
     AssetType,
     ConceptDirectionStatus,
+    ExplorationSessionStatus,
     DeckDeliveryStatus,
     DeliverableType,
     DocumentType,
@@ -84,6 +86,7 @@ from archium.infrastructure.database.models import (
     AssetORM,
     ChapterORM,
     ConceptDirectionORM,
+    ExplorationSessionORM,
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
@@ -1225,6 +1228,7 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
     return ConceptDirection(
         id=orm.id,
         project_id=orm.project_id,
+        exploration_session_id=orm.exploration_session_id,
         mission_id=orm.mission_id,
         title=orm.title,
         summary=orm.summary or "",
@@ -1248,6 +1252,7 @@ def concept_direction_to_orm(
 ) -> ConceptDirectionORM:
     target = orm or ConceptDirectionORM(id=domain.id)
     target.project_id = domain.project_id
+    target.exploration_session_id = domain.exploration_session_id
     target.mission_id = domain.mission_id
     target.title = domain.title
     target.summary = domain.summary
@@ -1259,6 +1264,38 @@ def concept_direction_to_orm(
     target.risks_json = list(domain.risks)
     target.status = domain.status.value
     target.sort_order = domain.sort_order
+    target.source = domain.source
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def exploration_session_to_domain(orm: ExplorationSessionORM) -> ExplorationSession:
+    return ExplorationSession(
+        id=orm.id,
+        project_id=orm.project_id,
+        idea_text=orm.idea_text,
+        status=ExplorationSessionStatus(orm.status),
+        selected_direction_id=orm.selected_direction_id,
+        mission_id=orm.mission_id,
+        source=orm.source or "genesis",
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def exploration_session_to_orm(
+    domain: ExplorationSession,
+    orm: ExplorationSessionORM | None = None,
+) -> ExplorationSessionORM:
+    target = orm or ExplorationSessionORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.idea_text = domain.idea_text
+    target.status = domain.status.value
+    target.selected_direction_id = domain.selected_direction_id
+    target.mission_id = domain.mission_id
     target.source = domain.source
     if domain.created_at is not None:
         target.created_at = domain.created_at

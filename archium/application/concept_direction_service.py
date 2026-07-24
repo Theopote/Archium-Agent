@@ -133,6 +133,10 @@ class ConceptDirectionService:
         direction = self._directions.get(direction_id)
         if direction is None:
             raise WorkflowError(f"概念方向 {direction_id} 不存在")
+        if direction.mission_id is None:
+            raise WorkflowError(
+                "该方向尚未绑定 Mission；请在概念探索页选择方向并提交生成 Mission"
+            )
         if direction.status == ConceptDirectionStatus.ARCHIVED:
             raise WorkflowError("已归档的概念方向不能选为当前方向")
 

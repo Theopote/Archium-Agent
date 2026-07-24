@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
@@ -38,6 +39,7 @@ from archium.infrastructure.database.models import (
     ArtifactJobORM,
     AssetORM,
     ConceptDirectionORM,
+    ExplorationSessionORM,
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
@@ -1304,6 +1306,81 @@ class ConceptDirectionRepository:
             ConceptDirectionORM.created_at.asc(),
         )
         return [mappers.concept_direction_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def list_by_exploration(
+        self,
+        exploration_session_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> list[ConceptDirection]:
+        stmt = select(ConceptDirectionORM).where(
+            ConceptDirectionORM.exploration_session_id == exploration_session_id
+        )
+        if not include_archived:
+            stmt = stmt.where(ConceptDirectionORM.status != "archived")
+        stmt = stmt.order_by(
+            ConceptDirectionORM.sort_order.asc(),
+            ConceptDirectionORM.created_at.asc(),
+        )
+        return [mappers.concept_direction_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class ExplorationSessionRepository:
+    """CRUD for pre-mission concept exploration sessions."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, exploration: ExplorationSession) -> ExplorationSession:
+        try:
+            orm = mappers.exploration_session_to_orm(exploration)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.exploration_session_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create exploration session", exc)
+            raise
+
+    def update(self, exploration: ExplorationSession) -> ExplorationSession:
+        try:
+            orm = self._session.get(ExplorationSessionORM, exploration.id)
+            if orm is None:
+                raise RepositoryError(f"Exploration session {exploration.id} not found")
+            mappers.exploration_session_to_orm(exploration, orm)
+            self._session.flush()
+            return mappers.exploration_session_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("update exploration session", exc)
+            raise
+
+    def get(self, exploration_id: UUID) -> ExplorationSession | None:
+        orm = self._session.get(ExplorationSessionORM, exploration_id)
+        if orm is None:
+            return None
+        return mappers.exploration_session_to_domain(orm)
+
+    def get_latest_for_project(self, project_id: UUID) -> ExplorationSession | None:
+        stmt = (
+            select(ExplorationSessionORM)
+            .where(ExplorationSessionORM.project_id == project_id)
+            .order_by(ExplorationSessionORM.created_at.desc())
+            .limit(1)
+        )
+        orm = self._session.scalars(stmt).first()
+        if orm is None:
+            return None
+        return mappers.exploration_session_to_domain(orm)
+
+    def list_by_project(self, project_id: UUID) -> list[ExplorationSession]:
+        stmt = (
+            select(ExplorationSessionORM)
+            .where(ExplorationSessionORM.project_id == project_id)
+            .order_by(ExplorationSessionORM.created_at.desc())
+        )
+        return [
+            mappers.exploration_session_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
 
 
 class VisualConceptBriefRepository:

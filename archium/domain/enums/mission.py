@@ -147,3 +147,11 @@ class ConceptDirectionStatus(StrEnum):
     DRAFT = "draft"
     SELECTED = "selected"
     ARCHIVED = "archived"
+
+
+class ExplorationSessionStatus(StrEnum):
+    """Lifecycle of a pre-mission concept exploration session."""
+
+    EXPLORING = "exploring"
+    DIRECTION_SELECTED = "direction_selected"
+    COMMITTED = "committed"

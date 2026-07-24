@@ -13,6 +13,7 @@ from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
     ConceptDirectionRepository,
+    ExplorationSessionRepository,
     PlanningSessionRepository,
     VisualConceptBriefRepository,
 )
@@ -43,11 +44,28 @@ def resolve_selected_concept_direction(
     session: Session,
     mission_id: UUID,
 ) -> ConceptDirection | None:
-    """Return the selected concept direction draft for a mission, if any."""
-    for item in ConceptDirectionRepository(session).list_by_mission(mission_id):
+    """Return the selected concept direction for a mission, if any.
+
+    Prefers SELECTED rows on the mission; if none, falls back to the project's
+    latest ExplorationSession.selected_direction_id (pre-mission or just-committed).
+    """
+    directions = ConceptDirectionRepository(session)
+    for item in directions.list_by_mission(mission_id):
         if item.status == ConceptDirectionStatus.SELECTED:
             return item
-    return None
+
+    mission = MissionRepository(session).get_mission(mission_id)
+    if mission is None:
+        return None
+    exploration = ExplorationSessionRepository(session).get_latest_for_project(mission.project_id)
+    if exploration is None or exploration.selected_direction_id is None:
+        return None
+    selected = directions.get(exploration.selected_direction_id)
+    if selected is None:
+        return None
+    if selected.mission_id is not None and selected.mission_id != mission_id:
+        return None
+    return selected
 
 
 def resolve_visual_concept_brief_for_direction(

@@ -29,6 +29,7 @@ def build_app_pages() -> dict[str, list[Any]]:
     """Create navigation sections (项目 / 制作 / 资源 / 系统) and cache pages for links."""
     from archium.ui.pages import (
         command_center,
+        concept_exploration,
         home,
         project_genesis,
         project_management,
@@ -123,6 +124,12 @@ def build_app_pages() -> dict[str, list[Any]]:
     # LEGACY_STUDIO_PAGE_KEY registers the raw workbench for bookmarks only —
     # product navigation must use PRODUCT_STUDIO_PAGE_KEY (edit).
     hidden_pages = {
+        "concept-exploration": st.Page(
+            concept_exploration.render,
+            title="概念探索",
+            icon=icons.PROJECT_MISSION,
+            url_path="concept-exploration",
+        ),
         "project-mission": st.Page(
             project_mission.render,
             title="项目任务",

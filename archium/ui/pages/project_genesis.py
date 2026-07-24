@@ -35,7 +35,7 @@ def render() -> None:
 
 
 def _render_concept_form() -> None:
-    st.markdown("**概念探索** — 无需上传资料，先建立设计使命与假设。")
+    st.markdown("**概念探索** — 无需上传资料，先推演概念方向，再生成设计使命。")
     with st.form("genesis_concept_form"):
         name = st.text_input("项目名称", placeholder="例如：黄土高原文化中心")
         idea = st.text_area(
@@ -43,7 +43,7 @@ def _render_concept_form() -> None:
             placeholder="例如：我想在陕西关中乡村做一个面向游客和村民的小型书店",
             height=120,
         )
-        submit = st.form_submit_button("创建并进入项目任务", type="primary", use_container_width=True)
+        submit = st.form_submit_button("创建并进入概念探索", type="primary", use_container_width=True)
         if submit:
             if not name.strip():
                 st.error("请填写项目名称")
@@ -52,16 +52,23 @@ def _render_concept_form() -> None:
                 st.error("请用一句话描述你的想法")
                 return
             try:
+                from archium.application.exploration_service import ExplorationService
+                from archium.infrastructure.llm.mock import MockLLMProvider
+
                 with get_session() as session:
                     project = ProjectManagementService(session).create_project(
                         name.strip(),
                         idea.strip(),
                         origin_mode=ProjectOriginMode.CONCEPT_EXPLORATION,
                     )
+                    ExplorationService(session, MockLLMProvider()).start_session(
+                        project.id,
+                        idea.strip(),
+                        source="genesis",
+                    )
                 st.session_state.selected_project_id = str(project.id)
                 st.session_state.genesis_task_description = idea.strip()
-                st.session_state.mission_step = 1
-                st.switch_page(get_app_page("project-mission"))
+                st.switch_page(get_app_page("concept-exploration"))
             except ValidationError as exc:
                 st.error(str(exc))
             except Exception as exc:

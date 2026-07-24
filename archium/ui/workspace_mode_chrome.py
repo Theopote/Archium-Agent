@@ -105,6 +105,7 @@ def stage_caption_for_mode(
 def _primary_label(page_key: str) -> str:
     labels = {
         "materials": "资料",
+        "concept-exploration": "概念探索",
         "project-mission": "项目任务",
         "outline": "大纲",
     }

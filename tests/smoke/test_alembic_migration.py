@@ -18,7 +18,7 @@ from sqlalchemy import inspect, text
 pytestmark = [pytest.mark.smoke, pytest.mark.migration_smoke]
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_HEAD_REVISION = "042_visual_concept_briefs"
+_HEAD_REVISION = "043_exploration_sessions"
 _PRE_RULE_CODE_REVISION = "004_review_layer"
 _BASELINE_REVISION = "003_fact_conflict_group"
 

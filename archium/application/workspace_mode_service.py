@@ -59,13 +59,13 @@ _PROFILES: dict[ArchitecturalWorkspaceMode, WorkspaceModeProfile] = {
     ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION: WorkspaceModeProfile(
         mode=ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION,
         title="概念探索",
-        caption="意图驱动：从一句话想法建立设计使命，资料可后续补充。",
-        focus="设计使命与工作假设",
-        primary_page_key="project-mission",
+        caption="意图驱动：从一句话想法推演方向，再建立设计使命；资料可后续补充。",
+        focus="概念方向与设计使命",
+        primary_page_key="concept-exploration",
         suggested_actions=(
-            "分析任务，形成设计使命 v0.1",
+            "推演 2–3 个概念方向并选定",
+            "提交生成设计使命与项目任务",
             "启动自主研究 enrich 背景",
-            "推演概念方向草稿",
         ),
         stage_captions={
             "materials": "可选：补充研究资料 enrich 概念。",

@@ -1069,21 +1069,50 @@ class ArtifactJobORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class ExplorationSessionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "exploration_sessions"
+    __table_args__ = (
+        Index("ix_exploration_sessions_project_id", "project_id"),
+        Index("ix_exploration_sessions_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    idea_text: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="exploring")
+    selected_direction_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
+    mission_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_missions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source: Mapped[str] = mapped_column(String(40), nullable=False, default="genesis")
+
+
 class ConceptDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "concept_directions"
     __table_args__ = (
         Index("ix_concept_directions_project_id", "project_id"),
         Index("ix_concept_directions_mission_id", "mission_id"),
+        Index("ix_concept_directions_exploration_session_id", "exploration_session_id"),
         Index("ix_concept_directions_status", "status"),
     )
 
     project_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
-    mission_id: Mapped[uuid.UUID] = mapped_column(
+    exploration_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("exploration_sessions.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    mission_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("project_missions.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")

@@ -72,6 +72,7 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
 # Still registered for deep links / st.page_link, but not shown in the sidebar.
 # ``studio`` is deprecated for product navigation — prefer PRODUCT_STUDIO_PAGE_KEY.
 HIDDEN_PAGE_KEYS: tuple[str, ...] = (
+    "concept-exploration",
     "project-mission",
     "workspace",
     LEGACY_STUDIO_PAGE_KEY,  # deprecated deep link; not a primary nav target

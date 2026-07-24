@@ -483,6 +483,83 @@ def archive_concept_direction(
     )
 
 
+def start_exploration_session(
+    session: Session,
+    project_id: UUID,
+    idea_text: str,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.exploration_service import ExplorationService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ExplorationService(session, llm, settings=runtime).start_session(
+        project_id, idea_text
+    )
+
+
+def get_latest_exploration_for_project(session: Session, project_id: UUID):
+    from archium.application.exploration_service import ExplorationService
+    from archium.infrastructure.llm.mock import MockLLMProvider
+
+    return ExplorationService(session, MockLLMProvider()).get_latest_for_project(project_id)
+
+
+def list_exploration_directions(session: Session, exploration_id: UUID):
+    from archium.application.exploration_service import ExplorationService
+    from archium.infrastructure.llm.mock import MockLLMProvider
+
+    return ExplorationService(session, MockLLMProvider()).list_directions(exploration_id)
+
+
+def generate_exploration_directions(
+    session: Session,
+    exploration_id: UUID,
+    *,
+    count: int = 3,
+    settings: Settings | None = None,
+):
+    from archium.application.exploration_service import ExplorationService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ExplorationService(session, llm, settings=runtime).generate_directions(
+        exploration_id,
+        count=count,
+    )
+
+
+def select_exploration_direction(
+    session: Session,
+    direction_id: UUID,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.exploration_service import ExplorationService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ExplorationService(session, llm, settings=runtime).select_direction(
+        direction_id
+    )
+
+
+def commit_exploration_to_mission(
+    session: Session,
+    exploration_id: UUID,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.exploration_service import ExplorationService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ExplorationService(session, llm, settings=runtime).commit_to_mission(
+        exploration_id
+    )
+
+
 def synthesize_visual_concept_brief(
     session: Session,
     direction_id: UUID,

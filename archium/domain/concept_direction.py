@@ -1,4 +1,4 @@
-"""Concept direction drafts — design iteration branches under one Mission."""
+"""Concept direction drafts — exploration branches (pre- or post-Mission)."""
 
 from __future__ import annotations
 
@@ -11,10 +11,11 @@ from archium.domain.enums import ConceptDirectionStatus
 
 
 class ConceptDirection(IdentifiedModel, TimestampedModel):
-    """One conceptual design direction draft for a mission."""
+    """One conceptual design direction draft under an ExplorationSession."""
 
     project_id: UUID
-    mission_id: UUID
+    exploration_session_id: UUID | None = None
+    mission_id: UUID | None = None
     title: str = Field(min_length=1, max_length=200)
     summary: str = ""
     theme: str = ""
