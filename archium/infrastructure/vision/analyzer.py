@@ -31,6 +31,8 @@ _EDGE_CLIP_DARK_RATIO = 0.08
 _HIGH_TEXT_EDGE_DENSITY = 0.14
 _LEGEND_MIN_COLOR_PATCHES = 3
 _NORTH_ARROW_MIN_SCORE = 0.28
+_PHOTO_BLUR_LAPLACIAN_STDEV = 8.0
+_PHOTO_OVEREXPOSE_RATIO = 0.22
 
 _DRAWING_TYPES = ("site_plan", "floor_plan", "section", "elevation", "diagram", "photo")
 
@@ -46,6 +48,8 @@ def analyze_image(asset_id: UUID, asset_path: str, image: Image.Image) -> Visual
     checks.append(check_text_density(image))
     checks.append(check_north_arrow(image))
     checks.append(check_legend_region(image))
+    checks.append(check_photo_sharpness(image))
+    checks.append(check_photo_exposure(image))
 
     drawing_type, confidence, classifier_evidence = classify_drawing(image)
     checks.append(
@@ -340,6 +344,85 @@ def check_legend_region(image: Image.Image) -> VisualQACheck:
             "color_patch_count": best_patches,
             "legend_score": round(best_score, 3),
             "min_color_patches": _LEGEND_MIN_COLOR_PATCHES,
+        },
+    )
+
+
+def check_photo_sharpness(image: Image.Image) -> VisualQACheck:
+    """Flag soft / compressed photos via Laplacian energy (Pillow, no OpenCV).
+
+    Uses a center crop so FIND_EDGES-style border rings do not inflate scores on
+    flat or heavily blurred fields.
+    """
+    gray = ImageOps.grayscale(image)
+    sample = gray.copy()
+    sample.thumbnail((256, 256))
+    width, height = sample.size
+    inset = max(4, min(width, height) // 8)
+    if width > inset * 2 and height > inset * 2:
+        sample = sample.crop((inset, inset, width - inset, height - inset))
+    # 3x3 Laplacian; offset keeps values in byte range for ImageStat.
+    lap = sample.filter(
+        ImageFilter.Kernel((3, 3), [0, 1, 0, 1, -4, 1, 0, 1, 0], scale=1, offset=128)
+    )
+    lap_stdev = float(ImageStat.Stat(lap).stddev[0])
+    passed = lap_stdev >= _PHOTO_BLUR_LAPLACIAN_STDEV
+    if passed:
+        confidence = min(1.0, lap_stdev / max(_PHOTO_BLUR_LAPLACIAN_STDEV * 2.5, 1.0))
+    else:
+        # Soft images fail with confidence rising as Laplacian energy drops.
+        confidence = min(
+            1.0,
+            max(
+                0.55,
+                (_PHOTO_BLUR_LAPLACIAN_STDEV - lap_stdev) / _PHOTO_BLUR_LAPLACIAN_STDEV + 0.55,
+            ),
+        )
+    return VisualQACheck(
+        check_name="photo_sharpness",
+        passed=passed,
+        confidence=round(confidence, 3),
+        summary=(
+            "照片边缘能量正常"
+            if passed
+            else "照片可能模糊或过度压缩（微信/手机导出常见）"
+        ),
+        method="pillow_heuristic",
+        threshold=_PHOTO_BLUR_LAPLACIAN_STDEV,
+        evidence={
+            "laplacian_stdev": round(lap_stdev, 3),
+            "threshold": _PHOTO_BLUR_LAPLACIAN_STDEV,
+        },
+    )
+
+
+def check_photo_exposure(image: Image.Image) -> VisualQACheck:
+    """Flag heavy highlight clipping typical of phone/WeChat outdoor shots."""
+    gray = ImageOps.grayscale(image)
+    sample = gray.copy()
+    sample.thumbnail((160, 160))
+    pixels = list(iter_image_pixels(sample))
+    total = max(len(pixels), 1)
+    hot = sum(1 for value in pixels if value >= 245)
+    ratio = hot / total
+    passed = ratio < _PHOTO_OVEREXPOSE_RATIO
+    confidence = min(1.0, max(0.55, ratio / max(_PHOTO_OVEREXPOSE_RATIO, 1e-6) * 0.7))
+    if passed:
+        confidence = min(1.0, 1.0 - ratio)
+    return VisualQACheck(
+        check_name="photo_exposure",
+        passed=passed,
+        confidence=round(confidence, 3),
+        summary=(
+            "照片高光占比正常"
+            if passed
+            else "照片高光可能过曝，主体细节易丢失"
+        ),
+        method="pillow_heuristic",
+        threshold=_PHOTO_OVEREXPOSE_RATIO,
+        evidence={
+            "highlight_ratio": round(ratio, 4),
+            "threshold": _PHOTO_OVEREXPOSE_RATIO,
         },
     )
 

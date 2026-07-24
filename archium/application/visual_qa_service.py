@@ -94,6 +94,22 @@ _CHECK_ISSUE_SPECS: dict[str, tuple[str, str, str, ReviewLayer, ReviewCategory, 
         ReviewCategory.VISUAL,
         ReviewSeverity.SUGGESTION,
     ),
+    "photo_sharpness": (
+        ReviewRuleCode.VISUAL_PHOTO_BLURRY,
+        "现场照片可能模糊",
+        "更换更清晰原图，或避免二次压缩的微信导出图。",
+        ReviewLayer.LAYOUT,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.MEDIUM,
+    ),
+    "photo_exposure": (
+        ReviewRuleCode.VISUAL_PHOTO_OVEREXPOSED,
+        "现场照片可能过曝",
+        "选用高光未死白的现场照，或先做安全曝光校正后再入库。",
+        ReviewLayer.LAYOUT,
+        ReviewCategory.VISUAL,
+        ReviewSeverity.SUGGESTION,
+    ),
 }
 
 _ASSET_LOAD_RULE_CODES = frozenset(
@@ -366,6 +382,12 @@ class VisualQAService:
                 keyword in context
                 for keyword in ("流线", "交通", "traffic", "circulation", "图例")
             )
+        if check_name in {"photo_sharpness", "photo_exposure"}:
+            return requirement.type in {
+                VisualType.SITE_PHOTO,
+                VisualType.RENDERING,
+                VisualType.REFERENCE_CASE,
+            }
         return True
 
     def _drawing_type_mismatch_issues(

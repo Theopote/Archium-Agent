@@ -24,7 +24,7 @@ from archium.infrastructure.database.repositories import (
     ProjectRepository,
 )
 from archium.infrastructure.vision.analyzer import analyze_image
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 from sqlalchemy.orm import Session
 
 pytest.importorskip("PIL")
@@ -112,6 +112,43 @@ class TestVisualAnalyzer:
         assert report.check("image_dimensions") is not None
         assert not report.check("image_dimensions").passed
 
+    def test_analyze_image_flags_blurry_photo(self) -> None:
+        # Detail + heavy Gaussian blur ≈ soft WeChat / handshake phone shot.
+        image = Image.new("RGB", (1000, 800), color=(90, 100, 110))
+        draw = ImageDraw.Draw(image)
+        for x in range(40, 960, 28):
+            draw.line((x, 40, x, 760), fill=(220, 210, 180), width=2)
+        image = image.filter(ImageFilter.GaussianBlur(radius=10))
+        report = analyze_image(uuid4(), "soft_site.jpg", image)
+
+        check = report.check("photo_sharpness")
+        assert check is not None
+        assert not check.passed
+        assert check.confidence >= 0.6
+
+    def test_analyze_image_flags_overexposed_photo(self) -> None:
+        image = Image.new("RGB", (1000, 800), color=(252, 252, 250))
+        report = analyze_image(uuid4(), "blown_highlight.jpg", image)
+
+        check = report.check("photo_exposure")
+        assert check is not None
+        assert not check.passed
+        assert check.confidence >= 0.6
+
+    def test_analyze_image_passes_sharp_balanced_photo(self) -> None:
+        image = Image.new("RGB", (1000, 800), color=(90, 100, 110))
+        draw = ImageDraw.Draw(image)
+        for x in range(40, 960, 28):
+            draw.line((x, 40, x, 760), fill=(220, 210, 180), width=2)
+        for y in range(40, 760, 28):
+            draw.line((40, y, 960, y), fill=(60, 70, 80), width=1)
+        report = analyze_image(uuid4(), "crisp_facade.jpg", image)
+
+        assert report.check("photo_sharpness") is not None
+        assert report.check("photo_sharpness").passed
+        assert report.check("photo_exposure") is not None
+        assert report.check("photo_exposure").passed
+
 
 class TestVisualQAService:
     def test_review_slides_suppresses_low_confidence_north_arrow(
@@ -192,6 +229,54 @@ class TestVisualQAService:
         assert dim_issue.confidence == 1.0
         assert dim_issue.detection_method == "pillow_heuristic"
         assert not dim_issue.requires_confirmation
+
+    def test_review_slides_emits_photo_blurry_for_site_photo(
+        self,
+        db_session: Session,
+        project_and_asset: tuple[object, Asset],
+        tmp_path: Path,
+    ) -> None:
+        project_id, asset = project_and_asset
+        soft_path = tmp_path / "mmexport_soft.jpg"
+        soft = Image.new("RGB", (1000, 800), color=(90, 100, 110))
+        draw = ImageDraw.Draw(soft)
+        for x in range(40, 960, 28):
+            draw.line((x, 40, x, 760), fill=(220, 210, 180), width=2)
+        soft.filter(ImageFilter.GaussianBlur(radius=10)).save(soft_path, format="JPEG")
+        asset.path = str(soft_path)
+        asset.filename = "mmexport_soft.jpg"
+        asset.asset_type = AssetType.PHOTO
+        asset.width = 1000
+        asset.height = 800
+        presentation = PresentationRepository(db_session).create_presentation(
+            Presentation(project_id=project_id, title="Photo QA")  # type: ignore[arg-type]
+        )
+        slide = SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="现场问题",
+            message="入口广场现状拥挤。",
+            visual_requirements=[
+                VisualRequirement(
+                    type=VisualType.SITE_PHOTO,
+                    description="现场照片",
+                    preferred_asset_ids=[asset.id],
+                )
+            ],
+        )
+
+        issues = VisualQAService(db_session).review_slides(
+            presentation.id,
+            [slide],
+            {asset.id: asset},
+        )
+
+        blurry = [issue for issue in issues if issue.rule_code == ReviewRuleCode.VISUAL_PHOTO_BLURRY]
+        assert blurry
+        assert blurry[0].requires_confirmation is True
+        # Photo checks must not fire north/legend rules on site photos.
+        assert not any(issue.rule_code == ReviewRuleCode.VISUAL_MISSING_NORTH_ARROW for issue in issues)
 
     def test_layout_review_runs_visual_qa_when_enabled(
         self,

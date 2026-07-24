@@ -130,6 +130,7 @@ pointerup  → 一次 Command → 一次后端持久化 → 一次 rerun
 | 轻度 enhance | **已做**（UnsharpMask / Median denoise / historical_restore 启发式） |
 | `ImageProcessor` 门面 | **已做**（非 Agent） |
 | Sharp / Node 执行器 | 未接入（**正确**，不在 PptxGen 加滤镜） |
+| 照片专用 QA（糊度 / 过曝） | **已做最小切片**（`photo_sharpness` / `photo_exposure` → `VISUAL.PHOTO_*`；仅 SITE_PHOTO/RENDERING/REFERENCE_CASE） |
 | Soft vignette overlay | **已做**（仅非证据/图纸的 presentation unify） |
 | 模型级自动主体检测（建筑/道路/人流分割） | 未做 |
 | 生成式老照片修复 | 未做（historical_restore 仅为轻度去噪+对比） |
@@ -161,13 +162,14 @@ PptxGen / AssetPathResolver 只消费 URI，不做滤镜。
 1. Sharp/Node 或外部模型作为可插拔主体检测（建筑立面 / 道路 / 人流）
 2. DB 级 derivative 元数据索引（当前靠文件缓存 + params_hash）
 3. 组件级截图 golden 覆盖 unify / deck style
-4. 照片专用 QA（糊度、微信压缩伪影）→ ReviewIssue
+4. 照片 QA 校准进 formal emit（当前糊度/过曝以 suspected 发出；微信压缩伪影专用检测仍未做）
 
 ### 验收指标
 - 证据类策略不破坏事实性表达（QA 规则 + 回归截图）
 - 同一 `original_asset_id` 可回溯 derivative 参数与版本（params_hash）
-- 混合来源照片观感统一且不过度改色
+- 混合来源照片观感统一且不过度改色（case_a batch E2E：微信/现场/历史 → StyleMatcher + Derivative）
 - 微信/扫描/老照片能分到不同 mode/enhance；Deck 抽样能拉开色温/亮度 knobs
+- 现场照片糊度/过曝可进入 VisualQA（suspected）
 ## Sprint 4：Layout Grammar Expansion（布局族参数化与变体选择）
 ### 要做什么
 在不引入“全自由求解器”的前提下，把现有布局家族升级为 grammar：
