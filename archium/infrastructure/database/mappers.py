@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from archium.domain.asset import Asset
+from archium.domain.artifact_job import ArtifactJob
 from archium.domain.citation import Citation
 from archium.domain.cultural_narrative import (
     CULTURAL_NARRATIVE_LOGICAL_KEY,
@@ -14,8 +15,10 @@ from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
+    ArtifactJobStatus,
     AssetType,
     DeckDeliveryStatus,
+    DeliverableType,
     DocumentType,
     InformationOrigin,
     InformationReliability,
@@ -73,6 +76,7 @@ from archium.domain.visual.visual_grammar import coerce_page_archetype
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
+    ArtifactJobORM,
     AssetORM,
     ChapterORM,
     CulturalNarrativePlanORM,
@@ -1146,6 +1150,64 @@ def delivery_record_to_orm(
     target.qa_status = domain.qa_status
     target.round_trip_report_json = domain.round_trip_report_json
     target.exported_at = domain.exported_at
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def artifact_job_to_domain(orm: ArtifactJobORM) -> ArtifactJob:
+    return ArtifactJob(
+        id=orm.id,
+        project_id=orm.project_id,
+        mission_id=orm.mission_id,
+        deliverable_id=orm.deliverable_id,
+        deliverable_title=orm.deliverable_title or "",
+        deliverable_type=DeliverableType(orm.deliverable_type),
+        request_kind=orm.request_kind or "other",
+        status=ArtifactJobStatus(orm.status),
+        message=orm.message or "",
+        warnings=list(orm.warnings_json or []),
+        plan_json=dict(orm.plan_json or {}),
+        title=orm.title or "",
+        payload_json=dict(orm.payload_json or {}),
+        markdown=orm.markdown or "",
+        json_path=orm.json_path,
+        markdown_path=orm.markdown_path,
+        docx_path=orm.docx_path,
+        error_message=orm.error_message,
+        started_at=orm.started_at,
+        completed_at=orm.completed_at,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def artifact_job_to_orm(
+    domain: ArtifactJob,
+    orm: ArtifactJobORM | None = None,
+) -> ArtifactJobORM:
+    target = orm or ArtifactJobORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.mission_id = domain.mission_id
+    target.deliverable_id = domain.deliverable_id
+    target.deliverable_title = domain.deliverable_title
+    target.deliverable_type = domain.deliverable_type.value
+    target.request_kind = domain.request_kind
+    target.status = domain.status.value
+    target.message = domain.message
+    target.warnings_json = list(domain.warnings)
+    target.plan_json = dict(domain.plan_json)
+    target.title = domain.title
+    target.payload_json = dict(domain.payload_json)
+    target.markdown = domain.markdown
+    target.json_path = domain.json_path
+    target.markdown_path = domain.markdown_path
+    target.docx_path = domain.docx_path
+    target.error_message = domain.error_message
+    target.started_at = domain.started_at
+    target.completed_at = domain.completed_at
     if domain.created_at is not None:
         target.created_at = domain.created_at
     if domain.updated_at is not None:

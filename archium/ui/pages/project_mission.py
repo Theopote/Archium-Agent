@@ -41,6 +41,7 @@ from archium.ui.planning_service import (
     generate_work_plan_artifact,
     get_planning_snapshot,
     get_presentation_bridge,
+    list_artifact_jobs,
 )
 from archium.ui.workflow_progress_panel import (
     render_workflow_progress_panel,
@@ -560,6 +561,18 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                         if getattr(cached, "docx_path", None):
                             st.caption(f"DOCX：{cached.docx_path}")
 
+        with get_session() as session:
+            recent_jobs = list_artifact_jobs(session, mission_id, limit=8)
+        if recent_jobs:
+            st.markdown("**最近成果作业**")
+            for job in recent_jobs:
+                status = job.status.value
+                st.caption(
+                    f"{job.deliverable_title or job.deliverable_id} · {job.request_kind} · {status}"
+                    + (f" · {job.markdown_path}" if job.markdown_path else "")
+                    + (f" · 错误：{job.error_message}" if job.error_message else "")
+                )
+
     selected_presentations: list[object] = [
         item
         for item in execution_plans
@@ -574,10 +587,10 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         ]
 
     if not selected_presentations:
-        if not question_plans and not work_plan_plans:
+        if not has_text_artifacts:
             st.info(
                 "当前没有可自动生成的成果。"
-                "请回到第 5 步勾选汇报、提问清单或工作大纲类成果。"
+                "请回到第 5 步勾选汇报或非汇报类成果（提问清单 / 工作大纲 / 报告 / 备忘录等）。"
             )
         return
 

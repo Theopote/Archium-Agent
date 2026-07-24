@@ -128,3 +128,14 @@ class DeliverableType(StrEnum):
     WORK_PLAN = "work_plan"
     IMPLEMENTATION_ROADMAP = "implementation_roadmap"
     OTHER = "other"
+
+
+class ArtifactJobStatus(StrEnum):
+    """Lifecycle for non-presentation artifact generation jobs."""
+
+    PLANNED = "planned"
+    READY = "ready"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"

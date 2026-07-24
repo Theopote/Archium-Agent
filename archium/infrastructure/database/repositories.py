@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from archium.domain.asset import Asset
+from archium.domain.artifact_job import ArtifactJob
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
@@ -32,6 +33,7 @@ from archium.domain.workflow import WorkflowRun
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
+    ArtifactJobORM,
     AssetORM,
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
@@ -1193,6 +1195,59 @@ class DeliveryRecordRepository:
             .limit(limit)
         )
         return [mappers.delivery_record_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class ArtifactJobRepository:
+    """CRUD for non-presentation artifact generation jobs."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, job: ArtifactJob) -> ArtifactJob:
+        try:
+            orm = mappers.artifact_job_to_orm(job)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.artifact_job_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create artifact job", exc)
+            raise
+
+    def update(self, job: ArtifactJob) -> ArtifactJob:
+        try:
+            orm = self._session.get(ArtifactJobORM, job.id)
+            if orm is None:
+                raise RepositoryError(f"Artifact job {job.id} not found")
+            mappers.artifact_job_to_orm(job, orm)
+            self._session.flush()
+            return mappers.artifact_job_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("update artifact job", exc)
+            raise
+
+    def get(self, job_id: UUID) -> ArtifactJob | None:
+        orm = self._session.get(ArtifactJobORM, job_id)
+        if orm is None:
+            return None
+        return mappers.artifact_job_to_domain(orm)
+
+    def list_by_mission(self, mission_id: UUID, *, limit: int = 50) -> list[ArtifactJob]:
+        stmt = (
+            select(ArtifactJobORM)
+            .where(ArtifactJobORM.mission_id == mission_id)
+            .order_by(ArtifactJobORM.created_at.desc())
+            .limit(limit)
+        )
+        return [mappers.artifact_job_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def list_by_project(self, project_id: UUID, *, limit: int = 50) -> list[ArtifactJob]:
+        stmt = (
+            select(ArtifactJobORM)
+            .where(ArtifactJobORM.project_id == project_id)
+            .order_by(ArtifactJobORM.created_at.desc())
+            .limit(limit)
+        )
+        return [mappers.artifact_job_to_domain(row) for row in self._session.scalars(stmt)]
 
 
 class OutlineApprovalRecordRepository:

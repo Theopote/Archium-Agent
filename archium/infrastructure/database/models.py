@@ -1029,6 +1029,46 @@ class DeliveryRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class ArtifactJobORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "artifact_jobs"
+    __table_args__ = (
+        Index("ix_artifact_jobs_project_id", "project_id"),
+        Index("ix_artifact_jobs_mission_id", "mission_id"),
+        Index("ix_artifact_jobs_status", "status"),
+        Index("ix_artifact_jobs_mission_deliverable", "mission_id", "deliverable_id"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_missions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    deliverable_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    deliverable_title: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    deliverable_type: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    request_kind: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="planned")
+    message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    warnings_json: Mapped[list[str]] = mapped_column("warnings", JSON, nullable=False, default=list)
+    plan_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
+    title: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    payload_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
+    markdown: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    json_path: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    markdown_path: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    docx_path: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class OutlineApprovalRecordORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "outline_approval_records"
     __table_args__ = (

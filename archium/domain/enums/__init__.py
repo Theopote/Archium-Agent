@@ -36,6 +36,7 @@ from archium.domain.enums.mission import (
     UncertaintyLevel,
     WorkstreamStatus,
     WorkstreamType,
+    ArtifactJobStatus,
 )
 from archium.domain.enums.presentation import (
     ApprovalStatus,
@@ -123,6 +124,7 @@ __all__ = [
     "WorkstreamType",
     "WorkstreamStatus",
     "DeliverableType",
+    "ArtifactJobStatus",
     "VisualType",
     "AssetType",
     "SlideAssetBindingRole",

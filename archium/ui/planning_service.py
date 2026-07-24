@@ -559,6 +559,34 @@ def get_presentation_bridge(
     return service.get_presentation_bridge(workflow_run_id, user_overrides=user_overrides)
 
 
+def run_artifact_job(
+    session: Session,
+    mission_id: UUID,
+    deliverable_id: str,
+    *,
+    settings: Settings | None = None,
+):
+    """Create, run, and persist an ArtifactJob for a planned non-presentation deliverable."""
+    from archium.application.artifact_job_service import ArtifactJobService
+
+    runtime = _resolve_runtime_settings(settings)
+    return ArtifactJobService(session, settings=runtime).run_for_deliverable(
+        mission_id,
+        deliverable_id,
+    )
+
+
+def list_artifact_jobs(
+    session: Session,
+    mission_id: UUID,
+    *,
+    limit: int = 20,
+) -> list:
+    from archium.application.artifact_job_service import ArtifactJobService
+
+    return ArtifactJobService(session).list_jobs_for_mission(mission_id, limit=limit)
+
+
 def generate_question_list_artifact(
     session: Session,
     mission_id: UUID,
@@ -566,40 +594,13 @@ def generate_question_list_artifact(
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
-    """Execute QuestionListExecutor against the mission bundle and write MD/JSON."""
-    from archium.application.artifact_executors import (
-        QuestionListExecutor,
-        artifact_output_dir,
-    )
-    from archium.infrastructure.database.repositories import FactRepository
-
-    runtime = _resolve_runtime_settings(settings)
-    missions = MissionRepository(session)
-    mission = missions.get_mission(mission_id)
-    if mission is None:
-        raise WorkflowError(f"Mission {mission_id} not found")
-
-    deliverable = None
-    plans = missions.list_deliverable_plans(mission_id)
-    if plans and deliverable_id:
-        for item in plans[0].deliverables:
-            if item.id == deliverable_id:
-                deliverable = item
-                break
-
-    out_dir = artifact_output_dir(
-        runtime.output_path,
-        mission_id=mission_id,
-        kind="question_list",
-    )
-    return QuestionListExecutor().execute(
-        mission,
-        gaps=missions.list_knowledge_gaps(mission_id),
-        questions=missions.list_clarifying_questions(mission_id),
-        assumptions=missions.list_assumptions(mission_id),
-        facts=FactRepository(session).list_by_project(mission.project_id),
-        deliverable=deliverable,
-        output_dir=out_dir,
+    """Execute QuestionListExecutor and persist an ArtifactJob when deliverable_id is set."""
+    return _generate_via_artifact_job(
+        session,
+        mission_id,
+        deliverable_id=deliverable_id,
+        settings=settings,
+        kind_label="提问清单",
     )
 
 
@@ -610,59 +611,13 @@ def generate_work_plan_artifact(
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
-    """Execute WorkPlanExecutor and write MD/JSON work outline."""
-    from archium.application.artifact_executors import (
-        WorkPlanExecutor,
-        artifact_output_dir,
+    return _generate_via_artifact_job(
+        session,
+        mission_id,
+        deliverable_id=deliverable_id,
+        settings=settings,
+        kind_label="工作大纲",
     )
-
-    runtime = _resolve_runtime_settings(settings)
-    missions = MissionRepository(session)
-    mission = missions.get_mission(mission_id)
-    if mission is None:
-        raise WorkflowError(f"Mission {mission_id} not found")
-
-    plans = missions.list_deliverable_plans(mission_id)
-    plan = plans[0] if plans else None
-    deliverable = None
-    if plan is not None and deliverable_id:
-        for item in plan.deliverables:
-            if item.id == deliverable_id:
-                deliverable = item
-                break
-
-    out_dir = artifact_output_dir(
-        runtime.output_path,
-        mission_id=mission_id,
-        kind="work_plan",
-    )
-    return WorkPlanExecutor().execute(
-        mission,
-        workstreams=missions.list_workstreams(mission_id),
-        deliverable_plan=plan,
-        deliverable=deliverable,
-        output_dir=out_dir,
-    )
-
-
-def _resolve_planned_deliverable(
-    session: Session,
-    mission_id: UUID,
-    deliverable_id: str | None,
-):
-    missions = MissionRepository(session)
-    mission = missions.get_mission(mission_id)
-    if mission is None:
-        raise WorkflowError(f"Mission {mission_id} not found")
-    plans = missions.list_deliverable_plans(mission_id)
-    plan = plans[0] if plans else None
-    deliverable = None
-    if plan is not None and deliverable_id:
-        for item in plan.deliverables:
-            if item.id == deliverable_id:
-                deliverable = item
-                break
-    return mission, deliverable
 
 
 def generate_report_artifact(
@@ -672,12 +627,13 @@ def generate_report_artifact(
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
-    from archium.application.artifact_executors import ReportExecutor, artifact_output_dir
-
-    runtime = _resolve_runtime_settings(settings)
-    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
-    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="report")
-    return ReportExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+    return _generate_via_artifact_job(
+        session,
+        mission_id,
+        deliverable_id=deliverable_id,
+        settings=settings,
+        kind_label="报告",
+    )
 
 
 def generate_memo_artifact(
@@ -687,12 +643,13 @@ def generate_memo_artifact(
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
-    from archium.application.artifact_executors import MemoExecutor, artifact_output_dir
-
-    runtime = _resolve_runtime_settings(settings)
-    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
-    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="memo")
-    return MemoExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+    return _generate_via_artifact_job(
+        session,
+        mission_id,
+        deliverable_id=deliverable_id,
+        settings=settings,
+        kind_label="备忘录",
+    )
 
 
 def generate_checklist_artifact(
@@ -702,12 +659,13 @@ def generate_checklist_artifact(
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
-    from archium.application.artifact_executors import ChecklistExecutor, artifact_output_dir
-
-    runtime = _resolve_runtime_settings(settings)
-    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
-    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="checklist")
-    return ChecklistExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+    return _generate_via_artifact_job(
+        session,
+        mission_id,
+        deliverable_id=deliverable_id,
+        settings=settings,
+        kind_label="清单",
+    )
 
 
 def generate_case_study_artifact(
@@ -717,12 +675,34 @@ def generate_case_study_artifact(
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
-    from archium.application.artifact_executors import CaseStudyExecutor, artifact_output_dir
+    return _generate_via_artifact_job(
+        session,
+        mission_id,
+        deliverable_id=deliverable_id,
+        settings=settings,
+        kind_label="案例研究",
+    )
 
-    runtime = _resolve_runtime_settings(settings)
-    mission, deliverable = _resolve_planned_deliverable(session, mission_id, deliverable_id)
-    out_dir = artifact_output_dir(runtime.output_path, mission_id=mission_id, kind="case_study")
-    return CaseStudyExecutor().execute(mission, deliverable=deliverable, output_dir=out_dir)
+
+def _generate_via_artifact_job(
+    session: Session,
+    mission_id: UUID,
+    *,
+    deliverable_id: str | None,
+    settings: Settings | None,
+    kind_label: str,
+) -> ArtifactOutput:
+    if not deliverable_id:
+        raise WorkflowError(f"生成{kind_label}需要 deliverable_id，以便写入 ArtifactJob")
+    result = run_artifact_job(
+        session,
+        mission_id,
+        deliverable_id,
+        settings=settings,
+    )
+    if result.output is None:
+        raise WorkflowError(f"{kind_label}生成未返回产物")
+    return result.output
 
 
 def start_presentation_from_planning(
