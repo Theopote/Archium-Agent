@@ -1,4 +1,4 @@
-"""Project genesis — dual entry for concept exploration vs existing projects."""
+"""Project genesis — concept, research/programming, or existing-project entry."""
 
 from __future__ import annotations
 
@@ -14,16 +14,21 @@ from archium.ui.error_handlers import report_user_error
 
 
 def render() -> None:
-    """Let users start from an idea or from existing project materials."""
+    """Let users start from an idea, programming brief, or existing materials."""
     render_page_header(
         "开始项目",
-        "从一句话想法探索设计使命，或从已有资料整理汇报。",
+        "从想法探索、前期策划可研，或从已有资料整理汇报。",
     )
 
-    tab_concept, tab_existing = st.tabs(["从想法开始", "从已有资料开始"])
+    tab_concept, tab_programming, tab_existing = st.tabs(
+        ["从想法开始", "策划与可研", "从已有资料开始"]
+    )
 
     with tab_concept:
         _render_concept_form()
+
+    with tab_programming:
+        _render_programming_form()
 
     with tab_existing:
         _render_existing_form()
@@ -55,6 +60,46 @@ def _render_concept_form() -> None:
                     )
                 st.session_state.selected_project_id = str(project.id)
                 st.session_state.genesis_task_description = idea.strip()
+                st.session_state.mission_step = 1
+                st.switch_page(get_app_page("project-mission"))
+            except ValidationError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(report_user_error(exc))
+
+
+def _render_programming_form() -> None:
+    st.markdown(
+        "**策划与可研** — 面向投资人沟通、功能策划或立项启动；"
+        "重点弄清决策背景与未知项，而非空间定稿。"
+    )
+    with st.form("genesis_programming_form"):
+        name = st.text_input("项目名称", placeholder="例如：某文旅综合体前期策划")
+        brief = st.text_area(
+            "策划任务描述",
+            placeholder=(
+                "例如：某城市更新地块拟引入文化商业，需梳理功能定位、"
+                "投资逻辑与关键未知项，形成投资人沟通提纲"
+            ),
+            height=120,
+        )
+        submit = st.form_submit_button("创建并进入项目任务", type="primary", use_container_width=True)
+        if submit:
+            if not name.strip():
+                st.error("请填写项目名称")
+                return
+            if not brief.strip():
+                st.error("请描述策划任务")
+                return
+            try:
+                with get_session() as session:
+                    project = ProjectManagementService(session).create_project(
+                        name.strip(),
+                        brief.strip(),
+                        origin_mode=ProjectOriginMode.RESEARCH_PROGRAMMING,
+                    )
+                st.session_state.selected_project_id = str(project.id)
+                st.session_state.genesis_task_description = brief.strip()
                 st.session_state.mission_step = 1
                 st.switch_page(get_app_page("project-mission"))
             except ValidationError as exc:

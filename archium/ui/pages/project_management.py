@@ -50,7 +50,7 @@ def _render_project_card(project: Project, index: int) -> None:
 
             if st.button("📂 打开", key=f"open_{project.id}", use_container_width=True, type="primary"):
                 st.session_state.selected_project_id = str(project.id)
-                if project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+                if project.origin_mode.skips_default_clarification:
                     st.switch_page(get_app_page("project-mission"))
                 else:
                     st.switch_page(get_app_page("materials"))

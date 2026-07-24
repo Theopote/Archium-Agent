@@ -30,6 +30,7 @@ from archium.ui.label_map import (
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.mission_panel import render_mission_panel
 from archium.ui.planning_service import (
+    PROGRAMMING_TASK_EXAMPLE_PROMPTS,
     TASK_EXAMPLE_PROMPTS,
     PlanningSnapshot,
     generate_question_list_artifact,
@@ -238,14 +239,19 @@ def _render_describe(project_id: UUID) -> None:
         from archium.infrastructure.database.repositories import ProjectRepository
 
         project = ProjectRepository(session).get_by_id(project_id)
-    if project is not None and project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
-        st.info(
-            "当前为概念探索草稿 — 假设可随研究修正；正式交付需后续补充资料。"
-        )
-    else:
-        st.caption(
-            "资料不完整也没关系。可以描述项目背景、甲方要求、现状问题，以及你希望最终完成什么。"
-        )
+        if project is not None and project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+            st.info(
+                "当前为概念探索草稿 — 假设可随研究修正；正式交付需后续补充资料。"
+            )
+        elif project is not None and project.origin_mode == ProjectOriginMode.RESEARCH_PROGRAMMING:
+            st.info(
+                "当前为策划与可研模式 — 重点梳理决策背景与未知项；"
+                "成果以问题清单、工作路径或备忘录为主；正式交付需后续补充资料。"
+            )
+        else:
+            st.caption(
+                "资料不完整也没关系。可以描述项目背景、甲方要求、现状问题，以及你希望最终完成什么。"
+            )
 
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
@@ -257,9 +263,12 @@ def _render_describe(project_id: UUID) -> None:
     genesis_task = st.session_state.pop("genesis_task_description", None)
     if genesis_task and not st.session_state.mission_task_draft:
         st.session_state.mission_task_draft = genesis_task
+    example_pool = TASK_EXAMPLE_PROMPTS
+    if project is not None and project.origin_mode == ProjectOriginMode.RESEARCH_PROGRAMMING:
+        example_pool = PROGRAMMING_TASK_EXAMPLE_PROMPTS
     example = st.selectbox(
         "示例（可选，不会限制你的描述）",
-        options=["（不使用示例）", *TASK_EXAMPLE_PROMPTS],
+        options=["（不使用示例）", *example_pool],
     )
     if example != "（不使用示例）" and not st.session_state.mission_task_draft:
         st.session_state.mission_task_draft = example

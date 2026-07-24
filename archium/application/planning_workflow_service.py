@@ -165,7 +165,7 @@ class PlanningWorkflowService:
         resolved_clarification = (
             require_clarification
             if require_clarification is not None
-            else resolved_origin != ProjectOriginMode.CONCEPT_EXPLORATION
+            else not resolved_origin.skips_default_clarification
         )
 
         planning_session = self._planning_sessions.create(

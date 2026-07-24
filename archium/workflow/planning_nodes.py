@@ -152,13 +152,16 @@ class PlanningWorkflowNodes:
         prefs = WebResearchSettingsService(self._runtime.session).get_preferences(
             base_settings=self._runtime.settings,
         )
-        if origin_mode != ProjectOriginMode.CONCEPT_EXPLORATION or not prefs.auto_on_concept_planning:
+        if (
+            not origin_mode.skips_default_clarification
+            or not prefs.auto_on_concept_planning
+        ):
             next_state = {"current_step": step, "warnings": warnings}
             self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
             return next_state
 
         if not prefs.enabled:
-            warnings.append("联网研究已禁用，跳过概念探索自动研究")
+            warnings.append("联网研究已禁用，跳过轻量规划自动研究")
             next_state = {"current_step": step, "warnings": warnings}
             self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
             return next_state
@@ -175,11 +178,11 @@ class PlanningWorkflowNodes:
             if result.items:
                 provider_note = result.search_provider or "无联网"
                 warnings.append(
-                    "概念探索自动研究：已写入 "
+                    "轻量规划自动研究：已写入 "
                     f"{len(result.items)} 条公开资料（检索 {result.search_hit_count} 条，{provider_note}）"
                 )
                 logger.info(
-                    "Concept planning auto research wrote %s items for mission %s",
+                    "Lightweight planning auto research wrote %s items for mission %s",
                     len(result.items),
                     mission_id,
                 )
@@ -189,11 +192,11 @@ class PlanningWorkflowNodes:
                 "autonomous_research_item_count": len(result.items),
             }
         except WorkflowError as exc:
-            warnings.append(f"概念探索自动研究跳过：{exc}")
+            warnings.append(f"轻量规划自动研究跳过：{exc}")
             next_state = {"current_step": step, "warnings": warnings}
         except Exception as exc:
             logger.warning("Concept planning auto research failed: %s", exc)
-            warnings.append(f"概念探索自动研究失败：{exc}")
+            warnings.append(f"轻量规划自动研究失败：{exc}")
             next_state = {"current_step": step, "warnings": warnings}
 
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
@@ -384,7 +387,7 @@ class PlanningWorkflowNodes:
         origin_mode = ProjectOriginMode(
             state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value)
         )
-        if origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+        if origin_mode.skips_default_clarification:
             self._runtime.clarification_service.auto_assume_concept_defaults(mission_id)
 
         # Resume path: clarification already handled and readiness allows continue.

@@ -127,7 +127,7 @@ class ProjectProgressSnapshot:
                 return "outline"
             return "materials"
 
-        if self.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
+        if self.origin_mode.skips_default_clarification:
             if not self.outline_approved:
                 return "outline"
             if not self.design_briefs_approved and self.has_outline:

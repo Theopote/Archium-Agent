@@ -89,9 +89,12 @@ def validate_mission_draft(
     draft: MissionGenerationDraft,
     facts: list[ProjectFact],
     *,
-    concept_mode: bool = False,
+    lightweight_mode: bool = False,
+    concept_mode: bool | None = None,
 ) -> MissionValidationResult:
     """Check draft for fabrication, conflict mishandling, and question limits."""
+    if concept_mode is not None:
+        lightweight_mode = concept_mode
     result = MissionValidationResult()
     active_facts = [fact for fact in facts if fact.verification_status != VerificationStatus.REJECTED]
     confirmed = {fact.key: fact for fact in active_facts if fact.is_confirmed}
@@ -102,18 +105,18 @@ def validate_mission_draft(
     }
 
     max_questions = (
-        MAX_CONCEPT_CLARIFYING_QUESTIONS if concept_mode else MAX_CLARIFYING_QUESTIONS
+        MAX_CONCEPT_CLARIFYING_QUESTIONS if lightweight_mode else MAX_CLARIFYING_QUESTIONS
     )
     if len(draft.clarifying_questions) > max_questions:
         result.warnings.append(
             f"clarifying_questions 超过 {max_questions} 个，将截断"
         )
 
-    if concept_mode:
+    if lightweight_mode:
         for index, question in enumerate(draft.clarifying_questions):
             if question.blocking:
                 result.warnings.append(
-                    f"概念探索模式下 clarifying_questions[{index}] 不应阻塞，将视为非阻塞"
+                    f"轻量规划模式下 clarifying_questions[{index}] 不应阻塞，将视为非阻塞"
                 )
 
     for key in conflicted_keys:
@@ -146,10 +149,13 @@ def parse_mission_draft(
     project_id: UUID,
     facts: list[ProjectFact],
     version: int = 1,
-    concept_mode: bool = False,
+    lightweight_mode: bool = False,
+    concept_mode: bool | None = None,
 ) -> MissionParseResult:
     """Convert LLM draft to domain models with fact-aware sanitization."""
-    validation = validate_mission_draft(draft, facts, concept_mode=concept_mode)
+    if concept_mode is not None:
+        lightweight_mode = concept_mode
+    validation = validate_mission_draft(draft, facts, lightweight_mode=lightweight_mode)
     if not validation.ok:
         raise ValueError("; ".join(validation.errors))
 

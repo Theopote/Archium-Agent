@@ -183,8 +183,11 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
             from archium.infrastructure.database.repositories import ProjectRepository
 
             project = ProjectRepository(session).get_by_id(project_id)
-        if project is not None and project.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION:
-            st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
+        if project is not None and project.origin_mode.skips_default_clarification:
+            if project.origin_mode == ProjectOriginMode.RESEARCH_PROGRAMMING:
+                st.caption("策划与可研中 — 资料可后续补充 enrich 任务理解。")
+            else:
+                st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
         else:
             st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
 

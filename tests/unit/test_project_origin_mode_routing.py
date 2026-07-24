@@ -47,6 +47,20 @@ def test_concept_exploration_routes_to_outline_without_documents() -> None:
     assert snapshot.current_stage_id == "outline"
 
 
+def test_research_programming_routes_to_outline_without_documents() -> None:
+    snapshot = _snapshot(
+        origin_mode=ProjectOriginMode.RESEARCH_PROGRAMMING,
+        has_mission_or_task=True,
+    )
+    assert snapshot.current_stage_id == "outline"
+
+
+def test_skips_default_clarification_includes_programming() -> None:
+    assert ProjectOriginMode.RESEARCH_PROGRAMMING.skips_default_clarification
+    assert ProjectOriginMode.CONCEPT_EXPLORATION.skips_default_clarification
+    assert not ProjectOriginMode.EXISTING_PROJECT.skips_default_clarification
+
+
 def test_existing_project_without_docs_but_with_mission_routes_to_outline() -> None:
     snapshot = _snapshot(
         origin_mode=ProjectOriginMode.EXISTING_PROJECT,

@@ -39,6 +39,19 @@ class ProjectOriginMode(StrEnum):
 
     CONCEPT_EXPLORATION = "concept_exploration"
     EXISTING_PROJECT = "existing_project"
+    RESEARCH_PROGRAMMING = "research_programming"
+
+    @property
+    def skips_default_clarification(self) -> bool:
+        """Origins that default to lightweight planning without a materials gate."""
+        return self in {
+            ProjectOriginMode.CONCEPT_EXPLORATION,
+            ProjectOriginMode.RESEARCH_PROGRAMMING,
+        }
+
+    @property
+    def allows_outline_without_materials(self) -> bool:
+        return self.skips_default_clarification
 
 class ProjectDomain(StrEnum):
     """Subject domain of the task — background context, not workflow driver."""

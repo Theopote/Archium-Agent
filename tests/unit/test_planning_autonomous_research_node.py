@@ -74,3 +74,34 @@ def test_run_autonomous_research_runs_for_concept_exploration(db_session, test_s
     research_mock.assert_called_once_with(mission_id)
     assert result["autonomous_research_item_count"] == 1
     assert any("自动研究" in warning for warning in result.get("warnings", []))
+
+
+def test_run_autonomous_research_runs_for_research_programming(db_session, test_settings) -> None:
+    runtime = PlanningWorkflowRuntime(
+        db_session,
+        MagicMock(),
+        settings=test_settings,
+    )
+    nodes = PlanningWorkflowNodes(runtime)
+    mission_id = uuid4()
+    state: PlanningWorkflowState = {
+        "project_id": str(uuid4()),
+        "workflow_run_id": str(uuid4()),
+        "origin_mode": ProjectOriginMode.RESEARCH_PROGRAMMING.value,
+        "mission_id": str(mission_id),
+        "warnings": [],
+    }
+
+    with patch(
+        "archium.application.autonomous_research_service.AutonomousResearchService.research_for_mission",
+        return_value=AutonomousResearchResult(
+            project_id=uuid4(),
+            mission_id=mission_id,
+            items=[],
+            search_hit_count=0,
+            search_provider="stub",
+        ),
+    ) as research_mock:
+        nodes.run_autonomous_research(state)
+
+    research_mock.assert_called_once_with(mission_id)

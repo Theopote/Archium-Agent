@@ -127,11 +127,14 @@ class ProjectMissionService:
 
         resolved_origin = origin_mode or project.origin_mode
         concept_mode = resolved_origin == ProjectOriginMode.CONCEPT_EXPLORATION
+        programming_mode = resolved_origin == ProjectOriginMode.RESEARCH_PROGRAMMING
+        lightweight_mode = resolved_origin.skips_default_clarification
         context = self._build_context(project_id, user_task_description)
         fact_summary = self._build_fact_summary(project_id)
         from archium.prompts.project_mission import (
             build_concept_mission_addendum,
             build_mission_user_prompt,
+            build_programming_mission_addendum,
         )
 
         user_prompt = build_mission_user_prompt(
@@ -141,9 +144,12 @@ class ProjectMissionService:
             project_name=project.name,
             project_type=project.project_type.value,
             concept_mode=concept_mode,
+            programming_mode=programming_mode,
         )
         if concept_mode:
             user_prompt += build_concept_mission_addendum()
+        elif programming_mode:
+            user_prompt += build_programming_mission_addendum()
 
         draft = self._llm.generate_structured(
             LLMRequest(
@@ -157,7 +163,7 @@ class ProjectMissionService:
         return self._persist_generation(
             project_id,
             draft,
-            concept_mode=concept_mode,
+            lightweight_mode=lightweight_mode,
         )
 
     def regenerate_mission(
@@ -272,14 +278,16 @@ class ProjectMissionService:
         *,
         previous: ProjectMission | None = None,
         change_source: RevisionSource = RevisionSource.GENERATED,
-        concept_mode: bool = False,
+        lightweight_mode: bool = False,
     ) -> MissionGenerationResult:
         facts = self._fact_ledger.get_ledger(project_id)
         fact_models = [
             entry.fact for entry in facts.entries if entry.fact is not None
         ] + list(facts.extra_facts)
 
-        validation = validate_mission_draft(draft, fact_models, concept_mode=concept_mode)
+        validation = validate_mission_draft(
+            draft, fact_models, lightweight_mode=lightweight_mode
+        )
         if not validation.ok:
             raise WorkflowError("; ".join(validation.errors))
 
@@ -289,7 +297,7 @@ class ProjectMissionService:
             project_id=project_id,
             facts=fact_models,
             version=version,
-            concept_mode=concept_mode,
+            lightweight_mode=lightweight_mode,
         )
         apply_mission_lineage(parsed.mission, previous)
         saved_mission = self._missions.save_mission(parsed.mission)

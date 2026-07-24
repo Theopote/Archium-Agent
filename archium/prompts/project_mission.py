@@ -46,9 +46,27 @@ CONCEPT_MISSION_ADDENDUM = """
 - task_statement 应表达设计使命（探索什么问题、创造什么体验），而非交付页数。
 """
 
+PROGRAMMING_MISSION_ADDENDUM = """
+【策划与可研模式 — 任务理解 v0.1】
+- 这是前期策划 / 功能策划 / 投资人沟通 / 可研启动阶段，不是施工图或方案定稿。
+- task_natures 应优先包含 programming、research、consulting 中的适用项；requested_service_depths
+  可含 preliminary_research、programming、feasibility_study。
+- 重点识别：决策背景、投资/运营逻辑、功能与规模未知项、市场与政策风险、利益相关方诉求。
+- 不得编造面积、容积率、投资额、收益率等；未知指标写入 knowledge_gaps / key_unknowns /
+  research_questions，并给出 assumptions（requires_confirmation=true）。
+- design_intent 仍应输出（theme, problem_statement, target_users, core_questions,
+  research_needed, working_assumptions），但重心是「要弄清什么、如何决策」，而非空间造型。
+- clarifying_questions 最多 3 个，全部 blocking=false，can_assume=true，并提供 suggested_assumption。
+- 成果倾向：问题清单、工作路径、策划备忘录、可研提纲；仅在用户明确需要时才把 PPT 作为首要成果。
+"""
+
 
 def build_concept_mission_addendum() -> str:
     return CONCEPT_MISSION_ADDENDUM
+
+
+def build_programming_mission_addendum() -> str:
+    return PROGRAMMING_MISSION_ADDENDUM
 
 
 def build_mission_user_prompt(
@@ -59,6 +77,7 @@ def build_mission_user_prompt(
     project_name: str = "",
     project_type: str = "",
     concept_mode: bool = False,
+    programming_mode: bool = False,
 ) -> str:
     header = "请基于以下信息生成 ProjectMission JSON。\n\n"
     meta = ""
@@ -67,6 +86,8 @@ def build_mission_user_prompt(
     mode_hint = ""
     if concept_mode:
         mode_hint = "【模式】概念探索 — 资料可空，优先建立设计使命与假设。\n\n"
+    elif programming_mode:
+        mode_hint = "【模式】策划与可研 — 资料可空，优先梳理决策问题、功能未知与研究成果。\n\n"
     return (
         header
         + mode_hint
