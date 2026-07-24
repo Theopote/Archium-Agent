@@ -94,6 +94,10 @@ class VisualConceptBriefService:
         direction = self._directions.get(concept_direction_id)
         if direction is None:
             raise WorkflowError(f"概念方向 {concept_direction_id} 不存在")
+        if direction.mission_id is None:
+            raise WorkflowError(
+                "该方向尚未绑定 Mission；请先在概念探索页选定方向并生成项目任务"
+            )
         mission = self._missions.get_mission(direction.mission_id)
         if mission is None:
             raise WorkflowError(f"Mission {direction.mission_id} not found")

@@ -3,17 +3,24 @@
 from __future__ import annotations
 
 from unittest.mock import MagicMock
-
 from uuid import uuid4
 
 import pytest
 
+from archium.application.exploration_service import ExplorationService
 from archium.application.mission_parser import parse_mission_draft
 from archium.application.project_mission_service import ProjectMissionService
-from archium.domain.enums import ProjectOriginMode
-from archium.domain.intent.design_intent import DesignIntent
+from archium.domain.enums import (
+    ConceptDirectionStatus,
+    ExplorationSessionStatus,
+    ProjectOriginMode,
+)
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import ProjectRepository
+from archium.infrastructure.llm.concept_direction_schemas import (
+    ConceptDirectionBatchDraft,
+    ConceptDirectionDraft,
+)
 from archium.infrastructure.llm.mission_schemas import (
     AssumptionDraft,
     ClarifyingQuestionDraft,
@@ -74,6 +81,68 @@ def test_generate_mission_concept_mode_persists_design_intent(
     assert "地域文化" in result.mission.design_intent.theme
     assert result.assumptions
     assert all(not question.blocking for question in result.clarifying_questions)
+
+
+def test_exploration_before_mission_commit_flow(db_session, concept_project) -> None:
+    llm = MagicMock()
+    llm.generate_structured.side_effect = [
+        ConceptDirectionBatchDraft(
+            directions=[
+                ConceptDirectionDraft(
+                    title="台地聚落",
+                    summary="沿台地展开",
+                    theme="台地生活",
+                    spatial_idea="分散院落",
+                    experience_focus="日常与穿行",
+                    differentiator="台地组织",
+                    open_questions=["规模？"],
+                    risks=["运营"],
+                ),
+                ConceptDirectionDraft(
+                    title="窑洞再生",
+                    summary="窑洞原型转译",
+                    theme="窑洞当代化",
+                    spatial_idea="连续拱廊",
+                    experience_focus="庇护",
+                    differentiator="窑洞叙事",
+                    open_questions=["采光？"],
+                    risks=["施工"],
+                ),
+            ]
+        ),
+        MissionGenerationDraft(
+            title="黄土高原文化中心概念探索",
+            task_statement="探索嵌入地域文化的小型文化中心",
+            design_intent=DesignIntentDraft(
+                theme="地域文化再生",
+                problem_statement="如何建立可讨论方向？",
+                social_background="",
+                cultural_context="",
+                target_users=["村民"],
+                desired_experience="在地认同",
+                core_questions=[],
+                research_needed=[],
+                working_assumptions=[],
+            ),
+            assumptions=[],
+            clarifying_questions=[],
+            knowledge_gaps=[],
+        ),
+    ]
+
+    service = ExplorationService(db_session, llm)
+    exploration = service.start_session(concept_project.id, "我想在黄土高原做一个文化中心")
+    generated = service.generate_directions(exploration.id)
+    assert all(d.mission_id is None for d in generated.directions)
+
+    selected = service.select_direction(generated.directions[0].id)
+    assert selected.direction.status == ConceptDirectionStatus.SELECTED
+
+    committed = service.commit_to_mission(exploration.id)
+    assert committed.exploration.status == ExplorationSessionStatus.COMMITTED
+    assert committed.mission.design_intent is not None
+    assert committed.mission.design_intent.theme == "台地生活"
+    assert committed.direction.mission_id == committed.mission.id
 
 
 def test_mission_parser_concept_mode_coerces_blocking_questions() -> None:

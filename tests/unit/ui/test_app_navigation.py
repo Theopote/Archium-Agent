@@ -59,7 +59,7 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
         RESOURCE_SECTION,
         SYSTEM_SECTION,
     }
-    assert len(sections[PROJECT_SECTION]) == 2
+    assert len(sections[PROJECT_SECTION]) == 3
     assert len(sections[MAKE_SECTION]) == 5
     assert len(sections[RESOURCE_SECTION]) == 2
     assert len(sections[SYSTEM_SECTION]) == 1
@@ -83,6 +83,9 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     assert app_navigation.get_app_page("home") is not None
     assert app_navigation.get_app_page("settings") is not None
     assert app_navigation.get_app_page("project-management") is not None
+    assert app_navigation.get_app_page("project-genesis") is not None
+    assert app_navigation.get_app_page("concept-exploration") is not None
+    assert "concept-exploration" in hidden_page_keys()
 
     # Hidden tools must stay out of the visible sidebar sections.
     visible_pages = {id(page) for pages in sections.values() for page in pages}

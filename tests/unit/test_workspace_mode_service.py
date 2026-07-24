@@ -38,6 +38,11 @@ def test_origin_maps_to_default_workspace_mode(origin, expected) -> None:
     assert profile_for(expected).title
 
 
+def test_concept_exploration_primary_page_is_exploration() -> None:
+    profile = profile_for(ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION)
+    assert profile.primary_page_key == "concept-exploration"
+
+
 def test_concept_project_elevates_to_design_iteration_when_directions_exist(
     db_session,
 ) -> None:
