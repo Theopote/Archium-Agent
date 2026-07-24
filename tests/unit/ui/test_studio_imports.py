@@ -4,7 +4,6 @@
 def test_studio_modules_import() -> None:
     from archium.application.visual.deck_repair_service import DeckRepairService
     from archium.ui.studio import (
-        ai_edit_panel,
         content_adaptation_panel,
         deck_repair_panel,
         element_labels,
@@ -15,7 +14,7 @@ def test_studio_modules_import() -> None:
         onboarding_panel,
         project_sidebar,
         slide_actions,
-        slide_canvas,
+        slide_canvas_enhanced,
         slide_navigator,
         slide_properties,
     )
@@ -38,13 +37,12 @@ def test_studio_modules_import() -> None:
     assert onboarding_panel.render_studio_onboarding is not None
     assert element_labels.format_element_label is not None
     for module in (
-        ai_edit_panel,
         content_adaptation_panel,
         history_panel,
         layout_candidates_panel,
         project_sidebar,
         slide_actions,
-        slide_canvas,
+        slide_canvas_enhanced,
         slide_navigator,
         slide_properties,
     ):

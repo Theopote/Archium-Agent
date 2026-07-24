@@ -2,7 +2,7 @@
 
 Studio page-key contract (see ``product_flow``):
 - Primary flow uses ``edit`` (制作 → 工作室).
-- ``studio`` remains a hidden deep-link / workbench module entry only.
+- ``studio`` remains a hidden deep-link that redirects to ``edit``.
 """
 
 from __future__ import annotations
@@ -25,10 +25,14 @@ from archium.ui.product_flow import (
 _PAGES: dict[str, Any] = {}
 
 
+def _redirect_legacy_studio_to_edit() -> None:
+    """Bookmark / old URL ``/studio`` → product stage ``/edit``."""
+    st.switch_page(get_app_page(PRODUCT_STUDIO_PAGE_KEY))
+
+
 def build_app_pages() -> dict[str, list[Any]]:
     """Create navigation sections (项目 / 制作 / 资源 / 系统) and cache pages for links."""
     from archium.ui.pages import (
-        command_center,
         concept_exploration,
         home,
         project_genesis,
@@ -36,11 +40,9 @@ def build_app_pages() -> dict[str, list[Any]]:
         project_mission,
         settings,
         slide_recovery,
-        studio,
         template_induction,
         template_library,
         template_studio,
-        visual_design,
         workspace,
     )
     from archium.ui.pages.flow import (
@@ -121,8 +123,7 @@ def build_app_pages() -> dict[str, list[Any]]:
     )
 
     # Hidden from sidebar but kept for deep links / st.page_link / st.switch_page.
-    # LEGACY_STUDIO_PAGE_KEY registers the raw workbench for bookmarks only —
-    # product navigation must use PRODUCT_STUDIO_PAGE_KEY (edit).
+    # LEGACY_STUDIO_PAGE_KEY only redirects to edit — workbench lives in pages.studio.
     hidden_pages = {
         "concept-exploration": st.Page(
             concept_exploration.render,
@@ -137,7 +138,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             url_path="project-mission",
         ),
         LEGACY_STUDIO_PAGE_KEY: st.Page(
-            studio.render,
+            _redirect_legacy_studio_to_edit,
             title="工作室",
             icon=icons.STUDIO,
             url_path=LEGACY_STUDIO_PAGE_KEY,
@@ -159,18 +160,6 @@ def build_app_pages() -> dict[str, list[Any]]:
             title="项目工作台",
             icon=icons.WORKSPACE,
             url_path="workspace",
-        ),
-        "visual-design": st.Page(
-            visual_design.render,
-            title="视觉设计",
-            icon=icons.VISUAL_DESIGN,
-            url_path="visual-design",
-        ),
-        "command-center": st.Page(
-            command_center.render,
-            title="指令中心",
-            icon=icons.COMMAND_CENTER,
-            url_path="command-center",
         ),
     }
 

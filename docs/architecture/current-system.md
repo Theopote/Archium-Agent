@@ -15,7 +15,7 @@
 
 `legacy/` 保留在仓库中供开发者按需运行（`python -m legacy.main` / `python main.py`），**不**随 `archium-agent` 安装，**不**被 `archium.*` 导入，也不出现在主导航。**状态冻结**：不再接受功能修改；Ruff/Mypy/CI 不检查 `legacy/` 与根 shim。验收：`rg "from legacy|import legacy" archium` 必须为空。静态检查：`ignore_missing_imports = false`，仅对无 stub 的第三方包在 overrides 中忽略。
 
-应用页面由 `archium/ui/app_navigation.py` 注册。当前页面覆盖项目、任务规划、生成工作区、Studio、视觉设计、页面恢复、模板归纳、模板库、模板 Studio、设置等能力。
+应用页面由 `archium/ui/app_navigation.py` 注册。侧栏覆盖项目、制作五阶段（资料 → 大纲 → 生成 → 工作室 → 交付）、模板库、页面复活、设置；隐藏深链含概念探索、项目任务、模板子页、以及开发者用项目工作台（旧 `studio` URL 重定向到 `edit`）。
 
 ## 主数据流
 

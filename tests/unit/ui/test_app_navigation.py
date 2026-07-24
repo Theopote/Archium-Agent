@@ -86,6 +86,11 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     assert app_navigation.get_app_page("project-genesis") is not None
     assert app_navigation.get_app_page("concept-exploration") is not None
     assert "concept-exploration" in hidden_page_keys()
+    assert "visual-design" not in hidden_page_keys()
+    assert "command-center" not in hidden_page_keys()
+    for retired in ("visual-design", "command-center"):
+        with pytest.raises(KeyError, match="Unknown app page"):
+            app_navigation.get_app_page(retired)
 
     # Hidden tools must stay out of the visible sidebar sections.
     visible_pages = {id(page) for pages in sections.values() for page in pages}
@@ -94,7 +99,7 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
 
 
 def test_edit_is_product_studio_key_studio_is_legacy_hidden_only() -> None:
-    """edit = formal 工作室 stage; studio = deep-link only (not sidebar)."""
+    """edit = formal 工作室 stage; studio = redirect deep-link only (not sidebar)."""
     assert product_studio_page_key() == PRODUCT_STUDIO_PAGE_KEY == "edit"
     assert LEGACY_STUDIO_PAGE_KEY == "studio"
     assert PRODUCT_STUDIO_PAGE_KEY in primary_page_keys()
@@ -105,6 +110,12 @@ def test_edit_is_product_studio_key_studio_is_legacy_hidden_only() -> None:
     make_ids = {id(page) for page in sections[MAKE_SECTION]}
     assert id(app_navigation.get_app_page(PRODUCT_STUDIO_PAGE_KEY)) in make_ids
     assert id(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY)) not in make_ids
+
+    # Legacy URL must redirect, not re-mount the workbench as a second product surface.
+    nav_src = (
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "app_navigation.py"
+    ).read_text(encoding="utf-8")
+    assert "_redirect_legacy_studio_to_edit" in nav_src
 
 
 def test_product_ui_does_not_navigate_to_legacy_studio_page_key() -> None:
@@ -297,6 +308,7 @@ def test_edit_stage_embeds_studio_without_inner_header() -> None:
     assert "_render_bottom_dock" not in studio_text
     assert 'st.popover("活动中心"' in studio_text
     assert 'st.popover("问题"' not in studio_text
+    assert "_render_art_direction_gate_if_paused" in studio_text
 
 
 def test_studio_export_is_popover_not_top_panel() -> None:

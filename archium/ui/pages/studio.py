@@ -1,9 +1,8 @@
-"""Presentation Studio — workbench shell (nav | canvas | inspector + bottom dock).
+"""Presentation Studio — workbench shell (nav | canvas | inspector).
 
 This module is the embeddable workbench. Product navigation must use the
 ``edit`` stage (``product_flow.PRODUCT_STUDIO_PAGE_KEY``), which calls
-``render(embedded=True)``. The standalone ``studio`` page key is a legacy
-deep link only and must not be re-added to sidebar navigation.
+``render(embedded=True)``. The standalone ``studio`` URL redirects to ``edit``.
 """
 
 from __future__ import annotations
@@ -46,6 +45,24 @@ def _apply_visual_result(result: object) -> None:
     if isinstance(result, VisualWorkflowResult):
         st.session_state.last_visual_workflow_result = result
         st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
+
+
+def _render_art_direction_gate_if_paused() -> None:
+    """Surface ArtDirection review when a visual job pauses at that gate."""
+    result = st.session_state.get("last_visual_workflow_result")
+    if not isinstance(result, VisualWorkflowResult):
+        return
+    if not result.awaiting_review or result.review_gate != "art_direction":
+        return
+    if result.art_direction is None:
+        return
+    from archium.ui.art_direction_panel import render_art_direction_panel
+
+    render_art_direction_panel(
+        art_direction=result.art_direction,
+        workflow_run_id=result.workflow_run.id,
+        awaiting_approval=True,
+    )
 
 
 _INSPECTOR_TABS = ("属性", "布局", "内容", "AI", "评论", "风格", "检查")
@@ -269,6 +286,7 @@ def _render_studio_info_menus(
                 )
             else:
                 st.caption("生成进度在后台任务运行时显示。")
+            _render_art_direction_gate_if_paused()
             from archium.ui.page_status_board_panel import render_page_status_board
 
             render_page_status_board(

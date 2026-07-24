@@ -1,6 +1,5 @@
 """Presentation Studio UI components."""
 
-from archium.ui.studio.ai_edit_panel import render_ai_edit_panel
 from archium.ui.studio.ai_workspace_panel import render_ai_workspace
 from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
 from archium.ui.studio.export_panel import render_export_panel, render_studio_toolbar
@@ -11,12 +10,11 @@ from archium.ui.studio.slide_navigator import render_slide_navigator
 from archium.ui.studio.slide_properties import render_slide_properties
 
 __all__ = [
-    "render_ai_edit_panel",  # legacy panel; live Studio uses render_ai_workspace
     "render_ai_workspace",
     "render_content_adaptation_panel",
     "render_export_panel",
     "render_history_panel",
-    "render_slide_canvas",  # enhanced canvas (live path)
+    "render_slide_canvas",
     "render_slide_navigator",
     "render_slide_properties",
     "render_studio_selection",

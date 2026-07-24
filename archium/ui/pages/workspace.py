@@ -759,12 +759,16 @@ def _render_history(project_id: UUID) -> None:
 def render() -> None:
     _init_session_state()
     st.markdown("### 项目工作台")
-    st.caption("管理项目资料，运行结构化汇报生成管线（深层工具页；日常请走制作五阶段）")
+    st.caption(
+        "开发者深层工具页（不在侧栏）。日常请走制作五阶段；"
+        "也可从「设置 → 开发者与验收」打开本页。"
+    )
     from archium.ui.product_flow import product_flow_chain
 
     st.info(
         f"推荐主流程：{product_flow_chain()}。"
-        f"本页仍可作为快捷路径直接填写{entity_label('PresentationBrief')}并生成。"
+        f"本页仍可作为快捷路径直接填写{entity_label('PresentationBrief')}并生成，"
+        "并包含完整审核 / 历史工具。"
     )
 
     _render_create_project()

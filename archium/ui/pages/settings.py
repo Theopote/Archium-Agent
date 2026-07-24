@@ -502,7 +502,15 @@ def _render_image_search_settings() -> None:
 
     st.divider()
     with st.expander("开发者与验收", expanded=False):
-        st.caption("Benchmark 与视觉语料用于产品研发验收，不属于日常项目交付。")
+        st.caption("Benchmark、视觉语料与深层工作台用于产品研发验收，不属于日常项目交付。")
+        from archium.ui import icons
+        from archium.ui.app_navigation import get_app_page
+
+        st.page_link(
+            get_app_page("workspace"),
+            label="打开项目工作台（深层工具）",
+            icon=icons.WORKSPACE,
+        )
         from archium.ui.benchmark_review_panel import render_benchmark_review_panel
         from archium.ui.visual_qa_corpus_panel import render_visual_qa_corpus_panel
 

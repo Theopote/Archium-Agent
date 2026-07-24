@@ -70,16 +70,15 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
 )
 
 # Still registered for deep links / st.page_link, but not shown in the sidebar.
-# ``studio`` is deprecated for product navigation — prefer PRODUCT_STUDIO_PAGE_KEY.
+# ``studio`` redirects to ``edit`` (bookmark compatibility only).
+# ``workspace`` is a developer deep tool (also linked from 设置 → 开发者与验收).
 HIDDEN_PAGE_KEYS: tuple[str, ...] = (
     "concept-exploration",
     "project-mission",
     "workspace",
-    LEGACY_STUDIO_PAGE_KEY,  # deprecated deep link; not a primary nav target
-    "visual-design",
+    LEGACY_STUDIO_PAGE_KEY,  # redirect → edit; not a primary nav target
     "template-studio",
     "template-induction",
-    "command-center",
 )
 
 # Backward-compatible alias used by older tests/imports.

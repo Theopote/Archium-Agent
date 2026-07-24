@@ -10,9 +10,6 @@ from archium.application.visual.layout_validation_service import LayoutValidatio
 from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.application.visual.visual_intent_service import VisualIntentService
 
-# VisualCompositionService is superseded by VisualWorkflowService / LangGraph nodes;
-# import it directly from visual_composition_service only for legacy callers.
-
 __all__ = [
     "ArtDirectionService",
     "BenchmarkService",

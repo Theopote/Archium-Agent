@@ -12,7 +12,7 @@
 | [Design System](design-system.md) | DesignSystem 令牌与默认预设 |
 | [Layout Families](layout-families.md) | 10 个版式族、变体与 generator |
 | [Renderer](renderer.md) | LayoutPlan → PptxGenJS 执行路径 |
-| [User Guide](user-guide.md) | 视觉设计页操作指南（ArtDirection / 候选版式） |
+| [User Guide](user-guide.md) | 工作室内视觉编排（ArtDirection / 候选版式 / 审核门） |
 
 ## 一句话
 
@@ -34,7 +34,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | LayoutPlan generators（10 个） | ✅ |
 | LayoutValidator + **Layout Quality Score**（几何/规则） | ✅ |
 | Visual Workflow（可暂停 / 可恢复） | ✅ |
-| 视觉设计 UI | ✅ |
+| 工作室视觉编排 UI | ✅ |
 | LayoutPlan → 原生 PPTX（`render-plan.mjs`） | ✅ |
 | Golden V1–V7（composition） | ✅ |
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ 初版 |
@@ -55,7 +55,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 
 | 路径 | 用途 |
 |------|------|
-| **LayoutPlan → `render-plan.mjs`** | 视觉编排主路径（视觉工作流 / 视觉设计页） |
+| **LayoutPlan → `render-plan.mjs`** | 视觉编排主路径（视觉工作流 / 工作室） |
 | PresentationSpec → `layouts/*.mjs` | 遗留模板路径（主汇报导出仍可用） |
 | Marp | 预览 / 降级 / 旧 visual regression |
 

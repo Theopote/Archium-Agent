@@ -3,7 +3,7 @@
 ## 分层
 
 ```
-UI (Streamlit 视觉设计)
+UI (Streamlit 工作室 / visual_service)
   └── archium/ui/visual_service.py          # facade，无布局算法
         └── VisualWorkflowService
               └── visual_graph (LangGraph)
@@ -89,7 +89,6 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 | `LayoutPlanningService` | `generate_candidates` / `select_best` / `plan_for_slide` |
 | `LayoutValidationService` | `validate` |
 | `LayoutRepairService` | `repair` — auto-repairable rule codes。字号按 DesignSystem 实际 `font_size` 选最小合法更大 token，必要时用阈值内 `font_size_override`；文本溢出按邻接空白→减间距→微调→更小 token→换 variant/拆页 |
-| `VisualCompositionService` | 薄编排：意图 → 候选 → 最佳计划 |
 | `VisualWorkflowService` | `run` / `continue_after_art_direction_approval` / `continue_after_layout_review` / `resume` |
 | `PptxGenPresentationRenderer` | `build_layout_instruction_deck` / `export_pptx_from_layout_instructions` |
 
