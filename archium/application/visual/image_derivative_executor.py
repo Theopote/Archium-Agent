@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from uuid import UUID
@@ -287,7 +288,7 @@ def _load_oriented_srgb(opened: PILImage.Image) -> PILImage.Image:
     try:
         icc = image.info.get("icc_profile")
         if icc and image.mode in {"RGB", "RGBA", "L", "CMYK"}:
-            src = ImageCms.ImageCmsProfile(bytes(icc))
+            src = ImageCms.ImageCmsProfile(BytesIO(bytes(icc)))
             dst = ImageCms.createProfile("sRGB")
             image = cast(PILImage.Image, ImageCms.profileToProfile(image, src, dst, outputMode="RGB"))
             return image

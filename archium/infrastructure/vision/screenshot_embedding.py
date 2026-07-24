@@ -61,19 +61,22 @@ def compute_screenshot_embedding_from_image(image: Image.Image) -> list[float]:
     thumb_rgb = thumb.convert("RGB")
     for y in range(thumb_rgb.height):
         for x in range(thumb_rgb.width):
-            r, g, b = thumb_rgb.getpixel((x, y))
-        idx = 0
-        if r >= 180:
-            idx += 1
-        if g >= 180:
-            idx += 1
-        if b >= 180:
-            idx += 1
-        if (r + g + b) / 3 < 80:
-            idx = 5
-        elif (r + g + b) / 3 > 200:
-            idx = 4
-        bucket[idx] += 1.0
+            pixel = thumb_rgb.getpixel((x, y))
+            if not isinstance(pixel, tuple) or len(pixel) < 3:
+                continue
+            r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
+            idx = 0
+            if r >= 180:
+                idx += 1
+            if g >= 180:
+                idx += 1
+            if b >= 180:
+                idx += 1
+            if (r + g + b) / 3 < 80:
+                idx = 5
+            elif (r + g + b) / 3 > 200:
+                idx = 4
+            bucket[idx] += 1.0
     total = max(sum(bucket), 1.0)
     bucket = [round(v / total, 4) for v in bucket]
 
