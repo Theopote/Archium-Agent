@@ -39,7 +39,7 @@ from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="image_derivative")
 
-PIPELINE_VERSION = "exif_srgb_v3_intelligence"
+PIPELINE_VERSION = "exif_srgb_v4_source_style"
 
 
 class ImageDerivativeNotImplementedError(NotImplementedError):
@@ -68,6 +68,7 @@ class ImageDerivativeExecutor:
         payload = {
             "mode": spec.mode.value,
             "asset_class": spec.asset_class.value,
+            "source_kind": spec.source_kind.value,
             "focal": spec.focal_point.model_dump(mode="json"),
             "crop": spec.crop.model_dump(mode="json") if spec.crop else None,
             "auto_subject_crop": spec.auto_subject_crop,

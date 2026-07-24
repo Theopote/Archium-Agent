@@ -8,9 +8,10 @@ Pipeline:
       → RenderScene asset reference (storage_uri of derivative)
 
 Execution: Pillow via ``ImageDerivativeExecutor`` (SAFE_NORMALIZE /
-PRESENTATION_UNIFY / DOCUMENT_SCAN) plus heuristic focus, tunable unify,
-and mild enhance. Model-level subject detection and generative restore remain
-deferred. Do **not** add filters inside PptxGenJS.
+PRESENTATION_UNIFY / DOCUMENT_SCAN) plus source classification, deck style
+matching, heuristic focus, tunable unify, and mild enhance. Model-level
+subject detection and generative restore remain deferred. Do **not** add
+filters inside PptxGenJS.
 
 Related (not this pipeline):
 - ``ImageTreatmentPlanningService`` — layout fit/policy only
@@ -54,6 +55,17 @@ class ImageCropStrategy(StrEnum):
     FOCAL = "focal"
     SUBJECT_HEURISTIC = "subject_heuristic"
     SKYLINE_HEURISTIC = "skyline_heuristic"
+
+
+class ImageSourceKind(StrEnum):
+    """Heuristic origin of a user photo — drives normalize / scan / historical policy."""
+
+    WECHAT_EXPORT = "wechat_export"
+    PHONE_PHOTO = "phone_photo"
+    HISTORICAL = "historical"
+    DOCUMENT_SCAN = "document_scan"
+    SITE_PHOTO = "site_photo"
+    UNKNOWN = "unknown"
 
 
 class FocalPoint(DomainModel):
@@ -109,6 +121,7 @@ class ImageTreatmentSpec(DomainModel):
     id: UUID = Field(default_factory=uuid4)
     original_asset_id: UUID
     asset_class: ImageAssetClass = ImageAssetClass.UNKNOWN
+    source_kind: ImageSourceKind = ImageSourceKind.UNKNOWN
     mode: ImageTreatmentMode = ImageTreatmentMode.NONE
     focal_point: FocalPoint = Field(default_factory=FocalPoint)
     crop: ImageCropBox | None = None

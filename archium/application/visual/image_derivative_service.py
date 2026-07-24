@@ -14,17 +14,17 @@ from archium.application.visual.asset_path_resolver import (
 )
 from archium.application.visual.image_derivative_executor import ImageDerivativeExecutor
 from archium.application.visual.image_processor import ImageProcessor
+from archium.application.visual.image_style_matcher import DeckStyleMatchResult, ImageStyleMatcher
 from archium.application.visual.image_treatment_spec_planner import ImageTreatmentSpecPlanner
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.image_derivative import ImageCropStrategy, ImageDerivative
+from archium.domain.visual.enums import PhotoTreatment
+from archium.domain.visual.image_derivative import ImageCropStrategy, ImageDerivative, ImageUnifyParams
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
     RenderNode,
     RenderScene,
-    ShapeNode,
-    TextNode,
 )
 from archium.infrastructure.database.repositories import AssetRepository
 from archium.infrastructure.storage.local_storage import LocalProjectStorage
@@ -38,6 +38,7 @@ class ImageDerivativeApplyResult:
     scene: RenderScene
     derivatives: tuple[ImageDerivative, ...]
     skipped: int = 0
+    deck_style: DeckStyleMatchResult | None = None
 
 
 class ImageDerivativeService:
@@ -53,6 +54,7 @@ class ImageDerivativeService:
         storage: LocalProjectStorage | None = None,
         resolver: AssetPathResolver | None = None,
         processor: ImageProcessor | None = None,
+        style_matcher: ImageStyleMatcher | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
@@ -61,6 +63,7 @@ class ImageDerivativeService:
         self._executor = executor or ImageDerivativeExecutor(storage=storage)
         self._storage = storage or LocalProjectStorage()
         self._resolver = resolver or AssetPathResolver()
+        self._style_matcher = style_matcher or ImageStyleMatcher()
         self._assets = AssetRepository(session) if session is not None else None
 
     def apply_to_scene(
@@ -82,6 +85,10 @@ class ImageDerivativeService:
             assets_dir=layout["assets"],
         )
 
+        resolved = self._resolve_visual_nodes(scene, project_id=project_id, resolve_ctx=ctx)
+        deck_style = self._match_deck_style(resolved, design_system=design_system)
+        deck_unify = deck_style.unify if deck_style is not None else None
+
         derivatives: list[ImageDerivative] = []
         skipped = 0
         nodes: list[RenderNode] = []
@@ -89,11 +96,14 @@ class ImageDerivativeService:
             if not isinstance(node, (ImageNode, DrawingNode)):
                 nodes.append(node)
                 continue
+            original_path = resolved.get(node.id)
             updated, derivative = self._process_node(
                 node,
                 project_id=project_id,
                 design_system=design_system,
                 resolve_ctx=ctx,
+                original_path=original_path,
+                deck_unify=deck_unify,
             )
             nodes.append(updated)
             if derivative is not None:
@@ -105,27 +115,53 @@ class ImageDerivativeService:
             scene=scene.model_copy(update={"nodes": nodes}),
             derivatives=tuple(derivatives),
             skipped=skipped,
+            deck_style=deck_style,
         )
 
-    def _process_node(
+    def _match_deck_style(
+        self,
+        resolved: dict[str, Path],
+        *,
+        design_system: DesignSystem | None,
+    ) -> DeckStyleMatchResult | None:
+        if design_system is None:
+            return None
+        treatment = design_system.image_style.photo_treatment
+        if treatment not in {PhotoTreatment.SUBTLE_UNIFY, PhotoTreatment.HISTORICAL}:
+            return None
+        paths = list(resolved.values())
+        if not paths:
+            return None
+        result = self._style_matcher.match_deck(paths)
+        logger.info("Deck style match: %s", result.rationale)
+        return result
+
+    def _resolve_visual_nodes(
+        self,
+        scene: RenderScene,
+        *,
+        project_id: UUID,
+        resolve_ctx: AssetPathResolveContext,
+    ) -> dict[str, Path]:
+        resolved: dict[str, Path] = {}
+        for node in scene.nodes:
+            if not isinstance(node, (ImageNode, DrawingNode)):
+                continue
+            path = self._resolve_original_path(node, project_id=project_id, resolve_ctx=resolve_ctx)
+            if path is not None:
+                resolved[node.id] = path
+        return resolved
+
+    def _resolve_original_path(
         self,
         node: ImageNode | DrawingNode,
         *,
         project_id: UUID,
-        design_system: DesignSystem | None,
         resolve_ctx: AssetPathResolveContext,
-    ) -> tuple[ImageNode | DrawingNode, ImageDerivative | None]:
+    ) -> Path | None:
         asset = None
         if self._assets is not None and node.asset_id is not None:
             asset = self._assets.get_by_id(node.asset_id)
-        spec = self._planner.plan_for_node(
-            node,
-            design_system=design_system,
-            asset=asset,
-        )
-        if spec is None or spec.mode.value == "none":
-            return node, None
-
         original_uri = node.storage_uri or node.asset_path
         original_path = self._resolver.resolve(original_uri, resolve_ctx) if original_uri else None
         if original_path is None and asset is not None and asset.path:
@@ -134,7 +170,54 @@ class ImageDerivativeService:
                 candidate = self._settings.project_storage_path / str(project_id) / asset.path
             original_path = candidate if candidate.is_file() else None
         if original_path is None or not original_path.is_file():
+            return None
+        return original_path
+
+    def _process_node(
+        self,
+        node: ImageNode | DrawingNode,
+        *,
+        project_id: UUID,
+        design_system: DesignSystem | None,
+        resolve_ctx: AssetPathResolveContext,
+        original_path: Path | None,
+        deck_unify: ImageUnifyParams | None,
+    ) -> tuple[ImageNode | DrawingNode, ImageDerivative | None]:
+        asset = None
+        if self._assets is not None and node.asset_id is not None:
+            asset = self._assets.get_by_id(node.asset_id)
+
+        if original_path is None:
+            original_path = self._resolve_original_path(
+                node, project_id=project_id, resolve_ctx=resolve_ctx
+            )
+        if original_path is None:
             logger.info("Skip derivative; unresolved original for node %s", node.id)
+            return node, None
+
+        classification = self._processor.classify_source(
+            path=original_path,
+            asset=asset,
+            filename=asset.filename if asset is not None else original_path.name,
+            tags=list(asset.tags) if asset is not None else None,
+            description=asset.description if asset is not None else None,
+        )
+        role_hint = self._processor.focus_hint_from_semantic_role(
+            getattr(node, "semantic_role", "") or node.id
+        )
+        tags = list(asset.tags) if asset is not None else []
+        tag_hint = self._processor.focus_hint_from_tags(tags)
+        focus_hint = role_hint or tag_hint
+
+        spec = self._planner.plan_for_node(
+            node,
+            design_system=design_system,
+            asset=asset,
+            source_kind=classification.kind,
+            deck_unify=deck_unify,
+            focus_hint=focus_hint,
+        )
+        if spec is None or spec.mode.value == "none":
             return node, None
 
         if isinstance(node, ImageNode) and (
@@ -145,8 +228,7 @@ class ImageDerivativeService:
             }
             or (spec.auto_subject_crop and spec.focal_point.source != "manual")
         ):
-            tags = list(asset.tags) if asset is not None else []
-            hint = self._processor.focus_hint_from_tags(tags)
+            hint = focus_hint
             if spec.crop_strategy == ImageCropStrategy.SKYLINE_HEURISTIC:
                 hint = "skyline"
             spec = self._processor.enrich_spec_with_focus(spec, original_path, hint=hint)

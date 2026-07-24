@@ -117,19 +117,21 @@ pointerup  → 一次 Command → 一次后端持久化 → 一次 rerun
 
 ## Sprint 3：Image Harmonization（图片衍生与安全统一）
 
-### 状态：**PARTIAL+**（Pillow V3 Image Intelligence；非 Sharp / 非生成式修复）
+### 状态：**PARTIAL+**（Pillow V4：来源分类 + Deck 色统计；非 Sharp / 非生成式修复）
 
 | 能力 | 状态 |
 |------|------|
 | 管线 `Original → Spec → Derivative → Scene URI` | **已接通**（`StudioSceneService.compile_scene`） |
 | Pillow 执行器 | EXIF+sRGB；`SAFE_NORMALIZE` / `PRESENTATION_UNIFY` / `DOCUMENT_SCAN`；落盘 `cache/derivatives/` |
-| 可调 unify（色温/饱和度/对比度/亮度） | **已做**（`ImageUnifyParams`；deck 共用默认） |
-| 启发式智能裁切（主体/天际线） | **已做**（`ImageFocusDetector`；置信度 &lt;0.35 不裁） |
+| 可调 unify（色温/饱和度/对比度/亮度） | **已做**（`ImageUnifyParams`） |
+| **来源分类**（微信/手机/扫描/老照片/现场） | **已做**（`ImageSourceClassifier` → Spec.source_kind） |
+| **Deck 色统计 StyleMatcher** | **已做**（抽样 ≤20 张 → 共用 unify；`ImageStyleMatcher`） |
+| 启发式智能裁切（主体/天际线） | **已做**（`ImageFocusDetector`；语义角色/标签 hint；置信度 &lt;0.35 不裁） |
 | 轻度 enhance | **已做**（UnsharpMask / Median denoise / historical_restore 启发式） |
 | `ImageProcessor` 门面 | **已做**（非 Agent） |
 | Sharp / Node 执行器 | 未接入（**正确**，不在 PptxGen 加滤镜） |
 | Soft vignette overlay | **已做**（仅非证据/图纸的 presentation unify） |
-| 模型级自动主体检测 | 未做 |
+| 模型级自动主体检测（建筑/道路/人流分割） | 未做 |
 | 生成式老照片修复 | 未做（historical_restore 仅为轻度去噪+对比） |
 | 证据策略 clamp | **已做**（证据/图纸不可 `presentation_unify` / overlay） |
 | PptxGen 内临时滤镜 | **禁止** |
@@ -143,10 +145,12 @@ pointerup  → 一次 Command → 一次后端持久化 → 一次 rerun
 
 ```text
 OriginalAsset
-  → ImageTreatmentSpec   (政策：mode / unify / enhance / crop_strategy)
-  → ImageProcessor.enrich (启发式 focal；低置信不裁)
-  → ImageDerivative      (Pillow：EXIF→sRGB→unify→enhance→crop→vignette→downscale)
-  → RenderScene.storage_uri  (derivative；asset_id 仍指向原图)
+  → ImageSourceClassifier   (微信/手机/扫描/历史/现场)
+  → ImageStyleMatcher       (Deck 抽样色统 → ImageUnifyParams)
+  → ImageTreatmentSpec      (政策：mode / unify / enhance / crop_strategy)
+  → ImageProcessor.enrich   (启发式 focal；低置信不裁)
+  → ImageDerivative         (Pillow：EXIF→sRGB→unify→enhance→crop→vignette→downscale)
+  → RenderScene.storage_uri (derivative；asset_id 仍指向原图)
 
 PptxGen / AssetPathResolver 只消费 URI，不做滤镜。
 ```
@@ -154,16 +158,16 @@ PptxGen / AssetPathResolver 只消费 URI，不做滤镜。
 开关：`image_derivatives_enabled`（默认 true）
 
 ### 仍待
-1. Sharp/Node 或外部模型作为可插拔主体检测
-2. Deck 级色统计（从 20 张采样均值再统一）— 当前为 DesignSystem 共用 knobs
-3. DB 级 derivative 元数据索引（当前靠文件缓存 + params_hash）
-4. 组件级截图 golden 覆盖 unify
+1. Sharp/Node 或外部模型作为可插拔主体检测（建筑立面 / 道路 / 人流）
+2. DB 级 derivative 元数据索引（当前靠文件缓存 + params_hash）
+3. 组件级截图 golden 覆盖 unify / deck style
+4. 照片专用 QA（糊度、微信压缩伪影）→ ReviewIssue
 
 ### 验收指标
 - 证据类策略不破坏事实性表达（QA 规则 + 回归截图）
 - 同一 `original_asset_id` 可回溯 derivative 参数与版本（params_hash）
 - 混合来源照片观感统一且不过度改色
-
+- 微信/扫描/老照片能分到不同 mode/enhance；Deck 抽样能拉开色温/亮度 knobs
 ## Sprint 4：Layout Grammar Expansion（布局族参数化与变体选择）
 ### 要做什么
 在不引入“全自由求解器”的前提下，把现有布局家族升级为 grammar：
