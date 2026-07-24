@@ -14,6 +14,7 @@ from archium.domain.visual.vision_generation import (
     ImageRequest,
     VisionAssetPolicy,
     VisionGenerationContext,
+    VisionGenerationMode,
     VisionStylePreset,
 )
 
@@ -101,15 +102,35 @@ class VisionPromptCompiler:
         if elements:
             prompt_parts.append("Include: " + "; ".join(elements[:8]) + ".")
 
-        compose_mode = bool(request.base_image_path) and self._registry.supports_base_overlay(
-            request.image_type
+        compose_mode = (
+            request.mode == VisionGenerationMode.TEXT_TO_IMAGE
+            and bool(request.base_image_path)
+            and self._registry.supports_base_overlay(request.image_type)
         )
+        edit_mode = request.mode in {
+            VisionGenerationMode.EDIT_FROM_PHOTO,
+            VisionGenerationMode.EDIT_FROM_DRAWING,
+        }
         if compose_mode:
             prompt_parts.append(
                 "Composition mode: analytical overlay on an existing site / plan base - "
                 "favor clear arrows, zones, and strategy labels over inventing a new site."
             )
             avoid.append("replace or invent a fake cadastral survey photo as the base")
+        if edit_mode:
+            kind = (
+                "photograph"
+                if request.mode == VisionGenerationMode.EDIT_FROM_PHOTO
+                else "architectural drawing"
+            )
+            prompt_parts.append(
+                f"Edit mode: transform the provided {kind} into an illustrative "
+                f"architectural concept variant for: {request.subject.strip()}. "
+                "Preserve recognizable site structure; do not invent a different campus. "
+                "Output must read as a presentation illustration, not a site survey photo."
+            )
+            avoid.append("photorealistic fake site evidence photo")
+            avoid.append("claim the result is an as-built survey image")
 
         prompt_parts.append(
             "Keep forms plausible for the stated building type; prioritize clarity over spectacle."
@@ -123,17 +144,21 @@ class VisionPromptCompiler:
         prompt = re.sub(r"\s+", " ", prompt).strip()
         negative = "; ".join(avoid)
         prompt_hash = hashlib.sha256(
-            f"{prompt}|{negative}|{request.width}x{request.height}|{request.base_image_path or ''}".encode()
+            f"{prompt}|{negative}|{request.width}x{request.height}|"
+            f"{request.base_image_path or ''}|{request.mode.value}".encode()
         ).hexdigest()[:16]
 
         rationale = [
             f"image_type={request.image_type.value}",
             f"style={style_key}",
+            f"mode={request.mode.value}",
             f"asset_policy={request.asset_policy.value}",
             f"context_phase={ctx.project_phase or 'n/a'}",
         ]
         if compose_mode:
             rationale.append("compose_mode=base_overlay")
+        if edit_mode:
+            rationale.append(f"edit_mode={request.mode.value}")
 
         return GenerationSpec(
             image_type=request.image_type,
@@ -152,6 +177,9 @@ class VisionPromptCompiler:
                 "base_image_path": request.base_image_path,
                 "overlay_cues": list(overlay_cues),
                 "compose_mode": compose_mode,
+                "edit_mode": edit_mode,
+                "generation_mode": request.mode.value,
+                "harmonize_output": request.harmonize_output,
                 "type_label_zh": template.label_zh,
             },
         )

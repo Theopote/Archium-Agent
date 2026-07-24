@@ -1,4 +1,4 @@
-"""Vision Image Generation Service — compile → generate → optional Asset persist."""
+"""Vision Image Generation Service — compile → generate/edit → QA → optional Asset."""
 
 from __future__ import annotations
 
@@ -7,11 +7,17 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
+from archium.application.visual.vision.conditioned_editor import (
+    ConditionedEditRequest,
+    VisionConditionedEditor,
+    soft_harmonize_png,
+)
 from archium.application.visual.vision.diagram_composer import (
     DiagramComposeRequest,
     VisionDiagramComposer,
     supports_diagram_compose,
 )
+from archium.application.visual.vision.image_evaluator import VisionImageEvaluator
 from archium.application.visual.vision.prompt_compiler import VisionPromptCompiler
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
@@ -21,7 +27,9 @@ from archium.domain.visual.vision_generation import (
     ImageRequest,
     VisionAssetPolicy,
     VisionGenerationContext,
+    VisionGenerationMode,
     VisionGenerationResult,
+    VisionInputEvaluation,
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import AssetRepository
@@ -48,6 +56,8 @@ class VisionImageGenerationService:
         generator: VisionImageGenerator | None = None,
         storage: LocalProjectStorage | None = None,
         diagram_composer: VisionDiagramComposer | None = None,
+        conditioned_editor: VisionConditionedEditor | None = None,
+        evaluator: VisionImageEvaluator | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
@@ -55,6 +65,8 @@ class VisionImageGenerationService:
         self._generator = generator or build_vision_image_generator(self._settings)
         self._storage = storage or LocalProjectStorage(settings=self._settings)
         self._composer = diagram_composer or VisionDiagramComposer()
+        self._editor = conditioned_editor or VisionConditionedEditor()
+        self._evaluator = evaluator or VisionImageEvaluator()
         self._assets = AssetRepository(session) if session is not None else None
 
     def compile(
@@ -80,7 +92,34 @@ class VisionImageGenerationService:
         }:
             raise WorkflowError("Vision Engine 仅支持示意类资产策略（illustrative_only）。")
 
+        if request.mode in {
+            VisionGenerationMode.EDIT_FROM_PHOTO,
+            VisionGenerationMode.EDIT_FROM_DRAWING,
+        } and not request.base_image_path:
+            raise WorkflowError("条件改图模式必须提供 base_image_path。")
+
+        input_eval: VisionInputEvaluation | None = None
+        if request.base_image_path:
+            input_eval = self._evaluator.evaluate_base_image(request.base_image_path)
+            if input_eval.blocking:
+                spec = self.compile(request, context=context)
+                return VisionGenerationResult(
+                    success=False,
+                    spec=spec,
+                    error="; ".join(input_eval.warnings) or "base image rejected",
+                    input_evaluation=input_eval,
+                    provider="",
+                    model="",
+                )
+
         spec = self.compile(request, context=context)
+        if input_eval is not None and input_eval.warnings:
+            spec.metadata = {
+                **spec.metadata,
+                "input_qa_warnings": list(input_eval.warnings),
+                "input_qa": input_eval.model_dump(mode="json"),
+            }
+
         try:
             payload = self._produce_pixels(request, spec)
         except Exception as exc:  # pragma: no cover - provider-specific
@@ -91,6 +130,7 @@ class VisionImageGenerationService:
                 error=str(exc),
                 provider=getattr(self._generator, "provider", ""),
                 model=getattr(self._generator, "model", ""),
+                input_evaluation=input_eval,
             )
 
         if payload is None:
@@ -100,7 +140,18 @@ class VisionImageGenerationService:
                 error="image generator unavailable",
                 provider=getattr(self._generator, "provider", ""),
                 model=getattr(self._generator, "model", ""),
+                input_evaluation=input_eval,
             )
+
+        harmonized = False
+        data = payload.data
+        mime_type = payload.mime_type
+        if request.harmonize_output and "png" in mime_type:
+            try:
+                data = soft_harmonize_png(data)
+                harmonized = True
+            except Exception as exc:  # pragma: no cover
+                logger.info("Vision soft harmonize skipped: %s", exc)
 
         storage_path: str | None = None
         asset_id: UUID | None = None
@@ -110,10 +161,12 @@ class VisionImageGenerationService:
             storage_path, asset_id = self._persist(
                 project_id=project_id,
                 spec=spec,
-                data=payload.data,
-                mime_type=payload.mime_type,
+                data=data,
+                mime_type=mime_type,
                 provider=payload.provider,
                 model=payload.model,
+                harmonized=harmonized,
+                input_evaluation=input_eval,
             )
 
         return VisionGenerationResult(
@@ -121,10 +174,12 @@ class VisionImageGenerationService:
             spec=spec,
             storage_path=storage_path,
             asset_id=asset_id,
-            mime_type=payload.mime_type,
+            mime_type=mime_type,
             provider=payload.provider,
             model=payload.model,
             illustrative=True,
+            input_evaluation=input_eval,
+            harmonized=harmonized,
         )
 
     def _produce_pixels(
@@ -132,7 +187,13 @@ class VisionImageGenerationService:
         request: ImageRequest,
         spec: GenerationSpec,
     ) -> GeneratedImageBytes | None:
-        """Prefer base+overlay compose for diagram types; else pluggable generator."""
+        """Edit / compose / generate — prefer conditioned paths when requested."""
+        if request.mode in {
+            VisionGenerationMode.EDIT_FROM_PHOTO,
+            VisionGenerationMode.EDIT_FROM_DRAWING,
+        }:
+            return self._produce_edit(request, spec)
+
         compose_mode = bool(spec.metadata.get("compose_mode")) and bool(request.base_image_path)
         if (
             compose_mode
@@ -167,6 +228,46 @@ class VisionImageGenerationService:
         if not self._generator.is_available():
             return None
         return self._generator.generate(spec)
+
+    def _produce_edit(
+        self,
+        request: ImageRequest,
+        spec: GenerationSpec,
+    ) -> GeneratedImageBytes | None:
+        assert request.base_image_path
+        # Prefer provider edit when available; otherwise Pillow conditioned editor.
+        edit_fn = getattr(self._generator, "edit", None)
+        if callable(edit_fn) and self._generator.is_available():
+            try:
+                return edit_fn(spec, base_image_path=request.base_image_path)
+            except Exception as exc:
+                logger.info("Provider image edit unavailable, using local editor: %s", exc)
+
+        if not self._editor.is_available():
+            return None
+        cues = tuple(
+            str(item)
+            for item in (spec.metadata.get("overlay_cues") or request.overlay_cues or [])
+            if str(item).strip()
+        )
+        data = self._editor.edit(
+            ConditionedEditRequest(
+                base_image_path=request.base_image_path,
+                width=spec.width,
+                height=spec.height,
+                subject=request.subject,
+                mode=request.mode,
+                style=spec.style,
+                prompt_hash=spec.prompt_hash,
+                overlay_cues=cues,
+            )
+        )
+        return GeneratedImageBytes(
+            data=data,
+            mime_type="image/png",
+            provider=self._editor.provider,
+            model=self._editor.model,
+        )
 
     def generate_for_intent(
         self,
@@ -205,6 +306,8 @@ class VisionImageGenerationService:
         mime_type: str,
         provider: str,
         model: str,
+        harmonized: bool = False,
+        input_evaluation: VisionInputEvaluation | None = None,
     ) -> tuple[str, UUID | None]:
         layout = self._storage.ensure_project_layout(project_id)
         vision_dir = layout["assets"] / "vision_generated"
@@ -238,7 +341,13 @@ class VisionImageGenerationService:
                     "style": spec.style,
                     "rationale": list(spec.rationale),
                     "compose_mode": bool(spec.metadata.get("compose_mode")),
+                    "edit_mode": bool(spec.metadata.get("edit_mode")),
+                    "generation_mode": spec.metadata.get("generation_mode"),
                     "base_image_path": spec.metadata.get("base_image_path"),
+                    "harmonized": harmonized,
+                    "input_qa_warnings": (
+                        list(input_evaluation.warnings) if input_evaluation else []
+                    ),
                 },
             )
             saved = self._assets.create(asset)

@@ -704,12 +704,14 @@ def generate_slide_vision_illustration(
     apply_to_element_id: str | None = None,
     base_element_id: str | None = None,
     overlay_cues: list[str] | None = None,
+    generation_mode: str = "text_to_image",
 ) -> object:
     """Compile + generate an illustrative asset; optionally bind to an image element.
 
     Always tags provenance as ``ai_generated`` / illustrative — never evidence.
     When ``base_element_id`` points at a resolvable image/drawing and image_type is a
     diagram type, Vision v0.2 composes strategy overlays on that base (still illustrative).
+    ``generation_mode=edit_from_photo`` runs v0.3 conditioned edit (still illustrative).
     """
     from pathlib import Path
 
@@ -718,6 +720,7 @@ def generate_slide_vision_illustration(
     from archium.domain.visual.vision_generation import (
         ArchitectureImageType,
         ImageRequest,
+        VisionGenerationMode,
         VisionStylePreset,
     )
     from archium.infrastructure.database.repositories import (
@@ -743,6 +746,10 @@ def generate_slide_vision_illustration(
             resolved_style = VisionStylePreset(style)
         except ValueError:
             resolved_style = style
+    try:
+        resolved_mode = VisionGenerationMode(generation_mode)
+    except ValueError:
+        resolved_mode = VisionGenerationMode.TEXT_TO_IMAGE
 
     base_image_path: str | None = None
     if base_element_id:
@@ -768,6 +775,13 @@ def generate_slide_vision_illustration(
                         base_image_path = str(path.resolve())
                         break
 
+    if (
+        resolved_mode
+        in {VisionGenerationMode.EDIT_FROM_PHOTO, VisionGenerationMode.EDIT_FROM_DRAWING}
+        and not base_image_path
+    ):
+        raise WorkflowError("条件改图需要选择可解析的底图元素。")
+
     cues = [cue.strip() for cue in (overlay_cues or []) if cue.strip()]
     request = ImageRequest(
         image_type=resolved_type,
@@ -777,6 +791,7 @@ def generate_slide_vision_illustration(
         elements=[slide.title] if slide.title else [],
         base_image_path=base_image_path,
         overlay_cues=cues,
+        mode=resolved_mode,
     )
     settings = _resolve_runtime_settings(None)
     result = VisionImageGenerationService(session, settings=settings).generate_for_intent(

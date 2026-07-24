@@ -109,8 +109,8 @@ archium/
 | # | 类型 | 用途 | v0.1 | v0.2 | v0.3 |
 |---|------|------|------|------|------|
 | 1 | **Concept** | 早期意象 / 概念草图 | ○ | ● 模板默认 | ● |
-| 2 | **Architectural Diagram** | 流线、策略、庭院切开、before–after 示意 | ○ 文生图示意 | ● 底图+Pillow 叠加 | ● CAD/图生图引导 |
-| 3 | **Style Transfer / Edit** | 老照片→改造意象、材料/夜景变体 | – | – | ● |
+| 2 | **Architectural Diagram** | 流线、策略、庭院切开、before–after 示意 | ○ 文生图示意 | ● 底图+Pillow 叠加 | ● 图纸条件改图 |
+| 3 | **Style Transfer / Edit** | 老照片→改造意象、材料/夜景变体 | – | – | ● 照片条件改图 |
 | 4 | **Atmosphere / Background** | 封面与氛围底图 | ● | ● | ● |
 | 5 | **Sketch** | 手绘/马克笔/铅笔感（非商业摄影） | ● 风格预设 | ● 风格包注册表 | ● |
 | 6 | **Presentation Illustration** | 页级抽象插图，服务 PPT | ● | ● | ● |
@@ -218,7 +218,7 @@ Studio 入口：`generate_slide_vision_illustration` / 属性面板「Vision 示
 | `ImageRequest.style=None` → 按图类默认 | **已做** |
 | Diagram 轻量合成：用户总平底图 + 策略箭头/标注层 | **已做** `diagram_composer.py`（Pillow；非 CAD） |
 | Studio：图类扩展 + 底图选择 + 叠加标注 | **已做** |
-| 条件生成 / 图生图 API | **未做**（→ v0.3） |
+| 条件生成 / 图生图 API | **已做（v0.3）** |
 
 Compose 路径（场地/流线 + 可解析底图时优先）：
 
@@ -231,11 +231,28 @@ base site/plan image
 
 无底图时仍走 stub / openai_compatible 文生图。
 
-### v0.3 — 视觉推理与输入理解
+### Vision Engine v0.3 — **PARTIAL（条件改图 + QA + 软统一）**
 
-- 照片 / 总平 / 简单模型截图条件生成与 edit
-- 与 Vision QA（糊度/过曝）及 Derivative 统一管线打通
-- 可选本地模型；仍保持 adapter 边界
+| 项 | 状态 |
+|----|------|
+| `VisionGenerationMode`：文生图 / 照片改图 / 图纸改图 | **已做** |
+| 底图 Photo QA（sharpness / exposure，软门禁） | **已做** `image_evaluator.py` |
+| 本地条件改图（Pillow，示意改造意象） | **已做** `conditioned_editor.py` |
+| OpenAI-compatible `images.edit`（失败回退本地） | **已做** |
+| 生成后软统一（Derivative 精神：色度/对比微调） | **已做** `soft_harmonize_png` |
+| Studio 模式切换 + 底图 QA 警告 | **已做** |
+| 完整图生图本地 SD / 主体检测 | **未做**（后续） |
+
+Edit 路径：
+
+```text
+base photo/drawing
+  → VisionImageEvaluator (warn blur/overexpose; block tiny)
+  → VisionPromptCompiler (edit semantics + evidence avoid)
+  → provider.edit OR conditioned_editor
+  → soft_harmonize_png (optional)
+  → Asset(origin=ai_generated, illustrative)
+```
 
 ## 9. 质量与诚信
 
@@ -255,8 +272,9 @@ Vision Engine 作为 **下一条战略主线** 立项，不阻塞 Studio V1 / Im
 
 1. 收口 Studio + 图片统一 + Grammar（进行中）
 2. Vision Engine v0.1 — **已完成**
-3. Vision Engine v0.2 建筑图类模板 + 底图叠加 — **本轮部分完成**
-4. v0.3 条件生成 / 图生图 / QA·Derivative 打通
+3. Vision Engine v0.2 建筑图类模板 + 底图叠加 — **已完成**
+4. Vision Engine v0.3 条件改图 + QA/软统一 — **本轮部分完成**
+5. 后续：本地模型 / 更强图生图 / 与 Scene Derivative 全量复用
 
 ## 11. 一句话决策
 

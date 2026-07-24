@@ -252,8 +252,8 @@ def _render_vision_illustration_panel(
     st.divider()
     st.markdown("**Vision 示意生成**")
     st.caption(
-        "建筑语义 → Prompt Compiler → 图片。结果标记为 `ai_generated` / 仅示意，"
-        "不会当作现场证据。场地/流线图可选用页内底图叠加策略层（仍非 CAD）。"
+        "建筑语义 → Prompt Compiler → 生成/改图。结果标记为 `ai_generated` / 仅示意，"
+        "不会当作现场证据。场地/流线可底图叠加；照片可条件改图（示意改造意象）。"
     )
     slide = slide_snapshot.slide
     default_subject = (slide.message or slide.title or "").strip() or "architectural concept illustration"
@@ -261,6 +261,17 @@ def _render_vision_illustration_panel(
         "生成主题",
         value=default_subject,
         key=f"studio_vision_subject_{slide.id}",
+    )
+    mode_options = {
+        "text_to_image": "文生图 / 底图叠加",
+        "edit_from_photo": "基于照片改图（示意）",
+        "edit_from_drawing": "基于图纸改图（示意）",
+    }
+    generation_mode = st.selectbox(
+        "模式",
+        options=list(mode_options.keys()),
+        format_func=lambda key: mode_options[key],
+        key=f"studio_vision_mode_{slide.id}",
     )
     type_options = {
         "flow_diagram": "流线分析图",
@@ -309,13 +320,22 @@ def _render_vision_illustration_panel(
         if element.content_type == LayoutContentType.IMAGE and not canvas_geometry_locked(element)
     ]
     base_element_id: str | None = None
-    if image_type in {"flow_diagram", "site_diagram"} and image_elements:
+    needs_base = generation_mode != "text_to_image" or image_type in {
+        "flow_diagram",
+        "site_diagram",
+    }
+    if needs_base and image_elements:
         base_labels = {
             element.id: format_element_label(element_id=element.id, role=element.role)
             for element in image_elements
         }
+        base_label = (
+            "底图（改图必选）"
+            if generation_mode != "text_to_image"
+            else "底图（总平/图纸叠加，可选）"
+        )
         base_choice = st.selectbox(
-            "底图（总平/图纸叠加，可选）",
+            base_label,
             options=["（不使用底图）", *list(base_labels.keys())],
             format_func=lambda value: (
                 value if value.startswith("（") else base_labels.get(value, value)
@@ -359,28 +379,44 @@ def _render_vision_illustration_panel(
                     apply_to_element_id=apply_target,
                     base_element_id=base_element_id,
                     overlay_cues=overlay_cues,
+                    generation_mode=generation_mode,
                 )
+            warnings = []
+            if result.input_evaluation is not None:
+                warnings = list(result.input_evaluation.warnings)
             st.session_state[f"studio_vision_last_{slide.id}"] = {
                 "asset_id": str(result.asset_id) if result.asset_id else None,
                 "provider": result.provider,
                 "prompt_hash": result.spec.prompt_hash,
                 "path": result.storage_path,
                 "compose": bool(result.spec.metadata.get("compose_mode")),
+                "edit": bool(result.spec.metadata.get("edit_mode")),
+                "harmonized": bool(result.harmonized),
+                "warnings": warnings,
             }
             if apply_target:
                 st.success("已生成示意并应用到所选图片元素（仅示意，非现场证据）。")
             else:
                 st.success("已生成示意并入库。可在「更换素材」中选用。")
+            if warnings:
+                st.warning("底图 QA：" + "；".join(warnings))
             st.rerun()
         except Exception as exc:
             st.error(format_user_error(exc))
 
     last = st.session_state.get(f"studio_vision_last_{slide.id}")
     if isinstance(last, dict) and last.get("asset_id"):
-        compose_note = " · 底图叠加" if last.get("compose") else ""
+        flags = []
+        if last.get("compose"):
+            flags.append("底图叠加")
+        if last.get("edit"):
+            flags.append("条件改图")
+        if last.get("harmonized"):
+            flags.append("软统一")
+        flag_note = f" · {'/'.join(flags)}" if flags else ""
         st.caption(
             f"最近生成：asset `{last['asset_id']}` · {last.get('provider')} · "
-            f"hash `{last.get('prompt_hash')}`{compose_note}"
+            f"hash `{last.get('prompt_hash')}`{flag_note}"
         )
 
 

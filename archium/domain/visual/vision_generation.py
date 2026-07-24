@@ -45,6 +45,19 @@ class VisionStylePreset(StrEnum):
     WATERCOLOR_NOTE = "watercolor_note"
 
 
+class VisionGenerationMode(StrEnum):
+    """How pixels are produced (Vision Engine v0.3)."""
+
+    TEXT_TO_IMAGE = "text_to_image"
+    """Pure generation from compiled prompt."""
+
+    EDIT_FROM_PHOTO = "edit_from_photo"
+    """Conditioned edit / style transfer from a user photo (always illustrative)."""
+
+    EDIT_FROM_DRAWING = "edit_from_drawing"
+    """Conditioned edit from a plan/drawing base (distinct from diagram compose overlay)."""
+
+
 class ImageRequest(DomainModel):
     """Declarative request attached to VisualIntent / Design Brief (no pixels)."""
 
@@ -64,7 +77,22 @@ class ImageRequest(DomainModel):
     # v0.2 diagram compose — user site plan / drawing as base (never treated as evidence output).
     base_image_path: str | None = Field(default=None, max_length=1024)
     overlay_cues: list[str] = Field(default_factory=list)
+    # v0.3 conditioned edit + post pipeline
+    mode: VisionGenerationMode = VisionGenerationMode.TEXT_TO_IMAGE
+    harmonize_output: bool = Field(
+        default=True,
+        description="Apply soft presentation unify (Derivative-spirit) before persist.",
+    )
 
+
+class VisionInputEvaluation(DomainModel):
+    """Base-image QA before conditioned edit (reuse photo sharpness / exposure)."""
+
+    sharpness_passed: bool | None = None
+    exposure_passed: bool | None = None
+    warnings: list[str] = Field(default_factory=list)
+    blocking: bool = False
+    checks: list[dict[str, object]] = Field(default_factory=list)
 
 
 class VisionGenerationContext(DomainModel):
@@ -107,3 +135,5 @@ class VisionGenerationResult(DomainModel):
     model: str = ""
     error: str | None = None
     illustrative: bool = True
+    input_evaluation: VisionInputEvaluation | None = None
+    harmonized: bool = False
