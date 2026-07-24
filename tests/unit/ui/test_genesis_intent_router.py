@@ -17,6 +17,7 @@ def test_genesis_uses_context_intelligence_not_mode_cards() -> None:
     assert "描述你的建筑项目、问题或灵感" in text
     assert "开始理解项目" in text
     assert "assess_project_context" in text
+    assert "project_context" in text
     assert "建议下一步" in text
     assert "刷新知识状态" in text
     assert "try_execute_research_for_project" in text

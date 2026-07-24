@@ -114,6 +114,15 @@ class VisualConceptBriefService:
                     spatial_idea=direction.spatial_idea,
                     experience_focus=direction.experience_focus,
                     differentiator=direction.differentiator,
+                    spatial_strategy=direction.spatial_strategy,
+                    formal_language=direction.formal_language,
+                    material_strategy=direction.material_strategy,
+                    reference_dna="；".join(direction.reference_dna),
+                    visual_prompt_block=(
+                        direction.visual_prompt.to_prompt_block()
+                        if direction.visual_prompt is not None
+                        else ""
+                    ),
                 ),
                 temperature=0.45,
                 json_mode=True,

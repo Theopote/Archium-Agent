@@ -1127,6 +1127,15 @@ class ConceptDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
     theme: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     spatial_idea: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    spatial_strategy: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    formal_language: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    material_strategy: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    reference_dna_json: Mapped[list[str]] = mapped_column(
+        "reference_dna", JSON, nullable=False, default=list
+    )
+    visual_prompt_json: Mapped[dict[str, object] | None] = mapped_column(
+        "visual_prompt", JSON, nullable=True
+    )
     experience_focus: Mapped[str] = mapped_column(Text, nullable=False, default="")
     differentiator: Mapped[str] = mapped_column(Text, nullable=False, default="")
     open_questions_json: Mapped[list[str]] = mapped_column(

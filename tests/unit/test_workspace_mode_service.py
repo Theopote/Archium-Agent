@@ -84,3 +84,29 @@ def test_existing_project_cannot_override_to_design_iteration(db_session) -> Non
             project.id,
             override=ArchitecturalWorkspaceMode.DESIGN_ITERATION,
         )
+
+
+def test_partial_knowledge_routes_by_context_not_origin_only(db_session) -> None:
+    from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
+
+    project = ProjectRepository(db_session).create(
+        Project(
+            name="医院改造",
+            description="西安某医院老院区改造，有一张照片和旧介绍",
+            origin_mode=ProjectOriginMode.EXISTING_PROJECT,
+            knowledge_state=KnowledgeState(
+                completeness_score=0.32,
+                maturity_stage=KnowledgeMaturityStage.DESIGN_ANALYSIS,
+                evidence_ratio=0.2,
+                assumption_ratio=0.75,
+                known={"location": "西安", "type": "医院改造"},
+                unknown=["规模", "历史"],
+                missing_information=["规模", "历史"],
+            ),
+        )
+    )
+    db_session.commit()
+    service = WorkspaceModeService(db_session)
+    mode = service.resolve_mode(project.id)
+    assert mode == ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION
+    assert service.resolve_primary_page_key(project.id) == "project-mission"

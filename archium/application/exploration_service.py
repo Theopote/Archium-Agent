@@ -393,21 +393,13 @@ class ExplorationService:
         *,
         sort_order: int,
     ) -> ConceptDirection:
-        direction = ConceptDirection(
+        from archium.application.concept_direction_mapping import concept_direction_from_draft
+
+        direction = concept_direction_from_draft(
+            draft,
             project_id=exploration.project_id,
             exploration_session_id=exploration.id,
-            mission_id=None,
-            title=draft.title.strip(),
-            summary=draft.summary.strip(),
-            theme=(draft.theme or "").strip(),
-            spatial_idea=(draft.spatial_idea or "").strip(),
-            experience_focus=(draft.experience_focus or "").strip(),
-            differentiator=(draft.differentiator or "").strip(),
-            open_questions=[item.strip() for item in draft.open_questions if item.strip()],
-            risks=[item.strip() for item in draft.risks if item.strip()],
-            status=ConceptDirectionStatus.DRAFT,
             sort_order=sort_order,
-            source="generated",
         )
         return self._directions.create(direction)
 
@@ -429,6 +421,12 @@ class ExplorationService:
             parts.append(f"主题：{direction.theme.strip()}")
         if direction.spatial_idea.strip():
             parts.append(f"空间想法：{direction.spatial_idea.strip()}")
+        if direction.spatial_strategy.strip():
+            parts.append(f"空间策略：{direction.spatial_strategy.strip()}")
+        if direction.formal_language.strip():
+            parts.append(f"形式语言：{direction.formal_language.strip()}")
+        if direction.material_strategy.strip():
+            parts.append(f"材料策略：{direction.material_strategy.strip()}")
         if direction.experience_focus.strip():
             parts.append(f"体验焦点：{direction.experience_focus.strip()}")
         return "\n".join(parts)

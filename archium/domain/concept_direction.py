@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import Field
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
+from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.enums import ConceptDirectionStatus
 
 
@@ -20,6 +21,11 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
     summary: str = ""
     theme: str = ""
     spatial_idea: str = ""
+    spatial_strategy: str = ""
+    formal_language: str = ""
+    material_strategy: str = ""
+    reference_dna: list[str] = Field(default_factory=list)
+    visual_prompt: ConceptVisualPrompt | None = None
     experience_focus: str = ""
     differentiator: str = ""
     open_questions: list[str] = Field(default_factory=list)
@@ -49,6 +55,21 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
             sections.append(f"摘要：{self.summary.strip()}")
         if self.spatial_idea.strip():
             sections.append(f"空间想法：{self.spatial_idea.strip()}")
+        if self.spatial_strategy.strip():
+            sections.append(f"空间策略：{self.spatial_strategy.strip()}")
+        if self.formal_language.strip():
+            sections.append(f"形式语言：{self.formal_language.strip()}")
+        if self.material_strategy.strip():
+            sections.append(f"材料策略：{self.material_strategy.strip()}")
+        if self.reference_dna:
+            sections.append(
+                "参照基因："
+                + "；".join(item for item in self.reference_dna if item.strip())
+            )
+        if self.visual_prompt is not None:
+            block = self.visual_prompt.to_prompt_block()
+            if block:
+                sections.append(block)
         if self.experience_focus.strip():
             sections.append(f"体验焦点：{self.experience_focus.strip()}")
         if self.differentiator.strip():

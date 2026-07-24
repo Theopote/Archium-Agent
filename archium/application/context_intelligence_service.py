@@ -13,6 +13,7 @@ from archium.application.context_evidence import (
     gather_project_evidence,
 )
 from archium.config.settings import Settings, get_settings
+from archium.domain.context.project_context import ProjectContext
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
@@ -39,6 +40,7 @@ class ContextAssessment:
     suggested_origin_mode: ProjectOriginMode = ProjectOriginMode.CONCEPT_EXPLORATION
     understanding_summary: str = ""
     warnings: list[str] = field(default_factory=list)
+    project_context: ProjectContext | None = None
 
 
 @dataclass(frozen=True)
@@ -135,6 +137,11 @@ class ContextIntelligenceService:
             assessment.knowledge_state = assessment.knowledge_state.model_copy(
                 update={"source": "materials_aware"}
             )
+        assessment.project_context = self._compose_project_context(
+            assessment,
+            evidence=evidence,
+            user_text=user_text.strip(),
+        )
         project.knowledge_state = assessment.knowledge_state
         project.origin_mode = assessment.suggested_origin_mode
         if write_evolution:
@@ -189,7 +196,20 @@ class ContextIntelligenceService:
             project.touch()
             self._projects.update(project)
             self._session.commit()
+        if assessment.project_context is None:
+            evidence = gather_project_evidence(self._session, project_id)
+            assessment.project_context = self._compose_project_context(
+                assessment,
+                evidence=evidence,
+                user_text=text,
+            )
         return assessment
+
+    def project_context_for(self, project_id: UUID) -> ProjectContext | None:
+        """Rebuild ProjectContext from persisted knowledge state and current evidence."""
+        from archium.application.project_context_builder import build_project_context
+
+        return build_project_context(self._session, project_id)
 
     @staticmethod
     def resolve_action_target(
@@ -346,12 +366,17 @@ class ContextIntelligenceService:
             assessed_at=datetime.now(UTC),
             source=source,
         )
-        return ContextAssessment(
+        assessment = ContextAssessment(
             knowledge_state=state,
             actions=actions,
             suggested_origin_mode=ProjectOriginMode(origin_raw),
             understanding_summary=(draft.understanding_summary or "").strip(),
         )
+        assessment.project_context = ContextIntelligenceService._compose_project_context(
+            assessment,
+            evidence=None,
+        )
+        return assessment
 
     def _rule_fallback(
         self,
@@ -450,7 +475,7 @@ class ContextIntelligenceService:
             has_materials=pack.has_evidence,
             blocking_gaps=pack.blocking_gap_count > 0,
         )
-        return ContextAssessment(
+        assessment = ContextAssessment(
             knowledge_state=state,
             actions=actions,
             suggested_origin_mode=origin,
@@ -458,6 +483,47 @@ class ContextIntelligenceService:
                 f"基于{'已有资料与事实' if pack.has_evidence else '文字描述'}的规则评估："
                 f"完整度约 {int(completeness * 100)}%。"
             ),
+        )
+        assessment.project_context = ContextIntelligenceService._compose_project_context(
+            assessment,
+            evidence=pack,
+            user_text=user_text,
+        )
+        return assessment
+
+    @staticmethod
+    def _compose_project_context(
+        assessment: ContextAssessment,
+        *,
+        evidence: ProjectEvidencePack | None = None,
+        user_text: str = "",
+    ) -> ProjectContext:
+        sources: list[str] = []
+        if user_text.strip():
+            sources.append("user_description")
+        pack = evidence or ProjectEvidencePack()
+        if pack.document_count:
+            sources.append(f"documents:{pack.document_count}")
+        if pack.confirmed_fact_count:
+            sources.append(f"confirmed_facts:{pack.confirmed_fact_count}")
+        if pack.extracted_fact_count:
+            sources.append(f"extracted_facts:{pack.extracted_fact_count}")
+        if pack.chunk_excerpts.strip():
+            sources.append("document_excerpts")
+        primary = ""
+        if assessment.actions:
+            primary = ContextIntelligenceService.resolve_action_target(
+                assessment.actions[0].action,
+                pending_fact_count=pack.pending_fact_count,
+                conflict_fact_count=pack.conflict_fact_count,
+            ).page_key
+        return ProjectContext.compose(
+            knowledge_state=assessment.knowledge_state,
+            next_actions=assessment.actions,
+            understanding_summary=assessment.understanding_summary,
+            suggested_origin_mode=assessment.suggested_origin_mode,
+            input_sources=sources,
+            primary_page_key=primary,
         )
 
     @staticmethod

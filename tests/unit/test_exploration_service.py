@@ -18,6 +18,7 @@ from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionBatchDraft,
     ConceptDirectionDraft,
+    ConceptVisualPromptDraft,
 )
 from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
 from archium.infrastructure.llm.mission_schemas import (
@@ -56,6 +57,15 @@ def _direction_batch() -> ConceptDirectionBatchDraft:
                 summary="沿台地展开的开放群落",
                 theme="台地生活",
                 spatial_idea="分散院落 + 共享庭院",
+                spatial_strategy="台地层级 + 院落聚落",
+                formal_language="低平体量，连续屋面",
+                material_strategy="夯土与木构",
+                reference_dna=["窑洞类型学", "村落公共性"],
+                visual_prompt=ConceptVisualPromptDraft(
+                    image_prompt="terraced village cultural center",
+                    camera="axonometric",
+                    style="concept sketch",
+                ),
                 experience_focus="村民日常与游客穿行并存",
                 differentiator="以台地地貌组织公共空间",
                 open_questions=["规模上限？"],

@@ -31,7 +31,23 @@ def build_visual_concept_brief_user_prompt(
     spatial_idea: str,
     experience_focus: str,
     differentiator: str,
+    spatial_strategy: str = "",
+    formal_language: str = "",
+    material_strategy: str = "",
+    reference_dna: str = "",
+    visual_prompt_block: str = "",
 ) -> str:
+    structured = ""
+    if spatial_strategy.strip():
+        structured += f"\n空间策略：{spatial_strategy.strip()}"
+    if formal_language.strip():
+        structured += f"\n形式语言：{formal_language.strip()}"
+    if material_strategy.strip():
+        structured += f"\n材料策略：{material_strategy.strip()}"
+    if reference_dna.strip():
+        structured += f"\n参照基因：{reference_dna.strip()}"
+    if visual_prompt_block.strip():
+        structured += f"\n{visual_prompt_block.strip()}"
     return f"""请为以下概念方向撰写一份视觉概念简报。
 
 任务标题：{mission_title}
@@ -42,7 +58,7 @@ def build_visual_concept_brief_user_prompt(
 主题：{theme or "（暂无）"}
 空间想法：{spatial_idea or "（暂无）"}
 体验焦点：{experience_focus or "（暂无）"}
-差异点：{differentiator or "（暂无）"}
+差异点：{differentiator or "（暂无）"}{structured or chr(10) + "（暂无结构化空间/形式字段）"}
 
 要求：
 1. 输出 title, composition_intent, atmosphere, diagram_intent,

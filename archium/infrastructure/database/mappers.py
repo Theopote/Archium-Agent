@@ -8,6 +8,7 @@ from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
 from archium.domain.citation import Citation
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import (
@@ -1256,6 +1257,15 @@ def artifact_job_to_orm(
 
 
 def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
+    visual_raw = getattr(orm, "visual_prompt_json", None)
+    visual = None
+    if isinstance(visual_raw, dict) and visual_raw:
+        try:
+            parsed = ConceptVisualPrompt.model_validate(visual_raw)
+            if not parsed.is_empty():
+                visual = parsed
+        except Exception:
+            visual = None
     return ConceptDirection(
         id=orm.id,
         project_id=orm.project_id,
@@ -1265,6 +1275,11 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
         summary=orm.summary or "",
         theme=orm.theme or "",
         spatial_idea=orm.spatial_idea or "",
+        spatial_strategy=getattr(orm, "spatial_strategy", None) or "",
+        formal_language=getattr(orm, "formal_language", None) or "",
+        material_strategy=getattr(orm, "material_strategy", None) or "",
+        reference_dna=list(getattr(orm, "reference_dna_json", None) or []),
+        visual_prompt=visual,
         experience_focus=orm.experience_focus or "",
         differentiator=orm.differentiator or "",
         open_questions=list(orm.open_questions_json or []),
@@ -1289,6 +1304,15 @@ def concept_direction_to_orm(
     target.summary = domain.summary
     target.theme = domain.theme
     target.spatial_idea = domain.spatial_idea
+    target.spatial_strategy = domain.spatial_strategy
+    target.formal_language = domain.formal_language
+    target.material_strategy = domain.material_strategy
+    target.reference_dna_json = list(domain.reference_dna)
+    target.visual_prompt_json = (
+        domain.visual_prompt.model_dump(mode="json")
+        if domain.visual_prompt is not None and not domain.visual_prompt.is_empty()
+        else None
+    )
     target.experience_focus = domain.experience_focus
     target.differentiator = domain.differentiator
     target.open_questions_json = list(domain.open_questions)

@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.concept_direction_mapping import concept_direction_from_draft
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
@@ -182,20 +183,11 @@ class ConceptDirectionService:
         *,
         sort_order: int,
     ) -> ConceptDirection:
-        direction = ConceptDirection(
+        direction = concept_direction_from_draft(
+            draft,
             project_id=mission.project_id,
             mission_id=mission.id,
-            title=draft.title.strip(),
-            summary=draft.summary.strip(),
-            theme=(draft.theme or "").strip(),
-            spatial_idea=(draft.spatial_idea or "").strip(),
-            experience_focus=(draft.experience_focus or "").strip(),
-            differentiator=(draft.differentiator or "").strip(),
-            open_questions=[item.strip() for item in draft.open_questions if item.strip()],
-            risks=[item.strip() for item in draft.risks if item.strip()],
-            status=ConceptDirectionStatus.DRAFT,
             sort_order=sort_order,
-            source="generated",
         )
         return self._directions.create(direction)
 

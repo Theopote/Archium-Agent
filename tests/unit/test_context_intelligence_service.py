@@ -53,6 +53,8 @@ def test_assess_text_from_llm_draft() -> None:
     assert result.suggested_origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION
     assert result.actions[0].action == NextBestActionType.EXPLORE_DIRECTIONS
     assert "概念" in result.understanding_summary
+    assert result.project_context is not None
+    assert result.project_context.recommended_workflow.value == "explore"
 
 
 def test_assess_rule_fallback_when_llm_fails() -> None:

@@ -7,6 +7,9 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.project_context_builder import build_project_context
+from archium.domain.context.project_context import ProjectContext
+from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import (
     ArchitecturalWorkspaceMode,
     ConceptDirectionStatus,
@@ -131,6 +134,31 @@ def origin_to_default_workspace_mode(
     return mapping.get(origin, ArchitecturalWorkspaceMode.EXISTING_PROJECT)
 
 
+def workspace_mode_from_context(
+    context: ProjectContext,
+    *,
+    origin: ProjectOriginMode,
+) -> ArchitecturalWorkspaceMode:
+    """Route workspace from knowledge state + NBA, not origin alone."""
+    workflow = context.recommended_workflow
+    page = context.primary_page_key
+    if workflow == RecommendedWorkflow.DESIGN:
+        return ArchitecturalWorkspaceMode.DESIGN_ITERATION
+    if workflow == RecommendedWorkflow.DELIVER:
+        return ArchitecturalWorkspaceMode.EXISTING_PROJECT
+    if workflow == RecommendedWorkflow.MATERIALS:
+        return ArchitecturalWorkspaceMode.EXISTING_PROJECT
+    if workflow == RecommendedWorkflow.EXPLORE:
+        return ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION
+    if workflow in (RecommendedWorkflow.RESEARCH, RecommendedWorkflow.MISSION):
+        if origin == ProjectOriginMode.RESEARCH_PROGRAMMING:
+            return ArchitecturalWorkspaceMode.RESEARCH_PROGRAMMING
+        if page == "materials":
+            return ArchitecturalWorkspaceMode.EXISTING_PROJECT
+        return ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION
+    return origin_to_default_workspace_mode(origin)
+
+
 class WorkspaceModeService:
     """Derive the active Architectural Workspace mode for a project."""
 
@@ -154,13 +182,17 @@ class WorkspaceModeService:
                 )
             return override
 
-        default = origin_to_default_workspace_mode(project.origin_mode)
-        if default in {
-            ArchitecturalWorkspaceMode.CONCEPT_EXPLORATION,
-            ArchitecturalWorkspaceMode.RESEARCH_PROGRAMMING,
-        } and self._has_concept_directions(project_id):
+        if self._has_concept_directions(project_id):
             return ArchitecturalWorkspaceMode.DESIGN_ITERATION
-        return default
+
+        context = build_project_context(self._session, project)
+        if context is not None:
+            return workspace_mode_from_context(
+                context,
+                origin=project.origin_mode,
+            )
+
+        return origin_to_default_workspace_mode(project.origin_mode)
 
     def resolve_profile(
         self,
@@ -169,6 +201,18 @@ class WorkspaceModeService:
         override: ArchitecturalWorkspaceMode | None = None,
     ) -> WorkspaceModeProfile:
         return profile_for(self.resolve_mode(project_id, override=override))
+
+    def resolve_primary_page_key(
+        self,
+        project_id: UUID,
+        *,
+        override: ArchitecturalWorkspaceMode | None = None,
+    ) -> str:
+        """Primary navigation page — prefers ProjectContext over origin default."""
+        context = build_project_context(self._session, project_id)
+        if context is not None and context.primary_page_key:
+            return context.primary_page_key
+        return self.resolve_profile(project_id, override=override).primary_page_key
 
     def available_modes(self, project_id: UUID) -> list[ArchitecturalWorkspaceMode]:
         project = self._require_project(project_id)

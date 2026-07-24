@@ -13,6 +13,7 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import render_page_header
+from archium.ui.components.concept_direction_details import render_concept_direction_details
 from archium.ui.error_handlers import format_user_error, report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.planning_service import (
@@ -178,24 +179,7 @@ def render() -> None:
             f"{direction.title} · {badge}",
             expanded=direction.status == ConceptDirectionStatus.SELECTED,
         ):
-            if direction.theme:
-                st.markdown(f"**主题**：{direction.theme}")
-            if direction.summary:
-                st.markdown(direction.summary)
-            if direction.spatial_idea:
-                st.markdown(f"**空间想法**：{direction.spatial_idea}")
-            if direction.experience_focus:
-                st.markdown(f"**体验焦点**：{direction.experience_focus}")
-            if direction.differentiator:
-                st.markdown(f"**差异点**：{direction.differentiator}")
-            if direction.open_questions:
-                st.markdown("**开放问题**")
-                for item in direction.open_questions:
-                    st.markdown(f"- {item}")
-            if direction.risks:
-                st.markdown("**风险**")
-                for item in direction.risks:
-                    st.markdown(f"- {item}")
+            render_concept_direction_details(direction)
 
             if direction.status != ConceptDirectionStatus.SELECTED and st.button(
                 "选为当前方向",

@@ -13,6 +13,10 @@ CONCEPT_DIRECTION_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 
 专业原则：
 - 每个方向必须有清晰差异点（differentiator），避免只是换标题。
+- 空间策略（spatial_strategy）写组织逻辑（轴线、院落、嵌入、线性、垂直聚落等），不是重复 spatial_idea。
+- 形式语言（formal_language）写体量/轮廓/构造气质；材料策略（material_strategy）写主材与工法倾向。
+- reference_dna 写 2–4 条参照基因（类型、氛围、构造传统），不是抄袭具体方案。
+- visual_prompt 为 Vision Engine 预留：image_prompt（可英中混合）、camera、style；勿写面积等精确指标。
 - 不得编造面积、容积率、投资额等精确指标；未知写成 open_questions。
 - 方向应回应用户想法与语境，而不是套模板风格标签。
 - 输出合法 JSON，字段与 schema 一致。
@@ -41,8 +45,9 @@ def build_concept_direction_user_prompt(
 要求：
 1. 恰好输出 {count} 个方向（或在信息极不足时不少于 2 个）。
 2. 各方向主题与体验焦点应可区分。
-3. 每个方向包含 title, summary, theme, spatial_idea, experience_focus,
-   differentiator, open_questions, risks。
+3. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
+   formal_language, material_strategy, reference_dna, visual_prompt,
+   experience_focus, differentiator, open_questions, risks。
 """
 
 
@@ -76,8 +81,9 @@ def build_exploration_direction_user_prompt(
 要求：
 1. 恰好输出 {count} 个方向（或在信息极不足时不少于 2 个）。
 2. 各方向是可比较的「可能世界」，差异点必须清晰。
-3. 每个方向包含 title, summary, theme, spatial_idea, experience_focus,
-   differentiator, open_questions, risks。
+3. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
+   formal_language, material_strategy, reference_dna, visual_prompt,
+   experience_focus, differentiator, open_questions, risks。
 4. 若有已证实约束，方向必须尊重；未知项写入 open_questions，勿捏造数值。
 5. 方向应回应 IdeaSeed 中的主题、灵感与关键词。
 """

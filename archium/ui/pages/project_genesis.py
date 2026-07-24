@@ -5,6 +5,8 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.application.project_management_service import ProjectManagementService
+from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
+from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.intent.next_best_action import NextBestActionType
 from archium.exceptions import ValidationError, WorkflowError
@@ -98,7 +100,12 @@ def _render_entry_form() -> None:
                     if refreshed is not None
                     else assessment.suggested_origin_mode
                 )
-                if origin == ProjectOriginMode.CONCEPT_EXPLORATION:
+                should_explore = (
+                    assessment.project_context is not None
+                    and assessment.project_context.recommended_workflow
+                    == RecommendedWorkflow.EXPLORE
+                ) or origin == ProjectOriginMode.CONCEPT_EXPLORATION
+                if should_explore:
                     if settings.llm_configured:
                         seed_result = start_exploration_session(
                             session,
@@ -130,6 +137,11 @@ def _render_entry_form() -> None:
                 "actions": [a.model_dump(mode="json") for a in assessment.actions],
                 "suggested_origin_mode": assessment.suggested_origin_mode.value,
                 "warnings": list(assessment.warnings),
+                "project_context": (
+                    assessment.project_context.model_dump(mode="json")
+                    if assessment.project_context is not None
+                    else None
+                ),
             }
             st.rerun()
         except ValidationError as exc:
@@ -191,6 +203,7 @@ def _render_intent_evidence_summary(project_id: str) -> None:
 
 
 def _render_assessment_card(project_id: str, payload: dict) -> None:
+    from archium.domain.context.project_context import ProjectContext
     from archium.domain.intent.knowledge_state import KnowledgeState
     from archium.domain.intent.next_best_action import NextBestAction
 
@@ -200,6 +213,32 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 
     state = KnowledgeState.model_validate(payload["knowledge_state"])
     st.success(state.summary_line())
+    ctx_raw = payload.get("project_context")
+    if ctx_raw:
+        ctx = ProjectContext.model_validate(ctx_raw)
+        stage_label = {
+            ProjectLifecycleStage.IDEA: "想法",
+            ProjectLifecycleStage.CONCEPT: "概念",
+            ProjectLifecycleStage.RESEARCH: "研究",
+            ProjectLifecycleStage.DESIGN: "设计",
+            ProjectLifecycleStage.DOCUMENTATION: "文档化",
+        }.get(ctx.lifecycle_stage, ctx.lifecycle_stage.value)
+        workflow_label = {
+            RecommendedWorkflow.EXPLORE: "概念探索",
+            RecommendedWorkflow.RESEARCH: "背景研究",
+            RecommendedWorkflow.MATERIALS: "整理资料",
+            RecommendedWorkflow.MISSION: "任务理解",
+            RecommendedWorkflow.DESIGN: "方案迭代",
+            RecommendedWorkflow.DELIVER: "正式交付",
+        }.get(ctx.recommended_workflow, ctx.recommended_workflow.value)
+        st.caption(
+            f"阶段判断：**{stage_label}** · 建议优先：**{workflow_label}** "
+            f"· 把握度约 {int(round(ctx.confidence * 100))}%"
+        )
+        if ctx.assumptions:
+            with st.expander("当前假设（待证实）", expanded=False):
+                for item in ctx.assumptions[:6]:
+                    st.markdown(f"- {item}")
     if payload.get("understanding_summary"):
         st.markdown(payload["understanding_summary"])
 
@@ -259,6 +298,11 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                     "actions": [a.model_dump(mode="json") for a in assessment.actions],
                     "suggested_origin_mode": assessment.suggested_origin_mode.value,
                     "warnings": list(assessment.warnings),
+                    "project_context": (
+                        assessment.project_context.model_dump(mode="json")
+                        if assessment.project_context is not None
+                        else None
+                    ),
                 }
                 st.rerun()
             except WorkflowError as exc:
