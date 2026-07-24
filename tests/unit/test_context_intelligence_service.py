@@ -134,6 +134,55 @@ def test_resolve_action_target_maps_pages() -> None:
     assert ask.mission_step == 3
 
 
+def test_try_execute_research_without_mission(db_session) -> None:
+    project = ProjectRepository(db_session).create(
+        Project(name="无任务项目", description="只有想法")
+    )
+    db_session.commit()
+    service = ContextIntelligenceService(db_session, MagicMock())
+    ok, message = service.try_execute_research(project.id)
+    assert ok is False
+    assert "Mission" in message or "任务" in message
+
+
+def test_try_execute_research_runs_when_mission_exists(db_session, monkeypatch) -> None:
+    from archium.application.autonomous_research_service import AutonomousResearchResult
+    from archium.domain.project_mission import ProjectMission
+    from archium.infrastructure.database.mission_repositories import MissionRepository
+
+    project = ProjectRepository(db_session).create(
+        Project(name="有任务项目", description="西安文化中心")
+    )
+    mission = MissionRepository(db_session).save_mission(
+        ProjectMission(
+            project_id=project.id,
+            title="文化中心",
+            task_statement="探索青年文化中心",
+        )
+    )
+    db_session.commit()
+
+    fake = AutonomousResearchResult(
+        project_id=project.id,
+        mission_id=mission.id,
+        topics=["关中公共文化"],
+        items=[MagicMock()],
+        search_provider="stub",
+    )
+    monkeypatch.setattr(
+        "archium.application.autonomous_research_service.AutonomousResearchService.research_for_mission",
+        lambda self, mission_id: fake,
+    )
+
+    service = ContextIntelligenceService(db_session, MagicMock())
+    ok, message = service.try_execute_research(project.id)
+    assert ok is True
+    assert "1 条" in message or "研究" in message
+    refreshed = ProjectRepository(db_session).get_by_id(project.id)
+    assert refreshed is not None
+    assert any(e.kind.value == "research" for e in refreshed.intent_evolution.events)
+
+
 def test_reassess_refreshes_without_duplicate_seed(db_session) -> None:
     project = ProjectRepository(db_session).create(
         Project(name="文化中心", description="西安青年文化中心想法")

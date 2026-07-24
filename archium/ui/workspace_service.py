@@ -166,9 +166,33 @@ def import_uploaded_file(
         temp_file.write(data)
         temp_path = Path(temp_file.name)
     try:
-        return IngestionService(session, settings=settings).import_file(project_id, temp_path)
+        result = IngestionService(session, settings=settings).import_file(
+            project_id, temp_path
+        )
     finally:
         temp_path.unlink(missing_ok=True)
+    _best_effort_reassess_after_upload(session, project_id, settings=settings)
+    return result
+
+
+def _best_effort_reassess_after_upload(
+    session: Session,
+    project_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> None:
+    """Refresh KnowledgeState after new evidence; never fail the import path."""
+    try:
+        from archium.application.context_intelligence_service import (
+            ContextIntelligenceService,
+        )
+        from archium.infrastructure.llm.factory import create_llm_provider
+
+        resolved = _resolve_runtime_settings(settings)
+        llm = create_llm_provider(resolved)
+        ContextIntelligenceService(session, llm, settings=resolved).reassess(project_id)
+    except Exception:
+        return
 
 
 def backfill_project_asset_vision(

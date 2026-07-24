@@ -533,6 +533,21 @@ def resolve_next_best_action_target(action):
     return ContextIntelligenceService.resolve_action_target(action)
 
 
+def try_execute_research_for_project(
+    session: Session,
+    project_id: UUID,
+    *,
+    settings: Settings | None = None,
+) -> tuple[bool, str]:
+    from archium.application.context_intelligence_service import ContextIntelligenceService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ContextIntelligenceService(session, llm, settings=runtime).try_execute_research(
+        project_id
+    )
+
+
 def assess_entry_context(
     user_text: str,
     *,

@@ -244,7 +244,35 @@ def _action_label(action: NextBestActionType) -> str:
 
 
 def _dispatch_action(action: NextBestActionType) -> None:
+    from uuid import UUID
+
     from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.domain.intent.next_best_action import NextBestActionType as ActionType
+    from archium.ui.planning_service import try_execute_research_for_project
+
+    project_raw = st.session_state.get("selected_project_id") or st.session_state.get(
+        _PROJECT_KEY
+    )
+    if action == ActionType.RESEARCH and project_raw:
+        settings = get_ui_effective_settings()
+        with st.spinner("正在启动自主研究…"):
+            try:
+                with get_session() as session:
+                    ok, message = try_execute_research_for_project(
+                        session,
+                        UUID(str(project_raw)),
+                        settings=settings,
+                    )
+                if ok:
+                    st.success(message)
+                    st.session_state.pop(_ASSESSMENT_KEY, None)
+                    st.session_state.pop(_PROJECT_KEY, None)
+                    st.session_state.mission_step = 2
+                    st.switch_page(get_app_page("project-mission"))
+                    return
+                st.info(message)
+            except Exception as exc:
+                st.warning(report_user_error(exc))
 
     st.session_state.pop(_ASSESSMENT_KEY, None)
     st.session_state.pop(_PROJECT_KEY, None)

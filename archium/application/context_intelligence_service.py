@@ -208,6 +208,54 @@ class ContextIntelligenceService:
             )
         return ActionDispatch(page_key="project-mission", mission_step=1, label=action.value)
 
+    def try_execute_research(
+        self,
+        project_id: UUID,
+    ) -> tuple[bool, str]:
+        """Run autonomous research when a Mission exists; otherwise advise navigation.
+
+        Returns (executed, message).
+        """
+        from archium.application.autonomous_research_service import AutonomousResearchService
+        from archium.infrastructure.database.mission_repositories import MissionRepository
+
+        missions = MissionRepository(self._session).list_missions_by_project(project_id)
+        if not missions:
+            return (
+                False,
+                "尚无项目任务（Mission）。请先生成任务理解，或进入项目任务页后再启动研究。",
+            )
+        mission = missions[0]
+        try:
+            result = AutonomousResearchService(
+                self._session,
+                self._llm,
+                settings=self._settings,
+            ).research_for_mission(mission.id)
+            self._session.commit()
+        except WorkflowError as exc:
+            return False, str(exc)
+        except Exception as exc:  # noqa: BLE001
+            return False, f"自主研究未能完成：{exc}"
+
+        self.append_evolution(
+            project_id,
+            IntentEvolutionKind.RESEARCH,
+            f"自主研究生成 {len(result.items)} 条公开摘要",
+        )
+        try:
+            self.reassess(project_id)
+        except Exception:
+            pass
+        provider = (
+            f"（来源：{result.search_provider}）" if result.search_provider else ""
+        )
+        return (
+            True,
+            f"已生成 {len(result.items)} 条公开研究摘要{provider}。"
+            + (" 知识状态已刷新。" if True else ""),
+        )
+
     def append_evolution(
         self,
         project_id: UUID,

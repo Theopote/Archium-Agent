@@ -19,6 +19,7 @@ def test_genesis_uses_context_intelligence_not_mode_cards() -> None:
     assert "assess_project_context" in text
     assert "建议下一步" in text
     assert "刷新知识状态" in text
+    assert "try_execute_research_for_project" in text
     assert "以想法为主" not in text
     assert "以现有资料为主" not in text
     assert "说不清，描述一下" not in text
