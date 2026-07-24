@@ -18,7 +18,6 @@ from archium.domain.visual.vision_generation import (
     VisionStylePreset,
 )
 
-
 _DEFAULT_AVOID = (
     "luxury commercial real-estate rendering",
     "photorealistic site survey photo presented as evidence",

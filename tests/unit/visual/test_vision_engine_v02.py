@@ -1,27 +1,6 @@
 """Vision Engine v0.2 — style templates + diagram base overlay."""
 
-from __future__ import annotations
-
-from pathlib import Path
-from uuid import uuid4
-
-import pytest
-from archium.application.visual.vision import (
-    DEFAULT_STYLE_REGISTRY,
-    VisionDiagramComposer,
-    VisionImageGenerationService,
-    VisionPromptCompiler,
-)
-from archium.application.visual.vision.diagram_composer import DiagramComposeRequest
-from archium.domain.visual.vision_generation import (
-    ArchitectureImageType,
-    ImageRequest,
-    VisionGenerationContext,
-    VisionStylePreset,
-)
-
-
-def test_style_registry_defaults_per_type() -> None:
+from __future__ import annotationsfrom pathlib import Pathfrom uuid import uuid4import pytestfrom archium.application.visual.vision import (    DEFAULT_STYLE_REGISTRY,    VisionDiagramComposer,    VisionImageGenerationService,    VisionPromptCompiler,)from archium.application.visual.vision.diagram_composer import DiagramComposeRequestfrom archium.domain.visual.vision_generation import (    ArchitectureImageType,    ImageRequest,    VisionGenerationContext,    VisionStylePreset,)def test_style_registry_defaults_per_type() -> None:
     registry = DEFAULT_STYLE_REGISTRY
     assert registry.default_style_for(ArchitectureImageType.FLOW_DIAGRAM) == (
         VisionStylePreset.AXONOMETRIC_DIAGRAM
@@ -88,8 +67,7 @@ def test_diagram_composer_overlays_base(tmp_path: Path) -> None:
 
 
 def test_generation_service_uses_composer_when_base_present(tmp_path: Path) -> None:
-    from archium.config.settings import Settings
-    from PIL import Image
+    from archium.config.settings import Settings    from PIL import Image
 
     base = tmp_path / "site_plan.png"
     Image.new("RGB", (400, 300), color=(170, 175, 180)).save(base)

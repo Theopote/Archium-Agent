@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-import pytest
 from archium.application.visual.vision import (
     VisionImageGenerationService,
     suggest_image_request_for_slide,
@@ -64,7 +63,6 @@ def test_suggest_narrative_opening_atmosphere() -> None:
 
 def test_persist_uses_presentation_unify_derivative(tmp_path) -> None:
     from archium.config.settings import Settings
-    from PIL import Image
 
     settings = Settings(_env_file=None, project_storage_path=tmp_path)
     service = VisionImageGenerationService(session=None, settings=settings)
@@ -85,7 +83,6 @@ def test_persist_uses_presentation_unify_derivative(tmp_path) -> None:
     assert result.harmonized is True
     assert result.storage_path is not None
     assert result.storage_path.endswith("_harmonized.jpg") or "vision_generated" in result.storage_path
-    layout_root = tmp_path / "projects" / str(project_id)
     # LocalProjectStorage may nest differently — resolve via relative under storage root.
     from archium.infrastructure.storage.local_storage import LocalProjectStorage
 

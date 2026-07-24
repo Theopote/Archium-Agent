@@ -14,8 +14,8 @@ from archium.domain.visual.enums import (
     LayoutFamily,
     VisualContentType,
 )
-from archium.domain.visual.visual_grammar import PageArchetype
 from archium.domain.visual.vision_generation import ImageRequest
+from archium.domain.visual.visual_grammar import PageArchetype
 
 
 class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):

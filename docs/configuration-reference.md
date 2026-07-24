@@ -132,11 +132,39 @@ Do not edit them manually.
 | `PPTXGEN_SCRIPT_PATH` | `*(unset)*` | No | Path to render.mjs. Defaults to bundled archium/infrastructure/renderers/pptxgen/render.mjs. |
 | `PPTX_STRUCTURE_MODE` | `flat` | No | PPTX package structure mode: 'flat' (absolute freeform shapes) or 'structured' (native slide masters/layouts/placeholders). |
 | `PPTX_CHART_EXPORT_MODE` | `cross_app_stable` | No | Chart/table PPTX strategy: 'cross_app_stable' (shapes/images) or 'native_data_backed' (PowerPoint Chart/Table with embedded workbook). |
+| `ALLOW_LEGACY_PRESENTATION_SPEC_PPTX_FALLBACK` | `false` | No | When true, editable PPTX export may fall back to legacy PresentationSpec templates if no visual LayoutPlan exists. Formal delivery prefers RenderScene. |
+| `EXPORT_LAYOUT_PLAN_VALIDATION_PPTX` | `false` | No | When true, visual workflow also writes presentation.layout_plan.validation.pptx from LayoutPlan instructions (non-formal validation artifact). |
 
 ## Visual fallback, layout thresholds & web image search {#visual}
 
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
+| `VISION_IMAGE_GENERATION_ENABLED` | `false` | No | When true, Vision Engine may call an external/local image backend (openai_compatible \| local_sd \| comfyui). When false or unavailable, uses Pillow stub. |
+| `VISION_IMAGE_GENERATION_PROVIDER` | `stub` | No | Vision Engine image backend: stub \| openai_compatible \| local_sd (aliases: a1111, forge, automatic1111) \| comfyui. |
+| `VISION_IMAGE_GENERATION_MODEL` | `dall-e-3` | No | Image model id for openai_compatible Vision Engine provider. |
+| `VISION_IMAGE_GENERATION_API_KEY` / `OPENAI_API_KEY` | `*(unset)*` | No | Optional API key for Vision Engine; falls back to LLM_API_KEY. |
+| `VISION_IMAGE_GENERATION_BASE_URL` | `*(unset)*` | No | Optional OpenAI-compatible base URL for image generation. |
+| `VISION_LOCAL_SD_BASE_URL` | `http://127.0.0.1:7860` | No | AUTOMATIC1111 / Forge WebUI base URL for local_sd provider. |
+| `VISION_LOCAL_SD_MODEL` | `*(unset)*` | No | Optional checkpoint name override for local_sd (sd_model_checkpoint). |
+| `VISION_LOCAL_SD_STEPS` | `24` | No | Local SD sampling steps for txt2img / img2img. |
+| `VISION_LOCAL_SD_CFG_SCALE` | `6.5` | No | Local SD CFG scale. |
+| `VISION_LOCAL_SD_DENOISING_STRENGTH` | `0.55` | No | Default img2img denoising strength for local_sd conditioned edit. |
+| `VISION_LOCAL_SD_SAMPLER` | `Euler a` | No | Local SD sampler name (A1111/Forge). |
+| `VISION_LOCAL_SD_TIMEOUT_SECONDS` | `180.0` | No | HTTP timeout for local_sd txt2img/img2img calls. |
+| `VISION_COMFYUI_BASE_URL` | `http://127.0.0.1:8188` | No | ComfyUI server base URL for comfyui provider. |
+| `VISION_COMFYUI_CHECKPOINT` | `*(unset)*` | No | Checkpoint filename for builtin ComfyUI graphs; falls back to VISION_LOCAL_SD_MODEL / VISION_IMAGE_GENERATION_MODEL. |
+| `VISION_COMFYUI_SAMPLER` | `euler` | No | ComfyUI KSampler sampler_name for builtin graphs. |
+| `VISION_COMFYUI_SCHEDULER` | `normal` | No | ComfyUI KSampler scheduler for builtin graphs. |
+| `VISION_COMFYUI_TIMEOUT_SECONDS` | `300.0` | No | Total wait budget for ComfyUI prompt completion. |
+| `VISION_COMFYUI_POLL_INTERVAL_SECONDS` | `1.0` | No | Polling interval when waiting for ComfyUI /history. |
+| `VISION_COMFYUI_WORKFLOW_TXT2IMG_PATH` | `*(unset)*` | No | Optional path to a ComfyUI API-format JSON workflow for txt2img. Supports {{prompt}} {{negative_prompt}} {{width}} {{height}} {{steps}} {{cfg}} {{seed}} {{checkpoint}} {{sampler}} {{scheduler}} {{lora_name}} … |
+| `VISION_COMFYUI_WORKFLOW_IMG2IMG_PATH` | `*(unset)*` | No | Optional path to a ComfyUI API-format JSON workflow for img2img. Supports {{image}} / {{denoise}} plus the txt2img placeholders. |
+| `VISION_COMFYUI_LORA` | `*(unset)*` | No | Optional LoRA filename for builtin Comfy graphs (LoraLoader). Also available as {{lora_name}} in custom workflows. |
+| `VISION_COMFYUI_LORA_STRENGTH_MODEL` | `0.8` | No | LoRA strength_model for builtin Comfy graphs. |
+| `VISION_COMFYUI_LORA_STRENGTH_CLIP` | `0.8` | No | LoRA strength_clip for builtin Comfy graphs. |
+| `VISION_LORA_PACK_ID` | `*(unset)*` | No | Active architectural LoRA pack id (see vision_gen/lora_packs). Overrides VISION_COMFYUI_LORA when set. |
+| `VISION_LORA_PACKS_DIR` | `*(unset)*` | No | Optional extra directory of LoRA packs (pack.json + weights/). |
+| `VISION_COMFYUI_LORAS_DIR` | `*(unset)*` | No | ComfyUI models/loras directory for pack install (python -m archium.infrastructure.vision_gen.lora_packs install …). |
 | `IMAGE_DERIVATIVES_ENABLED` | `true` | No | When true and Pillow is available, run ImageTreatmentSpec → ImageDerivative after RenderScene compile (cache under project/cache/derivatives). Never mutates originals; never applies filters inside PptxGenJS. |
 | `VISUAL_FALLBACK_ENABLED` | `true` | No | When true, export tries relaxed asset matching and programmatic diagram fallbacks. |
 | `VISUAL_FALLBACK_RELAXED_MATCHING` | `true` | No | When true, unmatched visuals may bind to the best available project asset at export time. |
@@ -148,6 +176,8 @@ Do not edit them manually.
 | `LAYOUT_MIN_HERO_AREA_RATIO` | `0.45` | No | Minimum hero area ratio of safe area for hero/drawing pages. |
 | `LAYOUT_MIN_WHITESPACE_RATIO` | `0.08` | No | Minimum whitespace ratio for LayoutValidator. |
 | `LAYOUT_MAX_WHITESPACE_RATIO` | `0.6` | No | Maximum whitespace ratio for LayoutValidator. |
+| `VISUAL_CAPACITY_BLOCK_OVERLOADED` | `true` | No | When true, CAPACITY.OVERLOAD slides do not emit LayoutPlan candidates (force content adaptation / split before layout planning). |
+| `VISUAL_REQUIRE_APPROVED_DESIGN_BRIEF` | `false` | No | When true, VisualIntent generation requires an APPROVED SlideDesignBrief for each slide (blocks skipping page design review). |
 | `WEB_IMAGE_SEARCH_ENABLED` | `true` | No | When true, export may download licensed stock photos for rendering/site-photo/reference visuals before falling back to schematic diagrams. |
 | `WEB_IMAGE_SEARCH_PROVIDER` | `pexels` | No | Stock photo provider used for web image search (currently only pexels). |
 | `PEXELS_API_KEY` | `*(unset)*` | No | Pexels API key for web image search during export. |

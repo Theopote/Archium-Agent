@@ -203,8 +203,11 @@ class _InMemoryIntentRepo:
 
 
 def _standalone_intent_service() -> VisualIntentService:
+    from archium.config.settings import get_settings
+
     service = VisualIntentService.__new__(VisualIntentService)
     service._session = cast(Any, None)
     service._llm = cast(Any, None)
+    service._settings = get_settings()
     service._intents = cast(Any, _InMemoryIntentRepo())
     return service

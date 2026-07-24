@@ -181,10 +181,12 @@ _VISUAL_GRAMMAR: dict[PageArchetype, VisualPageRecipe] = {
             _sig(r"历史|沿革|既往|historic|history", 1.8, "历史"),
             _sig(r"矛盾|痛点|拥堵|交叉|老化|tension|conflict", 1.6, "矛盾"),
             _sig(r"目标|愿景|更新|goal|objective|vision", 1.5, "目标"),
-            _sig(r"空间|流线|spatial", 1.2, "空间"),
+            # Keep "空间" weak — alone it must not outrank drawing/evidence slides.
+            _sig(r"空间|流线|spatial", 0.4, "空间"),
         ),
         visual_type_hints=frozenset({VisualType.SITE_PHOTO, VisualType.RENDERING}),
-        slide_type_hints=frozenset({SlideType.TITLE, SlideType.CONTENT}),
+        # TITLE only: CONTENT matches nearly every slide and steals drawing pages.
+        slide_type_hints=frozenset({SlideType.TITLE}),
         preferred_page_orders=frozenset({0}),
     ),
     PageArchetype.SITE_CONTEXT_ANALYSIS: VisualPageRecipe(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from archium.application.visual.layout_style_preference import LayoutStylePreference
-from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from archium.domain.visual.visual_grammar import PageArchetype, VisualPageRecipe, get_recipe
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
@@ -39,9 +39,19 @@ def apply_grammar_to_draft(
             merged_families.append(family)
     merged_families = merged_families[:3]
 
+    # Keep strong rule/LLM content types when grammar only offers MIXED/TEXT filler.
+    content_type = recipe.dominant_content_type
+    if (
+        draft.dominant_content_type
+        not in {VisualContentType.MIXED, VisualContentType.TEXT_ARGUMENT}
+        and recipe.dominant_content_type
+        in {VisualContentType.MIXED, VisualContentType.TEXT_ARGUMENT}
+    ):
+        content_type = draft.dominant_content_type
+
     return draft.model_copy(
         update={
-            "dominant_content_type": recipe.dominant_content_type,
+            "dominant_content_type": content_type,
             "preferred_layout_families": merged_families,
             "hierarchy": list(recipe.reading_order),
             "reading_order": list(recipe.reading_order),

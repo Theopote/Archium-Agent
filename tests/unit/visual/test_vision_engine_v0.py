@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from archium.application.visual.vision import VisionImageGenerationService, VisionPromptCompiler
+from archium.domain.visual.enums import ContinuityRole, DensityLevel, VisualContentType
 from archium.domain.visual.vision_generation import (
     ArchitectureImageType,
     ImageRequest,
@@ -13,7 +14,6 @@ from archium.domain.visual.vision_generation import (
     VisionStylePreset,
 )
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.domain.visual.enums import ContinuityRole, DensityLevel, VisualContentType
 from archium.infrastructure.vision_gen import StubVisionImageGenerator
 
 

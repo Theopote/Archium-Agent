@@ -52,7 +52,8 @@ def _score_recipe(
     if recipe.visual_type_hints and visual_types:
         overlap = visual_types & recipe.visual_type_hints
         if overlap:
-            score += 1.5 * len(overlap)
+            # One matching visual type is enough to clear the recognition threshold.
+            score += 2.0 * len(overlap)
             evidence.append(
                 "visual:" + ",".join(sorted(item.value for item in overlap))
             )

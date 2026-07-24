@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import base64
 from pathlib import Path
 from uuid import uuid4
 
-import pytest
 from archium.application.visual.vision import VisionPromptCompiler
 from archium.config.settings import Settings
 from archium.domain.visual.vision_generation import (
@@ -20,7 +18,6 @@ from archium.infrastructure.vision_gen import (
     build_vision_image_generator,
 )
 from archium.infrastructure.vision_gen.local_sd import _clamp_dim
-
 
 _TINY_PNG_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="

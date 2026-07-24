@@ -125,8 +125,9 @@ def test_edit_mode_requires_base() -> None:
 
 
 def test_soft_harmonize_preserves_png() -> None:
-    from PIL import Image
     from io import BytesIO
+
+    from PIL import Image
 
     buf = BytesIO()
     Image.new("RGB", (32, 32), color=(200, 100, 50)).save(buf, format="PNG")
