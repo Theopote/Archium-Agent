@@ -107,6 +107,7 @@ class PlanningWorkflowGraph:
 
         builder.add_node("load_project_context", nodes.load_project_context)
         builder.add_node("analyze_task", nodes.analyze_task)
+        builder.add_node("run_autonomous_research", nodes.run_autonomous_research)
         builder.add_node("validate_mission", nodes.validate_mission)
         builder.add_node("await_mission_correction", nodes.await_mission_correction)
         builder.add_node("await_user_clarification", nodes.await_user_clarification)
@@ -135,6 +136,11 @@ class PlanningWorkflowGraph:
         )
         builder.add_conditional_edges(
             "analyze_task",
+            _route_on_errors,
+            {"continue": "run_autonomous_research", "finalize": "finalize"},
+        )
+        builder.add_conditional_edges(
+            "run_autonomous_research",
             _route_on_errors,
             {"continue": "validate_mission", "finalize": "finalize"},
         )

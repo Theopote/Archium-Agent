@@ -282,7 +282,9 @@ def _render_about() -> None:
 
 
 def _render_web_research_settings() -> None:
+    from archium.application.web_research_settings_service import WebResearchSettingsService
     from archium.config.settings import get_settings
+    from archium.infrastructure.database.session import get_session
     from archium.ui.web_research_settings import (
         delete_tavily_api_key,
         save_tavily_api_key,
@@ -292,19 +294,36 @@ def _render_web_research_settings() -> None:
     st.markdown("### 联网研究")
     st.caption(
         "任务理解中的「启动自主研究」会先检索公开网页，再基于真实摘要生成知识条目。"
-        "未配置 Tavily 时自动降级为 DuckDuckGo（无需 Key，稳定性较低）。"
+        "概念探索项目在分析任务后会自动触发（可关闭）。"
+        "未配置 Tavily 时自动降级为 DuckDuckGo。"
     )
 
     base_settings = get_settings()
-    provider_label = {
-        "tavily": "Tavily",
-        "duckduckgo": "DuckDuckGo",
-    }.get(base_settings.web_research_provider.strip().lower(), base_settings.web_research_provider)
+    with get_session() as session:
+        prefs = WebResearchSettingsService(session).get_preferences(base_settings=base_settings)
+
+    enabled = st.toggle("启用联网研究", value=prefs.enabled)
+    auto_on_concept = st.toggle(
+        "概念探索规划时自动研究",
+        value=prefs.auto_on_concept_planning,
+        help="在「从想法开始」分析任务后，若有待研究项则自动写入公开资料。",
+    )
+    provider_options = ["tavily", "duckduckgo"]
+    provider_index = (
+        provider_options.index(prefs.provider)
+        if prefs.provider in provider_options
+        else 0
+    )
+    provider = st.selectbox(
+        "检索 Provider",
+        provider_options,
+        index=provider_index,
+        format_func=lambda value: "Tavily（推荐）" if value == "tavily" else "DuckDuckGo（无 Key）",
+    )
     st.caption(
-        f"当前策略：{'已启用' if base_settings.web_research_enabled else '已禁用'}"
-        f" · 首选 {provider_label}"
-        f" · 每主题最多 {base_settings.web_research_max_results} 条"
-        "（可通过 `.env` 中 `WEB_RESEARCH_*` 调整）"
+        f"高级：每主题最多 {base_settings.web_research_max_results} 条 · "
+        f"超时 {base_settings.web_research_timeout_seconds:.0f}s"
+        "（可通过 `.env` 中 `WEB_RESEARCH_MAX_RESULTS` / `WEB_RESEARCH_TIMEOUT_SECONDS` 调整）"
     )
 
     tavily_configured, tavily_masked, tavily_source = tavily_credential_status()
@@ -312,7 +331,7 @@ def _render_web_research_settings() -> None:
         "Tavily API Key",
         type="password",
         placeholder=f"已配置：{tavily_masked}" if tavily_masked else "输入 Tavily API Key",
-        help="在 https://tavily.com 申请。推荐用于自主研究的高质量检索。",
+        help="在 https://tavily.com 申请。Provider 选 Tavily 时需要。",
         key="tavily_api_key_input",
     )
     tavily_save_mode = st.radio(
@@ -331,6 +350,13 @@ def _render_web_research_settings() -> None:
     delete_clicked = delete_col.button("删除 Tavily 密钥", use_container_width=True)
 
     if save_clicked:
+        with get_session() as session:
+            WebResearchSettingsService(session).save_preferences(
+                enabled=enabled,
+                provider=provider,
+                auto_on_concept_planning=auto_on_concept,
+            )
+            session.commit()
         if tavily_key_input.strip():
             save_tavily_api_key(
                 api_key=tavily_key_input.strip(),
@@ -345,13 +371,13 @@ def _render_web_research_settings() -> None:
         st.warning("已删除 Tavily API Key")
         st.rerun()
 
-    if tavily_configured:
-        st.info("已配置 Tavily，自主研究将优先使用 Tavily 检索。")
-    elif base_settings.web_research_enabled:
+    if provider == "tavily" and not tavily_configured and not (base_settings.tavily_api_key or "").strip():
         st.warning(
-            "尚未配置 Tavily API Key，自主研究将使用 DuckDuckGo 降级检索。"
+            "已选 Tavily 但未配置 API Key，运行时将降级 DuckDuckGo。"
             "可在本页配置，或在 `.env` 中设置 `TAVILY_API_KEY`。"
         )
+    elif tavily_configured:
+        st.info("已配置 Tavily API Key。")
 
 
 def _render_image_search_settings() -> None:

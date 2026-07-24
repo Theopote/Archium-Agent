@@ -192,6 +192,10 @@ def _default_design_intent(mission: ProjectMission) -> DesignIntent:
 
 def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: str) -> None:
     from archium.application.autonomous_research_service import AutonomousResearchService
+    from archium.application.web_research_settings_service import (
+        WebResearchSettingsService,
+        apply_web_research_preferences,
+    )
     from archium.infrastructure.llm.factory import create_llm_provider
     from archium.infrastructure.research.web_search.service import WebResearchSearchService
     from archium.ui.llm_settings import get_ui_effective_settings
@@ -210,12 +214,22 @@ def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: s
         st.warning("配置 LLM 后可启动自主研究。")
         return
 
+    with get_session() as session:
+        prefs = WebResearchSettingsService(session).get_preferences(base_settings=settings)
+    effective_settings = apply_web_research_preferences(settings, prefs)
+
+    if not prefs.enabled:
+        st.warning("联网研究已在设置中关闭。")
+        return
+
     tavily_configured, _, _ = tavily_credential_status()
-    if settings.web_research_enabled:
-        if tavily_configured or (settings.tavily_api_key or "").strip():
+    if effective_settings.web_research_provider == "tavily":
+        if tavily_configured or (effective_settings.tavily_api_key or "").strip():
             st.caption("联网检索：Tavily")
         else:
             st.caption("联网检索：DuckDuckGo（未配置 Tavily，可在设置页配置 API Key）")
+    else:
+        st.caption("联网检索：DuckDuckGo")
 
     if st.button(
         "启动自主研究（写入公开资料）",
@@ -227,9 +241,9 @@ def _render_autonomous_research_action(mission: ProjectMission, *, key_prefix: s
                 service = AutonomousResearchService(
                     session,
                     create_llm_provider(settings),
-                    settings=settings,
+                    settings=effective_settings,
                     web_research=WebResearchSearchService(
-                        settings,
+                        effective_settings,
                         session_tavily_api_key=session_tavily_api_key(),
                     ),
                 )

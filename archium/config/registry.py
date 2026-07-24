@@ -155,6 +155,7 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "tavily_api_key": ConfigDomain.RETRIEVAL,
     "web_research_max_results": ConfigDomain.RETRIEVAL,
     "web_research_timeout_seconds": ConfigDomain.RETRIEVAL,
+    "web_research_auto_on_concept_planning": ConfigDomain.RETRIEVAL,
     "vision_image_generation_enabled": ConfigDomain.VISUAL,
     "vision_image_generation_provider": ConfigDomain.VISUAL,
     "vision_image_generation_model": ConfigDomain.VISUAL,

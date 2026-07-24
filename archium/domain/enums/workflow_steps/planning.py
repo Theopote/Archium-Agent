@@ -6,6 +6,7 @@ from enum import StrEnum
 class PlanningWorkflowStep(StrEnum):
     PLANNING_LOAD_CONTEXT = "planning_load_context"
     PLANNING_ANALYZE_TASK = "planning_analyze_task"
+    PLANNING_AUTONOMOUS_RESEARCH = "planning_autonomous_research"
     PLANNING_VALIDATE_MISSION = "planning_validate_mission"
     PLANNING_AWAIT_MISSION_CORRECTION = "planning_await_mission_correction"
     PLANNING_AWAIT_CLARIFICATION = "planning_await_clarification"

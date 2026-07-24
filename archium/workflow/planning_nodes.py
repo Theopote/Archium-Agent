@@ -124,6 +124,81 @@ class PlanningWorkflowNodes:
         self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
         return next_state
 
+    def run_autonomous_research(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
+        """Concept exploration: web search + synthesis into PUBLIC_RESEARCH knowledge."""
+        logger = get_logger(__name__, operation="planning_workflow")
+        mission_id = planning_mission_id(state)
+        warnings = list(state.get("warnings") or [])
+        step = PlanningWorkflowStep.PLANNING_AUTONOMOUS_RESEARCH.value
+
+        if mission_id is None:
+            next_state: PlanningWorkflowState = {
+                "current_step": step,
+                "warnings": warnings,
+            }
+            self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
+            return next_state
+
+        origin_mode = ProjectOriginMode(
+            state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value)
+        )
+        from archium.application.autonomous_research_service import AutonomousResearchService
+        from archium.application.web_research_settings_service import (
+            WebResearchSettingsService,
+            apply_web_research_preferences,
+        )
+        from archium.infrastructure.research.web_search.service import WebResearchSearchService
+
+        prefs = WebResearchSettingsService(self._runtime.session).get_preferences(
+            base_settings=self._runtime.settings,
+        )
+        if origin_mode != ProjectOriginMode.CONCEPT_EXPLORATION or not prefs.auto_on_concept_planning:
+            next_state = {"current_step": step, "warnings": warnings}
+            self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
+            return next_state
+
+        if not prefs.enabled:
+            warnings.append("联网研究已禁用，跳过概念探索自动研究")
+            next_state = {"current_step": step, "warnings": warnings}
+            self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
+            return next_state
+
+        effective_settings = apply_web_research_preferences(self._runtime.settings, prefs)
+        try:
+            result = AutonomousResearchService(
+                self._runtime.session,
+                self._runtime.llm,
+                settings=effective_settings,
+                web_research=WebResearchSearchService(effective_settings),
+            ).research_for_mission(mission_id)
+            warnings.extend(result.warnings)
+            if result.items:
+                provider_note = result.search_provider or "无联网"
+                warnings.append(
+                    "概念探索自动研究：已写入 "
+                    f"{len(result.items)} 条公开资料（检索 {result.search_hit_count} 条，{provider_note}）"
+                )
+                logger.info(
+                    "Concept planning auto research wrote %s items for mission %s",
+                    len(result.items),
+                    mission_id,
+                )
+            next_state = {
+                "current_step": step,
+                "warnings": warnings,
+                "autonomous_research_item_count": len(result.items),
+            }
+        except WorkflowError as exc:
+            warnings.append(f"概念探索自动研究跳过：{exc}")
+            next_state = {"current_step": step, "warnings": warnings}
+        except Exception as exc:
+            logger.warning("Concept planning auto research failed: %s", exc)
+            warnings.append(f"概念探索自动研究失败：{exc}")
+            next_state = {"current_step": step, "warnings": warnings}
+
+        self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
+        return next_state
+
     def validate_mission(self, state: PlanningWorkflowState) -> PlanningWorkflowState:
         """Initial mission consistency check before clarification."""
         return self._validate_mission_state(

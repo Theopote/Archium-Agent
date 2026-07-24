@@ -730,6 +730,13 @@ class Settings(BaseSettings):
         le=120.0,
         description="HTTP timeout for web research search requests.",
     )
+    web_research_auto_on_concept_planning: bool = Field(
+        default=True,
+        description=(
+            "When true, concept exploration planning automatically runs web research "
+            "after mission generation when research topics are present."
+        ),
+    )
 
     @model_validator(mode="after")
     def _validate_chunk_settings(self) -> Settings:
