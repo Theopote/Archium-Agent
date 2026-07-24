@@ -53,6 +53,19 @@ class ProjectOriginMode(StrEnum):
     def allows_outline_without_materials(self) -> bool:
         return self.skips_default_clarification
 
+
+class ArchitecturalWorkspaceMode(StrEnum):
+    """Product workspace mode — how the current project should feel in the UI.
+
+    Distinct from :class:`ProjectOriginMode`: origin is how the project started;
+    workspace mode is the active work posture (may elevate to design iteration).
+    """
+
+    EXISTING_PROJECT = "existing_project"
+    CONCEPT_EXPLORATION = "concept_exploration"
+    RESEARCH_PROGRAMMING = "research_programming"
+    DESIGN_ITERATION = "design_iteration"
+
 class ProjectDomain(StrEnum):
     """Subject domain of the task — background context, not workflow driver."""
 

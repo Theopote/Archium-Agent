@@ -59,6 +59,7 @@ from archium.domain.enums.presentation import (
 from archium.domain.enums.project import (
     ProjectDomain,
     ProjectOriginMode,
+    ArchitecturalWorkspaceMode,
     ProjectStage,
     ProjectStatus,
     ProjectType,
@@ -86,6 +87,7 @@ __all__ = [
     "ProjectStage",
     "ProjectStatus",
     "ProjectOriginMode",
+    "ArchitecturalWorkspaceMode",
     "ProjectDomain",
     "DocumentType",
     "ProcessingStatus",

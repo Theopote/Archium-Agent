@@ -190,6 +190,15 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     with header_l:
         st.markdown(f"### {snapshot.project_name}")
         st.caption(f"{greeting_for_now()} · 当前项目工作台")
+        try:
+            from archium.application.workspace_mode_service import profile_for
+            from archium.ui.workspace_mode_chrome import resolve_ui_workspace_mode
+
+            mode = resolve_ui_workspace_mode(snapshot.project_id)
+            profile = profile_for(mode)
+            st.caption(f"工作台模式：{profile.title} — {profile.focus}")
+        except Exception:
+            pass
     with header_r:
         if st.button("切换项目", use_container_width=True, key="home_switch_project"):
             st.switch_page(get_app_page("project-management"))

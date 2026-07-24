@@ -41,7 +41,7 @@ Project (origin_mode: concept | research_programming | existing)
 | P2 | Autonomous Research — 联网检索 → 知识 → 写回/AI 修订 Mission → Brief/Storyline 注入；资料面板标记「已写回 Mission」 | 已落地 |
 | P2 | Research/Programming 第三入口（策划与可研 / 投资人沟通）— Genesis 第三 Tab、`RESEARCH_PROGRAMMING` 轻量 Planning | 已落地 |
 | P3 | Design Iteration — 概念方向草稿 + 选中写回 `design_intent`；Brief/Storyline/Outline/`PresentationRequest` 注入【当前概念方向】；Vision Engine 视觉推演仍待做 | 首期+注入已落地 |
-| P3 | 四模式 Architectural Workspace | 规划中 |
+| P3 | 四模式 Architectural Workspace — 已有项目 / 概念探索 / 研究策划 / 设计迭代；模式解析 + Mission/五阶段/首页 chrome | 首期已落地 |
 
 Studio 的编辑闭环不是直接覆写导出文件：
 

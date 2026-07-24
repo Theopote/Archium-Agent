@@ -323,9 +323,29 @@ def render_concept_draft_banner(snapshot: ProjectProgressSnapshot | None = None)
 
 def render_stage_header(stage_id: str) -> None:
     stage = get_stage(stage_id)
-    render_page_header(stage.title, stage.caption)
+    caption = stage.caption
+    snapshot = None
+    try:
+        snapshot = load_project_progress_snapshot()
+    except Exception:
+        snapshot = None
+    if snapshot is not None:
+        from archium.ui.workspace_mode_chrome import (
+            resolve_ui_workspace_mode,
+            stage_caption_for_mode,
+        )
+
+        mode = resolve_ui_workspace_mode(snapshot.project_id)
+        caption = stage_caption_for_mode(stage_id, mode, default=stage.caption)
+        from archium.application.workspace_mode_service import profile_for
+
+        profile = profile_for(mode)
+        render_page_header(stage.title, caption)
+        st.caption(f"工作台模式：{profile.title} — {profile.focus}")
+    else:
+        render_page_header(stage.title, caption)
     render_flow_stepper(stage_id)
-    render_concept_draft_banner()
+    render_concept_draft_banner(snapshot)
 
 
 def render_flow_project_context(

@@ -700,6 +700,11 @@ def render(*, embedded: bool = False) -> None:
     snapshot = _load_snapshot(project_id)
     _sync_step_from_snapshot(snapshot)
 
+    if not embedded:
+        from archium.ui.workspace_mode_chrome import render_workspace_mode_chrome
+
+        render_workspace_mode_chrome(project_id, key_prefix="mission_ws")
+
     render_workflow_progress_panel(
         project_id,
         scope="planning",
