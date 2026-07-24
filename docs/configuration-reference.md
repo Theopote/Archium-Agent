@@ -78,6 +78,12 @@ Do not edit them manually.
 | `SLIDE_RECOVERY_PPTX_PERCEPTUAL_ENABLED` | `true` | No | When true, rasterize PPTX slides (when tools available) and supplement structural parsing with OCR/VLM perceptual regions. |
 | `RETRIEVAL_KEYWORD_BOOST_ENABLED` | `true` | No | When true, rerank vector hits with keyword overlap (helps metrics, drawing captions, and proper nouns that pure embeddings may miss). |
 | `CHUNK_CONTEXT_MAX_CHARS` | `600` | No | Maximum characters injected per retrieved chunk into LLM context. |
+| `WEB_RESEARCH_ENABLED` | `true` | No | When true, autonomous research queries the web before LLM synthesis and grounds citations in retrieved snippets. |
+| `WEB_RESEARCH_PROVIDER` | `tavily` | No | Web research provider: tavily (recommended, requires API key) or duckduckgo (no key, HTML fallback). |
+| `TAVILY_API_KEY` | `*(unset)*` | No | Tavily API key for autonomous web research. |
+| `WEB_RESEARCH_MAX_RESULTS` | `5` | No | Maximum web search hits to retrieve per research topic. |
+| `WEB_RESEARCH_TIMEOUT_SECONDS` | `20.0` | No | HTTP timeout for web research search requests. |
+| `WEB_RESEARCH_AUTO_ON_CONCEPT_PLANNING` | `true` | No | When true, concept exploration planning automatically runs web research after mission generation when research topics are present. |
 
 ## Document chunking {#chunking}
 
@@ -140,6 +146,7 @@ Do not edit them manually.
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
 | `VISION_IMAGE_GENERATION_ENABLED` | `false` | No | When true, Vision Engine may call an external/local image backend (openai_compatible \| local_sd \| comfyui). When false or unavailable, uses Pillow stub. |
+| `VISION_AUTO_FULFILL_IMAGE_REQUESTS` | `true` | No | When true and vision_image_generation_enabled, Visual workflow fulfills VisualIntent.image_request into an illustrative Asset when hero_asset_id is empty. |
 | `VISION_IMAGE_GENERATION_PROVIDER` | `stub` | No | Vision Engine image backend: stub \| openai_compatible \| local_sd (aliases: a1111, forge, automatic1111) \| comfyui. |
 | `VISION_IMAGE_GENERATION_MODEL` | `dall-e-3` | No | Image model id for openai_compatible Vision Engine provider. |
 | `VISION_IMAGE_GENERATION_API_KEY` / `OPENAI_API_KEY` | `*(unset)*` | No | Optional API key for Vision Engine; falls back to LLM_API_KEY. |
