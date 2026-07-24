@@ -204,8 +204,12 @@ class ConceptDirectionService:
         mission: ProjectMission,
         direction: ConceptDirection,
     ) -> DesignIntent:
+        from archium.application.intent_evidence_helpers import (
+            evidence_from_direction_selection,
+        )
+
         base = mission.design_intent or DesignIntent()
-        return DesignIntent(
+        intent = DesignIntent(
             theme=direction.theme or direction.title or base.theme,
             problem_statement=direction.summary or base.problem_statement,
             social_background=base.social_background,
@@ -215,7 +219,9 @@ class ConceptDirectionService:
             core_questions=list(direction.open_questions) or list(base.core_questions),
             research_needed=list(base.research_needed),
             working_assumptions=list(base.working_assumptions),
+            evidence=list(base.evidence),
         )
+        return intent.with_evidence(evidence_from_direction_selection(direction))
 
     def _require_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._missions.get_mission(mission_id)

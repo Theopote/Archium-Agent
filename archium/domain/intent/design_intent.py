@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.intent.intent_evidence import IntentEvidence
 
 
 class DesignIntent(DomainModel):
@@ -19,6 +20,26 @@ class DesignIntent(DomainModel):
     core_questions: list[str] = Field(default_factory=list)
     research_needed: list[str] = Field(default_factory=list)
     working_assumptions: list[str] = Field(default_factory=list)
+    evidence: list[IntentEvidence] = Field(default_factory=list)
+
+    def with_evidence(
+        self,
+        *items: IntentEvidence,
+        max_items: int = 40,
+    ) -> DesignIntent:
+        """Append unique evidence entries (by statement + source_type)."""
+        merged = list(self.evidence)
+        seen = {(entry.statement.strip(), entry.source_type.value) for entry in merged}
+        for item in items:
+            statement = item.statement.strip()
+            if not statement:
+                continue
+            key = (statement, item.source_type.value)
+            if key in seen:
+                continue
+            merged.append(item.model_copy(update={"statement": statement}))
+            seen.add(key)
+        return self.model_copy(update={"evidence": merged[-max_items:]})
 
     def to_prompt_block(self) -> str:
         """Compact text for LLM narrative / brief context."""
@@ -47,4 +68,12 @@ class DesignIntent(DomainModel):
             sections.append(
                 "工作假设:\n" + "\n".join(f"- {a}" for a in self.working_assumptions if a.strip())
             )
+        if self.evidence:
+            lines: list[str] = []
+            for entry in self.evidence[-8:]:
+                conf = int(round(entry.confidence * 100))
+                lines.append(
+                    f"- [{entry.source_label()} {conf}%] {entry.statement.strip()}"
+                )
+            sections.append("意图出处:\n" + "\n".join(lines))
         return "\n".join(sections)

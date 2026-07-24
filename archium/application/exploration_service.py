@@ -439,8 +439,12 @@ class ExplorationService:
         *,
         base: DesignIntent | None = None,
     ) -> DesignIntent:
+        from archium.application.intent_evidence_helpers import (
+            evidence_from_direction_selection,
+        )
+
         seed = base or DesignIntent()
-        return DesignIntent(
+        intent = DesignIntent(
             theme=direction.theme or direction.title or seed.theme,
             problem_statement=direction.summary or seed.problem_statement,
             social_background=seed.social_background,
@@ -450,7 +454,9 @@ class ExplorationService:
             core_questions=list(direction.open_questions) or list(seed.core_questions),
             research_needed=list(seed.research_needed),
             working_assumptions=list(seed.working_assumptions),
+            evidence=list(seed.evidence),
         )
+        return intent.with_evidence(evidence_from_direction_selection(direction))
 
     def _require_session(self, exploration_id: UUID) -> ExplorationSession:
         exploration = self._explorations.get(exploration_id)

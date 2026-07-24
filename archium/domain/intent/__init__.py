@@ -3,6 +3,7 @@
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.entry_intent import EntryIntentResult, EntryOrientation
 from archium.domain.intent.idea_seed import IdeaSeed
+from archium.domain.intent.intent_evidence import IntentEvidence, IntentEvidenceSourceType
 from archium.domain.intent.intent_evolution import (
     IntentEvolution,
     IntentEvolutionEvent,
@@ -16,6 +17,8 @@ __all__ = [
     "EntryIntentResult",
     "EntryOrientation",
     "IdeaSeed",
+    "IntentEvidence",
+    "IntentEvidenceSourceType",
     "IntentEvolution",
     "IntentEvolutionEvent",
     "IntentEvolutionKind",

@@ -822,6 +822,16 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
                 st.markdown("**工作假设（待确认）**")
                 for item in intent.working_assumptions:
                     st.markdown(f"- {item}")
+            if intent.evidence:
+                st.markdown("**意图出处**")
+                for entry in intent.evidence[-10:]:
+                    conf = int(round(entry.confidence * 100))
+                    materials = ""
+                    if entry.supporting_materials:
+                        materials = " · " + "；".join(entry.supporting_materials[:2])
+                    st.caption(
+                        f"[{entry.source_label()} {conf}%] {entry.statement}{materials}"
+                    )
             _render_concept_direction_section(mission, key_prefix=key_prefix)
             if research_topics:
                 _render_autonomous_research_section(mission, key_prefix=key_prefix)
@@ -1013,6 +1023,7 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
                 core_questions=_lines_to_list(intent_core_q),
                 research_needed=_lines_to_list(intent_research),
                 working_assumptions=_lines_to_list(intent_assumptions),
+                evidence=list(intent.evidence),
             ),
             current_situation=current_situation.strip() or None,
             primary_problems=_lines_to_list(primary_problems),

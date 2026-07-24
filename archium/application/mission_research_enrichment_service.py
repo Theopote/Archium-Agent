@@ -120,6 +120,7 @@ class MissionResearchEnrichmentService:
         else:
             mission = self._append_research_block(mission, pending)
 
+        mission = self._merge_research_evidence(mission, pending)
         self._mark_enriched(mission_id, [item.id for item in pending])
         self._history.record_snapshot(
             mission,
@@ -226,6 +227,25 @@ class MissionResearchEnrichmentService:
         return self._mission_service.update_mission(
             mission.id,
             MissionPatch(project_context=merged),
+        )
+
+    def _merge_research_evidence(
+        self,
+        mission: ProjectMission,
+        items: list[ProjectKnowledgeItem],
+    ) -> ProjectMission:
+        from archium.application.intent_evidence_helpers import evidence_from_research_item
+        from archium.domain.intent.design_intent import DesignIntent
+
+        intent = mission.design_intent or DesignIntent()
+        updated = intent.with_evidence(
+            *[evidence_from_research_item(item) for item in items]
+        )
+        if updated.evidence == intent.evidence:
+            return mission
+        return self._mission_service.update_mission(
+            mission.id,
+            MissionPatch(design_intent=updated),
         )
 
     @staticmethod
