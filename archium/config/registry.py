@@ -157,6 +157,7 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "web_research_timeout_seconds": ConfigDomain.RETRIEVAL,
     "web_research_auto_on_concept_planning": ConfigDomain.RETRIEVAL,
     "vision_image_generation_enabled": ConfigDomain.VISUAL,
+    "vision_auto_fulfill_image_requests": ConfigDomain.VISUAL,
     "vision_image_generation_provider": ConfigDomain.VISUAL,
     "vision_image_generation_model": ConfigDomain.VISUAL,
     "vision_image_generation_api_key": ConfigDomain.VISUAL,

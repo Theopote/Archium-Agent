@@ -211,6 +211,13 @@ class Settings(BaseSettings):
             "(openai_compatible | local_sd | comfyui). When false or unavailable, uses Pillow stub."
         ),
     )
+    vision_auto_fulfill_image_requests: bool = Field(
+        default=True,
+        description=(
+            "When true and vision_image_generation_enabled, Visual workflow fulfills "
+            "VisualIntent.image_request into an illustrative Asset when hero_asset_id is empty."
+        ),
+    )
     vision_image_generation_provider: str = Field(
         default="stub",
         description=(

@@ -40,8 +40,10 @@ from archium.domain.visual.vision_generation import (
     VisionGenerationResult,
     VisionInputEvaluation,
 )
+from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import AssetRepository
+from archium.infrastructure.database.visual_repositories import VisualIntentRepository
 from archium.infrastructure.storage.local_storage import LocalProjectStorage
 from archium.infrastructure.vision_gen.base import (
     GeneratedImageBytes,
@@ -341,6 +343,49 @@ class VisionImageGenerationService:
             project_id=project_id,
             persist_asset=persist_asset,
         )
+
+    def fulfill_intent_image_request(
+        self,
+        intent: VisualIntent,
+        *,
+        project_id: UUID,
+        slide_title: str = "",
+        slide_message: str = "",
+        page_archetype: str = "",
+        persist: bool = True,
+    ) -> tuple[VisualIntent, list[str]]:
+        """Fulfill ``image_request`` into an illustrative Asset when hero is empty.
+
+        Non-blocking: generation failures become warnings; never claims evidence.
+        """
+        warnings: list[str] = []
+        if intent.image_request is None or intent.hero_asset_id is not None:
+            return intent, warnings
+        if not self._settings.vision_image_generation_enabled:
+            return intent, warnings
+        if not self._settings.vision_auto_fulfill_image_requests:
+            return intent, warnings
+
+        archetype = page_archetype
+        if not archetype and intent.page_archetype is not None:
+            archetype = intent.page_archetype.value
+
+        result = self.generate_for_intent(
+            request=intent.image_request,
+            project_id=project_id,
+            slide_title=slide_title,
+            slide_message=slide_message,
+            page_archetype=archetype,
+            persist_asset=True,
+        )
+        if not result.success or result.asset_id is None:
+            warnings.append(result.error or "示意出图失败，已保留 image_request。")
+            return intent, warnings
+
+        updated = intent.model_copy(update={"hero_asset_id": result.asset_id})
+        if persist and self._session is not None:
+            updated = VisualIntentRepository(self._session).save(updated)
+        return updated, warnings
 
     def _persist(
         self,

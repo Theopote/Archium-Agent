@@ -35,6 +35,7 @@ from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.visual.visual_scene_repair_workflow_service import (
     VisualSceneRepairWorkflowService,
 )
+from archium.application.visual.vision import VisionImageGenerationService
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import (
@@ -104,6 +105,7 @@ class VisualWorkflowRuntime:
         self.layout_plans = LayoutPlanRepository(session)
         self.art_direction_service = ArtDirectionService(session, llm=llm)
         self.visual_intent_service = VisualIntentService(session, llm=llm)
+        self.vision_image_service = VisionImageGenerationService(session, settings=settings)
         self.layout_planning_service = LayoutPlanningService(
             session, llm=llm, settings=settings
         )
@@ -400,8 +402,10 @@ class VisualWorkflowNodes:
             briefs_by_slide_id, briefs_by_order = self._load_design_briefs(
                 UUID(str(state["presentation_id"]))
             )
+            project_id = UUID(str(state["project_id"]))
             intent_ids: list[str] = []
             updated_slides = []
+            fulfill_warnings: list[str] = []
             for index, slide in enumerate(slides):
                 previous = slides[index - 1] if index > 0 else None
                 nxt = slides[index + 1] if index + 1 < len(slides) else None
@@ -414,6 +418,25 @@ class VisualWorkflowNodes:
                     design_brief=brief,
                     use_llm=bool(state.get("use_llm", False)),
                 )
+                intent, image_warnings = (
+                    self._runtime.vision_image_service.fulfill_intent_image_request(
+                        intent,
+                        project_id=project_id,
+                        slide_title=slide.title or "",
+                        slide_message=slide.message or "",
+                        page_archetype=(
+                            intent.page_archetype.value
+                            if intent.page_archetype is not None
+                            else (
+                                slide.page_archetype.value
+                                if slide.page_archetype is not None
+                                else ""
+                            )
+                        ),
+                    )
+                )
+                for item in image_warnings:
+                    fulfill_warnings.append(f"slide {slide.order}: {item}")
                 slide.visual_intent_id = intent.id
                 self._runtime.presentations.save_slide(slide)
                 intent_ids.append(str(intent.id))
@@ -424,6 +447,8 @@ class VisualWorkflowNodes:
                 "visual_intent_ids": intent_ids,
                 "current_step": step,
             }
+            if fulfill_warnings:
+                next_state["warnings"] = fulfill_warnings
             merged = cast(VisualWorkflowState, {**state, **next_state})
             self._persist(merged)
             logger.info("Generated %s visual intents", len(intent_ids))
