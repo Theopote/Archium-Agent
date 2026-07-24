@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -27,8 +28,29 @@ from archium.infrastructure.renderers.pptxgen_cli import PptxGenCliRunner
 from archium.infrastructure.renderers.presentation_spec_builder import build_presentation_spec
 
 
+class FallbackImageResolver(Protocol):
+    """Application-provided port for stock/diagram fallback image resolution."""
+
+    def __call__(
+        self,
+        project_id: UUID,
+        slides: list[SlideSpec],
+        *,
+        output_dir: Path,
+        base_paths: dict[UUID, Path],
+        facts: list[ProjectFact],
+    ) -> dict[tuple[UUID, int], FallbackImage]: ...
+
+
+ContentRefPathResolver = Callable[[UUID, list[str]], dict[str, str]]
+
+
 class PptxGenPresentationRenderer:
-    """Export PresentationSpec (legacy) or LayoutPlan instructions to editable PPTX."""
+    """Export PresentationSpec (legacy) or LayoutPlan instructions to editable PPTX.
+
+    Application services (fallback images, asset-reference path maps) are injected
+    via ports — this renderer must not import ``archium.application``.
+    """
 
     def __init__(
         self,
@@ -36,11 +58,15 @@ class PptxGenPresentationRenderer:
         *,
         session: Session | None = None,
         theme: str = "architecture-board",
+        fallback_image_resolver: FallbackImageResolver | None = None,
+        content_ref_path_resolver: ContentRefPathResolver | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._session = session
         self._theme = theme
         self._cli = PptxGenCliRunner(self._settings)
+        self._fallback_image_resolver = fallback_image_resolver
+        self._content_ref_path_resolver = content_ref_path_resolver
 
     def is_available(self) -> bool:
         """Delegate to the Node/pptxgenjs CLI runtime check."""
@@ -68,22 +94,8 @@ class PptxGenPresentationRenderer:
         asset_paths = self._resolve_asset_paths(project_id, slides)
         facts = self._resolve_project_facts(project_id)
         fallback_images: dict[tuple[UUID, int], FallbackImage] = {}
-        if self._session is not None:
-            from archium.application.image_search_settings_service import (
-                ImageSearchSettingsService,
-            )
-            from archium.application.visual_fallback_service import VisualFallbackService
-
-            image_search_preferences = ImageSearchSettingsService(self._session).get_preferences(
-                base_settings=self._settings,
-            )
-            fallback_images = VisualFallbackService(
-                self._session,
-                settings=self._settings,
-                pexels_session_api_key=_resolve_pexels_session_api_key(),
-                unsplash_session_api_key=_resolve_unsplash_session_api_key(),
-                image_search_preferences=image_search_preferences,
-            ).resolve_export_images(
+        if self._fallback_image_resolver is not None:
+            fallback_images = self._fallback_image_resolver(
                 project_id,
                 slides,
                 output_dir=output_dir,
@@ -91,7 +103,7 @@ class PptxGenPresentationRenderer:
                 facts=facts,
             )
             # DB-007 / DB-005: infrastructure must not own transactions.
-            if self._session.new:
+            if self._session is not None and self._session.new:
                 self._session.flush()
         return build_presentation_spec(
             presentation_id=presentation_id,
@@ -192,24 +204,17 @@ class PptxGenPresentationRenderer:
                         resolved = self._resolve_single_asset_path(project_id, uuid_ref)
                         if resolved is not None:
                             asset_paths[ref] = str(resolved.resolve())
-            # Resolve non-UUID refs (e.g. icon:pedestrian_flow) via shared
-            # asset-reference context so LayoutPlan PPTX export can render them.
-            if self._session is not None:
-                from archium.application.visual.asset_reference import (
-                    build_asset_reference_context,
-                    content_refs_from_plan,
-                )
-
+            # Resolve non-UUID refs (e.g. icon:pedestrian_flow) via injected
+            # asset-reference port so LayoutPlan PPTX export can render them.
+            if self._content_ref_path_resolver is not None:
                 refs: list[str] = []
                 for plan in plans:
-                    refs.extend(content_refs_from_plan(plan))
-                context = build_asset_reference_context(
-                    self._session,
-                    project_id=project_id,
-                    content_refs=refs,
-                    settings=self._settings,
-                )
-                for ref, resolved_path in context.resolved_paths.items():
+                    refs.extend(
+                        el.content_ref for el in plan.elements if el.content_ref
+                    )
+                for ref, resolved_path in self._content_ref_path_resolver(
+                    project_id, refs
+                ).items():
                     asset_paths.setdefault(ref, resolved_path)
 
         adapter = PptxLayoutPlanAdapter()
@@ -339,21 +344,3 @@ class PptxGenPresentationRenderer:
         if self._session is None:
             return []
         return FactRepository(self._session).list_by_project(project_id)
-
-
-def _resolve_pexels_session_api_key() -> str | None:
-    try:
-        import streamlit as st
-    except ImportError:
-        return None
-    value = st.session_state.get("pexels_session_api_key")
-    return value if isinstance(value, str) and value else None
-
-
-def _resolve_unsplash_session_api_key() -> str | None:
-    try:
-        import streamlit as st
-    except ImportError:
-        return None
-    value = st.session_state.get("unsplash_session_api_key")
-    return value if isinstance(value, str) and value else None

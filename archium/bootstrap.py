@@ -30,13 +30,18 @@ def bootstrap_runtime(*, settings: Settings | None = None) -> Settings:
     repeated calls: settings are cached; ``init_database`` is additive.
     """
     load_environment()
+    from archium.application.llm_settings_resolver import get_effective_settings
     from archium.config.settings import get_settings
     from archium.infrastructure.database.session import init_database
+    from archium.infrastructure.llm.factory import set_effective_settings_provider
     from archium.logging import setup_logging
 
     resolved = settings or get_settings()
     setup_logging(resolved)
     init_database()
+    # Composition root: bare create_llm_provider() resolves profiles without
+    # infrastructure importing application.
+    set_effective_settings_provider(get_effective_settings)
     return resolved
 
 
@@ -64,6 +69,10 @@ def create_application() -> None:
     close_scoped_session()
     if not st.session_state.get("_archium_initialized"):
         bootstrap_runtime()
+        from archium.infrastructure.llm.factory import set_effective_settings_provider
+        from archium.ui.llm_settings import get_ui_effective_settings
+
+        set_effective_settings_provider(get_ui_effective_settings)
         st.session_state._archium_initialized = True
 
     inject_styles()

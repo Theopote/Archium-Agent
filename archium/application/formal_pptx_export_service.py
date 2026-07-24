@@ -53,10 +53,10 @@ class FormalPptxExportService:
             allow_legacy_spec_fallback = (
                 self._settings.allow_legacy_presentation_spec_pptx_fallback
             )
+        from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer
         from archium.application.visual.layout_readiness import presentation_has_visual_layout
         from archium.application.visual.studio_scene_service import StudioSceneService
         from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
-        from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 
         presentation = self._presentations.get_presentation(presentation_id)
         if presentation is None:
@@ -85,7 +85,7 @@ class FormalPptxExportService:
                     slide = slides_by_id.get(result.scene.slide_id)
                     notes = slide.speaker_notes if slide is not None else None
                     ordered_scenes.append((result.scene, notes or None))
-                legacy = PptxGenPresentationRenderer(
+                legacy = create_pptxgen_renderer(
                     self._settings, session=self._session
                 )
                 output_dir = legacy.output_dir(presentation_id, version=brief.version)
@@ -118,7 +118,7 @@ class FormalPptxExportService:
         if storyline is None or not slides:
             raise WorkflowError("Brief/storyline/slides required for legacy Spec PPTX fallback")
 
-        pptxgen = PptxGenPresentationRenderer(self._settings, session=self._session)
+        pptxgen = create_pptxgen_renderer(self._settings, session=self._session)
         spec_path = pptxgen.render(
             presentation_id=presentation_id,
             project_id=presentation.project_id,

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer
 from archium.application.render_export import export_marp_extras
 from archium.config.settings import Settings, get_settings
 from archium.domain.render import RenderResult
@@ -13,7 +14,6 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.renderers.json_renderer import JsonPresentationRenderer
 from archium.infrastructure.renderers.marp_renderer import MarpPresentationRenderer
-from archium.infrastructure.renderers.pptxgen_renderer import PptxGenPresentationRenderer
 
 
 class PresentationExportService:
@@ -25,7 +25,7 @@ class PresentationExportService:
         self._presentations = PresentationRepository(session)
         self._json = JsonPresentationRenderer(self._settings)
         self._marp = MarpPresentationRenderer(self._settings)
-        self._pptxgen = PptxGenPresentationRenderer(self._settings, session=session)
+        self._pptxgen = create_pptxgen_renderer(self._settings, session=session)
 
     def reexport(
         self,
@@ -91,11 +91,9 @@ class PresentationExportService:
             result.warnings.extend(formal.warnings)
             if result.spec_path is None and not formal.is_formal:
                 # Legacy Spec PPTX still wrote presentation.spec.json beside the deck.
-                from archium.infrastructure.renderers.pptxgen_renderer import (
-                    PptxGenPresentationRenderer,
-                )
+                from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer
 
-                out = PptxGenPresentationRenderer(
+                out = create_pptxgen_renderer(
                     self._settings, session=self._session
                 ).output_dir(presentation_id, version=version)
                 candidate = out / "presentation.spec.json"

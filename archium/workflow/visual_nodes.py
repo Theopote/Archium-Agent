@@ -10,6 +10,7 @@ from uuid import UUID
 from langgraph.types import interrupt
 from sqlalchemy.orm import Session
 
+from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer
 from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.application.visual.asset_reference import (
     AssetReferenceContext,
@@ -120,7 +121,7 @@ class VisualWorkflowRuntime:
             settings=settings,
             scene_repair=SceneRepairService(),
         )
-        self.pptxgen_renderer = pptxgen_renderer or PptxGenPresentationRenderer(
+        self.pptxgen_renderer = pptxgen_renderer or create_pptxgen_renderer(
             settings, session=session
         )
 

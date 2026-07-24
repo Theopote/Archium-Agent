@@ -123,7 +123,7 @@ class PptxRenderer:
             for scene, notes in scenes
         ]
         if enforce_capability_contract:
-            from archium.application.powerpoint_contract_service import PowerPointContractService
+            from archium.domain.powerpoint_contract import PowerPointContractService
 
             contracts = PowerPointContractService()
             chart_mode = (

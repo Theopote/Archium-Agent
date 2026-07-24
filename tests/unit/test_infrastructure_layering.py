@@ -1,37 +1,41 @@
-"""Guard: infrastructure must not import relocated application helpers."""
+"""Guard: infrastructure must not import application (layering phase-1/2)."""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-# Modules moved in layering phase-one — infrastructure must use domain/infra paths.
-_FORBIDDEN_HELPERS = re.compile(
-    r"^\s*(?:from|import)\s+archium\.application\.(?:"
-    r"visual\.(?:"
-    r"icon_stroke_resolve|text_style_resolve|icon_usage|"
-    r"placeholder_binding_normalize|visual_grammar_assets|"
-    r"drawing_inference_service|svg_icon_recolor|asset_path_resolver|"
-    r"induction_screenshot_embedding|scene_fonts|"
-    r"vision\.lora_pack_service"
-    r")|"
-    r"visual_qa_calibration"
-    r")\b"
-)
+_APPLICATION_IMPORT = re.compile(r"^\s*(?:from|import)\s+archium\.application\b")
+_UI_IMPORT = re.compile(r"^\s*(?:from|import)\s+archium\.ui\b")
 
 
-def test_infrastructure_does_not_import_relocated_helpers() -> None:
+def test_infrastructure_does_not_import_application() -> None:
     root = Path(__file__).resolve().parents[2] / "archium" / "infrastructure"
     package_root = root.parent.parent
     hits: list[str] = []
     for path in root.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
-        for match in _FORBIDDEN_HELPERS.finditer(text):
+        for match in _APPLICATION_IMPORT.finditer(text):
             line_no = text.count("\n", 0, match.start()) + 1
             hits.append(
                 f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
             )
     assert hits == [], (
-        "infrastructure must not import relocated application helpers "
-        "(use domain/visual or infrastructure.*):\n" + "\n".join(hits)
+        "infrastructure must not import archium.application "
+        "(inject ports from application/workflow composition roots):\n"
+        + "\n".join(hits)
     )
+
+
+def test_infrastructure_does_not_import_ui() -> None:
+    root = Path(__file__).resolve().parents[2] / "archium" / "infrastructure"
+    package_root = root.parent.parent
+    hits: list[str] = []
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for match in _UI_IMPORT.finditer(text):
+            line_no = text.count("\n", 0, match.start()) + 1
+            hits.append(
+                f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
+            )
+    assert hits == [], "infrastructure must not import archium.ui:\n" + "\n".join(hits)

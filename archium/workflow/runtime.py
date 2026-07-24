@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer
 from archium.application.presentation_service import PresentationService
 from archium.config.settings import Settings, get_settings
 from archium.infrastructure.database.repositories import WorkflowRunRepository
@@ -56,5 +57,5 @@ class PresentationWorkflowRuntime:
             json_renderer=renderer or JsonPresentationRenderer(resolved_settings),
             marp_renderer=marp_renderer or MarpPresentationRenderer(resolved_settings),
             pptxgen_renderer=pptxgen_renderer
-            or PptxGenPresentationRenderer(resolved_settings, session=session),
+            or create_pptxgen_renderer(resolved_settings, session=session),
         )

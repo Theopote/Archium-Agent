@@ -48,10 +48,10 @@ Studio 的编辑闭环不是直接覆写导出文件：
 
 | 层 | 目录 | 职责 |
 |---|---|---|
-| 领域模型 | `archium/domain/` | Pydantic 模型、枚举、不变量；视觉模型在 `domain/visual/`；**不**依赖 application / infrastructure / UI。自然语言解析器位于 `application/visual/`，domain 仅保留 `ParsedIntent` 等 DTO。纯视觉策略（字体族名、icon usage、text style resolve、drawing inference 等）亦在 `domain/visual/` |
-| 应用服务 | `archium/application/` | 用例编排、审核、版本、导出、视觉编辑和修复；**不**依赖 `archium.ui`（版式就绪判断见 `visual/layout_readiness.py`）。共享 planner 辅助在 `application/_helpers`；有效 LLM 设置解析在 `application/llm_settings_resolver` |
+| 领域模型 | `archium/domain/` | Pydantic 模型、枚举、不变量；视觉模型在 `domain/visual/`；**不**依赖 application / infrastructure / UI。自然语言解析器位于 `application/visual/`，domain 仅保留 `ParsedIntent` 等 DTO。纯视觉策略（字体族名、icon usage、text style resolve、drawing inference 等）与 PowerPoint 导出门控（`domain/powerpoint_contract`）亦在 domain |
+| 应用服务 | `archium/application/` | 用例编排、审核、版本、导出、视觉编辑和修复；**不**依赖 `archium.ui`（版式就绪判断见 `visual/layout_readiness.py`）。共享 planner 辅助在 `application/_helpers`；有效 LLM 设置解析在 `application/llm_settings_resolver`；PptxGen 端口接线在 `pptxgen_renderer_factory` |
 | 工作流 | `archium/workflow/` | Planning、Presentation、Visual 的可暂停流程；审批门与 `require_*_review` 标志一致；成果选择变更会使 DeliverablePlan 审批失效；工作路径选择变更同样会使下游计划审批失效；Storyline 优先通过 PlanningSession 绑定 Mission 叙事模式 |
-| 基础设施 | `archium/infrastructure/` | 数据库、解析、LLM、检索、布局、渲染、存储、视觉分析；Repository 封装 ORM，Application 不直接 import `models`。渲染/解析用的 I/O 辅助（`svg_icon_recolor`、`asset_path_resolver`、scene font probe）放在本层，不得反向依赖 application 用例服务（剩余服务注入见后续分层修复）。事实冲突组仅在检测到真实冲突时写入（alias:/key:/empty:），不同指标（如用地/建面）不共享 catalog 冲突组 |
+| 基础设施 | `archium/infrastructure/` | 数据库、解析、LLM、检索、布局、渲染、存储、视觉分析；Repository 封装 ORM，Application 不直接 import `models`。渲染/解析用的 I/O 辅助（`svg_icon_recolor`、`asset_path_resolver`、scene font probe）放在本层；**不得** import `archium.application` / `archium.ui`（fallback / asset-ref 经 factory 注入；LLM 有效设置经 composition root `set_effective_settings_provider`）。事实冲突组仅在检测到真实冲突时写入（alias:/key:/empty:），不同指标（如用地/建面）不共享 catalog 冲突组 |
 | UI | `archium/ui/` | Streamlit 页面、Studio 面板和 canvas component。产品主路径为五段式 `materials → outline → generate → edit → deliver`；`edit` 嵌入 Studio。Studio 选区统一经 `set_studio_selection` 同步单选/多选 key。 |
 | Agents/Prompts | `archium/agents/`、`archium/prompts/` | 结构化生成与提示词；不是全部业务逻辑所在层 |
 | 配置 | `archium/config/` | **仅** Settings / registry；不打开 DB、不解析 keyring、不 import application/infrastructure |
