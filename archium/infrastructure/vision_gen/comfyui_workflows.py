@@ -6,7 +6,7 @@ import json
 import re
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 _PLACEHOLDER_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
 
@@ -68,7 +68,7 @@ def render_custom_workflow(
 ) -> dict[str, Any]:
     """Load custom API workflow and substitute Archium placeholders."""
     graph = load_workflow_api_json(path)
-    return substitute_placeholders(deepcopy(graph), values)
+    return cast(dict[str, Any], substitute_placeholders(deepcopy(graph), values))
 
 
 def apply_lora_to_checkpoint_graph(

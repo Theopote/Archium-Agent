@@ -59,19 +59,19 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "show":
-        status = service.get_pack(args.pack_id)
-        if status is None:
+        pack = service.get_pack(args.pack_id)
+        if pack is None:
             print(f"pack not found: {args.pack_id}", file=sys.stderr)
             return 1
         print(
             json.dumps(
                 {
-                    "manifest": status.manifest.model_dump(mode="json"),
-                    "pack_dir": status.pack_dir,
-                    "weights_present": status.weights_present,
-                    "weights_missing": status.weights_missing,
-                    "ready": status.ready,
-                    "installed_to_comfy": status.installed_to_comfy,
+                    "manifest": pack.manifest.model_dump(mode="json"),
+                    "pack_dir": pack.pack_dir,
+                    "weights_present": pack.weights_present,
+                    "weights_missing": pack.weights_missing,
+                    "ready": pack.ready,
+                    "installed_to_comfy": pack.installed_to_comfy,
                 },
                 ensure_ascii=False,
                 indent=2,

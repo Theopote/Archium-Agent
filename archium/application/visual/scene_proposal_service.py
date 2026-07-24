@@ -610,7 +610,7 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
         from archium.domain.visual.render_scene import RenderNode as RenderNodeUnion
 
         try:
-            cloned = TypeAdapter(RenderNodeUnion).validate_python(payload)
+            cloned: RenderNodeUnion = TypeAdapter(RenderNodeUnion).validate_python(payload)
         except Exception:
             return
         scene.nodes = list(scene.nodes) + [cloned]

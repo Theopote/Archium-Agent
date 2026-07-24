@@ -25,34 +25,34 @@ def build_vision_image_generator(settings: Settings | None = None) -> VisionImag
     provider = (cfg.vision_image_generation_provider or "stub").strip().lower()
 
     if provider == "comfyui":
-        candidate = ComfyUiVisionImageGenerator(cfg)
-        if candidate.is_available():
+        comfy = ComfyUiVisionImageGenerator(cfg)
+        if comfy.is_available():
             logger.info(
                 "Vision Engine using comfyui base=%s checkpoint=%s",
-                candidate.base_url,
-                candidate.model,
+                comfy.base_url,
+                comfy.model,
             )
-            return candidate
+            return comfy
         logger.info("Vision Engine comfyui unavailable; falling back to stub")
         return StubVisionImageGenerator()
 
     if provider in _LOCAL_SD_ALIASES:
-        candidate = LocalSdVisionImageGenerator(cfg)
-        if candidate.is_available():
+        local_sd = LocalSdVisionImageGenerator(cfg)
+        if local_sd.is_available():
             logger.info(
                 "Vision Engine using local_sd base=%s model=%s",
-                candidate.base_url,
-                candidate.model,
+                local_sd.base_url,
+                local_sd.model,
             )
-            return candidate
+            return local_sd
         logger.info("Vision Engine local_sd unavailable; falling back to stub")
         return StubVisionImageGenerator()
 
     if provider == "openai_compatible":
-        candidate = OpenAICompatibleVisionImageGenerator(cfg)
-        if candidate.is_available():
-            logger.info("Vision Engine using openai_compatible model=%s", candidate.model)
-            return candidate
+        openai_compat = OpenAICompatibleVisionImageGenerator(cfg)
+        if openai_compat.is_available():
+            logger.info("Vision Engine using openai_compatible model=%s", openai_compat.model)
+            return openai_compat
         logger.info("Vision Engine openai_compatible unavailable; falling back to stub")
 
     return StubVisionImageGenerator()

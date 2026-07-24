@@ -15,7 +15,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.citation import Citation
 from archium.domain.document import DocumentChunk
 from archium.domain.enums import VerificationStatus
-from archium.domain.fact import ProjectFact
+from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.fact_ledger import STANDARD_FACT_KEYS
 from archium.infrastructure.database.repositories import FactRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -292,12 +292,12 @@ class FactExtractionService:
 
 def _merge_alternate_values(
     *,
-    primary: object,
-    candidates: list[object],
-) -> list[object]:
+    primary: FactValue,
+    candidates: list[FactValue],
+) -> list[FactValue]:
     """Deduplicate alternate values relative to the primary fact value."""
     primary_norm = _normalize_value(primary)
-    merged: list[object] = []
+    merged: list[FactValue] = []
     seen = {primary_norm}
     for candidate in candidates:
         token = _normalize_value(candidate)

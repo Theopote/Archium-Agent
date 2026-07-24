@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
+from typing import cast
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
@@ -237,7 +239,10 @@ class VisionImageGenerationService:
         ):
             cues = tuple(
                 str(item)
-                for item in (spec.metadata.get("overlay_cues") or request.overlay_cues or [])
+                for item in cast(
+                    Sequence[object],
+                    spec.metadata.get("overlay_cues") or request.overlay_cues or (),
+                )
                 if str(item).strip()
             )
             data = self._composer.compose(
@@ -273,7 +278,10 @@ class VisionImageGenerationService:
         edit_fn = getattr(self._generator, "edit", None)
         if callable(edit_fn) and self._generator.is_available():
             try:
-                return edit_fn(spec, base_image_path=request.base_image_path)
+                return cast(
+                    GeneratedImageBytes,
+                    edit_fn(spec, base_image_path=request.base_image_path),
+                )
             except Exception as exc:
                 logger.info("Provider image edit unavailable, using local editor: %s", exc)
 
@@ -281,7 +289,10 @@ class VisionImageGenerationService:
             return None
         cues = tuple(
             str(item)
-            for item in (spec.metadata.get("overlay_cues") or request.overlay_cues or [])
+            for item in cast(
+                Sequence[object],
+                spec.metadata.get("overlay_cues") or request.overlay_cues or (),
+            )
             if str(item).strip()
         )
         data = self._editor.edit(

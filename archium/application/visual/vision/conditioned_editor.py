@@ -9,8 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from archium.domain.visual.vision_generation import VisionGenerationMode, VisionStylePreset
+
+if TYPE_CHECKING:
+    from PIL.Image import Image as PilImage
 
 
 @dataclass(frozen=True)
@@ -146,7 +150,7 @@ def soft_harmonize_png(data: bytes) -> bytes:
     return buffer.getvalue()
 
 
-def _fit_cover(image: object, width: int, height: int) -> object:
+def _fit_cover(image: PilImage, width: int, height: int) -> PilImage:
     from PIL import Image
 
     assert isinstance(image, Image.Image)

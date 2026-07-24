@@ -49,6 +49,8 @@ from archium.domain.slide_design_brief import (
     coerce_brief_approval_status,
 )
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.visual.layout_family_normalize import coerce_layout_family
+from archium.domain.visual.visual_grammar import coerce_page_archetype
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
@@ -530,7 +532,7 @@ def _slide_intent_from_update(update: SlideIntentUpdate) -> SlideIntent:
         required_assets=[item.strip() for item in update.required_assets if item.strip()],
         forbidden_content=[item.strip() for item in update.forbidden_content if item.strip()],
         expected_layout=update.expected_layout.strip(),
-        page_archetype=update.page_archetype,
+        page_archetype=coerce_page_archetype(update.page_archetype),
         notes=update.notes.strip(),
     )
 
@@ -579,9 +581,9 @@ def _slide_design_brief_from_update(update: SlideDesignBriefUpdate) -> SlideDesi
         primary_asset_ids=list(update.primary_asset_ids),
         supporting_asset_ids=list(update.supporting_asset_ids),
         evidence_ids=list(update.evidence_ids),
-        layout_family=update.layout_family,
+        layout_family=coerce_layout_family(update.layout_family),
         expected_density=density,  # type: ignore[arg-type]
-        page_archetype=update.page_archetype,
+        page_archetype=coerce_page_archetype(update.page_archetype),
         drawing_policy=drawing_policy,
         image_policy=image_policy,
         required_content=[item.strip() for item in update.required_content if item.strip()],

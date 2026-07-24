@@ -216,15 +216,15 @@ def parse_canvas_editor_event(value: object) -> CanvasEditorEvent:
         if event_type == "select":
             element_id = value.get("elementId")
             raw_ids = value.get("elementIds")
-            element_ids: list[str] = []
+            selected_ids: list[str] = []
             if isinstance(raw_ids, list):
-                element_ids = [str(item) for item in raw_ids if item]
+                selected_ids = [str(item) for item in raw_ids if item]
             elif element_id:
-                element_ids = [str(element_id)]
+                selected_ids = [str(element_id)]
             return CanvasSelectEvent(
                 type="select",
                 elementId=str(element_id) if element_id else None,
-                elementIds=element_ids,
+                elementIds=selected_ids,
             )
     return None
 

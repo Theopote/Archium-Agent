@@ -59,7 +59,6 @@ def command_target_node_ids(command: StudioCommand) -> set[str]:
             MoveNodeCommand,
             ResizeNodeCommand,
             DeleteNodeCommand,
-            DuplicateNodesCommand,
             ReorderNodeCommand,
             SetNodeLockCommand,
             SetNodeVisibilityCommand,

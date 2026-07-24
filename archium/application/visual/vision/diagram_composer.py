@@ -8,8 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from archium.domain.visual.vision_generation import ArchitectureImageType
+
+if TYPE_CHECKING:
+    from PIL.Image import Image as PilImage
+    from PIL.ImageDraw import ImageDraw as PilImageDraw
 
 
 @dataclass(frozen=True)
@@ -147,7 +152,7 @@ class VisionDiagramComposer:
         return buffer.getvalue()
 
 
-def _fit_contain(image: object, width: int, height: int) -> object:
+def _fit_contain(image: PilImage, width: int, height: int) -> PilImage:
     from PIL import Image
 
     assert isinstance(image, Image.Image)
@@ -158,7 +163,7 @@ def _fit_contain(image: object, width: int, height: int) -> object:
 
 
 def _draw_arrow_head(
-    draw: object,
+    draw: PilImageDraw,
     x: int,
     y: int,
     *,

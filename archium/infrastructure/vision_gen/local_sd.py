@@ -11,7 +11,7 @@ import json
 from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -144,7 +144,7 @@ class LocalSdVisionImageGenerator:
         if strength is None:
             strength = self._settings.vision_local_sd_denoising_strength
         try:
-            denoising = float(strength)
+            denoising = float(cast(Any, strength))
         except (TypeError, ValueError):
             denoising = self._settings.vision_local_sd_denoising_strength
         denoising = max(0.05, min(denoising, 1.0))

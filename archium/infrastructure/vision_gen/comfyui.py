@@ -12,7 +12,7 @@ import uuid
 from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -45,7 +45,7 @@ def _default_json_request(
         req_headers.setdefault("Content-Type", "application/json")
     request = Request(url, data=body, headers=req_headers, method=method.upper())
     with urlopen(request, timeout=timeout) as response:  # noqa: S310
-        return response.read()
+        return cast(bytes, response.read())
 
 
 def _multipart_form(fields: dict[str, str], files: dict[str, tuple[str, bytes, str]]) -> tuple[bytes, str]:
@@ -321,7 +321,7 @@ class ComfyUiVisionImageGenerator:
         if strength is None:
             strength = self._settings.vision_local_sd_denoising_strength
         try:
-            denoise = float(strength)
+            denoise = float(cast(Any, strength))
         except (TypeError, ValueError):
             denoise = self._settings.vision_local_sd_denoising_strength
         denoise = max(0.05, min(denoise, 1.0))

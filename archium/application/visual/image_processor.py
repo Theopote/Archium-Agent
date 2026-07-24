@@ -17,6 +17,7 @@ from archium.application.visual.image_source_classifier import (
     ImageSourceClassification,
     ImageSourceClassifier,
 )
+from archium.domain.asset import Asset
 from archium.domain.visual.enums import PhotoTreatment
 from archium.domain.visual.image_derivative import (
     ImageCropStrategy,
@@ -45,7 +46,7 @@ class ImageProcessor:
         self,
         *,
         path: Path | None = None,
-        asset=None,  # noqa: ANN001 — Asset | None without circular import noise
+        asset: Asset | None = None,
         filename: str | None = None,
         tags: list[str] | None = None,
         description: str | None = None,

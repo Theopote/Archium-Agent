@@ -238,10 +238,10 @@ class VisualSceneRepairWorkflowService:
                     LayoutPlanRepository,
                 )
 
-                plans = LayoutPlanRepository(self._session)
-                plan = plans.get(slide.layout_plan_id)
+                plan_repo = LayoutPlanRepository(self._session)
+                plan = plan_repo.get(slide.layout_plan_id)
                 if plan is not None:
-                    plans.save(sync_layout_geometry_from_scene(saved, plan))
+                    plan_repo.save(sync_layout_geometry_from_scene(saved, plan))
             persisted.append(saved)
 
         scene_pptx_path: str | None = None

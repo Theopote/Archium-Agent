@@ -28,6 +28,7 @@ from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.scene_change_proposal import SceneChangeProposal
 from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
+from archium.domain.visual.vision_generation import VisionGenerationResult
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.renderers.pptx_pdf import convert_pptx_to_pdf
@@ -706,7 +707,7 @@ def generate_slide_vision_illustration(
     overlay_cues: list[str] | None = None,
     generation_mode: str = "text_to_image",
     denoising_strength: float | None = None,
-) -> object:
+) -> VisionGenerationResult:
     """Compile + generate an illustrative asset; optionally bind to an image element.
 
     Always tags provenance as ``ai_generated`` / illustrative — never evidence.
@@ -802,9 +803,7 @@ def generate_slide_vision_illustration(
         slide_title=slide.title or "",
         slide_message=slide.message or "",
         page_archetype=(
-            slide.page_archetype.value
-            if getattr(slide, "page_archetype", None) is not None
-            else ""
+            slide.page_archetype.value if slide.page_archetype is not None else ""
         ),
         persist_asset=True,
     )

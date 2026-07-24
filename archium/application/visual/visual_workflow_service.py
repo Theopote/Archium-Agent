@@ -109,9 +109,21 @@ class VisualWorkflowService:
             with suppress(Exception):
                 self.close()
 
-    def _invoke_graph(self, *args: object, thread_id: str, **kwargs: object):
+    def _invoke_graph(
+        self,
+        state: VisualWorkflowState | None,
+        *,
+        thread_id: str,
+        resume: bool = False,
+        resume_value: object = True,
+    ) -> VisualWorkflowState:
         with self._checkpointer_manager.serialized_execution(thread_id):
-            return self._graph.invoke(*args, thread_id=thread_id, **kwargs)
+            return self._graph.invoke(
+                state,
+                thread_id=thread_id,
+                resume=resume,
+                resume_value=resume_value,
+            )
 
     def run(
         self,
