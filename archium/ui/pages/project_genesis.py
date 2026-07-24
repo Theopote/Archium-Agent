@@ -35,7 +35,7 @@ def render() -> None:
 
 
 def _render_concept_form() -> None:
-    st.markdown("**概念探索** — 无需上传资料，先推演概念方向，再生成设计使命。")
+    st.markdown("**概念探索** — 无需上传资料，先解读想法、推演概念方向，再生成设计使命。")
     with st.form("genesis_concept_form"):
         name = st.text_input("项目名称", placeholder="例如：黄土高原文化中心")
         idea = st.text_area(
@@ -53,18 +53,37 @@ def _render_concept_form() -> None:
                 return
             try:
                 from archium.application.exploration_service import ExplorationService
-                from archium.infrastructure.llm.mock import MockLLMProvider
+                from archium.infrastructure.llm.factory import create_llm_provider
+                from archium.ui.llm_settings import get_ui_effective_settings
+                from archium.ui.planning_service import start_exploration_session
 
+                settings = get_ui_effective_settings()
                 with get_session() as session:
                     project = ProjectManagementService(session).create_project(
                         name.strip(),
                         idea.strip(),
                         origin_mode=ProjectOriginMode.CONCEPT_EXPLORATION,
                     )
-                    ExplorationService(session, MockLLMProvider()).start_session(
-                        project.id,
-                        idea.strip(),
-                        source="genesis",
+                    if settings.llm_configured:
+                        result = start_exploration_session(
+                            session,
+                            project.id,
+                            idea.strip(),
+                            settings=settings,
+                            enrich=True,
+                        )
+                    else:
+                        result = ExplorationService(
+                            session, create_llm_provider(settings), settings=settings
+                        ).start_session(
+                            project.id,
+                            idea.strip(),
+                            source="genesis",
+                            enrich=False,
+                        )
+                for warning in result.warnings:
+                    st.session_state.setdefault("exploration_seed_warnings", []).append(
+                        warning
                     )
                 st.session_state.selected_project_id = str(project.id)
                 st.session_state.genesis_task_description = idea.strip()

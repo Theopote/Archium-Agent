@@ -8,6 +8,7 @@ from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
 from archium.domain.citation import Citation
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import (
     CULTURAL_NARRATIVE_LOGICAL_KEY,
@@ -1273,10 +1274,26 @@ def concept_direction_to_orm(
 
 
 def exploration_session_to_domain(orm: ExplorationSessionORM) -> ExplorationSession:
+    seed: IdeaSeed | None = None
+    raw_json = getattr(orm, "idea_seed_json", None)
+    if isinstance(raw_json, dict) and raw_json.get("raw_input"):
+        seed = IdeaSeed.model_validate(raw_json)
+    elif isinstance(raw_json, str) and raw_json.strip():
+        import json
+
+        try:
+            parsed = json.loads(raw_json)
+            if isinstance(parsed, dict) and parsed.get("raw_input"):
+                seed = IdeaSeed.model_validate(parsed)
+        except json.JSONDecodeError:
+            seed = None
+    if seed is None:
+        seed = IdeaSeed.from_raw(orm.idea_text or "legacy", source="legacy_backfill")
     return ExplorationSession(
         id=orm.id,
         project_id=orm.project_id,
-        idea_text=orm.idea_text,
+        idea_text=seed.raw_input,
+        idea_seed=seed,
         status=ExplorationSessionStatus(orm.status),
         selected_direction_id=orm.selected_direction_id,
         mission_id=orm.mission_id,
@@ -1291,8 +1308,10 @@ def exploration_session_to_orm(
     orm: ExplorationSessionORM | None = None,
 ) -> ExplorationSessionORM:
     target = orm or ExplorationSessionORM(id=domain.id)
+    seed = domain.idea_seed or IdeaSeed.from_raw(domain.idea_text)
     target.project_id = domain.project_id
-    target.idea_text = domain.idea_text
+    target.idea_text = seed.raw_input
+    target.idea_seed_json = seed.model_dump(mode="json")
     target.status = domain.status.value
     target.selected_direction_id = domain.selected_direction_id
     target.mission_id = domain.mission_id

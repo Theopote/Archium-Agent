@@ -1080,6 +1080,9 @@ class ExplorationSessionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
     idea_text: Mapped[str] = mapped_column(Text, nullable=False)
+    idea_seed_json: Mapped[dict[str, object] | None] = mapped_column(
+        "idea_seed", JSON, nullable=True
+    )
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="exploring")
     selected_direction_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), nullable=True

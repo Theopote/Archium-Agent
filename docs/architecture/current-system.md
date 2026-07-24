@@ -21,7 +21,7 @@
 
 ```text
 Project (origin_mode: concept | research_programming | existing)
-  -> IdeaSeed / one-line idea
+  -> IdeaSeed (structured: raw_input / theme / keywords / inspiration)
   -> ExplorationSession -> ConceptDirections -> select
   -> DesignIntent + ProjectMission (commit) + optional SourceDocument
   -> Chunk / ProjectFact / FactLedger / Asset
@@ -41,7 +41,7 @@ Project (origin_mode: concept | research_programming | existing)
 | P0/P1 | `ProjectOriginMode` 双入口、`DesignIntent`、概念模式 Planning、Genesis UI | 已落地 |
 | P2 | Autonomous Research — 联网检索 → 知识 → 写回/AI 修订 Mission → Brief/Storyline 注入；资料面板标记「已写回 Mission」 | 已落地 |
 | P2 | Research/Programming 第三入口（策划与可研 / 投资人沟通）— Genesis 第三 Tab、`RESEARCH_PROGRAMMING` 轻量 Planning | 已落地 |
-| P3 | Concept Exploration 前置 — `ExplorationSession`（IdeaSeed 字段）→ 多 `ConceptDirection` → 选定 → 合成 `DesignIntent` + `ProjectMission`；Genesis 概念入口进探索页；Mission 面板对概念模式只读已提交方向 | 已落地 |
+| P3 | Concept Exploration 前置 — `ExplorationSession` + 结构化 `IdeaSeed`（start 时 LLM 扩充）→ 多 `ConceptDirection` → 选定 → 合成 `DesignIntent` + `ProjectMission`；Genesis 概念入口进探索页；Mission 面板对概念模式只读已提交方向 | 已落地 |
 | P3 | Design Iteration — 概念方向草稿 + 选中写回 `design_intent`；Brief/Storyline/Outline/`PresentationRequest` 注入【当前概念方向】+【视觉概念简报】；Vision Engine：`VisualConceptBrief` → 概念友好页 `VisualIntent.image_request`；Visual workflow 自动 `fulfill`；Mission 进度条 + 一键预览/刷新汇报请求 | 演示闭环体验已加强 |
 | P3 | 四模式 Architectural Workspace — 已有项目 / 概念探索 / 研究策划 / 设计迭代；模式解析 + Mission/五阶段/首页 chrome | 首期已落地 |
 

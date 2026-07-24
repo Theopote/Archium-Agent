@@ -7,6 +7,8 @@ from uuid import UUID
 import streamlit as st
 
 from archium.domain.enums import ConceptDirectionStatus, ExplorationSessionStatus
+from archium.domain.exploration_session import ExplorationSession
+from archium.domain.intent.idea_seed import IdeaSeed
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
@@ -15,6 +17,7 @@ from archium.ui.error_handlers import format_user_error, report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.planning_service import (
     commit_exploration_to_mission,
+    enrich_exploration_idea_seed,
     generate_exploration_directions,
     get_latest_exploration_for_project,
     list_exploration_directions,
@@ -27,7 +30,7 @@ def render() -> None:
     """Push concept directions before ProjectMission exists."""
     render_page_header(
         "概念探索",
-        "从一句话想法推演可比较方向，选定后再生成设计使命与项目任务。",
+        "从一句话想法解读 IdeaSeed、推演可比较方向，选定后再生成设计使命与项目任务。",
     )
 
     projects = list_projects()
@@ -58,14 +61,19 @@ def render() -> None:
         st.page_link(get_app_page("project-genesis"), label="返回开始项目", icon=":material/arrow_back:")
         return
 
-    st.markdown("**初始想法（IdeaSeed）**")
-    st.write(exploration.idea_text)
+    pending_warnings = st.session_state.pop("exploration_seed_warnings", None)
+    if pending_warnings:
+        for warning in pending_warnings:
+            st.warning(warning)
+
+    _render_idea_seed(exploration)
+
     status_label = {
         ExplorationSessionStatus.EXPLORING: "探索中",
         ExplorationSessionStatus.DIRECTION_SELECTED: "已选定方向",
         ExplorationSessionStatus.COMMITTED: "已生成 Mission",
     }.get(exploration.status, exploration.status.value)
-    st.caption(f"状态：{status_label}")
+    st.caption(f"探索状态：{status_label}")
 
     if exploration.status == ExplorationSessionStatus.COMMITTED:
         st.success("已提交为项目任务。可继续完善 Mission、研究与成果。")
@@ -77,6 +85,33 @@ def render() -> None:
         return
 
     settings = get_ui_effective_settings()
+    seed = exploration.idea_seed or IdeaSeed.from_raw(exploration.idea_text)
+    if not seed.is_enriched:
+        st.info("想法尚未结构化解读。配置 LLM 后可点击下方按钮重新解读。")
+    if st.button(
+        "重新解读想法",
+        key="enrich_idea_seed",
+        use_container_width=True,
+        disabled=not settings.llm_configured,
+    ):
+        if not settings.llm_configured:
+            st.error("未配置 LLM API Key。请前往设置配置。")
+            return
+        with st.spinner("正在解读想法…"):
+            try:
+                with get_session() as session:
+                    result = enrich_exploration_idea_seed(
+                        session, exploration.id, settings=settings
+                    )
+                for warning in result.warnings:
+                    st.warning(warning)
+                st.success("已更新 IdeaSeed。")
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(report_user_error(exc))
+
     if st.button(
         "推演概念方向（2–3 个）",
         type="primary",
@@ -190,3 +225,19 @@ def render() -> None:
                 st.error(str(exc))
             except Exception as exc:
                 st.error(report_user_error(exc))
+
+
+def _render_idea_seed(exploration: ExplorationSession) -> None:
+    seed = exploration.idea_seed or IdeaSeed.from_raw(exploration.idea_text)
+    st.markdown("**想法种子（IdeaSeed）**")
+    st.write(seed.raw_input)
+    cols = st.columns(2)
+    with cols[0]:
+        if seed.theme:
+            st.markdown(f"**主题线索**：{seed.theme}")
+        if seed.inspiration:
+            st.markdown(f"**灵感**：{seed.inspiration}")
+    with cols[1]:
+        if seed.keywords:
+            st.markdown("**关键词**：" + "、".join(seed.keywords))
+        st.caption(f"想象尺度：{seed.imagination_level}")

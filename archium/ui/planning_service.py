@@ -489,13 +489,29 @@ def start_exploration_session(
     idea_text: str,
     *,
     settings: Settings | None = None,
+    enrich: bool = True,
 ):
     from archium.application.exploration_service import ExplorationService
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return ExplorationService(session, llm, settings=runtime).start_session(
-        project_id, idea_text
+        project_id, idea_text, enrich=enrich
+    )
+
+
+def enrich_exploration_idea_seed(
+    session: Session,
+    exploration_id: UUID,
+    *,
+    settings: Settings | None = None,
+):
+    from archium.application.exploration_service import ExplorationService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return ExplorationService(session, llm, settings=runtime).enrich_idea_seed(
+        exploration_id
     )
 
 

@@ -19,11 +19,13 @@ from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionBatchDraft,
     ConceptDirectionDraft,
 )
+from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
 from archium.infrastructure.llm.mission_schemas import (
     AssumptionDraft,
     DesignIntentDraft,
     MissionGenerationDraft,
 )
+from archium.prompts.concept_direction import build_exploration_direction_user_prompt
 
 
 @pytest.fixture
@@ -34,6 +36,15 @@ def concept_project(db_session):
             description="概念探索",
             origin_mode=ProjectOriginMode.CONCEPT_EXPLORATION,
         )
+    )
+
+
+def _idea_seed_draft() -> IdeaSeedDraft:
+    return IdeaSeedDraft(
+        theme="地域文化再生",
+        inspiration="人与黄土高原地貌的关系探索",
+        keywords=["自然", "窑洞", "台地", "社区"],
+        imagination_level="open",
     )
 
 
@@ -101,22 +112,77 @@ def _mission_draft() -> MissionGenerationDraft:
     )
 
 
+def test_start_session_enriches_idea_seed(db_session, concept_project) -> None:
+    llm = MagicMock()
+    llm.generate_structured.return_value = _idea_seed_draft()
+    service = ExplorationService(db_session, llm)
+
+    result = service.start_session(
+        concept_project.id,
+        "我想在黄土高原做一个文化中心",
+    )
+    seed = result.exploration.idea_seed
+    assert seed is not None
+    assert seed.raw_input == "我想在黄土高原做一个文化中心"
+    assert seed.theme == "地域文化再生"
+    assert "窑洞" in seed.keywords
+    assert seed.is_enriched
+    assert result.warnings == []
+
+
+def test_start_session_degrades_when_llm_fails(db_session, concept_project) -> None:
+    llm = MagicMock()
+    llm.generate_structured.side_effect = RuntimeError("llm down")
+    service = ExplorationService(db_session, llm)
+
+    result = service.start_session(concept_project.id, "秦岭山中的禅意文化中心")
+    assert result.exploration.idea_seed is not None
+    assert result.exploration.idea_seed.raw_input == "秦岭山中的禅意文化中心"
+    assert not result.exploration.idea_seed.is_enriched
+    assert result.warnings
+    assert "想法解读未完成" in result.warnings[0]
+
+
+def test_exploration_direction_prompt_includes_seed_keywords() -> None:
+    from archium.domain.intent.idea_seed import IdeaSeed
+
+    seed = IdeaSeed(
+        raw_input="秦岭山中的禅意文化中心",
+        theme="东方静谧",
+        inspiration="人与自然关系探索",
+        keywords=["自然", "静谧", "东方"],
+    )
+    prompt = build_exploration_direction_user_prompt(
+        project_name="禅意中心",
+        idea_text=seed.raw_input,
+        idea_seed_block=seed.to_prompt_block(),
+        count=3,
+    )
+    assert "自然" in prompt
+    assert "静谧" in prompt
+    assert "人与自然关系探索" in prompt
+
+
 def test_generate_select_commit_creates_mission_without_prior_mission(
     db_session,
     concept_project,
 ) -> None:
     llm = MagicMock()
     llm.generate_structured.side_effect = [
+        _idea_seed_draft(),
         _direction_batch(),
         _mission_draft(),
     ]
     service = ExplorationService(db_session, llm)
 
-    exploration = service.start_session(
+    started = service.start_session(
         concept_project.id,
         "我想在黄土高原做一个文化中心",
     )
+    exploration = started.exploration
     assert exploration.status == ExplorationSessionStatus.EXPLORING
+    assert exploration.idea_seed is not None
+    assert exploration.idea_seed.is_enriched
 
     generated = service.generate_directions(exploration.id, count=3)
     assert len(generated.directions) == 3
@@ -141,9 +207,6 @@ def test_generate_select_commit_creates_mission_without_prior_mission(
 
     listed = service.list_directions(exploration.id)
     assert all(item.mission_id == committed.mission.id for item in listed)
-    assert (
-        resolve_selected_concept_direction(db_session, committed.mission.id) is not None
-    )
     resolved = resolve_selected_concept_direction(db_session, committed.mission.id)
     assert resolved is not None
     assert resolved.title == "窑洞再生"
@@ -156,16 +219,16 @@ def test_resolve_selected_falls_back_to_exploration_session(
     """Before mission SELECTED rows exist, use exploration.selected_direction_id."""
     llm = MagicMock()
     llm.generate_structured.side_effect = [
+        _idea_seed_draft(),
         _direction_batch(),
         _mission_draft(),
     ]
     service = ExplorationService(db_session, llm)
-    exploration = service.start_session(concept_project.id, "一句话想法")
+    exploration = service.start_session(concept_project.id, "一句话想法").exploration
     generated = service.generate_directions(exploration.id)
     selected = service.select_direction(generated.directions[0].id)
     committed = service.commit_to_mission(exploration.id)
 
-    # Clear SELECTED statuses so bridge must fall back to exploration pointer.
     for item in service.list_directions(exploration.id):
         if item.status == ConceptDirectionStatus.SELECTED:
             item.mark_draft()
@@ -179,3 +242,19 @@ def test_resolve_selected_falls_back_to_exploration_session(
     resolved = resolve_selected_concept_direction(db_session, committed.mission.id)
     assert resolved is not None
     assert resolved.id == selected.direction.id
+
+
+def test_enrich_idea_seed_retries(db_session, concept_project) -> None:
+    llm = MagicMock()
+    llm.generate_structured.side_effect = [
+        RuntimeError("first fail"),
+        _idea_seed_draft(),
+    ]
+    service = ExplorationService(db_session, llm)
+    started = service.start_session(concept_project.id, "未来养老社区")
+    assert not started.exploration.idea_seed.is_enriched
+
+    enriched = service.enrich_idea_seed(started.exploration.id)
+    assert enriched.exploration.idea_seed is not None
+    assert enriched.exploration.idea_seed.theme == "地域文化再生"
+    assert enriched.exploration.idea_seed.is_enriched

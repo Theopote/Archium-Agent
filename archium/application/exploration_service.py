@@ -17,6 +17,7 @@ from archium.domain.enums import (
 )
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.intent.design_intent import DesignIntent
+from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.project_mission import ProjectMission
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
@@ -30,13 +31,24 @@ from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionBatchDraft,
     ConceptDirectionDraft,
 )
+from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
 from archium.prompts.concept_direction import (
     CONCEPT_DIRECTION_SYSTEM_PROMPT,
     build_exploration_direction_user_prompt,
 )
+from archium.prompts.idea_seed import (
+    IDEA_SEED_SYSTEM_PROMPT,
+    build_idea_seed_user_prompt,
+)
 
 MAX_DIRECTIONS = 3
 MIN_DIRECTIONS = 2
+
+
+@dataclass
+class ExplorationStartResult:
+    exploration: ExplorationSession
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -88,22 +100,50 @@ class ExplorationService:
         idea_text: str,
         *,
         source: str = "genesis",
-    ) -> ExplorationSession:
+        enrich: bool = True,
+    ) -> ExplorationStartResult:
         idea = idea_text.strip()
         if not idea:
             raise WorkflowError("想法不能为空")
         project = self._projects.get_by_id(project_id)
         if project is None:
             raise WorkflowError(f"Project {project_id} not found")
+
+        warnings: list[str] = []
+        if enrich:
+            seed, enrich_warnings = self._enrich_from_raw(
+                idea, project_name=project.name
+            )
+            warnings.extend(enrich_warnings)
+        else:
+            seed = IdeaSeed.from_raw(idea, source="user")
+
         exploration = ExplorationSession(
             project_id=project_id,
-            idea_text=idea,
+            idea_text=seed.raw_input,
+            idea_seed=seed,
             status=ExplorationSessionStatus.EXPLORING,
             source=source,
         )
         created = self._explorations.create(exploration)
         self._session.commit()
-        return created
+        return ExplorationStartResult(exploration=created, warnings=warnings)
+
+    def enrich_idea_seed(self, exploration_id: UUID) -> ExplorationStartResult:
+        exploration = self._require_session(exploration_id)
+        if exploration.status == ExplorationSessionStatus.COMMITTED:
+            raise WorkflowError("已提交为 Mission 的探索不能再解读想法")
+        project = self._projects.get_by_id(exploration.project_id)
+        project_name = project.name if project is not None else ""
+        seed, warnings = self._enrich_from_raw(
+            exploration.idea_text, project_name=project_name
+        )
+        exploration.idea_seed = seed
+        exploration.idea_text = seed.raw_input
+        exploration.touch()
+        updated = self._explorations.update(exploration)
+        self._session.commit()
+        return ExplorationStartResult(exploration=updated, warnings=warnings)
 
     def get_session(self, exploration_id: UUID) -> ExplorationSession | None:
         return self._explorations.get(exploration_id)
@@ -144,12 +184,14 @@ class ExplorationService:
                     existing.archive()
                     self._directions.update(existing)
 
+        seed = exploration.idea_seed or IdeaSeed.from_raw(exploration.idea_text)
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=CONCEPT_DIRECTION_SYSTEM_PROMPT,
                 user_prompt=build_exploration_direction_user_prompt(
                     project_name=project.name,
-                    idea_text=exploration.idea_text,
+                    idea_text=seed.raw_input,
+                    idea_seed_block=seed.to_prompt_block(),
                     count=target_count,
                 ),
                 temperature=0.5,
@@ -265,6 +307,44 @@ class ExplorationService:
             direction=refreshed,
         )
 
+    def _enrich_from_raw(
+        self,
+        raw_input: str,
+        *,
+        project_name: str = "",
+    ) -> tuple[IdeaSeed, list[str]]:
+        warnings: list[str] = []
+        try:
+            draft = self._llm.generate_structured(
+                LLMRequest(
+                    system_prompt=IDEA_SEED_SYSTEM_PROMPT,
+                    user_prompt=build_idea_seed_user_prompt(
+                        raw_input=raw_input,
+                        project_name=project_name,
+                    ),
+                    temperature=0.4,
+                    json_mode=True,
+                ),
+                IdeaSeedDraft,
+            )
+            level = (draft.imagination_level or "open").strip().lower()
+            if level not in {"open", "grounded", "speculative"}:
+                level = "open"
+            seed = IdeaSeed(
+                raw_input=raw_input.strip(),
+                theme=(draft.theme or "").strip(),
+                inspiration=(draft.inspiration or "").strip(),
+                keywords=[item.strip() for item in draft.keywords if item.strip()][:8],
+                imagination_level=level,
+                source="user",
+            )
+            if not seed.is_enriched:
+                warnings.append("想法解读结果较空，可稍后重新解读。")
+            return seed, warnings
+        except Exception as exc:  # noqa: BLE001 — degrade without blocking session
+            warnings.append(f"想法解读未完成，已仅保存原文：{exc}")
+            return IdeaSeed.from_raw(raw_input, source="user"), warnings
+
     def _persist_draft(
         self,
         exploration: ExplorationSession,
@@ -295,10 +375,13 @@ class ExplorationService:
         exploration: ExplorationSession,
         direction: ConceptDirection,
     ) -> str:
+        seed = exploration.idea_seed
         parts = [
-            f"初始想法：{exploration.idea_text}",
+            f"初始想法：{seed.raw_input if seed else exploration.idea_text}",
             f"选定概念方向：{direction.title}",
         ]
+        if seed is not None and seed.to_prompt_block().strip():
+            parts.append("想法种子：\n" + seed.to_prompt_block())
         if direction.summary.strip():
             parts.append(f"方向摘要：{direction.summary.strip()}")
         if direction.theme.strip():

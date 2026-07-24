@@ -84,8 +84,16 @@ def test_generate_mission_concept_mode_persists_design_intent(
 
 
 def test_exploration_before_mission_commit_flow(db_session, concept_project) -> None:
+    from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
+
     llm = MagicMock()
     llm.generate_structured.side_effect = [
+        IdeaSeedDraft(
+            theme="地域文化",
+            inspiration="黄土高原生活",
+            keywords=["台地", "窑洞"],
+            imagination_level="open",
+        ),
         ConceptDirectionBatchDraft(
             directions=[
                 ConceptDirectionDraft(
@@ -131,7 +139,12 @@ def test_exploration_before_mission_commit_flow(db_session, concept_project) -> 
     ]
 
     service = ExplorationService(db_session, llm)
-    exploration = service.start_session(concept_project.id, "我想在黄土高原做一个文化中心")
+    exploration = service.start_session(
+        concept_project.id, "我想在黄土高原做一个文化中心"
+    ).exploration
+    assert exploration.idea_seed is not None
+    assert exploration.idea_seed.is_enriched
+
     generated = service.generate_directions(exploration.id)
     assert all(d.mission_id is None for d in generated.directions)
 
