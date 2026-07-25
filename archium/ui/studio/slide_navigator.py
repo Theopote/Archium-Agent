@@ -179,6 +179,7 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
     st.caption(f"共 {len(slides)} 页 · 滚轮浏览缩略图，点击打开中间预览")
 
     # Scrollable thumbnail rail — independent of the center canvas / page body.
+    clicked_index: int | None = None
     with st.container(height=_NAV_THUMBNAIL_SCROLL_HEIGHT_PX, border=False):
         for index, item in enumerate(slides):
             slide = item.slide
@@ -207,19 +208,23 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
                         f"{msg}…" if len(slide.message or "") > 40 else (msg or "内容草稿")
                     )
 
-                # on_click updates selection before the next run so the center
-                # canvas opens the chosen page immediately.
-                st.button(
+                if st.button(
                     label,
                     key=f"studio_nav_slide_{context.presentation.id}_{index}",
                     use_container_width=True,
                     type="primary" if is_selected else "secondary",
-                    on_click=_set_selected_slide,
-                    args=(index,),
                     help=f"{badge}{hint}".strip() or None,
-                )
+                ):
+                    clicked_index = index
+
                 if not is_selected:
                     st.caption(badge)
+
+    if clicked_index is not None:
+        selected_index = clicked_index
+        st.session_state.studio_selected_slide_index = selected_index
+        # Force a clean rerun so the center canvas opens the chosen page.
+        st.rerun()
 
     # Keep status actions outside the scroll rail so thumbnails stay dense.
     selected_item = slides[selected_index]
@@ -232,6 +237,7 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
             key_prefix=f"studio_nav_actions_{context.presentation.id}",
         )
 
+    # Persist the resolved selection (do not clobber a click handled above).
     st.session_state.studio_selected_slide_index = selected_index
     current_snapshot = get_selected_slide_snapshot(context, selected_index)
     if current_snapshot is not None:
