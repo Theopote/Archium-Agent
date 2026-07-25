@@ -7,6 +7,7 @@ Mapped in ``docs/user-task-playbooks.md``. Does not replace human F1–F7 rehear
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -31,9 +32,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    extra = list(args.pytest_args)
+    if extra and extra[0] == "--":
+        extra = extra[1:]
+
     cmd = [sys.executable, "-m", "pytest", *_DEFAULT_TARGETS, "-v"]
-    if args.pytest_args:
-        cmd.extend(args.pytest_args)
+    if extra:
+        cmd.extend(extra)
 
     print("+", " ".join(cmd), flush=True)
     proc = subprocess.run(cmd, cwd=_ROOT)

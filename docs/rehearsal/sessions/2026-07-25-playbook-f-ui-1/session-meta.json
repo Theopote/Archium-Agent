@@ -1,0 +1,31 @@
+{
+  "session_id": "2026-07-25-playbook-f-ui-1",
+  "date": "2026-07-25",
+  "playbook": "F",
+  "status": "in_progress",
+  "facilitator": "Cursor agent",
+  "operator": "pending human / agent-assisted UI",
+  "operator_is_non_developer": false,
+  "llm_configured": null,
+  "vision_image_enabled": null,
+  "scenario_prompt": "西安市某医院老院区改造，手头有一张老门诊楼照片、地址和一份旧院区介绍，甲方还没说清功能分区。",
+  "automated_gate": {
+    "command": "python scripts/run_playbook_f_gate.py -q",
+    "passed": false,
+    "run_date": "",
+    "commit": ""
+  },
+  "steps": {
+    "F1": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
+    "F2": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
+    "F3": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
+    "F4": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
+    "F5": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
+    "F6": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
+    "F7": {"pass": null, "waived": false, "waive_reason": "", "notes": ""}
+  },
+  "overall_pass": false,
+  "blockers": [],
+  "ui_walkthrough": true,
+  "scope": "F1-F4 Streamlit human sign-off"
+}
