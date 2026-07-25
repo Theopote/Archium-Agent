@@ -146,6 +146,7 @@ def visual_requirements_from_json(data: list[dict[str, object]]) -> list[VisualR
 def project_to_domain(orm: ProjectORM) -> Project:
     from archium.domain.intent.intent_evolution import IntentEvolution
     from archium.domain.intent.knowledge_state import KnowledgeState
+    from archium.domain.intent.knowledge_state_history import KnowledgeStateHistory
 
     knowledge = None
     raw_ks = getattr(orm, "knowledge_state_json", None)
@@ -154,6 +155,19 @@ def project_to_domain(orm: ProjectORM) -> Project:
             knowledge = KnowledgeState.model_validate(raw_ks)
         except Exception:
             knowledge = None
+
+    history = KnowledgeStateHistory()
+    raw_hist = getattr(orm, "knowledge_state_history_json", None)
+    if isinstance(raw_hist, dict):
+        try:
+            history = KnowledgeStateHistory.model_validate(raw_hist)
+        except Exception:
+            history = KnowledgeStateHistory()
+    elif isinstance(raw_hist, list):
+        try:
+            history = KnowledgeStateHistory.model_validate({"snapshots": raw_hist})
+        except Exception:
+            history = KnowledgeStateHistory()
 
     evolution = IntentEvolution()
     raw_ev = getattr(orm, "intent_evolution_json", None)
@@ -180,6 +194,7 @@ def project_to_domain(orm: ProjectORM) -> Project:
         status=ProjectStatus(orm.status),
         origin_mode=ProjectOriginMode(getattr(orm, "origin_mode", "existing_project")),
         knowledge_state=knowledge,
+        knowledge_state_history=history,
         intent_evolution=evolution,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -199,6 +214,9 @@ def project_to_orm(domain: Project, orm: ProjectORM | None = None) -> ProjectORM
     target.origin_mode = domain.origin_mode.value
     target.knowledge_state_json = (
         domain.knowledge_state.model_dump(mode="json") if domain.knowledge_state else None
+    )
+    target.knowledge_state_history_json = domain.knowledge_state_history.model_dump(
+        mode="json"
     )
     target.intent_evolution_json = domain.intent_evolution.model_dump(mode="json")
     target.created_at = domain.created_at

@@ -247,12 +247,22 @@ class PlanningWorkflowService:
 
         mission_id = self._mission_id_from_run(run)
         self._clarification.ensure_can_continue(mission_id)
-        return self._resume_interrupted_run(
+        result = self._resume_interrupted_run(
             run,
             session_status=PlanningSessionStatus.PLANNING,
             mission_id=mission_id,
             log_label="clarification",
         )
+        from archium.application.context import best_effort_reassess_knowledge
+
+        best_effort_reassess_knowledge(
+            self._session,
+            run.project_id,
+            llm=self._runtime.llm,
+            settings=self._settings,
+            reason="clarification_continued",
+        )
+        return result
 
     def continue_after_mission_correction(
         self,

@@ -184,25 +184,21 @@ class FactLedgerService:
         project_id: UUID,
     ) -> tuple[str | None, str | None]:
         """Refresh KnowledgeState after a confirmed fact; never fail confirm."""
-        try:
-            from archium.application.context import ContextAnalyzer
-            from archium.infrastructure.llm.factory import create_llm_provider
+        from archium.application.context import best_effort_reassess_knowledge
 
-            llm = self._llm
-            if llm is None:
-                llm = create_llm_provider(self._settings)
-            assessment = ContextAnalyzer(
-                self._session,
-                llm,
-                settings=self._settings,
-            ).reassess(project_id)
-            return (
-                assessment.knowledge_state.summary_line(),
-                assessment.understanding_summary.strip() or None,
-            )
-        except Exception:
+        assessment = best_effort_reassess_knowledge(
+            self._session,
+            project_id,
+            llm=self._llm,
+            settings=self._settings,
+            reason="fact_confirmed",
+        )
+        if assessment is None:
             return None, None
-
+        return (
+            assessment.knowledge_state.summary_line(),
+            assessment.understanding_summary.strip() or None,
+        )
     def _require_fact(self, fact_id: UUID) -> ProjectFact:
         fact = self._facts.get_by_id(fact_id)
         if fact is None:

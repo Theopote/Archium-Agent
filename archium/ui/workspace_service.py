@@ -196,16 +196,16 @@ def reassess_knowledge_after_upload(
     settings: Settings | None = None,
 ) -> UploadKnowledgeTip | None:
     """Refresh KnowledgeState after new evidence; never fail the import path."""
-    try:
-        from archium.application.context import ContextAnalyzer
-        from archium.infrastructure.llm.factory import create_llm_provider
+    from archium.application.context import best_effort_reassess_knowledge
 
-        resolved = _resolve_runtime_settings(settings)
-        llm = create_llm_provider(resolved)
-        assessment = ContextAnalyzer(
-            session, llm, settings=resolved
-        ).reassess(project_id)
-    except Exception:
+    resolved = _resolve_runtime_settings(settings)
+    assessment = best_effort_reassess_knowledge(
+        session,
+        project_id,
+        settings=resolved,
+        reason="document_uploaded",
+    )
+    if assessment is None:
         return None
 
     actions = sorted(assessment.actions, key=lambda item: item.priority)

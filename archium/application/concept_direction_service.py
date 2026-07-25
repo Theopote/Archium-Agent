@@ -160,6 +160,15 @@ class ConceptDirectionService:
             MissionPatch(design_intent=updated_intent),
         )
         self._session.commit()
+        from archium.application.context import best_effort_reassess_knowledge
+
+        best_effort_reassess_knowledge(
+            self._session,
+            mission.project_id,
+            llm=self._llm,
+            settings=self._settings,
+            reason="mission_direction_selected",
+        )
 
         refreshed = self._directions.get(direction_id)
         assert refreshed is not None

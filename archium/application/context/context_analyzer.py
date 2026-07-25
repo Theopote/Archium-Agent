@@ -49,6 +49,7 @@ class ContextAnalyzer:
         user_text: str,
         *,
         write_evolution: bool = True,
+        history_reason: str = "initial_assess",
     ) -> ContextAssessment:
         project = self._projects.get_by_id(project_id)
         if project is None:
@@ -83,6 +84,11 @@ class ContextAnalyzer:
                 }
             )
         project.knowledge_state = assessment.knowledge_state
+        project.knowledge_state_history = project.knowledge_state_history.append_from_state(
+            assessment.knowledge_state,
+            reason=history_reason,
+            reason_detail=user_text.strip()[:200],
+        )
         project.origin_mode = assessment.suggested_origin_mode
         if write_evolution:
             evo = project.intent_evolution or IntentEvolution()
@@ -106,6 +112,7 @@ class ContextAnalyzer:
         project_id: UUID,
         *,
         user_text: str | None = None,
+        history_reason: str = "refresh",
     ) -> ContextAssessment:
         project = self._projects.get_by_id(project_id)
         if project is None:
@@ -117,6 +124,7 @@ class ContextAnalyzer:
             project_id,
             text,
             write_evolution=False,
+            history_reason=history_reason or "refresh",
         )
         if assessment.understanding_summary.strip():
             self.append_evolution(
@@ -177,7 +185,7 @@ class ContextAnalyzer:
             f"自主研究生成 {len(result.items)} 条公开摘要",
         )
         try:
-            self.reassess(project_id)
+            self.reassess(project_id, history_reason="research")
         except Exception:
             pass
         provider = (

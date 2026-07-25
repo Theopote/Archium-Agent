@@ -40,6 +40,9 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     knowledge_state_json: Mapped[dict[str, object] | None] = mapped_column(
         "knowledge_state", JSON, nullable=True
     )
+    knowledge_state_history_json: Mapped[dict[str, object] | None] = mapped_column(
+        "knowledge_state_history", JSON, nullable=True
+    )
     intent_evolution_json: Mapped[dict[str, object] | None] = mapped_column(
         "intent_evolution", JSON, nullable=True
     )

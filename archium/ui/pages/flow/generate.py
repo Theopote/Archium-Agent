@@ -46,6 +46,27 @@ def _resolve_flow_project_id() -> UUID | None:
     return UUID(str(raw))
 
 
+def _render_project_context_readiness(project_id: UUID) -> None:
+    """Surface ProjectContext / KnowledgeState before the presentation pipeline."""
+    from archium.application.context import (
+        build_project_context,
+        presentation_readiness_from_context,
+    )
+
+    try:
+        with get_session() as session:
+            context = build_project_context(session, project_id)
+        readiness = presentation_readiness_from_context(context)
+    except Exception:
+        st.caption("知识状态暂不可用")
+        return
+
+    st.caption(readiness.summary)
+    if readiness.warnings:
+        # One combined callout keeps the generate page from becoming a dashboard.
+        st.warning("\n\n".join(readiness.warnings))
+
+
 def _render_queue_summary(metrics: GenerateQueueMetrics) -> None:
     st.markdown(
         f"**总体 {metrics.complete}/{metrics.total}**　"
@@ -122,6 +143,8 @@ def render() -> None:
         st.info("请先在「资料」阶段创建或选择项目。")
         render_stage_nav("generate")
         return
+
+    _render_project_context_readiness(project_id)
 
     presentation_id = _selected_presentation_id(project_id)
     has_attention = False

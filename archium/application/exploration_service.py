@@ -261,6 +261,15 @@ class ExplorationService:
             f"选定概念方向：{refreshed.title}",
         )
         self._session.commit()
+        from archium.application.context import best_effort_reassess_knowledge
+
+        best_effort_reassess_knowledge(
+            self._session,
+            exploration.project_id,
+            llm=self._llm,
+            settings=self._settings,
+            reason="direction_selected",
+        )
 
         return ExplorationSelectionResult(
             exploration=exploration,
@@ -320,6 +329,15 @@ class ExplorationService:
             ),
         )
         self._session.commit()
+        from archium.application.context import best_effort_reassess_knowledge
+
+        best_effort_reassess_knowledge(
+            self._session,
+            exploration.project_id,
+            llm=self._llm,
+            settings=self._settings,
+            reason="mission_committed",
+        )
 
         refreshed = self._directions.get(direction.id)
         assert refreshed is not None

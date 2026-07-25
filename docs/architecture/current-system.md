@@ -36,7 +36,9 @@ User opens Archium
   -> JSON / Marp / editable PPTX / PDF / preview images
 ```
 
-**核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextIntelligenceService` 评估已知/未知并建议下一步（探索方向、研究、澄清、上传部分资料、进入 Mission）。评估产出统一聚合为 `ProjectContext`（`archium/domain/context/`：`KnowledgeState` + 证据来源 + 生命周期阶段 + `RecommendedWorkflow` + NBA）；`WorkspaceModeService` 优先依据 `ProjectContext` 路由，而非仅 `origin_mode`。评估可刷新；研究写回 / 选定方向 / 提交 Mission 会追加 `IntentEvolution`。`origin_mode` 由评估内部派生（兼容字段）。概念草稿（无资料）可走完 Exploration → Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
+**核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextAnalyzer`（原 `ContextIntelligenceService`）评估已知/未知并建议下一步。评估产出统一聚合为 `ProjectContext`（`archium/domain/context/`）；`WorkspaceModeService` 优先依据 `ProjectContext` 路由，而非仅 `origin_mode`。
+
+**Intelligence Closure（P0–P1）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）——澄清继续、Mission 批准、概念方向选定/提交、资料上传、事实确认、自主研究；失败不阻断主流程。每次有意义的知识变化写入 `KnowledgeStateHistory`（`projects.knowledge_state_history` JSON：版本标签 v0.n→v1.0、增量 known/unknown、触发原因），UI「知识演进」时间线可回放。生成页读取 `presentation_readiness_from_context` 展示完整度/未知项警告。研究写回 / 选定方向 / 提交 Mission 仍追加 `IntentEvolution`。`origin_mode` 由评估内部派生（兼容字段）。概念草稿可走完 Exploration → Mission → Brief → Storyline → 生成；**正式交付**仍要求 `document_count > 0`（`evidence_readiness_service`）。
 
 ### 意图驱动路线图（v0.3+）
 
@@ -55,6 +57,8 @@ User opens Archium
 | P1 | `origin_mode` 退位 — 路由读 `ProjectContext`；`KnowledgeState` 持久化 lifecycle/workflow | 已落地 |
 | P1 | Context 模块 + NBA 跳转 — `application/context/`、`resolve_workflow_entry`、`ui/context_navigation` | 已落地 |
 | P2 | DesignRationale — ConceptDirection 生成/持久化/UI 设计推理 | 已落地 |
+| P0 | Intelligence Closure — 事件驱动 KS reassess；生成页读 ProjectContext readiness | 已落地 |
+| P1 | KnowledgeStateHistory — 版本化知识快照（v0.n→v1.0）+ UI 时间线 | 已落地（NBA Executor / Concept Viz Loop 待续） |
 
 Studio 的编辑闭环不是直接覆写导出文件：
 

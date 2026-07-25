@@ -251,6 +251,15 @@ class ProjectMissionService:
             note=history_note,
             actor=user_id,
         )
+        from archium.application.context import best_effort_reassess_knowledge
+
+        best_effort_reassess_knowledge(
+            self._session,
+            saved.project_id,
+            llm=self._llm,
+            settings=self._settings,
+            reason="mission_approved",
+        )
         return saved
 
 

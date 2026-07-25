@@ -25,6 +25,21 @@ _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.EVIDENCE: "出处确认",
 }
 
+_KS_REASON_LABELS = {
+    "initial_assess": "首次评估",
+    "refresh": "刷新评估",
+    "document_uploaded": "上传资料",
+    "fact_confirmed": "确认事实",
+    "research": "自主研究",
+    "clarification_continued": "澄清继续",
+    "mission_approved": "批准任务",
+    "direction_selected": "选定方向",
+    "mission_direction_selected": "更换方向",
+    "mission_committed": "提交任务",
+    "manual": "手动刷新",
+    "other": "其他",
+}
+
 
 def intent_evolution_kind_label(kind: IntentEvolutionKind | str) -> str:
     if isinstance(kind, IntentEvolutionKind):
@@ -95,9 +110,11 @@ def render_knowledge_and_evolution(
     title: str = "知识状态与意图演进",
 ) -> None:
     state = project.knowledge_state if show_knowledge else None
+    history = project.knowledge_state_history
     evolution = project.intent_evolution
+    has_history = bool(history and history.snapshots)
     has_events = bool(evolution and evolution.events)
-    if state is None and not has_events:
+    if state is None and not has_history and not has_events:
         return
 
     with st.expander(title, expanded=expanded):
@@ -105,14 +122,69 @@ def render_knowledge_and_evolution(
             from archium.ui.project_knowledge_profile import render_project_knowledge_strip
 
             render_project_knowledge_strip(project.id, compact=True, show_known_unknown=True)
-        if has_events:
+        if has_history:
             if state is not None:
+                st.divider()
+            st.markdown("**知识演进**")
+            render_knowledge_state_history_timeline(
+                history,
+                key_prefix=f"{key_prefix}_ks_{project.id}",
+            )
+        if has_events:
+            if state is not None or has_history:
                 st.divider()
             st.markdown("**意图演进**")
             render_intent_evolution_timeline(
                 evolution,
                 key_prefix=f"{key_prefix}_{project.id}",
             )
+
+
+def render_knowledge_state_history_timeline(
+    history,
+    *,
+    key_prefix: str = "ks_hist",
+    limit: int = 24,
+) -> None:
+    """Render KnowledgeStateHistory snapshots oldest → newest."""
+    from archium.domain.intent.knowledge_state_history import KnowledgeStateHistory
+
+    if history is None:
+        st.caption("尚无知识演进快照。")
+        return
+    if not isinstance(history, KnowledgeStateHistory):
+        try:
+            history = KnowledgeStateHistory.model_validate(history)
+        except Exception:
+            st.caption("知识演进数据不可用。")
+            return
+    snaps = list(history.snapshots)
+    if not snaps:
+        st.caption("尚无知识演进快照。评估或补充资料后会出现。")
+        return
+
+    visible = snaps[-limit:] if len(snaps) > limit else snaps
+    if len(snaps) > limit:
+        st.caption(f"共 {len(snaps)} 个版本，显示最近 {limit} 个")
+    else:
+        st.caption(f"共 {len(snaps)} 个版本")
+
+    for index, snap in enumerate(visible):
+        reason_key = (
+            snap.reason.value if hasattr(snap.reason, "value") else str(snap.reason)
+        )
+        reason_label = _KS_REASON_LABELS.get(reason_key, reason_key)
+        when = format_intent_event_time(snap.at)
+        st.markdown(f"**`{snap.version_label}`** · {reason_label} · `{when}`")
+        st.markdown(snap.summary.strip() or snap.milestone or "知识状态更新")
+        if snap.added_known_keys or snap.resolved_unknown or snap.known:
+            with st.expander("当时已知 / 增量", expanded=False, key=f"{key_prefix}_{index}"):
+                if snap.added_known_keys:
+                    st.caption("新增：" + "、".join(snap.added_known_keys[:8]))
+                if snap.resolved_unknown:
+                    st.caption("消解未知：" + "、".join(snap.resolved_unknown[:8]))
+                for key, value in list(snap.known.items())[:8]:
+                    st.caption(f"{key}：{value}")
 
 
 def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
