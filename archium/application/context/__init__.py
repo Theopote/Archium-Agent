@@ -3,6 +3,11 @@
 from archium.application.context.context_analyzer import ContextAnalyzer
 from archium.application.context.knowledge_assessor import KnowledgeAssessor
 from archium.application.context.knowledge_reassess import best_effort_reassess_knowledge
+from archium.application.context.nba_action_executor import (
+    NbaActionExecutor,
+    NbaExecutionResult,
+    nba_execute_label,
+)
 from archium.application.context.next_action_selector import (
     default_actions_for_stage,
     resolve_action_target,
@@ -37,6 +42,8 @@ __all__ = [
     "ContextAnalyzer",
     "ContextAssessment",
     "KnowledgeAssessor",
+    "NbaActionExecutor",
+    "NbaExecutionResult",
     "PresentationContextReadiness",
     "WorkflowEntryDispatch",
     "apply_workflow_entry",
@@ -46,6 +53,7 @@ __all__ = [
     "default_actions_for_stage",
     "finalize_assessment_context",
     "input_sources_from_evidence",
+    "nba_execute_label",
     "overlay_persisted_routing",
     "presentation_readiness_from_context",
     "resolve_action_target",

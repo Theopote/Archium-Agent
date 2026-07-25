@@ -16,22 +16,24 @@ def resolve_action_target(
     conflict_fact_count: int = 0,
 ) -> ActionDispatch:
     """Map NBA to an existing product page (+ optional orchestration kickoff)."""
+    from archium.application.context.nba_action_executor import nba_execute_label
     from archium.domain.orchestration import stage_hint_for_action
 
     hint = stage_hint_for_action(action)
     hint_value = hint.value if hint is not None else None
+    has_pending = pending_fact_count > 0 or conflict_fact_count > 0
 
     if action == NextBestActionType.EXPLORE_DIRECTIONS:
         return ActionDispatch(
             page_key="concept-exploration",
-            label="推演概念方向",
+            label=nba_execute_label(action),
             orchestration_action="start",
             stage_hint=hint_value,
         )
     if action == NextBestActionType.UPLOAD_MATERIALS:
         return ActionDispatch(
             page_key="materials",
-            label="上传 / 整理资料",
+            label=nba_execute_label(action),
             orchestration_action="start",
             stage_hint=hint_value,
         )
@@ -39,12 +41,12 @@ def resolve_action_target(
         return ActionDispatch(
             page_key="project-mission",
             mission_step=2,
-            label="启动研究补充背景",
+            label=nba_execute_label(action),
             orchestration_action="start",
             stage_hint=hint_value,
         )
     if action == NextBestActionType.ASK:
-        if pending_fact_count > 0 or conflict_fact_count > 0:
+        if has_pending:
             count = pending_fact_count + conflict_fact_count
             return ActionDispatch(
                 page_key="materials",
@@ -54,7 +56,7 @@ def resolve_action_target(
         return ActionDispatch(
             page_key="project-mission",
             mission_step=3,
-            label="先澄清关键问题",
+            label=nba_execute_label(action, has_pending_facts=False),
             orchestration_action="start",
             stage_hint=hint_value,
         )
@@ -65,7 +67,7 @@ def resolve_action_target(
         return ActionDispatch(
             page_key="project-mission",
             mission_step=1,
-            label="打开项目任务",
+            label=nba_execute_label(action),
             orchestration_action="start",
             stage_hint=hint_value,
         )

@@ -24,6 +24,8 @@ class KnowledgeStateChangeReason(StrEnum):
     DIRECTION_SELECTED = "direction_selected"
     MISSION_DIRECTION_SELECTED = "mission_direction_selected"
     MISSION_COMMITTED = "mission_committed"
+    NBA_EXPLORE = "nba_explore"
+    NBA_GENERATE_MISSION = "nba_generate_mission"
     MANUAL = "manual"
     OTHER = "other"
 
@@ -39,6 +41,8 @@ _REASON_ALIASES: dict[str, KnowledgeStateChangeReason] = {
     "direction_selected": KnowledgeStateChangeReason.DIRECTION_SELECTED,
     "mission_direction_selected": KnowledgeStateChangeReason.MISSION_DIRECTION_SELECTED,
     "mission_committed": KnowledgeStateChangeReason.MISSION_COMMITTED,
+    "nba_explore": KnowledgeStateChangeReason.NBA_EXPLORE,
+    "nba_generate_mission": KnowledgeStateChangeReason.NBA_GENERATE_MISSION,
     "manual": KnowledgeStateChangeReason.MANUAL,
 }
 

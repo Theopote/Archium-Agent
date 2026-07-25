@@ -36,6 +36,8 @@ _KS_REASON_LABELS = {
     "direction_selected": "选定方向",
     "mission_direction_selected": "更换方向",
     "mission_committed": "提交任务",
+    "nba_explore": "一键推演方向",
+    "nba_generate_mission": "一键生成任务",
     "manual": "手动刷新",
     "other": "其他",
 }

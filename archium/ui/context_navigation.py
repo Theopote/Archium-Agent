@@ -63,42 +63,37 @@ def navigate_next_best_action(
     conflict_fact_count: int = 0,
     page_switcher=st.switch_page,
     page_key_override: str | None = None,
+    mission_step_override: int | None = None,
+    focus_override: str | None = None,
 ) -> None:
     target = resolve_action_target(
         action,
         pending_fact_count=pending_fact_count,
         conflict_fact_count=conflict_fact_count,
     )
+    if mission_step_override is not None:
+        target = ActionDispatch(
+            page_key=target.page_key,
+            mission_step=mission_step_override,
+            label=target.label,
+            focus=focus_override if focus_override is not None else target.focus,
+            orchestration_action=target.orchestration_action,
+            stage_hint=target.stage_hint,
+        )
+    elif focus_override is not None:
+        target = ActionDispatch(
+            page_key=target.page_key,
+            mission_step=target.mission_step,
+            label=target.label,
+            focus=focus_override,
+            orchestration_action=target.orchestration_action,
+            stage_hint=target.stage_hint,
+        )
     apply_action_dispatch(session_state, target)
     from archium.ui.app_navigation import get_app_page
 
     page_key = page_key_override or target.page_key
     page_switcher(get_app_page(page_key))
-
-
-def try_navigate_research_action(
-    session,
-    session_state: dict[str, Any],
-    project_id: UUID,
-    *,
-    settings,
-    page_switcher=st.switch_page,
-) -> bool:
-    """Run autonomous research; navigate to mission step 2 on success."""
-    from archium.application.context.context_analyzer import ContextAnalyzer
-    from archium.infrastructure.llm.factory import create_llm_provider
-    from archium.ui.app_navigation import get_app_page
-
-    llm = create_llm_provider(settings)
-    ok, message = ContextAnalyzer(session, llm, settings=settings).try_execute_research(
-        project_id
-    )
-    if ok:
-        session_state["mission_step"] = 2
-        page_switcher(get_app_page("project-mission"))
-        return True
-    st.info(message)
-    return False
 
 
 def _maybe_start_orchestration(
@@ -151,45 +146,71 @@ def dispatch_next_best_action(
     settings=None,
     page_switcher=st.switch_page,
 ) -> bool:
-    """Handle RESEARCH inline; optionally start orchestration; navigate."""
-    if action == NextBestActionType.RESEARCH and settings is not None:
-        with st.spinner("正在启动自主研究…"):
-            if try_navigate_research_action(
-                session,
-                session_state,
-                project_id,
-                settings=settings,
-                page_switcher=page_switcher,
-            ):
-                # Also open/resume an orchestration plan so durable stage state exists.
-                pending, conflicts = pending_fact_counts(session, project_id)
-                target = resolve_action_target(
-                    action,
-                    pending_fact_count=pending,
-                    conflict_fact_count=conflicts,
-                )
-                _maybe_start_orchestration(
-                    session,
-                    session_state,
-                    action,
-                    project_id=project_id,
-                    settings=settings,
-                    target=target,
-                )
-                return True
-        return False
+    """Execute runnable NBA work, then navigate (and optionally start orchestration)."""
+    from archium.application.context.nba_action_executor import NbaActionExecutor
+    from archium.infrastructure.llm.factory import create_llm_provider
 
     pending, conflicts = pending_fact_counts(session, project_id)
-    target = resolve_action_target(
-        action,
-        pending_fact_count=pending,
-        conflict_fact_count=conflicts,
+    task = str(
+        session_state.get("genesis_task_description")
+        or session_state.get("mission_task_description")
+        or ""
     )
-    page_override = None
-    if settings is not None and target.orchestration_action in {"start", "resume"}:
+
+    if settings is None:
+        # Navigate-only fallback when settings unavailable
+        navigate_next_best_action(
+            session_state,
+            action,
+            project_id=project_id,
+            pending_fact_count=pending,
+            conflict_fact_count=conflicts,
+            page_switcher=page_switcher,
+        )
+        return True
+
+    llm = create_llm_provider(settings)
+    spinner_labels = {
+        NextBestActionType.RESEARCH: "正在执行自主研究…",
+        NextBestActionType.EXPLORE_DIRECTIONS: "正在推演概念方向…",
+        NextBestActionType.GENERATE_MISSION: "正在生成任务理解…",
+    }
+    label = spinner_labels.get(action, "正在执行下一步…")
+    with st.spinner(label):
+        result = NbaActionExecutor(session, llm, settings=settings).execute(
+            project_id,
+            action,
+            user_task_description=task,
+            pending_fact_count=pending,
+            conflict_fact_count=conflicts,
+        )
+
+    if result.message:
+        if result.success and result.executed:
+            st.success(result.message)
+        elif not result.success:
+            st.warning(result.message)
+        else:
+            st.info(result.message)
+    for warning in result.warnings[:3]:
+        if warning and warning != result.message:
+            st.caption(warning)
+
+    page_override = result.page_key
+    if (
+        result.success
+        and result.orchestration_action in {"start", "resume"}
+    ):
+        target = ActionDispatch(
+            page_key=result.page_key or "project-mission",
+            mission_step=result.mission_step,
+            focus=result.focus,
+            orchestration_action=result.orchestration_action,
+            stage_hint=result.stage_hint,
+        )
         try:
-            with st.spinner("正在启动工作编排…"):
-                page_override = _maybe_start_orchestration(
+            with st.spinner("正在同步工作编排…"):
+                orch_page = _maybe_start_orchestration(
                     session,
                     session_state,
                     action,
@@ -197,21 +218,23 @@ def dispatch_next_best_action(
                     settings=settings,
                     target=target,
                 )
-        except Exception as exc:  # noqa: BLE001 — navigation must still work
+            if orch_page:
+                page_override = orch_page
+        except Exception as exc:  # noqa: BLE001
             st.caption(f"编排未启动（可稍后在任务页继续）：{exc}")
 
-    navigate_next_best_action(
-        session_state,
-        action,
-        project_id=project_id,
-        pending_fact_count=pending,
-        conflict_fact_count=conflicts,
-        page_switcher=page_switcher,
-        page_key_override=page_override,
-    )
-    return True
+    if result.should_navigate and page_override:
+        navigate_next_best_action(
+            session_state,
+            action,
+            project_id=project_id,
+            pending_fact_count=pending,
+            conflict_fact_count=conflicts,
+            page_switcher=page_switcher,
+            page_key_override=page_override,
+            mission_step_override=result.mission_step,
+            focus_override=result.focus,
+        )
+        return result.success or not result.executed
 
-
-def workflow_entry_from_context(context) -> WorkflowEntryDispatch:
-    pending = conflict = 0
-    return resolve_workflow_entry(context, pending_fact_count=pending, conflict_fact_count=conflict)
+    return result.success

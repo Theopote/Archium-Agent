@@ -74,7 +74,7 @@ def test_import_uploaded_file_triggers_reassess(db_session: Session) -> None:
             return_value=fake_result,
         ),
         patch(
-            "archium.application.context_intelligence_service.ContextIntelligenceService.reassess"
+            "archium.application.context.best_effort_reassess_knowledge"
         ) as reassess,
         patch(
             "archium.infrastructure.llm.factory.create_llm_provider",
@@ -88,7 +88,8 @@ def test_import_uploaded_file_triggers_reassess(db_session: Session) -> None:
             data=b"%PDF-1.4 fake",
         )
     assert result is fake_result
-    reassess.assert_called_once_with(project.id)
+    assert reassess.call_count == 1
+    assert reassess.call_args.args[1] == project.id
 
 
 def test_import_uploaded_file_can_skip_reassess(db_session: Session) -> None:
@@ -103,7 +104,7 @@ def test_import_uploaded_file_can_skip_reassess(db_session: Session) -> None:
             return_value=fake_result,
         ),
         patch(
-            "archium.application.context_intelligence_service.ContextIntelligenceService.reassess"
+            "archium.application.context.best_effort_reassess_knowledge"
         ) as reassess,
     ):
         import_uploaded_file(
@@ -147,7 +148,7 @@ def test_reassess_knowledge_after_upload_builds_tip(db_session: Session) -> None
     )
     with (
         patch(
-            "archium.application.context_intelligence_service.ContextIntelligenceService.reassess",
+            "archium.application.context.best_effort_reassess_knowledge",
             return_value=fake,
         ),
         patch(
@@ -161,7 +162,7 @@ def test_reassess_knowledge_after_upload_builds_tip(db_session: Session) -> None
     assert "42%" in tip.summary_line
     assert tip.understanding_summary.startswith("资料增加")
     assert tip.primary_action == "explore_directions"
-    assert tip.primary_action_label == "推演概念方向"
+    assert tip.primary_action_label == "开始推演方向"
     assert any("推演" in label for label in tip.next_action_labels)
 
 
@@ -177,8 +178,8 @@ def test_import_uploaded_file_survives_reassess_failure(db_session: Session) -> 
             return_value=fake_result,
         ),
         patch(
-            "archium.application.context_intelligence_service.ContextIntelligenceService.reassess",
-            side_effect=RuntimeError("llm down"),
+            "archium.application.context.best_effort_reassess_knowledge",
+            return_value=None,
         ),
         patch(
             "archium.infrastructure.llm.factory.create_llm_provider",
