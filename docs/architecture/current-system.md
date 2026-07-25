@@ -59,7 +59,8 @@ User opens Archium
 | P2 | DesignRationale — ConceptDirection 生成/持久化/UI 设计推理 | 已落地 |
 | P0 | Intelligence Closure — 事件驱动 KS reassess；生成页读 ProjectContext readiness | 已落地 |
 | P1 | KnowledgeStateHistory — 版本化知识快照（v0.n→v1.0）+ UI 时间线 | 已落地 |
-| P2 | NBA 一键执行 — `NbaActionExecutor`（研究/推演/生成 Mission）+ 导航导航 | 已落地（Concept Viz Loop 待续） |
+| P2 | NBA 一键执行 — `NbaActionExecutor`（研究/推演/生成 Mission）+ 导航导航 | 已落地 |
+| P3 | Concept Visualization Loop — 边想边画：示意反馈写回方向种子 + 再合成；Mission 前可出图 | 已落地 |
 
 Studio 的编辑闭环不是直接覆写导出文件：
 
