@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents._helpers import build_project_context, build_retrieval_query_from_brief
+from archium.application._helpers import build_project_context, build_retrieval_query_from_brief
 from archium.agents.cultural_narrative_planner import CulturalNarrativePlanner
 from archium.agents.reference_style_profiler import ReferenceStyleProfiler
 from archium.agents.renovation_issue_planner import RenovationIssueMapPlanner

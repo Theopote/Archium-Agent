@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents._helpers import (
+from archium.application._helpers import (
     build_retrieval_query_from_storyline,
     resolve_design_context_bundle,
     slide_from_draft,
@@ -243,7 +243,7 @@ class SlidePlanService:
             )
             generated.append(slide)
 
-        from archium.agents.citations import enrich_slide_citations
+        from archium.application.citation_resolution import enrich_slide_citations
 
         for index, slide in enumerate(generated):
             if slide.delivery_status != SlideDeliveryStatus.READY:

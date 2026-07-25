@@ -523,7 +523,7 @@ class Settings(BaseSettings):
     slide_per_page_generation: bool = Field(
         default=True,
         description=(
-            "When true, SlidePlanner invokes the LLM once per page with "
+            "When true, SlidePlanService invokes the LLM once per page with "
             "SlideGenerationContext instead of one batch SlidePlan call."
         ),
     )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from archium.agents._helpers import brief_from_draft, slides_from_plan, storyline_from_draft
+from archium.application._helpers import brief_from_draft, slides_from_plan, storyline_from_draft
 from archium.application.chunk_models import ProjectContextBundle
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import DocumentType, ProcessingStatus, ProjectType

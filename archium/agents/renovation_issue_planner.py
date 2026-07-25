@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.agents._helpers import to_json
+from archium.application._helpers import to_json
 from archium.application.renovation_issue_service import (
     is_renovation_scenario,
     issue_map_fallback_from_brief,

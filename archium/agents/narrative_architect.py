@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.agents._helpers import storyline_from_draft, to_json
+from archium.application._helpers import storyline_from_draft, to_json
 from archium.application.cultural_narrative_service import format_narrative_for_prompt
 from archium.application.renovation_issue_service import format_issue_map_for_prompt
 from archium.config.settings import Settings, get_settings

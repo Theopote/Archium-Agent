@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from archium.agents._helpers import build_project_context_bundle, build_retrieval_query_from_request
+from archium.application._helpers import build_project_context_bundle, build_retrieval_query_from_request
 from archium.application.fact_extraction_service import FactExtractionService
 from archium.application.fact_validation_service import FactValidationService
 from archium.domain.enums import PresentationWorkflowStep

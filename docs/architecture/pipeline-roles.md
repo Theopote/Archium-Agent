@@ -282,7 +282,7 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 | —（LLM 仍内联） | Narrative | `SlidePlanService` |
 | `cultural_narrative_planner` | Narrative + Visual | `CulturalNarrativeService` |
 | `renovation_issue_planner` | Visual（专业语义） | `RenovationIssueMapService` |
-| `citations` | Research | （工具辅助） |
+| `citations`（兼容 re-export） | Research | `application/citation_resolution.py` |
 | `reference_style_profiler` | Visual（风格，非版式） | `ReferenceStyleProfileService` |
 
 **严禁新增**：

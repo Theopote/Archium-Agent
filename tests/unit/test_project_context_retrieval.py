@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from archium.agents._helpers import build_project_context, build_retrieval_query_from_request
+from archium.application._helpers import build_project_context, build_retrieval_query_from_request
 from archium.application.presentation_models import PresentationRequest
 from archium.application.retrieval_service import RetrievalService
 from archium.domain.document import DocumentChunk, SourceDocument

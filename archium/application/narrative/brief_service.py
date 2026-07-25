@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.agents.brief_builder import BriefBuilder
-from archium.agents._helpers import (
+from archium.application._helpers import (
     build_retrieval_query_from_request,
     resolve_design_context_text,
 )

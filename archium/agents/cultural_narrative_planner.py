@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.agents._helpers import to_json
+from archium.application._helpers import to_json
 from archium.application.cultural_narrative_service import (
     is_cultural_village_scenario,
     narrative_fallback_from_brief,

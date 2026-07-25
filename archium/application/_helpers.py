@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents.citations import citation_from_draft, enrich_slide_citations
+from archium.application.citation_resolution import citation_from_draft, enrich_slide_citations
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.knowledge_isolation import (
     filter_generation_facts,

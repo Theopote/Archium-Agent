@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from archium.agents._helpers import to_json
+from archium.application._helpers import to_json
 from archium.application.cultural_narrative_service import format_narrative_for_prompt
 from archium.application.outline_service import (
     infer_audience_mode,

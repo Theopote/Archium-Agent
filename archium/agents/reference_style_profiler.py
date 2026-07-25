@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.agents._helpers import to_json
+from archium.application._helpers import to_json
 from archium.application.reference_style_service import (
     profile_fallback_from_brief,
     profile_from_draft,

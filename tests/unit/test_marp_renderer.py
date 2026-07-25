@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from archium.agents._helpers import brief_from_draft, slides_from_plan, storyline_from_draft
+from archium.application._helpers import brief_from_draft, slides_from_plan, storyline_from_draft
 from archium.infrastructure.llm.presentation_schemas import (
     BriefDraft,
     SlidePlanDraft,

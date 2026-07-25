@@ -269,7 +269,7 @@ def preview_project_retrieval(
     settings: Settings | None = None,
     max_chunks: int = 12,
 ) -> ProjectContextBundle:
-    from archium.agents._helpers import build_project_context_bundle
+    from archium.application._helpers import build_project_context_bundle
 
     resolved = _resolve_runtime_settings(settings)
     return build_project_context_bundle(

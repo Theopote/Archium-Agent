@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from archium.agents._helpers import (
+from archium.application._helpers import (
     brief_from_draft,
     sanitize_slide_message,
     slides_from_plan,

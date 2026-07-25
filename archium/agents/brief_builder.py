@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.agents._helpers import brief_from_draft, build_request_context
+from archium.application._helpers import brief_from_draft, build_request_context
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.presentation import PresentationBrief
