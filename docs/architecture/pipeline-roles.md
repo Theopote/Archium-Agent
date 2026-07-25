@@ -242,6 +242,10 @@ UI：概念方向详情、Mission 设计使命、意图演进时间线展示空�
 UI：编排条展示闸门/反思，支持「继续编排」与「按上下文重规划」。
 从「跑完固定阶段」迈向「按知识状态管理设计过程」。
 
+**Phase K.1（P1）**：编排 `process_timeline`（阶段/闸门/重规划/反思过程史，链到
+IntentEvolution kind）；Planning `WorkflowRun` 快照 `mission_id`-first 瘦身；
+探索选定批判后补 `REFLECTION`。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -411,4 +415,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase K Decision Router / HumanGate / Reflection；J；I.3。*
+*Last updated: 2026-07-25 — Phase K.1 process_timeline / state thinning；K；J；I.3。*

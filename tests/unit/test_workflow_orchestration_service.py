@@ -168,6 +168,9 @@ def test_orchestration_advance_replans_pending_from_context() -> None:
     assert result.replan_decision is not None
     assert result.replan_decision.get("changed") is True
     assert result.workflow_run.state.get("decision_router", {}).get("changed") is True
+    timeline = result.workflow_run.state.get("process_timeline") or []
+    assert any(item.get("kind") == "replan" for item in timeline)
+    assert any(item.get("kind") == "stage" for item in timeline)
     stages = [s.stage for s in result.plan.stages]
     assert stages[0] == OrchestrationStage.EXPLORE
     assert OrchestrationStage.RESEARCH in stages

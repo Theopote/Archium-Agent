@@ -11,6 +11,7 @@ from archium.domain.orchestration import (
     OrchestrationPlan,
     OrchestrationStageStatus,
     label_for_stage,
+    list_process_timeline,
 )
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -66,6 +67,18 @@ def render_orchestration_status(
         router = run.state.get("decision_router")
         if isinstance(router, dict) and router.get("changed"):
             st.caption(f"决策路由：{router.get('reason') or '已按上下文重规划'}")
+        timeline = list_process_timeline(run.state, limit=8)
+        if timeline:
+            with st.expander(f"设计过程史（{len(timeline)}）", expanded=False):
+                for event in reversed(timeline):
+                    when = ""
+                    try:
+                        when = event.at.astimezone().strftime("%m-%d %H:%M")
+                    except Exception:
+                        when = str(event.at)[:16]
+                    st.markdown(f"- `{when}` · {event.display_line()}")
+                    if event.intent_evolution_kind:
+                        st.caption(f"↔ IntentEvolution · {event.intent_evolution_kind}")
         reflection = run.state.get("last_reflection")
         if isinstance(reflection, dict):
             from archium.ui.components.design_reflection_details import (
