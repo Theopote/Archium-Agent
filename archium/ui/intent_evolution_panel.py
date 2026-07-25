@@ -27,6 +27,7 @@ _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.EVIDENCE: "出处确认",
     IntentEvolutionKind.VISUAL_FEEDBACK: "示意反馈",
     IntentEvolutionKind.DESIGN_DECISION: "设计决策",
+    IntentEvolutionKind.REFLECTION: "设计反思",
 }
 
 _KS_REASON_LABELS = {
@@ -226,6 +227,7 @@ def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
             bits.append("证据：" + "；".join(event.evidence_refs[:4]))
         if bits:
             st.caption(" · ".join(bits))
+    from archium.ui.components.design_reflection_details import render_design_reflection
     from archium.ui.components.spatial_design_details import (
         render_design_decision,
         render_spatial_intent_from_snapshot,
@@ -241,6 +243,18 @@ def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
     snapshot = event.design_intent_snapshot
     if not snapshot:
         return
+
+    reflection_raw = snapshot.get("reflection")
+    if isinstance(reflection_raw, dict):
+        render_design_reflection(
+            reflection_raw,
+            expanded=event.kind == IntentEvolutionKind.REFLECTION,
+            title="设计反思详情",
+        )
+        # Reflection-only snapshots need no generic field dump.
+        if set(snapshot.keys()) <= {"reflection"}:
+            return
+
     with st.expander("当时意图快照", expanded=False, key=f"{key}_snap"):
         evidence_rows = snapshot.get("evidence")
         if isinstance(evidence_rows, list) and evidence_rows:
@@ -273,7 +287,13 @@ def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
                     suffix = " · " + "；".join(str(item) for item in materials[:2])
                 st.caption(f"[{source_label}] {statement}{suffix}")
         render_spatial_intent_from_snapshot(snapshot, expanded=False)
-        skip_fields = {"evidence", "spatial_intent", "design_rules", "design_rationale"}
+        skip_fields = {
+            "evidence",
+            "spatial_intent",
+            "design_rules",
+            "design_rationale",
+            "reflection",
+        }
         for field_name, value in snapshot.items():
             if field_name in skip_fields or value in (None, "", [], {}):
                 continue

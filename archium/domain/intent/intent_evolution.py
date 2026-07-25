@@ -27,6 +27,7 @@ class IntentEvolutionKind(StrEnum):
     EVIDENCE = "evidence"
     VISUAL_FEEDBACK = "visual_feedback"
     DESIGN_DECISION = "design_decision"
+    REFLECTION = "reflection"
 
 
 def _clip(value: str | None, limit: int) -> str | None:

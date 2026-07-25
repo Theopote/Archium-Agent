@@ -117,6 +117,106 @@ def test_orchestration_advance_moves_to_next_stage(monkeypatch) -> None:
     } or result.plan.stages[0].status == OrchestrationStageStatus.COMPLETED
 
 
+def test_orchestration_advance_replans_pending_from_context() -> None:
+    from archium.domain.context.project_context import ProjectContext
+    from archium.domain.intent.knowledge_state import KnowledgeState
+
+    session = MagicMock()
+    llm = MagicMock()
+    project_id = uuid4()
+    service = WorkflowOrchestrationService(session, llm)
+
+    plan = service.build_plan(
+        project_id,
+        action=NextBestActionType.EXPLORE_DIRECTIONS,
+    )
+    plan.stages[0].status = OrchestrationStageStatus.AWAITING_USER
+    run = WorkflowRun(
+        project_id=project_id,
+        status=WorkflowStatus.AWAITING_REVIEW,
+        state={
+            "workflow_kind": ORCHESTRATION_KIND,
+            "orchestration_plan": plan.model_dump(mode="json"),
+            "user_task_description": "",
+        },
+    )
+    store = {run.id: run}
+
+    class FakeRepo:
+        def get_by_id(self, run_id):  # noqa: ANN001
+            return store.get(run_id)
+
+        def update(self, updated: WorkflowRun) -> WorkflowRun:
+            store[updated.id] = updated
+            return updated
+
+        def list_by_project(self, _project_id):  # noqa: ANN001
+            return list(store.values())
+
+    service._workflow_runs = FakeRepo()  # noqa: SLF001
+    service._missions = MagicMock()  # noqa: SLF001
+    service._missions.list_missions_by_project.return_value = []
+
+    ctx = ProjectContext.compose(
+        knowledge_state=KnowledgeState(completeness_score=0.2),
+        next_actions=[],
+        understanding_summary="证据不足，先研究",
+    )
+    ctx = ctx.model_copy(update={"recommended_workflow": RecommendedWorkflow.RESEARCH})
+
+    result = service.advance(run.id, context=ctx, replan=True)
+    assert result.replan_decision is not None
+    assert result.replan_decision.get("changed") is True
+    assert result.workflow_run.state.get("decision_router", {}).get("changed") is True
+    stages = [s.stage for s in result.plan.stages]
+    assert stages[0] == OrchestrationStage.EXPLORE
+    assert OrchestrationStage.RESEARCH in stages
+    assert result.human_gate is not None or result.awaiting_user or result.active_stage
+
+
+def test_orchestration_replan_without_drive() -> None:
+    from archium.domain.context.project_context import ProjectContext
+    from archium.domain.intent.knowledge_state import KnowledgeState
+
+    project_id = uuid4()
+    service = WorkflowOrchestrationService(MagicMock(), MagicMock())
+    plan = service.build_plan(project_id, action=NextBestActionType.EXPLORE_DIRECTIONS)
+    plan.stages[0].status = OrchestrationStageStatus.AWAITING_USER
+    run = WorkflowRun(
+        project_id=project_id,
+        status=WorkflowStatus.AWAITING_REVIEW,
+        state={
+            "workflow_kind": ORCHESTRATION_KIND,
+            "orchestration_plan": plan.model_dump(mode="json"),
+        },
+    )
+    store = {run.id: run}
+
+    class FakeRepo:
+        def get_by_id(self, run_id):  # noqa: ANN001
+            return store.get(run_id)
+
+        def update(self, updated: WorkflowRun) -> WorkflowRun:
+            store[updated.id] = updated
+            return updated
+
+    service._workflow_runs = FakeRepo()  # noqa: SLF001
+    ctx = ProjectContext.compose(
+        knowledge_state=KnowledgeState(),
+        next_actions=[],
+    )
+    ctx = ctx.model_copy(update={"recommended_workflow": RecommendedWorkflow.DELIVER})
+    result = service.replan(run.id, context=ctx, drive=False)
+    assert result.replan_decision is not None
+    assert result.plan.source.value == "context_replan"
+    # in-flight explore kept
+    assert result.plan.stages[0].status == OrchestrationStageStatus.AWAITING_USER
+    pending = [
+        s.stage for s in result.plan.stages if s.status == OrchestrationStageStatus.PENDING
+    ]
+    assert OrchestrationStage.PRESENTATION in pending
+
+
 def test_build_plan_mission_workflow() -> None:
     service = WorkflowOrchestrationService(MagicMock(), MagicMock())
     plan = service.build_plan(uuid4())

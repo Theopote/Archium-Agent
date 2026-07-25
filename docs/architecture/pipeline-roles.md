@@ -236,6 +236,12 @@ Mission。`DesignRationale` 增加观察/问题/假设/策略/风险；`DesignDe
 `IntentEvolution`（`DESIGN_DECISION`）。解决「概念口号 → 空间规则」断层。
 UI：概念方向详情、Mission 设计使命、意图演进时间线展示空间意图/规则/决策。
 
+**Phase K（编排 Decision Router P0）**：`replan_from_context` 在 `advance` 时按
+`ProjectContext` / `RecommendedWorkflow` 重写 PENDING 尾部（保留已完成与 in-flight）；
+统一 `HumanGate`；研究/批评后写入 `DesignReflection`（`IntentEvolution.REFLECTION`）。
+UI：编排条展示闸门/反思，支持「继续编排」与「按上下文重规划」。
+从「跑完固定阶段」迈向「按知识状态管理设计过程」。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -405,4 +411,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase J SpatialIntent/DesignRule/DesignDecision；I.3。*
+*Last updated: 2026-07-25 — Phase K Decision Router / HumanGate / Reflection；J；I.3。*

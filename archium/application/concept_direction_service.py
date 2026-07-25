@@ -224,6 +224,24 @@ class ConceptDirectionService:
                     design_decision=decision.as_dict(),
                     design_intent_snapshot=updated_intent.model_dump(mode="json"),
                 )
+                if critique_gate.report is not None:
+                    from archium.application.design_reflection import (
+                        reflection_from_critique,
+                    )
+                    from archium.domain.intent.intent_evolution import (
+                        IntentEvolutionKind as _Kind,
+                    )
+
+                    reflection = reflection_from_critique(critique_gate.report)
+                    if not reflection.is_empty():
+                        project.intent_evolution = project.intent_evolution.append(
+                            _Kind.REFLECTION,
+                            reflection.why[:200] or "选定后设计反思",
+                            trigger="direction_critique_reflection",
+                            reason=reflection.why[:400] or None,
+                            evidence_refs=list(reflection.top_risks)[:4],
+                            design_intent_snapshot={"reflection": reflection.as_dict()},
+                        )
                 project.touch()
                 ProjectRepository(self._session).update(project)
         except Exception:

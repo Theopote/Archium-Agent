@@ -7,6 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.domain.orchestration import (
+    HumanGate,
     OrchestrationPlan,
     OrchestrationStageStatus,
     label_for_stage,
@@ -55,11 +56,28 @@ def render_orchestration_status(
             f" · 阶段 {plan.active_index + 1}/{len(plan.stages)}"
             f" · run `{str(run.id)[:8]}…`"
         )
+        gate_raw = run.state.get("human_gate")
+        if isinstance(gate_raw, dict):
+            try:
+                gate = HumanGate.model_validate(gate_raw)
+                st.caption(f"待确认：{gate.label} — {gate.prompt}")
+            except Exception:
+                pass
+        router = run.state.get("decision_router")
+        if isinstance(router, dict) and router.get("changed"):
+            st.caption(f"决策路由：{router.get('reason') or '已按上下文重规划'}")
+        reflection = run.state.get("last_reflection")
+        if isinstance(reflection, dict):
+            from archium.ui.components.design_reflection_details import (
+                render_design_reflection,
+            )
+
+            render_design_reflection(reflection, expanded=False)
         if stage.status in {
             OrchestrationStageStatus.AWAITING_USER,
             OrchestrationStageStatus.AWAITING_REVIEW,
         }:
-            cols = st.columns([1, 3])
+            cols = st.columns([1, 1, 2])
             if cols[0].button(
                 "继续编排",
                 key=f"{key_prefix}_advance_{run.id}",
@@ -78,10 +96,35 @@ def render_orchestration_status(
                         st.session_state["orchestration_active_stage"] = (
                             result.active_stage.value if result.active_stage else None
                         )
+                        if result.replan_decision and result.replan_decision.get("changed"):
+                            st.session_state["orchestration_replan"] = result.replan_decision
                         if result.page_key:
                             from archium.ui.app_navigation import get_app_page
 
                             st.switch_page(get_app_page(result.page_key))
+                        st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
+            if cols[1].button(
+                "按上下文重规划",
+                key=f"{key_prefix}_replan_{run.id}",
+                use_container_width=True,
+                help="根据当前知识状态改写尚未执行的阶段，不打断当前待确认步骤",
+            ):
+                try:
+                    with get_session() as replan_session:
+                        replan_llm = create_llm_provider(settings)
+                        replan_service = WorkflowOrchestrationService(
+                            replan_session, replan_llm, settings=settings
+                        )
+                        result = replan_service.replan(run.id, drive=False)
+                        st.session_state["orchestration_run_id"] = str(
+                            result.workflow_run.id
+                        )
+                        if result.replan_decision:
+                            st.session_state["orchestration_replan"] = (
+                                result.replan_decision
+                            )
                         st.rerun()
                 except Exception as exc:
                     st.error(format_user_error(exc))

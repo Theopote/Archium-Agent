@@ -16,12 +16,15 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.enums import WorkflowStatus
 from archium.domain.orchestration import (
+    HumanGate,
     OrchestrationPlan,
     OrchestrationPlanSource,
     OrchestrationStage,
     OrchestrationStageStatus,
     build_orchestration_plan,
+    human_gate_for_stage,
     label_for_stage,
+    replan_from_context,
     stage_hint_for_action,
 )
 from archium.domain.intent.next_best_action import NextBestActionType
@@ -43,6 +46,8 @@ class OrchestrationResult:
     plan: OrchestrationPlan
     page_key: str | None = None
     warnings: list[str] = field(default_factory=list)
+    human_gate: HumanGate | None = None
+    replan_decision: dict[str, object] | None = None
 
     @property
     def awaiting_user(self) -> bool:
@@ -140,8 +145,51 @@ class WorkflowOrchestrationService:
         task = str(run.state.get("user_task_description") or "")
         return self._drive(run, plan, user_task_description=task)
 
-    def advance(self, workflow_run_id: UUID) -> OrchestrationResult:
-        """Mark active awaiting_user stage complete and continue."""
+    def replan(
+        self,
+        workflow_run_id: UUID,
+        context: ProjectContext | None = None,
+        *,
+        drive: bool = False,
+    ) -> OrchestrationResult:
+        """Decision Router: refresh PENDING tail from ProjectContext."""
+        run = self._require_run(workflow_run_id)
+        plan = self._plan_from_run(run)
+        ctx = context or self._load_project_context(run.project_id)
+        plan, decision = replan_from_context(plan, context=ctx)
+        run.state = {
+            **run.state,
+            "orchestration_plan": plan.model_dump(mode="json"),
+            "decision_router": decision.as_dict(),
+        }
+        if ctx is not None:
+            reflection = self._reflection_payload(ctx)
+            if reflection is not None:
+                run.state["last_reflection"] = reflection
+        run = self._workflow_runs.update(run)
+        if drive:
+            task = str(run.state.get("user_task_description") or "")
+            result = self._drive(run, plan, user_task_description=task)
+            result.replan_decision = decision.as_dict()
+            return result
+        gate = self._gate_from_plan(plan)
+        return OrchestrationResult(
+            workflow_run=run,
+            plan=plan,
+            page_key=gate.page_key if gate else None,
+            human_gate=gate,
+            replan_decision=decision.as_dict(),
+            warnings=[decision.reason] if decision.reason else [],
+        )
+
+    def advance(
+        self,
+        workflow_run_id: UUID,
+        *,
+        context: ProjectContext | None = None,
+        replan: bool = True,
+    ) -> OrchestrationResult:
+        """Mark active awaiting stage complete, optionally replan from Context, continue."""
         run = self._require_run(workflow_run_id)
         plan = self._plan_from_run(run)
         stage = plan.active_stage()
@@ -159,14 +207,68 @@ class WorkflowOrchestrationService:
             OrchestrationStageStatus.AWAITING_REVIEW,
         }:
             stage.status = OrchestrationStageStatus.COMPLETED
-        nxt = plan.advance_index()
-        if nxt is None:
+
+        replan_payload: dict[str, object] | None = None
+        if replan:
+            ctx = context or self._load_project_context(run.project_id)
+            plan, decision = replan_from_context(plan, context=ctx)
+            replan_payload = decision.as_dict()
+            run.state = {
+                **run.state,
+                "decision_router": replan_payload,
+            }
+            if ctx is not None:
+                reflection = self._reflection_payload(ctx)
+                if reflection is not None:
+                    run.state["last_reflection"] = reflection
+                    self._best_effort_append_reflection(run.project_id, reflection)
+
+        from archium.domain.orchestration.decision_router import first_open_stage_index
+
+        open_idx = first_open_stage_index(plan.stages)
+        if open_idx is None:
             run.status = WorkflowStatus.COMPLETED
-            run.state = {**run.state, "orchestration_plan": plan.model_dump(mode="json")}
+            run.state = {
+                **run.state,
+                "orchestration_plan": plan.model_dump(mode="json"),
+                "human_gate": None,
+                "active_stage": None,
+            }
             run = self._workflow_runs.update(run)
-            return OrchestrationResult(workflow_run=run, plan=plan, page_key=None)
+            return OrchestrationResult(
+                workflow_run=run,
+                plan=plan,
+                page_key=None,
+                replan_decision=replan_payload,
+            )
+        plan.active_index = open_idx
+        # If cursor still on the stage we just completed, step forward.
+        current = plan.active_stage()
+        if current is not None and current.status in {
+            OrchestrationStageStatus.COMPLETED,
+            OrchestrationStageStatus.SKIPPED,
+            OrchestrationStageStatus.FAILED,
+        }:
+            if plan.advance_index() is None:
+                run.status = WorkflowStatus.COMPLETED
+                run.state = {
+                    **run.state,
+                    "orchestration_plan": plan.model_dump(mode="json"),
+                    "human_gate": None,
+                    "active_stage": None,
+                }
+                run = self._workflow_runs.update(run)
+                return OrchestrationResult(
+                    workflow_run=run,
+                    plan=plan,
+                    page_key=None,
+                    replan_decision=replan_payload,
+                )
+
         task = str(run.state.get("user_task_description") or "")
-        return self._drive(run, plan, user_task_description=task)
+        result = self._drive(run, plan, user_task_description=task)
+        result.replan_decision = replan_payload
+        return result
 
     def _drive(
         self,
@@ -206,7 +308,14 @@ class WorkflowOrchestrationService:
                 stage.workflow_run_id = UUID(str(result["workflow_run_id"]))
             if result.get("skip_reason"):
                 stage.skip_reason = str(result["skip_reason"])
+            if result.get("reflection"):
+                run.state = {**run.state, "last_reflection": result["reflection"]}
             page_key = stage.page_key
+            gate = human_gate_for_stage(
+                stage.stage,
+                page_key=page_key,
+                awaiting_review=status == OrchestrationStageStatus.AWAITING_REVIEW,
+            )
 
             if status == OrchestrationStageStatus.AWAITING_USER:
                 run.status = WorkflowStatus.AWAITING_REVIEW
@@ -214,7 +323,8 @@ class WorkflowOrchestrationService:
                     **run.state,
                     "orchestration_plan": plan.model_dump(mode="json"),
                     "active_stage": stage.stage.value,
-                    "review_gate": f"orchestration:{stage.stage.value}",
+                    "review_gate": gate.review_gate,
+                    "human_gate": gate.as_dict(),
                 }
                 run = self._workflow_runs.update(run)
                 return OrchestrationResult(
@@ -222,6 +332,7 @@ class WorkflowOrchestrationService:
                     plan=plan,
                     page_key=page_key,
                     warnings=warnings,
+                    human_gate=gate,
                 )
             if status == OrchestrationStageStatus.AWAITING_REVIEW:
                 run.status = WorkflowStatus.AWAITING_REVIEW
@@ -229,7 +340,8 @@ class WorkflowOrchestrationService:
                     **run.state,
                     "orchestration_plan": plan.model_dump(mode="json"),
                     "active_stage": stage.stage.value,
-                    "review_gate": f"orchestration:{stage.stage.value}",
+                    "review_gate": gate.review_gate,
+                    "human_gate": gate.as_dict(),
                     "child_workflow_run_id": str(stage.workflow_run_id)
                     if stage.workflow_run_id
                     else None,
@@ -240,6 +352,7 @@ class WorkflowOrchestrationService:
                     plan=plan,
                     page_key=page_key,
                     warnings=warnings,
+                    human_gate=gate,
                 )
             if status == OrchestrationStageStatus.FAILED:
                 run.status = WorkflowStatus.FAILED
@@ -248,6 +361,7 @@ class WorkflowOrchestrationService:
                     **run.state,
                     "orchestration_plan": plan.model_dump(mode="json"),
                     "active_stage": stage.stage.value,
+                    "human_gate": None,
                 }
                 run = self._workflow_runs.update(run)
                 return OrchestrationResult(
@@ -265,6 +379,7 @@ class WorkflowOrchestrationService:
             **run.state,
             "orchestration_plan": plan.model_dump(mode="json"),
             "active_stage": None,
+            "human_gate": None,
         }
         run = self._workflow_runs.update(run)
         return OrchestrationResult(
@@ -318,10 +433,16 @@ class WorkflowOrchestrationService:
             warnings = []
             if hasattr(result, "warnings"):
                 warnings = list(getattr(result, "warnings") or [])
-            return {
+            payload: dict[str, Any] = {
                 "status": OrchestrationStageStatus.COMPLETED,
                 "warnings": warnings or ["自主研究阶段已执行"],
             }
+            ctx = self._load_project_context(project_id)
+            reflection = self._reflection_payload(ctx, source="research")
+            if reflection is not None:
+                payload["reflection"] = reflection
+                self._best_effort_append_reflection(project_id, reflection)
+            return payload
         except Exception as exc:  # noqa: BLE001
             logger.warning("orchestration research stage failed: %s", exc)
             return {
@@ -329,6 +450,86 @@ class WorkflowOrchestrationService:
                 "skip_reason": str(exc),
                 "warnings": [f"研究阶段跳过：{exc}"],
             }
+
+    def _load_project_context(self, project_id: UUID) -> ProjectContext | None:
+        try:
+            from archium.application.context.project_context_builder import (
+                build_project_context,
+            )
+
+            return build_project_context(self._session, project_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("load ProjectContext for router failed: %s", exc)
+            return None
+
+    @staticmethod
+    def _reflection_payload(
+        context: ProjectContext | None,
+        *,
+        source: str = "context",
+    ) -> dict[str, object] | None:
+        if context is None:
+            return None
+        from archium.application.design_reflection import reflection_from_context
+
+        reflection = reflection_from_context(context)
+        if reflection.is_empty():
+            return None
+        if source != reflection.source:
+            reflection = reflection.model_copy(update={"source": source})
+        return reflection.as_dict()
+
+    def _best_effort_append_reflection(
+        self,
+        project_id: UUID,
+        reflection: dict[str, object],
+    ) -> None:
+        try:
+            from archium.domain.intent.intent_evolution import (
+                IntentEvolution,
+                IntentEvolutionKind,
+            )
+            from archium.infrastructure.database.repositories import ProjectRepository
+
+            repo = ProjectRepository(self._session)
+            project = repo.get_by_id(project_id)
+            if project is None:
+                return
+            why = str(reflection.get("why") or "").strip() or "设计反思"
+            evo = project.intent_evolution or IntentEvolution()
+            project.intent_evolution = evo.append(
+                IntentEvolutionKind.REFLECTION,
+                why[:200],
+                trigger="orchestration_reflection",
+                reason=why[:400],
+                evidence_refs=[
+                    str(item)
+                    for item in (reflection.get("top_risks") or [])[:3]
+                    if str(item).strip()
+                ],
+                design_intent_snapshot={"reflection": reflection},
+            )
+            repo.update(project)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("append reflection evolution skipped: %s", exc)
+
+    @staticmethod
+    def _gate_from_plan(plan: OrchestrationPlan) -> HumanGate | None:
+        stage = plan.active_stage()
+        if stage is None:
+            return None
+        if stage.status not in {
+            OrchestrationStageStatus.AWAITING_USER,
+            OrchestrationStageStatus.AWAITING_REVIEW,
+            OrchestrationStageStatus.PENDING,
+            OrchestrationStageStatus.RUNNING,
+        }:
+            return None
+        return human_gate_for_stage(
+            stage.stage,
+            page_key=stage.page_key,
+            awaiting_review=stage.status == OrchestrationStageStatus.AWAITING_REVIEW,
+        )
 
     def _run_mission_planning_stage(
         self,
@@ -681,12 +882,18 @@ class WorkflowOrchestrationService:
         }:
             current.status = status
         active.status = WorkflowStatus.AWAITING_REVIEW
+        gate = human_gate_for_stage(
+            current.stage,
+            page_key=current.page_key,
+            awaiting_review=True,
+        )
         active.state = {
             **active.state,
             "orchestration_plan": plan.model_dump(mode="json"),
             "active_stage": current.stage.value,
             "child_workflow_run_id": str(child_workflow_run_id),
-            "review_gate": f"orchestration:{current.stage.value}",
+            "review_gate": gate.review_gate,
+            "human_gate": gate.as_dict(),
         }
         return self._workflow_runs.update(active)
 

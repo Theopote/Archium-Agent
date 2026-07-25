@@ -37,6 +37,7 @@ class OrchestrationPlanSource(StrEnum):
     NBA = "nba"
     RECOMMENDED_WORKFLOW = "recommended_workflow"
     MANUAL = "manual"
+    CONTEXT_REPLAN = "context_replan"
 
 
 class OrchestrationStageSpec(DomainModel):
