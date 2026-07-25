@@ -62,6 +62,7 @@ User opens Archium
 | P0 | Knowledge claim index — `claims`/`open_unknowns` 桥接 Fact + ProjectKnowledgeItem；CI evidence 纳入知识条目；UI 展示 stale / 主张索引 | 已落地 |
 | P0 | KnowledgeDimensions / Knowledge Vector — 六维认知 + 派生 design_readiness；向量策略表驱动 NBA；UI 向量条；`completeness_score` 降为兼容聚合 | 已落地 |
 | P1 | Reasoning Trace — `ContextAssessmentReason`（factor/evidence/impact/confidence）；挂 `ContextAssessment.reasons` + KS `assessment_reasons`；规则合成 + LLM；Genesis/知识条可解释 NBA | 已落地 |
+| P1 | Design History Graph — IntentEvolution 边（Trigger/Old/New/Reason/Evidence）；`MISSION_APPROVED`；`intent_evolution_graph` 查询；时间线「设计史」视图 | 已落地 |
 | P1 | ProjectProcessBoard — Research/Design/Presentation 过程指针；Design 细化到 ConceptDirection / VisualConceptBrief focus | 首期派生视图已落地 |
 | P2 | NBA 一键执行 — `NbaActionExecutor` Act→写回→Reassess；无 Mission 亦可研究；成功后 stay 刷新 NBA | 已落地 |
 | P3 | Concept Visualization Loop — 边想边画：示意反馈写回方向种子 + 再合成；Mission 前可出图 | 已落地 |

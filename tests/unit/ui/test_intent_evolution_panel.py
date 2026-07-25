@@ -20,6 +20,7 @@ def test_intent_evolution_kind_labels() -> None:
     assert intent_evolution_kind_label(IntentEvolutionKind.SEED) == "初始想法"
     assert intent_evolution_kind_label("research") == "研究补充"
     assert intent_evolution_kind_label("evidence") == "出处确认"
+    assert intent_evolution_kind_label("mission_approved") == "批准任务"
     assert intent_evolution_kind_label("unknown_kind") == "unknown_kind"
 
 

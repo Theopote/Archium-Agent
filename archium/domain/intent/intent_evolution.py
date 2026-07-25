@@ -22,6 +22,7 @@ class IntentEvolutionKind(StrEnum):
     RESEARCH = "research"
     DIRECTION_SELECTED = "direction_selected"
     MISSION_COMMIT = "mission_commit"
+    MISSION_APPROVED = "mission_approved"
     EVIDENCE = "evidence"
     VISUAL_FEEDBACK = "visual_feedback"
 

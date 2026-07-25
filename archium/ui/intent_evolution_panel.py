@@ -22,6 +22,7 @@ _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.RESEARCH: "研究补充",
     IntentEvolutionKind.DIRECTION_SELECTED: "选定方向",
     IntentEvolutionKind.MISSION_COMMIT: "确认任务",
+    IntentEvolutionKind.MISSION_APPROVED: "批准任务",
     IntentEvolutionKind.EVIDENCE: "出处确认",
     IntentEvolutionKind.VISUAL_FEEDBACK: "示意反馈",
 }
@@ -69,6 +70,17 @@ def render_intent_evolution_timeline(
     if not events:
         st.caption("尚无意图演进记录。理解项目、研究或选定方向后会出现。")
         return
+
+    from archium.application.intent_evolution_graph import iter_design_history_edges
+
+    edges = iter_design_history_edges(evolution, require_shift=True)
+    if edges:
+        with st.expander("设计史（意图变迁）", expanded=True):
+            for edge in edges[-8:]:
+                kind_label = intent_evolution_kind_label(edge.kind)
+                st.markdown(f"- **{kind_label}**：{edge.display_line}")
+                if edge.evidence:
+                    st.caption("证据：" + "；".join(edge.evidence[:3]))
 
     visible = events[-limit:] if len(events) > limit else events
     if len(events) > limit:

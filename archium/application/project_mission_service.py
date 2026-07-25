@@ -264,6 +264,7 @@ class ProjectMissionService:
             note=history_note,
             actor=user_id,
         )
+        self._append_mission_approved_evolution(saved, note=history_note)
         from archium.application.context import best_effort_reassess_knowledge
 
         best_effort_reassess_knowledge(
@@ -274,6 +275,59 @@ class ProjectMissionService:
             reason="mission_approved",
         )
         return saved
+
+    def _append_mission_approved_evolution(
+        self,
+        mission: ProjectMission,
+        *,
+        note: str,
+    ) -> None:
+        from archium.application.intent_evolution_graph import intent_label_from_mission
+        from archium.domain.intent.intent_evolution import (
+            IntentEvolution,
+            IntentEvolutionKind,
+        )
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        projects = ProjectRepository(self._session)
+        project = projects.get_by_id(mission.project_id)
+        if project is None:
+            return
+        label = intent_label_from_mission(mission)
+        evo = project.intent_evolution or IntentEvolution()
+        # Prefer previous DIRECTION_SELECTED / MISSION_COMMIT new_summary as old intent
+        previous = None
+        for event in reversed(evo.events):
+            if event.kind in {
+                IntentEvolutionKind.DIRECTION_SELECTED,
+                IntentEvolutionKind.MISSION_COMMIT,
+                IntentEvolutionKind.RESEARCH,
+            } and (event.new_summary or "").strip():
+                previous = event.new_summary.strip()
+                break
+        project.intent_evolution = evo.append(
+            IntentEvolutionKind.MISSION_APPROVED,
+            f"批准任务理解：{mission.title}",
+            trigger="批准任务理解",
+            previous_summary=previous,
+            new_summary=label,
+            reason=(note or "建筑师确认当前任务定义").strip()[:200],
+            evidence_refs=[
+                bit
+                for bit in (
+                    mission.task_statement.strip()[:160],
+                    *(mission.research_questions[:2]),
+                )
+                if bit
+            ][:4],
+            design_intent_snapshot=(
+                mission.design_intent.model_dump(mode="json")
+                if mission.design_intent is not None
+                else {"title": mission.title, "task_statement": mission.task_statement}
+            ),
+        )
+        project.touch()
+        projects.update(project)
 
 
     def reject_mission(
