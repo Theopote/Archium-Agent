@@ -1061,7 +1061,7 @@ class ArtifactJobORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     request_kind: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="planned")
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    warnings_json: Mapped[list[str]] = mapped_column("warnings", JSON, nullable=False, default=list)
+    warnings_json: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     plan_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
     title: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     payload_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
