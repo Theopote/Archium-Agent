@@ -46,8 +46,10 @@ def _resolve_api_key_for_action(
     *,
     typed_key: str,
 ) -> str | None:
+    from archium.infrastructure.llm.connection_test import normalize_api_key
+
     if typed_key.strip():
-        return typed_key.strip()
+        return normalize_api_key(typed_key)
     with get_session() as session:
         service = LLMProfileService(session)
         session_key = st.session_state.get("llm_session_api_key")
@@ -56,7 +58,7 @@ def _resolve_api_key_for_action(
             session_api_key=session_key if isinstance(session_key, str) else None,
             env_api_key=get_settings().llm_api_key,
         )
-        return api_key
+        return normalize_api_key(api_key) if api_key else None
 
 
 def render() -> None:
@@ -145,7 +147,16 @@ def render() -> None:
                     f"响应时间：{result.latency_ms / 1000:.1f} 秒"
                 )
             else:
-                st.error(result.message)
+                lines = [result.message]
+                if result.error_code:
+                    lines.append(f"错误码：`{result.error_code}`")
+                if result.detail:
+                    lines.append(f"详情：{result.detail}")
+                lines.append(
+                    "提示：服务商、Base URL、模型名必须匹配"
+                    "（例如 Gemini Key 不能配 OpenAI 地址）。"
+                )
+                st.error("\n\n".join(lines))
 
     if save_clicked:
         if not draft_profile.model.strip():
@@ -157,9 +168,11 @@ def render() -> None:
                 save_service = LLMProfileService(session)
                 save_service.save_default_profile(draft_profile)
                 if api_key_input.strip():
+                    from archium.infrastructure.llm.connection_test import normalize_api_key
+
                     save_service.save_api_key(
                         draft_profile,
-                        api_key_input.strip(),
+                        normalize_api_key(api_key_input),
                         persist=save_mode == "保存到本机安全凭据库",
                         session_store=cast(dict[str, object], st.session_state),
                     )
