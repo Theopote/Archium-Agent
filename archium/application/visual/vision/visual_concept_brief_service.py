@@ -280,13 +280,39 @@ class VisualConceptBriefService:
             ),
             VisualSeedRefineDraft,
         )
+        direction_before = direction
+        previous_label = (
+            direction_before.title
+            or direction_before.theme
+            or (direction_before.spatial_strategy or "")[:60]
+            or ""
+        ).strip() or None
+        previous_prompt = ""
+        if direction_before.visual_prompt is not None:
+            previous_prompt = (direction_before.visual_prompt.image_prompt or "").strip()[:120]
+
         direction = self._apply_refine_draft(direction, draft)
         change_summary = (draft.change_summary or text[:120]).strip()
+        new_label = (
+            direction.title
+            or direction.theme
+            or (direction.spatial_strategy or "")[:60]
+            or change_summary
+            or ""
+        ).strip() or None
         self._append_visual_feedback_evolution(
             direction.project_id,
             change_summary,
             direction=direction,
             feedback=text,
+            previous_summary=previous_label,
+            new_summary=new_label,
+            reason=text.strip()[:200] or change_summary,
+            evidence_refs=[
+                bit
+                for bit in (previous_prompt, change_summary)
+                if bit and str(bit).strip()
+            ],
         )
         brief_result = self.synthesize_for_direction(
             direction.id,
@@ -343,6 +369,10 @@ class VisualConceptBriefService:
         *,
         direction: ConceptDirection,
         feedback: str,
+        previous_summary: str | None = None,
+        new_summary: str | None = None,
+        reason: str | None = None,
+        evidence_refs: list[str] | None = None,
     ) -> None:
         project = self._projects.get_by_id(project_id)
         if project is None:
@@ -359,6 +389,11 @@ class VisualConceptBriefService:
             IntentEvolutionKind.VISUAL_FEEDBACK,
             summary[:500],
             design_intent_snapshot=snapshot,
+            trigger="示意反馈",
+            previous_summary=previous_summary,
+            new_summary=new_summary,
+            reason=reason,
+            evidence_refs=evidence_refs,
         )
         self._projects.update(project)
 

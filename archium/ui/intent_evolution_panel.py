@@ -193,8 +193,25 @@ def render_knowledge_state_history_timeline(
 def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
     kind_label = intent_evolution_kind_label(event.kind)
     when = format_intent_event_time(event.at)
-    st.markdown(f"**{kind_label}** · `{when}`")
-    st.markdown(event.summary.strip())
+    trigger = (event.trigger or "").strip()
+    header = f"**{kind_label}** · `{when}`"
+    if trigger:
+        header = f"**{kind_label}** · {trigger} · `{when}`"
+    st.markdown(header)
+    st.markdown(event.display_line())
+    if event.has_history_edge():
+        bits: list[str] = []
+        if (event.previous_summary or "").strip() and (event.new_summary or "").strip():
+            bits.append(
+                f"旧：「{(event.previous_summary or '').strip()}」 → "
+                f"新：「{(event.new_summary or '').strip()}」"
+            )
+        if (event.reason or "").strip():
+            bits.append(f"原因：{(event.reason or '').strip()}")
+        if event.evidence_refs:
+            bits.append("证据：" + "；".join(event.evidence_refs[:4]))
+        if bits:
+            st.caption(" · ".join(bits))
     snapshot = event.design_intent_snapshot
     if not snapshot:
         return

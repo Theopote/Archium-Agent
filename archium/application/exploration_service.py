@@ -244,6 +244,24 @@ class ExplorationService:
             raise WorkflowError("已提交的探索不能更换方向")
 
         siblings = self._directions.list_by_exploration(exploration.id)
+        previous_selected = next(
+            (
+                sibling
+                for sibling in siblings
+                if sibling.status == ConceptDirectionStatus.SELECTED
+                and sibling.id != direction.id
+            ),
+            None,
+        )
+        previous_label = None
+        if previous_selected is not None:
+            previous_label = (
+                previous_selected.title or previous_selected.theme or ""
+            ).strip() or None
+        elif exploration.idea_seed is not None:
+            seed = exploration.idea_seed
+            previous_label = (seed.theme or seed.raw_input or "").strip()[:80] or None
+
         for sibling in siblings:
             if sibling.id == direction.id:
                 sibling.select()
@@ -255,10 +273,29 @@ class ExplorationService:
         exploration = self._explorations.update(exploration)
         refreshed = self._directions.get(direction_id)
         assert refreshed is not None
+        new_label = (refreshed.title or refreshed.theme or "").strip() or refreshed.title
         self._append_intent_evolution(
             exploration.project_id,
             IntentEvolutionKind.DIRECTION_SELECTED,
-            f"选定概念方向：{refreshed.title}",
+            f"选定概念方向：{new_label}",
+            trigger="选定概念方向",
+            previous_summary=previous_label,
+            new_summary=new_label,
+            reason="建筑师在概念探索中选定当前方向",
+            evidence_refs=[
+                bit
+                for bit in (
+                    refreshed.spatial_strategy,
+                    refreshed.formal_language,
+                    refreshed.experience_focus,
+                )
+                if bit and str(bit).strip()
+            ][:4],
+            design_intent_snapshot={
+                "direction_id": str(refreshed.id),
+                "title": refreshed.title,
+                "theme": refreshed.theme,
+            },
         )
         self._session.commit()
         from archium.application.context import best_effort_reassess_knowledge
@@ -326,10 +363,29 @@ class ExplorationService:
 
         exploration.mark_committed(mission.id)
         exploration = self._explorations.update(exploration)
+        previous_label = (direction.title or direction.theme or "").strip() or None
+        new_label = None
+        if mission.design_intent is not None and mission.design_intent.theme.strip():
+            new_label = mission.design_intent.theme.strip()
+        else:
+            new_label = mission.title
         self._append_intent_evolution(
             exploration.project_id,
             IntentEvolutionKind.MISSION_COMMIT,
             f"提交为 Mission：{mission.title}",
+            trigger="提交为项目任务",
+            previous_summary=previous_label,
+            new_summary=new_label,
+            reason="将选定概念方向固化为任务理解",
+            evidence_refs=[
+                bit
+                for bit in (
+                    direction.spatial_strategy,
+                    direction.formal_language,
+                    mission.task_statement,
+                )
+                if bit and str(bit).strip()
+            ][:4],
             design_intent_snapshot=(
                 mission.design_intent.model_dump(mode="json")
                 if mission.design_intent is not None
@@ -400,6 +456,11 @@ class ExplorationService:
         summary: str,
         *,
         design_intent_snapshot: dict[str, object] | None = None,
+        trigger: str | None = None,
+        previous_summary: str | None = None,
+        new_summary: str | None = None,
+        reason: str | None = None,
+        evidence_refs: list[str] | None = None,
     ) -> None:
         project = self._projects.get_by_id(project_id)
         if project is None:
@@ -409,6 +470,11 @@ class ExplorationService:
             kind,
             summary,
             design_intent_snapshot=design_intent_snapshot,
+            trigger=trigger,
+            previous_summary=previous_summary,
+            new_summary=new_summary,
+            reason=reason,
+            evidence_refs=evidence_refs,
         )
         project.touch()
         self._projects.update(project)

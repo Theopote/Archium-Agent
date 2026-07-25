@@ -227,6 +227,18 @@ class ContextAnalyzer:
             project_id,
             IntentEvolutionKind.RESEARCH,
             f"自主研究生成 {len(result.items)} 条公开摘要",
+            trigger="自主研究",
+            reason=(
+                f"补充{result.topics[0][:80]}"
+                if getattr(result, "topics", None)
+                else "补充公开背景研究"
+            ),
+            new_summary=f"公开研究摘要 ×{len(result.items)}",
+            evidence_refs=[
+                item.statement.strip()[:200]
+                for item in result.items
+                if getattr(item, "statement", None) and str(item.statement).strip()
+            ][:8],
         )
         reassessed = (
             best_effort_reassess_knowledge(
@@ -254,6 +266,11 @@ class ContextAnalyzer:
         summary: str,
         *,
         design_intent_snapshot: dict[str, object] | None = None,
+        trigger: str | None = None,
+        previous_summary: str | None = None,
+        new_summary: str | None = None,
+        reason: str | None = None,
+        evidence_refs: list[str] | None = None,
     ) -> Project:
         project = self._projects.get_by_id(project_id)
         if project is None:
@@ -263,6 +280,11 @@ class ContextAnalyzer:
             kind,
             summary,
             design_intent_snapshot=design_intent_snapshot,
+            trigger=trigger,
+            previous_summary=previous_summary,
+            new_summary=new_summary,
+            reason=reason,
+            evidence_refs=evidence_refs,
         )
         project.touch()
         updated = self._projects.update(project)

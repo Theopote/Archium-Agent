@@ -108,6 +108,12 @@ class MissionResearchEnrichmentService:
             raise WorkflowError("没有可写回的已确认公开研究")
 
         was_approved = is_mission_approval_current(mission)
+        previous_theme = ""
+        if mission.design_intent is not None:
+            previous_theme = mission.design_intent.theme.strip()
+        if not previous_theme:
+            previous_theme = (mission.title or "").strip()
+
         warnings: list[str] = []
         used_llm = False
         if prefer_llm and self._llm is not None and self._settings.llm_configured:
@@ -127,7 +133,17 @@ class MissionResearchEnrichmentService:
             RevisionSource.CLARIFICATION,
             note=f"公开研究写回（{len(pending)} 条）",
         )
-        self._append_research_evolution(mission.project_id, pending)
+        new_theme = ""
+        if mission.design_intent is not None:
+            new_theme = mission.design_intent.theme.strip()
+        if not new_theme:
+            new_theme = (mission.title or "").strip() or previous_theme
+        self._append_research_evolution(
+            mission.project_id,
+            pending,
+            previous_theme=previous_theme,
+            new_theme=new_theme,
+        )
         needs_reapproval = was_approved
         return MissionResearchEnrichmentResult(
             mission=mission,
@@ -310,6 +326,9 @@ class MissionResearchEnrichmentService:
         self,
         project_id: UUID,
         items: list[ProjectKnowledgeItem],
+        *,
+        previous_theme: str = "",
+        new_theme: str = "",
     ) -> None:
         from archium.application.intent_evidence_helpers import evidence_from_research_item
         from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
@@ -322,11 +341,26 @@ class MissionResearchEnrichmentService:
         evidence_dump = [
             evidence_from_research_item(item).model_dump(mode="json") for item in items
         ]
+        evidence_refs = [
+            item.statement.strip()[:200]
+            for item in items
+            if item.statement and item.statement.strip()
+        ][:8]
+        reason = None
+        if evidence_refs:
+            reason = f"发现{evidence_refs[0][:80]}"
+        previous = previous_theme.strip() or None
+        new = new_theme.strip() or None
         evo = project.intent_evolution or IntentEvolution()
         project.intent_evolution = evo.append(
             IntentEvolutionKind.RESEARCH,
             f"公开研究写回任务理解（{len(items)} 条）",
             design_intent_snapshot={"evidence": evidence_dump} if evidence_dump else None,
+            trigger="公开研究写回",
+            previous_summary=previous,
+            new_summary=new,
+            reason=reason,
+            evidence_refs=evidence_refs,
         )
         project.touch()
         projects.update(project)

@@ -120,6 +120,10 @@ def record_intent_evidence(
         kind,
         summary.strip()[:480] or "意图出处更新",
         design_intent_snapshot=snapshot,
+        trigger="出处确认",
+        reason=summary.strip()[:200] or None,
+        new_summary=cleaned[0].statement.strip()[:120] if cleaned else None,
+        evidence_refs=[item.statement.strip()[:200] for item in cleaned][:8],
     )
     project.touch()
     projects.update(project)

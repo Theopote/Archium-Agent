@@ -23,6 +23,14 @@ def test_intent_evolution_kind_labels() -> None:
     assert intent_evolution_kind_label("unknown_kind") == "unknown_kind"
 
 
+def test_display_line_used_by_panel_module() -> None:
+    from archium.ui import intent_evolution_panel as panel
+
+    src = Path(panel.__file__).read_text(encoding="utf-8")
+    assert "display_line" in src
+    assert "has_history_edge" in src
+
+
 def test_format_intent_event_time() -> None:
     stamp = datetime(2026, 7, 24, 15, 30, tzinfo=UTC)
     text = format_intent_event_time(stamp)
