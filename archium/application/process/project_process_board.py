@@ -8,8 +8,6 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.domain.enums import (
-    ApprovalStatus,
-    ExplorationSessionStatus,
     KnowledgeItemStatus,
     PresentationStatus,
     VerificationStatus,
@@ -94,74 +92,9 @@ def _research_pointer(session: Session, project_id: UUID) -> ProcessPointer:
 
 
 def _design_pointer(session: Session, project_id: UUID) -> ProcessPointer:
-    from archium.infrastructure.database.mission_repositories import MissionRepository
-    from archium.infrastructure.database.repositories import ExplorationSessionRepository
+    from archium.application.process.design_process_pointer import build_design_pointer
 
-    explorations = ExplorationSessionRepository(session).list_by_project(project_id)
-    missions = MissionRepository(session).list_missions_by_project(project_id)
-    now = datetime.now(UTC)
-
-    if explorations:
-        latest = max(explorations, key=lambda e: e.updated_at)
-        if latest.status == ExplorationSessionStatus.EXPLORING:
-            return ProcessPointer(
-                kind=ProjectProcessKind.DESIGN,
-                phase=ProjectProcessPhase.ACTIVE,
-                active_id=latest.id,
-                label="概念探索中",
-                detail="正在生成或比较方向",
-                updated_at=latest.updated_at,
-            )
-        if latest.status == ExplorationSessionStatus.DIRECTION_SELECTED:
-            return ProcessPointer(
-                kind=ProjectProcessKind.DESIGN,
-                phase=ProjectProcessPhase.READY,
-                active_id=latest.id,
-                label="方向已选定",
-                detail="可提交 Mission 或继续迭代",
-                updated_at=latest.updated_at,
-            )
-        if latest.status == ExplorationSessionStatus.COMMITTED:
-            return ProcessPointer(
-                kind=ProjectProcessKind.DESIGN,
-                phase=ProjectProcessPhase.COMPLETE,
-                active_id=latest.id,
-                label="探索已提交 Mission",
-                detail=f"mission={latest.mission_id}" if latest.mission_id else "",
-                updated_at=latest.updated_at,
-            )
-
-    if missions:
-        mission = missions[0]
-        if mission.approval_status == ApprovalStatus.APPROVED:
-            return ProcessPointer(
-                kind=ProjectProcessKind.DESIGN,
-                phase=ProjectProcessPhase.READY,
-                active_id=mission.id,
-                label="Mission 已批准",
-                detail=mission.title[:80],
-                updated_at=getattr(mission, "updated_at", now),
-            )
-        if mission.approval_status in {
-            ApprovalStatus.DRAFT,
-            ApprovalStatus.PENDING,
-            ApprovalStatus.CHANGES_PENDING,
-        }:
-            return ProcessPointer(
-                kind=ProjectProcessKind.DESIGN,
-                phase=ProjectProcessPhase.ACTIVE,
-                active_id=mission.id,
-                label="Mission 澄清中",
-                detail=mission.title[:80],
-                updated_at=getattr(mission, "updated_at", now),
-            )
-
-    return ProcessPointer(
-        kind=ProjectProcessKind.DESIGN,
-        phase=ProjectProcessPhase.IDLE,
-        label="尚未进入设计过程",
-        updated_at=now,
-    )
+    return build_design_pointer(session, project_id)
 
 
 def _presentation_pointer(session: Session, project_id: UUID) -> ProcessPointer:

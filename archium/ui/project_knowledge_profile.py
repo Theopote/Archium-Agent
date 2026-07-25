@@ -70,6 +70,7 @@ def render_project_knowledge_strip(
 def _render_process_board(project_id: UUID) -> None:
     try:
         from archium.application.process import build_project_process_board
+        from archium.domain.process import design_focus_label
         from archium.infrastructure.database.session import get_session
 
         with get_session() as session:
@@ -80,6 +81,10 @@ def _render_process_board(project_id: UUID) -> None:
             if pointer.phase.value == "idle":
                 continue
             bit = pointer.label
+            if pointer.kind.value == "design":
+                focus_label = design_focus_label(pointer.focus)
+                if focus_label:
+                    bit = f"[{focus_label}] {bit}"
             if pointer.detail:
                 bit = f"{bit}（{pointer.detail}）"
             details.append(bit)
