@@ -166,11 +166,17 @@ def _render_plan_wireframe(plan: LayoutPlan, *, selected_element_id: str | None)
         else:
             border = "1px solid #98a2b3"
             background = "rgba(152, 162, 179, 0.12)"
+        label = _escape_html(
+            (element.text_content or element.id or "")[:40]
+        )
         boxes.append(
             "<div style="
             f"'position:absolute;left:{left:.2f}%;top:{top:.2f}%;"
             f"width:{box_width:.2f}%;height:{box_height:.2f}%;"
-            f"border:{border};background:{background};border-radius:4px;'></div>"
+            f"border:{border};background:{background};border-radius:4px;"
+            "overflow:hidden;padding:2px 4px;box-sizing:border-box;"
+            "font-size:0.7rem;color:#3f3a34;line-height:1.2;'>"
+            f"{label}</div>"
         )
     st.caption("版式线框预览（由 LayoutPlan 几何自动生成）")
     st.markdown(

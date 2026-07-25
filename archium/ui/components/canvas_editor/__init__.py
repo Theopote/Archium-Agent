@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import mimetypes
+from pathlib import Path
 from typing import Any, Literal, NotRequired, TypedDict
 
 from archium.domain.visual.layout import LayoutPlan
@@ -18,6 +21,30 @@ from archium.ui.components.canvas_editor.runtime import (
 _BUILD_EXPORTS = frozenset(
     {"build_canvas_editor", "canvas_editor_build_dir", "is_canvas_editor_built"}
 )
+_DEFAULT_CANVAS_HEIGHT_PX = 480
+_MAX_EMBEDDED_PREVIEW_BYTES = 5_000_000
+
+
+def preview_url_for_canvas(image_url: str | Path | None) -> str:
+    """Return a browser-loadable image URL for the canvas iframe.
+
+    Local filesystem paths cannot be loaded inside the Streamlit component
+    iframe; convert them to ``data:`` URLs. HTTP(S) / data / media URLs pass through.
+    """
+    raw = str(image_url or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith(("http://", "https://", "data:", "/media/")):
+        return raw
+    path = Path(raw)
+    if not path.is_file():
+        return raw
+    data = path.read_bytes()
+    if not data or len(data) > _MAX_EMBEDDED_PREVIEW_BYTES:
+        return raw
+    mime = mimetypes.guess_type(path.name)[0] or "image/png"
+    encoded = base64.b64encode(data).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
 
 
 class CanvasSelectEvent(TypedDict):
@@ -262,7 +289,7 @@ def canvas_editor(
     if not ids and selected_element_id:
         ids = [selected_element_id]
     component_value = component_func(
-        imageUrl=image_url,
+        imageUrl=preview_url_for_canvas(image_url),
         elements=elements,
         selectedId=ids[0] if ids else selected_element_id,
         selectedIds=ids,
@@ -272,6 +299,8 @@ def canvas_editor(
         showAllBorders=show_all_borders,
         key=key,
         default=None,
+        # Initial iframe height; React then adjusts via setFrameHeight.
+        height=_DEFAULT_CANVAS_HEIGHT_PX,
     )
     return parse_canvas_editor_event(component_value)
 
@@ -356,5 +385,6 @@ __all__ = [
     "convert_elements_for_canvas",
     "is_canvas_editor_built",
     "parse_canvas_editor_event",
+    "preview_url_for_canvas",
     "reset_canvas_editor_component_cache",
 ]

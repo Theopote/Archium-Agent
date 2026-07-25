@@ -102,7 +102,11 @@ class SlidePreviewService:
             preview_kind: PreviewKind | None = None
 
             scene_path = scene_by_index.get(index)
-            if scene_path and Path(scene_path).is_file():
+            if (
+                scene_path
+                and Path(scene_path).is_file()
+                and not self._is_blank_preview_image(scene_path)
+            ):
                 preview_path = scene_path
                 preview_kind = "scene"
             else:
@@ -126,6 +130,21 @@ class SlidePreviewService:
                 )
             )
         return resolutions
+
+    @staticmethod
+    def _is_blank_preview_image(path: str | Path) -> bool:
+        """Detect near-uniform PNGs so Studio can fall back to wireframe."""
+        try:
+            from PIL import Image
+
+            with Image.open(path) as image:
+                sample = image.convert("L").resize((48, 27))
+                pixels = list(sample.getdata())
+            if not pixels:
+                return True
+            return (max(pixels) - min(pixels)) < 12
+        except Exception:
+            return False
 
     def _resolve_screenshot_paths(
         self,

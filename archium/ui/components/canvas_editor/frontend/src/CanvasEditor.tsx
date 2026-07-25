@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Streamlit, withStreamlitConnection } from "streamlit-component-lib";
+import {
+  Streamlit,
+  withStreamlitConnection,
+  ComponentProps,
+} from "streamlit-component-lib";
 
 /**
  * Canvas Editor — Studio Essential Editing V1
@@ -73,7 +77,22 @@ const ROLE_COLORS: Record<string, { border: string; background: string; label: s
     background: "rgba(18, 183, 106, 0.1)",
     label: "标题",
   },
+  SUBTITLE: {
+    border: "#12b76a",
+    background: "rgba(18, 183, 106, 0.08)",
+    label: "副标题",
+  },
+  LEAD_STATEMENT: {
+    border: "#667085",
+    background: "rgba(102, 112, 133, 0.1)",
+    label: "导语",
+  },
   BODY: {
+    border: "#667085",
+    background: "rgba(102, 112, 133, 0.1)",
+    label: "正文",
+  },
+  BODY_TEXT: {
     border: "#667085",
     background: "rgba(102, 112, 133, 0.1)",
     label: "正文",
@@ -90,6 +109,14 @@ const ROLE_COLORS: Record<string, { border: string; background: string; label: s
   },
 };
 
+const roleColorConfig = (role: string) => {
+  const key = String(role || "")
+    .trim()
+    .toUpperCase()
+    .replace(/-/g, "_");
+  return ROLE_COLORS[key] || ROLE_COLORS.DECORATION;
+};
+
 const DRAG_THRESHOLD_PX = 4;
 const GEOMETRY_EPSILON = 0.05;
 
@@ -98,7 +125,7 @@ const isTextContent = (contentType?: string) =>
 const isImageContent = (contentType?: string) =>
   (contentType || "").toLowerCase() === "image";
 
-const CanvasEditor: React.FC = () => {
+const CanvasEditor: React.FC<ComponentProps> = (props) => {
   const [hoverElementId, setHoverElementId] = useState<string | null>(null);
   const [localSelectedIds, setLocalSelectedIds] = useState<string[]>([]);
   const [dragElementId, setDragElementId] = useState<string | null>(null);
@@ -160,7 +187,7 @@ const CanvasEditor: React.FC = () => {
     additive: boolean;
   } | null>(null);
 
-  const args = (window as any).streamlitArgs;
+  const args = props.args || {};
   const imageUrl: string = args?.imageUrl || "";
   const elements: Element[] = useMemo(
     () => (args?.elements as Element[] | undefined) || [],
@@ -201,11 +228,23 @@ const CanvasEditor: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (imageRef.current) {
-      const height = imageRef.current.offsetHeight + 40;
-      Streamlit.setFrameHeight(height);
-    }
-  }, [containerSize, dragElementId, inlineEdit, assetPicker, commentAnchors.length]);
+    const applyFrameHeight = () => {
+      const container = containerRef.current;
+      if (container && container.offsetWidth > 0) {
+        const fromAspect = Math.round(container.offsetWidth * (9 / 16)) + 40;
+        const fromImage = imageRef.current?.offsetHeight
+          ? imageRef.current.offsetHeight + 40
+          : 0;
+        Streamlit.setFrameHeight(Math.max(fromAspect, fromImage, 280));
+        return;
+      }
+      Streamlit.setFrameHeight(480);
+    };
+
+    applyFrameHeight();
+    window.addEventListener("resize", applyFrameHeight);
+    return () => window.removeEventListener("resize", applyFrameHeight);
+  }, [containerSize, dragElementId, inlineEdit, assetPicker, commentAnchors.length, imageUrl]);
 
   const inlineEditElementId = inlineEdit?.elementId;
 
@@ -652,7 +691,7 @@ const CanvasEditor: React.FC = () => {
   };
 
   const renderElementBox = (element: Element, isHovered: boolean, isSelected: boolean) => {
-    const roleColor = ROLE_COLORS[element.role] || ROLE_COLORS.DECORATION;
+    const roleColor = roleColorConfig(element.role);
     const preview = dragPreviewById[element.id];
     const isDragging = preview !== undefined;
     const isResizing = dragElementId === element.id && resizePreview !== null;
@@ -855,6 +894,16 @@ const CanvasEditor: React.FC = () => {
             ref={imageRef}
             src={imageUrl}
             alt="Slide preview"
+            onLoad={() => {
+              const container = containerRef.current;
+              const fromAspect = container
+                ? Math.round(container.offsetWidth * (9 / 16)) + 40
+                : 0;
+              const fromImage = imageRef.current?.offsetHeight
+                ? imageRef.current.offsetHeight + 40
+                : 0;
+              Streamlit.setFrameHeight(Math.max(fromAspect, fromImage, 280));
+            }}
             style={{
               position: "absolute",
               top: 0,
