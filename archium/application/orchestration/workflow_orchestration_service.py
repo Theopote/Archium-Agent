@@ -435,8 +435,41 @@ class WorkflowOrchestrationService:
                 service.close()
 
     def _run_presentation_stage(self, project_id: UUID) -> dict[str, Any]:
-        """Thin adapter: surface ready PresentationRequest; do not auto-start the main chain."""
+        """Thin adapter: reuse or prepare PresentationWorkflowService (no auto execute)."""
         runs = self._workflow_runs.list_by_project(project_id)
+        presentation_runs = [r for r in runs if self._is_presentation_pipeline_run(r)]
+
+        completed = [
+            r for r in presentation_runs if r.status == WorkflowStatus.COMPLETED
+        ]
+        if completed:
+            latest = max(completed, key=lambda r: r.updated_at or r.created_at)
+            return {
+                "status": OrchestrationStageStatus.COMPLETED,
+                "workflow_run_id": latest.id,
+                "warnings": ["汇报主链已完成"],
+            }
+
+        awaiting = [
+            r for r in presentation_runs if r.status == WorkflowStatus.AWAITING_REVIEW
+        ]
+        if awaiting:
+            latest = max(awaiting, key=lambda r: r.updated_at or r.created_at)
+            return {
+                "status": OrchestrationStageStatus.AWAITING_REVIEW,
+                "workflow_run_id": latest.id,
+                "warnings": ["汇报主链等待审阅，请在生成页继续"],
+            }
+
+        running = [r for r in presentation_runs if r.status == WorkflowStatus.RUNNING]
+        if running:
+            latest = max(running, key=lambda r: r.updated_at or r.created_at)
+            return {
+                "status": OrchestrationStageStatus.AWAITING_USER,
+                "workflow_run_id": latest.id,
+                "warnings": ["汇报运行已准备或进行中，请在生成页继续主链"],
+            }
+
         planning_ready = [
             run
             for run in runs
@@ -449,26 +482,213 @@ class WorkflowOrchestrationService:
                 "status": OrchestrationStageStatus.AWAITING_USER,
                 "warnings": ["尚无就绪的汇报请求，请先完成任务规划与计划批准"],
             }
-        latest = max(planning_ready, key=lambda r: r.updated_at or r.created_at)
-        return {
-            "status": OrchestrationStageStatus.AWAITING_USER,
-            "workflow_run_id": latest.id,
-            "warnings": [
-                "汇报请求已就绪；请在生成页启动 PresentationWorkflowService 主链"
-                "（含大纲审阅闸门，编排层不自动开跑）"
-            ],
-        }
+
+        latest_planning = max(
+            planning_ready, key=lambda r: r.updated_at or r.created_at
+        )
+        return self._prepare_presentation_from_planning(project_id, latest_planning)
+
+    def _prepare_presentation_from_planning(
+        self,
+        project_id: UUID,
+        planning_run: WorkflowRun,
+    ) -> dict[str, Any]:
+        from archium.application.planning_workflow_service import PlanningWorkflowService
+        from archium.application.presentation_workflow_service import (
+            PresentationWorkflowService,
+        )
+        from archium.domain.enums import DeliverableType
+
+        planning = PlanningWorkflowService(
+            self._session, self._llm, settings=self._settings
+        )
+        presentation = PresentationWorkflowService(
+            self._session, self._llm, settings=self._settings
+        )
+        try:
+            bridge = planning.get_presentation_bridge(planning_run.id)
+            mission_id = None
+            raw = planning_run.state.get("mission_id")
+            if raw:
+                mission_id = UUID(str(raw))
+            if mission_id is not None:
+                plan = self._missions.get_approved_deliverable_plan(mission_id)
+                if plan is None:
+                    plans = self._missions.list_deliverable_plans(mission_id)
+                    plan = plans[0] if plans else None
+                if plan is not None:
+                    selected_presentations = [
+                        item
+                        for item in plan.deliverables
+                        if item.selected
+                        and item.deliverable_type == DeliverableType.PRESENTATION
+                    ]
+                    if not selected_presentations:
+                        return {
+                            "status": OrchestrationStageStatus.SKIPPED,
+                            "skip_reason": "成果计划未选择汇报类交付",
+                            "warnings": [
+                                "当前成果未选择 Presentation，编排跳过汇报阶段"
+                            ],
+                            "workflow_run_id": planning_run.id,
+                        }
+
+            child = presentation.prepare_run(
+                project_id,
+                bridge.request,
+                export_json=True,
+                export_marp=False,
+                require_brief_review=False,
+                require_storyline_review=False,
+                require_outline_review=True,
+            )
+            planning_session = planning.get_session_for_run(planning_run.id)
+            if planning_session is not None and child.presentation_id is not None:
+                with suppress(Exception):
+                    planning.attach_presentation(
+                        planning_session.id, child.presentation_id
+                    )
+            return {
+                "status": OrchestrationStageStatus.AWAITING_USER,
+                "workflow_run_id": child.id,
+                "warnings": [
+                    "已通过 PresentationWorkflowService.prepare_run 创建汇报运行；"
+                    "请在生成页执行主链（大纲审阅闸门仍生效）"
+                ],
+            }
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Presentation prepare for orchestration failed: %s", exc)
+            return {
+                "status": OrchestrationStageStatus.AWAITING_USER,
+                "workflow_run_id": planning_run.id,
+                "warnings": [
+                    f"汇报准备未自动创建：{exc}；请在任务页手动启动 PresentationWorkflowService"
+                ],
+            }
+        finally:
+            with suppress(Exception):
+                presentation.close()
+            with suppress(Exception):
+                planning.close()
 
     def _run_visual_stage(self, project_id: UUID) -> dict[str, Any]:
-        """Thin adapter: hand off to Studio / VisualWorkflowService under user control."""
-        _ = project_id
+        """Thin adapter: hand off to VisualWorkflowService when a presentation is ready."""
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        runs = self._workflow_runs.list_by_project(project_id)
+        visual_runs = [
+            r for r in runs if r.state.get("workflow_kind") == "visual_composition"
+        ]
+
+        completed = [r for r in visual_runs if r.status == WorkflowStatus.COMPLETED]
+        if completed:
+            latest = max(completed, key=lambda r: r.updated_at or r.created_at)
+            return {
+                "status": OrchestrationStageStatus.COMPLETED,
+                "workflow_run_id": latest.id,
+                "warnings": ["视觉编排已完成"],
+            }
+
+        awaiting = [
+            r for r in visual_runs if r.status == WorkflowStatus.AWAITING_REVIEW
+        ]
+        if awaiting:
+            latest = max(awaiting, key=lambda r: r.updated_at or r.created_at)
+            return {
+                "status": OrchestrationStageStatus.AWAITING_REVIEW,
+                "workflow_run_id": latest.id,
+                "warnings": ["视觉编排等待审阅，请在工作室继续"],
+            }
+
+        running = [r for r in visual_runs if r.status == WorkflowStatus.RUNNING]
+        if running:
+            latest = max(running, key=lambda r: r.updated_at or r.created_at)
+            return {
+                "status": OrchestrationStageStatus.AWAITING_USER,
+                "workflow_run_id": latest.id,
+                "warnings": ["视觉编排进行中，请在工作室继续 VisualWorkflowService"],
+            }
+
+        presentations = PresentationRepository(self._session).list_by_project(project_id)
+        with_outline = [p for p in presentations if p.current_outline_id]
+        if with_outline:
+            latest_pres = max(
+                with_outline, key=lambda p: p.updated_at or p.created_at
+            )
+            return {
+                "status": OrchestrationStageStatus.AWAITING_USER,
+                "warnings": [
+                    f"汇报已有大纲（presentation `{str(latest_pres.id)[:8]}…`）；"
+                    "请在工作室启动 VisualWorkflowService（编排层不自动开跑视觉子图）"
+                ],
+            }
+
+        presentation_done = [
+            r
+            for r in runs
+            if self._is_presentation_pipeline_run(r)
+            and r.status == WorkflowStatus.COMPLETED
+        ]
+        if presentations or presentation_done:
+            return {
+                "status": OrchestrationStageStatus.AWAITING_USER,
+                "warnings": [
+                    "汇报尚无大纲，请先完成汇报主链后再进入工作室启动 VisualWorkflowService"
+                ],
+            }
+
         return {
-            "status": OrchestrationStageStatus.AWAITING_USER,
-            "warnings": [
-                "请在工作室继续视觉与版式（VisualWorkflowService）；"
-                "编排层不自动启动视觉子图"
-            ],
+            "status": OrchestrationStageStatus.SKIPPED,
+            "skip_reason": "尚无汇报成果，跳过视觉阶段",
+            "warnings": ["尚无汇报成果，视觉阶段已跳过"],
         }
+
+    @staticmethod
+    def _is_presentation_pipeline_run(run: WorkflowRun) -> bool:
+        kind = run.state.get("workflow_kind")
+        if kind in {
+            ORCHESTRATION_KIND,
+            "planning",
+            "workstream_execution",
+            "visual_composition",
+        }:
+            return False
+        if run.presentation_id is None:
+            return False
+        return isinstance(run.state.get("request"), dict) or "current_step" in run.state
+
+    def link_child_run(
+        self,
+        project_id: UUID,
+        *,
+        stage: OrchestrationStage,
+        child_workflow_run_id: UUID,
+        status: OrchestrationStageStatus = OrchestrationStageStatus.AWAITING_REVIEW,
+    ) -> WorkflowRun | None:
+        """Attach a child subgraph run to the active orchestration stage, if matching."""
+        active = self.get_active_run(project_id)
+        if active is None:
+            return None
+        plan = self._plan_from_run(active)
+        current = plan.active_stage()
+        if current is None or current.stage != stage:
+            return None
+        current.workflow_run_id = child_workflow_run_id
+        if current.status in {
+            OrchestrationStageStatus.PENDING,
+            OrchestrationStageStatus.RUNNING,
+            OrchestrationStageStatus.AWAITING_USER,
+        }:
+            current.status = status
+        active.status = WorkflowStatus.AWAITING_REVIEW
+        active.state = {
+            **active.state,
+            "orchestration_plan": plan.model_dump(mode="json"),
+            "active_stage": current.stage.value,
+            "child_workflow_run_id": str(child_workflow_run_id),
+            "review_gate": f"orchestration:{current.stage.value}",
+        }
+        return self._workflow_runs.update(active)
 
     def _require_run(self, workflow_run_id: UUID) -> WorkflowRun:
         run = self._workflow_runs.get_by_id(workflow_run_id)

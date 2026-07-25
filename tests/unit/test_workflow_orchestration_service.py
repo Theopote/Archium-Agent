@@ -13,6 +13,7 @@ from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import WorkflowStatus
 from archium.domain.intent.next_best_action import NextBestActionType
 from archium.domain.orchestration import (
+    OrchestrationPlan,
     OrchestrationStage,
     OrchestrationStageStatus,
 )
@@ -141,9 +142,116 @@ def test_presentation_stage_awaits_when_planning_ready() -> None:
             return [planning]
 
     service._workflow_runs = FakeRepo()  # noqa: SLF001
+    # Avoid real prepare_run — exercise fallback warning path via monkeypatch
+    service._prepare_presentation_from_planning = (  # noqa: SLF001
+        lambda _pid, planning_run: {
+            "status": OrchestrationStageStatus.AWAITING_USER,
+            "workflow_run_id": planning_run.id,
+            "warnings": ["已通过 PresentationWorkflowService.prepare_run 创建汇报运行"],
+        }
+    )
     out = service._run_presentation_stage(project_id)  # noqa: SLF001
     assert out["status"] == OrchestrationStageStatus.AWAITING_USER
     assert out["workflow_run_id"] == planning.id
+
+
+def test_presentation_stage_reuses_existing_pipeline_run() -> None:
+    service = WorkflowOrchestrationService(MagicMock(), MagicMock())
+    project_id = uuid4()
+    child = WorkflowRun(
+        project_id=project_id,
+        presentation_id=uuid4(),
+        status=WorkflowStatus.AWAITING_REVIEW,
+        state={"request": {"title": "概念汇报"}, "current_step": "outline"},
+    )
+
+    class FakeRepo:
+        def list_by_project(self, _pid):  # noqa: ANN001
+            return [child]
+
+    service._workflow_runs = FakeRepo()  # noqa: SLF001
+    out = service._run_presentation_stage(project_id)  # noqa: SLF001
+    assert out["status"] == OrchestrationStageStatus.AWAITING_REVIEW
+    assert out["workflow_run_id"] == child.id
+
+
+def test_visual_stage_skips_without_presentation(monkeypatch) -> None:
+    service = WorkflowOrchestrationService(MagicMock(), MagicMock())
+    project_id = uuid4()
+
+    class FakeRepo:
+        def list_by_project(self, _pid):  # noqa: ANN001
+            return []
+
+    service._workflow_runs = FakeRepo()  # noqa: SLF001
+
+    class FakePresRepo:
+        def __init__(self, _session):  # noqa: ANN001
+            pass
+
+        def list_by_project(self, _pid):  # noqa: ANN001
+            return []
+
+    monkeypatch.setattr(
+        "archium.infrastructure.database.repositories.PresentationRepository",
+        FakePresRepo,
+    )
+    out = service._run_visual_stage(project_id)  # noqa: SLF001
+    assert out["status"] == OrchestrationStageStatus.SKIPPED
+
+
+def test_link_child_run_attaches_to_active_presentation_stage() -> None:
+    service = WorkflowOrchestrationService(MagicMock(), MagicMock())
+    project_id = uuid4()
+    plan = service.build_plan(project_id)
+    # Jump to presentation stage
+    for stage in plan.stages:
+        if stage.stage != OrchestrationStage.PRESENTATION:
+            stage.status = OrchestrationStageStatus.COMPLETED
+        else:
+            stage.status = OrchestrationStageStatus.AWAITING_USER
+            break
+    plan.active_index = next(
+        i
+        for i, s in enumerate(plan.stages)
+        if s.stage == OrchestrationStage.PRESENTATION
+    )
+    run = WorkflowRun(
+        project_id=project_id,
+        status=WorkflowStatus.AWAITING_REVIEW,
+        state={
+            "workflow_kind": ORCHESTRATION_KIND,
+            "orchestration_plan": plan.model_dump(mode="json"),
+        },
+    )
+    store = {run.id: run}
+
+    class FakeRepo:
+        def list_by_project(self, _pid):  # noqa: ANN001
+            return [run]
+
+        def get_by_id(self, rid):  # noqa: ANN001
+            return store.get(rid)
+
+        def update(self, updated: WorkflowRun) -> WorkflowRun:
+            store[updated.id] = updated
+            return updated
+
+    service._workflow_runs = FakeRepo()  # noqa: SLF001
+    child_id = uuid4()
+    linked = service.link_child_run(
+        project_id,
+        stage=OrchestrationStage.PRESENTATION,
+        child_workflow_run_id=child_id,
+    )
+    assert linked is not None
+    refreshed = OrchestrationPlan.model_validate(
+        linked.state["orchestration_plan"]
+    )
+    active = refreshed.active_stage()
+    assert active is not None
+    assert active.workflow_run_id == child_id
+    assert active.status == OrchestrationStageStatus.AWAITING_REVIEW
 
 
 def test_workstream_stage_skips_when_already_completed() -> None:

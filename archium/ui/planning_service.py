@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -1074,6 +1075,33 @@ def start_presentation_from_planning(
     planning_session = planning.get_session_for_run(workflow_run_id)
     if planning_session is not None:
         planning.attach_presentation(planning_session.id, result.presentation.id)
+
+    with suppress(Exception):
+        from archium.application.orchestration import WorkflowOrchestrationService
+        from archium.domain.enums import WorkflowStatus
+        from archium.domain.orchestration import (
+            OrchestrationStage,
+            OrchestrationStageStatus,
+        )
+        from archium.infrastructure.llm.factory import create_llm_provider
+
+        child_status = result.workflow_run.status
+        if child_status == WorkflowStatus.AWAITING_REVIEW:
+            orch_status = OrchestrationStageStatus.AWAITING_REVIEW
+        elif child_status == WorkflowStatus.COMPLETED:
+            orch_status = OrchestrationStageStatus.COMPLETED
+        else:
+            orch_status = OrchestrationStageStatus.AWAITING_USER
+
+        WorkflowOrchestrationService(
+            session, create_llm_provider(runtime), settings=runtime
+        ).link_child_run(
+            project_id,
+            stage=OrchestrationStage.PRESENTATION,
+            child_workflow_run_id=result.workflow_run.id,
+            status=orch_status,
+        )
+
     return result
 
 

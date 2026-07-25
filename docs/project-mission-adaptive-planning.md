@@ -55,7 +55,14 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 | **Orchestration（A）** | 把建议变成 **durable 阶段运行**：启动/恢复 Planning / Presentation / Visual 等子图，或停在需用户操作的页面 | `WorkflowOrchestrationService`；`WorkflowRun.state.workflow_kind=orchestration` |
 | **Workstream execution（B）** | 把已选 `WorkstreamPlan` 按依赖拓扑编成 **动态 LangGraph**，逐节点调用研究/策略笔记等 Service | `WorkstreamExecutionService` + `workstream_execution_graph` |
 
-NBA **仍会跳页**；对可编排动作（如打开任务、研究、探索）会额外 `start`/`resume` 编排 run。工作路径执行发生在 **交付计划批准之后**、汇报主链之前：`PlanningWorkflowService.approve_and_continue` / `resume_after_plan_approval` 会调用 `WorkstreamExecutionService`；编排层的 `workstream_execution` 阶段若发现路径已完成则不再重复跑。未选路径则阶段自动 `SKIPPED`。Presentation / Visual 编排阶段为薄适配（`AWAITING_USER`），不自动开跑主链。
+NBA **仍会跳页**；对可编排动作（如打开任务、研究、探索）会额外 `start`/`resume` 编排 run。工作路径执行发生在 **交付计划批准之后**、汇报主链之前：`PlanningWorkflowService.approve_and_continue` / `resume_after_plan_approval` 会调用 `WorkstreamExecutionService`；编排层的 `workstream_execution` 阶段若发现路径已完成则不再重复跑。未选路径则阶段自动 `SKIPPED`。
+
+**Presentation / Visual 阶段适配：**
+
+| 阶段 | 行为 |
+|------|------|
+| `presentation` | 复用已有汇报 `WorkflowRun`；否则在规划 draft 就绪时调用 `PresentationWorkflowService.prepare_run`（**不**自动 `execute`）；用户在生成页继续；`start_presentation_from_planning` 会 `link_child_run` |
+| `visual` | 已有 `visual_composition` 子 run 则挂接；有大纲则 `AWAITING_USER` 指向工作室；无汇报则 `SKIPPED`。编排层不自动启动 `VisualWorkflowService` |
 
 不引入新 Agent 类：编排与执行均为 **Service + Domain + Workflow node**（见 `docs/architecture/pipeline-roles.md`）。
 
