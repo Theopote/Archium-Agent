@@ -22,6 +22,9 @@ from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, Knowle
 
 def test_classify_reassess_mode_fact_confirmed_is_index() -> None:
     assert classify_reassess_mode("fact_confirmed") == ReassessMode.INDEX
+    assert classify_reassess_mode("fact_rejected") == ReassessMode.INDEX
+    assert classify_reassess_mode("knowledge_item_confirmed") == ReassessMode.INDEX
+    assert classify_reassess_mode("knowledge_item_rejected") == ReassessMode.INDEX
     assert classify_reassess_mode("mission_approved") == ReassessMode.FULL
     assert classify_reassess_mode("document_uploaded") == ReassessMode.FULL
     assert classify_reassess_mode("direction_selected") == ReassessMode.FULL

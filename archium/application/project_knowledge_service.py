@@ -121,12 +121,40 @@ class ProjectKnowledgeService:
     def confirm_item(self, item_id: UUID) -> ProjectKnowledgeItem:
         item = self._require_item(item_id)
         item.confirm()
-        return self._knowledge.update(item)
+        updated = self._knowledge.update(item)
+        self._best_effort_index_after_knowledge_change(
+            updated.project_id,
+            reason="knowledge_item_confirmed",
+        )
+        return updated
 
     def reject_item(self, item_id: UUID) -> ProjectKnowledgeItem:
         item = self._require_item(item_id)
         item.reject()
-        return self._knowledge.update(item)
+        updated = self._knowledge.update(item)
+        self._best_effort_index_after_knowledge_change(
+            updated.project_id,
+            reason="knowledge_item_rejected",
+        )
+        return updated
+
+    def _best_effort_index_after_knowledge_change(
+        self,
+        project_id: UUID,
+        *,
+        reason: str,
+    ) -> None:
+        """Refresh claim index after knowledge confirm/reject; never fail caller."""
+        try:
+            from archium.application.context import best_effort_reassess_knowledge
+
+            best_effort_reassess_knowledge(
+                self._session,
+                project_id,
+                reason=reason,
+            )
+        except Exception:
+            return
 
     def update_item_statement(self, item_id: UUID, statement: str) -> ProjectKnowledgeItem:
         item = self._require_item(item_id)

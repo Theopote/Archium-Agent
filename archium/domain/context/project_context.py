@@ -8,7 +8,8 @@ ProjectContext answers four questions:
 
 Do NOT store here: design solutions, exploration sessions, mission bodies,
 presentation/render state, or visual iteration state. Those belong on
-Research / Design / Presentation process objects under Project.
+Research / Design / Presentation process objects under Project
+(``ProjectProcessBoard`` / process-owned entities).
 """
 
 from __future__ import annotations

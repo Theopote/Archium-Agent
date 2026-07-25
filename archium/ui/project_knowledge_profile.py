@@ -62,7 +62,31 @@ def render_project_knowledge_strip(
 
     if show_known_unknown:
         _render_known_unknown(context.knowledge_state, compact=compact)
+    if not compact:
+        _render_process_board(project_id)
     return display
+
+
+def _render_process_board(project_id: UUID) -> None:
+    try:
+        from archium.application.process import build_project_process_board
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            board = build_project_process_board(session, project_id)
+        st.caption(f"过程板：{board.summary_line()}")
+        details = []
+        for pointer in (board.research, board.design, board.presentation):
+            if pointer.phase.value == "idle":
+                continue
+            bit = pointer.label
+            if pointer.detail:
+                bit = f"{bit}（{pointer.detail}）"
+            details.append(bit)
+        if details:
+            st.caption(" · ".join(details[:3]))
+    except Exception:
+        return
 
 
 def render_project_knowledge_action_buttons(

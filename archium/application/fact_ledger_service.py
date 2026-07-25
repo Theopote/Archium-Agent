@@ -122,7 +122,8 @@ class FactLedgerService:
         updated = self._facts.update(fact)
         self._record_confirmed_fact_evidence(updated)
         summary, understanding = self._best_effort_reassess_after_confirm(
-            updated.project_id
+            updated.project_id,
+            reason="fact_confirmed",
         )
         return FactConfirmResult(
             fact=updated,
@@ -133,7 +134,12 @@ class FactLedgerService:
     def reject_fact(self, fact_id: UUID) -> ProjectFact:
         fact = self._require_fact(fact_id)
         fact.reject()
-        return self._facts.update(fact)
+        updated = self._facts.update(fact)
+        self._best_effort_reassess_after_confirm(
+            updated.project_id,
+            reason="fact_rejected",
+        )
+        return updated
 
     def update_fact(
         self,
@@ -182,8 +188,10 @@ class FactLedgerService:
     def _best_effort_reassess_after_confirm(
         self,
         project_id: UUID,
+        *,
+        reason: str = "fact_confirmed",
     ) -> tuple[str | None, str | None]:
-        """Refresh KnowledgeState after a confirmed fact; never fail confirm."""
+        """Refresh KnowledgeState after a fact ledger change; never fail confirm."""
         from archium.application.context import best_effort_reassess_knowledge
 
         assessment = best_effort_reassess_knowledge(
@@ -191,7 +199,7 @@ class FactLedgerService:
             project_id,
             llm=self._llm,
             settings=self._settings,
-            reason="fact_confirmed",
+            reason=reason,
         )
         if assessment is None:
             return None, None

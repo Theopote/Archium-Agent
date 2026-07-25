@@ -26,6 +26,9 @@ class ReassessMode(StrEnum):
 _INDEX_REASONS = frozenset(
     {
         "fact_confirmed",
+        "fact_rejected",
+        "knowledge_item_confirmed",
+        "knowledge_item_rejected",
     }
 )
 
