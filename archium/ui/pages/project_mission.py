@@ -208,16 +208,22 @@ def _load_snapshot(project_id: UUID) -> PlanningSnapshot:
 
 def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
     """Advance default step based on workflow gate when user has not chosen one."""
+    gate = snapshot.review_gate
+    # Plan-approval gate means clarification is done; don't leave the UI stuck on
+    # step 3 after domain recovery / soft-patch (radio widget state can lag).
+    if gate == "plan_approval":
+        if st.session_state.mission_step < 4:
+            st.session_state.mission_step = 4
+            for key in ("mission_step_nav", "mission_step_nav_embedded"):
+                st.session_state.pop(key, None)
+        return
     if st.session_state.mission_step > 1:
         return
     if snapshot.mission is None:
         st.session_state.mission_step = 1
         return
-    gate = snapshot.review_gate
     if gate in {"mission_correction", "clarification", "mission_approval"}:
         st.session_state.mission_step = 2
-    elif gate == "plan_approval":
-        st.session_state.mission_step = 4
     elif snapshot.presentation_request is not None:
         st.session_state.mission_step = 6
     else:
