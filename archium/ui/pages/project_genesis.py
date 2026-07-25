@@ -264,13 +264,13 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 
     render_orchestration_status(_UUID(project_id), key_prefix="genesis_orch")
 
-    st.markdown("**建议下一步**")
+    st.markdown("**下一步行动**")
     actions = [NextBestAction.model_validate(item) for item in payload.get("actions") or []]
     _render_assessment_reasons(payload, knowledge_state=state)
     if not actions:
-        st.caption("暂无建议，可继续描述项目或补充资料。")
+        st.caption("暂无行动，可继续描述项目或补充资料。")
     for index, action in enumerate(actions):
-        label = _action_label(action.action)
+        label = _action_label(action.action, reason=action.reason)
         help_text = action.reason
         if action.question:
             help_text = f"{help_text}（问：{action.question}）" if help_text else action.question
@@ -351,17 +351,15 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
         )
 
 
-def _action_label(action: NextBestActionType) -> str:
-    from archium.application.context import resolve_action_target
+def _action_label(action: NextBestActionType, *, reason: str = "") -> str:
+    from archium.application.context.nba_action_executor import nba_execute_label
 
     pending, conflicts = _pending_fact_counts()
-    return (
-        resolve_action_target(
-            action,
-            pending_fact_count=pending,
-            conflict_fact_count=conflicts,
-        ).label
-        or action.value
+    has_pending = pending > 0 or conflicts > 0
+    return nba_execute_label(
+        action,
+        has_pending_facts=has_pending and action == NextBestActionType.ASK,
+        reason=reason,
     )
 
 
@@ -383,9 +381,15 @@ def _pending_fact_counts() -> tuple[int, int]:
         return 0, 0
 
 
-def _render_assessment_reasons(payload: dict, *, knowledge_state: KnowledgeState) -> None:
+def _render_assessment_reasons(payload: dict, *, knowledge_state) -> None:
     from archium.domain.intent.context_assessment_reason import ContextAssessmentReason
+    from archium.domain.intent.knowledge_state import KnowledgeState
 
+    state = (
+        knowledge_state
+        if isinstance(knowledge_state, KnowledgeState)
+        else KnowledgeState.model_validate(knowledge_state)
+    )
     raw = payload.get("reasons") or []
     reasons: list[ContextAssessmentReason] = []
     for item in raw:
@@ -394,10 +398,10 @@ def _render_assessment_reasons(payload: dict, *, knowledge_state: KnowledgeState
         except Exception:
             continue
     if not reasons:
-        reasons = list(knowledge_state.assessment_reasons or [])
+        reasons = list(state.assessment_reasons or [])
     if not reasons:
         return
-    with st.expander("判断依据（为何这样建议）", expanded=True):
+    with st.expander("判断依据（为何这样行动）", expanded=True):
         for reason in reasons[:5]:
             mark = {
                 "support": "＋",
@@ -407,9 +411,28 @@ def _render_assessment_reasons(payload: dict, *, knowledge_state: KnowledgeState
             st.markdown(f"- {mark} {reason.display_line()}")
 
 
+def _assessment_payload_from_project(session, project_id) -> dict | None:
+    from archium.application.project_context_builder import build_project_context
+
+    ctx = build_project_context(session, project_id)
+    if ctx is None:
+        return None
+    state = ctx.knowledge_state
+    return {
+        "understanding_summary": ctx.understanding_summary,
+        "knowledge_state": state.model_dump(mode="json"),
+        "actions": [a.model_dump(mode="json") for a in ctx.next_actions],
+        "reasons": [r.model_dump(mode="json") for r in state.assessment_reasons],
+        "suggested_origin_mode": ctx.suggested_origin_mode.value,
+        "warnings": [],
+        "project_context": ctx.model_dump(mode="json"),
+    }
+
+
 def _dispatch_action(action: NextBestActionType) -> None:
     from uuid import UUID
 
+    from archium.application.context.nba_action_executor import NbaExecutionResult
     from archium.ui.context_navigation import dispatch_next_best_action
     from archium.ui.llm_settings import get_ui_effective_settings
 
@@ -419,13 +442,22 @@ def _dispatch_action(action: NextBestActionType) -> None:
     if not project_raw:
         return
     settings = get_ui_effective_settings()
-    st.session_state.pop(_ASSESSMENT_KEY, None)
-    st.session_state.pop(_PROJECT_KEY, None)
+    project_id = UUID(str(project_raw))
     with get_session() as session:
-        dispatch_next_best_action(
+        result = dispatch_next_best_action(
             session,
             st.session_state,
             action,
-            project_id=UUID(str(project_raw)),
+            project_id=project_id,
             settings=settings,
         )
+        if isinstance(result, NbaExecutionResult) and result.stay_after_execute and result.success:
+            payload = _assessment_payload_from_project(session, project_id)
+            if payload is not None:
+                st.session_state[_ASSESSMENT_KEY] = payload
+                st.session_state[_PROJECT_KEY] = str(project_id)
+            st.rerun()
+            return
+    # Navigated away or navigate-only — clear ephemeral genesis card
+    st.session_state.pop(_ASSESSMENT_KEY, None)
+    st.session_state.pop(_PROJECT_KEY, None)

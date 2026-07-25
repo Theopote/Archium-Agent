@@ -38,7 +38,7 @@ User opens Archium
 
 **核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextAnalyzer`（原 `ContextIntelligenceService`）评估已知/未知并建议下一步。评估产出统一聚合为 `ProjectContext`（`archium/domain/context/`）——**仅认知快照**（已知/未知/阶段/NBA），不持有设计/汇报/渲染过程状态。过程状态由并列的 `ProjectProcessBoard`（`Research` / `Design` / `Presentation` 指针与相位）承载，由现有实体派生，**禁止**并入 `ProjectContext`。`KnowledgeState` 为**知识索引 + 多维认知**（`dimensions`：资料完整度 / 意图清晰度 / 证据信心 / 约束理解 / 对齐度 / 研究需求；`claims` / `open_unknowns` 指向 Fact / KnowledgeItem）。`completeness_score` 仅为兼容聚合，**不得**单独代表成熟。`WorkspaceModeService` 优先依据 `ProjectContext` 路由，而非仅 `origin_mode`。
 
-**Intelligence Closure（P0–P3）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）。`fact_confirmed` / `knowledge_item_confirmed` 等小证据事件走确定性 `ReassessMode.INDEX`；Mission/方向/上传等走 `FULL` LLM；LLM 失败时回退 `refresh_claim_index_only` 并标记 `cognition_stale`。有意义的知识变化写入 `KnowledgeStateHistory`。NBA 经 `NbaActionExecutor` **一键执行**可落地动作（自主研究、启动探索并推演方向、无 Mission 时生成任务理解），再跳页；上传资料 / 澄清 / 打开任务仍为导航（编排可同步 start）。生成页读取 `presentation_readiness_from_context`。P3 **Concept Visualization Loop**：Mission 前后均可 `ConceptDirection → VisualConceptBrief → 示意出图 → 建筑师反馈 → 写回 visual_prompt / 轻量空间字段 → IntentEvolution(VISUAL_FEEDBACK) → 再合成`；`visual_concept_briefs.mission_id` 可空，提交 Mission 时回填。`origin_mode` 仍为兼容字段。
+**Intelligence Closure（P0–P3）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）。`fact_confirmed` / `knowledge_item_confirmed` 等小证据事件走确定性 `ReassessMode.INDEX`；Mission/方向/上传等走 `FULL` LLM；LLM 失败时回退 `refresh_claim_index_only` 并标记 `cognition_stale`。有意义的知识变化写入 `KnowledgeStateHistory`。NBA 经 `NbaActionExecutor` **执行**（非仅推荐）：Research / Explore / Generate Mission 跑真实服务 → 写回知识 → reassess → 原地刷新下一步（`stay_after_execute`）；上传资料 / 澄清 / 打开任务仍为导航（编排可同步 start）。生成页读取 `presentation_readiness_from_context`。P3 **Concept Visualization Loop**：Mission 前后均可 `ConceptDirection → VisualConceptBrief → 示意出图 → 建筑师反馈 → 写回 visual_prompt / 轻量空间字段 → IntentEvolution(VISUAL_FEEDBACK) → 再合成`；`visual_concept_briefs.mission_id` 可空，提交 Mission 时回填。`origin_mode` 仍为兼容字段。
 
 ### 意图驱动路线图（v0.3+）
 
@@ -63,7 +63,7 @@ User opens Archium
 | P0 | KnowledgeDimensions / Knowledge Vector — 六维认知 + 派生 design_readiness；向量策略表驱动 NBA；UI 向量条；`completeness_score` 降为兼容聚合 | 已落地 |
 | P1 | Reasoning Trace — `ContextAssessmentReason`（factor/evidence/impact/confidence）；挂 `ContextAssessment.reasons` + KS `assessment_reasons`；规则合成 + LLM；Genesis/知识条可解释 NBA | 已落地 |
 | P1 | ProjectProcessBoard — Research/Design/Presentation 过程指针；Design 细化到 ConceptDirection / VisualConceptBrief focus | 首期派生视图已落地 |
-| P2 | NBA 一键执行 — `NbaActionExecutor`（研究/推演/生成 Mission）+ 导航导航 | 已落地 |
+| P2 | NBA 一键执行 — `NbaActionExecutor` Act→写回→Reassess；无 Mission 亦可研究；成功后 stay 刷新 NBA | 已落地 |
 | P3 | Concept Visualization Loop — 边想边画：示意反馈写回方向种子 + 再合成；Mission 前可出图 | 已落地 |
 
 Studio 的编辑闭环不是直接覆写导出文件：

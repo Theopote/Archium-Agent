@@ -14,6 +14,10 @@ from archium.domain.intent.next_best_action import NextBestActionType
 
 def test_nba_execute_labels() -> None:
     assert nba_execute_label(NextBestActionType.RESEARCH) == "开始研究"
+    assert (
+        nba_execute_label(NextBestActionType.RESEARCH, reason="补充当地文化研究")
+        == "开始文化研究"
+    )
     assert nba_execute_label(NextBestActionType.EXPLORE_DIRECTIONS) == "开始推演方向"
     assert nba_execute_label(NextBestActionType.GENERATE_MISSION) == "生成任务理解"
     assert nba_execute_label(NextBestActionType.ASK, has_pending_facts=True).startswith(
@@ -41,7 +45,7 @@ def test_upload_is_navigate_only() -> None:
     assert result.page_key == "materials"
 
 
-def test_research_success_executes(monkeypatch) -> None:
+def test_research_success_stays_for_reassess_loop(monkeypatch) -> None:
     executor = NbaActionExecutor(MagicMock(), MagicMock())
 
     class FakeAnalyzer:
@@ -49,7 +53,7 @@ def test_research_success_executes(monkeypatch) -> None:
             pass
 
         def try_execute_research(self, _pid):  # noqa: ANN001
-            return True, "已生成 2 条公开研究摘要"
+            return True, "已生成 2 条公开研究摘要。知识状态已刷新，下一步建议已更新。"
 
     monkeypatch.setattr(
         "archium.application.context.context_analyzer.ContextAnalyzer",
@@ -58,7 +62,10 @@ def test_research_success_executes(monkeypatch) -> None:
     result = executor.execute(uuid4(), NextBestActionType.RESEARCH)
     assert result.executed is True
     assert result.success is True
-    assert result.mission_step == 2
+    assert result.stay_after_execute is True
+    assert result.should_navigate is False
+    assert result.orchestration_action == "none"
+    assert result.reassessed is True
     assert "研究" in result.message or "摘要" in result.message
 
 

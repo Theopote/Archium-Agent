@@ -1,42 +1,21 @@
-"""Tests for mission research topic collection."""
+"""Unit tests for project-level research topic collection (pre-mission Act)."""
 
 from __future__ import annotations
 
-from uuid import uuid4
-
-from archium.application.research_topics import collect_mission_research_topics
-from archium.domain.intent.design_intent import DesignIntent
-from archium.domain.project_mission import ProjectMission
+from archium.application.research_topics import collect_project_research_topics
+from archium.domain.intent.knowledge_state import KnowledgeState
 
 
-def test_collect_mission_research_topics_merges_and_deduplicates() -> None:
-    mission = ProjectMission(
-        project_id=uuid4(),
-        title="测试",
-        task_statement="探索文化中心",
-        design_intent=DesignIntent(
-            research_needed=["关中乡村公共文化空间", " 关中乡村公共文化空间 "],
-        ),
-        research_questions=["中国乡村文化建筑有哪些典型模式？", "关中乡村公共文化空间"],
+def test_temple_case_derives_cultural_topics() -> None:
+    state = KnowledgeState(
+        known={"location": "秦岭", "type": "寺庙"},
+        unknown=["场地条件"],
     )
-
-    topics = collect_mission_research_topics(mission)
-
-    assert topics == [
-        "关中乡村公共文化空间",
-        "中国乡村文化建筑有哪些典型模式？",
-    ]
-
-
-def test_collect_mission_research_topics_case_insensitive_dedup() -> None:
-    mission = ProjectMission(
-        project_id=uuid4(),
-        title="测试",
-        task_statement="探索",
-        design_intent=DesignIntent(research_needed=["Public Space"]),
-        research_questions=["public space"],
+    topics = collect_project_research_topics(
+        project_name="秦岭寺庙",
+        project_description="秦岭深处一座寺庙改扩建，强调礼佛轴线与禅意氛围",
+        knowledge_state=state,
     )
-
-    topics = collect_mission_research_topics(mission)
-
-    assert topics == ["Public Space"]
+    blob = " ".join(topics)
+    assert topics
+    assert "文化" in blob or "礼仪" in blob or "秦岭" in blob

@@ -33,9 +33,13 @@ class NbaExecutionResult:
     reassessed: bool = False
     orchestration_action: str = "none"
     stage_hint: str | None = None
+    stay_after_execute: bool = False
+    """When True, UI should refresh NBA in place (Act→Learn→Reassess) instead of leaving."""
 
     @property
     def should_navigate(self) -> bool:
+        if self.stay_after_execute and self.success and self.executed:
+            return False
         return bool(self.page_key)
 
 
@@ -158,6 +162,8 @@ class NbaActionExecutor:
                 success=False,
                 warnings=[message],
             )
+        # Stay so UI can show refreshed KnowledgeState / new NBA (Learn→Reassess).
+        # Skip orchestration kickoff here — research already ran; avoid double Act.
         return NbaExecutionResult(
             action=NextBestActionType.RESEARCH,
             executed=True,
@@ -165,9 +171,10 @@ class NbaActionExecutor:
             message=message,
             page_key=target.page_key,
             mission_step=target.mission_step or 2,
-            orchestration_action=target.orchestration_action,
+            orchestration_action="none",
             stage_hint=target.stage_hint,
             reassessed=True,
+            stay_after_execute=True,
         )
 
     def _execute_explore(
@@ -222,8 +229,9 @@ class NbaActionExecutor:
                 page_key=target.page_key,
                 warnings=warnings,
                 reassessed=reassessed,
-                orchestration_action=target.orchestration_action,
+                orchestration_action="none",
                 stage_hint=target.stage_hint,
+                stay_after_execute=True,
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception("NBA explore execute failed: %s", exc)
@@ -324,9 +332,17 @@ class NbaActionExecutor:
         )
 
 
-def nba_execute_label(action: NextBestActionType, *, has_pending_facts: bool = False) -> str:
-    """Verb-first labels for one-click buttons."""
+def nba_execute_label(
+    action: NextBestActionType,
+    *,
+    has_pending_facts: bool = False,
+    reason: str = "",
+) -> str:
+    """Verb-first labels for one-click buttons (Action, not soft recommendation)."""
+    reason_l = (reason or "").strip()
     if action == NextBestActionType.RESEARCH:
+        if any(token in reason_l for token in ("文化", "礼仪", "地域", "先例", "背景")):
+            return "开始文化研究"
         return "开始研究"
     if action == NextBestActionType.EXPLORE_DIRECTIONS:
         return "开始推演方向"

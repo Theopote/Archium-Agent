@@ -150,26 +150,41 @@ def render_project_knowledge_action_buttons(
         pending, conflicts = pending_fact_counts(session, project_id)
         actions = context.next_actions[:max_items]
 
-    st.caption("建议下一步")
+    st.caption("下一步行动")
     runtime_settings = settings or get_ui_effective_settings()
     cols = st.columns(len(actions))
     for index, action in enumerate(actions):
+        from archium.application.context.nba_action_executor import nba_execute_label
+
         target = resolve_action_target(
             action.action,
             pending_fact_count=pending,
             conflict_fact_count=conflicts,
         )
-        label = target.label or action.reason or action.action.value
+        label = nba_execute_label(
+            action.action,
+            has_pending_facts=bool(pending or conflicts)
+            and action.action.value == "ask",
+            reason=action.reason,
+        ) or target.label or action.reason or action.action.value
         with cols[index]:
             if st.button(label, key=f"{key_prefix}_nba_{index}_{action.action.value}", use_container_width=True):
+                from archium.application.context.nba_action_executor import NbaExecutionResult
+
                 with get_session() as session:
-                    dispatch_next_best_action(
+                    result = dispatch_next_best_action(
                         session,
                         st.session_state,
                         action.action,
                         project_id=project_id,
                         settings=runtime_settings,
                     )
+                if (
+                    isinstance(result, NbaExecutionResult)
+                    and result.stay_after_execute
+                    and result.success
+                ):
+                    st.rerun()
 
 
 def render_project_knowledge_actions(
@@ -180,7 +195,7 @@ def render_project_knowledge_actions(
 ) -> None:
     if not display.suggested_actions:
         return
-    st.caption("建议下一步")
+    st.caption("下一步行动")
     cols = st.columns(min(max_items, len(display.suggested_actions)))
     for index, action in enumerate(display.suggested_actions[:max_items]):
         cols[index % len(cols)].markdown(f"{index + 1}. {action}")

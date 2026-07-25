@@ -148,15 +148,45 @@ def test_resolve_action_target_maps_pages() -> None:
     assert "待核实" in ask_facts.label
 
 
-def test_try_execute_research_without_mission(db_session) -> None:
+def test_try_execute_research_without_mission(db_session, monkeypatch) -> None:
+    from archium.application.autonomous_research_service import AutonomousResearchResult
+    from archium.domain.intent.knowledge_state import KnowledgeState
+
     project = ProjectRepository(db_session).create(
-        Project(name="无任务项目", description="只有想法")
+        Project(
+            name="秦岭寺庙",
+            description="秦岭深处一座寺庙改扩建，强调礼佛轴线与禅意氛围",
+            knowledge_state=KnowledgeState(
+                known={"location": "秦岭", "type": "寺庙"},
+                unknown=["场地测绘"],
+            ),
+        )
     )
     db_session.commit()
+
+    fake = AutonomousResearchResult(
+        project_id=project.id,
+        mission_id=None,
+        topics=["当地文化、礼仪与空间叙事先例"],
+        items=[MagicMock()],
+        search_provider="stub",
+    )
+    monkeypatch.setattr(
+        "archium.application.autonomous_research_service.AutonomousResearchService.research_topics",
+        lambda self, project_id, topics, **kwargs: fake,
+    )
+    monkeypatch.setattr(
+        "archium.application.context.knowledge_reassess.best_effort_reassess_knowledge",
+        lambda *_a, **_k: MagicMock(),
+    )
+
     service = ContextIntelligenceService(db_session, MagicMock())
     ok, message = service.try_execute_research(project.id)
-    assert ok is False
-    assert "Mission" in message or "任务" in message
+    assert ok is True
+    assert "研究" in message or "摘要" in message
+    refreshed = ProjectRepository(db_session).get_by_id(project.id)
+    assert refreshed is not None
+    assert any(e.kind.value == "research" for e in refreshed.intent_evolution.events)
 
 
 def test_try_execute_research_runs_when_mission_exists(db_session, monkeypatch) -> None:

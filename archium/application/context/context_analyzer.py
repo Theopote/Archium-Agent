@@ -157,22 +157,66 @@ class ContextAnalyzer:
         self,
         project_id: UUID,
     ) -> tuple[bool, str]:
+        """Act: run AutonomousResearch → write knowledge → reassess (Learn).
+
+        Works with or without Mission. Pre-mission uses project/KS-derived topics.
+        """
         from archium.application.autonomous_research_service import AutonomousResearchService
+        from archium.application.context.knowledge_reassess import (
+            best_effort_reassess_knowledge,
+        )
+        from archium.application.research_topics import (
+            collect_mission_research_topics,
+            collect_project_research_topics,
+        )
         from archium.infrastructure.database.mission_repositories import MissionRepository
 
+        project = self._projects.get_by_id(project_id)
+        if project is None:
+            return False, f"Project {project_id} not found"
+
         missions = MissionRepository(self._session).list_missions_by_project(project_id)
-        if not missions:
-            return (
-                False,
-                "尚无项目任务（Mission）。请先生成任务理解，或进入项目任务页后再启动研究。",
-            )
-        mission = missions[0]
+        research = AutonomousResearchService(
+            self._session,
+            self._llm,
+            settings=self._settings,
+        )
         try:
-            result = AutonomousResearchService(
-                self._session,
-                self._llm,
-                settings=self._settings,
-            ).research_for_mission(mission.id)
+            if missions:
+                mission = missions[0]
+                topics = collect_mission_research_topics(mission)
+                if topics:
+                    result = research.research_for_mission(mission.id)
+                else:
+                    # Mission exists but empty research list — still allow project topics
+                    fallback = collect_project_research_topics(
+                        project_name=project.name or "",
+                        project_description=project.description or "",
+                        knowledge_state=project.knowledge_state,
+                    )
+                    if not fallback:
+                        return False, "当前任务没有待研究项，且无法从项目描述推导研究主题。"
+                    result = research.research_topics(
+                        project_id,
+                        fallback,
+                        design_context=mission.task_statement or mission.title or "",
+                    )
+            else:
+                topics = collect_project_research_topics(
+                    project_name=project.name or "",
+                    project_description=project.description or "",
+                    knowledge_state=project.knowledge_state,
+                )
+                if not topics:
+                    return (
+                        False,
+                        "尚无足够线索推导研究主题。请补充项目描述中的地点/类型，或先生成任务理解。",
+                    )
+                result = research.research_topics(
+                    project_id,
+                    topics,
+                    design_context=(project.description or project.name or "").strip(),
+                )
             self._session.commit()
         except WorkflowError as exc:
             return False, str(exc)
@@ -184,16 +228,23 @@ class ContextAnalyzer:
             IntentEvolutionKind.RESEARCH,
             f"自主研究生成 {len(result.items)} 条公开摘要",
         )
-        try:
-            self.reassess(project_id, history_reason="research")
-        except Exception:
-            pass
+        reassessed = (
+            best_effort_reassess_knowledge(
+                self._session,
+                project_id,
+                llm=self._llm,
+                settings=self._settings,
+                reason="nba_research",
+            )
+            is not None
+        )
         provider = (
             f"（来源：{result.search_provider}）" if result.search_provider else ""
         )
+        refresh = "知识状态已刷新，下一步建议已更新。" if reassessed else "知识已写入；完整再评估稍后可刷新。"
         return (
             True,
-            f"已生成 {len(result.items)} 条公开研究摘要{provider}。知识状态已刷新。",
+            f"已生成 {len(result.items)} 条公开研究摘要{provider}。{refresh}",
         )
 
     def append_evolution(

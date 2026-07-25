@@ -145,9 +145,17 @@ def dispatch_next_best_action(
     project_id: UUID,
     settings=None,
     page_switcher=st.switch_page,
-) -> bool:
-    """Execute runnable NBA work, then navigate (and optionally start orchestration)."""
-    from archium.application.context.nba_action_executor import NbaActionExecutor
+    force_navigate: bool = False,
+):
+    """Execute runnable NBA work (Act), then navigate or stay for Reassess (Learn).
+
+    Returns ``NbaExecutionResult`` when settings are available; ``True`` for
+    navigate-only fallback without settings.
+    """
+    from archium.application.context.nba_action_executor import (
+        NbaActionExecutor,
+        NbaExecutionResult,
+    )
     from archium.infrastructure.llm.factory import create_llm_provider
 
     pending, conflicts = pending_fact_counts(session, project_id)
@@ -177,7 +185,9 @@ def dispatch_next_best_action(
     }
     label = spinner_labels.get(action, "正在执行下一步…")
     with st.spinner(label):
-        result = NbaActionExecutor(session, llm, settings=settings).execute(
+        result: NbaExecutionResult = NbaActionExecutor(
+            session, llm, settings=settings
+        ).execute(
             project_id,
             action,
             user_task_description=task,
@@ -200,6 +210,7 @@ def dispatch_next_best_action(
     if (
         result.success
         and result.orchestration_action in {"start", "resume"}
+        and not result.stay_after_execute
     ):
         target = ActionDispatch(
             page_key=result.page_key or "project-mission",
@@ -223,7 +234,8 @@ def dispatch_next_best_action(
         except Exception as exc:  # noqa: BLE001
             st.caption(f"编排未启动（可稍后在任务页继续）：{exc}")
 
-    if result.should_navigate and page_override:
+    should_nav = force_navigate or result.should_navigate
+    if should_nav and page_override:
         navigate_next_best_action(
             session_state,
             action,
@@ -235,6 +247,11 @@ def dispatch_next_best_action(
             mission_step_override=result.mission_step,
             focus_override=result.focus,
         )
-        return result.success or not result.executed
+    elif result.stay_after_execute and result.success and result.executed:
+        session_state["nba_last_loop"] = {
+            "action": action.value,
+            "message": result.message,
+            "reassessed": result.reassessed,
+        }
 
-    return result.success
+    return result
