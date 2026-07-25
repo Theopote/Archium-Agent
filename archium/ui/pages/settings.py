@@ -13,9 +13,11 @@ from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.connection_test import verify_llm_connection
 from archium.infrastructure.llm.factory import reset_llm_provider_cache
 from archium.infrastructure.llm.provider_presets import (
+    CUSTOM_MODEL_OPTION,
     PROVIDER_BY_SLUG,
     PROVIDER_LABELS,
     label_for_slug,
+    recommended_models_for_slug,
     slug_for_label,
 )
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -26,6 +28,56 @@ _SOURCE_LABELS = {
     "env": "环境变量 / .env",
     "none": "未配置",
 }
+
+
+def _resolve_model_choice(
+    *,
+    selected_slug: str,
+    model_default: str,
+    preset_model: str,
+) -> str:
+    """Selectbox of recommended models, with optional custom text input."""
+    recommended = list(recommended_models_for_slug(selected_slug))
+    current = (model_default or preset_model or "").strip()
+
+    if not recommended:
+        return st.text_input(
+            "模型",
+            value=current,
+            help="自定义服务商请手动填写模型名。",
+            key=f"llm_model_custom_only_{selected_slug}",
+        ).strip()
+
+    options = list(recommended)
+    if current and current not in options:
+        options.insert(0, current)
+    options.append(CUSTOM_MODEL_OPTION)
+
+    if current and current in options:
+        index = options.index(current)
+    elif current:
+        index = options.index(CUSTOM_MODEL_OPTION)
+    else:
+        index = 0
+
+    picked = st.selectbox(
+        "模型",
+        options,
+        index=index,
+        help="按服务商推荐的常用模型；选「自定义…」可手动填写。",
+        key=f"llm_model_select_{selected_slug}",
+    )
+    if picked != CUSTOM_MODEL_OPTION:
+        return picked.strip()
+
+    custom_default = current if current and current not in recommended else ""
+    return st.text_input(
+        "自定义模型名",
+        value=custom_default,
+        placeholder="例如 deepseek-v4-flash",
+        help="填写服务商文档中的完整模型 ID。",
+        key=f"llm_model_custom_text_{selected_slug}",
+    ).strip()
 
 
 def _load_profile_and_status() -> tuple[LLMProfile, CredentialStatus]:
@@ -90,7 +142,11 @@ def render() -> None:
     model_default = profile.model if profile.provider == selected_slug else preset.model
 
     base_url = st.text_input("Base URL", value=base_url_default or preset.base_url)
-    model = st.text_input("模型", value=model_default or preset.model)
+    model = _resolve_model_choice(
+        selected_slug=selected_slug,
+        model_default=model_default or "",
+        preset_model=preset.model,
+    )
     temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=float(profile.temperature), step=0.1)
     timeout_seconds = st.number_input(
         "请求超时（秒）",
