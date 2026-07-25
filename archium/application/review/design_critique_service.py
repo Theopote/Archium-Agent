@@ -133,12 +133,21 @@ class DesignCritiqueService:
             source = "llm"
         except Exception as exc:  # noqa: BLE001 — critic must degrade, not abort select
             logger.warning("design critique LLM failed, using rules: %s", exc)
+            draft = None
 
-        report = self._from_draft(
-            draft,
-            direction=direction,
-            source=source,
-        )
+        try:
+            report = self._from_draft(
+                draft,
+                direction=direction,
+                source=source,
+            )
+        except Exception as exc:  # noqa: BLE001 — malformed draft must not abort select
+            logger.warning("design critique draft invalid, using rules: %s", exc)
+            report = self._from_draft(
+                None,
+                direction=direction,
+                source="rules",
+            )
         report = self._merge_rule_signals(
             report,
             direction=direction,

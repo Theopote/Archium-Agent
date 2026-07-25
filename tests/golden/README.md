@@ -5,6 +5,7 @@ Part of the **[v0.2 Alpha Validation Sprint](../../docs/v0.2-alpha-validation-sp
 | Layer | Name | LLM | Parsers | CI | Purpose |
 |-------|------|-----|---------|-----|---------|
 | **1** | Deterministic workflow regression | `MockLLMProvider` | Inline DB chunks | ✅ Always | 工作流 / DB / 导出结构 |
+| **1e** | Role-level evaluation | Mock LLM | — | ✅ Prefer | 席位产物义务（`tests/evaluation/`） |
 | **2** | Real fixture acceptance | Cached or mock LLM | Real `IngestionService` | ✅ When manifests present | 真实 PDF/DOCX/PPTX/图片解析 |
 | **3** | Live model evaluation | Real API | Real | ❌ Manual only | 输出质量与模型波动 |
 
@@ -22,6 +23,16 @@ Mock LLM + 预置文本块。验证主链逻辑：
 ```bash
 pytest tests/golden/regression -v -m regression
 ```
+
+## Layer 1e — Role evaluation (`../evaluation/`)
+
+Mock LLM 断言席位产物义务（非 Agent 类、非 live 质量分）：
+
+```bash
+pytest tests/evaluation -q
+```
+
+详见 [evaluation/README.md](../evaluation/README.md)。
 
 ## Layer 1b — Mission Golden (`mission/`)
 

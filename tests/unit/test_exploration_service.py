@@ -30,6 +30,10 @@ from archium.infrastructure.llm.context_intelligence_schemas import (
     ContextAssessmentDraft,
     NextBestActionDraft,
 )
+from archium.infrastructure.llm.design_critique_schemas import (
+    DesignCritiqueDraft,
+    DesignCritiqueItemDraft,
+)
 from archium.prompts.concept_direction import build_exploration_direction_user_prompt
 
 
@@ -121,6 +125,32 @@ def _direction_batch() -> ConceptDirectionBatchDraft:
     )
 
 
+def _critique_draft() -> DesignCritiqueDraft:
+    """Stub for select_direction → DesignCritiqueService.critique."""
+    return DesignCritiqueDraft(
+        verdict="caution",
+        summary="可继续，建议补证据",
+        strengths=[
+            DesignCritiqueItemDraft(text="空间策略可读", challenge="why"),
+        ],
+        weaknesses=[],
+        missing_evidence=[
+            DesignCritiqueItemDraft(
+                text="缺场地依据",
+                challenge="evidence",
+                severity="medium",
+            )
+        ],
+        alternative_directions=[
+            DesignCritiqueItemDraft(
+                text="可先问题驱动再定形式",
+                challenge="alternative",
+            )
+        ],
+        form_only_risk=False,
+    )
+
+
 def _mission_draft() -> MissionGenerationDraft:
     return MissionGenerationDraft(
         title="黄土高原文化中心概念探索",
@@ -207,6 +237,7 @@ def test_generate_select_commit_creates_mission_without_prior_mission(
     llm.generate_structured.side_effect = [
         _idea_seed_draft(),
         _direction_batch(),
+        _critique_draft(),  # select_direction → design critique
         _ks_draft(),  # select_direction → best_effort_reassess
         _mission_draft(),
         _ks_draft(),  # commit_to_mission → best_effort_reassess
@@ -259,6 +290,7 @@ def test_resolve_selected_falls_back_to_exploration_session(
     llm.generate_structured.side_effect = [
         _idea_seed_draft(),
         _direction_batch(),
+        _critique_draft(),
         _ks_draft(),
         _mission_draft(),
         _ks_draft(),

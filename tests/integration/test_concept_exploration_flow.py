@@ -88,6 +88,10 @@ def test_exploration_before_mission_commit_flow(db_session, concept_project) -> 
         ContextAssessmentDraft,
         NextBestActionDraft,
     )
+    from archium.infrastructure.llm.design_critique_schemas import (
+        DesignCritiqueDraft,
+        DesignCritiqueItemDraft,
+    )
     from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
 
     def _ks() -> ContextAssessmentDraft:
@@ -141,6 +145,26 @@ def test_exploration_before_mission_commit_flow(db_session, concept_project) -> 
                     risks=["施工"],
                 ),
             ]
+        ),
+        DesignCritiqueDraft(
+            verdict="caution",
+            summary="可继续，建议补证据",
+            strengths=[],
+            weaknesses=[],
+            missing_evidence=[
+                DesignCritiqueItemDraft(
+                    text="缺场地依据",
+                    challenge="evidence",
+                    severity="medium",
+                )
+            ],
+            alternative_directions=[
+                DesignCritiqueItemDraft(
+                    text="可先问题驱动再定形式",
+                    challenge="alternative",
+                )
+            ],
+            form_only_risk=False,
         ),
         _ks(),
         MissionGenerationDraft(

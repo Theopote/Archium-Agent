@@ -174,6 +174,10 @@ flowchart LR
 topic → search → write → INDEX reassess；停条件为 max_steps /
 `research_need` 阈值 / 主题耗尽 / 空产出。产物为 `ResearchRun`（非新 Agent）。
 
+**Phase E（角色级 Evaluation）**：`tests/evaluation/` 用 Mock LLM 断言席位产物义务
+（ConceptDirection 空间策略/形式语言/风险、`DesignIntent.social_background`、
+研究条目 `source_citations`、Critic `alternative_directions`）。不是 `tests/agents/`。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -252,6 +256,8 @@ topic → search → write → INDEX reassess；停条件为 max_steps /
 （strengths / weaknesses / missing_evidence / alternative_directions）。
 闸门：`DESIGN_CRITIQUE_ON_SELECT`（默认 `warn`）。写入 IntentEvolution
 `DESIGN_CRITIQUE`，不静默改方向。
+
+**评价契约（Phase E）**：见 `tests/evaluation/`（Critic 必须给出 counterexample 方向）。
 
 ---
 
@@ -337,4 +343,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — 认知核（产品对话）↔ 六席位（实现）映射；禁止把认知核落成 Agent 类。*
+*Last updated: 2026-07-25 — Phase E `tests/evaluation/`；认知核 ↔ 六席位映射；禁止把认知核落成 Agent 类。*
