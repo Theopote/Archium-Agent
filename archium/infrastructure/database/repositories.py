@@ -24,7 +24,9 @@ from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
+from archium.domain.project_event import ProjectEvent, ProjectEventActor, ProjectEventType
 from archium.domain.project_knowledge import ProjectKnowledgeItem
+from archium.infrastructure.llm.trace import LLMTrace
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
@@ -51,7 +53,9 @@ from archium.infrastructure.database.models import (
     PresentationORM,
     ProjectFactORM,
     ProjectKnowledgeItemORM,
+    ProjectEventORM,
     ProjectORM,
+    LLMTraceORM,
     ReferenceStyleProfileORM,
     RenovationIssueMapORM,
     ReviewIssueORM,
@@ -80,7 +84,9 @@ class ProjectRepository:
             orm = mappers.project_to_orm(project)
             self._session.add(orm)
             self._session.flush()
-            return mappers.project_to_domain(orm)
+            created = mappers.project_to_domain(orm)
+            self._sync_project_events(created, emit_created=True)
+            return created
         except SQLAlchemyError as exc:
             _handle_error("create project", exc)
             raise
@@ -113,12 +119,37 @@ class ProjectRepository:
                 raise RepositoryError(f"Project {project.id} not found")
             mappers.project_to_orm(project, orm)
             self._session.flush()
-            return mappers.project_to_domain(orm)
+            updated = mappers.project_to_domain(orm)
+            self._sync_project_events(updated, emit_created=False)
+            return updated
         except RepositoryError:
             raise
         except SQLAlchemyError as exc:
             _handle_error("update project", exc)
             raise
+
+    def _sync_project_events(self, project: Project, *, emit_created: bool) -> None:
+        """Best-effort projection into project_events (never fail the primary write)."""
+        try:
+            from archium.application.project_event_service import ProjectEventService
+            from archium.domain.project_event import (
+                ProjectEventActor,
+                ProjectEventType,
+            )
+
+            service = ProjectEventService(self._session)
+            if emit_created:
+                service.emit(
+                    project.id,
+                    ProjectEventType.PROJECT_CREATED,
+                    f"创建项目「{project.name}」",
+                    actor=ProjectEventActor.USER,
+                    dedupe_key=f"project_created:{project.id}",
+                    source="project_repository",
+                )
+            service.sync_from_intent_evolution(project.id, project.intent_evolution)
+        except Exception:
+            return
 
     def delete(self, project_id: UUID) -> bool:
         try:
@@ -983,7 +1014,18 @@ class WorkflowRunRepository:
                 raise RepositoryError(f"Workflow run {run.id} not found")
             mappers.workflow_run_to_orm(run, orm)
             self._session.flush()
-            return mappers.workflow_run_to_domain(orm)
+            updated = mappers.workflow_run_to_domain(orm)
+            try:
+                from archium.application.project_event_service import ProjectEventService
+
+                ProjectEventService(self._session).sync_from_workflow_state(
+                    updated.project_id,
+                    updated.id,
+                    updated.state,
+                )
+            except Exception:
+                pass
+            return updated
         except RepositoryError:
             raise
         except SQLAlchemyError as exc:
@@ -1517,3 +1559,96 @@ class OutlineApprovalRecordRepository:
             orm.superseded_at = moment
         self._session.flush()
         return len(rows)
+
+
+class ProjectEventRepository:
+    """Append-only project event log."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, event: ProjectEvent) -> ProjectEvent:
+        try:
+            if event.dedupe_key and self.exists_dedupe(event.project_id, event.dedupe_key):
+                existing = self.get_by_dedupe(event.project_id, event.dedupe_key)
+                if existing is not None:
+                    return existing
+            orm = mappers.project_event_to_orm(event)
+            with self._session.begin_nested():
+                self._session.add(orm)
+                self._session.flush()
+            return mappers.project_event_to_domain(orm)
+        except IntegrityError:
+            existing = self.get_by_dedupe(event.project_id, event.dedupe_key)
+            if existing is not None:
+                return existing
+            raise RepositoryError("project event dedupe conflict") from None
+        except SQLAlchemyError as exc:
+            _handle_error("create project event", exc)
+            raise
+
+    def exists_dedupe(self, project_id: UUID, dedupe_key: str) -> bool:
+        key = (dedupe_key or "").strip()
+        if not key:
+            return False
+        return self.get_by_dedupe(project_id, key) is not None
+
+    def get_by_dedupe(self, project_id: UUID, dedupe_key: str) -> ProjectEvent | None:
+        stmt = (
+            select(ProjectEventORM)
+            .where(
+                ProjectEventORM.project_id == project_id,
+                ProjectEventORM.dedupe_key == dedupe_key,
+            )
+            .limit(1)
+        )
+        orm = self._session.scalars(stmt).first()
+        return mappers.project_event_to_domain(orm) if orm else None
+
+    def list_for_project(
+        self,
+        project_id: UUID,
+        *,
+        limit: int = 40,
+        event_types: list[ProjectEventType] | None = None,
+    ) -> list[ProjectEvent]:
+        stmt = (
+            select(ProjectEventORM)
+            .where(ProjectEventORM.project_id == project_id)
+            .order_by(ProjectEventORM.at.desc())
+            .limit(limit)
+        )
+        if event_types:
+            stmt = stmt.where(
+                ProjectEventORM.event_type.in_([item.value for item in event_types])
+            )
+        return [mappers.project_event_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class LLMTraceRepository:
+    """Persisted LLM traces (metadata only — no prompts / secrets)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create_from_trace(self, trace: LLMTrace) -> None:
+        try:
+            orm = mappers.llm_trace_to_orm(trace)
+            self._session.add(orm)
+            self._session.flush()
+        except SQLAlchemyError as exc:
+            _handle_error("create llm trace", exc)
+            raise
+
+    def list_for_project(self, project_id: UUID, *, limit: int = 50) -> list[LLMTrace]:
+        stmt = (
+            select(LLMTraceORM)
+            .where(LLMTraceORM.project_id == project_id)
+            .order_by(LLMTraceORM.created_at.desc())
+            .limit(limit)
+        )
+        return [mappers.llm_trace_orm_to_dataclass(row) for row in self._session.scalars(stmt)]
+
+    def list_recent(self, *, limit: int = 50) -> list[LLMTrace]:
+        stmt = select(LLMTraceORM).order_by(LLMTraceORM.created_at.desc()).limit(limit)
+        return [mappers.llm_trace_orm_to_dataclass(row) for row in self._session.scalars(stmt)]

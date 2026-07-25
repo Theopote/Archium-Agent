@@ -1595,3 +1595,106 @@ def outline_approval_record_to_orm(
     if domain.updated_at is not None:
         target.updated_at = domain.updated_at
     return target
+
+
+def project_event_to_domain(orm: "ProjectEventORM") -> "ProjectEvent":
+    from archium.domain.project_event import (
+        ProjectEvent,
+        ProjectEventActor,
+        ProjectEventType,
+    )
+
+    try:
+        event_type = ProjectEventType(orm.event_type)
+    except ValueError:
+        event_type = ProjectEventType.OTHER
+    try:
+        actor = ProjectEventActor(orm.actor)
+    except ValueError:
+        actor = ProjectEventActor.SYSTEM
+    return ProjectEvent(
+        id=orm.id,
+        project_id=orm.project_id,
+        at=orm.at,
+        actor=actor,
+        event_type=event_type,
+        summary=orm.summary,
+        payload=dict(orm.payload_json or {}),
+        dedupe_key=orm.dedupe_key or "",
+        source=orm.source or "",
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def project_event_to_orm(
+    domain: "ProjectEvent",
+    orm: "ProjectEventORM | None" = None,
+) -> "ProjectEventORM":
+    from archium.infrastructure.database.models import ProjectEventORM
+
+    target = orm or ProjectEventORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.at = domain.at
+    target.actor = domain.actor.value
+    target.event_type = domain.event_type.value
+    target.summary = domain.summary
+    target.payload_json = dict(domain.payload or {})
+    target.dedupe_key = domain.dedupe_key or ""
+    target.source = domain.source or ""
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def llm_trace_to_orm(trace: "LLMTrace") -> "LLMTraceORM":
+    from uuid import UUID, uuid4
+
+    from archium.infrastructure.database.models import LLMTraceORM
+
+    project_id = None
+    if trace.project_id:
+        try:
+            project_id = UUID(str(trace.project_id))
+        except ValueError:
+            project_id = None
+    return LLMTraceORM(
+        id=uuid4(),
+        request_id=trace.request_id[:40],
+        project_id=project_id,
+        provider=(trace.provider or "")[:80],
+        model=(trace.model or "")[:120],
+        capability=(trace.capability or None),
+        model_role=(trace.model_role or None),
+        prompt_version=(trace.prompt_version or None),
+        prompt_tokens=trace.prompt_tokens,
+        completion_tokens=trace.completion_tokens,
+        total_tokens=trace.total_tokens,
+        latency_ms=trace.latency_ms,
+        success=bool(trace.success),
+        error_type=trace.error_type,
+        metadata_json={str(k): str(v) for k, v in (trace.metadata or {}).items()},
+    )
+
+
+def llm_trace_orm_to_dataclass(orm: "LLMTraceORM") -> "LLMTrace":
+    from archium.infrastructure.llm.trace import LLMTrace
+
+    return LLMTrace(
+        request_id=orm.request_id,
+        provider=orm.provider,
+        model=orm.model,
+        capability=orm.capability,
+        model_role=orm.model_role,
+        prompt_version=orm.prompt_version,
+        project_id=str(orm.project_id) if orm.project_id else None,
+        prompt_tokens=orm.prompt_tokens,
+        completion_tokens=orm.completion_tokens,
+        total_tokens=orm.total_tokens,
+        latency_ms=orm.latency_ms,
+        success=bool(orm.success),
+        error_type=orm.error_type,
+        metadata={str(k): str(v) for k, v in (orm.metadata_json or {}).items()},
+    )

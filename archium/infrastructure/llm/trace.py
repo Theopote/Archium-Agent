@@ -1,7 +1,7 @@
 """LLM call tracing (tokens, latency, capability) — non-secret.
 
-Traces stay in-process by default (ring buffer + structured log). Persistence
-to DB can wrap ``LLMTraceRecorder`` later without changing call sites.
+Traces stay in-process by default (ring buffer + structured log). When
+``llm_trace_persist_enabled`` is on, also persist rows without prompts/keys.
 """
 
 from __future__ import annotations
@@ -9,8 +9,10 @@ from __future__ import annotations
 import threading
 import uuid
 from collections import deque
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Protocol
+from uuid import UUID
 
 from archium.logging import get_logger
 
@@ -86,19 +88,88 @@ class InMemoryLLMTraceRecorder:
             self._items.clear()
 
 
-_recorder: InMemoryLLMTraceRecorder = InMemoryLLMTraceRecorder()
+class DatabaseLLMTraceRecorder:
+    """Persist traces to ``llm_traces`` (independent short sessions)."""
+
+    def record(self, trace: LLMTrace) -> None:
+        try:
+            from archium.config.settings import get_settings
+
+            if not bool(getattr(get_settings(), "llm_trace_persist_enabled", True)):
+                return
+        except Exception:
+            return
+        try:
+            from archium.infrastructure.database.repositories import LLMTraceRepository
+            from archium.infrastructure.database.session import get_session
+
+            with get_session() as session:
+                LLMTraceRepository(session).create_from_trace(trace)
+                session.commit()
+        except Exception:
+            logger.exception(
+                "llm_trace persist failed request_id=%s",
+                trace.request_id,
+            )
+
+
+class FanoutLLMTraceRecorder:
+    """Record into multiple sinks; failures in one sink do not block others."""
+
+    def __init__(self, recorders: Sequence[LLMTraceRecorder]) -> None:
+        self._recorders = list(recorders)
+
+    def record(self, trace: LLMTrace) -> None:
+        for recorder in self._recorders:
+            try:
+                recorder.record(trace)
+            except Exception:
+                logger.exception("llm_trace sink failed")
+
+    def list_recent(self, limit: int = 50) -> list[LLMTrace]:
+        for recorder in self._recorders:
+            list_fn = getattr(recorder, "list_recent", None)
+            if callable(list_fn):
+                return list_fn(limit)
+        return []
+
+    def clear(self) -> None:
+        for recorder in self._recorders:
+            clear_fn = getattr(recorder, "clear", None)
+            if callable(clear_fn):
+                clear_fn()
+
+
+_memory: InMemoryLLMTraceRecorder = InMemoryLLMTraceRecorder()
+_recorder: LLMTraceRecorder = FanoutLLMTraceRecorder([_memory, DatabaseLLMTraceRecorder()])
 _recorder_lock = threading.Lock()
 
 
-def get_llm_trace_recorder() -> InMemoryLLMTraceRecorder:
+def get_llm_trace_recorder() -> LLMTraceRecorder:
     return _recorder
 
 
-def set_llm_trace_recorder(recorder: InMemoryLLMTraceRecorder | None) -> None:
+def get_memory_llm_trace_recorder() -> InMemoryLLMTraceRecorder:
+    return _memory
+
+
+def set_llm_trace_recorder(recorder: LLMTraceRecorder | None) -> None:
     """Replace the process-wide recorder (tests). Pass None to reset default."""
-    global _recorder
+    global _recorder, _memory
     with _recorder_lock:
-        _recorder = recorder if recorder is not None else InMemoryLLMTraceRecorder()
+        if recorder is None:
+            _memory = InMemoryLLMTraceRecorder()
+            _recorder = FanoutLLMTraceRecorder([_memory, DatabaseLLMTraceRecorder()])
+        else:
+            _recorder = recorder
+
+
+def list_persisted_traces_for_project(project_id: UUID, *, limit: int = 50) -> list[LLMTrace]:
+    from archium.infrastructure.database.repositories import LLMTraceRepository
+    from archium.infrastructure.database.session import get_session
+
+    with get_session() as session:
+        return LLMTraceRepository(session).list_for_project(project_id, limit=limit)
 
 
 def new_request_id() -> str:

@@ -1318,3 +1318,57 @@ class TemplateUsageBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     project_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False)
+
+
+class ProjectEventORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Append-only project design-memory log (projections + explicit emits)."""
+
+    __tablename__ = "project_events"
+    __table_args__ = (
+        Index("ix_project_events_project_id_at", "project_id", "at"),
+        Index("ix_project_events_event_type", "event_type"),
+        UniqueConstraint("project_id", "dedupe_key", name="uq_project_events_dedupe"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now
+    )
+    actor: Mapped[str] = mapped_column(String(40), nullable=False, default="system")
+    event_type: Mapped[str] = mapped_column(String(60), nullable=False, default="other")
+    summary: Mapped[str] = mapped_column(String(800), nullable=False)
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False, default=dict)
+    dedupe_key: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    source: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+
+
+class LLMTraceORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Persisted LLM call audit (never stores prompts or API keys)."""
+
+    __tablename__ = "llm_traces"
+    __table_args__ = (
+        Index("ix_llm_traces_project_id_created", "project_id", "created_at"),
+        Index("ix_llm_traces_request_id", "request_id"),
+        Index("ix_llm_traces_capability", "capability"),
+    )
+
+    request_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
+    )
+    provider: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    model: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    capability: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    model_role: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    latency_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    error_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    metadata_json: Mapped[dict[str, object]] = mapped_column(
+        "metadata", JSON, nullable=False, default=dict
+    )

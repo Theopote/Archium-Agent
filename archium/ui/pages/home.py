@@ -282,7 +282,29 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         _render_partner_next_steps(snapshot)
     with mid:
         _render_recent_design_changes(snapshot)
+        try:
+            from archium.ui.project_event_panel import render_project_event_log
+
+            render_project_event_log(
+                snapshot.project_id,
+                limit=6,
+                expanded=False,
+                title="项目事件记忆",
+            )
+        except Exception:
+            pass
     with right:
+        try:
+            from archium.ui.project_event_panel import render_job_progress_strip
+
+            render_job_progress_strip(
+                snapshot.project_id,
+                limit=4,
+                active_only=False,
+                title="任务进度",
+            )
+        except Exception:
+            pass
         _render_pending_issues(snapshot)
         _render_recent_versions(snapshot)
 

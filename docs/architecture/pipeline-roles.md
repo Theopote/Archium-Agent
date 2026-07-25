@@ -268,6 +268,14 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
   挂概念探索与 Mission；图绑 DesignIntent 字段。
 仍待：完整 Chat 会话轨、Storyline 字段在 Studio 内联编辑（现链回大纲阶段）。
 
+**Phase N（Engineering Foundation P0）**：长期产品记忆与可观测性。
+- `project_events` 统一事件账本：创建 / IntentEvolution 投影 / process_timeline 投影
+  （`ProjectEventService`；`ProjectRepository` / `WorkflowRunRepository` 自动同步）。
+- `llm_traces` 持久化 LLMTrace（tokens/latency/capability；禁 prompt/密钥）；
+  `FanoutLLMTraceRecorder` = 内存 + DB（`llm_trace_persist_enabled`）。
+- `JobProgressService` 统一 WorkflowRun + ArtifactJob 进度视图；Home 展示事件记忆与任务进度。
+仍待：独立 Worker 队列、团队 RBAC、CAD/BIM 资产解析。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -437,4 +445,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-26 — Phase M.1 Studio 故事线/AI 建议同屏 + Visual Thinking 分槽；Phase M 伙伴面。*
+*Last updated: 2026-07-26 — Phase N ProjectEvent / LLMTrace 落库 / JobProgress；Phase M.1 UI。*

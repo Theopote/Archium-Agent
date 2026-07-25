@@ -152,6 +152,13 @@ class Settings(BaseSettings):
         le=20,
         description="Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion.",
     )
+    llm_trace_persist_enabled: bool = Field(
+        default=True,
+        description=(
+            "Persist LLMTrace rows to the database (tokens/latency/capability only; "
+            "never prompts or API keys)."
+        ),
+    )
 
     # ── embedding.* ──────────────────────────────────────────────────────────
     embedding_provider: str = Field(
