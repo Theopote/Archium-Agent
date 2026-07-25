@@ -35,7 +35,8 @@ def render() -> None:
         "从一句话想法解读 IdeaSeed、推演可比较方向，选定后再生成设计使命与项目任务。",
     )
 
-    projects = list_projects()
+    with get_session() as session:
+        projects = list_projects(session)
     if not projects:
         st.info("请先在「开始项目」创建概念探索项目。")
         st.page_link(get_app_page("project-genesis"), label="去开始项目", icon=":material/add:")

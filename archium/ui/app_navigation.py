@@ -123,6 +123,7 @@ def build_app_pages() -> dict[str, list[Any]]:
     )
 
     # Hidden from sidebar but kept for deep links / st.page_link / st.switch_page.
+    # Must still be passed to st.navigation (visibility=hidden) or routes 404.
     # LEGACY_STUDIO_PAGE_KEY only redirects to edit — workbench lives in pages.studio.
     hidden_pages = {
         "concept-exploration": st.Page(
@@ -130,36 +131,42 @@ def build_app_pages() -> dict[str, list[Any]]:
             title="概念探索",
             icon=icons.PROJECT_MISSION,
             url_path="concept-exploration",
+            visibility="hidden",
         ),
         "project-mission": st.Page(
             project_mission.render,
             title="项目任务",
             icon=icons.PROJECT_MISSION,
             url_path="project-mission",
+            visibility="hidden",
         ),
         LEGACY_STUDIO_PAGE_KEY: st.Page(
             _redirect_legacy_studio_to_edit,
             title="工作室",
             icon=icons.STUDIO,
             url_path=LEGACY_STUDIO_PAGE_KEY,
+            visibility="hidden",
         ),
         "template-studio": st.Page(
             template_studio.render,
             title="模板工作室",
             icon=icons.TEMPLATE_STUDIO,
             url_path="template-studio",
+            visibility="hidden",
         ),
         "template-induction": st.Page(
             template_induction.render,
             title="模板归纳",
             icon=icons.TEMPLATE_INDUCTION,
             url_path="template-induction",
+            visibility="hidden",
         ),
         "workspace": st.Page(
             workspace.render,
             title="项目工作台",
             icon=icons.WORKSPACE,
             url_path="workspace",
+            visibility="hidden",
         ),
     }
 
@@ -177,15 +184,28 @@ def build_app_pages() -> dict[str, list[Any]]:
     _PAGES.setdefault(PRODUCT_STUDIO_PAGE_KEY, stage_pages[PRODUCT_STUDIO_PAGE_KEY])
 
     return {
-        PROJECT_SECTION: [home_page, genesis_page, project_page],
+        PROJECT_SECTION: [
+            home_page,
+            genesis_page,
+            project_page,
+            hidden_pages["concept-exploration"],
+            hidden_pages["project-mission"],
+            hidden_pages["workspace"],
+        ],
         MAKE_SECTION: [
             stage_pages["materials"],
             stage_pages["outline"],
             stage_pages["generate"],
             stage_pages[PRODUCT_STUDIO_PAGE_KEY],
             stage_pages["deliver"],
+            hidden_pages[LEGACY_STUDIO_PAGE_KEY],
         ],
-        RESOURCE_SECTION: [template_library_page, slide_recovery_page],
+        RESOURCE_SECTION: [
+            template_library_page,
+            slide_recovery_page,
+            hidden_pages["template-studio"],
+            hidden_pages["template-induction"],
+        ],
         SYSTEM_SECTION: [settings_page],
     }
 

@@ -111,6 +111,12 @@ def _render_entry_form() -> None:
                             and assessment.actions[0].action
                             == NextBestActionType.EXPLORE_DIRECTIONS
                         )
+                        or assessment.project_context.lifecycle_stage
+                        in {
+                            ProjectLifecycleStage.IDEA,
+                            ProjectLifecycleStage.RESEARCH,
+                            ProjectLifecycleStage.CONCEPT,
+                        }
                     )
                 )
                 if should_explore:

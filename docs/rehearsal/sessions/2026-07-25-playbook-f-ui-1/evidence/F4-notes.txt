@@ -1,0 +1,1 @@
+﻿Concept exploration page loads with IdeaSeed. Generate directions button present. Click → 操作失败，请稍后重试 (Gemini 429). No directions rendered.

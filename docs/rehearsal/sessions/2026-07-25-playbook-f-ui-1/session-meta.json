@@ -2,30 +2,83 @@
   "session_id": "2026-07-25-playbook-f-ui-1",
   "date": "2026-07-25",
   "playbook": "F",
-  "status": "in_progress",
-  "facilitator": "Cursor agent",
-  "operator": "pending human / agent-assisted UI",
+  "status": "failed",
+  "facilitator": "Cursor agent (browser-assisted UI walkthrough)",
+  "operator": "agent-assisted (not a non-developer)",
   "operator_is_non_developer": false,
-  "llm_configured": null,
-  "vision_image_enabled": null,
+  "llm_configured": true,
+  "vision_image_enabled": false,
   "scenario_prompt": "西安市某医院老院区改造，手头有一张老门诊楼照片、地址和一份旧院区介绍，甲方还没说清功能分区。",
   "automated_gate": {
-    "command": "python scripts/run_playbook_f_gate.py -q",
-    "passed": false,
-    "run_date": "",
-    "commit": ""
+    "command": "python scripts/run_playbook_f_gate.py",
+    "passed": true,
+    "run_date": "2026-07-25",
+    "commit": "6c33608",
+    "notes": "20 passed; fixed missing subprocess import + -- stripping in gate script"
   },
   "steps": {
-    "F1": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
-    "F2": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
-    "F3": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
-    "F4": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
-    "F5": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
-    "F6": {"pass": null, "waived": false, "waive_reason": "", "notes": ""},
-    "F7": {"pass": null, "waived": false, "waive_reason": "", "notes": ""}
+    "F1": {
+      "pass": false,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "Partial: no mode selector (PASS); completeness≈15% (target 20–45%); stage=概念形成/想法; known has location/type/materials-not-uploaded; unknown has 功能分区. Marked N on score band."
+    },
+    "F2": {
+      "pass": false,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "first_nba=上传/整理资料 (FAIL vs clarify/explore/mission first); secondary: 先澄清关键问题, 启动研究补充背景. Explore link present."
+    },
+    "F3": {
+      "pass": null,
+      "waived": true,
+      "waive_reason": "Optional for Preview; no sample DOCX/JPG prepared in session",
+      "notes": ""
+    },
+    "F4": {
+      "pass": false,
+      "waived": false,
+      "waive_reason": "",
+      "notes": "UI reached 概念探索 + IdeaSeed + 推演按钮 after nav/list_projects fixes; generate failed with readable error (Gemini free-tier 429). No directions."
+    },
+    "F5": {
+      "pass": null,
+      "waived": true,
+      "waive_reason": "Blocked by F4",
+      "notes": ""
+    },
+    "F6": {
+      "pass": null,
+      "waived": true,
+      "waive_reason": "Out of F1–F4 scope",
+      "notes": ""
+    },
+    "F7": {
+      "pass": null,
+      "waived": true,
+      "waive_reason": "Out of F1–F4 scope",
+      "notes": ""
+    }
   },
   "overall_pass": false,
-  "blockers": [],
+  "blockers": [
+    "F2 NBA prioritizes upload over clarify/explore for partial-knowledge narrative",
+    "F1 completeness band undershot (15% vs 20–45%)",
+    "F4 LLM quota exhausted (gemini-2.5-flash free tier 429)"
+  ],
   "ui_walkthrough": true,
-  "scope": "F1-F4 Streamlit human sign-off"
+  "scope": "F1-F4 Streamlit human sign-off",
+  "fixes_applied_during_session": [
+    "scripts/run_playbook_f_gate.py: import subprocess; strip leading -- from pytest args",
+    "alembic upgrade head → 047_concept_direction_design_rationale",
+    "app_navigation: register hidden pages with visibility=hidden in st.navigation",
+    "project_genesis: seed exploration for IDEA/RESEARCH/CONCEPT lifecycle",
+    "concept_exploration: list_projects(session) via get_session()"
+  ],
+  "pending_human_signoff": {
+    "required_for": "Context Intelligence full acceptance",
+    "missing": "Non-developer operator + paid/non-exhausted LLM for F4 directions; retest F1–F2 NBA after scoring/routing tweak"
+  },
+  "project_id": "341550c4-d88b-4d24-99e8-bb74ba0f0f12",
+  "completed_at": "2026-07-25T03:45:00+00:00"
 }

@@ -1,2 +1,8 @@
 issue_id,step_id,severity,summary,repro,owner,status
-1,F1,f_blocker,,,,
+1,F2,f_blocker,部分资料叙事下 NBA 首推「上传/整理资料」而非澄清/推演/任务理解,标准医院改造场景 Genesis 评估后看建议下一步,routing,open
+2,F1,post_f_improvement,完整度约 15% 低于清单期望 20–45%（已知地点/类型/未上传资料描述）,同上,scoring,open
+3,nav,f_blocker,隐藏页 concept-exploration / project-mission 未注册进 st.navigation → Page not found,直链 /concept-exploration 或 Genesis page_link,ui,fixed
+4,F4,f_blocker,concept_exploration.list_projects() 缺 session 参数导致页面崩溃,打开概念探索,ui,fixed
+5,F4,post_f_improvement,Gemini free-tier 429 导致推演失败（有可读「操作失败」）,点「推演概念方向」,ops,open
+6,F2,post_f_improvement,首次评估曾出现重复「先澄清关键问题」按钮,Genesis 评估卡 NBA 区,ui,open
+7,gate,post_f_improvement,run_playbook_f_gate.py 缺 subprocess 且 -- -q 转发错误,python scripts/run_playbook_f_gate.py -- -q,tooling,fixed

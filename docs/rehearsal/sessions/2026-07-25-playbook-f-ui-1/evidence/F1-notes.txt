@@ -1,0 +1,1 @@
+﻿completeness=5%, stage=概念形成, no mode selector observed, known has location/type/materials description, unknown has 功能分区
