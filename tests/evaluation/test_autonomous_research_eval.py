@@ -132,3 +132,6 @@ def test_research_eval_requires_source_citations(db_session, research_project) -
     assert result.critique.item_count >= 1
     assert 0.0 <= result.critique.validity <= 1.0
     assert 0.0 <= result.critique.design_relevance <= 1.0
+    assert result.vision_bundles, "evaluation: DesignKnowledge should seed Research→Vision"
+    assert len(result.vision_bundles[0].references) == 3
+    assert any("Research→Vision" in w for w in result.warnings)

@@ -56,6 +56,7 @@ class AutonomousResearchResult:
     search_provider: str | None = None
     run: ResearchRun | None = None
     critique: object | None = None
+    vision_bundles: list = field(default_factory=list)
 
 
 class AutonomousResearchService:
@@ -335,7 +336,7 @@ class AutonomousResearchService:
 
         mode = (self._settings.research_critique_mode or "warn").strip().lower()
         if mode == "off":
-            return result
+            return self._attach_research_vision(result)
         try:
             report = ResearchCritiqueService(
                 self._session,
@@ -350,7 +351,7 @@ class AutonomousResearchService:
             )
         except Exception as exc:  # noqa: BLE001 — critique must not fail research
             logger.warning("research critique failed: %s", exc)
-            return result
+            return self._attach_research_vision(result)
 
         result.critique = report
         for line in report.display_warnings()[:6]:
@@ -361,6 +362,33 @@ class AutonomousResearchService:
                 0,
                 "研究批判阻断提示：validity/design_relevance 偏低，请人工确认后再用于概念固化。",
             )
+        return self._attach_research_vision(result)
+
+    def _attach_research_vision(
+        self,
+        result: AutonomousResearchResult,
+    ) -> AutonomousResearchResult:
+        """Map DesignKnowledge → Vision seeds (illustrative). No pixel generation."""
+        if not bool(getattr(self._settings, "research_vision_bridge", True)):
+            return result
+        try:
+            from archium.application.visual.vision.research_vision_bridge import (
+                ResearchVisionBridgeService,
+            )
+
+            bundles = ResearchVisionBridgeService().bundles_from_items(result.items)
+        except Exception as exc:  # noqa: BLE001 — vision bridge must not fail research
+            logger.warning("research vision bridge failed: %s", exc)
+            return result
+        result.vision_bundles = bundles
+        if bundles:
+            n_refs = sum(len(b.references) for b in bundles)
+            note = (
+                f"Research→Vision：已从 {len(bundles)} 条设计知识生成 "
+                f"{n_refs} 个视觉参考种子（示意，非证据）"
+            )
+            if note not in result.warnings:
+                result.warnings.append(note)
         return result
 
     def _synthesize_batch(

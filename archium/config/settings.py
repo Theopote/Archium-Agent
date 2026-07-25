@@ -558,6 +558,14 @@ class Settings(BaseSettings):
             "Default false keeps CI/mocks deterministic (rules-only)."
         ),
     )
+    research_vision_bridge: bool = Field(
+        default=True,
+        description=(
+            "After autonomous research, map DesignKnowledge into ResearchVisionBundle "
+            "seeds (spatial analysis / concept sketch / modern translation). "
+            "Does not call image backends; pixels stay behind Vision Engine gates."
+        ),
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

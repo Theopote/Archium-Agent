@@ -203,6 +203,12 @@ Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statem
 `validity` / `design_relevance`，标记 background_only / weak_citation / over_analogy；
 默认规则批判（`RESEARCH_CRITIQUE_MODE=warn`），可选 LLM 合并。
 
+**Phase H.4（Research→Vision）**：`ResearchVisionBridgeService` 将
+`DesignKnowledge` / `ArchitectureCase` 映射为 `ResearchVisionBundle`
+（空间分析图 / 概念草图 / 现代转译图种子）；自主研究结束后挂到
+`AutonomousResearchResult.vision_bundles`。只产 Vision Engine `ImageRequest` 种子，
+**不**自动出像素；闸门仍是 `vision_image_generation_enabled`。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -244,6 +250,9 @@ Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statem
 
 创造概念图 / 分析示意 / 氛围图 / 手绘感插图，经 Prompt Compiler → 可插拔 Image API → Asset（`ai_generated`）→ Studio/Layout。  
 **不是** Midjourney 套壳；证据槽默认禁止生成图冒充现场。详见 [`vision-intelligence-layer.md`](vision-intelligence-layer.md)。
+
+**Research→Vision（Phase H.4）**：研究洞察经 `research_vision_bridge.py` 生成
+三类示意种子，再由既有 `VisualConceptBriefService` / `VisionImageGenerationService` 消费。
 
 ---
 
@@ -369,4 +378,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase H.3 Research Critic；H.2 ArchitectureCase；H.1 ResearchQuestion。*
+*Last updated: 2026-07-25 — Phase H.4 Research→Vision；H.3 Research Critic；H.2 ArchitectureCase。*

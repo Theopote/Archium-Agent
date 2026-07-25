@@ -14,6 +14,9 @@ from archium.application.visual.vision.image_generation_service import (
 from archium.application.visual.vision.intent_suggester import suggest_image_request_for_slide
 from archium.application.visual.vision.lora_pack_service import VisionLoraPackService
 from archium.application.visual.vision.prompt_compiler import VisionPromptCompiler
+from archium.application.visual.vision.research_vision_bridge import (
+    ResearchVisionBridgeService,
+)
 from archium.application.visual.vision.style_preset_registry import (
     DEFAULT_STYLE_REGISTRY,
     VisionStylePresetRegistry,
@@ -41,6 +44,7 @@ __all__ = [
     "VisionStylePresetRegistry",
     "VisualConceptBriefResult",
     "VisualConceptBriefService",
+    "ResearchVisionBridgeService",
     "apply_direction_seed_to_request",
     "apply_visual_concept_brief_to_intent",
     "direction_has_visual_seed",
