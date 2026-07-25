@@ -1,8 +1,19 @@
-"""Prompts for project mission generation."""
+"""Prompts for project mission generation.
+
+PROMPT_VERSION history
+----------------------
+project_mission.v1 — structured ProjectMission + concept/programming addenda
+project_mission.v2 — concept addendum injects Architectural Reasoning Framework
+"""
 
 from __future__ import annotations
 
+from archium.prompts.frameworks.architectural_reasoning import (
+    ARCHITECTURAL_REASONING_FRAMEWORK,
+)
 from archium.prompts.identity import ARCHIUM_IDENTITY
+
+PROMPT_VERSION = "project_mission.v2"
 
 MISSION_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 当前任务：理解用户描述的建筑任务，生成结构化的 ProjectMission 及相关规划对象。
@@ -37,17 +48,26 @@ research_questions, design_question_summaries, evaluation_criteria, uncertainty_
 knowledge_gaps, assumptions, clarifying_questions, design_questions, design_intent
 """
 
-CONCEPT_MISSION_ADDENDUM = """
-【概念探索模式 — 设计使命 v0.1】
+CONCEPT_MISSION_ADDENDUM = (
+    """
+【概念探索模式 — 设计使命 v0.2】
 - 这是从 0 到 1 的概念探索，不是「生成 N 页 PPT」的任务说明。
+- 建立 design_intent 时遵循下列建筑推理框架（先问题，后形式）：
+
+"""
+    + ARCHITECTURAL_REASONING_FRAMEWORK
+    + """
 - 必须输出 design_intent 对象，包含 theme, problem_statement, social_background,
   cultural_context, target_users, desired_experience, core_questions, research_needed,
   working_assumptions。
+- problem_statement 必须回答「为什么需要」，禁止只写建筑类型或「做一个 X」。
+- social_background / cultural_context 对应 Step 1；缺失则写入 assumptions 与 research_needed。
 - 缺失地点、规模、用户等信息时：写入 assumptions（requires_confirmation=true）和
   design_intent.working_assumptions，并列出 research_questions / research_needed。
 - clarifying_questions 最多 3 个，全部 blocking=false，can_assume=true，并提供 suggested_assumption。
 - task_statement 应表达设计使命（探索什么问题、创造什么体验），而非交付页数。
 """
+)
 
 PROGRAMMING_MISSION_ADDENDUM = """
 【策划与可研模式 — 任务理解 v0.1】
@@ -88,7 +108,10 @@ def build_mission_user_prompt(
         meta = f"【项目基础信息】\n名称: {project_name or '未命名'}\n类型: {project_type or 'other'}\n\n"
     mode_hint = ""
     if concept_mode:
-        mode_hint = "【模式】概念探索 — 资料可空，优先建立设计使命与假设。\n\n"
+        mode_hint = (
+            "【模式】概念探索 — 资料可空，优先按建筑推理框架建立设计使命与假设"
+            "（先问题与社会背景，后形式）。\n\n"
+        )
     elif programming_mode:
         mode_hint = "【模式】策划与可研 — 资料可空，优先梳理决策问题、功能未知与研究成果。\n\n"
     return (

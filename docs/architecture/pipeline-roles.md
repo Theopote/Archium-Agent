@@ -178,6 +178,11 @@ topic → search → write → INDEX reassess；停条件为 max_steps /
 （ConceptDirection 空间策略/形式语言/风险、`DesignIntent.social_background`、
 研究条目 `source_citations`、Critic `alternative_directions`）。不是 `tests/agents/`。
 
+**Phase F（Prompt 推理框架）**：`archium/prompts/frameworks/` 提供共享
+Architectural Reasoning / Design Critique / Research→Knowledge 片段；
+Concept、概念 Mission、自主研究、设计批判 SYSTEM 注入同一工序（非角色扮演）。
+任务 Prompt 带轻量 `PROMPT_VERSION`（如 `concept_direction.v2`）。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -343,4 +348,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase E `tests/evaluation/`；认知核 ↔ 六席位映射；禁止把认知核落成 Agent 类。*
+*Last updated: 2026-07-25 — Phase F Prompt frameworks；Phase E evaluation；认知核 ↔ 六席位。*
