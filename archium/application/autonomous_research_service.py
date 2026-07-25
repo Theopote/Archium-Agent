@@ -55,6 +55,7 @@ class AutonomousResearchResult:
     search_hit_count: int = 0
     search_provider: str | None = None
     run: ResearchRun | None = None
+    critique: object | None = None
 
 
 class AutonomousResearchService:
@@ -195,7 +196,10 @@ class AutonomousResearchService:
             run.touch_completed()
             batch_result.run = run
             batch_result.mission_id = mission_id
-            return batch_result
+            return self._attach_research_critique(
+                batch_result,
+                design_context=design_context,
+            )
 
         queue = list(topics)
         all_items: list[ProjectKnowledgeItem] = []
@@ -304,16 +308,60 @@ class AutonomousResearchService:
         run.research_need_after = need_after
         run.touch_completed()
 
-        return AutonomousResearchResult(
-            project_id=project.id,
-            mission_id=mission_id,
-            topics=list(run.completed_topics),
-            items=all_items,
-            warnings=warnings,
-            search_hit_count=total_hits,
-            search_provider=provider,
-            run=run,
+        return self._attach_research_critique(
+            AutonomousResearchResult(
+                project_id=project.id,
+                mission_id=mission_id,
+                topics=list(run.completed_topics),
+                items=all_items,
+                warnings=warnings,
+                search_hit_count=total_hits,
+                search_provider=provider,
+                run=run,
+            ),
+            design_context=design_context,
         )
+
+    def _attach_research_critique(
+        self,
+        result: AutonomousResearchResult,
+        *,
+        design_context: str,
+    ) -> AutonomousResearchResult:
+        from archium.application.review.research_critique_service import (
+            ResearchCritiqueService,
+        )
+        from archium.domain.research_critique import ResearchCritiqueVerdict
+
+        mode = (self._settings.research_critique_mode or "warn").strip().lower()
+        if mode == "off":
+            return result
+        try:
+            report = ResearchCritiqueService(
+                self._session,
+                self._llm,
+                settings=self._settings,
+            ).critique_items(
+                result.items,
+                project_id=result.project_id,
+                mission_id=result.mission_id,
+                design_context=design_context,
+                use_llm=bool(self._settings.research_critique_llm),
+            )
+        except Exception as exc:  # noqa: BLE001 — critique must not fail research
+            logger.warning("research critique failed: %s", exc)
+            return result
+
+        result.critique = report
+        for line in report.display_warnings()[:6]:
+            if line and line not in result.warnings:
+                result.warnings.append(line)
+        if mode == "block" and report.verdict == ResearchCritiqueVerdict.WEAK:
+            result.warnings.insert(
+                0,
+                "研究批判阻断提示：validity/design_relevance 偏低，请人工确认后再用于概念固化。",
+            )
+        return result
 
     def _synthesize_batch(
         self,

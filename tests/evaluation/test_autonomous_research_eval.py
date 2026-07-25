@@ -27,6 +27,7 @@ from tests.evaluation.assertions import (
     assert_research_item_has_design_knowledge,
     assert_research_item_has_sources,
 )
+from archium.domain.research_critique import ResearchCritiqueReport
 
 
 class _StubWebResearch(WebResearchSearchService):
@@ -127,3 +128,7 @@ def test_research_eval_requires_source_citations(db_session, research_project) -
         assert_research_item_has_design_knowledge(item)
         assert item.design_knowledge is not None
         assert "台地" in item.design_knowledge.principle
+    assert isinstance(result.critique, ResearchCritiqueReport)
+    assert result.critique.item_count >= 1
+    assert 0.0 <= result.critique.validity <= 1.0
+    assert 0.0 <= result.critique.design_relevance <= 1.0

@@ -543,6 +543,21 @@ class Settings(BaseSettings):
             "block=refuse when verdict is reject."
         ),
     )
+    research_critique_mode: str = Field(
+        default="warn",
+        description=(
+            "Research Critic after autonomous research batches: "
+            "off | warn | block. warn=attach ResearchCritiqueReport + warnings; "
+            "block=mark run weak and surface blocking warnings (items still stored)."
+        ),
+    )
+    research_critique_llm: bool = Field(
+        default=False,
+        description=(
+            "When true, Research Critic also calls LLM and merges with rules. "
+            "Default false keeps CI/mocks deterministic (rules-only)."
+        ),
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

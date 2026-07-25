@@ -6,7 +6,7 @@ Complements `tests/golden/` (workflow regression) and `tests/unit/` (implementat
 | File | Seat / core | Contract |
 |------|-------------|----------|
 | `test_concept_direction_eval.py` | Architectural Reasoning | 山地文化中心 → spatial_strategy / formal_language / risks；DesignIntent.social_background |
-| `test_autonomous_research_eval.py` | Research | knowledge items cite sources + DesignKnowledge |
+| `test_autonomous_research_eval.py` | Research | citations + DesignKnowledge + ResearchCritique scores |
 | `test_design_critique_eval.py` | Critic | alternative_directions (counterexamples) |
 
 ```bash

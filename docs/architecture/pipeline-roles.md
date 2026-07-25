@@ -199,6 +199,10 @@ Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statem
 支持跨类型迁移（如「冥想」→ 温泉/小教堂）；注入 Concept / Research 语境，
 并可映射为 `DesignKnowledge`。
 
+**Phase H.3（Research Critic）**：`ResearchCritiqueService` 对研究产物打
+`validity` / `design_relevance`，标记 background_only / weak_citation / over_analogy；
+默认规则批判（`RESEARCH_CRITIQUE_MODE=warn`），可选 LLM 合并。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -268,6 +272,7 @@ Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statem
 | 语义 / 场景 | `slide_semantic.py`、`scene_render_qa.py` |
 | 视觉只读 | `visual_critic_service.py`、`deck_qa_service.py` |
 | **设计批判（Phase D）** | `design_critique_service.py` → `DesignCritiqueReport` |
+| **研究批判（Phase H.3）** | `research_critique_service.py` → `ResearchCritiqueReport` |
 | Domain | `ReviewIssue`、`VisualCriticReport`、`design_critique.py` |
 | 修复（非 Critic） | `slide_repair_service.py`、`layout_repair_service.py`、`deck_repair_service.py` |
 
@@ -364,4 +369,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase H.2 ArchitectureCase；H.1 ResearchQuestion；H DesignKnowledge。*
+*Last updated: 2026-07-25 — Phase H.3 Research Critic；H.2 ArchitectureCase；H.1 ResearchQuestion。*
