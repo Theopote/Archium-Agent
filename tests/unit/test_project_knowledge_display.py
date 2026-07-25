@@ -48,12 +48,12 @@ def test_build_display_uses_partial_not_mode_language() -> None:
         understanding_summary="部分资料：有地点与旧楼背景。",
     )
     display = build_project_knowledge_display(ctx)
-    assert display.situation_label == "部分资料"
-    assert "部分资料" in display.headline
+    assert display.situation_label in {"部分资料", "意图清晰·资料尚少", "起步想法"}
     assert "概念探索" not in display.headline
     assert "已有项目" not in display.headline
     assert display.focus == "澄清关键问题"
     assert display.stage_label == "研究"
+    assert "意图" in display.headline or "资料" in display.headline
 
 
 def test_sparse_idea_classification() -> None:

@@ -17,6 +17,7 @@ from archium.application.context.nba_action_executor import (
     nba_execute_label,
 )
 from archium.application.context.next_action_selector import (
+    default_actions_for_dimensions,
     default_actions_for_stage,
     resolve_action_target,
     resolve_workflow_entry,
@@ -60,6 +61,7 @@ __all__ = [
     "build_project_context",
     "classify_reassess_mode",
     "compose_project_context",
+    "default_actions_for_dimensions",
     "default_actions_for_stage",
     "finalize_assessment_context",
     "input_sources_from_evidence",

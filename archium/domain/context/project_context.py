@@ -88,14 +88,21 @@ class ProjectContext(DomainModel):
 
 
 def infer_lifecycle_stage(state: KnowledgeState) -> ProjectLifecycleStage:
-    """Map knowledge maturity + completeness to a design-process stage."""
+    """Map multi-axis knowledge + maturity to a design-process stage."""
+    dims = state.effective_dimensions()
     if state.maturity_stage == KnowledgeMaturityStage.TECHNICAL_PRESENTATION:
         return ProjectLifecycleStage.DOCUMENTATION
     if state.maturity_stage == KnowledgeMaturityStage.DESIGN_ANALYSIS:
-        if state.completeness_score >= 0.55 and state.evidence_ratio >= 0.35:
+        if (
+            dims.information_completeness >= 0.55
+            and dims.evidence_confidence >= 0.35
+        ):
             return ProjectLifecycleStage.DESIGN
         return ProjectLifecycleStage.RESEARCH
-    if state.completeness_score < 0.22 and state.evidence_ratio < 0.12:
+    # Sparse materials but clear intent → CONCEPT (not IDEA)
+    if dims.information_completeness < 0.22 and dims.evidence_confidence < 0.12:
+        if dims.design_intent_clarity >= 0.55:
+            return ProjectLifecycleStage.CONCEPT
         return ProjectLifecycleStage.IDEA
     return ProjectLifecycleStage.CONCEPT
 
@@ -106,8 +113,9 @@ def infer_recommended_workflow(
     *,
     lifecycle_stage: ProjectLifecycleStage | None = None,
 ) -> RecommendedWorkflow:
-    """Pick the primary workflow from top next action, with stage-aware fallback."""
+    """Pick the primary workflow from top next action, with dimension-aware fallback."""
     lifecycle = lifecycle_stage or infer_lifecycle_stage(state)
+    dims = state.effective_dimensions()
     if actions:
         mapped = _workflow_for_action(actions[0].action)
         if mapped is not None:
@@ -117,10 +125,13 @@ def infer_recommended_workflow(
     if lifecycle == ProjectLifecycleStage.DESIGN:
         return RecommendedWorkflow.DESIGN
     if lifecycle == ProjectLifecycleStage.RESEARCH:
-        if state.evidence_ratio >= 0.2:
+        if dims.evidence_confidence >= 0.2 or dims.design_intent_clarity >= 0.55:
             return RecommendedWorkflow.MISSION
         return RecommendedWorkflow.RESEARCH
-    if state.evidence_ratio >= 0.25 and state.completeness_score >= 0.4:
+    # High intent + low info → explore, not materials-first
+    if dims.design_intent_clarity >= 0.6 and dims.information_completeness < 0.4:
+        return RecommendedWorkflow.EXPLORE
+    if dims.evidence_confidence >= 0.25 and dims.information_completeness >= 0.4:
         return RecommendedWorkflow.MATERIALS
     return RecommendedWorkflow.EXPLORE
 

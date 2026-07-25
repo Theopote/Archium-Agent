@@ -52,6 +52,8 @@ def render_project_knowledge_strip(
             f"当前重心：{display.focus}",
             f"把握度约 {display.confidence_pct}%",
         ]
+        if display.dimension_bits:
+            meta.append(" · ".join(display.dimension_bits))
         if display.claim_count:
             meta.append(f"主张 {display.claim_count}（已链接 {display.linked_claim_count}）")
         if display.knowledge_item_count:

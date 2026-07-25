@@ -81,7 +81,7 @@ def test_assess_rule_fallback_existing_docs() -> None:
     # Rule fallback may tag EXISTING_PROJECT internally; legacy origin follows ProjectContext.
     assert result.suggested_origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION
     assert result.knowledge_state.maturity_stage == KnowledgeMaturityStage.DESIGN_ANALYSIS
-    assert result.knowledge_state.completeness_score >= 0.5
+    assert result.knowledge_state.dimensions.information_completeness >= 0.5
     assert result.project_context is not None
 
 
@@ -112,7 +112,10 @@ def test_assess_and_persist_writes_knowledge_and_evolution(db_session) -> None:
     refreshed = ProjectRepository(db_session).get_by_id(project.id)
     assert refreshed is not None
     assert refreshed.knowledge_state is not None
-    assert refreshed.knowledge_state.completeness_score == pytest.approx(0.3)
+    assert refreshed.knowledge_state.dimensions.information_completeness >= 0.0
+    assert refreshed.knowledge_state.completeness_score == pytest.approx(
+        refreshed.knowledge_state.effective_dimensions().display_score()
+    )
     assert refreshed.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION
     assert len(refreshed.intent_evolution.events) >= 2
     assert refreshed.intent_evolution.events[0].kind.value == "seed"

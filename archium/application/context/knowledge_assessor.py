@@ -4,8 +4,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from archium.application.context.next_action_selector import default_actions_for_stage
 from archium.application.context.knowledge_claim_index import merge_claim_index_into_state
+from archium.application.context.knowledge_dimensions_builder import (
+    apply_dimensions_to_state,
+    dimensions_from_draft_values,
+    dimensions_from_rule_signals,
+)
+from archium.application.context.next_action_selector import (
+    default_actions_for_dimensions,
+    default_actions_for_stage,
+)
 from archium.application.context.project_context_composer import (
     compose_project_context,
     finalize_assessment_context,
@@ -112,14 +120,40 @@ class KnowledgeAssessor:
                 )
             )
         actions.sort(key=lambda a: a.priority)
+        dims_draft = draft.dimensions
+        dimensions = dimensions_from_draft_values(
+            information_completeness=(
+                None if dims_draft is None else dims_draft.information_completeness
+            ),
+            design_intent_clarity=(
+                None if dims_draft is None else dims_draft.design_intent_clarity
+            ),
+            evidence_confidence=(
+                None if dims_draft is None else dims_draft.evidence_confidence
+            ),
+            constraint_understanding=(
+                None if dims_draft is None else dims_draft.constraint_understanding
+            ),
+            user_alignment=None if dims_draft is None else dims_draft.user_alignment,
+            research_need=None if dims_draft is None else dims_draft.research_need,
+            completeness_score=float(draft.completeness_score),
+            evidence_ratio=float(draft.evidence_ratio),
+            assumption_ratio=float(draft.assumption_ratio),
+        )
         if not actions:
-            actions = default_actions_for_stage(stage_raw)
+            actions = default_actions_for_dimensions(
+                dimensions,
+                stage=stage_raw,
+                has_materials=bool(evidence and evidence.has_evidence),
+                blocking_gaps=bool(evidence and evidence.blocking_gap_count > 0),
+            )
 
         state = KnowledgeState(
             completeness_score=max(0.0, min(1.0, float(draft.completeness_score))),
             maturity_stage=KnowledgeMaturityStage(stage_raw),
             evidence_ratio=max(0.0, min(1.0, float(draft.evidence_ratio))),
             assumption_ratio=max(0.0, min(1.0, float(draft.assumption_ratio))),
+            dimensions=dimensions,
             known={k: str(v) for k, v in (draft.known or {}).items() if str(v).strip()},
             unknown=[u.strip() for u in draft.unknown if u and u.strip()],
             missing_information=[
@@ -128,12 +162,14 @@ class KnowledgeAssessor:
             assessed_at=datetime.now(UTC),
             source=source,
         )
+        state = apply_dimensions_to_state(state, dimensions)
         if evidence is not None and (
             evidence.indexed_facts
             or evidence.indexed_knowledge_items
             or evidence.indexed_gaps
         ):
             state = merge_claim_index_into_state(state, evidence)
+            state = apply_dimensions_to_state(state, dimensions)
         assessment = ContextAssessment(
             knowledge_state=state,
             actions=actions,
@@ -226,21 +262,41 @@ class KnowledgeAssessor:
             if gap_unknown:
                 unknown = gap_unknown
 
+        dimensions = dimensions_from_rule_signals(
+            user_text=user_text,
+            evidence=pack,
+            evidence_ratio=evidence_ratio,
+        )
+        if stage == KnowledgeMaturityStage.DESIGN_ANALYSIS:
+            dimensions = dimensions.model_copy(
+                update={
+                    "information_completeness": max(
+                        dimensions.information_completeness, 0.55
+                    ),
+                    "evidence_confidence": max(
+                        dimensions.evidence_confidence, evidence_ratio
+                    ),
+                }
+            )
         state = KnowledgeState(
             completeness_score=completeness,
             maturity_stage=stage,
             evidence_ratio=evidence_ratio,
             assumption_ratio=max(0.0, 1.0 - evidence_ratio),
+            dimensions=dimensions,
             known=known,
             unknown=unknown,
             missing_information=list(unknown),
             assessed_at=datetime.now(UTC),
             source="rule_fallback",
         )
+        state = apply_dimensions_to_state(state, dimensions)
         if pack.indexed_facts or pack.indexed_knowledge_items or pack.indexed_gaps:
             state = merge_claim_index_into_state(state, pack)
-        actions = default_actions_for_stage(
-            stage.value,
+            state = apply_dimensions_to_state(state, dimensions)
+        actions = default_actions_for_dimensions(
+            dimensions,
+            stage=stage.value,
             has_materials=pack.has_evidence,
             blocking_gaps=pack.blocking_gap_count > 0,
         )
@@ -250,7 +306,7 @@ class KnowledgeAssessor:
             suggested_origin_mode=origin,
             understanding_summary=(
                 f"基于{'已有资料与事实' if pack.has_evidence else '文字描述'}的规则评估："
-                f"完整度约 {int(completeness * 100)}%。"
+                f"{' · '.join(dimensions.summary_bits(limit=3))}。"
             ),
         )
         assessment.project_context = compose_project_context(

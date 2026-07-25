@@ -16,12 +16,14 @@ class KnowledgeSituation(StrEnum):
     """Coarse knowledge posture — not a user-selected project mode."""
 
     SPARSE_IDEA = "sparse_idea"
+    INTENT_LED = "intent_led"
     PARTIAL_CONTEXT = "partial_context"
     EVIDENCE_RICH = "evidence_rich"
 
 
 _SITUATION_LABELS = {
     KnowledgeSituation.SPARSE_IDEA: "起步想法",
+    KnowledgeSituation.INTENT_LED: "意图清晰·资料尚少",
     KnowledgeSituation.PARTIAL_CONTEXT: "部分资料",
     KnowledgeSituation.EVIDENCE_RICH: "资料较充实",
 }
@@ -71,13 +73,24 @@ class ProjectKnowledgeDisplay:
     linked_claim_count: int = 0
     blocking_unknown_count: int = 0
     knowledge_item_count: int = 0
+    dimension_bits: tuple[str, ...] = ()
+    intent_pct: int = 0
+    information_pct: int = 0
+    research_need_pct: int = 0
 
 
 def classify_knowledge_situation(state: KnowledgeState) -> KnowledgeSituation:
-    """Map continuous KnowledgeState to a user-facing situation (not origin_mode)."""
-    if state.completeness_score >= 0.55 and state.evidence_ratio >= 0.35:
+    """Map multi-axis KnowledgeState to a user-facing situation (not origin_mode)."""
+    dims = state.effective_dimensions()
+    if dims.information_completeness >= 0.55 and dims.evidence_confidence >= 0.35:
         return KnowledgeSituation.EVIDENCE_RICH
-    if state.completeness_score < 0.18 and state.evidence_ratio < 0.12:
+    if dims.design_intent_clarity >= 0.55 and dims.information_completeness < 0.4:
+        return KnowledgeSituation.INTENT_LED
+    if (
+        dims.information_completeness < 0.18
+        and dims.evidence_confidence < 0.12
+        and dims.design_intent_clarity < 0.4
+    ):
         return KnowledgeSituation.SPARSE_IDEA
     return KnowledgeSituation.PARTIAL_CONTEXT
 
@@ -89,9 +102,13 @@ def build_project_knowledge_display(
 ) -> ProjectKnowledgeDisplay:
     """Build demodeified copy from ProjectContext."""
     state = context.knowledge_state
+    dims = state.effective_dimensions()
     situation = classify_knowledge_situation(state)
     situation_label = _SITUATION_LABELS[situation]
-    completeness_pct = int(round(state.completeness_score * 100))
+    completeness_pct = int(round(dims.display_score() * 100))
+    intent_pct = int(round(dims.design_intent_clarity * 100))
+    information_pct = int(round(dims.information_completeness * 100))
+    research_need_pct = int(round(dims.research_need * 100))
     stage_label = _STAGE_LABELS.get(
         context.lifecycle_stage,
         context.lifecycle_stage.value,
@@ -101,11 +118,13 @@ def build_project_knowledge_display(
         context.recommended_workflow.value,
     )
     confidence_pct = int(round(context.confidence * 100))
+    dim_bits = tuple(dims.summary_bits(limit=4))
 
     actions = suggested_actions or _suggested_actions_from_context(context)
     focus = _focus_for_situation(situation, workflow_label, context.next_actions)
     headline = (
-        f"项目认知：**{situation_label}**（完整度约 {completeness_pct}%）"
+        f"项目认知：**{situation_label}**"
+        f"（意图 {intent_pct}% · 资料 {information_pct}%）"
         f" · 阶段 {stage_label} · 建议优先 **{workflow_label}**"
     )
     caption = _caption_for_situation(
@@ -136,6 +155,10 @@ def build_project_knowledge_display(
         linked_claim_count=linked,
         blocking_unknown_count=blocking,
         knowledge_item_count=int(state.knowledge_item_count or 0),
+        dimension_bits=dim_bits,
+        intent_pct=intent_pct,
+        information_pct=information_pct,
+        research_need_pct=research_need_pct,
     )
 
 
@@ -150,6 +173,8 @@ def _focus_for_situation(
             return label
     if situation == KnowledgeSituation.EVIDENCE_RICH:
         return "事实账本与汇报结构"
+    if situation == KnowledgeSituation.INTENT_LED:
+        return "在清晰意图上推演方向 / 写任务理解"
     if situation == KnowledgeSituation.SPARSE_IDEA:
         return "从想法澄清与方向推演开始"
     return workflow_label
@@ -162,9 +187,15 @@ def _caption_for_situation(
     workflow_label: str,
     understanding: str,
 ) -> str:
+    dims = state.effective_dimensions()
     summary = (understanding or "").strip()
     if situation == KnowledgeSituation.SPARSE_IDEA:
         base = "目前主要是想法与片段描述，不必先备齐资料。"
+    elif situation == KnowledgeSituation.INTENT_LED:
+        base = (
+            "设计意图已经较清楚，资料仍可后续补齐 — "
+            "不必因资料少而停在「未成熟」。"
+        )
     elif situation == KnowledgeSituation.PARTIAL_CONTEXT:
         base = (
             "这是大多数真实项目的状态：有一点地址、照片或介绍，"
@@ -172,13 +203,17 @@ def _caption_for_situation(
         )
     else:
         base = "资料较充实，可整理事实并推进汇报结构；正式交付仍建议核对证据。"
+    dim_line = " · ".join(dims.summary_bits(limit=3))
     if summary:
-        return f"{base} {summary}"
+        return f"{base} {summary}（{dim_line}）"
     unknowns = state.unknown or state.missing_information
-    if unknowns and situation == KnowledgeSituation.PARTIAL_CONTEXT:
+    if unknowns and situation in {
+        KnowledgeSituation.PARTIAL_CONTEXT,
+        KnowledgeSituation.INTENT_LED,
+    }:
         sample = "、".join(unknowns[:3])
-        return f"{base} 仍缺：{sample}。建议下一步：{workflow_label}。"
-    return f"{base} 建议下一步：{workflow_label}。"
+        return f"{base} 仍缺：{sample}。{dim_line}。建议下一步：{workflow_label}。"
+    return f"{base} {dim_line}。建议下一步：{workflow_label}。"
 
 
 def _suggested_actions_from_context(context: ProjectContext) -> tuple[str, ...]:
