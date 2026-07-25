@@ -10,7 +10,8 @@ CLARIFICATION_REVISION_SYSTEM_PROMPT = MISSION_SYSTEM_PROMPT + """\
 修订原则：
 - 将用户答案写入任务陈述、范围、约束或决策需求中，不得忽略。
 - 已接受的假设必须写入 assumptions 并在 known_constraints 中以 inferred/assumption 标记。
-- 仍未回答且非阻塞的问题可保留在 key_unknowns。
+- 仍未回答的问题写入 knowledge_gaps；不要用 key_unknowns / confidence 充当实时认知
+  （实时未知与把握度由 KnowledgeState 维护）。
 - 已回答的 knowledge_gaps / clarifying_questions 不要重复生成；clarifying_questions 可返回空列表。
 - 不得虚构面积、用地、高度、预算或规范条件。
 """

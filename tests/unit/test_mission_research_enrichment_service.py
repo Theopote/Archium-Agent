@@ -111,6 +111,13 @@ def test_revise_mission_from_written_research_updates_task_fields(
     service = MissionResearchEnrichmentService(db_session, llm=None)
     service.enrich_mission(mission.id, prefer_llm=False)
 
+    # Seed a generation-time snapshot that must not be rewritten by revision
+    mission = MissionRepository(db_session).get_mission(mission.id)
+    assert mission is not None
+    mission = MissionRepository(db_session).save_mission(
+        mission.model_copy(update={"key_unknowns": ["具体用地尚未确定"]})
+    )
+
     llm = MagicMock()
     llm.generate_structured.return_value = MissionResearchRevisionDraft(
         task_statement="探索黄土高原文化中心，并参考关中乡村公共文化空间公开案例。",
@@ -127,7 +134,9 @@ def test_revise_mission_from_written_research_updates_task_fields(
 
     assert result.mission_revised is True
     assert "公开案例" in result.mission.task_statement
-    assert result.mission.key_unknowns == ["具体用地与规模待确认"]
+    # key_unknowns is a deprecated snapshot — enrichment must not rewrite live cognition
+    assert result.mission.key_unknowns == ["具体用地尚未确定"]
+    assert result.mission.research_questions == ["哪些功能应优先复合？"]
 
 
 def test_list_written_back_items_tracks_enrichment(db_session, mission_with_confirmed_research) -> None:

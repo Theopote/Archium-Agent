@@ -164,7 +164,6 @@ class MissionResearchEnrichmentService:
             task_statement=draft.task_statement.strip()
             if draft.task_statement and draft.task_statement.strip()
             else None,
-            key_unknowns=draft.key_unknowns or None,
             research_questions=draft.research_questions or None,
         )
         if not patch.model_dump(exclude_none=True):
@@ -176,6 +175,7 @@ class MissionResearchEnrichmentService:
             RevisionSource.CLARIFICATION,
             note="公开研究写回后的轻量任务修订",
         )
+        self._best_effort_reassess_cognition(mission.project_id)
         return MissionResearchEnrichmentResult(
             mission=mission,
             used_llm=True,
@@ -207,9 +207,10 @@ class MissionResearchEnrichmentService:
             current_situation=draft.current_situation.strip()
             if draft.current_situation and draft.current_situation.strip()
             else None,
-            key_unknowns=draft.key_unknowns or None,
         )
-        return self._mission_service.update_mission(mission.id, patch)
+        updated = self._mission_service.update_mission(mission.id, patch)
+        self._best_effort_reassess_cognition(updated.project_id)
+        return updated
 
     def _append_research_block(
         self,
@@ -335,3 +336,17 @@ class MissionResearchEnrichmentService:
         if mission is None:
             raise WorkflowError(f"任务理解 {mission_id} 不存在")
         return mission
+
+    def _best_effort_reassess_cognition(self, project_id: UUID) -> None:
+        try:
+            from archium.application.context import best_effort_reassess_knowledge
+
+            best_effort_reassess_knowledge(
+                self._session,
+                project_id,
+                llm=self._llm,
+                settings=self._settings,
+                reason="mission_research_enrichment",
+            )
+        except Exception:  # noqa: BLE001
+            return

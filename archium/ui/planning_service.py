@@ -708,6 +708,7 @@ def get_design_iteration_progress(session: Session, mission_id: UUID):
 
 def preview_presentation_request_from_mission(session: Session, mission_id: UUID):
     """Build a PresentationRequest preview from mission + selected direction/visual brief."""
+    from archium.application.context.mission_cognition import load_project_knowledge_state
     from archium.application.mission_context_bridge import (
         resolve_selected_concept_direction,
         resolve_visual_concept_brief_for_mission,
@@ -722,6 +723,7 @@ def preview_presentation_request_from_mission(session: Session, mission_id: UUID
         mission,
         concept_direction=resolve_selected_concept_direction(session, mission_id),
         visual_concept_brief=resolve_visual_concept_brief_for_mission(session, mission_id),
+        knowledge_state=load_project_knowledge_state(session, mission.project_id),
     )
 
 

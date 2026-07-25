@@ -55,7 +55,15 @@ class EvaluationCriterion(DomainModel):
 
 
 class ProjectMission(IdentifiedModel, VersionedModel, TimestampedModel):
-    """Structured understanding of what the current architectural task is."""
+    """Stable task definition for the current architectural engagement.
+
+    Holds problem framing, questions, intent, and constraints — **not** live
+    cognition. Runtime unknowns / confidence belong on ``KnowledgeState`` /
+    ``ProjectContext`` (see ``mission_cognition`` helpers).
+
+    ``key_unknowns`` and ``confidence`` remain as **generation-time snapshots**
+    for backward compatibility; do not treat them as the live cognitive index.
+    """
 
     project_id: UUID
     lineage_id: UUID = Field(default_factory=uuid4)
@@ -66,7 +74,10 @@ class ProjectMission(IdentifiedModel, VersionedModel, TimestampedModel):
     domains: list[ProjectDomain] = Field(default_factory=list)
     intervention_scales: list[InterventionScale] = Field(default_factory=list)
     requested_service_depths: list[ServiceDepth] = Field(default_factory=list)
-    project_context: str = ""
+    project_context: str = Field(
+        default="",
+        description="Narrative task context string — not the ProjectContext domain object.",
+    )
     current_situation: str = ""
     primary_problems: list[str] = Field(default_factory=list)
     desired_changes: list[str] = Field(default_factory=list)
@@ -79,14 +90,28 @@ class ProjectMission(IdentifiedModel, VersionedModel, TimestampedModel):
     design_intent: DesignIntent | None = None
     approval_hash: str | None = Field(default=None, max_length=64)
     known_constraints: list[MissionConstraint] = Field(default_factory=list)
-    key_unknowns: list[str] = Field(default_factory=list)
+    key_unknowns: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Deprecated generation-time unknown snapshot. "
+            "Live unknowns: KnowledgeState.open_unknowns / unknown."
+        ),
+    )
     research_questions: list[str] = Field(default_factory=list)
     design_questions: list[str] = Field(default_factory=list)
     evaluation_criteria: list[EvaluationCriterion] = Field(default_factory=list)
     recommended_workstream_ids: list[UUID] = Field(default_factory=list)
     recommended_deliverable_ids: list[str] = Field(default_factory=list)
     uncertainty_level: UncertaintyLevel = UncertaintyLevel.MEDIUM
-    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    confidence: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Deprecated generation-time confidence snapshot. "
+            "Live confidence: ProjectContext.confidence / KnowledgeState dimensions."
+        ),
+    )
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 
     @field_validator("task_natures", "domains", "intervention_scales", "requested_service_depths")

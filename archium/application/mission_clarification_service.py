@@ -417,14 +417,16 @@ class MissionClarificationService:
             facts=fact_models,
             version=previous.version + 1,
         )
-        # Keep identity; update content only. Clarification records stay attached.
-        # Revised content requires a fresh explicit approval gate.
+        # Keep identity; update task-definition content only.
+        # Freeze deprecated cognition snapshots — live unknowns/confidence on KS.
         revised = parsed.mission.model_copy(
             update={
                 "id": previous.id,
                 "lineage_id": previous.lineage_id,
                 "logical_key": previous.logical_key,
                 "created_at": previous.created_at,
+                "key_unknowns": list(previous.key_unknowns),
+                "confidence": previous.confidence,
             }
         )
         revised.invalidate_approval()
@@ -434,6 +436,7 @@ class MissionClarificationService:
             RevisionSource.CLARIFICATION,
             note="澄清后修订任务理解",
         )
+        self._best_effort_reassess_cognition(saved.project_id)
         return MissionGenerationResult(
             mission=saved,
             knowledge_gaps=self._missions.list_knowledge_gaps(saved.id),
@@ -490,21 +493,17 @@ class MissionClarificationService:
         question: ClarifyingQuestion,
         answer: str,
     ) -> ProjectMission:
-        unknowns = [item for item in mission.key_unknowns if item not in question.question]
+        # Do not mutate deprecated key_unknowns — live unknowns live on KnowledgeState.
         decisions = list(mission.decisions_required)
         note = f"{question.question} → {answer}"
         if note not in decisions:
             decisions.append(note)
-        # Remove matching unknown phrases when answered.
-        updated = mission.model_copy(
-            update={
-                "key_unknowns": unknowns,
-                "decisions_required": decisions,
-            }
-        )
+        updated = mission.model_copy(update={"decisions_required": decisions})
         self._invalidate_mission_approval_if_needed(updated)
         updated.touch()
-        return self._missions.save_mission(updated)
+        saved = self._missions.save_mission(updated)
+        self._best_effort_reassess_cognition(saved.project_id)
+        return saved
 
     def _apply_assumption_to_mission(
         self,
@@ -534,7 +533,7 @@ class MissionClarificationService:
         gap: KnowledgeGap,
         answer: str,
     ) -> ProjectMission:
-        unknowns = [item for item in mission.key_unknowns if item not in gap.question]
+        # Stable task definition only: record confirmed constraint; unknowns → KS.
         constraints = list(mission.known_constraints)
         constraints.append(
             MissionConstraint(
@@ -545,18 +544,32 @@ class MissionClarificationService:
                 importance="high" if gap.priority.value in {"critical", "high"} else "medium",
             )
         )
-        updated = mission.model_copy(
-            update={"key_unknowns": unknowns, "known_constraints": constraints}
-        )
+        updated = mission.model_copy(update={"known_constraints": constraints})
         self._invalidate_mission_approval_if_needed(updated)
         updated.touch()
-        return self._missions.save_mission(updated)
+        saved = self._missions.save_mission(updated)
+        self._best_effort_reassess_cognition(saved.project_id)
+        return saved
 
     def _require_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._missions.get_mission(mission_id)
         if mission is None:
             raise WorkflowError(f"任务理解 {mission_id} 不存在")
         return mission
+
+    def _best_effort_reassess_cognition(self, project_id: UUID) -> None:
+        try:
+            from archium.application.context import best_effort_reassess_knowledge
+
+            best_effort_reassess_knowledge(
+                self._session,
+                project_id,
+                llm=self._llm,
+                settings=self._settings,
+                reason="mission_clarification",
+            )
+        except Exception:  # noqa: BLE001
+            return
 
     @staticmethod
     def _invalidate_mission_approval_if_needed(mission: ProjectMission) -> None:

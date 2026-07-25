@@ -12,7 +12,10 @@ MISSION_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 
 专业原则：
 - 区分 confirmed facts（已确认事实）、reasonable inferences（合理推断）、proposed assumptions（建议假设）、open questions（待解问题）。
-- 资料中缺失的信息必须标记为未知，写入 knowledge_gaps 或 key_unknowns。
+- 资料中缺失的信息必须标记为未知，优先写入 knowledge_gaps（可澄清缺口）。
+- ProjectMission 是相对稳定的「任务定义」；实时未知与把握度由 KnowledgeState / ProjectContext 维护，
+  不要把 Mission 当作实时认知索引。
+- key_unknowns / confidence 仅作生成时快照（可选），后续权威以知识状态为准。
 - 推断必须标记 verification_status 为 inferred；假设写入 assumptions。
 - 不得虚构面积、用地、高度、预算或规范条件；无依据时不得写入具体数值。
 - 若项目事实账本中已有确认指标，必须在 known_constraints 中保留，不得覆盖或忽略。
@@ -52,8 +55,8 @@ PROGRAMMING_MISSION_ADDENDUM = """
 - task_natures 应优先包含 programming、research、consulting 中的适用项；requested_service_depths
   可含 preliminary_research、programming、feasibility_study。
 - 重点识别：决策背景、投资/运营逻辑、功能与规模未知项、市场与政策风险、利益相关方诉求。
-- 不得编造面积、容积率、投资额、收益率等；未知指标写入 knowledge_gaps / key_unknowns /
-  research_questions，并给出 assumptions（requires_confirmation=true）。
+- 不得编造面积、容积率、投资额、收益率等；未知指标写入 knowledge_gaps
+  与 research_questions（key_unknowns 仅生成快照），并给出 assumptions（requires_confirmation=true）。
 - design_intent 仍应输出（theme, problem_statement, target_users, core_questions,
   research_needed, working_assumptions），但重心是「要弄清什么、如何决策」，而非空间造型。
 - clarifying_questions 最多 3 个，全部 blocking=false，can_assume=true，并提供 suggested_assumption。

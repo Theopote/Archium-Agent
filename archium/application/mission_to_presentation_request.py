@@ -77,12 +77,14 @@ def build_presentation_request(
     user_overrides: PresentationOverrides | None = None,
     concept_direction: ConceptDirection | None = None,
     visual_concept_brief: VisualConceptBrief | None = None,
+    knowledge_state=None,
 ) -> PresentationRequest:
     """Map mission (+ optional presentation deliverable) to PresentationRequest.
 
     Selected workstreams inform generation context via ``user_notes`` only.
     They are never copied wholesale into ``required_sections`` as chapter titles;
     Storyline still decides final chapters from the Brief.
+    Live unknowns come from ``knowledge_state`` when provided (not Mission snapshots).
     """
     if deliverable is not None and deliverable.deliverable_type != DeliverableType.PRESENTATION:
         raise WorkflowError(
@@ -128,6 +130,7 @@ def build_presentation_request(
         primary,
         concept_direction=concept_direction,
         visual_concept_brief=visual_concept_brief,
+        knowledge_state=knowledge_state,
     )
     presentation_type = infer_presentation_type(mission, primary)
     slide_count, duration = _infer_length(primary)
@@ -376,6 +379,7 @@ def _build_user_notes(
     *,
     concept_direction: ConceptDirection | None = None,
     visual_concept_brief: VisualConceptBrief | None = None,
+    knowledge_state=None,
 ) -> str:
     sections: list[str] = []
 
@@ -406,9 +410,16 @@ def _build_user_notes(
             "研究问题:\n"
             + "\n".join(f"- {item}" for item in mission.research_questions if item.strip())
         )
-    if mission.key_unknowns:
+    from archium.application.context.mission_cognition import cognition_unknown_texts
+
+    unknowns = cognition_unknown_texts(
+        knowledge_state=knowledge_state,
+        mission=mission,
+    )
+    if unknowns:
         sections.append(
-            "关键未知:\n" + "\n".join(f"- {item}" for item in mission.key_unknowns if item.strip())
+            "关键未知（以知识状态为准）:\n"
+            + "\n".join(f"- {item}" for item in unknowns)
         )
 
     selected = [item for item in workstreams if item.selected]

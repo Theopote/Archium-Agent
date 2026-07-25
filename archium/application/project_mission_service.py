@@ -70,10 +70,15 @@ class MissionPatch(DomainModel):
     out_of_scope: list[str] | None = None
     decision_context: str | None = None
     decisions_required: list[str] | None = None
-    key_unknowns: list[str] | None = None
+    key_unknowns: list[str] | None = None  # ignored — live unknowns on KnowledgeState
     research_questions: list[str] | None = None
     design_questions: list[str] | None = None
-    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Ignored — live confidence on ProjectContext / KnowledgeState.",
+    )
     task_natures: list[TaskNature] | None = None
     domains: list[ProjectDomain] | None = None
     intervention_scales: list[InterventionScale] | None = None
@@ -215,11 +220,19 @@ class ProjectMissionService:
         return result
 
     def update_mission(self, mission_id: UUID, patch: MissionPatch) -> ProjectMission:
+        from archium.application.context.mission_cognition import (
+            strip_cognition_snapshot_fields,
+        )
+
         mission = self._require_mission(mission_id)
         payload = mission.model_dump(mode="json")
-        payload.update(patch.model_dump(mode="json", exclude_none=True))
+        # Do not let patches rewrite live-cognition snapshots onto Mission.
+        patch_data = strip_cognition_snapshot_fields(
+            patch.model_dump(mode="json", exclude_none=True)
+        )
+        payload.update(patch_data)
         updated = ProjectMission.model_validate(payload)
-        if patch.model_dump(exclude_none=True):
+        if patch_data:
             updated.invalidate_approval()
         else:
             updated.touch()
@@ -429,10 +442,11 @@ def suggest_narrative_mode(mission: ProjectMission) -> NarrativeModeSuggestion:
 
 
 def mission_approval_hash(mission: ProjectMission) -> str:
-    """Hash human-approved Mission content, including narrative mode.
+    """Hash human-approved Mission **task definition** content.
 
-    Downstream planning sync fields (recommended workstream/deliverable ids) are
-    excluded so workstream/deliverable planning does not invalidate approval.
+    Downstream planning sync fields (recommended workstream/deliverable ids) and
+    deprecated cognition snapshots (``key_unknowns`` / ``confidence``) are
+    excluded so live KnowledgeState updates do not invalidate approval.
     """
     payload = mission.model_dump(
         mode="json",
@@ -443,6 +457,9 @@ def mission_approval_hash(mission: ProjectMission) -> str:
             "updated_at",
             "recommended_workstream_ids",
             "recommended_deliverable_ids",
+            # Live cognition belongs on KnowledgeState / ProjectContext
+            "key_unknowns",
+            "confidence",
         },
     )
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))

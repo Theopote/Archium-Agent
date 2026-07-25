@@ -868,7 +868,10 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
 def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission") -> None:
     """Render structured mission understanding with per-field editing."""
     st.markdown("#### 我对任务的理解")
-    st.caption(f"{mission.title} · v{mission.version} · 置信度 {mission.confidence:.0%}")
+    st.caption(
+        f"{mission.title} · v{mission.version} · "
+        "任务定义（实时未知/把握度见下方知识状态）"
+    )
     st.caption("可纠正 AI 对任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
 
     _render_knowledge_state_summary(mission.project_id)

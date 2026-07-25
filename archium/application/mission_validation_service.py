@@ -165,6 +165,7 @@ class MissionValidationService:
         knowledge_gaps: list[KnowledgeGap] | None = None,
         clarifying_questions: list[ClarifyingQuestion] | None = None,
         facts: list[ProjectFact] | None = None,
+        knowledge_state=None,
     ) -> MissionValidationReport:
         report = MissionValidationReport()
         gaps = knowledge_gaps or []
@@ -177,7 +178,9 @@ class MissionValidationService:
         self._check_consulting_vs_full_design(mission, report)
         self._check_blocking_gaps(gaps, questions, report)
         self._check_decisions_and_stakeholders(mission, report)
-        self._check_confidence_vs_unknowns(mission, report)
+        self._check_confidence_vs_unknowns(
+            mission, report, knowledge_state=knowledge_state
+        )
         self._check_confirmed_constraints(mission, fact_list, report)
         self._check_evaluation_criteria(mission, report)
         self._check_design_questions(mission, report)
@@ -385,9 +388,27 @@ class MissionValidationService:
         self,
         mission: ProjectMission,
         report: MissionValidationReport,
+        *,
+        knowledge_state=None,
     ) -> None:
-        unknown_count = len(mission.key_unknowns)
-        high_confidence = mission.confidence >= 0.75
+        from archium.application.context.mission_cognition import (
+            cognition_confidence,
+            cognition_unknown_texts,
+        )
+
+        # Prefer live KnowledgeState; fall back to generation-time Mission snapshots.
+        unknown_count = len(
+            cognition_unknown_texts(
+                knowledge_state=knowledge_state,
+                mission=mission,
+            )
+        )
+        confidence = cognition_confidence(
+            knowledge_state=knowledge_state,
+            mission=mission,
+        )
+        source = "知识状态" if knowledge_state is not None else "生成时快照"
+        high_confidence = confidence >= 0.75
         high_uncertainty = mission.uncertainty_level in {
             UncertaintyLevel.HIGH,
             UncertaintyLevel.CRITICAL,
@@ -400,8 +421,9 @@ class MissionValidationService:
                     field="confidence",
                     fields=("key_unknowns",),
                     message=(
-                        f"置信度较高（{mission.confidence:.0%}），"
-                        f"但关键未知多达 {unknown_count} 项，可能不一致"
+                        f"{source}置信度较高（{confidence:.0%}），"
+                        f"但关键未知多达 {unknown_count} 项；"
+                        "请以知识状态中的实时缺口为准复核"
                     ),
                     recoverable=True,
                 )
@@ -413,7 +435,10 @@ class MissionValidationService:
                     severity=ValidationSeverity.WARNING,
                     field="confidence",
                     fields=("uncertainty_level",),
-                    message="置信度高但不确定性等级偏高，请核对 uncertainty_level / confidence",
+                    message=(
+                        f"{source}置信度高但任务不确定性等级偏高；"
+                        "请核对任务定义中的 uncertainty_level 与知识状态把握度"
+                    ),
                     recoverable=True,
                 )
             )

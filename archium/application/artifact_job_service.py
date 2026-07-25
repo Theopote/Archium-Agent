@@ -127,11 +127,18 @@ class ArtifactJobService:
         mission: ProjectMission,
         deliverable: PlannedDeliverable,
     ) -> ArtifactOutput:
+        from archium.application.context.mission_cognition import (
+            load_project_knowledge_state,
+        )
+
         kind = _KIND_BY_TYPE.get(deliverable.deliverable_type, "other")
         out_dir = artifact_output_dir(
             self._settings.output_path,
             mission_id=mission.id,
             kind=kind,
+        )
+        knowledge_state = load_project_knowledge_state(
+            self._session, mission.project_id
         )
         if kind == "question_list":
             return QuestionListExecutor().execute(
@@ -154,19 +161,31 @@ class ArtifactJobService:
             )
         if kind == "report":
             return ReportExecutor().execute(
-                mission, deliverable=deliverable, output_dir=out_dir
+                mission,
+                deliverable=deliverable,
+                output_dir=out_dir,
+                knowledge_state=knowledge_state,
             )
         if kind == "memo":
             return MemoExecutor().execute(
-                mission, deliverable=deliverable, output_dir=out_dir
+                mission,
+                deliverable=deliverable,
+                output_dir=out_dir,
+                knowledge_state=knowledge_state,
             )
         if kind == "checklist":
             return ChecklistExecutor().execute(
-                mission, deliverable=deliverable, output_dir=out_dir
+                mission,
+                deliverable=deliverable,
+                output_dir=out_dir,
+                knowledge_state=knowledge_state,
             )
         if kind == "case_study":
             return CaseStudyExecutor().execute(
-                mission, deliverable=deliverable, output_dir=out_dir
+                mission,
+                deliverable=deliverable,
+                output_dir=out_dir,
+                knowledge_state=knowledge_state,
             )
         raise WorkflowError(f"未知成果类型：{deliverable.deliverable_type.value}")
 

@@ -16,6 +16,7 @@ from uuid import UUID
 from docx import Document as DocumentFactory
 from docx.shared import Pt
 
+from archium.application.context.mission_cognition import cognition_unknown_texts
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import (
     AssumptionStatus,
@@ -29,7 +30,15 @@ from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 
 
-def _mission_context_payload(mission: ProjectMission) -> dict[str, Any]:
+def _mission_context_payload(
+    mission: ProjectMission,
+    *,
+    knowledge_state=None,
+) -> dict[str, Any]:
+    unknowns = cognition_unknown_texts(
+        knowledge_state=knowledge_state,
+        mission=mission,
+    )
     return {
         "title": mission.title,
         "task_statement": mission.task_statement,
@@ -40,7 +49,9 @@ def _mission_context_payload(mission: ProjectMission) -> dict[str, Any]:
         "in_scope": list(mission.in_scope),
         "out_of_scope": list(mission.out_of_scope),
         "decisions_required": list(mission.decisions_required),
-        "key_unknowns": list(mission.key_unknowns),
+        # Compat key name; values come from KnowledgeState when available.
+        "key_unknowns": unknowns,
+        "open_unknowns": unknowns,
         "research_questions": list(mission.research_questions),
         "decision_context": mission.decision_context,
         "stakeholders": [
@@ -54,7 +65,12 @@ def _mission_context_payload(mission: ProjectMission) -> dict[str, Any]:
     }
 
 
-def _append_mission_context_markdown(lines: list[str], mission: ProjectMission) -> None:
+def _append_mission_context_markdown(
+    lines: list[str],
+    mission: ProjectMission,
+    *,
+    knowledge_state=None,
+) -> None:
     lines.append(f"**任务陈述**：{mission.task_statement}")
     lines.append("")
     if mission.project_context.strip():
@@ -92,10 +108,14 @@ def _append_mission_context_markdown(lines: list[str], mission: ProjectMission) 
         for decision in mission.decisions_required:
             lines.append(f"- {decision}")
         lines.append("")
-    if mission.key_unknowns:
-        lines.append("## 关键未知")
+    unknowns = cognition_unknown_texts(
+        knowledge_state=knowledge_state,
+        mission=mission,
+    )
+    if unknowns:
+        lines.append("## 关键未知（知识状态）")
         lines.append("")
-        for unknown in mission.key_unknowns:
+        for unknown in unknowns:
             lines.append(f"- {unknown}")
         lines.append("")
     if mission.research_questions:
@@ -598,6 +618,7 @@ class ReportExecutor:
         expected_length: str = "",
         notes: str = "",
         output_dir: Path | None = None,
+        knowledge_state=None,
     ) -> ArtifactOutput:
         scope = list(content_scope or [])
         if deliverable is not None and not scope:
@@ -626,7 +647,7 @@ class ReportExecutor:
             "expected_length": expected_length,
             "notes": notes,
             "sections": sections,
-            "mission": _mission_context_payload(mission),
+            "mission": _mission_context_payload(mission, knowledge_state=knowledge_state),
             "formats": ["json", "markdown"],
         }
         lines = [f"# {title}", ""]
@@ -639,7 +660,7 @@ class ReportExecutor:
         if expected_length:
             lines.append(f"**预期篇幅**：{expected_length}")
             lines.append("")
-        _append_mission_context_markdown(lines, mission)
+        _append_mission_context_markdown(lines, mission, knowledge_state=knowledge_state)
         lines.append("## 报告结构")
         lines.append("")
         for idx, section in enumerate(sections, start=1):
@@ -676,6 +697,7 @@ class MemoExecutor:
         audience: str = "",
         notes: str = "",
         output_dir: Path | None = None,
+        knowledge_state=None,
     ) -> ArtifactOutput:
         scope = list(content_scope or [])
         if deliverable is not None and not scope:
@@ -695,7 +717,7 @@ class MemoExecutor:
             "audience": audience,
             "notes": notes,
             "highlights": bullets,
-            "mission": _mission_context_payload(mission),
+            "mission": _mission_context_payload(mission, knowledge_state=knowledge_state),
             "formats": ["json", "markdown"],
         }
         lines = [f"# {title}", ""]
@@ -719,10 +741,14 @@ class MemoExecutor:
             for item in mission.decisions_required:
                 lines.append(f"- {item}")
             lines.append("")
-        if mission.key_unknowns:
+        unknowns = cognition_unknown_texts(
+            knowledge_state=knowledge_state,
+            mission=mission,
+        )
+        if unknowns:
             lines.append("## 待澄清")
             lines.append("")
-            for item in mission.key_unknowns:
+            for item in unknowns:
                 lines.append(f"- {item}")
             lines.append("")
         if notes:
@@ -754,12 +780,16 @@ class ChecklistExecutor:
         audience: str = "",
         notes: str = "",
         output_dir: Path | None = None,
+        knowledge_state=None,
     ) -> ArtifactOutput:
         checklist_items = list(items or [])
         if deliverable is not None and not checklist_items:
             checklist_items = list(deliverable.content_scope)
         if not checklist_items:
-            checklist_items = list(mission.decisions_required) or list(mission.key_unknowns)
+            checklist_items = list(mission.decisions_required) or cognition_unknown_texts(
+                knowledge_state=knowledge_state,
+                mission=mission,
+            )
         title = deliverable.title if deliverable is not None else f"{mission.title} — 清单"
         purpose = purpose or (deliverable.purpose if deliverable else "") or ""
         audience = audience or (deliverable.audience if deliverable else "") or ""
@@ -829,6 +859,7 @@ class CaseStudyExecutor:
         expected_length: str = "",
         notes: str = "",
         output_dir: Path | None = None,
+        knowledge_state=None,
     ) -> ArtifactOutput:
         scope = list(content_scope or [])
         if deliverable is not None and not scope:
@@ -864,7 +895,7 @@ class CaseStudyExecutor:
             "notes": notes,
             "lenses": lenses,
             "research_questions": research,
-            "mission": _mission_context_payload(mission),
+            "mission": _mission_context_payload(mission, knowledge_state=knowledge_state),
             "formats": ["json", "markdown"],
         }
         lines = [f"# {title}", ""]
