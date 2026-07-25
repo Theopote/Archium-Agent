@@ -1,4 +1,4 @@
-"""Unit tests for multi-axis KnowledgeDimensions."""
+"""Unit tests for multi-axis KnowledgeDimensions / Knowledge Vector."""
 
 from __future__ import annotations
 
@@ -7,6 +7,9 @@ from unittest.mock import MagicMock
 from archium.application.context.knowledge_assessor import KnowledgeAssessor
 from archium.application.context.knowledge_dimensions_builder import (
     dimensions_from_rule_signals,
+)
+from archium.application.context.knowledge_vector_policy import (
+    actions_from_knowledge_vector,
 )
 from archium.application.context.next_action_selector import default_actions_for_dimensions
 from archium.application.context_evidence import ProjectEvidencePack
@@ -22,9 +25,16 @@ from archium.domain.context.project_context import (
     infer_recommended_workflow,
 )
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
-from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions
+from archium.domain.intent.knowledge_dimensions import (
+    KnowledgeDimensions,
+    KnowledgeVector,
+)
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
 from archium.domain.intent.next_best_action import NextBestActionType
+
+
+def test_knowledge_vector_is_dimensions_alias() -> None:
+    assert KnowledgeVector is KnowledgeDimensions
 
 
 def test_temple_case_high_intent_low_information() -> None:
@@ -39,6 +49,8 @@ def test_temple_case_high_intent_low_information() -> None:
     assert dims.design_intent_clarity >= 0.7
     assert dims.information_completeness < 0.35
     assert dims.research_need >= 0.5
+    assert dims.facts == dims.information_completeness
+    assert "design_readiness" in dims.as_vector()
 
     state = KnowledgeState(
         dimensions=dims,
@@ -51,6 +63,48 @@ def test_temple_case_high_intent_low_information() -> None:
     actions = default_actions_for_dimensions(dims)
     assert actions[0].action == NextBestActionType.EXPLORE_DIRECTIONS
     assert classify_knowledge_situation(state) == KnowledgeSituation.INTENT_LED
+
+
+def test_vector_policy_constraint_low_asks() -> None:
+    dims = KnowledgeDimensions(
+        information_completeness=0.5,
+        design_intent_clarity=0.7,
+        evidence_confidence=0.5,
+        constraint_understanding=0.2,
+        user_alignment=0.5,
+        research_need=0.4,
+    )
+    actions = actions_from_knowledge_vector(dims)
+    assert actions[0].action == NextBestActionType.ASK
+    assert "约束" in actions[0].reason
+
+
+def test_vector_policy_evidence_low_verifies() -> None:
+    dims = KnowledgeDimensions(
+        information_completeness=0.6,
+        design_intent_clarity=0.65,
+        evidence_confidence=0.2,
+        constraint_understanding=0.55,
+        user_alignment=0.5,
+        research_need=0.3,
+    )
+    actions = actions_from_knowledge_vector(dims)
+    assert actions[0].action == NextBestActionType.ASK
+    assert "证据" in actions[0].reason or "核实" in actions[0].reason
+
+
+def test_vector_policy_design_ready_advances() -> None:
+    dims = KnowledgeDimensions(
+        information_completeness=0.75,
+        design_intent_clarity=0.8,
+        evidence_confidence=0.7,
+        constraint_understanding=0.7,
+        user_alignment=0.7,
+        research_need=0.2,
+    )
+    assert float(dims.design_readiness) >= 0.65
+    actions = actions_from_knowledge_vector(dims)
+    assert actions[0].action == NextBestActionType.GENERATE_MISSION
 
 
 def test_rich_materials_fuzzy_intent_asks_first() -> None:
@@ -99,6 +153,8 @@ def test_display_headline_uses_intent_and_information() -> None:
     assert display.situation == KnowledgeSituation.INTENT_LED
     assert "意图" in display.headline
     assert "资料" in display.headline
+    assert "就绪" in display.headline
+    assert display.vector_bars
     assert "完整度约" not in display.headline
 
 
@@ -113,3 +169,19 @@ def test_rule_fallback_temple_explore_first() -> None:
     )
     assert result.knowledge_state.dimensions.design_intent_clarity >= 0.55
     assert result.actions[0].action == NextBestActionType.EXPLORE_DIRECTIONS
+
+
+def test_knowledge_state_roundtrip_keeps_dimensions() -> None:
+    state = KnowledgeState(
+        dimensions=KnowledgeDimensions(
+            information_completeness=0.3,
+            design_intent_clarity=0.8,
+            evidence_confidence=0.2,
+            constraint_understanding=0.25,
+            user_alignment=0.5,
+            research_need=0.7,
+        )
+    ).with_synced_legacy_scores()
+    restored = KnowledgeState.model_validate(state.model_dump(mode="json"))
+    assert restored.dimensions.design_intent_clarity == 0.8
+    assert restored.dimensions.design_readiness >= 0.0

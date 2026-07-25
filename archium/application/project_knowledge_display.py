@@ -77,6 +77,8 @@ class ProjectKnowledgeDisplay:
     intent_pct: int = 0
     information_pct: int = 0
     research_need_pct: int = 0
+    design_readiness_pct: int = 0
+    vector_bars: tuple[tuple[str, int], ...] = ()
 
 
 def classify_knowledge_situation(state: KnowledgeState) -> KnowledgeSituation:
@@ -109,6 +111,7 @@ def build_project_knowledge_display(
     intent_pct = int(round(dims.design_intent_clarity * 100))
     information_pct = int(round(dims.information_completeness * 100))
     research_need_pct = int(round(dims.research_need * 100))
+    design_readiness_pct = int(round(float(dims.design_readiness) * 100))
     stage_label = _STAGE_LABELS.get(
         context.lifecycle_stage,
         context.lifecycle_stage.value,
@@ -119,12 +122,15 @@ def build_project_knowledge_display(
     )
     confidence_pct = int(round(context.confidence * 100))
     dim_bits = tuple(dims.summary_bits(limit=4))
+    vector_bars = tuple(
+        (label, int(round(score * 100))) for label, score in dims.vector_bars()
+    )
 
     actions = suggested_actions or _suggested_actions_from_context(context)
     focus = _focus_for_situation(situation, workflow_label, context.next_actions)
     headline = (
         f"项目认知：**{situation_label}**"
-        f"（意图 {intent_pct}% · 资料 {information_pct}%）"
+        f"（意图 {intent_pct}% · 资料 {information_pct}% · 就绪 {design_readiness_pct}%）"
         f" · 阶段 {stage_label} · 建议优先 **{workflow_label}**"
     )
     caption = _caption_for_situation(
@@ -159,6 +165,8 @@ def build_project_knowledge_display(
         intent_pct=intent_pct,
         information_pct=information_pct,
         research_need_pct=research_need_pct,
+        design_readiness_pct=design_readiness_pct,
+        vector_bars=vector_bars,
     )
 
 

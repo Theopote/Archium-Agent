@@ -1,4 +1,9 @@
-"""Multi-axis knowledge dimensions — not a single maturity score."""
+"""Multi-axis knowledge vector — not a single maturity score.
+
+``KnowledgeDimensions`` is the Knowledge Vector (v1). Prefer reading axes /
+``as_vector()`` over ``completeness_score``. ``design_readiness`` is derived —
+never treat it as an independent LLM truth score.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,7 @@ from archium.domain._base import DomainModel
 
 
 class KnowledgeDimensions(DomainModel):
-    """Architectural cognition axes.
+    """Architectural cognition vector (facts / intent / evidence / …).
 
     A temple project may score low on information_completeness yet high on
     design_intent_clarity — that must not collapse into one "maturity" float.
@@ -39,6 +44,58 @@ class KnowledgeDimensions(DomainModel):
             object.__setattr__(self, "research_need", derived)
         return self
 
+    # --- Vector aliases (Knowledge Vector vocabulary) ---
+
+    @property
+    def facts(self) -> float:
+        return self.information_completeness
+
+    @property
+    def intent(self) -> float:
+        return self.design_intent_clarity
+
+    @property
+    def evidence(self) -> float:
+        return self.evidence_confidence
+
+    @property
+    def constraints(self) -> float:
+        return self.constraint_understanding
+
+    @property
+    def context(self) -> float:
+        """Project / user context understanding (alignment-weighted)."""
+        return _clamp(self.user_alignment * 0.7 + self.constraint_understanding * 0.3)
+
+    @property
+    def design_readiness(self) -> float:
+        """Derived readiness to advance design — not an LLM free score.
+
+        Intent-led projects (clear concept, sparse drawings) can still be
+        moderately ready; weak intent always suppresses readiness.
+        """
+        intent = self.design_intent_clarity
+        facts = self.information_completeness
+        material_floor = max(facts, intent * 0.7)
+        constraint_floor = self.constraint_understanding * 0.5 + 0.5
+        evidence_floor = self.evidence_confidence * 0.4 + 0.6
+        alignment_floor = self.user_alignment * 0.35 + 0.65
+        return _clamp(
+            min(intent, material_floor, constraint_floor, evidence_floor, alignment_floor)
+        )
+
+    def as_vector(self) -> dict[str, float]:
+        """Canonical Knowledge Vector view for routing / UI."""
+        return {
+            "facts": self.facts,
+            "intent": self.intent,
+            "context": float(self.context),
+            "constraints": self.constraints,
+            "evidence": self.evidence,
+            "design_readiness": float(self.design_readiness),
+            "research_need": self.research_need,
+        }
+
     def display_score(self) -> float:
         """Compat aggregate — NOT a maturity verdict; prefer reading axes."""
         return (
@@ -51,20 +108,33 @@ class KnowledgeDimensions(DomainModel):
 
     def summary_bits(self, *, limit: int = 3) -> list[str]:
         pairs = [
-            ("资料", self.information_completeness),
-            ("意图", self.design_intent_clarity),
-            ("证据", self.evidence_confidence),
-            ("约束", self.constraint_understanding),
-            ("对齐", self.user_alignment),
+            ("资料", self.facts),
+            ("意图", self.intent),
+            ("证据", self.evidence),
+            ("约束", self.constraints),
+            ("语境", float(self.context)),
+            ("设计就绪", float(self.design_readiness)),
             ("研究需求", self.research_need),
         ]
-        # Surface extremes first (high intent / high research / low info)
         ranked = sorted(
             pairs,
             key=lambda item: abs(item[1] - 0.5),
             reverse=True,
         )
         return [f"{label} {int(round(score * 100))}%" for label, score in ranked[:limit]]
+
+    def vector_bars(self) -> list[tuple[str, float]]:
+        """Ordered axes for UI progress bars."""
+        v = self.as_vector()
+        return [
+            ("资料 facts", v["facts"]),
+            ("意图 intent", v["intent"]),
+            ("语境 context", v["context"]),
+            ("约束 constraints", v["constraints"]),
+            ("证据 evidence", v["evidence"]),
+            ("设计就绪 readiness", v["design_readiness"]),
+            ("研究需求 research", v["research_need"]),
+        ]
 
     @classmethod
     def from_legacy(
@@ -78,8 +148,9 @@ class KnowledgeDimensions(DomainModel):
         info = _clamp(completeness_score)
         evidence = _clamp(evidence_ratio)
         constraint = _clamp(1.0 - assumption_ratio)
-        # Legacy had no intent axis — use mid-high when sparse-but-described
-        intent = _clamp(max(0.25, completeness_score * 0.5 + (1.0 - assumption_ratio) * 0.35))
+        intent = _clamp(
+            max(0.25, completeness_score * 0.5 + (1.0 - assumption_ratio) * 0.35)
+        )
         alignment = _clamp(0.35 + intent * 0.25)
         research = derive_research_need(
             information_completeness=info,
@@ -94,6 +165,10 @@ class KnowledgeDimensions(DomainModel):
             user_alignment=alignment,
             research_need=research,
         )
+
+
+# Public alias — Knowledge Vector is KnowledgeDimensions (do not fork a second model).
+KnowledgeVector = KnowledgeDimensions
 
 
 def derive_research_need(

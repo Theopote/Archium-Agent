@@ -61,12 +61,24 @@ def render_project_knowledge_strip(
         if display.blocking_unknown_count:
             meta.append(f"阻断缺口 {display.blocking_unknown_count}")
         st.caption(" · ".join(meta))
+        _render_knowledge_vector_bars(display)
 
     if show_known_unknown:
         _render_known_unknown(context.knowledge_state, compact=compact)
     if not compact:
         _render_process_board(project_id)
     return display
+
+
+def _render_knowledge_vector_bars(display: ProjectKnowledgeDisplay) -> None:
+    if not display.vector_bars:
+        return
+    st.caption("Knowledge Vector")
+    cols = st.columns(min(4, len(display.vector_bars)))
+    for index, (label, pct) in enumerate(display.vector_bars):
+        with cols[index % len(cols)]:
+            st.caption(f"{label} {pct}%")
+            st.progress(min(1.0, max(0.0, pct / 100.0)))
 
 
 def _render_process_board(project_id: UUID) -> None:

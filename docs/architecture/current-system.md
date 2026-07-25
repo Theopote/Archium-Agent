@@ -60,7 +60,7 @@ User opens Archium
 | P0 | Intelligence Closure — 事件驱动 KS reassess；小事件 index-only、大事件全量 LLM；失败回退 claim index；生成页读 ProjectContext readiness | 已落地 |
 | P1 | KnowledgeStateHistory — 版本化知识快照（v0.n→v1.0）+ UI 时间线 | 已落地 |
 | P0 | Knowledge claim index — `claims`/`open_unknowns` 桥接 Fact + ProjectKnowledgeItem；CI evidence 纳入知识条目；UI 展示 stale / 主张索引 | 已落地 |
-| P0 | KnowledgeDimensions — 六维认知（意图≠资料）；NBA/lifecycle/UI 改读维度；`completeness_score` 降为兼容聚合 | 已落地 |
+| P0 | KnowledgeDimensions / Knowledge Vector — 六维认知 + 派生 design_readiness；向量策略表驱动 NBA；UI 向量条；`completeness_score` 降为兼容聚合 | 已落地 |
 | P1 | ProjectProcessBoard — Research/Design/Presentation 过程指针；Design 细化到 ConceptDirection / VisualConceptBrief focus | 首期派生视图已落地 |
 | P2 | NBA 一键执行 — `NbaActionExecutor`（研究/推演/生成 Mission）+ 导航导航 | 已落地 |
 | P3 | Concept Visualization Loop — 边想边画：示意反馈写回方向种子 + 再合成；Mission 前可出图 | 已落地 |

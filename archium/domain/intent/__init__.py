@@ -13,7 +13,7 @@ from archium.domain.intent.knowledge_claim import (
     KnowledgeClaimRef,
     KnowledgeUnknownRef,
 )
-from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions
+from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions, KnowledgeVector
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
 from archium.domain.intent.knowledge_state_history import (
     KnowledgeStateChangeReason,
@@ -39,6 +39,7 @@ __all__ = [
     "KnowledgeStateHistory",
     "KnowledgeStateSnapshot",
     "KnowledgeUnknownRef",
+    "KnowledgeVector",
     "NextBestAction",
     "NextBestActionType",
 ]

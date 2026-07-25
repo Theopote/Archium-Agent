@@ -86,92 +86,16 @@ def default_actions_for_dimensions(
     has_materials: bool = False,
     blocking_gaps: bool = False,
 ) -> list[NextBestAction]:
-    """NBA from multi-axis cognition — temple-case: high intent + low info → explore."""
-    if blocking_gaps:
-        return default_actions_for_stage(
-            stage or KnowledgeMaturityStage.DESIGN_ANALYSIS.value,
-            has_materials=has_materials,
-            blocking_gaps=True,
-        )
+    """NBA from Knowledge Vector policy (see knowledge_vector_policy)."""
+    from archium.application.context.knowledge_vector_policy import (
+        actions_from_knowledge_vector,
+    )
 
-    info = dimensions.information_completeness
-    intent = dimensions.design_intent_clarity
-    research = dimensions.research_need
-
-    # Clear concept, sparse materials — do not force upload first
-    if intent >= 0.6 and info < 0.4:
-        actions = [
-            NextBestAction(
-                action=NextBestActionType.EXPLORE_DIRECTIONS,
-                reason="设计意图较清晰、资料仍少，可先推演概念方向",
-                priority=0,
-            ),
-            NextBestAction(
-                action=NextBestActionType.GENERATE_MISSION,
-                reason="意图清楚时可先固化任务理解，不必等齐资料",
-                priority=1,
-            ),
-        ]
-        if research >= 0.55:
-            actions.append(
-                NextBestAction(
-                    action=NextBestActionType.RESEARCH,
-                    reason="背景/类型研究需求高，并行补充公开参照",
-                    priority=2,
-                )
-            )
-        actions.append(
-            NextBestAction(
-                action=NextBestActionType.ASK,
-                reason="澄清仍缺的关键约束与使用者条件",
-                priority=3,
-            )
-        )
-        return actions
-
-    # Rich materials, fuzzy intent — clarify first
-    if info >= 0.55 and intent < 0.45:
-        return [
-            NextBestAction(
-                action=NextBestActionType.ASK,
-                reason="资料较充足但设计目标仍模糊，先澄清意图",
-                priority=0,
-            ),
-            NextBestAction(
-                action=NextBestActionType.GENERATE_MISSION,
-                reason="用任务理解把目标与成果边界说清",
-                priority=1,
-            ),
-            NextBestAction(
-                action=NextBestActionType.EXPLORE_DIRECTIONS,
-                reason="意图澄清后可并行比较方向",
-                priority=2,
-            ),
-        ]
-
-    if research >= 0.7 and info < 0.55 and intent >= 0.5:
-        return [
-            NextBestAction(
-                action=NextBestActionType.RESEARCH,
-                reason="意图已有雏形且研究需求高，优先补充类型与背景证据",
-                priority=0,
-            ),
-            NextBestAction(
-                action=NextBestActionType.EXPLORE_DIRECTIONS,
-                reason="研究同时仍可推演方向",
-                priority=1,
-            ),
-            NextBestAction(
-                action=NextBestActionType.ASK,
-                reason="对齐关键未知项",
-                priority=2,
-            ),
-        ]
-
-    return default_actions_for_stage(
-        stage or KnowledgeMaturityStage.CONCEPT_FORMATION.value,
-        has_materials=has_materials or info >= 0.35,
-        blocking_gaps=False,
+    return actions_from_knowledge_vector(
+        dimensions,
+        stage=stage,
+        has_materials=has_materials,
+        blocking_gaps=blocking_gaps,
     )
 
 
