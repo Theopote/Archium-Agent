@@ -69,7 +69,7 @@ def _render_art_direction_gate_if_paused() -> None:
     )
 
 
-_INSPECTOR_TABS = ("属性", "布局", "内容", "AI", "评论", "风格", "检查")
+_INSPECTOR_TABS = ("属性", "布局", "内容", "修改", "评论", "风格", "检查")
 
 
 def _select_inspector_tab() -> str:
@@ -123,19 +123,8 @@ def _render_inspector_tabs(
         render_inspector_section("内容")
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
         return
-    if active == "AI":
-        render_inspector_section("AI 建议")
-        if slide_snapshot is not None:
-            from archium.ui.studio.page_ai_suggestions import page_partner_suggestions
-
-            tips = page_partner_suggestions(slide_snapshot.slide)
-            if tips:
-                st.markdown("**本页建议**")
-                for tip in tips:
-                    st.markdown(f"- {tip}")
-            else:
-                st.caption("本页暂无结构性建议。")
-            st.divider()
+    if active == "修改":
+        render_inspector_section("修改与提案")
         render_ai_workspace(
             slide_snapshot=slide_snapshot,
             presentation_id=presentation_id,
@@ -336,32 +325,58 @@ def _render_studio_info_menus(
 def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
     """Thin partner chrome: understanding + storyline thesis (not a feature dashboard)."""
     try:
-        from archium.ui.project_knowledge_profile import render_project_knowledge_strip
+        from archium.ui.project_knowledge_profile import render_ai_understanding_panel
         from archium.ui.studio.storyline_navigator import load_studio_narrative
         from archium.ui.studio_service import studio_readiness_label
 
-        left, right = st.columns([2.2, 1])
+        left, right = st.columns([2.4, 1])
         with left:
-            render_project_knowledge_strip(
+            render_ai_understanding_panel(
                 context.project.id,
                 compact=True,
-                show_known_unknown=False,
+                show_actions=False,
+                key_prefix=f"studio_understand_{context.project.id}",
+                title="项目理解",
             )
             narrative = load_studio_narrative(context.presentation.id)
             if narrative.thesis:
-                st.caption(f"故事线：{narrative.thesis[:140]}")
+                st.caption(f"故事线论点：{narrative.thesis[:160]}")
         with right:
             st.caption(studio_readiness_label(context))
+            st.caption("工作台：故事线 · 页面 · AI 建议")
             if st.button(
-                "打开 AI 建议",
+                "聚焦本页建议",
                 key=f"studio_open_ai_{context.presentation.id}",
                 use_container_width=True,
             ):
                 st.session_state.studio_show_inspector = True
-                st.session_state.studio_inspector_tab = "AI"
+                st.session_state.studio_show_nav = True
+                st.session_state.studio_inspector_tab = "修改"
                 st.rerun()
     except Exception:
         return
+
+
+def _render_partner_right_rail(
+    *,
+    slide_snapshot: SlideVisualSnapshot | None,
+    advanced: bool,
+    project_id: UUID,
+    presentation_id: UUID,
+) -> None:
+    """Storyline-first right rail: always-on page tips, then inspector tools."""
+    from archium.ui.studio.page_ai_suggestions import render_page_ai_suggestions_rail
+
+    slide = slide_snapshot.slide if slide_snapshot is not None else None
+    render_page_ai_suggestions_rail(slide, title="本页 AI 建议")
+    st.divider()
+    st.caption("检查器（属性 / 修改 / 评论…）")
+    _render_inspector_tabs(
+        slide_snapshot=slide_snapshot,
+        advanced=advanced,
+        project_id=project_id,
+        presentation_id=presentation_id,
+    )
 
 
 def render(
@@ -382,7 +397,10 @@ def render(
     if show_header:
         from archium.ui.components.chrome import render_page_header
 
-        render_page_header("工作室", "页面列表 · 主画布 · 检查器。活动中心与视图在顶部菜单。")
+        render_page_header(
+            "工作室",
+            "故事线导航 · 页面画布 · AI 建议。不是拖文本框的 PowerPoint 克隆。",
+        )
 
     critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
     context = render_studio_selection(
@@ -394,6 +412,12 @@ def render(
     )
     if context is None:
         return
+
+    # Partner defaults: keep storyline + suggestions visible
+    if "studio_show_nav" not in st.session_state:
+        st.session_state.studio_show_nav = True
+    if "studio_show_inspector" not in st.session_state:
+        st.session_state.studio_show_inspector = True
 
     _render_studio_partner_strip(context)
 
@@ -453,7 +477,7 @@ def render(
 
     if right_col is not None:
         with right_col:
-            _render_inspector_tabs(
+            _render_partner_right_rail(
                 slide_snapshot=slide_snapshot,
                 advanced=advanced,
                 project_id=context.project.id,

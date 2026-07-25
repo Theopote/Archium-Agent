@@ -56,7 +56,7 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
     ProductStage(
         id="edit",
         title="工作室",
-        caption="在工作室调整页面、版式与图文。",
+        caption="故事线 · 页面 · AI 建议，和 AI 一起打磨表达。",
         page_key=PRODUCT_STUDIO_PAGE_KEY,
         icon=icons.STUDIO,
     ),

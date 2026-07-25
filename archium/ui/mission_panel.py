@@ -428,17 +428,11 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
 
 def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: str) -> None:
     """Minimal design-iteration UI: generate and select 2–3 concept direction drafts."""
-    from pathlib import Path
-
     critique_warnings = st.session_state.pop("design_critique_warnings", None)
     if critique_warnings:
         st.warning("设计批判（选定前独立质疑）\n\n" + "\n\n".join(critique_warnings))
 
-    from archium.application.design_iteration_status import (
-        format_vision_user_warning,
-        visual_brief_status_label,
-    )
-    from archium.domain.enums import ConceptDirectionStatus, ProjectOriginMode
+    from archium.domain.enums import ConceptDirectionStatus
     from archium.infrastructure.database.repositories import ProjectRepository
     from archium.ui.app_navigation import get_app_page
     from archium.ui.llm_settings import get_ui_effective_settings
@@ -446,13 +440,10 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         archive_concept_direction,
         generate_concept_directions,
         get_design_iteration_progress,
-        get_latest_visual_concept_brief,
         list_concept_directions,
         preview_presentation_request_from_mission,
         refresh_presentation_request_draft,
-        refine_visual_concept_brief,
         select_concept_direction,
-        synthesize_visual_concept_brief,
     )
 
     with get_session() as session:
@@ -467,7 +458,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         st.markdown("**已提交概念方向**")
         st.caption(
             "概念探索在独立页完成推演与选定；此处只读展示已绑定本 Mission 的方向。"
-            "视觉概念简报与汇报注入仍可在此继续。"
+            "Visual Thinking 与汇报注入仍可在此继续。"
         )
         st.page_link(
             get_app_page("concept-exploration"),
@@ -482,7 +473,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         st.markdown("**概念方向草稿**")
         st.caption(
             "同一任务下推演 2–3 个可比较方向；选中后写入设计使命。"
-            "可为方向生成视觉概念简报（示意，非现场证据），并注入 Brief / 汇报请求。"
+            "可用 Visual Thinking（氛围/空间/材料/体量）探索示意，并注入 Brief / 汇报请求。"
         )
         st.info(progress.summary_line())
 
@@ -609,7 +600,9 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             except Exception as exc:
                 st.error(format_user_error(exc))
 
-    # Vision loop stays under selected / each direction via expanders below compare
+    settings = get_ui_effective_settings()
+    from archium.ui.components.visual_thinking_panel import render_visual_thinking_panel
+
     for direction in directions:
         badge = {
             ConceptDirectionStatus.SELECTED: "已选中",
@@ -617,188 +610,15 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             ConceptDirectionStatus.ARCHIVED: "已归档",
         }.get(direction.status, direction.status.value)
         with st.expander(
-            f"视觉与示意 · {direction.title} · {badge}",
+            f"Visual Thinking · {direction.title} · {badge}",
             expanded=direction.status == ConceptDirectionStatus.SELECTED,
         ):
-            st.markdown("**视觉概念简报**")
-            with get_session() as session:
-                visual_brief = get_latest_visual_concept_brief(session, direction.id)
-            if visual_brief is not None:
-                st.caption(
-                    f"{visual_brief_status_label(visual_brief.status)} · {visual_brief.title}"
-                )
-                if visual_brief.composition_intent:
-                    st.markdown(f"**构图意图**：{visual_brief.composition_intent}")
-                if visual_brief.atmosphere:
-                    st.markdown(f"**氛围**：{visual_brief.atmosphere}")
-                if visual_brief.compiled_prompt:
-                    with st.expander("已编译 Prompt", expanded=False):
-                        st.code(visual_brief.compiled_prompt[:2000])
-                if visual_brief.image_path:
-                    image_file = Path(visual_brief.image_path)
-                    if image_file.is_file():
-                        st.image(str(image_file), use_container_width=True)
-                    else:
-                        st.caption(f"示意路径：{visual_brief.image_path}")
-                if visual_brief.error_message:
-                    st.warning(format_vision_user_warning(visual_brief.error_message))
-                bind_bits = [
-                    part
-                    for part in (
-                        direction.theme,
-                        direction.spatial_strategy or direction.spatial_idea,
-                        direction.formal_language,
-                    )
-                    if part and str(part).strip()
-                ]
-                if bind_bits:
-                    st.caption("对应设计意图：" + " · ".join(bind_bits[:3]))
-            else:
-                st.caption("尚未生成视觉简报。")
-
-            vision_cols = st.columns(2)
-            if vision_cols[0].button(
-                "探索视觉表达（文字）",
-                key=f"{key_prefix}_visual_text_{direction.id}",
-                use_container_width=True,
-            ):
-                settings = get_ui_effective_settings()
-                if not settings.llm_configured:
-                    st.error("未配置 LLM API Key。请前往设置配置。")
-                    return
-                with st.spinner("正在合成视觉概念简报…"):
-                    try:
-                        with get_session() as session:
-                            result = synthesize_visual_concept_brief(
-                                session,
-                                direction.id,
-                                generate_image=False,
-                                settings=settings,
-                            )
-                        st.success(f"已生成视觉简报「{result.brief.title}」。")
-                        for warning in result.warnings:
-                            st.warning(format_vision_user_warning(warning))
-                        st.rerun()
-                    except WorkflowError as exc:
-                        st.error(str(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
-            if vision_cols[1].button(
-                "探索视觉表达 + 出图",
-                key=f"{key_prefix}_visual_image_{direction.id}",
-                use_container_width=True,
-            ):
-                settings = get_ui_effective_settings()
-                if not settings.llm_configured:
-                    st.error("未配置 LLM API Key。请前往设置配置。")
-                    return
-                if not settings.vision_image_generation_enabled:
-                    st.warning(
-                        "当前未开启 Vision 图像生成。将先保存文字简报；"
-                        "若要出图，请在设置中开启 vision_image_generation_enabled。"
-                    )
-                with st.spinner("正在合成概念示意并尝试出图…"):
-                    try:
-                        with get_session() as session:
-                            result = synthesize_visual_concept_brief(
-                                session,
-                                direction.id,
-                                generate_image=True,
-                                settings=settings,
-                            )
-                        if result.image_succeeded:
-                            st.success(
-                                f"已生成概念示意并完成出图：「{result.brief.title}」。"
-                            )
-                        else:
-                            st.success(f"已生成视觉简报「{result.brief.title}」。")
-                        for warning in result.warnings:
-                            st.warning(format_vision_user_warning(warning))
-                        st.rerun()
-                    except WorkflowError as exc:
-                        st.error(str(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
-
-            st.markdown("**示意反馈（边想边画）**")
-            feedback = st.text_area(
-                "看图后想改什么？",
-                key=f"{key_prefix}_visual_feedback_{direction.id}",
-                placeholder="例如：改成人视；材质更偏夯土；减少轴线感，加强院落围合…",
-                height=88,
+            render_visual_thinking_panel(
+                direction,
+                key_prefix=f"{key_prefix}_vt",
+                settings=settings,
             )
-            refine_cols = st.columns(2)
-            if refine_cols[0].button(
-                "按反馈修订方向（文字简报）",
-                key=f"{key_prefix}_visual_refine_text_{direction.id}",
-                use_container_width=True,
-            ):
-                settings = get_ui_effective_settings()
-                if not settings.llm_configured:
-                    st.error("未配置 LLM API Key。请前往设置配置。")
-                    return
-                with st.spinner("正在根据反馈修订方向并重新合成简报…"):
-                    try:
-                        with get_session() as session:
-                            loop = refine_visual_concept_brief(
-                                session,
-                                direction.id,
-                                feedback,
-                                generate_image=False,
-                                settings=settings,
-                            )
-                        st.success(
-                            f"已修订方向并更新简报「{loop.brief_result.brief.title}」。"
-                            f"（{loop.change_summary}）"
-                        )
-                        for warning in loop.brief_result.warnings:
-                            st.warning(format_vision_user_warning(warning))
-                        st.rerun()
-                    except WorkflowError as exc:
-                        st.error(str(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
-            if refine_cols[1].button(
-                "按反馈修订并重新出图",
-                key=f"{key_prefix}_visual_refine_image_{direction.id}",
-                use_container_width=True,
-            ):
-                settings = get_ui_effective_settings()
-                if not settings.llm_configured:
-                    st.error("未配置 LLM API Key。请前往设置配置。")
-                    return
-                if not settings.vision_image_generation_enabled:
-                    st.warning(
-                        "当前未开启 Vision 图像生成。将修订方向并保存文字简报；"
-                        "若要出图，请在设置中开启 vision_image_generation_enabled。"
-                    )
-                with st.spinner("正在根据反馈修订方向并尝试重新出图…"):
-                    try:
-                        with get_session() as session:
-                            loop = refine_visual_concept_brief(
-                                session,
-                                direction.id,
-                                feedback,
-                                generate_image=True,
-                                settings=settings,
-                            )
-                        if loop.brief_result.image_succeeded:
-                            st.success(
-                                f"已修订方向并完成出图：「{loop.brief_result.brief.title}」。"
-                                f"（{loop.change_summary}）"
-                            )
-                        else:
-                            st.success(
-                                f"已修订方向并更新简报「{loop.brief_result.brief.title}」。"
-                                f"（{loop.change_summary}）"
-                            )
-                        for warning in loop.brief_result.warnings:
-                            st.warning(format_vision_user_warning(warning))
-                        st.rerun()
-                    except WorkflowError as exc:
-                        st.error(str(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
+
 
 
 def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: str) -> None:

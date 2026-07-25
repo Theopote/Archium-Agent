@@ -259,7 +259,14 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
 - 概念探索：左「思考与建议」+ 右「方案比较」三列卡（`concept_direction_compare`）。
 - Project Home：挂 AI 理解、NBA、IntentEvolution 最近变化。
 - Mission 方向区同步比较卡；视觉环文案改为「探索视觉表达」并绑 DesignIntent 摘要。
-仍待：完整 Studio 壳（Canvas+Chat+Context）、Storyline 第一公民编辑器。
+
+**Phase M.1（UI P2）**：Studio / Outline 故事线第一公民 + Visual Thinking 分槽。
+- Studio：左故事线（章目的/关键信息 + 链到大纲编辑）· 中画布 · 右常驻「本页 AI 建议」
+  + 检查器；顶部项目理解面板。
+- Outline：右栏任务元数据下挂页意图 AI 建议（`outline_partner_suggestions`）。
+- Visual Thinking：氛围/空间/材料/体量四槽（`visual_thinking_slots` + panel），
+  挂概念探索与 Mission；图绑 DesignIntent 字段。
+仍待：完整 Chat 会话轨、Storyline 字段在 Studio 内联编辑（现链回大纲阶段）。
 
 ---
 
@@ -430,4 +437,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase M UI 伙伴面（理解面板 / 方向比较 / Home 演进）；Phase L PresentationCritic。*
+*Last updated: 2026-07-26 — Phase M.1 Studio 故事线/AI 建议同屏 + Visual Thinking 分槽；Phase M 伙伴面。*

@@ -48,15 +48,27 @@ def load_studio_narrative(presentation_id: UUID) -> StudioNarrativeBundle:
     )
 
 
-def _chapter_title_map(bundle: StudioNarrativeBundle) -> dict[str, str]:
-    titles: dict[str, str] = {}
+def _chapter_meta_map(bundle: StudioNarrativeBundle) -> dict[str, tuple[str, str, str]]:
+    """chapter_id → (title, purpose, key_message)."""
+    meta: dict[str, tuple[str, str, str]] = {}
     if bundle.storyline is not None:
         for chapter in bundle.storyline.chapters:
-            titles[str(chapter.id)] = chapter.title
+            meta[str(chapter.id)] = (
+                chapter.title,
+                (chapter.purpose or "").strip(),
+                (chapter.key_message or "").strip(),
+            )
     if bundle.outline is not None:
         for section in bundle.outline.sections:
-            titles.setdefault(str(section.id), section.title)
-    return titles
+            meta.setdefault(
+                str(section.id),
+                (section.title, (getattr(section, "purpose", "") or "").strip(), ""),
+            )
+    return meta
+
+
+def _chapter_title_map(bundle: StudioNarrativeBundle) -> dict[str, str]:
+    return {cid: title for cid, (title, _, _) in _chapter_meta_map(bundle).items()}
 
 
 def group_slide_indices_by_chapter(
@@ -104,6 +116,17 @@ def render_storyline_navigator(
     if narrative.thesis:
         st.caption(narrative.thesis[:160])
 
+    try:
+        from archium.ui.app_navigation import get_app_page
+
+        st.page_link(
+            get_app_page("outline"),
+            label="编辑故事线 / 页意图",
+            icon=":material/account_tree:",
+        )
+    except Exception:
+        pass
+
     mode = st.radio(
         "导航",
         options=["按章节", "全部页面"],
@@ -116,18 +139,30 @@ def render_storyline_navigator(
 
     status_map = _status_by_slide(context)
     selected_index = _resolve_selected_index(slides, status_map)
+    chapter_meta = _chapter_meta_map(narrative)
 
     for chapter_id, title, indices in groups:
+        purpose, key_message = "", ""
+        if chapter_id in chapter_meta:
+            _, purpose, key_message = chapter_meta[chapter_id]
         with st.expander(
             f"{title} · {len(indices)} 页",
             expanded=selected_index in indices,
         ):
+            if purpose:
+                st.caption(f"目的：{purpose[:100]}")
+            if key_message:
+                st.caption(f"关键信息：{key_message[:100]}")
             for index in indices:
                 item = slides[index]
                 slide = item.slide
                 row = status_map.get(str(slide.id))
                 badge = status_badge(row) if row is not None else ""
-                label = f"P{index + 1}  {slide.title or '未命名'}"
+                role = getattr(slide, "slide_role", None)
+                role_bit = ""
+                if role is not None:
+                    role_bit = f" · {getattr(role, 'value', role)}"
+                label = f"P{index + 1}  {slide.title or '未命名'}{role_bit}"
                 if badge:
                     label = f"{label}  {badge}"
                 if st.button(

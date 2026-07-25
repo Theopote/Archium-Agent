@@ -717,6 +717,19 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                     st.caption("生成大纲后可编辑页面设计摘要。")
         with right:
             _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
+            st.divider()
+            selected = int(st.session_state.get("outline_selected_card", 0) or 0)
+            selected_intent = None
+            if outline is not None:
+                intents = _ensure_editable_intents(outline)
+                if intents:
+                    idx = max(0, min(selected, len(intents) - 1))
+                    selected_intent = intents[idx]
+            from archium.ui.studio.page_ai_suggestions import (
+                render_outline_ai_suggestions_rail,
+            )
+
+            render_outline_ai_suggestions_rail(selected_intent)
 
     st.divider()
     cols = st.columns(2)
