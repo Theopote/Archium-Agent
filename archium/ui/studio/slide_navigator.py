@@ -25,9 +25,12 @@ from archium.ui.studio_service import (
     reorder_studio_slide,
 )
 
+# Independent scroll region for thumbnails (header / actions stay outside).
+_NAV_THUMBNAIL_SCROLL_HEIGHT_PX = 580
+
 
 def _set_selected_slide(index: int) -> None:
-    st.session_state.studio_selected_slide_index = index
+    st.session_state.studio_selected_slide_index = int(index)
 
 
 def _move_slide(context: StudioPresentationContext, from_index: int, to_index: int) -> None:
@@ -60,14 +63,10 @@ def _status_by_slide(context: StudioPresentationContext) -> dict[str, PagePipeli
     return mapping
 
 
-def render_slide_navigator(*, context: StudioPresentationContext) -> int:
-    """Render status-aware page list and return the selected slide index."""
-    st.markdown("**页面**")
-    slides = context.snapshot.slides
-    if not slides:
-        st.caption("当前汇报还没有页面。")
-        return 0
-
+def _resolve_selected_index(
+    slides: list,
+    status_map: dict[str, PagePipelineStatus],
+) -> int:
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     focus_slide_id = st.session_state.pop("studio_focus_slide_id", None)
     if focus_slide_id:
@@ -75,7 +74,6 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
             if str(item.slide.id) == str(focus_slide_id):
                 selected_index = index
                 break
-    status_map = _status_by_slide(context)
 
     # From Generate「处理问题页」: jump to first warn/error page.
     if st.session_state.pop("studio_focus_attention", None):
@@ -85,7 +83,23 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
                 selected_index = index
                 break
 
-    selected_index = max(0, min(selected_index, len(slides) - 1))
+    return max(0, min(selected_index, len(slides) - 1))
+
+
+def render_slide_navigator(*, context: StudioPresentationContext) -> int:
+    """Render status-aware page list and return the selected slide index.
+
+    Thumbnail list scrolls independently; clicking a page opens it in the
+    center canvas on the next run via ``studio_selected_slide_index``.
+    """
+    st.markdown("**页面**")
+    slides = context.snapshot.slides
+    if not slides:
+        st.caption("当前汇报还没有页面。")
+        return 0
+
+    status_map = _status_by_slide(context)
+    selected_index = _resolve_selected_index(slides, status_map)
 
     manage_cols = st.columns(2)
     with manage_cols[0]:
@@ -162,48 +176,61 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
             ):
                 _move_slide(context, selected_index, move_to)
 
-    for index, item in enumerate(slides):
-        slide = item.slide
-        row = status_map.get(str(slide.id))
-        badge = status_badge(row) if row is not None else "○待处理"
-        order_label = f"{slide.order + 1:02d}"
-        title = (slide.title or "未命名")[:16]
-        hint = ""
-        if row is not None and row.severity in {"warn", "error", "info"}:
-            detail = status_short_detail(row)
-            if detail and "完成" not in badge:
-                hint = f"  {detail}"
-        is_selected = index == selected_index
-        label = f"{order_label}  {title}  [{badge}]{hint}"
+    st.caption(f"共 {len(slides)} 页 · 滚轮浏览缩略图，点击打开中间预览")
 
-        # Border for selection; severity also shown as text badge (not color-only).
-        emphasize = is_selected or (
-            row is not None and row.severity in {"warn", "error"}
-        )
-        with st.container(border=emphasize):
-            preview_path = item.preview_image
-            if preview_path and Path(preview_path).is_file():
-                st.image(preview_path, use_container_width=True)
-            elif item.layout_plan is None:
-                msg = (slide.message or "")[:48]
-                st.caption(f"{msg}…" if len(slide.message or "") > 48 else (msg or "内容草稿"))
+    # Scrollable thumbnail rail — independent of the center canvas / page body.
+    with st.container(height=_NAV_THUMBNAIL_SCROLL_HEIGHT_PX, border=False):
+        for index, item in enumerate(slides):
+            slide = item.slide
+            row = status_map.get(str(slide.id))
+            badge = status_badge(row) if row is not None else "○待处理"
+            order_label = f"{slide.order + 1:02d}"
+            title = (slide.title or "未命名")[:16]
+            hint = ""
+            if row is not None and row.severity in {"warn", "error", "info"}:
+                detail = status_short_detail(row)
+                if detail and "完成" not in badge:
+                    hint = f"  {detail}"
+            is_selected = index == selected_index
+            label = f"{order_label}  {title}"
 
-            if st.button(
-                label,
-                key=f"studio_nav_slide_{context.presentation.id}_{index}",
-                use_container_width=True,
-                type="primary" if is_selected else "secondary",
-            ):
-                _set_selected_slide(index)
-                st.rerun()
+            emphasize = is_selected or (
+                row is not None and row.severity in {"warn", "error"}
+            )
+            with st.container(border=emphasize):
+                preview_path = item.preview_image
+                if preview_path and Path(preview_path).is_file():
+                    st.image(preview_path, use_container_width=True)
+                else:
+                    msg = (slide.message or "")[:40]
+                    st.caption(
+                        f"{msg}…" if len(slide.message or "") > 40 else (msg or "内容草稿")
+                    )
 
-            if is_selected and row is not None:
-                render_compact_page_actions(
-                    presentation_id=context.presentation.id,
-                    project_id=context.project.id,
-                    row=row,
-                    key_prefix=f"studio_nav_actions_{context.presentation.id}",
+                # on_click updates selection before the next run so the center
+                # canvas opens the chosen page immediately.
+                st.button(
+                    label,
+                    key=f"studio_nav_slide_{context.presentation.id}_{index}",
+                    use_container_width=True,
+                    type="primary" if is_selected else "secondary",
+                    on_click=_set_selected_slide,
+                    args=(index,),
+                    help=f"{badge}{hint}".strip() or None,
                 )
+                if not is_selected:
+                    st.caption(badge)
+
+    # Keep status actions outside the scroll rail so thumbnails stay dense.
+    selected_item = slides[selected_index]
+    selected_row = status_map.get(str(selected_item.slide.id))
+    if selected_row is not None:
+        render_compact_page_actions(
+            presentation_id=context.presentation.id,
+            project_id=context.project.id,
+            row=selected_row,
+            key_prefix=f"studio_nav_actions_{context.presentation.id}",
+        )
 
     st.session_state.studio_selected_slide_index = selected_index
     current_snapshot = get_selected_slide_snapshot(context, selected_index)
