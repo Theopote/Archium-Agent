@@ -24,12 +24,14 @@ from archium.application.visual.vision.visual_concept_brief_intent import (
     visual_concept_brief_applies,
 )
 from archium.application.visual.vision.visual_concept_brief_service import (
+    ConceptVisualizationLoopResult,
     VisualConceptBriefResult,
     VisualConceptBriefService,
 )
 
 __all__ = [
     "DEFAULT_STYLE_REGISTRY",
+    "ConceptVisualizationLoopResult",
     "VisionConditionedEditor",
     "VisionDiagramComposer",
     "VisionImageEvaluator",

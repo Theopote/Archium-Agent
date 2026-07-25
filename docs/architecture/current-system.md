@@ -38,7 +38,7 @@ User opens Archium
 
 **核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextAnalyzer`（原 `ContextIntelligenceService`）评估已知/未知并建议下一步。评估产出统一聚合为 `ProjectContext`（`archium/domain/context/`）；`WorkspaceModeService` 优先依据 `ProjectContext` 路由，而非仅 `origin_mode`。
 
-**Intelligence Closure（P0–P2）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）。有意义的知识变化写入 `KnowledgeStateHistory`。NBA 经 `NbaActionExecutor` **一键执行**可落地动作（自主研究、启动探索并推演方向、无 Mission 时生成任务理解），再跳页；上传资料 / 澄清 / 打开任务仍为导航（编排可同步 start）。生成页读取 `presentation_readiness_from_context`。`origin_mode` 仍为兼容字段。
+**Intelligence Closure（P0–P3）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）。有意义的知识变化写入 `KnowledgeStateHistory`。NBA 经 `NbaActionExecutor` **一键执行**可落地动作（自主研究、启动探索并推演方向、无 Mission 时生成任务理解），再跳页；上传资料 / 澄清 / 打开任务仍为导航（编排可同步 start）。生成页读取 `presentation_readiness_from_context`。P3 **Concept Visualization Loop**：Mission 前后均可 `ConceptDirection → VisualConceptBrief → 示意出图 → 建筑师反馈 → 写回 visual_prompt / 轻量空间字段 → IntentEvolution(VISUAL_FEEDBACK) → 再合成`；`visual_concept_briefs.mission_id` 可空，提交 Mission 时回填。`origin_mode` 仍为兼容字段。
 
 ### 意图驱动路线图（v0.3+）
 

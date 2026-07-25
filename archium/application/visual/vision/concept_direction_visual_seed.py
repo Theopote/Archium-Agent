@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
-from archium.domain.project_mission import ProjectMission
 from archium.domain.visual.vision_generation import (
     ArchitectureImageType,
     ImageRequest,
@@ -163,8 +164,10 @@ def image_request_from_concept_direction(direction: ConceptDirection) -> ImageRe
 
 
 def visual_concept_brief_from_direction_seed(
-    mission: ProjectMission,
+    *,
+    project_id: UUID,
     direction: ConceptDirection,
+    mission_id: UUID | None = None,
 ) -> VisualConceptBrief:
     """Text-first brief derived from direction seed (no LLM)."""
     vp = direction.visual_prompt
@@ -191,8 +194,8 @@ def visual_concept_brief_from_direction_seed(
         if part and part.strip()
     )[:500]
     return VisualConceptBrief(
-        project_id=mission.project_id,
-        mission_id=mission.id,
+        project_id=project_id,
+        mission_id=mission_id,
         concept_direction_id=direction.id,
         title=(direction.title or "概念视觉")[:200],
         composition_intent=composition,

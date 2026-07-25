@@ -316,6 +316,14 @@ class ExplorationService:
             sibling.mission_id = mission.id
             self._directions.update(sibling)
 
+        from archium.application.visual.vision import VisualConceptBriefService
+
+        brief_service = VisualConceptBriefService(
+            self._session, self._llm, settings=self._settings
+        )
+        for sibling in self._directions.list_by_exploration(exploration.id):
+            brief_service.backfill_mission_id_for_direction(sibling.id, mission.id)
+
         exploration.mark_committed(mission.id)
         exploration = self._explorations.update(exploration)
         self._append_intent_evolution(

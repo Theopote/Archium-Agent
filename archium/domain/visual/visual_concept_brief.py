@@ -16,7 +16,7 @@ class VisualConceptBrief(IdentifiedModel, TimestampedModel):
     """Text-first visual direction for one concept direction (optional pixels)."""
 
     project_id: UUID
-    mission_id: UUID
+    mission_id: UUID | None = None
     concept_direction_id: UUID
     title: str = Field(min_length=1, max_length=200)
     composition_intent: str = ""

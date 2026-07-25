@@ -1164,10 +1164,10 @@ class VisualConceptBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
-    mission_id: Mapped[uuid.UUID] = mapped_column(
+    mission_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("project_missions.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     concept_direction_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),

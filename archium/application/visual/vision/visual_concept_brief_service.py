@@ -21,6 +21,8 @@ from archium.application.visual.vision.visual_concept_brief_intent import (
 )
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.concept_visual_prompt import ConceptVisualPrompt
+from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
 from archium.domain.project_mission import ProjectMission
 from archium.domain.visual.vision_generation import (
     ArchitectureImageType,
@@ -33,13 +35,19 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
     ConceptDirectionRepository,
+    ProjectRepository,
     VisualConceptBriefRepository,
 )
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
-from archium.infrastructure.llm.visual_concept_brief_schemas import VisualConceptBriefDraft
+from archium.infrastructure.llm.visual_concept_brief_schemas import (
+    VisualConceptBriefDraft,
+    VisualSeedRefineDraft,
+)
 from archium.prompts.visual_concept_brief import (
     VISUAL_CONCEPT_BRIEF_SYSTEM_PROMPT,
+    VISUAL_SEED_REFINE_SYSTEM_PROMPT,
     build_visual_concept_brief_user_prompt,
+    build_visual_seed_refine_user_prompt,
 )
 
 _ALLOWED_IMAGE_TYPES = {
@@ -59,6 +67,15 @@ class VisualConceptBriefResult:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ConceptVisualizationLoopResult:
+    """P3 边想边画：反馈 → 修订方向种子 → 再合成简报/出图。"""
+
+    direction: ConceptDirection
+    brief_result: VisualConceptBriefResult
+    change_summary: str = ""
+
+
 class VisualConceptBriefService:
     """Visual-seat service: text brief from ConceptDirection + optional illustrative image."""
 
@@ -75,6 +92,7 @@ class VisualConceptBriefService:
         self._llm = llm
         self._settings = settings or get_settings()
         self._missions = MissionRepository(session)
+        self._projects = ProjectRepository(session)
         self._directions = ConceptDirectionRepository(session)
         self._briefs = VisualConceptBriefRepository(session)
         self._compiler = compiler or VisionPromptCompiler()
@@ -99,18 +117,19 @@ class VisualConceptBriefService:
         direction = self._directions.get(concept_direction_id)
         if direction is None:
             raise WorkflowError(f"概念方向 {concept_direction_id} 不存在")
-        if direction.mission_id is None:
-            raise WorkflowError(
-                "该方向尚未绑定 Mission；请先在概念探索页选定方向并生成项目任务"
-            )
-        mission = self._missions.get_mission(direction.mission_id)
-        if mission is None:
-            raise WorkflowError(f"Mission {direction.mission_id} not found")
+
+        mission = self._optional_mission(direction)
+        project = self._projects.get_by_id(direction.project_id)
+        project_name = project.name if project is not None else ""
 
         warnings: list[str] = []
         if direction_has_visual_seed(direction):
             brief = self._briefs.create(
-                visual_concept_brief_from_direction_seed(mission, direction)
+                visual_concept_brief_from_direction_seed(
+                    project_id=direction.project_id,
+                    direction=direction,
+                    mission_id=direction.mission_id,
+                )
             )
             warnings.append(
                 "已使用概念方向 visual_prompt 直出视觉简报，跳过 LLM 扩写。"
@@ -126,8 +145,16 @@ class VisualConceptBriefService:
                 LLMRequest(
                     system_prompt=VISUAL_CONCEPT_BRIEF_SYSTEM_PROMPT,
                     user_prompt=build_visual_concept_brief_user_prompt(
-                        mission_title=mission.title,
-                        task_statement=mission.task_statement,
+                        mission_title=(
+                            mission.title
+                            if mission is not None
+                            else (project_name or "概念探索")
+                        ),
+                        task_statement=(
+                            mission.task_statement
+                            if mission is not None
+                            else (direction.summary or "概念方向示意探索")
+                        ),
                         direction_title=direction.title,
                         direction_summary=direction.summary,
                         theme=direction.theme,
@@ -154,10 +181,15 @@ class VisualConceptBriefService:
                 ),
                 VisualConceptBriefDraft,
             )
-            brief = self._persist_brief(mission, direction, draft)
+            brief = self._persist_brief(
+                project_id=direction.project_id,
+                mission_id=direction.mission_id,
+                direction=direction,
+                draft=draft,
+            )
 
         request = apply_direction_seed_to_request(self._to_image_request(brief), direction)
-        context = self._to_context(mission, direction)
+        context = self._to_context(direction, mission=mission)
         spec = self._compiler.compile(request, context=context, direction=direction)
         brief.mark_ready(compiled_prompt=spec.prompt)
         brief.extra_json = {
@@ -179,7 +211,7 @@ class VisualConceptBriefService:
                 result = self._images.generate(
                     request,
                     context=context,
-                    project_id=mission.project_id,
+                    project_id=direction.project_id,
                     persist_asset=True,
                     direction=direction,
                 )
@@ -204,9 +236,145 @@ class VisualConceptBriefService:
             warnings=warnings,
         )
 
+    def refine_and_resynthesize(
+        self,
+        concept_direction_id: UUID,
+        feedback: str,
+        *,
+        generate_image: bool = False,
+    ) -> ConceptVisualizationLoopResult:
+        """Architect review → revise ConceptDirection visual seed → re-synthesize brief."""
+        text = (feedback or "").strip()
+        if not text:
+            raise WorkflowError("请填写对概念示意的反馈后再修订")
+
+        direction = self._directions.get(concept_direction_id)
+        if direction is None:
+            raise WorkflowError(f"概念方向 {concept_direction_id} 不存在")
+
+        latest = self._briefs.get_latest_for_direction(concept_direction_id)
+        draft = self._llm.generate_structured(
+            LLMRequest(
+                system_prompt=VISUAL_SEED_REFINE_SYSTEM_PROMPT,
+                user_prompt=build_visual_seed_refine_user_prompt(
+                    feedback=text,
+                    direction_title=direction.title,
+                    direction_summary=direction.summary,
+                    spatial_strategy=direction.spatial_strategy,
+                    formal_language=direction.formal_language,
+                    material_strategy=direction.material_strategy,
+                    experience_focus=direction.experience_focus,
+                    visual_prompt_block=(
+                        direction.visual_prompt.to_prompt_block()
+                        if direction.visual_prompt is not None
+                        else ""
+                    ),
+                    brief_title=latest.title if latest is not None else "",
+                    composition_intent=(
+                        latest.composition_intent if latest is not None else ""
+                    ),
+                    atmosphere=latest.atmosphere if latest is not None else "",
+                ),
+                temperature=0.4,
+                json_mode=True,
+            ),
+            VisualSeedRefineDraft,
+        )
+        direction = self._apply_refine_draft(direction, draft)
+        change_summary = (draft.change_summary or text[:120]).strip()
+        self._append_visual_feedback_evolution(
+            direction.project_id,
+            change_summary,
+            direction=direction,
+            feedback=text,
+        )
+        brief_result = self.synthesize_for_direction(
+            direction.id,
+            generate_image=generate_image,
+        )
+        refreshed = self._directions.get(direction.id)
+        assert refreshed is not None
+        return ConceptVisualizationLoopResult(
+            direction=refreshed,
+            brief_result=brief_result,
+            change_summary=change_summary,
+        )
+
+    def backfill_mission_id_for_direction(
+        self,
+        concept_direction_id: UUID,
+        mission_id: UUID,
+    ) -> int:
+        """Attach mission_id to pre-mission briefs for one direction. Returns updated count."""
+        updated = 0
+        for brief in self._briefs.list_by_direction(concept_direction_id):
+            if brief.mission_id is None:
+                brief.mission_id = mission_id
+                self._briefs.update(brief)
+                updated += 1
+        return updated
+
+    def _apply_refine_draft(
+        self,
+        direction: ConceptDirection,
+        draft: VisualSeedRefineDraft,
+    ) -> ConceptDirection:
+        current = direction.visual_prompt or ConceptVisualPrompt()
+        direction.visual_prompt = ConceptVisualPrompt(
+            image_prompt=(draft.image_prompt or current.image_prompt).strip(),
+            camera=(draft.camera or current.camera).strip(),
+            style=(draft.style or current.style).strip(),
+        )
+        if draft.spatial_strategy.strip():
+            direction.spatial_strategy = draft.spatial_strategy.strip()
+        if draft.formal_language.strip():
+            direction.formal_language = draft.formal_language.strip()
+        if draft.material_strategy.strip():
+            direction.material_strategy = draft.material_strategy.strip()
+        if draft.experience_focus.strip():
+            direction.experience_focus = draft.experience_focus.strip()
+        direction.touch()
+        return self._directions.update(direction)
+
+    def _append_visual_feedback_evolution(
+        self,
+        project_id: UUID,
+        summary: str,
+        *,
+        direction: ConceptDirection,
+        feedback: str,
+    ) -> None:
+        project = self._projects.get_by_id(project_id)
+        if project is None:
+            return
+        snapshot: dict[str, object] = {
+            "feedback": feedback[:800],
+            "direction_id": str(direction.id),
+            "direction_title": direction.title,
+        }
+        if direction.visual_prompt is not None:
+            snapshot["visual_prompt"] = direction.visual_prompt.model_dump(mode="json")
+        evo = project.intent_evolution or IntentEvolution()
+        project.intent_evolution = evo.append(
+            IntentEvolutionKind.VISUAL_FEEDBACK,
+            summary[:500],
+            design_intent_snapshot=snapshot,
+        )
+        self._projects.update(project)
+
+    def _optional_mission(self, direction: ConceptDirection) -> ProjectMission | None:
+        if direction.mission_id is None:
+            return None
+        mission = self._missions.get_mission(direction.mission_id)
+        if mission is None:
+            raise WorkflowError(f"Mission {direction.mission_id} not found")
+        return mission
+
     def _persist_brief(
         self,
-        mission: ProjectMission,
+        *,
+        project_id: UUID,
+        mission_id: UUID | None,
         direction: ConceptDirection,
         draft: VisualConceptBriefDraft,
     ) -> VisualConceptBrief:
@@ -223,8 +391,8 @@ class VisualConceptBriefService:
         if direction.design_rationale is not None and not direction.design_rationale.is_empty():
             extra_json["design_rationale"] = direction.design_rationale.model_dump(mode="json")
         brief = VisualConceptBrief(
-            project_id=mission.project_id,
-            mission_id=mission.id,
+            project_id=project_id,
+            mission_id=mission_id,
             concept_direction_id=direction.id,
             title=(draft.title or direction.title).strip()[:200],
             composition_intent=composition_intent,
@@ -246,10 +414,13 @@ class VisualConceptBriefService:
 
     def _to_context(
         self,
-        mission: ProjectMission,
         direction: ConceptDirection,
+        *,
+        mission: ProjectMission | None,
     ) -> VisionGenerationContext:
-        summary = direction.summary or mission.task_statement
+        summary = direction.summary or (
+            mission.task_statement if mission is not None else direction.title
+        )
         return VisionGenerationContext(
             project_type="",
             project_phase="concept",

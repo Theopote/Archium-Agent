@@ -446,6 +446,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         list_concept_directions,
         preview_presentation_request_from_mission,
         refresh_presentation_request_draft,
+        refine_visual_concept_brief,
         select_concept_direction,
         synthesize_visual_concept_brief,
     )
@@ -692,6 +693,86 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                         else:
                             st.success(f"已生成视觉简报「{result.brief.title}」。")
                         for warning in result.warnings:
+                            st.warning(format_vision_user_warning(warning))
+                        st.rerun()
+                    except WorkflowError as exc:
+                        st.error(str(exc))
+                    except Exception as exc:
+                        st.error(format_user_error(exc))
+
+            st.markdown("**示意反馈（边想边画）**")
+            feedback = st.text_area(
+                "看图后想改什么？",
+                key=f"{key_prefix}_visual_feedback_{direction.id}",
+                placeholder="例如：改成人视；材质更偏夯土；减少轴线感，加强院落围合…",
+                height=88,
+            )
+            refine_cols = st.columns(2)
+            if refine_cols[0].button(
+                "按反馈修订方向（文字简报）",
+                key=f"{key_prefix}_visual_refine_text_{direction.id}",
+                use_container_width=True,
+            ):
+                settings = get_ui_effective_settings()
+                if not settings.llm_configured:
+                    st.error("未配置 LLM API Key。请前往设置配置。")
+                    return
+                with st.spinner("正在根据反馈修订方向并重新合成简报…"):
+                    try:
+                        with get_session() as session:
+                            loop = refine_visual_concept_brief(
+                                session,
+                                direction.id,
+                                feedback,
+                                generate_image=False,
+                                settings=settings,
+                            )
+                        st.success(
+                            f"已修订方向并更新简报「{loop.brief_result.brief.title}」。"
+                            f"（{loop.change_summary}）"
+                        )
+                        for warning in loop.brief_result.warnings:
+                            st.warning(format_vision_user_warning(warning))
+                        st.rerun()
+                    except WorkflowError as exc:
+                        st.error(str(exc))
+                    except Exception as exc:
+                        st.error(format_user_error(exc))
+            if refine_cols[1].button(
+                "按反馈修订并重新出图",
+                key=f"{key_prefix}_visual_refine_image_{direction.id}",
+                use_container_width=True,
+            ):
+                settings = get_ui_effective_settings()
+                if not settings.llm_configured:
+                    st.error("未配置 LLM API Key。请前往设置配置。")
+                    return
+                if not settings.vision_image_generation_enabled:
+                    st.warning(
+                        "当前未开启 Vision 图像生成。将修订方向并保存文字简报；"
+                        "若要出图，请在设置中开启 vision_image_generation_enabled。"
+                    )
+                with st.spinner("正在根据反馈修订方向并尝试重新出图…"):
+                    try:
+                        with get_session() as session:
+                            loop = refine_visual_concept_brief(
+                                session,
+                                direction.id,
+                                feedback,
+                                generate_image=True,
+                                settings=settings,
+                            )
+                        if loop.brief_result.image_succeeded:
+                            st.success(
+                                f"已修订方向并完成出图：「{loop.brief_result.brief.title}」。"
+                                f"（{loop.change_summary}）"
+                            )
+                        else:
+                            st.success(
+                                f"已修订方向并更新简报「{loop.brief_result.brief.title}」。"
+                                f"（{loop.change_summary}）"
+                            )
+                        for warning in loop.brief_result.warnings:
                             st.warning(format_vision_user_warning(warning))
                         st.rerun()
                     except WorkflowError as exc:

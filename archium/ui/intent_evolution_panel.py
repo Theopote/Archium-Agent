@@ -23,6 +23,7 @@ _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.DIRECTION_SELECTED: "选定方向",
     IntentEvolutionKind.MISSION_COMMIT: "确认任务",
     IntentEvolutionKind.EVIDENCE: "出处确认",
+    IntentEvolutionKind.VISUAL_FEEDBACK: "示意反馈",
 }
 
 _KS_REASON_LABELS = {

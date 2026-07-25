@@ -13,6 +13,7 @@ from archium.application.design_rationale_fallback import ensure_direction_desig
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.enums import ConceptDirectionStatus
 from archium.domain.project_mission import ProjectMission
 from archium.exceptions import WorkflowError
@@ -185,6 +186,39 @@ class ConceptDirectionService:
         if direction.status == ConceptDirectionStatus.SELECTED:
             raise WorkflowError("请先选择其他方向，再归档当前选中方向")
         direction.archive()
+        updated = self._directions.update(direction)
+        self._session.commit()
+        return updated
+
+    def update_visual_seed(
+        self,
+        direction_id: UUID,
+        *,
+        visual_prompt: ConceptVisualPrompt,
+        spatial_strategy: str | None = None,
+        formal_language: str | None = None,
+        material_strategy: str | None = None,
+        experience_focus: str | None = None,
+    ) -> ConceptDirection:
+        """Write-back visual seed (and optional light spatial fields) after architect review."""
+        direction = self._directions.get(direction_id)
+        if direction is None:
+            raise WorkflowError(f"概念方向 {direction_id} 不存在")
+        if direction.status == ConceptDirectionStatus.ARCHIVED:
+            raise WorkflowError("已归档的概念方向不能修订视觉种子")
+        if visual_prompt.is_empty():
+            raise WorkflowError("视觉种子不能为空")
+
+        direction.visual_prompt = visual_prompt
+        if spatial_strategy is not None:
+            direction.spatial_strategy = spatial_strategy.strip()
+        if formal_language is not None:
+            direction.formal_language = formal_language.strip()
+        if material_strategy is not None:
+            direction.material_strategy = material_strategy.strip()
+        if experience_focus is not None:
+            direction.experience_focus = experience_focus.strip()
+        direction.touch()
         updated = self._directions.update(direction)
         self._session.commit()
         return updated

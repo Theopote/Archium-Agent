@@ -672,6 +672,25 @@ def synthesize_visual_concept_brief(
     )
 
 
+def refine_visual_concept_brief(
+    session: Session,
+    direction_id: UUID,
+    feedback: str,
+    *,
+    generate_image: bool = False,
+    settings: Settings | None = None,
+):
+    from archium.application.visual.vision import VisualConceptBriefService
+
+    runtime = _resolve_runtime_settings(settings)
+    llm = create_llm_provider(runtime)
+    return VisualConceptBriefService(session, llm, settings=runtime).refine_and_resynthesize(
+        direction_id,
+        feedback,
+        generate_image=generate_image,
+    )
+
+
 def get_latest_visual_concept_brief(session: Session, direction_id: UUID):
     from archium.application.visual.vision import VisualConceptBriefService
     from archium.infrastructure.llm.mock import MockLLMProvider

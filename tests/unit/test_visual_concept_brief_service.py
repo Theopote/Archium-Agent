@@ -233,3 +233,120 @@ def test_synthesize_uses_direction_seed_without_llm(db_session, seeded_direction
     assert result.brief.extra_json.get("seed_source") == "concept_direction.visual_prompt"
     assert "Primary scene seed" in result.brief.compiled_prompt or "yaodong" in result.brief.compiled_prompt.lower()
     assert result.brief.extra_json.get("direction_seed") is True
+
+
+def test_synthesize_pre_mission_direction(db_session) -> None:
+    project = ProjectRepository(db_session).create(
+        Project(
+            name="探索示意项目",
+            origin_mode=ProjectOriginMode.CONCEPT_EXPLORATION,
+        )
+    )
+    direction = ConceptDirectionRepository(db_session).create(
+        ConceptDirection(
+            project_id=project.id,
+            mission_id=None,
+            title="窑洞再生",
+            summary="以窑洞原型转译当代公共空间",
+            visual_prompt=ConceptVisualPrompt(
+                image_prompt="yaodong vaults in loess plateau",
+                camera="architectural axonometric",
+                style="concept sketch",
+            ),
+            status=ConceptDirectionStatus.DRAFT,
+        )
+    )
+    db_session.commit()
+
+    llm = MagicMock()
+    settings = Settings(vision_image_generation_enabled=False)
+    service = VisualConceptBriefService(db_session, llm, settings=settings)
+
+    result = service.synthesize_for_direction(direction.id, generate_image=False)
+
+    assert result.brief.mission_id is None
+    assert result.brief.project_id == project.id
+    assert result.brief.status == "ready"
+    llm.generate_structured.assert_not_called()
+
+
+def test_refine_and_resynthesize_updates_seed_and_evolution(db_session, seeded_direction) -> None:
+    from archium.domain.intent.intent_evolution import IntentEvolutionKind
+    from archium.infrastructure.llm.visual_concept_brief_schemas import VisualSeedRefineDraft
+
+    llm = MagicMock()
+    llm.generate_structured.return_value = VisualSeedRefineDraft(
+        image_prompt="eye-level courtyard with rammed earth walls",
+        camera="eye-level street view",
+        style="soft atmosphere",
+        spatial_strategy="围合院落",
+        formal_language="厚重土墙",
+        material_strategy="夯土",
+        experience_focus="日常穿行",
+        change_summary="改为人视与院落围合",
+    )
+    settings = Settings(vision_image_generation_enabled=False)
+    service = VisualConceptBriefService(db_session, llm, settings=settings)
+
+    loop = service.refine_and_resynthesize(
+        seeded_direction.id,
+        "改成人视，加强院落围合",
+        generate_image=False,
+    )
+
+    assert "院落" in loop.change_summary or "人视" in loop.change_summary
+    assert loop.direction.visual_prompt is not None
+    assert "eye-level" in loop.direction.visual_prompt.image_prompt.lower() or (
+        "eye-level" in loop.direction.visual_prompt.camera.lower()
+    )
+    assert loop.brief_result.brief.status == "ready"
+    project = ProjectRepository(db_session).get_by_id(seeded_direction.project_id)
+    assert project is not None
+    assert project.intent_evolution.events
+    assert project.intent_evolution.events[-1].kind == IntentEvolutionKind.VISUAL_FEEDBACK
+
+
+def test_update_visual_seed_writeback(db_session, seeded_direction) -> None:
+    service = ConceptDirectionService(db_session, MagicMock())
+    updated = service.update_visual_seed(
+        seeded_direction.id,
+        visual_prompt=ConceptVisualPrompt(
+            image_prompt="revised courtyard sketch",
+            camera="eye-level",
+            style="marker sketch",
+        ),
+        spatial_strategy="院落围合",
+    )
+    assert updated.visual_prompt is not None
+    assert updated.visual_prompt.image_prompt.startswith("revised")
+    assert updated.spatial_strategy == "院落围合"
+
+
+def test_backfill_mission_id_on_pre_mission_brief(db_session, concept_mission) -> None:
+    direction = ConceptDirectionRepository(db_session).create(
+        ConceptDirection(
+            project_id=concept_mission.project_id,
+            mission_id=None,
+            title="预示意方向",
+            summary="先画后锁 Mission",
+            visual_prompt=ConceptVisualPrompt(
+                image_prompt="pre-mission sketch",
+                camera="axonometric",
+                style="concept sketch",
+            ),
+            status=ConceptDirectionStatus.DRAFT,
+        )
+    )
+    db_session.commit()
+    llm = MagicMock()
+    settings = Settings(vision_image_generation_enabled=False)
+    service = VisualConceptBriefService(db_session, llm, settings=settings)
+    result = service.synthesize_for_direction(direction.id, generate_image=False)
+    assert result.brief.mission_id is None
+
+    count = service.backfill_mission_id_for_direction(direction.id, concept_mission.id)
+    db_session.commit()
+    assert count == 1
+    latest = service.get_latest_for_direction(direction.id)
+    assert latest is not None
+    assert latest.mission_id == concept_mission.id
