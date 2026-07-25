@@ -49,9 +49,12 @@ def _resolve_flow_project_id() -> UUID | None:
 def _render_project_context_readiness(project_id: UUID) -> None:
     """Surface ProjectContext / KnowledgeState before the presentation pipeline."""
     from archium.application.context import (
+        PresentationGateVerdict,
         build_project_context,
         presentation_readiness_from_context,
     )
+    from archium.config.settings import get_settings
+    from archium.ui.context_navigation import dispatch_next_best_action
 
     try:
         with get_session() as session:
@@ -62,9 +65,33 @@ def _render_project_context_readiness(project_id: UUID) -> None:
         return
 
     st.caption(readiness.summary)
+    if readiness.verdict == PresentationGateVerdict.BLOCK:
+        st.error(
+            "当前知识完备性偏低，正式汇报前建议先执行建议动作。"
+            "（门禁默认 warn 仍可生成；设 PRESENTATION_COGNITION_GATE=block 可硬阻断。）"
+        )
     if readiness.warnings:
         # One combined callout keeps the generate page from becoming a dashboard.
         st.warning("\n\n".join(readiness.warnings))
+    if readiness.suggested_action is not None:
+        label = {
+            "research": "补充研究",
+            "explore_directions": "推演概念方向",
+            "upload_materials": "整理资料",
+            "ask": "澄清未知项",
+            "open_mission": "打开任务",
+            "generate_mission": "生成任务",
+        }.get(readiness.suggested_action.value, readiness.suggested_action.value)
+        if st.button(f"建议：{label}", key=f"generate_gate_{readiness.suggested_action.value}"):
+            settings = get_settings()
+            with get_session() as session:
+                dispatch_next_best_action(
+                    session,
+                    st.session_state,
+                    readiness.suggested_action,
+                    project_id=project_id,
+                    settings=settings,
+                )
 
 
 def _render_queue_summary(metrics: GenerateQueueMetrics) -> None:

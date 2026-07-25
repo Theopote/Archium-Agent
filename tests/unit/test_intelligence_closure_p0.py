@@ -161,6 +161,11 @@ def test_approve_mission_triggers_reassess(monkeypatch) -> None:
         "archium.application.context.best_effort_reassess_knowledge",
         fake_reassess,
     )
+    monkeypatch.setattr(
+        ProjectMissionService,
+        "_append_mission_approved_evolution",
+        lambda self, _mission, note="": None,
+    )
 
     service = ProjectMissionService(MagicMock(), MagicMock())
     service._require_mission = lambda _mid: mission  # noqa: SLF001

@@ -51,7 +51,8 @@ Do not edit them manually.
 | `LLM_REPAIR_ATTEMPTS` | `2` | No | Maximum structured-output repair attempts per LLM call. |
 | `LLM_TIMEOUT_SECONDS` | `60.0` | No | LLM request timeout in seconds. |
 | `LLM_MAX_CONCURRENT_REQUESTS` | `5` | No | Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion. |
-| `SLIDE_PER_PAGE_GENERATION` | `true` | No | When true, SlidePlanner invokes the LLM once per page with SlideGenerationContext instead of one batch SlidePlan call. |
+| `SLIDE_PER_PAGE_GENERATION` | `true` | No | When true, SlidePlanService invokes the LLM once per page with SlideGenerationContext instead of one batch SlidePlan call. |
+| `PRESENTATION_COGNITION_GATE` | `warn` | No | Narrative entry gate from KnowledgeState: `off` (observe only), `warn` (default, never block), `block` (refuse when verdict is BLOCK), `auto_research` (run one RESEARCH NBA when suggested, then proceed with warnings). |
 
 ## Embedding {#embedding}
 

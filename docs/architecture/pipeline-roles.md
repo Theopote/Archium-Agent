@@ -119,6 +119,11 @@ flowchart LR
 
 **输出契约**：`SlideSpec` 只含**项目内容**（title / message / key_points / citations），不含参考模板坐标。
 
+**与 Cognition 的衔接（Phase A）**：汇报入口（`PresentationWorkflowService.prepare_run`）经
+`presentation_cognition_gate` 读取 `ProjectContext` / `KnowledgeState`，产出
+`proceed | warn | block` + 建议 NBA；`BriefService` 把完备性摘要注入 LLM 上下文。
+策略开关：`PRESENTATION_COGNITION_GATE`（默认 `warn`）。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）

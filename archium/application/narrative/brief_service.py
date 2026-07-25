@@ -13,6 +13,11 @@ from archium.agents._helpers import (
 )
 from archium.application.artifact_history_service import BriefHistoryService
 from archium.application.artifact_lineage import apply_brief_lineage
+from archium.application.context.presentation_readiness import (
+    format_readiness_for_prompt,
+    presentation_readiness_from_context,
+)
+from archium.application.context.project_context_builder import build_project_context
 from archium.application.mission_context_bridge import (
     enrich_mission_generation_context,
     resolve_project_mission,
@@ -78,6 +83,16 @@ class BriefService:
             project_context,
             mission,
         )
+        try:
+            readiness = presentation_readiness_from_context(
+                build_project_context(self._session, project_id)
+            )
+            if readiness.warnings or readiness.verdict.value != "proceed":
+                project_context = (
+                    f"{project_context}\n\n{format_readiness_for_prompt(readiness)}"
+                ).strip()
+        except Exception:  # noqa: BLE001 — cognition note must not abort brief
+            pass
         brief = self._builder.propose(
             project_id=project_id,
             presentation_id=presentation_id,

@@ -527,6 +527,14 @@ class Settings(BaseSettings):
             "SlideGenerationContext instead of one batch SlidePlan call."
         ),
     )
+    presentation_cognition_gate: str = Field(
+        default="warn",
+        description=(
+            "Narrative entry cognition gate: off | warn | block | auto_research. "
+            "warn=attach KnowledgeState warnings; block=refuse sparse KS; "
+            "auto_research=run one RESEARCH NBA when suggested then proceed."
+        ),
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

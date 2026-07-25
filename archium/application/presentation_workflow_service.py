@@ -142,6 +142,7 @@ class PresentationWorkflowService:
         require_storyline_review: bool = False,
         require_outline_review: bool = True,
         require_slides_review: bool = False,
+        bypass_cognition_gate: bool = False,
     ) -> WorkflowRun:
         """Create presentation + WorkflowRun records without invoking the graph."""
         self._route_service.require_route(
@@ -154,6 +155,26 @@ class PresentationWorkflowService:
         )
         if handler_key != "presentation_workflow":
             raise WorkflowError(f"Unexpected workflow handler: {handler_key}")
+
+        from archium.application.context.presentation_cognition_gate import (
+            enforce_presentation_cognition_gate,
+        )
+
+        gate = enforce_presentation_cognition_gate(
+            self._session,
+            project_id,
+            llm=self._runtime.llm,
+            settings=self._settings,
+            force=bypass_cognition_gate,
+        )
+        if gate.messages:
+            logger.info(
+                "presentation cognition gate project=%s mode=%s verdict=%s",
+                project_id,
+                gate.mode,
+                gate.readiness.verdict.value,
+            )
+
         presentation = self._runtime.presentation_service.create_presentation(project_id, request)
         resolved_preview_images = (
             export_preview_images
@@ -186,6 +207,7 @@ class PresentationWorkflowService:
                     "require_storyline_review": require_storyline_review,
                     "require_outline_review": require_outline_review,
                     "require_slides_review": require_slides_review,
+                    "cognition_gate": gate.as_dict(),
                 },
             )
         )

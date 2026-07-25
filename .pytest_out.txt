@@ -1,0 +1,25 @@
+﻿.............F                                                           [100%]
+================================== FAILURES ===================================
+___________________ test_approve_mission_triggers_reassess ____________________
+tests\unit\test_intelligence_closure_p0.py:176: in test_approve_mission_triggers_reassess
+    service.approve_mission(mission.id)
+archium\application\project_mission_service.py:267: in approve_mission
+    self._append_mission_approved_evolution(saved, note=history_note)
+archium\application\project_mission_service.py:293: in _append_mission_approved_evolution
+    project = projects.get_by_id(mission.project_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+archium\infrastructure\database\repositories.py:90: in get_by_id
+    return mappers.project_to_domain(orm) if orm else None
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+archium\infrastructure\database\mappers.py:190: in project_to_domain
+    project_type=ProjectType(orm.project_type),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python312\Lib\enum.py:740: in __call__
+    return cls.__new__(cls, value)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python312\Lib\enum.py:1154: in __new__
+    raise ve_exc
+E   ValueError: <MagicMock name='mock.get().project_type' id='1435129191440'> is not a valid ProjectType
+=========================== short test summary info ===========================
+FAILED tests/unit/test_intelligence_closure_p0.py::test_approve_mission_triggers_reassess
+1 failed, 13 passed in 1.88s

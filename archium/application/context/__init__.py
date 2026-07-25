@@ -23,8 +23,15 @@ from archium.application.context.next_action_selector import (
     resolve_action_target,
     resolve_workflow_entry,
 )
+from archium.application.context.presentation_cognition_gate import (
+    PresentationCognitionGateResult,
+    enforce_presentation_cognition_gate,
+    evaluate_presentation_cognition,
+)
 from archium.application.context.presentation_readiness import (
     PresentationContextReadiness,
+    PresentationGateVerdict,
+    format_readiness_for_prompt,
     presentation_readiness_from_context,
 )
 from archium.application.context.project_context_builder import (
@@ -54,7 +61,9 @@ __all__ = [
     "KnowledgeAssessor",
     "NbaActionExecutor",
     "NbaExecutionResult",
+    "PresentationCognitionGateResult",
     "PresentationContextReadiness",
+    "PresentationGateVerdict",
     "ReassessMode",
     "WorkflowEntryDispatch",
     "actions_from_knowledge_vector",
@@ -65,7 +74,10 @@ __all__ = [
     "compose_project_context",
     "default_actions_for_dimensions",
     "default_actions_for_stage",
+    "enforce_presentation_cognition_gate",
+    "evaluate_presentation_cognition",
     "finalize_assessment_context",
+    "format_readiness_for_prompt",
     "input_sources_from_evidence",
     "merge_claim_index_into_state",
     "nba_execute_label",
