@@ -124,6 +124,9 @@ flowchart LR
 `proceed | warn | block` + 建议 NBA；`BriefService` 把完备性摘要注入 LLM 上下文。
 策略开关：`PRESENTATION_COGNITION_GATE`（默认 `warn`）。
 
+**Phase B（可测 Policy）**：`actions_for_presentation_entry` 决定「汇报将启动」时的 NBA；
+`research_topics` 按设计影响轴（约束 / 类型 / 文化 / 阻断未知）排序研究主题，供自主研究消费。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）

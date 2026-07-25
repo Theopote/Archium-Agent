@@ -44,10 +44,20 @@ def test_readiness_verdict_block_when_sparse() -> None:
 
 
 def test_readiness_verdict_proceed_when_healthy() -> None:
+    from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions
+
     state = KnowledgeState(
         completeness_score=0.72,
         maturity_stage=KnowledgeMaturityStage.TECHNICAL_PRESENTATION,
         unknown=[],
+        dimensions=KnowledgeDimensions(
+            information_completeness=0.75,
+            design_intent_clarity=0.7,
+            evidence_confidence=0.65,
+            constraint_understanding=0.65,
+            user_alignment=0.65,
+            research_need=0.25,
+        ),
     )
     ctx = ProjectContext(
         knowledge_state=state,
@@ -57,7 +67,7 @@ def test_readiness_verdict_proceed_when_healthy() -> None:
     )
     ready = presentation_readiness_from_context(ctx)
     assert ready.verdict == PresentationGateVerdict.PROCEED
-    assert ready.suggested_action is None
+    assert ready.suggested_action in {None, NextBestActionType.OPEN_MISSION}
 
 
 def test_format_readiness_for_prompt_includes_action() -> None:

@@ -11,7 +11,10 @@ from archium.application.context.knowledge_reassess import (
     best_effort_reassess_knowledge,
     classify_reassess_mode,
 )
-from archium.application.context.knowledge_vector_policy import actions_from_knowledge_vector
+from archium.application.context.knowledge_vector_policy import (
+    actions_for_presentation_entry,
+    actions_from_knowledge_vector,
+)
 from archium.application.context.nba_action_executor import (
     NbaActionExecutor,
     NbaExecutionResult,
@@ -66,6 +69,7 @@ __all__ = [
     "PresentationGateVerdict",
     "ReassessMode",
     "WorkflowEntryDispatch",
+    "actions_for_presentation_entry",
     "actions_from_knowledge_vector",
     "apply_workflow_entry",
     "best_effort_reassess_knowledge",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions, KnowledgeVector
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage
 from archium.domain.intent.next_best_action import NextBestAction, NextBestActionType
@@ -217,3 +218,217 @@ def actions_from_knowledge_vector(
         has_materials=has_materials or facts >= 0.35,
         blocking_gaps=False,
     )
+
+
+def actions_for_presentation_entry(
+    vector: KnowledgeVector | KnowledgeDimensions | None = None,
+    *,
+    completeness_pct: int = 0,
+    unknown_count: int = 0,
+    recommended_workflow: RecommendedWorkflow | None = None,
+    blocking_gaps: bool = False,
+) -> list[NextBestAction]:
+    """NBA policy when the user is about to start Narrative / generate a deck.
+
+    Differs from general ``actions_from_knowledge_vector``: prioritises
+    *pre-brief* cognition (research / clarify / explore) over GENERATE_MISSION,
+    because the user already chose the presentation path.
+    """
+    if blocking_gaps or (unknown_count >= 3 and completeness_pct < 40):
+        return [
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="进入汇报前仍有较多未知项，先澄清以免叙事建立在假设上",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="公开研究可并行补证据",
+                priority=1,
+            ),
+            NextBestAction(
+                action=NextBestActionType.UPLOAD_MATERIALS,
+                reason="补充可核验资料",
+                priority=2,
+            ),
+        ]
+
+    if recommended_workflow == RecommendedWorkflow.EXPLORE:
+        return [
+            NextBestAction(
+                action=NextBestActionType.EXPLORE_DIRECTIONS,
+                reason="当前更适合先推演概念方向，再进入汇报主链",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="方向推演前可补类型参照",
+                priority=1,
+            ),
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="澄清意图与受众",
+                priority=2,
+            ),
+        ]
+
+    if recommended_workflow == RecommendedWorkflow.MATERIALS:
+        return [
+            NextBestAction(
+                action=NextBestActionType.UPLOAD_MATERIALS,
+                reason="进入汇报前建议先整理/确认资料与事实",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="确认待决事实",
+                priority=1,
+            ),
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="缺资料时用公开研究补语境",
+                priority=2,
+            ),
+        ]
+
+    if recommended_workflow == RecommendedWorkflow.MISSION:
+        return [
+            NextBestAction(
+                action=NextBestActionType.OPEN_MISSION,
+                reason="汇报前先对齐任务理解与交付边界",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.GENERATE_MISSION,
+                reason="尚无任务时可生成任务理解",
+                priority=1,
+            ),
+        ]
+
+    v = vector.as_vector() if vector is not None else {}
+    research = float(v.get("research_need", 0.0))
+    intent = float(v.get("intent", 0.0))
+    facts = float(v.get("facts", 0.0))
+    readiness = float(v.get("design_readiness", 0.0))
+    constraints = float(v.get("constraints", 0.0))
+
+    # Already healthy enough for Narrative — soft mission check, not research nag.
+    # (Legacy KS often derives research_need≈1.0 from assumption_ratio; do not
+    # let that override a strong completeness / DESIGN workflow signal.)
+    if completeness_pct >= 45 and recommended_workflow in {
+        RecommendedWorkflow.DESIGN,
+        RecommendedWorkflow.DELIVER,
+    }:
+        if readiness >= 0.5 or completeness_pct >= 60:
+            return [
+                NextBestAction(
+                    action=NextBestActionType.OPEN_MISSION,
+                    reason="知识较完备，可确认任务理解后直接生成汇报",
+                    priority=0,
+                ),
+            ]
+        return []
+
+    # Sparse cognition → research before storytelling
+    if completeness_pct < 25 or (research >= 0.65 and completeness_pct < 45):
+        return [
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="知识偏稀或研究需求高，进入汇报前先补背景与类型证据",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="对齐仍影响方案的关键未知项",
+                priority=1,
+            ),
+            NextBestAction(
+                action=NextBestActionType.EXPLORE_DIRECTIONS,
+                reason="研究同时可轻量推演方向",
+                priority=2,
+            ),
+        ]
+
+    if recommended_workflow == RecommendedWorkflow.RESEARCH or (
+        research >= 0.5 and facts < 0.5
+    ):
+        return [
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="建议补充背景研究后再写 Brief / 故事线",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="澄清研究无法覆盖的项目特有条件",
+                priority=1,
+            ),
+            NextBestAction(
+                action=NextBestActionType.UPLOAD_MATERIALS,
+                reason="补充项目自有资料",
+                priority=2,
+            ),
+        ]
+
+    if intent < 0.45:
+        return [
+            NextBestAction(
+                action=NextBestActionType.EXPLORE_DIRECTIONS,
+                reason="意图仍弱，汇报叙事易空；先推演方向",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="澄清汇报目的与核心信息",
+                priority=1,
+            ),
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="用类型参照刺激意图形成",
+                priority=2,
+            ),
+        ]
+
+    if constraints < 0.4 and unknown_count > 0:
+        return [
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="约束理解不足，汇报中的方案边界可能不成立",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="补充规范/场地类公开信息",
+                priority=1,
+            ),
+            NextBestAction(
+                action=NextBestActionType.UPLOAD_MATERIALS,
+                reason="上传红线/条件类资料",
+                priority=2,
+            ),
+        ]
+
+    if readiness >= 0.55 and completeness_pct >= 45:
+        return [
+            NextBestAction(
+                action=NextBestActionType.OPEN_MISSION,
+                reason="知识较完备，可确认任务理解后直接生成汇报",
+                priority=0,
+            ),
+        ]
+
+    if unknown_count > 0:
+        return [
+            NextBestAction(
+                action=NextBestActionType.ASK,
+                reason="仍有未知项，生成前建议快速澄清",
+                priority=0,
+            ),
+            NextBestAction(
+                action=NextBestActionType.RESEARCH,
+                reason="或用公开研究补缺",
+                priority=1,
+            ),
+        ]
+
+    return []

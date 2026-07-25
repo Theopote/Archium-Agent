@@ -18,14 +18,6 @@ class PresentationGateVerdict(StrEnum):
     BLOCK = "block"
 
 
-_WORKFLOW_TO_ACTION: dict[RecommendedWorkflow, NextBestActionType] = {
-    RecommendedWorkflow.RESEARCH: NextBestActionType.RESEARCH,
-    RecommendedWorkflow.EXPLORE: NextBestActionType.EXPLORE_DIRECTIONS,
-    RecommendedWorkflow.MATERIALS: NextBestActionType.UPLOAD_MATERIALS,
-    RecommendedWorkflow.MISSION: NextBestActionType.OPEN_MISSION,
-}
-
-
 @dataclass(frozen=True)
 class PresentationContextReadiness:
     """CI surface for generate / presentation entry (warn / block / proceed)."""
@@ -38,6 +30,7 @@ class PresentationContextReadiness:
     lifecycle_label: str = ""
     verdict: PresentationGateVerdict = PresentationGateVerdict.WARN
     suggested_action: NextBestActionType | None = None
+    suggested_action_reason: str = ""
 
     @property
     def blocks_generation(self) -> bool:
@@ -57,19 +50,39 @@ class PresentationContextReadiness:
             "suggested_action": (
                 self.suggested_action.value if self.suggested_action else None
             ),
+            "suggested_action_reason": self.suggested_action_reason,
         }
 
 
-def _suggest_action(
+def _suggest_from_presentation_policy(
     *,
-    workflow: RecommendedWorkflow | None,
+    context: ProjectContext | None,
+    completeness_pct: int,
     unknowns: list[str],
-) -> NextBestActionType | None:
-    if workflow is not None and workflow in _WORKFLOW_TO_ACTION:
-        return _WORKFLOW_TO_ACTION[workflow]
-    if unknowns:
-        return NextBestActionType.ASK
-    return None
+    workflow: RecommendedWorkflow | None,
+) -> tuple[NextBestActionType | None, str]:
+    from archium.application.context.knowledge_vector_policy import (
+        actions_for_presentation_entry,
+    )
+
+    vector = None
+    blocking = False
+    if context is not None and context.knowledge_state is not None:
+        state = context.knowledge_state
+        vector = state.effective_dimensions()
+        blocking = any(g.blocking for g in (state.open_unknowns or []))
+
+    actions = actions_for_presentation_entry(
+        vector,
+        completeness_pct=completeness_pct,
+        unknown_count=len(unknowns),
+        recommended_workflow=workflow,
+        blocking_gaps=blocking,
+    )
+    if not actions:
+        return None, ""
+    top = actions[0]
+    return top.action, top.reason
 
 
 def _verdict_for(
@@ -98,6 +111,12 @@ def presentation_readiness_from_context(
 ) -> PresentationContextReadiness:
     """Map ProjectContext into gate verdict + warnings for Narrative entry."""
     if context is None or context.knowledge_state is None:
+        suggested, reason = _suggest_from_presentation_policy(
+            context=None,
+            completeness_pct=0,
+            unknowns=[],
+            workflow=RecommendedWorkflow.MATERIALS,
+        )
         return PresentationContextReadiness(
             has_context=False,
             summary="尚未评估项目知识状态",
@@ -106,7 +125,9 @@ def presentation_readiness_from_context(
                 "建议先在「开始项目」或任务页刷新知识状态。"
             ],
             verdict=PresentationGateVerdict.WARN,
-            suggested_action=NextBestActionType.UPLOAD_MATERIALS,
+            suggested_action=suggested or NextBestActionType.UPLOAD_MATERIALS,
+            suggested_action_reason=reason
+            or "尚未建立知识状态，先补资料再评估",
         )
 
     state = context.knowledge_state
@@ -142,7 +163,14 @@ def presentation_readiness_from_context(
         unknowns=unknowns,
         workflow=workflow,
     )
-    suggested = _suggest_action(workflow=workflow, unknowns=unknowns)
+    suggested, reason = _suggest_from_presentation_policy(
+        context=context,
+        completeness_pct=completeness_pct,
+        unknowns=unknowns,
+        workflow=workflow,
+    )
+    if reason and verdict != PresentationGateVerdict.PROCEED:
+        warnings.append(reason)
 
     summary = (
         f"知识完整度约 {completeness_pct}%"
@@ -159,6 +187,7 @@ def presentation_readiness_from_context(
         lifecycle_label=context.lifecycle_stage.value,
         verdict=verdict,
         suggested_action=suggested,
+        suggested_action_reason=reason,
     )
 
 
@@ -167,6 +196,8 @@ def format_readiness_for_prompt(readiness: PresentationContextReadiness) -> str:
     lines = [f"【知识完备性】{readiness.summary}"]
     if readiness.suggested_action is not None:
         lines.append(f"建议下一步动作：{readiness.suggested_action.value}")
+        if readiness.suggested_action_reason:
+            lines.append(f"原因：{readiness.suggested_action_reason}")
     for warning in readiness.warnings[:5]:
         lines.append(f"- {warning}")
     return "\n".join(lines)

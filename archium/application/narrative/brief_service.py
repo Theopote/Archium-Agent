@@ -84,12 +84,34 @@ class BriefService:
             mission,
         )
         try:
-            readiness = presentation_readiness_from_context(
-                build_project_context(self._session, project_id)
-            )
+            pc = build_project_context(self._session, project_id)
+            readiness = presentation_readiness_from_context(pc)
+            cognition_bits: list[str] = []
             if readiness.warnings or readiness.verdict.value != "proceed":
+                cognition_bits.append(format_readiness_for_prompt(readiness))
+            from archium.application.research_topics import (
+                collect_mission_research_topic_candidates,
+                collect_project_research_topic_candidates,
+            )
+
+            topic_candidates = (
+                collect_mission_research_topic_candidates(mission)
+                if mission is not None
+                else collect_project_research_topic_candidates(
+                    project_name="",
+                    project_description="",
+                    knowledge_state=pc.knowledge_state if pc is not None else None,
+                    max_topics=3,
+                )
+            )
+            if topic_candidates:
+                lines = ["【优先研究主题（按设计影响排序）】"]
+                for item in topic_candidates[:3]:
+                    lines.append(f"- {item.text}（{item.axis.value} · {item.design_impact}）")
+                cognition_bits.append("\n".join(lines))
+            if cognition_bits:
                 project_context = (
-                    f"{project_context}\n\n{format_readiness_for_prompt(readiness)}"
+                    f"{project_context}\n\n" + "\n\n".join(cognition_bits)
                 ).strip()
         except Exception:  # noqa: BLE001 — cognition note must not abort brief
             pass
