@@ -457,6 +457,18 @@ def greeting_for_now() -> str:
 
 
 def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
+    """Prefer ProjectContext workflow entry before presentation pipeline stage."""
+    if snapshot.slide_count <= 0 and not snapshot.has_mission_or_task:
+        try:
+            from archium.application.context.workflow_navigation import workflow_entry_for_project
+            from archium.infrastructure.database.session import get_session
+
+            with get_session() as session:
+                entry = workflow_entry_for_project(session, snapshot.project_id)
+            if entry is not None:
+                return entry.page_key
+        except Exception:
+            pass
     return snapshot.current_stage_id
 
 

@@ -144,7 +144,7 @@ def render_warning_callout(message: str) -> None:
 
 def render_draft_mode_banner(
     *,
-    title: str = "概念草稿模式",
+    title: str = "部分资料 · 草稿交付",
     detail: str = "无项目资料，不得正式交付",
 ) -> None:
     """Persistent, high-visibility banner for concept-draft sessions."""

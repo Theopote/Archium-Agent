@@ -153,7 +153,7 @@ def _project_selector(*, key: str = "mission_project_selector") -> UUID | None:
         projects = list_projects(session)
     if not projects:
         st.info("还没有项目。")
-        if st.button("从想法或资料开始", type="primary"):
+        if st.button("开始描述项目", type="primary"):
             st.switch_page(get_app_page("project-genesis"))
         return None
 
@@ -240,30 +240,14 @@ def _render_step_nav(*, key: str = "mission_step_nav") -> int:
 
 def _render_describe(project_id: UUID) -> None:
     st.markdown("### 告诉 Archium 你接到了什么任务")
-    with get_session() as session:
-        from archium.infrastructure.database.repositories import ProjectRepository
+    from archium.ui.project_knowledge_profile import render_project_knowledge_strip
 
-        project = ProjectRepository(session).get_by_id(project_id)
-        from archium.application.project_context_routing import (
-            is_concept_leaning,
-            is_research_programming,
+    display = render_project_knowledge_strip(project_id, compact=False)
+    if display is None:
+        st.caption(
+            "资料不完整也没关系。描述项目背景、甲方要求、现状问题，"
+            "以及你希望最终完成什么 — 不必先选「有资料 / 没资料」。"
         )
-
-        if project is not None and is_concept_leaning(session, project) and not is_research_programming(
-            session, project
-        ):
-            st.info(
-                "当前为概念探索草稿 — 假设可随研究修正；正式交付需后续补充资料。"
-            )
-        elif project is not None and is_research_programming(session, project):
-            st.info(
-                "当前为策划与可研模式 — 重点梳理决策背景与未知项；"
-                "成果以问题清单、工作路径或备忘录为主；正式交付需后续补充资料。"
-            )
-        else:
-            st.caption(
-                "资料不完整也没关系。可以描述项目背景、甲方要求、现状问题，以及你希望最终完成什么。"
-            )
 
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
@@ -735,6 +719,10 @@ def render(*, embedded: bool = False) -> None:
         return
 
     project_id = selected_project_id
+    with get_session() as session:
+        from archium.application.context.workflow_navigation import sync_mission_step_from_context
+
+        sync_mission_step_from_context(session, project_id, st.session_state)
     snapshot = _load_snapshot(project_id)
     _sync_step_from_snapshot(snapshot)
 

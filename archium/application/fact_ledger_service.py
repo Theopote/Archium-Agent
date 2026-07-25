@@ -185,15 +185,13 @@ class FactLedgerService:
     ) -> tuple[str | None, str | None]:
         """Refresh KnowledgeState after a confirmed fact; never fail confirm."""
         try:
-            from archium.application.context_intelligence_service import (
-                ContextIntelligenceService,
-            )
+            from archium.application.context import ContextAnalyzer
             from archium.infrastructure.llm.factory import create_llm_provider
 
             llm = self._llm
             if llm is None:
                 llm = create_llm_provider(self._settings)
-            assessment = ContextIntelligenceService(
+            assessment = ContextAnalyzer(
                 self._session,
                 llm,
                 settings=self._settings,

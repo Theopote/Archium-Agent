@@ -71,7 +71,7 @@ def evaluate_stage_gate(
             or snapshot.document_count <= 0
         ):
             warnings.append(
-                "尚未绑定项目资料，后续生成将标记为概念草稿，不得正式交付"
+                "尚未绑定项目资料，后续生成将标记为草稿预览，不得正式交付"
             )
         return StageGateResult(
             can_proceed=True,
@@ -86,7 +86,7 @@ def evaluate_stage_gate(
             snapshot.evidence_availability == EvidenceAvailability.MISSING
             or snapshot.document_count <= 0
         ):
-            warnings.append("尚未绑定项目资料，生成内容仅作为概念草稿")
+            warnings.append("尚未绑定项目资料，生成内容仅作为草稿预览")
         if not snapshot.outline_approved:
             if not getattr(snapshot, "has_outline", False) and not snapshot.has_brief:
                 blockers.append("确认汇报对象与大纲结构（生成大纲）")
@@ -145,7 +145,7 @@ def evaluate_stage_gate(
             snapshot.evidence_availability == EvidenceAvailability.MISSING
             or snapshot.document_count <= 0
         ):
-            blockers.append("概念草稿不可正式交付：请先绑定至少一份项目资料")
+            blockers.append("草稿预览不可正式交付：请先绑定至少一份项目资料")
         elif not snapshot.formal_delivery_ready:
             if snapshot.export_blocker_count > 0:
                 blockers.append(f"仍有 {snapshot.export_blocker_count} 个阻塞项未清除")
@@ -248,7 +248,7 @@ def _stage_status_hint(
     snapshot: ProjectProgressSnapshot | None,
 ) -> str:
     if status == "warn" and stage_id == "materials":
-        return "无项目资料，当前为概念草稿模式"
+        return "尚无完整资料，可并行澄清与补资料"
     if status == "blocked" and stage_id == "materials":
         if snapshot is None:
             return "请先创建或选择项目"
@@ -316,8 +316,8 @@ def render_concept_draft_banner(snapshot: ProjectProgressSnapshot | None = None)
         or snapshot.document_count <= 0
     ):
         render_draft_mode_banner(
-            title="概念草稿模式",
-            detail="无项目资料，不得正式交付",
+            title="部分资料 · 草稿交付",
+            detail="尚无足够项目证据，可继续推演与预览；正式交付需补资料",
         )
 
 
@@ -330,18 +330,17 @@ def render_stage_header(stage_id: str) -> None:
     except Exception:
         snapshot = None
     if snapshot is not None:
-        from archium.ui.workspace_mode_chrome import (
-            resolve_ui_workspace_mode,
-            stage_caption_for_mode,
-        )
+        from archium.ui.workspace_mode_chrome import flow_stage_caption
 
-        mode = resolve_ui_workspace_mode(snapshot.project_id)
-        caption = stage_caption_for_mode(stage_id, mode, default=stage.caption)
-        from archium.application.workspace_mode_service import profile_for
-
-        profile = profile_for(mode)
+        caption = flow_stage_caption(stage_id, snapshot.project_id, default=stage.caption)
         render_page_header(stage.title, caption)
-        st.caption(f"工作台模式：{profile.title} — {profile.focus}")
+        from archium.ui.project_knowledge_profile import render_project_knowledge_strip
+
+        render_project_knowledge_strip(
+            snapshot.project_id,
+            compact=True,
+            show_known_unknown=False,
+        )
     else:
         render_page_header(stage.title, caption)
     render_flow_stepper(stage_id)
@@ -384,6 +383,9 @@ def render_flow_project_context(
         return render_project_picker(allow_create=allow_create)
 
     st.caption(f"当前项目：{labels[str(selected)]}")
+    from archium.ui.workspace_mode_chrome import render_flow_knowledge_context
+
+    render_flow_knowledge_context(UUID(str(selected)), key_prefix=f"{key_prefix}_ks")
     with st.expander("切换项目", expanded=False):
         if allow_create:
             from archium.ui.pages.workspace import _render_create_project

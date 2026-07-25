@@ -70,7 +70,10 @@ def _render_entry_form() -> None:
             st.error("请描述你的项目情况或想法")
             return
         try:
-            from archium.application.exploration_service import ExplorationService
+            from archium.application.context.next_action_selector import resolve_workflow_entry
+            from archium.application.context.workflow_navigation import apply_workflow_entry
+            from archium.application.fact_ledger_service import FactLedgerService
+            from archium.domain.intent.next_best_action import NextBestActionType
             from archium.infrastructure.llm.factory import create_llm_provider
             from archium.ui.planning_service import (
                 assess_project_context,
@@ -79,7 +82,6 @@ def _render_entry_form() -> None:
 
             project_name = name.strip() or _default_name_from_prompt(prompt.strip())
             with get_session() as session:
-                # Temporary origin; assess_and_persist will refine.
                 project = ProjectManagementService(session).create_project(
                     project_name,
                     prompt.strip(),
@@ -91,10 +93,25 @@ def _render_entry_form() -> None:
                     prompt.strip(),
                     settings=settings if settings.llm_configured else settings,
                 )
+                if assessment.project_context is not None:
+                    ledger = FactLedgerService(session).get_ledger(project.id)
+                    entry = resolve_workflow_entry(
+                        assessment.project_context,
+                        pending_fact_count=ledger.pending_count,
+                        conflict_fact_count=ledger.conflict_count,
+                    )
+                    apply_workflow_entry(st.session_state, entry)
                 should_explore = (
                     assessment.project_context is not None
-                    and assessment.project_context.recommended_workflow
-                    == RecommendedWorkflow.EXPLORE
+                    and (
+                        assessment.project_context.recommended_workflow
+                        == RecommendedWorkflow.EXPLORE
+                        or (
+                            assessment.actions
+                            and assessment.actions[0].action
+                            == NextBestActionType.EXPLORE_DIRECTIONS
+                        )
+                    )
                 )
                 if should_explore:
                     if settings.llm_configured:
@@ -106,6 +123,8 @@ def _render_entry_form() -> None:
                             enrich=True,
                         )
                     else:
+                        from archium.application.exploration_service import ExplorationService
+
                         seed_result = ExplorationService(
                             session, create_llm_provider(settings), settings=settings
                         ).start_session(
@@ -207,25 +226,11 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
     ctx_raw = payload.get("project_context")
     if ctx_raw:
         ctx = ProjectContext.model_validate(ctx_raw)
-        stage_label = {
-            ProjectLifecycleStage.IDEA: "想法",
-            ProjectLifecycleStage.CONCEPT: "概念",
-            ProjectLifecycleStage.RESEARCH: "研究",
-            ProjectLifecycleStage.DESIGN: "设计",
-            ProjectLifecycleStage.DOCUMENTATION: "文档化",
-        }.get(ctx.lifecycle_stage, ctx.lifecycle_stage.value)
-        workflow_label = {
-            RecommendedWorkflow.EXPLORE: "概念探索",
-            RecommendedWorkflow.RESEARCH: "背景研究",
-            RecommendedWorkflow.MATERIALS: "整理资料",
-            RecommendedWorkflow.MISSION: "任务理解",
-            RecommendedWorkflow.DESIGN: "方案迭代",
-            RecommendedWorkflow.DELIVER: "正式交付",
-        }.get(ctx.recommended_workflow, ctx.recommended_workflow.value)
-        st.caption(
-            f"阶段判断：**{stage_label}** · 建议优先：**{workflow_label}** "
-            f"· 把握度约 {int(round(ctx.confidence * 100))}%"
-        )
+        from archium.application.project_knowledge_display import build_project_knowledge_display
+
+        display = build_project_knowledge_display(ctx)
+        st.info(display.headline)
+        st.caption(display.caption)
         if ctx.assumptions:
             with st.expander("当前假设（待证实）", expanded=False):
                 for item in ctx.assumptions[:6]:
@@ -249,7 +254,7 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
     st.markdown("**建议下一步**")
     actions = [NextBestAction.model_validate(item) for item in payload.get("actions") or []]
     if not actions:
-        st.caption("暂无建议，可手动进入概念探索或资料。")
+        st.caption("暂无建议，可继续描述项目或补充资料。")
     for index, action in enumerate(actions):
         label = _action_label(action.action)
         help_text = action.reason
@@ -332,11 +337,11 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 
 
 def _action_label(action: NextBestActionType) -> str:
-    from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.application.context import resolve_action_target
 
     pending, conflicts = _pending_fact_counts()
     return (
-        ContextIntelligenceService.resolve_action_target(
+        resolve_action_target(
             action,
             pending_fact_count=pending,
             conflict_fact_count=conflicts,
@@ -363,51 +368,25 @@ def _pending_fact_counts() -> tuple[int, int]:
         return 0, 0
 
 
-def _apply_action_dispatch(target) -> None:
-    if target.mission_step is not None:
-        st.session_state.mission_step = target.mission_step
-    if getattr(target, "focus", None):
-        st.session_state["materials_focus"] = target.focus
-
-
 def _dispatch_action(action: NextBestActionType) -> None:
     from uuid import UUID
 
-    from archium.application.context_intelligence_service import ContextIntelligenceService
-    from archium.domain.intent.next_best_action import NextBestActionType as ActionType
-    from archium.ui.planning_service import try_execute_research_for_project
+    from archium.ui.context_navigation import dispatch_next_best_action
+    from archium.ui.llm_settings import get_ui_effective_settings
 
     project_raw = st.session_state.get("selected_project_id") or st.session_state.get(
         _PROJECT_KEY
     )
-    if action == ActionType.RESEARCH and project_raw:
-        settings = get_ui_effective_settings()
-        with st.spinner("正在启动自主研究…"):
-            try:
-                with get_session() as session:
-                    ok, message = try_execute_research_for_project(
-                        session,
-                        UUID(str(project_raw)),
-                        settings=settings,
-                    )
-                if ok:
-                    st.success(message)
-                    st.session_state.pop(_ASSESSMENT_KEY, None)
-                    st.session_state.pop(_PROJECT_KEY, None)
-                    st.session_state.mission_step = 2
-                    st.switch_page(get_app_page("project-mission"))
-                    return
-                st.info(message)
-            except Exception as exc:
-                st.warning(report_user_error(exc))
-
-    pending, conflicts = _pending_fact_counts()
+    if not project_raw:
+        return
+    settings = get_ui_effective_settings()
     st.session_state.pop(_ASSESSMENT_KEY, None)
     st.session_state.pop(_PROJECT_KEY, None)
-    target = ContextIntelligenceService.resolve_action_target(
-        action,
-        pending_fact_count=pending,
-        conflict_fact_count=conflicts,
-    )
-    _apply_action_dispatch(target)
-    st.switch_page(get_app_page(target.page_key))
+    with get_session() as session:
+        dispatch_next_best_action(
+            session,
+            st.session_state,
+            action,
+            project_id=UUID(str(project_raw)),
+            settings=settings,
+        )

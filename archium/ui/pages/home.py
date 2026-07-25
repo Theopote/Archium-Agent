@@ -52,7 +52,7 @@ def _render_empty_state() -> None:
         f"{greeting_for_now()}，开始第一个项目",
         "直接描述你的建筑想法或项目情况。"
         "不必先准备齐资料，也不必选择「有资料 / 没资料」。",
-        primary_label="告诉我你的想法",
+        primary_label="描述你的项目",
         primary_key="home_new_project_empty",
         on_primary=_go_create,
     )
@@ -194,14 +194,15 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     header_l, header_r = st.columns([3.2, 1])
     with header_l:
         st.markdown(f"### {snapshot.project_name}")
-        st.caption(f"{greeting_for_now()} · 当前项目工作台")
+        st.caption(f"{greeting_for_now()} · 当前项目")
         try:
-            from archium.application.workspace_mode_service import profile_for
-            from archium.ui.workspace_mode_chrome import resolve_ui_workspace_mode
+            from archium.ui.project_knowledge_profile import render_project_knowledge_strip
 
-            mode = resolve_ui_workspace_mode(snapshot.project_id)
-            profile = profile_for(mode)
-            st.caption(f"工作台模式：{profile.title} — {profile.focus}")
+            render_project_knowledge_strip(
+                snapshot.project_id,
+                compact=True,
+                show_known_unknown=False,
+            )
         except Exception:
             pass
     with header_r:

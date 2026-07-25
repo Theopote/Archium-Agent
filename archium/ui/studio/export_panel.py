@@ -390,7 +390,7 @@ def _render_quick_export_popover(
         if readiness.evidence.is_unknown:
             st.caption("资料状态无法验证，禁止正式导出。")
         elif readiness.evidence.is_concept_draft:
-            st.caption("概念草稿不可正式导出，请先绑定项目资料。")
+            st.caption("草稿预览不可正式导出，请先绑定项目资料。")
         elif not readiness.pptx_ready:
             st.caption("导出需先完成全部页面版式。")
         elif readiness.export_blocker_count > 0:

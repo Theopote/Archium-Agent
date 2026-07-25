@@ -306,7 +306,7 @@ def _render_web_research_settings() -> None:
     auto_on_concept = st.toggle(
         "概念探索规划时自动研究",
         value=prefs.auto_on_concept_planning,
-        help="在「从想法开始」分析任务后，若有待研究项则自动写入公开资料。",
+        help="在项目任务分析后，若有待研究项则自动写入公开资料。",
     )
     provider_options = ["tavily", "duckduckgo"]
     provider_index = (

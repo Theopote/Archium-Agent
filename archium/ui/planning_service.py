@@ -490,11 +490,11 @@ def assess_project_context(
     *,
     settings: Settings | None = None,
 ):
-    from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.application.context import ContextAnalyzer
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
-    return ContextIntelligenceService(session, llm, settings=runtime).assess_and_persist(
+    return ContextAnalyzer(session, llm, settings=runtime).assess_and_persist(
         project_id, user_text
     )
 
@@ -506,11 +506,11 @@ def reassess_project_context(
     user_text: str | None = None,
     settings: Settings | None = None,
 ):
-    from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.application.context import ContextAnalyzer
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
-    return ContextIntelligenceService(session, llm, settings=runtime).reassess(
+    return ContextAnalyzer(session, llm, settings=runtime).reassess(
         project_id, user_text=user_text
     )
 
@@ -521,9 +521,9 @@ def resolve_next_best_action_target(
     pending_fact_count: int = 0,
     conflict_fact_count: int = 0,
 ):
-    from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.application.context import resolve_action_target
 
-    return ContextIntelligenceService.resolve_action_target(
+    return resolve_action_target(
         action,
         pending_fact_count=pending_fact_count,
         conflict_fact_count=conflict_fact_count,
@@ -536,13 +536,11 @@ def try_execute_research_for_project(
     *,
     settings: Settings | None = None,
 ) -> tuple[bool, str]:
-    from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.application.context import ContextAnalyzer
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
-    return ContextIntelligenceService(session, llm, settings=runtime).try_execute_research(
-        project_id
-    )
+    return ContextAnalyzer(session, llm, settings=runtime).try_execute_research(project_id)
 
 
 def assess_entry_context(
@@ -552,13 +550,13 @@ def assess_entry_context(
     settings: Settings | None = None,
 ):
     """Assess before a project exists (no persistence)."""
-    from archium.application.context_intelligence_service import ContextIntelligenceService
+    from archium.application.context import ContextAnalyzer
     from archium.infrastructure.database.session import get_session
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     with get_session() as session:
-        return ContextIntelligenceService(session, llm, settings=runtime).assess_text(
+        return ContextAnalyzer(session, llm, settings=runtime).assess_text(
             user_text, project_name=project_name
         )
 

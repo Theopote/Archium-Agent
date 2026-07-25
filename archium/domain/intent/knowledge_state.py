@@ -29,6 +29,8 @@ class KnowledgeState(DomainModel):
     lifecycle_stage: str = ""
     recommended_workflow: str = ""
     primary_page_key: str = ""
+    fact_count: int = Field(default=0, ge=0)
+    source_count: int = Field(default=0, ge=0)
     assessed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     source: str = Field(default="initial", max_length=40)
 
