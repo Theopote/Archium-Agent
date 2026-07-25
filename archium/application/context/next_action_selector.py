@@ -15,19 +15,33 @@ def resolve_action_target(
     pending_fact_count: int = 0,
     conflict_fact_count: int = 0,
 ) -> ActionDispatch:
-    """Map NBA to an existing product page (no new pipeline)."""
+    """Map NBA to an existing product page (+ optional orchestration kickoff)."""
+    from archium.domain.orchestration import stage_hint_for_action
+
+    hint = stage_hint_for_action(action)
+    hint_value = hint.value if hint is not None else None
+
     if action == NextBestActionType.EXPLORE_DIRECTIONS:
         return ActionDispatch(
             page_key="concept-exploration",
             label="推演概念方向",
+            orchestration_action="start",
+            stage_hint=hint_value,
         )
     if action == NextBestActionType.UPLOAD_MATERIALS:
-        return ActionDispatch(page_key="materials", label="上传 / 整理资料")
+        return ActionDispatch(
+            page_key="materials",
+            label="上传 / 整理资料",
+            orchestration_action="start",
+            stage_hint=hint_value,
+        )
     if action == NextBestActionType.RESEARCH:
         return ActionDispatch(
             page_key="project-mission",
             mission_step=2,
             label="启动研究补充背景",
+            orchestration_action="start",
+            stage_hint=hint_value,
         )
     if action == NextBestActionType.ASK:
         if pending_fact_count > 0 or conflict_fact_count > 0:
@@ -41,6 +55,8 @@ def resolve_action_target(
             page_key="project-mission",
             mission_step=3,
             label="先澄清关键问题",
+            orchestration_action="start",
+            stage_hint=hint_value,
         )
     if action in {
         NextBestActionType.GENERATE_MISSION,
@@ -50,8 +66,14 @@ def resolve_action_target(
             page_key="project-mission",
             mission_step=1,
             label="打开项目任务",
+            orchestration_action="start",
+            stage_hint=hint_value,
         )
-    return ActionDispatch(page_key="project-mission", mission_step=1, label=action.value)
+    return ActionDispatch(
+        page_key="project-mission",
+        mission_step=1,
+        label=action.value,
+    )
 
 
 def default_actions_for_stage(

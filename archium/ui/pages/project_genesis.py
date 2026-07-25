@@ -257,6 +257,12 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 
     _render_intent_evidence_summary(project_id)
 
+    from uuid import UUID as _UUID
+
+    from archium.ui.components.orchestration_status import render_orchestration_status
+
+    render_orchestration_status(_UUID(project_id), key_prefix="genesis_orch")
+
     st.markdown("**建议下一步**")
     actions = [NextBestAction.model_validate(item) for item in payload.get("actions") or []]
     if not actions:

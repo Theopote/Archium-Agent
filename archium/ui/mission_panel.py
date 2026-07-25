@@ -792,6 +792,10 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
 
     _render_knowledge_state_summary(mission.project_id)
 
+    from archium.ui.components.orchestration_status import render_orchestration_status
+
+    render_orchestration_status(mission.project_id, key_prefix=f"{key_prefix}_orch")
+
     intent = _default_design_intent(mission)
     from archium.application.research_topics import collect_mission_research_topics
 

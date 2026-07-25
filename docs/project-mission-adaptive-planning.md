@@ -47,6 +47,18 @@ Brief → Storyline → SlideSpec → 审核 → 导出
 
 `origin_mode`（`concept_exploration` / `existing_project` / `research_programming`）由评估内部派生，**不再作为用户入口**。
 
+### Orchestration vs NBA vs Workstream execution
+
+| 层 | 职责 | 实现 |
+|----|------|------|
+| **NBA / RecommendedWorkflow** | 建议「下一步去哪」与默认阶段序列 | `next_action_selector`、`build_orchestration_plan` |
+| **Orchestration（A）** | 把建议变成 **durable 阶段运行**：启动/恢复 Planning / Presentation / Visual 等子图，或停在需用户操作的页面 | `WorkflowOrchestrationService`；`WorkflowRun.state.workflow_kind=orchestration` |
+| **Workstream execution（B）** | 把已选 `WorkstreamPlan` 按依赖拓扑编成 **动态 LangGraph**，逐节点调用研究/策略笔记等 Service | `WorkstreamExecutionService` + `workstream_execution_graph` |
+
+NBA **仍会跳页**；对可编排动作（如打开任务、研究、探索）会额外 `start`/`resume` 编排 run。工作路径执行发生在 Mission 选定 workstream 之后、汇报主链之前；未选路径则阶段自动 `SKIPPED`。
+
+不引入新 Agent 类：编排与执行均为 **Service + Domain + Workflow node**（见 `docs/architecture/pipeline-roles.md`）。
+
 领域字段 `DesignIntent`（嵌于 `ProjectMission.design_intent`）：
 
 - `theme`, `problem_statement`, `social_background`, `cultural_context`

@@ -29,6 +29,8 @@ class ActionDispatch:
     mission_step: int | None = None
     label: str = ""
     focus: str | None = None
+    orchestration_action: str = "none"  # start | resume | none
+    stage_hint: str | None = None
 
 
 @dataclass(frozen=True)
