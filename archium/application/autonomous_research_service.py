@@ -106,6 +106,16 @@ class AutonomousResearchService:
             design_context = (
                 f"{design_context}\n\n【研究问题 ResearchQuestions】\n{q_block}"
             ).strip()
+            from archium.application.architecture_case_library import (
+                ArchitectureCaseLibraryService,
+            )
+
+            library = ArchitectureCaseLibraryService()
+            case_block = library.format_prompt_block(
+                library.search_for_questions(list(questions), limit=2)
+            )
+            if case_block.strip():
+                design_context = f"{design_context}\n\n{case_block}".strip()
         result = self._run_bounded(
             project,
             topics=topics,

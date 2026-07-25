@@ -202,7 +202,10 @@ class ExplorationService:
             self._session, exploration.project_id
         )
         design_knowledge_block = format_design_knowledge_block(
-            self._session, exploration.project_id
+            self._session,
+            exploration.project_id,
+            query_hint=seed.raw_input,
+            design_intent=None,
         )
         draft = llm_generate_structured(
             self._llm,

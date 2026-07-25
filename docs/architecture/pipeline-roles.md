@@ -195,6 +195,10 @@ Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statem
 拆解分类问题（Social/Cultural/Architectural…），改写「案例堆砌」为问题表述；
 `research_topics` / 自主研究优先消费问题，而非裸关键词。
 
+**Phase H.2（ArchitectureCase）**：种子案例库 + 标签/问题重叠检索（非向量 RAG）；
+支持跨类型迁移（如「冥想」→ 温泉/小教堂）；注入 Concept / Research 语境，
+并可映射为 `DesignKnowledge`。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -360,4 +364,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase H.1 ResearchQuestion；Phase H DesignKnowledge；Phase G LLM Runtime。*
+*Last updated: 2026-07-25 — Phase H.2 ArchitectureCase；H.1 ResearchQuestion；H DesignKnowledge。*

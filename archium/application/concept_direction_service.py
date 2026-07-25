@@ -119,7 +119,10 @@ class ConceptDirectionService:
                     project_context=mission.project_context,
                     count=target_count,
                     design_knowledge_block=format_design_knowledge_block(
-                        self._session, mission.project_id
+                        self._session,
+                        mission.project_id,
+                        design_intent=mission.design_intent,
+                        query_hint=mission.task_statement or mission.title,
                     ),
                 ),
                 temperature=0.5,
