@@ -1372,3 +1372,47 @@ class LLMTraceORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     metadata_json: Mapped[dict[str, object]] = mapped_column(
         "metadata", JSON, nullable=False, default=dict
     )
+
+
+class BackgroundJobORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Durable background work queue (process-agnostic; not Streamlit-only)."""
+
+    __tablename__ = "background_jobs"
+    __table_args__ = (
+        Index("ix_background_jobs_status_created", "status", "created_at"),
+        Index("ix_background_jobs_project_id_created", "project_id", "created_at"),
+        Index("ix_background_jobs_kind", "kind"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(40), nullable=False, default="generic")
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="queued")
+    label: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    progress_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    message: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    payload_json: Mapped[dict[str, object]] = mapped_column("payload", JSON, nullable=False, default=dict)
+    result_json: Mapped[dict[str, object]] = mapped_column("result", JSON, nullable=False, default=dict)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class ProjectMemberORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Project membership for minimal RBAC."""
+
+    __tablename__ = "project_members"
+    __table_args__ = (
+        UniqueConstraint("project_id", "actor_id", name="uq_project_members_project_actor"),
+        Index("ix_project_members_project_id", "project_id"),
+        Index("ix_project_members_actor_id", "actor_id"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    actor_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    role: Mapped[str] = mapped_column(String(40), nullable=False, default="architect")

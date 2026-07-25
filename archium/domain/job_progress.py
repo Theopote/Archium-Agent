@@ -14,6 +14,7 @@ from archium.domain._base import DomainModel
 class JobKind(StrEnum):
     WORKFLOW = "workflow"
     ARTIFACT = "artifact"
+    BACKGROUND = "background"
 
 
 class JobProgressView(DomainModel):

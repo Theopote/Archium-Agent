@@ -1698,3 +1698,99 @@ def llm_trace_orm_to_dataclass(orm: "LLMTraceORM") -> "LLMTrace":
         error_type=orm.error_type,
         metadata={str(k): str(v) for k, v in (orm.metadata_json or {}).items()},
     )
+
+
+def background_job_to_domain(orm: "BackgroundJobORM") -> "BackgroundJob":
+    from archium.domain.background_job import (
+        BackgroundJob,
+        BackgroundJobKind,
+        BackgroundJobStatus,
+    )
+
+    try:
+        kind = BackgroundJobKind(orm.kind)
+    except ValueError:
+        kind = BackgroundJobKind.GENERIC
+    try:
+        status = BackgroundJobStatus(orm.status)
+    except ValueError:
+        status = BackgroundJobStatus.QUEUED
+    return BackgroundJob(
+        id=orm.id,
+        project_id=orm.project_id,
+        kind=kind,
+        status=status,
+        label=orm.label or "",
+        progress_pct=int(orm.progress_pct or 0),
+        message=orm.message or "",
+        payload=dict(orm.payload_json or {}),
+        result=dict(orm.result_json or {}),
+        error_message=orm.error_message,
+        started_at=orm.started_at,
+        completed_at=orm.completed_at,
+        attempts=int(orm.attempts or 0),
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def background_job_to_orm(
+    domain: "BackgroundJob",
+    orm: "BackgroundJobORM | None" = None,
+) -> "BackgroundJobORM":
+    from archium.infrastructure.database.models import BackgroundJobORM
+
+    target = orm or BackgroundJobORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.kind = domain.kind.value
+    target.status = domain.status.value
+    target.label = (domain.label or "")[:300]
+    target.progress_pct = int(domain.progress_pct or 0)
+    target.message = (domain.message or "")[:500]
+    target.payload_json = dict(domain.payload or {})
+    target.result_json = dict(domain.result or {})
+    target.error_message = domain.error_message
+    target.started_at = domain.started_at
+    target.completed_at = domain.completed_at
+    target.attempts = int(domain.attempts or 0)
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def project_member_to_domain(orm: "ProjectMemberORM") -> "ProjectMember":
+    from archium.domain.access import ProjectMember, ProjectRole
+
+    try:
+        role = ProjectRole(orm.role)
+    except ValueError:
+        role = ProjectRole.ARCHITECT
+    return ProjectMember(
+        id=orm.id,
+        project_id=orm.project_id,
+        actor_id=orm.actor_id,
+        display_name=orm.display_name or "",
+        role=role,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def project_member_to_orm(
+    domain: "ProjectMember",
+    orm: "ProjectMemberORM | None" = None,
+) -> "ProjectMemberORM":
+    from archium.infrastructure.database.models import ProjectMemberORM
+
+    target = orm or ProjectMemberORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.actor_id = domain.actor_id[:200]
+    target.display_name = (domain.display_name or "")[:200]
+    target.role = domain.role.value
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target

@@ -7,9 +7,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.domain.enums import ArtifactJobStatus, WorkflowStatus
+from archium.domain.background_job import BackgroundJobStatus
 from archium.domain.job_progress import JobKind, JobProgressView
 from archium.infrastructure.database.repositories import (
     ArtifactJobRepository,
+    BackgroundJobRepository,
     WorkflowRunRepository,
 )
 
@@ -69,6 +71,7 @@ class JobProgressService:
     def __init__(self, session: Session) -> None:
         self._workflows = WorkflowRunRepository(session)
         self._artifacts = ArtifactJobRepository(session)
+        self._background = BackgroundJobRepository(session)
 
     def list_for_project(
         self,
@@ -132,6 +135,31 @@ class JobProgressService:
                     message=(job.message or job.error_message or "")[:200],
                     updated_at=job.updated_at,
                     detail={"deliverable_id": job.deliverable_id},
+                )
+            )
+
+        try:
+            background = self._background.list_for_project(project_id, limit=24)
+        except Exception:
+            background = []
+        for job in background:
+            if active_only and job.status in {
+                BackgroundJobStatus.COMPLETED,
+                BackgroundJobStatus.FAILED,
+                BackgroundJobStatus.CANCELLED,
+            }:
+                continue
+            rows.append(
+                JobProgressView(
+                    job_id=job.id,
+                    project_id=project_id,
+                    kind=JobKind.BACKGROUND,
+                    label=job.label or f"后台 · {job.kind.value}",
+                    status=job.status.value,
+                    progress_pct=job.progress_pct,
+                    message=(job.message or job.error_message or "")[:200],
+                    updated_at=job.updated_at,
+                    detail={"kind": job.kind.value},
                 )
             )
 

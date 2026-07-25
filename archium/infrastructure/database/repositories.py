@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
+from archium.domain.background_job import BackgroundJob, BackgroundJobStatus
+from archium.domain.access import ProjectMember
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import CulturalNarrativePlan
@@ -40,6 +42,7 @@ from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
     ArtifactJobORM,
     AssetORM,
+    BackgroundJobORM,
     ConceptDirectionORM,
     ExplorationSessionORM,
     CulturalNarrativePlanORM,
@@ -54,6 +57,7 @@ from archium.infrastructure.database.models import (
     ProjectFactORM,
     ProjectKnowledgeItemORM,
     ProjectEventORM,
+    ProjectMemberORM,
     ProjectORM,
     LLMTraceORM,
     ReferenceStyleProfileORM,
@@ -147,6 +151,14 @@ class ProjectRepository:
                     dedupe_key=f"project_created:{project.id}",
                     source="project_repository",
                 )
+                try:
+                    from archium.application.project_access_service import (
+                        ProjectAccessService,
+                    )
+
+                    ProjectAccessService(self._session).ensure_default_owner(project.id)
+                except Exception:
+                    pass
             service.sync_from_intent_evolution(project.id, project.intent_evolution)
         except Exception:
             return
@@ -1688,3 +1700,139 @@ class LLMTraceRepository:
     def list_recent(self, *, limit: int = 50) -> list[LLMTrace]:
         stmt = select(LLMTraceORM).order_by(LLMTraceORM.created_at.desc()).limit(limit)
         return [mappers.llm_trace_orm_to_dataclass(row) for row in self._session.scalars(stmt)]
+
+
+class BackgroundJobRepository:
+    """Durable background job queue."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, job: BackgroundJob) -> BackgroundJob:
+        try:
+            orm = mappers.background_job_to_orm(job)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.background_job_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create background job", exc)
+            raise
+
+    def update(self, job: BackgroundJob) -> BackgroundJob:
+        try:
+            orm = self._session.get(BackgroundJobORM, job.id)
+            if orm is None:
+                raise RepositoryError(f"BackgroundJob {job.id} not found")
+            mappers.background_job_to_orm(job, orm)
+            self._session.flush()
+            return mappers.background_job_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update background job", exc)
+            raise
+
+    def get_by_id(self, job_id: UUID) -> BackgroundJob | None:
+        orm = self._session.get(BackgroundJobORM, job_id)
+        return mappers.background_job_to_domain(orm) if orm else None
+
+    def claim_next(self) -> BackgroundJob | None:
+        """Atomically claim the oldest queued job."""
+        try:
+            stmt = (
+                select(BackgroundJobORM)
+                .where(BackgroundJobORM.status == BackgroundJobStatus.QUEUED.value)
+                .order_by(BackgroundJobORM.created_at.asc())
+                .limit(1)
+            )
+            orm = self._session.scalars(stmt).first()
+            if orm is None:
+                return None
+            job = mappers.background_job_to_domain(orm)
+            job.mark_running(message=job.message or "running")
+            return self.update(job)
+        except SQLAlchemyError as exc:
+            _handle_error("claim background job", exc)
+            raise
+
+    def list_for_project(
+        self,
+        project_id: UUID,
+        *,
+        limit: int = 24,
+        status: BackgroundJobStatus | None = None,
+    ) -> list[BackgroundJob]:
+        stmt = (
+            select(BackgroundJobORM)
+            .where(BackgroundJobORM.project_id == project_id)
+            .order_by(BackgroundJobORM.created_at.desc())
+            .limit(limit)
+        )
+        if status is not None:
+            stmt = stmt.where(BackgroundJobORM.status == status.value)
+        return [mappers.background_job_to_domain(row) for row in self._session.scalars(stmt)]
+
+
+class ProjectMemberRepository:
+    """Project membership / RBAC persistence."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, member: ProjectMember) -> ProjectMember:
+        try:
+            orm = mappers.project_member_to_orm(member)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.project_member_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create project member", exc)
+            raise
+
+    def update(self, member: ProjectMember) -> ProjectMember:
+        try:
+            orm = self._session.get(ProjectMemberORM, member.id)
+            if orm is None:
+                raise RepositoryError(f"ProjectMember {member.id} not found")
+            mappers.project_member_to_orm(member, orm)
+            self._session.flush()
+            return mappers.project_member_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update project member", exc)
+            raise
+
+    def get_by_project_actor(
+        self, project_id: UUID, actor_id: str
+    ) -> ProjectMember | None:
+        stmt = (
+            select(ProjectMemberORM)
+            .where(
+                ProjectMemberORM.project_id == project_id,
+                ProjectMemberORM.actor_id == actor_id,
+            )
+            .limit(1)
+        )
+        orm = self._session.scalars(stmt).first()
+        return mappers.project_member_to_domain(orm) if orm else None
+
+    def list_for_project(self, project_id: UUID) -> list[ProjectMember]:
+        stmt = (
+            select(ProjectMemberORM)
+            .where(ProjectMemberORM.project_id == project_id)
+            .order_by(ProjectMemberORM.created_at.asc())
+        )
+        return [mappers.project_member_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def delete(self, member_id: UUID) -> bool:
+        try:
+            orm = self._session.get(ProjectMemberORM, member_id)
+            if orm is None:
+                return False
+            self._session.delete(orm)
+            self._session.flush()
+            return True
+        except SQLAlchemyError as exc:
+            _handle_error("delete project member", exc)
+            raise

@@ -33,6 +33,23 @@ class RepositoryError(ArchiumError):
     """Raised when a database repository operation fails."""
 
 
+class AccessDeniedError(ArchiumError):
+    """Raised when an actor lacks the required project permission."""
+
+    def __init__(
+        self,
+        message: str = "Access denied",
+        *,
+        project_id: UUID | None = None,
+        actor_id: str | None = None,
+        permission: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.project_id = project_id
+        self.actor_id = actor_id
+        self.permission = permission
+
+
 class WorkflowError(ArchiumError):
     """Raised when a workflow execution fails."""
 

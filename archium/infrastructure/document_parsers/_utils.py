@@ -14,6 +14,13 @@ _DOCX_SUFFIXES = {".docx"}
 _PPTX_SUFFIXES = {".pptx"}
 _XLSX_SUFFIXES = {".xlsx", ".xlsm"}
 _PDF_SUFFIXES = {".pdf"}
+_CAD_BIM_SUFFIXES = {
+    ".dwg": DocumentType.DWG,
+    ".dxf": DocumentType.DXF,
+    ".ifc": DocumentType.IFC,
+    ".rvt": DocumentType.RVT,
+    ".rfa": DocumentType.RVT,
+}
 
 
 def suffix_of(path: Path) -> str:
@@ -32,6 +39,8 @@ def infer_document_type(path: Path) -> DocumentType:
         return DocumentType.XLSX
     if suffix in _IMAGE_SUFFIXES:
         return DocumentType.IMAGE
+    if suffix in _CAD_BIM_SUFFIXES:
+        return _CAD_BIM_SUFFIXES[suffix]
     return DocumentType.OTHER
 
 

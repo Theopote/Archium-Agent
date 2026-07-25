@@ -9,6 +9,10 @@ class DocumentType(StrEnum):
     PPTX = "pptx"
     XLSX = "xlsx"
     IMAGE = "image"
+    DWG = "dwg"
+    DXF = "dxf"
+    IFC = "ifc"
+    RVT = "rvt"
     OTHER = "other"
 
 class ProcessingStatus(StrEnum):

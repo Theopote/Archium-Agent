@@ -31,10 +31,18 @@ def get_parser_for_path(file_path: Path, parsers: list[DocumentParser] | None = 
 
 def default_parsers() -> list[DocumentParser]:
     """Return all built-in document parsers."""
+    from archium.infrastructure.document_parsers.cad_bim_parser import CadBimParser
     from archium.infrastructure.document_parsers.docx_parser import DocxParser
     from archium.infrastructure.document_parsers.image_parser import ImageParser
     from archium.infrastructure.document_parsers.pdf_parser import PdfParser
     from archium.infrastructure.document_parsers.pptx_parser import PptxParser
     from archium.infrastructure.document_parsers.xlsx_parser import XlsxParser
 
-    return [PdfParser(), DocxParser(), PptxParser(), XlsxParser(), ImageParser()]
+    return [
+        PdfParser(),
+        DocxParser(),
+        PptxParser(),
+        XlsxParser(),
+        ImageParser(),
+        CadBimParser(),
+    ]

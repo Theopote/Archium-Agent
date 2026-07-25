@@ -281,7 +281,15 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
 - Workflow 完成时写入 `PRESENTATION_GENERATED` 事件；编排条挂任务进度。
 - Evaluation：`tests/evaluation/test_presentation_quality_eval.py`（Intent / Storyline /
   SlideRole / PresentationCritic 契约）。
-仍待：独立 Worker 队列、团队 RBAC、CAD/BIM 资产解析。
+
+**Phase N.2（Engineering P2）**：
+- 持久化 `background_jobs` 队列 + `BackgroundJobService` / `BackgroundJobWorker.process_once`
+  （与 Streamlit 内存 runner 解耦；`JobProgressService` 合并展示）。
+- 最小 RBAC：`project_members` + Owner / Architect / Reviewer / Client
+  （`ProjectAccessService`；新建项目默认本地 Owner）。
+- CAD/BIM：`DocumentType` 增 DWG/DXF/IFC/RVT；`CadBimParser` + `analyze_cad_bim_file`
+  元数据登记骨架（完整几何解析仍延后）。
+仍待：独立长驻 worker 进程、团队邀请 UI、IFC 空间语义抽取。
 
 ---
 
@@ -452,4 +460,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-26 — Phase N.1 项目模型档位 / Presentation eval / Job 编排条；Phase N 事件账本。*
+*Last updated: 2026-07-26 — Phase N.2 BackgroundJob / RBAC / CAD-BIM stub；N.1 模型档位。*
