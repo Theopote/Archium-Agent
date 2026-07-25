@@ -84,7 +84,31 @@ def test_generate_mission_concept_mode_persists_design_intent(
 
 
 def test_exploration_before_mission_commit_flow(db_session, concept_project) -> None:
+    from archium.infrastructure.llm.context_intelligence_schemas import (
+        ContextAssessmentDraft,
+        NextBestActionDraft,
+    )
     from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
+
+    def _ks() -> ContextAssessmentDraft:
+        return ContextAssessmentDraft(
+            completeness_score=0.28,
+            maturity_stage="concept_formation",
+            evidence_ratio=0.1,
+            assumption_ratio=0.8,
+            known={"type": "文化建筑"},
+            unknown=["规模"],
+            missing_information=["规模"],
+            suggested_origin_mode="concept_exploration",
+            understanding_summary="概念探索中。",
+            actions=[
+                NextBestActionDraft(
+                    action="explore_directions",
+                    reason="推演",
+                    priority=0,
+                ),
+            ],
+        )
 
     llm = MagicMock()
     llm.generate_structured.side_effect = [
@@ -118,6 +142,7 @@ def test_exploration_before_mission_commit_flow(db_session, concept_project) -> 
                 ),
             ]
         ),
+        _ks(),
         MissionGenerationDraft(
             title="黄土高原文化中心概念探索",
             task_statement="探索嵌入地域文化的小型文化中心",
@@ -136,6 +161,7 @@ def test_exploration_before_mission_commit_flow(db_session, concept_project) -> 
             clarifying_questions=[],
             knowledge_gaps=[],
         ),
+        _ks(),
     ]
 
     service = ExplorationService(db_session, llm)

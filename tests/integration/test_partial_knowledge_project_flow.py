@@ -243,6 +243,22 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
     )
 
     explore_llm = MagicMock()
+    def _ks() -> ContextAssessmentDraft:
+        return ContextAssessmentDraft(
+            completeness_score=0.35,
+            maturity_stage="concept_formation",
+            evidence_ratio=0.25,
+            assumption_ratio=0.7,
+            known={"location": "西安"},
+            unknown=["功能分区"],
+            missing_information=["功能分区"],
+            suggested_origin_mode="existing_project",
+            understanding_summary="部分资料改造任务。",
+            actions=[
+                NextBestActionDraft(action="explore_directions", reason="推演", priority=0),
+            ],
+        )
+
     explore_llm.generate_structured.side_effect = [
         IdeaSeedDraft(
             theme="医院老院区再生",
@@ -298,6 +314,7 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
                 ),
             ]
         ),
+        _ks(),
         MissionGenerationDraft(
             title="西安某医院老院区改造",
             task_statement="在部分资料条件下明确改造策略与待澄清问题",
@@ -311,6 +328,7 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
             clarifying_questions=[],
             knowledge_gaps=[],
         ),
+        _ks(),
     ]
 
     exploration_service = ExplorationService(db_session, explore_llm)

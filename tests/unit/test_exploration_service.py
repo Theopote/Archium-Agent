@@ -26,6 +26,10 @@ from archium.infrastructure.llm.mission_schemas import (
     DesignIntentDraft,
     MissionGenerationDraft,
 )
+from archium.infrastructure.llm.context_intelligence_schemas import (
+    ContextAssessmentDraft,
+    NextBestActionDraft,
+)
 from archium.prompts.concept_direction import build_exploration_direction_user_prompt
 
 
@@ -46,6 +50,28 @@ def _idea_seed_draft() -> IdeaSeedDraft:
         inspiration="人与黄土高原地貌的关系探索",
         keywords=["自然", "窑洞", "台地", "社区"],
         imagination_level="open",
+    )
+
+
+def _ks_draft() -> ContextAssessmentDraft:
+    """Stub for best_effort_reassess_knowledge after select/commit."""
+    return ContextAssessmentDraft(
+        completeness_score=0.28,
+        maturity_stage="concept_formation",
+        evidence_ratio=0.1,
+        assumption_ratio=0.8,
+        known={"type": "文化建筑"},
+        unknown=["规模"],
+        missing_information=["规模"],
+        suggested_origin_mode="concept_exploration",
+        understanding_summary="概念探索中，知识仍偏薄。",
+        actions=[
+            NextBestActionDraft(
+                action="explore_directions",
+                reason="继续方向推演",
+                priority=0,
+            ),
+        ],
     )
 
 
@@ -181,7 +207,9 @@ def test_generate_select_commit_creates_mission_without_prior_mission(
     llm.generate_structured.side_effect = [
         _idea_seed_draft(),
         _direction_batch(),
+        _ks_draft(),  # select_direction → best_effort_reassess
         _mission_draft(),
+        _ks_draft(),  # commit_to_mission → best_effort_reassess
     ]
     service = ExplorationService(db_session, llm)
 
@@ -231,7 +259,9 @@ def test_resolve_selected_falls_back_to_exploration_session(
     llm.generate_structured.side_effect = [
         _idea_seed_draft(),
         _direction_batch(),
+        _ks_draft(),
         _mission_draft(),
+        _ks_draft(),
     ]
     service = ExplorationService(db_session, llm)
     exploration = service.start_session(concept_project.id, "一句话想法").exploration
