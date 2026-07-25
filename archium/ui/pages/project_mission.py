@@ -206,6 +206,13 @@ def _load_snapshot(project_id: UUID) -> PlanningSnapshot:
     return snapshot
 
 
+def _set_mission_step(step: int) -> None:
+    """Set planner step; radio keys are applied on the next run before mount."""
+    value = int(step)
+    st.session_state.mission_step = value
+    st.session_state["_mission_step_force"] = value
+
+
 def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
     """Advance default step based on workflow gate when user has not chosen one."""
     gate = snapshot.review_gate
@@ -213,27 +220,28 @@ def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
     # step 3 after domain recovery / soft-patch (radio widget state can lag).
     if gate == "plan_approval":
         if st.session_state.mission_step < 4:
-            st.session_state.mission_step = 4
-            st.session_state["mission_step_nav"] = 4
-            st.session_state["mission_step_nav_embedded"] = 4
+            _set_mission_step(4)
         return
     if st.session_state.mission_step > 1:
         return
     if snapshot.mission is None:
-        st.session_state.mission_step = 1
+        _set_mission_step(1)
         return
     if gate in {"mission_correction", "clarification", "mission_approval"}:
-        st.session_state.mission_step = 2
+        _set_mission_step(2)
     elif snapshot.presentation_request is not None:
-        st.session_state.mission_step = 6
+        _set_mission_step(6)
     else:
-        st.session_state.mission_step = 2
+        _set_mission_step(2)
 
 
 def _render_step_nav(*, key: str = "mission_step_nav") -> int:
-    desired = int(st.session_state.mission_step)
-    if key not in st.session_state:
-        st.session_state[key] = desired
+    forced = st.session_state.pop("_mission_step_force", None)
+    if forced is not None:
+        st.session_state.mission_step = int(forced)
+        st.session_state[key] = int(forced)
+    elif key not in st.session_state:
+        st.session_state[key] = int(st.session_state.mission_step)
     step = st.radio(
         "规划步骤",
         options=list(range(1, 7)),
@@ -432,7 +440,7 @@ def _render_questions(snapshot: PlanningSnapshot, project_id: UUID) -> None:
 def _render_workstreams(snapshot: PlanningSnapshot) -> None:
     render_workstream_panel(snapshot.workstreams)
     if snapshot.workstreams and st.button("下一步：选择成果", use_container_width=True):
-        st.session_state.mission_step = 5
+        _set_mission_step(5)
         st.rerun()
 
 
@@ -445,7 +453,7 @@ def _render_deliverables(snapshot: PlanningSnapshot) -> None:
         "下一步：确认并开始执行",
         use_container_width=True,
     ):
-        st.session_state.mission_step = 6
+        _set_mission_step(6)
         st.rerun()
 
 
