@@ -1794,3 +1794,49 @@ def project_member_to_orm(
     if domain.updated_at is not None:
         target.updated_at = domain.updated_at
     return target
+
+
+def project_invite_to_domain(orm: "ProjectInviteORM") -> "ProjectInvite":
+    from archium.domain.access import ProjectInvite, ProjectRole
+
+    try:
+        role = ProjectRole(orm.role)
+    except ValueError:
+        role = ProjectRole.REVIEWER
+    return ProjectInvite(
+        id=orm.id,
+        project_id=orm.project_id,
+        code=orm.code,
+        role=role,
+        created_by=orm.created_by or "local-user",
+        expires_at=orm.expires_at,
+        max_uses=int(orm.max_uses or 1),
+        use_count=int(orm.use_count or 0),
+        revoked=bool(orm.revoked),
+        label=orm.label or "",
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def project_invite_to_orm(
+    domain: "ProjectInvite",
+    orm: "ProjectInviteORM | None" = None,
+) -> "ProjectInviteORM":
+    from archium.infrastructure.database.models import ProjectInviteORM
+
+    target = orm or ProjectInviteORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.code = domain.code[:40].upper()
+    target.role = domain.role.value
+    target.created_by = (domain.created_by or "local-user")[:200]
+    target.expires_at = domain.expires_at
+    target.max_uses = int(domain.max_uses or 1)
+    target.use_count = int(domain.use_count or 0)
+    target.revoked = bool(domain.revoked)
+    target.label = (domain.label or "")[:200]
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target

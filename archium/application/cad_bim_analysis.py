@@ -20,6 +20,7 @@ class CadAssetAnalysis:
     analysis: dict[str, object] = field(default_factory=dict)
 
     def as_metadata(self) -> dict[str, object]:
+        depth = str(self.analysis.get("parse_depth") or "metadata_only")
         return {
             "cad_bim": True,
             "format": self.format,
@@ -27,7 +28,7 @@ class CadAssetAnalysis:
             "size_bytes": self.size_bytes,
             "notes": list(self.notes),
             "analysis": dict(self.analysis),
-            "parse_depth": "metadata_only",
+            "parse_depth": depth,
         }
 
     def summary_text(self) -> str:
@@ -59,7 +60,7 @@ def is_cad_bim_path(path: Path) -> bool:
 def analyze_cad_bim_file(path: Path) -> CadAssetAnalysis:
     """Extract registration metadata for CAD/BIM uploads.
 
-    Does **not** claim room counts or full IFC graph parsing — that stays deferred.
+    IFC files get lightweight STEP text entity counts; full geometry stays deferred.
     """
     path = path.expanduser()
     suffix = path.suffix.lower()
@@ -77,7 +78,15 @@ def analyze_cad_bim_file(path: Path) -> CadAssetAnalysis:
     }
     if doc_type == DocumentType.IFC:
         analysis["schema_family"] = "IFC"
-        notes.append("IFC：适合后续楼层/空间语义提取（未在本版执行）")
+        from archium.application.ifc_text_semantics import extract_ifc_text_semantics
+
+        semantics = extract_ifc_text_semantics(path)
+        analysis["ifc_semantics"] = semantics.as_dict()
+        analysis["schema"] = semantics.schema
+        analysis["space_count"] = semantics.space_count
+        analysis["storey_count"] = semantics.storey_count
+        analysis["parse_depth"] = "ifc_text_semantics"
+        notes.extend(semantics.summary_lines())
     elif doc_type == DocumentType.RVT:
         analysis["authoring_tool"] = "Revit"
         notes.append("RVT：专有格式，建议导出 IFC/PDF 后再做深度知识抽取")

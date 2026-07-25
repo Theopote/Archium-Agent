@@ -1416,3 +1416,28 @@ class ProjectMemberORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     actor_id: Mapped[str] = mapped_column(String(200), nullable=False)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     role: Mapped[str] = mapped_column(String(40), nullable=False, default="architect")
+
+
+class ProjectInviteORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Shareable project invite codes."""
+
+    __tablename__ = "project_invites"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_project_invites_code"),
+        Index("ix_project_invites_project_id", "project_id"),
+        Index("ix_project_invites_code", "code"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    code: Mapped[str] = mapped_column(String(40), nullable=False)
+    role: Mapped[str] = mapped_column(String(40), nullable=False, default="reviewer")
+    created_by: Mapped[str] = mapped_column(String(200), nullable=False, default="local-user")
+    expires_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    use_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False, default="")

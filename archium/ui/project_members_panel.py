@@ -1,4 +1,4 @@
-"""Project membership / role panel (minimal RBAC chrome)."""
+"""Project membership / role / invite panel (minimal RBAC chrome)."""
 
 from __future__ import annotations
 
@@ -16,6 +16,8 @@ _ROLE_LABELS = {
     ProjectRole.CLIENT: "甲方 / 客户",
 }
 
+_INVITE_ROLES = [ProjectRole.ARCHITECT, ProjectRole.REVIEWER, ProjectRole.CLIENT]
+
 
 def render_project_members_panel(
     project_id: UUID,
@@ -23,14 +25,16 @@ def render_project_members_panel(
     key_prefix: str = "members",
     expanded: bool = False,
 ) -> None:
-    """List members and allow Owner to add a role (single-user ready)."""
+    """List members, create invite codes, and redeem invites."""
     from archium.application.project_access_service import ProjectAccessService
-    from archium.exceptions import AccessDeniedError
+    from archium.application.project_invite_service import ProjectInviteService
+    from archium.exceptions import AccessDeniedError, ValidationError
 
     with get_session() as session:
         access = ProjectAccessService(session)
         access.ensure_default_owner(project_id)
         members = access.list_members(project_id)
+        invites = ProjectInviteService(session).list_for_project(project_id, limit=8)
 
     with st.expander("项目成员与角色", expanded=expanded):
         st.caption("Owner / Architect / Reviewer / Client — 本地单用户默认已是负责人。")
@@ -57,19 +61,80 @@ def render_project_members_panel(
             actor = (actor_id or "").strip()
             if not actor:
                 st.warning("请填写成员 ID。")
-                return
+            else:
+                try:
+                    with get_session() as session:
+                        ProjectAccessService(session).add_member(
+                            project_id,
+                            actor,
+                            role,
+                            display_name=(display_name or "").strip(),
+                            actor=LOCAL_ACTOR_ID,
+                        )
+                    st.success(f"已更新成员 {actor}")
+                    st.rerun()
+                except AccessDeniedError as exc:
+                    st.error(str(exc))
+                except Exception as exc:
+                    st.error(f"无法更新成员：{exc}")
+
+        st.markdown("**邀请码**")
+        active = [i for i in invites if i.is_redeemable()]
+        if active:
+            for invite in active:
+                role_label = _ROLE_LABELS.get(invite.role, invite.role.value)
+                uses = f"{invite.use_count}/{invite.max_uses}"
+                st.code(invite.code, language=None)
+                st.caption(f"{role_label} · 已用 {uses}" + (f" · {invite.label}" if invite.label else ""))
+        else:
+            st.caption("暂无有效邀请码。")
+
+        with st.form(f"{key_prefix}_invite_{project_id}"):
+            invite_role = st.selectbox(
+                "邀请角色",
+                options=_INVITE_ROLES,
+                format_func=lambda r: _ROLE_LABELS.get(r, r.value),
+                index=1,
+            )
+            invite_label = st.text_input("备注", placeholder="例如：外部审阅")
+            create_invite = st.form_submit_button("生成邀请码", use_container_width=True)
+        if create_invite:
             try:
                 with get_session() as session:
-                    ProjectAccessService(session).add_member(
+                    invite = ProjectInviteService(session).create_invite(
                         project_id,
-                        actor,
-                        role,
-                        display_name=(display_name or "").strip(),
-                        actor=LOCAL_ACTOR_ID,
+                        invite_role,
+                        actor_id=LOCAL_ACTOR_ID,
+                        label=(invite_label or "").strip(),
                     )
-                st.success(f"已更新成员 {actor}")
+                st.success(f"邀请码：{invite.code}")
                 st.rerun()
-            except AccessDeniedError as exc:
+            except (AccessDeniedError, ValidationError) as exc:
                 st.error(str(exc))
             except Exception as exc:
-                st.error(f"无法更新成员：{exc}")
+                st.error(f"无法生成邀请码：{exc}")
+
+        with st.form(f"{key_prefix}_redeem_{project_id}"):
+            redeem_code = st.text_input("兑换邀请码", placeholder="粘贴邀请码")
+            redeem_actor = st.text_input("加入为成员 ID", value="guest-user")
+            redeem_name = st.text_input("显示名", placeholder="可选")
+            redeem = st.form_submit_button("兑换并加入", use_container_width=True)
+        if redeem:
+            try:
+                with get_session() as session:
+                    invite, member = ProjectInviteService(session).redeem(
+                        redeem_code,
+                        actor_id=(redeem_actor or "").strip() or "guest-user",
+                        display_name=(redeem_name or "").strip(),
+                    )
+                if invite.project_id != project_id:
+                    st.warning(
+                        f"已加入其他项目成员（{invite.project_id}）· 角色 {member.role.value}"
+                    )
+                else:
+                    st.success(f"已加入：{member.actor_id} · {member.role.value}")
+                st.rerun()
+            except ValidationError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(f"兑换失败：{exc}")

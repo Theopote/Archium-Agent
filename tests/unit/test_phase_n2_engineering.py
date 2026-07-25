@@ -194,3 +194,71 @@ def test_ingestion_enqueues_cad_analyze(
     assert any(
         j.kind == BackgroundJobKind.DOCUMENT_ANALYZE and str(j.id) == job_id for j in jobs
     )
+
+
+def test_project_invite_create_and_redeem(db_session: Session) -> None:
+    from archium.application.project_invite_service import ProjectInviteService
+    from archium.exceptions import ValidationError
+
+    project = ProjectRepository(db_session).create(Project(name="邀请", description=""))
+    invites = ProjectInviteService(db_session)
+    invite = invites.create_invite(
+        project.id,
+        ProjectRole.REVIEWER,
+        actor_id=LOCAL_ACTOR_ID,
+        label="外部审阅",
+        max_uses=2,
+        ttl_hours=24,
+    )
+    assert invite.is_redeemable()
+    assert len(invite.code) >= 6
+
+    _, member = invites.redeem(invite.code, actor_id="guest-1", display_name="访客")
+    assert member.role == ProjectRole.REVIEWER
+    assert member.actor_id == "guest-1"
+
+    refreshed = invites.get_by_code(invite.code)
+    assert refreshed is not None
+    assert refreshed.use_count == 1
+
+    with pytest.raises(ValidationError):
+        invites.create_invite(project.id, ProjectRole.OWNER, actor_id=LOCAL_ACTOR_ID)
+
+
+def test_ifc_text_semantics_counts(tmp_path: Path) -> None:
+    from archium.application.ifc_text_semantics import extract_ifc_text_semantics
+
+    ifc = tmp_path / "building.ifc"
+    ifc.write_text(
+        "\n".join(
+            [
+                "ISO-10303-21;",
+                "HEADER;",
+                "FILE_SCHEMA(('IFC4'));",
+                "ENDSEC;",
+                "DATA;",
+                "#1=IFCBUILDING('p1',$,'Main',$,$,$,$,$,$);",
+                "#2=IFCBUILDINGSTOREY('s1',$,'L1',$,$,$,$,$,$);",
+                "#3=IFCBUILDINGSTOREY('s2',$,'L2',$,$,$,$,$,$);",
+                "#4=IFCSPACE('sp1',$,'Lobby',$,$,$,$,$,$);",
+                "#5=IFCSPACE('sp2',$,'Office',$,$,$,$,$,$);",
+                "#6=IFCWALLSTANDARDCASE('w1',$,$,$,$,$,$,$,$);",
+                "#7=IFCDOOR('d1',$,$,$,$,$,$,$,$);",
+                "ENDSEC;",
+                "END-ISO-10303-21;",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    semantics = extract_ifc_text_semantics(ifc)
+    assert semantics.schema == "IFC4"
+    assert semantics.building_count == 1
+    assert semantics.storey_count == 2
+    assert semantics.space_count == 2
+    assert semantics.wall_count == 1
+    assert semantics.door_count == 1
+
+    analysis = analyze_cad_bim_file(ifc)
+    assert analysis.as_metadata()["parse_depth"] == "ifc_text_semantics"
+    assert analysis.analysis.get("space_count") == 2
+    assert "IFC schema" in "\n".join(analysis.notes)

@@ -295,7 +295,13 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
   （`--once` / `--poll` / `--max-jobs`）；Home 可手动 `process_once`。
 - CAD/BIM 导入后自动 `DOCUMENT_ANALYZE` 入队（`IngestionService`）。
 - Home「项目成员与角色」面板（`project_members_panel`）。
-仍待：长驻进程编排（systemd/Windows 服务）、邀请链接 UI、IFC 空间语义抽取。
+
+**Phase N.2.2（邀请码 + IFC 文本语义）**：
+- `project_invites` + `ProjectInviteService`（生成 / 兑换 / 撤销；角色限 architect/reviewer/client）。
+- Home 成员面板挂邀请码 UI。
+- IFC：`extract_ifc_text_semantics` 扫描 STEP 文本（schema / 空间 / 楼层 / 墙门窗计数）；
+  经 `analyze_cad_bim_file` 进入导入与 background analyze（非完整几何图）。
+仍待：systemd/Windows 服务编排（部署延后）、OAuth/邮件邀请、IFC 几何/拓扑解析。
 
 ---
 
@@ -466,4 +472,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-26 — Phase N.2.1 worker CLI / 导入入队 / 成员面板。*
+*Last updated: 2026-07-26 — Phase N.2.2 邀请码 / IFC 文本语义。*

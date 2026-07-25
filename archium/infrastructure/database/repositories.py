@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from archium.domain.asset import Asset
 from archium.domain.artifact_job import ArtifactJob
+from archium.domain.access import ProjectInvite, ProjectMember
 from archium.domain.background_job import BackgroundJob, BackgroundJobStatus
-from archium.domain.access import ProjectMember
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import CulturalNarrativePlan
@@ -60,6 +60,7 @@ from archium.infrastructure.database.models import (
     ProjectMemberORM,
     ProjectORM,
     LLMTraceORM,
+    ProjectInviteORM,
     ReferenceStyleProfileORM,
     RenovationIssueMapORM,
     ReviewIssueORM,
@@ -1836,3 +1837,55 @@ class ProjectMemberRepository:
         except SQLAlchemyError as exc:
             _handle_error("delete project member", exc)
             raise
+
+
+class ProjectInviteRepository:
+    """Project invite code persistence."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, invite: ProjectInvite) -> ProjectInvite:
+        try:
+            orm = mappers.project_invite_to_orm(invite)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.project_invite_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create project invite", exc)
+            raise
+
+    def update(self, invite: ProjectInvite) -> ProjectInvite:
+        try:
+            orm = self._session.get(ProjectInviteORM, invite.id)
+            if orm is None:
+                raise RepositoryError(f"ProjectInvite {invite.id} not found")
+            mappers.project_invite_to_orm(invite, orm)
+            self._session.flush()
+            return mappers.project_invite_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update project invite", exc)
+            raise
+
+    def get_by_id(self, invite_id: UUID) -> ProjectInvite | None:
+        orm = self._session.get(ProjectInviteORM, invite_id)
+        return mappers.project_invite_to_domain(orm) if orm else None
+
+    def get_by_code(self, code: str) -> ProjectInvite | None:
+        key = (code or "").strip().upper()
+        if not key:
+            return None
+        stmt = select(ProjectInviteORM).where(ProjectInviteORM.code == key).limit(1)
+        orm = self._session.scalars(stmt).first()
+        return mappers.project_invite_to_domain(orm) if orm else None
+
+    def list_for_project(self, project_id: UUID, *, limit: int = 20) -> list[ProjectInvite]:
+        stmt = (
+            select(ProjectInviteORM)
+            .where(ProjectInviteORM.project_id == project_id)
+            .order_by(ProjectInviteORM.created_at.desc())
+            .limit(limit)
+        )
+        return [mappers.project_invite_to_domain(row) for row in self._session.scalars(stmt)]
