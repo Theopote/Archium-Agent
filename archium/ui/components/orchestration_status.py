@@ -57,6 +57,17 @@ def render_orchestration_status(
             f" · 阶段 {plan.active_index + 1}/{len(plan.stages)}"
             f" · run `{str(run.id)[:8]}…`"
         )
+        try:
+            from archium.ui.project_event_panel import render_job_progress_strip
+
+            render_job_progress_strip(
+                project_id,
+                limit=3,
+                active_only=True,
+                title="相关任务进度",
+            )
+        except Exception:
+            pass
         gate_raw = run.state.get("human_gate")
         if isinstance(gate_raw, dict):
             try:

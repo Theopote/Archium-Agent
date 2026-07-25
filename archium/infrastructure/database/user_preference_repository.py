@@ -56,6 +56,57 @@ class UserPreferenceRepository:
             _handle_error("upsert user preference", exc)
             raise
 
+    def get_for_project(self, project_id, key: str) -> UserPreference | None:
+        from uuid import UUID
+
+        pid = project_id if isinstance(project_id, UUID) else UUID(str(project_id))
+        stmt = select(UserPreferenceORM).where(
+            UserPreferenceORM.key == key,
+            UserPreferenceORM.project_id == pid,
+        )
+        orm = self._session.scalar(stmt)
+        return mappers.user_preference_to_domain(orm) if orm else None
+
+    def upsert_for_project(
+        self,
+        project_id,
+        key: str,
+        value: Any,
+        *,
+        description: str | None = None,
+    ) -> UserPreference:
+        from uuid import UUID
+
+        pid = project_id if isinstance(project_id, UUID) else UUID(str(project_id))
+        try:
+            stmt = select(UserPreferenceORM).where(
+                UserPreferenceORM.key == key,
+                UserPreferenceORM.project_id == pid,
+            )
+            orm = self._session.scalar(stmt)
+            if orm is None:
+                pref = UserPreference(
+                    key=key,
+                    value=value,
+                    project_id=pid,
+                    description=description,
+                )
+                orm = mappers.user_preference_to_orm(pref)
+                self._session.add(orm)
+            else:
+                domain = mappers.user_preference_to_domain(orm)
+                domain.value = value
+                domain.project_id = pid
+                if description is not None:
+                    domain.description = description
+                domain.touch()
+                mappers.user_preference_to_orm(domain, orm)
+            self._session.flush()
+            return mappers.user_preference_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("upsert project preference", exc)
+            raise
+
     def delete_global(self, key: str) -> None:
         try:
             stmt = select(UserPreferenceORM).where(

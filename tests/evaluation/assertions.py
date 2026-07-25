@@ -67,3 +67,48 @@ def assert_critique_offers_counterexamples(report: DesignCritiqueReport) -> None
         or "可" in item.text
         for item in report.alternative_directions
     ), "evaluation: alternative_directions should read as counterexamples"
+
+
+def assert_presentation_intent_contract(intent) -> None:
+    """PresentationIntent must carry audience persuasion cues."""
+    assert intent is not None, "evaluation: PresentationIntent required"
+    assert_non_empty(intent.audience, field="PresentationIntent.audience")
+    assert_non_empty(intent.purpose, field="PresentationIntent.purpose")
+    assert_non_empty(intent.key_message, field="PresentationIntent.key_message")
+    assert_non_empty(
+        intent.persuasion_strategy,
+        field="PresentationIntent.persuasion_strategy",
+    )
+
+
+def assert_storyline_quality_contract(storyline) -> None:
+    assert storyline is not None, "evaluation: Storyline required"
+    assert_non_empty(storyline.thesis, field="Storyline.thesis")
+    assert storyline.chapters, "evaluation: Storyline must have chapters"
+    assert all(
+        (chapter.title or "").strip() and (chapter.key_message or "").strip()
+        for chapter in storyline.chapters
+    ), "evaluation: each chapter needs title and key_message"
+
+
+def assert_slides_have_roles(slides: list) -> None:
+    assert slides, "evaluation: slides required"
+    missing = [
+        slide.title
+        for slide in slides
+        if getattr(slide, "slide_role", None) is None
+    ]
+    assert not missing, (
+        "evaluation: every slide should have SlideRole; missing on: "
+        + "、".join(str(item) for item in missing[:5])
+    )
+
+
+def assert_presentation_critique_contract(report) -> None:
+    assert report is not None, "evaluation: PresentationCritiqueReport required"
+    assert 0.0 <= float(report.story_strength) <= 1.0
+    assert 0.0 <= float(report.visual_quality) <= 1.0
+    assert 0.0 <= float(report.architectural_expression) <= 1.0
+    assert report.suggestions or report.missing_points, (
+        "evaluation: critique should offer suggestions or missing_points"
+    )

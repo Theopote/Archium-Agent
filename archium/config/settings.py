@@ -138,6 +138,16 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LLM_MODEL", "GEMINI_MODEL"),
         description="Default chat/completion model name.",
     )
+    llm_fast_model: str | None = Field(
+        default="gemini-2.0-flash",
+        validation_alias=AliasChoices("LLM_FAST_MODEL"),
+        description="Fast model for concept exploration when project tier=fast.",
+    )
+    llm_quality_model: str | None = Field(
+        default="gemini-2.5-pro",
+        validation_alias=AliasChoices("LLM_QUALITY_MODEL"),
+        description="High-quality model for competition / formal decks when project tier=quality.",
+    )
     llm_max_retries: int = Field(default=2, ge=0, le=5, description="Maximum LLM request retries.")
     llm_repair_attempts: int = Field(
         default=2,

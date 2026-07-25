@@ -78,6 +78,8 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "llm_api_key": ConfigDomain.LLM,
     "llm_base_url": ConfigDomain.LLM,
     "llm_model": ConfigDomain.LLM,
+    "llm_fast_model": ConfigDomain.LLM,
+    "llm_quality_model": ConfigDomain.LLM,
     "llm_max_retries": ConfigDomain.LLM,
     "llm_max_concurrent_requests": ConfigDomain.LLM,
     "llm_repair_attempts": ConfigDomain.LLM,

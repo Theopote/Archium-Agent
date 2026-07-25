@@ -1017,12 +1017,48 @@ class WorkflowRunRepository:
             updated = mappers.workflow_run_to_domain(orm)
             try:
                 from archium.application.project_event_service import ProjectEventService
+                from archium.domain.enums import WorkflowStatus
+                from archium.domain.project_event import (
+                    ProjectEventActor,
+                    ProjectEventType,
+                )
 
-                ProjectEventService(self._session).sync_from_workflow_state(
+                events = ProjectEventService(self._session)
+                events.sync_from_workflow_state(
                     updated.project_id,
                     updated.id,
                     updated.state,
                 )
+                if updated.status == WorkflowStatus.COMPLETED:
+                    state = dict(updated.state or {})
+                    kind = str(state.get("workflow_kind") or "").strip().lower()
+                    if updated.presentation_id is not None or kind in {
+                        "presentation",
+                        "visual",
+                        "",
+                    }:
+                        title = str(
+                            state.get("presentation_title")
+                            or state.get("title")
+                            or "汇报"
+                        ).strip()
+                        events.emit(
+                            updated.project_id,
+                            ProjectEventType.PRESENTATION_GENERATED,
+                            f"完成生成：{title}",
+                            actor=ProjectEventActor.SYSTEM,
+                            payload={
+                                "workflow_run_id": str(updated.id),
+                                "presentation_id": (
+                                    str(updated.presentation_id)
+                                    if updated.presentation_id
+                                    else ""
+                                ),
+                                "workflow_kind": kind,
+                            },
+                            dedupe_key=f"presentation_generated:{updated.id}",
+                            source="workflow_run",
+                        )
             except Exception:
                 pass
             return updated

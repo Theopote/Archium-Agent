@@ -262,6 +262,17 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     except Exception:
         logger.exception("Failed to render home understanding panel")
 
+    try:
+        from archium.ui.llm_settings import render_project_llm_tier_selector
+
+        with st.expander("模型档位", expanded=False):
+            render_project_llm_tier_selector(
+                snapshot.project_id,
+                key_prefix="home_llm_tier",
+            )
+    except Exception:
+        logger.exception("Failed to render project LLM tier selector")
+
     st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
 
     if snapshot.outline_changes_pending:

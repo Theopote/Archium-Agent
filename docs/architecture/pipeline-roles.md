@@ -274,6 +274,13 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
 - `llm_traces` 持久化 LLMTrace（tokens/latency/capability；禁 prompt/密钥）；
   `FanoutLLMTraceRecorder` = 内存 + DB（`llm_trace_persist_enabled`）。
 - `JobProgressService` 统一 WorkflowRun + ArtifactJob 进度视图；Home 展示事件记忆与任务进度。
+
+**Phase N.1（Engineering P1）**：
+- 项目级模型档位 `fast` / `quality`（`ProjectLLMTierService` + `llm_fast_model` /
+  `llm_quality_model`；Home 可选；`get_effective_settings(project_id=…)` 生效）。
+- Workflow 完成时写入 `PRESENTATION_GENERATED` 事件；编排条挂任务进度。
+- Evaluation：`tests/evaluation/test_presentation_quality_eval.py`（Intent / Storyline /
+  SlideRole / PresentationCritic 契约）。
 仍待：独立 Worker 队列、团队 RBAC、CAD/BIM 资产解析。
 
 ---
@@ -445,4 +452,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-26 — Phase N ProjectEvent / LLMTrace 落库 / JobProgress；Phase M.1 UI。*
+*Last updated: 2026-07-26 — Phase N.1 项目模型档位 / Presentation eval / Job 编排条；Phase N 事件账本。*
