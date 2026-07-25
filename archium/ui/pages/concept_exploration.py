@@ -34,6 +34,9 @@ def render() -> None:
         "概念探索",
         "从一句话想法解读 IdeaSeed、推演可比较方向，选定后再生成设计使命与项目任务。",
     )
+    critique_warnings = st.session_state.pop("design_critique_warnings", None)
+    if critique_warnings:
+        st.warning("设计批判（选定前独立质疑）\n\n" + "\n\n".join(critique_warnings))
 
     with get_session() as session:
         projects = list_projects(session)
@@ -207,7 +210,10 @@ def render() -> None:
             ):
                 try:
                     with get_session() as session:
-                        select_exploration_direction(session, direction.id)
+                        selection = select_exploration_direction(session, direction.id)
+                    st.session_state["design_critique_warnings"] = list(
+                        getattr(selection, "critique_warnings", None) or []
+                    )
                     st.success(f"已选中「{direction.title}」。")
                     st.rerun()
                 except WorkflowError as exc:

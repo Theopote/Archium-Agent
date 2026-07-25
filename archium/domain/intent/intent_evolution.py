@@ -21,6 +21,7 @@ class IntentEvolutionKind(StrEnum):
     AI_UNDERSTANDING = "ai_understanding"
     RESEARCH = "research"
     DIRECTION_SELECTED = "direction_selected"
+    DESIGN_CRITIQUE = "design_critique"
     MISSION_COMMIT = "mission_commit"
     MISSION_APPROVED = "mission_approved"
     EVIDENCE = "evidence"

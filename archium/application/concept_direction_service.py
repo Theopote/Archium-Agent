@@ -45,6 +45,8 @@ class ConceptDirectionSelectionResult:
     direction: ConceptDirection
     mission: ProjectMission
     directions: list[ConceptDirection] = field(default_factory=list)
+    critique_warnings: list[str] = field(default_factory=list)
+    critique_report: object | None = None
 
 
 class ConceptDirectionService:
@@ -144,6 +146,12 @@ class ConceptDirectionService:
             raise WorkflowError("已归档的概念方向不能选为当前方向")
 
         mission = self._require_mission(direction.mission_id)
+        critique_gate = self._run_design_critique(
+            direction,
+            design_intent=mission.design_intent,
+        )
+        critique_warnings = list(critique_gate.warnings)
+
         siblings = self._directions.list_by_mission(direction.mission_id)
         for sibling in siblings:
             if sibling.id == direction.id:
@@ -177,6 +185,8 @@ class ConceptDirectionService:
             direction=refreshed,
             mission=mission,
             directions=self._directions.list_by_mission(direction.mission_id),
+            critique_warnings=critique_warnings,
+            critique_report=critique_gate.report,
         )
 
     def archive_direction(self, direction_id: UUID) -> ConceptDirection:
@@ -251,6 +261,40 @@ class ConceptDirectionService:
         if ctx is None or ctx.knowledge_state is None:
             return {}
         return dict(ctx.knowledge_state.known)
+
+    def _run_design_critique(
+        self,
+        direction: ConceptDirection,
+        *,
+        design_intent=None,
+    ):
+        from archium.application.review.design_critique_service import DesignCritiqueService
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        project = ProjectRepository(self._session).get_by_id(direction.project_id)
+        knowledge_state = project.knowledge_state if project is not None else None
+        research_summaries: list[str] = []
+        try:
+            from archium.infrastructure.database.repositories import (
+                ProjectKnowledgeRepository,
+            )
+
+            for item in ProjectKnowledgeRepository(self._session).list_by_project(
+                direction.project_id
+            )[:8]:
+                statement = (getattr(item, "statement", None) or "").strip()
+                if statement:
+                    research_summaries.append(statement[:300])
+        except Exception:  # noqa: BLE001
+            pass
+        return DesignCritiqueService(
+            self._session, self._llm, settings=self._settings
+        ).enforce_on_select(
+            direction,
+            design_intent=design_intent,
+            knowledge_state=knowledge_state,
+            research_summaries=research_summaries,
+        )
 
     def _require_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._missions.get_mission(mission_id)

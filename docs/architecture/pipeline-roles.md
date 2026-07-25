@@ -199,9 +199,16 @@ topic → search → write → INDEX reassess；停条件为 max_steps /
 | 四层审核 | `application/review/service.py` |
 | 语义 / 场景 | `slide_semantic.py`、`scene_render_qa.py` |
 | 视觉只读 | `visual_critic_service.py`、`deck_qa_service.py` |
+| **设计批判（Phase D）** | `design_critique_service.py` → `DesignCritiqueReport` |
+| Domain | `ReviewIssue`、`VisualCriticReport`、`design_critique.py` |
 | 修复（非 Critic） | `slide_repair_service.py`、`layout_repair_service.py`、`deck_repair_service.py` |
 
-**输出契约**：`ReviewFinding`；Critic **不**直接改稿。
+**输出契约**：`ReviewFinding` / `DesignCritiqueReport`；Critic **不**直接改稿。
+
+**Architectural Critic**：在 Exploration / Mission `select_direction` 前质疑概念方向
+（strengths / weaknesses / missing_evidence / alternative_directions）。
+闸门：`DESIGN_CRITIQUE_ON_SELECT`（默认 `warn`）。写入 IntentEvolution
+`DESIGN_CRITIQUE`，不静默改方向。
 
 ---
 
@@ -263,6 +270,7 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 2. **Architecture 分散**——尚未有单一 facade（仍不因此新开 Agent）。
 3. **Narrative ↔ Visual 弱耦合**——靠 `SlideSpec` / co-plan 衔接。
 4. **Critic 权限分裂**——内容/版面 review 可触发 repair；visual critic 只读。
+   设计批判（`DesignCritiqueReport`）已挂 select 前 warn 闸门；UI 展示与 commit 硬阻断仍可加深。
 5. **Template induction** 与 LayoutPlan 主路径仍在收敛。
 
 ## 非目标

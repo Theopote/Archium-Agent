@@ -430,6 +430,10 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     """Minimal design-iteration UI: generate and select 2–3 concept direction drafts."""
     from pathlib import Path
 
+    critique_warnings = st.session_state.pop("design_critique_warnings", None)
+    if critique_warnings:
+        st.warning("设计批判（选定前独立质疑）\n\n" + "\n\n".join(critique_warnings))
+
     from archium.application.design_iteration_status import (
         format_vision_user_warning,
         visual_brief_status_label,
@@ -589,7 +593,10 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 ):
                     try:
                         with get_session() as session:
-                            select_concept_direction(session, direction.id)
+                            selection = select_concept_direction(session, direction.id)
+                        st.session_state["design_critique_warnings"] = list(
+                            getattr(selection, "critique_warnings", None) or []
+                        )
                         st.success(f"已选中「{direction.title}」，并写回设计使命。")
                         st.rerun()
                     except WorkflowError as exc:

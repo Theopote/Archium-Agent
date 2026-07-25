@@ -66,6 +66,8 @@ class ExplorationSelectionResult:
     exploration: ExplorationSession
     direction: ConceptDirection
     directions: list[ConceptDirection] = field(default_factory=list)
+    critique_warnings: list[str] = field(default_factory=list)
+    critique_report: object | None = None
 
 
 @dataclass
@@ -243,6 +245,9 @@ class ExplorationService:
         if exploration.status == ExplorationSessionStatus.COMMITTED:
             raise WorkflowError("已提交的探索不能更换方向")
 
+        critique_gate = self._run_design_critique(direction, design_intent=None)
+        critique_warnings = list(critique_gate.warnings) if critique_gate else []
+
         siblings = self._directions.list_by_exploration(exploration.id)
         previous_selected = next(
             (
@@ -297,6 +302,24 @@ class ExplorationService:
                 "theme": refreshed.theme,
             },
         )
+        if critique_gate is not None and critique_gate.report.verdict.value != "proceed":
+            self._append_intent_evolution(
+                exploration.project_id,
+                IntentEvolutionKind.DESIGN_CRITIQUE,
+                f"设计批判：{critique_gate.report.summary or critique_gate.report.verdict.value}",
+                trigger="选定前设计批判",
+                previous_summary=new_label,
+                new_summary=critique_gate.report.verdict.value,
+                reason=(critique_gate.report.summary or "独立批判报告")[:500],
+                evidence_refs=[
+                    item.text
+                    for item in (
+                        critique_gate.report.weaknesses
+                        + critique_gate.report.missing_evidence
+                    )[:6]
+                ],
+                design_intent_snapshot=critique_gate.report.as_dict(),
+            )
         self._session.commit()
         from archium.application.context import best_effort_reassess_knowledge
 
@@ -312,6 +335,8 @@ class ExplorationService:
             exploration=exploration,
             direction=refreshed,
             directions=self._directions.list_by_exploration(exploration.id),
+            critique_warnings=critique_warnings,
+            critique_report=critique_gate.report if critique_gate else None,
         )
 
     def commit_to_mission(self, exploration_id: UUID) -> ExplorationCommitResult:
@@ -511,6 +536,40 @@ class ExplorationService:
         if ctx is None or ctx.knowledge_state is None:
             return {}
         return dict(ctx.knowledge_state.known)
+
+    def _run_design_critique(
+        self,
+        direction: ConceptDirection,
+        *,
+        design_intent=None,
+    ):
+        """Independent Architectural Critic before direction hardens (warn/block)."""
+        from archium.application.review.design_critique_service import DesignCritiqueService
+
+        project = self._projects.get_by_id(direction.project_id)
+        knowledge_state = project.knowledge_state if project is not None else None
+        research_summaries: list[str] = []
+        try:
+            from archium.infrastructure.database.repositories import (
+                ProjectKnowledgeRepository,
+            )
+
+            for item in ProjectKnowledgeRepository(self._session).list_by_project(
+                direction.project_id
+            )[:8]:
+                statement = (getattr(item, "statement", None) or "").strip()
+                if statement:
+                    research_summaries.append(statement[:300])
+        except Exception:  # noqa: BLE001
+            pass
+        return DesignCritiqueService(
+            self._session, self._llm, settings=self._settings
+        ).enforce_on_select(
+            direction,
+            design_intent=design_intent,
+            knowledge_state=knowledge_state,
+            research_summaries=research_summaries,
+        )
 
     @staticmethod
     def _task_description_from_seed(

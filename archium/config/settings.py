@@ -535,6 +535,14 @@ class Settings(BaseSettings):
             "auto_research=run one RESEARCH NBA when suggested then proceed."
         ),
     )
+    design_critique_on_select: str = Field(
+        default="warn",
+        description=(
+            "Architectural design critique when selecting a ConceptDirection: "
+            "off | warn | block. warn=attach DesignCritiqueReport; "
+            "block=refuse when verdict is reject."
+        ),
+    )
 
     # ── repair.* ─────────────────────────────────────────────────────────────
     slide_repair_enabled: bool = Field(

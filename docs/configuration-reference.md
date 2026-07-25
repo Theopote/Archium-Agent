@@ -53,6 +53,7 @@ Do not edit them manually.
 | `LLM_MAX_CONCURRENT_REQUESTS` | `5` | No | Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion. |
 | `SLIDE_PER_PAGE_GENERATION` | `true` | No | When true, SlidePlanService invokes the LLM once per page with SlideGenerationContext instead of one batch SlidePlan call. |
 | `PRESENTATION_COGNITION_GATE` | `warn` | No | Narrative entry gate from KnowledgeState: `off` (observe only), `warn` (default, never block), `block` (refuse when verdict is BLOCK), `auto_research` (run one RESEARCH NBA when suggested, then proceed with warnings). |
+| `DESIGN_CRITIQUE_ON_SELECT` | `warn` | No | Architectural design critique when selecting a ConceptDirection: `off` \| `warn` \| `block`. Default warn attaches `DesignCritiqueReport`; block refuses when verdict is reject. |
 
 ## Embedding {#embedding}
 
