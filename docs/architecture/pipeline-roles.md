@@ -111,9 +111,9 @@ flowchart LR
 
 | 类型 | 路径 |
 |------|------|
-| Agent | `narrative_architect.py`、`outline_planner.py`、`slide_planner.py`、`brief_builder.py` |
+| Planner（propose） | `agents/narrative_architect.py`、`outline_planner.py`、`brief_builder.py` 等 |
 | 场景特化 | `cultural_narrative_planner.py`、`renovation_issue_planner.py`（偏 Visual 边界） |
-| Service | `presentation_service.py`、`outline_service.py` |
+| Service | `application/narrative/*`、`presentation_service.py` |
 | Domain | `Brief`、`Storyline`、`OutlinePlan`、`SlideSpec` |
 | WorkflowStep | `BRIEF`、`STORYLINE`、`OUTLINE`、`SLIDES` + 各 `REVIEW_*` |
 
@@ -209,18 +209,19 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ## Agent 类边界（刻意保持稀少）
 
-`archium/agents/` 当前仅保留**需要 LLM 且边界清晰**的 planner：
+`archium/agents/` 仅保留 **LLM propose（无 Session / 无 persist）** 的 planner。
+持久化与编排在 `application/narrative/*Service`（Brief / Storyline / Outline / SlidePlan 等）。
 
-| Agent | 主要角色 |
-|-------|---------|
-| `brief_builder` | Narrative |
-| `narrative_architect` | Narrative |
-| `outline_planner` | Narrative |
-| `slide_planner` | Narrative |
-| `cultural_narrative_planner` | Narrative + Visual |
-| `renovation_issue_planner` | Visual（专业语义） |
-| `citations` | Research |
-| `reference_style_profiler` | Visual（风格，非版式） |
+| Planner（propose） | 主要角色 | Service（persist） |
+|-------|---------|-------------------|
+| `brief_builder` | Narrative | `BriefService` |
+| `narrative_architect` | Narrative | `StorylineService` |
+| `outline_planner` | Narrative | `OutlinePlanService` |
+| —（LLM 仍内联） | Narrative | `SlidePlanService` |
+| `cultural_narrative_planner` | Narrative + Visual | `CulturalNarrativeService` |
+| `renovation_issue_planner` | Visual（专业语义） | `RenovationIssueMapService` |
+| `citations` | Research | （工具辅助） |
+| `reference_style_profiler` | Visual（风格，非版式） | `ReferenceStyleProfileService` |
 
 **严禁新增**：
 

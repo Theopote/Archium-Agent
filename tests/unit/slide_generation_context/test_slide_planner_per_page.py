@@ -1,11 +1,11 @@
-"""Unit tests for per-page SlidePlanner generation."""
+"""Unit tests for per-page SlidePlanService generation."""
 
 from __future__ import annotations
 
 from uuid import UUID
 
 import pytest
-from archium.agents.slide_planner import SlidePlanner
+from archium.application.narrative.slide_plan_service import SlidePlanService
 from archium.config.settings import Settings
 from archium.domain.enums import PresentationType
 from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
@@ -73,8 +73,8 @@ def test_slide_planner_per_page_invokes_llm_per_slot(
         slide_per_page_generation=True,
         retrieval_enabled=False,
     )
-    planner = SlidePlanner(db_session, mock_llm, settings=settings)
-    slides = planner.generate(
+    service = SlidePlanService(db_session, mock_llm, settings=settings)
+    slides = service.generate(
         project_id,
         brief,
         storyline,
@@ -122,8 +122,8 @@ def test_slide_planner_batch_mode_single_call(
         slide_per_page_generation=False,
         retrieval_enabled=False,
     )
-    planner = SlidePlanner(db_session, mock_llm, settings=settings)
-    slides = planner.generate(
+    service = SlidePlanService(db_session, mock_llm, settings=settings)
+    slides = service.generate(
         project_id,
         brief,
         storyline,

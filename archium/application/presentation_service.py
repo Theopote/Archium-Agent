@@ -6,13 +6,15 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.agents.brief_builder import BriefBuilder
-from archium.agents.cultural_narrative_planner import CulturalNarrativePlanner
-from archium.agents.narrative_architect import NarrativeArchitect
-from archium.agents.outline_planner import OutlinePlanner
-from archium.agents.reference_style_profiler import ReferenceStyleProfiler
-from archium.agents.renovation_issue_planner import RenovationIssueMapPlanner
-from archium.agents.slide_planner import SlidePlanner
+from archium.application.narrative.brief_service import BriefService
+from archium.application.narrative.outline_plan_service import OutlinePlanService
+from archium.application.narrative.slide_plan_service import SlidePlanService
+from archium.application.narrative.specialty_plan_services import (
+    CulturalNarrativeService,
+    ReferenceStyleProfileService,
+    RenovationIssueMapService,
+)
+from archium.application.narrative.storyline_service import StorylineService
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
@@ -35,7 +37,10 @@ logger = get_logger(__name__, operation="presentation")
 
 
 class PresentationService:
-    """Atomic presentation generation capabilities used by the LangGraph workflow."""
+    """Atomic presentation generation capabilities used by the LangGraph workflow.
+
+    Orchestrates Narrative **Services** (persist) and LLM **planners** (propose).
+    """
 
     def __init__(
         self,
@@ -51,13 +56,19 @@ class PresentationService:
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
         self._projects = ProjectRepository(session)
-        self._brief_builder = BriefBuilder(session, llm, settings=self._settings)
-        self._cultural_narrative = CulturalNarrativePlanner(session, llm, settings=self._settings)
-        self._renovation_issue_map = RenovationIssueMapPlanner(session, llm, settings=self._settings)
-        self._reference_style = ReferenceStyleProfiler(session, llm, settings=self._settings)
-        self._narrative = NarrativeArchitect(session, llm, settings=self._settings)
-        self._outline = OutlinePlanner(session, llm, settings=self._settings)
-        self._slide_planner = SlidePlanner(session, llm, settings=self._settings)
+        self._brief = BriefService(session, llm, settings=self._settings)
+        self._cultural_narrative = CulturalNarrativeService(
+            session, llm, settings=self._settings
+        )
+        self._renovation_issue_map = RenovationIssueMapService(
+            session, llm, settings=self._settings
+        )
+        self._reference_style = ReferenceStyleProfileService(
+            session, llm, settings=self._settings
+        )
+        self._storyline = StorylineService(session, llm, settings=self._settings)
+        self._outline = OutlinePlanService(session, llm, settings=self._settings)
+        self._slide_planner = SlidePlanService(session, llm, settings=self._settings)
         self._renderer = renderer or JsonPresentationRenderer(self._settings)
         self._marp_renderer = marp_renderer or MarpPresentationRenderer(self._settings)
 
@@ -81,7 +92,7 @@ class PresentationService:
         *,
         manuscript: PresentationManuscript | None = None,
     ) -> PresentationBrief:
-        return self._brief_builder.generate(
+        return self._brief.generate(
             project_id,
             presentation_id,
             request,
@@ -119,7 +130,7 @@ class PresentationService:
         manuscript: PresentationManuscript | None = None,
         use_manuscript_pipeline: bool = False,
     ) -> Storyline:
-        return self._narrative.generate(
+        return self._storyline.generate(
             project_id,
             brief,
             cultural_narrative=cultural_narrative,

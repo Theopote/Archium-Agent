@@ -1,22 +1,8 @@
-"""Generate editable outline plans from storylines."""
+"""Generate outline plans — LLM proposal only (no Session)."""
 
 from __future__ import annotations
 
-from uuid import UUID
-
-from sqlalchemy.orm import Session
-
-from archium.agents._helpers import (
-    build_retrieval_query_from_storyline,
-    resolve_design_context_text,
-    to_json,
-)
-from archium.application.mission_context_bridge import (
-    enrich_mission_generation_context,
-    resolve_project_mission,
-)
-from archium.application.artifact_history_service import OutlineHistoryService
-from archium.application.artifact_lineage import apply_outline_lineage
+from archium.agents._helpers import to_json
 from archium.application.cultural_narrative_service import format_narrative_for_prompt
 from archium.application.outline_service import (
     infer_audience_mode,
@@ -27,14 +13,12 @@ from archium.application.outline_templates import detect_scenario_template, temp
 from archium.application.renovation_issue_service import format_issue_map_for_prompt
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
-from archium.domain.enums import OutlineAudienceMode, RevisionSource
+from archium.domain.enums import OutlineAudienceMode
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline
-from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_intent import SlideIntent
-from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import OutlinePlanDraft
 from archium.prompts.outline_planning import (
@@ -44,54 +28,46 @@ from archium.prompts.outline_planning import (
 
 
 class OutlinePlanner:
-    """Generate OutlinePlan between Storyline and SlideSpec."""
+    """Narrative planner: propose OutlinePlan from storyline + context text.
+
+    Does **not** read/write the database. Persistence belongs to ``OutlinePlanService``.
+    """
 
     def __init__(
         self,
-        session: Session,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
     ) -> None:
-        self._session = session
         self._llm = llm
         self._settings = settings or get_settings()
-        self._presentations = PresentationRepository(session)
-        self._history = OutlineHistoryService(session)
 
-    def generate(
+    def propose(
         self,
-        project_id: UUID,
         brief: PresentationBrief,
         storyline: Storyline,
         *,
+        project_context: str,
+        version: int = 1,
+        audience_mode: OutlineAudienceMode | None = None,
         cultural_narrative: CulturalNarrativePlan | None = None,
         renovation_issue_map: RenovationIssueMap | None = None,
-        manuscript: PresentationManuscript | None = None,
-        use_manuscript_pipeline: bool = False,
-        version: int | None = None,
-        audience_mode: OutlineAudienceMode | None = None,
         page_intents: list[SlideIntent] | None = None,
         page_asset_bindings: list[SlideAssetBinding] | None = None,
+        previous: OutlinePlan | None = None,
     ) -> OutlinePlan:
-        previous_outlines = self._presentations.list_outlines(brief.presentation_id)
-        previous = previous_outlines[0] if previous_outlines else None
-        if previous is not None:
-            self._history.archive_before_regeneration(previous)
-
-        if version is None:
-            version = (previous.version + 1) if previous is not None else 1
-
         mode = audience_mode or infer_audience_mode(brief.audience, brief.purpose)
         fallback = merge_template_with_storyline(brief, storyline)
 
         if not self._settings.llm_configured:
-            _attach_page_intents(fallback, page_intents=page_intents, previous=previous)
+            outline = fallback.model_copy(deep=True)
+            outline.version = version
+            outline.audience_mode = mode
+            _attach_page_intents(outline, page_intents=page_intents, previous=previous)
             _attach_page_asset_bindings(
-                fallback, page_asset_bindings=page_asset_bindings, previous=previous
+                outline, page_asset_bindings=page_asset_bindings, previous=previous
             )
-            saved = self._persist(fallback, brief, version, previous)
-            return saved
+            return outline
 
         template_key = detect_scenario_template(
             required_sections=list(brief.required_sections),
@@ -105,24 +81,6 @@ class OutlinePlanner:
                 for section in template_sections(template_key)[:12]
             )
 
-        project_context = resolve_design_context_text(
-            self._session,
-            project_id,
-            manuscript=manuscript,
-            use_manuscript_pipeline=use_manuscript_pipeline,
-            query=build_retrieval_query_from_storyline(brief, storyline),
-            settings=self._settings,
-        )
-        mission = resolve_project_mission(
-            self._session,
-            project_id,
-            presentation_id=brief.presentation_id,
-        )
-        project_context = enrich_mission_generation_context(
-            self._session,
-            project_context,
-            mission,
-        )
         draft = self._llm.generate_structured(
             LLMRequest(
                 system_prompt=OUTLINE_PLAN_SYSTEM_PROMPT,
@@ -156,27 +114,7 @@ class OutlinePlanner:
         _attach_page_asset_bindings(
             outline, page_asset_bindings=page_asset_bindings, previous=previous
         )
-
-        saved = self._persist(outline, brief, version, previous)
-        return saved
-
-    def _persist(
-        self,
-        outline: OutlinePlan,
-        brief: PresentationBrief,
-        version: int,
-        previous: OutlinePlan | None,
-    ) -> OutlinePlan:
-        outline.version = version
-        apply_outline_lineage(outline, previous)
-        saved = self._presentations.save_outline(outline)
-        self._history.record_snapshot(saved, RevisionSource.GENERATED)
-
-        presentation = self._presentations.get_presentation(brief.presentation_id)
-        if presentation is not None:
-            presentation.current_outline_id = saved.id
-            self._presentations.update_presentation(presentation)
-        return saved
+        return outline
 
 
 def _attach_page_intents(
@@ -185,7 +123,6 @@ def _attach_page_intents(
     page_intents: list[SlideIntent] | None,
     previous: OutlinePlan | None,
 ) -> None:
-    """Prefer explicit request intents; otherwise keep previous user edits."""
     if page_intents is not None:
         outline.page_intents = list(page_intents)
     elif previous is not None and previous.page_intents:
