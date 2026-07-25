@@ -408,6 +408,20 @@ class Settings(BaseSettings):
             "with similarity/authority/transferability scores."
         ),
     )
+    knowledge_graph_retrieval_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, KnowledgeFusion expands Architectural Knowledge Graph "
+            "(case/tag/concept/space relations) into KnowledgeReference hits."
+        ),
+    )
+    multimodal_retrieval_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, KnowledgeFusion includes multimodal (asset_caption) "
+            "visual feature retrieval. Image CLIP embeddings remain optional/future."
+        ),
+    )
     chunk_context_max_chars: int = Field(
         default=600,
         ge=100,

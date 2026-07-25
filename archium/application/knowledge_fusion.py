@@ -74,6 +74,8 @@ class KnowledgeFusionService:
         top_k: int = 16,
         filters: RetrievalFilters | None = None,
         include_cases: bool = True,
+        include_graph: bool = True,
+        include_multimodal: bool = True,
     ) -> list[KnowledgeReference]:
         query = (query or "").strip()
         preferred = infer_types_from_query(query)
@@ -83,8 +85,46 @@ class KnowledgeFusionService:
         refs.extend(self._knowledge_item_refs(project_id, query, preferred=preferred))
         if include_cases and query:
             refs.extend(self._case_refs(query))
+        if include_graph and query and bool(
+            getattr(self._settings, "knowledge_graph_retrieval_enabled", True)
+        ):
+            try:
+                from archium.application.knowledge_graph_service import KnowledgeGraphService
+
+                refs.extend(
+                    KnowledgeGraphService(
+                        self._session, settings=self._settings
+                    ).retrieve_via_graph(project_id, query, top_k=max(6, top_k // 2))
+                )
+            except Exception:
+                pass
+        if include_multimodal and query and bool(
+            getattr(self._settings, "multimodal_retrieval_enabled", True)
+        ):
+            try:
+                from archium.application.multimodal_retrieval import MultimodalRetrievalService
+
+                refs.extend(
+                    MultimodalRetrievalService(
+                        self._session, settings=self._settings
+                    ).retrieve(project_id, query, top_k=max(4, top_k // 3))
+                )
+            except Exception:
+                pass
         refs.sort(key=lambda item: item.relevance, reverse=True)
-        return refs[: max(1, top_k)]
+        return self._dedupe_refs(refs)[: max(1, top_k)]
+
+    @staticmethod
+    def _dedupe_refs(refs: list[KnowledgeReference]) -> list[KnowledgeReference]:
+        seen: set[tuple[str, str]] = set()
+        out: list[KnowledgeReference] = []
+        for ref in refs:
+            key = (ref.source_kind.value, ref.source_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(ref)
+        return out
 
     def format_prompt_block(self, refs: list[KnowledgeReference]) -> str:
         if not refs:

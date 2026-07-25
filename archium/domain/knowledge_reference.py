@@ -16,6 +16,8 @@ class KnowledgeSourceKind(StrEnum):
     DOCUMENT_CHUNK = "document_chunk"
     KNOWLEDGE_ITEM = "knowledge_item"
     ARCHITECTURE_CASE = "architecture_case"
+    GRAPH_NODE = "graph_node"
+    MULTIMODAL_ASSET = "multimodal_asset"
 
 
 class KnowledgeUsage(StrEnum):
