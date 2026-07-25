@@ -233,6 +233,7 @@ def test_approve_and_continue_facade(
     assert fourth.workflow_run.status == WorkflowStatus.COMPLETED
     assert fourth.deliverable_plan is not None
     assert fourth.deliverable_plan.approval_status == ApprovalStatus.APPROVED
+    assert fourth.workflow_run.state.get("workstream_execution_run_id")
 
 
 def test_planning_workflow_can_skip_gates(

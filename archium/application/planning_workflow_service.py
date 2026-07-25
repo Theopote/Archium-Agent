@@ -345,7 +345,12 @@ class PlanningWorkflowService:
         self,
         workflow_run_id: UUID,
     ) -> PlanningWorkflowResult:
-        """Resume after the plan-approval interrupt; plan must already be approved."""
+        """Resume after the plan-approval interrupt; plan must already be approved.
+
+        After the planning graph finalizes the presentation request draft, selected
+        workstreams are executed (dynamic LangGraph) before the presentation bridge
+        is used by the UI.
+        """
         run = self._require_planning_run(workflow_run_id)
         if run.status != WorkflowStatus.AWAITING_REVIEW:
             raise WorkflowError(f"Workflow run {workflow_run_id} is not awaiting plan approval")
@@ -365,11 +370,12 @@ class PlanningWorkflowService:
                 "交付成果计划尚未批准，无法继续。请先调用 approve_deliverable_plan。"
             )
 
-        return self._resume_interrupted_run(
+        result = self._resume_interrupted_run(
             run,
             session_status=PlanningSessionStatus.PLANNING,
             log_label="plan-approval",
         )
+        return self._run_workstream_execution_after_plan(result)
 
     def approve_and_continue(
         self,
@@ -393,6 +399,87 @@ class PlanningWorkflowService:
     def continue_after_plan_approval(self, workflow_run_id: UUID) -> PlanningWorkflowResult:
         """Deprecated alias for :meth:`approve_and_continue`."""
         return self.approve_and_continue(workflow_run_id)
+
+    def _run_workstream_execution_after_plan(
+        self,
+        result: PlanningWorkflowResult,
+    ) -> PlanningWorkflowResult:
+        """Run selected workstreams after plan approval, before presentation bridge use."""
+        if result.awaiting_review:
+            return result
+        if result.workflow_run.status != WorkflowStatus.COMPLETED:
+            return result
+        if result.workflow_run.state.get("workstream_execution_run_id"):
+            return result
+
+        try:
+            mission_id = self._mission_id_from_run(result.workflow_run)
+        except WorkflowError:
+            return result
+
+        from archium.application.orchestration.workstream_execution_service import (
+            WorkstreamExecutionService,
+        )
+        from archium.application.orchestration.workstream_node_registry import (
+            selected_workstreams,
+        )
+        from archium.domain.enums import WorkstreamStatus
+
+        missions = MissionRepository(self._session)
+        workstreams = missions.list_workstreams(mission_id)
+        selected = selected_workstreams(workstreams)
+        if not selected:
+            result.warnings = [
+                *result.warnings,
+                "未选择工作路径，跳过工作路径执行",
+            ]
+            return result
+
+        already_done = all(
+            ws.status in {WorkstreamStatus.COMPLETED, WorkstreamStatus.SKIPPED}
+            for ws in selected
+        )
+        if already_done:
+            result.warnings = [
+                *result.warnings,
+                "工作路径此前已执行完成，跳过重复执行",
+            ]
+            return result
+
+        service = WorkstreamExecutionService(
+            self._session,
+            self._runtime.llm,
+            settings=self._settings,
+            checkpointer_manager=self._checkpointer_manager,
+        )
+        try:
+            exec_result = service.run_for_mission(mission_id, workstreams)
+            for ws in workstreams:
+                missions.save_workstream(ws)
+            run = result.workflow_run
+            run.state = {
+                **run.state,
+                "workstream_execution_run_id": str(exec_result.workflow_run.id),
+                "workstream_execution_completed": exec_result.completed,
+                "workstream_execution_failed": exec_result.failed,
+                "workstream_execution_skipped": exec_result.skipped,
+                "presentation_ready_from_workstreams": exec_result.presentation_ready,
+            }
+            result.workflow_run = self._workflow_runs.update(run)
+            extra = list(exec_result.warnings)
+            if exec_result.failed:
+                extra.append(
+                    f"工作路径执行部分失败（失败 {exec_result.failed}），汇报主链仍可继续"
+                )
+            else:
+                extra.append(
+                    f"已执行工作路径：完成 {exec_result.completed}，跳过 {exec_result.skipped}"
+                )
+            result.warnings = [*result.warnings, *extra]
+        except Exception as exc:  # noqa: BLE001 — plan approval must not roll back
+            logger.exception("Workstream execution after plan approval failed: %s", exc)
+            result.warnings = [*result.warnings, f"工作路径执行未启动：{exc}"]
+        return result
 
     def _resume_interrupted_run(
         self,

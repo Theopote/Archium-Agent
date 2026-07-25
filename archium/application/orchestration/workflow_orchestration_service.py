@@ -301,15 +301,9 @@ class WorkflowOrchestrationService:
         if stage == OrchestrationStage.WORKSTREAM_EXECUTION:
             return self._run_workstream_stage(plan.project_id)
         if stage == OrchestrationStage.PRESENTATION:
-            return {
-                "status": OrchestrationStageStatus.AWAITING_USER,
-                "warnings": ["请在生成页启动或继续汇报主链"],
-            }
+            return self._run_presentation_stage(plan.project_id)
         if stage == OrchestrationStage.VISUAL:
-            return {
-                "status": OrchestrationStageStatus.AWAITING_USER,
-                "warnings": ["请在工作室继续视觉与版式"],
-            }
+            return self._run_visual_stage(plan.project_id)
         return {
             "status": OrchestrationStageStatus.SKIPPED,
             "skip_reason": f"未实现的阶段：{stage.value}",
@@ -388,6 +382,8 @@ class WorkflowOrchestrationService:
                 service.close()
 
     def _run_workstream_stage(self, project_id: UUID) -> dict[str, Any]:
+        from archium.domain.enums import WorkstreamStatus
+
         missions = self._missions.list_missions_by_project(project_id)
         if not missions:
             return {
@@ -402,6 +398,15 @@ class WorkflowOrchestrationService:
                 "status": OrchestrationStageStatus.SKIPPED,
                 "skip_reason": "未选择工作路径，自动跳过",
                 "warnings": ["未选择工作路径，工作路径执行阶段已跳过"],
+            }
+        if all(
+            ws.status in {WorkstreamStatus.COMPLETED, WorkstreamStatus.SKIPPED}
+            for ws in selected
+        ):
+            return {
+                "status": OrchestrationStageStatus.COMPLETED,
+                "skip_reason": "工作路径已在计划批准后执行",
+                "warnings": ["工作路径此前已执行，编排阶段不再重复运行"],
             }
         service = WorkstreamExecutionService(
             self._session, self._llm, settings=self._settings
@@ -428,6 +433,42 @@ class WorkflowOrchestrationService:
         finally:
             with suppress(Exception):
                 service.close()
+
+    def _run_presentation_stage(self, project_id: UUID) -> dict[str, Any]:
+        """Thin adapter: surface ready PresentationRequest; do not auto-start the main chain."""
+        runs = self._workflow_runs.list_by_project(project_id)
+        planning_ready = [
+            run
+            for run in runs
+            if run.state.get("workflow_kind") == "planning"
+            and run.status == WorkflowStatus.COMPLETED
+            and isinstance(run.state.get("presentation_request_draft"), dict)
+        ]
+        if not planning_ready:
+            return {
+                "status": OrchestrationStageStatus.AWAITING_USER,
+                "warnings": ["尚无就绪的汇报请求，请先完成任务规划与计划批准"],
+            }
+        latest = max(planning_ready, key=lambda r: r.updated_at or r.created_at)
+        return {
+            "status": OrchestrationStageStatus.AWAITING_USER,
+            "workflow_run_id": latest.id,
+            "warnings": [
+                "汇报请求已就绪；请在生成页启动 PresentationWorkflowService 主链"
+                "（含大纲审阅闸门，编排层不自动开跑）"
+            ],
+        }
+
+    def _run_visual_stage(self, project_id: UUID) -> dict[str, Any]:
+        """Thin adapter: hand off to Studio / VisualWorkflowService under user control."""
+        _ = project_id
+        return {
+            "status": OrchestrationStageStatus.AWAITING_USER,
+            "warnings": [
+                "请在工作室继续视觉与版式（VisualWorkflowService）；"
+                "编排层不自动启动视觉子图"
+            ],
+        }
 
     def _require_run(self, workflow_run_id: UUID) -> WorkflowRun:
         run = self._workflow_runs.get_by_id(workflow_run_id)

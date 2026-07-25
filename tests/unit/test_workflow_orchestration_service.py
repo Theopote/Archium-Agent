@@ -122,3 +122,50 @@ def test_build_plan_mission_workflow() -> None:
     # default without context → MISSION sequence
     assert plan.stages[0].stage == OrchestrationStage.MISSION_PLANNING
     assert any(s.stage == OrchestrationStage.PRESENTATION for s in plan.stages)
+
+
+def test_presentation_stage_awaits_when_planning_ready() -> None:
+    service = WorkflowOrchestrationService(MagicMock(), MagicMock())
+    project_id = uuid4()
+    planning = WorkflowRun(
+        project_id=project_id,
+        status=WorkflowStatus.COMPLETED,
+        state={
+            "workflow_kind": "planning",
+            "presentation_request_draft": {"mission_id": str(uuid4())},
+        },
+    )
+
+    class FakeRepo:
+        def list_by_project(self, _pid):  # noqa: ANN001
+            return [planning]
+
+    service._workflow_runs = FakeRepo()  # noqa: SLF001
+    out = service._run_presentation_stage(project_id)  # noqa: SLF001
+    assert out["status"] == OrchestrationStageStatus.AWAITING_USER
+    assert out["workflow_run_id"] == planning.id
+
+
+def test_workstream_stage_skips_when_already_completed() -> None:
+    from archium.domain.enums import WorkstreamStatus
+    from archium.domain.workstream import Workstream
+
+    service = WorkflowOrchestrationService(MagicMock(), MagicMock())
+    project_id = uuid4()
+    mission = MagicMock()
+    mission.id = uuid4()
+    ws = Workstream(
+        project_id=project_id,
+        mission_id=mission.id,
+        title="历史研究",
+        objective="梳理历史依据",
+        selected=True,
+        status=WorkstreamStatus.COMPLETED,
+    )
+    service._missions = MagicMock()  # noqa: SLF001
+    service._missions.list_missions_by_project.return_value = [mission]
+    service._missions.list_workstreams.return_value = [ws]
+
+    out = service._run_workstream_stage(project_id)  # noqa: SLF001
+    assert out["status"] == OrchestrationStageStatus.COMPLETED
+    assert "此前已执行" in (out.get("warnings") or [""])[0]
