@@ -222,14 +222,18 @@ def restore_domain_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
     restored: dict[str, Any] = {}
     if "request" in state_data:
         request = state_data["request"]
-        restored["request"] = request if isinstance(request, PresentationRequest) else request_from_dict(request)
+        if request is not None:
+            restored["request"] = (
+                request if isinstance(request, PresentationRequest) else request_from_dict(request)
+            )
     if "presentation" in state_data:
         presentation = state_data["presentation"]
-        restored["presentation"] = (
-            presentation
-            if isinstance(presentation, Presentation)
-            else Presentation.model_validate(presentation)
-        )
+        if presentation is not None:
+            restored["presentation"] = (
+                presentation
+                if isinstance(presentation, Presentation)
+                else Presentation.model_validate(presentation)
+            )
     if "brief" in state_data:
         brief = state_data["brief"]
         if brief is not None:

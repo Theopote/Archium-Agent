@@ -3,14 +3,31 @@
 from __future__ import annotations
 
 from archium.application.review_models import BriefUpdate, ChapterUpdate, StorylineUpdate
-from archium.application.review_service import PresentationReviewService
-from archium.domain.enums import ApprovalStatus, ProjectType, ReviewCategory, ReviewSeverity
+from archium.application.review_service import (
+    PresentationReviewService,
+    _manuscript_from_workflow_state,
+    _select_review_workflow_run,
+)
+from archium.domain.enums import (
+    ApprovalStatus,
+    ProjectType,
+    ReviewCategory,
+    ReviewSeverity,
+    WorkflowStatus,
+)
 from archium.domain.presentation import Chapter, Presentation, PresentationBrief, Storyline
 from archium.domain.project import Project
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import ReviewRuleCode
-from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
+from archium.domain.workflow import WorkflowRun
+from archium.infrastructure.database.repositories import (
+    PresentationRepository,
+    ProjectRepository,
+    ReviewRepository,
+    WorkflowRunRepository,
+)
 from sqlalchemy.orm import Session
+from uuid import uuid4
 
 
 def _seed_brief(db_session: Session) -> PresentationBrief:
@@ -167,3 +184,55 @@ def test_list_review_issues_by_project(db_session: Session) -> None:
     rule_codes = {issue.rule_code for issue in project_issues}
     assert ReviewRuleCode.EVIDENCE_MISSING_CITATION in rule_codes
     assert ReviewRuleCode.LAYOUT_TOO_MANY_BULLETS in rule_codes
+
+
+def test_select_review_workflow_run_prefers_non_visual() -> None:
+    project_id = uuid4()
+    presentation_id = uuid4()
+    visual = WorkflowRun(
+        project_id=project_id,
+        presentation_id=presentation_id,
+        status=WorkflowStatus.AWAITING_REVIEW,
+        state={"workflow_kind": "visual_composition", "presentation": None},
+    )
+    narrative = WorkflowRun(
+        project_id=project_id,
+        presentation_id=presentation_id,
+        status=WorkflowStatus.AWAITING_REVIEW,
+        state={"manuscript": {"id": str(uuid4())}},
+    )
+    selected = _select_review_workflow_run([visual, narrative])
+    assert selected is narrative
+
+
+def test_manuscript_from_visual_workflow_state_is_none(db_session: Session) -> None:
+    assert (
+        _manuscript_from_workflow_state(
+            db_session,
+            {"workflow_kind": "visual_composition", "presentation": None},
+        )
+        is None
+    )
+
+
+def test_get_review_context_tolerates_visual_null_presentation(db_session: Session) -> None:
+    brief = _seed_brief(db_session)
+    presentation_id = brief.presentation_id
+    WorkflowRunRepository(db_session).create(
+        WorkflowRun(
+            project_id=brief.project_id,
+            presentation_id=presentation_id,
+            status=WorkflowStatus.AWAITING_REVIEW,
+            state={
+                "workflow_kind": "visual_composition",
+                "presentation": None,
+                "brief": None,
+                "manuscript": None,
+            },
+        )
+    )
+    context = PresentationReviewService(db_session).get_review_context(presentation_id)
+    assert context is not None
+    assert context.presentation.id == presentation_id
+    assert context.workflow_run is not None
+    assert context.workflow_run.state.get("presentation") is None

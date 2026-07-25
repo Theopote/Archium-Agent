@@ -51,6 +51,7 @@ from archium.domain.slide_design_brief import (
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.visual.layout_family_normalize import coerce_layout_family
 from archium.domain.visual.visual_grammar import coerce_page_archetype
+from archium.domain.workflow import WorkflowRun
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
@@ -63,6 +64,49 @@ def slides_are_approved(slides: list[SlideSpec]) -> bool:
     if not slides:
         return False
     return all(slide.status == SlideStatus.APPROVED for slide in slides)
+
+
+def _is_visual_workflow_state(state: dict[str, object] | None) -> bool:
+    if not isinstance(state, dict):
+        return False
+    return state.get("workflow_kind") == "visual_composition"
+
+
+def _select_review_workflow_run(runs: list[WorkflowRun]) -> WorkflowRun | None:
+    """Prefer presentation-pipeline runs; visual snapshots are not review sources."""
+    if not runs:
+        return None
+    awaiting = [run for run in runs if run.status == WorkflowStatus.AWAITING_REVIEW]
+    pool = awaiting or list(runs)
+    for run in pool:
+        if not _is_visual_workflow_state(run.state):
+            return run
+    return pool[0]
+
+
+def _manuscript_from_workflow_state(
+    session: Session,
+    state: dict[str, object] | None,
+) -> PresentationManuscript | None:
+    """Resolve manuscript from raw checkpoint state without full domain restore.
+
+    Visual composition snapshots store ``presentation: null`` and must not go through
+    ``restore_domain_artifacts`` for this UI path.
+    """
+    if not isinstance(state, dict) or _is_visual_workflow_state(state):
+        return None
+    payload = state.get("manuscript")
+    manuscript_id: UUID | None = None
+    if isinstance(payload, dict) and payload.get("id") is not None:
+        try:
+            manuscript_id = UUID(str(payload["id"]))
+        except (TypeError, ValueError):
+            return None
+    elif isinstance(payload, PresentationManuscript):
+        manuscript_id = payload.id
+    if manuscript_id is None:
+        return None
+    return PresentationManuscriptService(session).get(manuscript_id)
 
 
 class PresentationReviewService:
@@ -119,18 +163,13 @@ class PresentationReviewService:
             workflow_run = self._workflow_runs.get_by_id(workflow_run_id)
         else:
             runs = self._workflow_runs.list_by_presentation(presentation_id)
-            workflow_run = next(
-                (run for run in runs if run.status == WorkflowStatus.AWAITING_REVIEW),
-                runs[0] if runs else None,
-            )
+            workflow_run = _select_review_workflow_run(runs)
 
         if workflow_run is not None:
-            from archium.workflow.serialization import restore_domain_artifacts
-
-            restored = restore_domain_artifacts(workflow_run.state)
-            candidate = restored.get("manuscript")
-            if candidate is not None:
-                manuscript = PresentationManuscriptService(self._session).get(candidate.id)
+            manuscript = _manuscript_from_workflow_state(
+                self._session,
+                workflow_run.state,
+            )
         if manuscript is None:
             manuscripts = PresentationManuscriptService(self._session).list_for_project(
                 presentation.project_id

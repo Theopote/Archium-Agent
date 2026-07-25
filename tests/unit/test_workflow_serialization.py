@@ -107,6 +107,23 @@ def test_restore_domain_artifacts_from_snapshot() -> None:
     assert restored["presentation"].id == presentation_id
 
 
+def test_restore_domain_artifacts_skips_null_presentation_and_request() -> None:
+    """Visual composition snapshots persist presentation/request as null."""
+    restored = restore_domain_artifacts(
+        {
+            "workflow_kind": "visual_composition",
+            "presentation": None,
+            "request": None,
+            "brief": None,
+            "manuscript": None,
+        }
+    )
+    assert "presentation" not in restored
+    assert "request" not in restored
+    assert "brief" not in restored
+    assert "manuscript" not in restored
+
+
 def test_restore_domain_artifacts_infers_rule_code_for_legacy_review_issues() -> None:
     presentation_id = uuid4()
     legacy_issue = {
