@@ -30,6 +30,49 @@
 
 **正确抽象**：产品六席位（上表）+ 可选的 **Visual 内部阶段标注**（Architecture / Composition / Layout）——后者只是代码与 E2E 的细粒度标签，**不是**新的 Agent。
 
+## 认知核（产品对话）↔ 六席位（实现）
+
+对外讲「建筑 AI」时，用 **约五个认知核** 即可，避免 Concept / Design / Strategy 再拆成多个 Agent。
+对内实现仍严格落在 **六个席位 + Service**，**禁止**新增 `ContextAgent` / `ReasoningAgent` / `PresentationAgent` 等类。
+
+```text
+              Architectural AI
+                      |
+          +-----------+------------+
+          |                        |
+   Context Intelligence     Architectural Reasoning
+          |                        |
+       Research                 Critic
+                      |
+           Presentation Delivery
+           (Narrative → Visual → Render)
+```
+
+| 认知核（对外） | 一句话 | 映射席位（对内） | 主要实现（示例） |
+|----------------|--------|------------------|------------------|
+| **Context Intelligence** | 理解项目：知多少、缺什么、下一步 | Research 的认知面（非修辞）+ 与 Planning 的闸门协作 | `ContextAnalyzer`、`KnowledgeState`、NBA、`presentation_cognition_gate` |
+| **Architectural Reasoning** | 建筑推理：问题—策略—概念—意图（**合一，勿再拆**） | Planning（Mission / 方向 / Intent）∪ Visual 内部 Architecture 语义 | Exploration、`ConceptDirection`、`DesignIntent`、renovation issue map |
+| **Research** | 外部与项目知识获取 | Research | 摄取、Fact/Knowledge、`AutonomousResearchService`（有界环） |
+| **Critic** | 质疑：设计方向 + 汇报/视觉表达 | Critic | `DesignCritiqueService`、`application/review/*`、visual critic |
+| **Presentation Delivery** | 把设计思想变成可交付汇报 | **Narrative → Visual → Render**（三阶，不合成一个 Agent） | Brief/Storyline/SlideSpec → Layout/Scene → PPTX |
+
+### 映射纪律
+
+1. **Context 是能力包，不是第七席位**：产品可单独说 Context Intelligence；代码仍挂在现有 Service / KS 产物上。
+2. **Reasoning 禁止再拆**：不出现 `ConceptAgent` / `DesignAgent` / `StrategyAgent`；概念探索与设计意图同属一核。
+3. **Planning 不被 Reasoning 吞没**：Mission / 交付物 / 工作流路径仍是 Planning 席位产物——「做什么项目」≠「空间怎么想」。
+4. **Presentation 保持三阶**：Narrative 写什么、Visual 怎么看、Render 出文件；合并成一个 Presentation Agent 会重新诱发 LayoutAgent 式膨胀。
+5. **Critic 双通道、同一席位**：设计批判（概念选定前）与页级/视觉 QA（表达）共用 Critic，产物不同、都不静默改稿。
+
+### 与「五个 Agent」提案的关系
+
+社区常见的五 Agent 图（Context / Reasoning / Research / Critic / Presentation）**精神正确**（少而精）。
+Archium 的落地选择是：
+
+- 用上表做 **产品叙事与能力分组**；
+- 用六席位做 **代码边界与 Workflow 授权**；
+- **不**把认知核落成五个长期 `class XxxAgent`。
+
 ## 六席位总览
 
 ```mermaid
@@ -267,18 +310,21 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 ## 已知缺口（刻意不假装已完成）
 
 1. **`PipelineRole` 细粒度标注**仍含 architecture/composition/layout——产品对话统一说 Visual。
-2. **Architecture 分散**——尚未有单一 facade（仍不因此新开 Agent）。
+2. **Architectural Reasoning 分散**——Exploration / DesignIntent / 问题—策略尚未有单一 facade（仍不因此新开 Agent；可收敛为 Planning∪Architecture 语义包）。
 3. **Narrative ↔ Visual 弱耦合**——靠 `SlideSpec` / co-plan 衔接。
 4. **Critic 权限分裂**——内容/版面 review 可触发 repair；visual critic 只读。
    设计批判（`DesignCritiqueReport`）已挂 select 前 warn 闸门；UI 展示与 commit 硬阻断仍可加深。
 5. **Template induction** 与 LayoutPlan 主路径仍在收敛。
+6. **Context Intelligence 产品命名**——实现已在，UI/文案尚未统一称「情境智能」能力包。
 
 ## 非目标
 
 - 不为每个角色新建 Agent 类或 SubAgent 树。
+- 不把「认知核」落成 `ContextAgent` / `ReasoningAgent` / `PresentationAgent`。
 - 不引入 DeepPresenter 式 Agent Environment。
 - 不把 PPTAgent 的 editor/coder 抄成同名类。
 - 不在 render 阶段重新做 layout selection 或 narrative 改写。
+- 不把 Narrative / Visual / Render 合成单一 Presentation Agent。
 
 ## 相关文档
 
@@ -291,4 +337,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-24 — 产品六席位硬上限；Architecture/Composition/Layout 收为 Visual 内部阶段。*
+*Last updated: 2026-07-25 — 认知核（产品对话）↔ 六席位（实现）映射；禁止把认知核落成 Agent 类。*

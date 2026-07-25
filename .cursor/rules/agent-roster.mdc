@@ -21,6 +21,12 @@ Forbidden examples: `ArchitectureAgent2`, `VisualAgent3`, `LayoutAgent4`,
 | **Render** | Execute approved scene → PPTX/PDF/PNG (no re-planning) |
 | **Critic** | Actionable findings only — does not silently rewrite the deck |
 
+Product conversation may group these into ~5 **cognitive cores**
+(Context Intelligence, Architectural Reasoning, Research, Critic,
+Presentation Delivery). Cores are naming only — they map onto the six
+seats above and must **not** become new `XxxAgent` classes. See
+`docs/architecture/pipeline-roles.md` §认知核.
+
 ## Implementation rule
 
 - Prefer **Service + Domain artifact + Workflow node**.
