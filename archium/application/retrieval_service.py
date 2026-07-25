@@ -74,32 +74,36 @@ class RetrievalService:
         filters: RetrievalFilters | None = None,
     ) -> list[DocumentChunk]:
         limit = top_k or self._settings.retrieval_top_k
+        scoped = (filters or RetrievalFilters()).with_default_chunk_scope()
         if not self.available or not query.strip():
-            return self._fallback_chunks(project_id, limit, filters=filters)
+            return self._fallback_chunks(project_id, limit, filters=scoped)
 
         assert self._embedder is not None
-        where = filters.to_chroma_where() if filters is not None and not filters.is_empty() else None
+        where = scoped.to_chroma_where() if not scoped.is_empty() else None
         # Over-fetch slightly when soft architectural preferences exist
         preferred = infer_types_from_query(query)
-        fetch_k = limit * 2 if preferred and where is None else limit
+        fetch_k = limit * 2 if preferred and (
+            filters is None or not filters.architectural_types
+        ) else limit
         hits = self._store.query(
             project_id,
             self._embedder.embed_query(query),
             top_k=fetch_k,
             where=where,
         )
+        hits = [h for h in hits if h.record_type != "knowledge_item"]
         if not hits:
             logger.info(
                 "No vector hits for project %s; falling back to sequential chunks",
                 project_id,
             )
-            return self._fallback_chunks(project_id, limit, filters=filters)
+            return self._fallback_chunks(project_id, limit, filters=scoped)
 
         chunk_ids = [hit.chunk_id for hit in hits]
         chunks = self._documents.get_chunks_by_ids(chunk_ids)
         if not chunks:
-            return self._fallback_chunks(project_id, limit, filters=filters)
-        chunks = self._apply_client_filters(chunks, filters)
+            return self._fallback_chunks(project_id, limit, filters=scoped)
+        chunks = self._apply_client_filters(chunks, scoped)
         if self._settings.retrieval_keyword_boost_enabled:
             chunks = rerank_retrieved_chunks(
                 chunks,
@@ -121,20 +125,16 @@ class RetrievalService:
         if not self.available or not query.strip():
             return []
         assert self._embedder is not None
-        where = filters.to_chroma_where() if filters is not None and not filters.is_empty() else None
+        scoped = (filters or RetrievalFilters()).with_default_chunk_scope()
+        where = scoped.to_chroma_where() if not scoped.is_empty() else None
         hits = self._store.query(
             project_id,
             self._embedder.embed_query(query),
             top_k=limit,
             where=where,
         )
-        if filters is None or filters.is_empty():
-            return hits
-        return [
-            hit
-            for hit in hits
-            if self._hit_matches_filters(hit, filters)
-        ]
+        hits = [h for h in hits if self._hit_matches_filters(h, scoped)]
+        return hits
 
     def _fallback_chunks(
         self,
@@ -173,6 +173,8 @@ class RetrievalService:
 
     @staticmethod
     def _hit_matches_filters(hit: VectorSearchHit, filters: RetrievalFilters) -> bool:
+        if filters.record_types and hit.record_type not in filters.record_types:
+            return False
         if filters.content_types and hit.content_type not in filters.content_types:
             return False
         if filters.architectural_types:

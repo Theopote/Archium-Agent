@@ -119,12 +119,15 @@ class ProjectKnowledgeService:
             category=category,
             design_knowledge=design_knowledge,
         )
-        return self._knowledge.create(item)
+        created = self._knowledge.create(item)
+        self._best_effort_vector_index(created)
+        return created
 
     def confirm_item(self, item_id: UUID) -> ProjectKnowledgeItem:
         item = self._require_item(item_id)
         item.confirm()
         updated = self._knowledge.update(item)
+        self._best_effort_vector_index(updated)
         self._best_effort_index_after_knowledge_change(
             updated.project_id,
             reason="knowledge_item_confirmed",
@@ -135,11 +138,30 @@ class ProjectKnowledgeService:
         item = self._require_item(item_id)
         item.reject()
         updated = self._knowledge.update(item)
+        self._best_effort_remove_vector(updated)
         self._best_effort_index_after_knowledge_change(
             updated.project_id,
             reason="knowledge_item_rejected",
         )
         return updated
+
+    def _best_effort_vector_index(self, item: ProjectKnowledgeItem) -> None:
+        try:
+            from archium.application.knowledge_vector_index import (
+                best_effort_index_knowledge_item,
+            )
+
+            best_effort_index_knowledge_item(self._session, item)
+        except Exception:
+            return
+
+    def _best_effort_remove_vector(self, item: ProjectKnowledgeItem) -> None:
+        try:
+            from archium.application.knowledge_vector_index import KnowledgeVectorIndexService
+
+            KnowledgeVectorIndexService(self._session).remove_item(item.project_id, item.id)
+        except Exception:
+            return
 
     def _best_effort_index_after_knowledge_change(
         self,
@@ -166,7 +188,9 @@ class ProjectKnowledgeService:
             raise WorkflowError("Knowledge statement must not be empty")
         item.statement = cleaned
         item.touch()
-        return self._knowledge.update(item)
+        updated = self._knowledge.update(item)
+        self._best_effort_vector_index(updated)
+        return updated
 
     def set_document_purpose(self, document_id: UUID, purpose: DocumentPurpose) -> None:
         document = self._documents.get_document(document_id)

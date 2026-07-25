@@ -10,6 +10,7 @@ from uuid import UUID
 import chromadb
 
 from archium.domain.document import DocumentChunk
+from archium.application.retrieval_credibility import score_chunk_credibility
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="vector_store")
@@ -56,32 +57,34 @@ class ChromaVectorStore:
         if len(chunks) != len(embeddings):
             raise ValueError("chunks and embeddings length mismatch")
 
-        records = [
-            {
-                "id": str(chunk.id),
-                "content": chunk.content,
-                "metadata": {
-                    "chunk_id": str(chunk.id),
-                    "document_id": str(chunk.document_id),
-                    "project_id": str(project_id),
-                    "page_number": chunk.page_number or 0,
-                    "section_title": chunk.section_title or "",
-                    "chunk_index": chunk.chunk_index,
-                    "document_name": document_name,
-                    "content_type": chunk.content_type,
-                    "architectural_type": str(
-                        chunk.metadata.get("architectural_type")
-                        or chunk.architectural_type.value
-                    ),
-                    "asset_id": str(chunk.metadata.get("asset_id") or ""),
-                    "record_type": "document_chunk",
-                    "authority": 0.72,
-                    "transferability": 0.7,
-                    "reliability": "",
-                },
-            }
-            for chunk in chunks
-        ]
+        records = []
+        for chunk in chunks:
+            cred = score_chunk_credibility(chunk)
+            records.append(
+                {
+                    "id": str(chunk.id),
+                    "content": chunk.content,
+                    "metadata": {
+                        "chunk_id": str(chunk.id),
+                        "document_id": str(chunk.document_id),
+                        "project_id": str(project_id),
+                        "page_number": chunk.page_number or 0,
+                        "section_title": chunk.section_title or "",
+                        "chunk_index": chunk.chunk_index,
+                        "document_name": document_name,
+                        "content_type": chunk.content_type,
+                        "architectural_type": str(
+                            chunk.metadata.get("architectural_type")
+                            or chunk.architectural_type.value
+                        ),
+                        "asset_id": str(chunk.metadata.get("asset_id") or ""),
+                        "record_type": "document_chunk",
+                        "authority": round(cred.authority, 4),
+                        "transferability": round(cred.transferability, 4),
+                        "reliability": "",
+                    },
+                }
+            )
         self.upsert_records(project_id, records, embeddings)
         logger.info(
             "Indexed %d chunks for project %s in Chroma",
@@ -127,7 +130,17 @@ class ChromaVectorStore:
             collection = self._client.get_collection(collection_name)
         except Exception:
             return
-        collection.delete(where={"document_id": str(document_id)})
+        try:
+            collection.delete(
+                where={
+                    "$and": [
+                        {"document_id": str(document_id)},
+                        {"record_type": "document_chunk"},
+                    ]
+                }
+            )
+        except Exception:
+            collection.delete(where={"document_id": str(document_id)})
         logger.info("Removed vectors for document %s from project %s", document_id, project_id)
 
     def delete_project(self, project_id: UUID) -> bool:

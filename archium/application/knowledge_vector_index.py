@@ -21,6 +21,8 @@ logger = get_logger(__name__, operation="knowledge_vector_index")
 
 RECORD_TYPE_KNOWLEDGE = "knowledge_item"
 RECORD_TYPE_CHUNK = "document_chunk"
+# Sentinel document_id so document-delete cascades never wipe knowledge vectors.
+_KNOWLEDGE_DOC_ID = UUID(int=0)
 
 
 def knowledge_item_embed_text(item: ProjectKnowledgeItem) -> str:
@@ -114,7 +116,7 @@ class KnowledgeVectorIndexService:
                     "content": text,
                     "metadata": {
                         "chunk_id": str(item.id),
-                        "document_id": str(item.id),  # placeholder for Chroma schema
+                        "document_id": str(_KNOWLEDGE_DOC_ID),
                         "project_id": str(project_id),
                         "page_number": 0,
                         "section_title": _knowledge_title(item),

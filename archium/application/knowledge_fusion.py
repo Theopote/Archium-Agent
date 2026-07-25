@@ -1,6 +1,7 @@
 """Project Knowledge Space fusion — Fact + Chunk + KnowledgeItem (+ optional cases).
 
-Not a new Agent: Service ranks KnowledgeReference with credibility dimensions.
+Not a new Agent: Service ranks KnowledgeReference with credibility dimensions
+and optional vector hits from KnowledgeVectorIndexService.
 """
 
 from __future__ import annotations
@@ -12,6 +13,17 @@ from sqlalchemy.orm import Session
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.application.fact_retrieval import match_fact_keys_from_query, rank_facts_for_context
 from archium.application.knowledge_isolation import filter_generation_facts, is_reference_document
+from archium.application.knowledge_vector_index import (
+    KnowledgeVectorIndexService,
+    knowledge_architectural_type,
+    knowledge_item_embed_text,
+)
+from archium.application.retrieval_credibility import (
+    rank_relevance,
+    score_chunk_credibility,
+    score_fact_credibility,
+    score_knowledge_credibility,
+)
 from archium.application.retrieval_filters import RetrievalFilters
 from archium.application.retrieval_hybrid import keyword_overlap_score
 from archium.application.retrieval_service import create_retrieval_service
@@ -23,13 +35,12 @@ from archium.domain.architectural_chunk import (
     infer_types_from_query,
 )
 from archium.domain.document import DocumentChunk
-from archium.domain.enums import InformationReliability, KnowledgeItemStatus, VerificationStatus
+from archium.domain.enums import KnowledgeItemStatus, VerificationStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_reference import (
     KnowledgeReference,
     KnowledgeSourceKind,
     KnowledgeUsage,
-    fuse_relevance,
 )
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.infrastructure.database.repositories import (
@@ -38,15 +49,6 @@ from archium.infrastructure.database.repositories import (
     ProjectKnowledgeRepository,
 )
 from archium.infrastructure.vector.chroma_store import VectorSearchHit
-
-
-_RELIABILITY_AUTHORITY: dict[InformationReliability, float] = {
-    InformationReliability.CONFIRMED: 0.95,
-    InformationReliability.HIGH_CONFIDENCE: 0.8,
-    InformationReliability.UNVERIFIED: 0.4,
-    InformationReliability.INFERENCE: 0.35,
-    InformationReliability.CONFLICTING: 0.2,
-}
 
 
 class KnowledgeFusionService:
@@ -113,8 +115,7 @@ class KnowledgeFusionService:
             similarity = 0.85 if fact.key in query_keys else (0.55 if query else 0.4)
             if query and keyword_overlap_score(query, f"{fact.label} {fact.value}") > 0.3:
                 similarity = max(similarity, 0.7)
-            authority = 0.92 if fact.is_confirmed else min(0.75, 0.4 + float(fact.confidence) * 0.4)
-            transferability = 1.0  # project-local facts always apply
+            cred = score_fact_credibility(fact)
             refs.append(
                 KnowledgeReference(
                     source_kind=KnowledgeSourceKind.FACT,
@@ -122,12 +123,14 @@ class KnowledgeFusionService:
                     content=self._format_fact(fact),
                     title=fact.label,
                     similarity=similarity,
-                    authority=authority,
-                    transferability=transferability,
-                    relevance=fuse_relevance(
+                    authority=cred.authority,
+                    transferability=cred.transferability,
+                    relevance=rank_relevance(
                         similarity=similarity,
-                        authority=authority,
-                        transferability=transferability,
+                        authority=cred.authority,
+                        transferability=cred.transferability,
+                        usage=KnowledgeUsage.EVIDENCE,
+                        has_citations=cred.has_citations,
                     ),
                     usage=KnowledgeUsage.EVIDENCE,
                     project_id=project_id,
@@ -154,6 +157,8 @@ class KnowledgeFusionService:
                 top_k=self._settings.retrieval_top_k,
                 filters=filters,
             )
+            # Drop knowledge vectors that slipped through legacy collections
+            hits = [h for h in hits if h.record_type != "knowledge_item"]
             if hits:
                 by_id = {
                     chunk.id: chunk
@@ -167,7 +172,7 @@ class KnowledgeFusionService:
         else:
             chunks = self._documents.list_chunks_by_project(project_id)[: self._settings.retrieval_top_k]
 
-        hit_scores = {hit.chunk_id: hit.score for hit in hits}
+        hit_by_id = {hit.chunk_id: hit for hit in hits}
         refs: list[KnowledgeReference] = []
         for chunk in chunks:
             arch = architectural_type_from_metadata(chunk.metadata)
@@ -179,15 +184,26 @@ class KnowledgeFusionService:
                     section_title=chunk.section_title,
                     content_type=chunk.content_type,
                 ).chunk_type
-            similarity = hit_scores.get(chunk.id)
+            hit = hit_by_id.get(chunk.id)
+            similarity = hit.score if hit is not None else None
             if similarity is None:
                 similarity = keyword_overlap_score(query, chunk.content) if query else 0.3
             if preferred and arch in preferred:
                 similarity = min(1.0, float(similarity) + 0.12)
-            authority = 0.7 if chunk.content_type != "asset_caption" else 0.55
-            transferability = 0.75 if arch != ArchitecturalChunkType.GENERAL else 0.55
-            if preferred and arch in preferred:
-                transferability = min(1.0, transferability + 0.15)
+            cred = score_chunk_credibility(chunk, preferred_types=preferred)
+            if hit is not None:
+                # Prefer stored credibility when indexed with P1 metadata
+                if hit.authority > 0:
+                    cred_authority = max(cred.authority, hit.authority)
+                else:
+                    cred_authority = cred.authority
+                if hit.transferability > 0:
+                    cred_xfer = max(cred.transferability, hit.transferability)
+                else:
+                    cred_xfer = cred.transferability
+            else:
+                cred_authority = cred.authority
+                cred_xfer = cred.transferability
             usage = (
                 KnowledgeUsage.ILLUSTRATIVE
                 if chunk.content_type == "asset_caption"
@@ -200,12 +216,14 @@ class KnowledgeFusionService:
                     content=chunk.content[:1500],
                     title=(chunk.section_title or "文档片段")[:120],
                     similarity=float(similarity),
-                    authority=authority,
-                    transferability=transferability,
-                    relevance=fuse_relevance(
+                    authority=cred_authority,
+                    transferability=cred_xfer,
+                    relevance=rank_relevance(
                         similarity=float(similarity),
-                        authority=authority,
-                        transferability=transferability,
+                        authority=cred_authority,
+                        transferability=cred_xfer,
+                        usage=usage,
+                        has_citations=cred.has_citations,
                     ),
                     usage=usage,
                     architectural_type=arch,
@@ -228,68 +246,62 @@ class KnowledgeFusionService:
             if item.status
             in {KnowledgeItemStatus.ACTIVE, KnowledgeItemStatus.CONFIRMED}
         ]
+        by_id = {item.id: item for item in items}
+        vector_scores: dict[UUID, float] = {}
+        if query:
+            try:
+                for hit in KnowledgeVectorIndexService(
+                    self._session, settings=self._settings
+                ).search(project_id, query, top_k=max(8, self._settings.retrieval_top_k)):
+                    if hit.chunk_id in by_id:
+                        vector_scores[hit.chunk_id] = float(hit.score)
+            except Exception:
+                vector_scores = {}
+
         refs: list[KnowledgeReference] = []
         for item in items:
-            text = item.statement
-            dk = item.design_knowledge
-            if dk is not None and dk.has_substance:
-                text = "\n".join(
-                    part
-                    for part in (
-                        dk.insight,
-                        dk.principle,
-                        dk.spatial_translation,
-                        dk.material_strategy,
-                        item.statement,
-                    )
-                    if part and str(part).strip()
-                )
-            similarity = keyword_overlap_score(query, text) if query else 0.35
-            if similarity < 0.15 and query:
+            text = knowledge_item_embed_text(item)
+            lexical = keyword_overlap_score(query, text) if query else 0.35
+            vector = vector_scores.get(item.id)
+            if vector is not None:
+                similarity = max(lexical, vector)
+                # Blend: vector carries semantic match for design knowledge
+                similarity = (0.55 * vector) + (0.45 * max(lexical, 0.15))
+            else:
+                similarity = lexical
+            if similarity < 0.12 and query and item.id not in vector_scores:
                 continue
-            authority = _RELIABILITY_AUTHORITY.get(item.reliability, 0.4)
-            transferability = 0.85 if dk is not None and dk.has_substance else 0.55
-            if preferred and dk is not None:
-                if any(
-                    t in preferred
-                    for t in (
-                        ArchitecturalChunkType.SPATIAL_STRATEGY,
-                        ArchitecturalChunkType.DESIGN_CONCEPT,
-                        ArchitecturalChunkType.MATERIAL_STRATEGY,
-                    )
-                ):
-                    transferability = min(1.0, transferability + 0.1)
+            cred = score_knowledge_credibility(item, preferred_types=preferred)
             usage = (
                 KnowledgeUsage.DESIGN_JUDGMENT
-                if dk is not None and dk.has_substance
+                if item.design_knowledge is not None and item.design_knowledge.has_substance
                 else KnowledgeUsage.BACKGROUND
             )
-            arch = None
-            if dk is not None:
-                if dk.spatial_translation.strip():
-                    arch = ArchitecturalChunkType.SPATIAL_STRATEGY
-                elif dk.material_strategy.strip():
-                    arch = ArchitecturalChunkType.MATERIAL_STRATEGY
-                elif dk.principle.strip() or dk.insight.strip():
-                    arch = ArchitecturalChunkType.DESIGN_CONCEPT
+            arch = knowledge_architectural_type(item)
             refs.append(
                 KnowledgeReference(
                     source_kind=KnowledgeSourceKind.KNOWLEDGE_ITEM,
                     source_id=str(item.id),
                     content=text[:1500],
-                    title=(dk.topic if dk and dk.topic.strip() else item.category)[:120],
-                    similarity=max(0.2, similarity),
-                    authority=authority,
-                    transferability=transferability,
-                    relevance=fuse_relevance(
-                        similarity=max(0.2, similarity),
-                        authority=authority,
-                        transferability=transferability,
+                    title=_knowledge_title(item),
+                    similarity=max(0.15, similarity),
+                    authority=cred.authority,
+                    transferability=cred.transferability,
+                    relevance=rank_relevance(
+                        similarity=max(0.15, similarity),
+                        authority=cred.authority,
+                        transferability=cred.transferability,
+                        usage=usage,
+                        has_citations=cred.has_citations,
                     ),
                     usage=usage,
-                    architectural_type=arch,
+                    architectural_type=arch if arch != ArchitecturalChunkType.GENERAL else None,
                     project_id=project_id,
-                    extra={"origin": item.origin.value, "reliability": item.reliability.value},
+                    extra={
+                        "origin": item.origin.value,
+                        "reliability": item.reliability.value,
+                        "vector_hit": item.id in vector_scores,
+                    },
                 )
             )
         return refs
@@ -302,8 +314,8 @@ class KnowledgeFusionService:
             case = match.case
             text = case.to_prompt_block()
             similarity = max(float(match.score), keyword_overlap_score(query, text))
-            authority = 0.8
-            transferability = 0.7 if case.transferable_principles else 0.5
+            authority = 0.78
+            transferability = 0.72 if case.transferable_principles else 0.48
             refs.append(
                 KnowledgeReference(
                     source_kind=KnowledgeSourceKind.ARCHITECTURE_CASE,
@@ -313,10 +325,12 @@ class KnowledgeFusionService:
                     similarity=max(0.25, similarity),
                     authority=authority,
                     transferability=transferability,
-                    relevance=fuse_relevance(
+                    relevance=rank_relevance(
                         similarity=max(0.25, similarity),
                         authority=authority,
                         transferability=transferability,
+                        usage=KnowledgeUsage.ILLUSTRATIVE,
+                        has_citations=False,
                     ),
                     usage=KnowledgeUsage.ILLUSTRATIVE,
                     architectural_type=ArchitecturalChunkType.CASE_BACKGROUND,
@@ -329,3 +343,10 @@ class KnowledgeFusionService:
     def _format_fact(fact: ProjectFact) -> str:
         unit = f" {fact.unit}" if fact.unit else ""
         return f"{fact.label}: {fact.value}{unit}"
+
+
+def _knowledge_title(item: ProjectKnowledgeItem) -> str:
+    dk = item.design_knowledge
+    if dk is not None and dk.topic.strip():
+        return dk.topic.strip()[:120]
+    return (item.category or "knowledge")[:120]

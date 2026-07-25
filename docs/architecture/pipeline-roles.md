@@ -216,6 +216,11 @@ Chroma 支持 `RetrievalFilters`（content_type / architectural_type / document_
 带 `similarity` / `authority` / `transferability` 的 `KnowledgeReference`，
 避免纯 Top-K 文本 RAG。
 
+**Phase I.1（Retrieval P1）**：`retrieval_credibility` 将权威度/可迁移性深入
+chunk rerank 与融合打分（低 authority 证据降权、低 transferability 封顶）；
+`KnowledgeVectorIndexService` 把 `ProjectKnowledge` / `DesignKnowledge` 写入同一
+Chroma 项目集合（`record_type=knowledge_item`），创建/确认时索引，融合检索消费向量命中。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -385,4 +390,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase I Retrieval P0；H.4 Research→Vision；H.3 Research Critic。*
+*Last updated: 2026-07-25 — Phase I.1 Retrieval P1（可信度+知识向量）；I P0；H.4。*
