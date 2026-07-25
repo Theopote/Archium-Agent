@@ -139,3 +139,58 @@ def test_infer_and_parse_cad_bim(tmp_path: Path) -> None:
     parsed = get_parser_for_path(dxf).parse(dxf)
     assert "CAD/BIM" in parsed.text
     assert parsed.metadata.get("cad_bim") is True
+
+
+def test_worker_cli_once_empty_queue(db_session: Session, monkeypatch) -> None:
+    from contextlib import contextmanager
+
+    from archium.workers.background import main, run_worker_loop
+
+    @contextmanager
+    def _sess():
+        yield db_session
+
+    import archium.workers.background as worker_mod
+
+    monkeypatch.setattr(worker_mod, "get_session", _sess)
+    assert run_worker_loop(once=True) == 0
+    assert main(["--once"]) == 0
+
+
+def test_ingestion_enqueues_cad_analyze(
+    db_session: Session, tmp_path: Path, monkeypatch
+) -> None:
+    from archium.application.ingestion_service import IngestionService
+    from archium.config.settings import get_settings
+    from archium.domain.background_job import BackgroundJobKind
+
+    settings = get_settings()
+    project = ProjectRepository(db_session).create(Project(name="CAD 导入", description=""))
+    ifc = tmp_path / "model.ifc"
+    ifc.write_text("ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n")
+
+    # Avoid embedding / chromadb side effects for this unit path.
+    service = IngestionService(db_session, settings=settings)
+    monkeypatch.setattr(service, "_index_chunks", lambda *a, **k: None)
+    monkeypatch.setattr(service, "_extract_facts_at_ingest", lambda *a, **k: None)
+    monkeypatch.setattr(
+        service,
+        "_process_asset_vision_rag",
+        lambda *a, **k: type(
+            "R",
+            (),
+            {"assets": a[2] if len(a) > 2 else [], "chunks": []},
+        )(),
+    )
+
+    result = service.import_file(project.id, ifc)
+    assert result.error is None
+    assert result.document is not None
+    assert result.document.metadata.get("cad_analyze_queued") is True
+    job_id = result.document.metadata.get("background_job_id")
+    assert job_id
+
+    jobs = BackgroundJobService(db_session).list_for_project(project.id)
+    assert any(
+        j.kind == BackgroundJobKind.DOCUMENT_ANALYZE and str(j.id) == job_id for j in jobs
+    )

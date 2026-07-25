@@ -289,7 +289,13 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
   （`ProjectAccessService`；新建项目默认本地 Owner）。
 - CAD/BIM：`DocumentType` 增 DWG/DXF/IFC/RVT；`CadBimParser` + `analyze_cad_bim_file`
   元数据登记骨架（完整几何解析仍延后）。
-仍待：独立长驻 worker 进程、团队邀请 UI、IFC 空间语义抽取。
+
+**Phase N.2.1（Engineering P2 接线）**：
+- 独立 worker 入口：`archium-worker` / `python -m archium.workers.background`
+  （`--once` / `--poll` / `--max-jobs`）；Home 可手动 `process_once`。
+- CAD/BIM 导入后自动 `DOCUMENT_ANALYZE` 入队（`IngestionService`）。
+- Home「项目成员与角色」面板（`project_members_panel`）。
+仍待：长驻进程编排（systemd/Windows 服务）、邀请链接 UI、IFC 空间语义抽取。
 
 ---
 
@@ -460,4 +466,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-26 — Phase N.2 BackgroundJob / RBAC / CAD-BIM stub；N.1 模型档位。*
+*Last updated: 2026-07-26 — Phase N.2.1 worker CLI / 导入入队 / 成员面板。*

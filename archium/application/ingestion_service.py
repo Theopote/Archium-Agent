@@ -133,6 +133,8 @@ class IngestionService:
                 document.mark_completed(page_count=page_count)
                 document = self._documents.update_document(document)
 
+            document = self._enqueue_cad_analyze_if_needed(project_id, document, stored_path)
+
             result.document = document
             result.chunks = saved_chunks
             result.assets = assets
@@ -144,6 +146,45 @@ class IngestionService:
                 result.document.mark_failed()
                 self._documents.update_document(result.document)
             return result
+
+    def _enqueue_cad_analyze_if_needed(
+        self,
+        project_id: UUID,
+        document: SourceDocument,
+        stored_path: Path,
+    ) -> SourceDocument:
+        """Queue durable CAD/BIM analysis after ingest (best-effort)."""
+        from archium.application.background_job_service import BackgroundJobService
+        from archium.application.cad_bim_analysis import is_cad_bim_path
+        from archium.domain.background_job import BackgroundJobKind
+
+        path = Path(stored_path)
+        if not is_cad_bim_path(path) and not is_cad_bim_path(Path(document.filename)):
+            return document
+        try:
+            job = BackgroundJobService(self._session).enqueue(
+                project_id,
+                BackgroundJobKind.DOCUMENT_ANALYZE,
+                label=f"CAD/BIM · {document.filename}",
+                payload={
+                    "path": str(path),
+                    "document_id": str(document.id),
+                    "filename": document.filename,
+                    "file_type": document.file_type.value,
+                },
+                message="queued after ingest",
+            )
+            document.metadata = {
+                **dict(document.metadata or {}),
+                "background_job_id": str(job.id),
+                "cad_analyze_queued": True,
+            }
+            return self._documents.update_document(document)
+        except Exception:
+            logger.exception(
+                "Failed to enqueue CAD/BIM analyze for %s", document.filename
+            )
+            return document
 
     def import_files(self, project_id: UUID, source_paths: list[Path]) -> list[ImportItemResult]:
         """Import multiple files; failures on one file do not stop the batch."""

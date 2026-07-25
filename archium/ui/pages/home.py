@@ -313,9 +313,20 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
                 limit=4,
                 active_only=False,
                 title="任务进度",
+                allow_process_once=True,
             )
         except Exception:
             pass
+        try:
+            from archium.ui.project_members_panel import render_project_members_panel
+
+            render_project_members_panel(
+                snapshot.project_id,
+                key_prefix="home_members",
+                expanded=False,
+            )
+        except Exception:
+            logger.exception("Failed to render project members panel")
         _render_pending_issues(snapshot)
         _render_recent_versions(snapshot)
 
