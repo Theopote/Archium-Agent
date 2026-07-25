@@ -27,11 +27,15 @@ class LLMRequest:
 
 @dataclass(frozen=True)
 class LLMResponse:
-    """Raw LLM response wrapper."""
+    """Raw LLM response wrapper (includes usage when the provider reports it)."""
 
     content: str
     model: str
     finish_reason: str | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+    latency_ms: float | None = None
 
 
 class LLMProvider(Protocol):

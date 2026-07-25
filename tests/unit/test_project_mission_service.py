@@ -148,7 +148,8 @@ def test_update_and_approve_mission(
         MissionPatch(title="修订后的任务标题", confidence=0.6),
     )
     assert updated.title == "修订后的任务标题"
-    assert updated.confidence == 0.6
+    # confidence on MissionPatch is intentionally ignored (live KS / ProjectContext)
+    assert updated.confidence == result.mission.confidence
 
     approved = mission_service.approve_mission(result.mission.id, user_id="tester")
     assert approved.approval_status == ApprovalStatus.APPROVED

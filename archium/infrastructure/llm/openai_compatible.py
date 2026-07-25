@@ -17,6 +17,7 @@ from archium.config.settings import Settings, get_settings
 from archium.exceptions import ConfigurationError, LLMProviderError, StructuredOutputError
 from archium.infrastructure.llm.base import LLMRequest, LLMResponse
 from archium.infrastructure.llm.structured import parse_and_validate, strip_code_fence
+from archium.infrastructure.llm.trace import usage_from_openai_completion
 from archium.logging import get_logger
 
 T = TypeVar("T", bound=BaseModel)
@@ -37,6 +38,7 @@ class OpenAICompatibleProvider:
     ) -> None:
         self._settings = settings or get_settings()
         self._client = client
+        self.last_response: LLMResponse | None = None
 
     @property
     def client(self) -> OpenAI:
@@ -118,6 +120,7 @@ class OpenAICompatibleProvider:
         last_error: Exception | None = None
         for attempt in range(self._settings.llm_max_retries + 1):
             try:
+                started = time.perf_counter()
                 response = self._create_completion(
                     model=model,
                     messages=messages,
@@ -125,14 +128,22 @@ class OpenAICompatibleProvider:
                     max_tokens=request.max_tokens,
                     json_mode=request.json_mode,
                 )
+                latency_ms = (time.perf_counter() - started) * 1000.0
 
                 choice = response.choices[0]
                 content = choice.message.content or ""
-                return LLMResponse(
+                usage = usage_from_openai_completion(response)
+                wrapped = LLMResponse(
                     content=content,
-                    model=response.model,
+                    model=response.model or model,
                     finish_reason=choice.finish_reason,
+                    prompt_tokens=usage.prompt_tokens,
+                    completion_tokens=usage.completion_tokens,
+                    total_tokens=usage.total_tokens,
+                    latency_ms=round(latency_ms, 2),
                 )
+                self.last_response = wrapped
+                return wrapped
             except _TRANSIENT_ERRORS as exc:
                 last_error = exc
                 if attempt >= self._settings.llm_max_retries:

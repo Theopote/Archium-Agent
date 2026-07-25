@@ -183,6 +183,10 @@ Architectural Reasoning / Design Critique / Research→Knowledge 片段；
 Concept、概念 Mission、自主研究、设计批判 SYSTEM 注入同一工序（非角色扮演）。
 任务 Prompt 带轻量 `PROMPT_VERSION`（如 `concept_direction.v2`）。
 
+**Phase G（LLM Runtime）**：`LLMRuntime` + `LLMCapability` 将任务映射到既有
+`ModelRole`；主链（Concept / Mission / Research / Critique）经 `call.generate_structured`
+记录 `LLMTrace`（tokens / latency / prompt_version）。不在 Agent 内选模型。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -348,4 +352,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase F Prompt frameworks；Phase E evaluation；认知核 ↔ 六席位。*
+*Last updated: 2026-07-25 — Phase G LLM Runtime/Trace；Phase F Prompt frameworks；Phase E evaluation。*

@@ -25,12 +25,15 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
+from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
+from archium.infrastructure.llm.capabilities import LLMCapability
 from archium.infrastructure.llm.research_schemas import AutonomousResearchDraft, ResearchFindingDraft
 from archium.infrastructure.research.web_search.models import WebSearchResult
 from archium.infrastructure.research.web_search.service import WebResearchSearchService
 from archium.logging import get_logger
 from archium.prompts.autonomous_research import (
     AUTONOMOUS_RESEARCH_SYSTEM_PROMPT,
+    PROMPT_VERSION as RESEARCH_PROMPT_VERSION,
     build_autonomous_research_user_prompt,
 )
 
@@ -295,7 +298,8 @@ class AutonomousResearchService:
             else:
                 warnings.append("联网检索未返回可用结果，本次摘要可能缺少外部来源")
 
-        draft = self._llm.generate_structured(
+        draft = llm_generate_structured(
+            self._llm,
             LLMRequest(
                 system_prompt=AUTONOMOUS_RESEARCH_SYSTEM_PROMPT,
                 user_prompt=build_autonomous_research_user_prompt(
@@ -306,8 +310,13 @@ class AutonomousResearchService:
                 ),
                 temperature=0.35,
                 json_mode=True,
+                metadata={"prompt_version": RESEARCH_PROMPT_VERSION},
             ),
             AutonomousResearchDraft,
+            capability=LLMCapability.RESEARCH_SYNTHESIS,
+            project_id=project.id,
+            session=self._session,
+            settings=self._settings,
         )
         if not draft.findings:
             warnings.append("模型未返回研究结果，请稍后重试或缩小研究范围")

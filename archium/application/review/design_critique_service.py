@@ -22,6 +22,8 @@ from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.exceptions import WorkflowError
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
+from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
+from archium.infrastructure.llm.capabilities import LLMCapability
 from archium.infrastructure.llm.design_critique_schemas import (
     DesignCritiqueDraft,
     DesignCritiqueItemDraft,
@@ -29,6 +31,7 @@ from archium.infrastructure.llm.design_critique_schemas import (
 from archium.logging import get_logger
 from archium.prompts.design_critique import (
     DESIGN_CRITIQUE_SYSTEM_PROMPT,
+    PROMPT_VERSION as CRITIQUE_PROMPT_VERSION,
     build_design_critique_user_prompt,
 )
 
@@ -117,7 +120,8 @@ class DesignCritiqueService:
         draft: DesignCritiqueDraft | None = None
         source = "rules"
         try:
-            draft = self._llm.generate_structured(
+            draft = llm_generate_structured(
+                self._llm,
                 LLMRequest(
                     system_prompt=DESIGN_CRITIQUE_SYSTEM_PROMPT,
                     user_prompt=build_design_critique_user_prompt(
@@ -127,8 +131,13 @@ class DesignCritiqueService:
                     ),
                     temperature=0.25,
                     json_mode=True,
+                    metadata={"prompt_version": CRITIQUE_PROMPT_VERSION},
                 ),
                 DesignCritiqueDraft,
+                capability=LLMCapability.DESIGN_CRITIQUE,
+                project_id=direction.project_id,
+                session=self._session,
+                settings=self._settings,
             )
             source = "llm"
         except Exception as exc:  # noqa: BLE001 — critic must degrade, not abort select

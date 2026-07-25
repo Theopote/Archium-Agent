@@ -49,9 +49,12 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
+from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
+from archium.infrastructure.llm.capabilities import LLMCapability
 from archium.infrastructure.llm.mission_schemas import MissionGenerationDraft
 from archium.prompts.project_mission import (
     MISSION_SYSTEM_PROMPT,
+    PROMPT_VERSION as MISSION_PROMPT_VERSION,
     build_mission_regeneration_prompt,
     build_mission_user_prompt,
 )
@@ -169,14 +172,20 @@ class ProjectMissionService:
         elif programming_mode:
             user_prompt += build_programming_mission_addendum()
 
-        draft = self._llm.generate_structured(
+        draft = llm_generate_structured(
+            self._llm,
             LLMRequest(
                 system_prompt=MISSION_SYSTEM_PROMPT,
                 user_prompt=user_prompt,
                 temperature=0.3,
                 json_mode=True,
+                metadata={"prompt_version": MISSION_PROMPT_VERSION},
             ),
             MissionGenerationDraft,
+            capability=LLMCapability.MISSION_GENERATION,
+            project_id=project_id,
+            session=self._session,
+            settings=self._settings,
         )
         return self._persist_generation(
             project_id,
@@ -195,7 +204,8 @@ class ProjectMissionService:
 
         context = self._build_context(previous.project_id, previous.task_statement)
         fact_summary = self._build_fact_summary(previous.project_id)
-        draft = self._llm.generate_structured(
+        draft = llm_generate_structured(
+            self._llm,
             LLMRequest(
                 system_prompt=MISSION_SYSTEM_PROMPT,
                 user_prompt=build_mission_regeneration_prompt(
@@ -206,8 +216,13 @@ class ProjectMissionService:
                 ),
                 temperature=0.3,
                 json_mode=True,
+                metadata={"prompt_version": MISSION_PROMPT_VERSION},
             ),
             MissionGenerationDraft,
+            capability=LLMCapability.MISSION_GENERATION,
+            project_id=previous.project_id,
+            session=self._session,
+            settings=self._settings,
         )
         self._clear_mission_artifacts(previous.id)
         self._history.archive_before_regeneration(previous)

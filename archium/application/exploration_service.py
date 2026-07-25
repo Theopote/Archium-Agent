@@ -30,6 +30,8 @@ from archium.infrastructure.database.repositories import (
     ProjectRepository,
 )
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
+from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
+from archium.infrastructure.llm.capabilities import LLMCapability
 from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionBatchDraft,
     ConceptDirectionDraft,
@@ -37,10 +39,12 @@ from archium.infrastructure.llm.concept_direction_schemas import (
 from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
 from archium.prompts.concept_direction import (
     CONCEPT_DIRECTION_SYSTEM_PROMPT,
+    PROMPT_VERSION as CONCEPT_PROMPT_VERSION,
     build_exploration_direction_user_prompt,
 )
 from archium.prompts.idea_seed import (
     IDEA_SEED_SYSTEM_PROMPT,
+    PROMPT_VERSION as IDEA_SEED_PROMPT_VERSION,
     build_idea_seed_user_prompt,
 )
 
@@ -193,7 +197,8 @@ class ExplorationService:
         verified_constraints = build_verified_constraints_block(
             self._session, exploration.project_id
         )
-        draft = self._llm.generate_structured(
+        draft = llm_generate_structured(
+            self._llm,
             LLMRequest(
                 system_prompt=CONCEPT_DIRECTION_SYSTEM_PROMPT,
                 user_prompt=build_exploration_direction_user_prompt(
@@ -205,8 +210,13 @@ class ExplorationService:
                 ),
                 temperature=0.5,
                 json_mode=True,
+                metadata={"prompt_version": CONCEPT_PROMPT_VERSION},
             ),
             ConceptDirectionBatchDraft,
+            capability=LLMCapability.CONCEPT_GENERATION,
+            project_id=exploration.project_id,
+            session=self._session,
+            settings=self._settings,
         )
         items = list(draft.directions)[:MAX_DIRECTIONS]
         if len(items) < MIN_DIRECTIONS:
@@ -444,7 +454,8 @@ class ExplorationService:
     ) -> tuple[IdeaSeed, list[str]]:
         warnings: list[str] = []
         try:
-            draft = self._llm.generate_structured(
+            draft = llm_generate_structured(
+                self._llm,
                 LLMRequest(
                     system_prompt=IDEA_SEED_SYSTEM_PROMPT,
                     user_prompt=build_idea_seed_user_prompt(
@@ -453,8 +464,12 @@ class ExplorationService:
                     ),
                     temperature=0.4,
                     json_mode=True,
+                    metadata={"prompt_version": IDEA_SEED_PROMPT_VERSION},
                 ),
                 IdeaSeedDraft,
+                capability=LLMCapability.IDEA_SEED,
+                session=self._session,
+                settings=self._settings,
             )
             level = (draft.imagination_level or "open").strip().lower()
             if level not in {"open", "grounded", "speculative"}:

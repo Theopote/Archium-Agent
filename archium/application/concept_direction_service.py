@@ -20,12 +20,15 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import ConceptDirectionRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
+from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
+from archium.infrastructure.llm.capabilities import LLMCapability
 from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionBatchDraft,
     ConceptDirectionDraft,
 )
 from archium.prompts.concept_direction import (
     CONCEPT_DIRECTION_SYSTEM_PROMPT,
+    PROMPT_VERSION as CONCEPT_PROMPT_VERSION,
     build_concept_direction_user_prompt,
 )
 
@@ -97,7 +100,8 @@ class ConceptDirectionService:
                     existing.archive()
                     self._directions.update(existing)
 
-        draft = self._llm.generate_structured(
+        draft = llm_generate_structured(
+            self._llm,
             LLMRequest(
                 system_prompt=CONCEPT_DIRECTION_SYSTEM_PROMPT,
                 user_prompt=build_concept_direction_user_prompt(
@@ -113,8 +117,13 @@ class ConceptDirectionService:
                 ),
                 temperature=0.5,
                 json_mode=True,
+                metadata={"prompt_version": CONCEPT_PROMPT_VERSION},
             ),
             ConceptDirectionBatchDraft,
+            capability=LLMCapability.CONCEPT_GENERATION,
+            project_id=mission.project_id,
+            session=self._session,
+            settings=self._settings,
         )
         items = list(draft.directions)[:MAX_DIRECTIONS]
         if len(items) < MIN_DIRECTIONS:

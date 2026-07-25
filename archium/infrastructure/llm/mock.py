@@ -7,7 +7,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from archium.infrastructure.llm.base import LLMRequest
+from archium.infrastructure.llm.base import LLMRequest, LLMResponse
 from archium.infrastructure.llm.structured import parse_and_validate
 
 T = TypeVar("T", bound=BaseModel)
@@ -29,14 +29,34 @@ class MockLLMProvider:
         self.text_responses = text_responses or {}
         self.selector = selector
         self.calls: list[LLMRequest] = []
+        self.last_response: LLMResponse | None = None
 
     def generate_text(self, request: LLMRequest) -> str:
         self.calls.append(request)
-        return self._resolve(request)
+        text = self._resolve(request)
+        self.last_response = LLMResponse(
+            content=text,
+            model=request.model or "mock",
+            finish_reason="stop",
+            prompt_tokens=0,
+            completion_tokens=0,
+            total_tokens=0,
+            latency_ms=0.0,
+        )
+        return text
 
     def generate_structured(self, request: LLMRequest, schema: type[T]) -> T:
         self.calls.append(request)
         raw = self._resolve(request)
+        self.last_response = LLMResponse(
+            content=raw,
+            model=request.model or "mock",
+            finish_reason="stop",
+            prompt_tokens=0,
+            completion_tokens=0,
+            total_tokens=0,
+            latency_ms=0.0,
+        )
         return parse_and_validate(raw, schema)
 
     def _resolve(self, request: LLMRequest) -> str:
