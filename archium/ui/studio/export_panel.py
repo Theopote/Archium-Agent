@@ -70,7 +70,7 @@ def _launch_visual_job(
         presentation_id,
         VisualJobAction.RUN,
         settings=settings,
-        require_art_direction_review=False,
+        require_art_direction_review=True,
         use_llm=False,
         export_pptx=True,
         export_layout_instructions=True,
@@ -128,18 +128,34 @@ def _deck_qa_report() -> dict | None:
 
 
 def _delivery_readiness(*, project_id: UUID, presentation_id: UUID) -> DeliveryReadinessReport:
+    critique = st.session_state.get("last_presentation_critique")
     return resolve_delivery_readiness_safe(
         project_id=project_id,
         presentation_id=presentation_id,
         deck_qa_report=_deck_qa_report(),
+        presentation_critique=critique if isinstance(critique, dict) else None,
+    )
+
+
+def _export_verdict(*, project_id: UUID, presentation_id: UUID):
+    from archium.application.evidence_readiness_service import resolve_export_verdict_safe
+
+    critique = st.session_state.get("last_presentation_critique")
+    return resolve_export_verdict_safe(
+        project_id=project_id,
+        presentation_id=presentation_id,
+        deck_qa_report=_deck_qa_report(),
+        presentation_critique=critique if isinstance(critique, dict) else None,
     )
 
 
 def _assert_export_gate(*, project_id: UUID, presentation_id: UUID, export_format: str) -> None:
     from archium.application.evidence_readiness_service import assert_formal_export_allowed
 
-    report = _delivery_readiness(project_id=project_id, presentation_id=presentation_id)
-    assert_formal_export_allowed(report, export_format=export_format)
+    assert_formal_export_allowed(
+        _export_verdict(project_id=project_id, presentation_id=presentation_id),
+        export_format=export_format,
+    )
 
 
 def _export_pptx(
@@ -218,6 +234,31 @@ def _export_pptx(
                 store_round_trip_report(rt_report)
                 round_trip_report = rt_report.model_dump(mode="json")
                 qa_status = rt_report.qa_status_value()
+
+            from archium.domain.export_round_trip import RoundTripStatus
+
+            if rt_report.status == RoundTripStatus.BLOCKED:
+                blocked_path = file_path.with_name(f"{file_path.stem}.blocked{file_path.suffix}")
+                try:
+                    if file_path.is_file():
+                        file_path.replace(blocked_path)
+                except OSError:
+                    blocked_path = file_path
+                _append_delivery_record(
+                    "PPTX",
+                    str(blocked_path),
+                    project_id=project_id,
+                    presentation_id=presentation_id,
+                    qa_status="blocked",
+                    round_trip_report=round_trip_report,
+                )
+                st.error(
+                    "Round-trip QA 阻塞：文件已标记为不可交付（.blocked.pptx），"
+                    "请修复阻塞项后重新导出。"
+                )
+                for line in rt_report.summary_lines_zh():
+                    st.caption(line)
+                return
 
             manifest = manifest.model_copy(
                 update={
@@ -384,17 +425,12 @@ def _render_quick_export_popover(
         project_id=context.project.id,
         presentation_id=context.presentation.id,
     )
-    export_disabled = not readiness.allows_formal_export
+    verdict = readiness.to_export_verdict()
+    export_disabled = not verdict.allows_formal_export
     with st.popover("导出", use_container_width=True):
-        st.caption("快速导出当前汇报。完整导出与质量检查请到「交付」。")
-        if readiness.evidence.is_unknown:
-            st.caption("资料状态无法验证，禁止正式导出。")
-        elif readiness.evidence.is_concept_draft:
-            st.caption("草稿预览不可正式导出，请先绑定项目资料。")
-        elif not readiness.pptx_ready:
-            st.caption("导出需先完成全部页面版式。")
-        elif readiness.export_blocker_count > 0:
-            st.caption("存在阻塞项，正式导出已被阻止。")
+        st.caption(verdict.partner_summary())
+        for line in verdict.partner_lines(limit=4)[1:]:
+            st.caption(line)
         if st.button(
             "导出 PPTX",
             use_container_width=True,

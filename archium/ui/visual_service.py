@@ -209,7 +209,7 @@ def generate_visual_and_export_pptx(
         session,
         project_id,
         presentation_id,
-        require_art_direction_review=False,
+        require_art_direction_review=True,
         use_llm=False,
         export_pptx=True,
         settings=settings,

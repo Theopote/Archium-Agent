@@ -109,7 +109,8 @@ class PptxRenderer:
         self,
         *,
         title: str,
-        scenes: list[tuple[RenderScene, str | None]],
+        scenes: list[tuple[RenderScene, str | None]]
+        | list[tuple[RenderScene, str | None, list[str] | None]],
         output_path: Path,
         structure_mode: PptxStructureMode | None = None,
         structure: PresentationStructureSpec | None = None,
@@ -118,10 +119,20 @@ class PptxRenderer:
         enforce_capability_contract: bool = True,
         project_id: UUID | None = None,
     ) -> Path:
-        resolved_pairs = [
-            (self._resolve_for_export(scene, project_id=project_id), notes)
-            for scene, notes in scenes
-        ]
+        normalized: list[tuple[RenderScene, str | None, list[str] | None]] = []
+        for entry in scenes:
+            if len(entry) >= 3:
+                scene, notes, cites = entry[0], entry[1], entry[2]  # type: ignore[misc]
+            else:
+                scene, notes = entry[0], entry[1]  # type: ignore[misc]
+                cites = None
+            normalized.append(
+                (
+                    self._resolve_for_export(scene, project_id=project_id),
+                    notes,
+                    cites,
+                )
+            )
         if enforce_capability_contract:
             from archium.domain.powerpoint_contract import PowerPointContractService
 
@@ -129,7 +140,7 @@ class PptxRenderer:
             chart_mode = (
                 chart_export_mode or self._default_chart_export_mode()
             ).value
-            for scene, _notes in resolved_pairs:
+            for scene, _notes, _cites in normalized:
                 contracts.require_capability_export_gate(
                     scene, chart_export_mode=chart_mode
                 )
@@ -147,7 +158,7 @@ class PptxRenderer:
         chart_mode = chart_export_mode or self._default_chart_export_mode()
         deck = self._adapter.render_deck(
             title=title,
-            scenes=resolved_pairs,
+            scenes=normalized,
             structure_mode=mode,
             structure=structure,
             chart_export_mode=chart_mode,

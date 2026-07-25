@@ -303,6 +303,14 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
   经 `analyze_cad_bim_file` 进入导入与 background analyze（非完整几何图）。
 仍待：systemd/Windows 服务编排（部署延后）、OAuth/邮件邀请、IFC 几何/拓扑解析。
 
+**Phase O（Batch 8 · Critic/Render/Delivery 产品裁决）**：
+- `ExportVerdict` 统一 Studio/Deliver 正式导出裁决（blocker + critic + 引用缺口）。
+- `block_export_on_critical_review` 默认 True；产品路径默认 `require_art_direction_review=True`。
+- Round-trip `BLOCKED` → 文件改名为 `.blocked.pptx`，不宣称可交付。
+- Critic 上屏：VisualCritic findings、Design/Presentation 摘要卡；页级证据芯片。
+- `citation.mjs` 接入 Scene from-plan 与 layout-family / Spec `citations`。
+仍待：人工视觉正式门（不可代码伪造）、FILL/OOXML 模板、完整 Chat 轨。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -472,4 +480,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-26 — Phase N.2.2 邀请码 / IFC 文本语义。*
+*Last updated: 2026-07-26 — Phase O ExportVerdict / Critic 上屏 / citation 接线。*

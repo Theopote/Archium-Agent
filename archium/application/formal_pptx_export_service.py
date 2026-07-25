@@ -78,13 +78,18 @@ class FormalPptxExportService:
                 force_recompile=False,
             )
             if scene_results:
+                from archium.application.evidence_readiness_service import (
+                    citation_lines_for_slide,
+                )
+
                 slides = self._presentations.list_slides(presentation_id)
                 slides_by_id = {slide.id: slide for slide in slides}
-                ordered_scenes: list[tuple[RenderScene, str | None]] = []
+                ordered_scenes: list[tuple[RenderScene, str | None, list[str] | None]] = []
                 for result in scene_results:
                     slide = slides_by_id.get(result.scene.slide_id)
                     notes = slide.speaker_notes if slide is not None else None
-                    ordered_scenes.append((result.scene, notes or None))
+                    cites = citation_lines_for_slide(slide) if slide is not None else []
+                    ordered_scenes.append((result.scene, notes or None, cites or None))
                 legacy = create_pptxgen_renderer(
                     self._settings, session=self._session
                 )

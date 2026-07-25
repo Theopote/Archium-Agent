@@ -233,11 +233,30 @@ def render_slide_properties(
         )
 
     if slide_snapshot.visual_critic is not None:
-        critic = slide_snapshot.visual_critic
-        total = critic.get("total_score")
-        score_label = f"{total:.2f}" if isinstance(total, (int, float)) else "—"
-        st.markdown(f"**{entity_label('Visual Critic', advanced=advanced)}**")
-        st.write(f"评分：{score_label}")
+        from archium.ui.components.critique_summary_panel import (
+            render_visual_critic_findings,
+        )
+
+        render_visual_critic_findings(slide_snapshot.visual_critic)
+
+    # Page-level evidence / citation chip
+    try:
+        cites = list(getattr(slide_snapshot.slide, "source_citations", None) or [])
+        missing = []
+        from archium.application.visual.visual_grammar_slots import missing_evidence_slots
+
+        missing = missing_evidence_slots(slide_snapshot.slide)
+        if cites or missing:
+            st.markdown("**证据绑定**")
+            if cites:
+                st.caption(f"已绑定 {len(cites)} 条来源引用")
+                for citation in cites[:3]:
+                    name = getattr(citation, "document_name", None) or str(citation)
+                    st.markdown(f"- {name}")
+            if missing:
+                st.warning("缺证据槽：" + "、".join(slot.role for slot in missing[:4]))
+    except Exception:
+        pass
 
 
 def _render_vision_illustration_panel(

@@ -176,6 +176,7 @@ def _build_spec_slide(
         images = [_full_bleed_image(images[0])]
 
     notes = slide.speaker_notes.strip() if slide.speaker_notes else None
+    citation_lines: list[str] = []
     if slide.source_citations:
         citation_lines = [
             f"{citation.document_name}"
@@ -209,6 +210,7 @@ def _build_spec_slide(
         chart=chart,
         table=table,
         plan_overlays=plan_overlays,
+        citations=citation_lines,
     )
 
 

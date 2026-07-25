@@ -676,7 +676,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
                     presentation_id,
                     VisualJobAction.RUN,
                     settings=settings,
-                    require_art_direction_review=False,
+                    require_art_direction_review=True,
                     use_llm=False,
                     export_pptx=True,
                 )

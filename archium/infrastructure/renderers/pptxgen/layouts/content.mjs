@@ -1,4 +1,4 @@
-import { addContentHeader, addNotes } from "../components/header.mjs";
+import { addContentHeader, addNotes, addSlideCitations } from "./shared.mjs";
 import { addImageOrPlaceholder } from "../core/image-fit.mjs";
 import { bulletRuns } from "../core/text-fit.mjs";
 
@@ -27,6 +27,7 @@ export function renderThesisSlide(pres, slide, theme) {
     });
   }
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }
 
 /** @param {import('pptxgenjs').default} pres @param {object} slide @param {import('../core/theme.mjs').PresentationTheme} theme */
@@ -57,6 +58,7 @@ export function renderSectionSlide(pres, slide, theme) {
     });
   }
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }
 
 /** @param {import('pptxgenjs').default} pres @param {object} slide @param {import('../core/theme.mjs').PresentationTheme} theme */
@@ -87,6 +89,7 @@ export function renderBulletsSlide(pres, slide, theme) {
     });
   }
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }
 
 /** @param {import('pptxgenjs').default} pres @param {object} slide @param {import('../core/theme.mjs').PresentationTheme} theme */
@@ -106,6 +109,7 @@ export function renderMessageSlide(pres, slide, theme) {
     });
   }
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }
 
 /** @param {import('pptxgenjs').default} pres @param {object} slide @param {import('../core/theme.mjs').PresentationTheme} theme */
@@ -145,6 +149,7 @@ export function renderImageContentSlide(pres, slide, theme) {
     });
   }
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }
 
 /** @param {import('pptxgenjs').default} pres @param {object} slide @param {import('../core/theme.mjs').PresentationTheme} theme */
@@ -173,6 +178,7 @@ export function renderImageFullSlide(pres, slide, theme) {
     });
   }
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }
 
 /** @param {import('pptxgenjs').default} pres @param {object} slide @param {import('../core/theme.mjs').PresentationTheme} theme */
@@ -193,6 +199,7 @@ export function renderTimelineSlide(pres, slide, theme) {
   }
   if (items.length === 0) {
     addNotes(page, slide.speaker_notes);
+    addSlideCitations(page, slide, theme);
     return;
   }
   const axisY = slide.message ? 3.05 : 2.75;
@@ -238,6 +245,7 @@ export function renderTimelineSlide(pres, slide, theme) {
     });
   });
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }
 
 /** @param {import('pptxgenjs').default} pres @param {object} slide @param {import('../core/theme.mjs').PresentationTheme} theme */
@@ -268,4 +276,5 @@ export function renderClosingSlide(pres, slide, theme) {
     });
   }
   addNotes(page, slide.speaker_notes);
+  addSlideCitations(page, slide, theme);
 }

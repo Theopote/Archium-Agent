@@ -50,6 +50,7 @@ class RenderedSlideInstruction:
     theme_tokens: dict[str, Any]
     elements: list[dict[str, Any]]
     speaker_notes: str | None = None
+    citations: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -64,6 +65,8 @@ class RenderedSlideInstruction:
         }
         if self.speaker_notes:
             payload["speaker_notes"] = self.speaker_notes
+        if self.citations:
+            payload["citations"] = list(self.citations)
         return payload
 
 

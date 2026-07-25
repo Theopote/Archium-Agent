@@ -84,6 +84,7 @@ class SpecSlide(DomainModel):
     chart: SpecChart | None = None
     table: SpecTable | None = None
     plan_overlays: PlanOverlayMetadata | None = None
+    citations: list[str] = Field(default_factory=list)
 
 
 class PresentationSpec(DomainModel):

@@ -487,8 +487,11 @@ class Settings(BaseSettings):
 
     # ── review.* ─────────────────────────────────────────────────────────────
     block_export_on_critical_review: bool = Field(
-        default=False,
-        description="When true, open CRITICAL ReviewIssue records block JSON/Marp export.",
+        default=True,
+        description=(
+            "When true, open CRITICAL / gate-blocking ReviewIssue records block "
+            "JSON/Marp export (aligned with Studio formal export gate)."
+        ),
     )
     llm_professional_review_enabled: bool = Field(
         default=False,

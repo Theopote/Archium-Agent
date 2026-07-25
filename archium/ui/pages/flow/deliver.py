@@ -140,22 +140,19 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         deck_qa_report = deck_qa.deck_qa_report
         warn_count = int(deck_qa_report.get("warning_count") or 0)
 
-    from archium.application.evidence_readiness_service import resolve_delivery_readiness_safe
+    from archium.application.evidence_readiness_service import resolve_export_verdict_safe
+    from archium.ui.components.critique_summary_panel import (
+        render_design_critique_card,
+        render_presentation_critique_card,
+    )
 
-    readiness = resolve_delivery_readiness_safe(
+    critique = st.session_state.get("last_presentation_critique")
+    verdict = resolve_export_verdict_safe(
         project_id=context.project.id,
         presentation_id=context.presentation.id,
         deck_qa_report=deck_qa_report,
+        presentation_critique=critique if isinstance(critique, dict) else None,
     )
-    evidence = readiness.evidence
-    if evidence.is_unknown:
-        st.error("资料状态无法验证 · 禁止正式交付（请检查数据库后重试）")
-        materials_label = "无法验证"
-    elif evidence.is_concept_draft:
-        materials_label = "0 份"
-    else:
-        materials_label = f"{evidence.document_count} 份"
-
     cols = st.columns(7)
     cols[0].metric(
         "页面完成",
@@ -164,20 +161,17 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         else "0/0",
     )
     cols[1].metric("待完成页", pending)
-    cols[2].metric("PPTX", "可导出" if readiness.pptx_ready else "未齐")
-    cols[3].metric("PDF", "可导出" if readiness.pdf_ready else "未齐")
-    cols[4].metric("警告", warn_count)
-    cols[5].metric("阻塞项", readiness.export_blocker_count)
-    cols[6].metric("项目资料", materials_label)
-    if readiness.formal_delivery_ready:
-        export_label = "可正式交付"
-    elif evidence.is_unknown:
-        export_label = "待验证"
-    elif evidence.is_concept_draft:
-        export_label = "草稿"
-    else:
-        export_label = "未通过"
-    st.caption(f"正式交付：{export_label}")
+    cols[2].metric("PPTX", "可导出" if verdict.pptx_ready else "未齐")
+    cols[3].metric("PDF", "可导出" if verdict.pdf_ready else "未齐")
+    cols[4].metric("警告", warn_count + len(verdict.warnings))
+    cols[5].metric("阻塞项", len(verdict.blockers))
+    cols[6].metric("证据缺口", verdict.citation_gap_count)
+    st.caption(f"正式交付：{verdict.partner_summary()}")
+    for line in verdict.partner_lines(limit=5)[1:]:
+        st.caption(line)
+
+    render_presentation_critique_card(context.presentation.id)
+    render_design_critique_card()
 
 
 def _render_qa(project_id: UUID) -> None:

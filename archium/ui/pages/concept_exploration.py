@@ -267,6 +267,9 @@ def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
             st.session_state["design_critique_warnings"] = list(
                 getattr(selection, "critique_warnings", None) or []
             )
+            report = getattr(selection, "critique_report", None)
+            if report is not None and hasattr(report, "as_dict"):
+                st.session_state["last_design_critique_report"] = report.as_dict()
             st.success("已选中方向。")
             st.rerun()
         except WorkflowError as exc:

@@ -11,6 +11,7 @@ import {
   matchPlaceholderName,
   resolveLayoutForFamily,
 } from "../core/structure.mjs";
+import { addCitationBlock } from "../components/citation.mjs";
 
 /**
  * @param {import('pptxgenjs').default} pres
@@ -76,6 +77,24 @@ export function renderSlideFromPlan(pres, slideInstruction, deckTheme = null, st
 
   if (slideInstruction.speaker_notes) {
     page.addNotes(String(slideInstruction.speaker_notes));
+  }
+
+  const citationLines = Array.isArray(slideInstruction.citations)
+    ? slideInstruction.citations.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  if (citationLines.length) {
+    const pageW = Number(slideInstruction.page_width) || 10;
+    const pageH = Number(slideInstruction.page_height) || 5.625;
+    addCitationBlock(
+      page,
+      citationLines.slice(0, 4),
+      {
+        colors: { muted: "666666" },
+        fonts: { caption: "Microsoft YaHei" },
+        component_styles: { caption: { fontSize: 9 } },
+      },
+      { x: 0.4, y: pageH - 0.75, w: pageW - 0.8, h: 0.6 },
+    );
   }
 }
 

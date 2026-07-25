@@ -44,6 +44,7 @@ class RenderScenePptxAdapter:
         *,
         design_system_id: UUID | None = None,
         speaker_notes: str | None = None,
+        citations: list[str] | None = None,
     ) -> RenderedSlideInstruction:
         # Hidden nodes remain part of authored revision state, but are not
         # visible delivery objects under the RenderScene closure contract.
@@ -76,24 +77,32 @@ class RenderScenePptxAdapter:
             theme_tokens=theme_tokens,
             elements=elements,
             speaker_notes=speaker_notes,
+            citations=list(citations or []),
         )
 
     def render_deck(
         self,
         *,
         title: str,
-        scenes: list[tuple[RenderScene, str | None]],
+        scenes: list[tuple[RenderScene, str | None]]
+        | list[tuple[RenderScene, str | None, list[str] | None]],
         design_system_id: UUID | None = None,
         structure_mode: PptxStructureMode = PptxStructureMode.FLAT,
         structure: PresentationStructureSpec | None = None,
         chart_export_mode: ChartExportMode = ChartExportMode.CROSS_APP_STABLE,
     ) -> dict[str, Any]:
         instructions: list[dict[str, Any]] = []
-        for scene, notes in scenes:
+        for entry in scenes:
+            if len(entry) == 3:
+                scene, notes, cites = entry  # type: ignore[misc]
+            else:
+                scene, notes = entry  # type: ignore[misc]
+                cites = None
             instruction = self.render_slide(
                 scene,
                 design_system_id=design_system_id,
                 speaker_notes=notes,
+                citations=list(cites or []) if cites else None,
             )
             instructions.append(instruction.to_dict())
         deck: dict[str, Any] = {
@@ -106,7 +115,7 @@ class RenderScenePptxAdapter:
         resolved = self._resolve_structure(
             structure_mode=structure_mode,
             structure=structure,
-            scenes=[scene for scene, _ in scenes],
+            scenes=[entry[0] for entry in scenes],
         )
         if resolved is not None:
             deck["structure"] = structure_spec_to_pptxgen_payload(resolved)
