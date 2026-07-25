@@ -42,6 +42,7 @@ class NarrativeArchitect:
         renovation_issue_map: RenovationIssueMap | None = None,
         narrative_mode: ArchitecturalNarrativeMode | None = None,
         design_intent_block: str = "",
+        presentation_intent_block: str = "",
     ) -> Storyline:
         draft = self._llm.generate_structured(
             LLMRequest(
@@ -57,6 +58,7 @@ class NarrativeArchitect:
                     else None,
                     narrative_mode=narrative_mode,
                     design_intent_block=design_intent_block or None,
+                    presentation_intent_block=presentation_intent_block or None,
                 ),
                 temperature=0.4,
             ),

@@ -246,6 +246,11 @@ UI：编排条展示闸门/反思，支持「继续编排」与「按上下文�
 IntentEvolution kind）；Planning `WorkflowRun` 快照 `mission_id`-first 瘦身；
 探索选定批判后补 `REFLECTION`。
 
+**Phase L（PresentationIntent / SlideRole P0）**：`PresentationIntent` 挂 Brief/Request
+（说服策略、视觉风格、深度、受众模式）；`SlideRole` + `VisualStrategy` 收敛
+PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
+`PresentationCritic` 聚合故事/视觉/建筑表达评分。从「页目录」迈向「受众说服叙事」。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -415,4 +420,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase K.1 process_timeline / state thinning；K；J；I.3。*
+*Last updated: 2026-07-25 — Phase L PresentationIntent/SlideRole；K.1；K；J。*

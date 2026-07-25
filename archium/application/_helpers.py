@@ -345,6 +345,10 @@ def build_request_context(request: PresentationRequest) -> str:
         f"语言: {request.language}",
         f"风格: {request.tone}",
     ]
+    if request.presentation_intent is not None:
+        block = request.presentation_intent.to_prompt_block()
+        if block.strip():
+            parts.append(block)
     if request.required_sections:
         parts.append("必须章节: " + ", ".join(request.required_sections))
     if request.excluded_topics:
@@ -388,8 +392,14 @@ def brief_from_draft(
     project_id: UUID,
     presentation_id: UUID,
     version: int = 1,
+    request: PresentationRequest | None = None,
 ) -> PresentationBrief:
-    return PresentationBrief(
+    from archium.application.presentation_intent_layer import (
+        ensure_brief_presentation_intent,
+        presentation_intent_from_request,
+    )
+
+    brief = PresentationBrief(
         project_id=project_id,
         presentation_id=presentation_id,
         title=draft.title,
@@ -406,7 +416,11 @@ def brief_from_draft(
         excluded_topics=list(draft.excluded_topics),
         language=draft.language,
         version=version,
+        presentation_intent=(
+            presentation_intent_from_request(request) if request is not None else None
+        ),
     )
+    return ensure_brief_presentation_intent(brief)
 
 
 def storyline_from_draft(draft: StorylineDraft, *, presentation_id: UUID, version: int = 1) -> Storyline:
@@ -476,7 +490,9 @@ def slide_from_draft(
     context_chunks: list[DocumentChunk] | None = None,
     version: int = 1,
 ) -> SlideSpec:
-    return SlideSpec(
+    from archium.application.presentation_intent_layer import ensure_slide_role_layer
+
+    slide = SlideSpec(
         presentation_id=presentation_id,
         chapter_id=draft.chapter_id,
         order=draft.order,
@@ -502,6 +518,7 @@ def slide_from_draft(
         speaker_notes=draft.speaker_notes,
         version=version,
     )
+    return ensure_slide_role_layer(slide)
 
 
 def slides_from_plan(

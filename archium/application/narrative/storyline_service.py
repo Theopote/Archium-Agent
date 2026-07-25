@@ -85,6 +85,15 @@ class StorylineService:
         if mission is not None and mission.design_intent is not None:
             design_intent_block = mission.design_intent.to_prompt_block()
 
+        from archium.application.presentation_intent_layer import (
+            ensure_brief_presentation_intent,
+        )
+
+        brief = ensure_brief_presentation_intent(brief)
+        presentation_intent_block = ""
+        if brief.presentation_intent is not None:
+            presentation_intent_block = brief.presentation_intent.to_prompt_block()
+
         storyline = self._architect.propose(
             brief,
             project_context=project_context,
@@ -93,6 +102,7 @@ class StorylineService:
             renovation_issue_map=renovation_issue_map,
             narrative_mode=narrative_mode,
             design_intent_block=design_intent_block,
+            presentation_intent_block=presentation_intent_block,
         )
         apply_storyline_lineage(storyline, previous)
         saved = self._presentations.save_storyline(storyline)

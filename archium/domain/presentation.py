@@ -14,6 +14,7 @@ from archium.domain.enums import (
     PresentationType,
 )
 from archium.domain.narrative_arc import NarrativeArc
+from archium.domain.presentation_intent import PresentationIntent
 
 BRIEF_LOGICAL_KEY = "presentation-brief"
 STORYLINE_LOGICAL_KEY = "presentation-storyline"
@@ -56,6 +57,7 @@ class PresentationBrief(IdentifiedModel, VersionedModel, TimestampedModel):
     excluded_topics: list[str] = Field(default_factory=list)
     language: str = Field(default="zh-CN", min_length=2)
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
+    presentation_intent: PresentationIntent | None = None
 
     def approve(self) -> None:
         self.approval_status = ApprovalStatus.APPROVED

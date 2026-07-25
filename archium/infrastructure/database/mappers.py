@@ -441,8 +441,17 @@ def presentation_to_orm(
 
 
 def presentation_brief_to_domain(orm: PresentationBriefORM) -> PresentationBrief:
+    from archium.domain.presentation_intent import PresentationIntent
+
     lineage_id = orm.lineage_id or orm.id
     logical_key = orm.logical_key or BRIEF_LOGICAL_KEY
+    intent_raw = getattr(orm, "presentation_intent_json", None)
+    intent = None
+    if isinstance(intent_raw, dict):
+        try:
+            intent = PresentationIntent.model_validate(intent_raw)
+        except Exception:
+            intent = None
     return PresentationBrief(
         id=orm.id,
         project_id=orm.project_id,
@@ -464,6 +473,7 @@ def presentation_brief_to_domain(orm: PresentationBriefORM) -> PresentationBrief
         language=orm.language,
         version=orm.version,
         approval_status=ApprovalStatus(orm.approval_status),
+        presentation_intent=intent,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -492,6 +502,12 @@ def presentation_brief_to_orm(
     target.approval_status = domain.approval_status.value
     target.lineage_id = domain.lineage_id
     target.logical_key = domain.logical_key
+    target.presentation_intent_json = (
+        domain.presentation_intent.model_dump(mode="json")
+        if domain.presentation_intent is not None
+        and not domain.presentation_intent.is_empty()
+        else None
+    )
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target
@@ -882,6 +898,8 @@ def reference_style_profile_to_orm(
 
 
 def slide_to_domain(orm: SlideORM) -> SlideSpec:
+    from archium.domain.slide_role import VisualStrategy, coerce_slide_role
+
     lineage_id = orm.lineage_id or orm.id
     logical_key = orm.logical_key or build_slide_logical_key(orm.chapter_id, orm.order)
     raw_delivery = getattr(orm, "delivery_status", None) or "ready"
@@ -889,6 +907,13 @@ def slide_to_domain(orm: SlideORM) -> SlideSpec:
         delivery_status = SlideDeliveryStatus(raw_delivery)
     except ValueError:
         delivery_status = SlideDeliveryStatus.READY
+    strategy_raw = getattr(orm, "visual_strategy_json", None)
+    strategy = None
+    if isinstance(strategy_raw, dict):
+        try:
+            strategy = VisualStrategy.model_validate(strategy_raw)
+        except Exception:
+            strategy = None
     return SlideSpec(
         id=orm.id,
         presentation_id=orm.presentation_id,
@@ -914,6 +939,8 @@ def slide_to_domain(orm: SlideORM) -> SlideSpec:
         required_evidence_slots=list(
             getattr(orm, "required_evidence_slots_json", None) or []
         ),
+        slide_role=coerce_slide_role(getattr(orm, "slide_role", None)),
+        visual_strategy=strategy,
     )
 
 
@@ -942,6 +969,12 @@ def slide_to_orm(domain: SlideSpec, orm: SlideORM | None = None) -> SlideORM:
         domain.page_archetype.value if domain.page_archetype is not None else None
     )
     target.required_evidence_slots_json = list(domain.required_evidence_slots)
+    target.slide_role = domain.slide_role.value if domain.slide_role is not None else None
+    target.visual_strategy_json = (
+        domain.visual_strategy.model_dump(mode="json")
+        if domain.visual_strategy is not None and not domain.visual_strategy.is_empty()
+        else None
+    )
     return target
 
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.slide_role import SlideRole, VisualStrategy, coerce_slide_role
 from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
 
 
@@ -31,6 +32,9 @@ class SlideIntent(DomainModel):
     expected_layout: str = Field(default="", max_length=200)
     # Visual Grammar archetype (VG-002); optional until recognition / user sets it.
     page_archetype: PageArchetype | None = None
+    # Presentation page role + visual reasoning.
+    slide_role: SlideRole | None = None
+    visual_strategy: VisualStrategy | None = None
     # 备注 / 自由说明（对应外部 API 的 page_instructions 条目）
     notes: str = Field(default="", max_length=2000)
 
@@ -40,6 +44,13 @@ class SlideIntent(DomainModel):
         if value is None or value == "":
             return None
         return coerce_page_archetype(value) or value
+
+    @field_validator("slide_role", mode="before")
+    @classmethod
+    def _coerce_slide_role(cls, value: object) -> object:
+        if value is None or value == "":
+            return None
+        return coerce_slide_role(value) or value
 
     def effective_page_intent(self) -> str:
         """Single-line intent used when a compact string is required."""

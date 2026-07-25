@@ -55,6 +55,7 @@ def build_storyline_user_prompt(
     issue_map_json: str | None = None,
     narrative_mode: ArchitecturalNarrativeMode | None = None,
     design_intent_block: str | None = None,
+    presentation_intent_block: str | None = None,
 ) -> str:
     mode_block = ""
     if narrative_mode is not None:
@@ -80,11 +81,18 @@ def build_storyline_user_prompt(
             f"\n【设计使命 — 章节应围绕核心追问展开，勿套用固定模板】\n"
             f"{design_intent_block.strip()}\n"
         )
+    presentation_intent_section = ""
+    if presentation_intent_block and presentation_intent_block.strip():
+        presentation_intent_section = (
+            f"\n【汇报意图 — 按受众说服策略组织论证路径，勿生成通用目录】\n"
+            f"{presentation_intent_block.strip()}\n"
+        )
     return (
         "请根据 PresentationBrief 生成 Storyline JSON。\n"
         "先填写 narrative_arc，再据此安排 chapters 顺序与 key_message。\n\n"
         f"【项目资料】\n{project_context}\n\n"
         f"【PresentationBrief】\n{brief_json}"
+        f"{presentation_intent_section}"
         f"{design_intent_section}"
         f"{narrative_block}"
         f"{issue_map_block}"

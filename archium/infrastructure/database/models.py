@@ -246,6 +246,9 @@ class PresentationBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
     lineage_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
     logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="presentation-brief")
+    presentation_intent_json: Mapped[dict[str, object] | None] = mapped_column(
+        "presentation_intent", JSON, nullable=True
+    )
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="briefs")
 
@@ -424,6 +427,10 @@ class SlideORM(UUIDPrimaryKeyMixin, Base):
     page_archetype: Mapped[str | None] = mapped_column(String(50), nullable=True)
     required_evidence_slots_json: Mapped[list[str]] = mapped_column(
         "required_evidence_slots", JSON, default=list
+    )
+    slide_role: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    visual_strategy_json: Mapped[dict[str, object] | None] = mapped_column(
+        "visual_strategy", JSON, nullable=True
     )
 
     presentation: Mapped[PresentationORM] = relationship(back_populates="slides")

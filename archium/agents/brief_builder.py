@@ -55,4 +55,5 @@ class BriefBuilder:
             project_id=project_id,
             presentation_id=presentation_id,
             version=version,
+            request=request,
         )

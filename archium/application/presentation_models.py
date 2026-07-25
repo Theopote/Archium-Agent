@@ -7,6 +7,7 @@ from pathlib import Path
 
 from archium.domain.enums import PresentationType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
+from archium.domain.presentation_intent import PresentationIntent
 from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 from archium.domain.workflow_route import PresentationWorkflowRoute
@@ -31,6 +32,7 @@ class PresentationRequest:
     language: str = "zh-CN"
     user_notes: str = ""
     use_manuscript_pipeline: bool = False
+    presentation_intent: PresentationIntent | None = None
     # Per-page free-text instructions (index = page order). Seeded onto OutlinePlan.page_intents.
     page_instructions: list[str] = field(default_factory=list)
     # Explicit page materials: {page_index: [{asset_id, type/description/...}, ...]}

@@ -135,6 +135,18 @@ def build_presentation_request(
     presentation_type = infer_presentation_type(mission, primary)
     slide_count, duration = _infer_length(primary)
 
+    from archium.application.presentation_intent_layer import (
+        presentation_intent_from_mission,
+    )
+
+    intent = presentation_intent_from_mission(
+        mission,
+        presentation_type=presentation_type,
+        audience=audience,
+        purpose=purpose,
+        key_message=core_message,
+    )
+
     request = PresentationRequest(
         title=title,
         audience=audience,
@@ -150,6 +162,7 @@ def build_presentation_request(
         tone="professional",
         language="zh-CN",
         user_notes=user_notes,
+        presentation_intent=intent,
     )
     return apply_presentation_overrides(request, user_overrides)
 
