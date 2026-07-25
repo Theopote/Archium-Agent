@@ -1307,6 +1307,23 @@ class ConceptDirectionRepository:
         )
         return [mappers.concept_direction_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def list_by_project(
+        self,
+        project_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> list[ConceptDirection]:
+        stmt = select(ConceptDirectionORM).where(
+            ConceptDirectionORM.project_id == project_id
+        )
+        if not include_archived:
+            stmt = stmt.where(ConceptDirectionORM.status != "archived")
+        stmt = stmt.order_by(
+            ConceptDirectionORM.sort_order.asc(),
+            ConceptDirectionORM.created_at.asc(),
+        )
+        return [mappers.concept_direction_to_domain(row) for row in self._session.scalars(stmt)]
+
     def list_by_exploration(
         self,
         exploration_session_id: UUID,

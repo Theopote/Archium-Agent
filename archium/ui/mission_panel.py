@@ -855,11 +855,24 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
                 )
                 result = service.research_for_mission(mission.id)
                 session.commit()
+            vision_payload = []
+            for bundle in getattr(result, "vision_bundles", []) or []:
+                try:
+                    vision_payload.append(bundle.model_dump(mode="json"))
+                except Exception:
+                    continue
+            st.session_state[f"{key_prefix}_research_vision_{mission.id}"] = vision_payload
+            st.session_state[f"{key_prefix}_research_items_{mission.id}"] = len(result.items)
             st.success(
                 f"已生成 {len(result.items)} 条公开研究摘要。"
                 + (
                     f"（联网检索 {result.search_hit_count} 条，来源：{result.search_provider}）"
                     if result.search_hit_count and result.search_provider
+                    else ""
+                )
+                + (
+                    f" · Research→Vision {len(vision_payload)} 组视觉种子"
+                    if vision_payload
                     else ""
                 )
             )
@@ -870,6 +883,64 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
             st.error(str(exc))
         except Exception as exc:
             st.error(format_user_error(exc))
+
+    _render_research_vision_seeds(mission, key_prefix=key_prefix)
+
+
+def _render_research_vision_seeds(mission: ProjectMission, *, key_prefix: str) -> None:
+    """Show last Research→Vision seeds and optionally apply to concept directions."""
+    from archium.application.visual.vision.research_vision_apply import (
+        apply_vision_bundles_to_directions,
+    )
+    from archium.domain.research_vision import ResearchVisionBundle
+
+    state_key = f"{key_prefix}_research_vision_{mission.id}"
+    payload = st.session_state.get(state_key) or []
+    if not payload:
+        return
+    bundles: list[ResearchVisionBundle] = []
+    for raw in payload:
+        try:
+            bundles.append(ResearchVisionBundle.model_validate(raw))
+        except Exception:
+            continue
+    if not bundles:
+        return
+
+    with st.expander(f"Research→Vision 视觉种子（{len(bundles)}）", expanded=True):
+        st.caption("示意种子，非证据图。可写入尚未有 visual_prompt 的概念方向。")
+        for bundle in bundles[:4]:
+            st.markdown(f"**{bundle.topic or '研究洞察'}**")
+            if bundle.insight.strip():
+                st.caption(bundle.insight.strip()[:200])
+            for ref in bundle.references:
+                vp = ref.visual_prompt
+                st.markdown(
+                    f"- `{ref.kind.value}` · {ref.title}  \n"
+                    f"  {vp.image_prompt[:120]}{'…' if len(vp.image_prompt) > 120 else ''}"
+                )
+        if st.button(
+            "将视觉种子写入概念方向（仅空种子）",
+            key=f"{key_prefix}_apply_research_vision_{mission.id}",
+            use_container_width=True,
+        ):
+            try:
+                with get_session() as session:
+                    updated = apply_vision_bundles_to_directions(
+                        session,
+                        mission.project_id,
+                        bundles,
+                        mission_id=mission.id,
+                        only_if_empty=True,
+                    )
+                    session.commit()
+                if updated:
+                    st.success(f"已写入 {len(updated)} 个概念方向的 visual_prompt。")
+                    st.rerun()
+                else:
+                    st.info("没有可写入的空视觉种子方向（可能已有种子或尚无方向草稿）。")
+            except Exception as exc:
+                st.error(format_user_error(exc))
 
 
 def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission") -> None:
