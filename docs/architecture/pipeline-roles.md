@@ -249,7 +249,9 @@ IntentEvolution kind）；Planning `WorkflowRun` 快照 `mission_id`-first 瘦�
 **Phase L（PresentationIntent / SlideRole P0）**：`PresentationIntent` 挂 Brief/Request
 （说服策略、视觉风格、深度、受众模式）；`SlideRole` + `VisualStrategy` 收敛
 PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
-`PresentationCritic` 聚合故事/视觉/建筑表达评分。从「页目录」迈向「受众说服叙事」。
+`PresentationCritic` 聚合故事/视觉/建筑表达评分，并挂入 presentation 图
+`run_presentation_critique`（layout 之后、repair/validate 之前，软失败）。
+从「页目录」迈向「受众说服叙事」。
 
 ---
 
@@ -420,4 +422,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase L PresentationIntent/SlideRole；K.1；K；J。*
+*Last updated: 2026-07-25 — Phase L PresentationCritic 入图；PresentationIntent/SlideRole；K.1。*

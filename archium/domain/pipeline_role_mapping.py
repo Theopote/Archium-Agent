@@ -55,6 +55,7 @@ _REVIEW_LAYER_TO_ROLE: dict[ReviewLayer, PipelineRole] = {
     ReviewLayer.ARCHITECTURAL: PipelineRole.ARCHITECTURE,
     ReviewLayer.LAYOUT: PipelineRole.LAYOUT,
     ReviewLayer.SEMANTIC: PipelineRole.CRITIC,
+    ReviewLayer.PRESENTATION: PipelineRole.CRITIC,
 }
 
 _WORKFLOW_STEP_TO_ROLE: dict[WorkflowStep, PipelineRole] = {
@@ -73,6 +74,7 @@ _WORKFLOW_STEP_TO_ROLE: dict[WorkflowStep, PipelineRole] = {
     WorkflowStep.EVIDENCE_REVIEW: PipelineRole.CRITIC,
     WorkflowStep.ARCHITECTURAL_REVIEW: PipelineRole.CRITIC,
     WorkflowStep.LAYOUT_REVIEW: PipelineRole.CRITIC,
+    WorkflowStep.PRESENTATION_CRITIQUE: PipelineRole.CRITIC,
     WorkflowStep.REPAIR_SLIDES: PipelineRole.CRITIC,
     WorkflowStep.EXPORT: PipelineRole.RENDER,
     WorkflowStep.PRESENTATION_SPEC: PipelineRole.RENDER,

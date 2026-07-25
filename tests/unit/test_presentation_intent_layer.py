@@ -95,6 +95,43 @@ def test_ensure_slide_role_layer() -> None:
     assert not enriched.visual_strategy.is_empty()
 
 
+def test_critique_to_review_issues_are_soft() -> None:
+    from archium.application.presentation_critic import (
+        critique_presentation,
+        critique_to_review_issues,
+    )
+    from archium.domain.enums import ReviewLayer, ReviewSeverity
+
+    brief = ensure_brief_presentation_intent(
+        PresentationBrief(
+            project_id=uuid4(),
+            presentation_id=uuid4(),
+            title="t",
+            presentation_type=PresentationType.CLIENT_REVIEW,
+            audience="甲方",
+            purpose="决策",
+            core_message="改善体验",
+        )
+    )
+    slides = [
+        SlideSpec(
+            presentation_id=brief.presentation_id,
+            chapter_id="ch1",
+            order=0,
+            title="问题",
+            message="交通冲突严重。",
+            slide_type=SlideType.CONTENT,
+            slide_role=SlideRole.PROBLEM_ANALYSIS,
+        )
+    ]
+    report = critique_presentation(brief=brief, slides=slides)
+    issues = critique_to_review_issues(brief.presentation_id, report)
+    assert issues
+    assert all(i.reviewer_layer == ReviewLayer.PRESENTATION for i in issues)
+    assert all(i.severity != ReviewSeverity.CRITICAL for i in issues)
+    assert all(not i.auto_fixable for i in issues)
+
+
 def test_presentation_critic_flags_missing_strategy_pages() -> None:
     brief = ensure_brief_presentation_intent(
         PresentationBrief(

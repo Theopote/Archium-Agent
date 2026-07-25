@@ -179,6 +179,9 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "review_issue_count": len(state.get("review_issues", [])),
         "slide_count": len(slides),
     }
+    critique = state.get("presentation_critique")
+    if isinstance(critique, dict):
+        payload["presentation_critique"] = critique
     context_bundle = state.get("context_bundle")
     if context_bundle is not None:
         payload["context_chunk_count"] = len(context_bundle.chunks)

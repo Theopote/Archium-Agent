@@ -32,6 +32,7 @@ class ReviewLayer(StrEnum):
     ARCHITECTURAL = "architectural"
     LAYOUT = "layout"
     SEMANTIC = "semantic"
+    PRESENTATION = "presentation"
 
 class ReviewCategory(StrEnum):
     CITATION = "citation"

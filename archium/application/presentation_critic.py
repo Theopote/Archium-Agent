@@ -5,10 +5,14 @@ Critic seat artifact. Aggregates existing signals; does not rewrite the deck.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity
 from archium.domain.presentation import PresentationBrief, Storyline
+from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_role import SlideRole
 
@@ -81,7 +85,10 @@ def critique_presentation(
             strategy_hits += 1
         if slide.slide_role in analysis_roles:
             analysis_total += 1
-            if slide.visual_strategy is not None and slide.visual_strategy.recommended_diagram.strip():
+            if (
+                slide.visual_strategy is not None
+                and slide.visual_strategy.recommended_diagram.strip()
+            ):
                 analysis_with_strategy += 1
 
     if slides:
@@ -121,3 +128,68 @@ def critique_presentation(
         suggestions=suggestions[:8],
         overloaded_slides=overloaded[:8],
     )
+
+
+def critique_to_review_issues(
+    presentation_id: UUID,
+    report: PresentationCritiqueReport,
+) -> list[ReviewIssue]:
+    """Map critique report → soft ReviewIssue rows (never auto_fixable / never CRITICAL)."""
+    issues: list[ReviewIssue] = []
+    score_line = (
+        f"故事 {int(report.story_strength * 100)}% · "
+        f"视觉 {int(report.visual_quality * 100)}% · "
+        f"建筑表达 {int(report.architectural_expression * 100)}%"
+    )
+    issues.append(
+        ReviewIssue(
+            presentation_id=presentation_id,
+            reviewer_layer=ReviewLayer.PRESENTATION,
+            category=ReviewCategory.STRUCTURE,
+            severity=ReviewSeverity.SUGGESTION,
+            title="汇报级批评评分",
+            description=score_line,
+            rule_code="presentation_critique_scores",
+            auto_fixable=False,
+        )
+    )
+    for item in report.missing_points:
+        issues.append(
+            ReviewIssue(
+                presentation_id=presentation_id,
+                reviewer_layer=ReviewLayer.PRESENTATION,
+                category=ReviewCategory.COVERAGE,
+                severity=ReviewSeverity.MEDIUM,
+                title="汇报缺项",
+                description=item,
+                rule_code="presentation_critique_missing",
+                auto_fixable=False,
+            )
+        )
+    for item in report.suggestions:
+        issues.append(
+            ReviewIssue(
+                presentation_id=presentation_id,
+                reviewer_layer=ReviewLayer.PRESENTATION,
+                category=ReviewCategory.STRUCTURE,
+                severity=ReviewSeverity.SUGGESTION,
+                title="汇报改进建议",
+                description=item,
+                rule_code="presentation_critique_suggestion",
+                auto_fixable=False,
+            )
+        )
+    for item in report.overloaded_slides:
+        issues.append(
+            ReviewIssue(
+                presentation_id=presentation_id,
+                reviewer_layer=ReviewLayer.PRESENTATION,
+                category=ReviewCategory.LENGTH,
+                severity=ReviewSeverity.SUGGESTION,
+                title="信息过载页",
+                description=item,
+                rule_code="presentation_critique_overload",
+                auto_fixable=False,
+            )
+        )
+    return issues

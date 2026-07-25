@@ -29,6 +29,7 @@ class PresentationWorkflowStep(StrEnum):
     EVIDENCE_REVIEW = "evidence_review"
     ARCHITECTURAL_REVIEW = "architectural_review"
     LAYOUT_REVIEW = "layout_review"
+    PRESENTATION_CRITIQUE = "presentation_critique"
     PROFESSIONAL_REVIEW = "professional_review"
     REPAIR_SLIDES = "repair_slides"
     SLIDE_VALIDATION = "slide_validation"

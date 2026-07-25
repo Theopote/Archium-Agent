@@ -44,6 +44,7 @@ class PresentationWorkflowState(TypedDict, total=False):
     outline: OutlinePlan | None
     slides: list[SlideSpec]
     review_issues: list[ReviewIssue]
+    presentation_critique: dict[str, object] | None
     matched_asset_count: int
     repaired_slide_count: int
     repair_round: int
@@ -118,6 +119,7 @@ def initial_workflow_state(
         "outline": None,
         "slides": [],
         "review_issues": [],
+        "presentation_critique": None,
         "matched_asset_count": 0,
         "repaired_slide_count": 0,
         "repair_round": 0,

@@ -188,6 +188,69 @@ class ReviewNodesMixin(WorkflowNodeBase):
                 "current_step": PresentationWorkflowStep.LAYOUT_REVIEW.value,
             }
 
+    def run_presentation_critique(
+        self, state: PresentationWorkflowState
+    ) -> PresentationWorkflowState:
+        """Deck-level PresentationCritic — soft-fail; never blocks export alone."""
+        logger = self._logger(state)
+        step = PresentationWorkflowStep.PRESENTATION_CRITIQUE.value
+        if state.get("errors"):
+            return {"current_step": step}
+
+        slides = self._load_slides_for_export(state)
+        if not slides:
+            return {"current_step": step}
+
+        try:
+            from archium.application.presentation_critic import (
+                critique_presentation,
+                critique_to_review_issues,
+            )
+            from archium.application.presentation_intent_layer import (
+                ensure_brief_presentation_intent,
+            )
+            from archium.domain.presentation import PresentationBrief
+
+            presentation_id = UUID(state["presentation_id"])
+            brief = self._coerce_domain(PresentationBrief, state.get("brief"))
+            if brief is not None:
+                brief = ensure_brief_presentation_intent(brief)
+            storyline = self._coerce_domain(Storyline, state.get("storyline"))
+            report = critique_presentation(
+                brief=brief,
+                storyline=storyline,
+                slides=slides,
+            )
+            critique_issues = critique_to_review_issues(presentation_id, report)
+            reviewer = AutomatedReviewService(
+                self._runtime.session,
+                llm=self._runtime.llm,
+                settings=self._runtime.settings,
+            )
+            next_state = cast(
+                PresentationWorkflowState,
+                {
+                    **self._merge_review_findings(state, critique_issues, reviewer),
+                    "presentation_critique": report.as_dict(),
+                    "current_step": step,
+                },
+            )
+            if brief is not None:
+                next_state["brief"] = brief
+            merged = cast(PresentationWorkflowState, {**state, **next_state})
+            self._persist_checkpoint(merged)
+            logger.info(
+                "Presentation critique story=%.2f visual=%.2f arch=%.2f (%d issue(s))",
+                report.story_strength,
+                report.visual_quality,
+                report.architectural_expression,
+                len(critique_issues),
+            )
+            return next_state
+        except Exception as exc:  # noqa: BLE001 — soft-fail like visual critic
+            logger.warning("Presentation critique failed (non-fatal): %s", exc)
+            return {"current_step": step}
+
     def run_professional_review(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
         """Backward-compatible alias: runs architectural review only."""
         return self.run_architectural_review(state)
