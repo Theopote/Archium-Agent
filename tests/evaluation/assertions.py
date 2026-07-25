@@ -46,6 +46,17 @@ def assert_research_item_has_sources(item: ProjectKnowledgeItem) -> None:
     )
 
 
+def assert_research_item_has_design_knowledge(item: ProjectKnowledgeItem) -> None:
+    knowledge = item.design_knowledge
+    assert knowledge is not None, "evaluation: research item must carry DesignKnowledge"
+    assert knowledge.has_substance, "evaluation: DesignKnowledge must have substance"
+    assert_non_empty(knowledge.principle or knowledge.insight, field="principle|insight")
+    assert_non_empty(
+        knowledge.spatial_translation or knowledge.project_link,
+        field="spatial_translation|project_link",
+    )
+
+
 def assert_critique_offers_counterexamples(report: DesignCritiqueReport) -> None:
     assert report.alternative_directions, (
         "evaluation: Critic must propose alternative / counterexample directions"

@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.design_knowledge_mapping import design_knowledge_from_finding
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.application.research_topics import collect_mission_research_topics
 from archium.config.settings import Settings, get_settings
@@ -391,17 +392,26 @@ class AutonomousResearchService:
         finding: ResearchFindingDraft,
         search_index: dict[str, WebSearchResult],
     ) -> ProjectKnowledgeItem:
-        statement_parts = [finding.summary.strip()]
-        if finding.key_points:
-            statement_parts.append(
-                "要点：\n"
-                + "\n".join(
-                    f"- {point.strip()}" for point in finding.key_points if point.strip()
+        knowledge = design_knowledge_from_finding(finding)
+        statement_parts: list[str] = []
+        if knowledge.has_substance:
+            statement_parts.extend(knowledge.to_statement_sections())
+        else:
+            statement_parts.append(finding.summary.strip())
+            if finding.key_points:
+                statement_parts.append(
+                    "要点：\n"
+                    + "\n".join(
+                        f"- {point.strip()}"
+                        for point in finding.key_points
+                        if point.strip()
+                    )
                 )
-            )
-        if finding.relevance.strip():
-            statement_parts.append(f"项目关联：{finding.relevance.strip()}")
+            if finding.relevance.strip():
+                statement_parts.append(f"项目关联：{finding.relevance.strip()}")
         statement = "\n\n".join(part for part in statement_parts if part)
+        if not statement.strip():
+            statement = finding.summary.strip() or finding.topic.strip()
 
         citations = self._build_citations(finding, search_index)
 
@@ -413,6 +423,7 @@ class AutonomousResearchService:
             source_citations=citations,
             requires_user_confirmation=True,
             category="research",
+            design_knowledge=knowledge if knowledge.has_substance else None,
         )
 
     def _build_citations(

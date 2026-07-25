@@ -342,6 +342,15 @@ def project_fact_to_orm(domain: ProjectFact, orm: ProjectFactORM | None = None) 
 
 
 def project_knowledge_item_to_domain(orm: ProjectKnowledgeItemORM) -> ProjectKnowledgeItem:
+    from archium.domain.design_knowledge import DesignKnowledge
+
+    design_knowledge = None
+    raw = getattr(orm, "design_knowledge_json", None)
+    if isinstance(raw, dict) and raw:
+        try:
+            design_knowledge = DesignKnowledge.model_validate(raw)
+        except Exception:  # noqa: BLE001 — tolerate legacy/partial JSON
+            design_knowledge = None
     return ProjectKnowledgeItem(
         id=orm.id,
         project_id=orm.project_id,
@@ -355,6 +364,7 @@ def project_knowledge_item_to_domain(orm: ProjectKnowledgeItemORM) -> ProjectKno
         status=KnowledgeItemStatus(orm.status),
         category=orm.category,
         linked_fact_id=orm.linked_fact_id,
+        design_knowledge=design_knowledge,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -376,6 +386,10 @@ def project_knowledge_item_to_orm(
     target.status = domain.status.value
     target.category = domain.category
     target.linked_fact_id = domain.linked_fact_id
+    if domain.design_knowledge is not None:
+        target.design_knowledge_json = domain.design_knowledge.model_dump(mode="json")
+    else:
+        target.design_knowledge_json = None
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

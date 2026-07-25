@@ -23,7 +23,10 @@ from archium.infrastructure.llm.research_schemas import (
 )
 from archium.infrastructure.research.web_search.models import WebSearchResult
 from archium.infrastructure.research.web_search.service import WebResearchSearchService
-from tests.evaluation.assertions import assert_research_item_has_sources
+from tests.evaluation.assertions import (
+    assert_research_item_has_design_knowledge,
+    assert_research_item_has_sources,
+)
 
 
 class _StubWebResearch(WebResearchSearchService):
@@ -87,7 +90,13 @@ def test_research_eval_requires_source_citations(db_session, research_project) -
             ResearchFindingDraft(
                 topic="山地文化建筑与聚落公共空间案例",
                 summary="山地文化设施常结合台地与聚落入口广场。",
-                key_points=["台地组织", "入口公共性"],
+                insight="公共性应沿地貌台地展开，而非单一大厅。",
+                principle="以台地层级组织公共空间",
+                spatial_translation="台地院落 + 入口广场",
+                material_strategy="本地石材与木构",
+                project_link="可支撑山地文化中心空间策略讨论",
+                applicability="适用于坡地乡镇、中小体量",
+                key_points=["原则：台地层级", "空间：入口公共性"],
                 suggested_sources=[
                     ResearchSourceDraft(
                         title="山地公共建筑研究",
@@ -115,3 +124,6 @@ def test_research_eval_requires_source_citations(db_session, research_project) -
     assert result.items, "evaluation: research must produce knowledge items"
     for item in result.items:
         assert_research_item_has_sources(item)
+        assert_research_item_has_design_knowledge(item)
+        assert item.design_knowledge is not None
+        assert "台地" in item.design_knowledge.principle

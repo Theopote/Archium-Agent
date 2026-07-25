@@ -9,6 +9,7 @@ from pydantic import Field, field_validator, model_validator
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
 from archium.domain.citation import Citation
+from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.enums import (
     InformationOrigin,
     InformationReliability,
@@ -70,6 +71,10 @@ class ProjectKnowledgeItem(IdentifiedModel, TimestampedModel):
     status: KnowledgeItemStatus = KnowledgeItemStatus.ACTIVE
     category: str = Field(default="general", min_length=1)
     linked_fact_id: UUID | None = None
+    design_knowledge: DesignKnowledge | None = Field(
+        default=None,
+        description="Structured design insight when origin is public research.",
+    )
 
     @property
     def is_confirmed(self) -> bool:

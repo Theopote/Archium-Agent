@@ -4,6 +4,7 @@ PROMPT_VERSION history
 ----------------------
 concept_direction.v1 — initial field-oriented instructions
 concept_direction.v2 — inject Architectural Reasoning Framework + quality criteria
+concept_direction.v3 — inject DesignKnowledge block into user prompts
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from archium.prompts.frameworks.architectural_reasoning import (
 )
 from archium.prompts.identity import ARCHIUM_IDENTITY
 
-PROMPT_VERSION = "concept_direction.v2"
+PROMPT_VERSION = "concept_direction.v3"
 
 CONCEPT_DIRECTION_SYSTEM_PROMPT = (
     ARCHIUM_IDENTITY
@@ -51,7 +52,11 @@ def build_concept_direction_user_prompt(
     design_intent_block: str,
     project_context: str,
     count: int,
+    design_knowledge_block: str = "",
 ) -> str:
+    knowledge_section = ""
+    if design_knowledge_block.strip():
+        knowledge_section = f"\n{design_knowledge_block.strip()}\n"
     return f"""请按【建筑推理框架】为以下任务生成 {count} 个概念方向草稿。
 
 任务标题：{mission_title}
@@ -62,14 +67,15 @@ def build_concept_direction_user_prompt(
 
 项目背景：
 {project_context or "（暂无）"}
-
+{knowledge_section}
 要求：
 1. 恰好输出 {count} 个方向（或在信息极不足时不少于 2 个）。
 2. 各方向主题与体验焦点应可区分；先写清问题与空间策略，再写形式。
-3. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
+3. 若有【已沉淀设计知识】，必须把 principle / spatial_translation 转进 spatial_strategy，勿当装饰。
+4. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
    formal_language, material_strategy, reference_dna, visual_prompt,
    design_rationale, experience_focus, differentiator, open_questions, risks。
-4. summary 须回答「为什么需要这个方向」，不是复述建筑类型。
+5. summary 须回答「为什么需要这个方向」，不是复述建筑类型。
 """
 
 
@@ -80,6 +86,7 @@ def build_exploration_direction_user_prompt(
     count: int,
     idea_seed_block: str = "",
     verified_constraints_block: str = "",
+    design_knowledge_block: str = "",
 ) -> str:
     seed_block = idea_seed_block.strip() or f"原始想法: {idea_text}"
     constraints = verified_constraints_block.strip()
@@ -94,19 +101,23 @@ def build_exploration_direction_user_prompt(
 （暂无）不要假装已有任务书、面积或现场证据。
 """
     )
+    knowledge_section = ""
+    if design_knowledge_block.strip():
+        knowledge_section = f"\n{design_knowledge_block.strip()}\n"
     return f"""请按【建筑推理框架】为一句建筑想法生成 {count} 个概念方向草稿。此时尚无正式 Mission。
 
 项目名称：{project_name or "（未命名）"}
 想法种子（IdeaSeed）：
 {seed_block}
-{constraints_section}
+{constraints_section}{knowledge_section}
 要求：
 1. 恰好输出 {count} 个方向（或在信息极不足时不少于 2 个）。
 2. 各方向是可比较的「可能世界」，差异点必须清晰。
 3. 先完成问题识别与空间转译，再写形式语言与视觉提示。
-4. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
+4. 若有【已沉淀设计知识】，把可迁移原则落到 spatial_strategy / material_strategy。
+5. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
    formal_language, material_strategy, reference_dna, visual_prompt,
    design_rationale, experience_focus, differentiator, open_questions, risks。
-5. 若有已证实约束，方向必须尊重；未知项写入 open_questions，勿捏造数值。
-6. 方向应回应 IdeaSeed 中的主题、灵感与关键词；summary 须点出回应的问题。
+6. 若有已证实约束，方向必须尊重；未知项写入 open_questions，勿捏造数值。
+7. 方向应回应 IdeaSeed 中的主题、灵感与关键词；summary 须点出回应的问题。
 """

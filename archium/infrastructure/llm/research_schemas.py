@@ -14,7 +14,38 @@ class ResearchSourceDraft(BaseModel):
 class ResearchFindingDraft(BaseModel):
     topic: str = Field(min_length=1)
     summary: str = Field(min_length=1)
-    key_points: list[str] = Field(default_factory=list)
+    insight: str = Field(
+        default="",
+        description="Why this matters for design (not a case dump).",
+    )
+    principle: str = Field(
+        default="",
+        description="Transferable design principle.",
+    )
+    spatial_translation: str = Field(
+        default="",
+        description="Spatial organization implication.",
+    )
+    material_strategy: str = Field(
+        default="",
+        description="Material / tectonic implication when known.",
+    )
+    project_link: str = Field(
+        default="",
+        description="Link to current project; may mirror relevance.",
+    )
+    applicability: str = Field(
+        default="",
+        description="Applicability boundaries.",
+    )
+    evidence: list[str] = Field(
+        default_factory=list,
+        description="Short evidence labels beyond suggested_sources.",
+    )
+    key_points: list[str] = Field(
+        default_factory=list,
+        description="Legacy / supplemental bullets; prefer labeled 原则/空间/材料/关联/适用.",
+    )
     suggested_sources: list[ResearchSourceDraft] = Field(default_factory=list)
     relevance: str = ""
 

@@ -9,6 +9,10 @@ from sqlalchemy.orm import Session
 
 from archium.application.context_evidence import build_verified_constraints_block
 from archium.application.design_intent_from_direction import design_intent_from_direction
+from archium.application.design_knowledge_context import (
+    design_knowledge_summary_lines,
+    format_design_knowledge_block,
+)
 from archium.application.design_rationale_fallback import ensure_direction_design_rationale
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.config.settings import Settings, get_settings
@@ -197,6 +201,9 @@ class ExplorationService:
         verified_constraints = build_verified_constraints_block(
             self._session, exploration.project_id
         )
+        design_knowledge_block = format_design_knowledge_block(
+            self._session, exploration.project_id
+        )
         draft = llm_generate_structured(
             self._llm,
             LLMRequest(
@@ -207,6 +214,7 @@ class ExplorationService:
                     idea_seed_block=seed.to_prompt_block(),
                     count=target_count,
                     verified_constraints_block=verified_constraints,
+                    design_knowledge_block=design_knowledge_block,
                 ),
                 temperature=0.5,
                 json_mode=True,
@@ -565,16 +573,20 @@ class ExplorationService:
         knowledge_state = project.knowledge_state if project is not None else None
         research_summaries: list[str] = []
         try:
-            from archium.infrastructure.database.repositories import (
-                ProjectKnowledgeRepository,
+            research_summaries = design_knowledge_summary_lines(
+                self._session, direction.project_id
             )
+            if not research_summaries:
+                from archium.infrastructure.database.repositories import (
+                    ProjectKnowledgeRepository,
+                )
 
-            for item in ProjectKnowledgeRepository(self._session).list_by_project(
-                direction.project_id
-            )[:8]:
-                statement = (getattr(item, "statement", None) or "").strip()
-                if statement:
-                    research_summaries.append(statement[:300])
+                for item in ProjectKnowledgeRepository(self._session).list_by_project(
+                    direction.project_id
+                )[:8]:
+                    statement = (getattr(item, "statement", None) or "").strip()
+                    if statement:
+                        research_summaries.append(statement[:300])
         except Exception:  # noqa: BLE001
             pass
         return DesignCritiqueService(

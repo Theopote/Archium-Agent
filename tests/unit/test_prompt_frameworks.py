@@ -24,7 +24,7 @@ def test_architectural_reasoning_framework_has_required_steps() -> None:
 
 
 def test_concept_prompt_injects_reasoning_framework() -> None:
-    assert concept_prompts.PROMPT_VERSION == "concept_direction.v2"
+    assert concept_prompts.PROMPT_VERSION == "concept_direction.v3"
     assert ARCHITECTURAL_REASONING_FRAMEWORK in concept_prompts.CONCEPT_DIRECTION_SYSTEM_PROMPT
     assert "spatial_strategy、formal_language、risks 不得留空" in (
         concept_prompts.CONCEPT_DIRECTION_SYSTEM_PROMPT
@@ -46,9 +46,10 @@ def test_concept_mission_addendum_injects_reasoning() -> None:
 
 
 def test_research_prompt_injects_knowledge_framework() -> None:
-    assert research_prompts.PROMPT_VERSION == "autonomous_research.v2"
+    assert research_prompts.PROMPT_VERSION == "autonomous_research.v3"
     assert RESEARCH_KNOWLEDGE_FRAMEWORK in research_prompts.AUTONOMOUS_RESEARCH_SYSTEM_PROMPT
     assert "可迁移设计原则" in research_prompts.AUTONOMOUS_RESEARCH_SYSTEM_PROMPT
+    assert "spatial_translation" in research_prompts.AUTONOMOUS_RESEARCH_SYSTEM_PROMPT
     user = research_prompts.build_autonomous_research_user_prompt(
         project_name="测试",
         design_context="概念探索",

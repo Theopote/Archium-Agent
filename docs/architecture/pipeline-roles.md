@@ -187,6 +187,10 @@ Concept、概念 Mission、自主研究、设计批判 SYSTEM 注入同一工序
 `ModelRole`；主链（Concept / Mission / Research / Critique）经 `call.generate_structured`
 记录 `LLMTrace`（tokens / latency / prompt_version）。不在 Agent 内选模型。
 
+**Phase H（Research → DesignKnowledge）**：自主研究 finding 结构化为
+`DesignKnowledge`（principle / spatial_translation / evidence…）并落库；
+Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statement。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -352,4 +356,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase G LLM Runtime/Trace；Phase F Prompt frameworks；Phase E evaluation。*
+*Last updated: 2026-07-25 — Phase H DesignKnowledge；Phase G LLM Runtime；Phase F Prompt frameworks。*

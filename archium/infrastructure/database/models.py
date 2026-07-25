@@ -174,6 +174,9 @@ class ProjectKnowledgeItemORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
     category: Mapped[str] = mapped_column(String(100), nullable=False, default="general")
     linked_fact_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    design_knowledge_json: Mapped[dict[str, object] | None] = mapped_column(
+        "design_knowledge", JSON, nullable=True
+    )
 
     project: Mapped[ProjectORM] = relationship(back_populates="knowledge_items")
 

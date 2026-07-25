@@ -82,7 +82,13 @@ def _finding(topic: str, url: str = "https://example.org/loess-public-space") ->
     return ResearchFindingDraft(
         topic=topic,
         summary="关中乡村公共文化空间常结合集市、祠堂与小型展览功能。",
-        key_points=["多功能复合", "与日常生产活动结合"],
+        insight="减少机构化，强化日常公共性。",
+        principle="多功能复合与日常生产结合",
+        spatial_translation="集市—祠堂—展览的串联院落",
+        material_strategy="生土与木构",
+        project_link="可为本项目提供尺度与功能复合参考",
+        applicability="关中乡镇、中小公共建筑",
+        key_points=["原则：多功能复合", "空间：与日常生产活动结合"],
         suggested_sources=[
             ResearchSourceDraft(
                 title="关中传统聚落公共空间研究",
@@ -132,6 +138,9 @@ def test_research_for_mission_creates_public_knowledge_items(db_session, concept
     assert "关中" in item.statement
     assert item.source_citations
     assert item.source_citations[0].url == "https://example.org/loess-public-space"
+    assert item.design_knowledge is not None
+    assert item.design_knowledge.principle
+    assert "复合" in item.design_knowledge.principle or "复合" in item.statement
 
     prompt = llm.generate_structured.call_args[0][0].user_prompt
     assert "联网检索结果" in prompt

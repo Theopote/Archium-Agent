@@ -19,6 +19,7 @@ from archium.domain.enums import (
     InformationOrigin,
     InformationReliability,
 )
+from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.fact import ProjectFact
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.exceptions import WorkflowError
@@ -97,6 +98,7 @@ class ProjectKnowledgeService:
         applies_to_current_project: bool = True,
         requires_user_confirmation: bool = False,
         category: str = "general",
+        design_knowledge: DesignKnowledge | None = None,
     ) -> ProjectKnowledgeItem:
         if origin == InformationOrigin.REFERENCE_CASE:
             applies_to_current_project = False
@@ -115,6 +117,7 @@ class ProjectKnowledgeService:
             applies_to_current_project=applies_to_current_project,
             requires_user_confirmation=requires_user_confirmation,
             category=category,
+            design_knowledge=design_knowledge,
         )
         return self._knowledge.create(item)
 
