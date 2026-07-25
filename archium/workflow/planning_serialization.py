@@ -19,8 +19,19 @@ from archium.workflow.planning_state import PlanningWorkflowState
 
 
 def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
+    """Persist planning run state with mission_id-first thinning.
+
+    When ``mission_id`` is present, omit the full ``mission`` / workstream /
+    gap embeds from ``WorkflowRun.state`` — nodes already reload via repos.
+    LangGraph in-memory state may still hold objects; only the SQL snapshot
+    is thinned (progressive State ≠ Domain).
+    """
     mission = state.get("mission")
     plan = state.get("deliverable_plan")
+    mission_id = state.get("mission_id") or (
+        str(mission.id) if mission is not None else None
+    )
+    thin = bool(mission_id)
     return {
         "workflow_kind": "planning",
         "current_step": state.get("current_step", PresentationWorkflowStep.INIT.value),
@@ -31,17 +42,28 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
         "user_task_description": state.get("user_task_description", ""),
         "project_name": state.get("project_name"),
         "project_context": state.get("project_context", ""),
-        "mission_id": state.get("mission_id") or (str(mission.id) if mission is not None else None),
-        "mission": mission.model_dump(mode="json") if mission is not None else None,
-        "knowledge_gaps": [item.model_dump(mode="json") for item in state.get("knowledge_gaps", [])],
-        "assumptions": [item.model_dump(mode="json") for item in state.get("assumptions", [])],
-        "clarifying_questions": [
+        "mission_id": mission_id,
+        # Prefer ID reference over Domain embed when mission_id is known.
+        "mission": None
+        if thin
+        else (mission.model_dump(mode="json") if mission is not None else None),
+        "knowledge_gaps": []
+        if thin
+        else [item.model_dump(mode="json") for item in state.get("knowledge_gaps", [])],
+        "assumptions": []
+        if thin
+        else [item.model_dump(mode="json") for item in state.get("assumptions", [])],
+        "clarifying_questions": []
+        if thin
+        else [
             item.model_dump(mode="json") for item in state.get("clarifying_questions", [])
         ],
-        "design_questions": [
-            item.model_dump(mode="json") for item in state.get("design_questions", [])
-        ],
-        "workstreams": [item.model_dump(mode="json") for item in state.get("workstreams", [])],
+        "design_questions": []
+        if thin
+        else [item.model_dump(mode="json") for item in state.get("design_questions", [])],
+        "workstreams": []
+        if thin
+        else [item.model_dump(mode="json") for item in state.get("workstreams", [])],
         "deliverable_plan": plan.model_dump(mode="json") if plan is not None else None,
         "presentation_request_draft": state.get("presentation_request_draft"),
         "artifact_execution_plans": list(state.get("artifact_execution_plans") or []),
@@ -54,6 +76,7 @@ def snapshot_planning_state(state: PlanningWorkflowState) -> dict[str, Any]:
         "errors": list(state.get("errors", [])),
         "warnings": list(state.get("warnings", [])),
         "mission_validation": state.get("mission_validation"),
+        "state_thinning": "mission_id" if thin else "full_embed",
     }
 
 

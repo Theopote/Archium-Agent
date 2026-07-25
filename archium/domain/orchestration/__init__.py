@@ -22,6 +22,11 @@ from archium.domain.orchestration.plan_builder import (
     stages_for_recommended_workflow,
     workflow_for_nba_action,
 )
+from archium.domain.orchestration.process_timeline import (
+    ProcessTimelineEvent,
+    append_process_timeline_event,
+    list_process_timeline,
+)
 
 __all__ = [
     "HumanGate",
@@ -31,12 +36,15 @@ __all__ = [
     "OrchestrationStage",
     "OrchestrationStageSpec",
     "OrchestrationStageStatus",
+    "ProcessTimelineEvent",
     "ReplanDecision",
     "WorkstreamNodeSpec",
+    "append_process_timeline_event",
     "build_orchestration_plan",
     "first_open_stage_index",
     "human_gate_for_stage",
     "label_for_stage",
+    "list_process_timeline",
     "page_key_for_stage",
     "replan_from_context",
     "stage_hint_for_action",

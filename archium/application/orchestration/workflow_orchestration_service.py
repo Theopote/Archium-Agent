@@ -21,6 +21,8 @@ from archium.domain.orchestration import (
     OrchestrationPlanSource,
     OrchestrationStage,
     OrchestrationStageStatus,
+    ProcessTimelineEvent,
+    append_process_timeline_event,
     build_orchestration_plan,
     human_gate_for_stage,
     label_for_stage,
@@ -162,10 +164,31 @@ class WorkflowOrchestrationService:
             "orchestration_plan": plan.model_dump(mode="json"),
             "decision_router": decision.as_dict(),
         }
+        if decision.changed:
+            run.state = append_process_timeline_event(
+                run.state,
+                ProcessTimelineEvent(
+                    kind="replan",
+                    stage=(plan.active_stage().stage.value if plan.active_stage() else ""),
+                    status="replanned",
+                    label="按上下文重规划",
+                    summary=decision.reason,
+                    decision_router=decision.as_dict(),
+                ),
+            )
         if ctx is not None:
             reflection = self._reflection_payload(ctx)
             if reflection is not None:
                 run.state["last_reflection"] = reflection
+                run.state = append_process_timeline_event(
+                    run.state,
+                    ProcessTimelineEvent(
+                        kind="reflection",
+                        label="设计反思",
+                        summary=str(reflection.get("why") or "")[:160],
+                        intent_evolution_kind="reflection",
+                    ),
+                )
         run = self._workflow_runs.update(run)
         if drive:
             task = str(run.state.get("user_task_description") or "")
@@ -217,11 +240,44 @@ class WorkflowOrchestrationService:
                 **run.state,
                 "decision_router": replan_payload,
             }
+            if decision.changed:
+                run.state = append_process_timeline_event(
+                    run.state,
+                    ProcessTimelineEvent(
+                        kind="replan",
+                        stage=stage.stage.value,
+                        status="replanned",
+                        label="推进时重规划",
+                        summary=decision.reason,
+                        decision_router=replan_payload,
+                    ),
+                )
             if ctx is not None:
                 reflection = self._reflection_payload(ctx)
                 if reflection is not None:
                     run.state["last_reflection"] = reflection
                     self._best_effort_append_reflection(run.project_id, reflection)
+                    run.state = append_process_timeline_event(
+                        run.state,
+                        ProcessTimelineEvent(
+                            kind="reflection",
+                            stage=stage.stage.value,
+                            label="设计反思",
+                            summary=str(reflection.get("why") or "")[:160],
+                            intent_evolution_kind="reflection",
+                        ),
+                    )
+
+        run.state = append_process_timeline_event(
+            run.state,
+            ProcessTimelineEvent(
+                kind="stage",
+                stage=stage.stage.value,
+                status=OrchestrationStageStatus.COMPLETED.value,
+                label=f"完成 {label_for_stage(stage.stage)}",
+                summary="建筑师确认后推进",
+            ),
+        )
 
         from archium.domain.orchestration.decision_router import first_open_stage_index
 
@@ -326,6 +382,17 @@ class WorkflowOrchestrationService:
                     "review_gate": gate.review_gate,
                     "human_gate": gate.as_dict(),
                 }
+                run.state = append_process_timeline_event(
+                    run.state,
+                    ProcessTimelineEvent(
+                        kind="gate",
+                        stage=stage.stage.value,
+                        status=status.value,
+                        label=gate.label,
+                        summary=gate.prompt,
+                        human_gate=gate.as_dict(),
+                    ),
+                )
                 run = self._workflow_runs.update(run)
                 return OrchestrationResult(
                     workflow_run=run,
@@ -346,6 +413,23 @@ class WorkflowOrchestrationService:
                     if stage.workflow_run_id
                     else None,
                 }
+                run.state = append_process_timeline_event(
+                    run.state,
+                    ProcessTimelineEvent(
+                        kind="gate",
+                        stage=stage.stage.value,
+                        status=status.value,
+                        label=gate.label,
+                        summary=gate.prompt,
+                        human_gate=gate.as_dict(),
+                        child_workflow_run_id=(
+                            str(stage.workflow_run_id) if stage.workflow_run_id else None
+                        ),
+                        artifact_refs=(
+                            [str(stage.workflow_run_id)] if stage.workflow_run_id else []
+                        ),
+                    ),
+                )
                 run = self._workflow_runs.update(run)
                 return OrchestrationResult(
                     workflow_run=run,
@@ -363,6 +447,16 @@ class WorkflowOrchestrationService:
                     "active_stage": stage.stage.value,
                     "human_gate": None,
                 }
+                run.state = append_process_timeline_event(
+                    run.state,
+                    ProcessTimelineEvent(
+                        kind="failed",
+                        stage=stage.stage.value,
+                        status=status.value,
+                        label=f"失败 {label_for_stage(stage.stage)}",
+                        summary="; ".join(str(e) for e in run.errors[:3]),
+                    ),
+                )
                 run = self._workflow_runs.update(run)
                 return OrchestrationResult(
                     workflow_run=run,
@@ -371,6 +465,19 @@ class WorkflowOrchestrationService:
                     warnings=warnings,
                 )
             # completed / skipped → next
+            run.state = append_process_timeline_event(
+                run.state,
+                ProcessTimelineEvent(
+                    kind="stage",
+                    stage=stage.stage.value,
+                    status=status.value,
+                    label=f"{'跳过' if status == OrchestrationStageStatus.SKIPPED else '完成'} {label_for_stage(stage.stage)}",
+                    summary=str(result.get("skip_reason") or "")[:160],
+                    child_workflow_run_id=(
+                        str(stage.workflow_run_id) if stage.workflow_run_id else None
+                    ),
+                ),
+            )
             if plan.advance_index() is None:
                 run.status = WorkflowStatus.COMPLETED
                 break
@@ -381,6 +488,15 @@ class WorkflowOrchestrationService:
             "active_stage": None,
             "human_gate": None,
         }
+        run.state = append_process_timeline_event(
+            run.state,
+            ProcessTimelineEvent(
+                kind="complete",
+                label="编排完成",
+                summary="全部阶段已完成或跳过",
+                status=WorkflowStatus.COMPLETED.value,
+            ),
+        )
         run = self._workflow_runs.update(run)
         return OrchestrationResult(
             workflow_run=run,

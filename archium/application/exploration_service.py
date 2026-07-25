@@ -375,6 +375,21 @@ class ExplorationService:
                 ],
                 design_intent_snapshot=critique_gate.report.as_dict(),
             )
+            from archium.application.design_reflection import reflection_from_critique
+
+            reflection = reflection_from_critique(critique_gate.report)
+            if not reflection.is_empty():
+                self._append_intent_evolution(
+                    exploration.project_id,
+                    IntentEvolutionKind.REFLECTION,
+                    reflection.why[:200] or "选定后设计反思",
+                    trigger="direction_critique_reflection",
+                    previous_summary=new_label,
+                    new_summary=critique_gate.report.verdict.value,
+                    reason=reflection.why[:400] or None,
+                    evidence_refs=list(reflection.top_risks)[:4],
+                    design_intent_snapshot={"reflection": reflection.as_dict()},
+                )
         self._session.commit()
         from archium.application.context import best_effort_reassess_knowledge
 
