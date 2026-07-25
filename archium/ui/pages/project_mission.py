@@ -214,8 +214,8 @@ def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
     if gate == "plan_approval":
         if st.session_state.mission_step < 4:
             st.session_state.mission_step = 4
-            for key in ("mission_step_nav", "mission_step_nav_embedded"):
-                st.session_state.pop(key, None)
+            st.session_state["mission_step_nav"] = 4
+            st.session_state["mission_step_nav_embedded"] = 4
         return
     if st.session_state.mission_step > 1:
         return
@@ -231,12 +231,14 @@ def _sync_step_from_snapshot(snapshot: PlanningSnapshot) -> None:
 
 
 def _render_step_nav(*, key: str = "mission_step_nav") -> int:
+    desired = int(st.session_state.mission_step)
+    if key not in st.session_state:
+        st.session_state[key] = desired
     step = st.radio(
         "规划步骤",
         options=list(range(1, 7)),
         format_func=lambda i: STEP_LABELS[i - 1],
         horizontal=True,
-        index=max(0, min(5, st.session_state.mission_step - 1)),
         label_visibility="collapsed",
         key=key,
     )
