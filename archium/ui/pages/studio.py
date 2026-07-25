@@ -22,6 +22,10 @@ from archium.ui.studio.project_sidebar import render_studio_selection
 from archium.ui.studio.slide_canvas_enhanced import render_slide_canvas
 from archium.ui.studio.slide_navigator import render_slide_navigator
 from archium.ui.studio.slide_properties import render_slide_properties
+from archium.ui.studio.storyline_navigator import (
+    load_studio_narrative,
+    render_storyline_navigator,
+)
 from archium.ui.studio_service import (
     SlideVisualSnapshot,
     StudioPresentationContext,
@@ -120,7 +124,18 @@ def _render_inspector_tabs(
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
         return
     if active == "AI":
-        render_inspector_section("AI")
+        render_inspector_section("AI 建议")
+        if slide_snapshot is not None:
+            from archium.ui.studio.page_ai_suggestions import page_partner_suggestions
+
+            tips = page_partner_suggestions(slide_snapshot.slide)
+            if tips:
+                st.markdown("**本页建议**")
+                for tip in tips:
+                    st.markdown(f"- {tip}")
+            else:
+                st.caption("本页暂无结构性建议。")
+            st.divider()
         render_ai_workspace(
             slide_snapshot=slide_snapshot,
             presentation_id=presentation_id,
@@ -318,6 +333,37 @@ def _render_studio_info_menus(
         st.caption("视图：" + (" · ".join(bits) if bits else "画布专注"))
 
 
+def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
+    """Thin partner chrome: understanding + storyline thesis (not a feature dashboard)."""
+    try:
+        from archium.ui.project_knowledge_profile import render_project_knowledge_strip
+        from archium.ui.studio.storyline_navigator import load_studio_narrative
+        from archium.ui.studio_service import studio_readiness_label
+
+        left, right = st.columns([2.2, 1])
+        with left:
+            render_project_knowledge_strip(
+                context.project.id,
+                compact=True,
+                show_known_unknown=False,
+            )
+            narrative = load_studio_narrative(context.presentation.id)
+            if narrative.thesis:
+                st.caption(f"故事线：{narrative.thesis[:140]}")
+        with right:
+            st.caption(studio_readiness_label(context))
+            if st.button(
+                "打开 AI 建议",
+                key=f"studio_open_ai_{context.presentation.id}",
+                use_container_width=True,
+            ):
+                st.session_state.studio_show_inspector = True
+                st.session_state.studio_inspector_tab = "AI"
+                st.rerun()
+    except Exception:
+        return
+
+
 def render(
     *,
     embedded: bool = False,
@@ -348,6 +394,8 @@ def render(
     )
     if context is None:
         return
+
+    _render_studio_partner_strip(context)
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
@@ -382,7 +430,13 @@ def render(
 
     if left_col is not None:
         with left_col:
-            selected_index = render_slide_navigator(context=context)
+            try:
+                narrative = load_studio_narrative(context.presentation.id)
+                selected_index = render_storyline_navigator(
+                    context=context, bundle=narrative
+                )
+            except Exception:
+                selected_index = render_slide_navigator(context=context)
 
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
 

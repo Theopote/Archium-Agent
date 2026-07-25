@@ -151,11 +151,11 @@ def test_display_headline_uses_intent_and_information() -> None:
     )
     display = build_project_knowledge_display(ctx)
     assert display.situation == KnowledgeSituation.INTENT_LED
-    assert "意图" in display.headline
-    assert "资料" in display.headline
-    assert "就绪" in display.headline
-    assert display.vector_bars
+    assert "%" not in display.headline
+    assert "意图清晰" in display.headline or "阶段" in display.headline
+    assert display.vector_bars  # metrics still available for diagnostics
     assert "完整度约" not in display.headline
+    assert display.partner_headline
 
 
 def test_rule_fallback_temple_explore_first() -> None:

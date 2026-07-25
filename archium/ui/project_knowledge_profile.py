@@ -24,13 +24,15 @@ def load_project_knowledge_display(project_id: UUID) -> ProjectKnowledgeDisplay 
     return build_project_knowledge_display(context)
 
 
-def render_project_knowledge_strip(
+def render_ai_understanding_panel(
     project_id: UUID,
     *,
     compact: bool = False,
-    show_known_unknown: bool = True,
+    show_actions: bool = True,
+    key_prefix: str = "ai_understanding",
+    title: str = "AI 当前理解",
 ) -> ProjectKnowledgeDisplay | None:
-    """Primary knowledge-first chrome — use instead of workspace mode titles."""
+    """Architect-facing understanding panel — known / missing / next, not % dashboards."""
     from archium.application.project_context_builder import build_project_context
     from archium.infrastructure.database.session import get_session
 
@@ -40,7 +42,68 @@ def render_project_knowledge_strip(
         return None
     display = build_project_knowledge_display(context)
 
-    st.info(display.headline)
+    st.markdown(f"**{title}**")
+    st.info(display.partner_headline or display.headline)
+    if display.cognition_stale:
+        st.warning(
+            "认知可能过期：最近一次完整知识评估未成功。"
+            "可稍后刷新知识状态。"
+        )
+    if not compact and display.caption:
+        st.caption(display.caption)
+
+    known_col, missing_col = st.columns(2)
+    with known_col:
+        st.markdown("**已知信息**")
+        if display.known_highlights:
+            for line in display.known_highlights[:6]:
+                st.markdown(f"- {line}")
+        else:
+            st.caption("尚无结构化已知项 — 可从描述或资料补充。")
+    with missing_col:
+        st.markdown("**仍缺 / 待澄清**")
+        if display.missing_highlights:
+            for line in display.missing_highlights[:6]:
+                st.markdown(f"- {line}")
+        else:
+            st.caption("暂无明确缺口。")
+
+    if show_actions:
+        st.markdown("**下一步建议**")
+        render_project_knowledge_action_buttons(
+            project_id,
+            key_prefix=key_prefix,
+            max_items=3,
+        )
+    elif display.suggested_actions:
+        st.markdown("**下一步建议**")
+        for index, action in enumerate(display.suggested_actions[:3], start=1):
+            st.markdown(f"{index}. {action}")
+    return display
+
+
+def render_project_knowledge_strip(
+    project_id: UUID,
+    *,
+    compact: bool = False,
+    show_known_unknown: bool = True,
+    show_metrics: bool = False,
+) -> ProjectKnowledgeDisplay | None:
+    """Primary knowledge-first chrome — use instead of workspace mode titles.
+
+    ``show_metrics`` exposes legacy % / vector bars for diagnostics; partner UI
+    keeps it off by default.
+    """
+    from archium.application.project_context_builder import build_project_context
+    from archium.infrastructure.database.session import get_session
+
+    with get_session() as session:
+        context = build_project_context(session, project_id)
+    if context is None:
+        return None
+    display = build_project_knowledge_display(context)
+
+    st.info(display.partner_headline or display.headline)
     if display.cognition_stale:
         st.warning(
             "认知可能过期：最近一次完整知识评估未成功，当前显示基于事实/知识条目索引。"
@@ -48,27 +111,53 @@ def render_project_knowledge_strip(
         )
     if not compact:
         st.caption(display.caption)
-        meta = [
-            f"当前重心：{display.focus}",
-            f"把握度约 {display.confidence_pct}%",
-        ]
-        if display.dimension_bits:
-            meta.append(" · ".join(display.dimension_bits))
+        meta = [f"当前重心：{display.focus}"]
+        if show_metrics:
+            meta.append(f"把握度约 {display.confidence_pct}%")
+            if display.dimension_bits:
+                meta.append(" · ".join(display.dimension_bits))
         if display.claim_count:
             meta.append(f"主张 {display.claim_count}（已链接 {display.linked_claim_count}）")
         if display.knowledge_item_count:
             meta.append(f"知识条目 {display.knowledge_item_count}")
         if display.blocking_unknown_count:
             meta.append(f"阻断缺口 {display.blocking_unknown_count}")
-        st.caption(" · ".join(meta))
-        _render_knowledge_vector_bars(display)
+        if meta:
+            st.caption(" · ".join(meta))
+        if show_metrics:
+            _render_knowledge_vector_bars(display)
 
     if show_known_unknown:
-        _render_known_unknown(context.knowledge_state, compact=compact)
+        if compact:
+            _render_known_unknown(context.knowledge_state, compact=True)
+        else:
+            _render_partner_known_missing(display, context.knowledge_state)
     if not compact:
         _render_assessment_reasons(context.knowledge_state)
         _render_process_board(project_id)
     return display
+
+
+def _render_partner_known_missing(
+    display: ProjectKnowledgeDisplay,
+    state: KnowledgeState,
+) -> None:
+    if display.known_highlights or display.missing_highlights:
+        known_col, missing_col = st.columns(2)
+        with known_col:
+            st.markdown("**已知信息**")
+            for line in display.known_highlights[:6]:
+                st.markdown(f"- {line}")
+            if not display.known_highlights:
+                st.caption("—")
+        with missing_col:
+            st.markdown("**仍缺**")
+            for line in display.missing_highlights[:6]:
+                st.markdown(f"- {line}")
+            if not display.missing_highlights:
+                st.caption("—")
+        return
+    _render_known_unknown(state, compact=False)
 
 
 def _render_assessment_reasons(state: KnowledgeState) -> None:
@@ -88,7 +177,7 @@ def _render_assessment_reasons(state: KnowledgeState) -> None:
 def _render_knowledge_vector_bars(display: ProjectKnowledgeDisplay) -> None:
     if not display.vector_bars:
         return
-    st.caption("Knowledge Vector")
+    st.caption("Knowledge Vector（诊断）")
     cols = st.columns(min(4, len(display.vector_bars)))
     for index, (label, pct) in enumerate(display.vector_bars):
         with cols[index % len(cols)]:
@@ -216,7 +305,7 @@ def _render_known_unknown(state: KnowledgeState, *, compact: bool) -> None:
             if claim.fact_id is not None or claim.knowledge_item_id is not None
         )
         counts.append(f"主张 {len(state.claims)}/{linked} 已链接")
-    if counts:
+    if counts and not compact:
         st.caption(" · ".join(counts))
 
     if state.claims:

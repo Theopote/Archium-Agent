@@ -55,6 +55,8 @@ _ALLOWED_IMAGE_TYPES = {
     ArchitectureImageType.ATMOSPHERE_IMAGE,
     ArchitectureImageType.SITE_DIAGRAM,
     ArchitectureImageType.SKETCH_NOTE,
+    ArchitectureImageType.MATERIAL_STUDY,
+    ArchitectureImageType.SECTION_ILLUSTRATION,
 }
 _ALLOWED_STYLES = {item.value for item in VisionStylePreset}
 
@@ -113,6 +115,10 @@ class VisualConceptBriefService:
         concept_direction_id: UUID,
         *,
         generate_image: bool = False,
+        preferred_image_type: ArchitectureImageType | None = None,
+        slot_key: str | None = None,
+        focus_hint: str | None = None,
+        style_preset: VisionStylePreset | None = None,
     ) -> VisualConceptBriefResult:
         direction = self._directions.get(concept_direction_id)
         if direction is None:
@@ -188,6 +194,14 @@ class VisualConceptBriefService:
                 draft=draft,
             )
 
+        brief = self._apply_slot_overrides(
+            brief,
+            preferred_image_type=preferred_image_type,
+            slot_key=slot_key,
+            focus_hint=focus_hint,
+            style_preset=style_preset,
+        )
+
         request = apply_direction_seed_to_request(self._to_image_request(brief), direction)
         context = self._to_context(direction, mission=mission)
         spec = self._compiler.compile(request, context=context, direction=direction)
@@ -235,6 +249,66 @@ class VisualConceptBriefService:
             image_succeeded=image_succeeded,
             warnings=warnings,
         )
+
+    def latest_brief_for_slot(
+        self,
+        concept_direction_id: UUID,
+        slot_key: str,
+    ) -> VisualConceptBrief | None:
+        """Prefer brief tagged with slot_key; else match by slot image_type."""
+        from archium.application.visual.vision.visual_thinking_slots import slot_by_key
+
+        slot = slot_by_key(slot_key)
+        briefs = self._briefs.list_by_direction(concept_direction_id)
+        for brief in briefs:
+            if str(brief.extra_json.get("slot_key") or "") == slot_key:
+                return brief
+        if slot is not None:
+            for brief in briefs:
+                if brief.image_type == slot.image_type:
+                    return brief
+        return None
+
+    def _apply_slot_overrides(
+        self,
+        brief: VisualConceptBrief,
+        *,
+        preferred_image_type: ArchitectureImageType | None,
+        slot_key: str | None,
+        focus_hint: str | None,
+        style_preset: VisionStylePreset | None,
+    ) -> VisualConceptBrief:
+        changed = False
+        extra = dict(brief.extra_json or {})
+        if preferred_image_type is not None:
+            coerced = self._coerce_image_type(preferred_image_type.value)
+            if brief.image_type != coerced:
+                brief.image_type = coerced
+                changed = True
+        if style_preset is not None:
+            brief.style_preset = style_preset
+            changed = True
+        if slot_key:
+            extra["slot_key"] = slot_key
+            changed = True
+        hint = (focus_hint or "").strip()
+        if hint:
+            extra["intent_binding"] = hint
+            if not brief.subject.strip():
+                brief.subject = hint[:500]
+            elif hint not in brief.subject:
+                brief.subject = f"{brief.subject.strip()}；{hint}"[:500]
+            if slot_key == "atmosphere" and not brief.atmosphere.strip():
+                brief.atmosphere = hint[:500]
+            if slot_key == "space" and not brief.diagram_intent.strip():
+                brief.diagram_intent = hint[:500]
+            if slot_key == "massing" and not brief.composition_intent.strip():
+                brief.composition_intent = hint[:500]
+            changed = True
+        if changed:
+            brief.extra_json = extra
+            return self._briefs.update(brief)
+        return brief
 
     def refine_and_resynthesize(
         self,

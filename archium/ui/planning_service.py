@@ -661,6 +661,10 @@ def synthesize_visual_concept_brief(
     *,
     generate_image: bool = False,
     settings: Settings | None = None,
+    preferred_image_type=None,
+    slot_key: str | None = None,
+    focus_hint: str | None = None,
+    style_preset=None,
 ):
     from archium.application.visual.vision import VisualConceptBriefService
 
@@ -669,6 +673,19 @@ def synthesize_visual_concept_brief(
     return VisualConceptBriefService(session, llm, settings=runtime).synthesize_for_direction(
         direction_id,
         generate_image=generate_image,
+        preferred_image_type=preferred_image_type,
+        slot_key=slot_key,
+        focus_hint=focus_hint,
+        style_preset=style_preset,
+    )
+
+
+def get_visual_concept_brief_for_slot(session: Session, direction_id: UUID, slot_key: str):
+    from archium.application.visual.vision import VisualConceptBriefService
+    from archium.infrastructure.llm.mock import MockLLMProvider
+
+    return VisualConceptBriefService(session, MockLLMProvider()).latest_brief_for_slot(
+        direction_id, slot_key
     )
 
 

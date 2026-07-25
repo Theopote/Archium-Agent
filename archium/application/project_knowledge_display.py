@@ -79,6 +79,9 @@ class ProjectKnowledgeDisplay:
     research_need_pct: int = 0
     design_readiness_pct: int = 0
     vector_bars: tuple[tuple[str, int], ...] = ()
+    known_highlights: tuple[str, ...] = ()
+    missing_highlights: tuple[str, ...] = ()
+    partner_headline: str = ""
 
 
 def classify_knowledge_situation(state: KnowledgeState) -> KnowledgeSituation:
@@ -128,11 +131,14 @@ def build_project_knowledge_display(
 
     actions = suggested_actions or _suggested_actions_from_context(context)
     focus = _focus_for_situation(situation, workflow_label, context.next_actions)
-    headline = (
-        f"项目认知：**{situation_label}**"
-        f"（意图 {intent_pct}% · 资料 {information_pct}% · 就绪 {design_readiness_pct}%）"
-        f" · 阶段 {stage_label} · 建议优先 **{workflow_label}**"
+    known_highlights = _known_highlights(state)
+    missing_highlights = _missing_highlights(state)
+    # Partner-facing: design language, not dashboard percentages.
+    partner_headline = (
+        f"AI 当前理解：**{situation_label}** · 阶段 **{stage_label}**"
+        f" · 建议优先 **{workflow_label}**"
     )
+    headline = partner_headline
     caption = _caption_for_situation(
         situation,
         state=state,
@@ -167,6 +173,9 @@ def build_project_knowledge_display(
         research_need_pct=research_need_pct,
         design_readiness_pct=design_readiness_pct,
         vector_bars=vector_bars,
+        known_highlights=known_highlights,
+        missing_highlights=missing_highlights,
+        partner_headline=partner_headline,
     )
 
 
@@ -188,6 +197,34 @@ def _focus_for_situation(
     return workflow_label
 
 
+def _known_highlights(state: KnowledgeState, *, limit: int = 6) -> tuple[str, ...]:
+    rows: list[str] = []
+    if state.claims:
+        for claim in state.claims[:limit]:
+            label = claim.key.strip() or "主张"
+            summary = (claim.summary or "").strip()
+            mark = "✓" if claim.confirmed else "·"
+            rows.append(f"{mark} {label}" + (f"：{summary[:40]}" if summary else ""))
+        return tuple(rows)
+    for key, value in list((state.known or {}).items())[:limit]:
+        rows.append(f"✓ {key}：{value}")
+    return tuple(rows)
+
+
+def _missing_highlights(state: KnowledgeState, *, limit: int = 6) -> tuple[str, ...]:
+    rows: list[str] = []
+    if state.open_unknowns:
+        for gap in state.open_unknowns[:limit]:
+            prefix = "? [阻断] " if gap.blocking else "? "
+            rows.append(f"{prefix}{gap.description}")
+        return tuple(rows)
+    for item in (state.unknown or state.missing_information or [])[:limit]:
+        text = str(item).strip()
+        if text:
+            rows.append(f"? {text}")
+    return tuple(rows)
+
+
 def _caption_for_situation(
     situation: KnowledgeSituation,
     *,
@@ -195,7 +232,6 @@ def _caption_for_situation(
     workflow_label: str,
     understanding: str,
 ) -> str:
-    dims = state.effective_dimensions()
     summary = (understanding or "").strip()
     if situation == KnowledgeSituation.SPARSE_IDEA:
         base = "目前主要是想法与片段描述，不必先备齐资料。"
@@ -211,17 +247,21 @@ def _caption_for_situation(
         )
     else:
         base = "资料较充实，可整理事实并推进汇报结构；正式交付仍建议核对证据。"
-    dim_line = " · ".join(dims.summary_bits(limit=3))
+    missing = _missing_highlights(state, limit=3)
+    missing_line = "、".join(
+        item.lstrip("? ").removeprefix("[阻断] ") for item in missing
+    )
     if summary:
-        return f"{base} {summary}（{dim_line}）"
-    unknowns = state.unknown or state.missing_information
-    if unknowns and situation in {
+        if missing_line:
+            return f"{base} {summary} 仍缺：{missing_line}。建议下一步：{workflow_label}。"
+        return f"{base} {summary} 建议下一步：{workflow_label}。"
+    if missing_line and situation in {
         KnowledgeSituation.PARTIAL_CONTEXT,
         KnowledgeSituation.INTENT_LED,
+        KnowledgeSituation.SPARSE_IDEA,
     }:
-        sample = "、".join(unknowns[:3])
-        return f"{base} 仍缺：{sample}。{dim_line}。建议下一步：{workflow_label}。"
-    return f"{base} {dim_line}。建议下一步：{workflow_label}。"
+        return f"{base} 仍缺：{missing_line}。建议下一步：{workflow_label}。"
+    return f"{base} 建议下一步：{workflow_label}。"
 
 
 def _suggested_actions_from_context(context: ProjectContext) -> tuple[str, ...]:

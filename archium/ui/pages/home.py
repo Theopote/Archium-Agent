@@ -190,24 +190,77 @@ def _task_statement_for(snapshot: ProjectProgressSnapshot) -> str:
     return snapshot.presentation_type_label
 
 
+def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
+    """Partner-facing design timeline snippet for Project Home."""
+    st.markdown("**最近设计变化**")
+    try:
+        from archium.infrastructure.database.repositories import ProjectRepository
+        from archium.ui.intent_evolution_panel import (
+            format_intent_event_time,
+            intent_evolution_kind_label,
+        )
+
+        with get_session() as session:
+            project = ProjectRepository(session).get_by_id(snapshot.project_id)
+        evolution = project.intent_evolution if project is not None else None
+        events = list(evolution.events) if evolution is not None else []
+        if not events:
+            st.caption("尚无设计决策记录。理解项目、选定方向或反思后会出现。")
+            return
+        st.caption(f"共 {len(events)} 次设计演进")
+        for event in reversed(events[-5:]):
+            kind = intent_evolution_kind_label(event.kind)
+            when = format_intent_event_time(event.at)
+            st.markdown(f"- **{kind}** · `{when}` — {event.display_line()}")
+        with st.expander("完整设计时间线", expanded=False):
+            from archium.ui.intent_evolution_panel import render_intent_evolution_timeline
+
+            render_intent_evolution_timeline(
+                evolution,
+                key_prefix=f"home_evo_{snapshot.project_id}",
+                limit=16,
+            )
+    except Exception:
+        logger.exception("Failed to render home design timeline")
+        st.caption("设计演进暂不可用。")
+
+
+def _render_partner_next_steps(snapshot: ProjectProgressSnapshot) -> None:
+    st.markdown("**下一步**")
+    try:
+        from archium.ui.project_knowledge_profile import render_project_knowledge_action_buttons
+
+        render_project_knowledge_action_buttons(
+            snapshot.project_id,
+            key_prefix=f"home_nba_{snapshot.project_id}",
+            max_items=3,
+        )
+    except Exception:
+        logger.exception("Failed to render home next-best actions")
+        st.caption(f"建议进入：{snapshot.current_stage_label}")
+
+
 def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     header_l, header_r = st.columns([3.2, 1])
     with header_l:
         st.markdown(f"### {snapshot.project_name}")
         st.caption(f"{greeting_for_now()} · 当前项目")
-        try:
-            from archium.ui.project_knowledge_profile import render_project_knowledge_strip
-
-            render_project_knowledge_strip(
-                snapshot.project_id,
-                compact=True,
-                show_known_unknown=False,
-            )
-        except Exception:
-            pass
     with header_r:
         if st.button("切换项目", use_container_width=True, key="home_switch_project"):
             st.switch_page(get_app_page("project-management"))
+
+    try:
+        from archium.ui.project_knowledge_profile import render_ai_understanding_panel
+
+        render_ai_understanding_panel(
+            snapshot.project_id,
+            compact=True,
+            show_actions=False,
+            key_prefix=f"home_understand_{snapshot.project_id}",
+            title="AI 当前理解",
+        )
+    except Exception:
+        logger.exception("Failed to render home understanding panel")
 
     st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
 
@@ -224,10 +277,13 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         _render_progress_bar(snapshot)
 
     st.divider()
-    left, right = st.columns(2)
+    left, mid, right = st.columns(3)
     with left:
-        _render_pending_issues(snapshot)
+        _render_partner_next_steps(snapshot)
+    with mid:
+        _render_recent_design_changes(snapshot)
     with right:
+        _render_pending_issues(snapshot)
         _render_recent_versions(snapshot)
 
     st.divider()

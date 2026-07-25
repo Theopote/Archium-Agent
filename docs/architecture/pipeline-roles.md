@@ -253,6 +253,14 @@ PageArchetype/NarrativeStage/SlideType；生成时回填并持久化；确定性
 `run_presentation_critique`（layout 之后、repair/validate 之前，软失败）。
 从「页目录」迈向「受众说服叙事」。
 
+**Phase M（UI / Product Experience P0–P1）**：伙伴面而非功能管理器。
+- Genesis 保持一句话入口；Knowledge 文案去 % 仪表盘，改为「已知 / 仍缺 / 下一步」
+  （`render_ai_understanding_panel`）。
+- 概念探索：左「思考与建议」+ 右「方案比较」三列卡（`concept_direction_compare`）。
+- Project Home：挂 AI 理解、NBA、IntentEvolution 最近变化。
+- Mission 方向区同步比较卡；视觉环文案改为「探索视觉表达」并绑 DesignIntent 摘要。
+仍待：完整 Studio 壳（Canvas+Chat+Context）、Storyline 第一公民编辑器。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -422,4 +430,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase L PresentationCritic 入图；PresentationIntent/SlideRole；K.1。*
+*Last updated: 2026-07-25 — Phase M UI 伙伴面（理解面板 / 方向比较 / Home 演进）；Phase L PresentationCritic。*

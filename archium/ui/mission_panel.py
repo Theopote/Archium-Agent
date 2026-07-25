@@ -25,7 +25,6 @@ from archium.domain.project_mission import (
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
-from archium.ui.components.concept_direction_details import render_concept_direction_details
 from archium.ui.components.design_rationale_details import render_design_rationale
 from archium.ui.components.spatial_design_details import render_spatial_design_layer
 from archium.ui.planning_service import update_mission_fields
@@ -576,49 +575,51 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 else:
                     st.warning("预览中尚未看到概念方向或视觉简报注入，请确认已选中方向。")
 
+    from archium.ui.components.concept_direction_compare import render_concept_direction_compare
+
+    clicked = render_concept_direction_compare(
+        directions,
+        key_prefix=f"{key_prefix}_cmp",
+        allow_select=not concept_origin,
+        allow_archive=not concept_origin,
+        show_details_expander=True,
+    )
+    if clicked and not concept_origin:
+        action, direction_id = clicked
+        if action == "select":
+            try:
+                with get_session() as session:
+                    selection = select_concept_direction(session, direction_id)
+                st.session_state["design_critique_warnings"] = list(
+                    getattr(selection, "critique_warnings", None) or []
+                )
+                st.success("已选中方向，并写回设计使命。")
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+        elif action == "archive":
+            try:
+                with get_session() as session:
+                    archive_concept_direction(session, direction_id)
+                st.rerun()
+            except WorkflowError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(format_user_error(exc))
+
+    # Vision loop stays under selected / each direction via expanders below compare
     for direction in directions:
         badge = {
             ConceptDirectionStatus.SELECTED: "已选中",
             ConceptDirectionStatus.DRAFT: "草稿",
             ConceptDirectionStatus.ARCHIVED: "已归档",
         }.get(direction.status, direction.status.value)
-        with st.expander(f"{direction.title} · {badge}", expanded=direction.status == ConceptDirectionStatus.SELECTED):
-            render_concept_direction_details(direction)
-
-            if not concept_origin:
-                cols = st.columns(2)
-                if direction.status != ConceptDirectionStatus.SELECTED and cols[0].button(
-                    "选为当前方向",
-                    key=f"{key_prefix}_select_dir_{direction.id}",
-                    use_container_width=True,
-                ):
-                    try:
-                        with get_session() as session:
-                            selection = select_concept_direction(session, direction.id)
-                        st.session_state["design_critique_warnings"] = list(
-                            getattr(selection, "critique_warnings", None) or []
-                        )
-                        st.success(f"已选中「{direction.title}」，并写回设计使命。")
-                        st.rerun()
-                    except WorkflowError as exc:
-                        st.error(str(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
-                if direction.status == ConceptDirectionStatus.DRAFT and cols[1].button(
-                    "归档",
-                    key=f"{key_prefix}_archive_dir_{direction.id}",
-                    use_container_width=True,
-                ):
-                    try:
-                        with get_session() as session:
-                            archive_concept_direction(session, direction.id)
-                        st.rerun()
-                    except WorkflowError as exc:
-                        st.error(str(exc))
-                    except Exception as exc:
-                        st.error(format_user_error(exc))
-
-            st.markdown("---")
+        with st.expander(
+            f"视觉与示意 · {direction.title} · {badge}",
+            expanded=direction.status == ConceptDirectionStatus.SELECTED,
+        ):
             st.markdown("**视觉概念简报**")
             with get_session() as session:
                 visual_brief = get_latest_visual_concept_brief(session, direction.id)
@@ -641,12 +642,23 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                         st.caption(f"示意路径：{visual_brief.image_path}")
                 if visual_brief.error_message:
                     st.warning(format_vision_user_warning(visual_brief.error_message))
+                bind_bits = [
+                    part
+                    for part in (
+                        direction.theme,
+                        direction.spatial_strategy or direction.spatial_idea,
+                        direction.formal_language,
+                    )
+                    if part and str(part).strip()
+                ]
+                if bind_bits:
+                    st.caption("对应设计意图：" + " · ".join(bind_bits[:3]))
             else:
                 st.caption("尚未生成视觉简报。")
 
             vision_cols = st.columns(2)
             if vision_cols[0].button(
-                "生成视觉简报（仅文字）",
+                "探索视觉表达（文字）",
                 key=f"{key_prefix}_visual_text_{direction.id}",
                 use_container_width=True,
             ):
@@ -672,7 +684,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                     except Exception as exc:
                         st.error(format_user_error(exc))
             if vision_cols[1].button(
-                "生成视觉简报 + 示意出图",
+                "探索视觉表达 + 出图",
                 key=f"{key_prefix}_visual_image_{direction.id}",
                 use_container_width=True,
             ):
@@ -685,7 +697,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                         "当前未开启 Vision 图像生成。将先保存文字简报；"
                         "若要出图，请在设置中开启 vision_image_generation_enabled。"
                     )
-                with st.spinner("正在合成视觉简报并尝试示意出图…"):
+                with st.spinner("正在合成概念示意并尝试出图…"):
                     try:
                         with get_session() as session:
                             result = synthesize_visual_concept_brief(
@@ -696,7 +708,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                             )
                         if result.image_succeeded:
                             st.success(
-                                f"已生成视觉简报并完成示意出图：「{result.brief.title}」。"
+                                f"已生成概念示意并完成出图：「{result.brief.title}」。"
                             )
                         else:
                             st.success(f"已生成视觉简报「{result.brief.title}」。")
