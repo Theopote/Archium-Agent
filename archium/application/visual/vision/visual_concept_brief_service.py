@@ -115,6 +115,12 @@ class VisualConceptBriefService:
             warnings.append(
                 "已使用概念方向 visual_prompt 直出视觉简报，跳过 LLM 扩写。"
             )
+            if direction.design_rationale is not None and not direction.design_rationale.is_empty():
+                brief.extra_json = {
+                    **brief.extra_json,
+                    "design_rationale": direction.design_rationale.model_dump(mode="json"),
+                }
+                brief = self._briefs.update(brief)
         else:
             draft = self._llm.generate_structured(
                 LLMRequest(
@@ -135,6 +141,11 @@ class VisualConceptBriefService:
                         visual_prompt_block=(
                             direction.visual_prompt.to_prompt_block()
                             if direction.visual_prompt is not None
+                            else ""
+                        ),
+                        design_rationale_block=(
+                            direction.design_rationale.to_prompt_block()
+                            if direction.design_rationale is not None
                             else ""
                         ),
                     ),
@@ -201,12 +212,22 @@ class VisualConceptBriefService:
     ) -> VisualConceptBrief:
         image_type = self._coerce_image_type(draft.image_type)
         style = self._coerce_style(draft.style_preset)
+        composition_intent = (draft.composition_intent or "").strip()
+        if (
+            not composition_intent
+            and direction.design_rationale is not None
+            and direction.design_rationale.statement.strip()
+        ):
+            composition_intent = direction.design_rationale.statement.strip()[:500]
+        extra_json: dict[str, object] = {}
+        if direction.design_rationale is not None and not direction.design_rationale.is_empty():
+            extra_json["design_rationale"] = direction.design_rationale.model_dump(mode="json")
         brief = VisualConceptBrief(
             project_id=mission.project_id,
             mission_id=mission.id,
             concept_direction_id=direction.id,
             title=(draft.title or direction.title).strip()[:200],
-            composition_intent=(draft.composition_intent or "").strip(),
+            composition_intent=composition_intent,
             atmosphere=(draft.atmosphere or "").strip(),
             diagram_intent=(draft.diagram_intent or "").strip(),
             image_type=image_type,
@@ -215,6 +236,7 @@ class VisualConceptBriefService:
             elements=[item.strip() for item in draft.elements if item.strip()][:12],
             avoid=[item.strip() for item in draft.avoid if item.strip()][:12],
             status="draft",
+            extra_json=extra_json,
         )
         return self._briefs.create(brief)
 

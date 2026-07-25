@@ -17,6 +17,7 @@ CONCEPT_DIRECTION_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - 形式语言（formal_language）写体量/轮廓/构造气质；材料策略（material_strategy）写主材与工法倾向。
 - reference_dna 写 2–4 条参照基因（类型、氛围、构造传统），不是抄袭具体方案。
 - visual_prompt 为 Vision Engine 预留：image_prompt（可英中混合）、camera、style；勿写面积等精确指标。
+- design_rationale 说明「为什么是这个方向」：statement（一句判断）、reasons（2–4 条）、evidence（引用用户/资料约束，勿捏造）、confidence（0–1）、alternatives（1–2 个未选方案及权衡）。
 - 不得编造面积、容积率、投资额等精确指标；未知写成 open_questions。
 - 方向应回应用户想法与语境，而不是套模板风格标签。
 - 输出合法 JSON，字段与 schema 一致。
@@ -47,7 +48,7 @@ def build_concept_direction_user_prompt(
 2. 各方向主题与体验焦点应可区分。
 3. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
    formal_language, material_strategy, reference_dna, visual_prompt,
-   experience_focus, differentiator, open_questions, risks。
+   design_rationale, experience_focus, differentiator, open_questions, risks。
 """
 
 
@@ -83,7 +84,7 @@ def build_exploration_direction_user_prompt(
 2. 各方向是可比较的「可能世界」，差异点必须清晰。
 3. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
    formal_language, material_strategy, reference_dna, visual_prompt,
-   experience_focus, differentiator, open_questions, risks。
+   design_rationale, experience_focus, differentiator, open_questions, risks。
 4. 若有已证实约束，方向必须尊重；未知项写入 open_questions，勿捏造数值。
 5. 方向应回应 IdeaSeed 中的主题、灵感与关键词。
 """

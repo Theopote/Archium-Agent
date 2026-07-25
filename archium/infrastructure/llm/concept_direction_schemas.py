@@ -20,6 +20,31 @@ class ConceptVisualPromptDraft(BaseModel):
     )
 
 
+class DesignRationaleAlternativeDraft(BaseModel):
+    label: str = ""
+    note: str = ""
+
+
+class DesignRationaleDraft(BaseModel):
+    statement: str = Field(
+        default="",
+        description="One-sentence design claim this direction makes",
+    )
+    reasons: list[str] = Field(
+        default_factory=list,
+        description="2–4 why bullets: climate, typology, user, context",
+    )
+    evidence: list[str] = Field(
+        default_factory=list,
+        description="Cited constraints or facts from user/materials (no invented metrics)",
+    )
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    alternatives: list[DesignRationaleAlternativeDraft] = Field(
+        default_factory=list,
+        description="1–2 options considered but not chosen, with brief trade-off",
+    )
+
+
 class ConceptDirectionDraft(BaseModel):
     title: str = Field(min_length=1)
     summary: str = Field(min_length=1)
@@ -42,6 +67,7 @@ class ConceptDirectionDraft(BaseModel):
         description="2–4 reference genes (architects, typologies, atmospheres) — not plagiarism",
     )
     visual_prompt: ConceptVisualPromptDraft | None = None
+    design_rationale: DesignRationaleDraft | None = None
     experience_focus: str = ""
     differentiator: str = ""
     open_questions: list[str] = Field(default_factory=list)

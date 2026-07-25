@@ -1136,6 +1136,9 @@ class ConceptDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     visual_prompt_json: Mapped[dict[str, object] | None] = mapped_column(
         "visual_prompt", JSON, nullable=True
     )
+    design_rationale_json: Mapped[dict[str, object] | None] = mapped_column(
+        "design_rationale", JSON, nullable=True
+    )
     experience_focus: Mapped[str] = mapped_column(Text, nullable=False, default="")
     differentiator: Mapped[str] = mapped_column(Text, nullable=False, default="")
     open_questions_json: Mapped[list[str]] = mapped_column(

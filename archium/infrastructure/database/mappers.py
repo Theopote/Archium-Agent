@@ -9,6 +9,7 @@ from archium.domain.artifact_job import ArtifactJob
 from archium.domain.citation import Citation
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
+from archium.domain.design_rationale import DesignRationale
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import (
@@ -1266,6 +1267,15 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
                 visual = parsed
         except Exception:
             visual = None
+    rationale_raw = getattr(orm, "design_rationale_json", None)
+    rationale = None
+    if isinstance(rationale_raw, dict) and rationale_raw:
+        try:
+            parsed_rationale = DesignRationale.model_validate(rationale_raw)
+            if not parsed_rationale.is_empty():
+                rationale = parsed_rationale
+        except Exception:
+            rationale = None
     return ConceptDirection(
         id=orm.id,
         project_id=orm.project_id,
@@ -1280,6 +1290,7 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
         material_strategy=getattr(orm, "material_strategy", None) or "",
         reference_dna=list(getattr(orm, "reference_dna_json", None) or []),
         visual_prompt=visual,
+        design_rationale=rationale,
         experience_focus=orm.experience_focus or "",
         differentiator=orm.differentiator or "",
         open_questions=list(orm.open_questions_json or []),
@@ -1311,6 +1322,11 @@ def concept_direction_to_orm(
     target.visual_prompt_json = (
         domain.visual_prompt.model_dump(mode="json")
         if domain.visual_prompt is not None and not domain.visual_prompt.is_empty()
+        else None
+    )
+    target.design_rationale_json = (
+        domain.design_rationale.model_dump(mode="json")
+        if domain.design_rationale is not None and not domain.design_rationale.is_empty()
         else None
     )
     target.experience_focus = domain.experience_focus

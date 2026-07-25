@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from archium.infrastructure.llm.concept_direction_schemas import DesignRationaleDraft
+
 
 class StakeholderDraft(BaseModel):
     name: str
@@ -80,6 +82,7 @@ class DesignIntentDraft(BaseModel):
     core_questions: list[str] = Field(default_factory=list)
     research_needed: list[str] = Field(default_factory=list)
     working_assumptions: list[str] = Field(default_factory=list)
+    design_rationale: DesignRationaleDraft | None = None
 
 
 class MissionGenerationDraft(BaseModel):

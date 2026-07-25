@@ -36,6 +36,7 @@ def build_visual_concept_brief_user_prompt(
     material_strategy: str = "",
     reference_dna: str = "",
     visual_prompt_block: str = "",
+    design_rationale_block: str = "",
 ) -> str:
     structured = ""
     if spatial_strategy.strip():
@@ -48,6 +49,8 @@ def build_visual_concept_brief_user_prompt(
         structured += f"\n参照基因：{reference_dna.strip()}"
     if visual_prompt_block.strip():
         structured += f"\n{visual_prompt_block.strip()}"
+    if design_rationale_block.strip():
+        structured += f"\n设计推理：\n{design_rationale_block.strip()}"
     return f"""请为以下概念方向撰写一份视觉概念简报。
 
 任务标题：{mission_title}

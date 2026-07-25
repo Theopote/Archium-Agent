@@ -5,6 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 from archium.domain.concept_direction import ConceptDirection
+from archium.ui.components.design_rationale_details import render_design_rationale
 
 
 def render_concept_direction_details(direction: ConceptDirection) -> None:
@@ -13,6 +14,7 @@ def render_concept_direction_details(direction: ConceptDirection) -> None:
         st.markdown(f"**主题**：{direction.theme}")
     if direction.summary:
         st.markdown(direction.summary)
+    render_design_rationale(direction.design_rationale, expanded=True)
     if direction.spatial_strategy:
         st.markdown(f"**空间策略**：{direction.spatial_strategy}")
     if direction.spatial_idea:

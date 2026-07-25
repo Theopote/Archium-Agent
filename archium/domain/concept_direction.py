@@ -8,6 +8,7 @@ from pydantic import Field
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
+from archium.domain.design_rationale import DesignRationale
 from archium.domain.enums import ConceptDirectionStatus
 
 
@@ -26,6 +27,7 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
     material_strategy: str = ""
     reference_dna: list[str] = Field(default_factory=list)
     visual_prompt: ConceptVisualPrompt | None = None
+    design_rationale: DesignRationale | None = None
     experience_focus: str = ""
     differentiator: str = ""
     open_questions: list[str] = Field(default_factory=list)
@@ -68,6 +70,10 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
             )
         if self.visual_prompt is not None:
             block = self.visual_prompt.to_prompt_block()
+            if block:
+                sections.append(block)
+        if self.design_rationale is not None:
+            block = self.design_rationale.to_prompt_block()
             if block:
                 sections.append(block)
         if self.experience_focus.strip():

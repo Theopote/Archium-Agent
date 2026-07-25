@@ -6,8 +6,32 @@ from uuid import UUID
 
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
+from archium.domain.design_rationale import DesignRationale, DesignRationaleAlternative
 from archium.domain.enums import ConceptDirectionStatus
-from archium.infrastructure.llm.concept_direction_schemas import ConceptDirectionDraft
+from archium.infrastructure.llm.concept_direction_schemas import (
+    ConceptDirectionDraft,
+    DesignRationaleDraft,
+)
+
+
+def design_rationale_from_draft(draft: DesignRationaleDraft | None) -> DesignRationale | None:
+    if draft is None:
+        return None
+    rationale = DesignRationale(
+        statement=(draft.statement or "").strip(),
+        reasons=[item.strip() for item in draft.reasons if item and item.strip()],
+        evidence=[item.strip() for item in draft.evidence if item and item.strip()],
+        confidence=float(draft.confidence),
+        alternatives=[
+            DesignRationaleAlternative(
+                label=(alt.label or "").strip(),
+                note=(alt.note or "").strip(),
+            )
+            for alt in draft.alternatives
+            if (alt.label or "").strip() or (alt.note or "").strip()
+        ],
+    )
+    return None if rationale.is_empty() else rationale
 
 
 def concept_direction_from_draft(
@@ -43,6 +67,7 @@ def concept_direction_from_draft(
             item.strip() for item in draft.reference_dna if item and item.strip()
         ],
         visual_prompt=visual,
+        design_rationale=design_rationale_from_draft(draft.design_rationale),
         experience_focus=(draft.experience_focus or "").strip(),
         differentiator=(draft.differentiator or "").strip(),
         open_questions=[item.strip() for item in draft.open_questions if item.strip()],

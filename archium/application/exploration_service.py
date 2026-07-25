@@ -8,6 +8,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.context_evidence import build_verified_constraints_block
+from archium.application.design_intent_from_direction import design_intent_from_direction
+from archium.application.design_rationale_fallback import ensure_direction_design_rationale
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
@@ -17,7 +19,6 @@ from archium.domain.enums import (
     ProjectOriginMode,
 )
 from archium.domain.exploration_session import ExplorationSession
-from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
 from archium.domain.project_mission import ProjectMission
@@ -296,7 +297,7 @@ class ExplorationService:
             task_text,
             origin_mode=ProjectOriginMode.CONCEPT_EXPLORATION,
         )
-        intent = self._intent_from_direction(direction, base=generated.mission.design_intent)
+        intent = design_intent_from_direction(direction, base=generated.mission.design_intent)
         mission = self._mission_service.update_mission(
             generated.mission.id,
             MissionPatch(design_intent=intent),
@@ -401,7 +402,23 @@ class ExplorationService:
             exploration_session_id=exploration.id,
             sort_order=sort_order,
         )
+        seed = exploration.idea_seed
+        direction = ensure_direction_design_rationale(
+            direction,
+            known_facts=self._known_facts_for_project(exploration.project_id),
+            idea_text=seed.raw_input if seed is not None else exploration.idea_text,
+        )
         return self._directions.create(direction)
+
+    def _known_facts_for_project(self, project_id: UUID) -> dict[str, str]:
+        from archium.application.context.project_context_builder import (
+            build_project_context,
+        )
+
+        ctx = build_project_context(self._session, project_id)
+        if ctx is None or ctx.knowledge_state is None:
+            return {}
+        return dict(ctx.knowledge_state.known)
 
     @staticmethod
     def _task_description_from_seed(
@@ -429,32 +446,11 @@ class ExplorationService:
             parts.append(f"材料策略：{direction.material_strategy.strip()}")
         if direction.experience_focus.strip():
             parts.append(f"体验焦点：{direction.experience_focus.strip()}")
+        if direction.design_rationale is not None:
+            block = direction.design_rationale.to_prompt_block()
+            if block.strip():
+                parts.append(block)
         return "\n".join(parts)
-
-    @staticmethod
-    def _intent_from_direction(
-        direction: ConceptDirection,
-        *,
-        base: DesignIntent | None = None,
-    ) -> DesignIntent:
-        from archium.application.intent_evidence_helpers import (
-            evidence_from_direction_selection,
-        )
-
-        seed = base or DesignIntent()
-        intent = DesignIntent(
-            theme=direction.theme or direction.title or seed.theme,
-            problem_statement=direction.summary or seed.problem_statement,
-            social_background=seed.social_background,
-            cultural_context=seed.cultural_context,
-            target_users=list(seed.target_users),
-            desired_experience=direction.experience_focus or seed.desired_experience,
-            core_questions=list(direction.open_questions) or list(seed.core_questions),
-            research_needed=list(seed.research_needed),
-            working_assumptions=list(seed.working_assumptions),
-            evidence=list(seed.evidence),
-        )
-        return intent.with_evidence(evidence_from_direction_selection(direction))
 
     def _require_session(self, exploration_id: UUID) -> ExplorationSession:
         exploration = self._explorations.get(exploration_id)

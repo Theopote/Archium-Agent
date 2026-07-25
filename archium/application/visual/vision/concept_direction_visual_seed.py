@@ -109,6 +109,12 @@ def apply_direction_seed_to_request(
         subject = vp.image_prompt.strip()[:500]
 
     purpose_parts = [request.purpose.strip()]
+    if (
+        direction.design_rationale is not None
+        and direction.design_rationale.statement.strip()
+        and direction.design_rationale.statement not in request.purpose
+    ):
+        purpose_parts.append(direction.design_rationale.statement.strip())
     if direction.spatial_strategy.strip() and direction.spatial_strategy not in request.purpose:
         purpose_parts.append(direction.spatial_strategy.strip())
     if direction.experience_focus.strip():
@@ -138,6 +144,8 @@ def image_request_from_concept_direction(direction: ConceptDirection) -> ImageRe
         direction.formal_language,
         direction.experience_focus,
     ]
+    if direction.design_rationale is not None and direction.design_rationale.statement.strip():
+        purpose_parts.insert(0, direction.design_rationale.statement.strip())
     purpose = " ".join(part.strip() for part in purpose_parts if part.strip())[:500]
     return ImageRequest(
         image_type=image_type,
@@ -166,6 +174,7 @@ def visual_concept_brief_from_direction_seed(
     composition = " · ".join(
         part.strip()
         for part in (
+            direction.design_rationale.statement if direction.design_rationale else "",
             direction.spatial_strategy,
             direction.spatial_idea,
             vp.camera,

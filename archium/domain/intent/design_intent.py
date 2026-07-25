@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.design_rationale import DesignRationale
 from archium.domain.intent.intent_evidence import IntentEvidence
 
 
@@ -21,6 +22,7 @@ class DesignIntent(DomainModel):
     research_needed: list[str] = Field(default_factory=list)
     working_assumptions: list[str] = Field(default_factory=list)
     evidence: list[IntentEvidence] = Field(default_factory=list)
+    design_rationale: DesignRationale | None = None
 
     def with_evidence(
         self,
@@ -76,4 +78,8 @@ class DesignIntent(DomainModel):
                     f"- [{entry.source_label()} {conf}%] {entry.statement.strip()}"
                 )
             sections.append("意图出处:\n" + "\n".join(lines))
+        if self.design_rationale is not None:
+            block = self.design_rationale.to_prompt_block()
+            if block.strip():
+                sections.append(block)
         return "\n".join(sections)

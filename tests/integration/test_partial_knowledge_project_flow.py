@@ -39,6 +39,7 @@ from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionBatchDraft,
     ConceptDirectionDraft,
     ConceptVisualPromptDraft,
+    DesignRationaleDraft,
 )
 from archium.infrastructure.llm.context_intelligence_schemas import (
     ContextAssessmentDraft,
@@ -269,6 +270,12 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
                     differentiator="在资料有限时仍可做策略比较",
                     open_questions=["功能分区？"],
                     risks=["结构鉴定未做"],
+                    design_rationale=DesignRationaleDraft(
+                        statement="在资料有限时优先最小干预，保留可识别历史界面",
+                        reasons=["南北主轴线仍可读", "结构鉴定未完成前避免大拆"],
+                        evidence=["location：西安", "简介提到1998年门诊楼"],
+                        confidence=0.68,
+                    ),
                 ),
                 ConceptDirectionDraft(
                     title="片区重组",
@@ -319,6 +326,8 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
     assert first.spatial_strategy
     assert first.visual_prompt is not None
     assert first.visual_prompt.image_prompt
+    assert first.design_rationale is not None
+    assert "最小干预" in first.design_rationale.statement
 
     selected = exploration_service.select_direction(first.id)
     assert selected.direction.status == ConceptDirectionStatus.SELECTED
@@ -326,6 +335,8 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
     committed = exploration_service.commit_to_mission(exploration.id)
     assert committed.exploration.status == ExplorationSessionStatus.COMMITTED
     assert committed.mission.design_intent is not None
+    assert committed.mission.design_intent.design_rationale is not None
+    assert committed.mission.design_intent.design_rationale.statement
     assert committed.direction.mission_id == committed.mission.id
 
     ctx = build_project_context(db_session, partial_project.id)

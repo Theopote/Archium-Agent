@@ -8,11 +8,12 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.concept_direction_mapping import concept_direction_from_draft
+from archium.application.design_intent_from_direction import design_intent_from_direction
+from archium.application.design_rationale_fallback import ensure_direction_design_rationale
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import ConceptDirectionStatus
-from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.project_mission import ProjectMission
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
@@ -150,7 +151,10 @@ class ConceptDirectionService:
                 sibling.mark_draft()
             self._directions.update(sibling)
 
-        updated_intent = self._intent_from_direction(mission, direction)
+        updated_intent = design_intent_from_direction(
+            direction,
+            base=mission.design_intent,
+        )
         mission = self._mission_service.update_mission(
             mission.id,
             MissionPatch(design_intent=updated_intent),
@@ -189,31 +193,21 @@ class ConceptDirectionService:
             mission_id=mission.id,
             sort_order=sort_order,
         )
+        direction = ensure_direction_design_rationale(
+            direction,
+            known_facts=self._known_facts_for_project(mission.project_id),
+        )
         return self._directions.create(direction)
 
-    def _intent_from_direction(
-        self,
-        mission: ProjectMission,
-        direction: ConceptDirection,
-    ) -> DesignIntent:
-        from archium.application.intent_evidence_helpers import (
-            evidence_from_direction_selection,
+    def _known_facts_for_project(self, project_id: UUID) -> dict[str, str]:
+        from archium.application.context.project_context_builder import (
+            build_project_context,
         )
 
-        base = mission.design_intent or DesignIntent()
-        intent = DesignIntent(
-            theme=direction.theme or direction.title or base.theme,
-            problem_statement=direction.summary or base.problem_statement,
-            social_background=base.social_background,
-            cultural_context=base.cultural_context,
-            target_users=list(base.target_users),
-            desired_experience=direction.experience_focus or base.desired_experience,
-            core_questions=list(direction.open_questions) or list(base.core_questions),
-            research_needed=list(base.research_needed),
-            working_assumptions=list(base.working_assumptions),
-            evidence=list(base.evidence),
-        )
-        return intent.with_evidence(evidence_from_direction_selection(direction))
+        ctx = build_project_context(self._session, project_id)
+        if ctx is None or ctx.knowledge_state is None:
+            return {}
+        return dict(ctx.knowledge_state.known)
 
     def _require_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._missions.get_mission(mission_id)
