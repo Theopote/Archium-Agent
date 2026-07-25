@@ -40,8 +40,8 @@ def upgrade() -> None:
             sa.Column("use_count", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("revoked", sa.Boolean(), nullable=False, server_default=sa.false()),
             sa.Column("label", sa.String(length=200), nullable=False, server_default=""),
+            sa.UniqueConstraint("code", name="uq_project_invites_code"),
         )
-        op.create_unique_constraint("uq_project_invites_code", "project_invites", ["code"])
         op.create_index("ix_project_invites_project_id", "project_invites", ["project_id"])
         op.create_index("ix_project_invites_code", "project_invites", ["code"])
 

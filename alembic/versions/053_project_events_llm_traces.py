@@ -32,6 +32,7 @@ def upgrade() -> None:
             sa.Column("payload", sa.JSON(), nullable=False),
             sa.Column("dedupe_key", sa.String(length=200), nullable=False, server_default=""),
             sa.Column("source", sa.String(length=80), nullable=False, server_default=""),
+            sa.UniqueConstraint("project_id", "dedupe_key", name="uq_project_events_dedupe"),
         )
         op.create_index(
             "ix_project_events_project_id_at",
@@ -39,11 +40,6 @@ def upgrade() -> None:
             ["project_id", "at"],
         )
         op.create_index("ix_project_events_event_type", "project_events", ["event_type"])
-        op.create_unique_constraint(
-            "uq_project_events_dedupe",
-            "project_events",
-            ["project_id", "dedupe_key"],
-        )
 
     if "llm_traces" not in tables:
         op.create_table(

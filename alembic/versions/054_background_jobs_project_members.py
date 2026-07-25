@@ -69,11 +69,9 @@ def upgrade() -> None:
             sa.Column("actor_id", sa.String(length=200), nullable=False),
             sa.Column("display_name", sa.String(length=200), nullable=False, server_default=""),
             sa.Column("role", sa.String(length=40), nullable=False, server_default="architect"),
-        )
-        op.create_unique_constraint(
-            "uq_project_members_project_actor",
-            "project_members",
-            ["project_id", "actor_id"],
+            sa.UniqueConstraint(
+                "project_id", "actor_id", name="uq_project_members_project_actor"
+            ),
         )
         op.create_index("ix_project_members_project_id", "project_members", ["project_id"])
         op.create_index("ix_project_members_actor_id", "project_members", ["actor_id"])
