@@ -28,6 +28,26 @@ class KnowledgeDimensionsDraft(BaseModel):
     research_need: float = Field(ge=0.0, le=1.0, default=0.5)
 
 
+class ContextAssessmentReasonDraft(BaseModel):
+    """Why this judgment / recommended path (reasoning trace)."""
+
+    factor: str = Field(description="Short factor label, e.g. 意图清晰 / 资料不足")
+    evidence: str = Field(default="", description="Observable signal backing the factor")
+    impact: str = Field(default="", description="How it affects the recommendation")
+    confidence: float = Field(ge=0.0, le=1.0, default=0.7)
+    polarity: str = Field(
+        default="nuance",
+        description="support | block | nuance",
+    )
+    related_axis: str = Field(
+        default="other",
+        description=(
+            "facts | intent | context | constraints | evidence | "
+            "design_readiness | research_need | workflow | other"
+        ),
+    )
+
+
 class ContextAssessmentDraft(BaseModel):
     completeness_score: float = Field(
         ge=0.0,
@@ -45,3 +65,4 @@ class ContextAssessmentDraft(BaseModel):
     suggested_origin_mode: str = "concept_exploration"
     understanding_summary: str = ""
     actions: list[NextBestActionDraft] = Field(default_factory=list)
+    reasons: list[ContextAssessmentReasonDraft] = Field(default_factory=list)

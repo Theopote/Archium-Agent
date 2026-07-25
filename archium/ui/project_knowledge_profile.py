@@ -66,8 +66,23 @@ def render_project_knowledge_strip(
     if show_known_unknown:
         _render_known_unknown(context.knowledge_state, compact=compact)
     if not compact:
+        _render_assessment_reasons(context.knowledge_state)
         _render_process_board(project_id)
     return display
+
+
+def _render_assessment_reasons(state: KnowledgeState) -> None:
+    reasons = list(state.assessment_reasons or [])
+    if not reasons:
+        return
+    with st.expander("判断依据", expanded=False):
+        for reason in reasons[:5]:
+            mark = {
+                "support": "＋",
+                "block": "−",
+                "nuance": "·",
+            }.get(getattr(reason.polarity, "value", ""), "·")
+            st.markdown(f"- {mark} {reason.display_line()}")
 
 
 def _render_knowledge_vector_bars(display: ProjectKnowledgeDisplay) -> None:

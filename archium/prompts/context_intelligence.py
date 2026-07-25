@@ -46,6 +46,10 @@ actions 可选：
 - 用户已提到图纸/PDF/CAD 且尚无文件时，可建议 upload_materials。
 - 投资/立项沟通为主时 suggested_origin_mode=research_programming。
 - completeness_score / evidence_ratio / assumption_ratio 仅兼容字段；以 dimensions 为准。
+- 另输出 reasons（3–5 条）：每条含 factor、evidence、impact、confidence、
+  polarity（support|block|nuance）、related_axis（facts|intent|constraints|…）。
+  让建筑师看懂「为何推荐这条路径」，不要黑盒。例如寺庙案例：意图清晰(support) +
+  基地资料不足(block) → 因此 explore，而非先逼上传。
 - 输出合法 JSON，字段与 schema 一致。
 """
 
@@ -92,7 +96,8 @@ def build_context_assessment_user_prompt(
 
 请输出 dimensions（六维）、completeness_score（兼容聚合）、maturity_stage、
 evidence_ratio、assumption_ratio、known、unknown、missing_information、
-suggested_origin_mode、understanding_summary、actions。
-known 尽量引用上述事实、知识条目或摘录；missing_information 优先对齐知识缺口。
+suggested_origin_mode、understanding_summary、actions、reasons（3–5 条判断依据）。
+known 尽量引用上述事实、知识条目或摘录；missing_information 优先覆盖知识缺口。
 理解摘要中请点出「意图 vs 资料」是否分离（例如意图清/资料少）。
+reasons 须能解释「为何是这条下一步」，勿空泛复述 summary。
 """

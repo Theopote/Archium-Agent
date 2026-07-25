@@ -151,6 +151,7 @@ def _render_entry_form() -> None:
                 "understanding_summary": assessment.understanding_summary,
                 "knowledge_state": assessment.knowledge_state.model_dump(mode="json"),
                 "actions": [a.model_dump(mode="json") for a in assessment.actions],
+                "reasons": [r.model_dump(mode="json") for r in assessment.reasons],
                 "suggested_origin_mode": assessment.suggested_origin_mode.value,
                 "warnings": list(assessment.warnings),
                 "project_context": (
@@ -265,6 +266,7 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 
     st.markdown("**建议下一步**")
     actions = [NextBestAction.model_validate(item) for item in payload.get("actions") or []]
+    _render_assessment_reasons(payload, knowledge_state=state)
     if not actions:
         st.caption("暂无建议，可继续描述项目或补充资料。")
     for index, action in enumerate(actions):
@@ -304,6 +306,7 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                     "understanding_summary": assessment.understanding_summary,
                     "knowledge_state": assessment.knowledge_state.model_dump(mode="json"),
                     "actions": [a.model_dump(mode="json") for a in assessment.actions],
+                    "reasons": [r.model_dump(mode="json") for r in assessment.reasons],
                     "suggested_origin_mode": assessment.suggested_origin_mode.value,
                     "warnings": list(assessment.warnings),
                     "project_context": (
@@ -378,6 +381,30 @@ def _pending_fact_counts() -> tuple[int, int]:
         return ledger.pending_count, ledger.conflict_count
     except Exception:
         return 0, 0
+
+
+def _render_assessment_reasons(payload: dict, *, knowledge_state: KnowledgeState) -> None:
+    from archium.domain.intent.context_assessment_reason import ContextAssessmentReason
+
+    raw = payload.get("reasons") or []
+    reasons: list[ContextAssessmentReason] = []
+    for item in raw:
+        try:
+            reasons.append(ContextAssessmentReason.model_validate(item))
+        except Exception:
+            continue
+    if not reasons:
+        reasons = list(knowledge_state.assessment_reasons or [])
+    if not reasons:
+        return
+    with st.expander("判断依据（为何这样建议）", expanded=True):
+        for reason in reasons[:5]:
+            mark = {
+                "support": "＋",
+                "block": "−",
+                "nuance": "·",
+            }.get(reason.polarity.value, "·")
+            st.markdown(f"- {mark} {reason.display_line()}")
 
 
 def _dispatch_action(action: NextBestActionType) -> None:

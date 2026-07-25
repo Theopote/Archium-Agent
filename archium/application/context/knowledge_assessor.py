@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from archium.application.context.assessment_reason_builder import (
+    synthesize_assessment_reasons,
+)
 from archium.application.context.knowledge_claim_index import merge_claim_index_into_state
 from archium.application.context.knowledge_dimensions_builder import (
     apply_dimensions_to_state,
@@ -12,7 +15,6 @@ from archium.application.context.knowledge_dimensions_builder import (
 )
 from archium.application.context.next_action_selector import (
     default_actions_for_dimensions,
-    default_actions_for_stage,
 )
 from archium.application.context.project_context_composer import (
     compose_project_context,
@@ -20,8 +22,12 @@ from archium.application.context.project_context_composer import (
 )
 from archium.application.context.types import ContextAssessment
 from archium.application.context_evidence import ProjectEvidencePack
-from archium.domain.context.project_context import ProjectContext
 from archium.domain.enums import ProjectOriginMode
+from archium.domain.intent.context_assessment_reason import (
+    AssessmentReasonAxis,
+    AssessmentReasonPolarity,
+    ContextAssessmentReason,
+)
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
 from archium.domain.intent.next_best_action import NextBestAction, NextBestActionType
 from archium.exceptions import WorkflowError
@@ -176,6 +182,11 @@ class KnowledgeAssessor:
             suggested_origin_mode=ProjectOriginMode(origin_raw),
             understanding_summary=(draft.understanding_summary or "").strip(),
         )
+        self._attach_reasons(
+            assessment,
+            evidence=evidence,
+            llm_reasons=_parse_reason_drafts(draft.reasons),
+        )
         assessment.project_context = compose_project_context(
             assessment,
             evidence=evidence,
@@ -309,6 +320,7 @@ class KnowledgeAssessor:
                 f"{' · '.join(dimensions.summary_bits(limit=3))}。"
             ),
         )
+        self._attach_reasons(assessment, evidence=pack)
         assessment.project_context = compose_project_context(
             assessment,
             evidence=pack,
@@ -316,3 +328,55 @@ class KnowledgeAssessor:
         )
         finalize_assessment_context(assessment)
         return assessment
+
+    @staticmethod
+    def _attach_reasons(
+        assessment: ContextAssessment,
+        *,
+        evidence: ProjectEvidencePack | None,
+        llm_reasons: list[ContextAssessmentReason] | None = None,
+    ) -> None:
+        state = assessment.knowledge_state
+        reasons = synthesize_assessment_reasons(
+            dimensions=state.effective_dimensions(),
+            known=state.known,
+            unknown=state.unknown or state.missing_information,
+            actions=assessment.actions,
+            evidence=evidence,
+            llm_reasons=llm_reasons,
+        )
+        assessment.reasons = reasons
+        assessment.knowledge_state = state.model_copy(
+            update={"assessment_reasons": reasons}
+        )
+
+
+def _parse_reason_drafts(drafts) -> list[ContextAssessmentReason]:
+    reasons: list[ContextAssessmentReason] = []
+    valid_polarity = {item.value for item in AssessmentReasonPolarity}
+    valid_axis = {item.value for item in AssessmentReasonAxis}
+    for item in drafts or []:
+        factor = (getattr(item, "factor", None) or "").strip()
+        if not factor:
+            continue
+        polarity_raw = (getattr(item, "polarity", None) or "nuance").strip().lower()
+        if polarity_raw not in valid_polarity:
+            polarity_raw = AssessmentReasonPolarity.NUANCE.value
+        axis_raw = (getattr(item, "related_axis", None) or "other").strip().lower()
+        if axis_raw not in valid_axis:
+            axis_raw = AssessmentReasonAxis.OTHER.value
+        try:
+            confidence = float(getattr(item, "confidence", 0.7) or 0.7)
+        except (TypeError, ValueError):
+            confidence = 0.7
+        reasons.append(
+            ContextAssessmentReason(
+                factor=factor[:200],
+                evidence=str(getattr(item, "evidence", "") or "").strip()[:500],
+                impact=str(getattr(item, "impact", "") or "").strip()[:400],
+                confidence=max(0.0, min(1.0, confidence)),
+                polarity=AssessmentReasonPolarity(polarity_raw),
+                related_axis=AssessmentReasonAxis(axis_raw),
+            )
+        )
+    return reasons

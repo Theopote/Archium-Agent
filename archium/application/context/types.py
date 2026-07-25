@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import ProjectOriginMode
+from archium.domain.intent.context_assessment_reason import ContextAssessmentReason
 from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.domain.intent.next_best_action import NextBestAction
 
@@ -19,6 +20,7 @@ class ContextAssessment:
     understanding_summary: str = ""
     warnings: list[str] = field(default_factory=list)
     project_context: ProjectContext | None = None
+    reasons: list[ContextAssessmentReason] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

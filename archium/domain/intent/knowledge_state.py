@@ -8,6 +8,7 @@ from enum import StrEnum
 from pydantic import Field, model_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.intent.context_assessment_reason import ContextAssessmentReason
 from archium.domain.intent.knowledge_claim import KnowledgeClaimRef, KnowledgeUnknownRef
 from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions
 
@@ -47,6 +48,10 @@ class KnowledgeState(DomainModel):
     cognition_stale: bool = Field(
         default=False,
         description="True when last best-effort LLM reassess failed; claim index may still be fresh.",
+    )
+    assessment_reasons: list[ContextAssessmentReason] = Field(
+        default_factory=list,
+        description="Last ContextAssessment reasoning trace (why NBA / stage).",
     )
 
     @model_validator(mode="after")
