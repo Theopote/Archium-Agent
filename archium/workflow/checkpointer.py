@@ -19,6 +19,12 @@ _CHECKPOINT_MODULES: list[tuple[str, str]] = [
     ("archium.application.presentation_models", "PresentationRequest"),
     ("archium.domain.citation", "Citation"),
     ("archium.domain.cultural_narrative", "CulturalNarrativePlan"),
+    ("archium.domain.cultural_narrative", "NarrativeEvent"),
+    ("archium.domain.cultural_narrative", "CulturalCharacter"),
+    ("archium.domain.cultural_narrative", "CulturalPlace"),
+    ("archium.domain.cultural_narrative", "CulturalRitual"),
+    ("archium.domain.cultural_narrative", "ArchitecturalSymbol"),
+    ("archium.domain.cultural_narrative", "CommunicationTheme"),
     ("archium.domain.deliverable", "DeliverablePlan"),
     ("archium.domain.deliverable", "PlannedDeliverable"),
     ("archium.domain.document", "DocumentChunk"),
@@ -77,6 +83,7 @@ _CHECKPOINT_MODULES: list[tuple[str, str]] = [
     ("archium.domain.presentation", "Presentation"),
     ("archium.domain.presentation", "PresentationBrief"),
     ("archium.domain.presentation", "Storyline"),
+    ("archium.domain.project_knowledge", "SourceCitation"),
     ("archium.domain.project_mission", "EvaluationCriterion"),
     ("archium.domain.project_mission", "MissionConstraint"),
     ("archium.domain.project_mission", "ProjectMission"),
@@ -201,6 +208,35 @@ class WorkflowCheckpointerManager:
                 yield
         finally:
             run_lock.release()
+
+    def clear_thread(self, thread_id: str) -> None:
+        """Drop all LangGraph checkpoint rows for ``thread_id``.
+
+        Needed when re-invoking a FAILED run: ``errors`` uses ``operator.add``,
+        so stale checkpoint errors survive a fresh ``errors: []`` input.
+        """
+        key = str(thread_id)
+        with self._db_lock:
+            saver = self.saver
+            conn = self._conn
+            if conn is None:
+                return
+            existing = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            for table in (
+                "checkpoints",
+                "checkpoint_blobs",
+                "checkpoint_writes",
+                "writes",
+            ):
+                if table in existing:
+                    conn.execute(f"DELETE FROM {table} WHERE thread_id = ?", (key,))
+            conn.commit()
+            _ = saver
 
     def close(self) -> None:
         with self._db_lock:

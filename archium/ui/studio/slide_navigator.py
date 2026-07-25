@@ -182,8 +182,11 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
         )
         with st.container(border=emphasize):
             preview_path = item.preview_image
-            if is_selected and preview_path and Path(preview_path).is_file():
+            if preview_path and Path(preview_path).is_file():
                 st.image(preview_path, use_container_width=True)
+            elif item.layout_plan is None:
+                msg = (slide.message or "")[:48]
+                st.caption(f"{msg}…" if len(slide.message or "") > 48 else (msg or "内容草稿"))
 
             if st.button(
                 label,

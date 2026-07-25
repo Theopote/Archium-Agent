@@ -86,7 +86,55 @@ def _preview_caption(kind: str | None) -> str:
     return "暂无预览。生成版式后将编译 RenderScene；必要时可降级为线框。"
 
 
-def _render_empty_preview_placeholder(*, has_layout_plan: bool = False) -> None:
+def _escape_html(value: str) -> str:
+    return (
+        value.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _render_content_slide_preview(slide) -> None:  # type: ignore[no-untyped-def]
+    """PPT-like page mockup from SlideSpec when layout/preview is not ready yet."""
+    title = _escape_html((slide.title or "未命名页面").strip())
+    message = _escape_html((slide.message or "").strip())
+    points = [(_escape_html(str(p).strip())) for p in (slide.key_points or []) if str(p).strip()]
+    bullets = "".join(
+        f"<li style='margin:0.35rem 0;line-height:1.45;color:#3f3a34;'>{point}</li>"
+        for point in points[:5]
+    )
+    bullets_block = (
+        f"<ul style='margin:0.9rem 0 0;padding-left:1.2rem;'>{bullets}</ul>" if bullets else ""
+    )
+    notes = ""
+    if getattr(slide, "speaker_notes", None):
+        notes = (
+            "<div style='margin-top:auto;padding-top:0.75rem;font-size:0.75rem;"
+            f"color:#8a8780;'>备注：{_escape_html(str(slide.speaker_notes)[:160])}</div>"
+        )
+    st.caption("内容页预览（尚无版式时的 PPT 样式草稿；生成版式后可进入交互编辑）")
+    st.markdown(
+        "<div style='position:relative;width:100%;aspect-ratio:16/9;"
+        "background:linear-gradient(160deg,#f7f4ef 0%,#fff 55%,#f0ebe3 100%);"
+        "border:1px solid #d8d6d0;border-radius:10px;overflow:hidden;"
+        "box-shadow:0 8px 24px rgba(40,32,24,0.06);'>"
+        "<div style='position:absolute;left:0;top:0;bottom:0;width:0.55rem;background:#8b5e3c;'></div>"
+        "<div style='position:absolute;inset:0;padding:6% 7% 5% 8%;display:flex;flex-direction:column;'>"
+        f"<div style='font-size:1.35rem;font-weight:700;color:#2a241f;line-height:1.25;'>{title}</div>"
+        f"<div style='margin-top:0.85rem;font-size:0.98rem;color:#5a5248;line-height:1.5;'>{message}</div>"
+        f"{bullets_block}{notes}"
+        "<div style='margin-top:auto;padding-top:0.75rem;font-size:0.72rem;color:#a39e96;"
+        "border-top:1px solid #e6e1d8;'>Archium · 内容草稿预览</div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_empty_preview_placeholder(*, has_layout_plan: bool = False, slide=None) -> None:  # type: ignore[no-untyped-def]
+    if slide is not None and not has_layout_plan:
+        _render_content_slide_preview(slide)
+        return
     hint = (
         "版式已生成，暂无预览图。运行带 PPTX 导出的视觉编排后可显示截图。"
         if has_layout_plan
@@ -209,7 +257,10 @@ def _render_static_or_empty_state(
     elif plan is not None and plan.elements:
         _render_plan_wireframe(plan, selected_element_id=selected_element_id)
     else:
-        _render_empty_preview_placeholder(has_layout_plan=plan is not None)
+        _render_empty_preview_placeholder(
+            has_layout_plan=plan is not None,
+            slide=slide_snapshot.slide,
+        )
 
     _render_validation_overlay(
         slide_snapshot=slide_snapshot,

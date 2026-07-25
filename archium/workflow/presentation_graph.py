@@ -51,12 +51,29 @@ def _route_after_manuscript(state: PresentationWorkflowState) -> str:
     return "generate_brief"
 
 
+def _approval_status(artifact: object | None) -> ApprovalStatus | None:
+    """Read approval_status from a domain model or checkpoint dict."""
+    if artifact is None:
+        return None
+    if isinstance(artifact, dict):
+        raw = artifact.get("approval_status")
+    else:
+        raw = getattr(artifact, "approval_status", None)
+    if raw is None:
+        return None
+    if isinstance(raw, ApprovalStatus):
+        return raw
+    try:
+        return ApprovalStatus(str(raw))
+    except ValueError:
+        return None
+
+
 def _route_after_brief(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
     if state.get("require_brief_review"):
-        brief = state.get("brief")
-        if brief is not None and brief.approval_status != ApprovalStatus.APPROVED:
+        if _approval_status(state.get("brief")) != ApprovalStatus.APPROVED:
             return "pause_for_review"
     return "continue"
 
@@ -65,8 +82,7 @@ def _route_after_storyline(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
     if state.get("require_storyline_review"):
-        storyline = state.get("storyline")
-        if storyline is not None and storyline.approval_status != ApprovalStatus.APPROVED:
+        if _approval_status(state.get("storyline")) != ApprovalStatus.APPROVED:
             return "pause_for_review"
     return "continue"
 
@@ -75,8 +91,7 @@ def _route_after_outline(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
     if state.get("require_outline_review"):
-        outline = state.get("outline")
-        if outline is not None and outline.approval_status != ApprovalStatus.APPROVED:
+        if _approval_status(state.get("outline")) != ApprovalStatus.APPROVED:
             return "pause_for_review"
     return "continue"
 

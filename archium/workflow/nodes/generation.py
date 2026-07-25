@@ -19,6 +19,19 @@ class GenerationNodesMixin(WorkflowNodeBase):
     """Generate presentation content and enrich slides with citations and assets."""
 
     @staticmethod
+    def _coerce_domain(model_cls, value):  # type: ignore[no-untyped-def]
+        if value is None:
+            return None
+        if isinstance(value, model_cls):
+            return value
+        if isinstance(value, dict):
+            try:
+                return model_cls.model_validate(value)
+            except Exception:
+                return None
+        return value
+
+    @staticmethod
     def _manuscript_context(
         state: PresentationWorkflowState,
     ) -> tuple[PresentationManuscript | None, bool]:
@@ -26,7 +39,10 @@ class GenerationNodesMixin(WorkflowNodeBase):
         use_pipeline = bool(request and request.use_manuscript_pipeline)
         manuscript = state.get("manuscript")
         if manuscript is not None and not isinstance(manuscript, PresentationManuscript):
-            manuscript = PresentationManuscript.model_validate(manuscript)
+            try:
+                manuscript = PresentationManuscript.model_validate(manuscript)
+            except Exception:
+                manuscript = None
         return manuscript, use_pipeline
 
     def generate_brief(self, state: PresentationWorkflowState) -> PresentationWorkflowState:
@@ -34,7 +50,9 @@ class GenerationNodesMixin(WorkflowNodeBase):
         if state.get("errors"):
             return {"current_step": PresentationWorkflowStep.BRIEF.value}
 
-        existing = state.get("brief")
+        from archium.domain.presentation import PresentationBrief
+
+        existing = self._coerce_domain(PresentationBrief, state.get("brief"))
         if existing is not None:
             refreshed = self._presentations.get_brief(existing.id)
             if refreshed is not None:
@@ -252,7 +270,11 @@ class GenerationNodesMixin(WorkflowNodeBase):
         if state.get("errors"):
             return {"current_step": PresentationWorkflowStep.STORYLINE.value}
 
-        existing = state.get("storyline")
+        from archium.domain.cultural_narrative import CulturalNarrativePlan
+        from archium.domain.presentation import PresentationBrief, Storyline
+        from archium.domain.renovation_issue import RenovationIssueMap
+
+        existing = self._coerce_domain(Storyline, state.get("storyline"))
         if existing is not None:
             refreshed = self._presentations.get_storyline(existing.id)
             if refreshed is not None:
@@ -264,7 +286,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
                     refreshed = self._presentations.save_storyline(refreshed)
                 return {"storyline": refreshed, "current_step": PresentationWorkflowStep.STORYLINE.value}
 
-        brief = state.get("brief")
+        brief = self._coerce_domain(PresentationBrief, state.get("brief"))
         if brief is None:
             return {
                 "errors": ["Cannot generate storyline without brief"],
@@ -277,8 +299,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
             storyline = self._runtime.presentation_service.generate_storyline(
                 project_id,
                 brief,
-                cultural_narrative=state.get("cultural_narrative"),
-                renovation_issue_map=state.get("renovation_issue_map"),
+                cultural_narrative=self._coerce_domain(
+                    CulturalNarrativePlan, state.get("cultural_narrative")
+                ),
+                renovation_issue_map=self._coerce_domain(
+                    RenovationIssueMap, state.get("renovation_issue_map")
+                ),
                 manuscript=manuscript,
                 use_manuscript_pipeline=use_pipeline,
             )
@@ -308,14 +334,19 @@ class GenerationNodesMixin(WorkflowNodeBase):
         if state.get("errors"):
             return {"current_step": PresentationWorkflowStep.OUTLINE.value}
 
-        existing = state.get("outline")
+        from archium.domain.cultural_narrative import CulturalNarrativePlan
+        from archium.domain.outline import OutlinePlan
+        from archium.domain.presentation import PresentationBrief, Storyline
+        from archium.domain.renovation_issue import RenovationIssueMap
+
+        existing = self._coerce_domain(OutlinePlan, state.get("outline"))
         if existing is not None:
             refreshed = self._presentations.get_outline(existing.id)
             if refreshed is not None:
                 return {"outline": refreshed, "current_step": PresentationWorkflowStep.OUTLINE.value}
 
-        brief = state.get("brief")
-        storyline = state.get("storyline")
+        brief = self._coerce_domain(PresentationBrief, state.get("brief"))
+        storyline = self._coerce_domain(Storyline, state.get("storyline"))
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot generate outline without brief and storyline"],
@@ -347,8 +378,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
                 project_id,
                 brief,
                 storyline,
-                cultural_narrative=state.get("cultural_narrative"),
-                renovation_issue_map=state.get("renovation_issue_map"),
+                cultural_narrative=self._coerce_domain(
+                    CulturalNarrativePlan, state.get("cultural_narrative")
+                ),
+                renovation_issue_map=self._coerce_domain(
+                    RenovationIssueMap, state.get("renovation_issue_map")
+                ),
                 manuscript=manuscript,
                 use_manuscript_pipeline=use_pipeline,
                 page_intents=page_intents,
@@ -387,9 +422,12 @@ class GenerationNodesMixin(WorkflowNodeBase):
             if slides:
                 return {"slides": slides, "current_step": PresentationWorkflowStep.SLIDES.value}
 
-        brief = state.get("brief")
-        storyline = state.get("storyline")
-        outline = state.get("outline")
+        from archium.domain.outline import OutlinePlan
+        from archium.domain.presentation import PresentationBrief, Storyline
+
+        brief = self._coerce_domain(PresentationBrief, state.get("brief"))
+        storyline = self._coerce_domain(Storyline, state.get("storyline"))
+        outline = self._coerce_domain(OutlinePlan, state.get("outline"))
         if brief is None or storyline is None:
             return {
                 "errors": ["Cannot generate slides without brief and storyline"],

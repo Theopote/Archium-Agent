@@ -282,8 +282,15 @@ class PresentationWorkflowService:
         if request is None or presentation is None:
             raise WorkflowError(f"Workflow run {workflow_run_id} is missing resumable state")
 
+        # Stale LangGraph checkpoints keep append-only ``errors``; wipe thread first.
+        self._checkpointer_manager.clear_thread(str(run.id))
+
         run.status = WorkflowStatus.RUNNING
         run.errors = []
+        patched_state = dict(run.state or {})
+        patched_state["errors"] = []
+        patched_state.pop("review_gate", None)
+        run.state = patched_state
         run.touch()
         self._workflow_runs.update(run)
 
@@ -299,6 +306,7 @@ class PresentationWorkflowService:
                 **initial_state,
                 **restored,
                 "errors": [],
+                "review_gate": None,
             },
         )
 
