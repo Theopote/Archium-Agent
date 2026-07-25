@@ -10,7 +10,10 @@ from sqlalchemy.orm import Session
 
 from archium.application.design_knowledge_mapping import design_knowledge_from_finding
 from archium.application.project_knowledge_service import ProjectKnowledgeService
-from archium.application.research_topics import collect_mission_research_topics
+from archium.application.research_topics import (
+    collect_mission_research_questions,
+    collect_mission_research_topic_candidates,
+)
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import InformationOrigin, InformationReliability
 from archium.domain.intent.research_run import (
@@ -46,6 +49,7 @@ class AutonomousResearchResult:
     project_id: UUID
     mission_id: UUID | None = None
     topics: list[str] = field(default_factory=list)
+    questions: list = field(default_factory=list)
     items: list[ProjectKnowledgeItem] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     search_hit_count: int = 0
@@ -80,17 +84,36 @@ class AutonomousResearchService:
         mission = self._missions.get_mission(mission_id)
         if mission is None:
             raise WorkflowError(f"任务理解 {mission_id} 不存在")
-        topics = collect_mission_research_topics(mission)
+        project = self._require_project(mission.project_id)
+        candidates = collect_mission_research_topic_candidates(
+            mission,
+            knowledge_state=project.knowledge_state,
+        )
+        topics = [c.text for c in candidates]
+        questions = [
+            c.question
+            for c in candidates
+            if c.question is not None
+        ] or collect_mission_research_questions(
+            mission,
+            knowledge_state=project.knowledge_state,
+        )
         if not topics:
             raise WorkflowError("当前任务没有待研究项，无法启动自主研究")
         design_context = self._design_context_text(mission)
-        project = self._require_project(mission.project_id)
-        return self._run_bounded(
+        if questions:
+            q_block = "\n".join(q.to_prompt_line() for q in questions[:6])
+            design_context = (
+                f"{design_context}\n\n【研究问题 ResearchQuestions】\n{q_block}"
+            ).strip()
+        result = self._run_bounded(
             project,
             topics=topics,
             design_context=design_context,
             mission_id=mission.id,
         )
+        result.questions = list(questions)
+        return result
 
     def research_topics(
         self,

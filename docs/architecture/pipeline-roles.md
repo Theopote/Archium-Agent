@@ -191,6 +191,10 @@ Concept、概念 Mission、自主研究、设计批判 SYSTEM 注入同一工序
 `DesignKnowledge`（principle / spatial_translation / evidence…）并落库；
 Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statement。
 
+**Phase H.1（ResearchQuestion）**：`ResearchQuestionService` 从 DesignIntent / KS
+拆解分类问题（Social/Cultural/Architectural…），改写「案例堆砌」为问题表述；
+`research_topics` / 自主研究优先消费问题，而非裸关键词。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -356,4 +360,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase H DesignKnowledge；Phase G LLM Runtime；Phase F Prompt frameworks。*
+*Last updated: 2026-07-25 — Phase H.1 ResearchQuestion；Phase H DesignKnowledge；Phase G LLM Runtime。*

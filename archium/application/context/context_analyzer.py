@@ -193,6 +193,7 @@ class ContextAnalyzer:
                         project_name=project.name or "",
                         project_description=project.description or "",
                         knowledge_state=project.knowledge_state,
+                        project_id=project_id,
                     )
                     if not fallback:
                         return False, "当前任务没有待研究项，且无法从项目描述推导研究主题。"
@@ -206,6 +207,7 @@ class ContextAnalyzer:
                     project_name=project.name or "",
                     project_description=project.description or "",
                     knowledge_state=project.knowledge_state,
+                    project_id=project_id,
                 )
                 if not topics:
                     return (

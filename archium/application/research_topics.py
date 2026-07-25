@@ -1,14 +1,14 @@
 """Shared helpers for mission-driven and project-level research topics.
 
-Policy (testable, not prompt): rank topics by **design impact** —
-which Knowledge Vector axis they address and how blocking the gap is —
-then return the top texts for AutonomousResearch.
+Policy (testable, not prompt): prefer problem-framed ``ResearchQuestion`` objects
+(from DesignIntent / KnowledgeState), then rank by **design impact**.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from archium.application.research_question_service import ResearchQuestionService
 from archium.domain.intent.context_assessment_reason import (
     AssessmentReasonAxis,
     AssessmentReasonPolarity,
@@ -17,6 +17,7 @@ from archium.domain.intent.context_assessment_reason import (
 from archium.domain.intent.knowledge_claim import KnowledgeUnknownRef
 from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.domain.project_mission import ProjectMission
+from archium.domain.research_question import ResearchQuestion, ResearchQuestionCategory
 
 # Keywords that typically change architectural decisions (site / code / program).
 _DESIGN_IMPACT_KEYWORDS: tuple[tuple[str, float, AssessmentReasonAxis], ...] = (
@@ -54,6 +55,17 @@ _AXIS_BASE: dict[AssessmentReasonAxis, float] = {
     AssessmentReasonAxis.OTHER: 0.3,
 }
 
+_CATEGORY_AXIS: dict[ResearchQuestionCategory, AssessmentReasonAxis] = {
+    ResearchQuestionCategory.SOCIAL: AssessmentReasonAxis.CONTEXT,
+    ResearchQuestionCategory.CULTURAL: AssessmentReasonAxis.CONTEXT,
+    ResearchQuestionCategory.HISTORICAL: AssessmentReasonAxis.CONTEXT,
+    ResearchQuestionCategory.ENVIRONMENTAL: AssessmentReasonAxis.CONSTRAINTS,
+    ResearchQuestionCategory.BEHAVIORAL: AssessmentReasonAxis.INTENT,
+    ResearchQuestionCategory.ECONOMIC: AssessmentReasonAxis.CONSTRAINTS,
+    ResearchQuestionCategory.TECHNICAL: AssessmentReasonAxis.CONSTRAINTS,
+    ResearchQuestionCategory.ARCHITECTURAL: AssessmentReasonAxis.RESEARCH_NEED,
+}
+
 
 @dataclass(frozen=True)
 class ResearchTopicCandidate:
@@ -64,10 +76,25 @@ class ResearchTopicCandidate:
     axis: AssessmentReasonAxis = AssessmentReasonAxis.OTHER
     source: str = "unknown"
     design_impact: str = ""
+    question: ResearchQuestion | None = None
+
+
+def collect_mission_research_questions(
+    mission: ProjectMission,
+    *,
+    knowledge_state: KnowledgeState | None = None,
+    max_questions: int = 8,
+) -> list[ResearchQuestion]:
+    """Problem-framed questions for the mission (preferred research drivers)."""
+    return ResearchQuestionService().decompose_mission(
+        mission,
+        knowledge_state=knowledge_state,
+        max_questions=max_questions,
+    )
 
 
 def collect_mission_research_topics(mission: ProjectMission) -> list[str]:
-    """Mission topics ranked: design_intent.research_needed before free questions."""
+    """Mission topics ranked: ResearchQuestion text first, then legacy strings."""
     return [c.text for c in collect_mission_research_topic_candidates(mission)]
 
 
@@ -75,9 +102,30 @@ def collect_mission_research_topic_candidates(
     mission: ProjectMission,
     *,
     max_topics: int = 8,
+    knowledge_state: KnowledgeState | None = None,
 ) -> list[ResearchTopicCandidate]:
     candidates: list[ResearchTopicCandidate] = []
-    if mission.design_intent is not None:
+
+    for question in collect_mission_research_questions(
+        mission,
+        knowledge_state=knowledge_state,
+        max_questions=max_topics,
+    ):
+        axis = _CATEGORY_AXIS.get(question.category, AssessmentReasonAxis.RESEARCH_NEED)
+        candidates.append(
+            ResearchTopicCandidate(
+                text=question.as_search_topic(),
+                score=min(1.0, float(question.priority)),
+                axis=axis,
+                source=f"research_question.{question.source or question.category.value}",
+                design_impact=question.rationale
+                or f"{question.category.value} 维度问题，驱动设计知识而非案例堆砌",
+                question=question,
+            )
+        )
+
+    # Legacy fallback when decomposition yields nothing.
+    if not candidates and mission.design_intent is not None:
         for item in mission.design_intent.research_needed:
             text = (item or "").strip()
             if not text:
@@ -92,20 +140,21 @@ def collect_mission_research_topic_candidates(
                     design_impact="任务设计意图标明的必研项，直接影响方案边界",
                 )
             )
-    for item in mission.research_questions:
-        text = (item or "").strip()
-        if not text:
-            continue
-        axis, boost = _keyword_axis_boost(text)
-        candidates.append(
-            ResearchTopicCandidate(
-                text=text,
-                score=min(0.75, 0.45 + boost * 0.5),
-                axis=axis,
-                source="mission.research_questions",
-                design_impact="任务研究问题，用于补证据或语境",
+    if not candidates:
+        for item in mission.research_questions:
+            text = (item or "").strip()
+            if not text:
+                continue
+            axis, boost = _keyword_axis_boost(text)
+            candidates.append(
+                ResearchTopicCandidate(
+                    text=text,
+                    score=min(0.75, 0.45 + boost * 0.5),
+                    axis=axis,
+                    source="mission.research_questions",
+                    design_impact="任务研究问题，用于补证据或语境",
+                )
             )
-        )
     return _dedupe_rank(candidates, max_topics=max_topics)
 
 
@@ -115,6 +164,7 @@ def collect_project_research_topics(
     project_description: str = "",
     knowledge_state: KnowledgeState | None = None,
     max_topics: int = 5,
+    project_id=None,
 ) -> list[str]:
     """Derive research topics when Mission is absent (pre-mission research)."""
     return [
@@ -124,6 +174,7 @@ def collect_project_research_topics(
             project_description=project_description,
             knowledge_state=knowledge_state,
             max_topics=max_topics,
+            project_id=project_id,
         )
     ]
 
@@ -134,13 +185,36 @@ def collect_project_research_topic_candidates(
     project_description: str = "",
     knowledge_state: KnowledgeState | None = None,
     max_topics: int = 5,
+    project_id=None,
 ) -> list[ResearchTopicCandidate]:
-    """Ranked candidates: open gaps + assessment reasons + type/location seeds.
+    """Ranked candidates: ResearchQuestions first, then gap/type seeds."""
+    from uuid import uuid4
 
-    Higher score ⇒ more likely to change design decisions (constraints / type /
-    culture / facts), not just fill prose.
-    """
     candidates: list[ResearchTopicCandidate] = []
+    pid = project_id
+    if pid is None:
+        pid = uuid4()
+
+    for question in ResearchQuestionService().decompose_project(
+        project_id=pid,
+        project_name=project_name,
+        project_description=project_description,
+        knowledge_state=knowledge_state,
+        max_questions=max_topics,
+    ):
+        axis = _CATEGORY_AXIS.get(question.category, AssessmentReasonAxis.RESEARCH_NEED)
+        candidates.append(
+            ResearchTopicCandidate(
+                text=question.as_search_topic(),
+                score=min(1.0, float(question.priority)),
+                axis=axis,
+                source=f"research_question.{question.source or question.category.value}",
+                design_impact=question.rationale
+                or f"{question.category.value} 维度问题",
+                question=question,
+            )
+        )
+
     state = knowledge_state
     research_need = 0.0
 
@@ -148,26 +222,7 @@ def collect_project_research_topic_candidates(
         dims = state.effective_dimensions()
         research_need = float(dims.research_need)
 
-        for gap in state.open_unknowns:
-            candidates.append(_from_open_unknown(gap, research_need=research_need))
-
-        for item in state.unknown or []:
-            candidates.append(
-                _from_free_gap(
-                    item,
-                    source="knowledge_state.unknown",
-                    research_need=research_need,
-                )
-            )
-        for item in state.missing_information or []:
-            candidates.append(
-                _from_free_gap(
-                    item,
-                    source="knowledge_state.missing_information",
-                    research_need=research_need,
-                )
-            )
-
+        # Keep high-impact legacy seeds (location/type / constraints) alongside questions.
         for reason in state.assessment_reasons or []:
             candidates.extend(_from_assessment_reason(reason, research_need=research_need))
 
@@ -205,18 +260,6 @@ def collect_project_research_topic_candidates(
                 )
             )
 
-        if dims.research_need >= 0.55 and not candidates:
-            candidates.append(
-                ResearchTopicCandidate(
-                    text="项目类型与场地文化背景",
-                    score=0.5 + research_need * 0.2,
-                    axis=AssessmentReasonAxis.RESEARCH_NEED,
-                    source="dimensions.research_need",
-                    design_impact="研究需求轴偏高但尚无具体缺口，先补类型与场地语境",
-                )
-            )
-
-        # Weak constraints with some facts → prefer constraint-shaped queries
         if dims.constraints < 0.4 and dims.facts >= 0.3:
             candidates.append(
                 ResearchTopicCandidate(
@@ -233,7 +276,7 @@ def collect_project_research_topic_candidates(
     seed = desc or name
     if seed:
         first = seed.splitlines()[0].strip()[:80]
-        if first:
+        if first and not candidates:
             candidates.append(
                 ResearchTopicCandidate(
                     text=f"{first}：地方文化与设计语境",
@@ -253,17 +296,6 @@ def collect_project_research_topic_candidates(
                     design_impact="文化类项目的礼仪与叙事先例直接决定概念方向",
                 )
             )
-
-    if not candidates and (name or desc):
-        candidates.append(
-            ResearchTopicCandidate(
-                text=f"{name or '项目'}背景与类型研究",
-                score=0.4,
-                axis=AssessmentReasonAxis.RESEARCH_NEED,
-                source="project_name_fallback",
-                design_impact="无结构化缺口时的保底类型背景研究",
-            )
-        )
 
     return _dedupe_rank(candidates, max_topics=max_topics)
 
