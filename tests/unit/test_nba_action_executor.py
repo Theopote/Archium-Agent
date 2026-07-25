@@ -117,7 +117,12 @@ def test_generate_mission_when_none_exists(monkeypatch) -> None:
     )
     assert result.executed is True
     assert result.success is True
+    assert result.stay_after_execute is True
+    assert result.should_navigate is False
+    assert result.orchestration_action == "none"
+    assert result.reassessed is True
     assert "医院改造" in result.message
+    assert "下一步" in result.message or "刷新" in result.message
 
 
 def test_explore_starts_session_and_generates(monkeypatch) -> None:

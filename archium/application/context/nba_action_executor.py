@@ -282,17 +282,23 @@ class NbaActionExecutor:
             self._session.commit()
             reassessed = self._reassess(project_id, "nba_generate_mission")
             title = result.mission.title if result.mission else "任务"
+            refresh = (
+                "知识状态已刷新，下一步行动已更新。"
+                if reassessed
+                else "任务已写入；可稍后刷新知识状态。"
+            )
             return NbaExecutionResult(
                 action=NextBestActionType.GENERATE_MISSION,
                 executed=True,
                 success=True,
-                message=f"已生成任务理解「{title}」。",
+                message=f"已生成任务理解「{title}」。{refresh}",
                 page_key=target.page_key,
                 mission_step=target.mission_step or 1,
                 warnings=list(result.warnings),
                 reassessed=reassessed,
-                orchestration_action=target.orchestration_action,
+                orchestration_action="none",
                 stage_hint=target.stage_hint,
+                stay_after_execute=True,
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception("NBA generate mission failed: %s", exc)
