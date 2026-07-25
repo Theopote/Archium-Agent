@@ -253,10 +253,13 @@ class ContextAnalyzer:
         provider = (
             f"（来源：{result.search_provider}）" if result.search_provider else ""
         )
+        loop_note = ""
+        if result.run is not None:
+            loop_note = f" {result.run.summary_line()}。"
         refresh = "知识状态已刷新，下一步建议已更新。" if reassessed else "知识已写入；完整再评估稍后可刷新。"
         return (
             True,
-            f"已生成 {len(result.items)} 条公开研究摘要{provider}。{refresh}",
+            f"已生成 {len(result.items)} 条公开研究摘要{provider}。{loop_note}{refresh}",
         )
 
     def append_evolution(

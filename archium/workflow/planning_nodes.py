@@ -145,6 +145,18 @@ class PlanningWorkflowNodes:
         from archium.application.project_context_routing import skips_default_clarification
 
         project_id = UUID(state["project_id"])
+        origin_raw = state.get("origin_mode")
+        if origin_raw:
+            try:
+                concept_leaning = ProjectOriginMode(str(origin_raw)).skips_default_clarification
+            except ValueError:
+                concept_leaning = skips_default_clarification(
+                    self._runtime.session, project_id
+                )
+        else:
+            concept_leaning = skips_default_clarification(
+                self._runtime.session, project_id
+            )
         from archium.application.autonomous_research_service import AutonomousResearchService
         from archium.application.web_research_settings_service import (
             WebResearchSettingsService,
@@ -155,10 +167,7 @@ class PlanningWorkflowNodes:
         prefs = WebResearchSettingsService(self._runtime.session).get_preferences(
             base_settings=self._runtime.settings,
         )
-        if (
-            not skips_default_clarification(self._runtime.session, project_id)
-            or not prefs.auto_on_concept_planning
-        ):
+        if not concept_leaning or not prefs.auto_on_concept_planning:
             next_state = {"current_step": step, "warnings": warnings}
             self._persist({**state, **next_state}, status=WorkflowStatus.RUNNING)
             return next_state
@@ -180,9 +189,13 @@ class PlanningWorkflowNodes:
             warnings.extend(result.warnings)
             if result.items:
                 provider_note = result.search_provider or "无联网"
+                loop_bit = ""
+                if result.run is not None:
+                    loop_bit = f"；{result.run.summary_line()}"
                 warnings.append(
                     "轻量规划自动研究：已写入 "
-                    f"{len(result.items)} 条公开资料（检索 {result.search_hit_count} 条，{provider_note}）"
+                    f"{len(result.items)} 条公开资料（检索 {result.search_hit_count} 条，"
+                    f"{provider_note}{loop_bit}）"
                 )
                 logger.info(
                     "Lightweight planning auto research wrote %s items for mission %s",

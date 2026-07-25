@@ -127,6 +127,10 @@ flowchart LR
 **Phase B（可测 Policy）**：`actions_for_presentation_entry` 决定「汇报将启动」时的 NBA；
 `research_topics` 按设计影响轴（约束 / 类型 / 文化 / 阻断未知）排序研究主题，供自主研究消费。
 
+**Phase C（有界研究环）**：`AutonomousResearchService` 按步执行
+topic → search → write → INDEX reassess；停条件为 max_steps /
+`research_need` 阈值 / 主题耗尽 / 空产出。产物为 `ResearchRun`（非新 Agent）。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）

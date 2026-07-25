@@ -21,6 +21,12 @@ from archium.domain.intent.knowledge_state_history import (
     KnowledgeStateSnapshot,
 )
 from archium.domain.intent.next_best_action import NextBestAction, NextBestActionType
+from archium.domain.intent.research_run import (
+    ResearchRun,
+    ResearchRunStopReason,
+    ResearchStep,
+    ResearchStepStatus,
+)
 
 __all__ = [
     "DesignIntent",
@@ -42,4 +48,8 @@ __all__ = [
     "KnowledgeVector",
     "NextBestAction",
     "NextBestActionType",
+    "ResearchRun",
+    "ResearchRunStopReason",
+    "ResearchStep",
+    "ResearchStepStatus",
 ]

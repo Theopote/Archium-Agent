@@ -85,6 +85,10 @@ Do not edit them manually.
 | `WEB_RESEARCH_MAX_RESULTS` | `5` | No | Maximum web search hits to retrieve per research topic. |
 | `WEB_RESEARCH_TIMEOUT_SECONDS` | `20.0` | No | HTTP timeout for web research search requests. |
 | `WEB_RESEARCH_AUTO_ON_CONCEPT_PLANNING` | `true` | No | When true, concept exploration planning automatically runs web research after mission generation when research topics are present. |
+| `AUTONOMOUS_RESEARCH_LOOP_ENABLED` | `true` | No | When true, autonomous research runs a bounded loop (topic → search → write → light reassess) instead of a single batch synthesis. |
+| `AUTONOMOUS_RESEARCH_MAX_STEPS` | `3` | No | Maximum iterations of the autonomous research loop. |
+| `AUTONOMOUS_RESEARCH_TOPICS_PER_STEP` | `2` | No | Topics synthesized per loop step. |
+| `AUTONOMOUS_RESEARCH_STOP_RESEARCH_NEED` | `0.45` | No | Stop the loop early when estimated `research_need` falls to this threshold or below. |
 
 ## Document chunking {#chunking}
 

@@ -29,6 +29,7 @@ _INDEX_REASONS = frozenset(
         "fact_rejected",
         "knowledge_item_confirmed",
         "knowledge_item_rejected",
+        "research_step",
     }
 )
 

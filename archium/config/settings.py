@@ -752,6 +752,34 @@ class Settings(BaseSettings):
             "after mission generation when research topics are present."
         ),
     )
+    autonomous_research_loop_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true, autonomous research runs a bounded loop "
+            "(topic → search → write → light reassess) instead of one batch call."
+        ),
+    )
+    autonomous_research_max_steps: int = Field(
+        default=3,
+        ge=1,
+        le=8,
+        description="Maximum iterations of the autonomous research loop.",
+    )
+    autonomous_research_topics_per_step: int = Field(
+        default=2,
+        ge=1,
+        le=5,
+        description="How many research topics to synthesize per loop step.",
+    )
+    autonomous_research_stop_research_need: float = Field(
+        default=0.45,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Stop the research loop early when estimated research_need "
+            "falls to this threshold or below."
+        ),
+    )
 
     @model_validator(mode="after")
     def _validate_chunk_settings(self) -> Settings:
