@@ -8,6 +8,11 @@ from archium.domain.intent.intent_evolution import (
     IntentEvolutionEvent,
     IntentEvolutionKind,
 )
+from archium.domain.intent.knowledge_claim import (
+    KnowledgeClaimKind,
+    KnowledgeClaimRef,
+    KnowledgeUnknownRef,
+)
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
 from archium.domain.intent.knowledge_state_history import (
     KnowledgeStateChangeReason,
@@ -24,11 +29,14 @@ __all__ = [
     "IntentEvolution",
     "IntentEvolutionEvent",
     "IntentEvolutionKind",
+    "KnowledgeClaimKind",
+    "KnowledgeClaimRef",
     "KnowledgeMaturityStage",
     "KnowledgeState",
     "KnowledgeStateChangeReason",
     "KnowledgeStateHistory",
     "KnowledgeStateSnapshot",
+    "KnowledgeUnknownRef",
     "NextBestAction",
     "NextBestActionType",
 ]

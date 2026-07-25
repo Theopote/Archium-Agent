@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from archium.application.context.knowledge_claim_index import merge_claim_index_into_state
 from archium.application.context.next_action_selector import resolve_action_target
 from archium.application.context.types import ContextAssessment
 from archium.application.context_evidence import ProjectEvidencePack
@@ -32,6 +33,8 @@ def compose_project_context(
         sources.append(f"confirmed_facts:{pack.confirmed_fact_count}")
     if pack.extracted_fact_count:
         sources.append(f"extracted_facts:{pack.extracted_fact_count}")
+    if pack.knowledge_item_count:
+        sources.append(f"knowledge_items:{pack.knowledge_item_count}")
     if pack.chunk_excerpts.strip():
         sources.append("document_excerpts")
     primary = ""
@@ -55,18 +58,5 @@ def enrich_knowledge_state_counts(
     state,
     evidence: ProjectEvidencePack,
 ) -> object:
-    """Attach evidence counts to KnowledgeState snapshot."""
-    source_count = evidence.document_count + (
-        1 if evidence.chunk_excerpts.strip() else 0
-    )
-    fact_count = (
-        evidence.confirmed_fact_count
-        + evidence.extracted_fact_count
-        + evidence.pending_fact_count
-    )
-    return state.model_copy(
-        update={
-            "source_count": source_count,
-            "fact_count": fact_count,
-        }
-    )
+    """Attach evidence counts and claim index to KnowledgeState."""
+    return merge_claim_index_into_state(state, evidence)

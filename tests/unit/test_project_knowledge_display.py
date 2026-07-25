@@ -72,3 +72,43 @@ def test_evidence_rich_classification() -> None:
         assumption_ratio=0.2,
     )
     assert classify_knowledge_situation(state) == KnowledgeSituation.EVIDENCE_RICH
+
+
+def test_build_display_includes_stale_and_claim_counts() -> None:
+    from archium.domain.intent.knowledge_claim import (
+        KnowledgeClaimKind,
+        KnowledgeClaimRef,
+        KnowledgeUnknownRef,
+    )
+
+    state = KnowledgeState(
+        completeness_score=0.4,
+        evidence_ratio=0.25,
+        cognition_stale=True,
+        knowledge_item_count=2,
+        claims=[
+            KnowledgeClaimRef(
+                key="location",
+                summary="西安",
+                kind=KnowledgeClaimKind.FACT,
+                confirmed=True,
+            )
+        ],
+        open_unknowns=[
+            KnowledgeUnknownRef(
+                description="缺少建筑面积",
+                category="missing_fact",
+                blocking=True,
+            )
+        ],
+    )
+    ctx = ProjectContext.compose(
+        knowledge_state=state,
+        next_actions=[],
+        understanding_summary="stale index",
+    )
+    display = build_project_knowledge_display(ctx)
+    assert display.cognition_stale is True
+    assert display.claim_count == 1
+    assert display.blocking_unknown_count == 1
+    assert display.knowledge_item_count == 2

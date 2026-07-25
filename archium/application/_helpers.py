@@ -72,7 +72,7 @@ def build_retrieval_query_from_storyline(brief: PresentationBrief, storyline: St
     )
 
 
-def build_project_context(
+def build_retrieval_context_text(
     session: Session,
     project_id: UUID,
     *,
@@ -80,8 +80,8 @@ def build_project_context(
     max_chunks: int = 24,
     settings: Settings | None = None,
 ) -> str:
-    """Build compact text context from retrieved chunks and project facts."""
-    return build_project_context_bundle(
+    """RAG prompt text from chunks/facts — not domain ``ProjectContext``."""
+    return build_retrieval_context_bundle(
         session,
         project_id,
         query=query,
@@ -90,7 +90,30 @@ def build_project_context(
     ).text
 
 
-def build_project_context_bundle(
+def build_project_context(
+    session: Session,
+    project_id: UUID,
+    *,
+    query: str | None = None,
+    max_chunks: int = 24,
+    settings: Settings | None = None,
+) -> str:
+    """Deprecated alias for ``build_retrieval_context_text``.
+
+    Do not confuse with domain ``ProjectContext``
+    (``archium.domain.context.project_context``) or
+    ``archium.application.context.build_project_context``.
+    """
+    return build_retrieval_context_text(
+        session,
+        project_id,
+        query=query,
+        max_chunks=max_chunks,
+        settings=settings,
+    )
+
+
+def build_retrieval_context_bundle(
     session: Session,
     project_id: UUID,
     *,
@@ -98,7 +121,7 @@ def build_project_context_bundle(
     max_chunks: int = 24,
     settings: Settings | None = None,
 ) -> ProjectContextBundle:
-    """Build prompt context plus chunk metadata for citation linking."""
+    """RAG context bundle (text + chunk metadata) — not domain ProjectContext."""
     from archium.application.fact_retrieval import (
         match_fact_keys_from_query,
         rank_facts_for_context,
@@ -189,6 +212,24 @@ def build_project_context_bundle(
         text="\n".join(lines),
         chunks=chunks,
         document_names=document_names,
+    )
+
+
+def build_project_context_bundle(
+    session: Session,
+    project_id: UUID,
+    *,
+    query: str | None = None,
+    max_chunks: int = 24,
+    settings: Settings | None = None,
+) -> ProjectContextBundle:
+    """Deprecated alias for ``build_retrieval_context_bundle``."""
+    return build_retrieval_context_bundle(
+        session,
+        project_id,
+        query=query,
+        max_chunks=max_chunks,
+        settings=settings,
     )
 
 

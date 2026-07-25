@@ -8,6 +8,7 @@ from enum import StrEnum
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.intent.knowledge_claim import KnowledgeClaimRef, KnowledgeUnknownRef
 
 
 class KnowledgeMaturityStage(StrEnum):
@@ -17,7 +18,12 @@ class KnowledgeMaturityStage(StrEnum):
 
 
 class KnowledgeState(DomainModel):
-    """Snapshot of what the project knows / does not know right now."""
+    """Cognitive index: what is known/unknown, scored — not a dump of process state.
+
+    Authoritative bodies live in ProjectFact / ProjectKnowledgeItem.
+    ``claims`` / ``open_unknowns`` point at those stores; ``known`` / ``unknown``
+    remain display/compat projections and must not become a second truth store.
+    """
 
     completeness_score: float = Field(ge=0.0, le=1.0, default=0.0)
     maturity_stage: KnowledgeMaturityStage = KnowledgeMaturityStage.CONCEPT_FORMATION
@@ -26,13 +32,20 @@ class KnowledgeState(DomainModel):
     known: dict[str, str] = Field(default_factory=dict)
     unknown: list[str] = Field(default_factory=list)
     missing_information: list[str] = Field(default_factory=list)
+    claims: list[KnowledgeClaimRef] = Field(default_factory=list)
+    open_unknowns: list[KnowledgeUnknownRef] = Field(default_factory=list)
     lifecycle_stage: str = ""
     recommended_workflow: str = ""
     primary_page_key: str = ""
     fact_count: int = Field(default=0, ge=0)
     source_count: int = Field(default=0, ge=0)
+    knowledge_item_count: int = Field(default=0, ge=0)
     assessed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     source: str = Field(default="initial", max_length=40)
+    cognition_stale: bool = Field(
+        default=False,
+        description="True when last best-effort LLM reassess failed; claim index may still be fresh.",
+    )
 
     def summary_line(self) -> str:
         pct = int(round(self.completeness_score * 100))

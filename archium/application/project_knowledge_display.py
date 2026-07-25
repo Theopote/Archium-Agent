@@ -66,6 +66,11 @@ class ProjectKnowledgeDisplay:
     caption: str
     focus: str
     suggested_actions: tuple[str, ...]
+    cognition_stale: bool = False
+    claim_count: int = 0
+    linked_claim_count: int = 0
+    blocking_unknown_count: int = 0
+    knowledge_item_count: int = 0
 
 
 def classify_knowledge_situation(state: KnowledgeState) -> KnowledgeSituation:
@@ -109,6 +114,12 @@ def build_project_knowledge_display(
         workflow_label=workflow_label,
         understanding=context.understanding_summary,
     )
+    linked = sum(
+        1
+        for claim in state.claims
+        if claim.fact_id is not None or claim.knowledge_item_id is not None
+    )
+    blocking = sum(1 for gap in state.open_unknowns if gap.blocking)
     return ProjectKnowledgeDisplay(
         situation=situation,
         situation_label=situation_label,
@@ -120,6 +131,11 @@ def build_project_knowledge_display(
         caption=caption,
         focus=focus,
         suggested_actions=actions,
+        cognition_stale=bool(state.cognition_stale),
+        claim_count=len(state.claims),
+        linked_claim_count=linked,
+        blocking_unknown_count=blocking,
+        knowledge_item_count=int(state.knowledge_item_count or 0),
     )
 
 

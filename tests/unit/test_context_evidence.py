@@ -11,12 +11,22 @@ from archium.application.context_evidence import (
 from archium.application.context_intelligence_service import ContextIntelligenceService
 from archium.domain.context.legacy_origin import infer_legacy_origin_mode
 from archium.domain.document import DocumentChunk, SourceDocument
-from archium.domain.enums import DocumentType, ProcessingStatus, ProjectOriginMode, VerificationStatus
+from archium.domain.enums import (
+    DocumentType,
+    InformationOrigin,
+    InformationReliability,
+    KnowledgeItemStatus,
+    ProcessingStatus,
+    ProjectOriginMode,
+    VerificationStatus,
+)
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
+from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
     FactRepository,
+    ProjectKnowledgeRepository,
     ProjectRepository,
 )
 from archium.infrastructure.llm.context_intelligence_schemas import (
@@ -34,14 +44,18 @@ def test_assessment_prompt_includes_evidence_blocks() -> None:
         document_count=1,
         document_summaries="- brief.pdf",
         fact_lines="- [已确认] 地点: 西安",
+        knowledge_lines="- [active/public_research/有引用] 北侧树木需保留",
         chunk_excerpts="- [p.1] 现状门诊楼建于1998年",
         gap_lines="- [阻断] 缺少标准事实：建筑面积",
         confirmed_fact_count=1,
         pending_fact_count=0,
+        knowledge_item_count=1,
         blocking_gap_count=1,
     )
     assert "【已提取/已确认事实】" in prompt
+    assert "【项目知识条目】" in prompt
     assert "西安" in prompt
+    assert "北侧树木" in prompt
     assert "现状门诊楼" in prompt
     assert "建筑面积" in prompt
 
@@ -104,6 +118,19 @@ def test_gather_project_evidence_includes_facts_chunks_gaps(db_session) -> None:
             content_type="text",
         )
     )
+    ProjectKnowledgeRepository(db_session).create(
+        ProjectKnowledgeItem(
+            project_id=project.id,
+            statement="北侧树木需在改扩建中保留",
+            origin=InformationOrigin.PUBLIC_RESEARCH,
+            reliability=InformationReliability.HIGH_CONFIDENCE,
+            status=KnowledgeItemStatus.ACTIVE,
+            category="site",
+            source_citations=[
+                SourceCitation(url="https://example.com/policy", source_title="政策摘要")
+            ],
+        )
+    )
     db_session.commit()
 
     pack = gather_project_evidence(db_session, project.id)
@@ -113,8 +140,12 @@ def test_gather_project_evidence_includes_facts_chunks_gaps(db_session) -> None:
     assert "西安" in pack.fact_lines
     assert "未提取" not in pack.fact_lines
     assert "1998" in pack.chunk_excerpts
+    assert pack.knowledge_item_count == 1
+    assert "北侧树木" in pack.knowledge_lines
     assert pack.blocking_gap_count >= 1
     assert pack.has_evidence is True
+    assert pack.indexed_facts
+    assert pack.indexed_knowledge_items
 
     constraints = build_verified_constraints_block(db_session, project.id)
     assert "西安" in constraints
@@ -154,12 +185,15 @@ def test_assess_and_persist_passes_materials_evidence(db_session) -> None:
     result = service.assess_and_persist(project.id, "医院旧楼改造")
 
     assert result.knowledge_state.source == "materials_aware"
+    assert result.knowledge_state.claims
+    assert any(c.key == "location" for c in result.knowledge_state.claims)
     refreshed = ProjectRepository(db_session).get_by_id(project.id)
     assert refreshed is not None
     assert refreshed.origin_mode == ProjectOriginMode.CONCEPT_EXPLORATION
     user_prompt = llm.generate_structured.call_args.args[0].user_prompt
     assert "西安" in user_prompt
     assert "【已提取/已确认事实】" in user_prompt
+    assert "【项目知识条目】" in user_prompt
 
 
 def test_rule_fallback_uses_confirmed_facts() -> None:

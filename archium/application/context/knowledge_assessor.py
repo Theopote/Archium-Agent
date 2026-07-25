@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from archium.application.context.next_action_selector import default_actions_for_stage
+from archium.application.context.knowledge_claim_index import merge_claim_index_into_state
 from archium.application.context.project_context_composer import (
     compose_project_context,
     finalize_assessment_context,
@@ -60,10 +61,12 @@ class KnowledgeAssessor:
                         document_count=pack.document_count,
                         document_summaries=pack.document_summaries,
                         fact_lines=pack.fact_lines,
+                        knowledge_lines=pack.knowledge_lines,
                         chunk_excerpts=pack.chunk_excerpts,
                         gap_lines=pack.gap_lines,
                         confirmed_fact_count=pack.confirmed_fact_count,
                         pending_fact_count=pack.pending_fact_count,
+                        knowledge_item_count=pack.knowledge_item_count,
                         blocking_gap_count=pack.blocking_gap_count,
                     ),
                     temperature=0.3,
@@ -125,6 +128,12 @@ class KnowledgeAssessor:
             assessed_at=datetime.now(UTC),
             source=source,
         )
+        if evidence is not None and (
+            evidence.indexed_facts
+            or evidence.indexed_knowledge_items
+            or evidence.indexed_gaps
+        ):
+            state = merge_claim_index_into_state(state, evidence)
         assessment = ContextAssessment(
             knowledge_state=state,
             actions=actions,
@@ -228,6 +237,8 @@ class KnowledgeAssessor:
             assessed_at=datetime.now(UTC),
             source="rule_fallback",
         )
+        if pack.indexed_facts or pack.indexed_knowledge_items or pack.indexed_gaps:
+            state = merge_claim_index_into_state(state, pack)
         actions = default_actions_for_stage(
             stage.value,
             has_materials=pack.has_evidence,

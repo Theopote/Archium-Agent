@@ -11,7 +11,7 @@ CONTEXT_INTELLIGENCE_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - 建筑设计是资料完整度的连续谱，不是「有资料 / 没资料」二元开关。
 - 多数项目介于纯想法与完备资料之间：至少有地点、名称或基本思路；图纸也很少一次交齐。
 - 你不生成方案正文；你判断：已知什么、未知什么、下一步最该做什么。
-- 若提供了【已提取/已确认事实】或【资料摘录】，known 应尽量落在这些证据上，并可用简短来源说明。
+- 若提供了【已提取/已确认事实】、【项目知识条目】或【资料摘录】，known 应尽量落在这些证据上，并可用简短来源说明。
 - 不得把假设写成已证实；assumption_ratio 应随证据增加而下降。
 - 【知识缺口】应优先进入 missing_information / unknown。
 
@@ -43,10 +43,12 @@ def build_context_assessment_user_prompt(
     document_count: int = 0,
     document_summaries: str = "",
     fact_lines: str = "",
+    knowledge_lines: str = "",
     chunk_excerpts: str = "",
     gap_lines: str = "",
     confirmed_fact_count: int = 0,
     pending_fact_count: int = 0,
+    knowledge_item_count: int = 0,
     blocking_gap_count: int = 0,
 ) -> str:
     return f"""请评估以下项目输入的知识状态，并给出 2–4 条下一步建议。
@@ -63,6 +65,10 @@ def build_context_assessment_user_prompt(
 【已提取/已确认事实】
 {fact_lines.strip() or "（暂无）"}
 
+项目知识条目数：{knowledge_item_count}
+【项目知识条目】（研究写回 / 已确认陈述，含出处标记）
+{knowledge_lines.strip() or "（暂无）"}
+
 【资料摘录】
 {chunk_excerpts.strip() or "（暂无）"}
 
@@ -72,5 +78,5 @@ def build_context_assessment_user_prompt(
 
 请输出 completeness_score、maturity_stage、evidence_ratio、assumption_ratio、
 known、unknown、missing_information、suggested_origin_mode、understanding_summary、actions。
-known 尽量引用上述事实或摘录；missing_information 优先对齐知识缺口。
+known 尽量引用上述事实、知识条目或摘录；missing_information 优先对齐知识缺口。
 """

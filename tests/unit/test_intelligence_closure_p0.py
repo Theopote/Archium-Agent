@@ -5,7 +5,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from archium.application.context.knowledge_reassess import best_effort_reassess_knowledge
+from archium.application.context.knowledge_reassess import (
+    ReassessMode,
+    best_effort_reassess_knowledge,
+    classify_reassess_mode,
+)
 from archium.application.context.presentation_readiness import (
     presentation_readiness_from_context,
 )
@@ -14,6 +18,13 @@ from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
+
+
+def test_classify_reassess_mode_fact_confirmed_is_index() -> None:
+    assert classify_reassess_mode("fact_confirmed") == ReassessMode.INDEX
+    assert classify_reassess_mode("mission_approved") == ReassessMode.FULL
+    assert classify_reassess_mode("document_uploaded") == ReassessMode.FULL
+    assert classify_reassess_mode("direction_selected") == ReassessMode.FULL
 
 
 def test_best_effort_reassess_returns_none_on_failure(monkeypatch) -> None:
@@ -27,6 +38,10 @@ def test_best_effort_reassess_returns_none_on_failure(monkeypatch) -> None:
     monkeypatch.setattr(
         "archium.infrastructure.llm.factory.create_llm_provider",
         lambda _settings: MagicMock(),
+    )
+    monkeypatch.setattr(
+        "archium.application.context.knowledge_claim_index.refresh_claim_index_only",
+        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("no ks")),
     )
     assert best_effort_reassess_knowledge(MagicMock(), uuid4(), reason="test") is None
 
@@ -52,8 +67,46 @@ def test_best_effort_reassess_returns_assessment(monkeypatch) -> None:
         "archium.infrastructure.llm.factory.create_llm_provider",
         lambda _settings: MagicMock(),
     )
-    out = best_effort_reassess_knowledge(MagicMock(), uuid4(), reason="test")
+    out = best_effort_reassess_knowledge(MagicMock(), uuid4(), reason="mission_approved")
     assert out is assessment
+
+
+def test_best_effort_fact_confirmed_uses_index_path(monkeypatch) -> None:
+    calls: list[str] = []
+    state = KnowledgeState(completeness_score=0.5, claims=[])
+
+    def fake_index(*_a, **_k):  # noqa: ANN002, ANN003
+        calls.append("index")
+        return state
+
+    def fake_build(*_a, **_k):  # noqa: ANN002, ANN003
+        return ProjectContext.compose(
+            knowledge_state=state,
+            next_actions=[],
+            understanding_summary="indexed",
+        )
+
+    def boom_analyzer(*_a, **_k):  # noqa: ANN002, ANN003
+        raise AssertionError("full LLM path should not run for fact_confirmed")
+
+    monkeypatch.setattr(
+        "archium.application.context.knowledge_claim_index.refresh_claim_index_only",
+        fake_index,
+    )
+    monkeypatch.setattr(
+        "archium.application.context.project_context_builder.build_project_context",
+        fake_build,
+    )
+    monkeypatch.setattr(
+        "archium.application.context.context_analyzer.ContextAnalyzer",
+        boom_analyzer,
+    )
+    out = best_effort_reassess_knowledge(
+        MagicMock(), uuid4(), reason="fact_confirmed"
+    )
+    assert out is not None
+    assert calls == ["index"]
+    assert out.understanding_summary == "indexed"
 
 
 def test_presentation_readiness_without_context() -> None:
@@ -112,7 +165,6 @@ def test_approve_mission_triggers_reassess(monkeypatch) -> None:
     service._missions.save_mission.side_effect = lambda m: m
     service._history = MagicMock()  # noqa: SLF001
 
-    # Avoid narrative suggestion side paths if any
     monkeypatch.setattr(
         "archium.application.project_mission_service.suggest_narrative_mode",
         lambda _m: MagicMock(mode=None),

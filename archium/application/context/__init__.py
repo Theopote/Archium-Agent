@@ -2,7 +2,15 @@
 
 from archium.application.context.context_analyzer import ContextAnalyzer
 from archium.application.context.knowledge_assessor import KnowledgeAssessor
-from archium.application.context.knowledge_reassess import best_effort_reassess_knowledge
+from archium.application.context.knowledge_claim_index import (
+    merge_claim_index_into_state,
+    refresh_claim_index_only,
+)
+from archium.application.context.knowledge_reassess import (
+    ReassessMode,
+    best_effort_reassess_knowledge,
+    classify_reassess_mode,
+)
 from archium.application.context.nba_action_executor import (
     NbaActionExecutor,
     NbaExecutionResult,
@@ -45,17 +53,21 @@ __all__ = [
     "NbaActionExecutor",
     "NbaExecutionResult",
     "PresentationContextReadiness",
+    "ReassessMode",
     "WorkflowEntryDispatch",
     "apply_workflow_entry",
     "best_effort_reassess_knowledge",
     "build_project_context",
+    "classify_reassess_mode",
     "compose_project_context",
     "default_actions_for_stage",
     "finalize_assessment_context",
     "input_sources_from_evidence",
+    "merge_claim_index_into_state",
     "nba_execute_label",
     "overlay_persisted_routing",
     "presentation_readiness_from_context",
+    "refresh_claim_index_only",
     "resolve_action_target",
     "resolve_workflow_entry",
     "sync_mission_step_from_context",

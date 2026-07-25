@@ -1,4 +1,15 @@
-"""Unified project context — knowledge snapshot + evidence + recommended stage."""
+"""Unified project context — cognitive snapshot only (not a process God Object).
+
+ProjectContext answers four questions:
+  1. What do we know?
+  2. What do we not know?
+  3. What lifecycle stage are we in?
+  4. What is the next best action?
+
+Do NOT store here: design solutions, exploration sessions, mission bodies,
+presentation/render state, or visual iteration state. Those belong on
+Research / Design / Presentation process objects under Project.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +24,7 @@ from archium.domain.intent.next_best_action import NextBestAction, NextBestActio
 
 
 class ProjectContext(DomainModel):
-    """Aggregate view: how much we know, what we assume, and what to do next."""
+    """Cognitive aggregate view — not design/presentation/render state."""
 
     knowledge_state: KnowledgeState
     input_sources: list[str] = Field(default_factory=list)

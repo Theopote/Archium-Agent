@@ -32,23 +32,36 @@ def render_project_knowledge_strip(
 ) -> ProjectKnowledgeDisplay | None:
     """Primary knowledge-first chrome — use instead of workspace mode titles."""
     from archium.application.project_context_builder import build_project_context
-    from archium.infrastructure.database.repositories import ProjectRepository
     from archium.infrastructure.database.session import get_session
 
     with get_session() as session:
         context = build_project_context(session, project_id)
-        project = ProjectRepository(session).get_by_id(project_id)
     if context is None:
         return None
     display = build_project_knowledge_display(context)
 
     st.info(display.headline)
+    if display.cognition_stale:
+        st.warning(
+            "认知可能过期：最近一次完整知识评估未成功，当前显示基于事实/知识条目索引。"
+            "可稍后刷新知识状态。"
+        )
     if not compact:
         st.caption(display.caption)
-        st.caption(f"当前重心：{display.focus} · 把握度约 {display.confidence_pct}%")
+        meta = [
+            f"当前重心：{display.focus}",
+            f"把握度约 {display.confidence_pct}%",
+        ]
+        if display.claim_count:
+            meta.append(f"主张 {display.claim_count}（已链接 {display.linked_claim_count}）")
+        if display.knowledge_item_count:
+            meta.append(f"知识条目 {display.knowledge_item_count}")
+        if display.blocking_unknown_count:
+            meta.append(f"阻断缺口 {display.blocking_unknown_count}")
+        st.caption(" · ".join(meta))
 
-    if show_known_unknown and project is not None and project.knowledge_state is not None:
-        _render_known_unknown(project.knowledge_state, compact=compact)
+    if show_known_unknown:
+        _render_known_unknown(context.knowledge_state, compact=compact)
     return display
 
 
@@ -121,18 +134,50 @@ def _render_known_unknown(state: KnowledgeState, *, compact: bool) -> None:
         counts.append(f"来源 {state.source_count}")
     if state.fact_count:
         counts.append(f"事实 {state.fact_count}")
+    if state.knowledge_item_count:
+        counts.append(f"知识条目 {state.knowledge_item_count}")
+    if state.claims:
+        linked = sum(
+            1
+            for claim in state.claims
+            if claim.fact_id is not None or claim.knowledge_item_id is not None
+        )
+        counts.append(f"主张 {len(state.claims)}/{linked} 已链接")
     if counts:
         st.caption(" · ".join(counts))
-    if state.known:
+
+    if state.claims:
+        claim_bits: list[str] = []
+        for claim in state.claims[:6]:
+            tag = "✓" if claim.confirmed else "·"
+            claim_bits.append(f"{tag}{claim.key}={claim.summary[:40]}")
+        text = "；".join(claim_bits)
+        if compact:
+            st.caption(f"主张索引：{text}")
+        else:
+            st.markdown(f"**主张索引**：{text}")
+    elif state.known:
         known_text = "；".join(f"{key}={value}" for key, value in list(state.known.items())[:6])
         if compact:
             st.caption(f"已知：{known_text}")
         else:
             st.markdown(f"**已知**：{known_text}")
-    unknowns = state.unknown or state.missing_information
-    if unknowns:
-        text = "；".join(unknowns[:6])
+
+    if state.open_unknowns:
+        parts: list[str] = []
+        for gap in state.open_unknowns[:6]:
+            prefix = "[阻断] " if gap.blocking else ""
+            parts.append(f"{prefix}{gap.description}")
+        text = "；".join(parts)
         if compact:
             st.caption(f"仍缺：{text}")
         else:
             st.markdown(f"**仍缺**：{text}")
+    else:
+        unknowns = state.unknown or state.missing_information
+        if unknowns:
+            text = "；".join(unknowns[:6])
+            if compact:
+                st.caption(f"仍缺：{text}")
+            else:
+                st.markdown(f"**仍缺**：{text}")

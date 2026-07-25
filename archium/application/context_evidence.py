@@ -8,12 +8,17 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application._helpers import _format_fact_line
-from archium.application.knowledge_gap_detection import detect_knowledge_gaps
-from archium.domain.enums import VerificationStatus
+from archium.application.knowledge_gap_detection import (
+    KnowledgeGapEntry,
+    detect_knowledge_gaps,
+)
+from archium.domain.enums import KnowledgeItemStatus, VerificationStatus
 from archium.domain.fact import ProjectFact
+from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.infrastructure.database.repositories import (
     DocumentRepository,
     FactRepository,
+    ProjectKnowledgeRepository,
 )
 
 
@@ -31,6 +36,11 @@ class ProjectEvidencePack:
     chunk_excerpts: str = ""
     gap_lines: str = ""
     blocking_gap_count: int = 0
+    knowledge_lines: str = ""
+    knowledge_item_count: int = 0
+    indexed_facts: tuple[ProjectFact, ...] = ()
+    indexed_knowledge_items: tuple[ProjectKnowledgeItem, ...] = ()
+    indexed_gaps: tuple[KnowledgeGapEntry, ...] = ()
 
     @property
     def has_evidence(self) -> bool:
@@ -38,7 +48,9 @@ class ProjectEvidencePack:
             self.document_count > 0
             or self.confirmed_fact_count > 0
             or self.extracted_fact_count > 0
+            or self.knowledge_item_count > 0
             or bool(self.fact_lines.strip())
+            or bool(self.knowledge_lines.strip())
             or bool(self.chunk_excerpts.strip())
         )
 
@@ -52,8 +64,9 @@ def gather_project_evidence(
     max_chunks: int = 5,
     chunk_chars: int = 160,
     max_gaps: int = 8,
+    max_knowledge_lines: int = 10,
 ) -> ProjectEvidencePack:
-    """Collect filenames, facts, short chunks, and knowledge gaps for CI prompts."""
+    """Collect filenames, facts, knowledge items, chunks, and gaps for CI."""
     documents = DocumentRepository(session).list_by_project(project_id)
     doc_lines = [
         f"- {doc.filename}"
@@ -66,10 +79,19 @@ def gather_project_evidence(
         facts, limit=max_fact_lines
     )
 
+    knowledge_items = ProjectKnowledgeRepository(session).list_by_project(project_id)
+    knowledge_lines, knowledge_count = _format_knowledge_items(
+        knowledge_items, limit=max_knowledge_lines
+    )
+
     chunks = DocumentRepository(session).list_chunks_by_project(project_id)
     chunk_lines = _format_chunks(chunks, limit=max_chunks, max_chars=chunk_chars)
 
-    gap_report = detect_knowledge_gaps(project_id, facts=facts)
+    gap_report = detect_knowledge_gaps(
+        project_id,
+        facts=facts,
+        knowledge_items=knowledge_items,
+    )
     ordered_gaps = sorted(
         gap_report.gaps,
         key=lambda gap: (0 if gap.blocking else 1, gap.category, gap.description),
@@ -91,6 +113,11 @@ def gather_project_evidence(
         chunk_excerpts="\n".join(chunk_lines),
         gap_lines="\n".join(gap_lines),
         blocking_gap_count=blocking,
+        knowledge_lines="\n".join(knowledge_lines),
+        knowledge_item_count=knowledge_count,
+        indexed_facts=tuple(facts),
+        indexed_knowledge_items=tuple(knowledge_items),
+        indexed_gaps=tuple(ordered_gaps),
     )
 
 
@@ -172,6 +199,37 @@ def _format_facts(
     )
     lines = [_format_fact_line(fact) for fact in ranked[:limit]]
     return lines, confirmed, extracted, pending, conflicts
+
+
+def _format_knowledge_items(
+    items: list[ProjectKnowledgeItem],
+    *,
+    limit: int,
+) -> tuple[list[str], int]:
+    active = [
+        item
+        for item in items
+        if item.status != KnowledgeItemStatus.REJECTED and not item.is_reference_only
+    ]
+    ranked = sorted(
+        active,
+        key=lambda item: (
+            0 if item.is_confirmed else 1,
+            0 if item.source_citations else 1,
+            item.category,
+            str(item.id),
+        ),
+    )
+    lines: list[str] = []
+    for item in ranked[:limit]:
+        status = "已确认" if item.is_confirmed else item.status.value
+        origin = item.origin.value
+        cite = "有引用" if item.source_citations else "无引用"
+        statement = " ".join((item.statement or "").split())
+        if len(statement) > 140:
+            statement = statement[:137] + "…"
+        lines.append(f"- [{status}/{origin}/{cite}] {statement}")
+    return lines, len(active)
 
 
 def _format_chunks(chunks: list, *, limit: int, max_chars: int) -> list[str]:

@@ -36,9 +36,9 @@ User opens Archium
   -> JSON / Marp / editable PPTX / PDF / preview images
 ```
 
-**核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextAnalyzer`（原 `ContextIntelligenceService`）评估已知/未知并建议下一步。评估产出统一聚合为 `ProjectContext`（`archium/domain/context/`）；`WorkspaceModeService` 优先依据 `ProjectContext` 路由，而非仅 `origin_mode`。
+**核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextAnalyzer`（原 `ContextIntelligenceService`）评估已知/未知并建议下一步。评估产出统一聚合为 `ProjectContext`（`archium/domain/context/`）——**仅认知快照**（已知/未知/阶段/NBA），不持有设计/汇报/渲染过程状态。`KnowledgeState` 为**知识索引**（`claims` / `open_unknowns` 指向 Fact / KnowledgeItem），不是第二套真相库。`WorkspaceModeService` 优先依据 `ProjectContext` 路由，而非仅 `origin_mode`。
 
-**Intelligence Closure（P0–P3）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）。有意义的知识变化写入 `KnowledgeStateHistory`。NBA 经 `NbaActionExecutor` **一键执行**可落地动作（自主研究、启动探索并推演方向、无 Mission 时生成任务理解），再跳页；上传资料 / 澄清 / 打开任务仍为导航（编排可同步 start）。生成页读取 `presentation_readiness_from_context`。P3 **Concept Visualization Loop**：Mission 前后均可 `ConceptDirection → VisualConceptBrief → 示意出图 → 建筑师反馈 → 写回 visual_prompt / 轻量空间字段 → IntentEvolution(VISUAL_FEEDBACK) → 再合成`；`visual_concept_briefs.mission_id` 可空，提交 Mission 时回填。`origin_mode` 仍为兼容字段。
+**Intelligence Closure（P0–P3）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）。`fact_confirmed` 等小证据事件走确定性 `ReassessMode.INDEX`；Mission/方向/上传等走 `FULL` LLM；LLM 失败时回退 `refresh_claim_index_only` 并标记 `cognition_stale`。有意义的知识变化写入 `KnowledgeStateHistory`。NBA 经 `NbaActionExecutor` **一键执行**可落地动作（自主研究、启动探索并推演方向、无 Mission 时生成任务理解），再跳页；上传资料 / 澄清 / 打开任务仍为导航（编排可同步 start）。生成页读取 `presentation_readiness_from_context`。P3 **Concept Visualization Loop**：Mission 前后均可 `ConceptDirection → VisualConceptBrief → 示意出图 → 建筑师反馈 → 写回 visual_prompt / 轻量空间字段 → IntentEvolution(VISUAL_FEEDBACK) → 再合成`；`visual_concept_briefs.mission_id` 可空，提交 Mission 时回填。`origin_mode` 仍为兼容字段。
 
 ### 意图驱动路线图（v0.3+）
 
@@ -48,7 +48,7 @@ User opens Archium
 | P2 | Autonomous Research — 联网检索 → 知识 → 写回/AI 修订 Mission → Brief/Storyline 注入；资料面板标记「已写回 Mission」 | 已落地 |
 | P2 | Research/Programming 第三入口（策划与可研 / 投资人沟通）— Genesis 第三 Tab、`RESEARCH_PROGRAMMING` 轻量 Planning | 已落地 |
 | P3 | Intent Router（显式取向）— 已被 KnowledgeState 入口取代 / 内化 | 已取代 |
-| P0 | Knowledge State + Context Intelligence — 评估吃事实账本 / chunk 摘录 / 知识缺口；探索方向注入已证实约束；Genesis 单一入口 + IntentEvolution 时间线 | 已落地 |
+| P0 | Knowledge State + Context Intelligence — 评估吃事实账本 / 知识条目 / chunk 摘录 / 知识缺口；探索方向注入已证实约束；Genesis 单一入口 + IntentEvolution 时间线 | 已落地 |
 | P1 | IntentEvidence + 事实确认闭环 — 出处写入 / IntentEvolution；NBA ASK→待确认事实；**确认事实后自动 reassess 知识状态并提示** | 已落地 |
 | P3 | Concept Exploration 前置 — `ExplorationSession` + 结构化 `IdeaSeed` → 多 `ConceptDirection` → 选定 → `DesignIntent` + `ProjectMission` | 已落地 |
 | P3 | Design Iteration — 概念方向 + 视觉概念简报注入；Vision Engine；Mission 进度条 | 演示闭环体验已加强 |
@@ -57,8 +57,9 @@ User opens Archium
 | P1 | `origin_mode` 退位 — 路由读 `ProjectContext`；`KnowledgeState` 持久化 lifecycle/workflow | 已落地 |
 | P1 | Context 模块 + NBA 跳转 — `application/context/`、`resolve_workflow_entry`、`ui/context_navigation` | 已落地 |
 | P2 | DesignRationale — ConceptDirection 生成/持久化/UI 设计推理 | 已落地 |
-| P0 | Intelligence Closure — 事件驱动 KS reassess；生成页读 ProjectContext readiness | 已落地 |
+| P0 | Intelligence Closure — 事件驱动 KS reassess；小事件 index-only、大事件全量 LLM；失败回退 claim index；生成页读 ProjectContext readiness | 已落地 |
 | P1 | KnowledgeStateHistory — 版本化知识快照（v0.n→v1.0）+ UI 时间线 | 已落地 |
+| P0 | Knowledge claim index — `claims`/`open_unknowns` 桥接 Fact + ProjectKnowledgeItem；CI evidence 纳入知识条目；UI 展示 stale / 主张索引 | 已落地 |
 | P2 | NBA 一键执行 — `NbaActionExecutor`（研究/推演/生成 Mission）+ 导航导航 | 已落地 |
 | P3 | Concept Visualization Loop — 边想边画：示意反馈写回方向种子 + 再合成；Mission 前可出图 | 已落地 |
 
