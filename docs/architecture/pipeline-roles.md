@@ -234,6 +234,7 @@ Chroma 项目集合（`record_type=knowledge_item`），创建/确认时索引�
 `ConceptDirection` / `DesignIntent`；生成与选定时确定性回填；选定方向把空间层写入
 Mission。`DesignRationale` 增加观察/问题/假设/策略/风险；`DesignDecision` 写入
 `IntentEvolution`（`DESIGN_DECISION`）。解决「概念口号 → 空间规则」断层。
+UI：概念方向详情、Mission 设计使命、意图演进时间线展示空间意图/规则/决策。
 
 ---
 

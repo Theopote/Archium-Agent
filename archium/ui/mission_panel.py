@@ -27,6 +27,7 @@ from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
 from archium.ui.components.concept_direction_details import render_concept_direction_details
 from archium.ui.components.design_rationale_details import render_design_rationale
+from archium.ui.components.spatial_design_details import render_spatial_design_layer
 from archium.ui.planning_service import update_mission_fields
 
 TASK_NATURE_LABELS = {
@@ -983,6 +984,11 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
                         f"[{entry.source_label()} {conf}%] {entry.statement}{materials}"
                     )
             render_design_rationale(intent.design_rationale, expanded=False)
+            render_spatial_design_layer(
+                spatial_intent=intent.spatial_intent,
+                design_rules=intent.design_rules,
+                expanded=True,
+            )
             _render_concept_direction_section(mission, key_prefix=key_prefix)
             if research_topics:
                 _render_autonomous_research_section(mission, key_prefix=key_prefix)
@@ -1176,6 +1182,8 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
                 working_assumptions=_lines_to_list(intent_assumptions),
                 evidence=list(intent.evidence),
                 design_rationale=intent.design_rationale,
+                spatial_intent=intent.spatial_intent,
+                design_rules=list(intent.design_rules),
             ),
             current_situation=current_situation.strip() or None,
             primary_problems=_lines_to_list(primary_problems),

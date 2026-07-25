@@ -21,10 +21,12 @@ _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.AI_UNDERSTANDING: "AI 理解",
     IntentEvolutionKind.RESEARCH: "研究补充",
     IntentEvolutionKind.DIRECTION_SELECTED: "选定方向",
+    IntentEvolutionKind.DESIGN_CRITIQUE: "设计批评",
     IntentEvolutionKind.MISSION_COMMIT: "确认任务",
     IntentEvolutionKind.MISSION_APPROVED: "批准任务",
     IntentEvolutionKind.EVIDENCE: "出处确认",
     IntentEvolutionKind.VISUAL_FEEDBACK: "示意反馈",
+    IntentEvolutionKind.DESIGN_DECISION: "设计决策",
 }
 
 _KS_REASON_LABELS = {
@@ -224,6 +226,18 @@ def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
             bits.append("证据：" + "；".join(event.evidence_refs[:4]))
         if bits:
             st.caption(" · ".join(bits))
+    from archium.ui.components.spatial_design_details import (
+        render_design_decision,
+        render_spatial_intent_from_snapshot,
+    )
+
+    if event.design_decision:
+        render_design_decision(
+            event.design_decision,
+            expanded=event.kind == IntentEvolutionKind.DESIGN_DECISION,
+            title="设计决策详情",
+        )
+
     snapshot = event.design_intent_snapshot
     if not snapshot:
         return
@@ -258,13 +272,17 @@ def _render_timeline_event(event: IntentEvolutionEvent, *, key: str) -> None:
                 if isinstance(materials, list) and materials:
                     suffix = " · " + "；".join(str(item) for item in materials[:2])
                 st.caption(f"[{source_label}] {statement}{suffix}")
+        render_spatial_intent_from_snapshot(snapshot, expanded=False)
+        skip_fields = {"evidence", "spatial_intent", "design_rules", "design_rationale"}
         for field_name, value in snapshot.items():
-            if field_name == "evidence" or value in (None, "", [], {}):
+            if field_name in skip_fields or value in (None, "", [], {}):
                 continue
             if isinstance(value, list):
                 text = "；".join(str(item) for item in value[:6] if str(item).strip())
                 if not text:
                     continue
                 st.caption(f"{field_name}：{text}")
+            elif isinstance(value, dict):
+                continue
             else:
                 st.caption(f"{field_name}：{value}")

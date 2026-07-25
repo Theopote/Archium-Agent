@@ -17,6 +17,14 @@ def render_design_rationale(
     with st.expander("设计推理", expanded=expanded):
         if rationale.statement.strip():
             st.markdown(f"**判断**：{rationale.statement.strip()}")
+        if rationale.observation.strip():
+            st.markdown(f"**观察**：{rationale.observation.strip()}")
+        if rationale.problem.strip():
+            st.markdown(f"**问题**：{rationale.problem.strip()}")
+        if rationale.hypothesis.strip():
+            st.markdown(f"**假设**：{rationale.hypothesis.strip()}")
+        if rationale.strategy.strip():
+            st.markdown(f"**策略**：{rationale.strategy.strip()}")
         if rationale.reasons:
             st.markdown("**理由**")
             for item in rationale.reasons:
@@ -24,6 +32,10 @@ def render_design_rationale(
         if rationale.evidence:
             st.markdown("**依据**")
             for item in rationale.evidence:
+                st.markdown(f"- {item}")
+        if rationale.risks:
+            st.markdown("**风险**")
+            for item in rationale.risks:
                 st.markdown(f"- {item}")
         if rationale.alternatives:
             st.markdown("**权衡 / 未选方案**")
