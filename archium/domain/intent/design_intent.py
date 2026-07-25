@@ -7,6 +7,7 @@ from pydantic import Field
 from archium.domain._base import DomainModel
 from archium.domain.design_rationale import DesignRationale
 from archium.domain.intent.intent_evidence import IntentEvidence
+from archium.domain.spatial_design import DesignRule, SpatialIntent
 
 
 class DesignIntent(DomainModel):
@@ -23,6 +24,8 @@ class DesignIntent(DomainModel):
     working_assumptions: list[str] = Field(default_factory=list)
     evidence: list[IntentEvidence] = Field(default_factory=list)
     design_rationale: DesignRationale | None = None
+    spatial_intent: SpatialIntent | None = None
+    design_rules: list[DesignRule] = Field(default_factory=list)
 
     def with_evidence(
         self,
@@ -82,4 +85,16 @@ class DesignIntent(DomainModel):
             block = self.design_rationale.to_prompt_block()
             if block.strip():
                 sections.append(block)
+        if self.spatial_intent is not None:
+            block = self.spatial_intent.to_prompt_block()
+            if block.strip():
+                sections.append(block)
+        if self.design_rules:
+            rule_lines = [
+                f"- {rule.to_prompt_line()}"
+                for rule in self.design_rules
+                if not rule.is_empty()
+            ]
+            if rule_lines:
+                sections.append("设计规则：\n" + "\n".join(rule_lines))
         return "\n".join(sections)

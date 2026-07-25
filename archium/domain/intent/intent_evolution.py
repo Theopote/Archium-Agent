@@ -26,6 +26,7 @@ class IntentEvolutionKind(StrEnum):
     MISSION_APPROVED = "mission_approved"
     EVIDENCE = "evidence"
     VISUAL_FEEDBACK = "visual_feedback"
+    DESIGN_DECISION = "design_decision"
 
 
 def _clip(value: str | None, limit: int) -> str | None:
@@ -69,6 +70,10 @@ class IntentEvolutionEvent(DomainModel):
         default_factory=list,
         description="Light evidence pointers (statements, titles, URLs).",
     )
+    design_decision: dict[str, object] | None = Field(
+        default=None,
+        description="Optional DesignDecision payload (model_dump).",
+    )
 
     def display_line(self) -> str:
         """Human-readable Design History line; falls back to summary."""
@@ -110,6 +115,7 @@ class IntentEvolution(DomainModel):
         new_summary: str | None = None,
         reason: str | None = None,
         evidence_refs: list[str] | None = None,
+        design_decision: dict[str, object] | None = None,
     ) -> IntentEvolution:
         events = list(self.events)
         event = IntentEvolutionEvent(
@@ -125,6 +131,7 @@ class IntentEvolution(DomainModel):
                 for ref in (evidence_refs or [])
                 if ref and str(ref).strip()
             ][:12],
+            design_decision=design_decision,
         )
         if event.previous_summary or event.new_summary or event.reason:
             event = event.model_copy(update={"summary": event.display_line()[:500]})

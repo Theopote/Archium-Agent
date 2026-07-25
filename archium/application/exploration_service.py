@@ -291,6 +291,12 @@ class ExplorationService:
         for sibling in siblings:
             if sibling.id == direction.id:
                 sibling.select()
+                from archium.application.spatial_design_layer import (
+                    design_decision_from_direction_selection,
+                    ensure_direction_spatial_layer,
+                )
+
+                sibling = ensure_direction_spatial_layer(sibling)
             elif sibling.status == ConceptDirectionStatus.SELECTED:
                 sibling.mark_draft()
             self._directions.update(sibling)
@@ -300,6 +306,14 @@ class ExplorationService:
         refreshed = self._directions.get(direction_id)
         assert refreshed is not None
         new_label = (refreshed.title or refreshed.theme or "").strip() or refreshed.title
+        from archium.application.spatial_design_layer import (
+            design_decision_from_direction_selection,
+        )
+
+        decision = design_decision_from_direction_selection(
+            refreshed,
+            previous_theme=previous_label or "",
+        )
         self._append_intent_evolution(
             exploration.project_id,
             IntentEvolutionKind.DIRECTION_SELECTED,
@@ -321,7 +335,27 @@ class ExplorationService:
                 "direction_id": str(refreshed.id),
                 "title": refreshed.title,
                 "theme": refreshed.theme,
+                "spatial_intent": (
+                    refreshed.spatial_intent.model_dump(mode="json")
+                    if refreshed.spatial_intent is not None
+                    else None
+                ),
+                "design_rules": [
+                    rule.model_dump(mode="json") for rule in refreshed.design_rules[:6]
+                ],
             },
+            design_decision=decision.as_dict(),
+        )
+        self._append_intent_evolution(
+            exploration.project_id,
+            IntentEvolutionKind.DESIGN_DECISION,
+            decision.decision or f"设计决策：{new_label}",
+            trigger="概念方向选定",
+            previous_summary=previous_label,
+            new_summary=decision.chosen or new_label,
+            reason=decision.reason or None,
+            evidence_refs=list(decision.evidence)[:6],
+            design_decision=decision.as_dict(),
         )
         if critique_gate is not None and critique_gate.report.verdict.value != "proceed":
             self._append_intent_evolution(
@@ -512,6 +546,7 @@ class ExplorationService:
         new_summary: str | None = None,
         reason: str | None = None,
         evidence_refs: list[str] | None = None,
+        design_decision: dict[str, object] | None = None,
     ) -> None:
         project = self._projects.get_by_id(project_id)
         if project is None:
@@ -526,6 +561,7 @@ class ExplorationService:
             new_summary=new_summary,
             reason=reason,
             evidence_refs=evidence_refs,
+            design_decision=design_decision,
         )
         project.touch()
         self._projects.update(project)
@@ -538,6 +574,7 @@ class ExplorationService:
         sort_order: int,
     ) -> ConceptDirection:
         from archium.application.concept_direction_mapping import concept_direction_from_draft
+        from archium.application.spatial_design_layer import ensure_direction_spatial_layer
 
         direction = concept_direction_from_draft(
             draft,
@@ -551,6 +588,7 @@ class ExplorationService:
             known_facts=self._known_facts_for_project(exploration.project_id),
             idea_text=seed.raw_input if seed is not None else exploration.idea_text,
         )
+        direction = ensure_direction_spatial_layer(direction)
         return self._directions.create(direction)
 
     def _known_facts_for_project(self, project_id: UUID) -> dict[str, str]:

@@ -10,6 +10,7 @@ from archium.domain.citation import Citation
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.design_rationale import DesignRationale
+from archium.domain.spatial_design import DesignRule, SpatialIntent
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import (
@@ -1308,6 +1309,27 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
                 rationale = parsed_rationale
         except Exception:
             rationale = None
+    spatial_raw = getattr(orm, "spatial_intent_json", None)
+    spatial = None
+    if isinstance(spatial_raw, dict) and spatial_raw:
+        try:
+            parsed_spatial = SpatialIntent.model_validate(spatial_raw)
+            if not parsed_spatial.is_empty():
+                spatial = parsed_spatial
+        except Exception:
+            spatial = None
+    rules_raw = getattr(orm, "design_rules_json", None) or []
+    rules: list[DesignRule] = []
+    if isinstance(rules_raw, list):
+        for item in rules_raw:
+            if not isinstance(item, dict):
+                continue
+            try:
+                rule = DesignRule.model_validate(item)
+            except Exception:
+                continue
+            if not rule.is_empty():
+                rules.append(rule)
     return ConceptDirection(
         id=orm.id,
         project_id=orm.project_id,
@@ -1323,6 +1345,8 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
         reference_dna=list(getattr(orm, "reference_dna_json", None) or []),
         visual_prompt=visual,
         design_rationale=rationale,
+        spatial_intent=spatial,
+        design_rules=rules,
         experience_focus=orm.experience_focus or "",
         differentiator=orm.differentiator or "",
         open_questions=list(orm.open_questions_json or []),
@@ -1361,6 +1385,16 @@ def concept_direction_to_orm(
         if domain.design_rationale is not None and not domain.design_rationale.is_empty()
         else None
     )
+    target.spatial_intent_json = (
+        domain.spatial_intent.model_dump(mode="json")
+        if domain.spatial_intent is not None and not domain.spatial_intent.is_empty()
+        else None
+    )
+    target.design_rules_json = [
+        rule.model_dump(mode="json")
+        for rule in domain.design_rules
+        if not rule.is_empty()
+    ]
     target.experience_focus = domain.experience_focus
     target.differentiator = domain.differentiator
     target.open_questions_json = list(domain.open_questions)

@@ -10,6 +10,7 @@ from archium.domain._base import IdentifiedModel, TimestampedModel
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.design_rationale import DesignRationale
 from archium.domain.enums import ConceptDirectionStatus
+from archium.domain.spatial_design import DesignRule, SpatialIntent
 
 
 class ConceptDirection(IdentifiedModel, TimestampedModel):
@@ -28,6 +29,8 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
     reference_dna: list[str] = Field(default_factory=list)
     visual_prompt: ConceptVisualPrompt | None = None
     design_rationale: DesignRationale | None = None
+    spatial_intent: SpatialIntent | None = None
+    design_rules: list[DesignRule] = Field(default_factory=list)
     experience_focus: str = ""
     differentiator: str = ""
     open_questions: list[str] = Field(default_factory=list)
@@ -76,6 +79,18 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
             block = self.design_rationale.to_prompt_block()
             if block:
                 sections.append(block)
+        if self.spatial_intent is not None:
+            block = self.spatial_intent.to_prompt_block()
+            if block:
+                sections.append(block)
+        if self.design_rules:
+            rule_lines = [
+                f"- {rule.to_prompt_line()}"
+                for rule in self.design_rules
+                if not rule.is_empty()
+            ]
+            if rule_lines:
+                sections.append("设计规则：\n" + "\n".join(rule_lines))
         if self.experience_focus.strip():
             sections.append(f"体验焦点：{self.experience_focus.strip()}")
         if self.differentiator.strip():

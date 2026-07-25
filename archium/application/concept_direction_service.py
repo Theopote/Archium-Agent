@@ -172,21 +172,63 @@ class ConceptDirectionService:
         critique_warnings = list(critique_gate.warnings)
 
         siblings = self._directions.list_by_mission(direction.mission_id)
+        previous_theme = (
+            (mission.design_intent.theme if mission.design_intent else "") or ""
+        ).strip()
+        from archium.application.spatial_design_layer import (
+            design_decision_from_direction_selection,
+            ensure_direction_spatial_layer,
+        )
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        selected: ConceptDirection | None = None
         for sibling in siblings:
             if sibling.id == direction.id:
                 sibling.select()
+                sibling = ensure_direction_spatial_layer(sibling)
+                selected = sibling
             elif sibling.status == ConceptDirectionStatus.SELECTED:
                 sibling.mark_draft()
             self._directions.update(sibling)
 
+        selected = selected or ensure_direction_spatial_layer(direction)
         updated_intent = design_intent_from_direction(
-            direction,
+            selected,
             base=mission.design_intent,
         )
         mission = self._mission_service.update_mission(
             mission.id,
             MissionPatch(design_intent=updated_intent),
         )
+        try:
+            from archium.domain.intent.intent_evolution import (
+                IntentEvolution,
+                IntentEvolutionKind,
+            )
+
+            project = ProjectRepository(self._session).get_by_id(mission.project_id)
+            if project is not None:
+                decision = design_decision_from_direction_selection(
+                    selected,
+                    previous_theme=previous_theme,
+                )
+                evo = project.intent_evolution or IntentEvolution()
+                project.intent_evolution = evo.append(
+                    IntentEvolutionKind.DESIGN_DECISION,
+                    decision.decision or f"选定方向：{selected.title}",
+                    trigger="Mission 方向选定",
+                    previous_summary=previous_theme or None,
+                    new_summary=selected.title,
+                    reason=decision.reason or None,
+                    evidence_refs=list(decision.evidence)[:6],
+                    design_decision=decision.as_dict(),
+                    design_intent_snapshot=updated_intent.model_dump(mode="json"),
+                )
+                project.touch()
+                ProjectRepository(self._session).update(project)
+        except Exception:
+            pass
+
         self._session.commit()
         from archium.application.context import best_effort_reassess_knowledge
 
@@ -269,6 +311,9 @@ class ConceptDirectionService:
             direction,
             known_facts=self._known_facts_for_project(mission.project_id),
         )
+        from archium.application.spatial_design_layer import ensure_direction_spatial_layer
+
+        direction = ensure_direction_spatial_layer(direction)
         return self._directions.create(direction)
 
     def _known_facts_for_project(self, project_id: UUID) -> dict[str, str]:

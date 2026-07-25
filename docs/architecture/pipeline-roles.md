@@ -230,6 +230,11 @@ Chroma 项目集合（`record_type=knowledge_item`），创建/确认时索引�
 **Phase I.3（产品面接线）**：检索预览展示 KnowledgeReference（含图谱/多模态通道）；
 自主研究后可展开 Research→Vision 种子，并一键写入空 `ConceptDirection.visual_prompt`。
 
+**Phase J（建筑设计逻辑层 P0）**：`SpatialIntent` + `DesignRule` 挂在
+`ConceptDirection` / `DesignIntent`；生成与选定时确定性回填；选定方向把空间层写入
+Mission。`DesignRationale` 增加观察/问题/假设/策略/风险；`DesignDecision` 写入
+`IntentEvolution`（`DESIGN_DECISION`）。解决「概念口号 → 空间规则」断层。
+
 ---
 
 ### 4. Visual Role（含内部 Architecture / Composition / Layout）
@@ -399,4 +404,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase I.3 产品面接线；I.2 图谱+多模态；I.1。*
+*Last updated: 2026-07-25 — Phase J SpatialIntent/DesignRule/DesignDecision；I.3。*

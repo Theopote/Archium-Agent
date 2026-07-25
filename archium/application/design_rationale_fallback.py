@@ -66,6 +66,11 @@ def synthesize_design_rationale_from_direction(
         reasons=reasons[:5],
         evidence=evidence[:6],
         confidence=confidence,
+        observation=(idea_text or "").strip()[:300],
+        problem=(direction.summary or "").strip()[:300],
+        hypothesis=statement[:300],
+        strategy=(direction.spatial_strategy or direction.spatial_idea or "").strip()[:300],
+        risks=[item.strip() for item in direction.risks if item and item.strip()][:4],
     )
     return None if rationale.is_empty() else rationale
 
