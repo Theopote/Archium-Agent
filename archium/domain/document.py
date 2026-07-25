@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import Field, field_validator
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
+from archium.domain.architectural_chunk import ArchitecturalChunkType
 from archium.domain.enums import DocumentType, ProcessingStatus
 
 
@@ -61,3 +62,23 @@ class DocumentChunk(IdentifiedModel):
     content_type: str = "text"
     chunk_index: int = Field(ge=0)
     metadata: dict[str, object] = Field(default_factory=dict)
+
+    @property
+    def architectural_type(self) -> ArchitecturalChunkType:
+        from archium.domain.architectural_chunk import architectural_type_from_metadata
+
+        return architectural_type_from_metadata(self.metadata)
+
+    def ensure_architectural_annotation(self) -> DocumentChunk:
+        """Classify and stamp architectural_type into metadata if missing."""
+        from archium.domain.architectural_chunk import classify_architectural_chunk
+
+        if self.metadata.get("architectural_type"):
+            return self
+        annotation = classify_architectural_chunk(
+            self.content,
+            section_title=self.section_title,
+            content_type=self.content_type,
+        )
+        merged = {**self.metadata, **annotation.to_metadata()}
+        return self.model_copy(update={"metadata": merged})

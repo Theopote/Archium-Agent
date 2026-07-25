@@ -167,11 +167,39 @@ def build_retrieval_context_bundle(
 
     lines: list[str] = []
     highlighted_keys: set[str] = set()
+    if (
+        bool(getattr(resolved_settings, "knowledge_fusion_enabled", True))
+        and query
+        and query.strip()
+    ):
+        try:
+            from archium.application.knowledge_fusion import KnowledgeFusionService
+
+            fusion = KnowledgeFusionService(session, settings=resolved_settings)
+            fused = fusion.retrieve(
+                project_id,
+                query,
+                top_k=min(16, max_chunks),
+            )
+            block = fusion.format_prompt_block(fused)
+            if block.strip():
+                lines.append(block)
+                for ref in fused:
+                    if ref.source_kind.value == "fact":
+                        key = str(ref.extra.get("fact_key") or "")
+                        if key:
+                            highlighted_keys.add(key)
+        except Exception:
+            # Fusion must not break context assembly
+            pass
+
     if query_keys and ranked_facts:
         matched = [fact for fact in ranked_facts if fact.key in query_keys]
         if matched:
             lines.append("【与检索相关的项目事实 · 结构化优先】")
             for fact in matched:
+                if fact.key in highlighted_keys:
+                    continue
                 lines.append(_format_fact_line(fact))
                 highlighted_keys.add(fact.key)
 

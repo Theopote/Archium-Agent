@@ -6,8 +6,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.retrieval_filters import RetrievalFilters
 from archium.application.retrieval_hybrid import rerank_retrieved_chunks
 from archium.config.settings import Settings, get_settings
+from archium.domain.architectural_chunk import infer_types_from_query
 from archium.domain.document import DocumentChunk
 from archium.infrastructure.database.repositories import DocumentRepository
 from archium.infrastructure.embeddings.base import EmbeddingProvider
@@ -49,10 +51,11 @@ class RetrievalService:
         if not self.available or not chunks:
             return
         assert self._embedder is not None
-        embeddings = self._embedder.embed_documents([chunk.content for chunk in chunks])
+        annotated = [chunk.ensure_architectural_annotation() for chunk in chunks]
+        embeddings = self._embedder.embed_documents([chunk.content for chunk in annotated])
         self._store.upsert_chunks(
             project_id,
-            chunks,
+            annotated,
             embeddings,
             document_name=document_name,
         )
@@ -68,30 +71,42 @@ class RetrievalService:
         query: str,
         *,
         top_k: int | None = None,
+        filters: RetrievalFilters | None = None,
     ) -> list[DocumentChunk]:
         limit = top_k or self._settings.retrieval_top_k
         if not self.available or not query.strip():
-            return self._fallback_chunks(project_id, limit)
+            return self._fallback_chunks(project_id, limit, filters=filters)
 
         assert self._embedder is not None
+        where = filters.to_chroma_where() if filters is not None and not filters.is_empty() else None
+        # Over-fetch slightly when soft architectural preferences exist
+        preferred = infer_types_from_query(query)
+        fetch_k = limit * 2 if preferred and where is None else limit
         hits = self._store.query(
             project_id,
             self._embedder.embed_query(query),
-            top_k=limit,
+            top_k=fetch_k,
+            where=where,
         )
         if not hits:
             logger.info(
                 "No vector hits for project %s; falling back to sequential chunks",
                 project_id,
             )
-            return self._fallback_chunks(project_id, limit)
+            return self._fallback_chunks(project_id, limit, filters=filters)
 
         chunk_ids = [hit.chunk_id for hit in hits]
         chunks = self._documents.get_chunks_by_ids(chunk_ids)
         if not chunks:
-            return self._fallback_chunks(project_id, limit)
+            return self._fallback_chunks(project_id, limit, filters=filters)
+        chunks = self._apply_client_filters(chunks, filters)
         if self._settings.retrieval_keyword_boost_enabled:
-            chunks = rerank_retrieved_chunks(chunks, hits, query)
+            chunks = rerank_retrieved_chunks(
+                chunks,
+                hits,
+                query,
+                preferred_architectural_types=preferred,
+            )
         return chunks[:limit]
 
     def search(
@@ -100,19 +115,73 @@ class RetrievalService:
         query: str,
         *,
         top_k: int | None = None,
+        filters: RetrievalFilters | None = None,
     ) -> list[VectorSearchHit]:
         limit = top_k or self._settings.retrieval_top_k
         if not self.available or not query.strip():
             return []
         assert self._embedder is not None
-        return self._store.query(
+        where = filters.to_chroma_where() if filters is not None and not filters.is_empty() else None
+        hits = self._store.query(
             project_id,
             self._embedder.embed_query(query),
             top_k=limit,
+            where=where,
         )
+        if filters is None or filters.is_empty():
+            return hits
+        return [
+            hit
+            for hit in hits
+            if self._hit_matches_filters(hit, filters)
+        ]
 
-    def _fallback_chunks(self, project_id: UUID, limit: int) -> list[DocumentChunk]:
-        return self._documents.list_chunks_by_project(project_id)[:limit]
+    def _fallback_chunks(
+        self,
+        project_id: UUID,
+        limit: int,
+        *,
+        filters: RetrievalFilters | None = None,
+    ) -> list[DocumentChunk]:
+        chunks = self._documents.list_chunks_by_project(project_id)
+        chunks = self._apply_client_filters(chunks, filters)
+        return chunks[:limit]
+
+    @staticmethod
+    def _apply_client_filters(
+        chunks: list[DocumentChunk],
+        filters: RetrievalFilters | None,
+    ) -> list[DocumentChunk]:
+        if filters is None or filters.is_empty():
+            return chunks
+        result = chunks
+        if filters.content_types:
+            allowed = set(filters.content_types)
+            result = [c for c in result if c.content_type in allowed]
+        if filters.architectural_types:
+            allowed_arch = {t.value for t in filters.architectural_types}
+            result = [
+                c
+                for c in result
+                if str(c.metadata.get("architectural_type") or c.architectural_type.value)
+                in allowed_arch
+            ]
+        if filters.document_ids:
+            allowed_docs = set(filters.document_ids)
+            result = [c for c in result if c.document_id in allowed_docs]
+        return result
+
+    @staticmethod
+    def _hit_matches_filters(hit: VectorSearchHit, filters: RetrievalFilters) -> bool:
+        if filters.content_types and hit.content_type not in filters.content_types:
+            return False
+        if filters.architectural_types:
+            allowed = {t.value for t in filters.architectural_types}
+            if hit.architectural_type not in allowed:
+                return False
+        if filters.document_ids and hit.document_id not in filters.document_ids:
+            return False
+        return True
 
 
 def create_retrieval_service(

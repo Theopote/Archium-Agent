@@ -125,12 +125,13 @@ flowchart LR
 | 类型 | 路径 |
 |------|------|
 | Workflow | `retrieve_context` → `extract_facts` → `validate_facts`（`archium/workflow/nodes/ingestion.py`） |
-| Service | `ingestion_service.py`、`presentation_manuscript_service.py` |
+| Service | `ingestion_service.py`、`presentation_manuscript_service.py`、`knowledge_fusion.py`、`retrieval_service.py` |
 | Agent（LLM 辅助） | `citations.py`、RAG via `agents/_helpers.py` |
-| Domain | `presentation_manuscript.py`、`Citation`、`Asset` |
+| Domain | `presentation_manuscript.py`、`Citation`、`Asset`、`architectural_chunk.py`、`knowledge_reference.py` |
 | WorkflowStep | `RETRIEVE_CONTEXT`、`EXTRACT_FACTS`、`VALIDATE_FACTS`、`RESOLVE_CITATIONS`、`MATCH_ASSETS` |
 
-**输出契约**：事实带来源；禁止把参考 PPT 案例文本写入 manuscript 事实层。
+**输出契约**：事实带来源；禁止把参考 PPT 案例文本写入 manuscript 事实层。  
+**Phase I**：检索命中优先为带可信度的 `KnowledgeReference`，而非纯文本 Top-K。
 
 ---
 
@@ -208,6 +209,12 @@ Concept / Critique 注入已沉淀设计知识块，不再只消费散文 statem
 （空间分析图 / 概念草图 / 现代转译图种子）；自主研究结束后挂到
 `AutonomousResearchResult.vision_bundles`。只产 Vision Engine `ImageRequest` 种子，
 **不**自动出像素；闸门仍是 `vision_image_generation_enabled`。
+
+**Phase I（Retrieval P0 · 建筑知识检索）**：`ArchitecturalChunkType` 标注文档块；
+Chroma 支持 `RetrievalFilters`（content_type / architectural_type / document_id）；
+`KnowledgeFusionService` 将 Fact + Chunk + KnowledgeItem（+ Case）融合为
+带 `similarity` / `authority` / `transferability` 的 `KnowledgeReference`，
+避免纯 Top-K 文本 RAG。
 
 ---
 
@@ -378,4 +385,4 @@ Induction:     参考PPTX → Schema/Template → Co-plan → ReferenceSlideEdit
 
 ---
 
-*Last updated: 2026-07-25 — Phase H.4 Research→Vision；H.3 Research Critic；H.2 ArchitectureCase。*
+*Last updated: 2026-07-25 — Phase I Retrieval P0；H.4 Research→Vision；H.3 Research Critic。*

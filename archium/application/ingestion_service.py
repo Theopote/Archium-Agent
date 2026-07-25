@@ -246,7 +246,7 @@ class IngestionService:
                 content_type=part.content_type,
                 chunk_index=index,
                 metadata=part.metadata,
-            )
+            ).ensure_architectural_annotation()
             for index, part in enumerate(parts)
             if part.content.strip()
         ]
@@ -272,7 +272,7 @@ class IngestionService:
                     content_type=page.content_type,
                     chunk_index=index,
                     metadata={"needs_ocr": parsed.needs_ocr},
-                )
+                ).ensure_architectural_annotation()
             )
         return chunks
 

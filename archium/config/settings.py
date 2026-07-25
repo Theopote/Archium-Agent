@@ -400,6 +400,14 @@ class Settings(BaseSettings):
             "and proper nouns that pure embeddings may miss)."
         ),
     )
+    knowledge_fusion_enabled: bool = Field(
+        default=True,
+        description=(
+            "When assembling project context, fuse FactLedger + DocumentChunk + "
+            "ProjectKnowledge (+ seed cases) into ranked KnowledgeReference hits "
+            "with similarity/authority/transferability scores."
+        ),
+    )
     chunk_context_max_chars: int = Field(
         default=600,
         ge=100,
