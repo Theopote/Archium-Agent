@@ -87,14 +87,23 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
         existing = state.get("cultural_narrative")
         if existing is not None:
+            from archium.domain.cultural_narrative import CulturalNarrativePlan
             from archium.infrastructure.database.repositories import ProjectRepository
 
-            refreshed = ProjectRepository(self._runtime.session).get_cultural_narrative(existing.id)
-            if refreshed is not None:
-                return {
-                    "cultural_narrative": refreshed,
-                    "current_step": PresentationWorkflowStep.CULTURAL_NARRATIVE.value,
-                }
+            if isinstance(existing, dict):
+                try:
+                    existing = CulturalNarrativePlan.model_validate(existing)
+                except Exception:
+                    existing = None
+            if existing is not None:
+                refreshed = ProjectRepository(self._runtime.session).get_cultural_narrative(
+                    existing.id
+                )
+                if refreshed is not None:
+                    return {
+                        "cultural_narrative": refreshed,
+                        "current_step": PresentationWorkflowStep.CULTURAL_NARRATIVE.value,
+                    }
 
         brief = state.get("brief")
         if brief is None:

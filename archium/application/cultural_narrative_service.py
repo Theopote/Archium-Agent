@@ -176,8 +176,18 @@ def validate_narrative(plan: CulturalNarrativePlan) -> list[str]:
     return issues
 
 
-def format_narrative_for_prompt(plan: CulturalNarrativePlan) -> str:
+def format_narrative_for_prompt(
+    plan: CulturalNarrativePlan | dict[str, object] | None,
+) -> str:
     """Compact narrative summary for downstream Storyline / Outline agents."""
+    if plan is None:
+        return "{}"
+    if isinstance(plan, dict):
+        # Checkpoint serde may leave a plain dict when msgpack types are blocked.
+        try:
+            plan = CulturalNarrativePlan.model_validate(plan)
+        except Exception:
+            return json.dumps(plan, ensure_ascii=False, indent=2)
     payload = {
         "central_story": plan.central_story,
         "identity_keywords": plan.identity_keywords,

@@ -18,6 +18,7 @@ _CHECKPOINT_MODULES: list[tuple[str, str]] = [
     ("archium.application.chunk_models", "ProjectContextBundle"),
     ("archium.application.presentation_models", "PresentationRequest"),
     ("archium.domain.citation", "Citation"),
+    ("archium.domain.cultural_narrative", "CulturalNarrativePlan"),
     ("archium.domain.deliverable", "DeliverablePlan"),
     ("archium.domain.deliverable", "PlannedDeliverable"),
     ("archium.domain.document", "DocumentChunk"),

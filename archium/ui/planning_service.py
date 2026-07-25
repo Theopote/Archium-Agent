@@ -1039,17 +1039,13 @@ def start_presentation_from_planning(
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
     """Approve plan gate if needed, then launch the existing presentation pipeline."""
+    from archium.domain.enums import ApprovalStatus
+
     runtime = _resolve_runtime_settings(settings)
     planning = _create_planning_service(session, runtime)
     run = planning.get_run(workflow_run_id)
     if run is None:
         raise WorkflowError(f"Workflow run {workflow_run_id} not found")
-
-    if run.status.value == "awaiting_review" and run.state.get("review_gate") == "plan_approval":
-        planning.approve_and_continue(workflow_run_id)
-        run = planning.get_run(workflow_run_id)
-        if run is None:
-            raise WorkflowError(f"Workflow run {workflow_run_id} disappeared after plan approval")
 
     missions = MissionRepository(session)
     mission_id = None
@@ -1079,6 +1075,41 @@ def start_presentation_from_planning(
             "当前成果计划未选择「汇报 / Presentation」类成果。"
             "非汇报成果不会自动创建 Presentation；请调整成果选择后再启动。"
         )
+
+    # Domain-complete path (approved plan + request draft): launch presentation
+    # without resuming LangGraph. Soft-recovered planning runs often lack a full
+    # checkpoint / deliverable_plan blob, and approve_and_continue would fail.
+    has_draft = isinstance(run.state.get("presentation_request_draft"), dict)
+    domain_ready = plan.approval_status == ApprovalStatus.APPROVED and has_draft
+    if (
+        not domain_ready
+        and run.status.value == "awaiting_review"
+        and run.state.get("review_gate") == "plan_approval"
+    ):
+        planning.approve_and_continue(workflow_run_id)
+        run = planning.get_run(workflow_run_id)
+        if run is None:
+            raise WorkflowError(f"Workflow run {workflow_run_id} disappeared after plan approval")
+    elif domain_ready and run.state.get("review_gate") == "plan_approval":
+        # Clear the planning gate so UI no longer looks stuck at plan_approval.
+        next_state = dict(run.state or {})
+        next_state["review_gate"] = None
+        next_state["current_step"] = "presentation_launched"
+        next_state["deliverable_plan"] = {
+            "id": str(plan.id),
+            "approval_status": plan.approval_status.value,
+            "project_id": str(plan.project_id),
+            "mission_id": str(plan.mission_id),
+        }
+        run.state = next_state
+        from archium.domain.enums import WorkflowStatus
+
+        run.status = WorkflowStatus.COMPLETED
+        run.touch()
+        from archium.infrastructure.database.repositories import WorkflowRunRepository
+
+        WorkflowRunRepository(session).update(run)
+        session.commit()
 
     bridge = planning.get_presentation_bridge(workflow_run_id)
     presentation_service = _create_presentation_service(session, runtime)
