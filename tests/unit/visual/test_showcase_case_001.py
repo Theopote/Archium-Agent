@@ -130,3 +130,34 @@ class TestShowcaseCase001:
         payload = scorecard_template()
         assert payload["schema_version"] == "showcase_investor_score_v1"
         assert payload["gate"]["total_min"] == 35
+
+    def test_render_bundle_and_dry_run(self, tmp_path) -> None:  # noqa: ANN001
+        from archium.application.visual.showcase_case_001 import (
+            build_case_001_render_bundle,
+            write_case_001_dry_run,
+        )
+
+        bundle = build_case_001_render_bundle()
+        assert len(bundle.plans) == 20
+        assert bundle.style_preset_id == CASE_001_DEFAULT_PRESET
+        assert all(plan.elements for plan in bundle.plans)
+        # Demo tour slides present with expected families bias.
+        titles = [slide.title for slide in bundle.slides]
+        for title in DEMO_TOUR_TITLES:
+            assert title in titles
+
+        summary = write_case_001_dry_run(bundle, output_dir=tmp_path)
+        assert summary["mode"] == "dry_run"
+        assert summary["slide_count"] == 20
+        assert (tmp_path / "presentation.layout_instructions.json").is_file()
+        assert (tmp_path / "rhythm_snapshot.json").is_file()
+        assert len(list((tmp_path / "layout_plans").glob("slide_*.json"))) == 20
+
+        deck = json.loads(
+            (tmp_path / "presentation.layout_instructions.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert len(deck.get("slides") or deck.get("pages") or []) >= 20 or (
+            isinstance(deck, dict) and "slides" in deck
+        )

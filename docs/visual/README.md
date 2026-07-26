@@ -43,7 +43,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Golden V1–V7（composition） | ✅ |
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ |
 | Visual Critic screenshot_v1 / vision_v1（结构 + 可选截图 LLM） | ✅ v0.3 Phase 3 |
-| **Showcase Case 001**（医院 20 页 outline + 投资人 /50 评分门） | ✅ 骨架 / CI smoke；⏳ 人工 PPTX 达标 |
+| **Showcase Case 001**（医院 20 页 outline + LayoutSolver PPTX + 投资人 /50） | ✅ 可本地导出 PPTX；⏳ 人工填分过门 |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
 | **Page Director**（单主张 / 禁区 / copy_budget） | ✅ v0.3 Phase 1.3 |

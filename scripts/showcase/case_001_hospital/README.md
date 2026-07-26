@@ -23,19 +23,30 @@ Presentation Engine v0.3 **Phase 4** 杀手级 Demo 案例包。
 
 ```bash
 py -m scripts.showcase.run_case_001_smoke
+py -m scripts.showcase.run_case_001_render --dry-run
 # 或
 py -m pytest tests/unit/visual/test_showcase_case_001.py -q
 ```
 
-校验：outline → DeckComposition 节奏（高潮预算、密度波形）+ 评分门契约。
+校验：outline → DeckComposition 节奏 → LayoutSolver 20 页 plans + layout instruction deck（无 Node）。
 
-## 本地完整 Demo（人工）
+## 本地 PPTX（需 Node + pptxgenjs）
 
-1. 将照片 / CAD 截图 / PDF 放到本机工作区（勿提交大文件）。
-2. 上传资料包 → 选择 Style Preset → 一键生成汇报。
-3. 固定导览：封面 → 区位与交通 → 设计策略 → 效果表达。
-4. 将 PPTX 写入 `outputs/`（已 gitignore）。
-5. 复制 `scorecard.template.json` → `outputs/scorecard.filled.json` 填分，用：
+```bash
+# 首次：cd archium/infrastructure/renderers/pptxgen && npm install
+py -m scripts.showcase.run_case_001_render
+# 可选气质：--style-preset architecture_urban
+```
+
+产物写入 `outputs/`（已 gitignore）：`presentation.pptx`、`layout_plans/`、`presentation.layout_instructions.json`。
+
+路径：**LayoutSolver → render-plan.mjs**（非 Phase 8 DB 验收、非遗留 Spec fallback）。无真实照片时图位可能为空占位，正式 Demo 再挂本地素材。
+
+## 人工评分
+
+1. 打开 `outputs/presentation.pptx`，按 Demo 导览：封面 → 区位与交通 → 设计策略 → 效果表达。  
+2. 复制 `scorecard.template.json` → `outputs/scorecard.filled.json` 填分。  
+3. 评估门禁：
 
 ```bash
 py -m scripts.showcase.evaluate_scorecard scripts/showcase/case_001_hospital/outputs/scorecard.filled.json
@@ -44,5 +55,6 @@ py -m scripts.showcase.evaluate_scorecard scripts/showcase/case_001_hospital/out
 ## 硬约束
 
 - 不新增 Agent；走 Visual / Critic 既有服务。
-- 主路径 RenderScene → PPTX，不走遗留 Spec fallback。
+- Showcase 本地导出走 LayoutPlan 主渲染路径（与正式 Studio RenderScene 同源 instruction deck）。
 - Critic 只读，不静默改稿。
+- 大二进制不进 git。

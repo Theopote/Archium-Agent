@@ -280,7 +280,7 @@ Vision Critic 输出示例（契约）：
 
 | Case | 主题 | 目标页数 | 气质默认 Preset | 状态 |
 |------|------|----------|-----------------|------|
-| Case 001 | 医院更新汇报 | ~20 | `architecture_technical` 或 `urban` | ✅ 包骨架 + CI smoke |
+| Case 001 | 医院更新汇报 | ~20 | `architecture_technical` 或 `urban` | ✅ outline + LayoutSolver PPTX 路径 |
 | Case 002 | 校园建筑改造 | ~20 | `architecture_academic` | ⏳ |
 | Case 003 | 城市更新 | ~30 | `architecture_urban` | ⏳ |
 
@@ -290,7 +290,8 @@ Vision Critic 输出示例（契约）：
 资料与跑法：[`scripts/showcase/case_001_hospital/`](../../scripts/showcase/case_001_hospital/)（`manifest.json` / `outline.json` / 文本 fixtures）。**大二进制不进 git**；CI 跑 `py -m scripts.showcase.run_case_001_smoke`（Deck 节奏，无 LLM）；完整 PPTX → `outputs/` 或 Actions artifact。
 
 - [x] Case 001 outline（20 页）+ Demo 导览锚点 + Style Preset 默认 technical  
-- [ ] Case 001 端到端 RenderScene → PPTX（本地 / artifact；人工填分后宣称达标）  
+- [x] Case 001 LayoutSolver → layout instructions / 本地 PPTX（`run_case_001_render`；无照片时图位可空）  
+- [ ] Case 001 挂真实素材 + 人工填分过门（宣称 Showcase 达标）  
 - [ ] Case 002 / 003  
 
 #### 4.2 人工评分表（投资人向）
