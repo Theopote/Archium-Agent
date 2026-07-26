@@ -70,8 +70,16 @@ def test_studio_and_deliver_both_fail_closed_on_unknown() -> None:
     assert "_project_has_documents" not in export
     assert "resolve_project_evidence_safe" in export
     assert "allows_formal_export" in export
-    assert "resolve_delivery_readiness_safe" in deliver
-    assert "资料状态无法验证" in deliver
+    assert "resolve_export_verdict_safe" in deliver
+    flow_chrome = (
+        Path(__file__).resolve().parents[2]
+        / "archium"
+        / "ui"
+        / "pages"
+        / "flow"
+        / "__init__.py"
+    ).read_text(encoding="utf-8")
+    assert "资料状态无法验证" in flow_chrome
     assert (
         ProjectEvidenceStatus(
             availability=EvidenceAvailability.UNKNOWN

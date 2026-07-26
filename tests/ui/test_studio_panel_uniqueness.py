@@ -46,5 +46,5 @@ def test_inspector_is_lazy_not_st_tabs() -> None:
     assert "_select_inspector_tab" in source
     assert 'if active == "检查"' not in source  # check is the default fallthrough
     assert "render_deferred_scene_repair_panel" in source
-    # Repair only after AI branch returns — not executed for every tab.
-    assert 'if active == "AI":' in source
+    # Repair only after 修改 branch returns — not executed for every tab.
+    assert 'if active == "修改":' in source

@@ -105,7 +105,6 @@ class DatabaseLLMTraceRecorder:
 
             with get_session() as session:
                 LLMTraceRepository(session).create_from_trace(trace)
-                session.commit()
         except Exception:
             logger.exception(
                 "llm_trace persist failed request_id=%s",

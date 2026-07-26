@@ -27,7 +27,7 @@ def test_deliver_readiness_shows_pending_warnings_and_blockers() -> None:
     assert 'metric("PPTX"' in text or 'metric("PPTX",' in text
     assert 'metric("PDF"' in text or 'metric("PDF",' in text
     assert "阻塞项" in text
-    assert "项目资料" in text
+    assert "证据缺口" in text
     assert "evidence_readiness_service" in text
     assert "_render_delivery_record_actions" in text
     # Must not collapse warnings into the pending metric.

@@ -45,6 +45,8 @@ def test_sqlite_engine_uses_wal_and_busy_timeout(tmp_path: Path) -> None:
 def test_postgres_url_requires_driver(monkeypatch: pytest.MonkeyPatch) -> None:
     import builtins
 
+    from archium.infrastructure.database import engine as db_engine_mod
+
     real_import = builtins.__import__
 
     def fake_import(name: str, *args: object, **kwargs: object):
@@ -54,7 +56,7 @@ def test_postgres_url_requires_driver(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
     with pytest.raises(ConfigurationError, match="psycopg"):
-        db_session_mod._ensure_postgres_driver("postgresql+psycopg://localhost/archium")
+        db_engine_mod._ensure_postgres_driver("postgresql+psycopg://localhost/archium")
 
 
 def test_database_backend_detection(tmp_path: Path) -> None:
@@ -75,7 +77,10 @@ def test_scoped_session_shared_in_same_thread(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = Settings(_env_file=None, database_path=tmp_path / "scoped.db")
-    monkeypatch.setattr(db_session_mod, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        "archium.infrastructure.database.engine.get_settings",
+        lambda: settings,
+    )
 
     with get_session(scoped=True) as first:
         first_id = id(first)
@@ -90,7 +95,10 @@ def test_independent_sessions_differ_in_same_thread(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = Settings(_env_file=None, database_path=tmp_path / "indep.db")
-    monkeypatch.setattr(db_session_mod, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        "archium.infrastructure.database.engine.get_settings",
+        lambda: settings,
+    )
 
     with get_session(scoped=False) as first, get_session(scoped=False) as second:
         assert id(first) != id(second)
@@ -101,7 +109,10 @@ def test_background_thread_uses_independent_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = Settings(_env_file=None, database_path=tmp_path / "thread.db")
-    monkeypatch.setattr(db_session_mod, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        "archium.infrastructure.database.engine.get_settings",
+        lambda: settings,
+    )
     main_id: int | None = None
     worker_id: int | None = None
 

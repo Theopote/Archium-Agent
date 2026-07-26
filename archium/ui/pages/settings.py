@@ -425,7 +425,6 @@ def _render_web_research_settings() -> None:
                 provider=provider,
                 auto_on_concept_planning=auto_on_concept,
             )
-            session.commit()
         if tavily_key_input.strip():
             save_tavily_api_key(
                 api_key=tavily_key_input.strip(),

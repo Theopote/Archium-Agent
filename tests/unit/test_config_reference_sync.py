@@ -24,14 +24,14 @@ def test_registry_covers_all_settings_fields() -> None:
 
 def test_review_and_repair_defaults_match_settings() -> None:
     settings = Settings(_env_file=None)
-    assert settings.block_export_on_critical_review is False
+    assert settings.block_export_on_critical_review is True
     assert settings.llm_professional_review_enabled is False
     assert settings.slide_repair_enabled is False
     assert settings.fact_extraction_enabled is True
     assert settings.retrieval_enabled is False
 
     specs = {spec.field_name: spec for spec in iter_setting_specs()}
-    assert specs["block_export_on_critical_review"].default is False
+    assert specs["block_export_on_critical_review"].default is True
     assert specs["slide_repair_enabled"].default is False
     assert specs["fact_extraction_enabled"].default is True
 

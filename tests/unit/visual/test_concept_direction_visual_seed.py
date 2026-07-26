@@ -108,6 +108,10 @@ def test_visual_brief_from_direction_seed() -> None:
         title="文化中心",
         task_statement="探索概念",
     )
-    brief = visual_concept_brief_from_direction_seed(mission, direction)
+    brief = visual_concept_brief_from_direction_seed(
+        project_id=direction.project_id,
+        direction=direction,
+        mission_id=mission.id,
+    )
     assert brief.subject == direction.visual_prompt.image_prompt
     assert brief.extra_json["seed_source"] == "concept_direction.visual_prompt"

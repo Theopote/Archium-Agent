@@ -38,6 +38,10 @@ def isolated_migration_engine(tmp_path: Path, monkeypatch) -> Iterator[Engine]:
     reset_engine_cache()
     reset_settings()
     monkeypatch.setattr("archium.config.settings.get_settings", lambda: settings)
+    monkeypatch.setattr(
+        "archium.infrastructure.database.engine.get_settings",
+        lambda: settings,
+    )
     engine = create_engine_from_settings(settings)
     monkeypatch.setattr(session_module, "get_engine", lambda: engine)
     yield engine
@@ -134,7 +138,7 @@ def test_init_database_initializes_custom_engine_when_global_is_migrated(
     reset_settings()
     monkeypatch.setattr("archium.config.settings.get_settings", lambda: global_settings)
     monkeypatch.setattr(
-        "archium.infrastructure.database.session.get_settings",
+        "archium.infrastructure.database.engine.get_settings",
         lambda: global_settings,
     )
 

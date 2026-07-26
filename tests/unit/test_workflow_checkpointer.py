@@ -58,6 +58,7 @@ def test_workflow_service_closes_checkpointer_after_run(
         assert checkpoint_path.exists()
     finally:
         service.close()
+        manager.close()
 
     checkpoint_path.unlink()
     assert not checkpoint_path.exists()

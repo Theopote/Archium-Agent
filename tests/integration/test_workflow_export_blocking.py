@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
@@ -21,6 +23,7 @@ from archium.infrastructure.llm import MockLLMProvider
 from sqlalchemy.orm import Session
 
 from tests.fixtures.mock_llm import pipeline_mock_selector
+from tests.fixtures.mock_presentation_responses import BRIEF_JSON
 
 
 @pytest.fixture
@@ -87,16 +90,25 @@ def blocking_settings(test_settings: object) -> object:
     return test_settings.model_copy(update={"block_export_on_critical_review": True})
 
 
+def _blocking_coverage_selector(request):
+    """Shared pipeline mock, but force a Brief section that slides never cover."""
+    if "生成 PresentationBrief JSON" in request.user_prompt:
+        brief = json.loads(BRIEF_JSON)
+        brief["required_sections"] = ["不存在的章节", "改造策略"]
+        return json.dumps(brief, ensure_ascii=False)
+    return pipeline_mock_selector(request)
+
+
 def test_workflow_blocks_export_on_critical_review(
     project_with_context: Project,
     request_payload: PresentationRequest,
     db_session: Session,
     blocking_settings: object,
 ) -> None:
-    mock_llm = MockLLMProvider(selector=pipeline_mock_selector)
+    mock_llm = MockLLMProvider(selector=_blocking_coverage_selector)
     service = PresentationWorkflowService(db_session, mock_llm, settings=blocking_settings)  # type: ignore[arg-type]
 
-    with pytest.raises(WorkflowError, match="必要章节未覆盖|现状分析"):
+    with pytest.raises(WorkflowError, match="必要章节未覆盖|不存在的章节"):
         service.run(
             project_with_context.id,
             request_payload,
@@ -113,4 +125,6 @@ def test_workflow_blocks_export_on_critical_review(
     assert runs
     assert runs[0].status == WorkflowStatus.FAILED
     assert runs[0].state.get("json_path") is None
-    assert any("必要章节未覆盖" in error or "现状分析" in error for error in runs[0].errors)
+    assert any(
+        "必要章节未覆盖" in error or "不存在的章节" in error for error in runs[0].errors
+    )

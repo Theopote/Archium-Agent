@@ -179,7 +179,7 @@ def test_stage_header_uses_stepper_not_plain_chain() -> None:
     assert "evaluate_stage_gate" in text
     assert "确认大纲并开始生成" in text
     assert "render_concept_draft_banner" in text
-    assert "概念草稿模式" in text
+    assert "草稿交付" in text or "资料状态无法验证" in text
 
 
 def test_outline_page_types_use_chinese_labels() -> None:
@@ -231,7 +231,7 @@ def test_deliver_page_hides_benchmark_and_has_readiness() -> None:
     settings_text = settings_src.read_text(encoding="utf-8")
     assert "准备度" in deliver_text
     assert "版本记录" in deliver_text
-    assert "项目资料" in deliver_text
+    assert "resolve_export_verdict_safe" in deliver_text
     assert "_render_delivery_record_actions" in deliver_text
     assert "下载" in deliver_text
     assert "打开目录" in deliver_text

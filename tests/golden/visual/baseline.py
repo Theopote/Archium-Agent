@@ -270,10 +270,22 @@ def compare_to_baseline(
     *,
     slides: list[SlideSpec],
     preview_paths: list[Path],
+    max_pixel_diff_ratio: float | None = None,
 ) -> list[str]:
+    import sys
+
     issues = compare_structure(baseline, slides=slides, preview_paths=preview_paths)
     if issues:
         return issues
+
+    pixel_limit = (
+        MAX_PIXEL_DIFF_RATIO
+        if max_pixel_diff_ratio is None
+        else max_pixel_diff_ratio
+    )
+    if max_pixel_diff_ratio is None and sys.platform.startswith("win"):
+        # Marp/Chromium rasterization drifts slightly across Windows GPU stacks.
+        pixel_limit = CROSS_PLATFORM_MAX_PIXEL_DIFF_RATIO
 
     case_dir = baseline_dir(baseline.case_id)
     for preview_meta, actual_path in zip(baseline.previews, preview_paths, strict=True):
@@ -286,6 +298,7 @@ def compare_to_baseline(
                 baseline_path,
                 actual_path,
                 expected_hash=preview_meta.average_hash,
+                max_pixel_diff_ratio=pixel_limit,
             )
         )
     return issues

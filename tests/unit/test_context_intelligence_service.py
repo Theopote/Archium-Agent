@@ -163,11 +163,13 @@ def test_try_execute_research_without_mission(db_session, monkeypatch) -> None:
     )
     db_session.commit()
 
+    item = MagicMock()
+    item.statement = "秦岭寺庙礼佛轴线与禅意氛围的公开研究摘要"
     fake = AutonomousResearchResult(
         project_id=project.id,
         mission_id=None,
         topics=["当地文化、礼仪与空间叙事先例"],
-        items=[MagicMock()],
+        items=[item],
         search_provider="stub",
     )
     monkeypatch.setattr(
@@ -205,11 +207,13 @@ def test_try_execute_research_runs_when_mission_exists(db_session, monkeypatch) 
     )
     db_session.commit()
 
+    item = MagicMock()
+    item.statement = "关中公共文化研究摘要"
     fake = AutonomousResearchResult(
         project_id=project.id,
         mission_id=mission.id,
         topics=["关中公共文化"],
-        items=[MagicMock()],
+        items=[item],
         search_provider="stub",
     )
     monkeypatch.setattr(

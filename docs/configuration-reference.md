@@ -47,13 +47,14 @@ Do not edit them manually.
 | `LLM_API_KEY` / `GEMINI_API_KEY` | `*(unset)*` | No | OpenAI-compatible API key (e.g. Gemini). Unset allows startup; LLM calls fail at runtime. |
 | `LLM_BASE_URL` / `GEMINI_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai/` | No | OpenAI-compatible API base URL. |
 | `LLM_MODEL` / `GEMINI_MODEL` | `gemini-2.5-flash` | No | Default chat/completion model name. |
+| `LLM_FAST_MODEL` | `gemini-2.0-flash` | No | Fast model for concept exploration when project tier=fast. |
+| `LLM_QUALITY_MODEL` | `gemini-2.5-pro` | No | High-quality model for competition / formal decks when project tier=quality. |
 | `LLM_MAX_RETRIES` | `2` | No | Maximum LLM request retries. |
 | `LLM_REPAIR_ATTEMPTS` | `2` | No | Maximum structured-output repair attempts per LLM call. |
 | `LLM_TIMEOUT_SECONDS` | `60.0` | No | LLM request timeout in seconds. |
 | `LLM_MAX_CONCURRENT_REQUESTS` | `5` | No | Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion. |
+| `LLM_TRACE_PERSIST_ENABLED` | `true` | No | Persist LLMTrace rows to the database (tokens/latency/capability only; never prompts or API keys). |
 | `SLIDE_PER_PAGE_GENERATION` | `true` | No | When true, SlidePlanService invokes the LLM once per page with SlideGenerationContext instead of one batch SlidePlan call. |
-| `PRESENTATION_COGNITION_GATE` | `warn` | No | Narrative entry gate from KnowledgeState: `off` (observe only), `warn` (default, never block), `block` (refuse when verdict is BLOCK), `auto_research` (run one RESEARCH NBA when suggested, then proceed with warnings). |
-| `DESIGN_CRITIQUE_ON_SELECT` | `warn` | No | Architectural design critique when selecting a ConceptDirection: `off` \| `warn` \| `block`. Default warn attaches `DesignCritiqueReport`; block refuses when verdict is reject. |
 
 ## Embedding {#embedding}
 
@@ -79,6 +80,9 @@ Do not edit them manually.
 | `SLIDE_RECOVERY_VLM_MODEL` | `*(unset)*` | No | Optional vision-capable model override for slide recovery VLM analysis. |
 | `SLIDE_RECOVERY_PPTX_PERCEPTUAL_ENABLED` | `true` | No | When true, rasterize PPTX slides (when tools available) and supplement structural parsing with OCR/VLM perceptual regions. |
 | `RETRIEVAL_KEYWORD_BOOST_ENABLED` | `true` | No | When true, rerank vector hits with keyword overlap (helps metrics, drawing captions, and proper nouns that pure embeddings may miss). |
+| `KNOWLEDGE_FUSION_ENABLED` | `true` | No | When assembling project context, fuse FactLedger + DocumentChunk + ProjectKnowledge (+ seed cases) into ranked KnowledgeReference hits with similarity/authority/transferability scores. |
+| `KNOWLEDGE_GRAPH_RETRIEVAL_ENABLED` | `true` | No | When true, KnowledgeFusion expands Architectural Knowledge Graph (case/tag/concept/space relations) into KnowledgeReference hits. |
+| `MULTIMODAL_RETRIEVAL_ENABLED` | `true` | No | When true, KnowledgeFusion includes multimodal (asset_caption) visual feature retrieval. Image CLIP embeddings remain optional/future. |
 | `CHUNK_CONTEXT_MAX_CHARS` | `600` | No | Maximum characters injected per retrieved chunk into LLM context. |
 | `WEB_RESEARCH_ENABLED` | `true` | No | When true, autonomous research queries the web before LLM synthesis and grounds citations in retrieved snippets. |
 | `WEB_RESEARCH_PROVIDER` | `tavily` | No | Web research provider: tavily (recommended, requires API key) or duckduckgo (no key, HTML fallback). |
@@ -86,10 +90,10 @@ Do not edit them manually.
 | `WEB_RESEARCH_MAX_RESULTS` | `5` | No | Maximum web search hits to retrieve per research topic. |
 | `WEB_RESEARCH_TIMEOUT_SECONDS` | `20.0` | No | HTTP timeout for web research search requests. |
 | `WEB_RESEARCH_AUTO_ON_CONCEPT_PLANNING` | `true` | No | When true, concept exploration planning automatically runs web research after mission generation when research topics are present. |
-| `AUTONOMOUS_RESEARCH_LOOP_ENABLED` | `true` | No | When true, autonomous research runs a bounded loop (topic → search → write → light reassess) instead of a single batch synthesis. |
+| `AUTONOMOUS_RESEARCH_LOOP_ENABLED` | `true` | No | When true, autonomous research runs a bounded loop (topic → search → write → light reassess) instead of one batch call. |
 | `AUTONOMOUS_RESEARCH_MAX_STEPS` | `3` | No | Maximum iterations of the autonomous research loop. |
-| `AUTONOMOUS_RESEARCH_TOPICS_PER_STEP` | `2` | No | Topics synthesized per loop step. |
-| `AUTONOMOUS_RESEARCH_STOP_RESEARCH_NEED` | `0.45` | No | Stop the loop early when estimated `research_need` falls to this threshold or below. |
+| `AUTONOMOUS_RESEARCH_TOPICS_PER_STEP` | `2` | No | How many research topics to synthesize per loop step. |
+| `AUTONOMOUS_RESEARCH_STOP_RESEARCH_NEED` | `0.45` | No | Stop the research loop early when estimated research_need falls to this threshold or below. |
 
 ## Document chunking {#chunking}
 
@@ -108,12 +112,13 @@ Do not edit them manually.
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
 | `FACT_EXTRACTION_ENABLED` | `true` | No | When true, extract ProjectFact records at document ingest (rule-based metrics) and after context retrieval (LLM for remaining standard facts). |
+| `PRESENTATION_COGNITION_GATE` | `warn` | No | Narrative entry cognition gate: off \| warn \| block \| auto_research. warn=attach KnowledgeState warnings; block=refuse sparse KS; auto_research=run one RESEARCH NBA when suggested then proceed. |
 
 ## review.* — Quality review & export gating {#review}
 
 | Environment variable | Default | Required at startup | Description |
 |----------------------|---------|:-------------------:|-------------|
-| `BLOCK_EXPORT_ON_CRITICAL_REVIEW` | `false` | No | When true, open CRITICAL ReviewIssue records block JSON/Marp export. |
+| `BLOCK_EXPORT_ON_CRITICAL_REVIEW` | `true` | No | When true, open CRITICAL / gate-blocking ReviewIssue records block JSON/Marp export (aligned with Studio formal export gate). |
 | `LLM_PROFESSIONAL_REVIEW_ENABLED` | `false` | No | When true and LLM is configured, run LLM-assisted review across all four layers (content/evidence/architectural/layout) and Brief semantic alignment. |
 | `VISUAL_QA_ENABLED` | `true` | No | When true and Pillow is available, run explainable image QA on matched slide assets (dimensions, margins, contrast, clipping, text density, north arrow, legend, drawing type). |
 | `VISUAL_CRITIC_ENABLED` | `true` | No | When true, run read-only Visual Critic after visual render (Visual Quality heuristics; never auto-repairs or blocks PPTX export). |
@@ -123,6 +128,9 @@ Do not edit them manually.
 | `VISUAL_PPTX_SCREENSHOTS_ENABLED` | `true` | No | When true, attempt PPTX→PNG screenshots (LibreOffice + pdftoppm) after export for Visual Critic. Soft-skips when tools are missing. |
 | `INDUCTION_SCREENSHOT_CLUSTERING_ENABLED` | `true` | No | When true, blend deterministic screenshot fingerprints into reference slide clustering when per-slide PNGs exist. |
 | `INDUCTION_SCREENSHOT_CLUSTERING_WEIGHT` | `0.35` | No | Weight of screenshot distance vs structural embedding distance. |
+| `DESIGN_CRITIQUE_ON_SELECT` | `warn` | No | Architectural design critique when selecting a ConceptDirection: off \| warn \| block. warn=attach DesignCritiqueReport; block=refuse when verdict is reject. |
+| `RESEARCH_CRITIQUE_MODE` | `warn` | No | Research Critic after autonomous research batches: off \| warn \| block. warn=attach ResearchCritiqueReport + warnings; block=mark run weak and surface blocking warnings (items still stored). |
+| `RESEARCH_CRITIQUE_LLM` | `false` | No | When true, Research Critic also calls LLM and merges with rules. Default false keeps CI/mocks deterministic (rules-only). |
 
 ## repair.* — Automated slide repair {#repair}
 
@@ -179,6 +187,7 @@ Do not edit them manually.
 | `VISION_LORA_PACKS_DIR` | `*(unset)*` | No | Optional extra directory of LoRA packs (pack.json + weights/). |
 | `VISION_COMFYUI_LORAS_DIR` | `*(unset)*` | No | ComfyUI models/loras directory for pack install (python -m archium.infrastructure.vision_gen.lora_packs install …). |
 | `IMAGE_DERIVATIVES_ENABLED` | `true` | No | When true and Pillow is available, run ImageTreatmentSpec → ImageDerivative after RenderScene compile (cache under project/cache/derivatives). Never mutates originals; never applies filters inside PptxGenJS. |
+| `RESEARCH_VISION_BRIDGE` | `true` | No | After autonomous research, map DesignKnowledge into ResearchVisionBundle seeds (spatial analysis / concept sketch / modern translation). Does not call image backends; pixels stay behind Vision Engine gates. |
 | `VISUAL_FALLBACK_ENABLED` | `true` | No | When true, export tries relaxed asset matching and programmatic diagram fallbacks. |
 | `VISUAL_FALLBACK_RELAXED_MATCHING` | `true` | No | When true, unmatched visuals may bind to the best available project asset at export time. |
 | `VISUAL_FALLBACK_RELAXED_MIN_SCORE` | `0.2` | No | Minimum score for relaxed asset fallback during export. |

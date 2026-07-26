@@ -59,9 +59,9 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
         RESOURCE_SECTION,
         SYSTEM_SECTION,
     }
-    assert len(sections[PROJECT_SECTION]) == 3
-    assert len(sections[MAKE_SECTION]) == 5
-    assert len(sections[RESOURCE_SECTION]) == 2
+    assert len(sections[PROJECT_SECTION]) == 6  # 3 visible + 3 hidden deep-links
+    assert len(sections[MAKE_SECTION]) == 6  # 5 stages + legacy studio redirect
+    assert len(sections[RESOURCE_SECTION]) == 4  # 2 visible + 2 hidden template tools
     assert len(sections[SYSTEM_SECTION]) == 1
 
     # Stage titles come from product_flow (st.Page.title needs ScriptRunContext).
@@ -92,8 +92,16 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
         with pytest.raises(KeyError, match="Unknown app page"):
             app_navigation.get_app_page(retired)
 
-    # Hidden tools must stay out of the visible sidebar sections.
-    visible_pages = {id(page) for pages in sections.values() for page in pages}
+    # Hidden tools may be registered inside sections for Streamlit routing,
+    # but must keep visibility="hidden" (not shown in the sidebar).
+    for key in hidden_page_keys():
+        assert getattr(app_navigation.get_app_page(key), "visibility", None) == "hidden"
+    visible_pages = {
+        id(page)
+        for pages in sections.values()
+        for page in pages
+        if getattr(page, "visibility", "visible") != "hidden"
+    }
     for key in hidden_page_keys():
         assert id(app_navigation.get_app_page(key)) not in visible_pages
 
@@ -107,9 +115,14 @@ def test_edit_is_product_studio_key_studio_is_legacy_hidden_only() -> None:
     assert LEGACY_STUDIO_PAGE_KEY not in primary_page_keys()
 
     sections = app_navigation.build_app_pages()
-    make_ids = {id(page) for page in sections[MAKE_SECTION]}
-    assert id(app_navigation.get_app_page(PRODUCT_STUDIO_PAGE_KEY)) in make_ids
-    assert id(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY)) not in make_ids
+    make_visible_ids = {
+        id(page)
+        for page in sections[MAKE_SECTION]
+        if getattr(page, "visibility", "visible") != "hidden"
+    }
+    assert id(app_navigation.get_app_page(PRODUCT_STUDIO_PAGE_KEY)) in make_visible_ids
+    assert id(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY)) not in make_visible_ids
+    assert getattr(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY), "visibility", None) == "hidden"
 
     # Legacy URL must redirect, not re-mount the workbench as a second product surface.
     nav_src = (
@@ -345,7 +358,7 @@ def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
     )
     text = studio_src.read_text(encoding="utf-8")
     assert "_INSPECTOR_TABS" in text
-    assert '("属性", "布局", "内容", "AI", "评论", "风格", "检查")' in text
+    assert '("属性", "布局", "内容", "修改", "评论", "风格", "检查")' in text
     assert "def _render_inspector_tabs" in text
     assert "_select_inspector_tab" in text
     assert "st.tabs(" not in text
@@ -355,8 +368,8 @@ def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
     assert "render_ai_workspace" in text
     assert "_render_bottom_dock" not in text
     assert "_render_studio_info_menus" in text
-    # Lazy panels: AI and check are gated, not both under st.tabs contexts.
-    assert 'if active == "AI":' in text
+    # Lazy panels: AI workspace lives under 修改; check is the default fallthrough.
+    assert 'if active == "修改":' in text
     assert "render_deferred_scene_repair_panel" in text
     assert "render_human_review_panel" in text
     info_start = text.index("def _render_studio_info_menus")

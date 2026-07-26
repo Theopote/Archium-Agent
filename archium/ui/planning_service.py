@@ -1134,8 +1134,6 @@ def start_presentation_from_planning(
         from archium.infrastructure.database.repositories import WorkflowRunRepository
 
         WorkflowRunRepository(session).update(run)
-        session.commit()
-
     bridge = planning.get_presentation_bridge(workflow_run_id)
     presentation_service = _create_presentation_service(session, runtime)
     result = presentation_service.run(

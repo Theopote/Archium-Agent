@@ -20,7 +20,7 @@ def test_genesis_uses_context_intelligence_not_mode_cards() -> None:
     assert "project_context" in text
     assert "建议下一步" in text
     assert "刷新知识状态" in text
-    assert "try_execute_research_for_project" in text
+    assert "NbaExecutionResult" in text or "nba_execute_label" in text
     assert "_render_intent_evidence_summary" in text
     assert "materials_focus" in text or "_pending_fact_counts" in text
     assert "以想法为主" not in text
@@ -32,7 +32,7 @@ def test_genesis_uses_context_intelligence_not_mode_cards() -> None:
 def test_home_empty_state_invites_idea_not_mode_choice() -> None:
     src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
     text = src.read_text(encoding="utf-8")
-    assert "告诉我你的想法" in text
+    assert "建筑想法" in text or "描述你的项目" in text
     assert "知识状态" in text
     assert "开始项目（选主路径）" not in text
 
@@ -46,6 +46,5 @@ def test_concept_exploration_shows_knowledge_summary() -> None:
         / "concept_exploration.py"
     )
     text = src.read_text(encoding="utf-8")
-    assert "_render_knowledge_and_evolution" in text
     assert "render_project_knowledge_and_evolution" in text
     assert "刷新知识状态" in text

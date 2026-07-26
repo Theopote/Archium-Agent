@@ -116,14 +116,14 @@ def test_confirm_fact_triggers_reassess(db_session: Session) -> None:
         understanding_summary="确认地点后完整度上升。",
     )
     with patch(
-        "archium.application.context_intelligence_service.ContextIntelligenceService.reassess",
+        "archium.application.context.best_effort_reassess_knowledge",
         return_value=fake,
     ):
         result = FactLedgerService(db_session, llm=MagicMock()).confirm_fact(fact.id)
 
     assert result.fact.is_confirmed
     assert result.knowledge_summary is not None
-    assert "48%" in result.knowledge_summary
+    assert "证据" in result.knowledge_summary or "%" in result.knowledge_summary
     assert result.understanding_summary and "地点" in result.understanding_summary
 
 

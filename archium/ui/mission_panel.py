@@ -237,12 +237,10 @@ def _render_research_knowledge_preview(project_id: UUID, *, key_prefix: str) -> 
         if cols[0].button("确认", key=f"{key_prefix}_confirm_research_{item.id}"):
             with get_session() as session:
                 ProjectKnowledgeService(session).confirm_item(item.id)
-                session.commit()
             st.rerun()
         if cols[1].button("驳回", key=f"{key_prefix}_reject_research_{item.id}"):
             with get_session() as session:
                 ProjectKnowledgeService(session).reject_item(item.id)
-                session.commit()
             st.rerun()
 
 
@@ -280,7 +278,6 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
                     create_llm_provider(settings),
                     settings=settings,
                 ).approve_mission(mission.id, note="研究写回后重新批准")
-                session.commit()
             st.success("任务理解已批准。")
             st.rerun()
         except WorkflowError as exc:
@@ -301,7 +298,6 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
                     note="研究写回后重新批准",
                     settings=settings,
                 )
-                session.commit()
             st.success("任务理解已批准，规划工作流已继续。")
             st.rerun()
         except WorkflowError as exc:
@@ -369,7 +365,6 @@ def _render_mission_revision_action(mission: ProjectMission, *, key_prefix: str)
                     settings=settings,
                 )
                 result = service.revise_mission_from_written_research(mission.id)
-                session.commit()
             st.success("已根据公开研究修订任务理解。")
             if result.needs_reapproval:
                 st.warning("任务理解审批已失效，请重新批准。")
@@ -412,7 +407,6 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
                     settings=settings,
                 )
                 result = service.enrich_mission(mission.id)
-                session.commit()
             mode = "AI 整合" if result.used_llm else "追加"
             st.success(f"已将 {result.items_enriched} 条公开研究写回任务理解（{mode}）。")
             if result.needs_reapproval:
@@ -690,7 +684,6 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
                     ),
                 )
                 result = service.research_for_mission(mission.id)
-                session.commit()
             vision_payload = []
             for bundle in getattr(result, "vision_bundles", []) or []:
                 try:
@@ -769,7 +762,6 @@ def _render_research_vision_seeds(mission: ProjectMission, *, key_prefix: str) -
                         mission_id=mission.id,
                         only_if_empty=True,
                     )
-                    session.commit()
                 if updated:
                     st.success(f"已写入 {len(updated)} 个概念方向的 visual_prompt。")
                     st.rerun()

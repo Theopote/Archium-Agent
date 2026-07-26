@@ -33,13 +33,22 @@ def test_sidebar_four_sections_exclude_legacy_tools() -> None:
         RESOURCE_SECTION,
         SYSTEM_SECTION,
     }
-    visible = {id(page) for pages in sections.values() for page in pages}
+    visible = {
+        id(page)
+        for pages in sections.values()
+        for page in pages
+        if getattr(page, "visibility", "visible") != "hidden"
+    }
     for key in hidden_page_keys():
-        assert id(app_navigation.get_app_page(key)) not in visible
+        page = app_navigation.get_app_page(key)
+        assert getattr(page, "visibility", None) == "hidden"
+        assert id(page) not in visible
     assert LEGACY_STUDIO_PAGE_KEY not in primary_page_keys()
     assert product_studio_page_key() == PRODUCT_STUDIO_PAGE_KEY
     assert id(app_navigation.get_app_page(PRODUCT_STUDIO_PAGE_KEY)) in {
-        id(page) for page in sections[MAKE_SECTION]
+        id(page)
+        for page in sections[MAKE_SECTION]
+        if getattr(page, "visibility", "visible") != "hidden"
     }
 
 

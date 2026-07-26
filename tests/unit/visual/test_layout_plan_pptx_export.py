@@ -145,23 +145,17 @@ def test_renderer_resolves_icon_refs_via_asset_context(tmp_path: Path) -> None:
     renderer = PptxGenPresentationRenderer(
         Settings(_env_file=None),
         session=MagicMock(),
+        content_ref_path_resolver=lambda _project_id, _refs: {
+            "icon:pedestrian_flow": str(icon_path),
+        },
     )
-    fake_context = MagicMock()
-    fake_context.resolved_paths = {
-        "icon:pedestrian_flow": str(icon_path),
-    }
-    with patch(
-        "archium.application.visual.asset_reference.build_asset_reference_context",
-        return_value=fake_context,
-    ) as mocked:
-        deck = renderer.build_layout_instruction_deck(
-            title="测试汇报",
-            plans=[plan],
-            design_system=design,
-            slides=[slide],
-            project_id=uuid4(),
-        )
-    mocked.assert_called_once()
+    deck = renderer.build_layout_instruction_deck(
+        title="测试汇报",
+        plans=[plan],
+        design_system=design,
+        slides=[slide],
+        project_id=uuid4(),
+    )
     elements = deck["slides"][0]["elements"]
     icon_el = next(item for item in elements if item["id"] == "metric_icon")
     # Accent recolor materializes a sibling cache file; path must still resolve.

@@ -14,7 +14,7 @@ BRIEF_JSON = """\
   "decisions_required": ["确认改造范围", "确认分期策略"],
   "audience_concerns": ["施工对运营影响"],
   "tone": "professional",
-  "required_sections": ["现状分析", "改造策略"],
+  "required_sections": ["院区现状", "改造策略"],
   "excluded_topics": [],
   "language": "zh-CN"
 }"""

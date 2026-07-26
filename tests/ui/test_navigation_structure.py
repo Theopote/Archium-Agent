@@ -37,14 +37,16 @@ def test_sidebar_has_four_product_sections() -> None:
 
 def test_make_section_uses_edit_not_legacy_studio() -> None:
     sections = app_navigation.build_app_pages()
-    make_ids = {id(page) for page in sections[MAKE_SECTION]}
+    make_pages = sections[MAKE_SECTION]
+    make_visible = [page for page in make_pages if getattr(page, "visibility", "visible") != "hidden"]
+    make_ids = {id(page) for page in make_visible}
     assert id(app_navigation.get_app_page(PRODUCT_STUDIO_PAGE_KEY)) in make_ids
     assert product_studio_page_key() == PRODUCT_STUDIO_PAGE_KEY
     assert LEGACY_STUDIO_PAGE_KEY not in primary_page_keys()
     for key in hidden_page_keys():
-        assert id(app_navigation.get_app_page(key)) not in {
-            id(page) for pages in sections.values() for page in pages
-        }
+        page = app_navigation.get_app_page(key)
+        assert getattr(page, "visibility", None) == "hidden"
+        assert id(page) not in make_ids
 
 
 def test_product_flow_pages_exist() -> None:

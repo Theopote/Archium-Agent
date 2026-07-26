@@ -62,6 +62,5 @@ def render_project_llm_tier_selector(
     if choice != current:
         with get_session() as session:
             ProjectLLMTierService(session).set_tier(project_id, choice)
-            session.commit()
         st.caption(f"已切换为「{tier_label(choice)}」。")
         st.rerun()

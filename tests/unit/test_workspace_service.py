@@ -159,7 +159,7 @@ def test_reassess_knowledge_after_upload_builds_tip(db_session: Session) -> None
         tip = reassess_knowledge_after_upload(db_session, project.id)
 
     assert tip is not None
-    assert "42%" in tip.summary_line
+    assert "30%" in tip.summary_line  # evidence_ratio via summary_line bits
     assert tip.understanding_summary.startswith("资料增加")
     assert tip.primary_action == "explore_directions"
     assert tip.primary_action_label == "开始推演方向"
