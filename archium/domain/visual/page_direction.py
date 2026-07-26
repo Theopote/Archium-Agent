@@ -14,6 +14,8 @@ from pydantic import Field
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import DensityLevel, LayoutFamily
+from archium.domain.visual.page_visual_grammar import PageVisualFormula
+from archium.domain.visual.visual_budget import VisualBudget
 from archium.domain.visual.visual_concept import VisualConcept
 from archium.domain.visual.visual_language import VisualLanguageSpec
 
@@ -77,6 +79,7 @@ class PageDirection(DomainModel):
         description="Director-derived layout bias — not architect input.",
     )
     copy_budget: CopyBudget = Field(default_factory=CopyBudget)
+    visual_budget: VisualBudget | None = None
 
     preferred_layout_families: list[LayoutFamily] = Field(default_factory=list)
     forbidden_layout_families: list[LayoutFamily] = Field(default_factory=list)
@@ -88,6 +91,7 @@ class PageDirection(DomainModel):
     situation_rule_id: str | None = None
     visual_concept: VisualConcept | None = None
     visual_language: VisualLanguageSpec | None = None
+    page_grammar: PageVisualFormula | None = None
     evidence: list[str] = Field(default_factory=list)
     source: str = Field(default="rules", min_length=1, max_length=40)
 
@@ -120,6 +124,12 @@ class PageDirection(DomainModel):
                 self.visual_language.as_dict() if self.visual_language else None
             ),
             "copy_budget": self.copy_budget.model_dump(mode="json"),
+            "visual_budget": (
+                self.visual_budget.as_dict() if self.visual_budget else None
+            ),
+            "page_grammar": (
+                self.page_grammar.as_dict() if self.page_grammar else None
+            ),
             "derived_composition_bias": [item.value for item in self.composition_bias],
             "preferred_layout_families": [
                 item.value for item in self.preferred_layout_families

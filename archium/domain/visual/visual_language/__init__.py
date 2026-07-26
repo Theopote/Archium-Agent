@@ -13,6 +13,7 @@ from archium.domain.visual.visual_language.decoration import (
     DecorationRecipe,
     DividerKind,
 )
+from archium.domain.visual.visual_language.image_mask import ImageMaskKind, ImageMaskSpec
 from archium.domain.visual.visual_language.layering import SceneLayerRole
 from archium.domain.visual.visual_language.spec import ImageBehavior, VisualLanguageSpec
 from archium.domain.visual.visual_language.symbols import (
@@ -37,6 +38,8 @@ __all__ = [
     "DecorationRecipe",
     "DividerKind",
     "ImageBehavior",
+    "ImageMaskKind",
+    "ImageMaskSpec",
     "NAMED_SWATCHES",
     "SYMBOL_GLYPHS",
     "SceneLayerRole",

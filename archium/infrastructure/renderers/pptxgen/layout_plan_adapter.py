@@ -159,6 +159,10 @@ class PptxLayoutPlanAdapter:
             instruction["stroke_width"] = element.stroke_width
         if element.layer_role:
             instruction["layer_role"] = element.layer_role
+        if element.image_mask:
+            instruction["image_mask"] = element.image_mask
+        if element.corner_radius is not None:
+            instruction["corner_radius"] = element.corner_radius
         if element.text_content is not None:
             instruction["text"] = element.text_content
         if element.content_ref:

@@ -98,32 +98,65 @@ Gamma 做漂亮通用 PPT；Archium 要做 **像有经验的建筑设计总监�
 
 ---
 
-## 3.1 Visual Language Layer（视觉修辞 v1）
+## 3.1 Visual Language Layer（视觉修辞核心）
 
 高级感来自 **视觉修辞**，不是网格对齐。Gamma 调通用组件；Archium 调 **建筑视觉词汇**。
 
 ```text
 VisualConcept
+  └─ VisualNarrative   ← 隐喻如何「动」：geometry / direction / color_roles / components
+  → VisualBudget       ← 装饰上限（防 Canva 化）
   → VisualLanguageSpec
-       typography   (TypographyRecipe: giant_bilingual / architectural_title …)
-       color_story  (语义角色 existing/conflict/future，非扁平 palette)
-       decoration   (thin_line / axis_line / section_index)
-       symbols      (ArchitecturalSymbol：circulation_flow，非 emoji)
+       typography · color_story · decoration · symbols · primitive_ids
+  → VisualPrimitive 目录（axis_line / flow_line / hero_statement …）
   → apply_visual_language_to_plan / scene
   → PPTX
 ```
 
-包路径：`archium/domain/visual/visual_language/` · 服务：`VisualLanguageService`（规则目录，无新 Agent）。
+| 模块 | 路径 | 职责 |
+|------|------|------|
+| VisualNarrative | `domain/visual/visual_narrative.py` | 完整视觉策略（非仅概念名） |
+| VisualBudget | `domain/visual/visual_budget.py` | hero_ratio / lines / icons 上限 |
+| Primitives | `domain/visual/primitives/` | 建筑零件目录（禁 emoji 图标包） |
+| Language | `domain/visual/visual_language/` | 页级修辞聚合 |
 
-Case 001 绑定：
+首批高质量 Concept（加深而非堆数量）：
 
-| 页 | Typography | Color / 装饰 |
-|----|------------|--------------|
-| 封面 | `giant_bilingual` + thin_line | climax 色角色 |
-| 设计策略 | `architectural_title` + `01 · STRATEGY` | technical_card |
-| 流线冲突 | bilingual + axis | gray/red/white + circulation_flow |
+1. **Fragment → Network**（流线冲突）— broken_lines_to_curve · converging · gray/red/white  
+2. **Existing → Transformation**（效果表达 / 改造对比）— photo + analysis line · intervention green  
+3. **Layer → System**（区位与交通）— base + overlay · layered  
+4. **Path → Experience**（流线优化）— path + nodes · sequential  
+5. **Core → Expansion**（概念生成）— radial growth · circle mask  
+6. **Quiet Argument**（结论建议）— 一句 + 留白  
 
-Dry-run 产物：`visual_language.json`。延后：ImageMask、Atmosphere、完整 SceneGraph、GraphicPrimitive 大库。
+### 3.2 页级视觉语法（Page Visual Grammar）
+
+公式 = 语义槽位 + 视觉零件（不是 LayoutFamily）：
+
+| 公式 | 语义 | 视觉零件 |
+|------|------|----------|
+| `problem_evidence_conflict` | Evidence + Conflict + Conclusion | photo · diagram · red_accent |
+| `strategy_existing_transform` | Existing + Transformation + Future | before · arrow · after |
+| `before_after_cut` | Before + Cut + After | dual image · gradient_fade |
+| `process_sequence` | Sequence + Evolution + Timeline | axis · nodes · labels |
+| `drawing_dominant` | Drawing + Annotation | drawing · callouts |
+| `hero_statement` | Statement + Hero | giant title · thin_rule |
+| `monument_image` | Monument + OneLine | full bleed · silhouette |
+| `layer_analysis` | BaseMap + Overlay + Conclusion | overlay_map |
+| `path_experience` | Path + Node + Sequence | flow_line · circulation |
+| `core_expansion` | Core + Growth + Expansion | circle_mask · radial |
+| `decision_metric` | Metric + Source | thin_rule · caption |
+| `quiet_argument` | Claim + Whitespace | short statement |
+
+实现：`domain/visual/page_visual_grammar.py` → `PageDirection.page_grammar`；Primitive 按 `visual_budget.icons` 实体化进 LayoutPlan。
+
+### 3.3 ImageMask（图片修辞）
+
+`ImageMaskSpec`（`circle` / `rounded` / `gradient_fade` / `silhouette`）挂在 `VisualLanguageSpec.image_mask`，写入 LayoutElement，pptxgen：圆裁（OVAL+图）、渐隐/剪影（底部半透明叠层）。
+
+延后：凑满 ~20 句型、Atmosphere 底纹、真实 SVG 资产包、Corpus、LLM 选型。
+
+Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `narrative` + `page_grammar` + `image_mask`。
 
 ---
 
@@ -211,8 +244,9 @@ Dry-run 产物：`visual_language.json`。延后：ImageMask、Atmosphere、完�
 - [x] 本文件作为现行 Grammar 索引（收敛 Expression Modes / Families / 页主张 / Preset）  
 - [x] `VisualConcept` 域模型 +「流线冲突」`fragment_to_network` 切片  
 - [x] Visual Language Engine v1（Typography / ColorStory / Divider）+ Case 001 封面/策略/冲突  
+- [x] Visual Rhetoric Core：VisualNarrative + VisualBudget + VisualPrimitive 目录  
 - [ ] Case 001 人工打开「流线冲突」页：先读到主张与隐喻，而非三卡片  
 - [ ] ImageCompositionPlan / ImageMask（主图+局部+分析线）— 下一刀  
 - [ ] Design Corpus 首批 ≥50 页标注  
 
-**下一步投资优先级**：Visual Language 渲染打磨 → Image Composition → Corpus；**暂停**再扩 LayoutFamily 数量与新 Agent。
+**下一步投资优先级**：Primitive → 渲染打磨 → Image Composition → Corpus；**暂停**再扩 LayoutFamily / Concept 数量与新 Agent。

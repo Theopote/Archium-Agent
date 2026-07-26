@@ -402,8 +402,25 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
     h: Number(element.h) || 1,
   };
   const path = element.path;
+  const mask = String(element.image_mask || "none");
   if (path) {
     const fitMode = element.fit_mode || (element.content_type === "drawing" ? "contain" : "cover");
+    // Circle mask: prefer oval shape filled with the image when freeform.
+    if (mask === "circle" && !placeholderName && pres.shapes?.OVAL) {
+      try {
+        page.addShape(pres.shapes.OVAL, {
+          x: rect.x,
+          y: rect.y,
+          w: rect.w,
+          h: rect.h,
+          fill: { type: "image", path },
+          line: { color: "FFFFFF", width: 0 },
+        });
+        return;
+      } catch (_err) {
+        // Fall through to rectangular image.
+      }
+    }
     /** @type {Record<string, unknown>} */
     const opts = { path };
     if (placeholderName) {
@@ -416,8 +433,28 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
       if (fitMode === "contain" || fitMode === "cover") {
         opts.sizing = { type: fitMode, w: rect.w, h: rect.h };
       }
+      if (element.opacity != null && Number(element.opacity) < 1) {
+        opts.transparency = Math.round((1 - Number(element.opacity)) * 100);
+      }
     }
     page.addImage(opts);
+    // Soft fade / silhouette: translucent panel over the lower edge.
+    if (
+      !placeholderName &&
+      (mask === "gradient_fade" || mask === "silhouette") &&
+      pres.shapes?.RECTANGLE
+    ) {
+      const fadeH = Math.max(0.2, rect.h * 0.28);
+      page.addShape(pres.shapes.RECTANGLE, {
+        x: rect.x,
+        y: rect.y + rect.h - fadeH,
+        w: rect.w,
+        h: fadeH,
+        fill: { color: "1A1A1A" },
+        line: { color: "1A1A1A", width: 0 },
+        transparency: mask === "silhouette" ? 45 : 55,
+      });
+    }
     return;
   }
 
@@ -425,8 +462,11 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
   const fill = _stripHash(colors.surface || colors.light || "F4F6F8");
   const line = _stripHash(colors.warning || colors.accent || colors.primary || "B45309");
   const muted = _stripHash(colors.muted_text || colors.muted || "666666");
+  const shapeKind =
+    mask === "circle" && pres.shapes?.OVAL ? pres.shapes.OVAL : pres.shapes.RECTANGLE;
   if (!placeholderName) {
-    page.addShape(pres.shapes.RECTANGLE, {
+    /** @type {Record<string, unknown>} */
+    const shapeOpts = {
       x: rect.x,
       y: rect.y,
       w: rect.w,
@@ -437,7 +477,11 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
         width: element.asset_unresolved ? 1.5 : 1,
         dashType: element.asset_unresolved ? "dash" : undefined,
       },
-    });
+    };
+    if (element.corner_radius != null && Number(element.corner_radius) > 0 && mask !== "circle") {
+      shapeOpts.rectRadius = Math.min(0.5, Number(element.corner_radius) / Math.max(rect.w, 0.01));
+    }
+    page.addShape(shapeKind, shapeOpts);
   }
   let label = element.content_type === "drawing" ? "图纸占位" : "图片占位";
   if (element.asset_unresolved) {
@@ -451,6 +495,11 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
     } else {
       label = "素材缺失/路径未解析";
     }
+  }
+  if (mask === "circle") {
+    label = `${label} · 圆裁`;
+  } else if (mask === "gradient_fade") {
+    label = `${label} · 渐隐`;
   }
   /** @type {Record<string, unknown>} */
   const textOpts = {

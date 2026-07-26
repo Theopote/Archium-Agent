@@ -471,10 +471,12 @@ class RenderSceneCompiler:
                 height=element.height,
                 z_index=element.z_index,
                 locked=element.locked,
+                opacity=element.opacity if element.opacity is not None else 1.0,
                 storage_uri=path or "",
                 asset_path=path or "",
                 asset_origin=origin,  # type: ignore[arg-type]
                 fit_mode=fit,  # type: ignore[arg-type]
+                corner_radius=element.corner_radius or 0.0,
                 asset_unresolved=unresolved,
                 icon_stroke_color=icon_stroke_color,
                 icon_stroke_token=icon_stroke_token,

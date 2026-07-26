@@ -93,3 +93,6 @@ def test_studio_style_tab_surfaces_art_direction() -> None:
     assert "as_page_claim" in props
     assert "视觉语言" in props
     assert "summary_caption" in props
+    assert "视觉预算" in props
+    assert "页语法" in props
+    assert "page_grammar" in props

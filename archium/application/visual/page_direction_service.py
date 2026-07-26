@@ -329,7 +329,9 @@ class PageDirectionService:
         direction = concept_service.apply(direction, concept)
         language_service = VisualLanguageService()
         language = language_service.compose(slide, direction, concept=concept)
-        return language_service.apply(direction, language)
+        return language_service.apply(
+            direction, language, concept=concept, slide=slide
+        )
 
     def apply_to_intent(
         self,

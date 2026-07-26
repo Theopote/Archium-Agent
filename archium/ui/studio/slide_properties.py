@@ -218,6 +218,16 @@ def render_slide_properties(
             language = direction.visual_language
             if language is not None:
                 st.caption(f"视觉语言：{language.summary_caption()}")
+            if direction.visual_budget is not None:
+                vb = direction.visual_budget
+                st.caption(
+                    f"视觉预算：hero≥{vb.hero_ratio:.0%} · "
+                    f"线≤{vb.decorative_lines} · 符≤{vb.icons}"
+                )
+            if direction.page_grammar is not None:
+                g = direction.page_grammar
+                slots = " + ".join(g.semantic_slots[:3])
+                st.caption(f"页语法：`{g.id.value}` · {slots}")
 
     st.markdown(f"**{entity_label('LayoutPlan', advanced=advanced)}**")
     if plan is None:

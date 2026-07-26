@@ -215,6 +215,7 @@ def build_case_001_render_bundle(
                 plan,
                 direction.visual_language,
                 page_order=slide.order,
+                visual_budget=direction.visual_budget,
             )
         plans.append(plan)
 

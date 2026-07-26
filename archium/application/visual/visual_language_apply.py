@@ -5,6 +5,7 @@ from __future__ import annotations
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, ShapeNode, TextNode
+from archium.domain.visual.visual_budget import VisualBudget
 from archium.domain.visual.visual_language import (
     NAMED_SWATCHES,
     SYMBOL_GLYPHS,
@@ -22,14 +23,20 @@ def apply_visual_language_to_plan(
     language: VisualLanguageSpec | None,
     *,
     page_order: int | None = None,
+    visual_budget: VisualBudget | None = None,
 ) -> LayoutPlan:
     """Mutate title typography and inject decoration elements (returns new plan)."""
     if language is None:
         return plan
+    budget = visual_budget or VisualBudget()
     elements = list(plan.elements)
     elements = _apply_typography(elements, language, plan=plan)
-    elements = _inject_decorations(elements, language, plan=plan, page_order=page_order)
-    elements = _inject_symbols(elements, language, plan=plan)
+    elements = _inject_decorations(
+        elements, language, plan=plan, page_order=page_order, budget=budget
+    )
+    elements = _inject_symbols(elements, language, plan=plan, budget=budget)
+    elements = _inject_primitives(elements, language, plan=plan, budget=budget)
+    elements = _apply_image_masks(elements, language)
     reading = list(plan.reading_order)
     for element in elements:
         if element.id not in reading and element.role != LayoutElementRole.DECORATION:
@@ -154,19 +161,24 @@ def _inject_decorations(
     *,
     plan: LayoutPlan,
     page_order: int | None,
+    budget: VisualBudget,
 ) -> list[LayoutElement]:
     out = list(elements)
+    if budget.decorative_lines <= 0 and not language.decoration.section_index:
+        return out
     title = next((el for el in out if el.role == LayoutElementRole.TITLE), None)
     accent = _swatch_hex(
         language.color_story,
-        prefer=("conflict", "intervention", "accent", "existing"),
+        prefer=("conflict", "intervention", "accent", "existing", "problem"),
     )
     ink = NAMED_SWATCHES.get("axis_line", "#2C2C2C")
     deco = language.decoration
+    lines_added = 0
 
-    if DecorationId.THIN_LINE in deco.decorations or deco.divider_kind is not None:
+    if (
+        DecorationId.THIN_LINE in deco.decorations or deco.divider_kind is not None
+    ) and lines_added < budget.decorative_lines:
         if title is not None and not any(el.id == "vl_thin_line" for el in out):
-            # Place under bilingual english if present.
             en = next((el for el in out if el.id == "vl_title_en"), None)
             anchor = en or title
             out.append(
@@ -185,8 +197,9 @@ def _inject_decorations(
                     layer_role=SceneLayerRole.DECORATION.value,
                 )
             )
+            lines_added += 1
 
-    if DecorationId.AXIS_LINE in deco.decorations:
+    if DecorationId.AXIS_LINE in deco.decorations and lines_added < budget.decorative_lines:
         if not any(el.id == "vl_axis_line" for el in out):
             out.append(
                 LayoutElement(
@@ -205,6 +218,7 @@ def _inject_decorations(
                     layer_role=SceneLayerRole.DECORATION.value,
                 )
             )
+            lines_added += 1
 
     if DecorationId.SECTION_LABEL_01 in deco.decorations or deco.section_index:
         if not any(el.id == "vl_section_index" for el in out):
@@ -236,17 +250,151 @@ def _inject_decorations(
     return out
 
 
+def _apply_image_masks(
+    elements: list[LayoutElement],
+    language: VisualLanguageSpec,
+) -> list[LayoutElement]:
+    """Stamp ImageMaskSpec onto hero / supporting image elements."""
+    from archium.domain.visual.visual_language.image_mask import ImageMaskKind
+
+    mask = language.image_mask
+    if mask.kind == ImageMaskKind.NONE and language.image_behavior.value == "inherit":
+        return elements
+    targets = set(mask.target_roles or ["hero_visual", "supporting_visual"])
+    out: list[LayoutElement] = []
+    for element in elements:
+        if element.content_type not in {
+            LayoutContentType.IMAGE,
+            LayoutContentType.DRAWING,
+        }:
+            out.append(element)
+            continue
+        if element.role.value not in targets:
+            out.append(element)
+            continue
+        updates: dict[str, object] = {
+            "image_mask": mask.kind.value,
+            "layer_role": SceneLayerRole.IMAGE.value,
+        }
+        if mask.kind == ImageMaskKind.CIRCLE:
+            updates["corner_radius"] = min(element.width, element.height) / 2.0
+        elif mask.kind in {ImageMaskKind.ROUNDED, ImageMaskKind.GRADIENT_FADE}:
+            updates["corner_radius"] = mask.corner_radius
+        elif mask.kind == ImageMaskKind.SILHOUETTE:
+            updates["opacity"] = max(0.55, 1.0 - mask.edge_softness * 0.35)
+            updates["corner_radius"] = mask.corner_radius
+        out.append(element.model_copy(update=updates))
+    return out
+
+
+def _inject_primitives(
+    elements: list[LayoutElement],
+    language: VisualLanguageSpec,
+    *,
+    plan: LayoutPlan,
+    budget: VisualBudget,
+) -> list[LayoutElement]:
+    """Materialize glyph/line primitives from language.primitive_ids under budget."""
+    from archium.domain.visual.primitives import PrimitiveKind, resolve_primitives
+
+    if not language.primitive_ids or budget.icons <= 0:
+        return elements
+    out = list(elements)
+    title = next((el for el in out if el.role == LayoutElementRole.TITLE), None)
+    accent = _swatch_hex(
+        language.color_story,
+        prefer=("conflict", "problem", "intervention", "accent"),
+    )
+    ink = NAMED_SWATCHES.get("axis_line", "#2C2C2C")
+    color = accent or ink
+    placed = 0
+    for prim in resolve_primitives(language.primitive_ids):
+        if placed >= budget.icons:
+            break
+        el_id = f"vl_prim_{prim.id}"
+        if any(el.id == el_id for el in out):
+            continue
+        # Lines already handled as decorations — skip thin_rule/axis when present.
+        if prim.id in {"thin_rule", "axis_line", "hero_statement", "section_index"}:
+            continue
+        if prim.kind == PrimitiveKind.LINE and prim.id == "flow_line":
+            # Horizontal flow strip near bottom.
+            out.append(
+                LayoutElement(
+                    id=el_id,
+                    role=LayoutElementRole.ANNOTATION,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=prim.glyph or "→ → →",
+                    x=(title.x if title else plan.page_width * 0.1),
+                    y=plan.page_height * 0.78,
+                    width=min(3.5, plan.page_width * 0.35),
+                    height=0.32,
+                    z_index=6,
+                    style_token="caption",
+                    font_size_override=13,
+                    letter_spacing=0.18,
+                    layer_role=SceneLayerRole.ANNOTATION.value,
+                )
+            )
+            placed += 1
+            continue
+        if prim.kind in {PrimitiveKind.SYMBOL, PrimitiveKind.DIAGRAM, PrimitiveKind.ANNOTATION}:
+            glyph = prim.glyph or prim.id
+            out.append(
+                LayoutElement(
+                    id=el_id,
+                    role=LayoutElementRole.ANNOTATION,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=glyph,
+                    x=(title.x if title else plan.page_width * 0.1) + placed * 1.15,
+                    y=plan.page_height * 0.84,
+                    width=1.0,
+                    height=0.28,
+                    z_index=6,
+                    style_token="caption",
+                    font_size_override=12,
+                    letter_spacing=0.12,
+                    layer_role=SceneLayerRole.ANNOTATION.value,
+                )
+            )
+            placed += 1
+            continue
+        if prim.kind == PrimitiveKind.DIAGRAM and prim.id == "overlay_map":
+            # Soft tint block suggesting an analysis overlay (not a photo).
+            out.append(
+                LayoutElement(
+                    id=el_id,
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=plan.page_width * 0.55,
+                    y=plan.page_height * 0.22,
+                    width=plan.page_width * 0.35,
+                    height=plan.page_height * 0.45,
+                    z_index=1,
+                    fill_color=color,
+                    stroke_color=ink,
+                    stroke_width=0.5,
+                    opacity=0.12,
+                    layer_role=SceneLayerRole.GEOMETRY.value,
+                )
+            )
+            if budget.color_blocks > 0:
+                placed += 1
+    return out
+
+
 def _inject_symbols(
     elements: list[LayoutElement],
     language: VisualLanguageSpec,
     *,
     plan: LayoutPlan,
+    budget: VisualBudget,
 ) -> list[LayoutElement]:
-    if not language.symbols:
+    if not language.symbols or budget.icons <= 0:
         return elements
     out = list(elements)
     title = next((el for el in out if el.role == LayoutElementRole.TITLE), None)
-    for index, symbol in enumerate(language.symbols[:2]):
+    for index, symbol in enumerate(language.symbols[: budget.icons]):
         el_id = f"vl_symbol_{symbol.value}"
         if any(el.id == el_id for el in out):
             continue

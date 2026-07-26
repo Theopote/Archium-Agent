@@ -65,6 +65,12 @@ class LayoutElement(DomainModel):
         default=None,
         description="SceneLayerRole hint (background/image/decoration/text).",
     )
+    # Visual Language image mask hints (executed by PPTX / scene adapters).
+    image_mask: str | None = Field(
+        default=None,
+        description="ImageMaskKind value: none/rounded/circle/gradient_fade/silhouette.",
+    )
+    corner_radius: float | None = Field(default=None, ge=0.0)
     fit_mode: ImageFit | None = None
     crop_policy: CropPolicy | None = None
     min_width: float | None = Field(default=None, gt=0)
