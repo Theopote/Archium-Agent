@@ -50,6 +50,21 @@ class LayoutElement(DomainModel):
     alignment: str = "left"
     style_token: str | None = None
     font_size_override: float | None = Field(default=None, gt=0)
+    letter_spacing: float | None = Field(
+        default=None,
+        description="Em units for title tracking (Visual Language typography).",
+    )
+    opacity: float | None = Field(default=None, ge=0.0, le=1.0)
+    fill_color: str | None = Field(
+        default=None,
+        description="Shape / decoration fill (#RRGGBB).",
+    )
+    stroke_color: str | None = Field(default=None)
+    stroke_width: float | None = Field(default=None, ge=0)
+    layer_role: str | None = Field(
+        default=None,
+        description="SceneLayerRole hint (background/image/decoration/text).",
+    )
     fit_mode: ImageFit | None = None
     crop_policy: CropPolicy | None = None
     min_width: float | None = Field(default=None, gt=0)

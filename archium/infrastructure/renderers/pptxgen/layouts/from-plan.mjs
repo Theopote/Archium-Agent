@@ -368,6 +368,13 @@ function renderTextElement(page, element, placeholderName = null) {
     align: _align(element.alignment),
     valign: element.role === "metric" ? "mid" : "top",
   };
+  if (element.letter_spacing != null && Number(element.letter_spacing) !== 0) {
+    // pptxgenjs: charSpacing is percentage of font size (approx em*100).
+    opts.charSpacing = Math.round(Number(element.letter_spacing) * 100);
+  }
+  if (element.opacity != null && Number(element.opacity) < 1) {
+    opts.transparency = Math.round((1 - Number(element.opacity)) * 100);
+  }
   if (placeholderName) {
     opts.placeholder = placeholderName;
   } else {
@@ -479,14 +486,19 @@ function renderShapeElement(pres, page, element, slideInstruction) {
     element.stroke_color || colors.border || colors.muted_text || "D9D5CF",
   );
   const lineWidth = Number(element.stroke_width) || 0;
-  page.addShape(pres.shapes.RECTANGLE, {
+  /** @type {Record<string, unknown>} */
+  const shapeOpts = {
     x: Number(element.x) || 0,
     y: Number(element.y) || 0,
     w: Number(element.w) || 1,
     h: Number(element.h) || 0.3,
     fill: { color: fill },
     line: { color: lineColor, width: lineWidth },
-  });
+  };
+  if (element.opacity != null && Number(element.opacity) < 1) {
+    shapeOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);
+  }
+  page.addShape(pres.shapes.RECTANGLE, shapeOpts);
 }
 
 /**

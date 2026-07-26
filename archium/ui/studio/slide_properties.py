@@ -215,6 +215,9 @@ def render_slide_properties(
             if direction.situation_rule_id:
                 bits.append(f"规则 `{direction.situation_rule_id}`")
             st.caption(" · ".join(bits))
+            language = direction.visual_language
+            if language is not None:
+                st.caption(f"视觉语言：{language.summary_caption()}")
 
     st.markdown(f"**{entity_label('LayoutPlan', advanced=advanced)}**")
     if plan is None:

@@ -16,6 +16,7 @@ from archium.application.visual.scene_compilers.specialized import (
     MetricCompiler,
     PhotoEvidenceGridCompiler,
 )
+from archium.domain.visual.render_scene import RenderScene
 from archium.exceptions import WorkflowError
 
 
@@ -34,12 +35,31 @@ class SceneCompilerChain:
             if not compiler.supports(context):
                 continue
             scene = compiler.compile(context)
+            scene = _apply_language_if_present(context, scene)
             return SceneCompileResult(
                 scene=scene,
                 compiler_id=compiler.compiler_id,
                 semantic_block_type=context.semantic_block_type,
             )
         raise WorkflowError("SceneCompilerChain has no supporting compiler")
+
+
+def _apply_language_if_present(
+    context: SceneCompileContext,
+    scene: RenderScene,
+) -> RenderScene:
+    """Boost title / append decorations from PageDirection.visual_language."""
+    intent = context.visual_intent
+    if intent is None or intent.page_direction is None:
+        return scene
+    language = intent.page_direction.visual_language
+    if language is None:
+        return scene
+    from archium.application.visual.visual_language_apply import (
+        apply_visual_language_to_scene,
+    )
+
+    return apply_visual_language_to_scene(scene, language)
 
 
 def default_scene_compilers(

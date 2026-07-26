@@ -421,7 +421,12 @@ class RenderSceneCompiler:
                 typography_token=typography_token,
                 alignment=element.alignment or typography.alignment,
                 line_height=typography.line_height,
-                letter_spacing=typography.letter_spacing,
+                letter_spacing=(
+                    element.letter_spacing
+                    if element.letter_spacing is not None
+                    else typography.letter_spacing
+                ),
+                opacity=element.opacity if element.opacity is not None else 1.0,
                 padding=BoxSpacing(left=4 / 96, right=4 / 96, top=2 / 96, bottom=2 / 96),
                 overflow_policy=_scene_overflow_policy(overflow_policy),
             )
@@ -525,20 +530,29 @@ class RenderSceneCompiler:
         element: LayoutElement,
         design_system: DesignSystem,
     ) -> list[ShapeNode]:
+        fill = element.fill_color or design_system.colors.resolve("surface")
+        stroke = element.stroke_color or design_system.colors.resolve("border")
+        stroke_width = (
+            element.stroke_width if element.stroke_width is not None else 1.0
+        )
+        # Thin decoration rules: no stroke, solid fill only.
+        if element.role.value == "decoration" and element.height <= 0.05:
+            stroke_width = element.stroke_width if element.stroke_width is not None else 0.0
         return [
             ShapeNode(
                 id=element.id,
-                semantic_role=element.role.value,
+                semantic_role=element.layer_role or element.role.value,
                 source_layout_element_id=element.id,
                 x=element.x,
                 y=element.y,
                 width=element.width,
                 height=element.height,
                 z_index=element.z_index,
+                opacity=element.opacity if element.opacity is not None else 1.0,
                 shape_kind="rectangle",
-                fill_color=design_system.colors.resolve("surface"),
-                stroke_color=design_system.colors.resolve("border"),
-                stroke_width=1,
+                fill_color=fill,
+                stroke_color=stroke,
+                stroke_width=stroke_width,
             )
         ]
 

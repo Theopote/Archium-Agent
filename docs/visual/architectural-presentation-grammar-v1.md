@@ -13,6 +13,7 @@
 | 整册节奏 | DeckComposition / PacingRole / VisualIntensity |
 | 页主张 | `PageDirection`（产品名）/`claim` · `emotion` · `evidence_priority` · `avoid` |
 | 页隐喻 | **`VisualConcept`**（本版新增；≠ Vision 出图 Brief） |
+| 视觉修辞 | **`VisualLanguageSpec`**（Typography / ColorStory / Decoration / Symbols） |
 | 表达模式 | Expression Modes ×10 |
 | 版式族 | LayoutFamily ×10 + generators |
 | 只读审查 | Visual Critic `screenshot_v1` / `vision_v1` |
@@ -28,6 +29,7 @@ Gamma 做漂亮通用 PPT；Archium 要做 **像有经验的建筑设计总监�
   → SlideSpec（讲什么）
   → PageDirection 页主张（claim / emotion / evidence / avoid）
   → VisualConcept（视觉隐喻 · 色故事 · 图面语言）   ← 美学关键步
+  → VisualLanguageSpec（字 / 色角色 / 装饰 / 符号） ← 视觉修辞
   → Expression Mode + LayoutFamily（结构）
   → LayoutPlan → RenderScene → PPTX
   → Critic（只读）
@@ -93,6 +95,35 @@ Gamma 做漂亮通用 PPT；Archium 要做 **像有经验的建筑设计总监�
 | `whitespace_hint` | 目标留白提示（与 Preset content_policy 取更严） |
 
 **最小切片（已实现）**：医院 Case 001「流线冲突」→ 强制 `fragment_to_network`（灰/警示红/白 · 图示优先 · 禁长文）。
+
+---
+
+## 3.1 Visual Language Layer（视觉修辞 v1）
+
+高级感来自 **视觉修辞**，不是网格对齐。Gamma 调通用组件；Archium 调 **建筑视觉词汇**。
+
+```text
+VisualConcept
+  → VisualLanguageSpec
+       typography   (TypographyRecipe: giant_bilingual / architectural_title …)
+       color_story  (语义角色 existing/conflict/future，非扁平 palette)
+       decoration   (thin_line / axis_line / section_index)
+       symbols      (ArchitecturalSymbol：circulation_flow，非 emoji)
+  → apply_visual_language_to_plan / scene
+  → PPTX
+```
+
+包路径：`archium/domain/visual/visual_language/` · 服务：`VisualLanguageService`（规则目录，无新 Agent）。
+
+Case 001 绑定：
+
+| 页 | Typography | Color / 装饰 |
+|----|------------|--------------|
+| 封面 | `giant_bilingual` + thin_line | climax 色角色 |
+| 设计策略 | `architectural_title` + `01 · STRATEGY` | technical_card |
+| 流线冲突 | bilingual + axis | gray/red/white + circulation_flow |
+
+Dry-run 产物：`visual_language.json`。延后：ImageMask、Atmosphere、完整 SceneGraph、GraphicPrimitive 大库。
 
 ---
 
@@ -170,6 +201,7 @@ Gamma 做漂亮通用 PPT；Archium 要做 **像有经验的建筑设计总监�
 | 比较页 | 两卡片 | Before/After + 空间问题 + 策略转化 |
 | 数字 | 大数字卡 | 克制指标 + 来源 |
 | 故事 | Hero 模板 | 页主张 + 隐喻 + 图纸/证据纪律 |
+| 视觉词汇 | 通用商业组件 | **建筑视觉语言**（标题修辞 · 色叙事 · 轴/流线符号） |
 | 拆页 | 通用密度 | 建筑「一页一主张」 |
 
 ---
@@ -178,8 +210,9 @@ Gamma 做漂亮通用 PPT；Archium 要做 **像有经验的建筑设计总监�
 
 - [x] 本文件作为现行 Grammar 索引（收敛 Expression Modes / Families / 页主张 / Preset）  
 - [x] `VisualConcept` 域模型 +「流线冲突」`fragment_to_network` 切片  
+- [x] Visual Language Engine v1（Typography / ColorStory / Divider）+ Case 001 封面/策略/冲突  
 - [ ] Case 001 人工打开「流线冲突」页：先读到主张与隐喻，而非三卡片  
-- [ ] ImageCompositionPlan（主图+局部+分析线）— v0.3 后 / Visual Intelligence  
+- [ ] ImageCompositionPlan / ImageMask（主图+局部+分析线）— 下一刀  
 - [ ] Design Corpus 首批 ≥50 页标注  
 
-**下一步投资优先级**：Grammar 约束落地页（本切片）→ Image Composition → Corpus；**暂停**再扩 StylePreset 数量与新 Agent。
+**下一步投资优先级**：Visual Language 渲染打磨 → Image Composition → Corpus；**暂停**再扩 LayoutFamily 数量与新 Agent。

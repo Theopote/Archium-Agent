@@ -147,6 +147,18 @@ class PptxLayoutPlanAdapter:
         }
         if element.font_size_override is not None:
             instruction["font_size_override"] = element.font_size_override
+        if element.letter_spacing is not None:
+            instruction["letter_spacing"] = element.letter_spacing
+        if element.opacity is not None:
+            instruction["opacity"] = element.opacity
+        if element.fill_color:
+            instruction["fill_color"] = element.fill_color.lstrip("#")
+        if element.stroke_color:
+            instruction["stroke_color"] = element.stroke_color.lstrip("#")
+        if element.stroke_width is not None:
+            instruction["stroke_width"] = element.stroke_width
+        if element.layer_role:
+            instruction["layer_role"] = element.layer_role
         if element.text_content is not None:
             instruction["text"] = element.text_content
         if element.content_ref:

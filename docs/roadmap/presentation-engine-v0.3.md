@@ -120,6 +120,21 @@ SlideSpec + PageArchetype + DeckDirective
 
 统一出口：`PresentationIntelligenceService` → `PresentationIntelligenceBrief`（Case 001 dry-run 写 `presentation_intelligence.json`）。Studio「汇报气质」面板先露出 Preset / 节奏 / 情绪，工程令牌收入 expander。
 
+### 产品叙事：Visual Language Engine（视觉修辞，不是新 LayoutFamily）
+
+打开 PPT 的高级感来自 **字体 / 色叙事 / 轴饰 / 建筑符号**，不是再加一个 Family。
+
+| 叙事名 | 实现锚点 |
+|--------|----------|
+| TypographyRecipe | `domain/visual/visual_language/typography.py` |
+| ColorStory（情绪角色） | `color_story.py` — existing/conflict/future |
+| Decoration / Divider | `decoration.py` + LayoutElement SHAPE |
+| ArchitecturalSymbol | `symbols.py` — circulation_flow（禁 emoji） |
+| 页级聚合 | `VisualLanguageSpec` on `PageDirection.visual_language` |
+| 落地 | `VisualLanguageService` → `apply_visual_language_to_plan` / scene |
+
+Case 001 dry-run：`visual_language.json`。正式语法见 Grammar §3.1。**下一刀**：ImageMask / Atmosphere；**不做**：堆更多 LayoutFamily、新 Agent。
+
 ---
 
 ## 3. 明确暂停（本阶段禁止）

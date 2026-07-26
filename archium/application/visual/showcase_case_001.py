@@ -205,6 +205,17 @@ def build_case_001_render_bundle(
                 variant=variant,
             ),
         )
+        direction = intent.page_direction
+        if direction is not None and direction.visual_language is not None:
+            from archium.application.visual.visual_language_apply import (
+                apply_visual_language_to_plan,
+            )
+
+            plan = apply_visual_language_to_plan(
+                plan,
+                direction.visual_language,
+                page_order=slide.order,
+            )
         plans.append(plan)
 
     return Case001RenderBundle(
@@ -280,6 +291,7 @@ def write_case_001_dry_run(
     )
 
     page_claims = []
+    visual_language_pages = []
     for slide, intent in zip(bundle.slides, bundle.intents, strict=True):
         direction = intent.page_direction
         if direction is None:
@@ -288,6 +300,14 @@ def write_case_001_dry_run(
         card["title"] = slide.title
         card["order"] = slide.order
         page_claims.append(card)
+        if direction.visual_language is not None:
+            visual_language_pages.append(
+                {
+                    "title": slide.title,
+                    "order": slide.order,
+                    "visual_language": direction.visual_language.as_dict(),
+                }
+            )
     claims_path = out / "page_claims.json"
     claims_path.write_text(
         json.dumps(
@@ -305,6 +325,24 @@ def write_case_001_dry_run(
         + "\n",
         encoding="utf-8",
     )
+    language_path = out / "visual_language.json"
+    language_path.write_text(
+        json.dumps(
+            {
+                "product_label": "视觉语言",
+                "engine": "visual_language_v1",
+                "note": (
+                    "Typography / ColorStory / Decoration / Symbols — rhetoric layer "
+                    "after VisualConcept, before Layout coordinates."
+                ),
+                "pages": visual_language_pages,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     summary = {
         "case_id": CASE_001_ID,
@@ -314,6 +352,7 @@ def write_case_001_dry_run(
         "output_dir": str(out),
         "layout_instructions": str(deck_path),
         "page_claims": str(claims_path),
+        "visual_language": str(language_path),
         "demo_tour_titles": list(DEMO_TOUR_TITLES),
         "families": [plan.layout_family.value for plan in bundle.plans],
         "page_direction_hits": intel_brief.page_direction_hits,

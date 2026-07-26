@@ -91,3 +91,5 @@ def test_studio_style_tab_surfaces_art_direction() -> None:
     props = Path("archium/ui/studio/slide_properties.py").read_text(encoding="utf-8")
     assert "页主张" in props
     assert "as_page_claim" in props
+    assert "视觉语言" in props
+    assert "summary_caption" in props

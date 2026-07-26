@@ -322,10 +322,14 @@ class PageDirectionService:
         slide: SlideSpec, direction: PageDirection
     ) -> PageDirection:
         from archium.application.visual.visual_concept_service import VisualConceptService
+        from archium.application.visual.visual_language_service import VisualLanguageService
 
-        service = VisualConceptService()
-        concept = service.recognize(slide, direction)
-        return service.apply(direction, concept)
+        concept_service = VisualConceptService()
+        concept = concept_service.recognize(slide, direction)
+        direction = concept_service.apply(direction, concept)
+        language_service = VisualLanguageService()
+        language = language_service.compose(slide, direction, concept=concept)
+        return language_service.apply(direction, language)
 
     def apply_to_intent(
         self,
