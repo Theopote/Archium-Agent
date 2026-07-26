@@ -58,8 +58,8 @@ class DesignRationaleDraft(BaseModel):
     observation / interpretation / problem / hypothesis / strategy / risks
 ```
 
-**R1 已关：** Draft↔Domain 链字段、Prompt Step→Rationale、fallback 不覆盖 LLM 链。  
-**仍开：** Critic→Revise（APP-010）、ReasoningArtifact 身份（APP-011）。
+**R1–R3 已关：** Draft↔Domain、ReasoningArtifact、Critic→Revise 原子路径。  
+**Topic 04：** 循环仍为 one-shot（无再批判 / 无人闸）— 见 [04-design-loop.md](04-design-loop.md)。
 
 ---
 
@@ -189,7 +189,7 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 |------|------|
 | 01 Domain | Rationale 嵌套双份（DOM-024）放大「无推理 SSOT」 |
 | 02 Knowledge | Case/DK 已是证据源；缺绑进 Reasoning 节点 |
-| 04 设计循环 | 本专题证明 Critic 有、Revise 无 — 04 可深挖 |
+| 04 设计循环 | 本专题证明 Critic/Revise 有、**迭代与人闸无** — 见 [04](04-design-loop.md) |
 | 06 绘画 | Visual 吃 rationale prompt block，非验证后的推理节点 |
 
 ---
