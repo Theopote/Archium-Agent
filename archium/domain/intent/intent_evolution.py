@@ -28,6 +28,7 @@ class IntentEvolutionKind(StrEnum):
     VISUAL_FEEDBACK = "visual_feedback"
     DESIGN_DECISION = "design_decision"
     REFLECTION = "reflection"
+    DIRECTION_REVISED = "direction_revised"
 
 
 def _clip(value: str | None, limit: int) -> str | None:

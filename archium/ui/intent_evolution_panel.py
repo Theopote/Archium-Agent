@@ -27,6 +27,7 @@ _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.VISUAL_FEEDBACK: "示意反馈",
     IntentEvolutionKind.DESIGN_DECISION: "设计决策",
     IntentEvolutionKind.REFLECTION: "设计反思",
+    IntentEvolutionKind.DIRECTION_REVISED: "批判修订",
 }
 
 _KS_REASON_LABELS = {

@@ -38,16 +38,32 @@ def reflection_from_critique(report: DesignCritiqueReport) -> DesignReflection:
     risks = [item.text for item in report.weaknesses[:6]]
     if report.form_only_risk:
         risks = ["形式风险偏高：论证偏形式语言"] + risks
+    if report.chain_incomplete:
+        risks = ["推理链不完整：缺 hypothesis 或 strategy"] + risks
     next_adj = [item.text for item in report.alternative_directions[:4]]
+    if report.chain_incomplete:
+        next_adj = [
+            "补全推理链 hypothesis 与 strategy（可从空间策略回填）",
+            *next_adj,
+        ]
     if report.verdict.value == "reject":
         next_adj = ["暂缓固化方向，先补证据或换路径"] + next_adj
     elif report.verdict.value == "caution":
         next_adj = ["带风险继续：先回应弱点与缺证"] + next_adj
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in next_adj:
+        key = item.strip().casefold()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item.strip()[:200])
     return DesignReflection(
         why=why[:400],
         unverified_assumptions=unverified,
-        top_risks=risks,
-        next_adjustments=next_adj,
+        top_risks=risks[:8],
+        next_adjustments=deduped[:8],
         source="critique",
     )
 

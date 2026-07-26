@@ -89,6 +89,10 @@ def test_gate_warn_mode_never_raises(monkeypatch) -> None:
         "archium.application.context.presentation_cognition_gate.evaluate_presentation_cognition",
         lambda *_a, **_k: sparse,
     )
+    monkeypatch.setattr(
+        "archium.application.context.presentation_cognition_gate._reasoning_node_warnings",
+        lambda *_a, **_k: [],
+    )
     settings = Settings(_env_file=None, presentation_cognition_gate="warn")
     result = enforce_presentation_cognition_gate(
         MagicMock(),
@@ -98,6 +102,33 @@ def test_gate_warn_mode_never_raises(monkeypatch) -> None:
     )
     assert result.blocked is False
     assert result.readiness.verdict == PresentationGateVerdict.BLOCK
+
+
+def test_gate_reasoning_warning_non_blocking(monkeypatch) -> None:
+    ready = presentation_readiness_from_context(
+        ProjectContext(
+            knowledge_state=KnowledgeState(completeness_score=0.8),
+            lifecycle_stage=ProjectLifecycleStage.DESIGN,
+            recommended_workflow=RecommendedWorkflow.DESIGN,
+            confidence=0.7,
+        )
+    )
+    monkeypatch.setattr(
+        "archium.application.context.presentation_cognition_gate.evaluate_presentation_cognition",
+        lambda *_a, **_k: ready,
+    )
+    monkeypatch.setattr(
+        "archium.application.context.presentation_cognition_gate._reasoning_node_warnings",
+        lambda *_a, **_k: ["设计推理节点尚未经批判确认（verified=false）"],
+    )
+    settings = Settings(_env_file=None, presentation_cognition_gate="warn")
+    result = enforce_presentation_cognition_gate(
+        MagicMock(),
+        uuid4(),
+        settings=settings,
+    )
+    assert result.blocked is False
+    assert any("verified" in m for m in result.messages)
 
 
 def test_gate_block_mode_raises(monkeypatch) -> None:
@@ -112,6 +143,10 @@ def test_gate_block_mode_raises(monkeypatch) -> None:
     monkeypatch.setattr(
         "archium.application.context.presentation_cognition_gate.evaluate_presentation_cognition",
         lambda *_a, **_k: sparse,
+    )
+    monkeypatch.setattr(
+        "archium.application.context.presentation_cognition_gate._reasoning_node_warnings",
+        lambda *_a, **_k: [],
     )
     settings = Settings(_env_file=None, presentation_cognition_gate="block")
     with pytest.raises(WorkflowError, match="认知门禁"):
@@ -135,6 +170,10 @@ def test_gate_block_mode_force_bypasses(monkeypatch) -> None:
     monkeypatch.setattr(
         "archium.application.context.presentation_cognition_gate.evaluate_presentation_cognition",
         lambda *_a, **_k: sparse,
+    )
+    monkeypatch.setattr(
+        "archium.application.context.presentation_cognition_gate._reasoning_node_warnings",
+        lambda *_a, **_k: [],
     )
     settings = Settings(_env_file=None, presentation_cognition_gate="block")
     result = enforce_presentation_cognition_gate(
@@ -188,6 +227,10 @@ def test_gate_auto_research_runs_nba(monkeypatch) -> None:
     monkeypatch.setattr(
         "archium.application.context.presentation_cognition_gate.evaluate_presentation_cognition",
         fake_eval,
+    )
+    monkeypatch.setattr(
+        "archium.application.context.presentation_cognition_gate._reasoning_node_warnings",
+        lambda *_a, **_k: [],
     )
     monkeypatch.setattr(
         "archium.application.context.nba_action_executor.NbaActionExecutor",

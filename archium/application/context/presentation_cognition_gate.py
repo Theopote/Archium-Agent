@@ -89,6 +89,7 @@ def enforce_presentation_cognition_gate(
 
     readiness = evaluate_presentation_cognition(session, project_id)
     messages = list(readiness.warnings)
+    messages.extend(_reasoning_node_warnings(session, project_id))
     result = PresentationCognitionGateResult(
         readiness=readiness,
         mode=mode,
@@ -166,3 +167,49 @@ def _maybe_auto_research(
     note = list(result.messages)
     result.messages = note + [w for w in refreshed.warnings if w not in note]
     return result
+
+
+def _reasoning_node_warnings(session: Session, project_id: UUID) -> list[str]:
+    """Soft warnings when selected direction lacks a verified ReasoningArtifact (R3)."""
+    try:
+        from archium.domain.enums import ConceptDirectionStatus
+        from archium.infrastructure.database.repositories import ConceptDirectionRepository
+
+        directions = ConceptDirectionRepository(session).list_by_project(project_id)
+        if not isinstance(directions, (list, tuple)):
+            return []
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("reasoning gate lookup failed: %s", exc)
+        return []
+
+    selected = None
+    for item in directions:
+        status = getattr(item, "status", None)
+        if status == ConceptDirectionStatus.SELECTED:
+            selected = item
+            break
+    if selected is None:
+        # No selected direction yet — do not nag presentation entry for exploration-only
+        return []
+
+    try:
+        from archium.application.reasoning_artifact import ensure_direction_reasoning
+
+        node = ensure_direction_reasoning(selected).reasoning
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("reasoning ensure failed for gate: %s", exc)
+        return []
+
+    if node is None or node.is_empty():
+        return [
+            "尚无已验证设计推理节点（ReasoningArtifact）；汇报将偏答案生成，建议先补全并选定经批判的方向。"
+        ]
+    if not node.is_proceedable():
+        return [
+            "当前方向推理链不完整（缺 hypothesis/strategy）；汇报入口仅警告，不阻断（Beta）。"
+        ]
+    if not node.verified:
+        return [
+            "设计推理节点尚未经批判确认（verified=false）；可继续汇报，建议先走选定/批判闭环。"
+        ]
+    return []

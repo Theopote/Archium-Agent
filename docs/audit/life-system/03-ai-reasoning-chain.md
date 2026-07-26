@@ -74,7 +74,7 @@ class DesignRationaleDraft(BaseModel):
 | DesignReflection | 派生 VO | 无表 | — | next_adjustments **未执行** |
 | ResearchRun | 遥测 |  ephemeral | Research Critic 另轨 | 否 |
 | DesignKnowledge | 研究洞察 | KnowledgeItem JSON | prompt 注入 | 软 |
-| ReasoningArtifact | **薄封装** | Direction JSON envelope | 是（reasoning_id） | 否（R3） |
+| ReasoningArtifact | **薄封装** | Direction JSON envelope | 是（reasoning_id） | 是（R3 revise + verified） |
 
 `archium/agents/` 以 Narrative/Brief planner 为主，**不**产出 observation→strategy；消费 `design_intent_block` 字符串。
 
@@ -157,11 +157,13 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 
 （关闭 `APP-011`。）
 
-### Phase R3 — Critic → Revise 闭环（产品关键）
+### Phase R3 — Critic → Revise 闭环（产品关键）✅ 2026-07-26
 
 6. `revise_direction_from_critique(report)`：写回同一 Direction 的 rationale / spatial / risks  
-7. Reflection.`next_adjustments` 变为可执行建议（一键应用或进 IntentEvolution）  
+7. Reflection.`next_adjustments` 变为可执行建议（选定路径自动应用 + IntentEvolution `DIRECTION_REVISED`）  
 8. Presentation 入口检查：无已验证 Reasoning 节点则警告（非硬挡 Beta）  
+
+（关闭 `APP-010`。）
 
 **不做：** 新 `ReasoningAgent` 类；把 ProcessBoard 并进 ProjectContext。
 
@@ -173,7 +175,7 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 |------|------|------|
 | APP-008 | P1 | ~~DesignRationaleDraft 缺链字段~~ **done (R1)** |
 | APP-009 | P1 | ~~框架映射到分散字段~~ **done (R1)** |
-| APP-010 | P1 | DesignCritique / Reflection 无 Revise：next_adjustments 不执行 |
+| APP-010 | P1 | ~~Critic/Reflection 无 Revise~~ **done (R3)** |
 | APP-011 | P2 | ~~无 ReasoningArtifact~~ **done (R2)** |
 | DOM-029 | P2 | ~~缺 interpretation~~ **done (R1)** |
 

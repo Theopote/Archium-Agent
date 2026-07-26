@@ -17,5 +17,5 @@
 | APP-007 | P2 | open | `*_safe` 会话与死代码 IconSelection (A7) | application | 噪音 | 删除或正式化 | 无未引用符号 | `-` |
 | APP-008 | P1 | done | DesignRationaleDraft 缺 observation/problem/hypothesis/strategy，与 Domain 断裂 | `concept_direction_schemas.py`; `concept_direction_mapping.py` | LLM 无法沉淀推理链；靠 fallback 合成答案 | Draft 对齐 Domain 链字段；映射写入 | 生成方向 rationale 含链字段；单测覆盖 | `-` |
 | APP-009 | P1 | done | 建筑推理框架映射到分散方向字段，未写入 Rationale 链 | `prompts/frameworks/architectural_reasoning.py`; `prompts/concept_direction.py` | 产品叙事与数据模型错位 | Step→Rationale 字段映射；方向字段作表达层 | prompt 明示链字段；抽检输出可追溯 Step | `-` |
-| APP-010 | P1 | open | DesignCritique / Reflection 无 Revise：next_adjustments 不执行 | `design_critique_service.py`; `design_reflection.py`; concept select | Critic 只挡不改 → AI 自嗨风险 | `revise_direction_from_critique`；可应用 adjustments | 批判后方向字段可更新；IntentEvolution 有边 | `-` |
+| APP-010 | P1 | done | DesignCritique / Reflection 无 Revise：next_adjustments 不执行 | `design_revise_service.py`; concept select | Critic 只挡不改 → AI 自嗨风险 | `revise_direction_from_critique`；可应用 adjustments | 批判后方向字段可更新；IntentEvolution 有边 | `-` |
 | APP-011 | P2 | done | 无 ReasoningArtifact 身份；证据 refs 未绑定单一推理节点 | `reasoning_artifact.py`; concept/mission | 推理不可版本化/追溯 | 薄封装 id+project+evidence refs（复用 Rationale） | 推理节点可按 id 取；Critic 读同一节点 | `-` |

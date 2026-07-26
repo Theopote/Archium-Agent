@@ -170,6 +170,11 @@ class ConceptDirectionService:
             design_intent=mission.design_intent,
         )
         critique_warnings = list(critique_gate.warnings)
+        direction, revise_notes = self._maybe_revise_from_critique(
+            direction,
+            critique_gate,
+        )
+        critique_warnings.extend(revise_notes)
 
         siblings = self._directions.list_by_mission(direction.mission_id)
         previous_theme = (
@@ -184,6 +189,7 @@ class ConceptDirectionService:
         selected: ConceptDirection | None = None
         for sibling in siblings:
             if sibling.id == direction.id:
+                sibling = direction
                 sibling.select()
                 sibling = ensure_direction_spatial_layer(sibling)
                 selected = sibling
@@ -383,6 +389,89 @@ class ConceptDirectionService:
             knowledge_state=knowledge_state,
             research_summaries=research_summaries,
         )
+
+    def _maybe_revise_from_critique(
+        self,
+        direction: ConceptDirection,
+        critique_gate: Any,
+    ) -> tuple[ConceptDirection, list[str]]:
+        """Apply Critic→Revise when gate left actionable gaps (Phase R3)."""
+        from archium.application.design_revise_service import (
+            mark_direction_reasoning_verified,
+            revise_direction_from_critique,
+            should_revise_from_critique,
+        )
+        from archium.domain.design_critique import DesignCritiqueVerdict
+        from archium.domain.intent.intent_evolution import (
+            IntentEvolution,
+            IntentEvolutionKind,
+        )
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        report = getattr(critique_gate, "report", None)
+        notes: list[str] = []
+        if report is None:
+            return direction, notes
+
+        if not should_revise_from_critique(report):
+            if report.verdict == DesignCritiqueVerdict.PROCEED:
+                verified = mark_direction_reasoning_verified(direction)
+                if verified.reasoning is not None and verified.reasoning.verified:
+                    if direction.reasoning is None or not direction.reasoning.verified:
+                        direction = self._directions.update(verified)
+                        notes.append("推理节点已标记为批判通过（verified）。")
+            return direction, notes
+
+        result = revise_direction_from_critique(
+            direction,
+            report,
+            known_facts=self._known_facts_for_project(direction.project_id),
+        )
+        if result.changed or result.applied:
+            direction = self._directions.update(result.direction)
+            if result.applied:
+                notes.append(
+                    "已按批判自动修订方向："
+                    + "；".join(result.applied[:6])
+                )
+            try:
+                project = ProjectRepository(self._session).get_by_id(direction.project_id)
+                if project is not None:
+                    evo = project.intent_evolution or IntentEvolution()
+                    project.intent_evolution = evo.append(
+                        IntentEvolutionKind.DIRECTION_REVISED,
+                        "批判后修订概念方向",
+                        trigger="revise_direction_from_critique",
+                        previous_summary=(direction.title or "")[:80] or None,
+                        new_summary=(
+                            (direction.design_rationale.strategy if direction.design_rationale else "")
+                            or direction.spatial_strategy
+                            or direction.title
+                        )[:80]
+                        or None,
+                        reason=(report.summary or "回应批判弱点与推理链缺口")[:500],
+                        evidence_refs=list(result.applied)[:8],
+                        design_intent_snapshot={
+                            "revise": result.as_dict(),
+                            "critique_verdict": report.verdict.value,
+                        },
+                    )
+                    if result.reflection is not None and not result.reflection.is_empty():
+                        project.intent_evolution = project.intent_evolution.append(
+                            IntentEvolutionKind.REFLECTION,
+                            result.reflection.why[:200] or "修订后设计反思",
+                            trigger="revise_reflection",
+                            reason=result.reflection.why[:400] or None,
+                            evidence_refs=list(result.reflection.next_adjustments)[:4],
+                            design_intent_snapshot={
+                                "reflection": result.reflection.as_dict()
+                            },
+                        )
+                    project.touch()
+                    ProjectRepository(self._session).update(project)
+            except Exception:
+                pass
+        return direction, notes
 
     def _require_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._missions.get_mission(mission_id)

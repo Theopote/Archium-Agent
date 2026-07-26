@@ -71,12 +71,22 @@ class ReasoningArtifact(IdentifiedModel, TimestampedModel):
     rationale: DesignRationale
     evidence_refs: ReasoningEvidenceRefs = Field(default_factory=ReasoningEvidenceRefs)
     source_direction_id: UUID | None = None
+    verified: bool = Field(
+        default=False,
+        description="True when Critic allowed proceed with a complete reasoning chain.",
+    )
 
     def is_empty(self) -> bool:
         return self.rationale.is_empty()
 
     def is_proceedable(self) -> bool:
         return self.rationale.is_proceedable_chain()
+
+    def mark_verified(self) -> ReasoningArtifact:
+        """Return a copy flagged as Critic-verified (stable id)."""
+        copy = self.model_copy(update={"verified": True})
+        copy.touch()
+        return copy
 
     def to_prompt_block(self) -> str:
         sections: list[str] = []
