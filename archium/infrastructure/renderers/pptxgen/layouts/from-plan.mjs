@@ -528,21 +528,29 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
  */
 function renderShapeElement(pres, page, element, slideInstruction) {
   const colors = slideInstruction.theme_tokens?.colors ?? {};
-  const fill = _stripHash(
-    element.fill_color || colors.surface || colors.light || "F4F6F8",
-  );
+  const hasFill = Boolean(element.fill_color);
+  const lineWidth = Number(element.stroke_width) || 0;
+  // Stroke-only shapes (e.g. Atmosphere contour rings) must not fall back to a surface fill.
+  const strokeOnly = !hasFill && lineWidth > 0;
+  const fill = strokeOnly
+    ? null
+    : _stripHash(
+        element.fill_color || colors.surface || colors.light || "F4F6F8",
+      );
   const lineColor = _stripHash(
     element.stroke_color || colors.border || colors.muted_text || "D9D5CF",
   );
-  const lineWidth = Number(element.stroke_width) || 0;
   /** @type {Record<string, unknown>} */
   const shapeOpts = {
     x: Number(element.x) || 0,
     y: Number(element.y) || 0,
     w: Number(element.w) || 1,
     h: Number(element.h) || 0.3,
-    fill: { color: fill },
-    line: { color: lineColor, width: lineWidth },
+    fill: strokeOnly ? { type: "none" } : { color: fill },
+    line: {
+      color: lineColor,
+      width: lineWidth > 0 ? lineWidth : 0,
+    },
   };
   if (element.opacity != null && Number(element.opacity) < 1) {
     shapeOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);

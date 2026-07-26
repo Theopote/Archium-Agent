@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from archium.domain.visual.visual_language.atmosphere import (
+    AtmosphereKind,
+    AtmosphereSpec,
+)
 from archium.domain.visual.visual_language.color_story import (
     NAMED_SWATCHES,
     ColorRole,
@@ -31,6 +35,8 @@ from archium.domain.visual.visual_language.typography import (
 
 __all__ = [
     "ArchitecturalSymbolId",
+    "AtmosphereKind",
+    "AtmosphereSpec",
     "CardStyle",
     "ColorRole",
     "ColorStory",

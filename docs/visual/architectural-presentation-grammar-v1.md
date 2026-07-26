@@ -154,9 +154,15 @@ VisualConcept
 
 `ImageMaskSpec`（`circle` / `rounded` / `gradient_fade` / `silhouette`）挂在 `VisualLanguageSpec.image_mask`，写入 LayoutElement，pptxgen：圆裁（OVAL+图）、渐隐/剪影（底部半透明叠层）。
 
-延后：凑满 ~20 句型、Atmosphere 底纹、真实 SVG 资产包、Corpus、LLM 选型。
+### 3.4 Atmosphere + SVG 构件
 
-Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `narrative` + `page_grammar` + `image_mask`。
+`AtmosphereSpec`（`cad_grid` / `contour` / `blueprint` / `dot_field`）挂在 `VisualLanguageSpec.atmosphere`，由页语法/隐喻选型；`apply_visual_language_to_plan` 注入 `vl_atm_*` 背景线/环/洗色（z≈0）。Contour 等描边形在 pptxgen 中按 stroke-only 渲染（不回填 surface）。
+
+Primitive → 优先 `icon:*`（`primitive_icons.py` → 仓库内 `architectural_icons` SVG），无映射时再退到字形；`PptxGenPresentationRenderer` 在无 project 时也会解析 bundled icon 路径（Case 001 dry-run / PPTX）。
+
+延后：凑满 ~20 句型、Corpus、LLM 选型、更多 SVG 资产。
+
+Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `narrative` + `page_grammar` + `image_mask` + atmosphere。
 
 ---
 
@@ -246,7 +252,8 @@ Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `n
 - [x] Visual Language Engine v1（Typography / ColorStory / Divider）+ Case 001 封面/策略/冲突  
 - [x] Visual Rhetoric Core：VisualNarrative + VisualBudget + VisualPrimitive 目录  
 - [ ] Case 001 人工打开「流线冲突」页：先读到主张与隐喻，而非三卡片  
-- [ ] ImageCompositionPlan / ImageMask（主图+局部+分析线）— 下一刀  
+- [x] ImageMask + Atmosphere + SVG primitives（Visual Language apply → pptxgen）
+- [ ] ImageCompositionPlan（主图+局部+分析线）— 下一刀  
 - [ ] Design Corpus 首批 ≥50 页标注  
 
 **下一步投资优先级**：Primitive → 渲染打磨 → Image Composition → Corpus；**暂停**再扩 LayoutFamily / Concept 数量与新 Agent。

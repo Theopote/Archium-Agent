@@ -333,8 +333,8 @@ def write_case_001_dry_run(
                 "product_label": "视觉语言",
                 "engine": "visual_language_v1",
                 "note": (
-                    "Typography / ColorStory / Decoration / Symbols — rhetoric layer "
-                    "after VisualConcept, before Layout coordinates."
+                    "Typography / ColorStory / Decoration / Symbols / Atmosphere / "
+                    "SVG primitives — rhetoric layer after VisualConcept, before Layout."
                 ),
                 "pages": visual_language_pages,
             },

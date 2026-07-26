@@ -7,6 +7,7 @@ from enum import StrEnum
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.visual.visual_language.atmosphere import AtmosphereSpec
 from archium.domain.visual.visual_language.color_story import ColorStory
 from archium.domain.visual.visual_language.decoration import DecorationRecipe
 from archium.domain.visual.visual_language.image_mask import ImageMaskSpec
@@ -27,10 +28,10 @@ class VisualLanguageSpec(DomainModel):
     color_story: ColorStory = Field(default_factory=ColorStory)
     decoration: DecorationRecipe = Field(default_factory=DecorationRecipe)
     symbols: list[ArchitecturalSymbolId] = Field(default_factory=list, max_length=6)
-    # Resolved VisualPrimitive ids (from narrative.recommended_components ∩ budget).
     primitive_ids: list[str] = Field(default_factory=list, max_length=12)
     image_behavior: ImageBehavior = ImageBehavior.INHERIT
     image_mask: ImageMaskSpec = Field(default_factory=ImageMaskSpec)
+    atmosphere: AtmosphereSpec = Field(default_factory=AtmosphereSpec)
     source: str = Field(default="rules", max_length=40)
 
     def as_dict(self) -> dict[str, object]:
@@ -42,6 +43,7 @@ class VisualLanguageSpec(DomainModel):
             "primitive_ids": list(self.primitive_ids),
             "image_behavior": self.image_behavior.value,
             "image_mask": self.image_mask.as_dict(),
+            "atmosphere": self.atmosphere.as_dict(),
             "source": self.source,
         }
 
@@ -60,4 +62,6 @@ class VisualLanguageSpec(DomainModel):
             bits.append("件 " + ",".join(self.primitive_ids[:3]))
         if self.image_mask.kind.value != "none":
             bits.append(f"罩 `{self.image_mask.kind.value}`")
+        if self.atmosphere.kind.value != "none":
+            bits.append(f"底 `{self.atmosphere.kind.value}`")
         return " · ".join(bits)

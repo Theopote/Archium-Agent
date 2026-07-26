@@ -104,6 +104,8 @@ def test_formula_primitives_materialize_on_plan() -> None:
     language = direction.visual_language
     assert language is not None
     assert "flow_line" in language.primitive_ids or "circulation" in language.primitive_ids
+    # Path-experience pages get contour atmosphere.
+    assert language.atmosphere.kind.value == "contour"
     plan = LayoutPlan(
         slide_id=slide.id,
         design_system_id=uuid4(),
@@ -134,9 +136,24 @@ def test_formula_primitives_materialize_on_plan() -> None:
         visual_budget=direction.visual_budget,
     )
     ids = {el.id for el in updated.elements}
+    assert any(i.startswith("vl_atm_") for i in ids)
     assert any(i.startswith("vl_prim_") for i in ids) or any(
         i.startswith("vl_symbol_") for i in ids
     )
+    prim = next(
+        (el for el in updated.elements if el.id.startswith("vl_prim_")),
+        None,
+    )
+    if prim is not None and prim.content_type == LayoutContentType.IMAGE:
+        assert prim.content_ref and prim.content_ref.startswith("icon:")
+
+
+def test_site_layer_gets_cad_grid_atmosphere() -> None:
+    slide = _slide("区位与交通", "城市界面与急诊入口的交通压力集中在北侧。")
+    direction = PageDirectionService().direct(slide)
+    assert direction.visual_language is not None
+    assert direction.visual_language.atmosphere.kind.value == "cad_grid"
+    assert "底 `cad_grid`" in direction.visual_language.summary_caption()
 
 
 def test_select_page_formula_problem_emotion() -> None:

@@ -31,6 +31,7 @@ def apply_visual_language_to_plan(
     budget = visual_budget or VisualBudget()
     elements = list(plan.elements)
     elements = _apply_typography(elements, language, plan=plan)
+    elements = _inject_atmosphere(elements, language, plan=plan, budget=budget)
     elements = _inject_decorations(
         elements, language, plan=plan, page_order=page_order, budget=budget
     )
@@ -287,6 +288,164 @@ def _apply_image_masks(
     return out
 
 
+def _inject_atmosphere(
+    elements: list[LayoutElement],
+    language: VisualLanguageSpec,
+    *,
+    plan: LayoutPlan,
+    budget: VisualBudget,
+) -> list[LayoutElement]:
+    """Emit CAD grid / contour / blueprint accents behind content (z≈0)."""
+    from archium.domain.visual.visual_language.atmosphere import AtmosphereKind
+
+    atm = language.atmosphere
+    if atm.kind == AtmosphereKind.NONE:
+        return elements
+    out = list(elements)
+    if any(el.id.startswith("vl_atm_") for el in out):
+        return out
+    stroke = NAMED_SWATCHES.get(atm.stroke_swatch, NAMED_SWATCHES.get("axis_line", "#2C2C2C"))
+    opacity = atm.opacity
+    # Cap line count with decoration budget (+2 for atmosphere soft allowance).
+    density = min(atm.density, max(2, budget.decorative_lines + 4))
+    margin_x = plan.page_width * 0.06
+    margin_y = plan.page_height * 0.1
+    usable_w = plan.page_width - 2 * margin_x
+    usable_h = plan.page_height - 2 * margin_y
+
+    if atm.kind == AtmosphereKind.CAD_GRID:
+        cols = max(2, density)
+        rows = max(2, density - 1)
+        for i in range(cols + 1):
+            x = margin_x + usable_w * (i / cols)
+            out.append(
+                LayoutElement(
+                    id=f"vl_atm_v_{i}",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=x,
+                    y=margin_y,
+                    width=0.01,
+                    height=usable_h,
+                    z_index=0,
+                    fill_color=stroke,
+                    stroke_color=stroke,
+                    stroke_width=0,
+                    opacity=opacity,
+                    layer_role=SceneLayerRole.BACKGROUND.value,
+                )
+            )
+        for j in range(rows + 1):
+            y = margin_y + usable_h * (j / rows)
+            out.append(
+                LayoutElement(
+                    id=f"vl_atm_h_{j}",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=margin_x,
+                    y=y,
+                    width=usable_w,
+                    height=0.01,
+                    z_index=0,
+                    fill_color=stroke,
+                    stroke_color=stroke,
+                    stroke_width=0,
+                    opacity=opacity,
+                    layer_role=SceneLayerRole.BACKGROUND.value,
+                )
+            )
+        return out
+
+    if atm.kind == AtmosphereKind.CONTOUR:
+        for i in range(density):
+            t = (i + 1) / (density + 1)
+            out.append(
+                LayoutElement(
+                    id=f"vl_atm_contour_{i}",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=margin_x + usable_w * (0.5 - t / 2),
+                    y=margin_y + usable_h * (0.5 - t / 2),
+                    width=max(0.4, usable_w * t),
+                    height=max(0.3, usable_h * t),
+                    z_index=0,
+                    fill_color=None,
+                    stroke_color=stroke,
+                    stroke_width=0.75,
+                    opacity=opacity + 0.05 * (1 - t),
+                    layer_role=SceneLayerRole.BACKGROUND.value,
+                )
+            )
+        return out
+
+    if atm.kind == AtmosphereKind.BLUEPRINT:
+        out.append(
+            LayoutElement(
+                id="vl_atm_blueprint_wash",
+                role=LayoutElementRole.DECORATION,
+                content_type=LayoutContentType.SHAPE,
+                x=0,
+                y=0,
+                width=plan.page_width,
+                height=plan.page_height,
+                z_index=0,
+                fill_color="#E8EEF5",
+                stroke_color="#E8EEF5",
+                stroke_width=0,
+                opacity=min(0.35, opacity * 2.5),
+                layer_role=SceneLayerRole.BACKGROUND.value,
+            )
+        )
+        # Light horizontal rules like a drafting sheet.
+        for j in range(min(density, 6)):
+            y = margin_y + usable_h * ((j + 1) / (min(density, 6) + 1))
+            out.append(
+                LayoutElement(
+                    id=f"vl_atm_bp_h_{j}",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=margin_x,
+                    y=y,
+                    width=usable_w,
+                    height=0.008,
+                    z_index=0,
+                    fill_color=stroke,
+                    stroke_color=stroke,
+                    stroke_width=0,
+                    opacity=opacity,
+                    layer_role=SceneLayerRole.BACKGROUND.value,
+                )
+            )
+        return out
+
+    if atm.kind == AtmosphereKind.DOT_FIELD:
+        # Sparse dots as tiny squares (SVG-less, deterministic).
+        cols = density
+        rows = max(2, density - 2)
+        for i in range(cols):
+            for j in range(rows):
+                out.append(
+                    LayoutElement(
+                        id=f"vl_atm_dot_{i}_{j}",
+                        role=LayoutElementRole.DECORATION,
+                        content_type=LayoutContentType.SHAPE,
+                        x=margin_x + usable_w * ((i + 0.5) / cols),
+                        y=margin_y + usable_h * ((j + 0.5) / rows),
+                        width=0.04,
+                        height=0.04,
+                        z_index=0,
+                        fill_color=stroke,
+                        stroke_color=stroke,
+                        stroke_width=0,
+                        opacity=opacity,
+                        layer_role=SceneLayerRole.BACKGROUND.value,
+                    )
+                )
+        return out
+
+    return out
+
+
 def _inject_primitives(
     elements: list[LayoutElement],
     language: VisualLanguageSpec,
@@ -294,8 +453,11 @@ def _inject_primitives(
     plan: LayoutPlan,
     budget: VisualBudget,
 ) -> list[LayoutElement]:
-    """Materialize glyph/line primitives from language.primitive_ids under budget."""
+    """Materialize primitives — prefer bundled SVG icon refs over text glyphs."""
     from archium.domain.visual.primitives import PrimitiveKind, resolve_primitives
+    from archium.domain.visual.visual_language.primitive_icons import (
+        icon_ref_for_primitive,
+    )
 
     if not language.primitive_ids or budget.icons <= 0:
         return elements
@@ -314,11 +476,32 @@ def _inject_primitives(
         el_id = f"vl_prim_{prim.id}"
         if any(el.id == el_id for el in out):
             continue
-        # Lines already handled as decorations — skip thin_rule/axis when present.
         if prim.id in {"thin_rule", "axis_line", "hero_statement", "section_index"}:
             continue
+        icon_ref = icon_ref_for_primitive(prim.id)
+        if icon_ref and prim.kind in {
+            PrimitiveKind.SYMBOL,
+            PrimitiveKind.DIAGRAM,
+            PrimitiveKind.LINE,
+            PrimitiveKind.ANNOTATION,
+        }:
+            out.append(
+                LayoutElement(
+                    id=el_id,
+                    role=LayoutElementRole.ANNOTATION,
+                    content_type=LayoutContentType.IMAGE,
+                    content_ref=icon_ref,
+                    x=(title.x if title else plan.page_width * 0.1) + placed * 0.85,
+                    y=plan.page_height * 0.82,
+                    width=0.55,
+                    height=0.55,
+                    z_index=6,
+                    layer_role=SceneLayerRole.ANNOTATION.value,
+                )
+            )
+            placed += 1
+            continue
         if prim.kind == PrimitiveKind.LINE and prim.id == "flow_line":
-            # Horizontal flow strip near bottom.
             out.append(
                 LayoutElement(
                     id=el_id,
@@ -338,7 +521,11 @@ def _inject_primitives(
             )
             placed += 1
             continue
-        if prim.kind in {PrimitiveKind.SYMBOL, PrimitiveKind.DIAGRAM, PrimitiveKind.ANNOTATION}:
+        if prim.kind in {
+            PrimitiveKind.SYMBOL,
+            PrimitiveKind.DIAGRAM,
+            PrimitiveKind.ANNOTATION,
+        }:
             glyph = prim.glyph or prim.id
             out.append(
                 LayoutElement(
@@ -360,7 +547,6 @@ def _inject_primitives(
             placed += 1
             continue
         if prim.kind == PrimitiveKind.DIAGRAM and prim.id == "overlay_map":
-            # Soft tint block suggesting an analysis overlay (not a photo).
             out.append(
                 LayoutElement(
                     id=el_id,

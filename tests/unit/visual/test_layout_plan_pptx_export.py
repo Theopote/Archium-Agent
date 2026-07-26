@@ -163,6 +163,36 @@ def test_renderer_resolves_icon_refs_via_asset_context(tmp_path: Path) -> None:
     assert Path(icon_el["path"]).suffix.lower() == ".svg"
 
 
+def test_renderer_resolves_bundled_icons_without_project() -> None:
+    """Case 001 / dry-run: icon:* resolves from architectural_icons pack."""
+    design = default_presentation_design_system()
+    plan = _sample_plan(design.id)
+    plan.elements.append(
+        LayoutElement(
+            id="vl_prim_circulation",
+            role=LayoutElementRole.ANNOTATION,
+            content_type=LayoutContentType.IMAGE,
+            content_ref="icon:pedestrian_flow",
+            x=0.7,
+            y=2.8,
+            width=0.55,
+            height=0.55,
+        )
+    )
+    renderer = PptxGenPresentationRenderer(Settings(_env_file=None))
+    deck = renderer.build_layout_instruction_deck(
+        title="Showcase",
+        plans=[plan],
+        design_system=design,
+    )
+    icon_el = next(
+        item for item in deck["slides"][0]["elements"] if item["id"] == "vl_prim_circulation"
+    )
+    assert "path" in icon_el
+    assert Path(icon_el["path"]).is_file()
+    assert Path(icon_el["path"]).suffix.lower() == ".svg"
+
+
 def test_cli_render_layout_instructions_invokes_render_plan(tmp_path: Path) -> None:
     deck_path = tmp_path / "presentation.layout_instructions.json"
     deck_path.write_text('{"title":"T","slides":[]}', encoding="utf-8")

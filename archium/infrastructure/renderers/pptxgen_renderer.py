@@ -220,6 +220,9 @@ class PptxGenPresentationRenderer:
                 ).items():
                     asset_paths.setdefault(ref, resolved_path)
 
+        # Bundled architectural icons resolve without a project (Case 001 / dry-run).
+        self._resolve_bundled_icon_refs(plans, asset_paths)
+
         adapter = PptxLayoutPlanAdapter()
         packed: list[tuple[LayoutPlan, DesignSystem, SlideContentBundle | None]] = []
         for index, plan in enumerate(plans, start=1):
@@ -280,6 +283,40 @@ class PptxGenPresentationRenderer:
             content_refs=content_refs,
         )
         return self.export_pptx_from_layout_instructions(deck, output_dir=output_dir)
+
+    @staticmethod
+    def _resolve_bundled_icon_refs(
+        plans: list[LayoutPlan],
+        asset_paths: dict[str, str],
+    ) -> None:
+        """Resolve ``icon:*`` content_refs from the curated SVG pack (no project)."""
+        pending: list[str] = []
+        for plan in plans:
+            for element in plan.elements:
+                ref = element.content_ref
+                if (
+                    ref
+                    and ref.startswith("icon:")
+                    and ref not in asset_paths
+                ):
+                    pending.append(ref)
+        if not pending:
+            return
+        from archium.application.visual.architectural_icon_registry import (
+            load_default_architectural_icon_registry,
+        )
+
+        registry = load_default_architectural_icon_registry()
+        for ref in dict.fromkeys(pending):
+            icon_key = ref.split(":", 1)[1].strip()
+            if not icon_key:
+                continue
+            icon = registry.get_by_name(icon_key)
+            if icon is None:
+                continue
+            svg_path = registry.resolve_svg_path(icon)
+            if svg_path.is_file():
+                asset_paths[ref] = str(svg_path.resolve())
 
     def _resolve_asset_paths(
         self,
