@@ -26,6 +26,7 @@ from archium.domain.knowledge_graph import (
     KnowledgeRelationKind,
 )
 from archium.domain.outline import OutlinePlan
+from archium.domain.organization import Organization
 from archium.domain.outline_approval_record import OutlineApprovalRecord
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -56,6 +57,7 @@ from archium.infrastructure.database.models import (
     ExplorationSessionORM,
     KnowledgeGraphEdgeORM,
     LLMTraceORM,
+    OrganizationORM,
     OutlineApprovalRecordORM,
     OutlinePlanORM,
     PlanningSessionORM,
@@ -120,6 +122,25 @@ class ProjectRepository:
         if status is not None:
             stmt = stmt.where(ProjectORM.status == status.value)
         elif not include_hidden:
+            stmt = stmt.where(
+                ProjectORM.status.not_in(
+                    (ProjectStatus.DELETING.value, ProjectStatus.DELETED.value)
+                )
+            )
+        return [mappers.project_to_domain(row) for row in self._session.scalars(stmt)]
+
+    def list_by_organization(
+        self,
+        organization_id: UUID,
+        *,
+        include_hidden: bool = False,
+    ) -> list[Project]:
+        stmt = (
+            select(ProjectORM)
+            .where(ProjectORM.organization_id == organization_id)
+            .order_by(ProjectORM.updated_at.desc())
+        )
+        if not include_hidden:
             stmt = stmt.where(
                 ProjectORM.status.not_in(
                     (ProjectStatus.DELETING.value, ProjectStatus.DELETED.value)

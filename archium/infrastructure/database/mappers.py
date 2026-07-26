@@ -80,6 +80,7 @@ from archium.domain.presentation import (
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
 from archium.domain.project_architecture_case import ProjectArchitectureCase
+from archium.domain.organization import Organization
 from archium.domain.project_event import ProjectEvent
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.reference_style import (
@@ -112,6 +113,7 @@ from archium.infrastructure.database.models import (
     ExplorationSessionORM,
     KnowledgeGraphEdgeORM,
     LLMTraceORM,
+    OrganizationORM,
     OutlineApprovalRecordORM,
     OutlinePlanORM,
     PlanningSessionORM,
@@ -216,6 +218,7 @@ def project_to_domain(orm: ProjectORM) -> Project:
         client=orm.client,
         status=ProjectStatus(orm.status),
         origin_mode=ProjectOriginMode(getattr(orm, "origin_mode", "existing_project")),
+        organization_id=getattr(orm, "organization_id", None),
         knowledge_state=knowledge,
         knowledge_state_history=history,
         intent_evolution=evolution,
@@ -235,6 +238,7 @@ def project_to_orm(domain: Project, orm: ProjectORM | None = None) -> ProjectORM
     target.client = domain.client
     target.status = domain.status.value
     target.origin_mode = domain.origin_mode.value
+    target.organization_id = domain.organization_id
     target.knowledge_state_json = (
         domain.knowledge_state.model_dump(mode="json") if domain.knowledge_state else None
     )
@@ -242,6 +246,31 @@ def project_to_orm(domain: Project, orm: ProjectORM | None = None) -> ProjectORM
         mode="json"
     )
     target.intent_evolution_json = domain.intent_evolution.model_dump(mode="json")
+    target.created_at = domain.created_at
+    target.updated_at = domain.updated_at
+    return target
+
+
+def organization_to_domain(orm: OrganizationORM) -> Organization:
+    return Organization(
+        id=orm.id,
+        name=orm.name,
+        slug=orm.slug,
+        display_name=orm.display_name or "",
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def organization_to_orm(
+    domain: Organization,
+    orm: OrganizationORM | None = None,
+) -> OrganizationORM:
+    target = orm or OrganizationORM(id=domain.id)
+    target.name = domain.name.strip()
+    slug = (domain.slug or "").strip() or None
+    target.slug = slug[:80] if slug else None
+    target.display_name = (domain.display_name or "").strip()[:300]
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

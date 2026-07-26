@@ -23,6 +23,21 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from archium.infrastructure.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, utc_now
 
 
+class OrganizationORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Thin tenant / firm root (DOM-032)."""
+
+    __tablename__ = "organizations"
+    __table_args__ = (
+        Index("ix_organizations_slug", "slug", unique=True),
+    )
+
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    slug: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    display_name: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+
+    projects: Mapped[list[ProjectORM]] = relationship(back_populates="organization")
+
+
 class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "projects"
 
@@ -37,6 +52,12 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     origin_mode: Mapped[str] = mapped_column(
         String(50), nullable=False, default="existing_project"
     )
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     knowledge_state_json: Mapped[dict[str, object] | None] = mapped_column(
         "knowledge_state", JSON, nullable=True
     )
@@ -50,6 +71,7 @@ class ProjectORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     current_renovation_issue_map_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_reference_style_profile_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
 
+    organization: Mapped[OrganizationORM | None] = relationship(back_populates="projects")
     documents: Mapped[list[SourceDocumentORM]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",

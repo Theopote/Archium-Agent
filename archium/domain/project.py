@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import Field
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
@@ -23,6 +25,10 @@ class Project(IdentifiedModel, TimestampedModel):
     client: str | None = None
     status: ProjectStatus = ProjectStatus.ACTIVE
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT
+    organization_id: UUID | None = Field(
+        default=None,
+        description="Optional tenant root (DOM-032); null = local / unscoped.",
+    )
     knowledge_state: KnowledgeState | None = None
     knowledge_state_history: KnowledgeStateHistory = Field(
         default_factory=KnowledgeStateHistory

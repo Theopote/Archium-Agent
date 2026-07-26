@@ -51,6 +51,7 @@ class ProjectManagementService:
         *,
         origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
         actor_id: str | None = None,
+        organization_id: UUID | None = None,
     ) -> Project:
         cleaned_name = name.strip()
         if not cleaned_name:
@@ -62,11 +63,20 @@ class ProjectManagementService:
 
         from archium.domain.access import LOCAL_ACTOR_ID
 
+        if organization_id is not None:
+            from archium.infrastructure.database.organization_repository import (
+                OrganizationRepository,
+            )
+
+            if OrganizationRepository(self._session).get(organization_id) is None:
+                raise ValidationError(f"组织 {organization_id} 不存在")
+
         resolved = (actor_id or LOCAL_ACTOR_ID).strip() or LOCAL_ACTOR_ID
         project = Project(
             name=cleaned_name,
             description=cleaned_description,
             origin_mode=origin_mode,
+            organization_id=organization_id,
         )
         created = self._projects.create(project, actor_id=resolved)
         # APP-003: use-case boundary owns commit (UI must not).
