@@ -12,7 +12,7 @@
 
 **设计循环 L1–L3 已闭合（再批判 / Ask·Apply / 修订代际）；Research Critic block 语义仍欠。**
 
-Create → Critique → Ask/Apply → Revise(vN) → Re-Critique → Select，带 `parent_reasoning_id` 与 Mission `DESIGN_CRITIQUE` 边。Ask pending 充当人闸 interrupt。仍开：`APP-016`。
+Create → Critique → Ask/Apply → Revise(vN) → Re-Critique → Select，带 `parent_reasoning_id` 与 Mission `DESIGN_CRITIQUE` 边。Ask pending 充当人闸 interrupt。Research Critic block（APP-016）已关。
 
 ---
 
@@ -178,7 +178,7 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 | APP-013 | P1 | ~~自动修订无人工确认~~ **done (L2)** |
 | APP-014 | P2 | ~~Reflection UI 无 Apply/Reject~~ **done (L2)** |
 | APP-015 | P2 | ~~Mission 无 DESIGN_CRITIQUE 边~~ **done (L3)** |
-| APP-016 | P2 | Research Critic `block` 不拒绝落库 / 不挡概念硬化 |
+| APP-016 | P2 | ~~Research Critic `block`~~ **done** |
 | DOM-030 | P2 | ~~缺修订身份~~ **done (L3)** |
 | WF-009 | P2 | ~~非一等图 interrupt~~ **done (L3：Ask=人闸)** |
 | DOM-024 | P1 | （已有）Direction↔Intent 双份；revise-then-commit 放大漂移 |

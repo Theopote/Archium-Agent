@@ -23,7 +23,7 @@
 | APP-013 | P1 | done | 选定路径自动修订无人工确认 | `design_loop.py`; `design_revise_ask_panel.py` | 相对 Critic 只读契约的静默改方向 | `DESIGN_REVISE_ON_SELECT=off\|auto\|ask`；ask 出示 diff | 默认 ask；Apply/Reject 可选定 | `-` |
 | APP-014 | P2 | done | Reflection next_adjustments UI 无 Apply/Reject | `design_revise_ask_panel.py`; reflection 预览 | 调整项只展示不执行 | Ask 面板展示 adjustments + Apply/Reject | Apply 后方向字段变；Reject 记边 | `-` |
 | APP-015 | P2 | done | Mission select 不写 DESIGN_CRITIQUE IntentEvolution 边 | `concept_direction_service.select_direction` | 探索/Mission 历史不对称 | 与 exploration 对齐写 DESIGN_CRITIQUE | Mission 选定有 DESIGN_CRITIQUE 边 | `-` |
-| APP-016 | P2 | open | Research Critic block 不拒绝落库/不挡概念硬化 | `research_critique_service.py`; autonomous research | 「block」名不副实 | block 拒写或拒绝进入 Design Critic 摘要 | block 下弱研究不可硬化 | `-` |
+| APP-016 | P2 | done | Research Critic block 不拒绝落库/不挡概念硬化 | `autonomous_research_service._attach_research_critique` | 「block」名不副实 | WEAK+block → reject items + WorkflowError | block 下弱研究不可硬化 | `-` |
 | APP-017 | P1 | done | 多模态检索默认 ILLUSTRATIVE；项目素材未进 EVIDENCE | `multimodal_retrieval.py`; life-system 05 | 设计通道看不到现场证据 | PROJECT_MATERIAL photo/drawing → EVIDENCE | 检索 usage=evidence；生成图仍 illustrative | `-` |
 | APP-018 | P1 | done | ProjectContext.input_sources 无类型化视觉证据摘要 | `context_evidence.py`; composer | 认知面看不见 site_photo/drawing | gather + compose 写入 site_photo:N 等 | Context.input_sources 含视觉行 | `-` |
 | APP-019 | P2 | done | 草图/现场图未种子化 IdeaSeed/Direction | `visual_idea_seed.py`; upload hook | 多模态停在 RAG | 弱种子 enrich=False；不自动推演/选定 | 上传现场图可开探索；无 SELECTED | `-` |
@@ -31,3 +31,5 @@
 | APP-021 | P2 | done | IFC/CAD 文本语义未写入 ProjectFact | `cad_spatial_fact_materializer.py`; ifc_text_semantics | 空间计数停在 chunk 散文 | floors/constraints/main_function 白名单落账 | IFC 导入有 floors；可测 | `-` |
 | APP-022 | P2 | done | DOCUMENT_ANALYZE 完成不回写文档/事实 | `background_job_worker.py` | 异步分析对世界模型无效 | 合并 metadata + materialize facts | job 后 doc 有 parse_depth；有事实 | `-` |
 | APP-023 | P2 | done | 视觉证据包缺 CAD/BIM 文档门面 | `visual_evidence_service`; architectural_asset_from_document | Context 不见 cad_bim:N | 文档级 facade 入 pack | input_sources 含 cad_bim | `-` |
+| APP-024 | P1 | done | Direction/Brief→ImageRequest 缺 seed_source | `vision_generation.ImageRequest`; concept/brief/suggester seeds | 页意图来源不可追溯 | seed_source 字段 + 方向优先 | 方向种子可测；示意策略不变 | `-` |
+| APP-025 | P2 | open | 册级 illustrative hero 风格无共享锁 | Vision Engine / ArtDirection | 跨页插图漂移 | P2：共享 style/DNA | 非证据页可共享锁 | `-` |

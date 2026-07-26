@@ -54,6 +54,7 @@ def image_request_from_visual_concept_brief(brief: VisualConceptBrief) -> ImageR
         avoid=list(brief.avoid),
         asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
         mode=VisionGenerationMode.TEXT_TO_IMAGE,
+        seed_source="brief",
     )
 
 

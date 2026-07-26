@@ -48,6 +48,7 @@ def suggest_image_request_for_slide(
             elements=elements,
             asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             mode=VisionGenerationMode.TEXT_TO_IMAGE,
+            seed_source="suggester",
         )
     if archetype == PageArchetype.SITE_CONTEXT_ANALYSIS:
         return ImageRequest(
@@ -58,6 +59,7 @@ def suggest_image_request_for_slide(
             elements=elements or ["site boundary", "access points"],
             asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             mode=VisionGenerationMode.TEXT_TO_IMAGE,
+            seed_source="suggester",
         )
     if archetype == PageArchetype.DESIGN_STRATEGY:
         return ImageRequest(
@@ -68,6 +70,7 @@ def suggest_image_request_for_slide(
             elements=elements or ["primary path", "strategy highlight"],
             asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             mode=VisionGenerationMode.TEXT_TO_IMAGE,
+            seed_source="suggester",
         )
     if archetype == PageArchetype.BEFORE_AFTER_TRANSFORMATION:
         return ImageRequest(
@@ -78,6 +81,7 @@ def suggest_image_request_for_slide(
             elements=elements or ["before cue", "after cue"],
             asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             mode=VisionGenerationMode.TEXT_TO_IMAGE,
+            seed_source="suggester",
         )
     # GENERIC / unknown: only suggest when the slide already leans diagrammatic.
     title_blob = f"{slide.title or ''} {slide.message or ''}".lower()
@@ -90,5 +94,6 @@ def suggest_image_request_for_slide(
             elements=elements,
             asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             mode=VisionGenerationMode.TEXT_TO_IMAGE,
+            seed_source="suggester",
         )
     return None

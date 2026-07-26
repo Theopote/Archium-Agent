@@ -611,8 +611,8 @@ class Settings(BaseSettings):
         default="warn",
         description=(
             "Research Critic after autonomous research batches: "
-            "off | warn | block. warn=attach ResearchCritiqueReport + warnings; "
-            "block=mark run weak and surface blocking warnings (items still stored)."
+            "off | warn | block. warn=attach ResearchCritiqueReport + warnings (items kept); "
+            "block=on WEAK reject persisted items and raise WorkflowError (no hardening)."
         ),
     )
     research_critique_llm: bool = Field(

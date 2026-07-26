@@ -132,7 +132,7 @@ Do not edit them manually.
 | `INDUCTION_SCREENSHOT_CLUSTERING_WEIGHT` | `0.35` | No | Weight of screenshot distance vs structural embedding distance. |
 | `DESIGN_CRITIQUE_ON_SELECT` | `warn` | No | Architectural design critique when selecting a ConceptDirection: off \| warn \| block. warn=attach DesignCritiqueReport; block=refuse when verdict is reject. |
 | `DESIGN_REVISE_ON_SELECT` | `ask` | No | Phase L2: how Critique→Revise runs on ConceptDirection select: off=never revise; auto=revise+re-critique silently (L1); ask=return pending revise offer for Apply/Reject (default). |
-| `RESEARCH_CRITIQUE_MODE` | `warn` | No | Research Critic after autonomous research batches: off \| warn \| block. warn=attach ResearchCritiqueReport + warnings; block=mark run weak and surface blocking warnings (items still stored). |
+| `RESEARCH_CRITIQUE_MODE` | `warn` | No | Research Critic after autonomous research batches: off \| warn \| block. warn=attach ResearchCritiqueReport + warnings (items kept); block=on WEAK reject persisted items and raise WorkflowError (no hardening). |
 | `RESEARCH_CRITIQUE_LLM` | `false` | No | When true, Research Critic also calls LLM and merges with rules. Default false keeps CI/mocks deterministic (rules-only). |
 
 ## repair.* — Automated slide repair {#repair}

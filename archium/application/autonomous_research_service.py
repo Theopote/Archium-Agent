@@ -62,6 +62,8 @@ class AutonomousResearchResult:
     run: ResearchRun | None = None
     critique: object | None = None
     vision_bundles: list = field(default_factory=list)
+    blocked: bool = False
+    """True when RESEARCH_CRITIQUE_MODE=block and verdict=WEAK (items rejected)."""
 
 
 class AutonomousResearchService:
@@ -366,11 +368,32 @@ class AutonomousResearchService:
             if line and line not in result.warnings:
                 result.warnings.append(line)
         if mode == "block" and report.verdict == ResearchCritiqueVerdict.WEAK:
+            rejected = self._reject_items_for_block(result.items)
+            result.blocked = True
+            result.items = []
             result.warnings.insert(
                 0,
-                "研究批判阻断提示：validity/design_relevance 偏低，请人工确认后再用于概念固化。",
+                (
+                    "研究批判阻断：validity/design_relevance 偏低，"
+                    f"已拒绝 {rejected} 条研究知识，不可用于概念硬化。"
+                ),
+            )
+            raise WorkflowError(
+                "研究批判阻断：弱研究不可落库用于概念硬化。"
+                "请补充证据或将 RESEARCH_CRITIQUE_MODE 设为 warn。"
             )
         return self._attach_research_vision(result)
+
+    def _reject_items_for_block(self, items: list[ProjectKnowledgeItem]) -> int:
+        """Mark persisted research items REJECTED so hardening channels skip them."""
+        rejected = 0
+        for item in items:
+            try:
+                self._knowledge.reject_item(item.id)
+                rejected += 1
+            except Exception as exc:  # noqa: BLE001 — best-effort reject
+                logger.warning("failed to reject research item %s: %s", item.id, exc)
+        return rejected
 
     def _attach_research_vision(
         self,

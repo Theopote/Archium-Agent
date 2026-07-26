@@ -89,6 +89,14 @@ class ImageRequest(DomainModel):
         le=1.0,
         description="img2img strength for local_sd / edit backends (None = provider default).",
     )
+    seed_source: str = Field(
+        default="",
+        max_length=40,
+        description=(
+            "Provenance of this request: concept_direction | brief | suggester | "
+            "research_vision | manual (Topic 06 P1)."
+        ),
+    )
 
 
 class VisionInputEvaluation(DomainModel):

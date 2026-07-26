@@ -55,6 +55,7 @@ class ResearchVisualReference(DomainModel):
             ],
             asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
             mode=VisionGenerationMode.TEXT_TO_IMAGE,
+            seed_source="research_vision",
         )
 
 

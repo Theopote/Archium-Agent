@@ -160,6 +160,7 @@ def image_request_from_concept_direction(direction: ConceptDirection) -> ImageRe
         ],
         asset_policy=VisionAssetPolicy.ILLUSTRATIVE_ONLY,
         mode=VisionGenerationMode.TEXT_TO_IMAGE,
+        seed_source="concept_direction",
     )
 
 
