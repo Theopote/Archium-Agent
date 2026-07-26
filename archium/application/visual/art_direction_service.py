@@ -48,6 +48,7 @@ class ArtDirectionService:
         deliverable_id: str | None = None,
         presentation_id: UUID | None = None,
         design_system_id: UUID | None = None,
+        style_preset_id: str | None = None,
         user_preferences: VisualPreferences | None = None,
         brief: PresentationBrief | None = None,
         storyline: Storyline | None = None,
@@ -56,6 +57,15 @@ class ArtDirectionService:
     ) -> ArtDirection:
         design_system_id = self._ensure_design_system(design_system_id)
         preferences = user_preferences or VisualPreferences()
+        from archium.domain.visual.style import (
+            DEFAULT_STYLE_PRESET_ID,
+            resolve_style_preset_id,
+        )
+
+        try:
+            resolved_preset = resolve_style_preset_id(style_preset_id).value
+        except KeyError:
+            resolved_preset = DEFAULT_STYLE_PRESET_ID.value
 
         draft: ArtDirectionDraft | None = None
         skill_audit_note = ""
@@ -115,6 +125,7 @@ class ArtDirectionService:
             ],
             forbidden_styles=list(draft.forbidden_styles),
             design_system_id=design_system_id,
+            style_preset_id=resolved_preset,
             approval_status=ApprovalStatus.PENDING,
         )
         return self._art_directions.save(art)
@@ -197,6 +208,7 @@ class ArtDirectionService:
             "pacing_strategy",
             "consistency_rules",
             "forbidden_styles",
+            "style_preset_id",
         }
         payload = {key: value for key, value in updates.items() if key in allowed}
         updated = art.model_copy(

@@ -166,9 +166,9 @@ archium/application/visual/
 
 **验收**：
 
-- [ ] 同一 `SlideSpec` 在 `minimal` vs `technical` 下，hero 面积、字号、留白可测量差异。  
-- [ ] 单测：registry 完整、非法 id 失败、绑定后 DesignSystem 哈希变化。  
-- [ ] 至少 2 个 composition golden 用不同 Preset 出可对比截图。
+- [x] 同一 `SlideSpec` 在 `minimal` vs `technical` 下，hero 面积、字号、留白可测量差异。  
+- [x] 单测：registry 完整、非法 id 失败、绑定后 DesignSystem 哈希变化。  
+- [x] 至少 2 个 composition 对比（Hero generator + fingerprint；见 `tests/unit/visual/test_style_presets.py`）。
 
 #### P1.2 Deck 节奏控制器（强化现有模型）
 

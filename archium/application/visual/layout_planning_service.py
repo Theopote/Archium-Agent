@@ -163,6 +163,13 @@ class LayoutPlanningService:
         if design is None:
             raise ValueError(f"DesignSystem {design_system_id} not found")
         art = self._art.get(art_direction_id) if art_direction_id else None
+        if art is not None and art.style_preset_id:
+            from archium.application.visual.style_overlay import apply_style_overlays
+
+            design = apply_style_overlays(
+                design,
+                art_direction=art,
+            ).design_system
 
         from archium.application.visual.template_usage_brief_context import (
             constraints_from_brief,

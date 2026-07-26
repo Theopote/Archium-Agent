@@ -1,0 +1,260 @@
+"""Built-in StylePreset registry (six architecture office aesthetics)."""
+
+from __future__ import annotations
+
+from archium.domain.visual.enums import DensityLevel, LayoutFamily
+from archium.domain.visual.style.presets import StylePreset, StylePresetId
+
+DEFAULT_STYLE_PRESET_ID = StylePresetId.ARCHITECTURE_TECHNICAL
+
+_PRESETS: dict[StylePresetId, StylePreset] = {
+    StylePresetId.ARCHITECTURE_MINIMAL: StylePreset(
+        id=StylePresetId.ARCHITECTURE_MINIMAL,
+        display_name="Architecture Minimal",
+        description="SOM-like: sparse type, large whitespace, muted greyscale, quiet titles.",
+        density=DensityLevel.SPACIOUS,
+        title_style="quiet_bar",
+        diagram_style="line_sparse",
+        title_scale=0.9,
+        body_pt=15.0,
+        letter_spacing_bias=0.15,
+        margin_scale=1.28,
+        gutter_scale=1.25,
+        spacing_scale=1.2,
+        hero_min_area_ratio=0.52,
+        min_whitespace_ratio=0.16,
+        max_whitespace_ratio=0.72,
+        max_accent_ratio=0.04,
+        colors={
+            "background": "#F5F5F5",
+            "surface": "#FFFFFF",
+            "primary_text": "#1A1A1A",
+            "secondary_text": "#555555",
+            "muted_text": "#888888",
+            "primary": "#2A2A2A",
+            "secondary": "#6A6A6A",
+            "accent": "#4A4A4A",
+            "border": "#E0E0E0",
+        },
+        preferred_layout_families=(
+            LayoutFamily.HERO,
+            LayoutFamily.TEXTUAL_ARGUMENT,
+            LayoutFamily.DRAWING_FOCUS,
+        ),
+        forbidden_layout_families=(LayoutFamily.METRIC_DASHBOARD,),
+        forbidden_style_tags=("metric_dashboard_heavy", "icon_overload", "loud_accent"),
+    ),
+    StylePresetId.ARCHITECTURE_TECHNICAL: StylePreset(
+        id=StylePresetId.ARCHITECTURE_TECHNICAL,
+        display_name="Architecture Technical",
+        description="Design-institute board: dense drawings, cool grey, compact margins.",
+        density=DensityLevel.COMPACT,
+        title_style="technical_bar",
+        diagram_style="line_dense",
+        title_scale=0.95,
+        body_pt=14.0,
+        letter_spacing_bias=0.0,
+        margin_scale=0.82,
+        gutter_scale=0.7,
+        spacing_scale=0.85,
+        hero_min_area_ratio=0.34,
+        min_whitespace_ratio=0.05,
+        max_whitespace_ratio=0.42,
+        max_accent_ratio=0.1,
+        colors={
+            "background": "#F2F4F6",
+            "surface": "#FFFFFF",
+            "primary_text": "#1C2430",
+            "secondary_text": "#3E4A59",
+            "muted_text": "#6B7785",
+            "primary": "#2C3E50",
+            "secondary": "#5B6770",
+            "accent": "#2C5F7C",
+            "border": "#C8D0D8",
+        },
+        preferred_layout_families=(
+            LayoutFamily.DRAWING_FOCUS,
+            LayoutFamily.ANALYTICAL_DIAGRAM,
+            LayoutFamily.EVIDENCE_BOARD,
+            LayoutFamily.METRIC_DASHBOARD,
+        ),
+        forbidden_layout_families=(),
+        forbidden_style_tags=("decorative_frame", "tourism_brochure"),
+    ),
+    StylePresetId.ARCHITECTURE_LUXURY: StylePreset(
+        id=StylePresetId.ARCHITECTURE_LUXURY,
+        display_name="Architecture Luxury",
+        description="Competition/commercial: strong titles, large hero, restrained deep palette.",
+        density=DensityLevel.BALANCED,
+        title_style="strong_bar",
+        diagram_style="tone_mass",
+        title_scale=1.2,
+        body_pt=15.0,
+        letter_spacing_bias=0.05,
+        margin_scale=1.1,
+        gutter_scale=1.05,
+        spacing_scale=1.1,
+        hero_min_area_ratio=0.55,
+        min_whitespace_ratio=0.12,
+        max_whitespace_ratio=0.58,
+        max_accent_ratio=0.07,
+        colors={
+            "background": "#1A1A1A",
+            "surface": "#242424",
+            "primary_text": "#F2F0EB",
+            "secondary_text": "#C8C4BC",
+            "muted_text": "#9A968E",
+            "primary": "#E8E4DC",
+            "secondary": "#A89F90",
+            "accent": "#C9A227",
+            "border": "#3A3A3A",
+            "overlay": "#00000099",
+        },
+        preferred_layout_families=(
+            LayoutFamily.HERO,
+            LayoutFamily.HYBRID_CANVAS,
+            LayoutFamily.STRATEGY_CARDS,
+        ),
+        forbidden_layout_families=(LayoutFamily.METRIC_DASHBOARD,),
+        forbidden_style_tags=("icon_overload", "dense_caption_wall"),
+    ),
+    StylePresetId.ARCHITECTURE_ACADEMIC: StylePreset(
+        id=StylePresetId.ARCHITECTURE_ACADEMIC,
+        display_name="Architecture Academic",
+        description="Research/campus report: rational color, analysis-first, balanced density.",
+        density=DensityLevel.BALANCED,
+        title_style="academic_bar",
+        diagram_style="annotated_figure",
+        title_scale=1.0,
+        body_pt=15.5,
+        letter_spacing_bias=0.0,
+        margin_scale=1.05,
+        gutter_scale=1.0,
+        spacing_scale=1.0,
+        hero_min_area_ratio=0.42,
+        min_whitespace_ratio=0.1,
+        max_whitespace_ratio=0.55,
+        max_accent_ratio=0.09,
+        colors={
+            "background": "#F7F6F3",
+            "surface": "#FFFFFF",
+            "primary_text": "#1A1A1A",
+            "secondary_text": "#4A4A4A",
+            "muted_text": "#777777",
+            "primary": "#1F3A5F",
+            "secondary": "#5B6770",
+            "accent": "#3D6B4F",
+            "border": "#D9D5CF",
+        },
+        preferred_layout_families=(
+            LayoutFamily.ANALYTICAL_DIAGRAM,
+            LayoutFamily.PROCESS_NARRATIVE,
+            LayoutFamily.TEXTUAL_ARGUMENT,
+            LayoutFamily.COMPARATIVE_MATRIX,
+        ),
+        forbidden_layout_families=(),
+        forbidden_style_tags=("loud_accent",),
+    ),
+    StylePresetId.ARCHITECTURE_URBAN: StylePreset(
+        id=StylePresetId.ARCHITECTURE_URBAN,
+        display_name="Architecture Urban",
+        description="Urban renewal: evidence + masterplan density, problem emphasis, warning accent.",
+        density=DensityLevel.COMPACT,
+        title_style="problem_bar",
+        diagram_style="layer_overlay",
+        title_scale=1.05,
+        body_pt=14.5,
+        letter_spacing_bias=0.0,
+        margin_scale=0.9,
+        gutter_scale=0.85,
+        spacing_scale=0.9,
+        hero_min_area_ratio=0.4,
+        min_whitespace_ratio=0.07,
+        max_whitespace_ratio=0.48,
+        max_accent_ratio=0.12,
+        colors={
+            "background": "#F4F3F0",
+            "surface": "#FFFFFF",
+            "primary_text": "#1A1A1A",
+            "secondary_text": "#4A4A4A",
+            "muted_text": "#777777",
+            "primary": "#2C3E50",
+            "secondary": "#5B6770",
+            "accent": "#C47B2B",
+            "warning": "#B33A3A",
+            "border": "#D0CBC4",
+        },
+        preferred_layout_families=(
+            LayoutFamily.EVIDENCE_BOARD,
+            LayoutFamily.DRAWING_FOCUS,
+            LayoutFamily.COMPARATIVE_MATRIX,
+            LayoutFamily.STRATEGY_CARDS,
+        ),
+        forbidden_layout_families=(),
+        forbidden_style_tags=("tourism_brochure",),
+    ),
+    StylePresetId.ARCHITECTURE_LANDSCAPE: StylePreset(
+        id=StylePresetId.ARCHITECTURE_LANDSCAPE,
+        display_name="Architecture Landscape",
+        description="Landscape/environment: soft natural palette, spacious atmosphere + section.",
+        density=DensityLevel.SPACIOUS,
+        title_style="soft_bar",
+        diagram_style="section_soft",
+        title_scale=0.95,
+        body_pt=15.0,
+        letter_spacing_bias=0.08,
+        margin_scale=1.2,
+        gutter_scale=1.15,
+        spacing_scale=1.15,
+        hero_min_area_ratio=0.48,
+        min_whitespace_ratio=0.14,
+        max_whitespace_ratio=0.68,
+        max_accent_ratio=0.06,
+        colors={
+            "background": "#F3F5F1",
+            "surface": "#FFFFFF",
+            "primary_text": "#1E2A22",
+            "secondary_text": "#4A5A4E",
+            "muted_text": "#7A8A7E",
+            "primary": "#3D5A45",
+            "secondary": "#6B7F70",
+            "accent": "#5B7C6A",
+            "success": "#3D6B4F",
+            "border": "#D2D8CF",
+        },
+        preferred_layout_families=(
+            LayoutFamily.HERO,
+            LayoutFamily.ANALYTICAL_DIAGRAM,
+            LayoutFamily.HYBRID_CANVAS,
+        ),
+        forbidden_layout_families=(LayoutFamily.METRIC_DASHBOARD,),
+        forbidden_style_tags=("icon_overload", "loud_accent"),
+    ),
+}
+
+
+def list_style_presets() -> tuple[StylePreset, ...]:
+    """Return all built-in presets in stable enum order."""
+    return tuple(_PRESETS[item] for item in StylePresetId)
+
+
+def get_style_preset(preset_id: StylePresetId | str) -> StylePreset:
+    """Return a preset or raise KeyError for unknown ids."""
+    key = resolve_style_preset_id(preset_id)
+    try:
+        return _PRESETS[key]
+    except KeyError as exc:
+        raise KeyError(f"unknown style preset: {preset_id}") from exc
+
+
+def resolve_style_preset_id(value: StylePresetId | str | None) -> StylePresetId:
+    """Coerce string/enum to StylePresetId; None → default technical."""
+    if value is None:
+        return DEFAULT_STYLE_PRESET_ID
+    if isinstance(value, StylePresetId):
+        return value
+    cleaned = str(value).strip().lower().replace("-", "_").replace(" ", "_")
+    try:
+        return StylePresetId(cleaned)
+    except ValueError as exc:
+        raise KeyError(f"unknown style preset: {value}") from exc

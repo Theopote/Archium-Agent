@@ -83,6 +83,8 @@ class DeckCompositionPlanningService:
         self._apply_density_pacing(directives, variety_notes)
         self._apply_text_rhythm(directives, variety_notes)
         self._apply_drawing_rhythm(directives, variety_notes)
+        if art_direction is not None:
+            self._apply_style_preset_bias(directives, art_direction, variety_notes)
 
         section_strategies = self._build_section_strategies(ordered, directives)
         hero_ids, transition_ids, climax_ids = self._identify_anchor_slides(
@@ -314,6 +316,55 @@ class DeckCompositionPlanningService:
                 directive.should_contrast_previous = True
                 notes.append(f"slide_index={index}: 图纸页过多，插入分析/结论文本页调节")
                 drawing_streak = 0
+
+    @staticmethod
+    def _apply_style_preset_bias(
+        directives: list[SlideCompositionDirective],
+        art_direction: ArtDirection,
+        notes: list[str],
+    ) -> None:
+        """Bias density / preferred families from ArtDirection.style_preset_id."""
+        if not art_direction.style_preset_id:
+            return
+        try:
+            from archium.domain.visual.style import get_style_preset
+
+            preset = get_style_preset(art_direction.style_preset_id)
+        except KeyError:
+            notes.append(f"style_preset:unknown:{art_direction.style_preset_id}")
+            return
+
+        for directive in directives:
+            if directive.pacing_role not in {
+                PacingRole.CLIMAX,
+                PacingRole.OPENING,
+            }:
+                directive.target_density = preset.density
+            if preset.preferred_layout_families:
+                preferred = list(preset.preferred_layout_families)
+                merged = _implemented_families(
+                    [*preferred, *directive.preferred_layout_families]
+                )
+                directive.preferred_layout_families = merged or directive.preferred_layout_families
+            if preset.forbidden_layout_families:
+                forbidden = list(
+                    dict.fromkeys(
+                        [
+                            *directive.forbidden_layout_families,
+                            *preset.forbidden_layout_families,
+                        ]
+                    )
+                )
+                directive.forbidden_layout_families = forbidden
+                # Drop forbidden families from preferred when alternatives remain.
+                kept = [
+                    fam
+                    for fam in directive.preferred_layout_families
+                    if fam not in preset.forbidden_layout_families
+                ]
+                if kept:
+                    directive.preferred_layout_families = kept
+        notes.append(f"style_preset:{preset.id.value}:density={preset.density.value}")
 
     @staticmethod
     def _build_section_strategies(

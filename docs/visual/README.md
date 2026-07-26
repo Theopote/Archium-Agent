@@ -28,6 +28,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | 能力 | 状态 |
 |------|------|
 | DesignSystem + 默认 `architecture-board` | ✅ |
+| **Style Preset ×6**（minimal/technical/luxury/academic/urban/landscape） | ✅ v0.3 Phase 1.1 |
 | ArtDirection（生成 / 审核 / 再生） | ✅ |
 | VisualIntent（规则 / LLM） | ✅ |
 | LayoutFamily Registry（10 族） | ✅ |

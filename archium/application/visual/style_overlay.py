@@ -1,13 +1,14 @@
-"""Apply ArtDirection / ReferenceStyleProfile overlays onto DesignSystem.
+"""Apply StylePreset / ArtDirection / ReferenceStyleProfile overlays onto DesignSystem.
 
-Produces an **in-memory** DesignSystem for RenderScene compilation. Persisted
-DesignSystem rows are not mutated.
+Produces an **in-memory** DesignSystem for layout + RenderScene compilation.
+Persisted DesignSystem rows are not mutated.
 
 Priority (later wins on the same token):
 
 1. Base ``DesignSystem``
-2. ``ArtDirection`` tone / palette / typography strategy hints
-3. ``ReferenceStyleProfile`` color / typography / image cues (highest)
+2. ``StylePreset`` (architecture office aesthetic — measurable tokens)
+3. ``ArtDirection`` tone / palette / typography strategy hints
+4. ``ReferenceStyleProfile`` color / typography / image cues (highest)
 
 Only cues that can be resolved deterministically are applied (hex colors,
 explicit font/size patterns). Free-text strategies that cannot be mapped are
@@ -28,6 +29,7 @@ from archium.domain.visual.design_system import (
     TypographySystem,
 )
 from archium.domain.visual.enums import PhotoTreatment
+from archium.domain.visual.style import apply_style_preset, get_style_preset
 
 _HEX_RE = re.compile(r"#([0-9A-Fa-f]{3,6}|[0-9A-Fa-f]{8})\b")
 _FONT_AT_SIZE_RE = re.compile(
@@ -133,22 +135,43 @@ def apply_style_overlays(
     *,
     art_direction: ArtDirection | None = None,
     reference_style: ReferenceStyleProfile | None = None,
+    style_preset_id: str | None = None,
 ) -> StyleOverlayResult:
     """Return a DesignSystem with deterministic style overlays applied."""
-    if art_direction is None and reference_style is None:
+    resolved_preset_id = style_preset_id
+    if resolved_preset_id is None and art_direction is not None:
+        resolved_preset_id = art_direction.style_preset_id
+
+    if (
+        art_direction is None
+        and reference_style is None
+        and not resolved_preset_id
+    ):
         return StyleOverlayResult(design_system=design_system, warnings=[])
+
+    working = design_system
+    warnings: list[str] = []
+    name_suffix: list[str] = []
+
+    if resolved_preset_id:
+        try:
+            preset = get_style_preset(resolved_preset_id)
+            working = apply_style_preset(working, preset)
+            name_suffix.append(f"preset:{preset.id.value}")
+            warnings.append(f"style_overlay:style_preset={preset.id.value}")
+        except KeyError:
+            warnings.append(f"style_overlay:unknown_style_preset:{resolved_preset_id}")
 
     color_updates: dict[str, str] = {}
     typography_updates: dict[str, TextStyleToken] = {}
-    image_style = design_system.image_style
-    warnings: list[str] = []
+    image_style = working.image_style
 
     if art_direction is not None:
         art_colors, art_notes = _colors_from_art_direction(art_direction)
         color_updates.update(art_colors)
         warnings.extend(art_notes)
         art_typo, art_typo_notes = _typography_from_art_direction(
-            design_system.typography,
+            working.typography,
             art_direction,
         )
         typography_updates.update(art_typo)
@@ -159,7 +182,7 @@ def apply_style_overlays(
         color_updates.update(ref_colors)
         warnings.extend(ref_notes)
         ref_typo, ref_typo_notes = _typography_from_reference_style(
-            design_system.typography,
+            working.typography,
             typography_updates,
             reference_style,
         )
@@ -171,36 +194,48 @@ def apply_style_overlays(
         )
         warnings.extend(image_notes)
 
-    if not color_updates and not typography_updates and image_style is design_system.image_style:
+    if (
+        not color_updates
+        and not typography_updates
+        and image_style is working.image_style
+        and working is design_system
+    ):
         warnings.append("style_overlay:no_resolvable_cues")
         return StyleOverlayResult(design_system=design_system, warnings=warnings)
 
-    colors = design_system.colors
+    colors = working.colors
     if color_updates:
         colors = colors.model_copy(update=color_updates)
 
-    typography = design_system.typography
+    typography = working.typography
     if typography_updates:
         typography = typography.model_copy(update=typography_updates)
 
-    name_suffix = []
     if art_direction is not None:
         name_suffix.append("art")
     if reference_style is not None:
         name_suffix.append("ref")
-    overlaid = design_system.model_copy(
+    overlaid = working.model_copy(
         update={
-            "name": f"{design_system.name}+{'+'.join(name_suffix)}",
+            "name": (
+                f"{design_system.name}+{'+'.join(name_suffix)}"
+                if name_suffix
+                else working.name
+            ),
             "description": (
                 f"{design_system.description} "
                 f"[style overlay: {', '.join(name_suffix)}]"
-            ).strip(),
+            ).strip()
+            if name_suffix
+            else working.description,
             "colors": colors,
             "typography": typography,
             "image_style": image_style,
             "source_reference": (
-                f"{design_system.source_reference or 'design_system'}"
+                f"{working.source_reference or design_system.source_reference or 'design_system'}"
                 f"|style_overlay:{'+'.join(name_suffix)}"
+                if name_suffix
+                else working.source_reference
             ),
         }
     )

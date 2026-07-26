@@ -223,6 +223,7 @@ def derive_layout_style_preference(
                 "layout_style:art_direction:"
                 + ",".join(sorted({family.value for family, _, _ in hits}))
             )
+        _apply_style_preset_layout_bias(art_direction, family_scores, notes)
 
     if not family_scores and not variant_scores:
         notes.append("layout_style:no_resolvable_cues")
@@ -255,6 +256,32 @@ def derive_layout_style_preference(
 
 def _cue_text(cue: StyleLayoutCue) -> str:
     return f"{cue.pattern} {cue.description}".strip()
+
+
+def _apply_style_preset_layout_bias(
+    art_direction: ArtDirection,
+    family_scores: dict[LayoutFamily, float],
+    notes: list[str],
+) -> None:
+    """Boost preferred families / demote forbidden ones from StylePreset."""
+    preset_id = art_direction.style_preset_id
+    if not preset_id:
+        return
+    try:
+        from archium.domain.visual.style import get_style_preset
+
+        preset = get_style_preset(preset_id)
+    except KeyError:
+        notes.append(f"layout_style:unknown_style_preset:{preset_id}")
+        return
+
+    for index, family in enumerate(preset.preferred_layout_families):
+        weight = 0.55 - min(index, 4) * 0.08
+        family_scores[family] = family_scores.get(family, 0.0) + weight
+    for family in preset.forbidden_layout_families:
+        # Soft demotion so grammar/intent can still win when required.
+        family_scores[family] = family_scores.get(family, 0.0) - 0.45
+    notes.append(f"layout_style:style_preset={preset.id.value}")
 
 
 def _match_text(

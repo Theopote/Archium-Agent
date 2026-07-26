@@ -34,14 +34,25 @@
 | `FooterStyleSystem` | 页脚与页码 |
 | `LayoutThresholds` | 最小字号、主视觉面积比、留白上下限 |
 
-## 与 ArtDirection 的分工
+## 与 ArtDirection / Style Preset 的分工
 
 | 对象 | 回答的问题 |
 |------|------------|
 | DesignSystem | 「用什么令牌与阈值？」 |
+| **Style Preset** | 「哪种建筑事务所气质？」（可执行令牌覆盖） |
 | ArtDirection | 「这套汇报的视觉概念、语气与策略是什么？」 |
 
-ArtDirection 引用一个 `design_system_id`，并可覆盖策略叙述（色彩/字体/图纸/节奏等），但不改写绝对坐标。
+### Style Preset（v0.3）
+
+- Domain：`archium/domain/visual/style/`
+- 六个内置：`architecture_minimal` / `technical` / `luxury` / `academic` / `urban` / `landscape`
+- 默认：`architecture_technical`
+- 通过 `ArtDirection.style_preset_id` 绑定；`apply_style_overlays` 在 ArtDirection 自由文本启发式之前应用
+- **不**改写持久化 DesignSystem 行；布局生成与 RenderScene 编译使用内存覆盖结果
+
+ArtDirection 引用一个 `design_system_id`，并可绑定 `style_preset_id` 与策略叙述（色彩/字体/图纸/节奏等），但不改写绝对坐标。
+
+详见 [Presentation Engine v0.3](../roadmap/presentation-engine-v0.3.md)。
 
 ## 配置覆盖
 

@@ -35,6 +35,9 @@ class ArtDirection(IdentifiedModel, VersionedModel, TimestampedModel):
     consistency_rules: list[str] = Field(default_factory=list)
     forbidden_styles: list[str] = Field(default_factory=list)
     design_system_id: UUID | None = None
+    # Architecture Style Preset id (e.g. architecture_minimal). Applies measurable
+    # DesignSystem overlays; distinct from Vision image-generation style presets.
+    style_preset_id: str | None = None
     # Bound TemplateUsageBrief snapshot — survives template re-induction.
     template_usage_brief_id: UUID | None = None
     template_usage_brief_version: int | None = Field(default=None, ge=1)

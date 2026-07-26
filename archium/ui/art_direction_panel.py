@@ -8,6 +8,11 @@ import streamlit as st
 
 from archium.domain.enums import ApprovalStatus
 from archium.domain.visual.art_direction import ArtDirection
+from archium.domain.visual.style import (
+    DEFAULT_STYLE_PRESET_ID,
+    list_style_presets,
+    resolve_style_preset_id,
+)
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -45,7 +50,25 @@ def render_art_direction_panel(
     if awaiting_approval:
         st.info("视觉工作流已暂停，请审核并批准视觉方向后继续。")
 
+    presets = list_style_presets()
+    preset_labels = {p.id.value: f"{p.display_name} — {p.description}" for p in presets}
+    try:
+        current_preset = resolve_style_preset_id(
+            art_direction.style_preset_id or DEFAULT_STYLE_PRESET_ID
+        ).value
+    except KeyError:
+        current_preset = DEFAULT_STYLE_PRESET_ID.value
+
     with st.form(f"art_direction_form_{art_direction.id}"):
+        style_preset_id = st.selectbox(
+            "风格预设（Style Preset）",
+            options=list(preset_labels.keys()),
+            index=list(preset_labels.keys()).index(current_preset)
+            if current_preset in preset_labels
+            else 0,
+            format_func=lambda key: preset_labels.get(key, key),
+            help="事务所气质令牌：影响留白、字号、主图阈值与版式偏好（不改绝对坐标）。",
+        )
         concept_name = st.text_input("视觉概念", value=art_direction.concept_name)
         rationale = st.text_area("设计理由", value=art_direction.rationale, height=100)
         visual_tone = st.text_area(
@@ -119,6 +142,7 @@ def render_art_direction_panel(
             "closing_strategy": closing_strategy,
             "consistency_rules": _lines_to_list(consistency_rules),
             "emotional_keywords": _lines_to_list(emotional_keywords),
+            "style_preset_id": style_preset_id,
         }
         try:
             with get_session() as session:
