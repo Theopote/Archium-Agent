@@ -67,7 +67,7 @@ def test_formal_export_gate_requires_pptx_ready() -> None:
         assert_formal_export_allowed(report, export_format="PPTX")
 
 
-def test_studio_and_deliver_share_readiness_service() -> None:
+def test_studio_and_deliver_share_export_gate() -> None:
     from pathlib import Path
 
     export = (
@@ -85,7 +85,10 @@ def test_studio_and_deliver_share_readiness_service() -> None:
         / "flow"
         / "deliver.py"
     ).read_text(encoding="utf-8")
-    assert "evidence_readiness_service" in export
+    assert "export_gate" in export
     assert "_assert_export_gate" in export
-    assert "evidence_readiness_service" in deliver
+    assert "export_gate" in deliver
     assert "revision_id" in export
+    # APP-004: product export UI gates on ExportVerdict, not raw DeckQA alone
+    assert "allows_formal_export" in export
+    assert "DeckQA" not in export or "deck_qa_report" in export

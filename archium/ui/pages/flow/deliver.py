@@ -140,7 +140,7 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         deck_qa_report = deck_qa.deck_qa_report
         warn_count = int(deck_qa_report.get("warning_count") or 0)
 
-    from archium.application.evidence_readiness_service import resolve_export_verdict_safe
+    from archium.application.export_gate import resolve_export_verdict_safe
     from archium.ui.components.critique_summary_panel import (
         render_design_critique_card,
         render_presentation_critique_card,

@@ -6,11 +6,6 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.evidence_readiness_service import (
-    DeliveryReadinessReport,
-    ProjectEvidenceStatus,
-    resolve_delivery_readiness_safe,
-)
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.config.settings import Settings
 from archium.domain.render import RenderResult
@@ -127,18 +122,8 @@ def _deck_qa_report() -> dict | None:
     return None
 
 
-def _delivery_readiness(*, project_id: UUID, presentation_id: UUID) -> DeliveryReadinessReport:
-    critique = st.session_state.get("last_presentation_critique")
-    return resolve_delivery_readiness_safe(
-        project_id=project_id,
-        presentation_id=presentation_id,
-        deck_qa_report=_deck_qa_report(),
-        presentation_critique=critique if isinstance(critique, dict) else None,
-    )
-
-
 def _export_verdict(*, project_id: UUID, presentation_id: UUID):
-    from archium.application.evidence_readiness_service import resolve_export_verdict_safe
+    from archium.application.export_gate import resolve_export_verdict_safe
 
     critique = st.session_state.get("last_presentation_critique")
     return resolve_export_verdict_safe(
@@ -150,7 +135,7 @@ def _export_verdict(*, project_id: UUID, presentation_id: UUID):
 
 
 def _assert_export_gate(*, project_id: UUID, presentation_id: UUID, export_format: str) -> None:
-    from archium.application.evidence_readiness_service import assert_formal_export_allowed
+    from archium.application.export_gate import assert_formal_export_allowed
 
     assert_formal_export_allowed(
         _export_verdict(project_id=project_id, presentation_id=presentation_id),
@@ -408,12 +393,6 @@ def _export_pdf(
         st.error(format_user_error(exc))
 
 
-def _project_evidence_status(project_id: UUID) -> ProjectEvidenceStatus:
-    from archium.application.evidence_readiness_service import resolve_project_evidence_safe
-
-    return resolve_project_evidence_safe(project_id)
-
-
 def _render_quick_export_popover(
     *,
     context: StudioPresentationContext,
@@ -421,11 +400,10 @@ def _render_quick_export_popover(
     key_prefix: str = "studio",
 ) -> None:
     """Compact export entry — does not dominate the editing chrome."""
-    readiness = _delivery_readiness(
+    verdict = _export_verdict(
         project_id=context.project.id,
         presentation_id=context.presentation.id,
     )
-    verdict = readiness.to_export_verdict()
     export_disabled = not verdict.allows_formal_export
     with st.popover("导出", use_container_width=True):
         st.caption(verdict.partner_summary())
@@ -529,8 +507,8 @@ def render_export_panel(
     project_id = context.project.id
     presentation_id = context.presentation.id
     settings = get_ui_effective_settings()
-    readiness = _delivery_readiness(project_id=project_id, presentation_id=presentation_id)
-    export_disabled = not readiness.allows_formal_export
+    verdict = _export_verdict(project_id=project_id, presentation_id=presentation_id)
+    export_disabled = not verdict.allows_formal_export
     preferences = _render_scene_preset_row()
 
     (
@@ -600,14 +578,11 @@ def render_export_panel(
                 settings=settings,
             )
 
-    if readiness.evidence.is_unknown:
-        st.caption("资料状态无法验证，禁止正式导出。")
-    elif readiness.evidence.is_concept_draft:
-        st.caption("概念草稿不可正式导出，请先绑定项目资料。")
-    elif not readiness.pptx_ready:
-        st.caption("导出需先完成全部页面版式。")
-    elif readiness.export_blocker_count > 0:
-        st.caption("存在阻塞项，正式导出已被阻止。")
+    st.caption(verdict.partner_summary())
+    for line in verdict.partner_lines(limit=4)[1:]:
+        st.caption(line)
+    if verdict.evidence_stacks:
+        st.caption("门禁证据栈：" + " · ".join(verdict.evidence_stacks))
 
     from archium.ui.delivery.export_policy_panel import render_export_policy_panel
     from archium.ui.delivery.fidelity_report_panel import render_fidelity_report_panel

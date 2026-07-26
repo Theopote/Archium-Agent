@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1–L3 + UI-009 + WF-010 + DOM-024 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段 HumanGate；单一 stage；Direction↔Intent 可 diff。余：Research→页引用、APP-004。
+**子系统可用；L1–L3 + UI-009 + WF-010 + DOM-024 + APP-004 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段 HumanGate；单一 stage；Direction↔Intent 可 diff；导出只读 `ExportVerdict`。余：Research→页引用、APP-005。
 
 ---
 
@@ -121,7 +121,7 @@
 9. Research → 页引用链：**仍延后**（DOM/KN 债）  
 10. Critique 分轨：设计→回探索（L2）；Deliver 加「回工作室」链（弱化 APP-004，不关）
 
-（关闭 `MS-002`；`UI-009` / `WF-010` / `DOM-024` **done**；`APP-004` 仍开。）
+（关闭 `MS-002`；`UI-009` / `WF-010` / `DOM-024` / `APP-004` **done**。）
 
 ### Phase L3+ — HumanGate 顶栏 ✅ 2026-07-26
 
@@ -134,6 +134,10 @@
 ### Phase L3+++ — Direction↔Intent 同步 ✅ 2026-07-26
 
 13. **DOM-024**：`DesignIntent.source_direction_id` + `diff_direction_intent`；投影后对齐 / 漂移可检
+
+### Phase L3++++ — 导出统一 verdict ✅ 2026-07-26
+
+14. **APP-004**：QA 多栈只产证据；`export_gate` + `ExportVerdict.evidence_stacks`；Studio/Deliver 导出只读 verdict
 
 **不做：** 新 Agent；ProcessBoard 写进 ProjectContext 当 SSOT；把设计循环硬塞进 LangGraph。
 
@@ -151,7 +155,7 @@
 | UI-009 | P2 | ~~Orchestration HumanGate 未在五阶段顶栏~~ **done** |
 | MS-002 | P1 | ~~Presentation 无 mission_id~~ **done (L3)** |
 | DOM-024 | P1 | ~~Direction↔Intent 双份漂移~~ **done（source_direction_id + diff）** |
-| APP-004 | P1 | （已有）QA 多栈；交付门禁需统一 verdict |
+| APP-004 | P1 | ~~QA 多栈；交付门禁需统一 verdict~~ **done**（`export_gate` + `evidence_stacks`） |
 | UI-006 | P1 | （已有）剧本 E 真人闭环验收未完成 |
 
 ---

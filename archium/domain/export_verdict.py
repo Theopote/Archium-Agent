@@ -27,6 +27,8 @@ class ExportVerdict:
     pdf_ready: bool = False
     evidence_ok: bool = False
     round_trip_status: str | None = None
+    # APP-004: which QA/evidence stacks fed this verdict (stacks produce evidence only).
+    evidence_stacks: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def allows_formal_export(self) -> bool:

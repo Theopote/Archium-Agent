@@ -56,6 +56,7 @@ class DeliveryReadinessReport:
     blockers: tuple[str, ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)
     critic_lines: tuple[str, ...] = field(default_factory=tuple)
+    evidence_stacks: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def formal_delivery_ready(self) -> bool:
@@ -82,6 +83,7 @@ class DeliveryReadinessReport:
             status = ExportVerdictStatus.READY_WITH_WARNINGS
         if round_trip_status == "blocked":
             status = ExportVerdictStatus.BLOCKED
+        stacks = self.evidence_stacks or ("materials_evidence",)
         return ExportVerdict(
             status=status,
             blockers=self.blockers,
@@ -94,6 +96,7 @@ class DeliveryReadinessReport:
             pdf_ready=self.pdf_ready,
             evidence_ok=self.evidence.allows_formal_export,
             round_trip_status=round_trip_status,
+            evidence_stacks=stacks,
         )
 
 
@@ -156,6 +159,8 @@ def resolve_delivery_readiness(
     blockers: list[str] = []
     warnings: list[str] = []
     critic_lines: list[str] = []
+    stacks: list[str] = ["materials_evidence"]
+    scene_hit = False
 
     if evidence.is_unknown:
         blockers.append("资料状态无法验证，禁止正式交付")
@@ -176,8 +181,11 @@ def resolve_delivery_readiness(
             review_blocker_count = len(review_blockers)
             for issue in review_blockers[:5]:
                 blockers.append(f"[{issue.category.value}] {issue.title}")
+            if review_blocker_count > 0:
+                stacks.append("automated_review")
         except Exception:
             blockers.append("质量检查状态无法验证")
+            stacks.append("automated_review")
 
         for message in _scene_export_blocker_messages(
             session,
@@ -186,17 +194,24 @@ def resolve_delivery_readiness(
         ):
             blockers.append(message)
             review_blocker_count += 1
+            scene_hit = True
+        if scene_hit:
+            stacks.append("scene_semantic")
 
         citation_msgs = _citation_gap_messages(session, presentation_id)
         citation_gap_count = len(citation_msgs)
         blockers.extend(citation_msgs[:5])
+        if citation_gap_count > 0:
+            stacks.append("citation_gap")
 
     if isinstance(deck_qa_report, dict):
         deck_qa_blocker_count = int(deck_qa_report.get("blocker_count") or 0)
+        stacks.append("deck_qa")
         if deck_qa_blocker_count > 0:
             blockers.append(f"Deck QA 仍有 {deck_qa_blocker_count} 个阻塞项")
 
     if isinstance(presentation_critique, dict):
+        stacks.append("presentation_critic")
         for item in list(presentation_critique.get("missing_points") or [])[:3]:
             critic_lines.append(str(item))
         for item in list(presentation_critique.get("suggestions") or [])[:2]:
@@ -217,6 +232,7 @@ def resolve_delivery_readiness(
         blockers=tuple(blockers),
         warnings=tuple(warnings),
         critic_lines=tuple(critic_lines),
+        evidence_stacks=tuple(dict.fromkeys(stacks)),
     )
 
 

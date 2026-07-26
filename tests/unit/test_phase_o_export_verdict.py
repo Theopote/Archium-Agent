@@ -155,3 +155,82 @@ def test_resolve_export_verdict_safe_unknown() -> None:
             presentation_id=uuid4(),
         )
     assert verdict.status == ExportVerdictStatus.BLOCKED
+
+
+def test_app004_export_gate_facade_and_evidence_stacks() -> None:
+    """APP-004: stacks produce evidence; export reads ExportVerdict via facade."""
+    from archium.application import export_gate
+    from archium.application.evidence_readiness_service import resolve_delivery_readiness
+
+    assert export_gate.resolve_export_verdict_safe is resolve_export_verdict_safe
+    assert hasattr(export_gate, "assert_formal_export_allowed")
+
+    report = DeliveryReadinessReport(
+        evidence=ProjectEvidenceStatus(
+            availability=EvidenceAvailability.AVAILABLE,
+            document_count=1,
+        ),
+        pptx_ready=True,
+        pdf_ready=True,
+        evidence_stacks=("materials_evidence", "deck_qa", "presentation_critic"),
+    )
+    verdict = report.to_export_verdict()
+    assert verdict.evidence_stacks == (
+        "materials_evidence",
+        "deck_qa",
+        "presentation_critic",
+    )
+    assert verdict.allows_formal_export
+
+    session = MagicMock()
+    with (
+        patch(
+            "archium.application.visual.layout_readiness.presentation_has_visual_layout",
+            return_value=True,
+        ),
+        patch(
+            "archium.application.review_service.PresentationReviewService"
+        ) as review_cls,
+        patch(
+            "archium.infrastructure.database.repositories.DocumentRepository"
+        ) as doc_cls,
+        patch(
+            "archium.infrastructure.database.repositories.PresentationRepository"
+        ) as pres_cls,
+        patch(
+            "archium.application.evidence_readiness_service._scene_export_blocker_messages",
+            return_value=[],
+        ),
+        patch(
+            "archium.application.evidence_readiness_service._citation_gap_messages",
+            return_value=[],
+        ),
+    ):
+        review_cls.return_value.list_review_issues.return_value = []
+        doc_cls.return_value.list_by_project.return_value = [object()]
+        pres_cls.return_value.list_slides.return_value = []
+        resolved = resolve_delivery_readiness(
+            session,
+            project_id=uuid4(),
+            presentation_id=uuid4(),
+            deck_qa_report={"blocker_count": 0},
+            presentation_critique={"suggestions": ["tighten story"]},
+        )
+    assert "materials_evidence" in resolved.evidence_stacks
+    assert "deck_qa" in resolved.evidence_stacks
+    assert "presentation_critic" in resolved.evidence_stacks
+    out = resolved.to_export_verdict()
+    assert out.evidence_stacks == resolved.evidence_stacks
+
+
+def test_app004_product_export_ui_reads_verdict_only() -> None:
+    root = Path(__file__).resolve().parents[2]
+    export = (root / "archium/ui/studio/export_panel.py").read_text(encoding="utf-8")
+    deliver = (root / "archium/ui/pages/flow/deliver.py").read_text(encoding="utf-8")
+    assert "from archium.application.export_gate import" in export
+    assert "resolve_export_verdict_safe" in export
+    assert "assert_formal_export_allowed" in export
+    assert "export_gate" in deliver
+    # Must not gate export buttons on DeliveryReadinessReport.allows_formal_export directly
+    assert "readiness.allows_formal_export" not in export
+    assert "_export_verdict" in export
