@@ -21,7 +21,7 @@ from archium.application.visual.scene_geometry import apply_geometry_token
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_proposal_qa import (
     compare_proposal_qa,
-    proposal_introduces_blocker,
+    proposal_has_open_blocker,
 )
 from archium.application.visual.studio_command_executor import (
     StudioCommandExecutor,
@@ -319,8 +319,10 @@ class SceneProposalService:
             slide.order,
         )
         comparison = compare_proposal_qa(proposal.qa_before, list(accepted_qa.issues))
-        if proposal_introduces_blocker(comparison):
-            raise WorkflowError("不能接受会引入新的 Blocker 级质量问题的修改。")
+        if proposal_has_open_blocker(comparison):
+            raise WorkflowError(
+                "不能接受仍存在 Blocker 级质量问题的修改（含原有未消除项）。"
+            )
         if not accepted_qa.preview_render_success:
             raise WorkflowError("不能接受预览渲染失败的 Scene 修改。")
 

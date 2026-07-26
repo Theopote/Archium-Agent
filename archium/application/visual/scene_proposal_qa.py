@@ -57,6 +57,15 @@ def proposal_introduces_blocker(comparison: ProposalQAComparison) -> bool:
     return any(issue.severity == IssueSeverity.BLOCKER for issue in comparison.introduced)
 
 
+def proposal_has_open_blocker(comparison: ProposalQAComparison) -> bool:
+    """Return True when the accepted scene still has any blocker (QD-003).
+
+    Covers residual blockers that pre-existed (``remaining``) as well as newly
+    introduced ones — Accept must not ship a Scene that remains BLOCKED.
+    """
+    return any(issue.severity == IssueSeverity.BLOCKER for issue in comparison.after)
+
+
 def _issue_key(issue: QualityIssue) -> tuple[str, tuple[str, ...]]:
     return (issue.code, tuple(sorted(issue.evidence)))
 
