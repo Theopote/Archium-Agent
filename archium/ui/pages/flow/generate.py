@@ -193,6 +193,10 @@ def render() -> None:
     with st.expander("运行汇报管线", expanded=presentation_id is None):
         render_generate_stage(project_id, include_export=False)
 
+    from archium.ui.showcase_case_001_panel import render_showcase_case_001_panel
+
+    render_showcase_case_001_panel()
+
     snapshot = None
     try:
         snapshot = load_project_progress_snapshot()

@@ -23,16 +23,15 @@ class VisualConceptService:
         direction: PageDirection,
     ) -> VisualConcept | None:
         rule_id = direction.situation_rule_id or ""
-        blob = " ".join(
-            [
-                slide.title or "",
-                slide.message or "",
-                " ".join(slide.key_points or []),
-                direction.claim,
-            ]
-        ).lower()
+        title = (slide.title or "").strip()
 
-        if rule_id == "site_traffic_conflict" or _looks_like_circulation_break(blob):
+        # Only bind fragment_to_network to dedicated circulation-conflict pages.
+        # Do not fire on overview pages that merely mention 流线交叉 in key points.
+        if rule_id == "site_traffic_conflict" or title in {
+            "流线冲突",
+            "交通冲突",
+            "人车混行",
+        }:
             return FRAGMENT_TO_NETWORK_CONCEPT.model_copy(deep=True)
         return None
 
@@ -82,10 +81,6 @@ class VisualConceptService:
             }
         )
 
-
-def _looks_like_circulation_break(blob: str) -> bool:
-    keys = ("流线冲突", "流线交叉", "人车混行", "交通冲突", "医患交叉", "洁污交叉")
-    return any(key in blob for key in keys)
 
 
 def _unique(items: list[LayoutFamily]) -> list[LayoutFamily]:

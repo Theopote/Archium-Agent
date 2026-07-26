@@ -36,6 +36,28 @@ def _lines_to_list(text: str) -> list[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
+def _render_personality_card(preset_id: str, art_direction: ArtDirection) -> None:
+    try:
+        preset_obj = get_style_preset(preset_id)
+    except KeyError:
+        return
+    tone = " · ".join(art_direction.visual_tone[:3]) or "（未填语气）"
+    emotion = " · ".join(art_direction.emotional_keywords[:4]) or "克制专业"
+    personality = preset_obj.presentation_personality
+    policy = preset_obj.content_policy
+    st.markdown(
+        f"**{preset_obj.display_name}**  \n"
+        f"{preset_obj.description}  \n"
+        f"叙事性格：{personality.logic.value} · 情绪 {personality.emotion.value} · "
+        f"图面 {personality.image_role.value}  \n"
+        f"内容政策：msg≤{policy.max_message_chars} · pts≤{policy.max_key_points} · "
+        f"img≤{policy.max_images} · 留白≥{policy.preferred_whitespace}  \n"
+        f"语气：{tone}  \n"
+        f"情绪曲线关键词：{emotion}  \n"
+        f"节奏：{(art_direction.pacing_strategy or '')[:160]}"
+    )
+
+
 def render_art_direction_panel(
     *,
     art_direction: ArtDirection,
@@ -56,42 +78,26 @@ def render_art_direction_panel(
     presets = list_style_presets()
     preset_labels = {p.id.value: f"{p.display_name} — {p.description}" for p in presets}
     try:
-        current_preset = resolve_style_preset_id(
+        saved_preset = resolve_style_preset_id(
             art_direction.style_preset_id or DEFAULT_STYLE_PRESET_ID
         ).value
     except KeyError:
-        current_preset = DEFAULT_STYLE_PRESET_ID.value
+        saved_preset = DEFAULT_STYLE_PRESET_ID.value
 
-    try:
-        preset_obj = get_style_preset(current_preset)
-        tone = " · ".join(art_direction.visual_tone[:3]) or "（未填语气）"
-        emotion = " · ".join(art_direction.emotional_keywords[:4]) or "克制专业"
-        personality = preset_obj.presentation_personality
-        policy = preset_obj.content_policy
-        st.markdown(
-            f"**{preset_obj.display_name}**  \n"
-            f"{preset_obj.description}  \n"
-            f"叙事性格：{personality.logic.value} · 情绪 {personality.emotion.value} · "
-            f"图面 {personality.image_role.value}  \n"
-            f"内容政策：msg≤{policy.max_message_chars} · pts≤{policy.max_key_points} · "
-            f"img≤{policy.max_images} · 留白≥{policy.preferred_whitespace}  \n"
-            f"语气：{tone}  \n"
-            f"情绪曲线关键词：{emotion}  \n"
-            f"节奏：{(art_direction.pacing_strategy or '')[:160]}"
-        )
-    except KeyError:
-        pass
+    # Preset lives outside the form so personality card updates immediately.
+    preset_key = f"art_style_preset_{art_direction.id}"
+    if preset_key not in st.session_state:
+        st.session_state[preset_key] = saved_preset
+    style_preset_id = st.selectbox(
+        "事务所气质（Style Preset）",
+        options=list(preset_labels.keys()),
+        key=preset_key,
+        format_func=lambda key: preset_labels.get(key, key),
+        help="打开 PPT 第一印象：留白、字号、主图阈值与版式偏好（不改绝对坐标）。切换后上方读法即时更新。",
+    )
+    _render_personality_card(style_preset_id, art_direction)
 
     with st.form(f"art_direction_form_{art_direction.id}"):
-        style_preset_id = st.selectbox(
-            "事务所气质（Style Preset）",
-            options=list(preset_labels.keys()),
-            index=list(preset_labels.keys()).index(current_preset)
-            if current_preset in preset_labels
-            else 0,
-            format_func=lambda key: preset_labels.get(key, key),
-            help="打开 PPT 第一印象：留白、字号、主图阈值与版式偏好（不改绝对坐标）。",
-        )
         concept_name = st.text_input("视觉概念（一句话）", value=art_direction.concept_name)
         rationale = st.text_area(
             "为什么这样定调",

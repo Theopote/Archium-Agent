@@ -199,6 +199,22 @@ def render_slide_properties(
         st.write(f"{field_label('audience_takeaway', advanced=advanced)}：{intent.audience_takeaway}")
         st.write(f"{field_label('dominant_content_type', advanced=advanced)}：`{intent.dominant_content_type.value}`")
         st.write(f"{field_label('density_level', advanced=advanced)}：`{intent.density_level.value}`")
+        direction = intent.page_direction
+        if direction is not None:
+            claim = direction.as_page_claim()
+            st.markdown("**页主张**")
+            st.write(claim.get("claim") or direction.single_message or "—")
+            emotion = claim.get("emotion") or (
+                direction.narrative_emotion.value if direction.narrative_emotion else "—"
+            )
+            vc = claim.get("visual_concept") or {}
+            metaphor = vc.get("visual_metaphor") if isinstance(vc, dict) else None
+            bits = [f"情绪 `{emotion}`"]
+            if metaphor:
+                bits.append(f"隐喻 `{metaphor}`")
+            if direction.situation_rule_id:
+                bits.append(f"规则 `{direction.situation_rule_id}`")
+            st.caption(" · ".join(bits))
 
     st.markdown(f"**{entity_label('LayoutPlan', advanced=advanced)}**")
     if plan is None:

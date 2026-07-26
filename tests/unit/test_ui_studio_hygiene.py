@@ -70,3 +70,24 @@ def test_art_direction_panel_leads_with_presentation_intelligence() -> None:
     assert "Presentation Intelligence" in source
     assert "事务所气质（Style Preset）" in source
     assert "工程细节（令牌策略原文）" in source
+    # Preset selectbox must sit outside the form so personality updates live.
+    form_idx = source.index('with st.form(f"art_direction_form_')
+    preset_idx = source.index("事务所气质（Style Preset）")
+    assert preset_idx < form_idx
+
+
+def test_generate_page_exposes_showcase_case_001_rehearsal() -> None:
+    generate = Path("archium/ui/pages/flow/generate.py").read_text(encoding="utf-8")
+    panel = Path("archium/ui/showcase_case_001_panel.py").read_text(encoding="utf-8")
+    assert "render_showcase_case_001_panel" in generate
+    assert "Showcase 排练：Case 001" in panel
+    assert "fragment_to_network" in panel
+
+
+def test_studio_style_tab_surfaces_art_direction() -> None:
+    studio = Path("archium/ui/pages/studio.py").read_text(encoding="utf-8")
+    assert "_render_studio_art_direction" in studio
+    assert 'render_inspector_section("汇报气质")' in studio
+    props = Path("archium/ui/studio/slide_properties.py").read_text(encoding="utf-8")
+    assert "页主张" in props
+    assert "as_page_claim" in props

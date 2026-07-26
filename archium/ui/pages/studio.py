@@ -69,6 +69,42 @@ def _render_art_direction_gate_if_paused() -> None:
     )
 
 
+def _render_studio_art_direction(*, project_id: UUID, presentation_id: UUID) -> None:
+    """Editable 汇报气质 on the Style tab (not only when the gate pauses)."""
+    from archium.infrastructure.database.session import get_session
+    from archium.infrastructure.database.visual_repositories import ArtDirectionRepository
+    from archium.ui.art_direction_panel import render_art_direction_panel
+
+    result = st.session_state.get("last_visual_workflow_result")
+    art = None
+    workflow_run_id = None
+    awaiting = False
+    if isinstance(result, VisualWorkflowResult) and result.art_direction is not None:
+        art = result.art_direction
+        if result.awaiting_review and result.review_gate == "art_direction":
+            awaiting = True
+            workflow_run_id = result.workflow_run.id
+
+    if art is None:
+        with get_session() as session:
+            for candidate in ArtDirectionRepository(session).list_by_project(project_id):
+                if candidate.presentation_id == presentation_id:
+                    art = candidate
+                    break
+            if art is None:
+                arts = ArtDirectionRepository(session).list_by_project(project_id)
+                art = arts[0] if arts else None
+
+    if art is None:
+        st.caption("尚无汇报气质。生成页时完成视觉编排后会出现在这里。")
+        return
+    render_art_direction_panel(
+        art_direction=art,
+        workflow_run_id=workflow_run_id,
+        awaiting_approval=awaiting,
+    )
+
+
 _INSPECTOR_TABS = ("属性", "布局", "内容", "修改", "评论", "风格", "检查")
 
 
@@ -143,6 +179,9 @@ def _render_inspector_tabs(
     if active == "风格":
         from archium.ui.studio.deck_theme_panel import render_deck_theme_panel
 
+        render_inspector_section("汇报气质")
+        _render_studio_art_direction(project_id=project_id, presentation_id=presentation_id)
+        st.divider()
         render_inspector_section("全稿风格")
         render_deck_theme_panel(
             presentation_id=presentation_id,

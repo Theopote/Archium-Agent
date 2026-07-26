@@ -66,3 +66,22 @@ def test_unrelated_slide_has_no_forced_fragment_concept() -> None:
     direction = PageDirectionService().direct(slide)
     concept = VisualConceptService().recognize(slide, direction)
     assert concept is None or concept.visual_metaphor != VisualMetaphor.FRAGMENT_TO_NETWORK
+
+
+def test_overview_mentioning_circulation_does_not_force_fragment() -> None:
+    """Overview pages that mention 交叉 must not steal fragment_to_network."""
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="site",
+        order=4,
+        title="现状问题总览",
+        message="现状问题：拥堵、交叉、老化三类并存。",
+        key_points=["门诊大厅拥堵", "医患动线混杂", "后勤空间老化"],
+    )
+    direction = PageDirectionService().direct(slide)
+    assert direction.situation_rule_id != "site_traffic_conflict"
+    assert (
+        direction.visual_concept is None
+        or direction.visual_concept.visual_metaphor
+        != VisualMetaphor.FRAGMENT_TO_NETWORK
+    )
