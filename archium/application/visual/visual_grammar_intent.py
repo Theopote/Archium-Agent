@@ -105,7 +105,13 @@ def preferred_variant_for_intent(
     intent: VisualIntent,
     family: LayoutFamily,
 ) -> str | None:
-    """Grammar-preferred variant for a layout family, if any."""
+    """Expression-mode / grammar-preferred variant for a layout family, if any."""
+    locked = getattr(intent, "preferred_layout_variant", None)
+    if locked:
+        # Only honor lock when it targets this family (or family is primary preferred).
+        preferred = list(intent.preferred_layout_families)
+        if not preferred or preferred[0] == family:
+            return locked
     if intent.page_archetype is None or intent.page_archetype == PageArchetype.GENERIC:
         return None
     recipe = get_recipe(intent.page_archetype)

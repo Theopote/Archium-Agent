@@ -11,6 +11,7 @@
 | [Vision Intelligence Layer](../architecture/vision-intelligence-layer.md) | **战略缺口**：概念/图示/氛围生成（Visual 席位；非 Midjourney 套壳） |
 | [Design System](design-system.md) | DesignSystem 令牌与默认预设 |
 | [Layout Families](layout-families.md) | 10 个版式族、变体与 generator |
+| [Expression Modes](expression-modes.md) | **v0.3** 10 种建筑表达模式（锁定族/变体/字数） |
 | [Renderer](renderer.md) | LayoutPlan → PptxGenJS 执行路径 |
 | [User Guide](user-guide.md) | 工作室内视觉编排（ArtDirection / 候选版式 / 审核门） |
 
@@ -44,6 +45,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
 | **Page Director**（单主张 / 禁区 / copy_budget） | ✅ v0.3 Phase 1.3 |
+| **Expression Modes ×10**（锁定族/变体 + 人工 checklist） | ✅ v0.3 Phase 2 |
 | RenderScene 画布编辑（单选 / 多选 / 框选） | ✅ |
 | 元素评论 → 提案 → QA → Revision | ✅ |
 | 固定画布容量预算 / 内容适配 / 拆页建议 | ✅ |

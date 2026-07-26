@@ -230,7 +230,14 @@ archium/application/visual/
 | 9 | Metric Dashboard | 指标克制，服务决策页 | `metric_dashboard` |
 | 10 | Hybrid Climax | 综合高潮页，严格容量预算 | `hybrid_canvas` + climax |
 
-**验收**：每个模式 ≥1 个截图 golden + 人工「像不像建筑所」勾选（见 Phase 4 评分表）。
+**验收**：每个模式 ≥1 个结构/变体锁定 golden（`tests/unit/visual/test_expression_modes.py`）；人工「像不像建筑所」勾选见各模式 `human_checklist`（Phase 4 评分表复用）。
+
+- [x] 十种模式注册表 + 主族/变体均在 LayoutFamily Registry 内  
+- [x] Page Director 识别并写入 `expression_mode_id` / `locked_layout_variant`  
+- [x] VisualIntent 变体锁影响 `preferred_variant_for_intent`  
+- [x] 每模式可生成对应 LayoutPlan（变体一致）
+
+文档：[`docs/visual/expression-modes.md`](../visual/expression-modes.md)
 
 ---
 

@@ -44,6 +44,9 @@ class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
     page_archetype: PageArchetype | None = None
     # v0.3 Page Director output (structured creative direction; no geometry).
     page_direction: PageDirection | None = None
+    # v0.3 Expression Mode id + locked layout variant (Phase 2).
+    expression_mode_id: str | None = None
+    preferred_layout_variant: str | None = None
     image_request: ImageRequest | None = None
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 

@@ -27,6 +27,7 @@
 - [管线角色](architecture/pipeline-roles.md)：逻辑角色与应用服务的映射（六席硬上限）。
 - [Vision Intelligence Layer](architecture/vision-intelligence-layer.md)：建筑语义驱动的概念/图示/氛围生成（Visual 席位；非 Midjourney 套壳）。
 - [视觉编排](visual/README.md)：VisualIntent、LayoutPlan、RenderScene、Studio 编辑与 QA。
+- [建筑表达模式](visual/expression-modes.md)：v0.3 十种 Expression Mode（Hero / Drawing Story / …）。
 - [Presentation Engine v0.3](roadmap/presentation-engine-v0.3.md)：**现行 Showcase 计划** — Style Preset、Deck 节奏、页面导演、Visual Critic、投资人 Demo（暂停扩 Agent）。
 - [配置参考](configuration-reference.md)：由 `Settings` 自动生成，禁止手工修改。
 

@@ -14,6 +14,10 @@ from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_composition import SlideCompositionDirective
 from archium.domain.visual.enums import DensityLevel, LayoutFamily
+from archium.domain.visual.expression_mode import (
+    ExpressionMode,
+    recognize_expression_mode,
+)
 from archium.domain.visual.page_direction import (
     CompositionBias,
     CopyBudget,
@@ -207,6 +211,12 @@ class PageDirectionService:
         recipe = get_recipe(archetype) if archetype != PageArchetype.GENERIC else None
         rule = _match_situation(blob)
         single_message = _single_message(slide, existing_intent)
+        mode = recognize_expression_mode(
+            title=slide.title or "",
+            message=slide.message or "",
+            key_points=list(slide.key_points or []),
+            page_archetype=archetype if archetype != PageArchetype.GENERIC else None,
+        )
 
         if rule is not None:
             direction = PageDirection(
@@ -222,27 +232,40 @@ class PageDirectionService:
                 evidence=[f"situation:{rule.rule_id}:{rule.label}"],
                 source="rules",
             )
-            return self._merge_with_context(
+            direction = self._merge_with_context(
                 direction,
                 recipe=recipe,
                 deck_directive=deck_directive,
                 style_preset=_resolve_preset(style_preset, art_direction),
                 director_wins=True,
             )
+            return self._apply_expression_mode(direction, mode, prefer_mode_lock=False)
 
-        # No situation hit — archetype recipe (or generic defaults).
+        if mode is not None:
+            direction = _from_expression_mode(single_message=single_message, mode=mode)
+            direction = self._merge_with_context(
+                direction,
+                recipe=recipe,
+                deck_directive=deck_directive,
+                style_preset=_resolve_preset(style_preset, art_direction),
+                director_wins=True,
+            )
+            return self._apply_expression_mode(direction, mode, prefer_mode_lock=True)
+
+        # No situation / mode hit — archetype recipe (or generic defaults).
         direction = _from_recipe_or_default(
             single_message=single_message,
             recipe=recipe,
             slide=slide,
         )
-        return self._merge_with_context(
+        direction = self._merge_with_context(
             direction,
             recipe=recipe,
             deck_directive=deck_directive,
             style_preset=_resolve_preset(style_preset, art_direction),
             director_wins=False,
         )
+        return self._apply_expression_mode(direction, mode, prefer_mode_lock=False)
 
     def apply_to_intent(
         self,
@@ -262,8 +285,10 @@ class PageDirectionService:
         preferred = [fam for fam in preferred if fam not in forbidden] or preferred
 
         bias_text = "+".join(b.value for b in direction.composition_bias) or "balanced"
+        mode_label = direction.expression_mode_id or "none"
         strategy = (
             f"page_direction:{direction.situation_rule_id or direction.source}; "
+            f"expression_mode={mode_label}; "
             f"bias={bias_text}; "
             f"copy≤{direction.copy_budget.max_key_points}pts/"
             f"{direction.copy_budget.max_message_chars}chars; "
@@ -275,6 +300,8 @@ class PageDirectionService:
             "preferred_layout_families": preferred[:3],
             "composition_strategy": strategy,
             "hierarchy": list(direction.must_show) or list(intent.hierarchy),
+            "expression_mode_id": direction.expression_mode_id,
+            "preferred_layout_variant": direction.locked_layout_variant,
         }
         if direction.density_override is not None:
             updates["density_level"] = direction.density_override
@@ -284,6 +311,67 @@ class PageDirectionService:
                 f"{intent.annotation_strategy}; 禁止：{hide}".strip("; ")
             )
         return intent.model_copy(update=updates)
+
+    def _apply_expression_mode(
+        self,
+        direction: PageDirection,
+        mode: ExpressionMode | None,
+        *,
+        prefer_mode_lock: bool,
+    ) -> PageDirection:
+        if mode is None:
+            return direction
+        evidence = list(direction.evidence)
+        evidence.append(f"expression_mode:{mode.id.value}:{mode.display_name}")
+        preferred = list(direction.preferred_layout_families)
+        forbidden = list(direction.forbidden_layout_families)
+        if prefer_mode_lock:
+            preferred = _unique([mode.primary_family, *mode.fallback_families, *preferred])
+            forbidden = _unique([*list(mode.forbidden_families), *forbidden])
+            budget = mode.copy_budget.model_copy()
+            # Keep tighter of situation vs mode when both present.
+            if direction.copy_budget.max_key_points < budget.max_key_points:
+                budget = direction.copy_budget.model_copy()
+            density = mode.density
+            biases = list(mode.composition_bias) or list(direction.composition_bias)
+            must_show = list(dict.fromkeys([*mode.must_show, *direction.must_show]))
+            must_hide = list(dict.fromkeys([*mode.must_hide, *direction.must_hide]))
+        else:
+            # Situation won: keep situation copy/density, still stamp mode id + lock variant
+            # when primary family aligns.
+            budget = direction.copy_budget
+            density = direction.density_override
+            biases = list(direction.composition_bias)
+            must_show = list(direction.must_show)
+            must_hide = list(direction.must_hide)
+            if mode.primary_family not in preferred:
+                preferred = _unique([*preferred, mode.primary_family])
+            forbidden = _unique([*forbidden, *list(mode.forbidden_families)])
+
+        preferred = [fam for fam in preferred if fam not in set(forbidden)]
+        if not preferred:
+            preferred = [mode.primary_family]
+
+        locked_variant = mode.primary_variant
+        if preferred and preferred[0] != mode.primary_family:
+            # Don't lock a foreign family's variant.
+            locked_variant = None
+
+        return direction.model_copy(
+            update={
+                "preferred_layout_families": preferred[:3],
+                "forbidden_layout_families": forbidden,
+                "density_override": density if prefer_mode_lock else direction.density_override,
+                "copy_budget": budget if prefer_mode_lock else direction.copy_budget,
+                "composition_bias": biases,
+                "must_show": must_show,
+                "must_hide": must_hide,
+                "expression_mode_id": mode.id.value,
+                "locked_layout_variant": locked_variant,
+                "evidence": evidence,
+                "source": "expression_mode" if prefer_mode_lock else direction.source,
+            }
+        )
 
     def apply_to_brief(
         self,
@@ -463,6 +551,27 @@ def _single_message(
             break
     raw = re.sub(r"\s+", " ", raw).strip()
     return raw[:500] or "本页只讲一个核心矛盾。"
+
+
+def _from_expression_mode(
+    *,
+    single_message: str,
+    mode: ExpressionMode,
+) -> PageDirection:
+    return PageDirection(
+        single_message=single_message,
+        must_show=list(mode.must_show),
+        must_hide=list(mode.must_hide),
+        composition_bias=list(mode.composition_bias),
+        copy_budget=mode.copy_budget.model_copy(),
+        preferred_layout_families=[mode.primary_family, *mode.fallback_families],
+        forbidden_layout_families=list(mode.forbidden_families),
+        density_override=mode.density,
+        locked_layout_variant=mode.primary_variant,
+        expression_mode_id=mode.id.value,
+        evidence=[f"expression_mode:{mode.id.value}"],
+        source="expression_mode",
+    )
 
 
 def _from_recipe_or_default(

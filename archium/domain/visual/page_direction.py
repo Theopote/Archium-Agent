@@ -45,6 +45,9 @@ class PageDirection(DomainModel):
     preferred_layout_families: list[LayoutFamily] = Field(default_factory=list)
     forbidden_layout_families: list[LayoutFamily] = Field(default_factory=list)
     density_override: DensityLevel | None = None
+    # Locked generator variant for Expression Mode (v0.3 Phase 2).
+    locked_layout_variant: str | None = None
+    expression_mode_id: str | None = None
 
     situation_rule_id: str | None = None
     evidence: list[str] = Field(default_factory=list)
