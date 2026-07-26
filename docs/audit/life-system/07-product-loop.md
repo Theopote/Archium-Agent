@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1–L3 + UI-009 后产品闭环胶合层基本可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段可见 HumanGate。余：WF-010 单一 stage truth、Research→页引用、DOM-024、APP-004。
+**子系统可用；L1–L3 + UI-009 + WF-010 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段可见 HumanGate；主 chrome 单一 stage。余：Research→页引用、DOM-024、APP-004。
 
 ---
 
@@ -104,7 +104,7 @@
 2. **Stepper soft-guide**：materials/outline gate 警告仍在比较方向  
 3. **常驻 design strip**：`render_design_context_strip` 展示 ProcessBoard.label + 深链  
 
-（关闭 `UI-007` / `UI-008`；`WF-010` 仍开。）
+（关闭 `UI-007` / `UI-008`；`WF-010` 后补 done。）
 
 ### Phase L2 — 可恢复人闸（P1–P2）✅ 2026-07-26
 
@@ -121,11 +121,15 @@
 9. Research → 页引用链：**仍延后**（DOM/KN 债）  
 10. Critique 分轨：设计→回探索（L2）；Deliver 加「回工作室」链（弱化 APP-004，不关）
 
-（关闭 `MS-002`；`UI-009` **done（五阶段 compact HumanGate）**；`WF-010` / `APP-004` / `DOM-024` 仍开。）
+（关闭 `MS-002`；`UI-009` **done**；`WF-010` **done（product_stage_truth）**；`APP-004` / `DOM-024` 仍开。）
 
 ### Phase L3+ — HumanGate 顶栏 ✅ 2026-07-26
 
 11. **UI-009**：`render_orchestration_status(compact=True)` 接入 `render_stage_header`；五阶段可见待确认 + Continue/Replan
+
+### Phase L3++ — 单一 stage truth ✅ 2026-07-26
+
+12. **WF-010**：`resolve_product_stage_truth` — 活跃编排映射五阶段，覆盖 presentation 启发式；snapshot `authoritative_stage_id`
 
 **不做：** 新 Agent；ProcessBoard 写进 ProjectContext 当 SSOT；把设计循环硬塞进 LangGraph。
 
@@ -137,7 +141,7 @@
 |------|------|------|
 | UI-007 | P1 | ~~五阶段与 ProcessBoard 脱节~~ **done (L1)** |
 | UI-008 | P1 | ~~无常驻方向/Mission 条~~ **done (L1)** |
-| WF-010 | P2 | OrchestrationPlan 与 product_flow 双轨；缺单一 stage truth |
+| WF-010 | P2 | ~~OrchestrationPlan 与 product_flow 双轨~~ **done** |
 | APP-026 | P1 | ~~pending Ask 仅 session~~ **done (L2)** |
 | APP-027 | P2 | ~~批判未 Hydrate~~ **done (L2)** |
 | UI-009 | P2 | ~~Orchestration HumanGate 未在五阶段顶栏~~ **done** |
@@ -167,4 +171,5 @@
 - [x] Phase L1 导航脊柱  
 - [x] Phase L2 可恢复人闸  
 - [x] Phase L3 lineage（MS-002 + DesignArtifact 板；Research→页仍延后）  
-- [x] UI-009 五阶段 HumanGate compact 顶栏
+- [x] UI-009 五阶段 HumanGate compact 顶栏  
+- [x] WF-010 单一 product stage truth

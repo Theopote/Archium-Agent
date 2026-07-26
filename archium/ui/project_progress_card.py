@@ -51,6 +51,8 @@ class ProjectProgressSnapshot:
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT
     lightweight_mode: bool = False
     has_mission_or_task: bool = False
+    # WF-010: when set, overrides presentation heuristic for chrome / continue hints.
+    authoritative_stage_id: str | None = None
 
     @property
     def pending_count(self) -> int:
@@ -122,7 +124,13 @@ class ProjectProgressSnapshot:
 
     @property
     def current_stage_id(self) -> str:
-        """Best next product-flow stage for「继续工作」."""
+        """Best next product-flow stage for「继续工作」/ chrome (WF-010 SSOT)."""
+        if self.authoritative_stage_id:
+            return self.authoritative_stage_id
+        return self.presentation_heuristic_stage_id()
+
+    def presentation_heuristic_stage_id(self) -> str:
+        """Presentation-artifact heuristic only (no orchestration)."""
         if self.evidence_availability == EvidenceAvailability.UNKNOWN:
             if self.has_mission_or_task:
                 return "outline"
@@ -152,6 +160,7 @@ class ProjectProgressSnapshot:
         if not self.ready_for_export:
             return "edit"
         return "deliver"
+
     @property
     def current_stage_label(self) -> str:
         labels = {
@@ -303,7 +312,7 @@ def _snapshot_for_project(
         session_item.user_task_description.strip() for session_item in planning_sessions
     )
 
-    return ProjectProgressSnapshot(
+    snapshot = ProjectProgressSnapshot(
         project_id=project.id,
         project_name=project.name,
         presentation_id=presentation.id if presentation is not None else None,
@@ -329,6 +338,18 @@ def _snapshot_for_project(
         lightweight_mode=skips_default_clarification(session, project),
         has_mission_or_task=has_mission_or_task,
     )
+    try:
+        from archium.application.product_stage_truth import resolve_product_stage_truth
+        from dataclasses import replace
+
+        truth = resolve_product_stage_truth(
+            session,
+            project.id,
+            presentation_stage_id=snapshot.presentation_heuristic_stage_id(),
+        )
+        return replace(snapshot, authoritative_stage_id=truth.stage_id)
+    except Exception:
+        return snapshot
 
 
 def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
