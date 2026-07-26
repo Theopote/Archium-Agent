@@ -184,8 +184,9 @@ def _focus_comment_on_canvas(
         mapped = canvas_element_id_for_node(scene, node_id)
         if mapped not in focus_ids:
             focus_ids.append(mapped)
-    st.session_state["studio_selected_element_id"] = primary
-    st.session_state["studio_selected_element_ids"] = focus_ids
+    from archium.ui.studio.canvas_command_bridge import set_studio_selection
+
+    set_studio_selection([fid for fid in focus_ids if fid])
     st.session_state["studio_focused_comment_id"] = str(comment.id)
     if comment.region_bbox:
         st.session_state["studio_comment_region_bbox"] = dict(comment.region_bbox)

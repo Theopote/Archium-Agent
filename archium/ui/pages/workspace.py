@@ -21,6 +21,12 @@ from archium.ui.background_workflow_runner import (
     submit_visual_job,
     warn_background_workflows_required,
 )
+from archium.ui.workflow_resume_ux import (
+    RESUME_EXPORT_BUTTON_LABEL,
+    RESUME_EXPORT_HELP,
+    RESUME_EXPORT_STARTED,
+    render_resume_failure,
+)
 from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.cultural_narrative_panel import render_cultural_narrative_panel
@@ -584,7 +590,11 @@ def _render_last_result() -> None:
         if project_id is None:
             st.caption("缺少项目上下文，无法重试导出。")
             return
-        if st.button("重试工作流导出", key=f"retry_export_{workflow_run_id}"):
+        if st.button(
+            RESUME_EXPORT_BUTTON_LABEL,
+            key=f"retry_export_{workflow_run_id}",
+            help=RESUME_EXPORT_HELP,
+        ):
             settings = get_ui_effective_settings()
             if not background_workflows_enabled(settings):
                 warn_background_workflows_required()
@@ -596,12 +606,12 @@ def _render_last_result() -> None:
                     settings=settings,
                 )
                 set_active_job_id(project_id, job.job_id)
-                st.info("已在后台重试工作流导出，请查看进度。")
+                st.info(RESUME_EXPORT_STARTED)
                 render_workflow_progress_panel(project_id, job_id=job.job_id)
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                render_resume_failure(exc, project_id=project_id)
             except Exception as exc:
-                st.error(format_user_error(exc))
+                render_resume_failure(exc, project_id=project_id)
 
     download_paths: list[Path] = list(result.render.output_paths())
     if result.render.warnings:

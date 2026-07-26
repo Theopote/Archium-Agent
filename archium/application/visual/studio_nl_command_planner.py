@@ -177,7 +177,7 @@ class StudioNLCommandPlanner:
                 reasons=(),
                 parsed_intent=parsed.intent,
                 confidence=parsed.confidence,
-                unsupported_reason="复合修改暂未纳入 Scene 提案，请拆成单步指令或改用版式直接编辑。",
+                unsupported_reason="复合修改暂未纳入 Scene 提案，请拆成单步指令。",
                 uses_layout_fallback=True,
             )
 

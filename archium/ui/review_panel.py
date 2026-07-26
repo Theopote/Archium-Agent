@@ -53,6 +53,12 @@ from archium.ui.background_workflow_runner import (
     submit_resume_workflow,
     warn_background_workflows_required,
 )
+from archium.ui.workflow_resume_ux import (
+    RESUME_EXPORT_BUTTON_LABEL,
+    RESUME_EXPORT_HELP,
+    RESUME_EXPORT_STARTED,
+    render_resume_failure,
+)
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import (
     entity_label,
@@ -265,10 +271,10 @@ def _render_critical_recovery_actions(
             st.error(f"重新生成失败：{exc}")
 
     if workflow_run_id is not None and st.button(
-        "重试工作流导出",
+        RESUME_EXPORT_BUTTON_LABEL,
         key=f"recover_retry_export_{presentation_id}",
         use_container_width=True,
-        help="在解决或忽略严重问题后，从 interrupt/checkpoint 继续（无 checkpoint 时需新建工作流）。",
+        help=RESUME_EXPORT_HELP,
     ):
         settings = get_ui_effective_settings()
         if not background_workflows_enabled(settings):
@@ -281,12 +287,12 @@ def _render_critical_recovery_actions(
                 settings=settings,
             )
             set_active_job_id(project_id, job.job_id)
-            st.info("已在后台重试工作流导出，请查看进度。")
+            st.info(RESUME_EXPORT_STARTED)
             render_workflow_progress_panel(project_id, job_id=job.job_id)
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            render_resume_failure(exc, project_id=project_id)
         except Exception as exc:
-            st.error(format_user_error(exc))
+            render_resume_failure(exc, project_id=project_id)
 
     if has_slide_issues:
         st.caption(f"页面级问题可使用下方「定位页面」跳转到 {_SLIDE_LABEL} 标签页编辑。")

@@ -1,4 +1,4 @@
-"""Unified AI modification workspace — edit input + proposal review in one flow."""
+"""Unified modification workspace — proposal-first write path into Scene (ST-003)."""
 
 from __future__ import annotations
 
@@ -32,15 +32,18 @@ def render_ai_workspace(
     presentation_id: UUID,
     settings: Settings,
 ) -> None:
-    """Single AI Tab workspace: request → proposal → before/after → accept."""
-    st.markdown("**修改建议 · AI 修改 · 需确认**")
+    """修改 Tab：request → proposal → before/after → accept（有 Scene 时禁止旁路写入）。"""
+    st.markdown("**修改建议 · 需确认后写入**")
     if slide_snapshot is None:
         st.caption("请选择页面后再编辑。")
         return
 
     slide_id = slide_snapshot.slide.id
     if slide_snapshot.render_scene is None:
-        st.caption("当前页尚无 RenderScene，暂仅支持版式直接编辑。")
+        st.caption(
+            "当前页尚无 RenderScene：暂用规则式直接应用。"
+            "生成版式后将改为「提案确认」唯一写入路径。"
+        )
         _render_legacy_panel(slide_id=slide_id)
         return
 
@@ -58,6 +61,7 @@ def render_ai_workspace(
 
     st.caption(
         "保护：锁定内容、素材身份、页面事实与引用保持不变。"
+        "有 Scene 时只经提案写入（ST-003）；画布拖拽/对齐走统一命令栈。"
         "评论会绑定当前 Scene Revision / hash / node_snapshot。"
     )
     text = st.text_area(
@@ -104,10 +108,6 @@ def render_ai_workspace(
             settings=settings,
             embedded=True,
         )
-
-    with st.expander("版式直接编辑（不经提案确认）", expanded=False):
-        st.caption("安全提示：直接写入版式，无 Before/After。优先使用上方提案流程。")
-        _render_legacy_panel(slide_id=slide_id)
 
 
 def _run_scoped_proposal(
@@ -176,13 +176,19 @@ def _run_scoped_proposal(
 
 
 def _render_legacy_panel(*, slide_id: UUID) -> None:
+    """Fallback only when the slide has no RenderScene yet (ST-003 exception)."""
+    text = st.text_area(
+        "输入修改要求",
+        placeholder="例如：减少文字、放大主图…",
+        height=80,
+        key=f"studio_ai_edit_input_{slide_id}",
+    )
     if st.button(
-        "直接应用上方描述",
+        "直接应用描述",
         use_container_width=True,
         key=f"studio_apply_edit_{slide_id}",
     ):
-        text = str(st.session_state.get(f"studio_ai_edit_input_{slide_id}", "")).strip()
-        _run_edit(slide_id=slide_id, text=text)
+        _run_edit(slide_id=slide_id, text=text.strip())
 
     preset_rows = [
         [VisualEditIntent.REDUCE_TEXT, VisualEditIntent.ENLARGE_HERO],

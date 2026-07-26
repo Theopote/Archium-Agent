@@ -8,7 +8,7 @@
 |------|----------|------|------|------|------|----------|----------|----------|
 | ST-001 | P0 | done | 接受提案会回滚 live scene | `scene_proposal_service.py` | 接受即丢编辑 | 快照行；接受不 rollback live | 接受后画布保留接受结果 | `-` |
 | ST-002 | P0 | done | clear_proposal 误提交；accept 不同步 LayoutPlan；中途 commit | StudioSceneEdit | 脏事务 / Plan 脱节 | session-only clear；同步 Plan；去中途 commit | 单测覆盖 accept/clear | `-` |
-| ST-003 | P1 | open | 提案环 vs VisualEdit 双编辑环 | studio services | 状态分叉 | 统一命令模型 | 一种写路径进 Scene | `-` |
+| ST-003 | P1 | mitigated | 提案环 vs VisualEdit 双编辑环 | `ai_workspace_panel` 有 Scene 时仅提案；无 Scene 暂留规则直写 | 状态分叉 | 统一命令模型 | 有 Scene 时 UI 无「不经提案」旁路；画布几何仍走命令栈 | ST-003 |
 | ST-004 | P1 | mitigated | load 可能对已编辑页重编译覆盖 | `ensure_scene_for_slide` | 丢用户改动 | DOM-011：`geometry_authority=render_scene` 时非 force 复用 Scene | `test_ensure_scene_preserves_render_scene_geometry_authority` | `-` |
 | ST-005 | P1 | done | Proposal repo 绕过 `save_render_scene` 守卫 | `SceneProposalRepository.save`; `scene_proposal.snapshot` | 坏 Scene 入库 | 统一保存入口 | 守卫测试覆盖提案路径 | ST-005 |
 | ST-006 | P2 | done | 双历史；死 `ai_edit_panel` / `slide_canvas` | ui/studio | 维护噪音 | 删死代码；历史单一 | 无未引用模块 | `-` |
