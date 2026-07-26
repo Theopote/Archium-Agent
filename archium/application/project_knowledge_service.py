@@ -127,6 +127,7 @@ class ProjectKnowledgeService:
         item = self._require_item(item_id)
         item.confirm()
         self._best_effort_link_architecture_case(item)
+        self._best_effort_confirm_graph_edges(item)
         updated = self._knowledge.update(item)
         self._best_effort_vector_index(updated)
         self._best_effort_index_after_knowledge_change(
@@ -141,6 +142,15 @@ class ProjectKnowledgeService:
             from archium.application.architecture_case_service import ArchitectureCaseService
 
             ArchitectureCaseService(self._session).ensure_from_knowledge_item(item)
+        except Exception:
+            return
+
+    def _best_effort_confirm_graph_edges(self, item: ProjectKnowledgeItem) -> None:
+        """Phase C: persist confirmed graph edges for precedent / linked fact."""
+        try:
+            from archium.application.knowledge_graph_service import KnowledgeGraphService
+
+            KnowledgeGraphService(self._session).ensure_edges_from_knowledge_item(item)
         except Exception:
             return
 

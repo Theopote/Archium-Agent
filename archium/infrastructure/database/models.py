@@ -1211,6 +1211,39 @@ class ArchitectureCaseORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     tags_json: Mapped[list[str]] = mapped_column("tags", JSON, nullable=False, default=list)
 
 
+class KnowledgeGraphEdgeORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Confirmed (durable) knowledge-graph edges — Phase C."""
+
+    __tablename__ = "knowledge_graph_edges"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "relation",
+            "source_ref",
+            "target_ref",
+            name="uq_knowledge_graph_edges_project_rel_endpoints",
+        ),
+        Index("ix_knowledge_graph_edges_project_id", "project_id"),
+        Index("ix_knowledge_graph_edges_status", "status"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    relation: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_ref: Mapped[str] = mapped_column(String(120), nullable=False)
+    target_ref: Mapped[str] = mapped_column(String(120), nullable=False)
+    weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    evidence: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
+    source: Mapped[str] = mapped_column(String(40), nullable=False, default="user")
+    knowledge_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_knowledge_items.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+
 class VisualConceptBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "visual_concept_briefs"
     __table_args__ = (

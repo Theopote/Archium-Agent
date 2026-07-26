@@ -8,9 +8,9 @@
 
 ## 一句话结论
 
-**已越过「纯自由文本 dump」，尚未建成可持久的 Design Knowledge Graph。**
+**已越过「纯自由文本 dump」；Phase A–C 后具备可链接、可写案例、可持久确认边的知识脚手架。**
 
-结构化槽位（问题→策略→空间→材料→适用）出现在 `ArchitectureCase` 与 `DesignKnowledge` 上；图（`KnowledgeGraphSnapshot`）是**每次重建的读时投影**，不是可积累的知识资产。案例库仅 8 条种子（王澍以宁波博物馆为代表，**无象山校园**）。多套 Evidence 彼此不通。
+结构化槽位与 `precedent_ref` / `reference_case_ids` 已对齐；项目级 `architecture_cases` 可扩展；`knowledge_graph_edges` 保存确认关系。图仍非 Neo4j 产品级知识库，但已不再「关掉进程结构消失」。Evidence 多身份（KN-012）与案例库体量仍是后续债。
 
 ---
 
@@ -177,11 +177,12 @@ ArchitectureCase(
 4. `ArchitectureCase` 可持久（**项目级** `architecture_cases`），seeds 为 bootstrap；同 slug 项目行覆盖种子  
 5. 研究确认写回：`precedent_ref` 命中种子则只链接；否则从 DesignKnowledge **创建 draft** 并回写 `precedent_ref`；`activate` 提升为检索默认可见  
 
-### Phase C — 图从投影升级为增量边（可选）
+### Phase C — 图从投影升级为增量边 ✅
 
-6. 持久化精选边表：`KnowledgeEdgeORM`（project_id, relation, source_ref, target_ref）  
-7. Snapshot = seeds + 账本爆炸 + **用户/研究确认边**  
-8. 收敛 Evidence：设计链只用 `IntentEvidence` + `SourceCitation`；汇报 Evidence* 改名或隔离命名空间  
+6. 持久化确认边表 `knowledge_graph_edges`（`ConfirmedKnowledgeEdge`）  
+7. Snapshot = seeds + 账本爆炸 + **确认边**（缺端点时建 stub 节点）  
+8. 研究确认自动写 `INSPIRED_BY`（precedent_ref）/ `LINKED_FACT`；可 `revoke`  
+9. Evidence 命名空间收敛（KN-012）仍 open — 不在本 Phase 改汇报 Evidence* 命名  
 
 ---
 
@@ -221,3 +222,4 @@ ArchitectureCase(
 - [ ] 择优落地 Phase A（词表对齐 + precedent_ref）
 - [x] Phase A 落地：`problem`/`strategy`/`precedent_ref` + `reference_case_ids`（KN-008/009/013 done）
 - [x] Phase B 落地：项目级可写 `architecture_cases` + 确认研究写回建草稿（KN-010 done）
+- [x] Phase C 落地：`knowledge_graph_edges` 确认边持久化 + snapshot 合并（KN-011 done）

@@ -1,7 +1,8 @@
 """Architectural Knowledge Graph — nodes & relations (in-memory / project-scoped).
 
 Not Neo4j: Service builds a traversable snapshot from Fact / Knowledge /
-ArchitectureCase / Asset captions. Process history stays on IntentEvolution.
+ArchitectureCase / Asset captions, then merges **confirmed** persisted edges
+(Phase C). Process history stays on IntentEvolution.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from archium.domain._base import DomainModel
+from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel
 
 
 class KnowledgeNodeKind(StrEnum):
@@ -46,6 +47,17 @@ class KnowledgeRelationKind(StrEnum):
     EXPRESSES = "expresses"
 
 
+class ConfirmedEdgeStatus(StrEnum):
+    ACTIVE = "active"
+    REVOKED = "revoked"
+
+
+class ConfirmedEdgeSource(StrEnum):
+    USER = "user"
+    RESEARCH_CONFIRM = "research_confirm"
+    SYSTEM = "system"
+
+
 class KnowledgeNode(DomainModel):
     id: str = Field(min_length=1, max_length=120)
     kind: KnowledgeNodeKind
@@ -70,6 +82,39 @@ class KnowledgeEdge(DomainModel):
     target_id: str = Field(min_length=1, max_length=120)
     weight: float = Field(default=1.0, ge=0.0, le=1.0)
     evidence: str = ""
+    confirmed: bool = False
+
+
+class ConfirmedKnowledgeEdge(IdentifiedModel, TimestampedModel):
+    """User/research-confirmed graph edge — survives process restart (Phase C)."""
+
+    project_id: UUID
+    relation: KnowledgeRelationKind
+    source_ref: str = Field(min_length=1, max_length=120)
+    target_ref: str = Field(min_length=1, max_length=120)
+    weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    evidence: str = ""
+    status: ConfirmedEdgeStatus = ConfirmedEdgeStatus.ACTIVE
+    source: ConfirmedEdgeSource = ConfirmedEdgeSource.USER
+    knowledge_item_id: UUID | None = None
+
+    def edge_key(self) -> str:
+        return f"{self.source_ref}:{self.relation.value}:{self.target_ref}"
+
+    def to_snapshot_edge(self) -> KnowledgeEdge:
+        return KnowledgeEdge(
+            id=self.edge_key()[:160],
+            relation=self.relation,
+            source_id=self.source_ref,
+            target_id=self.target_ref,
+            weight=self.weight,
+            evidence=self.evidence,
+            confirmed=True,
+        )
+
+    def revoke(self) -> None:
+        self.status = ConfirmedEdgeStatus.REVOKED
+        self.touch()
 
 
 class KnowledgeGraphSnapshot(DomainModel):
@@ -134,11 +179,30 @@ class KnowledgeGraphSnapshot(DomainModel):
         for node in self.nodes[:20]:
             lines.append(f"- 节点 {node.to_prompt_line()}")
         for edge in self.edges[:max_edges]:
+            mark = "✓" if edge.confirmed else ""
             lines.append(
-                f"- 边 {edge.source_id} -[{edge.relation.value}]-> {edge.target_id}"
+                f"- 边{mark} {edge.source_id} -[{edge.relation.value}]-> {edge.target_id}"
                 + (f" ({edge.evidence[:80]})" if edge.evidence else "")
             )
         return "\n".join(lines)
+
+
+def infer_node_kind_from_ref(ref: str) -> KnowledgeNodeKind:
+    prefix = (ref or "").split(":", 1)[0].strip().lower()
+    mapping = {
+        "fact": KnowledgeNodeKind.FACT,
+        "knowledge": KnowledgeNodeKind.KNOWLEDGE_ITEM,
+        "case": KnowledgeNodeKind.CASE,
+        "asset": KnowledgeNodeKind.ASSET,
+        "concept": KnowledgeNodeKind.CONCEPT,
+        "strategy": KnowledgeNodeKind.STRATEGY,
+        "space": KnowledgeNodeKind.SPACE,
+        "material": KnowledgeNodeKind.MATERIAL,
+        "architect": KnowledgeNodeKind.ARCHITECT,
+        "tag": KnowledgeNodeKind.TAG,
+        "building": KnowledgeNodeKind.BUILDING,
+    }
+    return mapping.get(prefix, KnowledgeNodeKind.OTHER)
 
 
 def _tokenize(text: str) -> list[str]:

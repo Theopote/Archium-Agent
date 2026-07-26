@@ -20,6 +20,11 @@ from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ArchitectureCaseStatus, ProjectStatus, ReviewStatus, RevisionEntityType
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.fact import ProjectFact
+from archium.domain.knowledge_graph import (
+    ConfirmedEdgeStatus,
+    ConfirmedKnowledgeEdge,
+    KnowledgeRelationKind,
+)
 from archium.domain.outline import OutlinePlan
 from archium.domain.outline_approval_record import OutlineApprovalRecord
 from archium.domain.planning_session import PlanningSession
@@ -49,6 +54,7 @@ from archium.infrastructure.database.models import (
     DeliveryRecordORM,
     DocumentChunkORM,
     ExplorationSessionORM,
+    KnowledgeGraphEdgeORM,
     LLMTraceORM,
     OutlineApprovalRecordORM,
     OutlinePlanORM,
@@ -865,6 +871,77 @@ class ArchitectureCaseRepository:
             return True
         except SQLAlchemyError as exc:
             _handle_error("delete architecture case", exc)
+            raise
+
+
+class KnowledgeGraphEdgeRepository:
+    """CRUD for confirmed knowledge-graph edges."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, edge: ConfirmedKnowledgeEdge) -> ConfirmedKnowledgeEdge:
+        try:
+            orm = mappers.confirmed_knowledge_edge_to_orm(edge)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.confirmed_knowledge_edge_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create knowledge graph edge", exc)
+            raise
+
+    def get_by_id(self, edge_id: UUID) -> ConfirmedKnowledgeEdge | None:
+        orm = self._session.get(KnowledgeGraphEdgeORM, edge_id)
+        return mappers.confirmed_knowledge_edge_to_domain(orm) if orm else None
+
+    def get_by_endpoints(
+        self,
+        project_id: UUID,
+        *,
+        relation: KnowledgeRelationKind,
+        source_ref: str,
+        target_ref: str,
+    ) -> ConfirmedKnowledgeEdge | None:
+        stmt = select(KnowledgeGraphEdgeORM).where(
+            KnowledgeGraphEdgeORM.project_id == project_id,
+            KnowledgeGraphEdgeORM.relation == relation.value,
+            KnowledgeGraphEdgeORM.source_ref == source_ref,
+            KnowledgeGraphEdgeORM.target_ref == target_ref,
+        )
+        orm = self._session.scalars(stmt).first()
+        return mappers.confirmed_knowledge_edge_to_domain(orm) if orm else None
+
+    def list_by_project(
+        self,
+        project_id: UUID,
+        *,
+        active_only: bool = True,
+    ) -> list[ConfirmedKnowledgeEdge]:
+        stmt = select(KnowledgeGraphEdgeORM).where(
+            KnowledgeGraphEdgeORM.project_id == project_id
+        )
+        if active_only:
+            stmt = stmt.where(
+                KnowledgeGraphEdgeORM.status == ConfirmedEdgeStatus.ACTIVE.value
+            )
+        stmt = stmt.order_by(KnowledgeGraphEdgeORM.updated_at.desc())
+        return [
+            mappers.confirmed_knowledge_edge_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
+    def update(self, edge: ConfirmedKnowledgeEdge) -> ConfirmedKnowledgeEdge:
+        try:
+            orm = self._session.get(KnowledgeGraphEdgeORM, edge.id)
+            if orm is None:
+                raise RepositoryError(f"Knowledge graph edge {edge.id} not found")
+            mappers.confirmed_knowledge_edge_to_orm(edge, orm)
+            self._session.flush()
+            return mappers.confirmed_knowledge_edge_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update knowledge graph edge", exc)
             raise
 
 

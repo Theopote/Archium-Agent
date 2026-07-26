@@ -14,11 +14,15 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.architecture_case import ArchitectureCase
 from archium.domain.enums import KnowledgeItemStatus, VerificationStatus
 from archium.domain.knowledge_graph import (
+    ConfirmedEdgeSource,
+    ConfirmedEdgeStatus,
+    ConfirmedKnowledgeEdge,
     KnowledgeEdge,
     KnowledgeGraphSnapshot,
     KnowledgeNode,
     KnowledgeNodeKind,
     KnowledgeRelationKind,
+    infer_node_kind_from_ref,
 )
 from archium.domain.knowledge_reference import (
     KnowledgeReference,
@@ -26,8 +30,10 @@ from archium.domain.knowledge_reference import (
     KnowledgeUsage,
 )
 from archium.domain.project_knowledge import ProjectKnowledgeItem
+from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import (
     FactRepository,
+    KnowledgeGraphEdgeRepository,
     ProjectKnowledgeRepository,
 )
 
@@ -46,6 +52,7 @@ class KnowledgeGraphService:
         self._settings = settings or get_settings()
         self._facts = FactRepository(session)
         self._knowledge = ProjectKnowledgeRepository(session)
+        self._confirmed_edges = KnowledgeGraphEdgeRepository(session)
         self._cases = case_library
 
     def build_snapshot(self, project_id: UUID) -> KnowledgeGraphSnapshot:
@@ -67,18 +74,31 @@ class KnowledgeGraphService:
             target_id: str,
             weight: float = 1.0,
             evidence: str = "",
+            confirmed: bool = False,
         ) -> None:
             if source_id not in nodes or target_id not in nodes:
                 return
             edge_id = f"{source_id}:{relation.value}:{target_id}"
+            key = edge_id[:160]
+            if confirmed:
+                edges[:] = [
+                    edge
+                    for edge in edges
+                    if not (
+                        edge.source_id == source_id
+                        and edge.target_id == target_id
+                        and edge.relation == relation
+                    )
+                ]
             edges.append(
                 KnowledgeEdge(
-                    id=edge_id[:160],
+                    id=key,
                     relation=relation,
                     source_id=source_id,
                     target_id=target_id,
                     weight=weight,
                     evidence=evidence[:300],
+                    confirmed=confirmed,
                 )
             )
 
@@ -109,11 +129,145 @@ class KnowledgeGraphService:
         for case in cases.list_cases():
             self._add_case_subgraph(case, add_node, add_edge)
 
+        self._merge_confirmed_edges(project_id, nodes, add_node, add_edge)
+
         return KnowledgeGraphSnapshot(
             project_id=project_id,
             nodes=list(nodes.values()),
             edges=edges,
         )
+
+    def confirm_edge(
+        self,
+        project_id: UUID,
+        *,
+        relation: KnowledgeRelationKind,
+        source_ref: str,
+        target_ref: str,
+        weight: float = 1.0,
+        evidence: str = "",
+        source: ConfirmedEdgeSource = ConfirmedEdgeSource.USER,
+        knowledge_item_id: UUID | None = None,
+    ) -> ConfirmedKnowledgeEdge:
+        """Upsert an active confirmed edge (idempotent on endpoints+relation)."""
+        source_ref = source_ref.strip()[:120]
+        target_ref = target_ref.strip()[:120]
+        if not source_ref or not target_ref:
+            raise WorkflowError("Confirmed edge requires source_ref and target_ref")
+        existing = self._confirmed_edges.get_by_endpoints(
+            project_id,
+            relation=relation,
+            source_ref=source_ref,
+            target_ref=target_ref,
+        )
+        if existing is not None:
+            existing.status = ConfirmedEdgeStatus.ACTIVE
+            existing.weight = weight
+            existing.evidence = evidence[:500]
+            existing.source = source
+            if knowledge_item_id is not None:
+                existing.knowledge_item_id = knowledge_item_id
+            existing.touch()
+            return self._confirmed_edges.update(existing)
+        edge = ConfirmedKnowledgeEdge(
+            project_id=project_id,
+            relation=relation,
+            source_ref=source_ref,
+            target_ref=target_ref,
+            weight=weight,
+            evidence=evidence[:500],
+            status=ConfirmedEdgeStatus.ACTIVE,
+            source=source,
+            knowledge_item_id=knowledge_item_id,
+        )
+        return self._confirmed_edges.create(edge)
+
+    def revoke_edge(self, edge_id: UUID) -> ConfirmedKnowledgeEdge:
+        edge = self._confirmed_edges.get_by_id(edge_id)
+        if edge is None:
+            raise WorkflowError(f"Knowledge graph edge {edge_id} not found")
+        edge.revoke()
+        return self._confirmed_edges.update(edge)
+
+    def list_confirmed_edges(
+        self, project_id: UUID, *, active_only: bool = True
+    ) -> list[ConfirmedKnowledgeEdge]:
+        return self._confirmed_edges.list_by_project(
+            project_id, active_only=active_only
+        )
+
+    def ensure_edges_from_knowledge_item(
+        self, item: ProjectKnowledgeItem
+    ) -> list[ConfirmedKnowledgeEdge]:
+        """Persist durable edges when research knowledge is confirmed (Phase C)."""
+        created: list[ConfirmedKnowledgeEdge] = []
+        item_ref = f"knowledge:{item.id}"
+        dk = item.design_knowledge
+        if dk is not None:
+            from archium.domain.case_ref import case_id_from_ref, normalize_precedent_ref
+
+            case_id = case_id_from_ref(dk.precedent_ref)
+            if case_id:
+                created.append(
+                    self.confirm_edge(
+                        item.project_id,
+                        relation=KnowledgeRelationKind.INSPIRED_BY,
+                        source_ref=item_ref,
+                        target_ref=normalize_precedent_ref(case_id) or f"case:{case_id}",
+                        weight=0.95,
+                        evidence="precedent_ref",
+                        source=ConfirmedEdgeSource.RESEARCH_CONFIRM,
+                        knowledge_item_id=item.id,
+                    )
+                )
+        if item.linked_fact_id is not None:
+            created.append(
+                self.confirm_edge(
+                    item.project_id,
+                    relation=KnowledgeRelationKind.LINKED_FACT,
+                    source_ref=item_ref,
+                    target_ref=f"fact:{item.linked_fact_id}",
+                    weight=1.0,
+                    evidence="linked_fact_id",
+                    source=ConfirmedEdgeSource.RESEARCH_CONFIRM,
+                    knowledge_item_id=item.id,
+                )
+            )
+        return created
+
+    def _merge_confirmed_edges(
+        self,
+        project_id: UUID,
+        nodes: dict[str, KnowledgeNode],
+        add_node: Any,
+        add_edge: Any,
+    ) -> None:
+        for confirmed in self._confirmed_edges.list_by_project(project_id, active_only=True):
+            for ref in (confirmed.source_ref, confirmed.target_ref):
+                if ref in nodes:
+                    continue
+                kind = infer_node_kind_from_ref(ref)
+                label = ref.split(":", 1)[-1][:300] or ref
+                add_node(
+                    KnowledgeNode(
+                        id=ref,
+                        kind=kind,
+                        label=label,
+                        summary="confirmed-edge stub",
+                        project_id=project_id,
+                        source_ref=ref,
+                        tags=["confirmed_stub"],
+                        extra={"stub": True},
+                    )
+                )
+            add_edge(
+                relation=confirmed.relation,
+                source_id=confirmed.source_ref,
+                target_id=confirmed.target_ref,
+                weight=confirmed.weight,
+                evidence=confirmed.evidence or "confirmed",
+                confirmed=True,
+            )
 
     def retrieve_via_graph(
         self,

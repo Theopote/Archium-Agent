@@ -55,6 +55,12 @@ from archium.domain.enums import (
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.intent.idea_seed import IdeaSeed
+from archium.domain.knowledge_graph import (
+    ConfirmedEdgeSource,
+    ConfirmedEdgeStatus,
+    ConfirmedKnowledgeEdge,
+    KnowledgeRelationKind,
+)
 from archium.domain.memory import UserPreference
 from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
@@ -101,6 +107,7 @@ from archium.infrastructure.database.models import (
     DeliveryRecordORM,
     DocumentChunkORM,
     ExplorationSessionORM,
+    KnowledgeGraphEdgeORM,
     LLMTraceORM,
     OutlineApprovalRecordORM,
     OutlinePlanORM,
@@ -1505,6 +1512,46 @@ def architecture_case_to_orm(
     target.transferable_principles_json = list(domain.transferable_principles)
     target.risks_json = list(domain.risks)
     target.tags_json = list(domain.tags)
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def confirmed_knowledge_edge_to_domain(
+    orm: KnowledgeGraphEdgeORM,
+) -> ConfirmedKnowledgeEdge:
+    return ConfirmedKnowledgeEdge(
+        id=orm.id,
+        project_id=orm.project_id,
+        relation=KnowledgeRelationKind(orm.relation),
+        source_ref=orm.source_ref,
+        target_ref=orm.target_ref,
+        weight=float(orm.weight or 1.0),
+        evidence=orm.evidence or "",
+        status=ConfirmedEdgeStatus(orm.status),
+        source=ConfirmedEdgeSource(orm.source),
+        knowledge_item_id=orm.knowledge_item_id,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def confirmed_knowledge_edge_to_orm(
+    domain: ConfirmedKnowledgeEdge,
+    orm: KnowledgeGraphEdgeORM | None = None,
+) -> KnowledgeGraphEdgeORM:
+    target = orm or KnowledgeGraphEdgeORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.relation = domain.relation.value
+    target.source_ref = domain.source_ref
+    target.target_ref = domain.target_ref
+    target.weight = domain.weight
+    target.evidence = domain.evidence
+    target.status = domain.status.value
+    target.source = domain.source.value
+    target.knowledge_item_id = domain.knowledge_item_id
     if domain.created_at is not None:
         target.created_at = domain.created_at
     if domain.updated_at is not None:
