@@ -392,6 +392,13 @@ class Settings(BaseSettings):
         default=True,
         description="When true, run OCR (pytesseract) for raster slide recovery inputs.",
     )
+    document_ocr_enabled: bool = Field(
+        default=True,
+        description=(
+            "When true and pytesseract is available, run OCR on scanned PDF/image assets "
+            "marked needs_ocr at ingest and materialize ocr_text chunks (KN-005 / Topic 05)."
+        ),
+    )
     slide_recovery_vlm_enabled: bool = Field(
         default=True,
         description=(

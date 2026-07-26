@@ -232,7 +232,7 @@ Project（唯一 identity）
 | 02 知识模型 | `DesignKnowledge` 字段接近护城河，缺 Graph 边与 precedent 结构 |
 | 03 推理链 | `DesignRationale` + `ContextAssessmentReason` 已有；缺统一 Reasoning Artifact 身份 |
 | 04 设计循环 | `DesignCritiqueReport` / Reflection 存在；与 Decision→Revise 闭环待查 |
-| 05 多模态 | SourceDocument 有；ArchitecturalAsset 无 |
+| 05 多模态 | SourceDocument + ArchitecturalAsset 门面（M1）；现场→约束仍欠 |
 | 06 AI 绘画 | `ConceptVisualPrompt` / 页级 `VisualIntent` 分裂 |
 | 07 产品闭环 | NBA + ProcessBoard 是基础；旅程完整性待查 |
 | 08 协作 | `access.ProjectMember` 有雏形；Organization/角色权限待查 |

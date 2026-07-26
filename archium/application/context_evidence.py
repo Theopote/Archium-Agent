@@ -41,6 +41,12 @@ class ContextMaterialsPack:
     indexed_facts: tuple[ProjectFact, ...] = ()
     indexed_knowledge_items: tuple[ProjectKnowledgeItem, ...] = ()
     indexed_gaps: tuple[KnowledgeGapEntry, ...] = ()
+    # Topic 05 / APP-018 — typed multimodal intake signals
+    site_photo_count: int = 0
+    drawing_count: int = 0
+    diagram_count: int = 0
+    reference_asset_count: int = 0
+    visual_input_sources: tuple[str, ...] = ()
 
     @property
     def has_evidence(self) -> bool:
@@ -52,6 +58,9 @@ class ContextMaterialsPack:
             or bool(self.fact_lines.strip())
             or bool(self.knowledge_lines.strip())
             or bool(self.chunk_excerpts.strip())
+            or self.site_photo_count > 0
+            or self.drawing_count > 0
+            or self.diagram_count > 0
         )
 
 
@@ -106,6 +115,10 @@ def gather_project_evidence(
     ]
     blocking = sum(1 for gap in gap_report.gaps if gap.blocking)
 
+    from archium.application.visual_evidence_service import build_visual_evidence_pack
+
+    visual = build_visual_evidence_pack(session, project_id)
+
     return ContextMaterialsPack(
         document_count=len(documents),
         document_summaries="\n".join(doc_lines),
@@ -122,6 +135,11 @@ def gather_project_evidence(
         indexed_facts=tuple(facts),
         indexed_knowledge_items=tuple(knowledge_items),
         indexed_gaps=tuple(ordered_gaps),
+        site_photo_count=visual.site_photo_count,
+        drawing_count=visual.drawing_count,
+        diagram_count=visual.diagram_count,
+        reference_asset_count=visual.reference_count,
+        visual_input_sources=tuple(visual.input_source_lines()),
     )
 
 

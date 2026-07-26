@@ -10,7 +10,7 @@
 | TS-002 | P0 | done | 资源 URI 越狱；上传文件名未净化 | `asset_path_resolver`; `local_storage` | 路径穿越 | jail + sanitize | 安全单测绿 | `-` |
 | TS-003 | P0 | done | Alembic 日志暴露密码 | alembic env | 凭据泄漏 | `hide_password` | 日志无明文密码 | `-` |
 | TS-004 | P0 | done | domain/spike 测试档位错；门禁图内联 | `tests/conftest.py` 等 | CI 档混乱 | 归 unit；fixture 化 | tier marker 测试绿 | `-` |
-| TS-005 | P1 | open | export 阻断默认、绝对路径、SecretStr 缺口、多模态未绑定 | config / settings | 配置不安全或不一致 | 逐项收紧 + 文档 | Batch 14 backlog 清零 | `-` |
+| TS-005 | P1 | open | export 阻断默认、绝对路径、SecretStr 缺口、多模态未绑定 | config / settings | 配置不安全或不一致 | 逐项收紧 + 文档；**多模态：`document_ocr_enabled` / vision RAG 已注册绑定（Topic 05）** | Batch 14 backlog 清零 | `-` |
 | TS-006 | P2 | open | 重复 fixtures/markers；calibration 臃肿；output(s) 命名 | tests | 维护成本 | 去重规范 | 无重复 marker 定义 | `-` |
 | TS-007 | P1 | done | 剧本 A 无可重复自动门禁命令 | `scripts/run_playbook_a_gate.py`; playbooks | 发版无固定命令 | 脚本 + 文档 + 守卫 | `test_playbook_a_documents_repeatable_gate_script` 绿 | `-` |
 | TS-008 | P1 | mitigated | chromadb CVE-2026-45829 无修复版 | `docs/security/dependency-allowlist.json` | 审计红；理论 RCE（HTTP 服务） | allowlist 至 2026-10-01；仅 PersistentClient | `ci_security_audit_gate true pip` 清洁锁环境绿；到期前升级 | `-` |

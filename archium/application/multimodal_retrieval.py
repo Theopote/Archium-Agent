@@ -202,6 +202,7 @@ class MultimodalRetrievalService:
 
             cred = score_chunk_credibility(chunk)
             content = annotation.to_prompt_block()
+            usage = self._usage_for_chunk(chunk)
             refs.append(
                 KnowledgeReference(
                     source_kind=KnowledgeSourceKind.MULTIMODAL_ASSET,
@@ -215,9 +216,9 @@ class MultimodalRetrievalService:
                         similarity=max(0.2, similarity),
                         authority=cred.authority,
                         transferability=cred.transferability,
-                        usage=KnowledgeUsage.ILLUSTRATIVE,
+                        usage=usage,
                     ),
-                    usage=KnowledgeUsage.ILLUSTRATIVE,
+                    usage=usage,
                     architectural_type=ArchitecturalChunkType.DRAWING_NOTE,
                     project_id=project_id,
                     extra={
@@ -228,6 +229,7 @@ class MultimodalRetrievalService:
                         "asset_id": str(chunk.metadata.get("asset_id") or ""),
                         "image_embedding": False,
                         "cad_bim_ready": False,
+                        "usage": usage.value,
                     },
                 )
             )
@@ -255,3 +257,69 @@ class MultimodalRetrievalService:
 
         refs.sort(key=lambda item: item.relevance, reverse=True)
         return refs[: max(1, top_k)]
+
+    def _usage_for_chunk(self, chunk: DocumentChunk) -> KnowledgeUsage:
+        """Project-material photos/drawings → EVIDENCE; reference/generated → ILLUSTRATIVE."""
+        from archium.application.knowledge_isolation import document_purpose_from_metadata
+        from archium.domain.architectural_asset import (
+            ArchitecturalAssetRole,
+            infer_architectural_asset_role,
+            infer_architectural_asset_usage,
+        )
+        from archium.domain.asset import Asset
+        from archium.domain.enums import AssetType, DocumentPurpose
+        from archium.infrastructure.database.repositories import AssetRepository
+
+        purpose = DocumentPurpose.PROJECT_MATERIAL
+        document = self._documents.get_document(chunk.document_id)
+        if document is not None:
+            purpose = document_purpose_from_metadata(document.metadata or {})
+
+        asset: Asset | None = None
+        raw_asset_id = chunk.metadata.get("asset_id")
+        if raw_asset_id:
+            try:
+                asset = AssetRepository(self._session).get_by_id(UUID(str(raw_asset_id)))
+            except (ValueError, TypeError):
+                asset = None
+
+        if asset is None:
+            # Caption-only fallback from chunk metadata
+            drawing_type = str(chunk.metadata.get("drawing_type") or "")
+            proxy = Asset(
+                project_id=chunk.project_id,
+                document_id=chunk.document_id,
+                filename="caption",
+                path="caption",
+                asset_type=(
+                    AssetType.DRAWING
+                    if drawing_type in {"site_plan", "floor_plan", "section", "elevation", "plan"}
+                    else AssetType.PHOTO
+                    if chunk.content_type == "image" or drawing_type in {"photo", "image"}
+                    else AssetType.IMAGE
+                ),
+                metadata=dict(chunk.metadata or {}),
+            )
+            role = infer_architectural_asset_role(proxy, document_purpose=purpose)
+            return infer_architectural_asset_usage(
+                role, document_purpose=purpose, asset=proxy
+            )
+
+        role = infer_architectural_asset_role(asset, document_purpose=purpose)
+        if role == ArchitecturalAssetRole.OTHER and annotation_hints_drawing(chunk):
+            role = ArchitecturalAssetRole.DRAWING
+        return infer_architectural_asset_usage(
+            role, document_purpose=purpose, asset=asset
+        )
+
+
+def annotation_hints_drawing(chunk: DocumentChunk) -> bool:
+    drawing_type = str(chunk.metadata.get("drawing_type") or "").lower()
+    return drawing_type in {
+        "site_plan",
+        "floor_plan",
+        "section",
+        "elevation",
+        "plan",
+        "drawing",
+    }

@@ -13,7 +13,7 @@
 | KN-002 | P1 | open | Fact/Knowledge/Manuscript 有损桥接 (K2) | knowledge services | 信息丢失 | 显式映射 + 丢字段告警 | 往返字段清单测试 | `-` |
 | KN-003 | P1 | open | 导出绕过 `filter_generation_facts` (K3) | `pptxgen_renderer` | 未审事实进稿 | 导出前统一过滤 | 过滤关则导出缺事实 / 开则一致 | `-` |
 | KN-004 | P1 | open | LLM 任意键写入事实 (K4) | parsing/extraction | schema 污染 | 白名单键 | 未知键拒绝或进 quarantine | `-` |
-| KN-005 | P1 | open | 重解析与 `needs_ocr` 行为不清 (K5/K6) | parsers | 重复/漏 OCR | 状态机 + 文档 | 重跑幂等；OCR 标志可测 | `-` |
+| KN-005 | P1 | mitigated | 重解析与 `needs_ocr` 行为不清 (K5/K6) | `ingestion_service` OCR；`ocr_text.py`; `document_ocr_enabled` | 重复/漏 OCR | M1：needs_ocr→ocr_text；成功则 COMPLETED；重解析删块重建 | OCR 标志可测；无引擎时保持 needs_ocr | `-` |
 | KN-006 | P2 | open | DOCX 页码语义弱；CitationORM 死 (K7/K8) | documents; models | 引用不准 | 页映射策略；删死表 | 页码断言 + 无死 ORM | `-` |
 | KN-007 | P0 | done | Golden 缺事实账本 + review issues（Beta B9） | golden assertions / case_a | 主链质量不可见 | Ledger 计数 + CONFLICTED 状态 + review issue 下限 | B9 关闭；case_a 断言绿 | `-` |
 | KN-008 | P1 | done | DesignKnowledge 与 ArchitectureCase 槽位不对齐（缺 problem/strategy；无 precedent 链接） | `design_knowledge.py`; `architecture_case.py`; `design_knowledge_mapping.py` | 研究写回与案例库两套词表；无法追溯先例 | 对齐字段 + `precedent_ref`；映射表单测 | Case↔DK 往返不丢 problem/strategy；可挂 `case:*` | `-` |

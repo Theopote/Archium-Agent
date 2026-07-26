@@ -221,7 +221,7 @@ ArchitectureCase(
 | 01 Domain | KnowledgeBase 仍是 Fact+Item；本专题证实「知识」≠「图」 |
 | 03 推理链 | Rationale 有链无边；Research Critic 有，缺 Reasoning Artifact 身份 |
 | 04 设计循环 | 批判需引用可追溯 DK/Case ID，否则 Critic 只能评散文 |
-| 05 多模态 | ArchitecturalChunkType 已有 SPATIAL/MATERIAL 标签；Asset→图节点待接 |
+| 05 多模态 | ArchitecturalChunkType 已有 SPATIAL/MATERIAL；Asset→图节点仍待；M1 EVIDENCE 用法已接 |
 | 06 绘画 | ResearchVisionBridge 已从 DK/Case 出视觉种子 — 知识结构直接喂绘画 |
 
 ---

@@ -88,4 +88,5 @@ def input_sources_from_evidence(evidence: ProjectEvidencePack) -> list[str]:
         sources.append(f"knowledge_items:{evidence.knowledge_item_count}")
     if evidence.chunk_excerpts.strip():
         sources.append("document_excerpts")
+    sources.extend(list(getattr(evidence, "visual_input_sources", ()) or ()))
     return sources

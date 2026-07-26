@@ -57,6 +57,7 @@
 | DOM-028 | P2 | open | KnowledgeState 回声 lifecycle/workflow/page 与 ProjectContext 双写 | `intent/knowledge_state.py`; `context/project_context.py` | 路由读到陈旧回声 | 权威在 Context 合成；KS 只存索引+dimensions（compat 字段只读派生） | 路由测试只信 Context；KS 回声有单一写入点 | `-` |
 | DOM-029 | P2 | done | DesignRationale 缺 interpretation 槽（理想推理链） | `design_rationale.py`; life-system 03 | observation→hypothesis 中间释义丢失 | 增 interpretation 字段 + prompt/Draft 对齐 | Domain/Draft/单测含 interpretation | `-` |
 | DOM-030 | P2 | done | 批判/修订结果缺 Direction 修订身份（diff / parent） | `reasoning_artifact.py`; life-system 04 | 无法追溯第 n 次修订 | revision / parent_reasoning_id + IntentEvolution lineage | 修订可按代取；IntentEvolution 可链 | `-` |
+| DOM-031 | P1 | done | 缺 ArchitecturalAsset 读模型门面（SourceDocument+Asset 分裂入口） | `architectural_asset.py`; life-system 05 | 多模态无统一入口；易平行身份 | 薄门面无新表；role/usage 推断 | 可从 Asset 建门面；Context 可汇总 | `-` |
 
 ---
 

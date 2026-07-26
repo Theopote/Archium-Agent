@@ -38,6 +38,8 @@ def compose_project_context(
         sources.append(f"knowledge_items:{pack.knowledge_item_count}")
     if pack.chunk_excerpts.strip():
         sources.append("document_excerpts")
+    # Topic 05 / APP-018 — typed visual evidence lines (site_photo:N, drawing:N, …)
+    sources.extend(list(getattr(pack, "visual_input_sources", ()) or ()))
     primary = ""
     if assessment.actions:
         primary = resolve_action_target(

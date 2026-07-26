@@ -115,18 +115,30 @@ class IngestionService:
             for chunk in vision_result.chunks:
                 saved_chunks.append(self._documents.create_chunk(chunk))
 
+            ocr_chunks, ocr_ok = self._maybe_ocr_document_assets(
+                project_id,
+                document,
+                assets,
+                needs_ocr=parsed.needs_ocr,
+                base_chunk_index=len(saved_chunks),
+            )
+            for chunk in ocr_chunks:
+                saved_chunks.append(self._documents.create_chunk(chunk))
+
             self._extract_facts_at_ingest(project_id, document.filename, saved_chunks)
             self._index_chunks(project_id, document, saved_chunks)
 
+            still_needs_ocr = bool(parsed.needs_ocr) and not ocr_ok
             document.metadata = {
                 **document.metadata,
                 **parsed.metadata,
-                "needs_ocr": parsed.needs_ocr,
+                "needs_ocr": still_needs_ocr,
+                "ocr_applied": ocr_ok,
                 "chunk_count": len(saved_chunks),
                 "asset_count": len(assets),
             }
             page_count = len(parsed.pages) if parsed.pages else None
-            if parsed.needs_ocr and document.file_type.value == "pdf":
+            if still_needs_ocr and document.file_type.value in {"pdf", "image"}:
                 document.processing_status = ProcessingStatus.NEEDS_OCR
                 document = self._documents.update_document(document)
             else:
@@ -225,18 +237,30 @@ class IngestionService:
             for chunk in vision_result.chunks:
                 saved_chunks.append(self._documents.create_chunk(chunk))
 
+            ocr_chunks, ocr_ok = self._maybe_ocr_document_assets(
+                document.project_id,
+                document,
+                assets,
+                needs_ocr=parsed.needs_ocr,
+                base_chunk_index=len(saved_chunks),
+            )
+            for chunk in ocr_chunks:
+                saved_chunks.append(self._documents.create_chunk(chunk))
+
             self._extract_facts_at_ingest(document.project_id, document.filename, saved_chunks)
             self._index_chunks(document.project_id, document, saved_chunks)
 
+            still_needs_ocr = bool(parsed.needs_ocr) and not ocr_ok
             document.metadata = {
                 **document.metadata,
                 **parsed.metadata,
-                "needs_ocr": parsed.needs_ocr,
+                "needs_ocr": still_needs_ocr,
+                "ocr_applied": ocr_ok,
                 "chunk_count": len(saved_chunks),
                 "asset_count": len(assets),
             }
             page_count = len(parsed.pages) if parsed.pages else None
-            if parsed.needs_ocr and document.file_type.value == "pdf":
+            if still_needs_ocr and document.file_type.value in {"pdf", "image"}:
                 document.processing_status = ProcessingStatus.NEEDS_OCR
             else:
                 document.mark_completed(page_count=page_count)
@@ -369,6 +393,83 @@ class IngestionService:
             )
         except Exception as exc:
             logger.warning("Parse-time fact extraction failed for %s: %s", document_name, exc)
+
+    def _maybe_ocr_document_assets(
+        self,
+        project_id: UUID,
+        document: SourceDocument,
+        assets: list[Asset],
+        *,
+        needs_ocr: bool,
+        base_chunk_index: int,
+    ) -> tuple[list[DocumentChunk], bool]:
+        """When needs_ocr, OCR image assets into ocr_text chunks (KN-005 / Topic 05).
+
+        Idempotent on reparse because chunks are deleted before rebuild.
+        Returns (chunks, ocr_succeeded).
+        """
+        if not needs_ocr or not assets:
+            return [], False
+        if not getattr(self._settings, "document_ocr_enabled", True):
+            return [], False
+
+        from archium.domain.enums import AssetType
+        from archium.infrastructure.vision.ocr_text import (
+            extract_text_from_image,
+            is_meaningful_ocr_text,
+            pytesseract_available,
+        )
+
+        if not pytesseract_available():
+            logger.info(
+                "OCR skipped for %s — pytesseract unavailable; status stays needs_ocr",
+                document.filename,
+            )
+            return [], False
+
+        indexable = {
+            AssetType.IMAGE,
+            AssetType.PHOTO,
+            AssetType.DRAWING,
+            AssetType.DIAGRAM,
+        }
+        chunks: list[DocumentChunk] = []
+        for asset in assets:
+            if asset.asset_type not in indexable:
+                continue
+            path = Path(asset.path)
+            if not path.is_file():
+                continue
+            text = extract_text_from_image(path)
+            if not is_meaningful_ocr_text(text):
+                continue
+            chunks.append(
+                DocumentChunk(
+                    project_id=project_id,
+                    document_id=document.id,
+                    content=text[:4000],
+                    page_number=asset.page_number,
+                    section_title=f"OCR · {asset.filename}",
+                    content_type="ocr_text",
+                    chunk_index=base_chunk_index + len(chunks),
+                    metadata={
+                        "asset_id": str(asset.id),
+                        "ocr": True,
+                        "ocr_engine": "pytesseract",
+                        "needs_ocr": False,
+                    },
+                ).ensure_architectural_annotation()
+            )
+
+        if not chunks:
+            logger.info("OCR produced no text for %s", document.filename)
+            return [], False
+        logger.info(
+            "OCR materialized %s chunk(s) for %s",
+            len(chunks),
+            document.filename,
+        )
+        return chunks, True
 
     def _process_asset_vision_rag(
         self,
