@@ -44,3 +44,5 @@ pytest tests/unit/visual/test_expression_modes.py -q
 ```
 
 既有 composition golden（V1–V7、V19–V23）继续覆盖对应版式结构；Expression Mode 负责**选择与锁定**，不另起坐标系统。
+
+完整建筑汇报语法（页主张 → VisualConcept → Family 比例）：见 [Architectural Presentation Grammar v1.0](architectural-presentation-grammar-v1.md)。

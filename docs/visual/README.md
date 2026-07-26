@@ -12,19 +12,20 @@
 | [Design System](design-system.md) | DesignSystem 令牌与默认预设 |
 | [Layout Families](layout-families.md) | 10 个版式族、变体与 generator |
 | [Expression Modes](expression-modes.md) | **v0.3** 10 种建筑表达模式（锁定族/变体/字数） |
+| [Architectural Presentation Grammar v1.0](architectural-presentation-grammar-v1.md) | **建筑汇报表达语法** — 页主张 → VisualConcept → Family |
 | [Renderer](renderer.md) | LayoutPlan → PptxGenJS 执行路径 |
 | [User Guide](user-guide.md) | 工作室内视觉编排（ArtDirection / 候选版式 / 审核门） |
 
 ## 一句话
 
 ```
-SlideSpec → VisualIntent → ArtDirection → LayoutPlan → Validate/Repair → Render
-         ↘（战略规划）Vision Engine → ai_generated Asset → Studio / 非证据槽
+SlideSpec → 页主张(PageDirection) → VisualConcept → Expression Mode / LayoutFamily
+         → LayoutPlan → Validate → RenderScene → PPTX → Critic
 ```
 
-LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 生成**。Renderer **执行** LayoutPlan，不重新决定版式。概念/分析示意生成见 [Vision Intelligence Layer](../architecture/vision-intelligence-layer.md)（未在当前 Visual Quality 冲刺内收口）。
+LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 生成**。Renderer **执行** LayoutPlan，不重新决定版式。页级隐喻见 [Grammar v1.0](architectural-presentation-grammar-v1.md)；出图概念见 [Vision Intelligence Layer](../architecture/vision-intelligence-layer.md)。
 
-**Page Director（v0.3）**：在 VisualIntent / SlideDesignBrief 之前用规则判断「本页只讲什么」——`single_message`、`must_show`/`must_hide`、`composition_bias`、`copy_budget`、版式禁区。不含坐标；与 `PageArchetype` Recipe 合并，冲突时 Director 覆盖密度/禁区。
+**Page Director / 页主张（v0.3）**：先定 claim / emotion / evidence / avoid，再挂 `VisualConcept`（如流线冲突 → `fragment_to_network`），最后才是 composition_bias 与坐标。
 
 ## Round 1 已落地
 
@@ -47,7 +48,8 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | **Presentation Intelligence**（Preset+Deck+Director 产品读法） | ✅ 门面服务；非新 Agent |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
-| **Page Director**（页主张 claim/emotion/evidence/avoid） | ✅ v0.3；产品名「页主张」 |
+| **Page Director**（页主张 claim/emotion/evidence/avoid + VisualConcept） | ✅ Grammar v1 切片 |
+| **Architectural Presentation Grammar v1.0** | ✅ 文档 + fragment_to_network |
 | **Expression Modes ×10**（锁定族/变体 + 人工 checklist） | ✅ v0.3 Phase 2 |
 | RenderScene 画布编辑（单选 / 多选 / 框选） | ✅ |
 | 元素评论 → 提案 → QA → Revision | ✅ |

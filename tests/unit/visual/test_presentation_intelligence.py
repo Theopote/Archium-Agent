@@ -103,5 +103,6 @@ class TestPresentationIntelligence:
         conflict = next(p for p in claims["pages"] if p["title"] == "流线冲突")
         assert conflict["emotion"] == "problem"
         assert conflict["evidence_priority"][0] == "site_photo"
+        assert conflict["visual_concept"]["visual_metaphor"] == "fragment_to_network"
         assert summary["page_direction_hits"] == 20
         assert "site_traffic_conflict" in summary["situation_rules_fired"]

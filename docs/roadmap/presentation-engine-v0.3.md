@@ -92,6 +92,8 @@ avoid（must_hide）
 
 Case 001 dry-run 产出 `page_claims.json` 供 Demo 先读主张再看版式。
 
+正式语法索引：[`docs/visual/architectural-presentation-grammar-v1.md`](../visual/architectural-presentation-grammar-v1.md)（含 VisualConcept / Drawing Dominant 比例约定）。
+
 ```text
 SlideSpec + PageArchetype + DeckDirective
         ↓

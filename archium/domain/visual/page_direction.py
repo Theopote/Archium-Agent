@@ -14,6 +14,7 @@ from pydantic import Field
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import DensityLevel, LayoutFamily
+from archium.domain.visual.visual_concept import VisualConcept
 
 
 class CompositionBias(StrEnum):
@@ -84,6 +85,7 @@ class PageDirection(DomainModel):
     expression_mode_id: str | None = None
 
     situation_rule_id: str | None = None
+    visual_concept: VisualConcept | None = None
     evidence: list[str] = Field(default_factory=list)
     source: str = Field(default="rules", min_length=1, max_length=40)
 
@@ -109,6 +111,9 @@ class PageDirection(DomainModel):
             "emotion": self.narrative_emotion.value,
             "evidence_priority": self.evidence_priority,
             "avoid": self.avoid,
+            "visual_concept": (
+                self.visual_concept.as_dict() if self.visual_concept else None
+            ),
             "copy_budget": self.copy_budget.model_dump(mode="json"),
             "derived_composition_bias": [item.value for item in self.composition_bias],
             "preferred_layout_families": [

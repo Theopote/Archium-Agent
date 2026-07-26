@@ -28,7 +28,9 @@ py -m scripts.showcase.run_case_001_render --dry-run
 py -m pytest tests/unit/visual/test_showcase_case_001.py -q
 ```
 
-校验：outline → DeckComposition → **页主张（Page Director）** → LayoutSolver 20 页 + `presentation_intelligence.json` + `page_claims.json`（无 Node）。
+校验：outline → DeckComposition → **页主张（Page Director）** → **VisualConcept** → LayoutSolver 20 页 + `presentation_intelligence.json` + `page_claims.json`（无 Node）。
+
+语法文档：[Architectural Presentation Grammar v1.0](../../../docs/visual/architectural-presentation-grammar-v1.md)（流线冲突 → `fragment_to_network`）。
 
 气质对比（technical vs minimal，可测差值）：
 

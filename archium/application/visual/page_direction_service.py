@@ -280,7 +280,10 @@ class PageDirectionService:
                 style_preset=_resolve_preset(style_preset, art_direction),
                 director_wins=True,
             )
-            return self._apply_expression_mode(direction, mode, prefer_mode_lock=False)
+            direction = self._apply_expression_mode(
+                direction, mode, prefer_mode_lock=False
+            )
+            return self._attach_visual_concept(slide, direction)
 
         if mode is not None:
             direction = _from_expression_mode(single_message=single_message, mode=mode)
@@ -291,7 +294,10 @@ class PageDirectionService:
                 style_preset=_resolve_preset(style_preset, art_direction),
                 director_wins=True,
             )
-            return self._apply_expression_mode(direction, mode, prefer_mode_lock=True)
+            direction = self._apply_expression_mode(
+                direction, mode, prefer_mode_lock=True
+            )
+            return self._attach_visual_concept(slide, direction)
 
         # No situation / mode hit — archetype recipe (or generic defaults).
         direction = _from_recipe_or_default(
@@ -306,7 +312,20 @@ class PageDirectionService:
             style_preset=_resolve_preset(style_preset, art_direction),
             director_wins=False,
         )
-        return self._apply_expression_mode(direction, mode, prefer_mode_lock=False)
+        direction = self._apply_expression_mode(
+            direction, mode, prefer_mode_lock=False
+        )
+        return self._attach_visual_concept(slide, direction)
+
+    @staticmethod
+    def _attach_visual_concept(
+        slide: SlideSpec, direction: PageDirection
+    ) -> PageDirection:
+        from archium.application.visual.visual_concept_service import VisualConceptService
+
+        service = VisualConceptService()
+        concept = service.recognize(slide, direction)
+        return service.apply(direction, concept)
 
     def apply_to_intent(
         self,
