@@ -166,7 +166,7 @@ def content_from_slide(
     citations = source_text
     if citations is None and slide.source_citations:
         first = slide.source_citations[0]
-        citations = first.document_name
+        citations = first.display_label()
         if first.page_number is not None:
             citations = f"{citations} p.{first.page_number}"
     icon_refs = [

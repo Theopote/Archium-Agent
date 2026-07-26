@@ -26,6 +26,8 @@ class SourceCitation(Citation):
     source_title: str | None = None
     published_at: date | None = None
     accessed_at: datetime | None = None
+    # Topic 07: optional back-link when cite is projected onto a slide.
+    knowledge_item_id: UUID | None = None
 
     @field_validator("document_name")
     @classmethod
@@ -55,6 +57,22 @@ class SourceCitation(Citation):
             quote=self.quote,
             confidence=self.confidence,
         )
+
+    def display_label(self) -> str:
+        """Partner-facing label for slide/export citation lines."""
+        name = self.document_name.strip()
+        if name:
+            return name
+        title = (self.source_title or "").strip()
+        if title:
+            return title
+        url = (self.url or "").strip()
+        if url:
+            from urllib.parse import urlparse
+
+            host = (urlparse(url).netloc or "").strip()
+            return host or url[:60]
+        return "外部来源"
 
 
 class ProjectKnowledgeItem(IdentifiedModel, TimestampedModel):

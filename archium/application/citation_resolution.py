@@ -15,6 +15,7 @@ from archium.application.retrieval_service import create_retrieval_service
 from archium.config.settings import Settings, get_settings
 from archium.domain.citation import Citation
 from archium.domain.document import DocumentChunk
+from archium.domain.project_knowledge import SourceCitation
 from archium.domain.slide import SlideSpec
 from archium.infrastructure.database.repositories import DocumentRepository
 from archium.infrastructure.llm.presentation_schemas import CitationDraft
@@ -103,26 +104,34 @@ def enrich_slide_citations(
         return
 
     query = " ".join(part for part in [slide.message, *slide.key_points] if part)
-    if not query.strip():
-        return
-
-    retrieval = create_retrieval_service(session, resolved_settings)
-    for hit in retrieval.search(project_id, query, top_k=2):
-        chunk = DocumentRepository(session).get_chunk(hit.chunk_id)
-        if chunk is None:
-            continue
-        slide.source_citations.append(
-            Citation(
-                document_id=chunk.document_id,
-                document_name=names.get(chunk.document_id, "项目资料"),
-                page_number=chunk.page_number,
-                chunk_id=chunk.id,
-                quote=hit.content[:200],
-                confidence=min(max(hit.score, 0.0), 1.0),
+    if query.strip():
+        retrieval = create_retrieval_service(session, resolved_settings)
+        for hit in retrieval.search(project_id, query, top_k=2):
+            chunk = DocumentRepository(session).get_chunk(hit.chunk_id)
+            if chunk is None:
+                continue
+            slide.source_citations.append(
+                SourceCitation(
+                    document_id=chunk.document_id,
+                    document_name=names.get(chunk.document_id, "项目资料"),
+                    page_number=chunk.page_number,
+                    chunk_id=chunk.id,
+                    quote=hit.content[:200],
+                    confidence=min(max(hit.score, 0.0), 1.0),
+                )
             )
-        )
-        return
+            return
 
+    # Topic 07: Research URL / public cites → page when document retrieval is empty.
+    from archium.application.research_page_citation_bridge import (
+        attach_research_citations_to_slide,
+    )
+
+    attach_research_citations_to_slide(
+        session,
+        project_id=project_id,
+        slide=slide,
+    )
 
 def _match_chunk_by_quote(quote: str | None, chunks: list[DocumentChunk]) -> DocumentChunk | None:
     if not quote:

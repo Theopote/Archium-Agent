@@ -179,7 +179,7 @@ def _build_spec_slide(
     citation_lines: list[str] = []
     if slide.source_citations:
         citation_lines = [
-            f"{citation.document_name}"
+            f"{citation.display_label()}"
             + (f" p.{citation.page_number}" if citation.page_number else "")
             for citation in slide.source_citations
         ]

@@ -365,18 +365,39 @@ def citation_lines_for_slide(slide: object) -> list[str]:
     citations = getattr(slide, "source_citations", None) or []
     lines: list[str] = []
     for citation in citations[:6]:
-        name = str(getattr(citation, "document_name", "") or "").strip()
-        if not name:
+        label = _citation_display_label(citation)
+        if not label:
             continue
         page = getattr(citation, "page_number", None)
         quote = str(getattr(citation, "quote", "") or "").strip()
-        bit = name
+        bit = label
         if page:
             bit = f"{bit} p.{page}"
         if quote:
             bit = f"{bit} — {quote[:80]}"
         lines.append(bit)
     return lines
+
+
+def _citation_display_label(citation: object) -> str:
+    display = getattr(citation, "display_label", None)
+    if callable(display):
+        label = str(display() or "").strip()
+        if label:
+            return label
+    name = str(getattr(citation, "document_name", "") or "").strip()
+    if name:
+        return name
+    title = str(getattr(citation, "source_title", "") or "").strip()
+    if title:
+        return title
+    url = str(getattr(citation, "url", "") or "").strip()
+    if url:
+        from urllib.parse import urlparse
+
+        host = (urlparse(url).netloc or "").strip()
+        return host or url[:60]
+    return ""
 
 
 def _citation_gap_messages(session: Session, presentation_id: UUID) -> list[str]:

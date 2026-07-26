@@ -31,6 +31,7 @@ User opens Archium
   -> Chunk / ProjectFact / FactLedger / Asset
   -> Workstream -> DeliverablePlan
   -> PresentationBrief -> Storyline -> SlideSpec
+     (+ resolve_citations: document retrieval, then Research SourceCitation → page)
   -> SlideDesignBrief -> VisualIntent -> LayoutPlan
   -> RenderScene -> Scene QA / Proposal / Revision
   -> JSON / Marp / editable PPTX / PDF / preview images

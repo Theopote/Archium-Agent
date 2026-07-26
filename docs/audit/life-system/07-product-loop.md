@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1–L3 + UI-009 + WF-010 + DOM-024 + APP-004/005 + DOM-023 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段 HumanGate；单一 stage；Direction↔Intent 可 diff；导出只读 `ExportVerdict`；Scene 修后 Plan 一致。余：Research→页引用。
+**子系统可用；Topic 07 产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段 HumanGate；单一 stage；Direction↔Intent 可 diff；导出只读 `ExportVerdict`；Scene 修后 Plan 一致；Research→页引用经 `resolve_citations` 投影。
 
 ---
 
@@ -118,10 +118,10 @@
 
 7. `Presentation.mission_id` + `PresentationRequest.mission_id`（**MS-002**）；Mission bridge / create / workflow serialize 注入  
 8. materials/deliver **DesignArtifact 时间线**（`design_artifact_catalog`）  
-9. Research → 页引用链：**仍延后**（DOM/KN 债）  
+9. Research → 页引用链：**done** — `SlideSpec.source_citations: SourceCitation`；`research_page_citation_bridge` 挂 `enrich_slide_citations`（DOM-008/KN-002 全量仍开）  
 10. Critique 分轨：设计→回探索（L2）；Deliver 加「回工作室」链（弱化 APP-004，不关）
 
-（关闭 `MS-002`；`UI-009` / `WF-010` / `DOM-024` / `APP-004` **done**。）
+（关闭 `MS-002`；`UI-009` / `WF-010` / `DOM-024` / `APP-004` **done**；Research→页引用 **done**。）
 
 ### Phase L3+ — HumanGate 顶栏 ✅ 2026-07-26
 
@@ -138,6 +138,10 @@
 ### Phase L3++++ — 导出统一 verdict ✅ 2026-07-26
 
 14. **APP-004**：QA 多栈只产证据；`export_gate` + `ExportVerdict.evidence_stacks`；Studio/Deliver 导出只读 verdict
+
+### Phase L3+++++ — Research→页引用 ✅ 2026-07-26
+
+15. 已确认 Research `SourceCitation`（含 URL）经 `attach_research_citations_to_slide` → `SlideSpec`；导出 `citation_lines_for_slide` 可读 label
 
 **不做：** 新 Agent；ProcessBoard 写进 ProjectContext 当 SSOT；把设计循环硬塞进 LangGraph。
 
@@ -178,7 +182,9 @@
 - [x] Issue 草案登记 module-audit  
 - [x] Phase L1 导航脊柱  
 - [x] Phase L2 可恢复人闸  
-- [x] Phase L3 lineage（MS-002 + DesignArtifact 板；Research→页仍延后）  
+- [x] Phase L3 lineage（MS-002 + DesignArtifact 板；Research→页引用桥接）  
 - [x] UI-009 五阶段 HumanGate compact 顶栏  
 - [x] WF-010 单一 product stage truth  
-- [x] DOM-024 Direction↔Intent sync / diff
+- [x] DOM-024 Direction↔Intent sync / diff  
+- [x] APP-004/005 + DOM-023  
+- [x] Research→页引用（`research_page_citation_bridge`；DOM-008 全量仍开）

@@ -16,9 +16,10 @@ def _format_citations(slide: SlideSpec) -> str:
         return ""
     lines = ["", "*来源：*"]
     for citation in slide.source_citations:
+        label = citation.display_label()
         page = f" p.{citation.page_number}" if citation.page_number else ""
         quote = f" — {citation.quote}" if citation.quote else ""
-        lines.append(f"- {_escape_inline(citation.document_name)}{page}{quote}")
+        lines.append(f"- {_escape_inline(label)}{page}{quote}")
     return "\n".join(lines)
 
 

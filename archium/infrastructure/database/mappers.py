@@ -980,7 +980,7 @@ def slide_to_domain(orm: SlideORM) -> SlideSpec:
         layout_id=orm.layout_id,
         key_points=list(orm.key_points_json),
         visual_requirements=visual_requirements_from_json(orm.visual_requirements_json),
-        source_citations=citations_from_json(orm.source_citations_json),
+        source_citations=source_citations_from_json(orm.source_citations_json),
         speaker_notes=orm.speaker_notes,
         status=SlideStatus(orm.status),
         delivery_status=delivery_status,
@@ -1008,7 +1008,7 @@ def slide_to_orm(domain: SlideSpec, orm: SlideORM | None = None) -> SlideORM:
     target.layout_id = domain.layout_id
     target.key_points_json = list(domain.key_points)
     target.visual_requirements_json = visual_requirements_to_json(domain.visual_requirements)
-    target.source_citations_json = citations_to_json(domain.source_citations)
+    target.source_citations_json = source_citations_to_json(domain.source_citations)
     target.speaker_notes = domain.speaker_notes
     target.status = domain.status.value
     target.delivery_status = domain.delivery_status.value

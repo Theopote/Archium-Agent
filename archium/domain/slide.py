@@ -9,6 +9,7 @@ from pydantic import Field, field_validator, model_validator
 from archium.domain._base import DomainModel, IdentifiedModel, VersionedModel
 from archium.domain.citation import Citation
 from archium.domain.enums import SlideDeliveryStatus, SlideStatus, SlideType, VisualType
+from archium.domain.project_knowledge import SourceCitation
 from archium.domain.slide_role import SlideRole, VisualStrategy, coerce_slide_role
 from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
 
@@ -69,7 +70,8 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     layout_id: str = Field(default="default", min_length=1)
     key_points: list[str] = Field(default_factory=list)
     visual_requirements: list[SlideVisualRequirement] = Field(default_factory=list)
-    source_citations: list[Citation] = Field(default_factory=list)
+    # Topic 07: SourceCitation so Research URL cites can land on pages (not document-only Citation).
+    source_citations: list[SourceCitation] = Field(default_factory=list)
     speaker_notes: str | None = None
     status: SlideStatus = SlideStatus.PLANNED
     # Delivery readiness (independent of content review SlideStatus).
@@ -84,6 +86,25 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     # Presentation page role + visual reasoning (Phase L).
     slide_role: SlideRole | None = None
     visual_strategy: VisualStrategy | None = None
+
+    @field_validator("source_citations", mode="before")
+    @classmethod
+    def _coerce_source_citations(cls, value: object) -> object:
+        if not value:
+            return value
+        if not isinstance(value, list):
+            return value
+        coerced: list[object] = []
+        for item in value:
+            if isinstance(item, SourceCitation):
+                coerced.append(item)
+            elif isinstance(item, Citation):
+                coerced.append(SourceCitation.from_citation(item))
+            elif isinstance(item, dict):
+                coerced.append(SourceCitation.model_validate(item))
+            else:
+                coerced.append(item)
+        return coerced
 
     @field_validator("page_archetype", mode="before")
     @classmethod
