@@ -15,11 +15,13 @@ from archium.domain.visual.benchmark import (
 )
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
+    CRITIC_COPY_DENSITY_HIGH,
     CRITIC_FOCUS_UNCLEAR,
     CRITIC_HERO_WEAK,
     CRITIC_MECHANICAL,
     CRITIC_PAGE_REPETITION,
     CRITIC_READING_ORDER_AWKWARD,
+    CRITIC_TITLE_WEAK,
     VisualCriticDimensions,
     VisualCriticFinding,
     VisualCriticReport,
@@ -137,11 +139,13 @@ from archium.domain.visual.visual_intent import VisualIntent
 
 __all__ = [
     "CRITIC_COLOR_CHAOS",
+    "CRITIC_COPY_DENSITY_HIGH",
     "CRITIC_FOCUS_UNCLEAR",
     "CRITIC_HERO_WEAK",
     "CRITIC_MECHANICAL",
     "CRITIC_PAGE_REPETITION",
     "CRITIC_READING_ORDER_AWKWARD",
+    "CRITIC_TITLE_WEAK",
     "DECK_CHROME_INCONSISTENT",
     "DECK_CLIMAX_OVERLOAD",
     "DECK_ADJACENT_HERO",

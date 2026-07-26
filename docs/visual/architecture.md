@@ -104,14 +104,16 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 - 多页节奏、案例图统一尺度
 - “不重叠但仍机械”的观感
 
-下一阶段再增加 **screenshot-based Visual Critic**。候选选择与 golden `score_baseline` 均只约束 Layout Quality。
+下一阶段重点是 **杀手级 Demo + 人工评分**（v0.3 Phase 4）。候选选择与 golden `score_baseline` 均只约束 Layout Quality。
 
-### Visual Critic（heuristic_v0，只读）
+### Visual Critic（heuristic_v0 + screenshot_v1 + 可选 vision_v1，只读）
 
 工作流在 `render_presentation` 之后增加 `critique_visuals`（`VISUAL_CRITIC_ENABLED`）：
 
 - 产出 `VisualCriticReport`（`score_kind: visual_quality`），与 Layout Quality Score 分离
 - 评价维度：focus / reading order / hero / color（需截图）/ mechanical / multi-page repetition
+- **screenshot_v1**：计划几何结构审查（`CRITIC.TITLE_WEAK`、`CRITIC.COPY_DENSITY_HIGH`）与可执行百分比建议；有 PNG 时再跑色板启发式
+- **vision_v1**：可选 LLM 多模态（`VISUAL_CRITIC_LLM_ENABLED`），软失败
 - **不**调用 `LayoutRepairService`，**不**参与正式 PPTX 门禁
 - 结果写入 `visual_critic_reports.json` 与 workflow warnings
 

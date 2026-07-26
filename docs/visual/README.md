@@ -41,7 +41,8 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | 工作室视觉编排 UI | ✅ |
 | LayoutPlan → 原生 PPTX（`render-plan.mjs`） | ✅ |
 | Golden V1–V7（composition） | ✅ |
-| Visual Critic heuristic_v0（只读 Visual Quality） | ✅ 初版 |
+| Visual Critic heuristic_v0（只读 Visual Quality） | ✅ |
+| Visual Critic screenshot_v1 / vision_v1（结构 + 可选截图 LLM） | ✅ v0.3 Phase 3 |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
 | **Page Director**（单主张 / 禁区 / copy_budget） | ✅ v0.3 Phase 1.3 |
@@ -54,7 +55,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 
 ## 下一阶段：Showcase（v0.3）
 
-架构方向正确，但距离「打开 PPT 即像成熟商业产品」仍缺：**Style Preset（事务所气质）**、**整册 Golden Deck**、**页面导演（单页主张 / 禁区）**、**截图级 Visual Critic**。
+架构方向正确，但距离「打开 PPT 即像成熟商业产品」仍缺：**整册 Golden Deck / 杀手级 Demo** 与人工五维评分（v0.3 Phase 4）。Style Preset、Deck 节奏、页面导演、表达模式与截图级 Visual Critic 已落地。
 
 现行计划：[Presentation Engine v0.3](../roadmap/presentation-engine-v0.3.md)。本阶段暂停扩 Agent / 知识库广度；优先视觉输出质量与投资人 Demo。
 
@@ -62,7 +63,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 
 仍未提供自动建筑效果图生成、通用复杂约束求解器或与 PowerPoint 完全等价的自由编辑体验。当前图片处理是受证据策略约束的衍生管线，不是生成式修图；画布编辑写入 RenderScene 修订，而不是直接修改任意 PPTX 内部对象。
 
-**Layout Quality Score** 主要覆盖结构与规则。`heuristic_v0` Visual Critic 提供只读视觉质量提示；确定性修复和需要确认的提案是两条不同路径。是否阻断导出由审核/导出策略决定，不能仅根据一个视觉分数推断。
+**Layout Quality Score** 主要覆盖结构与规则。Visual Critic（`heuristic_v0` / `screenshot_v1` / 可选 `vision_v1`）提供只读视觉质量提示；确定性修复和需要确认的提案是两条不同路径。是否阻断导出由审核/导出策略决定，不能仅根据一个视觉分数推断。
 
 ## 与旧路径的关系
 

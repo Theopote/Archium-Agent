@@ -17,12 +17,14 @@ from archium.application.visual.template_usage_brief_context import (
 )
 from archium.domain.visual.critic import (
     CRITIC_COLOR_CHAOS,
+    CRITIC_COPY_DENSITY_HIGH,
     CRITIC_FOCUS_UNCLEAR,
     CRITIC_HERO_WEAK,
     CRITIC_MECHANICAL,
     CRITIC_PAGE_REPETITION,
     CRITIC_READING_ORDER_AWKWARD,
     CRITIC_TEMPLATE_BRIEF_VIOLATION,
+    CRITIC_TITLE_WEAK,
     VisualCriticDimensions,
     VisualCriticFinding,
     VisualCriticReport,
@@ -47,13 +49,26 @@ except ImportError:  # pragma: no cover
 
 
 _METHOD = "heuristic_v0"
-_METHOD_LLM = "heuristic_v0+llm_vision"
+_METHOD_SCREENSHOT = "screenshot_v1"
+_METHOD_VISION = "vision_v1"
 logger = get_logger(__name__, operation="visual_critic")
 
 _VISION_SYSTEM = (
     "You are an architectural presentation Visual Critic. "
     "Evaluate ONLY visual quality of the slide screenshot. "
-    "Do not invent layout repairs. Return JSON only."
+    "Do not invent layout repairs or silently rewrite the deck. "
+    "Suggestions must be actionable percentages when possible "
+    "(e.g. reduce copy ~30%, increase hero area ~20%). "
+    "Return JSON only."
+)
+
+_TEXT_ROLES = frozenset(
+    {
+        LayoutElementRole.BODY_TEXT,
+        LayoutElementRole.LEAD_STATEMENT,
+        LayoutElementRole.CAPTION,
+        LayoutElementRole.ANNOTATION,
+    }
 )
 
 
@@ -134,8 +149,8 @@ class VisualCriticService:
                     severity=LayoutIssueSeverity.WARNING,
                     message="Page visual focus / hierarchy looks unclear.",
                     suggestion=(
-                        "Strengthen title/hero contrast or reduce competing "
-                        "equal-weight boxes."
+                        "Strengthen title/hero contrast (~20% clearer hierarchy) "
+                        "or reduce competing equal-weight boxes."
                     ),
                     evidence={"focus_hierarchy_clarity": focus},
                 )
@@ -156,7 +171,10 @@ class VisualCriticService:
                     rule_code=CRITIC_HERO_WEAK,
                     severity=LayoutIssueSeverity.WARNING,
                     message="Hero visual does not dominate the page enough.",
-                    suggestion="Enlarge the hero or reduce competing supporting visuals.",
+                    suggestion=(
+                        "Enlarge primary visual by ~20%; reduce competing "
+                        "supporting visuals and text blocks."
+                    ),
                     evidence={"hero_prominence": hero},
                 )
             )
@@ -181,11 +199,34 @@ class VisualCriticService:
                 )
             )
 
+        structure = self._structure_findings(plan, area)
+        if structure:
+            findings.extend(structure)
+            notes.append(
+                "screenshot_v1 structure pass (plan metrics; offline CI path)."
+            )
+
+        # Promote method when v0.3 actionable visual findings are present
+        # (structure codes or enhanced hero/focus suggestions).
+        if any(
+            item.rule_code
+            in {
+                CRITIC_TITLE_WEAK,
+                CRITIC_COPY_DENSITY_HIGH,
+                CRITIC_HERO_WEAK,
+                CRITIC_FOCUS_UNCLEAR,
+            }
+            for item in findings
+        ):
+            method = _METHOD_SCREENSHOT
+
         source: str | None = None
         if image_path is not None:
             path = Path(image_path)
             if path.is_file():
                 source = str(path)
+                if method == _METHOD:
+                    method = _METHOD_SCREENSHOT
                 color = self._score_color_calm(path)
                 if color is not None and color < 0.45:
                     findings.append(
@@ -203,7 +244,7 @@ class VisualCriticService:
                 if self._llm_enabled and self._llm is not None:
                     vision = self._llm_vision_critique(plan, path)
                     if vision is not None:
-                        method = _METHOD_LLM
+                        method = _METHOD_VISION
                         focus = (focus + vision.focus_hierarchy_clarity) / 2
                         reading = (reading + vision.reading_order_naturalness) / 2
                         if hero is not None:
@@ -221,7 +262,8 @@ class VisualCriticService:
                 notes.append(f"Screenshot not found: {path}")
         else:
             notes.append(
-                "No screenshot provided; color_chaos skipped (geometry-only critic)."
+                "No screenshot provided; color_chaos skipped "
+                "(structure/geometry critic still runs)."
             )
 
         dimensions = VisualCriticDimensions(
@@ -276,7 +318,10 @@ class VisualCriticService:
             "hero_prominence, color_chaos (1=calm), mechanical_feel (1=organic).\n"
             "Findings rule_code must be one of: "
             "CRITIC.FOCUS_UNCLEAR, CRITIC.READING_ORDER_AWKWARD, CRITIC.HERO_WEAK, "
-            "CRITIC.COLOR_CHAOS, CRITIC.MECHANICAL.\n"
+            "CRITIC.COLOR_CHAOS, CRITIC.MECHANICAL, CRITIC.TITLE_WEAK, "
+            "CRITIC.COPY_DENSITY_HIGH.\n"
+            "Suggestions must be actionable with approximate percentages when useful "
+            "(e.g. reduce copy ~30%, increase hero area ~20%).\n"
             "Return JSON matching the schema."
         )
         try:
@@ -313,6 +358,8 @@ class VisualCriticService:
             CRITIC_HERO_WEAK,
             CRITIC_COLOR_CHAOS,
             CRITIC_MECHANICAL,
+            CRITIC_TITLE_WEAK,
+            CRITIC_COPY_DENSITY_HIGH,
         }
         out: list[VisualCriticFinding] = []
         for item in draft.findings:
@@ -325,6 +372,8 @@ class VisualCriticService:
                 "CRITIC.HERO_WEAK": CRITIC_HERO_WEAK,
                 "CRITIC.COLOR_CHAOS": CRITIC_COLOR_CHAOS,
                 "CRITIC.MECHANICAL": CRITIC_MECHANICAL,
+                "CRITIC.TITLE_WEAK": CRITIC_TITLE_WEAK,
+                "CRITIC.COPY_DENSITY_HIGH": CRITIC_COPY_DENSITY_HIGH,
             }.get(code, code)
             if normalized not in allowed:
                 continue
@@ -341,6 +390,67 @@ class VisualCriticService:
                 )
             )
         return out
+
+    def _structure_findings(
+        self, plan: LayoutPlan, page_area: float
+    ) -> list[VisualCriticFinding]:
+        """Deterministic screenshot-structure critic (plan metrics; CI-safe)."""
+        findings: list[VisualCriticFinding] = []
+        titles = plan.elements_by_role(LayoutElementRole.TITLE)
+        if titles:
+            title = max(titles, key=lambda item: item.area)
+            height_ratio = title.height / max(plan.page_height, 1e-6)
+            area_ratio = title.area / page_area
+            if height_ratio < 0.06 or area_ratio < 0.028:
+                findings.append(
+                    VisualCriticFinding(
+                        rule_code=CRITIC_TITLE_WEAK,
+                        severity=LayoutIssueSeverity.WARNING,
+                        message="Title is too weak to form a clear visual focus.",
+                        suggestion=(
+                            "Strengthen title: increase title band height ~25% "
+                            "or raise contrast so the headline anchors the page."
+                        ),
+                        evidence={
+                            "title_height_ratio": round(height_ratio, 4),
+                            "title_area_ratio": round(area_ratio, 4),
+                            "source": "screenshot_structure_v1",
+                        },
+                    )
+                )
+
+        copy_area = sum(
+            el.area
+            for el in plan.elements
+            if el.role in _TEXT_ROLES
+            or (
+                el.content_type == LayoutContentType.TEXT
+                and el.role
+                not in {
+                    LayoutElementRole.TITLE,
+                    LayoutElementRole.FOOTER,
+                    LayoutElementRole.DECORATION,
+                }
+            )
+        )
+        copy_ratio = copy_area / page_area
+        if copy_ratio > 0.35:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_COPY_DENSITY_HIGH,
+                    severity=LayoutIssueSeverity.WARNING,
+                    message="Body copy density is too high for architectural presentation.",
+                    suggestion=(
+                        "Reduce body copy by ~30%; keep a single conclusion bar "
+                        "and let the primary visual breathe."
+                    ),
+                    evidence={
+                        "copy_area_ratio": round(copy_ratio, 4),
+                        "source": "screenshot_structure_v1",
+                    },
+                )
+            )
+        return findings
 
     @staticmethod
     def _dedupe_findings(findings: list[VisualCriticFinding]) -> list[VisualCriticFinding]:

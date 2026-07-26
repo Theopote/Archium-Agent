@@ -40,7 +40,7 @@
 | ArtDirection | **全稿**视觉语言叙述（语气、策略、节奏文字） | `domain/visual/art_direction.py` |
 | PageArchetype + Recipe | 开篇/区位/问题/策略/前后等语法 | `domain/visual/visual_grammar.py` |
 | DeckComposition | `PacingRole` / `VisualIntensity` / 密度与版式偏好 | `domain/visual/deck_composition.py` |
-| Visual Critic | `heuristic_v0` 只读几何启发式 | `domain/visual/critic.py` |
+| Visual Critic | `heuristic_v0` + `screenshot_v1`（结构）+ 可选 `vision_v1` | `domain/visual/critic.py` |
 | Vision style_preset | **出图**风格（马克笔等），≠ 整册 PPT 美学 | Vision Engine |
 | Golden composition | 单页/组件截图回归 | `tests/golden/visual/composition/` |
 
@@ -262,8 +262,15 @@ Vision Critic 输出示例（契约）：
 
 **验收**：
 
-- [ ] 对「故意做坏」的 golden 页，vision critic 命中 ≥ 约定 rule 的 80%。  
-- [ ] 对通过人工审美的页，误报率可接受（记录阈值，不追求零误报）。
+- [x] 对「故意做坏」的 golden 页，vision/structure critic 命中 ≥ 约定 rule 的 80%。  
+- [x] 对通过人工审美的页，误报率可接受（记录预算：结构类 `TITLE_WEAK`/`COPY_DENSITY_HIGH`/`HERO_WEAK` 应为 0；其它 incidental ≤ 1）。
+
+实现要点（`VisualCriticService`）：
+
+- `heuristic_v0`：离线几何快路径（保留）。  
+- `screenshot_v1`：计划几何结构审查（`CRITIC.TITLE_WEAK` / `CRITIC.COPY_DENSITY_HIGH`）+ 可选截图色板；建议带可执行百分比（减字 ~30%、主图 ~20%）。  
+- `vision_v1`：可选 LLM 多模态（`VISUAL_CRITIC_LLM_ENABLED`），软失败，只读。  
+- 对抗样本：`tests/unit/visual/test_visual_critic_screenshot_v03.py`。
 
 ---
 
