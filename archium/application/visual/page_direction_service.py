@@ -21,6 +21,7 @@ from archium.domain.visual.expression_mode import (
 from archium.domain.visual.page_direction import (
     CompositionBias,
     CopyBudget,
+    NarrativeEmotion,
     PageDirection,
 )
 from archium.domain.visual.style import StylePreset, get_style_preset
@@ -45,6 +46,7 @@ class _SituationRule:
     density: DensityLevel
     copy_budget: CopyBudget
     label: str
+    narrative_emotion: NarrativeEmotion = NarrativeEmotion.PROBLEM
 
 
 def _pat(*exprs: str) -> tuple[re.Pattern[str], ...]:
@@ -77,6 +79,7 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             max_body_blocks=1,
         ),
         label="现状证据板：照片网格 + 短结论",
+        narrative_emotion=NarrativeEmotion.PROBLEM,
     ),
     _SituationRule(
         rule_id="site_traffic_conflict",
@@ -118,6 +121,7 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             max_body_blocks=1,
         ),
         label="基地交通矛盾：一图一流线一句结论",
+        narrative_emotion=NarrativeEmotion.PROBLEM,
     ),
     _SituationRule(
         rule_id="site_problem_evidence_legacy",
@@ -143,6 +147,7 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             max_body_blocks=1,
         ),
         label="现状证据板：照片网格 + 短结论",
+        narrative_emotion=NarrativeEmotion.PROBLEM,
     ),
     _SituationRule(
         rule_id="drawing_story",
@@ -169,6 +174,7 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             max_body_blocks=1,
         ),
         label="图纸叙事：主图 + 编号解释",
+        narrative_emotion=NarrativeEmotion.CALM,
     ),
     _SituationRule(
         rule_id="strategy_cards",
@@ -186,6 +192,7 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             max_body_blocks=0,
         ),
         label="策略卡：3–4 卡，禁止堆字",
+        narrative_emotion=NarrativeEmotion.STRATEGY,
     ),
     _SituationRule(
         rule_id="hero_opening",
@@ -207,6 +214,7 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             max_body_blocks=0,
         ),
         label="开场大图：一句概念，极少文字",
+        narrative_emotion=NarrativeEmotion.CLIMAX,
     ),
 )
 
@@ -249,6 +257,7 @@ class PageDirectionService:
         if rule is not None:
             direction = PageDirection(
                 single_message=single_message,
+                narrative_emotion=rule.narrative_emotion,
                 must_show=list(rule.must_show),
                 must_hide=list(rule.must_hide),
                 composition_bias=list(rule.composition_bias),
@@ -315,26 +324,28 @@ class PageDirectionService:
         bias_text = "+".join(b.value for b in direction.composition_bias) or "balanced"
         mode_label = direction.expression_mode_id or "none"
         strategy = (
-            f"page_direction:{direction.situation_rule_id or direction.source}; "
+            f"page_claim:{direction.situation_rule_id or direction.source}; "
+            f"emotion={direction.narrative_emotion.value}; "
             f"expression_mode={mode_label}; "
             f"bias={bias_text}; "
             f"copy≤{direction.copy_budget.max_key_points}pts/"
             f"{direction.copy_budget.max_message_chars}chars; "
-            f"must_show={','.join(direction.must_show[:4])}"
+            f"evidence={','.join(direction.evidence_priority[:4])}"
         )
         updates: dict[str, object] = {
             "page_direction": direction,
-            "audience_takeaway": direction.single_message,
+            "audience_takeaway": direction.claim,
+            "emotional_tone": direction.narrative_emotion.value,
             "preferred_layout_families": preferred[:3],
             "composition_strategy": strategy,
-            "hierarchy": list(direction.must_show) or list(intent.hierarchy),
+            "hierarchy": list(direction.evidence_priority) or list(intent.hierarchy),
             "expression_mode_id": direction.expression_mode_id,
             "preferred_layout_variant": direction.locked_layout_variant,
         }
         if direction.density_override is not None:
             updates["density_level"] = direction.density_override
-        if direction.must_hide:
-            hide = "、".join(direction.must_hide[:4])
+        if direction.avoid:
+            hide = "、".join(direction.avoid[:4])
             updates["annotation_strategy"] = (
                 f"{intent.annotation_strategy}; 禁止：{hide}".strip("; ")
             )
@@ -592,6 +603,7 @@ def _from_expression_mode(
 ) -> PageDirection:
     return PageDirection(
         single_message=single_message,
+        narrative_emotion=_emotion_for_expression_mode(mode),
         must_show=list(mode.must_show),
         must_hide=list(mode.must_hide),
         composition_bias=list(mode.composition_bias),
@@ -606,6 +618,24 @@ def _from_expression_mode(
     )
 
 
+def _emotion_for_expression_mode(mode: ExpressionMode) -> NarrativeEmotion:
+    from archium.domain.visual.expression_mode import ExpressionModeId
+
+    mapping = {
+        ExpressionModeId.HERO_OPENING: NarrativeEmotion.CLIMAX,
+        ExpressionModeId.PROBLEM_TO_SOLUTION: NarrativeEmotion.STRATEGY,
+        ExpressionModeId.DRAWING_STORY: NarrativeEmotion.CALM,
+        ExpressionModeId.BEFORE_AFTER: NarrativeEmotion.STRATEGY,
+        ExpressionModeId.EVIDENCE_BOARD: NarrativeEmotion.PROBLEM,
+        ExpressionModeId.ANALYTICAL_DIAGRAM: NarrativeEmotion.CALM,
+        ExpressionModeId.STRATEGY_CARDS: NarrativeEmotion.STRATEGY,
+        ExpressionModeId.PROCESS_NARRATIVE: NarrativeEmotion.STRATEGY,
+        ExpressionModeId.METRIC_DASHBOARD: NarrativeEmotion.DECISION,
+        ExpressionModeId.HYBRID_CLIMAX: NarrativeEmotion.CLIMAX,
+    }
+    return mapping.get(mode.id, NarrativeEmotion.CALM)
+
+
 def _from_recipe_or_default(
     *,
     single_message: str,
@@ -615,6 +645,7 @@ def _from_recipe_or_default(
     if recipe is None:
         return PageDirection(
             single_message=single_message,
+            narrative_emotion=NarrativeEmotion.CALM,
             must_show=["title", "primary_visual", "conclusion"],
             must_hide=["decorative_noise"],
             composition_bias=[CompositionBias.TEXT_LEAD],
@@ -631,8 +662,10 @@ def _from_recipe_or_default(
             source="rules",
         )
     bias = _bias_from_recipe(recipe)
+    emotion = _emotion_for_archetype(recipe.archetype)
     return PageDirection(
         single_message=single_message,
+        narrative_emotion=emotion,
         must_show=[zone.role for zone in recipe.composition_zones[:4]],
         must_hide=["layout_family_conflict"],
         composition_bias=bias,
@@ -648,6 +681,27 @@ def _from_recipe_or_default(
         evidence=[f"archetype:{recipe.archetype.value}"],
         source="archetype",
     )
+
+
+def _emotion_for_archetype(archetype: PageArchetype) -> NarrativeEmotion:
+    problem_like = {
+        PageArchetype.SITE_PROBLEM_DIAGNOSIS,
+        PageArchetype.SITE_CONTEXT_ANALYSIS,
+    }
+    strategy_like = {
+        PageArchetype.DESIGN_STRATEGY,
+        PageArchetype.BEFORE_AFTER_TRANSFORMATION,
+    }
+    climax_like = {
+        PageArchetype.NARRATIVE_OPENING,
+    }
+    if archetype in problem_like:
+        return NarrativeEmotion.PROBLEM
+    if archetype in strategy_like:
+        return NarrativeEmotion.STRATEGY
+    if archetype in climax_like:
+        return NarrativeEmotion.CLIMAX
+    return NarrativeEmotion.CALM
 
 
 def _bias_from_recipe(recipe: VisualPageRecipe) -> list[CompositionBias]:
