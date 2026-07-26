@@ -29,9 +29,9 @@ def _slide(title: str, message: str, *, order: int = 0) -> SlideSpec:
     )
 
 
-def test_page_grammar_catalog_has_twelve_formulas() -> None:
+def test_page_grammar_catalog_has_twenty_formulas() -> None:
     formulas = list_page_formulas()
-    assert len(formulas) == 12
+    assert len(formulas) == 20
     ids = {f.id for f in formulas}
     assert PageGrammarId.PROBLEM_EVIDENCE_CONFLICT in ids
     assert PageGrammarId.PATH_EXPERIENCE in ids
@@ -39,7 +39,26 @@ def test_page_grammar_catalog_has_twelve_formulas() -> None:
     assert PageGrammarId.QUIET_ARGUMENT in ids
     assert PageGrammarId.MONUMENT_IMAGE in ids
     assert PageGrammarId.BEFORE_AFTER_CUT in ids
+    assert PageGrammarId.SECTION_OPENER in ids
+    assert PageGrammarId.PHASING_TIMELINE in ids
+    assert PageGrammarId.THRESHOLD_SEQUENCE in ids
+    assert PageGrammarId.EVIDENCE_TRIPTYCH in ids
+    assert PageGrammarId.AXONOMETRIC_CALLOUT in ids
+    assert PageGrammarId.MASTERPLAN_FOCUS in ids
+    assert PageGrammarId.PROGRAM_STACK in ids
+    assert PageGrammarId.QUOTE_CITATION in ids
 
+
+def test_phasing_and_threshold_title_selection() -> None:
+    assert select_page_formula(emotion="strategy", title="实施分期").id == (
+        PageGrammarId.PHASING_TIMELINE
+    )
+    assert select_page_formula(emotion="calm", title="入口序列").id == (
+        PageGrammarId.THRESHOLD_SEQUENCE
+    )
+    assert select_page_formula(emotion="calm", title="策略篇").id == (
+        PageGrammarId.SECTION_OPENER
+    )
 
 def test_conflict_page_selects_path_experience_formula() -> None:
     slide = _slide("流线冲突", "医患流线交叉与洁污混行是当前最大安全风险。")
@@ -159,6 +178,54 @@ def test_site_layer_gets_cad_grid_atmosphere() -> None:
 def test_select_page_formula_problem_emotion() -> None:
     formula = select_page_formula(emotion="problem", title="现状问题总览")
     assert formula.id == PageGrammarId.PROBLEM_EVIDENCE_CONFLICT
+
+
+def test_conflict_gets_photo_plus_analysis_composition() -> None:
+    slide = _slide("流线冲突", "医患流线交叉与洁污混行是当前最大安全风险。")
+    direction = PageDirectionService().direct(slide)
+    language = direction.visual_language
+    assert language is not None
+    assert language.image_composition.mode.value == "photo_plus_analysis"
+    assert any(
+        line.kind.value == "conflict" for line in language.image_composition.analysis_lines
+    )
+    plan = LayoutPlan(
+        slide_id=slide.id,
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+        layout_family=LayoutFamily.ANALYTICAL_DIAGRAM,
+        layout_variant="default",
+        page_width=13.333,
+        page_height=7.5,
+        elements=[
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                x=5.0,
+                y=1.0,
+                width=7.5,
+                height=5.0,
+            )
+        ],
+        reading_order=["hero"],
+    )
+    updated = apply_visual_language_to_plan(
+        plan,
+        language,
+        page_order=5,
+        visual_budget=direction.visual_budget,
+    )
+    ids = {el.id for el in updated.elements}
+    assert any(i.startswith("vl_icp_line_") for i in ids)
+    assert "图 `photo_plus_analysis`" in language.summary_caption()
+
+
+def test_site_layer_gets_layered_base_composition() -> None:
+    slide = _slide("区位与交通", "城市界面与急诊入口的交通压力集中在北侧。")
+    direction = PageDirectionService().direct(slide)
+    assert direction.visual_language is not None
+    assert direction.visual_language.image_composition.mode.value == "layered_base"
 
 
 def test_image_mask_stamps_hero_element() -> None:

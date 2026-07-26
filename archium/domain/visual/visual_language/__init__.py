@@ -17,6 +17,12 @@ from archium.domain.visual.visual_language.decoration import (
     DecorationRecipe,
     DividerKind,
 )
+from archium.domain.visual.visual_language.image_composition import (
+    AnalysisLineKind,
+    ImageCompositionMode,
+    ImageCompositionPlan,
+    ImageSlotRole,
+)
 from archium.domain.visual.visual_language.image_mask import ImageMaskKind, ImageMaskSpec
 from archium.domain.visual.visual_language.layering import SceneLayerRole
 from archium.domain.visual.visual_language.spec import ImageBehavior, VisualLanguageSpec
@@ -34,6 +40,7 @@ from archium.domain.visual.visual_language.typography import (
 )
 
 __all__ = [
+    "AnalysisLineKind",
     "ArchitecturalSymbolId",
     "AtmosphereKind",
     "AtmosphereSpec",
@@ -44,8 +51,11 @@ __all__ = [
     "DecorationRecipe",
     "DividerKind",
     "ImageBehavior",
+    "ImageCompositionMode",
+    "ImageCompositionPlan",
     "ImageMaskKind",
     "ImageMaskSpec",
+    "ImageSlotRole",
     "NAMED_SWATCHES",
     "SYMBOL_GLYPHS",
     "SceneLayerRole",

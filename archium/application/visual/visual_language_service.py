@@ -38,6 +38,9 @@ from archium.domain.visual.visual_language import (
     VisualLanguageSpec,
 )
 from archium.domain.visual.visual_language.atmosphere import atmosphere_for_context
+from archium.domain.visual.visual_language.image_composition import (
+    image_composition_for_context,
+)
 from archium.domain.visual.visual_language.image_mask import mask_for_image_behavior
 
 # Case / product bilingual labels (architecture report convention).
@@ -93,6 +96,13 @@ class VisualLanguageService:
             ),
             emotion=direction.narrative_emotion.value,
         )
+        image_composition = image_composition_for_context(
+            formula_id=formula.id.value if formula else None,
+            metaphor=(
+                concept.visual_metaphor.value if concept is not None else None
+            ),
+            emotion=direction.narrative_emotion.value,
+        )
         return VisualLanguageSpec(
             typography=typography,
             color_story=color_story,
@@ -102,6 +112,7 @@ class VisualLanguageService:
             image_behavior=image_behavior,
             image_mask=image_mask,
             atmosphere=atmosphere,
+            image_composition=image_composition,
             source="visual_rhetoric_v1",
         )
 

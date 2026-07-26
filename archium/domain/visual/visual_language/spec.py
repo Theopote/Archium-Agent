@@ -10,6 +10,7 @@ from archium.domain._base import DomainModel
 from archium.domain.visual.visual_language.atmosphere import AtmosphereSpec
 from archium.domain.visual.visual_language.color_story import ColorStory
 from archium.domain.visual.visual_language.decoration import DecorationRecipe
+from archium.domain.visual.visual_language.image_composition import ImageCompositionPlan
 from archium.domain.visual.visual_language.image_mask import ImageMaskSpec
 from archium.domain.visual.visual_language.symbols import ArchitecturalSymbolId
 from archium.domain.visual.visual_language.typography import TypographyRecipe
@@ -32,6 +33,7 @@ class VisualLanguageSpec(DomainModel):
     image_behavior: ImageBehavior = ImageBehavior.INHERIT
     image_mask: ImageMaskSpec = Field(default_factory=ImageMaskSpec)
     atmosphere: AtmosphereSpec = Field(default_factory=AtmosphereSpec)
+    image_composition: ImageCompositionPlan = Field(default_factory=ImageCompositionPlan)
     source: str = Field(default="rules", max_length=40)
 
     def as_dict(self) -> dict[str, object]:
@@ -44,6 +46,7 @@ class VisualLanguageSpec(DomainModel):
             "image_behavior": self.image_behavior.value,
             "image_mask": self.image_mask.as_dict(),
             "atmosphere": self.atmosphere.as_dict(),
+            "image_composition": self.image_composition.as_dict(),
             "source": self.source,
         }
 
@@ -64,4 +67,6 @@ class VisualLanguageSpec(DomainModel):
             bits.append(f"罩 `{self.image_mask.kind.value}`")
         if self.atmosphere.kind.value != "none":
             bits.append(f"底 `{self.atmosphere.kind.value}`")
+        if self.image_composition.mode.value != "none":
+            bits.append(f"图 `{self.image_composition.mode.value}`")
         return " · ".join(bits)

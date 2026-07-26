@@ -334,7 +334,7 @@ def write_case_001_dry_run(
                 "engine": "visual_language_v1",
                 "note": (
                     "Typography / ColorStory / Decoration / Symbols / Atmosphere / "
-                    "SVG primitives — rhetoric layer after VisualConcept, before Layout."
+                    "SVG primitives / ImageComposition — rhetoric after VisualConcept."
                 ),
                 "pages": visual_language_pages,
             },
@@ -360,6 +360,9 @@ def write_case_001_dry_run(
         "project_personality": intel_brief.project_personality,
         "situation_rules_fired": intel_brief.situation_rules_fired,
     }
+    from archium.application.visual.design_corpus_service import DesignCorpusService
+
+    summary["design_corpus"] = DesignCorpusService().progress()
     (out / "render_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

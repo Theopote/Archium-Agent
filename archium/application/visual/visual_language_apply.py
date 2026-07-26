@@ -38,6 +38,7 @@ def apply_visual_language_to_plan(
     elements = _inject_symbols(elements, language, plan=plan, budget=budget)
     elements = _inject_primitives(elements, language, plan=plan, budget=budget)
     elements = _apply_image_masks(elements, language)
+    elements = _inject_image_composition(elements, language, plan=plan, budget=budget)
     reading = list(plan.reading_order)
     for element in elements:
         if element.id not in reading and element.role != LayoutElementRole.DECORATION:
@@ -285,6 +286,146 @@ def _apply_image_masks(
             updates["opacity"] = max(0.55, 1.0 - mask.edge_softness * 0.35)
             updates["corner_radius"] = mask.corner_radius
         out.append(element.model_copy(update=updates))
+    return out
+
+
+def _inject_image_composition(
+    elements: list[LayoutElement],
+    language: VisualLanguageSpec,
+    *,
+    plan: LayoutPlan,
+    budget: VisualBudget,
+) -> list[LayoutElement]:
+    """Overlay analysis lines (and optional detail frame) on the hero image frame."""
+    from archium.domain.visual.visual_language.image_composition import (
+        ImageCompositionMode,
+    )
+
+    composition = language.image_composition
+    if composition.mode == ImageCompositionMode.NONE:
+        return elements
+    out = list(elements)
+    if any(el.id.startswith("vl_icp_") for el in out):
+        return out
+
+    hero = next(
+        (
+            el
+            for el in out
+            if el.role
+            in {LayoutElementRole.HERO_VISUAL, LayoutElementRole.SUPPORTING_VISUAL}
+            and el.content_type
+            in {LayoutContentType.IMAGE, LayoutContentType.DRAWING}
+        ),
+        None,
+    )
+    # Fallback: largest image-like box, else a synthetic frame on the right half.
+    if hero is None:
+        candidates = [
+            el
+            for el in out
+            if el.content_type
+            in {LayoutContentType.IMAGE, LayoutContentType.DRAWING}
+        ]
+        hero = max(candidates, key=lambda el: el.width * el.height, default=None)
+    if hero is None:
+        # Synthetic analysis frame so rhetoric still shows on text-led layouts
+        # that claim photo_plus_analysis (Case 001 conflict without assets).
+        frame_x = plan.page_width * 0.48
+        frame_y = plan.page_height * 0.18
+        frame_w = plan.page_width * 0.44
+        frame_h = plan.page_height * 0.62
+    else:
+        frame_x, frame_y = hero.x, hero.y
+        frame_w, frame_h = hero.width, hero.height
+
+    # Cap analysis lines with decorative_lines budget (at least 1 when mode asks).
+    line_cap = max(1, min(len(composition.analysis_lines), budget.decorative_lines + 1))
+    for index, line in enumerate(composition.analysis_lines[:line_cap]):
+        stroke = NAMED_SWATCHES.get(
+            line.stroke_swatch, NAMED_SWATCHES.get("axis_line", "#2C2C2C")
+        )
+        x0 = frame_x + frame_w * line.x0
+        y0 = frame_y + frame_h * line.y0
+        x1 = frame_x + frame_w * line.x1
+        y1 = frame_y + frame_h * line.y1
+        # Approximate a thin rectangle along the segment (axis-aligned bbox + min thickness).
+        left = min(x0, x1)
+        top = min(y0, y1)
+        width = max(abs(x1 - x0), 0.02)
+        height = max(abs(y1 - y0), 0.02)
+        # Prefer stroke-only when the segment is nearly horizontal/vertical.
+        if abs(x1 - x0) >= abs(y1 - y0):
+            # Horizontal-ish: thin bar
+            top = (y0 + y1) / 2.0 - 0.012
+            height = 0.024
+            width = max(width, 0.15)
+            left = min(x0, x1)
+        else:
+            left = (x0 + x1) / 2.0 - 0.012
+            width = 0.024
+            height = max(height, 0.15)
+            top = min(y0, y1)
+        out.append(
+            LayoutElement(
+                id=f"vl_icp_line_{line.kind.value}_{index}",
+                role=LayoutElementRole.ANNOTATION,
+                content_type=LayoutContentType.SHAPE,
+                x=left,
+                y=top,
+                width=width,
+                height=height,
+                z_index=7,
+                fill_color=stroke,
+                stroke_color=stroke,
+                stroke_width=0,
+                opacity=line.opacity,
+                layer_role=SceneLayerRole.ANNOTATION.value,
+            )
+        )
+        if line.label and budget.icons > 0:
+            out.append(
+                LayoutElement(
+                    id=f"vl_icp_label_{line.kind.value}_{index}",
+                    role=LayoutElementRole.CAPTION,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=line.label.upper(),
+                    x=left + 0.05,
+                    y=max(0.1, top - 0.28),
+                    width=min(1.6, frame_w * 0.4),
+                    height=0.24,
+                    z_index=8,
+                    style_token="caption",
+                    font_size_override=10,
+                    letter_spacing=0.12,
+                    layer_role=SceneLayerRole.ANNOTATION.value,
+                )
+            )
+
+    # Detail inset frame (rhetoric placeholder — does not invent a second asset).
+    wants_detail = composition.max_details > 0 and any(
+        slot.role.value == "detail" for slot in composition.slots
+    )
+    if wants_detail and budget.color_blocks > 0:
+        inset_w = min(2.2, frame_w * 0.28)
+        inset_h = min(1.6, frame_h * 0.32)
+        out.append(
+            LayoutElement(
+                id="vl_icp_detail_frame",
+                role=LayoutElementRole.DECORATION,
+                content_type=LayoutContentType.SHAPE,
+                x=frame_x + frame_w - inset_w - 0.12,
+                y=frame_y + 0.12,
+                width=inset_w,
+                height=inset_h,
+                z_index=6,
+                fill_color=None,
+                stroke_color=NAMED_SWATCHES.get("axis_line", "#2C2C2C"),
+                stroke_width=1.0,
+                opacity=0.75,
+                layer_role=SceneLayerRole.ANNOTATION.value,
+            )
+        )
     return out
 
 

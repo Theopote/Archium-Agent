@@ -28,6 +28,14 @@ class PageGrammarId(StrEnum):
     BEFORE_AFTER_CUT = "before_after_cut"
     CORE_EXPANSION = "core_expansion"
     QUIET_ARGUMENT = "quiet_argument"
+    SECTION_OPENER = "section_opener"
+    PHASING_TIMELINE = "phasing_timeline"
+    THRESHOLD_SEQUENCE = "threshold_sequence"
+    EVIDENCE_TRIPTYCH = "evidence_triptych"
+    AXONOMETRIC_CALLOUT = "axonometric_callout"
+    MASTERPLAN_FOCUS = "masterplan_focus"
+    PROGRAM_STACK = "program_stack"
+    QUOTE_CITATION = "quote_citation"
 
 
 class PageVisualFormula(DomainModel):
@@ -200,6 +208,94 @@ FORMULA_QUIET = PageVisualFormula(
     must_hide=["decorative_icons", "photo_wall", "strategy_card_wall"],
 )
 
+FORMULA_SECTION = PageVisualFormula(
+    id=PageGrammarId.SECTION_OPENER,
+    display_name="章节扉页：编号 + 短题",
+    semantic_slots=["SectionIndex", "ShortTitle", "Whitespace"],
+    visual_parts=["section_index", "thin_rule", "short_statement"],
+    accent_role="neutral",
+    preferred_emotions=["calm", "climax"],
+    default_primitive_ids=["section_index", "thin_rule", "hero_statement"],
+    must_hide=["key_point_wall", "metric_wall", "photo_wall"],
+)
+
+FORMULA_PHASING = PageVisualFormula(
+    id=PageGrammarId.PHASING_TIMELINE,
+    display_name="分期实施：阶段轴 + 节点",
+    semantic_slots=["Phase", "Sequence", "Milestone"],
+    visual_parts=["horizontal_axis", "nodes", "phase_labels"],
+    accent_role="intervention",
+    preferred_emotions=["strategy", "decision"],
+    default_primitive_ids=["axis_line", "node", "section_index", "thin_rule"],
+    must_hide=["emoji_icons", "photo_wall"],
+)
+
+FORMULA_THRESHOLD = PageVisualFormula(
+    id=PageGrammarId.THRESHOLD_SEQUENCE,
+    display_name="入口序列：门槛 + 路径 + 到达",
+    semantic_slots=["Threshold", "Approach", "Arrival"],
+    visual_parts=["entrance", "flow_line", "node"],
+    accent_role="accent",
+    preferred_emotions=["strategy", "calm"],
+    default_primitive_ids=["entrance", "flow_line", "circulation", "node"],
+    must_hide=["metric_wall", "three_column_text"],
+)
+
+FORMULA_EVIDENCE_TRIPTYCH = PageVisualFormula(
+    id=PageGrammarId.EVIDENCE_TRIPTYCH,
+    display_name="证据三联：三帧图像证据（非三栏字墙）",
+    semantic_slots=["EvidenceA", "EvidenceB", "EvidenceC", "Claim"],
+    visual_parts=["photo_triptych", "thin_rule", "short_statement"],
+    accent_role="conflict",
+    preferred_emotions=["problem"],
+    default_primitive_ids=["thin_rule", "node", "axis_line"],
+    must_hide=["three_column_text", "emoji_icons", "strategy_card_wall"],
+)
+
+FORMULA_AXON = PageVisualFormula(
+    id=PageGrammarId.AXONOMETRIC_CALLOUT,
+    display_name="轴测注解：体量 + 编号引出",
+    semantic_slots=["Axonometric", "KeyedCallout", "Claim"],
+    visual_parts=["drawing", "callouts", "thin_rule", "section_index"],
+    accent_role="intervention",
+    preferred_emotions=["strategy", "calm"],
+    default_primitive_ids=["thin_rule", "node", "section_index", "overlay_map"],
+    must_hide=["emoji_icons", "metric_wall", "three_column_text"],
+)
+
+FORMULA_MASTERPLAN = PageVisualFormula(
+    id=PageGrammarId.MASTERPLAN_FOCUS,
+    display_name="总图主导：场地平面 + 北向比例",
+    semantic_slots=["Masterplan", "NorthScale", "Highlight"],
+    visual_parts=["drawing", "axis_line", "overlay_map"],
+    accent_role="intervention",
+    preferred_emotions=["calm", "problem"],
+    default_primitive_ids=["axis_line", "overlay_map", "node", "thin_rule"],
+    must_hide=["strategy_card_wall", "emoji_icons"],
+)
+
+FORMULA_PROGRAM = PageVisualFormula(
+    id=PageGrammarId.PROGRAM_STACK,
+    display_name="功能叠合：竖向程序 + 分区色",
+    semantic_slots=["Program", "Stack", "Zone"],
+    visual_parts=["stack_diagram", "color_blocks", "thin_rule"],
+    accent_role="accent",
+    preferred_emotions=["strategy", "decision"],
+    default_primitive_ids=["thin_rule", "section_index", "node", "overlay_map"],
+    must_hide=["photo_wall", "emoji_icons"],
+)
+
+FORMULA_QUOTE = PageVisualFormula(
+    id=PageGrammarId.QUOTE_CITATION,
+    display_name="引语页：一句引用 + 来源",
+    semantic_slots=["Quote", "Attribution", "Whitespace"],
+    visual_parts=["short_statement", "thin_rule", "caption"],
+    accent_role="neutral",
+    preferred_emotions=["calm"],
+    default_primitive_ids=["thin_rule", "hero_statement"],
+    must_hide=["metric_wall", "photo_wall", "strategy_card_wall"],
+)
+
 _FORMULAS: dict[PageGrammarId, PageVisualFormula] = {
     f.id: f
     for f in (
@@ -215,6 +311,14 @@ _FORMULAS: dict[PageGrammarId, PageVisualFormula] = {
         FORMULA_BEFORE_AFTER,
         FORMULA_CORE,
         FORMULA_QUIET,
+        FORMULA_SECTION,
+        FORMULA_PHASING,
+        FORMULA_THRESHOLD,
+        FORMULA_EVIDENCE_TRIPTYCH,
+        FORMULA_AXON,
+        FORMULA_MASTERPLAN,
+        FORMULA_PROGRAM,
+        FORMULA_QUOTE,
     )
 }
 
@@ -265,6 +369,22 @@ def select_page_formula(
         return FORMULA_PATH
     if metaphor == "monument_single" or title in {"总体愿景"}:
         return FORMULA_MONUMENT
+    if title in {"章节", "第一章", "第二节", "篇章扉页", "问题篇", "策略篇"}:
+        return FORMULA_SECTION
+    if title in {"实施分期", "分期建设", "施工阶段", "实施计划"}:
+        return FORMULA_PHASING
+    if title in {"入口序列", "入院体验", "门槛空间", "到达体验"}:
+        return FORMULA_THRESHOLD
+    if title in {"证据三联", "现场三联", "问题三联"}:
+        return FORMULA_EVIDENCE_TRIPTYCH
+    if title in {"轴测分析", "体量轴测", "空间轴测"}:
+        return FORMULA_AXON
+    if title in {"总平面", "总图", "场地总图", "总体规划"}:
+        return FORMULA_MASTERPLAN
+    if title in {"功能构成", "功能叠合", "程序分区", "竖向功能"}:
+        return FORMULA_PROGRAM
+    if title in {"设计语录", "引用", "理念引语"}:
+        return FORMULA_QUOTE
     if rule == "hero_opening" or title == "封面" or mode == "hero_opening":
         return FORMULA_HERO
     if rule == "drawing_story" or mode == "drawing_story":

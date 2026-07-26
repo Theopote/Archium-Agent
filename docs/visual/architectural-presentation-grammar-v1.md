@@ -147,8 +147,16 @@ VisualConcept
 | `core_expansion` | Core + Growth + Expansion | circle_mask · radial |
 | `decision_metric` | Metric + Source | thin_rule · caption |
 | `quiet_argument` | Claim + Whitespace | short statement |
+| `section_opener` | SectionIndex + ShortTitle | section_index · thin_rule |
+| `phasing_timeline` | Phase + Milestone | axis · nodes |
+| `threshold_sequence` | Threshold + Approach + Arrival | entrance · flow |
+| `evidence_triptych` | Evidence×3 + Claim | photo frames（禁三栏字墙） |
+| `axonometric_callout` | Axonometric + KeyedCallout | drawing · callouts |
+| `masterplan_focus` | Masterplan + NorthScale | drawing · axis |
+| `program_stack` | Program + Stack + Zone | stack diagram · color |
+| `quote_citation` | Quote + Attribution | short statement · caption |
 
-实现：`domain/visual/page_visual_grammar.py` → `PageDirection.page_grammar`；Primitive 按 `visual_budget.icons` 实体化进 LayoutPlan。
+实现：`domain/visual/page_visual_grammar.py` → `PageDirection.page_grammar`；Primitive 按 `visual_budget.icons` 实体化进 LayoutPlan。当前 **20 / ~20** 句型（首轮目录完成）。
 
 ### 3.3 ImageMask（图片修辞）
 
@@ -160,9 +168,28 @@ VisualConcept
 
 Primitive → 优先 `icon:*`（`primitive_icons.py` → 仓库内 `architectural_icons` SVG），无映射时再退到字形；`PptxGenPresentationRenderer` 在无 project 时也会解析 bundled icon 路径（Case 001 dry-run / PPTX）。
 
-延后：凑满 ~20 句型、Corpus、LLM 选型、更多 SVG 资产。
+### 3.5 ImageCompositionPlan（主图 + 局部 + 分析线）
 
-Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `narrative` + `page_grammar` + `image_mask` + atmosphere。
+`ImageCompositionPlan` 挂在 `VisualLanguageSpec.image_composition`：
+
+| mode | 语义 | 典型页 |
+|------|------|--------|
+| `photo_plus_analysis` | 主图 + conflict/flow 分析线 | 流线冲突 / 问题证据 |
+| `layered_base` | 底图 + axis/boundary + 局部框 | 区位与交通 |
+| `before_after` | 前后 + cut 线 | 改造对比 |
+| `hero_plus_detail` | 主图 + 局部 inset 框 | 策略 / 核心生长 |
+| `hero_only` | 一张大图，无分析线 | 封面 / 纪念碑 |
+| `none` | 文字主导 | 结论 / 决策指标 |
+
+`apply` 在 hero 框（或合成右半框）上注入 `vl_icp_line_*` / `vl_icp_detail_frame`，受 `VisualBudget.decorative_lines` 约束。
+
+### 3.6 Design Corpus（结构化标注，不训练）
+
+`DesignCorpusPage` + `DesignCorpusService`：公式范例（20×2 气质）+ Case 001 outline 20 页标注 ≥50。按 `formula_id` / `page_type` / `metaphor` 匹配，供导演与 Studio 参考。**不做**自建扩散训练。
+
+延后：外部院优秀页截图入库、Corpus→打分权重、LLM 选型。
+
+Case 001 dry-run：`visual_language.json`；页主张卡含 budget / narrative / grammar / mask / atmosphere / image_composition。
 
 ---
 
@@ -213,9 +240,9 @@ Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `n
 
 ---
 
-## 7. Design Corpus（下一阶段，不训练）
+## 7. Design Corpus（已接线 v1 种子）
 
-目标：标注 100–200 页优秀建筑汇报（SOM / Foster / 国内优秀院…），字段示例：
+目标：标注优秀建筑汇报页；v1 先做**结构化元数据**（可无图），字段：
 
 ```json
 {
@@ -225,11 +252,13 @@ Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `n
   "text_density": 0.15,
   "dominant_element": "drawing",
   "style": "minimal_architecture",
-  "metaphor": null
+  "metaphor": null,
+  "formula_id": "strategy_existing_transform"
 }
 ```
 
-先做结构化语料与匹配，**不做**自建扩散模型训练。与 Case 001 / composition golden 合流。
+实现：`domain/visual/design_corpus.py` + `application/visual/design_corpus_service.py`  
+种子：公式范例 40 + Case 001 的 20 页 = **60 ≥50**。与 composition golden / Showcase 合流；**不做**自建扩散模型训练。
 
 ---
 
@@ -253,7 +282,8 @@ Case 001 dry-run：`visual_language.json`；页主张卡含 `visual_budget` + `n
 - [x] Visual Rhetoric Core：VisualNarrative + VisualBudget + VisualPrimitive 目录  
 - [ ] Case 001 人工打开「流线冲突」页：先读到主张与隐喻，而非三卡片  
 - [x] ImageMask + Atmosphere + SVG primitives（Visual Language apply → pptxgen）
-- [ ] ImageCompositionPlan（主图+局部+分析线）— 下一刀  
-- [ ] Design Corpus 首批 ≥50 页标注  
+- [x] ImageCompositionPlan（主图+局部+分析线）
+- [x] 页语法首轮目录 ~20 句型  
+- [x] Design Corpus 首批 ≥50 页标注（元数据种子；外部截图待补）  
 
-**下一步投资优先级**：Primitive → 渲染打磨 → Image Composition → Corpus；**暂停**再扩 LayoutFamily / Concept 数量与新 Agent。
+**下一步投资优先级**：Case 001 人工视觉验收 → 外部优秀页截图入库 → 渲染打磨；**暂停**再扩 LayoutFamily / Concept 数量与新 Agent。

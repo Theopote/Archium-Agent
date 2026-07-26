@@ -48,14 +48,23 @@ def atmosphere_for_context(
     metaphor = (metaphor or "").strip()
     emotion = (emotion or "").strip().lower()
 
-    if formula_id in {"layer_analysis", "drawing_dominant"} or metaphor == "layered_site":
+    if formula_id in {"layer_analysis", "drawing_dominant", "masterplan_focus", "axonometric_callout"} or metaphor == "layered_site":
         return AtmosphereSpec(
             kind=AtmosphereKind.CAD_GRID,
             opacity=0.1,
             density=7,
             source="atmosphere:layer_or_drawing",
         )
-    if formula_id in {"path_experience"} or metaphor in {
+    if formula_id in {"phasing_timeline", "process_sequence"}:
+        return AtmosphereSpec(
+            kind=AtmosphereKind.DOT_FIELD,
+            opacity=0.09,
+            density=4,
+            source="atmosphere:phasing",
+        )
+    if formula_id in {"section_opener"}:
+        return AtmosphereSpec(kind=AtmosphereKind.NONE, source="atmosphere:section_clear")
+    if formula_id in {"path_experience", "threshold_sequence"} or metaphor in {
         "fragment_to_network",
         "path_to_experience",
     }:
