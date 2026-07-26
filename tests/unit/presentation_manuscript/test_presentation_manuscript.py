@@ -104,6 +104,8 @@ def test_manuscript_facts_are_traceable(db_session) -> None:
     fact = manuscript.verified_facts[0]
     assert fact.verified is True
     assert fact.citation_ids
+    assert fact.knowledge_item_id == item.id
+    assert fact.source_id == str(item.id)
     assert manuscript.citations
     assert manuscript.citations[0].citation.document_id == doc_id
 

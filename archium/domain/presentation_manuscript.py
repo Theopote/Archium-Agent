@@ -24,6 +24,8 @@ class ManuscriptFact(DomainModel):
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     verified: bool = False
     knowledge_item_id: UUID | None = None
+    # DOM-008: optional hard link to ProjectFact (copied from Knowledge.linked_fact_id).
+    linked_fact_id: UUID | None = None
 
     @field_validator("statement", "source_id")
     @classmethod
@@ -53,6 +55,9 @@ class PresentationEvidenceItem(DomainModel):
     citation_id: str | None = None
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     verified: bool = False
+    # DOM-008: typed back-links (source_id remains str for legacy catalog keys).
+    knowledge_item_id: UUID | None = None
+    linked_fact_id: UUID | None = None
     # Never promote reference_template assets into project evidence.
     asset_origin: Literal[
         "project_upload",

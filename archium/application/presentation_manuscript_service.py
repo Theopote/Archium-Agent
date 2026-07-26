@@ -6,15 +6,19 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
+from archium.application.fact_knowledge_manuscript_mapping import (
+    knowledge_item_to_evidence,
+    knowledge_item_to_manuscript_fact,
+)
 from archium.domain.enums import InformationOrigin, KnowledgeItemStatus
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import (
     CitationReference,
-    EvidenceItem,
     ManuscriptFact,
     ManuscriptSection,
     ManuscriptStatus,
+    PresentationEvidenceItem,
     PresentationManuscript,
 )
 from archium.domain.project_knowledge import ProjectKnowledgeItem
@@ -116,7 +120,7 @@ class PresentationManuscriptService:
             items = self._knowledge.list_by_project(project_id)
 
         facts: list[ManuscriptFact] = []
-        evidence: list[EvidenceItem] = []
+        evidence: list[PresentationEvidenceItem] = []
         citations: list[CitationReference] = []
         unresolved: list[str] = []
         unsupported: list[str] = []
@@ -161,13 +165,10 @@ class PresentationManuscriptService:
                 bool(safe_citation_ids)
                 and item.origin == InformationOrigin.USER_UPLOAD
             )
-            fact = ManuscriptFact(
-                statement=item.statement,
-                source_id=str(item.id),
+            fact, _map = knowledge_item_to_manuscript_fact(
+                item,
                 citation_ids=safe_citation_ids,
-                confidence=1.0 if verified else 0.6,
                 verified=verified,
-                knowledge_item_id=item.id,
             )
             facts.append(fact)
 
@@ -175,14 +176,11 @@ class PresentationManuscriptService:
                 unresolved.append(item.statement)
 
             evidence.append(
-                EvidenceItem(
-                    evidence_type="document_quote",
-                    summary=item.statement,
-                    source_id=str(item.id),
+                knowledge_item_to_evidence(
+                    item,
                     citation_id=safe_citation_ids[0] if safe_citation_ids else None,
-                    confidence=fact.confidence,
                     verified=verified,
-                    asset_origin="project_upload",
+                    confidence=fact.confidence,
                 )
             )
 
