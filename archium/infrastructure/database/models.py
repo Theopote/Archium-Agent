@@ -196,6 +196,11 @@ class PresentationORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     current_brief_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_storyline_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     current_outline_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    mission_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_missions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     project: Mapped[ProjectORM] = relationship(back_populates="presentations")
     briefs: Mapped[list[PresentationBriefORM]] = relationship(

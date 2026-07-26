@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from uuid import UUID
 
 from archium.domain.enums import PresentationType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -42,6 +43,8 @@ class PresentationRequest:
     )
     # Explicit route keeps preservation-incompatible jobs out of this generation pipeline.
     workflow_route: PresentationWorkflowRoute = PresentationWorkflowRoute.GENERATE_FROM_PROJECT
+    # Topic 07 L3 / MS-002 — stamped onto Presentation when creating from Mission bridge
+    mission_id: UUID | None = None
 
 
 @dataclass

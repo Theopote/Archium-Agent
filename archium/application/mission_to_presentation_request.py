@@ -153,6 +153,7 @@ def build_presentation_request(mission: ProjectMission, deliverable: PlannedDeli
         language="zh-CN",
         user_notes=user_notes,
         presentation_intent=intent,
+        mission_id=mission.id,
     )
     return apply_presentation_overrides(request, user_overrides)
 
@@ -320,6 +321,10 @@ def bridge_from_draft(draft: dict) -> MissionPresentationBridge:
         ptype = presentation_type
     else:
         ptype = PresentationType(str(presentation_type))
+    mission_raw = draft.get("mission_id")
+    if not mission_raw:
+        raise WorkflowError("presentation draft 缺少 mission_id")
+    mission_id = UUID(str(mission_raw))
     request = PresentationRequest(
         title=str(draft.get("title") or "未命名汇报"),
         audience=str(draft.get("audience") or "甲方"),
@@ -335,13 +340,11 @@ def bridge_from_draft(draft: dict) -> MissionPresentationBridge:
         tone=str(draft.get("tone") or "professional"),
         language=str(draft.get("language") or "zh-CN"),
         user_notes=str(draft.get("user_notes") or ""),
+        mission_id=mission_id,
     )
-    mission_raw = draft.get("mission_id")
-    if not mission_raw:
-        raise WorkflowError("presentation draft 缺少 mission_id")
     return MissionPresentationBridge(
         request=request,
-        mission_id=UUID(str(mission_raw)),
+        mission_id=mission_id,
         deliverable_id=str(draft["deliverable_id"]) if draft.get("deliverable_id") else None,
         warnings=list(draft.get("warnings") or []),
     )

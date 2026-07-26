@@ -81,7 +81,11 @@ class PresentationService:
         if project is None:
             raise ProjectNotFoundError(project_id)
         return self._presentations.create_presentation(
-            Presentation(project_id=project_id, title=request.title)
+            Presentation(
+                project_id=project_id,
+                title=request.title,
+                mission_id=request.mission_id,
+            )
         )
 
     def generate_brief(

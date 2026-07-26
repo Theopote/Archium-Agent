@@ -172,6 +172,15 @@ def _render_readiness(context: StudioPresentationContext) -> None:
 
     render_presentation_critique_card(context.presentation.id)
     render_design_critique_card(project_id=context.project.id)
+    from archium.ui.components.design_artifact_timeline import (
+        render_design_artifact_timeline,
+    )
+
+    render_design_artifact_timeline(context.project.id)
+    if getattr(context.presentation, "mission_id", None):
+        st.caption(f"汇报溯源 Mission：`{context.presentation.mission_id}`")
+        st.page_link(get_app_page("project-mission"), label="打开项目任务 →")
+    st.page_link(get_app_page("edit"), label="有版面问题？回工作室 →")
 
 
 def _render_qa(project_id: UUID) -> None:

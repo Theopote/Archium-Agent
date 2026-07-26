@@ -65,6 +65,7 @@ def request_to_dict(request: PresentationRequest) -> dict[str, Any]:
         "use_manuscript_pipeline": request.use_manuscript_pipeline,
         "page_instructions": list(request.page_instructions),
         "page_materials": _serialize_page_materials(request.page_materials),
+        "mission_id": str(request.mission_id) if request.mission_id else None,
     }
 
 
@@ -77,11 +78,20 @@ def _serialize_page_materials(
 
 
 def request_from_dict(data: dict[str, Any]) -> PresentationRequest:
+    from uuid import UUID
+
     from archium.domain.enums import PresentationType
 
     presentation_type = data.get("presentation_type", PresentationType.CLIENT_REVIEW)
     if isinstance(presentation_type, str):
         presentation_type = PresentationType(presentation_type)
+    mission_id = None
+    raw_mission = data.get("mission_id")
+    if raw_mission:
+        try:
+            mission_id = UUID(str(raw_mission))
+        except (TypeError, ValueError):
+            mission_id = None
     return PresentationRequest(
         title=str(data["title"]),
         audience=str(data["audience"]),
@@ -103,6 +113,7 @@ def request_from_dict(data: dict[str, Any]) -> PresentationRequest:
         use_manuscript_pipeline=bool(data.get("use_manuscript_pipeline", False)),
         page_instructions=[str(item) for item in data.get("page_instructions", [])],
         page_materials=_deserialize_page_materials(data.get("page_materials")),
+        mission_id=mission_id,
     )
 
 

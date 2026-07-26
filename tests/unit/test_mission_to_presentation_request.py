@@ -177,6 +177,7 @@ def test_build_presentation_request_field_mapping() -> None:
     assert request.title == "概念设计汇报"
     assert request.audience == "甲方"
     assert request.purpose == mission.task_statement
+    assert request.mission_id == mission.id
     assert request.core_message == "形成前期策划"
     assert request.decisions_required == mission.decisions_required
     assert request.audience_concerns == ["宗教功能", "文化定位"]

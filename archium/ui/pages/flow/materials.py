@@ -21,5 +21,10 @@ def render() -> None:
         render_stage_nav("materials")
         return
     render_materials_stage(project_id)
+    from archium.ui.components.design_artifact_timeline import (
+        render_design_artifact_timeline,
+    )
+
+    render_design_artifact_timeline(project_id)
     st.divider()
     render_stage_nav("materials")

@@ -437,6 +437,7 @@ def presentation_to_domain(orm: PresentationORM) -> Presentation:
         current_brief_id=orm.current_brief_id,
         current_storyline_id=orm.current_storyline_id,
         current_outline_id=orm.current_outline_id,
+        mission_id=getattr(orm, "mission_id", None),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -454,6 +455,7 @@ def presentation_to_orm(
     target.current_brief_id = domain.current_brief_id
     target.current_storyline_id = domain.current_storyline_id
     target.current_outline_id = domain.current_outline_id
+    target.mission_id = domain.mission_id
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at
     return target

@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1–L2 后继续工作尊重设计态，Ask/批判可跨刷新恢复。** Orchestration 尚未成为单一 stage truth（WF-010）；Presentation↔Mission 溯源（MS-002）仍欠。
+**子系统可用；L1–L3 后产品闭环胶合层基本可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；示意产物有时间线。余：WF-010 单一 stage truth、UI-009 HumanGate 顶栏、Research→页引用、DOM-024。
 
 ---
 
@@ -114,12 +114,14 @@
 
 （关闭 `APP-026` / `APP-027`；`UI-009` 仍开。）
 
-### Phase L3 — 端到端 lineage（P2）
+### Phase L3 — 端到端 lineage（P2）✅ 2026-07-26
 
-7. Presentation.`mission_id`（**MS-002**）+ bridge 默认注入  
-8. materials/deliver **DesignArtifact 时间线**  
-9. Research → 页引用链（接既有 DOM/KN 债）  
-10. Critique 分轨行动：设计→回探索；版面→Studio（强化 **APP-004**）
+7. `Presentation.mission_id` + `PresentationRequest.mission_id`（**MS-002**）；Mission bridge / create / workflow serialize 注入  
+8. materials/deliver **DesignArtifact 时间线**（`design_artifact_catalog`）  
+9. Research → 页引用链：**仍延后**（DOM/KN 债）  
+10. Critique 分轨：设计→回探索（L2）；Deliver 加「回工作室」链（弱化 APP-004，不关）
+
+（关闭 `MS-002`；`WF-010` / `UI-009` / `APP-004` / `DOM-024` 仍开。）
 
 **不做：** 新 Agent；ProcessBoard 写进 ProjectContext 当 SSOT；把设计循环硬塞进 LangGraph。
 
@@ -135,7 +137,7 @@
 | APP-026 | P1 | ~~pending Ask 仅 session~~ **done (L2)** |
 | APP-027 | P2 | ~~批判未 Hydrate~~ **done (L2)** |
 | UI-009 | P2 | Orchestration HumanGate 未在五阶段顶栏统一展示 |
-| MS-002 | P1 | （已有）Presentation 无持久 mission_id |
+| MS-002 | P1 | ~~Presentation 无 mission_id~~ **done (L3)** |
 | DOM-024 | P1 | （已有）Direction↔Intent 双份漂移放大闭环断裂 |
 | APP-004 | P1 | （已有）QA 多栈；交付门禁需统一 verdict |
 | UI-006 | P1 | （已有）剧本 E 真人闭环验收未完成 |
@@ -146,11 +148,11 @@
 
 | 专题 | 钩子 |
 |------|------|
-| 04 设计循环 | 后端闭合；产品 Ask 不可恢复 |
-| 05 多模态 | 证据进 Context；与 design 阶段门禁未串联 |
-| 06 绘画 | DesignArtifact 有身份；主 nav 无产物视图 |
-| 01 Domain | DOM-024 放大 commit 后语义断裂 |
-| 08 商业化 | 可续闭环是协作/计费前提 |
+| 04 设计循环 | 后端闭合；Ask 已 durable（L2） |
+| 05 多模态 | 证据进 Context；与 design 阶段门禁软串联 |
+| 06 绘画 | DesignArtifact 有身份 + materials/deliver 时间线 |
+| 01 Domain | DOM-024 仍放大 commit 后语义断裂 |
+| 08 商业化 | 可续闭环是协作/计费前提 — 下一专题 |
 
 ---
 
@@ -160,4 +162,4 @@
 - [x] Issue 草案登记 module-audit  
 - [x] Phase L1 导航脊柱  
 - [x] Phase L2 可恢复人闸  
-- [ ] Phase L3 lineage（含 MS-002）
+- [x] Phase L3 lineage（MS-002 + DesignArtifact 板；Research→页仍延后）

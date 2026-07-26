@@ -31,6 +31,8 @@ class Presentation(IdentifiedModel, TimestampedModel):
     current_brief_id: UUID | None = None
     current_storyline_id: UUID | None = None
     current_outline_id: UUID | None = None
+    # Topic 07 L3 / MS-002 — optional lineage to ProjectMission
+    mission_id: UUID | None = None
 
     def touch(self) -> None:
         TimestampedModel.touch(self)
