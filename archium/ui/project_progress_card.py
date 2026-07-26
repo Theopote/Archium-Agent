@@ -241,14 +241,15 @@ def _snapshot_for_project(
 
     presentations = PresentationRepository(session).list_by_project(project.id)
 
-    presentation = None
-    if preferred_presentation_id is not None and presentations:
-        presentation = next(
-            (item for item in presentations if item.id == preferred_presentation_id),
-            None,
-        )
-    if presentation is None and presentations:
-        presentation = max(presentations, key=lambda item: item.updated_at)
+    from archium.application.presentation_selection import select_presentation
+
+    presentation = select_presentation(
+        session,
+        presentations,
+        preferred_id=preferred_presentation_id,
+        # Progress chrome should not lock onto an empty newest shell.
+        keep_empty_preferred=False,
+    )
 
     slide_count = 0
     layout_ready_count = 0

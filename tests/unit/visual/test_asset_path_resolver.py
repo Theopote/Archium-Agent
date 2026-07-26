@@ -152,3 +152,40 @@ def test_benchmark_uri_rejects_path_traversal(tmp_path: Path) -> None:
         ),
     )
     assert escaped is None
+
+
+def test_resolve_scene_clears_asset_unresolved_when_file_found(tmp_path: Path) -> None:
+    root = tmp_path / "projects"
+    project_id = uuid4()
+    project_dir = root / str(project_id)
+    project_dir.mkdir(parents=True)
+    asset = project_dir / "hero.png"
+    asset.write_bytes(b"png")
+    uri = storage_asset_uri(project_id, "hero.png")
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ImageNode(
+                id="hero",
+                x=0,
+                y=0,
+                width=4,
+                height=3,
+                storage_uri=uri,
+                asset_unresolved=True,
+            )
+        ],
+    )
+    resolved = AssetPathResolver().resolve_scene(
+        scene,
+        AssetPathResolveContext(project_storage_root=root, project_id=project_id),
+    )
+    node = resolved.nodes[0]
+    assert isinstance(node, ImageNode)
+    assert node.resolved_path
+    assert node.asset_unresolved is False
+

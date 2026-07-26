@@ -90,6 +90,28 @@ def test_unresolved_asset_emits_image_not_rendered() -> None:
     )
 
 
+def test_resolved_path_skips_image_not_rendered() -> None:
+    scene = _scene(
+        nodes=[
+            ImageNode(
+                id="hero",
+                x=1,
+                y=1,
+                width=4,
+                height=3,
+                asset_path="missing.png",
+                asset_unresolved=True,
+                resolved_path="/tmp/hero.png",
+            )
+        ]
+    )
+    report = run_scene_semantic_qa(uuid4(), [scene])
+    assert not any(
+        finding.check_code == SceneSemanticCheckCode.IMAGE_NOT_RENDERED
+        for finding in report.findings
+    )
+
+
 def test_font_too_small() -> None:
     scene = _scene(
         nodes=[

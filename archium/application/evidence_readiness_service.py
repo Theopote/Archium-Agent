@@ -432,9 +432,18 @@ def _scene_export_blocker_messages(
     presentation_id: UUID,
     project_id: UUID,
 ) -> list[str]:
-    """In-memory Scene semantic blockers for formal export (no ReviewIssue spam)."""
+    """In-memory Scene semantic blockers for formal export (no ReviewIssue spam).
+
+    Resolves asset paths the same way formal PPTX export does, so stale
+    ``asset_unresolved`` flags do not block when files are actually available.
+    """
     try:
+        from archium.application.visual.asset_path_resolver import (
+            AssetPathResolveContext,
+            AssetPathResolver,
+        )
         from archium.application.visual.scene_semantic_qa_service import run_scene_semantic_qa
+        from archium.config.settings import get_settings
         from archium.domain.visual.page_quality import IssueSeverity
         from archium.domain.visual.quality_issue_catalog import default_severity_for_auto_code
         from archium.infrastructure.database.repositories import PresentationRepository
@@ -453,9 +462,18 @@ def _scene_export_blocker_messages(
                 scenes.append(scene)
         if not scenes:
             return []
+        settings = get_settings()
+        resolver = AssetPathResolver()
+        resolve_ctx = AssetPathResolveContext(
+            project_id=project_id,
+            project_storage_root=settings.project_storage_path,
+        )
+        resolved_scenes = [
+            resolver.resolve_scene(scene, resolve_ctx) for scene in scenes
+        ]
         report = run_scene_semantic_qa(
             presentation_id,
-            scenes,
+            resolved_scenes,
             project_id=project_id,
             slide_orders=orders,
         )

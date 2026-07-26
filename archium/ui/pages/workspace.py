@@ -89,11 +89,22 @@ def _init_session_state() -> None:
 
 def _resolve_active_presentation_id(project_id: UUID) -> UUID | None:
     result: WorkflowRunResult | None = st.session_state.get("last_workflow_result")
-    if result is not None and result.presentation is not None:
-        return result.presentation.id
+    preferred = (
+        result.presentation.id
+        if result is not None and result.presentation is not None
+        else st.session_state.get("selected_presentation_id")
+    )
     with get_session() as session:
+        from archium.application.presentation_selection import select_presentation
+
         presentations = list_project_presentations(session, project_id)
-    return presentations[0].id if presentations else None
+        picked = select_presentation(
+            session,
+            presentations,
+            preferred_id=preferred,
+            keep_empty_preferred=False,
+        )
+    return picked.id if picked is not None else None
 
 
 def _pptx_export_prompt_key(presentation_id: UUID) -> str:

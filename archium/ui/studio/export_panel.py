@@ -149,6 +149,7 @@ def _export_pptx(
     presentation_id: UUID,
     settings: Settings,
     qa_status: str = "unknown",
+    require_formal_gate: bool = True,
 ) -> None:
     from archium.application.export_policy_service import (
         ExportPolicyService,
@@ -159,11 +160,12 @@ def _export_pptx(
 
     policy = get_session_export_policy()
     try:
-        _assert_export_gate(
-            project_id=project_id,
-            presentation_id=presentation_id,
-            export_format="PPTX",
-        )
+        if require_formal_gate:
+            _assert_export_gate(
+                project_id=project_id,
+                presentation_id=presentation_id,
+                export_format="PPTX",
+            )
         with st.spinner("正在评估导出忠实度…"), get_session() as session:
             from archium.application.evidence_readiness_service import (
                 latest_presentation_revision_id,
@@ -250,10 +252,13 @@ def _export_pptx(
                 str(path),
                 project_id=project_id,
                 presentation_id=presentation_id,
-                qa_status=qa_status,
+                qa_status="working_draft" if not require_formal_gate else qa_status,
                 round_trip_report=round_trip_report,
             )
-            st.success("PPTX 导出完成。")
+            if require_formal_gate:
+                st.success("PPTX 导出完成。")
+            else:
+                st.warning("已导出工作稿（非正式交付）。请处理阻塞项后再正式导出。")
             for line in manifest.summary_lines_zh():
                 st.caption(line)
             if manifest.fallback_used and manifest.fallback_reason:
@@ -411,6 +416,19 @@ def _render_quick_export_popover(
                 presentation_id=context.presentation.id,
                 settings=settings,
             )
+        if export_disabled and verdict.pptx_ready:
+            if st.button(
+                "导出工作稿",
+                use_container_width=True,
+                key=f"{key_prefix}_export_pptx_draft",
+                help="版式已齐但正式门禁未通过时，可先导出工作稿（非正式交付）。",
+            ):
+                _export_pptx(
+                    project_id=context.project.id,
+                    presentation_id=context.presentation.id,
+                    settings=settings,
+                    require_formal_gate=False,
+                )
         if st.button(
             "导出 PDF",
             use_container_width=True,
@@ -574,6 +592,18 @@ def render_export_panel(
         st.caption(line)
     if verdict.evidence_stacks:
         st.caption("门禁证据栈：" + " · ".join(verdict.evidence_stacks))
+    if export_disabled and verdict.pptx_ready:
+        if st.button(
+            "导出工作稿（非正式）",
+            key="deliver_export_pptx_draft",
+            help="版式已齐但正式门禁未通过时，可先导出工作稿。",
+        ):
+            _export_pptx(
+                project_id=project_id,
+                presentation_id=presentation_id,
+                settings=settings,
+                require_formal_gate=False,
+            )
 
     from archium.ui.delivery.export_policy_panel import render_export_policy_panel
     from archium.ui.delivery.fidelity_report_panel import render_fidelity_report_panel

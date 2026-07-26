@@ -90,7 +90,13 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
     presentation_options = list(presentation_labels.keys())
     selected_presentation = st.session_state.get("selected_presentation_id")
     if selected_presentation not in presentation_options:
-        selected_presentation = presentation_options[0]
+        with get_session() as session:
+            from archium.application.presentation_selection import select_presentation
+
+            picked = select_presentation(session, presentations)
+        selected_presentation = (
+            str(picked.id) if picked is not None else presentation_options[0]
+        )
         st.session_state.selected_presentation_id = selected_presentation
 
     context = _load_context(project_id, UUID(str(selected_presentation)))

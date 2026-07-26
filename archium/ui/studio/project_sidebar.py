@@ -117,6 +117,14 @@ def render_studio_selection(
         default_presentation_index = presentation_options.index(
             st.session_state.selected_presentation_id
         )
+    else:
+        with get_session() as session:
+            from archium.application.presentation_selection import select_presentation
+
+            picked = select_presentation(session, presentations)
+        if picked is not None and str(picked.id) in presentation_options:
+            default_presentation_index = presentation_options.index(str(picked.id))
+            st.session_state.selected_presentation_id = str(picked.id)
 
     if compact:
         selected_presentation = presentation_options[default_presentation_index]

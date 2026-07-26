@@ -217,11 +217,13 @@ class AssetPathResolver:
                 uri = node.storage_uri or node.asset_path
                 resolved = self.resolve(uri, ctx) if uri else None
                 absolute = str(resolved) if resolved is not None else None
-                nodes.append(
-                    node.model_copy(
-                        update={"resolved_path": absolute},
-                    )
-                )
+                update: dict[str, Any] = {"resolved_path": absolute}
+                # Align export gate + PPTX adapter: unresolved flag tracks renderability.
+                if absolute:
+                    update["asset_unresolved"] = False
+                elif uri:
+                    update["asset_unresolved"] = True
+                nodes.append(node.model_copy(update=update))
             elif isinstance(node, ChartNode) and node.preview_storage_uri:
                 resolved = self.resolve(node.preview_storage_uri, ctx)
                 nodes.append(

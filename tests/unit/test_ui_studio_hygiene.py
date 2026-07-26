@@ -53,3 +53,12 @@ def test_resume_button_label_is_product_facing() -> None:
     assert "RESUME_EXPORT_BUTTON_LABEL" in workspace
     assert "重试工作流导出" not in review
     assert "重试工作流导出" not in workspace
+
+
+def test_export_panel_offers_working_draft_when_formal_blocked() -> None:
+    export = Path("archium/ui/studio/export_panel.py").read_text(encoding="utf-8")
+    assert "require_formal_gate" in export
+    assert "导出工作稿" in export
+    assert "select_presentation" in Path("archium/ui/pages/flow/generate.py").read_text(
+        encoding="utf-8"
+    )

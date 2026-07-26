@@ -27,14 +27,20 @@ from archium.ui.workspace_service import list_project_presentations
 def _selected_presentation_id(project_id: UUID) -> UUID | None:
     selected = st.session_state.get("selected_presentation_id")
     with get_session() as session:
+        from archium.application.presentation_selection import select_presentation
+
         presentations = list_project_presentations(session, project_id)
-    if not presentations:
+        picked = select_presentation(
+            session,
+            presentations,
+            preferred_id=selected,
+            # Auto-default: skip empty shells when another deck has pages.
+            keep_empty_preferred=False,
+        )
+    if picked is None:
         return None
-    ids = [str(item.id) for item in presentations]
-    if selected in ids:
-        return UUID(str(selected))
-    st.session_state.selected_presentation_id = ids[0]
-    return presentations[0].id
+    st.session_state.selected_presentation_id = str(picked.id)
+    return picked.id
 
 
 def _resolve_flow_project_id() -> UUID | None:
