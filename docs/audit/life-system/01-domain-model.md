@@ -215,7 +215,7 @@ Project（唯一 identity）
 | 建议编号 | 级别 | 问题 |
 |----------|------|------|
 | DOM-023 | P1 | 缺少正式 Aggregate 地图；新能力易旁路 Project |
-| DOM-024 | P1 | ConceptDirection 与 DesignIntent 共享 VO 双份嵌套，无同步不变量 |
+| DOM-024 | P1 | ~~ConceptDirection 与 DesignIntent 共享 VO 双份嵌套，无同步不变量~~ **done** |
 | DOM-025 | P2 | DesignDecision 仅以 dict 挂 IntentEvolution |
 | DOM-026 | P2 | `Mission.project_context` 字符串与 `ProjectContext` 同名异义 |
 | DOM-027 | P1 | ~~无设计产物聚合~~ **done (Topic 06 P3)** — 薄 DesignArtifact；Critique 仍 Reasoning |

@@ -44,5 +44,6 @@ def design_intent_from_direction(
         design_rationale=enriched.design_rationale or seed.design_rationale,
         spatial_intent=spatial,
         design_rules=rules,
+        source_direction_id=enriched.id,
     )
     return intent.with_evidence(evidence_from_direction_selection(enriched))

@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1–L3 + UI-009 + WF-010 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段可见 HumanGate；主 chrome 单一 stage。余：Research→页引用、DOM-024、APP-004。
+**子系统可用；L1–L3 + UI-009 + WF-010 + DOM-024 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段 HumanGate；单一 stage；Direction↔Intent 可 diff。余：Research→页引用、APP-004。
 
 ---
 
@@ -121,7 +121,7 @@
 9. Research → 页引用链：**仍延后**（DOM/KN 债）  
 10. Critique 分轨：设计→回探索（L2）；Deliver 加「回工作室」链（弱化 APP-004，不关）
 
-（关闭 `MS-002`；`UI-009` **done**；`WF-010` **done（product_stage_truth）**；`APP-004` / `DOM-024` 仍开。）
+（关闭 `MS-002`；`UI-009` / `WF-010` / `DOM-024` **done**；`APP-004` 仍开。）
 
 ### Phase L3+ — HumanGate 顶栏 ✅ 2026-07-26
 
@@ -130,6 +130,10 @@
 ### Phase L3++ — 单一 stage truth ✅ 2026-07-26
 
 12. **WF-010**：`resolve_product_stage_truth` — 活跃编排映射五阶段，覆盖 presentation 启发式；snapshot `authoritative_stage_id`
+
+### Phase L3+++ — Direction↔Intent 同步 ✅ 2026-07-26
+
+13. **DOM-024**：`DesignIntent.source_direction_id` + `diff_direction_intent`；投影后对齐 / 漂移可检
 
 **不做：** 新 Agent；ProcessBoard 写进 ProjectContext 当 SSOT；把设计循环硬塞进 LangGraph。
 
@@ -146,7 +150,7 @@
 | APP-027 | P2 | ~~批判未 Hydrate~~ **done (L2)** |
 | UI-009 | P2 | ~~Orchestration HumanGate 未在五阶段顶栏~~ **done** |
 | MS-002 | P1 | ~~Presentation 无 mission_id~~ **done (L3)** |
-| DOM-024 | P1 | （已有）Direction↔Intent 双份漂移放大闭环断裂 |
+| DOM-024 | P1 | ~~Direction↔Intent 双份漂移~~ **done（source_direction_id + diff）** |
 | APP-004 | P1 | （已有）QA 多栈；交付门禁需统一 verdict |
 | UI-006 | P1 | （已有）剧本 E 真人闭环验收未完成 |
 
@@ -159,7 +163,7 @@
 | 04 设计循环 | 后端闭合；Ask 已 durable（L2） |
 | 05 多模态 | 证据进 Context；与 design 阶段门禁软串联 |
 | 06 绘画 | DesignArtifact 有身份 + materials/deliver 时间线 |
-| 01 Domain | DOM-024 仍放大 commit 后语义断裂 |
+| 01 Domain | DOM-024 同步契约已落地；DOM-023 聚合地图仍开 |
 | 08 商业化 | 可续闭环已是协作/计费前提（Topic 08 完成） |
 
 ---
@@ -172,4 +176,5 @@
 - [x] Phase L2 可恢复人闸  
 - [x] Phase L3 lineage（MS-002 + DesignArtifact 板；Research→页仍延后）  
 - [x] UI-009 五阶段 HumanGate compact 顶栏  
-- [x] WF-010 单一 product stage truth
+- [x] WF-010 单一 product stage truth  
+- [x] DOM-024 Direction↔Intent sync / diff

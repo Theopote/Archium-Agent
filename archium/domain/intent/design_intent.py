@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import Field
 
 from archium.domain._base import DomainModel
@@ -26,6 +28,11 @@ class DesignIntent(DomainModel):
     design_rationale: DesignRationale | None = None
     spatial_intent: SpatialIntent | None = None
     design_rules: list[DesignRule] = Field(default_factory=list)
+    # DOM-024: provenance to ConceptDirection when Intent was projected from one.
+    source_direction_id: UUID | None = Field(
+        default=None,
+        description="ConceptDirection id this intent was last projected from (if any).",
+    )
 
     def with_evidence(
         self,
