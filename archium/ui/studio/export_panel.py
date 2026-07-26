@@ -223,23 +223,14 @@ def _export_pptx(
             from archium.domain.export_round_trip import RoundTripStatus
 
             if rt_report.status == RoundTripStatus.BLOCKED:
-                blocked_path = file_path.with_name(f"{file_path.stem}.blocked{file_path.suffix}")
-                try:
-                    if file_path.is_file():
-                        file_path.replace(blocked_path)
-                except OSError:
-                    blocked_path = file_path
-                _append_delivery_record(
-                    "PPTX",
-                    str(blocked_path),
-                    project_id=project_id,
-                    presentation_id=presentation_id,
-                    qa_status="blocked",
-                    round_trip_report=round_trip_report,
+                from archium.application.export_round_trip_service import (
+                    discard_export_on_round_trip_blocked,
                 )
+
+                # QD-005: no .blocked.pptx half-product and no delivery row.
+                discard_export_on_round_trip_blocked(file_path)
                 st.error(
-                    "Round-trip QA 阻塞：文件已标记为不可交付（.blocked.pptx），"
-                    "请修复阻塞项后重新导出。"
+                    "Round-trip QA 阻塞：导出文件已撤销，请修复阻塞项后重新导出。"
                 )
                 for line in rt_report.summary_lines_zh():
                     st.caption(line)

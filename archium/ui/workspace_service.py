@@ -426,7 +426,7 @@ def resume_workflow(
     *,
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
-    """Resume or retry a workflow from its LangGraph checkpoint."""
+    """Continue a presentation workflow from its LangGraph interrupt/checkpoint (WF-004)."""
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with get_session() as session:

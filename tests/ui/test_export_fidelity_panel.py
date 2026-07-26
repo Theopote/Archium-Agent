@@ -28,6 +28,7 @@ def test_export_panel_integrates_policy_before_export() -> None:
     assert "enforce_export_policy" in source
     assert "render_export_policy_panel" in source
     assert "ExportRoundTripService" in source
+    assert "discard_export_on_round_trip_blocked" in source
 
 
 def test_fidelity_panel_shows_round_trip() -> None:

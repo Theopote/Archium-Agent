@@ -532,7 +532,9 @@ class PlanningWorkflowService:
         return self._ensure_success(self._to_result(refreshed, final_state))
 
     def resume(self, workflow_run_id: UUID) -> PlanningWorkflowResult:
-        """Continue a planning run from its current gate or checkpoint."""
+        """Continue from gate or LangGraph checkpoint only (WF-004: no START replay)."""
+        from archium.workflow.resume_policy import ensure_resumable_checkpoint
+
         run = self._require_planning_run(workflow_run_id)
         if run.status == WorkflowStatus.COMPLETED:
             return self._to_result(run, run.state)
@@ -548,44 +550,26 @@ class PlanningWorkflowService:
                 return self.resume_after_plan_approval(workflow_run_id)
             raise WorkflowError(f"Unknown planning review gate: {gate}")
 
-        restored = restore_planning_artifacts(run.state)
-        user_task = restored.get("user_task_description") or run.state.get("user_task_description")
-        if not user_task:
-            raise WorkflowError(f"Workflow run {workflow_run_id} is missing resumable state")
+        ensure_resumable_checkpoint(
+            workflow_run_id=workflow_run_id,
+            status=run.status.value,
+            resumable=self._graph.has_resumable_checkpoint(str(run.id)),
+        )
 
-        planning_session = self._require_session_for_run(run)
         run.status = WorkflowStatus.RUNNING
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
 
-        initial_state = initial_planning_state(
-            project_id=str(run.project_id),
-            workflow_run_id=str(run.id),
-            planning_session_id=str(planning_session.id),
-            user_task_description=str(user_task),
-            presentation_id=str(run.presentation_id) if run.presentation_id else None,
-            require_clarification=bool(run.state.get("require_clarification", True)),
-            require_mission_approval=bool(run.state.get("require_mission_approval", True)),
-            require_plan_approval=bool(run.state.get("require_plan_approval", True)),
-            origin_mode=ProjectOriginMode(
-                str(run.state.get("origin_mode", ProjectOriginMode.EXISTING_PROJECT.value))
-            ),
-        )
-        initial_state = cast(
-            PlanningWorkflowState,
-            {**initial_state, **restored, "errors": [], "warnings": []},
-        )
-
         try:
-            final_state = self._invoke_graph(initial_state, thread_id=str(run.id))
+            final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
             logger.exception("Planning workflow resume failed: %s", exc)
             run.errors = [str(exc)]
             run.status = WorkflowStatus.FAILED
             run.touch()
             self._workflow_runs.update(run)
-            self._mark_session_failed(planning_session.id)
+            self._mark_session_failed_for_run(run.id)
             raise WorkflowError(str(exc)) from exc
 
         refreshed = self._workflow_runs.get_by_id(run.id)

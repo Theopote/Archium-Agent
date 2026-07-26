@@ -145,6 +145,11 @@ class PresentationWorkflowGraph:
         graph_input: PresentationWorkflowState | Command = Command(resume=True) if resume else (state or {})
         return cast(PresentationWorkflowState, self._graph.invoke(graph_input, config))
 
+    def has_resumable_checkpoint(self, thread_id: str) -> bool:
+        from archium.workflow.resume_policy import checkpoint_is_resumable
+
+        return checkpoint_is_resumable(self._graph, thread_id)
+
     @staticmethod
     def is_interrupted(state: PresentationWorkflowState | dict[str, object]) -> bool:
         return bool(state.get("__interrupt__"))

@@ -388,3 +388,32 @@ def _derive_status(
     if drawing_issues or warnings:
         return RoundTripStatus.PASS_WITH_WARNINGS
     return RoundTripStatus.PASS
+
+
+def discard_export_on_round_trip_blocked(pptx_path: Path | str) -> list[Path]:
+    """QD-005: remove delivery PPTX residue when Round-trip is BLOCKED.
+
+    Deletes the primary export path and any legacy ``*.blocked.pptx`` sibling.
+    Returns the list of paths that were removed. Never renames to a durable
+    half-product.
+    """
+    path = Path(pptx_path)
+    removed: list[Path] = []
+    candidates = (
+        path,
+        path.with_name(f"{path.stem}.blocked{path.suffix}"),
+        path.with_name(f"{path.stem}.tmp{path.suffix}"),
+    )
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve() if candidate.exists() else candidate
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        try:
+            if candidate.is_file():
+                candidate.unlink()
+                removed.append(candidate)
+        except OSError:
+            continue
+    return removed

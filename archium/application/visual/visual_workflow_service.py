@@ -301,7 +301,9 @@ class VisualWorkflowService:
         return self._to_result(refreshed, final_state)
 
     def resume(self, workflow_run_id: UUID) -> VisualWorkflowResult:
-        """Resume a paused or failed-but-checkpointed visual workflow."""
+        """Continue from gate or LangGraph checkpoint only (WF-004: no START replay)."""
+        from archium.workflow.resume_policy import ensure_resumable_checkpoint
+
         run = self._workflow_runs.get_by_id(workflow_run_id)
         if run is None:
             raise WorkflowError(f"Workflow run {workflow_run_id} not found")
@@ -313,39 +315,19 @@ class VisualWorkflowService:
                 return self.continue_after_layout_review(workflow_run_id)
             return self.continue_after_art_direction_approval(workflow_run_id)
 
-        restored = restore_visual_artifacts(run.state)
-        if run.presentation_id is None or restored.get("presentation_id") is None:
-            raise WorkflowError(f"Workflow run {workflow_run_id} is missing presentation_id")
+        ensure_resumable_checkpoint(
+            workflow_run_id=workflow_run_id,
+            status=run.status.value,
+            resumable=self._graph.has_resumable_checkpoint(str(run.id)),
+        )
 
         run.status = WorkflowStatus.RUNNING
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
 
-        initial_state = initial_visual_workflow_state(
-            project_id=str(run.project_id),
-            presentation_id=str(run.presentation_id),
-            workflow_run_id=str(run.id),
-            require_art_direction_review=bool(
-                restored.get("require_art_direction_review", True)
-            ),
-            use_llm=bool(restored.get("use_llm", False)),
-            export_pptx=bool(restored.get("export_pptx", False)),
-            export_layout_instructions=bool(
-                restored.get("export_layout_instructions", True)
-            ),
-            candidate_count=int(restored.get("candidate_count", 3)),
-            max_repair_rounds=int(restored.get("max_repair_rounds", 1)),
-            preferences=restored.get("preferences"),
-            design_system_id=restored.get("design_system_id"),
-        )
-        initial_state = cast(
-            VisualWorkflowState,
-            {**initial_state, **restored, "errors": []},
-        )
-
         try:
-            final_state = self._invoke_graph(initial_state, thread_id=str(run.id))
+            final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
             logger.exception("Visual workflow resume failed: %s", exc)
             run.errors = [str(exc)]

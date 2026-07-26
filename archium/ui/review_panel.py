@@ -268,7 +268,7 @@ def _render_critical_recovery_actions(
         "重试工作流导出",
         key=f"recover_retry_export_{presentation_id}",
         use_container_width=True,
-        help="在解决或忽略严重问题后，从 checkpoint 重试导出。",
+        help="在解决或忽略严重问题后，从 interrupt/checkpoint 继续（无 checkpoint 时需新建工作流）。",
     ):
         settings = get_ui_effective_settings()
         if not background_workflows_enabled(settings):

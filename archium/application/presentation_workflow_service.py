@@ -303,7 +303,9 @@ class PresentationWorkflowService:
         return self._ensure_success(self._to_result(refreshed, final_state))
 
     def resume(self, workflow_run_id: UUID) -> WorkflowRunResult:
-        """Re-run or continue a workflow from its LangGraph checkpoint."""
+        """Continue from LangGraph interrupt/checkpoint only (WF-004: no START replay)."""
+        from archium.workflow.resume_policy import ensure_resumable_checkpoint
+
         run = self._workflow_runs.get_by_id(workflow_run_id)
         if run is None:
             raise WorkflowError(f"Workflow run {workflow_run_id} not found")
@@ -312,42 +314,21 @@ class PresentationWorkflowService:
         if run.status == WorkflowStatus.AWAITING_REVIEW:
             return self.continue_after_review(workflow_run_id)
 
-        restored = restore_domain_artifacts(run.state)
-        request = restored.get("request")
-        presentation = restored.get("presentation") or self._load_presentation(run)
-        if request is None or presentation is None:
-            raise WorkflowError(f"Workflow run {workflow_run_id} is missing resumable state")
-
-        # Stale LangGraph checkpoints keep append-only ``errors``; wipe thread first.
-        self._checkpointer_manager.clear_thread(str(run.id))
+        ensure_resumable_checkpoint(
+            workflow_run_id=workflow_run_id,
+            status=run.status.value,
+            resumable=self._graph.has_resumable_checkpoint(str(run.id)),
+        )
 
         run.status = WorkflowStatus.RUNNING
         run.errors = []
-        patched_state = dict(run.state or {})
-        patched_state["errors"] = []
-        patched_state.pop("review_gate", None)
-        run.state = patched_state
         run.touch()
         self._workflow_runs.update(run)
-
-        if run.presentation_id is None:
-            raise WorkflowError(
-                f"Workflow run {workflow_run_id} is missing presentation_id"
-            )
-
-        initial_state = self._build_initial_state(run, request, presentation)
-        initial_state = cast(
-            PresentationWorkflowState,
-            {
-                **initial_state,
-                **restored,
-                "errors": [],
-                "review_gate": None,
-            },
-        )
+        if self._settings.workflow_checkpoint_commit_enabled:
+            self._session.commit()
 
         try:
-            final_state = self._invoke_graph(initial_state, thread_id=str(run.id))
+            final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)
         except Exception as exc:
             logger.exception("Workflow resume failed: %s", exc)
             run.errors = [str(exc)]
