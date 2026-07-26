@@ -26,6 +26,10 @@ from archium.domain.visual.critic import (
     VisualCriticFinding,
     VisualCriticReport,
 )
+from archium.domain.visual.presentation_intelligence import (
+    PRESENTATION_INTELLIGENCE_SCHEMA,
+    PresentationIntelligenceBrief,
+)
 from archium.domain.visual.showcase_score import (
     SHOWCASE_GATE_AESTHETIC_MIN,
     SHOWCASE_GATE_PROFESSIONALISM_MIN,
@@ -156,6 +160,8 @@ __all__ = [
     "CRITIC_PAGE_REPETITION",
     "CRITIC_READING_ORDER_AWKWARD",
     "CRITIC_TITLE_WEAK",
+    "PRESENTATION_INTELLIGENCE_SCHEMA",
+    "PresentationIntelligenceBrief",
     "SHOWCASE_GATE_AESTHETIC_MIN",
     "SHOWCASE_GATE_PROFESSIONALISM_MIN",
     "SHOWCASE_GATE_TOTAL_MIN",

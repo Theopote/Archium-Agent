@@ -10,6 +10,7 @@ from archium.domain.enums import ApprovalStatus
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.style import (
     DEFAULT_STYLE_PRESET_ID,
+    get_style_preset,
     list_style_presets,
     resolve_style_preset_id,
 )
@@ -42,13 +43,15 @@ def render_art_direction_panel(
     awaiting_approval: bool = False,
 ) -> None:
     """Show and edit ArtDirection; optionally continue a paused visual workflow."""
-    st.markdown(
-        f"**视觉方向** · {APPROVAL_LABELS.get(art_direction.approval_status, art_direction.approval_status.value)}"
+    st.markdown("### 汇报气质")
+    st.caption(
+        f"Presentation Intelligence · "
+        f"{APPROVAL_LABELS.get(art_direction.approval_status, art_direction.approval_status.value)}"
+        f" · {art_direction.concept_name}"
     )
-    st.caption(f"概念：{art_direction.concept_name}")
 
     if awaiting_approval:
-        st.info("视觉工作流已暂停，请审核并批准视觉方向后继续。")
+        st.info("视觉工作流已暂停：先确认气质与节奏，再批准继续生成。")
 
     presets = list_style_presets()
     preset_labels = {p.id.value: f"{p.display_name} — {p.description}" for p in presets}
@@ -59,58 +62,104 @@ def render_art_direction_panel(
     except KeyError:
         current_preset = DEFAULT_STYLE_PRESET_ID.value
 
+    try:
+        preset_obj = get_style_preset(current_preset)
+        tone = " · ".join(art_direction.visual_tone[:3]) or "（未填语气）"
+        emotion = " · ".join(art_direction.emotional_keywords[:4]) or "克制专业"
+        personality = preset_obj.presentation_personality
+        policy = preset_obj.content_policy
+        st.markdown(
+            f"**{preset_obj.display_name}**  \n"
+            f"{preset_obj.description}  \n"
+            f"叙事性格：{personality.logic.value} · 情绪 {personality.emotion.value} · "
+            f"图面 {personality.image_role.value}  \n"
+            f"内容政策：msg≤{policy.max_message_chars} · pts≤{policy.max_key_points} · "
+            f"img≤{policy.max_images} · 留白≥{policy.preferred_whitespace}  \n"
+            f"语气：{tone}  \n"
+            f"情绪曲线关键词：{emotion}  \n"
+            f"节奏：{(art_direction.pacing_strategy or '')[:160]}"
+        )
+    except KeyError:
+        pass
+
     with st.form(f"art_direction_form_{art_direction.id}"):
         style_preset_id = st.selectbox(
-            "风格预设（Style Preset）",
+            "事务所气质（Style Preset）",
             options=list(preset_labels.keys()),
             index=list(preset_labels.keys()).index(current_preset)
             if current_preset in preset_labels
             else 0,
             format_func=lambda key: preset_labels.get(key, key),
-            help="事务所气质令牌：影响留白、字号、主图阈值与版式偏好（不改绝对坐标）。",
+            help="打开 PPT 第一印象：留白、字号、主图阈值与版式偏好（不改绝对坐标）。",
         )
-        concept_name = st.text_input("视觉概念", value=art_direction.concept_name)
-        rationale = st.text_area("设计理由", value=art_direction.rationale, height=100)
+        concept_name = st.text_input("视觉概念（一句话）", value=art_direction.concept_name)
+        rationale = st.text_area(
+            "为什么这样定调",
+            value=art_direction.rationale,
+            height=80,
+        )
         visual_tone = st.text_area(
             "视觉语气（每行一项）",
             value="\n".join(art_direction.visual_tone),
-            height=80,
+            height=70,
         )
-        col_a, col_b = st.columns(2)
-        with col_a:
-            palette_strategy = st.text_area("色彩策略", value=art_direction.palette_strategy, height=80)
-            typography_strategy = st.text_area(
-                "字体策略", value=art_direction.typography_strategy, height=80
-            )
-            image_strategy = st.text_area("图片策略", value=art_direction.image_strategy, height=80)
-            diagram_strategy = st.text_area("图形策略", value=art_direction.diagram_strategy, height=80)
-        with col_b:
-            drawing_strategy = st.text_area("图纸策略", value=art_direction.drawing_strategy, height=80)
-            annotation_strategy = st.text_area(
-                "标注策略", value=art_direction.annotation_strategy, height=80
-            )
-            pacing_strategy = st.text_area("节奏策略", value=art_direction.pacing_strategy, height=80)
-            forbidden_styles = st.text_area(
-                "禁止风格（每行一项）",
-                value="\n".join(art_direction.forbidden_styles),
-                height=80,
-            )
+        pacing_strategy = st.text_area(
+            "整册节奏（开场 / 证据 / 高潮 / 收束）",
+            value=art_direction.pacing_strategy,
+            height=70,
+        )
+        emotional_keywords = st.text_area(
+            "情绪关键词（每行一项）",
+            value="\n".join(art_direction.emotional_keywords),
+            height=60,
+        )
+        forbidden_styles = st.text_area(
+            "禁止风格（每行一项）",
+            value="\n".join(art_direction.forbidden_styles),
+            height=60,
+        )
 
-        with st.expander("更多策略", expanded=False):
-            grid_strategy = st.text_area("网格策略", value=art_direction.grid_strategy, height=60)
-            cover_strategy = st.text_area("封面策略", value=art_direction.cover_strategy, height=60)
-            section_strategy = st.text_area("章节策略", value=art_direction.section_strategy, height=60)
-            content_strategy = st.text_area("内容页策略", value=art_direction.content_strategy, height=60)
-            closing_strategy = st.text_area("收束策略", value=art_direction.closing_strategy, height=60)
+        with st.expander("工程细节（令牌策略原文）", expanded=False):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                palette_strategy = st.text_area(
+                    "色彩策略", value=art_direction.palette_strategy, height=70
+                )
+                typography_strategy = st.text_area(
+                    "字体策略", value=art_direction.typography_strategy, height=70
+                )
+                image_strategy = st.text_area(
+                    "图片策略", value=art_direction.image_strategy, height=70
+                )
+                diagram_strategy = st.text_area(
+                    "图形策略", value=art_direction.diagram_strategy, height=70
+                )
+            with col_b:
+                drawing_strategy = st.text_area(
+                    "图纸策略", value=art_direction.drawing_strategy, height=70
+                )
+                annotation_strategy = st.text_area(
+                    "标注策略", value=art_direction.annotation_strategy, height=70
+                )
+                grid_strategy = st.text_area(
+                    "网格策略", value=art_direction.grid_strategy, height=60
+                )
+                cover_strategy = st.text_area(
+                    "封面策略", value=art_direction.cover_strategy, height=60
+                )
+            section_strategy = st.text_area(
+                "章节策略", value=art_direction.section_strategy, height=60
+            )
+            content_strategy = st.text_area(
+                "内容页策略", value=art_direction.content_strategy, height=60
+            )
+            closing_strategy = st.text_area(
+                "收束策略", value=art_direction.closing_strategy, height=60
+            )
             consistency_rules = st.text_area(
                 "一致性规则（每行一项）",
                 value="\n".join(art_direction.consistency_rules),
-                height=80,
-            )
-            emotional_keywords = st.text_area(
-                "情绪关键词（每行一项）",
-                value="\n".join(art_direction.emotional_keywords),
-                height=60,
+                height=70,
             )
 
         c1, c2, c3 = st.columns(3)

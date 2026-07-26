@@ -53,6 +53,32 @@ def _pat(*exprs: str) -> tuple[re.Pattern[str], ...]:
 
 _SITUATION_RULES: tuple[_SituationRule, ...] = (
     _SituationRule(
+        rule_id="site_problem_evidence",
+        patterns=_pat(
+            r"现状问题",
+            r"痛点总览",
+            r"现场问题",
+            r"问题总览",
+            r"evidence\s*board",
+        ),
+        must_show=("photo_evidence_grid", "issue_labels", "problem_conclusion"),
+        must_hide=("long_body_paragraphs", "decorative_icons"),
+        composition_bias=(
+            CompositionBias.EVIDENCE_GRID,
+            CompositionBias.CONCLUSION_BAR,
+        ),
+        preferred=(LayoutFamily.EVIDENCE_BOARD, LayoutFamily.HYBRID_CANVAS),
+        forbidden=(LayoutFamily.TEXTUAL_ARGUMENT, LayoutFamily.METRIC_DASHBOARD),
+        density=DensityLevel.COMPACT,
+        copy_budget=CopyBudget(
+            max_title_chars=32,
+            max_message_chars=90,
+            max_key_points=4,
+            max_body_blocks=1,
+        ),
+        label="现状证据板：照片网格 + 短结论",
+    ),
+    _SituationRule(
         rule_id="site_traffic_conflict",
         patterns=_pat(
             r"人车混行",
@@ -62,6 +88,10 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             r"混行",
             r"交叉口拥堵",
             r"交通冲突",
+            r"流线冲突",
+            r"流线交叉",
+            r"医患.{0,6}交叉",
+            r"洁污.{0,6}交叉",
         ),
         must_show=("site_photo", "circulation_diagram", "problem_conclusion"),
         must_hide=("long_body_paragraphs", "three_column_text", "metric_wall"),
@@ -90,15 +120,12 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
         label="基地交通矛盾：一图一流线一句结论",
     ),
     _SituationRule(
-        rule_id="site_problem_evidence",
+        rule_id="site_problem_evidence_legacy",
         patterns=_pat(
-            r"现状问题",
             r"痛点",
-            r"现场问题",
-            r"老化",
-            r"破损",
-            r"隐患",
-            r"evidence\s*board",
+            r"破损隐患",
+            r"空间老化",
+            r"后勤.{0,4}老化",
         ),
         must_show=("photo_evidence_grid", "issue_labels", "problem_conclusion"),
         must_hide=("long_body_paragraphs", "decorative_icons"),
@@ -123,8 +150,9 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             r"总平面",
             r"总图",
             r"平面图",
-            r"立面",
-            r"剖面",
+            r"立面图",
+            r"立面与",
+            r"剖面图",
             r"master\s*plan",
             r"floor\s*plan",
         ),
@@ -462,24 +490,28 @@ class PageDirectionService:
             )
 
         if style_preset is not None:
+            # Soft bias only — never outrank situation / deck rhythm families.
             preferred = _unique(
-                [*list(style_preset.preferred_layout_families), *preferred]
+                [*preferred, *list(style_preset.preferred_layout_families)]
             )
             forbidden = _unique(
                 [*list(style_preset.forbidden_layout_families), *forbidden]
             )
-            # Minimal aesthetics tighten copy further.
-            if style_preset.id.value == "architecture_minimal":
-                budget = budget.model_copy(
-                    update={
-                        "max_key_points": max(0, budget.max_key_points - 1),
-                        "max_message_chars": min(budget.max_message_chars, 64),
-                        "max_body_blocks": min(budget.max_body_blocks, 1),
-                    }
-                )
-                evidence.append("style_preset:architecture_minimal:tighter_copy")
-            else:
-                evidence.append(f"style_preset:{style_preset.id.value}")
+            from archium.domain.visual.style.presets import merge_copy_budget_stricter
+
+            budget = merge_copy_budget_stricter(budget, style_preset.content_policy)
+            personality = style_preset.presentation_personality
+            evidence.append(
+                f"style_preset:{style_preset.id.value}:"
+                f"{personality.logic.value}/{personality.emotion.value}/"
+                f"{personality.image_role.value}"
+            )
+            evidence.append(
+                "content_policy:"
+                f"msg≤{style_preset.content_policy.max_message_chars},"
+                f"pts≤{style_preset.content_policy.max_key_points},"
+                f"img≤{style_preset.content_policy.max_images}"
+            )
 
         # Preferred must not include forbidden.
         preferred = [fam for fam in preferred if fam not in set(forbidden)]

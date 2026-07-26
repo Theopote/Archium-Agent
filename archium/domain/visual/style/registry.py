@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 from archium.domain.visual.enums import DensityLevel, LayoutFamily
-from archium.domain.visual.style.presets import StylePreset, StylePresetId
+from archium.domain.visual.style.presets import (
+    EmotionLevel,
+    ImageRole,
+    NarrativeLogic,
+    PresentationPersonality,
+    StyleContentPolicy,
+    StylePreset,
+    StylePresetId,
+)
 
 DEFAULT_STYLE_PRESET_ID = StylePresetId.ARCHITECTURE_TECHNICAL
 
@@ -15,6 +23,20 @@ _PRESETS: dict[StylePresetId, StylePreset] = {
         density=DensityLevel.SPACIOUS,
         title_style="quiet_bar",
         diagram_style="line_sparse",
+        presentation_personality=PresentationPersonality(
+            logic=NarrativeLogic.ARGUMENT_FIRST,
+            emotion=EmotionLevel.LOW,
+            image_role=ImageRole.DOMINANT,
+        ),
+        content_policy=StyleContentPolicy(
+            max_title_chars=28,
+            max_message_chars=64,
+            max_key_points=2,
+            max_body_blocks=1,
+            max_images=2,
+            max_diagrams=1,
+            preferred_whitespace=0.35,
+        ),
         title_scale=0.9,
         body_pt=15.0,
         letter_spacing_bias=0.15,
@@ -51,6 +73,20 @@ _PRESETS: dict[StylePresetId, StylePreset] = {
         density=DensityLevel.COMPACT,
         title_style="technical_bar",
         diagram_style="line_dense",
+        presentation_personality=PresentationPersonality(
+            logic=NarrativeLogic.EVIDENCE_FIRST,
+            emotion=EmotionLevel.LOW,
+            image_role=ImageRole.SUPPORTING,
+        ),
+        content_policy=StyleContentPolicy(
+            max_title_chars=32,
+            max_message_chars=90,
+            max_key_points=3,
+            max_body_blocks=2,
+            max_images=4,
+            max_diagrams=2,
+            preferred_whitespace=0.12,
+        ),
         title_scale=0.95,
         body_pt=14.0,
         letter_spacing_bias=0.0,
@@ -88,6 +124,20 @@ _PRESETS: dict[StylePresetId, StylePreset] = {
         density=DensityLevel.BALANCED,
         title_style="strong_bar",
         diagram_style="tone_mass",
+        presentation_personality=PresentationPersonality(
+            logic=NarrativeLogic.EXPERIENCE_FIRST,
+            emotion=EmotionLevel.HIGH,
+            image_role=ImageRole.DOMINANT,
+        ),
+        content_policy=StyleContentPolicy(
+            max_title_chars=28,
+            max_message_chars=72,
+            max_key_points=1,
+            max_body_blocks=1,
+            max_images=3,
+            max_diagrams=1,
+            preferred_whitespace=0.28,
+        ),
         title_scale=1.2,
         body_pt=15.0,
         letter_spacing_bias=0.05,
@@ -125,6 +175,20 @@ _PRESETS: dict[StylePresetId, StylePreset] = {
         density=DensityLevel.BALANCED,
         title_style="academic_bar",
         diagram_style="annotated_figure",
+        presentation_personality=PresentationPersonality(
+            logic=NarrativeLogic.ANALYSIS_FIRST,
+            emotion=EmotionLevel.LOW,
+            image_role=ImageRole.EQUAL,
+        ),
+        content_policy=StyleContentPolicy(
+            max_title_chars=36,
+            max_message_chars=110,
+            max_key_points=4,
+            max_body_blocks=2,
+            max_images=3,
+            max_diagrams=2,
+            preferred_whitespace=0.18,
+        ),
         title_scale=1.0,
         body_pt=15.5,
         letter_spacing_bias=0.0,
@@ -162,6 +226,20 @@ _PRESETS: dict[StylePresetId, StylePreset] = {
         density=DensityLevel.COMPACT,
         title_style="problem_bar",
         diagram_style="layer_overlay",
+        presentation_personality=PresentationPersonality(
+            logic=NarrativeLogic.EVIDENCE_FIRST,
+            emotion=EmotionLevel.MEDIUM,
+            image_role=ImageRole.EQUAL,
+        ),
+        content_policy=StyleContentPolicy(
+            max_title_chars=32,
+            max_message_chars=90,
+            max_key_points=3,
+            max_body_blocks=2,
+            max_images=4,
+            max_diagrams=2,
+            preferred_whitespace=0.14,
+        ),
         title_scale=1.05,
         body_pt=14.5,
         letter_spacing_bias=0.0,
@@ -200,6 +278,20 @@ _PRESETS: dict[StylePresetId, StylePreset] = {
         density=DensityLevel.SPACIOUS,
         title_style="soft_bar",
         diagram_style="section_soft",
+        presentation_personality=PresentationPersonality(
+            logic=NarrativeLogic.EXPERIENCE_FIRST,
+            emotion=EmotionLevel.MEDIUM,
+            image_role=ImageRole.DOMINANT,
+        ),
+        content_policy=StyleContentPolicy(
+            max_title_chars=30,
+            max_message_chars=80,
+            max_key_points=2,
+            max_body_blocks=1,
+            max_images=3,
+            max_diagrams=1,
+            preferred_whitespace=0.30,
+        ),
         title_scale=0.95,
         body_pt=15.0,
         letter_spacing_bias=0.08,

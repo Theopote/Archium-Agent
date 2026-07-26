@@ -76,6 +76,8 @@ def test_minimal_vs_technical_measurable_token_diff() -> None:
     assert technical.typography.body.font_size == 14.0
     assert minimal.thresholds.min_hero_area_ratio > technical.thresholds.min_hero_area_ratio
     assert minimal.thresholds.min_whitespace_ratio > technical.thresholds.min_whitespace_ratio
+    # content_policy.preferred_whitespace raises the floor for minimal.
+    assert minimal.thresholds.min_whitespace_ratio >= 0.35
     assert design_system_fingerprint(minimal) != design_system_fingerprint(technical)
     # Base unchanged
     assert base.page.margin_left == 0.7
@@ -154,3 +156,69 @@ def test_hero_safe_area_differs_by_preset() -> None:
     min_area = min_hero.width * min_hero.height
     tech_area = tech_hero.width * tech_hero.height
     assert min_area < tech_area
+
+
+def test_all_presets_have_personality_and_content_policy() -> None:
+    from archium.domain.visual.style import (
+        EmotionLevel,
+        ImageRole,
+        NarrativeLogic,
+        merge_copy_budget_stricter,
+    )
+    from archium.domain.visual.page_direction import CopyBudget
+
+    for preset in list_style_presets():
+        personality = preset.presentation_personality
+        policy = preset.content_policy
+        assert isinstance(personality.logic, NarrativeLogic)
+        assert isinstance(personality.emotion, EmotionLevel)
+        assert isinstance(personality.image_role, ImageRole)
+        assert policy.max_message_chars <= 120
+        assert policy.max_key_points <= 4
+        assert policy.max_images >= 1
+        assert policy.preferred_whitespace is not None
+
+    technical = get_style_preset(StylePresetId.ARCHITECTURE_TECHNICAL)
+    luxury = get_style_preset(StylePresetId.ARCHITECTURE_LUXURY)
+    assert technical.presentation_personality.logic == NarrativeLogic.EVIDENCE_FIRST
+    assert technical.presentation_personality.emotion == EmotionLevel.LOW
+    assert technical.presentation_personality.image_role == ImageRole.SUPPORTING
+    assert luxury.presentation_personality.logic == NarrativeLogic.EXPERIENCE_FIRST
+    assert luxury.presentation_personality.emotion == EmotionLevel.HIGH
+    assert luxury.presentation_personality.image_role == ImageRole.DOMINANT
+    assert luxury.content_policy.max_key_points < technical.content_policy.max_key_points
+
+    loose = CopyBudget(
+        max_title_chars=40,
+        max_message_chars=200,
+        max_key_points=6,
+        max_body_blocks=4,
+    )
+    merged = merge_copy_budget_stricter(loose, luxury.content_policy)
+    assert merged.max_key_points == luxury.content_policy.max_key_points
+    assert merged.max_message_chars == luxury.content_policy.max_message_chars
+
+
+def test_director_merges_preset_content_policy_stricter() -> None:
+    from archium.application.visual.page_direction_service import PageDirectionService
+    from archium.domain.slide import SlideSpec
+    from archium.domain.enums import SlideType
+    from uuid import uuid4
+
+    slide = SlideSpec(
+        presentation_id=uuid4(),
+        chapter_id="c",
+        order=0,
+        title="流线冲突",
+        message="医患流线交叉与洁污混行是当前最大安全风险。",
+        slide_type=SlideType.CONTENT,
+        key_points=["a", "b", "c", "d"],
+    )
+    direction = PageDirectionService().direct(
+        slide,
+        style_preset=get_style_preset(StylePresetId.ARCHITECTURE_LUXURY),
+    )
+    # Situation wants 1 point; luxury also 1 — still ≤1.
+    assert direction.copy_budget.max_key_points <= 1
+    assert direction.copy_budget.max_message_chars <= 72
+    assert any("content_policy:" in item for item in direction.evidence)

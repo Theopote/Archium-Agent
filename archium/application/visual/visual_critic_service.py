@@ -37,6 +37,7 @@ from archium.domain.visual.enums import (
     LayoutIssueSeverity,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.style.presets import StyleContentPolicy
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.infrastructure.layout.geometry import Rect
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
@@ -112,6 +113,7 @@ class VisualCriticService:
         peer_plans: list[LayoutPlan] | None = None,
         usage_brief: TemplateUsageBrief | None = None,
         usage_constraints: TemplateUsageConstraints | None = None,
+        content_policy: StyleContentPolicy | None = None,
     ) -> VisualCriticReport:
         findings: list[VisualCriticFinding] = []
         notes: list[str] = []
@@ -199,7 +201,7 @@ class VisualCriticService:
                 )
             )
 
-        structure = self._structure_findings(plan, area)
+        structure = self._structure_findings(plan, area, content_policy=content_policy)
         if structure:
             findings.extend(structure)
             notes.append(
@@ -392,7 +394,11 @@ class VisualCriticService:
         return out
 
     def _structure_findings(
-        self, plan: LayoutPlan, page_area: float
+        self,
+        plan: LayoutPlan,
+        page_area: float,
+        *,
+        content_policy: StyleContentPolicy | None = None,
     ) -> list[VisualCriticFinding]:
         """Deterministic screenshot-structure critic (plan metrics; CI-safe)."""
         findings: list[VisualCriticFinding] = []
@@ -434,7 +440,11 @@ class VisualCriticService:
             )
         )
         copy_ratio = copy_area / page_area
-        if copy_ratio > 0.35:
+        copy_limit = 0.35
+        if content_policy and content_policy.preferred_whitespace is not None:
+            # Higher whitespace preference → lower allowed copy area.
+            copy_limit = max(0.18, 0.50 - content_policy.preferred_whitespace)
+        if copy_ratio > copy_limit:
             findings.append(
                 VisualCriticFinding(
                     rule_code=CRITIC_COPY_DENSITY_HIGH,
@@ -446,10 +456,68 @@ class VisualCriticService:
                     ),
                     evidence={
                         "copy_area_ratio": round(copy_ratio, 4),
+                        "copy_limit": round(copy_limit, 4),
                         "source": "screenshot_structure_v1",
                     },
                 )
             )
+
+        if content_policy is not None:
+            image_count = sum(
+                1
+                for el in plan.elements
+                if el.content_type == LayoutContentType.IMAGE
+                and el.role
+                in {
+                    LayoutElementRole.HERO_VISUAL,
+                    LayoutElementRole.SUPPORTING_VISUAL,
+                }
+            )
+            diagram_count = sum(
+                1
+                for el in plan.elements
+                if el.content_type == LayoutContentType.DRAWING
+            )
+            if image_count > content_policy.max_images:
+                findings.append(
+                    VisualCriticFinding(
+                        rule_code=CRITIC_COPY_DENSITY_HIGH,
+                        severity=LayoutIssueSeverity.WARNING,
+                        message=(
+                            f"Too many images ({image_count}) for StylePreset "
+                            f"content_policy max_images={content_policy.max_images}."
+                        ),
+                        suggestion=(
+                            f"Keep ≤{content_policy.max_images} images; "
+                            "prefer one dominant visual."
+                        ),
+                        evidence={
+                            "image_count": image_count,
+                            "max_images": content_policy.max_images,
+                            "source": "style_content_policy",
+                        },
+                    )
+                )
+            if diagram_count > content_policy.max_diagrams:
+                findings.append(
+                    VisualCriticFinding(
+                        rule_code=CRITIC_COPY_DENSITY_HIGH,
+                        severity=LayoutIssueSeverity.INFO,
+                        message=(
+                            f"Too many diagrams ({diagram_count}) for StylePreset "
+                            f"max_diagrams={content_policy.max_diagrams}."
+                        ),
+                        suggestion=(
+                            f"Keep ≤{content_policy.max_diagrams} drawings; "
+                            "split across pages if needed."
+                        ),
+                        evidence={
+                            "diagram_count": diagram_count,
+                            "max_diagrams": content_policy.max_diagrams,
+                            "source": "style_content_policy",
+                        },
+                    )
+                )
         return findings
 
     @staticmethod

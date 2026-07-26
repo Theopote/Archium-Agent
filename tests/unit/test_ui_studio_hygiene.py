@@ -62,3 +62,11 @@ def test_export_panel_offers_working_draft_when_formal_blocked() -> None:
     assert "select_presentation" in Path("archium/ui/pages/flow/generate.py").read_text(
         encoding="utf-8"
     )
+
+
+def test_art_direction_panel_leads_with_presentation_intelligence() -> None:
+    source = Path("archium/ui/art_direction_panel.py").read_text(encoding="utf-8")
+    assert "汇报气质" in source
+    assert "Presentation Intelligence" in source
+    assert "事务所气质（Style Preset）" in source
+    assert "工程细节（令牌策略原文）" in source

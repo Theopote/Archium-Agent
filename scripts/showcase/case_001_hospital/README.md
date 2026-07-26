@@ -28,7 +28,13 @@ py -m scripts.showcase.run_case_001_render --dry-run
 py -m pytest tests/unit/visual/test_showcase_case_001.py -q
 ```
 
-校验：outline → DeckComposition 节奏 → LayoutSolver 20 页 plans + layout instruction deck（无 Node）。
+校验：outline → DeckComposition → **Page Director** → LayoutSolver 20 页 + `presentation_intelligence.json`（无 Node）。
+
+气质对比（technical vs minimal，可测差值）：
+
+```bash
+py -m scripts.showcase.compare_case_001_presets
+```
 
 ## 本地 PPTX（需 Node + pptxgenjs）
 

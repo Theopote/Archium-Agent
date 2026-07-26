@@ -43,7 +43,8 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Golden V1–V7（composition） | ✅ |
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ |
 | Visual Critic screenshot_v1 / vision_v1（结构 + 可选截图 LLM） | ✅ v0.3 Phase 3 |
-| **Showcase Case 001**（医院 20 页 outline + LayoutSolver PPTX + 投资人 /50） | ✅ 可本地导出 PPTX；⏳ 人工填分过门 |
+| **Showcase Case 001**（医院 20 页 + Presentation Intelligence + PPTX） | ✅ 导演/气质可测；⏳ 真人五维过门 |
+| **Presentation Intelligence**（Preset+Deck+Director 产品读法） | ✅ 门面服务；非新 Agent |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
 | **Page Director**（单主张 / 禁区 / copy_budget） | ✅ v0.3 Phase 1.3 |
@@ -56,7 +57,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 
 ## 下一阶段：Showcase（v0.3）
 
-架构方向正确，但距离「打开 PPT 即像成熟商业产品」仍缺：**Case 001 完整 PPTX + 人工五维评分过门**（v0.3 Phase 4）。案例包与评分契约已在 [`scripts/showcase/case_001_hospital/`](../../scripts/showcase/case_001_hospital/)。
+架构方向正确。当前收紧点：让 **Style Preset + Deck 节奏 + Page Director** 在打开 PPT 的第一印象上生效（Presentation Intelligence 产品读法），并用 Case 001 人工五维过门。不新增 Agent / 平行 Intelligence 引擎。
 
 现行计划：[Presentation Engine v0.3](../roadmap/presentation-engine-v0.3.md)。本阶段暂停扩 Agent / 知识库广度；优先视觉输出质量与投资人 Demo。
 

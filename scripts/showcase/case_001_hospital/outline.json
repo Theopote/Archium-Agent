@@ -11,7 +11,9 @@
       "dominant_content_type": "hero_image",
       "preferred_layout_family": "hero",
       "chapter": "intro",
-      "demo_tour": "cover"
+      "demo_tour": "cover",
+      "message": "老院区更新：不停业实施的空间策略",
+      "key_points": ["市级综合医院"]
     },
     {
       "title": "项目背景",
@@ -19,7 +21,9 @@
       "continuity_role": "explanation",
       "dominant_content_type": "text_argument",
       "preferred_layout_family": "textual_argument",
-      "chapter": "intro"
+      "chapter": "intro",
+      "message": "院区老化与接诊压力叠加，需在运营中完成更新。",
+      "key_points": ["建设年代久", "门诊量上升", "后勤瓶颈"]
     },
     {
       "title": "任务与目标",
@@ -27,7 +31,9 @@
       "continuity_role": "explanation",
       "dominant_content_type": "text_argument",
       "preferred_layout_family": "strategy_cards",
-      "chapter": "intro"
+      "chapter": "intro",
+      "message": "理顺流线、补足科室、保障不停业分期落地。",
+      "key_points": ["流线安全", "面积达标", "分期不停业"]
     },
     {
       "title": "区位与交通",
@@ -36,7 +42,9 @@
       "dominant_content_type": "site_plan",
       "preferred_layout_family": "drawing_focus",
       "chapter": "site",
-      "demo_tour": "site_analysis"
+      "demo_tour": "site_analysis",
+      "message": "城市界面与急诊入口的交通压力集中在北侧。",
+      "key_points": ["北侧主入口", "急诊临街", "后勤尽端"]
     },
     {
       "title": "现状问题总览",
@@ -44,7 +52,9 @@
       "continuity_role": "evidence",
       "dominant_content_type": "photo_evidence",
       "preferred_layout_family": "evidence_board",
-      "chapter": "site"
+      "chapter": "site",
+      "message": "现状问题：拥堵、交叉、老化三类并存。",
+      "key_points": ["门诊大厅拥堵", "医患流线交叉", "后勤空间老化"]
     },
     {
       "title": "流线冲突",
@@ -52,7 +62,9 @@
       "continuity_role": "evidence",
       "dominant_content_type": "photo_evidence",
       "preferred_layout_family": "evidence_board",
-      "chapter": "site"
+      "chapter": "site",
+      "message": "医患流线交叉与洁污混行是当前最大安全风险。",
+      "key_points": ["急诊与物流冲突"]
     },
     {
       "title": "科室压力",
@@ -60,7 +72,9 @@
       "continuity_role": "evidence",
       "dominant_content_type": "metrics",
       "preferred_layout_family": "metric_dashboard",
-      "chapter": "site"
+      "chapter": "site",
+      "message": "关键科室面积与床位指标低于规范目标。",
+      "key_points": ["急诊 82%", "ICU 70%", "影像 65%"]
     },
     {
       "title": "规范约束",
@@ -68,7 +82,9 @@
       "continuity_role": "explanation",
       "dominant_content_type": "text_argument",
       "preferred_layout_family": "textual_argument",
-      "chapter": "site"
+      "chapter": "site",
+      "message": "消防、感染控制与不停业要求共同框定可改范围。",
+      "key_points": ["消防疏散", "感染控制", "投资边界"]
     },
     {
       "title": "设计策略",
@@ -77,7 +93,9 @@
       "dominant_content_type": "text_argument",
       "preferred_layout_family": "strategy_cards",
       "chapter": "strategy",
-      "demo_tour": "strategy"
+      "demo_tour": "strategy",
+      "message": "策略回应问题：分流、补面积、分期围合。",
+      "key_points": ["分流", "补面积", "分期"]
     },
     {
       "title": "概念生成",
@@ -150,7 +168,9 @@
       "dominant_content_type": "hero_image",
       "preferred_layout_family": "hero",
       "chapter": "delivery",
-      "demo_tour": "atmosphere"
+      "demo_tour": "atmosphere",
+      "message": "更新后的城市界面与入院体验。",
+      "key_points": ["北向界面", "入口广场"]
     },
     {
       "title": "结论建议",

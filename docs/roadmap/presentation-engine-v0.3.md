@@ -90,6 +90,20 @@ SlideSpec + PageArchetype + DeckDirective
 
 **不是**新 Agent；是 Visual 席位上的确定性 + 少量 LLM 结构化决策。
 
+### 产品叙事：Presentation Intelligence（不是新层）
+
+投资人建议里的「Presentation Intelligence Layer」在 Archium 中 **映射为既有 Visual 产物的统一读法**，禁止平行拆出新 Agent / 新引擎：
+
+| 叙事名 | 实现锚点 |
+|--------|----------|
+| Project Personality | `StylePreset` + `ArtDirection.style_preset_id` |
+| Audience Model | Brief / Storyline audience + `audience_takeaway` |
+| Story Rhythm | `DeckCompositionPlan` / `PacingRole` / 高潮预算 |
+| Emotional Curve | `VisualIntensity` + ArtDirection `emotional_keywords` |
+| 页级主张 | `PageDirectionService`（copy_budget / 禁区） |
+
+统一出口：`PresentationIntelligenceService` → `PresentationIntelligenceBrief`（Case 001 dry-run 写 `presentation_intelligence.json`）。Studio「汇报气质」面板先露出 Preset / 节奏 / 情绪，工程令牌收入 expander。
+
 ---
 
 ## 3. 明确暂停（本阶段禁止）
@@ -145,17 +159,31 @@ archium/application/visual/
 
 ```json
 {
-  "id": "architecture_minimal",
-  "typography": { "title_scale": 0.9, "body_pt": 15, "tracking": "loose" },
-  "spacing": { "margin_bias": "generous", "gutter_bias": "wide" },
-  "image_ratio": { "hero_min": 0.45, "drawing_fit": "contain" },
-  "color": { "palette_ref": "...", "max_accent_ratio": 0.08 },
-  "title_style": "quiet_bar",
-  "diagram_style": "line_sparse",
-  "density": "spacious",
-  "forbidden": ["metric_dashboard_heavy", "icon_overload"]
+  "id": "architecture_technical",
+  "presentation_personality": {
+    "logic": "evidence_first",
+    "emotion": "low",
+    "image_role": "supporting"
+  },
+  "content_policy": {
+    "max_message_chars": 90,
+    "max_key_points": 3,
+    "max_body_blocks": 2,
+    "max_images": 4,
+    "max_diagrams": 2,
+    "preferred_whitespace": 0.12
+  },
+  "typography": { "title_scale": 0.95, "body_pt": 14 },
+  "spacing": { "margin_scale": 0.82 },
+  "image_ratio": { "hero_min": 0.34 },
+  "color": { "max_accent_ratio": 0.1 },
+  "density": "compact",
+  "forbidden": ["decorative_frame", "tourism_brochure"]
 }
 ```
+
+**叙事性格 ≠ 色板**：Technical = 事实/证据优先；Luxury = 体验/情绪优先、图面主导。  
+**内容政策**：稿级默认；与 `PageDirection.copy_budget` **取更严者**；Critic 可用 `preferred_whitespace` / max_images 拒绝垃圾页。
 
 **接线（必须）**：
 
@@ -168,7 +196,8 @@ archium/application/visual/
 
 - [x] 同一 `SlideSpec` 在 `minimal` vs `technical` 下，hero 面积、字号、留白可测量差异。  
 - [x] 单测：registry 完整、非法 id 失败、绑定后 DesignSystem 哈希变化。  
-- [x] 至少 2 个 composition 对比（Hero generator + fingerprint；见 `tests/unit/visual/test_style_presets.py`）。
+- [x] 至少 2 个 composition 对比（Hero generator + fingerprint；见 `tests/unit/visual/test_style_presets.py`）。  
+- [x] 六档 Preset 均含 `presentation_personality` + `content_policy`；Director 取更严 CopyBudget。
 
 #### P1.2 Deck 节奏控制器（强化现有模型）
 

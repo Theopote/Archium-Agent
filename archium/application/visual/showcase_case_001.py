@@ -43,10 +43,7 @@ from archium.domain.visual.style import (
 )
 from archium.domain.visual.style.presets import StylePresetId
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.infrastructure.layout.generators.base import (
-    LayoutGeneratorContext,
-    content_from_slide,
-)
+from archium.infrastructure.layout.generators.base import LayoutGeneratorContext
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.layout.layout_solver import LayoutSolver
 
@@ -172,48 +169,47 @@ def build_case_001_render_bundle(
     outline: list[dict[str, Any]] | None = None,
     style_preset_id: str | None = None,
 ) -> Case001RenderBundle:
-    """Outline → DeckComposition → LayoutSolver plans (no LLM, no DB)."""
+    """Outline → DeckComposition → Page Director → LayoutSolver (no LLM, no DB)."""
+    from archium.application.visual.presentation_intelligence_service import (
+        PresentationIntelligenceService,
+    )
+
     preset = resolve_style_preset_id(style_preset_id or CASE_001_DEFAULT_PRESET).value
     design = case_001_design_system(preset)
     slides, intents = build_case_001_deck(outline)
     composition = plan_case_001_composition(slides=slides, intents=intents)
+    intel = PresentationIntelligenceService()
+    directed = intel.direct_deck_intents(
+        slides, intents, composition, style_preset_id=preset
+    )
     registry = get_layout_family_registry()
     solver = LayoutSolver()
     plans: list[LayoutPlan] = []
-    resolved_intents: list[VisualIntent] = []
+    clipped_slides: list[SlideSpec] = []
 
-    for slide, intent, directive in zip(
-        slides, intents, composition.slide_directives, strict=True
-    ):
-        families = list(directive.preferred_layout_families) or list(
-            intent.preferred_layout_families
-        )
-        family = families[0]
-        resolved = intent.model_copy(
-            update={
-                "density_level": directive.target_density,
-                "preferred_layout_families": families,
-            }
-        )
-        resolved_intents.append(resolved)
-        variant = preferred_variant_for_intent(resolved, family)
+    for slide, intent in zip(slides, directed, strict=True):
+        clipped = intel.clip_slide_copy(slide, intent)
+        clipped_slides.append(clipped)
+        families = list(intent.preferred_layout_families)
+        family = families[0] if families else LayoutFamily.TEXTUAL_ARGUMENT
+        variant = preferred_variant_for_intent(intent, family)
         variant = registry.resolve_variant(family, variant)
         plan = solver.generate(
             family,
             LayoutGeneratorContext(
-                slide=slide,
-                visual_intent=resolved,
+                slide=clipped,
+                visual_intent=intent,
                 art_direction=None,
                 design_system=design,
-                content=content_from_slide(slide, resolved),
+                content=intel.content_for_intent(clipped, intent),
                 variant=variant,
             ),
         )
         plans.append(plan)
 
     return Case001RenderBundle(
-        slides=slides,
-        intents=resolved_intents,
+        slides=clipped_slides,
+        intents=directed,
         plans=plans,
         design=design,
         composition=composition,
@@ -265,6 +261,24 @@ def write_case_001_dry_run(
         encoding="utf-8",
     )
 
+    from archium.application.visual.presentation_intelligence_service import (
+        PresentationIntelligenceService,
+    )
+
+    intel_brief = PresentationIntelligenceService().build_brief(
+        style_preset_id=bundle.style_preset_id,
+        slides=bundle.slides,
+        intents=bundle.intents,
+        composition=bundle.composition,
+        case_id=CASE_001_ID,
+        demo_tour_titles=list(DEMO_TOUR_TITLES),
+    )
+    (out / "presentation_intelligence.json").write_text(
+        json.dumps(intel_brief.model_dump(mode="json"), ensure_ascii=False, indent=2)
+        + "\n",
+        encoding="utf-8",
+    )
+
     summary = {
         "case_id": CASE_001_ID,
         "mode": "dry_run",
@@ -274,6 +288,9 @@ def write_case_001_dry_run(
         "layout_instructions": str(deck_path),
         "demo_tour_titles": list(DEMO_TOUR_TITLES),
         "families": [plan.layout_family.value for plan in bundle.plans],
+        "page_direction_hits": intel_brief.page_direction_hits,
+        "project_personality": intel_brief.project_personality,
+        "situation_rules_fired": intel_brief.situation_rules_fired,
     }
     (out / "render_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",

@@ -175,8 +175,11 @@ def _merge_thresholds(base: LayoutThresholds, preset: StylePreset) -> LayoutThre
     updates: dict[str, float] = {}
     if preset.hero_min_area_ratio is not None:
         updates["min_hero_area_ratio"] = preset.hero_min_area_ratio
-    if preset.min_whitespace_ratio is not None:
-        updates["min_whitespace_ratio"] = preset.min_whitespace_ratio
+    min_ws = preset.min_whitespace_ratio
+    policy_ws = preset.content_policy.preferred_whitespace
+    if min_ws is not None or policy_ws is not None:
+        candidates = [value for value in (min_ws, policy_ws, base.min_whitespace_ratio) if value is not None]
+        updates["min_whitespace_ratio"] = max(candidates)
     if preset.max_whitespace_ratio is not None:
         updates["max_whitespace_ratio"] = preset.max_whitespace_ratio
     if preset.body_pt is not None:
