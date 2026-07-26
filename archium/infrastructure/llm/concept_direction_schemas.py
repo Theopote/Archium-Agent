@@ -43,6 +43,31 @@ class DesignRationaleDraft(BaseModel):
         default_factory=list,
         description="1–2 options considered but not chosen, with brief trade-off",
     )
+    # Reasoning chain — aligns with Domain DesignRationale (Phase R1)
+    observation: str = Field(
+        default="",
+        description="Site / culture / typology observation (Step 1)",
+    )
+    interpretation: str = Field(
+        default="",
+        description="What the observation implies for design (optional)",
+    )
+    problem: str = Field(
+        default="",
+        description="Contradiction or need this direction answers (Step 2)",
+    )
+    hypothesis: str = Field(
+        default="",
+        description="Working design hypothesis / intent claim (Step 3)",
+    )
+    strategy: str = Field(
+        default="",
+        description="Architectural strategy that carries the hypothesis (Step 4)",
+    )
+    risks: list[str] = Field(
+        default_factory=list,
+        description="Known risks / unverified assumptions for this rationale (Step 6)",
+    )
 
 
 class ConceptDirectionDraft(BaseModel):

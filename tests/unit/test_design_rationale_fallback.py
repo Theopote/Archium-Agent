@@ -40,14 +40,44 @@ def test_synthesize_design_rationale_from_direction() -> None:
     assert "南北主轴线" in rationale.statement
     assert any("形式语言" in item for item in rationale.reasons)
     assert any("西安" in item for item in rationale.evidence)
+    assert rationale.has_reasoning_chain()
+    assert "医院老院区" in rationale.observation
+    assert "保留立面" in rationale.problem
+    assert rationale.strategy.startswith("保留南北")
 
 
-def test_ensure_direction_design_rationale_preserves_llm_output() -> None:
-    existing = DesignRationale(statement="LLM 判断", reasons=["理由 A"], confidence=0.8)
+def test_ensure_direction_design_rationale_preserves_llm_chain() -> None:
+    existing = DesignRationale(
+        statement="LLM 判断",
+        reasons=["理由 A"],
+        confidence=0.8,
+        observation="LLM 观察",
+        problem="LLM 问题",
+        hypothesis="LLM 假设",
+        strategy="LLM 策略",
+    )
     direction = _direction(design_rationale=existing)
     updated = ensure_direction_design_rationale(direction, known_facts={"location": "西安"})
     assert updated.design_rationale is not None
     assert updated.design_rationale.statement == "LLM 判断"
+    assert updated.design_rationale.observation == "LLM 观察"
+    assert updated.design_rationale.strategy == "LLM 策略"
+
+
+def test_ensure_backfills_chain_without_overwriting_claim() -> None:
+    existing = DesignRationale(statement="LLM 判断", reasons=["理由 A"], confidence=0.8)
+    direction = _direction(design_rationale=existing)
+    updated = ensure_direction_design_rationale(
+        direction,
+        known_facts={"location": "西安"},
+        idea_text="医院老院区改造",
+    )
+    assert updated.design_rationale is not None
+    assert updated.design_rationale.statement == "LLM 判断"
+    assert updated.design_rationale.reasons == ["理由 A"]
+    assert updated.design_rationale.has_reasoning_chain()
+    assert "医院老院区" in updated.design_rationale.observation
+    assert updated.design_rationale.strategy.startswith("保留南北")
 
 
 def test_design_intent_from_direction_copies_rationale() -> None:
@@ -56,9 +86,14 @@ def test_design_intent_from_direction_copies_rationale() -> None:
         reasons=["资料有限时仍可推进讨论"],
         evidence=["location：西安"],
         confidence=0.7,
+        observation="南北轴线清晰",
+        problem="更新与轴线保留冲突",
+        hypothesis="轴线可承载分期更新",
+        strategy="保留南北主轴线",
     )
     direction = _direction(design_rationale=rationale)
     intent = design_intent_from_direction(direction)
     assert intent.design_rationale is not None
     assert intent.design_rationale.statement == "保留主轴线"
+    assert intent.design_rationale.has_reasoning_chain()
     assert "设计判断" in intent.to_prompt_block()

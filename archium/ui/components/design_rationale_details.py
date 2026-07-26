@@ -19,6 +19,8 @@ def render_design_rationale(
             st.markdown(f"**判断**：{rationale.statement.strip()}")
         if rationale.observation.strip():
             st.markdown(f"**观察**：{rationale.observation.strip()}")
+        if rationale.interpretation.strip():
+            st.markdown(f"**释义**：{rationale.interpretation.strip()}")
         if rationale.problem.strip():
             st.markdown(f"**问题**：{rationale.problem.strip()}")
         if rationale.hypothesis.strip():

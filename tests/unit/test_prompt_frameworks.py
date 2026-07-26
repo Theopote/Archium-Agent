@@ -24,11 +24,14 @@ def test_architectural_reasoning_framework_has_required_steps() -> None:
 
 
 def test_concept_prompt_injects_reasoning_framework() -> None:
-    assert concept_prompts.PROMPT_VERSION == "concept_direction.v3"
+    assert concept_prompts.PROMPT_VERSION == "concept_direction.v5"
     assert ARCHITECTURAL_REASONING_FRAMEWORK in concept_prompts.CONCEPT_DIRECTION_SYSTEM_PROMPT
     assert "spatial_strategy、formal_language、risks 不得留空" in (
         concept_prompts.CONCEPT_DIRECTION_SYSTEM_PROMPT
     )
+    assert "design_rationale.observation" in concept_prompts.CONCEPT_DIRECTION_SYSTEM_PROMPT
+    assert "design_rationale.problem" in concept_prompts.CONCEPT_DIRECTION_SYSTEM_PROMPT
+    assert "design_rationale.strategy" in concept_prompts.CONCEPT_DIRECTION_SYSTEM_PROMPT
     user = concept_prompts.build_exploration_direction_user_prompt(
         project_name="山地文化中心",
         idea_text="山地文化中心",
@@ -36,6 +39,7 @@ def test_concept_prompt_injects_reasoning_framework() -> None:
     )
     assert "建筑推理框架" in user
     assert "回应的问题" in user
+    assert "observation→problem→hypothesis→strategy" in user
 
 
 def test_concept_mission_addendum_injects_reasoning() -> None:

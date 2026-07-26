@@ -50,17 +50,16 @@ class DesignRationale(DomainModel):
     observation / problem / hypothesis / strategy / risks
 ```
 
-LLM Draft（残缺）：
+LLM Draft（R1 后已对齐）：
 
-```28:45:archium/infrastructure/llm/concept_direction_schemas.py
+```28:70:archium/infrastructure/llm/concept_direction_schemas.py
 class DesignRationaleDraft(BaseModel):
     statement / reasons / evidence / confidence / alternatives
-    # 无 observation / problem / hypothesis / strategy
+    observation / interpretation / problem / hypothesis / strategy / risks
 ```
 
-后果：模型即使按 `architectural_reasoning.v1` 思考，结构化输出也**装不下**推理链；`design_rationale_fallback` 用方向字段拼一份「看起来有 rationale」——是合成答案，不是推理沉淀。
-
-Prompt 框架映射到**分散方向字段**（summary / spatial_strategy / risks），而非 Rationale 链字段——产品叙事与数据模型再次错位。
+**R1 已关：** Draft↔Domain 链字段、Prompt Step→Rationale、fallback 不覆盖 LLM 链。  
+**仍开：** Critic→Revise（APP-010）、ReasoningArtifact 身份（APP-011）。
 
 ---
 
@@ -142,11 +141,13 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 
 ## 建议演进（渐进）
 
-### Phase R1 — 对齐 LLM 与 Domain（低成本，P0）
+### Phase R1 — 对齐 LLM 与 Domain（低成本，P0）✅ 2026-07-26
 
 1. `DesignRationaleDraft` 增加 observation / problem / hypothesis / strategy（+ 可选 interpretation）  
 2. Prompt 字段映射改为「Step → Rationale 链」，方向卡片字段为表达层  
 3. Fallback 仅在链字段全空时启用；有 LLM 链则禁止静默覆盖  
+
+（关闭 `APP-008` / `APP-009` / `DOM-029`。）
 
 ### Phase R2 — Reasoning 节点身份（中）
 
@@ -168,11 +169,11 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 
 | 编号 | 级别 | 问题 |
 |------|------|------|
-| APP-008 | P1 | DesignRationaleDraft 缺 observation/problem/hypothesis/strategy，与 Domain 断裂 |
-| APP-009 | P1 | 建筑推理框架映射到分散方向字段，未写入 Rationale 链 |
+| APP-008 | P1 | ~~DesignRationaleDraft 缺链字段~~ **done (R1)** |
+| APP-009 | P1 | ~~框架映射到分散字段~~ **done (R1)** |
 | APP-010 | P1 | DesignCritique / Reflection 无 Revise：next_adjustments 不执行 |
 | APP-011 | P2 | 无 ReasoningArtifact 身份；证据 refs 未绑定单一推理节点 |
-| DOM-029 | P2 | DesignRationale 缺 interpretation 槽（理想链 interpretation） |
+| DOM-029 | P2 | ~~缺 interpretation~~ **done (R1)** |
 
 （写入 `03-application.md` / `02-domain.md`。）
 
@@ -195,4 +196,4 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 - [x] 生成答案 vs 设计推理判定  
 - [x] Schema/Domain 断裂取证  
 - [x] Issue 草案 APP-008…011 / DOM-029  
-- [ ] 择优落地 Phase R1（Draft 对齐）
+- [x] 择优落地 Phase R1（Draft 对齐）

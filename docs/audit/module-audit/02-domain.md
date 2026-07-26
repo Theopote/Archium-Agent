@@ -55,7 +55,7 @@
 | DOM-026 | P2 | open | `Mission.project_context` 字符串与 `ProjectContext` 同名异义 | `project_mission.py` | 评审/导入混淆 | 重命名叙事字段（如 `task_context_narrative`）+ 迁移别名 | 域内无歧义名；测试/UI 文案更新 | `-` |
 | DOM-027 | P1 | open | 无设计产物聚合；`ArtifactKind` 几乎全是汇报管线 | `artifact_ownership.py` | 设计图/批判报告无处安放，被迫塞 Presentation | 引入 `DesignArtifact`（或同义）与汇报 Artifact 分枚举 | 设计产物不经 PPT ArtifactKind；有 project_id 追溯 | `-` |
 | DOM-028 | P2 | open | KnowledgeState 回声 lifecycle/workflow/page 与 ProjectContext 双写 | `intent/knowledge_state.py`; `context/project_context.py` | 路由读到陈旧回声 | 权威在 Context 合成；KS 只存索引+dimensions（compat 字段只读派生） | 路由测试只信 Context；KS 回声有单一写入点 | `-` |
-| DOM-029 | P2 | open | DesignRationale 缺 interpretation 槽（理想推理链） | `design_rationale.py`; life-system 03 | observation→hypothesis 中间释义丢失 | 增 interpretation 字段 + prompt/Draft 对齐 | Domain/Draft/单测含 interpretation | `-` |
+| DOM-029 | P2 | done | DesignRationale 缺 interpretation 槽（理想推理链） | `design_rationale.py`; life-system 03 | observation→hypothesis 中间释义丢失 | 增 interpretation 字段 + prompt/Draft 对齐 | Domain/Draft/单测含 interpretation | `-` |
 
 ---
 

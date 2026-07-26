@@ -31,6 +31,12 @@ def design_rationale_from_draft(draft: DesignRationaleDraft | None) -> DesignRat
             for alt in draft.alternatives
             if (alt.label or "").strip() or (alt.note or "").strip()
         ],
+        observation=(draft.observation or "").strip(),
+        interpretation=(draft.interpretation or "").strip(),
+        problem=(draft.problem or "").strip(),
+        hypothesis=(draft.hypothesis or "").strip(),
+        strategy=(draft.strategy or "").strip(),
+        risks=[item.strip() for item in draft.risks if item and item.strip()],
     )
     return None if rationale.is_empty() else rationale
 

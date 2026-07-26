@@ -1,7 +1,7 @@
 """Design rationale — why a direction or decision, not just what.
 
 Supports both claim–evidence skeleton and design-reasoning fields
-(observation → problem → hypothesis → strategy → risks).
+(observation → interpretation → problem → hypothesis → strategy → risks).
 """
 
 from __future__ import annotations
@@ -37,6 +37,10 @@ class DesignRationale(DomainModel):
         default="",
         description="What was observed in site / culture / typology.",
     )
+    interpretation: str = Field(
+        default="",
+        description="What the observation implies for design (reading of conditions).",
+    )
     problem: str = Field(
         default="",
         description="Contradiction or need the design addresses.",
@@ -54,16 +58,23 @@ class DesignRationale(DomainModel):
         description="Known risks / failure modes of this rationale.",
     )
 
+    def has_reasoning_chain(self) -> bool:
+        """True when any observation→strategy chain slot is filled (LLM or authored)."""
+        return bool(
+            self.observation.strip()
+            or self.interpretation.strip()
+            or self.problem.strip()
+            or self.hypothesis.strip()
+            or self.strategy.strip()
+        )
+
     def is_empty(self) -> bool:
         return not (
             self.statement.strip()
             or self.reasons
             or self.evidence
             or self.alternatives
-            or self.observation.strip()
-            or self.problem.strip()
-            or self.hypothesis.strip()
-            or self.strategy.strip()
+            or self.has_reasoning_chain()
             or self.risks
         )
 
@@ -75,6 +86,8 @@ class DesignRationale(DomainModel):
             sections.append(f"设计判断：{self.statement.strip()}")
         if self.observation.strip():
             sections.append(f"观察：{self.observation.strip()}")
+        if self.interpretation.strip():
+            sections.append(f"释义：{self.interpretation.strip()}")
         if self.problem.strip():
             sections.append(f"问题：{self.problem.strip()}")
         if self.hypothesis.strip():
