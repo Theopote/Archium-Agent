@@ -39,6 +39,11 @@ class VisualPrimitive(DomainModel):
         }
 
 
+from archium.domain.visual.primitives.draw_spec import (
+    PrimitiveDrawSpec,
+    draw_spec_for,
+)
+
 # --- Catalog (extend carefully; quality over quantity) ---
 
 HERO_STATEMENT = VisualPrimitive(
@@ -59,7 +64,7 @@ FLOW_LINE = VisualPrimitive(
     id="flow_line",
     kind=PrimitiveKind.LINE,
     meaning="circulation_flow",
-    behavior={"weight": 1.0, "dash": "solid", "direction": "path"},
+    behavior={"weight": 1.0, "dash": "solid", "direction": "path", "curvature": 0.45},
     glyph="→ → →",
 )
 
@@ -163,3 +168,8 @@ def resolve_primitives(ids: list[str]) -> list[VisualPrimitive]:
         seen.add(item)
         out.append(prim)
     return out
+
+
+def draw_spec_for_primitive(primitive_id: str) -> PrimitiveDrawSpec | None:
+    """Executable geometry/style for a catalog primitive (Primitive Engine)."""
+    return draw_spec_for(primitive_id)

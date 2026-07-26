@@ -540,6 +540,9 @@ function renderShapeElement(pres, page, element, slideInstruction) {
   const lineColor = _stripHash(
     element.stroke_color || colors.border || colors.muted_text || "D9D5CF",
   );
+  const useOval =
+    (element.image_mask === "circle" || element.shape_kind === "oval") &&
+    pres.shapes?.OVAL;
   /** @type {Record<string, unknown>} */
   const shapeOpts = {
     x: Number(element.x) || 0,
@@ -555,7 +558,7 @@ function renderShapeElement(pres, page, element, slideInstruction) {
   if (element.opacity != null && Number(element.opacity) < 1) {
     shapeOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);
   }
-  page.addShape(pres.shapes.RECTANGLE, shapeOpts);
+  page.addShape(useOval ? pres.shapes.OVAL : pres.shapes.RECTANGLE, shapeOpts);
 }
 
 /**

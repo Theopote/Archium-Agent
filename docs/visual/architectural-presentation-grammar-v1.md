@@ -187,7 +187,22 @@ Primitive → 优先 `icon:*`（`primitive_icons.py` → 仓库内 `architectura
 
 `DesignCorpusPage` + `DesignCorpusService`：公式范例（20×2 气质）+ Case 001 outline 20 页标注 ≥50。按 `formula_id` / `page_type` / `metaphor` 匹配，供导演与 Studio 参考。**不做**自建扩散训练。
 
-延后：外部院优秀页截图入库、Corpus→打分权重、LLM 选型。
+### 3.7 Visual Primitive Engine（执行层）
+
+Concept 说「要流线」；Engine 说「怎么画」：
+
+```text
+PrimitiveDrawSpec { geometry, style, meaning }
+  → primitive_materializer
+  → LayoutElement (vl_draw_*)
+  → pptxgen shape / oval
+```
+
+首批可执行：`flow_line`（bezier 采样）· `axis_line` · `node`（圆）· `thin_rule` · `overlay_map`。  
+冲突页 rhetoric pack：`vl_draw_flow_existing`（灰）+ `vl_draw_node_conflict`（红）+ `vl_draw_flow_network`（绿）。  
+`fragment_to_network` 页 `decorative_lines ≥ 5`，避免灰线吃光预算。
+
+延后：外部院优秀页截图入库、真 Bezier/Freeform 路径、LLM 选型。
 
 Case 001 dry-run：`visual_language.json`；页主张卡含 budget / narrative / grammar / mask / atmosphere / image_composition。
 
@@ -285,5 +300,6 @@ Case 001 dry-run：`visual_language.json`；页主张卡含 budget / narrative /
 - [x] ImageCompositionPlan（主图+局部+分析线）
 - [x] 页语法首轮目录 ~20 句型  
 - [x] Design Corpus 首批 ≥50 页标注（元数据种子；外部截图待补）  
+- [x] Visual Primitive Engine v1：DrawSpec + Materializer；冲突页灰/红/绿  
 
-**下一步投资优先级**：Case 001 人工视觉验收 → 外部优秀页截图入库 → 渲染打磨；**暂停**再扩 LayoutFamily / Concept 数量与新 Agent。
+**下一步投资优先级**：Case 001 人工打开验收（封面 / 流线冲突 / 策略）→ Typography 执行加深 → 真 Bezier；**暂停**再扩 LayoutFamily / Concept。

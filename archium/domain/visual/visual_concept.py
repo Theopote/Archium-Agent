@@ -93,8 +93,9 @@ FRAGMENT_TO_NETWORK_NARRATIVE = VisualNarrative(
         "existing": "gray",
         "problem": "red",
         "conflict": "red",
+        "intervention": "renew_green",
         "future": "white",
-        "solution": "white",
+        "solution": "renew_green",
     },
     recommended_components=[
         "flow_line",

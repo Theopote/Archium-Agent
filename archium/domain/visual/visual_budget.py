@@ -35,7 +35,7 @@ class VisualBudget(DomainModel):
 BUDGET_PROBLEM = VisualBudget(
     hero_ratio=0.5,
     accent_elements=3,
-    decorative_lines=2,
+    decorative_lines=6,
     icons=2,
     color_blocks=1,
 )

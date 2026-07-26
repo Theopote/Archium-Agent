@@ -41,7 +41,8 @@ def test_fragment_concept_carries_full_visual_narrative() -> None:
     assert concept.narrative.graphic_language.direction == MotionDirection.CONVERGING
     assert "flow_line" in concept.narrative.recommended_components
     assert direction.visual_budget is not None
-    assert direction.visual_budget.decorative_lines <= 2
+    # Primitive Engine pack needs room for gray existing + green network.
+    assert direction.visual_budget.decorative_lines >= 5
     assert direction.visual_budget.icons <= 2
     language = direction.visual_language
     assert language is not None

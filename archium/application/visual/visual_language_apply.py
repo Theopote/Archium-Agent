@@ -594,30 +594,56 @@ def _inject_primitives(
     plan: LayoutPlan,
     budget: VisualBudget,
 ) -> list[LayoutElement]:
-    """Materialize primitives — prefer bundled SVG icon refs over text glyphs."""
+    """Materialize primitives via DrawSpec engine; fall back to icons/glyphs."""
+    from archium.application.visual.primitive_materializer import materialize_primitives
     from archium.domain.visual.primitives import PrimitiveKind, resolve_primitives
+    from archium.domain.visual.primitives.draw_spec import draw_spec_for
     from archium.domain.visual.visual_language.primitive_icons import (
         icon_ref_for_primitive,
     )
 
-    if not language.primitive_ids or budget.icons <= 0:
+    if not language.primitive_ids:
         return elements
-    out = list(elements)
-    title = next((el for el in out if el.role == LayoutElementRole.TITLE), None)
-    accent = _swatch_hex(
-        language.color_story,
-        prefer=("conflict", "problem", "intervention", "accent"),
+
+    # Infer metaphor hint from color rhetoric / pack-friendly roles.
+    metaphor = None
+    roles = language.color_story.roles
+    if "conflict" in roles and ("existing" in roles or "intervention" in roles):
+        metaphor = "fragment_to_network"
+    if language.image_composition.mode.value == "photo_plus_analysis":
+        metaphor = metaphor or "fragment_to_network"
+
+    out = materialize_primitives(
+        plan=plan,
+        elements=elements,
+        primitive_ids=list(language.primitive_ids),
+        color_story=language.color_story,
+        budget=budget,
+        metaphor=metaphor,
     )
-    ink = NAMED_SWATCHES.get("axis_line", "#2C2C2C")
-    color = accent or ink
-    placed = 0
+
+    # Glyph / SVG fallback for primitives without draw specs (or leftover budget).
+    if budget.icons <= 0:
+        return out
+    title = next((el for el in out if el.role == LayoutElementRole.TITLE), None)
+    placed = sum(1 for el in out if el.id.startswith("vl_draw_node") or el.id.startswith("vl_prim_"))
+    drawable = {pid for pid in language.primitive_ids if draw_spec_for(pid) is not None}
     for prim in resolve_primitives(language.primitive_ids):
         if placed >= budget.icons:
             break
+        if prim.id in drawable or prim.id in {
+            "thin_rule",
+            "axis_line",
+            "hero_statement",
+            "section_index",
+            "flow_line",
+            "node",
+            "overlay_map",
+            "circulation",
+        }:
+            continue
         el_id = f"vl_prim_{prim.id}"
         if any(el.id == el_id for el in out):
-            continue
-        if prim.id in {"thin_rule", "axis_line", "hero_statement", "section_index"}:
             continue
         icon_ref = icon_ref_for_primitive(prim.id)
         if icon_ref and prim.kind in {
@@ -637,26 +663,6 @@ def _inject_primitives(
                     width=0.55,
                     height=0.55,
                     z_index=6,
-                    layer_role=SceneLayerRole.ANNOTATION.value,
-                )
-            )
-            placed += 1
-            continue
-        if prim.kind == PrimitiveKind.LINE and prim.id == "flow_line":
-            out.append(
-                LayoutElement(
-                    id=el_id,
-                    role=LayoutElementRole.ANNOTATION,
-                    content_type=LayoutContentType.TEXT,
-                    text_content=prim.glyph or "→ → →",
-                    x=(title.x if title else plan.page_width * 0.1),
-                    y=plan.page_height * 0.78,
-                    width=min(3.5, plan.page_width * 0.35),
-                    height=0.32,
-                    z_index=6,
-                    style_token="caption",
-                    font_size_override=13,
-                    letter_spacing=0.18,
                     layer_role=SceneLayerRole.ANNOTATION.value,
                 )
             )
@@ -686,27 +692,6 @@ def _inject_primitives(
                 )
             )
             placed += 1
-            continue
-        if prim.kind == PrimitiveKind.DIAGRAM and prim.id == "overlay_map":
-            out.append(
-                LayoutElement(
-                    id=el_id,
-                    role=LayoutElementRole.DECORATION,
-                    content_type=LayoutContentType.SHAPE,
-                    x=plan.page_width * 0.55,
-                    y=plan.page_height * 0.22,
-                    width=plan.page_width * 0.35,
-                    height=plan.page_height * 0.45,
-                    z_index=1,
-                    fill_color=color,
-                    stroke_color=ink,
-                    stroke_width=0.5,
-                    opacity=0.12,
-                    layer_role=SceneLayerRole.GEOMETRY.value,
-                )
-            )
-            if budget.color_blocks > 0:
-                placed += 1
     return out
 
 

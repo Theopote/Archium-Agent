@@ -227,11 +227,12 @@ class VisualLanguageService:
         if concept.drawing_min_area_ratio is not None:
             hero = max(hero, concept.drawing_min_area_ratio)
         if concept.visual_metaphor == VisualMetaphor.FRAGMENT_TO_NETWORK:
+            # Need room for gray existing + green network segments (Primitive Engine pack).
             return base.model_copy(
                 update={
                     "hero_ratio": min(0.65, hero),
                     "accent_elements": min(base.accent_elements, 3),
-                    "decorative_lines": min(base.decorative_lines, 2),
+                    "decorative_lines": max(5, min(base.decorative_lines, 6)),
                     "icons": min(base.icons, 2),
                     "color_blocks": min(base.color_blocks, 1),
                 }
@@ -322,11 +323,13 @@ class VisualLanguageService:
                 roles={
                     ColorRole.EXISTING.value: "gray",
                     ColorRole.CONFLICT.value: "red",
+                    ColorRole.INTERVENTION.value: "renew_green",
                     ColorRole.FUTURE.value: "white",
                 },
                 meaning={
                     "gray": "existing",
                     "red": "conflict",
+                    "renew_green": "intervention",
                     "white": "future",
                 },
                 source="grammar_v1:fragment_to_network",
