@@ -279,6 +279,33 @@ def write_case_001_dry_run(
         encoding="utf-8",
     )
 
+    page_claims = []
+    for slide, intent in zip(bundle.slides, bundle.intents, strict=True):
+        direction = intent.page_direction
+        if direction is None:
+            continue
+        card = direction.as_page_claim()
+        card["title"] = slide.title
+        card["order"] = slide.order
+        page_claims.append(card)
+    claims_path = out / "page_claims.json"
+    claims_path.write_text(
+        json.dumps(
+            {
+                "product_label": "页主张",
+                "note": (
+                    "Architects read claim / emotion / evidence_priority / avoid first; "
+                    "derived_composition_bias is director output for layout, not input."
+                ),
+                "pages": page_claims,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
     summary = {
         "case_id": CASE_001_ID,
         "mode": "dry_run",
@@ -286,6 +313,7 @@ def write_case_001_dry_run(
         "style_preset_id": bundle.style_preset_id,
         "output_dir": str(out),
         "layout_instructions": str(deck_path),
+        "page_claims": str(claims_path),
         "demo_tour_titles": list(DEMO_TOUR_TITLES),
         "families": [plan.layout_family.value for plan in bundle.plans],
         "page_direction_hits": intel_brief.page_direction_hits,

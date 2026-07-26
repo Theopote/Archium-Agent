@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from archium.application.visual.page_direction_service import PageDirectionService
 from archium.application.visual.presentation_intelligence_service import (
     PresentationIntelligenceService,
@@ -60,6 +62,9 @@ class TestPresentationIntelligence:
         intent = bundle.intents[conflict_idx]
         assert intent.page_direction is not None
         assert intent.page_direction.situation_rule_id == "site_traffic_conflict"
+        assert intent.page_direction.narrative_emotion.value == "problem"
+        assert intent.emotional_tone == "problem"
+        assert intent.page_direction.claim
         # Forbidden textual argument → evidence/analytical preferred.
         assert LayoutFamily.TEXTUAL_ARGUMENT not in intent.preferred_layout_families
         assert len(bundle.slides[conflict_idx].key_points) <= 1
@@ -92,5 +97,11 @@ class TestPresentationIntelligence:
         bundle = build_case_001_render_bundle()
         summary = write_case_001_dry_run(bundle, output_dir=tmp_path)
         assert (tmp_path / "presentation_intelligence.json").is_file()
+        assert (tmp_path / "page_claims.json").is_file()
+        claims = json.loads((tmp_path / "page_claims.json").read_text(encoding="utf-8"))
+        assert claims["product_label"] == "页主张"
+        conflict = next(p for p in claims["pages"] if p["title"] == "流线冲突")
+        assert conflict["emotion"] == "problem"
+        assert conflict["evidence_priority"][0] == "site_photo"
         assert summary["page_direction_hits"] == 20
         assert "site_traffic_conflict" in summary["situation_rules_fired"]

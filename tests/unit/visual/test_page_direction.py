@@ -11,7 +11,7 @@ from archium.application.visual.page_direction_service import (
 from archium.application.visual.visual_grammar_intent import forbidden_families_for_intent
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualContentType
-from archium.domain.visual.page_direction import CompositionBias
+from archium.domain.visual.page_direction import CompositionBias, NarrativeEmotion
 from archium.domain.visual.style import StylePresetId, get_style_preset
 from archium.domain.visual.visual_grammar import PageArchetype
 from archium.domain.visual.visual_intent import VisualIntent
@@ -65,7 +65,15 @@ def test_traffic_conflict_predictable_copy_budget_and_family() -> None:
     assert CompositionBias.DIAGRAM_CENTER in direction.composition_bias
     assert CompositionBias.CONCLUSION_BAR in direction.composition_bias
     assert "site_photo" in direction.must_show
-    assert "three_column_text" in direction.must_hide
+    assert direction.evidence_priority[0] == "site_photo"
+    assert "three_column_text" in direction.avoid
+    assert direction.claim == direction.single_message
+    assert direction.narrative_emotion == NarrativeEmotion.PROBLEM
+    card = direction.as_page_claim()
+    assert card["claim"] == direction.claim
+    assert card["emotion"] == "problem"
+    assert card["evidence_priority"][0] == "site_photo"
+    assert "derived_composition_bias" in card
     # Single message is first sentence only.
     assert "分流" not in direction.single_message or "人车混行" in direction.single_message
     assert "。" not in direction.single_message

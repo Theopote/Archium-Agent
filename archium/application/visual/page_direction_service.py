@@ -220,7 +220,11 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
 
 
 class PageDirectionService:
-    """Derive PageDirection from slide text + archetype + optional rhythm/style."""
+    """Derive page claim (PageDirection) then layout hints — Visual seat.
+
+    Product order: claim → emotion → evidence_priority → avoid →
+    derived composition_bias. Does not invent absolute coordinates.
+    """
 
     def direct(
         self,
@@ -407,6 +411,11 @@ class PageDirectionService:
                 "must_hide": must_hide,
                 "expression_mode_id": mode.id.value,
                 "locked_layout_variant": locked_variant,
+                "narrative_emotion": (
+                    _emotion_for_expression_mode(mode)
+                    if prefer_mode_lock
+                    else direction.narrative_emotion
+                ),
                 "evidence": evidence,
                 "source": "expression_mode" if prefer_mode_lock else direction.source,
             }

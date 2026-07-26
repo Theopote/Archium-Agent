@@ -73,10 +73,24 @@ DesignSystem（令牌） → LayoutFamily → PPTX
 
 需要 **Archium Visual Benchmark**：完整输入包 → 完整 PPTX → 人工五维评分。
 
-### 缺口 C — 页面导演（Page Director）
+### 缺口 C — 页面导演（Page Director）→ 产品名「页主张」
 
 今天常见路径：`SlideSpec → LayoutFamily → Generator`。  
 缺的是页级创作判断：这一页只讲一个矛盾？主图占比？是否禁止三段正文？
+
+工程类型名保持 **`PageDirection`**（不与 `VisualIntent` / `SlideSpec` 抢名）。  
+产品读法：
+
+```text
+claim（这一页主张）
+emotion（problem|strategy|climax|calm|decision）
+evidence_priority（有序 must_show）
+avoid（must_hide）
+→ derived composition_bias（导演派生，非建筑师输入）
+→ Layout
+```
+
+Case 001 dry-run 产出 `page_claims.json` 供 Demo 先读主张再看版式。
 
 ```text
 SlideSpec + PageArchetype + DeckDirective

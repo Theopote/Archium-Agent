@@ -47,7 +47,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | **Presentation Intelligence**（Preset+Deck+Director 产品读法） | ✅ 门面服务；非新 Agent |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
-| **Page Director**（单主张 / 禁区 / copy_budget） | ✅ v0.3 Phase 1.3 |
+| **Page Director**（页主张 claim/emotion/evidence/avoid） | ✅ v0.3；产品名「页主张」 |
 | **Expression Modes ×10**（锁定族/变体 + 人工 checklist） | ✅ v0.3 Phase 2 |
 | RenderScene 画布编辑（单选 / 多选 / 框选） | ✅ |
 | 元素评论 → 提案 → QA → Revision | ✅ |
