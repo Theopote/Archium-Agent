@@ -45,6 +45,12 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | 图片衍生处理（原图不可变） | ✅ 初版 |
 | 模板导入、归纳、发布与 Template Studio | ✅ 初版 |
 
+## 下一阶段：Showcase（v0.3）
+
+架构方向正确，但距离「打开 PPT 即像成熟商业产品」仍缺：**Style Preset（事务所气质）**、**整册 Golden Deck**、**页面导演（单页主张 / 禁区）**、**截图级 Visual Critic**。
+
+现行计划：[Presentation Engine v0.3](../roadmap/presentation-engine-v0.3.md)。本阶段暂停扩 Agent / 知识库广度；优先视觉输出质量与投资人 Demo。
+
 ## 当前边界
 
 仍未提供自动建筑效果图生成、通用复杂约束求解器或与 PowerPoint 完全等价的自由编辑体验。当前图片处理是受证据策略约束的衍生管线，不是生成式修图；画布编辑写入 RenderScene 修订，而不是直接修改任意 PPTX 内部对象。

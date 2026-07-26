@@ -4,6 +4,7 @@
 > **文档状态：历史快照。**
 > 本文记录特定阶段的分析、实施、验收或计划，可能包含已过时的路径、状态和结论。
 > 当前行为以代码、测试、`README.md`、`docs/README.md` 及现行专题文档为准。
+> **Showcase / 美学下一阶段**见现行计划 [`presentation-engine-v0.3.md`](presentation-engine-v0.3.md)（Style / 节奏 / 导演 / Demo）；本文中的 Studio 编辑与 ImageDerivative 基础设施仍可复用。
 ## 背景与定位
 Archium（阿基姆）的瓶颈不是“生成更多内容”，而是让最终页面在建筑汇报场景里具备：
 
