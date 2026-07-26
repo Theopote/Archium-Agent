@@ -130,7 +130,8 @@ class FanoutLLMTraceRecorder:
         for recorder in self._recorders:
             list_fn = getattr(recorder, "list_recent", None)
             if callable(list_fn):
-                return list_fn(limit)
+                result = list_fn(limit)
+                return list(result) if result is not None else []
         return []
 
     def clear(self) -> None:
@@ -191,7 +192,15 @@ def usage_from_openai_completion(response: object) -> LLMUsage:
 def _as_optional_int(value: object) -> int | None:
     if value is None:
         return None
-    try:
+    if isinstance(value, bool):
         return int(value)
-    except (TypeError, ValueError):
-        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, (str, bytes, bytearray)):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    return None

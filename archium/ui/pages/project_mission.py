@@ -735,9 +735,14 @@ def render(*, embedded: bool = False) -> None:
 
     project_id = selected_project_id
     with get_session() as session:
-        from archium.application.context.workflow_navigation import sync_mission_step_from_context
+        from archium.application.context.workflow_navigation import (
+            as_session_state,
+            sync_mission_step_from_context,
+        )
 
-        sync_mission_step_from_context(session, project_id, st.session_state)
+        sync_mission_step_from_context(
+            session, project_id, as_session_state(st.session_state)
+        )
     snapshot = _load_snapshot(project_id)
     _sync_step_from_snapshot(snapshot)
 

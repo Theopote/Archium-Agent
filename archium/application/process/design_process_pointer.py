@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -141,7 +142,7 @@ def _resolve_selected_direction(
     loaded = directions_repo.get(exploration.selected_direction_id)
     if loaded is None or loaded.status == ConceptDirectionStatus.ARCHIVED:
         return None
-    return loaded
+    return cast(ConceptDirection, loaded)
 
 
 def _pointer_from_selected_direction(

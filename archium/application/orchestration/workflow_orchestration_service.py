@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import Any
+from typing import cast, Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -169,7 +169,9 @@ class WorkflowOrchestrationService:
                 run.state,
                 ProcessTimelineEvent(
                     kind="replan",
-                    stage=(plan.active_stage().stage.value if plan.active_stage() else ""),
+                    stage=(
+                        _active.stage.value if (_active := plan.active_stage()) is not None else ""
+                    ),
                     status="replanned",
                     label="按上下文重规划",
                     summary=decision.reason,
@@ -617,7 +619,7 @@ class WorkflowOrchestrationService:
                 reason=why[:400],
                 evidence_refs=[
                     str(item)
-                    for item in (reflection.get("top_risks") or [])[:3]
+                    for item in cast(list[object], reflection.get("top_risks") or [])[:3]
                     if str(item).strip()
                 ],
                 design_intent_snapshot={"reflection": reflection},

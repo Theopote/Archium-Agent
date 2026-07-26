@@ -71,7 +71,10 @@ def _render_entry_form() -> None:
             return
         try:
             from archium.application.context.next_action_selector import resolve_workflow_entry
-            from archium.application.context.workflow_navigation import apply_workflow_entry
+            from archium.application.context.workflow_navigation import (
+                apply_workflow_entry,
+                as_session_state,
+            )
             from archium.application.fact_ledger_service import FactLedgerService
             from archium.domain.intent.next_best_action import NextBestActionType
             from archium.infrastructure.llm.factory import create_llm_provider
@@ -100,7 +103,7 @@ def _render_entry_form() -> None:
                         pending_fact_count=ledger.pending_count,
                         conflict_fact_count=ledger.conflict_count,
                     )
-                    apply_workflow_entry(st.session_state, entry)
+                    apply_workflow_entry(as_session_state(st.session_state), entry)
                 should_explore = (
                     assessment.project_context is not None
                     and (
@@ -434,6 +437,7 @@ def _dispatch_action(action: NextBestActionType) -> None:
     from uuid import UUID
 
     from archium.application.context.nba_action_executor import NbaExecutionResult
+    from archium.application.context.workflow_navigation import as_session_state
     from archium.ui.context_navigation import dispatch_next_best_action
     from archium.ui.llm_settings import get_ui_effective_settings
 
@@ -447,7 +451,7 @@ def _dispatch_action(action: NextBestActionType) -> None:
     with get_session() as session:
         result = dispatch_next_best_action(
             session,
-            st.session_state,
+            as_session_state(st.session_state),
             action,
             project_id=project_id,
             settings=settings,

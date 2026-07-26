@@ -142,7 +142,7 @@ class SlidePreviewService:
                 pixels = list(sample.getdata())
             if not pixels:
                 return True
-            return (max(pixels) - min(pixels)) < 12
+            return bool((max(pixels) - min(pixels)) < 12)
         except Exception:
             return False
 

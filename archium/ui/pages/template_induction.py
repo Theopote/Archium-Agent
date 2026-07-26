@@ -154,7 +154,7 @@ def _render_upload() -> None:
         st.rerun()
 
 
-def _render_phase35_signoff(service, workspace, presentation, induction) -> None:  # type: ignore[no-untyped-def]
+def _render_phase35_signoff(service, workspace, presentation, induction) -> None:
     st.markdown("##### Phase 3.5 真人结构复核签署")
     st.caption(
         "本段只记录结构复核结论。下方「发布门禁」红框属于 Phase 4 Schema 正式发布，"
@@ -207,7 +207,7 @@ def _render_phase35_signoff(service, workspace, presentation, induction) -> None
                 st.rerun()
 
 
-def _render_publication_readiness(presentation, induction) -> None:  # type: ignore[no-untyped-def]
+def _render_publication_readiness(presentation, induction) -> None:
     from archium.application.visual.architectural_content_schema_publish_gate import (
         ArchitecturalContentSchemaPublishGate,
     )

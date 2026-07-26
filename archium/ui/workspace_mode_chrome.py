@@ -87,9 +87,10 @@ def render_workspace_mode_chrome(project_id: UUID, *, key_prefix: str = "ws_mode
         use_container_width=True,
     ):
         if entry is not None:
+            from archium.application.context.workflow_navigation import as_session_state
             from archium.ui.context_navigation import navigate_workflow_entry
 
-            navigate_workflow_entry(st.session_state, entry)
+            navigate_workflow_entry(as_session_state(st.session_state), entry)
         else:
             st.switch_page(get_app_page(profile.primary_page_key))
 

@@ -53,6 +53,7 @@ def _render_project_context_readiness(project_id: UUID) -> None:
         build_project_context,
         presentation_readiness_from_context,
     )
+    from archium.application.context.workflow_navigation import as_session_state
     from archium.config.settings import get_settings
     from archium.ui.context_navigation import dispatch_next_best_action
 
@@ -87,7 +88,7 @@ def _render_project_context_readiness(project_id: UUID) -> None:
             with get_session() as session:
                 dispatch_next_best_action(
                     session,
-                    st.session_state,
+                    as_session_state(st.session_state),
                     readiness.suggested_action,
                     project_id=project_id,
                     settings=settings,

@@ -110,7 +110,7 @@ class WorkstreamExecutionGraph:
         *,
         thread_id: str,
     ) -> WorkstreamExecutionState:
-        config = {"configurable": {"thread_id": thread_id}}
+        config: Any = {"configurable": {"thread_id": thread_id}}
         result = self._compiled.invoke(state, config=config)
         return cast(WorkstreamExecutionState, result)
 

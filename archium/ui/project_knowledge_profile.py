@@ -221,6 +221,7 @@ def render_project_knowledge_action_buttons(
 ) -> None:
     """Clickable NBA buttons wired to context navigation."""
     from archium.application.context.next_action_selector import resolve_action_target
+    from archium.application.context.workflow_navigation import as_session_state
     from archium.application.project_context_builder import build_project_context
     from archium.infrastructure.database.session import get_session
     from archium.ui.context_navigation import (
@@ -263,7 +264,7 @@ def render_project_knowledge_action_buttons(
                 with get_session() as session:
                     result = dispatch_next_best_action(
                         session,
-                        st.session_state,
+                        as_session_state(st.session_state),
                         action.action,
                         project_id=project_id,
                         settings=runtime_settings,

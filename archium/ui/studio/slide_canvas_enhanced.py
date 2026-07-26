@@ -95,7 +95,7 @@ def _escape_html(value: str) -> str:
     )
 
 
-def _render_content_slide_preview(slide) -> None:  # type: ignore[no-untyped-def]
+def _render_content_slide_preview(slide) -> None:
     """PPT-like page mockup from SlideSpec when layout/preview is not ready yet."""
     title = _escape_html((slide.title or "未命名页面").strip())
     message = _escape_html((slide.message or "").strip())
@@ -131,7 +131,7 @@ def _render_content_slide_preview(slide) -> None:  # type: ignore[no-untyped-def
     )
 
 
-def _render_empty_preview_placeholder(*, has_layout_plan: bool = False, slide=None) -> None:  # type: ignore[no-untyped-def]
+def _render_empty_preview_placeholder(*, has_layout_plan: bool = False, slide=None) -> None:
     if slide is not None and not has_layout_plan:
         _render_content_slide_preview(slide)
         return

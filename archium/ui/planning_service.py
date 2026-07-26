@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from dataclasses import dataclass, field
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -1048,7 +1049,7 @@ def _generate_via_artifact_job(
     )
     if result.output is None:
         raise WorkflowError(f"{kind_label}生成未返回产物")
-    return result.output
+    return cast("ArtifactOutput", result.output)
 
 
 def start_presentation_from_planning(

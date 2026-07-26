@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from collections.abc import MutableMapping
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -12,13 +13,13 @@ from archium.application.context.project_context_builder import build_project_co
 from archium.application.context.types import WorkflowEntryDispatch
 from archium.application.fact_ledger_service import FactLedgerService
 
+# Streamlit SessionStateProxy is dict-like at runtime; stubs disagree with Protocol.get.
+SessionStateLike = MutableMapping[str, Any]
 
-class SessionStateLike(Protocol):
-    """Streamlit session_state-compatible mapping (stubs are not MutableMapping)."""
 
-    def __getitem__(self, key: str, /) -> Any: ...
-    def __setitem__(self, key: str, value: Any, /) -> None: ...
-    def get(self, key: str, default: Any = None, /) -> Any: ...
+def as_session_state(state: object) -> SessionStateLike:
+    """Narrow Streamlit session_state / dict to a mutable mapping for helpers."""
+    return cast(SessionStateLike, state)
 
 
 def workflow_entry_for_project(

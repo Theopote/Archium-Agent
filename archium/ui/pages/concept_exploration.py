@@ -276,7 +276,7 @@ def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
             st.error(str(exc))
         except Exception as exc:
             st.error(format_user_error(exc))
-    return directions
+    return list(directions)
 
 
 def _render_selected_direction_vision(direction, *, settings) -> None:

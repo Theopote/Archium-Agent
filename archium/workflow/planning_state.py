@@ -48,6 +48,7 @@ class PlanningWorkflowState(TypedDict, total=False):
     current_step: str
     errors: Annotated[list[str], operator.add]
     warnings: Annotated[list[str], operator.add]
+    autonomous_research_item_count: int
     mission_validation: dict[str, Any] | None
 
 

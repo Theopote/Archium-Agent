@@ -99,12 +99,16 @@ def render_rag_preview_panel(project_id: UUID) -> None:
         for chunk in bundle.chunks:
             arch = chunk.metadata.get("architectural_type")
             if not arch:
-                arch = getattr(chunk, "architectural_type", None)
-                arch = arch.value if hasattr(arch, "value") else arch
+                arch_attr = getattr(chunk, "architectural_type", None)
+                if arch_attr is not None and hasattr(arch_attr, "value"):
+                    arch = arch_attr.value
+                else:
+                    arch = arch_attr
+            arch_cell: float | str = arch if isinstance(arch, (float, str)) else (str(arch) if arch is not None else "")
             rows.append(
                 {
                     "类型": "图档语义" if chunk.content_type == "asset_caption" else "文本",
-                    "建筑块": arch or "—",
+                    "建筑块": arch_cell or "—",
                     "页码": chunk.page_number or "—",
                     "章节": chunk.section_title or "—",
                     "字数": len(chunk.content),
