@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 from archium.config.settings import Settings
 from archium.exceptions import ConfigurationError
-from archium.infrastructure.database import session as db_session_mod
 from archium.infrastructure.database.session import (
     close_scoped_session,
     create_engine_from_settings,
