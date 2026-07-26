@@ -17,7 +17,6 @@ from archium.infrastructure.database.models import UserPreferenceORM
 def _handle_error(action: str, exc: Exception) -> None:
     raise RepositoryError(f"Database {action} failed: {exc}") from exc
 
-
 class UserPreferenceRepository:
     """Key/value preference storage scoped to global or project context."""
 
@@ -56,7 +55,7 @@ class UserPreferenceRepository:
             _handle_error("upsert user preference", exc)
             raise
 
-    def get_for_project(self, project_id, key: str) -> UserPreference | None:
+    def get_for_project(self, project_id: Any, key: str) -> UserPreference | None:
         from uuid import UUID
 
         pid = project_id if isinstance(project_id, UUID) else UUID(str(project_id))
@@ -67,14 +66,7 @@ class UserPreferenceRepository:
         orm = self._session.scalar(stmt)
         return mappers.user_preference_to_domain(orm) if orm else None
 
-    def upsert_for_project(
-        self,
-        project_id,
-        key: str,
-        value: Any,
-        *,
-        description: str | None = None,
-    ) -> UserPreference:
+    def upsert_for_project(self, project_id: Any, key: str, value: Any, *, description: str | None=None) -> UserPreference:
         from uuid import UUID
 
         pid = project_id if isinstance(project_id, UUID) else UUID(str(project_id))

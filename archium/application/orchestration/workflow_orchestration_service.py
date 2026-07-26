@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import cast, Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session

@@ -7,6 +7,7 @@ Policy (testable, not prompt): prefer problem-framed ``ResearchQuestion`` object
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from archium.application.research_question_service import ResearchQuestionService
 from archium.domain.intent.context_assessment_reason import (
@@ -66,7 +67,6 @@ _CATEGORY_AXIS: dict[ResearchQuestionCategory, AssessmentReasonAxis] = {
     ResearchQuestionCategory.ARCHITECTURAL: AssessmentReasonAxis.RESEARCH_NEED,
 }
 
-
 @dataclass(frozen=True)
 class ResearchTopicCandidate:
     """One ranked research topic with explainable design-impact scoring."""
@@ -77,7 +77,6 @@ class ResearchTopicCandidate:
     source: str = "unknown"
     design_impact: str = ""
     question: ResearchQuestion | None = None
-
 
 def collect_mission_research_questions(
     mission: ProjectMission,
@@ -92,11 +91,9 @@ def collect_mission_research_questions(
         max_questions=max_questions,
     )
 
-
 def collect_mission_research_topics(mission: ProjectMission) -> list[str]:
     """Mission topics ranked: ResearchQuestion text first, then legacy strings."""
     return [c.text for c in collect_mission_research_topic_candidates(mission)]
-
 
 def collect_mission_research_topic_candidates(
     mission: ProjectMission,
@@ -157,15 +154,7 @@ def collect_mission_research_topic_candidates(
             )
     return _dedupe_rank(candidates, max_topics=max_topics)
 
-
-def collect_project_research_topics(
-    *,
-    project_name: str = "",
-    project_description: str = "",
-    knowledge_state: KnowledgeState | None = None,
-    max_topics: int = 5,
-    project_id=None,
-) -> list[str]:
+def collect_project_research_topics(*, project_name: str='', project_description: str='', knowledge_state: KnowledgeState | None=None, max_topics: int=5, project_id: Any=None) -> list[str]:
     """Derive research topics when Mission is absent (pre-mission research)."""
     return [
         c.text
@@ -178,15 +167,7 @@ def collect_project_research_topics(
         )
     ]
 
-
-def collect_project_research_topic_candidates(
-    *,
-    project_name: str = "",
-    project_description: str = "",
-    knowledge_state: KnowledgeState | None = None,
-    max_topics: int = 5,
-    project_id=None,
-) -> list[ResearchTopicCandidate]:
+def collect_project_research_topic_candidates(*, project_name: str='', project_description: str='', knowledge_state: KnowledgeState | None=None, max_topics: int=5, project_id: Any=None) -> list[ResearchTopicCandidate]:
     """Ranked candidates: ResearchQuestions first, then gap/type seeds."""
     from uuid import uuid4
 
@@ -299,7 +280,6 @@ def collect_project_research_topic_candidates(
 
     return _dedupe_rank(candidates, max_topics=max_topics)
 
-
 def _from_open_unknown(
     gap: KnowledgeUnknownRef,
     *,
@@ -328,7 +308,6 @@ def _from_open_unknown(
         design_impact=impact,
     )
 
-
 def _from_free_gap(
     raw: str,
     *,
@@ -344,7 +323,6 @@ def _from_free_gap(
         source=source,
         design_impact=f"知识缺口（{axis.value}）影响设计输入完备性",
     )
-
 
 def _from_assessment_reason(
     reason: ContextAssessmentReason,
@@ -394,7 +372,6 @@ def _from_assessment_reason(
         )
     return out
 
-
 def _keyword_axis_boost(text: str) -> tuple[AssessmentReasonAxis, float]:
     best_axis = AssessmentReasonAxis.OTHER
     best_boost = 0.0
@@ -403,7 +380,6 @@ def _keyword_axis_boost(text: str) -> tuple[AssessmentReasonAxis, float]:
             best_boost = boost
             best_axis = axis
     return best_axis, best_boost
-
 
 def _dedupe_rank(
     candidates: list[ResearchTopicCandidate],

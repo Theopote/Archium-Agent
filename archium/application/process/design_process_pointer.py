@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -125,12 +125,7 @@ def build_design_pointer(session: Session, project_id: UUID) -> ProcessPointer:
         updated_at=now,
     )
 
-
-def _resolve_selected_direction(
-    directions_repo,
-    exploration: ExplorationSession,
-    directions: list[ConceptDirection],
-) -> ConceptDirection | None:
+def _resolve_selected_direction(directions_repo: Any, exploration: ExplorationSession, directions: list[ConceptDirection]) -> ConceptDirection | None:
     selected = next(
         (d for d in directions if d.status == ConceptDirectionStatus.SELECTED),
         None,
@@ -143,7 +138,6 @@ def _resolve_selected_direction(
     if loaded is None or loaded.status == ConceptDirectionStatus.ARCHIVED:
         return None
     return cast(ConceptDirection, loaded)
-
 
 def _pointer_from_selected_direction(
     *,
@@ -221,7 +215,6 @@ def _pointer_from_selected_direction(
         updated_at=stamp or now,
     )
 
-
 def _committed_pointer(
     exploration: ExplorationSession,
     selected: ConceptDirection | None,
@@ -256,7 +249,6 @@ def _committed_pointer(
         detail=f"mission={exploration.mission_id}" if exploration.mission_id else "",
         updated_at=exploration.updated_at or now,
     )
-
 
 def _mission_only_pointer(mission: ProjectMission, now: datetime) -> ProcessPointer:
     stamp = getattr(mission, "updated_at", now)

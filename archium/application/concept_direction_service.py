@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -41,13 +42,11 @@ from archium.prompts.concept_direction import (
 MAX_DIRECTIONS = 3
 MIN_DIRECTIONS = 2
 
-
 @dataclass
 class ConceptDirectionGenerationResult:
     mission_id: UUID
     directions: list[ConceptDirection] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-
 
 @dataclass
 class ConceptDirectionSelectionResult:
@@ -56,7 +55,6 @@ class ConceptDirectionSelectionResult:
     directions: list[ConceptDirection] = field(default_factory=list)
     critique_warnings: list[str] = field(default_factory=list)
     critique_report: object | None = None
-
 
 class ConceptDirectionService:
     """Planning-side service for concept direction drafts (not vision rendering)."""
@@ -346,12 +344,7 @@ class ConceptDirectionService:
             return {}
         return dict(ctx.knowledge_state.known)
 
-    def _run_design_critique(
-        self,
-        direction: ConceptDirection,
-        *,
-        design_intent=None,
-    ):
+    def _run_design_critique(self, direction: ConceptDirection, *, design_intent: Any=None) -> Any:
         from archium.application.review.design_critique_service import DesignCritiqueService
         from archium.infrastructure.database.repositories import ProjectRepository
 

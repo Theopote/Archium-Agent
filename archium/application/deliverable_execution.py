@@ -36,7 +36,6 @@ ArtifactRequestKind = Literal[
     "other",
 ]
 
-
 @dataclass(frozen=True)
 class ReportRequest:
     title: str
@@ -47,7 +46,6 @@ class ReportRequest:
     expected_length: str = ""
     notes: str = ""
 
-
 @dataclass(frozen=True)
 class MemoRequest:
     title: str
@@ -56,7 +54,6 @@ class MemoRequest:
     content_scope: list[str] = field(default_factory=list)
     notes: str = ""
 
-
 @dataclass(frozen=True)
 class ChecklistRequest:
     title: str
@@ -64,7 +61,6 @@ class ChecklistRequest:
     audience: str
     items: list[str] = field(default_factory=list)
     notes: str = ""
-
 
 @dataclass(frozen=True)
 class QuestionListRequest:
@@ -77,7 +73,6 @@ class QuestionListRequest:
     # Preview hints only; executor rebuilds from gaps/questions/assumptions/facts.
     preview_hints: list[str] = field(default_factory=list)
 
-
 @dataclass(frozen=True)
 class CaseStudyRequest:
     title: str
@@ -87,7 +82,6 @@ class CaseStudyRequest:
     expected_length: str = ""
     notes: str = ""
 
-
 @dataclass(frozen=True)
 class WorkPlanRequest:
     title: str
@@ -96,7 +90,6 @@ class WorkPlanRequest:
     content_scope: list[str] = field(default_factory=list)
     expected_length: str = ""
     notes: str = ""
-
 
 @dataclass
 class ArtifactExecutionPlan:
@@ -164,7 +157,6 @@ class ArtifactExecutionPlan:
             payload["work_plan_request"] = self.work_plan_request.__dict__
         return payload
 
-
 _TYPE_TO_KIND: dict[DeliverableType, ArtifactRequestKind] = {
     DeliverableType.PRESENTATION: "presentation",
     DeliverableType.REPORT: "report",
@@ -193,26 +185,15 @@ _SUPPORTED_KINDS = frozenset(
     }
 )
 
-
 def supports_auto_generation(deliverable_type: DeliverableType) -> bool:
     """Return True when this deliverable type can be auto-generated today."""
     kind = _TYPE_TO_KIND.get(deliverable_type, "other")
     return kind in _SUPPORTED_KINDS
 
-
 class DeliverableExecutionRouter:
     """Map each planned deliverable to a typed execution plan."""
 
-    def route(
-        self,
-        mission: ProjectMission,
-        deliverable: PlannedDeliverable,
-        *,
-        workstreams: list[Workstream] | None = None,
-        user_overrides: PresentationOverrides | None = None,
-        concept_direction=None,
-        visual_concept_brief=None,
-    ) -> ArtifactExecutionPlan:
+    def route(self, mission: ProjectMission, deliverable: PlannedDeliverable, *, workstreams: list[Workstream] | None=None, user_overrides: PresentationOverrides | None=None, concept_direction: Any=None, visual_concept_brief: Any=None) -> ArtifactExecutionPlan:
         kind = _TYPE_TO_KIND.get(deliverable.deliverable_type, "other")
         if deliverable.deliverable_type == DeliverableType.PRESENTATION:
             request = build_presentation_request(
@@ -260,17 +241,7 @@ class DeliverableExecutionRouter:
             plan.work_plan_request = _build_work_plan_request(deliverable)
         return plan
 
-    def route_plan(
-        self,
-        mission: ProjectMission,
-        plan: DeliverablePlan,
-        *,
-        workstreams: list[Workstream] | None = None,
-        user_overrides: PresentationOverrides | None = None,
-        selected_only: bool = True,
-        concept_direction=None,
-        visual_concept_brief=None,
-    ) -> list[ArtifactExecutionPlan]:
+    def route_plan(self, mission: ProjectMission, plan: DeliverablePlan, *, workstreams: list[Workstream] | None=None, user_overrides: PresentationOverrides | None=None, selected_only: bool=True, concept_direction: Any=None, visual_concept_brief: Any=None) -> list[ArtifactExecutionPlan]:
         items = plan.selected_deliverables() if selected_only else list(plan.deliverables)
         return [
             self.route(
@@ -284,17 +255,7 @@ class DeliverableExecutionRouter:
             for item in items
         ]
 
-    def require_presentation_plan(
-        self,
-        mission: ProjectMission,
-        plan: DeliverablePlan,
-        *,
-        workstreams: list[Workstream] | None = None,
-        deliverable_id: str | None = None,
-        user_overrides: PresentationOverrides | None = None,
-        concept_direction=None,
-        visual_concept_brief=None,
-    ) -> ArtifactExecutionPlan:
+    def require_presentation_plan(self, mission: ProjectMission, plan: DeliverablePlan, *, workstreams: list[Workstream] | None=None, deliverable_id: str | None=None, user_overrides: PresentationOverrides | None=None, concept_direction: Any=None, visual_concept_brief: Any=None) -> ArtifactExecutionPlan:
         """Return the PRESENTATION execution plan or raise — never fall back."""
         if deliverable_id is not None:
             for item in plan.deliverables:
@@ -342,7 +303,6 @@ class DeliverableExecutionRouter:
             visual_concept_brief=visual_concept_brief,
         )
 
-
 def _build_report_request(deliverable: PlannedDeliverable) -> ReportRequest:
     return ReportRequest(
         title=deliverable.title,
@@ -354,7 +314,6 @@ def _build_report_request(deliverable: PlannedDeliverable) -> ReportRequest:
         notes=deliverable.notes or "",
     )
 
-
 def _build_memo_request(deliverable: PlannedDeliverable) -> MemoRequest:
     return MemoRequest(
         title=deliverable.title,
@@ -364,7 +323,6 @@ def _build_memo_request(deliverable: PlannedDeliverable) -> MemoRequest:
         notes=deliverable.notes or "",
     )
 
-
 def _build_checklist_request(deliverable: PlannedDeliverable) -> ChecklistRequest:
     return ChecklistRequest(
         title=deliverable.title,
@@ -373,7 +331,6 @@ def _build_checklist_request(deliverable: PlannedDeliverable) -> ChecklistReques
         items=list(deliverable.content_scope),
         notes=deliverable.notes or "",
     )
-
 
 def _build_question_list_request(
     mission: ProjectMission,
@@ -390,7 +347,6 @@ def _build_question_list_request(
         preview_hints=hints,
     )
 
-
 def _build_case_study_request(deliverable: PlannedDeliverable) -> CaseStudyRequest:
     return CaseStudyRequest(
         title=deliverable.title,
@@ -400,7 +356,6 @@ def _build_case_study_request(deliverable: PlannedDeliverable) -> CaseStudyReque
         expected_length=deliverable.expected_length or "",
         notes=deliverable.notes or "",
     )
-
 
 def _build_work_plan_request(deliverable: PlannedDeliverable) -> WorkPlanRequest:
     return WorkPlanRequest(

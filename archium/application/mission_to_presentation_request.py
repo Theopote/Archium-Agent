@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field, replace
+from typing import Any
 from uuid import UUID
 
 from archium.application.presentation_models import PresentationRequest
@@ -34,7 +35,6 @@ class PresentationOverrides:
     tone: str | None = None
     language: str | None = None
     user_notes: str | None = None
-
 
 @dataclass(frozen=True)
 class MissionPresentationBridge:
@@ -68,17 +68,7 @@ class MissionPresentationBridge:
             "warnings": list(self.warnings),
         }
 
-
-def build_presentation_request(
-    mission: ProjectMission,
-    deliverable: PlannedDeliverable | None = None,
-    *,
-    workstreams: list[Workstream] | None = None,
-    user_overrides: PresentationOverrides | None = None,
-    concept_direction: ConceptDirection | None = None,
-    visual_concept_brief: VisualConceptBrief | None = None,
-    knowledge_state=None,
-) -> PresentationRequest:
+def build_presentation_request(mission: ProjectMission, deliverable: PlannedDeliverable | None=None, *, workstreams: list[Workstream] | None=None, user_overrides: PresentationOverrides | None=None, concept_direction: ConceptDirection | None=None, visual_concept_brief: VisualConceptBrief | None=None, knowledge_state: Any=None) -> PresentationRequest:
     """Map mission (+ optional presentation deliverable) to PresentationRequest.
 
     Selected workstreams inform generation context via ``user_notes`` only.
@@ -166,7 +156,6 @@ def build_presentation_request(
     )
     return apply_presentation_overrides(request, user_overrides)
 
-
 def build_presentation_bridge(
     mission: ProjectMission,
     *,
@@ -232,7 +221,6 @@ def build_presentation_bridge(
         warnings=warnings,
     )
 
-
 def select_presentation_deliverable(
     plan: DeliverablePlan,
     *,
@@ -262,7 +250,6 @@ def select_presentation_deliverable(
         return presentations[0], warnings
     return None, warnings
 
-
 def apply_presentation_overrides(
     request: PresentationRequest,
     overrides: PresentationOverrides | None,
@@ -290,7 +277,6 @@ def apply_presentation_overrides(
         if value is not None:
             updates[name] = value
     return replace(request, **updates) if updates else request
-
 
 def infer_presentation_type(
     mission: ProjectMission,
@@ -327,7 +313,6 @@ def infer_presentation_type(
         return PresentationType.SCHEMATIC
     return PresentationType.CLIENT_REVIEW
 
-
 def bridge_from_draft(draft: dict) -> MissionPresentationBridge:
     """Restore a bridge from planning-state draft dict."""
     presentation_type = draft.get("presentation_type", PresentationType.CLIENT_REVIEW.value)
@@ -361,7 +346,6 @@ def bridge_from_draft(draft: dict) -> MissionPresentationBridge:
         warnings=list(draft.get("warnings") or []),
     )
 
-
 def _resolve_audience(
     mission: ProjectMission,
     deliverable: PlannedDeliverable | None,
@@ -375,7 +359,6 @@ def _resolve_audience(
         return primary.name
     return "甲方"
 
-
 def _resolve_required_sections(
     mission: ProjectMission,
     deliverable: PlannedDeliverable | None,
@@ -384,16 +367,7 @@ def _resolve_required_sections(
         return [item for item in deliverable.content_scope if item.strip()]
     return [item for item in mission.in_scope if item.strip()]
 
-
-def _build_user_notes(
-    mission: ProjectMission,
-    workstreams: list[Workstream],
-    deliverable: PlannedDeliverable | None,
-    *,
-    concept_direction: ConceptDirection | None = None,
-    visual_concept_brief: VisualConceptBrief | None = None,
-    knowledge_state=None,
-) -> str:
+def _build_user_notes(mission: ProjectMission, workstreams: list[Workstream], deliverable: PlannedDeliverable | None, *, concept_direction: ConceptDirection | None=None, visual_concept_brief: VisualConceptBrief | None=None, knowledge_state: Any=None) -> str:
     sections: list[str] = []
 
     if mission.design_intent is not None:
@@ -457,7 +431,6 @@ def _build_user_notes(
 
     return "\n\n".join(sections)
 
-
 _LENGTH_RANGE = re.compile(
     r"(?P<low>\d+)\s*[-~～到至]\s*(?P<high>\d+)\s*(?P<unit>页|页数|分钟|min|mins)?",
     re.IGNORECASE,
@@ -466,7 +439,6 @@ _LENGTH_SINGLE = re.compile(
     r"(?P<value>\d+)\s*(?P<unit>页|页数|分钟|min|mins)",
     re.IGNORECASE,
 )
-
 
 def _infer_length(
     deliverable: PlannedDeliverable | None,

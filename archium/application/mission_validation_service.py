@@ -7,6 +7,7 @@ for architectural-planning consistency (not draft fabrication checks).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
 from archium.domain.enums import (
@@ -40,7 +41,6 @@ _CONSULTING_NATURES = frozenset(
 
 _QUESTION_MARKERS = ("?", "？", "吗", "呢", "如何", "怎样", "是否", "何", "哪", "什么", "为何")
 
-
 @dataclass(frozen=True)
 class MissionValidationIssue:
     """Stable, machine-readable validation finding."""
@@ -64,7 +64,6 @@ class MissionValidationIssue:
             "suggestion": self.suggestion,
             "recoverable": self.recoverable,
         }
-
 
 @dataclass
 class MissionValidationReport:
@@ -154,19 +153,10 @@ class MissionValidationReport:
             "is_fatal": self.is_fatal,
         }
 
-
 class MissionValidationService:
     """Validate mission domain models for professional planning consistency."""
 
-    def validate(
-        self,
-        mission: ProjectMission,
-        *,
-        knowledge_gaps: list[KnowledgeGap] | None = None,
-        clarifying_questions: list[ClarifyingQuestion] | None = None,
-        facts: list[ProjectFact] | None = None,
-        knowledge_state=None,
-    ) -> MissionValidationReport:
+    def validate(self, mission: ProjectMission, *, knowledge_gaps: list[KnowledgeGap] | None=None, clarifying_questions: list[ClarifyingQuestion] | None=None, facts: list[ProjectFact] | None=None, knowledge_state: Any=None) -> MissionValidationReport:
         report = MissionValidationReport()
         gaps = knowledge_gaps or []
         questions = clarifying_questions or []
@@ -384,13 +374,7 @@ class MissionValidationService:
                 )
             )
 
-    def _check_confidence_vs_unknowns(
-        self,
-        mission: ProjectMission,
-        report: MissionValidationReport,
-        *,
-        knowledge_state=None,
-    ) -> None:
+    def _check_confidence_vs_unknowns(self, mission: ProjectMission, report: MissionValidationReport, *, knowledge_state: Any=None) -> None:
         from archium.application.context.mission_cognition import (
             cognition_confidence,
             cognition_unknown_texts,
@@ -508,15 +492,12 @@ class MissionValidationService:
                 )
             )
 
-
 def _normalize_scope(value: str) -> str:
     return value.strip().lower().replace(" ", "")
-
 
 def _looks_like_question(text: str) -> bool:
     stripped = text.strip()
     return any(marker in stripped for marker in _QUESTION_MARKERS)
-
 
 def _constraint_supported_by_facts(
     constraint: MissionConstraint,

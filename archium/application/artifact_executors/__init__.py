@@ -30,11 +30,7 @@ from archium.domain.project_mission import ProjectMission
 from archium.domain.workstream import Workstream
 
 
-def _mission_context_payload(
-    mission: ProjectMission,
-    *,
-    knowledge_state=None,
-) -> dict[str, Any]:
+def _mission_context_payload(mission: ProjectMission, *, knowledge_state: Any=None) -> dict[str, Any]:
     unknowns = cognition_unknown_texts(
         knowledge_state=knowledge_state,
         mission=mission,
@@ -64,13 +60,7 @@ def _mission_context_payload(
         ],
     }
 
-
-def _append_mission_context_markdown(
-    lines: list[str],
-    mission: ProjectMission,
-    *,
-    knowledge_state=None,
-) -> None:
+def _append_mission_context_markdown(lines: list[str], mission: ProjectMission, *, knowledge_state: Any=None) -> None:
     lines.append(f"**任务陈述**：{mission.task_statement}")
     lines.append("")
     if mission.project_context.strip():
@@ -125,7 +115,6 @@ def _append_mission_context_markdown(
             lines.append(f"- {question}")
         lines.append("")
 
-
 @dataclass
 class ArtifactOutput:
     """Generated artifact payload (in-memory + optional on-disk paths)."""
@@ -149,7 +138,6 @@ class ArtifactOutput:
             "docx_path": str(self.docx_path) if self.docx_path else None,
         }
 
-
 def artifact_output_dir(
     output_root: Path,
     *,
@@ -160,7 +148,6 @@ def artifact_output_dir(
     path = output_root / "artifacts" / str(mission_id) / f"{kind}_{stamp}"
     path.mkdir(parents=True, exist_ok=True)
     return path
-
 
 def write_artifact_files(
     output: ArtifactOutput,
@@ -178,7 +165,6 @@ def write_artifact_files(
     output.json_path = json_path
     output.markdown_path = md_path
     return output
-
 
 def write_question_list_docx(
     *,
@@ -215,7 +201,6 @@ def write_question_list_docx(
     document.save(str(path))
     return path
 
-
 @dataclass(frozen=True)
 class QuestionListItem:
     source: str
@@ -228,7 +213,6 @@ class QuestionListItem:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
 
 class QuestionListExecutor:
     """Build a question list from mission bundle context (not deliverable.content_scope)."""
@@ -438,7 +422,6 @@ class QuestionListExecutor:
             lines.append("")
         return "\n".join(lines)
 
-
 @dataclass
 class WorkPlanSection:
     workstream_id: str
@@ -454,7 +437,6 @@ class WorkPlanSection:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
 
 class WorkPlanExecutor:
     """Generate a structured project work outline from Mission + Workstreams + DeliverablePlan."""
@@ -603,23 +585,10 @@ class WorkPlanExecutor:
 
         return "\n".join(lines)
 
-
 class ReportExecutor:
     """Generate a structured report outline from Mission + deliverable scope."""
 
-    def execute(
-        self,
-        mission: ProjectMission,
-        *,
-        deliverable: PlannedDeliverable | None = None,
-        content_scope: list[str] | None = None,
-        purpose: str = "",
-        audience: str = "",
-        expected_length: str = "",
-        notes: str = "",
-        output_dir: Path | None = None,
-        knowledge_state=None,
-    ) -> ArtifactOutput:
+    def execute(self, mission: ProjectMission, *, deliverable: PlannedDeliverable | None=None, content_scope: list[str] | None=None, purpose: str='', audience: str='', expected_length: str='', notes: str='', output_dir: Path | None=None, knowledge_state: Any=None) -> ArtifactOutput:
         scope = list(content_scope or [])
         if deliverable is not None and not scope:
             scope = list(deliverable.content_scope)
@@ -683,22 +652,10 @@ class ReportExecutor:
             write_artifact_files(output, output_dir, basename="report")
         return output
 
-
 class MemoExecutor:
     """Generate a short planning memo from Mission context."""
 
-    def execute(
-        self,
-        mission: ProjectMission,
-        *,
-        deliverable: PlannedDeliverable | None = None,
-        content_scope: list[str] | None = None,
-        purpose: str = "",
-        audience: str = "",
-        notes: str = "",
-        output_dir: Path | None = None,
-        knowledge_state=None,
-    ) -> ArtifactOutput:
+    def execute(self, mission: ProjectMission, *, deliverable: PlannedDeliverable | None=None, content_scope: list[str] | None=None, purpose: str='', audience: str='', notes: str='', output_dir: Path | None=None, knowledge_state: Any=None) -> ArtifactOutput:
         scope = list(content_scope or [])
         if deliverable is not None and not scope:
             scope = list(deliverable.content_scope)
@@ -766,22 +723,10 @@ class MemoExecutor:
             write_artifact_files(output, output_dir, basename="memo")
         return output
 
-
 class ChecklistExecutor:
     """Generate a checklist from deliverable content_scope and mission decisions."""
 
-    def execute(
-        self,
-        mission: ProjectMission,
-        *,
-        deliverable: PlannedDeliverable | None = None,
-        items: list[str] | None = None,
-        purpose: str = "",
-        audience: str = "",
-        notes: str = "",
-        output_dir: Path | None = None,
-        knowledge_state=None,
-    ) -> ArtifactOutput:
+    def execute(self, mission: ProjectMission, *, deliverable: PlannedDeliverable | None=None, items: list[str] | None=None, purpose: str='', audience: str='', notes: str='', output_dir: Path | None=None, knowledge_state: Any=None) -> ArtifactOutput:
         checklist_items = list(items or [])
         if deliverable is not None and not checklist_items:
             checklist_items = list(deliverable.content_scope)
@@ -844,23 +789,10 @@ class ChecklistExecutor:
             write_artifact_files(output, output_dir, basename="checklist")
         return output
 
-
 class CaseStudyExecutor:
     """Generate a case-study brief skeleton from Mission + research questions."""
 
-    def execute(
-        self,
-        mission: ProjectMission,
-        *,
-        deliverable: PlannedDeliverable | None = None,
-        content_scope: list[str] | None = None,
-        purpose: str = "",
-        audience: str = "",
-        expected_length: str = "",
-        notes: str = "",
-        output_dir: Path | None = None,
-        knowledge_state=None,
-    ) -> ArtifactOutput:
+    def execute(self, mission: ProjectMission, *, deliverable: PlannedDeliverable | None=None, content_scope: list[str] | None=None, purpose: str='', audience: str='', expected_length: str='', notes: str='', output_dir: Path | None=None, knowledge_state: Any=None) -> ArtifactOutput:
         scope = list(content_scope or [])
         if deliverable is not None and not scope:
             scope = list(deliverable.content_scope)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -55,11 +56,7 @@ def build_project_context(
     ctx = overlay_persisted_routing(ctx, project.knowledge_state)
     return apply_legacy_origin(ctx)
 
-
-def overlay_persisted_routing(
-    ctx: ProjectContext,
-    knowledge_state,
-) -> ProjectContext:
+def overlay_persisted_routing(ctx: ProjectContext, knowledge_state: Any) -> ProjectContext:
     """Prefer routing snapshot persisted at last assessment."""
     from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
     from archium.domain.context.recommended_workflow import RecommendedWorkflow
@@ -78,7 +75,6 @@ def overlay_persisted_routing(
     if not updates:
         return ctx
     return ctx.model_copy(update=updates)
-
 
 def input_sources_from_evidence(evidence: ProjectEvidencePack) -> list[str]:
     sources: list[str] = []

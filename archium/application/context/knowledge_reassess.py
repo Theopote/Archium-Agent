@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -14,13 +15,11 @@ from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="knowledge_reassess")
 
-
 class ReassessMode(StrEnum):
     """How aggressively to refresh cognition after a product event."""
 
     INDEX = "index"  # deterministic claim index only
     FULL = "full"  # LLM reassess (+ index fallback on failure)
-
 
 # Evidence deltas that only need claim/gap re-index — not a full LLM rejudge.
 _INDEX_REASONS = frozenset(
@@ -33,14 +32,12 @@ _INDEX_REASONS = frozenset(
     }
 )
 
-
 def classify_reassess_mode(reason: str | None) -> ReassessMode:
     """Map lifecycle reason → index-only vs full LLM reassess."""
     key = (reason or "").strip().lower()
     if key in _INDEX_REASONS:
         return ReassessMode.INDEX
     return ReassessMode.FULL
-
 
 def best_effort_reassess_knowledge(
     session: Session,
@@ -69,7 +66,6 @@ def best_effort_reassess_knowledge(
         reason=reason,
     )
 
-
 def _resolve_mode(
     mode: ReassessMode | str | None,
     reason: str,
@@ -82,7 +78,6 @@ def _resolve_mode(
     if raw in {ReassessMode.INDEX.value, "index_only", "incremental"}:
         return ReassessMode.INDEX
     return ReassessMode.FULL
-
 
 def _best_effort_index_refresh(
     session: Session,
@@ -136,7 +131,6 @@ def _best_effort_index_refresh(
             exc,
         )
         return None
-
 
 def _best_effort_full_reassess(
     session: Session,
@@ -196,8 +190,7 @@ def _best_effort_full_reassess(
             )
         return None
 
-
-def _default_origin():
+def _default_origin() -> Any:
     from archium.domain.enums import ProjectOriginMode
 
     return ProjectOriginMode.CONCEPT_EXPLORATION

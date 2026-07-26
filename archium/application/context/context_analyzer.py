@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -40,7 +41,7 @@ class ContextAnalyzer:
         self._projects = ProjectRepository(session)
         self._assessor = KnowledgeAssessor(llm)
 
-    def assess_text(self, user_text: str, **kwargs) -> ContextAssessment:
+    def assess_text(self, user_text: str, **kwargs: Any) -> ContextAssessment:
         return self._assessor.assess_text(user_text, **kwargs)
 
     def assess_and_persist(

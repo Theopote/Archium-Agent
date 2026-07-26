@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from archium.application.context.assessment_reason_builder import (
     synthesize_assessment_reasons,
@@ -41,7 +42,6 @@ from archium.prompts.context_intelligence import (
 _VALID_STAGES = {item.value for item in KnowledgeMaturityStage}
 _VALID_ACTIONS = {item.value for item in NextBestActionType}
 _VALID_ORIGINS = {item.value for item in ProjectOriginMode}
-
 
 class KnowledgeAssessor:
     """Assess KnowledgeState and NBA suggestions from user text + evidence."""
@@ -350,8 +350,7 @@ class KnowledgeAssessor:
             update={"assessment_reasons": reasons}
         )
 
-
-def _parse_reason_drafts(drafts) -> list[ContextAssessmentReason]:
+def _parse_reason_drafts(drafts: Any) -> list[ContextAssessmentReason]:
     reasons: list[ContextAssessmentReason] = []
     valid_polarity = {item.value for item in AssessmentReasonPolarity}
     valid_axis = {item.value for item in AssessmentReasonAxis}

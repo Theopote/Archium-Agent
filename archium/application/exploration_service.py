@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -59,19 +60,16 @@ from archium.prompts.idea_seed import (
 MAX_DIRECTIONS = 3
 MIN_DIRECTIONS = 2
 
-
 @dataclass
 class ExplorationStartResult:
     exploration: ExplorationSession
     warnings: list[str] = field(default_factory=list)
-
 
 @dataclass
 class ExplorationGenerationResult:
     exploration_id: UUID
     directions: list[ConceptDirection] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-
 
 @dataclass
 class ExplorationSelectionResult:
@@ -81,13 +79,11 @@ class ExplorationSelectionResult:
     critique_warnings: list[str] = field(default_factory=list)
     critique_report: object | None = None
 
-
 @dataclass
 class ExplorationCommitResult:
     exploration: ExplorationSession
     mission: ProjectMission
     direction: ConceptDirection
-
 
 class ExplorationService:
     """Concept exploration before ProjectMission exists."""
@@ -620,12 +616,7 @@ class ExplorationService:
             return {}
         return dict(ctx.knowledge_state.known)
 
-    def _run_design_critique(
-        self,
-        direction: ConceptDirection,
-        *,
-        design_intent=None,
-    ):
+    def _run_design_critique(self, direction: ConceptDirection, *, design_intent: Any=None) -> Any:
         """Independent Architectural Critic before direction hardens (warn/block)."""
         from archium.application.review.design_critique_service import DesignCritiqueService
 

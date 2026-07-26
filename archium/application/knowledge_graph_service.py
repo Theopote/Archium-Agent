@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -152,13 +153,7 @@ class KnowledgeGraphService:
         refs.sort(key=lambda item: item.relevance, reverse=True)
         return refs[: max(1, top_k)]
 
-    def _add_knowledge_item_subgraph(
-        self,
-        item: ProjectKnowledgeItem,
-        project_id: UUID,
-        add_node,
-        add_edge,
-    ) -> None:
+    def _add_knowledge_item_subgraph(self, item: ProjectKnowledgeItem, project_id: UUID, add_node: Any, add_edge: Any) -> None:
         item_id = f"knowledge:{item.id}"
         dk = item.design_knowledge
         label = (dk.topic if dk and dk.topic.strip() else item.category) or "knowledge"
@@ -245,7 +240,7 @@ class KnowledgeGraphService:
                 weight=0.85,
             )
 
-    def _add_case_subgraph(self, case: ArchitectureCase, add_node, add_edge) -> None:
+    def _add_case_subgraph(self, case: ArchitectureCase, add_node: Any, add_edge: Any) -> None:
         case_id = f"case:{case.id}"
         add_node(
             KnowledgeNode(
@@ -432,7 +427,6 @@ class KnowledgeGraphService:
                 "tags": list(node.tags)[:8],
             },
         )
-
 
 def _slug(text: str) -> str:
     cleaned = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in text.strip().lower())
