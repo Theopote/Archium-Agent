@@ -256,7 +256,7 @@ class ConceptDirectionService:
                     new_summary=selected.title,
                     reason=decision.reason or None,
                     evidence_refs=list(decision.evidence)[:6],
-                    design_decision=decision.as_dict(),
+                    design_decision=decision,
                     design_intent_snapshot=updated_intent.model_dump(mode="json"),
                     actor_id=actor_id,
                 )

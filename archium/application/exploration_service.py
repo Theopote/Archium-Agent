@@ -390,7 +390,7 @@ class ExplorationService:
                     rule.model_dump(mode="json") for rule in refreshed.design_rules[:6]
                 ],
             },
-            design_decision=decision.as_dict(),
+            design_decision=decision,
             actor_id=actor_id,
         )
         self._append_intent_evolution(
@@ -402,7 +402,7 @@ class ExplorationService:
             new_summary=decision.chosen or new_label,
             reason=decision.reason or None,
             evidence_refs=list(decision.evidence)[:6],
-            design_decision=decision.as_dict(),
+            design_decision=decision,
             actor_id=actor_id,
         )
         if (
@@ -615,7 +615,7 @@ class ExplorationService:
         new_summary: str | None = None,
         reason: str | None = None,
         evidence_refs: list[str] | None = None,
-        design_decision: dict[str, object] | None = None,
+        design_decision: object | None = None,
         actor_id: str | None = None,
     ) -> None:
         project = self._projects.get_by_id(project_id)

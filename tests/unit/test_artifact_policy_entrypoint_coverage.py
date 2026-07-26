@@ -31,8 +31,25 @@ def test_required_write_entrypoints_are_registered() -> None:
         "reference_slide_editing.generate_scene",
         "pptx.reconcile.accept",
         "delivery.record_pptx_export",
+        "scene_proposal.snapshot",
     }
     assert required <= ARTIFACT_WRITE_ENTRYPOINTS
+
+
+def test_scene_proposal_repository_uses_save_render_scene_gateway() -> None:
+    root = Path(__file__).resolve().parents[2]
+    source = (
+        root
+        / "archium"
+        / "infrastructure"
+        / "database"
+        / "visual_repositories.py"
+    ).read_text(encoding="utf-8")
+    assert "save_render_scene" in source
+    assert 'entrypoint="scene_proposal.snapshot"' in source
+    # Create path must not raw-save snapshot scenes (status-only early return may still
+    # reference repo helpers; snapshot create must go through the gateway).
+    assert "scene_proposal.snapshot" in source
 
 
 def test_unregistered_entrypoint_is_rejected() -> None:

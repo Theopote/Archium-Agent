@@ -11,9 +11,24 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.spatial_design import DesignDecision
+
+
+def coerce_design_decision(value: object) -> DesignDecision | None:
+    """Normalize DesignDecision | dict | None for IntentEvolution (DOM-025)."""
+    if value is None:
+        return None
+    if isinstance(value, DesignDecision):
+        return value
+    if isinstance(value, dict):
+        try:
+            return DesignDecision.model_validate(value)
+        except Exception:
+            return None
+    return None
 
 
 class IntentEvolutionKind(StrEnum):
@@ -72,15 +87,24 @@ class IntentEvolutionEvent(DomainModel):
         default_factory=list,
         description="Light evidence pointers (statements, titles, URLs).",
     )
-    design_decision: dict[str, object] | None = Field(
+    design_decision: DesignDecision | None = Field(
         default=None,
-        description="Optional DesignDecision payload (model_dump).",
+        description="Typed DesignDecision payload (DOM-025); legacy dicts coerce on load.",
     )
     actor_id: str | None = Field(
         default=None,
         max_length=200,
         description="Member actor who caused this human decision (COLLAB-006).",
     )
+
+    @field_validator("design_decision", mode="before")
+    @classmethod
+    def _coerce_design_decision_field(cls, value: object) -> object:
+        if value is None or isinstance(value, DesignDecision):
+            return value
+        if isinstance(value, dict):
+            return coerce_design_decision(value)
+        return value
 
     def display_line(self) -> str:
         """Human-readable Design History line; falls back to summary."""
@@ -124,7 +148,7 @@ class IntentEvolution(DomainModel):
         new_summary: str | None = None,
         reason: str | None = None,
         evidence_refs: list[str] | None = None,
-        design_decision: dict[str, object] | None = None,
+        design_decision: DesignDecision | dict[str, object] | None = None,
         actor_id: str | None = None,
     ) -> IntentEvolution:
         events = list(self.events)
@@ -141,7 +165,7 @@ class IntentEvolution(DomainModel):
                 for ref in (evidence_refs or [])
                 if ref and str(ref).strip()
             ][:12],
-            design_decision=design_decision,
+            design_decision=coerce_design_decision(design_decision),
             actor_id=_clip(actor_id, 200),
         )
         if event.previous_summary or event.new_summary or event.reason:

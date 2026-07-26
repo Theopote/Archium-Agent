@@ -16,7 +16,11 @@ from archium.domain.citation import Citation
 from archium.domain.document import DocumentChunk
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import FactValue, ProjectFact
-from archium.domain.fact_ledger import STANDARD_FACT_KEYS
+from archium.domain.fact_ledger import (
+    SEMANTIC_ALIAS_GROUPS,
+    STANDARD_FACT_KEY_MAP,
+    STANDARD_FACT_KEYS,
+)
 from archium.infrastructure.database.repositories import FactRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.presentation_schemas import (
@@ -138,7 +142,18 @@ class FactExtractionService:
             key = item.key.strip().lower().replace(" ", "_")
             if not key or key in known_keys:
                 continue
-            fact = self._draft_to_fact(project_id, item, context_bundle)
+            key = _canonicalize_fact_key(key)
+            if key not in STANDARD_FACT_KEY_MAP:
+                # KN-004: refuse schema pollution from inventable LLM keys.
+                logger.warning("Skipping non-standard fact key from LLM: %s", key)
+                continue
+            if key in known_keys:
+                continue
+            fact = self._draft_to_fact(
+                project_id,
+                item.model_copy(update={"key": key}),
+                context_bundle,
+            )
             stored, action = self._upsert_fact(fact)
             known_keys.add(stored.key)
             if action == "created":
@@ -288,6 +303,16 @@ class FactExtractionService:
             combined.append(citation)
             seen.add(token)
         return combined
+
+
+def _canonicalize_fact_key(key: str) -> str:
+    """Map known LLM aliases onto STANDARD_FACT_KEY_MAP keys (KN-004)."""
+    if key in STANDARD_FACT_KEY_MAP:
+        return key
+    for group in SEMANTIC_ALIAS_GROUPS:
+        if key in group:
+            return group[0]
+    return key
 
 
 def _merge_alternate_values(

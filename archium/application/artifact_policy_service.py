@@ -195,6 +195,7 @@ ARTIFACT_WRITE_ENTRYPOINTS: frozenset[str] = frozenset(
         "pptx.reconcile.accept",
         "save_render_scene",
         "delivery.record_pptx_export",
+        "scene_proposal.snapshot",
     }
 )
 

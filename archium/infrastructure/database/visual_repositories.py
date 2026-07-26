@@ -243,9 +243,20 @@ class SceneProposalRepository:
                     raise RuntimeError("failed to hydrate scene change proposal after save")
                 return saved
 
-            base_scene = self._scenes.save(self._base_scene_snapshot(proposal))
+            from archium.application.artifact_policy_service import save_render_scene
+
+            # ST-005: snapshot rows must go through the RenderScene write gateway.
+            base_scene = save_render_scene(
+                self._scenes,
+                self._base_scene_snapshot(proposal),
+                entrypoint="scene_proposal.snapshot",
+            )
             proposed_scene = self._candidate_scene_snapshot(proposal)
-            saved_proposed = self._scenes.save(proposed_scene)
+            saved_proposed = save_render_scene(
+                self._scenes,
+                proposed_scene,
+                entrypoint="scene_proposal.snapshot",
+            )
 
             hydrated = proposal.model_copy(
                 update={

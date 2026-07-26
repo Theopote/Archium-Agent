@@ -267,12 +267,20 @@ def test_scene_proposal_repository_superseded_status(db_session: Session) -> Non
 
 def test_accept_proposal_keeps_live_scene_as_proposed(db_session: Session) -> None:
     """Accept must not be undone by the subsequent proposal metadata save."""
+    from archium.application.visual.scene_deterministic_qa_service import ProposalSceneQAResult
     from archium.application.visual.scene_proposal_service import SceneProposalService
     from archium.config.settings import Settings
     from archium.domain.visual.studio_command import RewriteTextCommand
 
     presentation, slide, base_scene = _seed_slide_with_scene(db_session)
     service = SceneProposalService(db_session, settings=Settings())
+    # QD-003: accept scans residual blockers — keep this persistence test focused on
+    # live-scene identity by stubbing QA clean.
+    service._qa_for_scene = lambda *args, **kwargs: ProposalSceneQAResult(  # type: ignore[method-assign]
+        issues=(),
+        layers={},
+        preview_render_success=True,
+    )
     proposal = service.create_proposal(
         base_scene=base_scene,
         commands=[
