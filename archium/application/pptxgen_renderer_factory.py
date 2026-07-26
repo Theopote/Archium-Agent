@@ -34,10 +34,11 @@ def create_pptxgen_renderer(
     pexels_session_api_key: str | None = None,
     unsplash_session_api_key: str | None = None,
 ) -> PptxGenPresentationRenderer:
-    """Construct a PptxGen renderer with fallback / asset-ref ports when session is set."""
+    """Construct a PptxGen renderer with fallback / asset-ref / fact ports when session is set."""
     resolved = settings or get_settings()
     fallback_resolver = None
     content_ref_resolver = None
+    fact_resolver = None
 
     if session is not None:
 
@@ -83,10 +84,17 @@ def create_pptxgen_renderer(
             )
             return dict(context.resolved_paths)
 
+        def fact_resolver(project_id: UUID) -> list[ProjectFact]:
+            # KN-003: export uses the same eligibility gate as generation.
+            from archium.application.project_knowledge_service import ProjectKnowledgeService
+
+            return ProjectKnowledgeService(session).generation_eligible_facts(project_id)
+
     return PptxGenPresentationRenderer(
         resolved,
         session=session,
         theme=theme,
         fallback_image_resolver=fallback_resolver,
         content_ref_path_resolver=content_ref_resolver,
+        fact_resolver=fact_resolver,
     )

@@ -11,7 +11,7 @@
 | KN-000 | P0 | done | 假目录冲突；伪造 citation UUID | fact validation; citation_from_draft | 错误冲突 / 坏引用 | 校验修复；禁止假 UUID | 相关单测绿 | `-` |
 | KN-001 | P0 | done | 事实主键冲突丢弃 alternate 值 (K1) | `uq_fact_project_key`; fact 写入 | 真冲突被静默吞 | `alternate_values` 保留冲突备选值 | `test_upsert_retains_alternate_value_on_key_conflict` | `-` |
 | KN-002 | P1 | open | Fact/Knowledge/Manuscript 有损桥接 (K2) | knowledge services | 信息丢失 | 显式映射 + 丢字段告警 | 往返字段清单测试 | `-` |
-| KN-003 | P1 | open | 导出绕过 `filter_generation_facts` (K3) | `pptxgen_renderer` | 未审事实进稿 | 导出前统一过滤 | 过滤关则导出缺事实 / 开则一致 | `-` |
+| KN-003 | P1 | done | 导出绕过 `filter_generation_facts` (K3) | `pptxgen_renderer_factory`; `pptxgen_renderer` fact_resolver | 未审事实进稿 | 导出前统一过滤 | 过滤关则导出缺事实 / 开则一致 | Topic 07 KN-003 |
 | KN-004 | P1 | open | LLM 任意键写入事实 (K4) | parsing/extraction | schema 污染 | 白名单键 | 未知键拒绝或进 quarantine | `-` |
 | KN-005 | P1 | mitigated | 重解析与 `needs_ocr` 行为不清 (K5/K6) | `ingestion_service` OCR；`ocr_text.py`; `document_ocr_enabled` | 重复/漏 OCR | M1：needs_ocr→ocr_text；成功则 COMPLETED；重解析删块重建 | OCR 标志可测；无引擎时保持 needs_ocr | `-` |
 | KN-006 | P2 | open | DOCX 页码语义弱；CitationORM 死 (K7/K8) | documents; models | 引用不准 | 页映射策略；删死表 | 页码断言 + 无死 ORM | `-` |

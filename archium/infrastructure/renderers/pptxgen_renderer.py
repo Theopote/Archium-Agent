@@ -43,13 +43,14 @@ class FallbackImageResolver(Protocol):
 
 
 ContentRefPathResolver = Callable[[UUID, list[str]], dict[str, str]]
+FactResolver = Callable[[UUID], list[ProjectFact]]
 
 
 class PptxGenPresentationRenderer:
     """Export PresentationSpec (legacy) or LayoutPlan instructions to editable PPTX.
 
-    Application services (fallback images, asset-reference path maps) are injected
-    via ports — this renderer must not import ``archium.application``.
+    Application services (fallback images, asset-reference path maps, generation-eligible
+    facts) are injected via ports — this renderer must not import ``archium.application``.
     """
 
     def __init__(
@@ -60,6 +61,7 @@ class PptxGenPresentationRenderer:
         theme: str = "architecture-board",
         fallback_image_resolver: FallbackImageResolver | None = None,
         content_ref_path_resolver: ContentRefPathResolver | None = None,
+        fact_resolver: FactResolver | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._session = session
@@ -67,6 +69,7 @@ class PptxGenPresentationRenderer:
         self._cli = PptxGenCliRunner(self._settings)
         self._fallback_image_resolver = fallback_image_resolver
         self._content_ref_path_resolver = content_ref_path_resolver
+        self._fact_resolver = fact_resolver
 
     def is_available(self) -> bool:
         """Delegate to the Node/pptxgenjs CLI runtime check."""
@@ -341,6 +344,14 @@ class PptxGenPresentationRenderer:
         return resolved
 
     def _resolve_project_facts(self, project_id: UUID) -> list[ProjectFact]:
+        """Resolve facts for Spec charts/tables.
+
+        KN-003: prefer an injected ``fact_resolver`` (generation-eligible set).
+        Raw ``FactRepository.list_by_project`` is last-resort only when no port
+        is wired (tests / offline) — production factory always injects.
+        """
+        if self._fact_resolver is not None:
+            return list(self._fact_resolver(project_id))
         if self._session is None:
             return []
         return FactRepository(self._session).list_by_project(project_id)
