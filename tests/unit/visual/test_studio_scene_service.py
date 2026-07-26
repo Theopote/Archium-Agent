@@ -416,3 +416,62 @@ def test_ensure_scene_preserves_render_scene_geometry_authority(
     reloaded_plan = plans.get(plan.id)
     assert reloaded_plan is not None
     assert reloaded_plan.geometry_authority == "layout_plan"
+
+
+def test_app005_scene_repair_persists_syncs_layout_plan(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """APP-005: after persisted Scene repair, LayoutPlan mirrors Scene geometry."""
+    from archium.domain.visual.scene_repair import (
+        SceneRepairAction,
+        SceneRepairActionType,
+        SceneRepairBatchResult,
+    )
+
+    _presentation, slide, plan = _seed_slide_with_plan(db_session)
+    settings = Settings(_env_file=None, output_path=tmp_path, scene_repair_enabled=True)
+    service = StudioSceneService(db_session, settings=settings)
+
+    def _fake_repair(self, scene, slide_spec):
+        repaired_nodes = []
+        for node in scene.nodes:
+            if node.source_layout_element_id == "title":
+                repaired_nodes.append(
+                    node.model_copy(update={"x": 1.5, "y": 1.25, "text": "院区总平面（修）"})
+                )
+            else:
+                repaired_nodes.append(node)
+        repaired = scene.model_copy(update={"nodes": repaired_nodes})
+        action = SceneRepairAction(
+            scene_id=repaired.id,
+            node_id="title",
+            check_code="SEMANTIC.TEXT_OVERFLOW",
+            action_type=SceneRepairActionType.SHORTEN_TEXT.value,
+            reason="test repair",
+        )
+        batch = SceneRepairBatchResult(
+            scenes=[repaired],
+            actions=[action],
+            rounds=1,
+            remaining_issue_count=0,
+        )
+        return repaired, batch
+
+    monkeypatch.setattr(StudioSceneService, "_run_scene_repair", _fake_repair)
+    result = service.ensure_scene_for_slide(slide.id)
+    assert result is not None
+    assert result.reused is False
+
+    reloaded = LayoutPlanRepository(db_session).get(plan.id)
+    assert reloaded is not None
+    assert reloaded.geometry_authority == "render_scene"
+    title_el = next(el for el in reloaded.elements if el.id == "title")
+    assert title_el.x == pytest.approx(1.5)
+    assert title_el.y == pytest.approx(1.25)
+    assert title_el.text_content == "院区总平面（修）"
+    scene_title = result.scene.node_by_layout_element_id("title")
+    assert scene_title is not None
+    assert scene_title.x == pytest.approx(title_el.x)
+    assert scene_title.y == pytest.approx(title_el.y)

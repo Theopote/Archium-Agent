@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1–L3 + UI-009 + WF-010 + DOM-024 + APP-004 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段 HumanGate；单一 stage；Direction↔Intent 可 diff；导出只读 `ExportVerdict`。余：Research→页引用、APP-005。
+**子系统可用；L1–L3 + UI-009 + WF-010 + DOM-024 + APP-004/005 + DOM-023 后产品闭环胶合层可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段 HumanGate；单一 stage；Direction↔Intent 可 diff；导出只读 `ExportVerdict`；Scene 修后 Plan 一致。余：Research→页引用。
 
 ---
 
@@ -167,7 +167,7 @@
 | 04 设计循环 | 后端闭合；Ask 已 durable（L2） |
 | 05 多模态 | 证据进 Context；与 design 阶段门禁软串联 |
 | 06 绘画 | DesignArtifact 有身份 + materials/deliver 时间线 |
-| 01 Domain | DOM-024 同步契约已落地；DOM-023 聚合地图仍开 |
+| 01 Domain | DOM-023 / DOM-024 已落地；DOM-025…028 仍开 |
 | 08 商业化 | 可续闭环已是协作/计费前提（Topic 08 完成） |
 
 ---

@@ -38,6 +38,24 @@ User opens Archium
 
 **核心原则**：建筑设计是**知识完整度的连续谱**，不是「有资料 / 没资料」二元开关。入口不再要求用户先选模式；`ContextAnalyzer`（原 `ContextIntelligenceService`）评估已知/未知并建议下一步。评估产出统一聚合为 `ProjectContext`（`archium/domain/context/`）——**仅认知快照**（已知/未知/阶段/NBA），不持有设计/汇报/渲染过程状态。过程状态由并列的 `ProjectProcessBoard`（`Research` / `Design` / `Presentation` 指针与相位）承载，由现有实体派生，**禁止**并入 `ProjectContext`。`KnowledgeState` 为**知识索引 + 多维认知**（`dimensions`：资料完整度 / 意图清晰度 / 证据信心 / 约束理解 / 对齐度 / 研究需求；`claims` / `open_unknowns` 指向 Fact / KnowledgeItem）。`completeness_score` 仅为兼容聚合，**不得**单独代表成熟。`ProjectMission` 为**相对稳定的任务定义**（问题/问题清单/意图/约束）；实时 `unknowns` / `confidence` 以 `KnowledgeState` / `ProjectContext` 为准，Mission 上的 `key_unknowns` / `confidence` 仅为生成时快照。`IntentEvolution` 记录设计过程边（Trigger → Old → New → Reason → Evidence），可演进为 Design History Graph。`WorkspaceModeService` 优先依据 `ProjectContext` 路由，而非仅 `origin_mode`。
 
+### Project Aggregate Map（DOM-023）
+
+```text
+Project（唯一 identity）
+  ├── Cognition: KnowledgeState（持久）→ ProjectContext（派生）
+  ├── Process:   ProjectProcessBoard（派生指针）
+  ├── Knowledge: Fact / KnowledgeItem / Document / Asset（FK）
+  ├── Design:    Session → ConceptDirection → (commit) Mission.DesignIntent
+  ├── Memory:    IntentEvolution / ProjectEvent / KS History
+  └── Delivery:  Presentation…（汇报 BC，不得反向定义 Project）
+```
+
+权威目录与守卫：`archium/domain/project_aggregate_map.py`、`tests/unit/test_project_aggregate_map.py`。
+
+禁止：新能力新建第二套 Project identity（`LogicalProject` / `WorkspaceProject` / Research·CAD·BIM 伪 Project 表）。允许的非 identity 视图：`ProjectOverview`（UI）、`ProjectContextBundle`（RAG）、`ArchitecturalAsset` / `DesignArtifact`（门面 / VO）。
+
+**不做：** 把 Mission / Direction / Presentation 嵌回 Project 上帝对象；把 ProcessBoard 并入 ProjectContext；为世界模型再开第七个 Agent。
+
 **Intelligence Closure（P0–P3）**：KnowledgeState 在关键产品事件后**尽力刷新**（`best_effort_reassess_knowledge`）。`fact_confirmed` / `knowledge_item_confirmed` 等小证据事件走确定性 `ReassessMode.INDEX`；Mission/方向/上传等走 `FULL` LLM；LLM 失败时回退 `refresh_claim_index_only` 并标记 `cognition_stale`。有意义的知识变化写入 `KnowledgeStateHistory`。NBA 经 `NbaActionExecutor` **执行**（非仅推荐）：Research / Explore / Generate Mission 跑真实服务 → 写回知识 → reassess → 原地刷新下一步（`stay_after_execute`）；上传资料 / 澄清 / 打开任务仍为导航（编排可同步 start）。生成页读取 `presentation_readiness_from_context`。P3 **Concept Visualization Loop**：Mission 前后均可 `ConceptDirection → VisualConceptBrief → 示意出图 → 建筑师反馈 → 写回 visual_prompt / 轻量空间字段 → IntentEvolution(VISUAL_FEEDBACK) → 再合成`；`visual_concept_briefs.mission_id` 可空，提交 Mission 时回填。`origin_mode` 仍为兼容字段。
 
 ### 意图驱动路线图（v0.3+）
@@ -102,6 +120,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - Visual workflow 与 Studio 共用 `SceneCompilerChain` + `ImageDerivativeService` 编译 RenderScene；按 `layout_plan_id` 复用 scene id / version。`LayoutPlan.overflow_policy` 与 `TextNode.overflow_policy` 共用 `OverflowPolicy`（`clip`/`shrink`/`warn`/`split`，DOM-020）；默认 `warn`。`warn`/`split` 触发 `SEMANTIC.TEXT_OVERFLOW` 以便修复。旧字面量 `error`→`warn`、`continue`→`split`。
 - **导出 SSOT（DOM-003）：** 正式可编辑 PPTX 权威为 ``RenderScene`` → `presentation.pptx`。`PresentationSpec` 仅为由 `SlideSpec` 派生的遗留模板导出格式（兼容/测试），不再与 Scene 并列作为正式交付真相。无视觉版式时 **默认拒绝** Spec PPTX 回退；仅当 ``allow_legacy_presentation_spec_pptx_fallback=true`` 时才允许并写入警告。
 - **几何 SSOT（DOM-011）：** 版式引擎写出的 LayoutPlan 为 `geometry_authority=layout_plan`；Studio / Scene 修复改几何后同步 Plan 并将权威切为 `render_scene`。此后 `ensure_scene_for_slide`（非 force）不得用 Plan 重编译覆盖 Scene。布局引擎再次改写 Plan 时经 `refresh_after_layout_edit` 收回权威为 `layout_plan` 再 force 重编译。
+- **修复入口（APP-005）：** 交付几何以 **RenderScene** 为修入口（`SceneRepairService` / Studio safe-auto / Proposal accept / visual `repair_and_persist`）。凡持久化 Scene 修复后必须 `sync_layout_geometry_from_scene`，保证 Scene+Plan 一致。`LayoutRepairService` 仅限编译前 Plan 空间；`SlideRepairService` 仅改上游 `SlideSpec` 文案（之后走重编译）。二者不得成为第二套几何 SSOT。
 - **正式 Studio 交付物**为 RenderScene → `presentation.pptx`（导出前 `AssetPathResolver.resolve_scene`）。Visual workflow 在 compile/repair 后写入同名正式文件；Critic 截图绑定该文件（RP-003）。LayoutPlan 指令 JSON 为校验产物；可选 `export_layout_plan_validation_pptx=true` 时另写 `presentation.layout_plan.validation.pptx`（非正式交付）。
 - Canvas 支持点击、Shift 多选、框选、文字/图片编辑，以及多选对齐、分布和等宽高。
 - 元素评论支持作用域：`node`（单节点）、`node_and_references`、`selection`（多选）、`region`（包围盒区域）、`slide`（整页），并通过 Inbox 管理状态。

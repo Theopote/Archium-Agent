@@ -1,4 +1,9 @@
-"""Conservative layout repair for auto-repairable validation issues."""
+"""Conservative layout repair for auto-repairable validation issues.
+
+APP-005: Plan-space only (pre-compile). Delivery geometry repairs enter via
+``SceneRepairService`` / Studio; after Scene persist, Plan is mirrored with
+``sync_layout_geometry_from_scene``.
+"""
 
 from __future__ import annotations
 

@@ -14,7 +14,13 @@ from archium.domain.intent.knowledge_state_history import KnowledgeStateHistory
 
 
 class Project(IdentifiedModel, TimestampedModel):
-    """A building or planning project that owns documents and presentations."""
+    """Unique architectural project identity root (DOM-023).
+
+    Satellites (Mission, Facts, Presentations, …) reference ``project_id``;
+    do not nest them into this model or invent a parallel Project identity.
+    See ``archium.domain.project_aggregate_map`` and
+    ``docs/architecture/current-system.md`` § Project Aggregate Map.
+    """
 
     name: str = Field(min_length=1, max_length=500)
     code: str | None = Field(default=None, max_length=100)

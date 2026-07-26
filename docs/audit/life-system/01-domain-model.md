@@ -214,7 +214,7 @@ Project（唯一 identity）
 
 | 建议编号 | 级别 | 问题 |
 |----------|------|------|
-| DOM-023 | P1 | 缺少正式 Aggregate 地图；新能力易旁路 Project |
+| DOM-023 | P1 | ~~缺少正式 Aggregate 地图；新能力易旁路 Project~~ **done**（`project_aggregate_map` + 架构文 + 守卫） |
 | DOM-024 | P1 | ~~ConceptDirection 与 DesignIntent 共享 VO 双份嵌套，无同步不变量~~ **done** |
 | DOM-025 | P2 | DesignDecision 仅以 dict 挂 IntentEvolution |
 | DOM-026 | P2 | `Mission.project_context` 字符串与 `ProjectContext` 同名异义 |
@@ -246,4 +246,5 @@ Project（唯一 identity）
 - [x] 循环依赖 / 双写风险列出  
 - [x] 分裂风险评级  
 - [x] 修复纪律与 DOM Issue 草案  
-- [ ] DOM-023…028 合入 module-audit 台账并择优排期（下一步）
+- [x] DOM-023…028 合入 module-audit 台账并择优排期（下一步）
+- [x] DOM-023 Aggregate 地图 + 守卫已落地

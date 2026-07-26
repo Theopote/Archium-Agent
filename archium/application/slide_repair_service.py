@@ -1,4 +1,9 @@
-"""Repair individual slides based on automated review feedback."""
+"""Repair individual slides based on automated review feedback.
+
+APP-005: Content-layer only (``SlideSpec``). Does not own delivery geometry;
+after content repair, Plan/Scene must be recompiled. Geometry SSOT repairs
+enter via RenderScene.
+"""
 
 from __future__ import annotations
 

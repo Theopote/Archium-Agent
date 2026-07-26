@@ -302,6 +302,9 @@ class StudioSceneService:
         prepared, batch = self._run_scene_repair(scene, slide)
         saved = save_render_scene(self._scenes, prepared)
         self._record_safe_auto_repair(slide, saved, batch)
+        # APP-005: Scene is the repair entry — persist must keep LayoutPlan mirrored.
+        if batch is not None and batch.actions:
+            plan = self._sync_plan_after_scene_repair(saved, plan)
         self.invalidate_preview_cache(
             slide.presentation_id,
             layout_plan_id=plan.id,
@@ -372,6 +375,18 @@ class StudioSceneService:
         )
         repaired = batch.scenes[0] if batch.scenes else scene
         return repaired, batch
+
+    def _sync_plan_after_scene_repair(
+        self,
+        scene: RenderScene,
+        plan: LayoutPlan,
+    ) -> LayoutPlan:
+        """Mirror repaired Scene geometry/text onto LayoutPlan (APP-005 / DOM-011)."""
+        from archium.application.visual.studio_scene_edit_service import (
+            sync_layout_geometry_from_scene,
+        )
+
+        return self._plans.save(sync_layout_geometry_from_scene(scene, plan))
 
     def _build_scene_result(
         self,
