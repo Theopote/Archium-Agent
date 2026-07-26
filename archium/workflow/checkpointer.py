@@ -76,6 +76,7 @@ _CHECKPOINT_MODULES: list[tuple[str, str]] = [
     ("archium.domain.outline", "OutlineSection"),
     ("archium.domain.presentation_manuscript", "CitationReference"),
     ("archium.domain.presentation_manuscript", "EvidenceItem"),
+    ("archium.domain.presentation_manuscript", "PresentationEvidenceItem"),
     ("archium.domain.presentation_manuscript", "ManuscriptFact"),
     ("archium.domain.presentation_manuscript", "ManuscriptSection"),
     ("archium.domain.presentation_manuscript", "ManuscriptStatus"),

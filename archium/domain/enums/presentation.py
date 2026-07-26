@@ -50,12 +50,20 @@ class ApprovalStatus(StrEnum):
     # Approved outline edited again — needs re-confirmation before generation.
     CHANGES_PENDING = "changes_pending"
 
-class EvidenceAvailability(StrEnum):
-    """Tri-state project materials check — never collapse query failure into bool."""
+class MaterialsAvailability(StrEnum):
+    """Tri-state project materials check — never collapse query failure into bool.
+
+    Delivery/materials gate (KN-012) — not IntentEvidence.
+    """
 
     AVAILABLE = "available"
     MISSING = "missing"
     UNKNOWN = "unknown"
+
+
+# KN-012 legacy alias — prefer MaterialsAvailability in new code.
+EvidenceAvailability = MaterialsAvailability
+
 
 class SlideType(StrEnum):
     """SlideSpec rhetorical / content-planning type.

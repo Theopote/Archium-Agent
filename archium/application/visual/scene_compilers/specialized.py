@@ -58,7 +58,8 @@ class DrawingFocusCompiler(_SpecializedCompilerBase):
         return scene.model_copy(update={"nodes": nodes})
 
 
-class PhotoEvidenceGridCompiler(_SpecializedCompilerBase):
+class PresentationPhotoEvidenceGridCompiler(_SpecializedCompilerBase):
+    """Photo evidence grid scene compiler (presentation BC — not IntentEvidence)."""
     block_type = SemanticBlockType.PHOTO_EVIDENCE_GRID
     compiler_id = "photo_evidence_grid"
 
@@ -84,3 +85,7 @@ class DecisionCompiler(_SpecializedCompilerBase):
         if schema is None:
             return False
         return any(req.role.value == "decision_request" for req in schema.required_content)
+
+
+# KN-012 legacy alias — prefer PresentationPhotoEvidenceGridCompiler in new code.
+PhotoEvidenceGridCompiler = PresentationPhotoEvidenceGridCompiler

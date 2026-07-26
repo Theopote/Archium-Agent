@@ -34,8 +34,8 @@ class ManuscriptFact(DomainModel):
         return stripped
 
 
-class EvidenceItem(DomainModel):
-    """Catalog entry for evidence that can support a slide argument."""
+class PresentationEvidenceItem(DomainModel):
+    """Manuscript catalog entry for slide arguments (presentation BC — not IntentEvidence)."""
 
     id: str = Field(default_factory=lambda: str(uuid4()), min_length=1)
     evidence_type: Literal[
@@ -70,6 +70,10 @@ class EvidenceItem(DomainModel):
         if not stripped:
             raise ValueError("value must not be empty")
         return stripped
+
+
+# KN-012 legacy alias — prefer PresentationEvidenceItem in new code.
+EvidenceItem = PresentationEvidenceItem
 
 
 class CitationReference(DomainModel):
@@ -115,7 +119,7 @@ class PresentationManuscript(IdentifiedModel, VersionedModel, TimestampedModel):
 
     verified_facts: list[ManuscriptFact] = Field(default_factory=list)
     sections: list[ManuscriptSection] = Field(default_factory=list)
-    evidence_catalog: list[EvidenceItem] = Field(default_factory=list)
+    evidence_catalog: list[PresentationEvidenceItem] = Field(default_factory=list)
     citations: list[CitationReference] = Field(default_factory=list)
 
     unresolved_questions: list[str] = Field(default_factory=list)
@@ -130,7 +134,7 @@ class PresentationManuscript(IdentifiedModel, VersionedModel, TimestampedModel):
                 return fact
         return None
 
-    def evidence_by_id(self, evidence_id: str) -> EvidenceItem | None:
+    def evidence_by_id(self, evidence_id: str) -> PresentationEvidenceItem | None:
         for item in self.evidence_catalog:
             if item.id == evidence_id:
                 return item
@@ -142,7 +146,7 @@ class PresentationManuscript(IdentifiedModel, VersionedModel, TimestampedModel):
                 return section
         return None
 
-    def project_evidence_only(self) -> list[EvidenceItem]:
+    def project_evidence_only(self) -> list[PresentationEvidenceItem]:
         """Evidence safe for project slides (excludes reference template assets)."""
         return [
             item

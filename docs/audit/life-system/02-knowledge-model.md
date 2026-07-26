@@ -115,7 +115,20 @@ ArchitectureCase(
 
 ---
 
-## Evidence 分裂（本专题核心债务）
+## Evidence 权威地图（KN-012 done）
+
+| 链 | 权威类型 | 说明 |
+|----|----------|------|
+| **设计** | `IntentEvidence` + `SourceCitation` | 意图出处 / 知识引用；`IntentEvidence.knowledge_item_id` 可选硬链 |
+| **汇报** | `PresentationEvidenceItem` / `Slot` / `Requirement` | 稿件与页模板；旧名 `Evidence*` 为别名 |
+| **交付** | `MaterialsAvailability` / `MaterialsExportReadiness` / `ContextMaterialsPack` | 出门禁与 CI 材料信号；旧名 `EvidenceAvailability` 等为别名 |
+| **非身份** | `DesignKnowledge.evidence` 等 `list[str]` | 仅标签，不是 Evidence 实体 |
+
+代码 SSOT：`archium/domain/evidence_authority.py`。不改 `LayoutFamily.EVIDENCE_BOARD` 等 PPT 字符串契约。
+
+---
+
+## Evidence 分裂（历史表，已收敛命名）
 
 | 形状 | 用途 | 是否设计知识边 |
 |------|------|----------------|
@@ -182,7 +195,7 @@ ArchitectureCase(
 6. 持久化确认边表 `knowledge_graph_edges`（`ConfirmedKnowledgeEdge`）  
 7. Snapshot = seeds + 账本爆炸 + **确认边**（缺端点时建 stub 节点）  
 8. 研究确认自动写 `INSPIRED_BY`（precedent_ref）/ `LINKED_FACT`；可 `revoke`  
-9. Evidence 命名空间收敛（KN-012）仍 open — 不在本 Phase 改汇报 Evidence* 命名  
+9. Evidence 命名空间收敛（KN-012）✅ — `evidence_authority.py` + Presentation*/Materials* 别名；PPT 字符串契约未动  
 
 ---
 
@@ -223,3 +236,4 @@ ArchitectureCase(
 - [x] Phase A 落地：`problem`/`strategy`/`precedent_ref` + `reference_case_ids`（KN-008/009/013 done）
 - [x] Phase B 落地：项目级可写 `architecture_cases` + 确认研究写回建草稿（KN-010 done）
 - [x] Phase C 落地：`knowledge_graph_edges` 确认边持久化 + snapshot 合并（KN-011 done）
+- [x] KN-012 落地：Evidence 权威目录 + Presentation*/Materials* 命名隔离

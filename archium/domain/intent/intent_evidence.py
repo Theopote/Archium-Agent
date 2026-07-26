@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from uuid import UUID
+
 from pydantic import Field
 
 from archium.domain._base import DomainModel
@@ -19,7 +21,7 @@ class IntentEvidenceSourceType(StrEnum):
 
 
 class IntentEvidence(DomainModel):
-    """One claimed design statement and where it came from."""
+    """One claimed design statement and where it came from (design-chain authority)."""
 
     statement: str = Field(min_length=1, max_length=800)
     source_type: IntentEvidenceSourceType
@@ -27,6 +29,10 @@ class IntentEvidence(DomainModel):
     created_by: str = Field(default="system", max_length=40)
     field_hint: str = Field(default="", max_length=80)
     supporting_materials: list[str] = Field(default_factory=list)
+    knowledge_item_id: UUID | None = Field(
+        default=None,
+        description="Optional hard link to ProjectKnowledgeItem (KN-012).",
+    )
     note: str = Field(default="", max_length=400)
 
     def source_label(self) -> str:

@@ -21,7 +21,9 @@ from archium.infrastructure.layout.geometry import (
 )
 
 
-class EvidenceBoardLayoutGenerator(LayoutGenerator):
+class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
+    """Numbered photo evidence board (presentation layout — not IntentEvidence)."""
+
     family = LayoutFamily.EVIDENCE_BOARD
 
     def generate(self, context: LayoutGeneratorContext) -> LayoutPlan:
@@ -320,3 +322,7 @@ class EvidenceBoardLayoutGenerator(LayoutGenerator):
             balance_strategy="evidence_grid",
             grid_rows=rows,
         )
+
+
+# KN-012 legacy alias — prefer PresentationEvidenceBoardLayoutGenerator in new code.
+EvidenceBoardLayoutGenerator = PresentationEvidenceBoardLayoutGenerator

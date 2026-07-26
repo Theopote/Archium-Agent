@@ -20,5 +20,5 @@
 | KN-009 | P1 | done | ConceptDirection.reference_dna 无 case_id，无法回链案例库 | `concept_direction.py`; concept prompts | 参照基因不可验证、不可检索 | 增 `reference_case_ids`；dna 并存一期 | 选定方向可解析到 ArchitectureCase | `-` |
 | KN-010 | P1 | done | ArchitectureCase 仅内存 8 seeds，不可持久/扩展 | `case_library/seeds.py`; `architecture_case_library.py`; `architecture_cases` 表 | 护城河无法随事务所增长 | 可写 Case 存储（项目级）+ seeds bootstrap | 可新增案例并参与 match；seeds 仍可用 | `-` |
 | KN-011 | P2 | done | KnowledgeGraphSnapshot 只读时投影，无确认边持久化 | `knowledge_graph.py`; `knowledge_graph_edges` 表; `knowledge_graph_service.py` | 知识结构不积累 | 确认边表 + snapshot 合并；研究确认写 INSPIRED_BY/LINKED_FACT | 确认边重启后仍在；检索可走确认边 | `-` |
-| KN-012 | P1 | open | Evidence 多身份未收敛（设计 vs 汇报） | intent_evidence; design_knowledge; presentation_manuscript; visual Evidence* | 追溯断裂；命名污染设计知识 | 设计链权威 IntentEvidence+Citation；汇报 Evidence* 隔离命名 | 架构文列出权威；跨层引用有 ID | `-` |
+| KN-012 | P1 | done | Evidence 多身份未收敛（设计 vs 汇报） | `evidence_authority.py`; Presentation*/Materials* 别名 | 追溯断裂；命名污染设计知识 | 设计链权威 IntentEvidence+Citation；汇报 Evidence* 隔离命名 | 架构文列出权威；跨层引用有 ID | `-` |
 | KN-013 | P2 | done | Case→DK 映射将 design_problem 塞进 insight，丢失独立性 | `architecture_case.to_design_knowledge` | 问题与洞察混淆 | DK 增 problem 或显式契约字段 | to_design_knowledge 保留 problem 槽 | `-` |

@@ -16,7 +16,9 @@ from archium.exceptions import WorkflowError
 
 
 @dataclass(frozen=True)
-class ProjectEvidenceStatus:
+class MaterialsExportReadiness:
+    """Formal export materials gate (delivery BC — not IntentEvidence)."""
+
     availability: EvidenceAvailability
     document_count: int = 0
 
@@ -36,11 +38,15 @@ class ProjectEvidenceStatus:
         return self.availability == EvidenceAvailability.UNKNOWN
 
 
+# KN-012 legacy alias — prefer MaterialsExportReadiness in new code.
+ProjectEvidenceStatus = MaterialsExportReadiness
+
+
 @dataclass(frozen=True)
 class DeliveryReadinessReport:
     """Unified readiness for formal export — single source for Studio + deliver."""
 
-    evidence: ProjectEvidenceStatus
+    evidence: MaterialsExportReadiness
     pptx_ready: bool = False
     pdf_ready: bool = False
     export_blocker_count: int = 0

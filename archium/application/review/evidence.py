@@ -31,8 +31,8 @@ def _visual_supports_message(message: str, description: str) -> bool:
     return bool(message_tokens & description_tokens)
 
 
-class EvidenceReviewer(ReviewRunnerBase):
-    """Check citations, numeric claims, and claim-to-evidence alignment."""
+class PresentationEvidenceReviewer(ReviewRunnerBase):
+    """Check citations, numeric claims, and claim-to-evidence alignment (presentation Critic)."""
 
     def run(
         self,
@@ -139,3 +139,7 @@ class EvidenceReviewer(ReviewRunnerBase):
                     )
 
         return self._persist(presentation_id, issues)
+
+
+# KN-012 legacy alias — prefer PresentationEvidenceReviewer in new code.
+EvidenceReviewer = PresentationEvidenceReviewer

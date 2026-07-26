@@ -23,8 +23,8 @@ from archium.infrastructure.database.repositories import (
 
 
 @dataclass(frozen=True)
-class ProjectEvidencePack:
-    """Lightweight materials signal for KnowledgeState assessment."""
+class ContextMaterialsPack:
+    """Lightweight materials signal for KnowledgeState assessment (not IntentEvidence)."""
 
     document_count: int = 0
     document_summaries: str = ""
@@ -55,6 +55,10 @@ class ProjectEvidencePack:
         )
 
 
+# KN-012 legacy alias — prefer ContextMaterialsPack in new code.
+ProjectEvidencePack = ContextMaterialsPack
+
+
 def gather_project_evidence(
     session: Session,
     project_id: UUID,
@@ -65,7 +69,7 @@ def gather_project_evidence(
     chunk_chars: int = 160,
     max_gaps: int = 8,
     max_knowledge_lines: int = 10,
-) -> ProjectEvidencePack:
+) -> ContextMaterialsPack:
     """Collect filenames, facts, knowledge items, chunks, and gaps for CI."""
     documents = DocumentRepository(session).list_by_project(project_id)
     doc_lines = [
@@ -102,7 +106,7 @@ def gather_project_evidence(
     ]
     blocking = sum(1 for gap in gap_report.gaps if gap.blocking)
 
-    return ProjectEvidencePack(
+    return ContextMaterialsPack(
         document_count=len(documents),
         document_summaries="\n".join(doc_lines),
         fact_lines="\n".join(fact_lines),

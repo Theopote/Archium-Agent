@@ -50,14 +50,18 @@ class CompositionZone:
 
 
 @dataclass(frozen=True)
-class EvidenceSlot:
-    """Required semantic evidence role for a page archetype (VG-002 contract)."""
+class PresentationEvidenceSlot:
+    """Required semantic evidence role for a page archetype (presentation BC — not IntentEvidence)."""
 
     role: str
     description: str
     visual_types: frozenset[VisualType] = frozenset()
     accepts_text: bool = False
     required: bool = True
+
+
+# KN-012 legacy alias — prefer PresentationEvidenceSlot in new code.
+EvidenceSlot = PresentationEvidenceSlot
 
 
 @dataclass(frozen=True)
@@ -78,7 +82,7 @@ class VisualPageRecipe:
     annotation_strategy: str
     composition_strategy: str
     emotional_tone: str
-    required_evidence_slots: tuple[EvidenceSlot, ...] = ()
+    required_evidence_slots: tuple[PresentationEvidenceSlot, ...] = ()
     title_signals: tuple[ArchetypeSignal, ...] = ()
     body_signals: tuple[ArchetypeSignal, ...] = ()
     visual_type_hints: frozenset[VisualType] = frozenset()
@@ -98,8 +102,8 @@ def _slot(
     visual_types: frozenset[VisualType] | None = None,
     accepts_text: bool = False,
     required: bool = True,
-) -> EvidenceSlot:
-    return EvidenceSlot(
+) -> PresentationEvidenceSlot:
+    return PresentationEvidenceSlot(
         role=role,
         description=description,
         visual_types=visual_types or frozenset(),

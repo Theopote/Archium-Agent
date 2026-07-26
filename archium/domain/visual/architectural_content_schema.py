@@ -58,7 +58,9 @@ class SchemaVisualRequirement(DomainModel):
     description: str = ""
 
 
-class EvidenceRequirement(DomainModel):
+class PresentationEvidenceRequirement(DomainModel):
+    """Template page evidence need (presentation BC — not IntentEvidence)."""
+
     evidence_type: Literal[
         "project_photo",
         "drawing",
@@ -73,6 +75,10 @@ class EvidenceRequirement(DomainModel):
     max_count: int = Field(default=4, ge=0)
     must_be_observable_in_asset: bool = False
     description: str = ""
+
+
+# KN-012 legacy alias — prefer PresentationEvidenceRequirement in new code.
+EvidenceRequirement = PresentationEvidenceRequirement
 
 
 class UsageCondition(DomainModel):
@@ -117,7 +123,7 @@ class ArchitecturalContentSchema(TimestampedModel):
     required_content: list[ContentRequirement] = Field(default_factory=list)
     optional_content: list[ContentRequirement] = Field(default_factory=list)
     visual_requirements: list[SchemaVisualRequirement] = Field(default_factory=list)
-    evidence_requirements: list[EvidenceRequirement] = Field(default_factory=list)
+    evidence_requirements: list[PresentationEvidenceRequirement] = Field(default_factory=list)
 
     allowed_asset_origins: list[str] = Field(
         default_factory=lambda: ["project_upload", "public_research"]
