@@ -196,6 +196,7 @@ class VisualConceptBriefService:
 
         brief = self._apply_slot_overrides(
             brief,
+            direction=direction,
             preferred_image_type=preferred_image_type,
             slot_key=slot_key,
             focus_hint=focus_hint,
@@ -273,11 +274,16 @@ class VisualConceptBriefService:
         self,
         brief: VisualConceptBrief,
         *,
+        direction: ConceptDirection | None = None,
         preferred_image_type: ArchitectureImageType | None,
         slot_key: str | None,
         focus_hint: str | None,
         style_preset: VisionStylePreset | None,
     ) -> VisualConceptBrief:
+        from archium.application.visual.vision.deck_illustrative_style_lock import (
+            resolve_deck_illustrative_style_lock,
+        )
+
         changed = False
         extra = dict(brief.extra_json or {})
         if preferred_image_type is not None:
@@ -285,7 +291,17 @@ class VisualConceptBriefService:
             if brief.image_type != coerced:
                 brief.image_type = coerced
                 changed = True
-        if style_preset is not None:
+        # Topic 06 P2: deck style lock wins over per-slot style defaults
+        lock = resolve_deck_illustrative_style_lock(direction=direction, brief=None)
+        if lock is None:
+            lock = resolve_deck_illustrative_style_lock(direction=None, brief=brief)
+        if lock is not None:
+            if brief.style_preset != lock.style:
+                brief.style_preset = lock.style
+                changed = True
+            extra["deck_style_lock"] = lock.source
+            changed = True
+        elif style_preset is not None:
             brief.style_preset = style_preset
             changed = True
         if slot_key:

@@ -19,7 +19,7 @@
 | 03 | AI 推理链 | [03-ai-reasoning-chain.md](03-ai-reasoning-chain.md) | **完成** |
 | 04 | 设计循环（Create→Critique→Revise） | [04-design-loop.md](04-design-loop.md) | **完成** |
 | 05 | 多模态建筑输入 | [05-multimodal-input.md](05-multimodal-input.md) | **完成**（M1–M3） |
-| 06 | AI 绘画系统 | [06-ai-painting.md](06-ai-painting.md) | **完成**（P1） |
+| 06 | AI 绘画系统 | [06-ai-painting.md](06-ai-painting.md) | **完成**（P1–P2） |
 | 07 | 产品闭环 | 待开 | pending |
 | 08 | 商业化与团队协作 | 待开 | pending |
 

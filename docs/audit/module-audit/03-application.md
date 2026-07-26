@@ -32,4 +32,4 @@
 | APP-022 | P2 | done | DOCUMENT_ANALYZE 完成不回写文档/事实 | `background_job_worker.py` | 异步分析对世界模型无效 | 合并 metadata + materialize facts | job 后 doc 有 parse_depth；有事实 | `-` |
 | APP-023 | P2 | done | 视觉证据包缺 CAD/BIM 文档门面 | `visual_evidence_service`; architectural_asset_from_document | Context 不见 cad_bim:N | 文档级 facade 入 pack | input_sources 含 cad_bim | `-` |
 | APP-024 | P1 | done | Direction/Brief→ImageRequest 缺 seed_source | `vision_generation.ImageRequest`; concept/brief/suggester seeds | 页意图来源不可追溯 | seed_source 字段 + 方向优先 | 方向种子可测；示意策略不变 | `-` |
-| APP-025 | P2 | open | 册级 illustrative hero 风格无共享锁 | Vision Engine / ArtDirection | 跨页插图漂移 | P2：共享 style/DNA | 非证据页可共享锁 | `-` |
+| APP-025 | P2 | done | 册级 illustrative hero 风格无共享锁 | `deck_illustrative_style_lock.py`; visual_intent; VT slots | 跨页插图漂移 | 方向 style 锁 + 非证据页统一；槽位保 image_type | 非证据页共享 style；诊断页不锁 | `-` |

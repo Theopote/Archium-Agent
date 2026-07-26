@@ -237,6 +237,10 @@ class VisualIntentService:
                 direction_has_visual_seed,
                 image_request_from_concept_direction,
             )
+            from archium.application.visual.vision.deck_illustrative_style_lock import (
+                apply_deck_illustrative_style_lock,
+                resolve_deck_illustrative_style_lock,
+            )
             from archium.application.visual.vision.intent_suggester import (
                 suggest_image_request_for_slide,
             )
@@ -247,6 +251,8 @@ class VisualIntentService:
             from archium.infrastructure.database.repositories import PresentationRepository
 
             archetype = getattr(intent, "page_archetype", None) or recognition.archetype
+            concept_brief = None
+            selected_direction = None
             if (
                 self._session is not None
                 and slide.presentation_id is not None
@@ -255,30 +261,31 @@ class VisualIntentService:
                 concept_brief = resolve_visual_concept_brief_for_presentation(
                     self._session, slide.presentation_id
                 )
+                presentation = PresentationRepository(self._session).get_presentation(
+                    slide.presentation_id
+                )
+                if presentation is not None:
+                    mission = resolve_project_mission(
+                        self._session,
+                        presentation.project_id,
+                        presentation_id=presentation.id,
+                    )
+                    if mission is not None:
+                        selected_direction = resolve_selected_concept_direction(
+                            self._session, mission.id
+                        )
                 if concept_brief is not None:
                     intent = apply_visual_concept_brief_to_intent(intent, concept_brief)
-                else:
-                    presentation = PresentationRepository(self._session).get_presentation(
-                        slide.presentation_id
-                    )
-                    if presentation is not None:
-                        mission = resolve_project_mission(
-                            self._session,
-                            presentation.project_id,
-                            presentation_id=presentation.id,
-                        )
-                        if mission is not None:
-                            direction = resolve_selected_concept_direction(
-                                self._session, mission.id
+                elif selected_direction is not None and direction_has_visual_seed(
+                    selected_direction
+                ):
+                    intent = intent.model_copy(
+                        update={
+                            "image_request": image_request_from_concept_direction(
+                                selected_direction
                             )
-                            if direction is not None and direction_has_visual_seed(direction):
-                                intent = intent.model_copy(
-                                    update={
-                                        "image_request": image_request_from_concept_direction(
-                                            direction
-                                        )
-                                    }
-                                )
+                        }
+                    )
             if intent.image_request is None:
                 suggested = suggest_image_request_for_slide(
                     slide,
@@ -286,6 +293,21 @@ class VisualIntentService:
                 )
                 if suggested is not None:
                     intent = intent.model_copy(update={"image_request": suggested})
+            # Topic 06 P2: share style DNA across non-evidence illustrative pages
+            if intent.image_request is not None and visual_concept_brief_applies(
+                page_archetype=archetype
+            ):
+                lock = resolve_deck_illustrative_style_lock(
+                    direction=selected_direction,
+                    brief=concept_brief,
+                )
+                locked = apply_deck_illustrative_style_lock(
+                    intent.image_request,
+                    lock,
+                    page_archetype=archetype,
+                )
+                if locked is not intent.image_request:
+                    intent = intent.model_copy(update={"image_request": locked})
         return self._intents.save(intent)
 
     @staticmethod

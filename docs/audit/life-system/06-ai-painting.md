@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**Vision Engine 已可用，身份仍偏「页级插图」；设计级视觉种子与页意图分裂。**（P1 后：ConceptVisualPrompt→ImageRequest 带 `seed_source` 可追溯，方向种子优先于 archetype 建议。）
+**Vision Engine 已可用；P1–P2 后种子可追溯且册级示意风格可锁。** DesignArtifact（DOM-027）与强一致性 img2img 仍欠。
 
 后端（stub / OpenAI / local_sd / ComfyUI）、示意策略、Research→Vision 种子均在。缺口是 deck 一致性与 DesignArtifact（DOM-027），不是再加 Agent。
 
@@ -42,7 +42,7 @@
 | 多后端 | B | factory + stub 回退 |
 | 示意/证据分轨 | **A-** | Topic 05 + VisionAssetPolicy |
 | Direction→页种子桥 | **B（P1）** | `seed_source` + 优先级 |
-| 册级风格一致 | C | 每页独立 request |
+| 册级风格一致 | **B（P2）** | `deck_illustrative_style_lock` |
 | DesignArtifact | D | DOM-027 仍开 |
 
 ---
@@ -66,10 +66,12 @@
 
 （关闭 `APP-024`。）
 
-### Phase P2 — 册级一致（P2）
+### Phase P2 — 册级一致（P2）✅ 2026-07-26
 
-4. 共享 style / DNA 跨非证据页  
-5. Visual Thinking 槽位并入同一种子通道  
+4. `DeckIllustrativeStyleLock`：方向 `visual_prompt.style` / 非槽位 Brief 共享 style+DNA  
+5. Visual Thinking 槽位保留 `image_type`，style 服从册锁；canonical brief 优先于槽位 brief  
+
+（关闭 `APP-025`。）
 
 ### Phase P3 — 设计产物身份（延后）
 
@@ -84,10 +86,10 @@
 
 | 编号 | 级别 | 问题 |
 |------|------|------|
-| APP-024 | P1 | ~~Direction/Brief→ImageRequest 缺 seed_source / 优先级不稳~~ **done (P1)** |
-| APP-025 | P2 | 册级 illustrative hero 风格无共享锁 |
+| APP-024 | P1 | ~~Direction/Brief→ImageRequest 缺 seed_source~~ **done (P1)** |
+| APP-025 | P2 | ~~册级 illustrative hero 风格无共享锁~~ **done (P2)** |
 | DOM-027 | P1 | （已有）无 DesignArtifact；概念图挂汇报 Asset |
-| APP-016 | P2 | Research Critic block（本会话另关） |
+| APP-016 | P2 | Research Critic block（已关） |
 
 ---
 
@@ -106,4 +108,5 @@
 - [x] 路径取证与理想对照  
 - [x] Issue 草案 APP-024/025  
 - [x] Phase P1 落地  
-- [ ] P2/P3 排期  
+- [x] Phase P2 册级风格锁  
+- [ ] P3 DesignArtifact 排期  

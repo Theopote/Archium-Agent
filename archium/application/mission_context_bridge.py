@@ -72,8 +72,13 @@ def resolve_visual_concept_brief_for_direction(
     session: Session,
     concept_direction_id: UUID,
 ) -> VisualConceptBrief | None:
-    """Return the latest visual concept brief for a direction, if any."""
-    return VisualConceptBriefRepository(session).get_latest_for_direction(concept_direction_id)
+    """Return canonical visual concept brief for a direction (prefer non-slot)."""
+    from archium.application.visual.vision.deck_illustrative_style_lock import (
+        pick_canonical_visual_concept_brief,
+    )
+
+    briefs = VisualConceptBriefRepository(session).list_by_direction(concept_direction_id)
+    return pick_canonical_visual_concept_brief(briefs)
 
 
 def resolve_visual_concept_brief_for_mission(
