@@ -16,10 +16,15 @@ def ensure_direction_reasoning(
     direction: ConceptDirection,
     *,
     knowledge_item_ids: list[UUID] | None = None,
+    bump_revision: bool = False,
+    critique_verdict: str = "",
+    critique_summary: str = "",
 ) -> ConceptDirection:
     """Attach or refresh ReasoningArtifact; preserve stable id when already set.
 
     Does not invent a rationale — call design_rationale_fallback first if needed.
+    When ``bump_revision`` is True and a prior reasoning node exists, spawn a new
+    generation (Phase L3 lineage) instead of overwriting the same id.
     """
     rationale = direction.design_rationale
     if rationale is None or rationale.is_empty():
@@ -32,8 +37,21 @@ def ensure_direction_reasoning(
         knowledge_item_ids=knowledge_item_ids,
         existing=direction.reasoning.evidence_refs if direction.reasoning else None,
     )
-    if direction.reasoning is not None and not direction.reasoning.is_empty():
-        artifact = direction.reasoning.model_copy(
+    parent = direction.reasoning
+    if (
+        bump_revision
+        and parent is not None
+        and not parent.is_empty()
+    ):
+        artifact = parent.spawn_revision(
+            rationale=rationale,
+            evidence_refs=refs,
+            critique_verdict=critique_verdict,
+            critique_summary=critique_summary,
+        )
+        artifact.source_direction_id = direction.id
+    elif parent is not None and not parent.is_empty():
+        artifact = parent.model_copy(
             update={
                 "project_id": direction.project_id,
                 "rationale": rationale,
@@ -41,13 +59,21 @@ def ensure_direction_reasoning(
                 "source_direction_id": direction.id,
             }
         )
-        artifact.touch()
+        if critique_verdict or critique_summary:
+            artifact = artifact.with_critique_meta(
+                verdict=critique_verdict,
+                summary=critique_summary,
+            )
+        else:
+            artifact.touch()
     else:
         artifact = ReasoningArtifact(
             project_id=direction.project_id,
             rationale=rationale,
             evidence_refs=refs,
             source_direction_id=direction.id,
+            last_critique_verdict=(critique_verdict or "").strip()[:40],
+            last_critique_summary=(critique_summary or "").strip()[:400],
         )
     return direction.model_copy(
         update={

@@ -249,6 +249,31 @@ class ConceptDirectionService:
                     design_decision=decision.as_dict(),
                     design_intent_snapshot=updated_intent.model_dump(mode="json"),
                 )
+                if critique_gate.report is not None and not _loop_revised:
+                    # APP-015 / L3: Mission path records DESIGN_CRITIQUE like exploration
+                    project.intent_evolution = project.intent_evolution.append(
+                        IntentEvolutionKind.DESIGN_CRITIQUE,
+                        f"设计批判：{critique_gate.report.summary or critique_gate.report.verdict.value}",
+                        trigger="选定前设计批判",
+                        previous_summary=selected.title,
+                        new_summary=critique_gate.report.verdict.value,
+                        reason=(critique_gate.report.summary or "独立批判报告")[:500],
+                        evidence_refs=[
+                            item.text
+                            for item in (
+                                critique_gate.report.weaknesses
+                                + critique_gate.report.missing_evidence
+                            )[:6]
+                        ],
+                        design_intent_snapshot={
+                            **critique_gate.report.as_dict(),
+                            "reasoning_lineage": (
+                                selected.reasoning.lineage_dict()
+                                if selected.reasoning is not None
+                                else None
+                            ),
+                        },
+                    )
                 if critique_gate.report is not None:
                     from archium.application.design_reflection import (
                         reflection_from_critique,
@@ -493,6 +518,11 @@ class ConceptDirectionService:
                             "critique_verdict": critique_gate.report.verdict.value,
                             "recritique_verdict": loop.gate.report.verdict.value,
                             "revise_policy": policy,
+                            "reasoning_lineage": (
+                                direction.reasoning.lineage_dict()
+                                if direction.reasoning is not None
+                                else None
+                            ),
                         },
                     )
                     if loop.revise.reflection is not None and not loop.revise.reflection.is_empty():

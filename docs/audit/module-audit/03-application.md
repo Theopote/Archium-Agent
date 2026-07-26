@@ -22,5 +22,5 @@
 | APP-012 | P1 | done | Revise 后无再 Critique；设计循环未闭合 | `design_loop.py`; `*_maybe_revise_from_critique` | 修订可「看起来更好」却未再验证 | revise 后 rule/LLM 再批判；reject 仍走 warn/block | 修订后有第二份报告；单测覆盖 | `-` |
 | APP-013 | P1 | done | 选定路径自动修订无人工确认 | `design_loop.py`; `design_revise_ask_panel.py` | 相对 Critic 只读契约的静默改方向 | `DESIGN_REVISE_ON_SELECT=off\|auto\|ask`；ask 出示 diff | 默认 ask；Apply/Reject 可选定 | `-` |
 | APP-014 | P2 | done | Reflection next_adjustments UI 无 Apply/Reject | `design_revise_ask_panel.py`; reflection 预览 | 调整项只展示不执行 | Ask 面板展示 adjustments + Apply/Reject | Apply 后方向字段变；Reject 记边 | `-` |
-| APP-015 | P2 | open | Mission select 不写 DESIGN_CRITIQUE IntentEvolution 边 | `concept_direction_service.select_direction` | 探索/Mission 历史不对称 | 与 exploration 对齐写 DESIGN_CRITIQUE | Mission 选定 caution/reject 有边 | `-` |
+| APP-015 | P2 | done | Mission select 不写 DESIGN_CRITIQUE IntentEvolution 边 | `concept_direction_service.select_direction` | 探索/Mission 历史不对称 | 与 exploration 对齐写 DESIGN_CRITIQUE | Mission 选定有 DESIGN_CRITIQUE 边 | `-` |
 | APP-016 | P2 | open | Research Critic block 不拒绝落库/不挡概念硬化 | `research_critique_service.py`; autonomous research | 「block」名不副实 | block 拒写或拒绝进入 Design Critic 摘要 | block 下弱研究不可硬化 | `-` |

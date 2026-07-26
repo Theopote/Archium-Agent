@@ -14,4 +14,4 @@
 | WF-006 | P1 | open | Plan 审批缺内容哈希 (W5) | DeliverablePlan | 内容被改仍算已批 | 写入 content hash；变更作废 | hash 变则 approval 空 | `-` |
 | WF-007 | P2 | open | 死 STEP_LABELS / 路由表残留 (W6) | workflow | 误导维护者 | 删除或生成自图定义 | 无死常量 | `-` |
 | WF-008 | P0 | done | Golden 未覆盖 interrupt + continue_after_review（Beta B7） | `tests/golden/regression/test_interrupt_continue.py` | 主链回归不足 | case_a brief 门禁 interrupt → approve → continue | B7 关闭；golden regression 绿 | `-` |
-| WF-009 | P2 | open | 设计循环非一等图节点（无 critique→human→revise→re-critique） | exploration/mission select；life-system 04 | 循环挂服务调用，难 interrupt | 可选图节点或显式用例状态机；不新 Agent | 可暂停于批判报告；continue 后 revise+再批判 | `-` |
+| WF-009 | P2 | done | 设计循环非一等图节点（无 critique→human→revise→re-critique） | exploration/mission select；life-system 04 | 循环挂服务调用，难 interrupt | L2 Ask `pending_revise` 作为人闸 interrupt（不新 Agent/图） | Ask 可暂停；Apply/Reject 后继续 | `-` |

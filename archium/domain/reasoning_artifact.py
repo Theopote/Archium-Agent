@@ -75,6 +75,26 @@ class ReasoningArtifact(IdentifiedModel, TimestampedModel):
         default=False,
         description="True when Critic allowed proceed with a complete reasoning chain.",
     )
+    # Phase L3 — revision identity (DOM-030)
+    revision: int = Field(
+        default=1,
+        ge=1,
+        description="1-based reasoning generation; increments on Critic→Revise apply.",
+    )
+    parent_reasoning_id: UUID | None = Field(
+        default=None,
+        description="Prior ReasoningArtifact.id when this node was spawned by revise.",
+    )
+    last_critique_verdict: str = Field(
+        default="",
+        max_length=40,
+        description="Last DesignCritique verdict attached to this generation.",
+    )
+    last_critique_summary: str = Field(
+        default="",
+        max_length=400,
+        description="Short summary from the critique that produced this generation.",
+    )
 
     def is_empty(self) -> bool:
         return self.rationale.is_empty()
@@ -83,13 +103,63 @@ class ReasoningArtifact(IdentifiedModel, TimestampedModel):
         return self.rationale.is_proceedable_chain()
 
     def mark_verified(self) -> ReasoningArtifact:
-        """Return a copy flagged as Critic-verified (stable id)."""
+        """Return a copy flagged as Critic-verified (stable id / revision)."""
         copy = self.model_copy(update={"verified": True})
         copy.touch()
         return copy
 
+    def with_critique_meta(self, *, verdict: str, summary: str = "") -> ReasoningArtifact:
+        """Stamp critique metadata without changing identity."""
+        copy = self.model_copy(
+            update={
+                "last_critique_verdict": (verdict or "").strip()[:40],
+                "last_critique_summary": (summary or "").strip()[:400],
+            }
+        )
+        copy.touch()
+        return copy
+
+    def spawn_revision(
+        self,
+        *,
+        rationale: DesignRationale,
+        evidence_refs: ReasoningEvidenceRefs | None = None,
+        critique_verdict: str = "",
+        critique_summary: str = "",
+    ) -> ReasoningArtifact:
+        """Create a new reasoning generation linked to this node as parent (L3)."""
+        from archium.domain._base import new_uuid
+
+        child = ReasoningArtifact(
+            id=new_uuid(),
+            project_id=self.project_id,
+            rationale=rationale,
+            evidence_refs=evidence_refs or self.evidence_refs,
+            source_direction_id=self.source_direction_id,
+            verified=False,
+            revision=int(self.revision) + 1,
+            parent_reasoning_id=self.id,
+            last_critique_verdict=(critique_verdict or "").strip()[:40],
+            last_critique_summary=(critique_summary or "").strip()[:400],
+        )
+        return child
+
+    def lineage_dict(self) -> dict[str, object]:
+        return {
+            "reasoning_id": str(self.id),
+            "revision": self.revision,
+            "parent_reasoning_id": (
+                str(self.parent_reasoning_id) if self.parent_reasoning_id else None
+            ),
+            "verified": self.verified,
+            "last_critique_verdict": self.last_critique_verdict,
+            "last_critique_summary": self.last_critique_summary,
+        }
+
     def to_prompt_block(self) -> str:
         sections: list[str] = []
+        if self.revision > 1:
+            sections.append(f"推理世代：v{self.revision}")
         block = self.rationale.to_prompt_block()
         if block:
             sections.append(block)
@@ -104,6 +174,7 @@ class ReasoningArtifact(IdentifiedModel, TimestampedModel):
                 + "；".join(str(uid) for uid in self.evidence_refs.knowledge_item_ids)
             )
         return "\n".join(sections)
+
 
     def to_storage_dict(self) -> dict[str, object]:
         """Envelope for nesting in concept_directions.design_rationale JSON."""

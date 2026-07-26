@@ -801,6 +801,11 @@ class ExplorationService:
                     "critique_verdict": critique_gate.report.verdict.value,
                     "recritique_verdict": loop.gate.report.verdict.value,
                     "revise_policy": policy,
+                    "reasoning_lineage": (
+                        direction.reasoning.lineage_dict()
+                        if direction.reasoning is not None
+                        else None
+                    ),
                 },
             )
             if loop.revise.reflection is not None and not loop.revise.reflection.is_empty():

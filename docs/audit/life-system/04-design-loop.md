@@ -10,9 +10,9 @@
 
 ## 一句话结论
 
-**有 Critic→Ask/Revise→Re-Critique 路径；修订身份与图 interrupt 仍欠。**
+**设计循环 L1–L3 已闭合（再批判 / Ask·Apply / 修订代际）；Research Critic block 语义仍欠。**
 
-Create 能产出可比较方向；选定前 Critique 能 warn/block；默认 **ask** 出示修订预览，Apply 后再批判，Reject 按原方向选定。仍缺：Direction 修订代际、一等图 interrupt。
+Create → Critique → Ask/Apply → Revise(vN) → Re-Critique → Select，带 `parent_reasoning_id` 与 Mission `DESIGN_CRITIQUE` 边。Ask pending 充当人闸 interrupt。仍开：`APP-016`。
 
 ---
 
@@ -101,8 +101,8 @@ Create 能产出可比较方向；选定前 Critique 能 warn/block；默认 **a
 1. ~~无 Re-Critique~~ → **L1 已闭合**（修订后 rules 再批判）  
 2. ~~无人工 Apply~~ → **L2 已闭合**（`DESIGN_REVISE_ON_SELECT=ask` + Apply/Reject）  
 3. ~~Reflection UI 只读~~ → **L2 Ask 面板可执行 next_adjustments**  
-4. **Mission 路径初评不记 DESIGN_CRITIQUE 边**（修订后再批判会记；APP-015）  
-5. **非工作流图**：循环挂在 `select_direction` 服务调用上（WF-009）
+4. ~~Mission 路径初评不记 DESIGN_CRITIQUE 边~~ → **L3 已对齐**  
+5. ~~非工作流图~~ → **L3：Ask pending_revise 为人闸 interrupt（不新 Agent）**
 
 ---
 
@@ -161,12 +161,12 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 实现：`design_loop.DesignReviseOffer` + `design_revise_ask_panel`（探索页 / Mission 面板）。  
 （关闭 `APP-013` / `APP-014`。）
 
-### Phase L3 — 循环身份（P2）
+### Phase L3 — 循环身份（P2）✅ 2026-07-26
 
-5. Direction revision 指针（`parent_reasoning_id` / revision n）或薄 DesignArtifact 挂 CritiqueReport  
-6. 可选：探索图 interrupt 节点（不新 Agent）；Mission 路径补齐 `DESIGN_CRITIQUE` 边  
+5. `ReasoningArtifact.revision` + `parent_reasoning_id`；修订时 spawn 新世代；IntentEvolution 带 `reasoning_lineage`  
+6. Mission 路径补齐 `DESIGN_CRITIQUE` 边；Ask `pending_revise` 视为人闸 interrupt（不新 Agent / 不新 LangGraph 节点）  
 
-**不做：** `DesignLoopAgent`；把 Deck Repair 并进 Design Critic；ProcessBoard 变写权威。
+（关闭 `DOM-030` / `APP-015` / `WF-009`。）
 
 ---
 
@@ -177,10 +177,10 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 | APP-012 | P1 | ~~Revise 后无再 Critique~~ **done (L1)** |
 | APP-013 | P1 | ~~自动修订无人工确认~~ **done (L2)** |
 | APP-014 | P2 | ~~Reflection UI 无 Apply/Reject~~ **done (L2)** |
-| APP-015 | P2 | Mission `select_direction` 不写 IntentEvolution `DESIGN_CRITIQUE` 边 |
+| APP-015 | P2 | ~~Mission 无 DESIGN_CRITIQUE 边~~ **done (L3)** |
 | APP-016 | P2 | Research Critic `block` 不拒绝落库 / 不挡概念硬化 |
-| DOM-030 | P2 | 批判/修订结果缺少 Direction 修订身份（diff / parent） |
-| WF-009 | P2 | 设计循环非一等图节点（无 critique→human→revise→re-critique interrupt） |
+| DOM-030 | P2 | ~~缺修订身份~~ **done (L3)** |
+| WF-009 | P2 | ~~非一等图 interrupt~~ **done (L3：Ask=人闸)** |
 | DOM-024 | P1 | （已有）Direction↔Intent 双份；revise-then-commit 放大漂移 |
 | DOM-027 | P1 | （已有）CritiqueReport/Reflection 非 DesignArtifact |
 | APP-004 | P1 | （已有）设计批判与版面 QA/Repair 权威需继续隔离 |

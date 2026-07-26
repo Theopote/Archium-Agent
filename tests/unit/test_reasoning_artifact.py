@@ -94,7 +94,29 @@ def test_parse_legacy_flat_and_envelope_roundtrip() -> None:
     assert again_a.evidence_refs.case_ids
 
 
-def test_build_reasoning_artifact_from_direction() -> None:
+def test_spawn_revision_lineage() -> None:
+    from archium.domain.design_rationale import DesignRationale
+    from archium.domain.reasoning_artifact import ReasoningArtifact
+
+    parent = ReasoningArtifact(
+        project_id=uuid4(),
+        rationale=DesignRationale(statement="v1", hypothesis="h", strategy="s"),
+        revision=1,
+    )
+    child = parent.spawn_revision(
+        rationale=DesignRationale(statement="v2", hypothesis="h2", strategy="s2"),
+        critique_verdict="caution",
+        critique_summary="补丁后",
+    )
+    assert child.revision == 2
+    assert child.parent_reasoning_id == parent.id
+    assert child.id != parent.id
+    assert child.verified is False
+    assert child.last_critique_verdict == "caution"
+    assert "v2" in child.lineage_dict()["reasoning_id"] or child.lineage_dict()[
+        "revision"
+    ] == 2
+
     artifact = build_reasoning_artifact_from_direction(_direction())
     assert artifact is not None
     assert "嵌入" in artifact.to_prompt_block() or "地景" in artifact.to_prompt_block()

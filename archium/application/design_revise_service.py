@@ -37,6 +37,11 @@ class DirectionReviseResult:
             "reflection": (
                 self.reflection.as_dict() if self.reflection is not None else None
             ),
+            "reasoning_lineage": (
+                self.direction.reasoning.lineage_dict()
+                if self.direction.reasoning is not None
+                else None
+            ),
         }
 
 
@@ -77,6 +82,7 @@ def revise_direction_from_critique(
     skipped: list[str] = []
 
     before = direction.model_dump(mode="json")
+    parent_before = direction.reasoning
     rationale = direction.design_rationale or DesignRationale()
     risks = list(direction.risks or [])
     open_questions = list(direction.open_questions or [])
@@ -147,7 +153,33 @@ def revise_direction_from_critique(
         known_facts=known_facts,
         idea_text=idea_text,
     )
+    had_parent = parent_before is not None and not parent_before.is_empty()
+    # Re-bind rationale onto existing node first so spawn sees current parent.
     direction = ensure_direction_reasoning(direction)
+    after_probe = direction.model_dump(mode="json")
+    will_change = before != after_probe or bool(applied)
+    if will_change and had_parent:
+        # Restore parent identity for spawn (first ensure may have mutated same id).
+        direction = direction.model_copy(update={"reasoning": parent_before})
+        direction = ensure_direction_reasoning(
+            direction,
+            bump_revision=True,
+            critique_verdict=report.verdict.value,
+            critique_summary=report.summary or "",
+        )
+        if direction.reasoning is not None:
+            applied.append(f"lineage:v{direction.reasoning.revision}")
+        else:
+            applied.append("lineage:bump")
+    elif will_change and direction.reasoning is not None:
+        direction = direction.model_copy(
+            update={
+                "reasoning": direction.reasoning.with_critique_meta(
+                    verdict=report.verdict.value,
+                    summary=report.summary or "",
+                )
+            }
+        )
     direction = ensure_direction_spatial_layer(direction)
     # Phase L1: never set verified here — only after a Critic proceed (re)pass.
 

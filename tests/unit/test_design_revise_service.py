@@ -123,7 +123,52 @@ def test_apply_reflection_adjustments_executes_next_adjustments() -> None:
     assert blob.strip()
 
 
-def test_reflection_includes_chain_adjustment() -> None:
+def test_revise_bumps_reasoning_revision_lineage() -> None:
+    from archium.application.reasoning_artifact import ensure_direction_reasoning
+
+    direction = _direction(
+        design_rationale=DesignRationale(
+            statement="嵌入式布局",
+            observation="山地",
+            problem="切割",
+            hypothesis="应嵌入",
+            strategy="低体量",
+            evidence=["现场"],
+            confidence=0.6,
+        )
+    )
+    direction = ensure_direction_reasoning(direction)
+    assert direction.reasoning is not None
+    parent_id = direction.reasoning.id
+    assert direction.reasoning.revision == 1
+
+    report = DesignCritiqueReport(
+        direction_id=direction.id,
+        project_id=direction.project_id,
+        verdict=DesignCritiqueVerdict.CAUTION,
+        summary="需补风险",
+        chain_incomplete=False,
+        weaknesses=[
+            DesignCritiqueItem(
+                text="施工分期边界不清",
+                challenge=DesignCritiqueChallenge.EVIDENCE,
+                severity="high",
+            )
+        ],
+        source="rules",
+    )
+    result = revise_direction_from_critique(direction, report)
+    assert result.changed is True
+    assert result.direction.reasoning is not None
+    assert result.direction.reasoning.revision == 2
+    assert result.direction.reasoning.parent_reasoning_id == parent_id
+    assert result.direction.reasoning.id != parent_id
+    assert result.direction.reasoning.verified is False
+    assert any(a.startswith("lineage:v") for a in result.applied)
+    lineage = result.as_dict()["reasoning_lineage"]
+    assert isinstance(lineage, dict)
+    assert lineage["revision"] == 2
+
     report = DesignCritiqueReport(
         verdict=DesignCritiqueVerdict.CAUTION,
         chain_incomplete=True,
