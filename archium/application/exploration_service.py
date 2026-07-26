@@ -391,6 +391,7 @@ class ExplorationService:
                 ],
             },
             design_decision=decision.as_dict(),
+            actor_id=actor_id,
         )
         self._append_intent_evolution(
             exploration.project_id,
@@ -402,6 +403,7 @@ class ExplorationService:
             reason=decision.reason or None,
             evidence_refs=list(decision.evidence)[:6],
             design_decision=decision.as_dict(),
+            actor_id=actor_id,
         )
         if (
             critique_gate is not None
@@ -614,6 +616,7 @@ class ExplorationService:
         reason: str | None = None,
         evidence_refs: list[str] | None = None,
         design_decision: dict[str, object] | None = None,
+        actor_id: str | None = None,
     ) -> None:
         project = self._projects.get_by_id(project_id)
         if project is None:
@@ -629,6 +632,7 @@ class ExplorationService:
             reason=reason,
             evidence_refs=evidence_refs,
             design_decision=design_decision,
+            actor_id=actor_id,
         )
         project.touch()
         self._projects.update(project)

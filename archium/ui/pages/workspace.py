@@ -140,11 +140,14 @@ def _render_create_project() -> None:
                 st.error("请填写项目名称")
                 return
             with get_session() as session:
+                from archium.ui.session_actor import get_current_actor_id
+
                 project = create_project(
                     session,
                     name=name,
                     project_type=project_type,
                     description=description,
+                    actor_id=get_current_actor_id(),
                 )
             st.session_state.selected_project_id = str(project.id)
             st.success(f"已创建项目：{project.name}")

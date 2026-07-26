@@ -85,10 +85,13 @@ def _render_entry_form() -> None:
 
             project_name = name.strip() or _default_name_from_prompt(prompt.strip())
             with get_session() as session:
+                from archium.ui.session_actor import get_current_actor_id
+
                 project = ProjectManagementService(session).create_project(
                     project_name,
                     prompt.strip(),
                     origin_mode=ProjectOriginMode.CONCEPT_EXPLORATION,
+                    actor_id=get_current_actor_id(),
                 )
                 assessment = assess_project_context(
                     session,

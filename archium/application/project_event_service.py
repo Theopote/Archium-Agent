@@ -16,6 +16,7 @@ from archium.domain.orchestration.process_timeline import (
     list_process_timeline,
 )
 from archium.domain.project_event import (
+    MEMBER_ACTOR_ID_KEY,
     ProjectEvent,
     ProjectEventActor,
     ProjectEventType,
@@ -35,6 +36,35 @@ _INTENT_TO_EVENT: dict[IntentEvolutionKind, ProjectEventType] = {
     IntentEvolutionKind.DESIGN_DECISION: ProjectEventType.DESIGN_DECISION,
     IntentEvolutionKind.REFLECTION: ProjectEventType.REFLECTION,
 }
+
+# Human decision kinds: when actor_id is present, project as USER (not AI).
+_HUMAN_INTENT_KINDS = frozenset(
+    {
+        IntentEvolutionKind.DIRECTION_SELECTED,
+        IntentEvolutionKind.MISSION_COMMIT,
+        IntentEvolutionKind.MISSION_APPROVED,
+        IntentEvolutionKind.DESIGN_DECISION,
+        IntentEvolutionKind.DIRECTION_REVISED,
+    }
+)
+
+
+def _normalize_actor_id(actor_id: str | None) -> str | None:
+    text = (actor_id or "").strip()
+    return text[:200] or None
+
+
+def stamp_member_actor(
+    payload: dict[str, Any],
+    actor_id: str | None,
+) -> dict[str, Any]:
+    """Copy-on-write stamp of member actor_id into event payload."""
+    resolved = _normalize_actor_id(actor_id)
+    if not resolved:
+        return payload
+    out = dict(payload)
+    out[MEMBER_ACTOR_ID_KEY] = resolved
+    return out
 
 
 def _fingerprint(*parts: object) -> str:
@@ -56,6 +86,7 @@ class ProjectEventService:
         summary: str,
         *,
         actor: ProjectEventActor = ProjectEventActor.SYSTEM,
+        actor_id: str | None = None,
         payload: dict[str, Any] | None = None,
         dedupe_key: str = "",
         source: str = "explicit",
@@ -72,7 +103,7 @@ class ProjectEventService:
             event_type=event_type,
             actor=actor,
             summary=text[:800],
-            payload=dict(payload or {}),
+            payload=stamp_member_actor(dict(payload or {}), actor_id),
             dedupe_key=key[:200],
             source=source[:80],
         )
@@ -102,11 +133,16 @@ class ProjectEventService:
                 payload["trigger"] = item.trigger
             if item.reason:
                 payload["reason"] = item.reason
+            member_id = _normalize_actor_id(getattr(item, "actor_id", None))
+            event_actor = ProjectEventActor.AI
+            if member_id and kind in _HUMAN_INTENT_KINDS:
+                event_actor = ProjectEventActor.USER
             created = self.emit(
                 project_id,
                 event_type,
                 item.display_line() or item.summary,
-                actor=ProjectEventActor.AI,
+                actor=event_actor,
+                actor_id=member_id,
                 payload=payload,
                 dedupe_key=key,
                 source="intent_evolution",

@@ -13,4 +13,4 @@
 | COLLAB-003 | P1 | done | 无 session actor SSOT；全局硬编码 local-user | `session_actor.py` | 无法切换身份 | session `actor_id` + redeem 写入 | 兑换后身份切换 | Topic 08 C1 |
 | COLLAB-004 | P1 | done | 邀请码仅 Home 手输；无 deep link / 邮件 | `invite_deep_link.py`; home; members panel | 难分享给甲方 | `?invite=` → pending redeem | URL 可预填兑换 | Topic 08 C2 |
 | COLLAB-005 | P1 | done | 无 Client/Reviewer 角色化导航 | `role_navigation.py`; continue_work; flow strip | 全员同一五阶段 | 角色化 chrome | Client continue→deliver；strip 示角色 | Topic 08 C3 |
-| COLLAB-006 | P2 | open | ProjectEvent 无 member 级 attribution | `project_event.py` | 无法答「谁批准」 | payload actor_id | 事件可读成员 | `-` |
+| COLLAB-006 | P2 | done | ProjectEvent 无 member 级 attribution | `project_event.py`; emit/intent/invite | 无法答「谁批准」 | payload `actor_id` + 投影 | 创建/选定/批准/兑换可读成员 | Topic 08 C3 |

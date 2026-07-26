@@ -292,11 +292,12 @@ class PlanningWorkflowService:
         mission_id: UUID,
         *,
         user_id: str | None = None,
+        actor_id: str | None = None,
         note: str | None = None,
     ) -> ProjectMission:
         """Approve mission understanding (domain action only)."""
         return self._runtime.mission_service.approve_mission(
-            mission_id, user_id=user_id, note=note
+            mission_id, user_id=user_id, actor_id=actor_id, note=note
         )
 
     def resume_after_mission_approval(
@@ -331,12 +332,15 @@ class PlanningWorkflowService:
         workflow_run_id: UUID,
         *,
         user_id: str | None = None,
+        actor_id: str | None = None,
         note: str | None = None,
     ) -> PlanningWorkflowResult:
         """UI facade: approve mission then resume past the mission-approval gate."""
         run = self._require_planning_run(workflow_run_id)
         mission_id = self._mission_id_from_run(run)
-        self.approve_mission(mission_id, user_id=user_id, note=note)
+        self.approve_mission(
+            mission_id, user_id=user_id, actor_id=actor_id, note=note
+        )
         return self.resume_after_mission_approval(workflow_run_id)
 
     def approve_deliverable_plan(

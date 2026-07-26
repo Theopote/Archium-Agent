@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**协作底座 + C1–C3 产品胶合已落地一截；仍非完整商业化。** 可见项目、关键写路径、邀请 deep link、Client/Reviewer 角色化 continue/chrome 已通。无可信 IdP、无 Org/计费层；`LLMTrace` 可作用量原料，尚非账单。
+**协作底座 + C1–C3 产品胶合已落地一截；仍非完整商业化。** 可见项目、关键写路径、邀请 deep link、角色化 chrome、事件成员归因已通。无可信 IdP、无 Org/计费层；`LLMTrace` 可作用量原料，尚非账单。
 
 ---
 
@@ -32,7 +32,7 @@
   关键写路径 require               Studio 细粒度 / 评论 RBAC
   ?invite= deep link             邮件外发
   角色化 continue + chrome        全局顶栏 actor 切换仍薄
-  ProjectEvent + LLMTrace        member 归因 / 用量 UI / Org
+  ProjectEvent + member actor_id  Studio 评论归因 / 用量 UI / Org
 ```
 
 | 层 | 成熟度 | 落点 |
@@ -41,7 +41,7 @@
 | 权限接线 | **B（C1–C2）** | 可见项目 + 关键写路径；Studio 细粒度仍欠 |
 | 邀请 | **B（C2）** | 码+TTL + `?invite=` deep link |
 | 角色化 UI | **B-（C3）** | continue + design strip + 编辑预警 |
-| 共享记忆 | B | ProjectEvent / IntentEvolution |
+| 共享记忆 | **B+（C3）** | ProjectEvent / IntentEvolution + member `actor_id` |
 | LLMTrace | B- | 可持久；无聚合 UI |
 | Studio 评论 | C+ | ElementComment；无协作者身份 |
 | Auth / Org | F | 无 SSO；无 Organization |
@@ -67,7 +67,7 @@
 4. **Redeem 自填 actor_id** — 身份可伪造（SEC-002）  
 5. **无 Organization** — 多客户事务所 SaaS 无根对象（DOM-032）  
 6. **用量：** Trace 有、账单无（BILL-001/002）  
-7. **事件归因：** ProjectEvent 缺 member 级 actor（COLLAB-006）  
+7. ~~事件归因~~ → **C3 payload `actor_id`**（选定/批准/创建/兑换）；Studio 评论归因仍欠  
 
 ---
 
@@ -93,7 +93,7 @@
 ### Phase C3 — 角色化 UI ✅ 切片（2026-07-26）；用量仍开
 
 8. **Client/Reviewer 角色化 chrome（COLLAB-005）** — `role_navigation` + continue_work + design strip + 编辑预警  
-9. ElementComment / ProjectEvent attribution（COLLAB-006）— **仍开**  
+9. **ProjectEvent member attribution（COLLAB-006）** — payload `actor_id`；选定/批准/创建/邀请兑换  
 10. Token rollup + soft quota（BILL-001/002）— **仍开**  
 11. 可选 Organization（DOM-032）— **仍开**
 
@@ -110,7 +110,7 @@
 | COLLAB-003 | P1 | ~~无 session actor SSOT~~ **done (C1)** |
 | COLLAB-004 | P1 | ~~邀请无 deep link~~ **done (C2)** |
 | COLLAB-005 | P1 | ~~无 Client/Reviewer 角色化导航~~ **done (C3)** |
-| COLLAB-006 | P2 | ProjectEvent 无 member 级 attribution |
+| COLLAB-006 | P2 | ~~ProjectEvent 无 member 级 attribution~~ **done (C3)** |
 | SEC-001 | P0 | ~~无成员时 local-user 全权限 bootstrap~~ **mitigated (C1)** |
 | SEC-002 | P1 | 无 OAuth；actor_id 可伪造 |
 | APP-028 | P1 | ~~缺统一 require 门面~~ **done (C1)**；写路径 **done (C2)** |
@@ -127,7 +127,7 @@
 |------|------|
 | 07 产品闭环 | continue_work 已接 `actor_id` 角色启发式（C3） |
 | 01 Domain | 无 Org 根（DOM-032） |
-| 04 设计循环 | Ask durable；缺「谁 Apply」归因 |
+| 04 设计循环 | Ask durable；Apply/选定/批准已可归因（C3） |
 | module-audit | `15-collaboration` / `16-billing-usage` |
 
 ---
@@ -139,4 +139,5 @@
 - [x] Phase C1 身份与可见项目  
 - [x] Phase C2 写路径 RBAC + invite deep link  
 - [x] Phase C3 角色化 UI（COLLAB-005）  
-- [ ] Phase C3 余量：归因 / 用量 / tenancy
+- [x] Phase C3 事件成员归因（COLLAB-006）  
+- [ ] Phase C3 余量：用量 / tenancy

@@ -81,11 +81,14 @@ def create_studio_project(
     project_type: ProjectType,
     description: str = "",
 ) -> Project:
+    from archium.ui.session_actor import get_current_actor_id
+
     return create_project(
         session,
         name=name,
         project_type=project_type,
         description=description,
+        actor_id=get_current_actor_id(),
     )
 
 

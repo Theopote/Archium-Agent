@@ -92,13 +92,15 @@ class ProjectRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def create(self, project: Project) -> Project:
+    def create(self, project: Project, *, actor_id: str | None = None) -> Project:
         try:
             orm = mappers.project_to_orm(project)
             self._session.add(orm)
             self._session.flush()
             created = mappers.project_to_domain(orm)
-            self._sync_project_events(created, emit_created=True)
+            self._sync_project_events(
+                created, emit_created=True, actor_id=actor_id
+            )
             return created
         except SQLAlchemyError as exc:
             _handle_error("create project", exc)
@@ -141,7 +143,13 @@ class ProjectRepository:
             _handle_error("update project", exc)
             raise
 
-    def _sync_project_events(self, project: Project, *, emit_created: bool) -> None:
+    def _sync_project_events(
+        self,
+        project: Project,
+        *,
+        emit_created: bool,
+        actor_id: str | None = None,
+    ) -> None:
         """Best-effort projection into project_events (never fail the primary write)."""
         try:
             from archium.application.project_event_service import ProjectEventService
@@ -157,6 +165,7 @@ class ProjectRepository:
                     ProjectEventType.PROJECT_CREATED,
                     f"创建项目「{project.name}」",
                     actor=ProjectEventActor.USER,
+                    actor_id=actor_id,
                     dedupe_key=f"project_created:{project.id}",
                     source="project_repository",
                 )

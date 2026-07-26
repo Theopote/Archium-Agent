@@ -261,6 +261,7 @@ class ProjectMissionService:
         mission_id: UUID,
         *,
         user_id: str | None = None,
+        actor_id: str | None = None,
         note: str | None = None,
     ) -> ProjectMission:
         """Mark the mission approved (domain action only — does not resume workflow)."""
@@ -271,16 +272,19 @@ class ProjectMissionService:
         mission.approve()
         mission.approval_hash = mission_approval_hash(mission)
         saved = self._missions.save_mission(mission)
+        resolved_actor = (actor_id or user_id or "").strip() or None
         history_note = note or "批准任务理解"
-        if user_id:
-            history_note = f"{history_note} · by {user_id}"
+        if resolved_actor:
+            history_note = f"{history_note} · by {resolved_actor}"
         self._history.record_snapshot(
             saved,
             RevisionSource.APPROVAL,
             note=history_note,
-            actor=user_id,
+            actor=resolved_actor,
         )
-        self._append_mission_approved_evolution(saved, note=history_note)
+        self._append_mission_approved_evolution(
+            saved, note=history_note, actor_id=resolved_actor
+        )
         from archium.application.context import best_effort_reassess_knowledge
 
         best_effort_reassess_knowledge(
@@ -297,6 +301,7 @@ class ProjectMissionService:
         mission: ProjectMission,
         *,
         note: str,
+        actor_id: str | None = None,
     ) -> None:
         from archium.application.intent_evolution_graph import intent_label_from_mission
         from archium.domain.intent.intent_evolution import (
@@ -341,6 +346,7 @@ class ProjectMissionService:
                 if mission.design_intent is not None
                 else {"title": mission.title, "task_statement": mission.task_statement}
             ),
+            actor_id=actor_id,
         )
         project.touch()
         projects.update(project)

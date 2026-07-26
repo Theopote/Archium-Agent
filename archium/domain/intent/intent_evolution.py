@@ -76,6 +76,11 @@ class IntentEvolutionEvent(DomainModel):
         default=None,
         description="Optional DesignDecision payload (model_dump).",
     )
+    actor_id: str | None = Field(
+        default=None,
+        max_length=200,
+        description="Member actor who caused this human decision (COLLAB-006).",
+    )
 
     def display_line(self) -> str:
         """Human-readable Design History line; falls back to summary."""
@@ -120,6 +125,7 @@ class IntentEvolution(DomainModel):
         reason: str | None = None,
         evidence_refs: list[str] | None = None,
         design_decision: dict[str, object] | None = None,
+        actor_id: str | None = None,
     ) -> IntentEvolution:
         events = list(self.events)
         event = IntentEvolutionEvent(
@@ -136,6 +142,7 @@ class IntentEvolution(DomainModel):
                 if ref and str(ref).strip()
             ][:12],
             design_decision=design_decision,
+            actor_id=_clip(actor_id, 200),
         )
         if event.previous_summary or event.new_summary or event.reason:
             event = event.model_copy(update={"summary": event.display_line()[:500]})

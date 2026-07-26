@@ -258,6 +258,7 @@ class ConceptDirectionService:
                     evidence_refs=list(decision.evidence)[:6],
                     design_decision=decision.as_dict(),
                     design_intent_snapshot=updated_intent.model_dump(mode="json"),
+                    actor_id=actor_id,
                 )
                 if critique_gate.report is not None and not _loop_revised:
                     # APP-015 / L3: Mission path records DESIGN_CRITIQUE like exploration

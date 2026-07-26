@@ -50,6 +50,7 @@ class ProjectManagementService:
         description: str | None = None,
         *,
         origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
+        actor_id: str | None = None,
     ) -> Project:
         cleaned_name = name.strip()
         if not cleaned_name:
@@ -59,12 +60,15 @@ class ProjectManagementService:
         if cleaned_description == "":
             cleaned_description = None
 
+        from archium.domain.access import LOCAL_ACTOR_ID
+
+        resolved = (actor_id or LOCAL_ACTOR_ID).strip() or LOCAL_ACTOR_ID
         project = Project(
             name=cleaned_name,
             description=cleaned_description,
             origin_mode=origin_mode,
         )
-        created = self._projects.create(project)
+        created = self._projects.create(project, actor_id=resolved)
         # APP-003: use-case boundary owns commit (UI must not).
         self._session.commit()
         logger.info("Created project %s", created.id)

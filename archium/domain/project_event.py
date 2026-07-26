@@ -41,6 +41,10 @@ class ProjectEventActor(StrEnum):
     AI = "ai"
 
 
+# Payload key for member-level attribution (COLLAB-006). Avoids schema migration.
+MEMBER_ACTOR_ID_KEY = "actor_id"
+
+
 class ProjectEvent(IdentifiedModel, TimestampedModel):
     """One append-only project memory row."""
 
@@ -54,5 +58,24 @@ class ProjectEvent(IdentifiedModel, TimestampedModel):
     dedupe_key: str = Field(default="", max_length=200)
     source: str = Field(default="", max_length=80)
 
+    @property
+    def member_actor_id(self) -> str | None:
+        raw = self.payload.get(MEMBER_ACTOR_ID_KEY)
+        if raw is None:
+            return None
+        text = str(raw).strip()
+        return text[:200] or None
+
     def display_line(self) -> str:
         return self.summary.strip()
+
+    def attribution_label(self) -> str:
+        """Short 「谁」label for UI; empty when unattributed."""
+        member = self.member_actor_id
+        if member:
+            return member
+        if self.actor == ProjectEventActor.USER:
+            return "用户"
+        if self.actor == ProjectEventActor.AI:
+            return "AI"
+        return ""

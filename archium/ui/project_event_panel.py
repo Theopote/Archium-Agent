@@ -50,7 +50,11 @@ def render_project_event_log(
         for event in events:
             label = _EVENT_LABELS.get(event.event_type.value, event.event_type.value)
             when = event.at.astimezone().strftime("%m-%d %H:%M")
-            st.markdown(f"- **{label}** · `{when}` — {event.display_line()}")
+            who = event.attribution_label()
+            who_bit = f" · `{who}`" if who else ""
+            st.markdown(
+                f"- **{label}** · `{when}`{who_bit} — {event.display_line()}"
+            )
 
 
 def render_job_progress_strip(

@@ -112,6 +112,29 @@ class ProjectInviteService:
         invite.use_count += 1
         invite.touch()
         invite = self._repo.update(invite)
+        try:
+            from archium.application.project_event_service import ProjectEventService
+            from archium.domain.project_event import (
+                ProjectEventActor,
+                ProjectEventType,
+            )
+
+            ProjectEventService(self._session).emit(
+                invite.project_id,
+                ProjectEventType.OTHER,
+                f"成员加入：{member.display_name or member.actor_id}（{invite.role.value}）",
+                actor=ProjectEventActor.USER,
+                actor_id=member.actor_id,
+                payload={
+                    "invite_code": invite.code,
+                    "role": invite.role.value,
+                    "member_id": str(member.id),
+                },
+                dedupe_key=f"member_joined:{invite.project_id}:{member.actor_id}:{invite.id}",
+                source="invite_redeem",
+            )
+        except Exception:
+            pass
         return invite, member
 
     def get_by_code(self, code: str) -> ProjectInvite | None:

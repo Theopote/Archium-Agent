@@ -101,14 +101,18 @@ def create_project(
     project_type: ProjectType,
     description: str = "",
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
+    actor_id: str | None = None,
 ) -> Project:
+    from archium.domain.access import LOCAL_ACTOR_ID
+
     project = Project(
         name=name.strip(),
         project_type=project_type,
         description=description.strip() or None,
         origin_mode=origin_mode,
     )
-    return ProjectRepository(session).create(project)
+    resolved = (actor_id or LOCAL_ACTOR_ID).strip() or LOCAL_ACTOR_ID
+    return ProjectRepository(session).create(project, actor_id=resolved)
 
 
 def get_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:

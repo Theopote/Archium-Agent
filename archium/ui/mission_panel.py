@@ -273,11 +273,17 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
     ):
         try:
             with get_session() as session:
+                from archium.ui.session_actor import get_current_actor_id
+
                 ProjectMissionService(
                     session,
                     create_llm_provider(settings),
                     settings=settings,
-                ).approve_mission(mission.id, note="研究写回后重新批准")
+                ).approve_mission(
+                    mission.id,
+                    note="研究写回后重新批准",
+                    actor_id=get_current_actor_id(),
+                )
             st.success("任务理解已批准。")
             st.rerun()
         except WorkflowError as exc:
@@ -292,10 +298,13 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
     ):
         try:
             with get_session() as session:
+                from archium.ui.session_actor import get_current_actor_id
+
                 approve_mission_and_continue(
                     session,
                     UUID(str(workflow_run_id)),
                     note="研究写回后重新批准",
+                    actor_id=get_current_actor_id(),
                     settings=settings,
                 )
             st.success("任务理解已批准，规划工作流已继续。")

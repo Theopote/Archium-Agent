@@ -162,10 +162,13 @@ def _render_create_project_form() -> None:
 
         if submit:
             try:
+                from archium.ui.session_actor import get_current_actor_id
+
                 with get_session() as session:
                     created_project = ProjectManagementService(session).create_project(
                         project_name,
                         project_description,
+                        actor_id=get_current_actor_id(),
                     )
                 st.success(f"✅ 项目「{created_project.name}」创建成功")
                 st.session_state.selected_project_id = str(created_project.id)

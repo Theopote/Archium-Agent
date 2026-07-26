@@ -163,13 +163,14 @@ def approve_mission_and_continue(
     workflow_run_id: UUID,
     *,
     user_id: str | None = None,
+    actor_id: str | None = None,
     note: str | None = None,
     settings: Settings | None = None,
 ) -> PlanningWorkflowResult:
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.approve_mission_and_continue(
-        workflow_run_id, user_id=user_id, note=note
+        workflow_run_id, user_id=user_id, actor_id=actor_id, note=note
     )
 
 
