@@ -334,8 +334,10 @@ class ConceptDirectionService:
             direction,
             known_facts=self._known_facts_for_project(mission.project_id),
         )
+        from archium.application.reasoning_artifact import ensure_direction_reasoning
         from archium.application.spatial_design_layer import ensure_direction_spatial_layer
 
+        direction = ensure_direction_reasoning(direction)
         direction = ensure_direction_spatial_layer(direction)
         return self._directions.create(direction)
 

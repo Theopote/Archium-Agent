@@ -74,7 +74,7 @@ class DesignRationaleDraft(BaseModel):
 | DesignReflection | 派生 VO | 无表 | — | next_adjustments **未执行** |
 | ResearchRun | 遥测 |  ephemeral | Research Critic 另轨 | 否 |
 | DesignKnowledge | 研究洞察 | KnowledgeItem JSON | prompt 注入 | 软 |
-| ReasoningArtifact | **不存在** | — | — | — |
+| ReasoningArtifact | **薄封装** | Direction JSON envelope | 是（reasoning_id） | 否（R3） |
 
 `archium/agents/` 以 Narrative/Brief planner 为主，**不**产出 observation→strategy；消费 `design_intent_block` 字符串。
 
@@ -149,11 +149,13 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 
 （关闭 `APP-008` / `APP-009` / `DOM-029`。）
 
-### Phase R2 — Reasoning 节点身份（中）
+### Phase R2 — Reasoning 节点身份（中）✅ 2026-07-26
 
 4. 薄封装 `ReasoningArtifact` = DesignRationale + `id` + `project_id` + evidence refs（cases / knowledge ids）  
-   或给 Direction 上的 rationale 加 lineage，不强制新表一期  
+   嵌套于 Direction 的 `design_rationale` JSON envelope（无新表）  
 5. Critic 评分改为「链完整度 + 证据」；缺 hypothesis/strategy 不得 proceed  
+
+（关闭 `APP-011`。）
 
 ### Phase R3 — Critic → Revise 闭环（产品关键）
 
@@ -172,7 +174,7 @@ Context Intelligence ──推理(NBA)──► IdeaSeed
 | APP-008 | P1 | ~~DesignRationaleDraft 缺链字段~~ **done (R1)** |
 | APP-009 | P1 | ~~框架映射到分散字段~~ **done (R1)** |
 | APP-010 | P1 | DesignCritique / Reflection 无 Revise：next_adjustments 不执行 |
-| APP-011 | P2 | 无 ReasoningArtifact 身份；证据 refs 未绑定单一推理节点 |
+| APP-011 | P2 | ~~无 ReasoningArtifact~~ **done (R2)** |
 | DOM-029 | P2 | ~~缺 interpretation~~ **done (R1)** |
 
 （写入 `03-application.md` / `02-domain.md`。）

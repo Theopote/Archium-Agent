@@ -29,6 +29,7 @@ class DesignCritiqueChallenge(StrEnum):
     PROBLEM_FIT = "problem_fit"
     ALTERNATIVE = "alternative"
     FORM_ONLY = "form_only"
+    CHAIN = "chain"
 
 
 class DesignCritiqueItem(DomainModel):
@@ -51,6 +52,7 @@ class DesignCritiqueReport(TimestampedModel):
 
     direction_id: UUID | None = None
     project_id: UUID | None = None
+    reasoning_id: UUID | None = None
     verdict: DesignCritiqueVerdict = DesignCritiqueVerdict.CAUTION
     summary: str = ""
     strengths: list[DesignCritiqueItem] = Field(default_factory=list)
@@ -58,6 +60,7 @@ class DesignCritiqueReport(TimestampedModel):
     missing_evidence: list[DesignCritiqueItem] = Field(default_factory=list)
     alternative_directions: list[DesignCritiqueItem] = Field(default_factory=list)
     form_only_risk: bool = False
+    chain_incomplete: bool = False
     source: str = Field(default="mixed", max_length=40)  # llm | rules | mixed
 
     def touch_completed(self) -> None:
@@ -71,9 +74,11 @@ class DesignCritiqueReport(TimestampedModel):
         return {
             "direction_id": str(self.direction_id) if self.direction_id else None,
             "project_id": str(self.project_id) if self.project_id else None,
+            "reasoning_id": str(self.reasoning_id) if self.reasoning_id else None,
             "verdict": self.verdict.value,
             "summary": self.summary,
             "form_only_risk": self.form_only_risk,
+            "chain_incomplete": self.chain_incomplete,
             "source": self.source,
             "strengths": [item.model_dump() for item in self.strengths],
             "weaknesses": [item.model_dump() for item in self.weaknesses],
@@ -87,6 +92,8 @@ class DesignCritiqueReport(TimestampedModel):
         lines: list[str] = []
         if self.summary.strip():
             lines.append(self.summary.strip())
+        if self.chain_incomplete:
+            lines.append("推理链不完整：缺少假设或策略，不宜直接 proceed。")
         if self.form_only_risk:
             lines.append("形式风险偏高：论证更偏形式语言，问题/证据链偏弱。")
         for item in self.weaknesses[:3]:

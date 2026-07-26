@@ -608,6 +608,9 @@ class ExplorationService:
             known_facts=self._known_facts_for_project(exploration.project_id),
             idea_text=seed.raw_input if seed is not None else exploration.idea_text,
         )
+        from archium.application.reasoning_artifact import ensure_direction_reasoning
+
+        direction = ensure_direction_reasoning(direction)
         direction = ensure_direction_spatial_layer(direction)
         return self._directions.create(direction)
 

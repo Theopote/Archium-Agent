@@ -20,6 +20,7 @@ from archium.domain.design_critique import (
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.exceptions import WorkflowError
+from archium.application.reasoning_artifact import ensure_direction_reasoning
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
 from archium.infrastructure.llm.capabilities import LLMCapability
@@ -107,6 +108,7 @@ class DesignCritiqueService:
         research_summaries: list[str] | None = None,
     ) -> DesignCritiqueReport:
         """Critique a concept direction against intent + research context."""
+        direction = ensure_direction_reasoning(direction)
         research_block = self._research_block(
             knowledge_state=knowledge_state,
             research_summaries=research_summaries,
@@ -164,6 +166,10 @@ class DesignCritiqueService:
             design_intent=design_intent,
             research_block=research_block,
         )
+        if direction.reasoning is not None:
+            report = report.model_copy(
+                update={"reasoning_id": direction.reasoning.id}
+            )
         report.touch_completed()
         return report
 
@@ -270,9 +276,21 @@ class DesignCritiqueService:
         source = report.source
 
         rationale = direction.design_rationale
+        if direction.reasoning is not None and not direction.reasoning.is_empty():
+            rationale = direction.reasoning.rationale
         evidence_bits: list[str] = []
         if rationale is not None:
             evidence_bits.extend(rationale.evidence or [])
+        if direction.reasoning is not None:
+            if direction.reasoning.evidence_refs.case_ids:
+                evidence_bits.extend(
+                    f"case:{cid}" for cid in direction.reasoning.evidence_refs.case_ids
+                )
+            if direction.reasoning.evidence_refs.knowledge_item_ids:
+                evidence_bits.extend(
+                    str(uid)
+                    for uid in direction.reasoning.evidence_refs.knowledge_item_ids
+                )
         if design_intent is not None:
             evidence_bits.extend(
                 e.statement for e in (design_intent.evidence or []) if e.statement.strip()
@@ -300,9 +318,42 @@ class DesignCritiqueService:
             )
             source = "mixed" if source == "llm" else "rules"
 
+        chain_incomplete = False
+        if rationale is None or rationale.is_empty():
+            chain_incomplete = True
+            weaknesses.append(
+                DesignCritiqueItem(
+                    text="缺少可寻址推理节点（DesignRationale / ReasoningArtifact）",
+                    challenge=DesignCritiqueChallenge.CHAIN,
+                    severity="high",
+                )
+            )
+            source = "mixed" if source == "llm" else "rules"
+        elif not rationale.is_proceedable_chain():
+            chain_incomplete = True
+            missing_parts: list[str] = []
+            if not (rationale.hypothesis or "").strip():
+                missing_parts.append("hypothesis")
+            if not (rationale.strategy or "").strip():
+                missing_parts.append("strategy")
+            weaknesses.append(
+                DesignCritiqueItem(
+                    text=(
+                        "推理链不完整，缺 "
+                        + " / ".join(missing_parts)
+                        + "；完整度不足不得 proceed"
+                    ),
+                    challenge=DesignCritiqueChallenge.CHAIN,
+                    severity="high",
+                )
+            )
+            source = "mixed" if source == "llm" else "rules"
+
         problem = ""
         if design_intent is not None:
             problem = (design_intent.problem_statement or "").strip()
+        if rationale is not None and (rationale.problem or "").strip():
+            problem = problem or rationale.problem.strip()
         blob = " ".join(
             part
             for part in (
@@ -311,6 +362,9 @@ class DesignCritiqueService:
                 direction.formal_language,
                 direction.experience_focus,
                 (rationale.statement if rationale else ""),
+                (rationale.problem if rationale else ""),
+                (rationale.hypothesis if rationale else ""),
+                (rationale.strategy if rationale else ""),
             )
             if part and str(part).strip()
         )
@@ -343,7 +397,23 @@ class DesignCritiqueService:
             for item in missing + weaknesses
             if item.severity in {"critical", "high"}
         ]
-        if form_only and len(high_gaps) >= 2:
+        if chain_incomplete and (
+            rationale is None
+            or rationale.is_empty()
+            or (
+                not (rationale.hypothesis or "").strip()
+                and not (rationale.strategy or "").strip()
+            )
+        ):
+            # No usable hypothesis/strategy at all → reject proceed path
+            verdict = DesignCritiqueVerdict.REJECT
+        elif chain_incomplete:
+            # Partial chain (one of hypothesis/strategy missing) → cannot proceed
+            if verdict == DesignCritiqueVerdict.PROCEED:
+                verdict = DesignCritiqueVerdict.CAUTION
+            if form_only:
+                verdict = DesignCritiqueVerdict.REJECT
+        elif form_only and len(high_gaps) >= 2:
             verdict = DesignCritiqueVerdict.REJECT
         elif high_gaps and verdict == DesignCritiqueVerdict.PROCEED:
             verdict = DesignCritiqueVerdict.CAUTION
@@ -356,6 +426,8 @@ class DesignCritiqueService:
                 summary = "批判结论：可继续，但需正视弱点与缺证"
             else:
                 summary = "批判结论：可继续选定"
+        if chain_incomplete and "推理链" not in summary:
+            summary = (summary.rstrip("。") + "；推理链 hypothesis/strategy 不完整。").strip()
 
         return report.model_copy(
             update={
@@ -363,9 +435,13 @@ class DesignCritiqueService:
                 "missing_evidence": _dedupe_items(missing)[:8],
                 "alternative_directions": _dedupe_items(alternatives)[:6],
                 "form_only_risk": form_only,
+                "chain_incomplete": chain_incomplete,
                 "verdict": verdict,
                 "summary": summary,
                 "source": source,
+                "reasoning_id": (
+                    direction.reasoning.id if direction.reasoning is not None else None
+                ),
             }
         )
 

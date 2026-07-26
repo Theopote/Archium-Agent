@@ -68,6 +68,10 @@ class DesignRationale(DomainModel):
             or self.strategy.strip()
         )
 
+    def is_proceedable_chain(self) -> bool:
+        """True when hypothesis and strategy are present — Critic may allow proceed."""
+        return bool(self.hypothesis.strip() and self.strategy.strip())
+
     def is_empty(self) -> bool:
         return not (
             self.statement.strip()

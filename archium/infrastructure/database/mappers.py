@@ -16,7 +16,10 @@ from archium.domain.cultural_narrative import (
     CulturalNarrativePlan,
 )
 from archium.domain.delivery_record import DeliveryRecord
-from archium.domain.design_rationale import DesignRationale
+from archium.domain.reasoning_artifact import (
+    dump_reasoning_storage,
+    parse_reasoning_storage,
+)
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
@@ -1354,13 +1357,13 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
             visual = None
     rationale_raw = getattr(orm, "design_rationale_json", None)
     rationale = None
+    reasoning = None
     if isinstance(rationale_raw, dict) and rationale_raw:
-        try:
-            parsed_rationale = DesignRationale.model_validate(rationale_raw)
-            if not parsed_rationale.is_empty():
-                rationale = parsed_rationale
-        except Exception:
-            rationale = None
+        rationale, reasoning = parse_reasoning_storage(
+            rationale_raw,
+            project_id=orm.project_id,
+            direction_id=orm.id,
+        )
     spatial_raw = getattr(orm, "spatial_intent_json", None)
     spatial = None
     if isinstance(spatial_raw, dict) and spatial_raw:
@@ -1398,6 +1401,7 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
         reference_case_ids=list(getattr(orm, "reference_case_ids_json", None) or []),
         visual_prompt=visual,
         design_rationale=rationale,
+        reasoning=reasoning,
         spatial_intent=spatial,
         design_rules=rules,
         experience_focus=orm.experience_focus or "",
@@ -1434,10 +1438,9 @@ def concept_direction_to_orm(
         if domain.visual_prompt is not None and not domain.visual_prompt.is_empty()
         else None
     )
-    target.design_rationale_json = (
-        domain.design_rationale.model_dump(mode="json")
-        if domain.design_rationale is not None and not domain.design_rationale.is_empty()
-        else None
+    target.design_rationale_json = dump_reasoning_storage(
+        reasoning=domain.reasoning,
+        design_rationale=domain.design_rationale,
     )
     target.spatial_intent_json = (
         domain.spatial_intent.model_dump(mode="json")

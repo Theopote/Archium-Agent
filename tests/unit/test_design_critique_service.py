@@ -49,12 +49,93 @@ def test_critique_rules_flag_missing_evidence_and_form_only() -> None:
     assert any("依据" in item.text or "证据" in item.text for item in report.missing_evidence)
     assert report.alternative_directions
     assert report.form_only_risk is True
-    assert report.verdict in {
-        DesignCritiqueVerdict.CAUTION,
-        DesignCritiqueVerdict.REJECT,
-    }
+    assert report.chain_incomplete is True
+    assert report.verdict == DesignCritiqueVerdict.REJECT
     # Critic must not mutate direction fields — service only returns report
     assert report.source in {"rules", "mixed"}
+
+
+def test_critique_incomplete_chain_cannot_proceed() -> None:
+    llm = MagicMock()
+    llm.generate_structured.return_value = DesignCritiqueDraft(
+        verdict="proceed",
+        summary="模型偏乐观",
+        strengths=[],
+        weaknesses=[],
+        missing_evidence=[],
+        alternative_directions=[],
+        form_only_risk=False,
+    )
+    service = DesignCritiqueService(MagicMock(), llm, settings=Settings(_env_file=None))
+    direction = ConceptDirection(
+        id=uuid4(),
+        project_id=uuid4(),
+        title="礼仪轴",
+        summary="回应礼佛流线问题",
+        spatial_strategy="礼仪轴线与场地入口矛盾",
+        design_rationale=DesignRationale(
+            statement="礼仪优先",
+            evidence=["现场踏勘：入口偏窄"],
+            confidence=0.5,
+            # missing hypothesis / strategy
+        ),
+    )
+    report = service.critique(
+        direction,
+        design_intent=DesignIntent(
+            theme="寺庙",
+            problem_statement="礼佛流线与后勤冲突",
+        ),
+        research_summaries=["礼仪流线研究摘要"],
+    )
+    assert report.chain_incomplete is True
+    assert report.verdict != DesignCritiqueVerdict.PROCEED
+    assert report.reasoning_id is not None
+    assert any(item.challenge.value == "chain" for item in report.weaknesses)
+
+
+def test_critique_proceedable_chain_keeps_llm_proceed_when_evidence_ok() -> None:
+    llm = MagicMock()
+    llm.generate_structured.return_value = DesignCritiqueDraft(
+        verdict="proceed",
+        summary="链完整",
+        strengths=[
+            DesignCritiqueItemDraft(text="轴线清晰", challenge="why", severity="suggestion")
+        ],
+        weaknesses=[],
+        missing_evidence=[],
+        alternative_directions=[],
+        form_only_risk=False,
+    )
+    service = DesignCritiqueService(MagicMock(), llm, settings=Settings(_env_file=None))
+    direction = ConceptDirection(
+        id=uuid4(),
+        project_id=uuid4(),
+        title="礼仪轴",
+        summary="回应礼佛流线问题",
+        spatial_strategy="礼仪轴线与场地入口矛盾",
+        reference_case_ids=["ningbo_museum"],
+        design_rationale=DesignRationale(
+            statement="礼仪优先",
+            observation="入口与后勤冲突",
+            problem="礼佛流线与后勤冲突",
+            hypothesis="礼仪轴可分离流线",
+            strategy="礼仪轴线与服务环分离",
+            evidence=["现场踏勘：入口偏窄"],
+            confidence=0.7,
+        ),
+    )
+    report = service.critique(
+        direction,
+        design_intent=DesignIntent(
+            theme="寺庙",
+            problem_statement="礼佛流线与后勤冲突",
+        ),
+        research_summaries=["礼仪流线研究摘要"],
+    )
+    assert report.chain_incomplete is False
+    assert report.verdict == DesignCritiqueVerdict.PROCEED
+    assert report.reasoning_id is not None
 
 
 def test_critique_llm_draft_merged_with_rules() -> None:

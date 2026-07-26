@@ -11,6 +11,7 @@ from archium.domain.case_ref import normalize_case_id_list
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.design_rationale import DesignRationale
 from archium.domain.enums import ConceptDirectionStatus
+from archium.domain.reasoning_artifact import ReasoningArtifact
 from archium.domain.spatial_design import DesignRule, SpatialIntent
 
 
@@ -34,6 +35,10 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
     )
     visual_prompt: ConceptVisualPrompt | None = None
     design_rationale: DesignRationale | None = None
+    reasoning: ReasoningArtifact | None = Field(
+        default=None,
+        description="Addressable reasoning node (Phase R2); wraps design_rationale + evidence refs.",
+    )
     spatial_intent: SpatialIntent | None = None
     design_rules: list[DesignRule] = Field(default_factory=list)
     experience_focus: str = ""
@@ -94,7 +99,11 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
             block = self.visual_prompt.to_prompt_block()
             if block:
                 sections.append(block)
-        if self.design_rationale is not None:
+        if self.reasoning is not None and not self.reasoning.is_empty():
+            block = self.reasoning.to_prompt_block()
+            if block:
+                sections.append(block)
+        elif self.design_rationale is not None:
             block = self.design_rationale.to_prompt_block()
             if block:
                 sections.append(block)
