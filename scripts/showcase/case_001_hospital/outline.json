@@ -1,0 +1,172 @@
+{
+  "case_id": "case_001_hospital",
+  "title": "医院更新汇报",
+  "schema_version": "showcase_outline_v1",
+  "target_slide_count": 20,
+  "slides": [
+    {
+      "title": "封面",
+      "slide_type": "title",
+      "continuity_role": "opening",
+      "dominant_content_type": "hero_image",
+      "preferred_layout_family": "hero",
+      "chapter": "intro",
+      "demo_tour": "cover"
+    },
+    {
+      "title": "项目背景",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "text_argument",
+      "preferred_layout_family": "textual_argument",
+      "chapter": "intro"
+    },
+    {
+      "title": "任务与目标",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "text_argument",
+      "preferred_layout_family": "strategy_cards",
+      "chapter": "intro"
+    },
+    {
+      "title": "区位与交通",
+      "slide_type": "content",
+      "continuity_role": "evidence",
+      "dominant_content_type": "site_plan",
+      "preferred_layout_family": "drawing_focus",
+      "chapter": "site",
+      "demo_tour": "site_analysis"
+    },
+    {
+      "title": "现状问题总览",
+      "slide_type": "content",
+      "continuity_role": "evidence",
+      "dominant_content_type": "photo_evidence",
+      "preferred_layout_family": "evidence_board",
+      "chapter": "site"
+    },
+    {
+      "title": "流线冲突",
+      "slide_type": "content",
+      "continuity_role": "evidence",
+      "dominant_content_type": "photo_evidence",
+      "preferred_layout_family": "evidence_board",
+      "chapter": "site"
+    },
+    {
+      "title": "科室压力",
+      "slide_type": "content",
+      "continuity_role": "evidence",
+      "dominant_content_type": "metrics",
+      "preferred_layout_family": "metric_dashboard",
+      "chapter": "site"
+    },
+    {
+      "title": "规范约束",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "text_argument",
+      "preferred_layout_family": "textual_argument",
+      "chapter": "site"
+    },
+    {
+      "title": "设计策略",
+      "slide_type": "section",
+      "continuity_role": "section_opening",
+      "dominant_content_type": "text_argument",
+      "preferred_layout_family": "strategy_cards",
+      "chapter": "strategy",
+      "demo_tour": "strategy"
+    },
+    {
+      "title": "概念生成",
+      "slide_type": "content",
+      "continuity_role": "climax",
+      "dominant_content_type": "hero_image",
+      "preferred_layout_family": "hero",
+      "chapter": "strategy"
+    },
+    {
+      "title": "总图布局",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "site_plan",
+      "preferred_layout_family": "drawing_focus",
+      "chapter": "strategy"
+    },
+    {
+      "title": "流线优化",
+      "slide_type": "content",
+      "continuity_role": "comparison",
+      "dominant_content_type": "comparison",
+      "preferred_layout_family": "comparative_matrix",
+      "chapter": "strategy"
+    },
+    {
+      "title": "功能分区",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "floor_plan",
+      "preferred_layout_family": "drawing_focus",
+      "chapter": "strategy"
+    },
+    {
+      "title": "立面与氛围",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "elevation",
+      "preferred_layout_family": "hybrid_canvas",
+      "chapter": "strategy"
+    },
+    {
+      "title": "分期实施",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "process",
+      "preferred_layout_family": "process_narrative",
+      "chapter": "delivery"
+    },
+    {
+      "title": "指标对比",
+      "slide_type": "content",
+      "continuity_role": "comparison",
+      "dominant_content_type": "metrics",
+      "preferred_layout_family": "metric_dashboard",
+      "chapter": "delivery"
+    },
+    {
+      "title": "风险与保障",
+      "slide_type": "content",
+      "continuity_role": "explanation",
+      "dominant_content_type": "text_argument",
+      "preferred_layout_family": "strategy_cards",
+      "chapter": "delivery"
+    },
+    {
+      "title": "效果表达",
+      "slide_type": "content",
+      "continuity_role": "climax",
+      "dominant_content_type": "hero_image",
+      "preferred_layout_family": "hero",
+      "chapter": "delivery",
+      "demo_tour": "atmosphere"
+    },
+    {
+      "title": "结论建议",
+      "slide_type": "summary",
+      "continuity_role": "summary",
+      "dominant_content_type": "text_argument",
+      "preferred_layout_family": "textual_argument",
+      "chapter": "delivery"
+    },
+    {
+      "title": "下一步",
+      "slide_type": "closing",
+      "continuity_role": "closing",
+      "dominant_content_type": "text_argument",
+      "preferred_layout_family": "textual_argument",
+      "chapter": "delivery"
+    }
+  ]
+}

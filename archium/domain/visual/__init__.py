@@ -26,6 +26,16 @@ from archium.domain.visual.critic import (
     VisualCriticFinding,
     VisualCriticReport,
 )
+from archium.domain.visual.showcase_score import (
+    SHOWCASE_GATE_AESTHETIC_MIN,
+    SHOWCASE_GATE_PROFESSIONALISM_MIN,
+    SHOWCASE_GATE_TOTAL_MIN,
+    SHOWCASE_SCORE_SCHEMA,
+    SHOWCASE_TOTAL_MAX,
+    ShowcaseGateResult,
+    ShowcaseInvestorDimensions,
+    ShowcaseInvestorScore,
+)
 from archium.domain.visual.deck_composition import (
     DeckCompositionPlan,
     PacingRole,
@@ -146,6 +156,14 @@ __all__ = [
     "CRITIC_PAGE_REPETITION",
     "CRITIC_READING_ORDER_AWKWARD",
     "CRITIC_TITLE_WEAK",
+    "SHOWCASE_GATE_AESTHETIC_MIN",
+    "SHOWCASE_GATE_PROFESSIONALISM_MIN",
+    "SHOWCASE_GATE_TOTAL_MIN",
+    "SHOWCASE_SCORE_SCHEMA",
+    "SHOWCASE_TOTAL_MAX",
+    "ShowcaseGateResult",
+    "ShowcaseInvestorDimensions",
+    "ShowcaseInvestorScore",
     "DECK_CHROME_INCONSISTENT",
     "DECK_CLIMAX_OVERLOAD",
     "DECK_ADJACENT_HERO",

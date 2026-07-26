@@ -43,6 +43,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Golden V1–V7（composition） | ✅ |
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ |
 | Visual Critic screenshot_v1 / vision_v1（结构 + 可选截图 LLM） | ✅ v0.3 Phase 3 |
+| **Showcase Case 001**（医院 20 页 outline + 投资人 /50 评分门） | ✅ 骨架 / CI smoke；⏳ 人工 PPTX 达标 |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
 | **Page Director**（单主张 / 禁区 / copy_budget） | ✅ v0.3 Phase 1.3 |
@@ -55,7 +56,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 
 ## 下一阶段：Showcase（v0.3）
 
-架构方向正确，但距离「打开 PPT 即像成熟商业产品」仍缺：**整册 Golden Deck / 杀手级 Demo** 与人工五维评分（v0.3 Phase 4）。Style Preset、Deck 节奏、页面导演、表达模式与截图级 Visual Critic 已落地。
+架构方向正确，但距离「打开 PPT 即像成熟商业产品」仍缺：**Case 001 完整 PPTX + 人工五维评分过门**（v0.3 Phase 4）。案例包与评分契约已在 [`scripts/showcase/case_001_hospital/`](../../scripts/showcase/case_001_hospital/)。
 
 现行计划：[Presentation Engine v0.3](../roadmap/presentation-engine-v0.3.md)。本阶段暂停扩 Agent / 知识库广度；优先视觉输出质量与投资人 Demo。
 

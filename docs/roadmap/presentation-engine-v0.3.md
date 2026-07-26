@@ -278,16 +278,20 @@ Vision Critic 输出示例（契约）：
 
 #### 4.1 案例包
 
-| Case | 主题 | 目标页数 | 气质默认 Preset |
-|------|------|----------|-----------------|
-| Case 001 | 医院更新汇报 | ~20 | `architecture_technical` 或 `urban` |
-| Case 002 | 校园建筑改造 | ~20 | `architecture_academic` |
-| Case 003 | 城市更新 | ~30 | `architecture_urban` |
+| Case | 主题 | 目标页数 | 气质默认 Preset | 状态 |
+|------|------|----------|-----------------|------|
+| Case 001 | 医院更新汇报 | ~20 | `architecture_technical` 或 `urban` | ✅ 包骨架 + CI smoke |
+| Case 002 | 校园建筑改造 | ~20 | `architecture_academic` | ⏳ |
+| Case 003 | 城市更新 | ~30 | `architecture_urban` | ⏳ |
 
 每案输入：PDF / 照片 / CAD 截图 / 文本 / 规范摘录 / 指标表。  
 输出：完整 `presentation.pptx`（RenderScene 主路径）。
 
-资料与跑法放在可复现脚本下（例如 `scripts/showcase/`），**大二进制不进 git**（符合仓库 hygiene）；CI 可只跑小 fixture，完整 PPTX 作 Release / 本地 / Actions artifact。
+资料与跑法：[`scripts/showcase/case_001_hospital/`](../../scripts/showcase/case_001_hospital/)（`manifest.json` / `outline.json` / 文本 fixtures）。**大二进制不进 git**；CI 跑 `py -m scripts.showcase.run_case_001_smoke`（Deck 节奏，无 LLM）；完整 PPTX → `outputs/` 或 Actions artifact。
+
+- [x] Case 001 outline（20 页）+ Demo 导览锚点 + Style Preset 默认 technical  
+- [ ] Case 001 端到端 RenderScene → PPTX（本地 / artifact；人工填分后宣称达标）  
+- [ ] Case 002 / 003  
 
 #### 4.2 人工评分表（投资人向）
 
@@ -302,6 +306,11 @@ Vision Critic 输出示例（契约）：
 
 **阶段门**：Case 001 总分 ≥ 35，且「美观」「专业度」均 ≥ 7，才宣称 Showcase 达标。
 
+实现：`archium/domain/visual/showcase_score.py`（与 `HumanVisualReview` 1–5 分轨）；模板 `scorecard.template.json`；评估 `py -m scripts.showcase.evaluate_scorecard <filled.json>`。
+
+- [x] 五维 /50 模型 + 门禁契约 + 单测  
+- [ ] Case 001 人工填分通过门禁（需真实 PPTX 评审）  
+
 #### 4.3 Demo 脚本（对外）
 
 1. 上传 Case 001 资料包  
@@ -310,6 +319,8 @@ Vision Critic 输出示例（契约）：
 4. 30–60s 内可打开 PPTX（可先出关键页预览）  
 5. 固定导览：封面 → 基地分析 → 设计策略 → 效果表达  
 
+- [x] 导览标题写入 `manifest.json` / `outline.json`（封面 / 区位与交通 / 设计策略 / 效果表达）  
+- [ ] 对外排练录像或 checklist 签字
 ---
 
 ## 6. 优先级重排（执行序）

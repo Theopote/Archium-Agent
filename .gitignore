@@ -79,3 +79,10 @@ alerts.log
 # Local dev notes — CI screenshot imports (never commit)
 .dev-notes/ci-screenshot*
 .dev-notes/_ci_candidates_import*
+
+# Showcase Case packs — large binaries only (manifests / text fixtures stay tracked)
+scripts/showcase/**/outputs/
+scripts/showcase/**/artifacts/
+scripts/showcase/**/*.pptx
+scripts/showcase/**/*.pdf
+scripts/showcase/**/scorecard.filled.json

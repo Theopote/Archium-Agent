@@ -1,0 +1,34 @@
+{
+  "case_id": "case_001_hospital",
+  "title": "医院更新汇报 — Showcase Case 001",
+  "schema_version": "showcase_case_manifest_v1",
+  "target_slide_count": 20,
+  "style_preset_id": "architecture_technical",
+  "alternate_style_preset_ids": ["architecture_urban"],
+  "skill": "hospital-renovation-report",
+  "pipeline": "materials → narrative → visual intent → RenderScene → presentation.pptx",
+  "legacy_spec_fallback": false,
+  "outline": "outline.json",
+  "scorecard_template": "scorecard.template.json",
+  "fixtures_dir": "fixtures",
+  "outputs_dir": "outputs",
+  "demo_tour": [
+    {"role": "cover", "title": "封面"},
+    {"role": "site_analysis", "title": "区位与交通"},
+    {"role": "strategy", "title": "设计策略"},
+    {"role": "atmosphere", "title": "效果表达"}
+  ],
+  "gate": {
+    "schema": "showcase_investor_score_v1",
+    "total_min": 35,
+    "aesthetic_min": 7,
+    "professionalism_min": 7,
+    "total_max": 50
+  },
+  "materials_expected": [
+    "site-brief.txt",
+    "ops-continuity-notes.txt",
+    "optional: site photos / CAD screenshots / PDF (local or Actions artifact only)"
+  ],
+  "notes": "Large binaries must not be committed; place under outputs/ or CI artifacts."
+}

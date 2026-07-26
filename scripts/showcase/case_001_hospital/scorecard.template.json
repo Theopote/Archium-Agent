@@ -1,0 +1,29 @@
+{
+  "case_id": "case_001_hospital",
+  "schema_version": "showcase_investor_score_v1",
+  "style_preset_id": "architecture_technical",
+  "dimensions": {
+    "information_logic": null,
+    "architectural_expression": null,
+    "aesthetic": null,
+    "professionalism": null,
+    "editability_studio": null
+  },
+  "notes": "",
+  "reviewer": null,
+  "demo_tour_ok": null,
+  "gate": {
+    "total_min": 35,
+    "aesthetic_min": 7,
+    "professionalism_min": 7,
+    "total_max": 50
+  },
+  "skill": "hospital-renovation-report",
+  "labels_zh": {
+    "information_logic": "信息逻辑",
+    "architectural_expression": "建筑表达",
+    "aesthetic": "美观",
+    "professionalism": "专业度",
+    "editability_studio": "可修改性（Studio）"
+  }
+}
