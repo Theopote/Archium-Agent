@@ -1,4 +1,4 @@
-"""Project event log + job progress partner chrome."""
+"""Project event log + job progress + usage partner chrome."""
 
 from __future__ import annotations
 
@@ -55,6 +55,45 @@ def render_project_event_log(
             st.markdown(
                 f"- **{label}** · `{when}`{who_bit} — {event.display_line()}"
             )
+
+
+def render_project_usage_strip(
+    project_id: UUID,
+    *,
+    expanded: bool = False,
+    title: str = "本月 LLM 用量",
+) -> None:
+    """BILL-001: project token rollup from llm_traces (+ soft budget warn)."""
+    try:
+        from archium.application.usage_rollup_service import UsageRollupService
+
+        with get_session() as session:
+            rollup = UsageRollupService(session).rollup_for_project(project_id)
+    except Exception:
+        return
+    with st.expander(title, expanded=expanded):
+        st.caption("来自 LLMTrace 聚合（不含 prompt / 密钥）。非账单。")
+        st.markdown(rollup.display_line())
+        if rollup.soft_budget_tokens > 0:
+            ratio = rollup.budget_ratio or 0.0
+            st.progress(
+                ratio,
+                text=(
+                    f"软配额 {rollup.total_tokens:,} / "
+                    f"{rollup.soft_budget_tokens:,} tokens"
+                ),
+            )
+            if rollup.over_soft_budget:
+                st.warning(
+                    "已达本项目软配额上限（仅提示，不阻断）。"
+                    "可在设置调高 `llm_usage_soft_budget_tokens`，或关闭为 0。"
+                )
+        if rollup.by_capability:
+            for item in rollup.by_capability[:5]:
+                st.caption(
+                    f"· `{item.capability}` · {item.call_count} 次 · "
+                    f"{item.total_tokens:,} tokens"
+                )
 
 
 def render_job_progress_strip(

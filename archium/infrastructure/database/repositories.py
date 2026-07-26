@@ -1866,6 +1866,62 @@ class LLMTraceRepository:
         stmt = select(LLMTraceORM).order_by(LLMTraceORM.created_at.desc()).limit(limit)
         return [mappers.llm_trace_orm_to_dataclass(row) for row in self._session.scalars(stmt)]
 
+    def aggregate_for_project(
+        self,
+        project_id: UUID,
+        *,
+        since: datetime | None = None,
+        capability_limit: int = 6,
+    ) -> dict[str, object]:
+        """SQL rollup: call counts + token sums (+ top capabilities)."""
+        from sqlalchemy import case, func
+
+        filters = [LLMTraceORM.project_id == project_id]
+        if since is not None:
+            filters.append(LLMTraceORM.created_at >= since)
+
+        totals = self._session.execute(
+            select(
+                func.count(LLMTraceORM.id),
+                func.coalesce(
+                    func.sum(case((LLMTraceORM.success.is_(True), 1), else_=0)),
+                    0,
+                ),
+                func.coalesce(func.sum(LLMTraceORM.prompt_tokens), 0),
+                func.coalesce(func.sum(LLMTraceORM.completion_tokens), 0),
+                func.coalesce(func.sum(LLMTraceORM.total_tokens), 0),
+            ).where(*filters)
+        ).one()
+
+        cap_label = func.coalesce(LLMTraceORM.capability, "unknown")
+        cap_rows = self._session.execute(
+            select(
+                cap_label,
+                func.count(LLMTraceORM.id),
+                func.coalesce(func.sum(LLMTraceORM.total_tokens), 0),
+            )
+            .where(*filters)
+            .group_by(cap_label)
+            .order_by(func.coalesce(func.sum(LLMTraceORM.total_tokens), 0).desc())
+            .limit(max(1, int(capability_limit)))
+        ).all()
+
+        return {
+            "call_count": int(totals[0] or 0),
+            "success_count": int(totals[1] or 0),
+            "prompt_tokens": int(totals[2] or 0),
+            "completion_tokens": int(totals[3] or 0),
+            "total_tokens": int(totals[4] or 0),
+            "by_capability": [
+                {
+                    "capability": str(row[0] or "unknown"),
+                    "call_count": int(row[1] or 0),
+                    "total_tokens": int(row[2] or 0),
+                }
+                for row in cap_rows
+            ],
+        }
+
 
 class BackgroundJobRepository:
     """Durable background job queue."""

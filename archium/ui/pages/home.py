@@ -294,13 +294,21 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     with mid:
         _render_recent_design_changes(snapshot)
         try:
-            from archium.ui.project_event_panel import render_project_event_log
+            from archium.ui.project_event_panel import (
+                render_project_event_log,
+                render_project_usage_strip,
+            )
 
             render_project_event_log(
                 snapshot.project_id,
                 limit=6,
                 expanded=False,
                 title="项目事件记忆",
+            )
+            render_project_usage_strip(
+                snapshot.project_id,
+                expanded=False,
+                title="本月 LLM 用量",
             )
         except Exception:
             pass

@@ -8,7 +8,7 @@
 
 | 编号 | 严重级别 | 状态 | 问题 | 文件 | 影响 | 修复方案 | 验收标准 | 提交 SHA |
 |------|----------|------|------|------|------|----------|----------|----------|
-| BILL-001 | P2 | open | 无 token 聚合 / 项目用量 UI | `llm_traces`; no rollup service | 无法定价/控本 | sum by project/month | Home 可看用量 | `-` |
-| BILL-002 | P2 | open | 无 seat / quota 模型 | access / settings | 无法限席位 | soft budget warn | 超配额有警告 | `-` |
+| BILL-001 | P2 | done | 无 token 聚合 / 项目用量 UI | `usage_rollup_service`; Home strip | 无法定价/控本 | sum by project/month | Home 可看用量 | Topic 08 C3 |
+| BILL-002 | P2 | mitigated | 无 seat / quota 模型 | `llm_usage_soft_budget_tokens` | 无法限席位 | soft budget warn（非硬阻断） | 超配额 Home 警告；席位模型仍欠 | Topic 08 C3 |
 | BILL-003 | P3 | open | 无 Stripe/subscription 集成 | — | 无法收款 | 延后至产品门禁后 | — | `-` |
 | DOM-032 | P2 | open | 无 Organization / tenant 根对象 | domain | 多客户事务所分裂 | 薄 Org + nullable FK | 单测可挂 org | `-` |

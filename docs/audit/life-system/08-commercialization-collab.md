@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**协作底座 + C1–C3 产品胶合已落地一截；仍非完整商业化。** 可见项目、关键写路径、邀请 deep link、角色化 chrome、事件成员归因已通。无可信 IdP、无 Org/计费层；`LLMTrace` 可作用量原料，尚非账单。
+**协作底座 + C1–C3 产品胶合已落地一截；仍非完整商业化。** 可见项目、写路径、邀请、角色 chrome、事件归因、LLM 用量条已通。无可信 IdP、无 Org；席位/Stripe 仍欠。
 
 ---
 
@@ -32,7 +32,7 @@
   关键写路径 require               Studio 细粒度 / 评论 RBAC
   ?invite= deep link             邮件外发
   角色化 continue + chrome        全局顶栏 actor 切换仍薄
-  ProjectEvent + member actor_id  Studio 评论归因 / 用量 UI / Org
+  LLMTrace → Home 用量条        seat / Stripe / Org
 ```
 
 | 层 | 成熟度 | 落点 |
@@ -42,10 +42,10 @@
 | 邀请 | **B（C2）** | 码+TTL + `?invite=` deep link |
 | 角色化 UI | **B-（C3）** | continue + design strip + 编辑预警 |
 | 共享记忆 | **B+（C3）** | ProjectEvent / IntentEvolution + member `actor_id` |
-| LLMTrace | B- | 可持久；无聚合 UI |
+| LLMTrace | **B（C3）** | 持久 + 项目月度 rollup UI；非账单 |
 | Studio 评论 | C+ | ElementComment；无协作者身份 |
 | Auth / Org | F | 无 SSO；无 Organization |
-| 计费 | F | 无 seat/quota/Stripe |
+| 计费 | **D+（C3）** | soft token budget；无 seat / Stripe |
 
 ---
 
@@ -66,7 +66,7 @@
 3. ~~无成员无限 bootstrap~~ → **C1 `ensure_default_owner` 收窄**  
 4. **Redeem 自填 actor_id** — 身份可伪造（SEC-002）  
 5. **无 Organization** — 多客户事务所 SaaS 无根对象（DOM-032）  
-6. **用量：** Trace 有、账单无（BILL-001/002）  
+6. ~~用量 Trace 有、账单无~~ → **C3 Home rollup + soft budget**；席位/Stripe 仍欠（BILL-002/003）  
 7. ~~事件归因~~ → **C3 payload `actor_id`**（选定/批准/创建/兑换）；Studio 评论归因仍欠  
 
 ---
@@ -94,7 +94,7 @@
 
 8. **Client/Reviewer 角色化 chrome（COLLAB-005）** — `role_navigation` + continue_work + design strip + 编辑预警  
 9. **ProjectEvent member attribution（COLLAB-006）** — payload `actor_id`；选定/批准/创建/邀请兑换  
-10. Token rollup + soft quota（BILL-001/002）— **仍开**  
+10. **Token rollup + soft quota（BILL-001；BILL-002 soft）** — `UsageRollupService` + Home 用量条；席位模型仍开  
 11. 可选 Organization（DOM-032）— **仍开**
 
 **不做：** 新 Agent；完整 IdP；生产 Stripe；实时 CRDT 协同；多 region。
@@ -115,8 +115,9 @@
 | SEC-002 | P1 | 无 OAuth；actor_id 可伪造 |
 | APP-028 | P1 | ~~缺统一 require 门面~~ **done (C1)**；写路径 **done (C2)** |
 | UI-010 | P1 | ~~无角色 chrome~~ **partial (C3 strip)**；全局顶栏切换仍薄 |
-| BILL-001 | P2 | 无 token 聚合 / 项目用量 UI |
-| BILL-002 | P2 | 无 seat / quota 模型 |
+| BILL-001 | P2 | ~~无 token 聚合 / 项目用量 UI~~ **done (C3)** |
+| BILL-002 | P2 | ~~无 soft quota~~ **mitigated**（token 软配额）；席位模型仍开 |
+| BILL-003 | P3 | 无 Stripe/subscription |
 | DOM-032 | P2 | 无 Organization / tenant 根对象 |
 
 ---
@@ -140,4 +141,5 @@
 - [x] Phase C2 写路径 RBAC + invite deep link  
 - [x] Phase C3 角色化 UI（COLLAB-005）  
 - [x] Phase C3 事件成员归因（COLLAB-006）  
-- [ ] Phase C3 余量：用量 / tenancy
+- [x] Phase C3 用量 rollup（BILL-001）+ soft budget（BILL-002 thin）  
+- [ ] Phase C3 余量：tenancy（DOM-032）/ Stripe（BILL-003）/ 席位模型

@@ -169,6 +169,14 @@ class Settings(BaseSettings):
             "never prompts or API keys)."
         ),
     )
+    llm_usage_soft_budget_tokens: int = Field(
+        default=500_000,
+        ge=0,
+        description=(
+            "Soft monthly-ish token budget per project for UI warnings (BILL-002). "
+            "0 disables the soft quota warning."
+        ),
+    )
 
     # ── embedding.* ──────────────────────────────────────────────────────────
     embedding_provider: str = Field(
