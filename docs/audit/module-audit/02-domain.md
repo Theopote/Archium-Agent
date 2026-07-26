@@ -2,9 +2,9 @@
 
 模块：领域模型与分层边界  
 前缀：`DOM-`  
-更新：2026-07-23（含逐文件检查）
+更新：2026-07-26（含第二轮世界模型 Issue）
 
-相关：[第一轮判断](00-round1-judgment.md)
+相关：[第一轮判断](00-round1-judgment.md) · [第二轮 Domain Model](../life-system/01-domain-model.md)
 
 ## 检查结论摘要
 
@@ -49,6 +49,12 @@
 | DOM-020 | P2 | done | Overflow 词表不一致 | Layout `OverflowPolicy` vs TextNode Literal（含 `error` vs `warn`） | QA/渲染行为分歧 | TextNode 改用 `OverflowPolicy`；legacy `error`/`continue` 别名；QA 认 warn/split | arch-contract overflow-policy-values；`test_render_scene_contracts` | `-` |
 | DOM-021 | P2 | open | `RenderResult` 持 Path、legacy marp 字段 | `render.py` | Domain 沾文件系统 | 迁 application DTO | domain 无业务 Path 聚合 | `-` |
 | DOM-022 | P2 | open | `powerpoint_capability.py` 过大（~420） | 同文件 | 能力表难维护 | 拆分或数据驱动 | 单文件下降 | `-` |
+| DOM-023 | P1 | open | 缺少正式 Project Aggregate 地图；新能力易旁路唯一 identity | `project.py`; `docs/architecture/current-system.md`; life-system 01 | Research/CAD/BIM 各自长「伪 Project」 | 文档钉死聚合地图 + 测试守卫禁止第二套 Project identity | 架构文有地图；守卫拒绝平行 Project 实体命名/表 | `-` |
+| DOM-024 | P1 | open | ConceptDirection 与 DesignIntent 双份嵌套 Rationale/Spatial/Rules，无同步不变量 | `concept_direction.py`; `intent/design_intent.py` | Mission commit 后方向与意图漂移 | 同步契约或 Intent 引用 direction_id + 覆盖层 | commit/选定后字段一致或显式 diff；单测覆盖 | `-` |
+| DOM-025 | P2 | open | DesignDecision 仅以 dict 挂 IntentEvolution | `intent/intent_evolution.py`; `spatial_design.py` | 历史决策无类型不变量 | 读写经 `DesignDecision`；dict 仅迁移 | 新写入可 `model_validate`；旧 dict 兼容 | `-` |
+| DOM-026 | P2 | open | `Mission.project_context` 字符串与 `ProjectContext` 同名异义 | `project_mission.py` | 评审/导入混淆 | 重命名叙事字段（如 `task_context_narrative`）+ 迁移别名 | 域内无歧义名；测试/UI 文案更新 | `-` |
+| DOM-027 | P1 | open | 无设计产物聚合；`ArtifactKind` 几乎全是汇报管线 | `artifact_ownership.py` | 设计图/批判报告无处安放，被迫塞 Presentation | 引入 `DesignArtifact`（或同义）与汇报 Artifact 分枚举 | 设计产物不经 PPT ArtifactKind；有 project_id 追溯 | `-` |
+| DOM-028 | P2 | open | KnowledgeState 回声 lifecycle/workflow/page 与 ProjectContext 双写 | `intent/knowledge_state.py`; `context/project_context.py` | 路由读到陈旧回声 | 权威在 Context 合成；KS 只存索引+dimensions（compat 字段只读派生） | 路由测试只信 Context；KS 回声有单一写入点 | `-` |
 
 ---
 
