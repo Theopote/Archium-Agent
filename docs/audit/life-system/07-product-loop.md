@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1–L3 后产品闭环胶合层基本可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；示意产物有时间线。余：WF-010 单一 stage truth、UI-009 HumanGate 顶栏、Research→页引用、DOM-024。
+**子系统可用；L1–L3 + UI-009 后产品闭环胶合层基本可走通。** 继续工作尊重设计态；Ask/批判可恢复；汇报可溯源 Mission；五阶段可见 HumanGate。余：WF-010 单一 stage truth、Research→页引用、DOM-024、APP-004。
 
 ---
 
@@ -112,7 +112,7 @@
 5. Deliver/Outline 从 DESIGN_CRITIQUE 边 / pending hydrate；caution/reject 链回概念探索  
 6. materials/outline stage gate 合并 cognition readiness warnings（默认仍 warn）  
 
-（关闭 `APP-026` / `APP-027`；`UI-009` 仍开。）
+（关闭 `APP-026` / `APP-027`；`UI-009` 后补 done。）
 
 ### Phase L3 — 端到端 lineage（P2）✅ 2026-07-26
 
@@ -121,7 +121,11 @@
 9. Research → 页引用链：**仍延后**（DOM/KN 债）  
 10. Critique 分轨：设计→回探索（L2）；Deliver 加「回工作室」链（弱化 APP-004，不关）
 
-（关闭 `MS-002`；`WF-010` / `UI-009` / `APP-004` / `DOM-024` 仍开。）
+（关闭 `MS-002`；`UI-009` **done（五阶段 compact HumanGate）**；`WF-010` / `APP-004` / `DOM-024` 仍开。）
+
+### Phase L3+ — HumanGate 顶栏 ✅ 2026-07-26
+
+11. **UI-009**：`render_orchestration_status(compact=True)` 接入 `render_stage_header`；五阶段可见待确认 + Continue/Replan
 
 **不做：** 新 Agent；ProcessBoard 写进 ProjectContext 当 SSOT；把设计循环硬塞进 LangGraph。
 
@@ -136,7 +140,7 @@
 | WF-010 | P2 | OrchestrationPlan 与 product_flow 双轨；缺单一 stage truth |
 | APP-026 | P1 | ~~pending Ask 仅 session~~ **done (L2)** |
 | APP-027 | P2 | ~~批判未 Hydrate~~ **done (L2)** |
-| UI-009 | P2 | Orchestration HumanGate 未在五阶段顶栏统一展示 |
+| UI-009 | P2 | ~~Orchestration HumanGate 未在五阶段顶栏~~ **done** |
 | MS-002 | P1 | ~~Presentation 无 mission_id~~ **done (L3)** |
 | DOM-024 | P1 | （已有）Direction↔Intent 双份漂移放大闭环断裂 |
 | APP-004 | P1 | （已有）QA 多栈；交付门禁需统一 verdict |
@@ -152,7 +156,7 @@
 | 05 多模态 | 证据进 Context；与 design 阶段门禁软串联 |
 | 06 绘画 | DesignArtifact 有身份 + materials/deliver 时间线 |
 | 01 Domain | DOM-024 仍放大 commit 后语义断裂 |
-| 08 商业化 | 可续闭环是协作/计费前提 — 下一专题 |
+| 08 商业化 | 可续闭环已是协作/计费前提（Topic 08 完成） |
 
 ---
 
@@ -162,4 +166,5 @@
 - [x] Issue 草案登记 module-audit  
 - [x] Phase L1 导航脊柱  
 - [x] Phase L2 可恢复人闸  
-- [x] Phase L3 lineage（MS-002 + DesignArtifact 板；Research→页仍延后）
+- [x] Phase L3 lineage（MS-002 + DesignArtifact 板；Research→页仍延后）  
+- [x] UI-009 五阶段 HumanGate compact 顶栏

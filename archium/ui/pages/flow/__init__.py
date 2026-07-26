@@ -497,6 +497,19 @@ def render_stage_header(stage_id: str) -> None:
             show_known_unknown=False,
         )
         render_design_context_strip(snapshot.project_id)
+        try:
+            from archium.ui.components.orchestration_status import (
+                render_orchestration_status,
+            )
+
+            render_orchestration_status(
+                snapshot.project_id,
+                key_prefix=f"flow_{stage_id}_orch",
+                compact=True,
+                current_page_key=stage_id,
+            )
+        except Exception:
+            pass
     else:
         render_page_header(stage.title, caption)
     render_flow_stepper(stage_id)
