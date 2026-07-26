@@ -411,6 +411,7 @@ def deliverable_plan_to_domain(orm: DeliverablePlanORM) -> DeliverablePlan:
         logical_key=orm.logical_key or DELIVERABLE_PLAN_LOGICAL_KEY,
         deliverables=[PlannedDeliverable.model_validate(item) for item in orm.deliverables_json],
         approval_status=ApprovalStatus(orm.approval_status),
+        approval_hash=getattr(orm, "approval_hash", None),
         version=orm.version,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -428,6 +429,7 @@ def deliverable_plan_to_orm(
     target.logical_key = domain.logical_key
     target.deliverables_json = [item.model_dump(mode="json") for item in domain.deliverables]
     target.approval_status = domain.approval_status.value
+    target.approval_hash = domain.approval_hash
     target.version = domain.version
     target.created_at = domain.created_at
     target.updated_at = domain.updated_at

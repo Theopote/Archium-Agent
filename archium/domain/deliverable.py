@@ -44,6 +44,8 @@ class DeliverablePlan(IdentifiedModel, VersionedModel, TimestampedModel):
     logical_key: str = Field(default=DELIVERABLE_PLAN_LOGICAL_KEY, max_length=200)
     deliverables: list[PlannedDeliverable] = Field(default_factory=list)
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
+    # WF-006 / MS-005: fingerprint of approved content; cleared on invalidate.
+    approval_hash: str | None = Field(default=None, max_length=64)
 
     def selected_deliverables(self) -> list[PlannedDeliverable]:
         return [item for item in self.deliverables if item.selected]
@@ -55,10 +57,12 @@ class DeliverablePlan(IdentifiedModel, VersionedModel, TimestampedModel):
     def invalidate_approval(self) -> None:
         """Clear approval after plan content/selection changes."""
         self.approval_status = ApprovalStatus.DRAFT
+        self.approval_hash = None
         self.touch()
 
     def reject(self) -> None:
         self.approval_status = ApprovalStatus.REJECTED
+        self.approval_hash = None
         self.touch()
 
     def touch(self) -> None:

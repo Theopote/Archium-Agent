@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from archium.application.deliverable_planning_service import DeliverablePlanningService
+from archium.application.deliverable_planning_service import (
+    DeliverablePlanningService,
+    deliverable_plan_approval_hash,
+)
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.domain.enums import ApprovalStatus, DeliverableType
@@ -143,6 +146,8 @@ def test_select_deselect_and_approve(
 
     approved = deliverable_service.approve_plan(result.plan.id)
     assert approved.approval_status == ApprovalStatus.APPROVED
+    assert approved.approval_hash is not None
+    assert approved.approval_hash == deliverable_plan_approval_hash(approved)
 
 
 def test_selection_edit_invalidates_approved_plan(
@@ -168,6 +173,7 @@ def test_selection_edit_invalidates_approved_plan(
         updated = deliverable_service.select_deliverable(approved.id, optional.id)
 
     assert updated.approval_status == ApprovalStatus.DRAFT
+    assert updated.approval_hash is None
 
     # Idempotent re-apply must not keep a stale approved status after prior invalidation.
     again = deliverable_service.set_deliverable_selection(

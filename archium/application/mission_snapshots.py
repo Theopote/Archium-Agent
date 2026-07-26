@@ -122,6 +122,7 @@ def deliverable_plan_to_snapshot(plan: DeliverablePlan) -> dict[str, object]:
         "mission_id": str(plan.mission_id),
         "project_id": str(plan.project_id),
         "approval_status": plan.approval_status.value,
+        "approval_hash": plan.approval_hash,
         "version": plan.version,
         "deliverable_titles": [item.title for item in plan.deliverables],
         "selected_ids": [item.id for item in plan.selected_deliverables()],

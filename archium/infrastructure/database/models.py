@@ -1035,6 +1035,7 @@ class DeliverablePlanORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     logical_key: Mapped[str] = mapped_column(String(200), nullable=False, default="deliverable-plan")
     deliverables_json: Mapped[list[dict[str, object]]] = mapped_column("deliverables", JSON, default=list)
     approval_status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    approval_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     mission: Mapped[ProjectMissionORM] = relationship(back_populates="deliverable_plans")

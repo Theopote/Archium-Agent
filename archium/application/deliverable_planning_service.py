@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -212,7 +214,7 @@ class DeliverablePlanningService:
         plan = self._require_plan(plan_id)
         if not plan.selected_deliverables():
             raise WorkflowError("请至少选择一项成果后再批准")
-        plan.approve()
+        stamp_deliverable_plan_approval(plan)
         saved = self._missions.save_deliverable_plan(plan)
         history_note = note or "批准成果规划"
         if user_id:
@@ -315,3 +317,47 @@ class DeliverablePlanningService:
     def _invalidate_plan_approval_if_needed(plan: DeliverablePlan) -> None:
         if plan.approval_status == ApprovalStatus.APPROVED:
             plan.invalidate_approval()
+
+
+def deliverable_plan_approval_hash(plan: DeliverablePlan) -> str:
+    """Hash approved DeliverablePlan content (WF-006 / MS-005).
+
+    Excludes approval metadata and timestamps so touch()/status flips alone
+    do not redefine the fingerprint — content + selection define it.
+    """
+    payload = plan.model_dump(
+        mode="json",
+        exclude={
+            "approval_hash",
+            "approval_status",
+            "created_at",
+            "updated_at",
+        },
+    )
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def is_deliverable_plan_approval_current(plan: DeliverablePlan) -> bool:
+    """Reject legacy, edited, or tampered plan approvals at workflow gates."""
+    return (
+        plan.approval_status == ApprovalStatus.APPROVED
+        and plan.approval_hash is not None
+        and plan.approval_hash == deliverable_plan_approval_hash(plan)
+    )
+
+
+def ensure_deliverable_plan_approval_current(plan: DeliverablePlan) -> None:
+    """Raise when plan approval is missing, stale, or tampered."""
+    if is_deliverable_plan_approval_current(plan):
+        return
+    if plan.approval_status != ApprovalStatus.APPROVED:
+        raise WorkflowError("成果规划尚未批准，无法继续下游。请先批准成果规划。")
+    raise WorkflowError("成果规划审批已失效（内容已变更或校验失败），请重新批准后再继续。")
+
+
+def stamp_deliverable_plan_approval(plan: DeliverablePlan) -> DeliverablePlan:
+    """Mark plan approved and stamp content hash (auto-approve / service share)."""
+    plan.approve()
+    plan.approval_hash = deliverable_plan_approval_hash(plan)
+    return plan

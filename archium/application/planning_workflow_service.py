@@ -9,7 +9,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.deliverable_planning_service import DeliverablePlanningService
+from archium.application.deliverable_planning_service import (
+    DeliverablePlanningService,
+    ensure_deliverable_plan_approval_current,
+    is_deliverable_plan_approval_current,
+)
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.mission_to_presentation_request import (
     MissionPresentationBridge,
@@ -379,10 +383,12 @@ class PlanningWorkflowService:
         plan = self._runtime.missions.get_deliverable_plan(UUID(str(plan_data["id"])))
         if plan is None:
             raise WorkflowError(f"DeliverablePlan {plan_data['id']} not found")
-        if plan.approval_status != ApprovalStatus.APPROVED:
+        try:
+            ensure_deliverable_plan_approval_current(plan)
+        except WorkflowError as exc:
             raise WorkflowError(
-                "交付成果计划尚未批准，无法继续。请先调用 approve_deliverable_plan。"
-            )
+                "交付成果计划尚未批准或已失效，无法继续。请先调用 approve_deliverable_plan。"
+            ) from exc
 
         result = self._resume_interrupted_run(
             run,
@@ -642,7 +648,7 @@ class PlanningWorkflowService:
             and draft.get("mission_id")
             and user_overrides is None
             and plan is not None
-            and plan.approval_status == ApprovalStatus.APPROVED
+            and is_deliverable_plan_approval_current(plan)
         ):
             return bridge_from_draft(draft)
 
@@ -691,7 +697,7 @@ class PlanningWorkflowService:
         if mission is None:
             raise WorkflowError(f"Mission {mission_id} not found")
         plan = missions.get_approved_deliverable_plan(mission_id)
-        if plan is None:
+        if plan is None or not is_deliverable_plan_approval_current(plan):
             raise WorkflowError(
                 "尚未批准成果规划，无法生成汇报请求。请先完成 DeliverablePlan 审批。"
             )

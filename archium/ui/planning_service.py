@@ -10,7 +10,10 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.artifact_executors import ArtifactOutput
-from archium.application.deliverable_planning_service import DeliverablePlanningService
+from archium.application.deliverable_planning_service import (
+    DeliverablePlanningService,
+    is_deliverable_plan_approval_current,
+)
 from archium.application.fact_ledger_service import FactLedgerService
 from archium.application.mission_clarification_service import (
     ClarificationActionResult,
@@ -1114,7 +1117,7 @@ def start_presentation_from_planning(
     # without resuming LangGraph. Soft-recovered planning runs often lack a full
     # checkpoint / deliverable_plan blob, and approve_and_continue would fail.
     has_draft = isinstance(run.state.get("presentation_request_draft"), dict)
-    domain_ready = plan.approval_status == ApprovalStatus.APPROVED and has_draft
+    domain_ready = is_deliverable_plan_approval_current(plan) and has_draft
     if (
         not domain_ready
         and run.status.value == "awaiting_review"

@@ -8,7 +8,11 @@ from uuid import UUID
 from langgraph.types import interrupt
 from sqlalchemy.orm import Session
 
-from archium.application.deliverable_planning_service import DeliverablePlanningService
+from archium.application.deliverable_planning_service import (
+    DeliverablePlanningService,
+    is_deliverable_plan_approval_current,
+    stamp_deliverable_plan_approval,
+)
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.mission_validation_service import MissionValidationService
 from archium.application.project_mission_service import (
@@ -650,7 +654,7 @@ class PlanningWorkflowNodes:
             run is not None
             and run.state.get("review_gate") == "plan_approval"
             and plan is not None
-            and plan.approval_status == ApprovalStatus.APPROVED
+            and is_deliverable_plan_approval_current(plan)
         ):
             mission = self._runtime.missions.get_mission(mission_id)
             resume_state: PlanningWorkflowState = {
@@ -665,8 +669,8 @@ class PlanningWorkflowNodes:
             return resume_state
 
         if not state.get("require_plan_approval", True):
-            if plan is not None and plan.approval_status != ApprovalStatus.APPROVED:
-                plan.approve()
+            if plan is not None and not is_deliverable_plan_approval_current(plan):
+                stamp_deliverable_plan_approval(plan)
                 plan = self._runtime.missions.save_deliverable_plan(plan)
             return {
                 "current_step": PlanningWorkflowStep.PLANNING_AWAIT_APPROVAL.value,
@@ -684,7 +688,7 @@ class PlanningWorkflowNodes:
         interrupt({"gate": "plan_approval", "step": PlanningWorkflowStep.PLANNING_AWAIT_APPROVAL.value})
 
         plan = self._runtime.missions.get_deliverable_plan(plan.id) if plan is not None else None
-        if plan is None or plan.approval_status != ApprovalStatus.APPROVED:
+        if plan is None or not is_deliverable_plan_approval_current(plan):
             return {
                 "current_step": PresentationWorkflowStep.FAILED.value,
                 "errors": ["成果计划尚未批准，无法继续"],
