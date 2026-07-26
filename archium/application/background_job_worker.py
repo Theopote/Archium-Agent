@@ -40,7 +40,7 @@ class BackgroundJobWorker:
             return {
                 "acknowledged": True,
                 "kind": job.kind.value,
-                "payload_keys": sorted(str(k) for k in job.payload.keys()),
+                "payload_keys": sorted(str(k) for k in job.payload),
             }
         return {"acknowledged": True, "kind": job.kind.value}
 

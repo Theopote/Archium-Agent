@@ -24,9 +24,9 @@ from archium.domain.project_mission import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
 from archium.ui.components.design_rationale_details import render_design_rationale
 from archium.ui.components.spatial_design_details import render_spatial_design_layer
+from archium.ui.error_handlers import format_user_error
 from archium.ui.planning_service import update_mission_fields
 
 TASK_NATURE_LABELS = {

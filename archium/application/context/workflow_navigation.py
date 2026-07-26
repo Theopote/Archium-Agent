@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
+
+from sqlalchemy.orm import Session
 
 from archium.application.context.next_action_selector import resolve_workflow_entry
 from archium.application.context.project_context_builder import build_project_context
 from archium.application.context.types import WorkflowEntryDispatch
 from archium.application.fact_ledger_service import FactLedgerService
-from sqlalchemy.orm import Session
+
+
+class SessionStateLike(Protocol):
+    """Streamlit session_state-compatible mapping (stubs are not MutableMapping)."""
+
+    def __getitem__(self, key: str, /) -> Any: ...
+    def __setitem__(self, key: str, value: Any, /) -> None: ...
+    def get(self, key: str, default: Any = None, /) -> Any: ...
 
 
 def workflow_entry_for_project(
@@ -27,7 +36,7 @@ def workflow_entry_for_project(
     )
 
 
-def apply_workflow_entry(session_state: dict[str, Any], dispatch: WorkflowEntryDispatch) -> None:
+def apply_workflow_entry(session_state: SessionStateLike, dispatch: WorkflowEntryDispatch) -> None:
     if dispatch.mission_step is not None:
         session_state["mission_step"] = dispatch.mission_step
     if dispatch.focus:
@@ -40,7 +49,7 @@ def apply_workflow_entry(session_state: dict[str, Any], dispatch: WorkflowEntryD
     }
 
 
-def sync_mission_step_from_context(session: Session, project_id: UUID, session_state: dict[str, Any]) -> None:
+def sync_mission_step_from_context(session: Session, project_id: UUID, session_state: SessionStateLike) -> None:
     """On mission page load, jump to the step implied by ProjectContext when unset."""
     if session_state.get("mission_step", 1) > 1:
         return

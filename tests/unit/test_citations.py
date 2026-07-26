@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.application.citation_resolution import citation_from_draft, enrich_slide_citations
 from archium.application.chunk_models import ProjectContextBundle
+from archium.application.citation_resolution import citation_from_draft, enrich_slide_citations
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import DocumentType, ProcessingStatus, ProjectType, SlideType
 from archium.domain.presentation import Presentation

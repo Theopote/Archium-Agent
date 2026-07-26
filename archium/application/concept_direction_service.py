@@ -32,8 +32,10 @@ from archium.infrastructure.llm.concept_direction_schemas import (
 )
 from archium.prompts.concept_direction import (
     CONCEPT_DIRECTION_SYSTEM_PROMPT,
-    PROMPT_VERSION as CONCEPT_PROMPT_VERSION,
     build_concept_direction_user_prompt,
+)
+from archium.prompts.concept_direction import (
+    PROMPT_VERSION as CONCEPT_PROMPT_VERSION,
 )
 
 MAX_DIRECTIONS = 3

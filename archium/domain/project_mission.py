@@ -8,7 +8,6 @@ from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
-from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.enums import (
     ApprovalStatus,
     ConstraintSource,
@@ -19,6 +18,7 @@ from archium.domain.enums import (
     UncertaintyLevel,
     VerificationStatus,
 )
+from archium.domain.intent.design_intent import DesignIntent
 
 MISSION_LOGICAL_KEY = "project-mission"
 

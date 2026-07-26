@@ -31,7 +31,12 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
 from archium.domain.deliverable import DeliverablePlan
-from archium.domain.enums import DeliverableType, KnowledgeGapStatus, ProjectOriginMode, QuestionStatus
+from archium.domain.enums import (
+    DeliverableType,
+    KnowledgeGapStatus,
+    ProjectOriginMode,
+    QuestionStatus,
+)
 from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
 from archium.domain.planning_session import PlanningSession

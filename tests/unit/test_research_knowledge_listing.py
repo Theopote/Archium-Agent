@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.domain.enums import InformationOrigin, InformationReliability
 from archium.domain.project import Project

@@ -8,7 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.workflow_models import WorkflowRunResult
-from archium.domain.enums import ProjectOriginMode, ProjectType
+from archium.domain.enums import ProjectType
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
@@ -29,7 +29,6 @@ from archium.ui.fact_ledger_panel import render_fact_ledger_panel
 from archium.ui.knowledge_panel import render_knowledge_panel
 from archium.ui.label_map import (
     brief_storyline_pair,
-    content_pipeline_chain,
     entity_label,
 )
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -184,11 +183,11 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
         st.dataframe(rows, use_container_width=True, hide_index=True)
     else:
         with get_session() as session:
-            from archium.infrastructure.database.repositories import ProjectRepository
             from archium.application.project_context_routing import (
                 is_concept_leaning,
                 is_research_programming,
             )
+            from archium.infrastructure.database.repositories import ProjectRepository
 
             project = ProjectRepository(session).get_by_id(project_id)
             if project is not None and is_concept_leaning(session, project) and not is_research_programming(

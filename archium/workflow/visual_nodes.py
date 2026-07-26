@@ -30,12 +30,12 @@ from archium.application.visual.layout_planning_service import (
 from archium.application.visual.layout_repair_service import LayoutRepairService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.scene_repair_service import SceneRepairService
+from archium.application.visual.vision import VisionImageGenerationService
 from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.visual.visual_scene_repair_workflow_service import (
     VisualSceneRepairWorkflowService,
 )
-from archium.application.visual.vision import VisionImageGenerationService
 from archium.application.workflow_checkpoint import commit_workflow_checkpoint, finalize_run_state
 from archium.config.settings import Settings
 from archium.domain.enums import (

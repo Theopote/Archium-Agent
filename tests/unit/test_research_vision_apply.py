@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
-
 from archium.application.visual.vision.research_vision_apply import (
     apply_vision_bundles_to_directions,
 )
@@ -19,6 +17,7 @@ from archium.infrastructure.database.repositories import (
     ConceptDirectionRepository,
     ProjectRepository,
 )
+from sqlalchemy.orm import Session
 
 
 def test_apply_vision_seed_fills_empty_direction(

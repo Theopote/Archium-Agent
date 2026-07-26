@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from archium.application.project_llm_tier_service import (
     ProjectLLMTierService,
     model_for_tier,
@@ -16,6 +12,9 @@ from archium.domain.project import Project
 from archium.domain.project_llm_tier import ProjectLLMTier
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.repositories import ProjectRepository
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture()

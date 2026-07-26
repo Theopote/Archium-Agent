@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
 from archium.application.review.design_critique_service import DesignCritiqueService
 from archium.config.settings import Settings
 from archium.domain.concept_direction import ConceptDirection

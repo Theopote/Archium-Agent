@@ -21,7 +21,6 @@ from archium.domain.intent.context_assessment_reason import (
 from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions
 from archium.domain.intent.next_best_action import NextBestActionType
 
-
 _TEMPLE_TEXT = (
     "秦岭深处一座寺庙改扩建：强调礼佛轴线、庭院序列与禅意氛围，"
     "形式克制，材料以木石为主，空间叙事重于图纸完备。"

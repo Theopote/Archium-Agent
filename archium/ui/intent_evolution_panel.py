@@ -12,7 +12,6 @@ from archium.domain.intent.intent_evolution import (
     IntentEvolutionEvent,
     IntentEvolutionKind,
 )
-from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.domain.project import Project
 from archium.infrastructure.database.session import get_session
 

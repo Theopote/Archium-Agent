@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.domain.context.legacy_origin import apply_legacy_origin, infer_legacy_origin_mode
+from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.project import Project

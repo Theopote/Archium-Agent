@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import Field
-
 from archium.domain._base import DomainModel
 
 

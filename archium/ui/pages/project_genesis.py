@@ -290,8 +290,9 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
         key="genesis_reassess",
         use_container_width=True,
     ):
-        from archium.ui.planning_service import reassess_project_context
         from uuid import UUID
+
+        from archium.ui.planning_service import reassess_project_context
 
         with st.spinner("正在重新评估知识状态…"):
             try:

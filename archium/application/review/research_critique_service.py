@@ -25,6 +25,8 @@ from archium.infrastructure.llm.research_critique_schemas import ResearchCritiqu
 from archium.logging import get_logger
 from archium.prompts.research_critique import (
     PROMPT_VERSION as RESEARCH_CRITIQUE_PROMPT_VERSION,
+)
+from archium.prompts.research_critique import (
     RESEARCH_CRITIQUE_SYSTEM_PROMPT,
     build_research_critique_user_prompt,
 )

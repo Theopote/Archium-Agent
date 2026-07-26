@@ -75,7 +75,7 @@ class LLMRuntime:
         project_id: UUID | str | None = None,
     ) -> T:
         prepared, role = self._prepare(request, capability=capability, project_id=project_id)
-        return self._run(
+        result = self._run(
             prepared,
             role=role,
             capability=capability,
@@ -83,6 +83,7 @@ class LLMRuntime:
             structured=True,
             schema=schema,
         )
+        return result  # type: ignore[return-value]
 
     def _prepare(
         self,

@@ -31,14 +31,19 @@ from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
 from archium.infrastructure.llm.capabilities import LLMCapability
-from archium.infrastructure.llm.research_schemas import AutonomousResearchDraft, ResearchFindingDraft
+from archium.infrastructure.llm.research_schemas import (
+    AutonomousResearchDraft,
+    ResearchFindingDraft,
+)
 from archium.infrastructure.research.web_search.models import WebSearchResult
 from archium.infrastructure.research.web_search.service import WebResearchSearchService
 from archium.logging import get_logger
 from archium.prompts.autonomous_research import (
     AUTONOMOUS_RESEARCH_SYSTEM_PROMPT,
-    PROMPT_VERSION as RESEARCH_PROMPT_VERSION,
     build_autonomous_research_user_prompt,
+)
+from archium.prompts.autonomous_research import (
+    PROMPT_VERSION as RESEARCH_PROMPT_VERSION,
 )
 
 logger = get_logger(__name__, operation="autonomous_research")

@@ -6,10 +6,6 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from archium.application.job_progress_service import JobProgressService
 from archium.application.project_event_service import ProjectEventService
 from archium.domain.enums import WorkflowStatus
@@ -28,6 +24,9 @@ from archium.infrastructure.llm.trace import (
     LLMTrace,
     set_llm_trace_recorder,
 )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture()

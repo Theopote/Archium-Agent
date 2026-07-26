@@ -5,12 +5,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.concept_direction_service import ConceptDirectionService
 from archium.application.visual.vision import VisualConceptBriefService
 from archium.config.settings import Settings
-from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.concept_direction import ConceptDirection
+from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.enums import (
     ConceptDirectionStatus,
     ProjectOriginMode,

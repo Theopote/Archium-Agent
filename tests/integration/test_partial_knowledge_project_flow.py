@@ -10,7 +10,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.context_intelligence_service import ContextIntelligenceService
 from archium.application.exploration_service import ExplorationService
 from archium.application.ingestion_service import IngestionService

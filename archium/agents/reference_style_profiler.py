@@ -38,7 +38,7 @@ class ReferenceStyleProfiler:
         brief: PresentationBrief,
         *,
         reference_context: str,
-        source_document_ids: list[UUID],
+        source_document_ids: list[str],
         version: int = 1,
     ) -> ReferenceStyleProfile:
         if not self._settings.llm_configured:

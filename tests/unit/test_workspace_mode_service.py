@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from archium.application.workspace_mode_service import (
     WorkspaceModeService,
     origin_to_default_workspace_mode,

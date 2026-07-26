@@ -6,10 +6,6 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from archium.application.background_job_service import BackgroundJobService
 from archium.application.background_job_worker import BackgroundJobWorker
 from archium.application.cad_bim_analysis import analyze_cad_bim_file
@@ -25,6 +21,9 @@ from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.document_parsers import get_parser_for_path
 from archium.infrastructure.document_parsers._utils import infer_document_type
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture()

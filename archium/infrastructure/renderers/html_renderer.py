@@ -9,15 +9,15 @@ from urllib.parse import quote
 from archium.domain.visual.font_names import (
     DEFAULT_CJK_FONT,
 )
-from archium.domain.visual.scene_fonts import (
-    css_font_stack,
-)
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
     RenderScene,
     ShapeNode,
     TextNode,
+)
+from archium.domain.visual.scene_fonts import (
+    css_font_stack,
 )
 
 DEFAULT_DPI = 96

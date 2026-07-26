@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from archium.application.evidence_readiness_service import (
     DeliveryReadinessReport,
     ProjectEvidenceStatus,

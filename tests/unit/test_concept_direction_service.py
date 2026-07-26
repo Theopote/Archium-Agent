@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.concept_direction_service import ConceptDirectionService
 from archium.domain.enums import (
     ConceptDirectionStatus,

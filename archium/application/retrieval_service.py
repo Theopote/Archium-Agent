@@ -181,9 +181,7 @@ class RetrievalService:
             allowed = {t.value for t in filters.architectural_types}
             if hit.architectural_type not in allowed:
                 return False
-        if filters.document_ids and hit.document_id not in filters.document_ids:
-            return False
-        return True
+        return not (filters.document_ids and hit.document_id not in filters.document_ids)
 
 
 def create_retrieval_service(

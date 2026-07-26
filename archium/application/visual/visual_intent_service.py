@@ -248,7 +248,8 @@ class VisualIntentService:
 
             archetype = getattr(intent, "page_archetype", None) or recognition.archetype
             if (
-                slide.presentation_id is not None
+                self._session is not None
+                and slide.presentation_id is not None
                 and visual_concept_brief_applies(page_archetype=archetype)
             ):
                 concept_brief = resolve_visual_concept_brief_for_presentation(

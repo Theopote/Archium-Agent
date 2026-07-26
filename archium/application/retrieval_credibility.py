@@ -44,10 +44,7 @@ def reliability_authority(reliability: InformationReliability) -> float:
 
 
 def score_fact_credibility(fact: ProjectFact) -> CredibilityScores:
-    if fact.is_confirmed:
-        authority = 0.94
-    else:
-        authority = min(0.78, 0.38 + float(fact.confidence) * 0.45)
+    authority = 0.94 if fact.is_confirmed else min(0.78, 0.38 + float(fact.confidence) * 0.45)
     if fact.verification_status == VerificationStatus.CONFLICTED:
         authority = min(authority, 0.25)
     has_citations = bool(fact.source_citations)

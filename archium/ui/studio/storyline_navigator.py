@@ -11,6 +11,7 @@ import streamlit as st
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Storyline
 from archium.infrastructure.database.session import get_session
+from archium.ui.page_status_board_panel import status_badge
 from archium.ui.studio.slide_navigator import (
     _resolve_selected_index,
     _set_selected_slide,
@@ -18,7 +19,6 @@ from archium.ui.studio.slide_navigator import (
     render_slide_navigator,
 )
 from archium.ui.studio_service import StudioPresentationContext
-from archium.ui.page_status_board_panel import status_badge
 
 
 @dataclass(frozen=True)

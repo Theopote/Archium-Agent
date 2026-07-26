@@ -54,9 +54,11 @@ from archium.infrastructure.llm.capabilities import LLMCapability
 from archium.infrastructure.llm.mission_schemas import MissionGenerationDraft
 from archium.prompts.project_mission import (
     MISSION_SYSTEM_PROMPT,
-    PROMPT_VERSION as MISSION_PROMPT_VERSION,
     build_mission_regeneration_prompt,
     build_mission_user_prompt,
+)
+from archium.prompts.project_mission import (
+    PROMPT_VERSION as MISSION_PROMPT_VERSION,
 )
 
 
@@ -154,7 +156,6 @@ class ProjectMissionService:
         fact_summary = self._build_fact_summary(project_id)
         from archium.prompts.project_mission import (
             build_concept_mission_addendum,
-            build_mission_user_prompt,
             build_programming_mission_addendum,
         )
 
@@ -318,7 +319,7 @@ class ProjectMissionService:
                 IntentEvolutionKind.MISSION_COMMIT,
                 IntentEvolutionKind.RESEARCH,
             } and (event.new_summary or "").strip():
-                previous = event.new_summary.strip()
+                previous = (event.new_summary or "").strip()
                 break
         project.intent_evolution = evo.append(
             IntentEvolutionKind.MISSION_APPROVED,

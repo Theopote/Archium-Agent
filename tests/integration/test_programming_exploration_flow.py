@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.project_mission_service import ProjectMissionService
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.project import Project

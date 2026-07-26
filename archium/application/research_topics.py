@@ -399,10 +399,9 @@ def _keyword_axis_boost(text: str) -> tuple[AssessmentReasonAxis, float]:
     best_axis = AssessmentReasonAxis.OTHER
     best_boost = 0.0
     for keyword, boost, axis in _DESIGN_IMPACT_KEYWORDS:
-        if keyword in text:
-            if boost > best_boost:
-                best_boost = boost
-                best_axis = axis
+        if keyword in text and boost > best_boost:
+            best_boost = boost
+            best_axis = axis
     return best_axis, best_boost
 
 

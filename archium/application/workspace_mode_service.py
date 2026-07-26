@@ -7,8 +7,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.application.project_context_builder import build_project_context
+from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import (

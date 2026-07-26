@@ -151,12 +151,13 @@ class MultimodalRetrievalService:
         query = (query or "").strip()
         modality = infer_modality_from_query(query)
         # Always allow multimodal channel when query mentions visual/drawing OR blank modality with asset preference
-        if modality is None and not any(
-            token in query for token in ("空间", "材料", "立面", "氛围", "示意")
+        if (
+            modality is None
+            and not any(token in query for token in ("空间", "材料", "立面", "氛围", "示意"))
+            and not self._settings.asset_vision_rag_enabled
         ):
             # Soft: still scan captions if asset_vision enabled and query non-empty
-            if not self._settings.asset_vision_rag_enabled:
-                return []
+            return []
 
         filters = RetrievalFilters(content_types=("asset_caption", "image"))
         retrieval = create_retrieval_service(self._session, self._settings)

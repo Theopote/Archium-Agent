@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.autonomous_research_service import AutonomousResearchService
 from archium.config.settings import Settings
 from archium.domain.enums import ProjectOriginMode
@@ -14,6 +13,7 @@ from archium.domain.intent.knowledge_dimensions import KnowledgeDimensions
 from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.domain.project import Project
 from archium.domain.project_mission import ProjectMission
+from archium.domain.research_critique import ResearchCritiqueReport
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import ProjectRepository
 from archium.infrastructure.llm.research_schemas import (
@@ -23,11 +23,11 @@ from archium.infrastructure.llm.research_schemas import (
 )
 from archium.infrastructure.research.web_search.models import WebSearchResult
 from archium.infrastructure.research.web_search.service import WebResearchSearchService
+
 from tests.evaluation.assertions import (
     assert_research_item_has_design_knowledge,
     assert_research_item_has_sources,
 )
-from archium.domain.research_critique import ResearchCritiqueReport
 
 
 class _StubWebResearch(WebResearchSearchService):

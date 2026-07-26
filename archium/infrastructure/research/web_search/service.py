@@ -11,6 +11,10 @@ from archium.infrastructure.research.web_search.models import WebSearchResult
 from archium.infrastructure.research.web_search.tavily import TavilyClient
 
 
+class _SearchClient(Protocol):
+    def search(self, query: str, *, max_results: int = 5) -> list[WebSearchResult]: ...
+
+
 class WebResearchProvider(Protocol):
     provider_name: str
 
@@ -18,7 +22,7 @@ class WebResearchProvider(Protocol):
 
 
 class _NamedProvider:
-    def __init__(self, name: str, client: WebResearchProvider) -> None:
+    def __init__(self, name: str, client: _SearchClient) -> None:
         self.provider_name = name
         self._client = client
 

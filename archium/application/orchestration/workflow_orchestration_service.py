@@ -15,6 +15,7 @@ from archium.application.orchestration.workstream_execution_service import (
 from archium.config.settings import Settings, get_settings
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.enums import WorkflowStatus
+from archium.domain.intent.next_best_action import NextBestActionType
 from archium.domain.orchestration import (
     HumanGate,
     OrchestrationPlan,
@@ -29,7 +30,6 @@ from archium.domain.orchestration import (
     replan_from_context,
     stage_hint_for_action,
 )
-from archium.domain.intent.next_best_action import NextBestActionType
 from archium.domain.workflow import WorkflowRun
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
@@ -304,22 +304,21 @@ class WorkflowOrchestrationService:
             OrchestrationStageStatus.COMPLETED,
             OrchestrationStageStatus.SKIPPED,
             OrchestrationStageStatus.FAILED,
-        }:
-            if plan.advance_index() is None:
-                run.status = WorkflowStatus.COMPLETED
-                run.state = {
-                    **run.state,
-                    "orchestration_plan": plan.model_dump(mode="json"),
-                    "human_gate": None,
-                    "active_stage": None,
-                }
-                run = self._workflow_runs.update(run)
-                return OrchestrationResult(
-                    workflow_run=run,
-                    plan=plan,
-                    page_key=None,
-                    replan_decision=replan_payload,
-                )
+        } and plan.advance_index() is None:
+            run.status = WorkflowStatus.COMPLETED
+            run.state = {
+                **run.state,
+                "orchestration_plan": plan.model_dump(mode="json"),
+                "human_gate": None,
+                "active_stage": None,
+            }
+            run = self._workflow_runs.update(run)
+            return OrchestrationResult(
+                workflow_run=run,
+                plan=plan,
+                page_key=None,
+                replan_decision=replan_payload,
+            )
 
         task = str(run.state.get("user_task_description") or "")
         result = self._drive(run, plan, user_task_description=task)
@@ -545,13 +544,11 @@ class WorkflowOrchestrationService:
             from archium.application.context.context_analyzer import ContextAnalyzer
 
             analyzer = ContextAnalyzer(self._session, self._llm, settings=self._settings)
-            result = analyzer.try_execute_research(project_id)
-            warnings = []
-            if hasattr(result, "warnings"):
-                warnings = list(getattr(result, "warnings") or [])
+            ok, message = analyzer.try_execute_research(project_id)
             payload: dict[str, Any] = {
                 "status": OrchestrationStageStatus.COMPLETED,
-                "warnings": warnings or ["自主研究阶段已执行"],
+                "warnings": [message] if message else ["自主研究阶段已执行"],
+                "research_ok": ok,
             }
             ctx = self._load_project_context(project_id)
             reflection = self._reflection_payload(ctx, source="research")

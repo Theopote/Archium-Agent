@@ -139,9 +139,8 @@ class ProjectProgressSnapshot:
                 return "edit"
             return "deliver"
 
-        if self.document_count <= 0 and self.has_mission_or_task:
-            if not self.outline_approved:
-                return "outline"
+        if self.document_count <= 0 and self.has_mission_or_task and not self.outline_approved:
+            return "outline"
         if self.document_count <= 0:
             return "materials"
         if not self.outline_approved:

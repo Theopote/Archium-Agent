@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
-
 from archium.application.knowledge_fusion import KnowledgeFusionService
 from archium.application.retrieval_filters import RetrievalFilters
 from archium.application.retrieval_service import RetrievalService
@@ -34,6 +32,7 @@ from archium.infrastructure.database.repositories import (
 )
 from archium.infrastructure.embeddings.mock import MockEmbeddingProvider
 from archium.infrastructure.vector.chroma_store import ChromaVectorStore
+from sqlalchemy.orm import Session
 
 
 def test_classify_spatial_and_drawing() -> None:

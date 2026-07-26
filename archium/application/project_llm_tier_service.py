@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from archium.config.settings import Settings
 from archium.domain.project_llm_tier import (
     PROJECT_LLM_TIER_KEY,
-    ProjectLLMTier,
     TIER_LABELS,
+    ProjectLLMTier,
 )
 from archium.infrastructure.database.user_preference_repository import (
     UserPreferenceRepository,

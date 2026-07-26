@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.context_intelligence_service import ContextIntelligenceService
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage

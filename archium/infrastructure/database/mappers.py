@@ -4,30 +4,29 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.domain.asset import Asset
+from archium.domain.access import ProjectInvite, ProjectMember
 from archium.domain.artifact_job import ArtifactJob
+from archium.domain.asset import Asset
+from archium.domain.background_job import BackgroundJob
 from archium.domain.citation import Citation
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
-from archium.domain.design_rationale import DesignRationale
-from archium.domain.spatial_design import DesignRule, SpatialIntent
-from archium.domain.intent.idea_seed import IdeaSeed
-from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import (
     CULTURAL_NARRATIVE_LOGICAL_KEY,
     CulturalNarrativePlan,
 )
 from archium.domain.delivery_record import DeliveryRecord
+from archium.domain.design_rationale import DesignRationale
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
     ArtifactJobStatus,
     AssetType,
     ConceptDirectionStatus,
-    ExplorationSessionStatus,
     DeckDeliveryStatus,
     DeliverableType,
     DocumentType,
+    ExplorationSessionStatus,
     InformationOrigin,
     InformationReliability,
     KnowledgeItemStatus,
@@ -52,7 +51,9 @@ from archium.domain.enums import (
     VerificationStatus,
     WorkflowStatus,
 )
+from archium.domain.exploration_session import ExplorationSession
 from archium.domain.fact import FactValue, ProjectFact
+from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.memory import UserPreference
 from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
@@ -68,6 +69,7 @@ from archium.domain.presentation import (
 )
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
+from archium.domain.project_event import ProjectEvent
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.reference_style import (
     REFERENCE_STYLE_PROFILE_LOGICAL_KEY,
@@ -80,28 +82,34 @@ from archium.domain.slide import SlideSpec, VisualRequirement, build_slide_logic
 from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.spatial_design import DesignRule, SpatialIntent
+from archium.domain.visual.vision_generation import ArchitectureImageType, VisionStylePreset
 from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.domain.visual.visual_grammar import coerce_page_archetype
-from archium.domain.visual.vision_generation import ArchitectureImageType, VisionStylePreset
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
     ArtifactJobORM,
     AssetORM,
+    BackgroundJobORM,
     ChapterORM,
     ConceptDirectionORM,
-    ExplorationSessionORM,
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
+    ExplorationSessionORM,
+    LLMTraceORM,
     OutlineApprovalRecordORM,
     OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
     PresentationManuscriptORM,
     PresentationORM,
+    ProjectEventORM,
     ProjectFactORM,
+    ProjectInviteORM,
     ProjectKnowledgeItemORM,
+    ProjectMemberORM,
     ProjectORM,
     ReferenceStyleProfileORM,
     RenovationIssueMapORM,
@@ -115,6 +123,7 @@ from archium.infrastructure.database.models import (
     VisualQAReportORM,
     WorkflowRunORM,
 )
+from archium.infrastructure.llm.trace import LLMTrace
 
 
 def citations_to_json(citations: list[Citation]) -> list[dict[str, object]]:
@@ -1597,7 +1606,7 @@ def outline_approval_record_to_orm(
     return target
 
 
-def project_event_to_domain(orm: "ProjectEventORM") -> "ProjectEvent":
+def project_event_to_domain(orm: ProjectEventORM) -> ProjectEvent:
     from archium.domain.project_event import (
         ProjectEvent,
         ProjectEventActor,
@@ -1628,9 +1637,9 @@ def project_event_to_domain(orm: "ProjectEventORM") -> "ProjectEvent":
 
 
 def project_event_to_orm(
-    domain: "ProjectEvent",
-    orm: "ProjectEventORM | None" = None,
-) -> "ProjectEventORM":
+    domain: ProjectEvent,
+    orm: ProjectEventORM | None = None,
+) -> ProjectEventORM:
     from archium.infrastructure.database.models import ProjectEventORM
 
     target = orm or ProjectEventORM(id=domain.id)
@@ -1649,7 +1658,7 @@ def project_event_to_orm(
     return target
 
 
-def llm_trace_to_orm(trace: "LLMTrace") -> "LLMTraceORM":
+def llm_trace_to_orm(trace: LLMTrace) -> LLMTraceORM:
     from uuid import UUID, uuid4
 
     from archium.infrastructure.database.models import LLMTraceORM
@@ -1679,7 +1688,7 @@ def llm_trace_to_orm(trace: "LLMTrace") -> "LLMTraceORM":
     )
 
 
-def llm_trace_orm_to_dataclass(orm: "LLMTraceORM") -> "LLMTrace":
+def llm_trace_orm_to_dataclass(orm: LLMTraceORM) -> LLMTrace:
     from archium.infrastructure.llm.trace import LLMTrace
 
     return LLMTrace(
@@ -1700,7 +1709,7 @@ def llm_trace_orm_to_dataclass(orm: "LLMTraceORM") -> "LLMTrace":
     )
 
 
-def background_job_to_domain(orm: "BackgroundJobORM") -> "BackgroundJob":
+def background_job_to_domain(orm: BackgroundJobORM) -> BackgroundJob:
     from archium.domain.background_job import (
         BackgroundJob,
         BackgroundJobKind,
@@ -1735,9 +1744,9 @@ def background_job_to_domain(orm: "BackgroundJobORM") -> "BackgroundJob":
 
 
 def background_job_to_orm(
-    domain: "BackgroundJob",
-    orm: "BackgroundJobORM | None" = None,
-) -> "BackgroundJobORM":
+    domain: BackgroundJob,
+    orm: BackgroundJobORM | None = None,
+) -> BackgroundJobORM:
     from archium.infrastructure.database.models import BackgroundJobORM
 
     target = orm or BackgroundJobORM(id=domain.id)
@@ -1760,7 +1769,7 @@ def background_job_to_orm(
     return target
 
 
-def project_member_to_domain(orm: "ProjectMemberORM") -> "ProjectMember":
+def project_member_to_domain(orm: ProjectMemberORM) -> ProjectMember:
     from archium.domain.access import ProjectMember, ProjectRole
 
     try:
@@ -1779,9 +1788,9 @@ def project_member_to_domain(orm: "ProjectMemberORM") -> "ProjectMember":
 
 
 def project_member_to_orm(
-    domain: "ProjectMember",
-    orm: "ProjectMemberORM | None" = None,
-) -> "ProjectMemberORM":
+    domain: ProjectMember,
+    orm: ProjectMemberORM | None = None,
+) -> ProjectMemberORM:
     from archium.infrastructure.database.models import ProjectMemberORM
 
     target = orm or ProjectMemberORM(id=domain.id)
@@ -1796,7 +1805,7 @@ def project_member_to_orm(
     return target
 
 
-def project_invite_to_domain(orm: "ProjectInviteORM") -> "ProjectInvite":
+def project_invite_to_domain(orm: ProjectInviteORM) -> ProjectInvite:
     from archium.domain.access import ProjectInvite, ProjectRole
 
     try:
@@ -1820,9 +1829,9 @@ def project_invite_to_domain(orm: "ProjectInviteORM") -> "ProjectInvite":
 
 
 def project_invite_to_orm(
-    domain: "ProjectInvite",
-    orm: "ProjectInviteORM | None" = None,
-) -> "ProjectInviteORM":
+    domain: ProjectInvite,
+    orm: ProjectInviteORM | None = None,
+) -> ProjectInviteORM:
     from archium.infrastructure.database.models import ProjectInviteORM
 
     target = orm or ProjectInviteORM(id=domain.id)

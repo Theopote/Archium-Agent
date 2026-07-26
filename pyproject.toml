@@ -152,6 +152,7 @@ ignore = ["B008", "E501"]
 
 [tool.mypy]
 python_version = "3.11"
+mypy_path = "typings"
 warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
@@ -202,8 +203,15 @@ module = [
 ]
 ignore_missing_imports = true
 
+
+# Streamlit UI: many handlers still lack full annotations; keep checking bodies.
+[[tool.mypy.overrides]]
+module = ["archium.ui", "archium.ui.*"]
+disallow_untyped_defs = false
+
 # chromadb → numpy ships 3.12-only stub syntax; skip third-party follow-imports.
 [[tool.mypy.overrides]]
 module = ["chromadb", "chromadb.*", "numpy", "numpy.*"]
 follow_imports = "skip"
 ignore_missing_imports = true
+ignore_errors = true

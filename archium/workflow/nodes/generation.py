@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from archium.application.citation_resolution import enrich_slide_citations
 from archium.application._helpers import (
     build_project_context_bundle,
     build_retrieval_query_from_request,
 )
 from archium.application.asset_matching_service import AssetMatchingService
+from archium.application.citation_resolution import enrich_slide_citations
 from archium.domain.enums import ApprovalStatus, PresentationWorkflowStep
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.slide import SlideSpec

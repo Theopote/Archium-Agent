@@ -6,7 +6,6 @@ Critic role Service: read-only report. Never rewrites the direction or Mission.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -31,8 +30,10 @@ from archium.infrastructure.llm.design_critique_schemas import (
 from archium.logging import get_logger
 from archium.prompts.design_critique import (
     DESIGN_CRITIQUE_SYSTEM_PROMPT,
-    PROMPT_VERSION as CRITIQUE_PROMPT_VERSION,
     build_design_critique_user_prompt,
+)
+from archium.prompts.design_critique import (
+    PROMPT_VERSION as CRITIQUE_PROMPT_VERSION,
 )
 
 logger = get_logger(__name__, operation="design_critique")
@@ -388,10 +389,10 @@ class DesignCritiqueService:
             for gap in (knowledge_state.unknown or [])[:5]:
                 if str(gap).strip():
                     lines.append(f"- 未知：{str(gap).strip()[:200]}")
-            for gap in (knowledge_state.open_unknowns or [])[:5]:
-                if gap.description.strip():
-                    prefix = "阻断未知" if gap.blocking else "未知"
-                    lines.append(f"- {prefix}：{gap.description.strip()[:200]}")
+            for unknown_ref in (knowledge_state.open_unknowns or [])[:5]:
+                if unknown_ref.description.strip():
+                    prefix = "阻断未知" if unknown_ref.blocking else "未知"
+                    lines.append(f"- {prefix}：{unknown_ref.description.strip()[:200]}")
         if not lines:
             return "（暂无研究摘要）"
         return "\n".join(lines)

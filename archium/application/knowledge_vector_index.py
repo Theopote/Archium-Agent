@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -133,7 +134,7 @@ class KnowledgeVectorIndexService:
                     },
                 }
             )
-        self._store.upsert_records(project_id, records, embeddings)
+        self._store.upsert_records(project_id, cast(list[dict[str, object]], records), embeddings)
         logger.info("Indexed %d knowledge items for project %s", len(records), project_id)
 
     def remove_item(self, project_id: UUID, item_id: UUID) -> None:

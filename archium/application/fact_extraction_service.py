@@ -7,8 +7,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.application.citation_resolution import citation_from_draft
 from archium.application.chunk_models import ProjectContextBundle
+from archium.application.citation_resolution import citation_from_draft
 from archium.application.fact_metric_extractor import ExtractedMetric, extract_metrics_from_chunks
 from archium.application.fact_validation_service import _normalize_value
 from archium.config.settings import Settings, get_settings

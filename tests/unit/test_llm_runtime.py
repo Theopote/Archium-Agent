@@ -5,8 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from pydantic import BaseModel
-
 from archium.config.settings import Settings
 from archium.domain.model_roles import ModelRole
 from archium.infrastructure.llm.base import LLMRequest, LLMResponse
@@ -23,6 +21,7 @@ from archium.infrastructure.llm.trace import (
     set_llm_trace_recorder,
     usage_from_openai_completion,
 )
+from pydantic import BaseModel
 
 
 class _TinyDraft(BaseModel):

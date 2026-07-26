@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from archium.domain.intent.intent_evolution import IntentEvolutionKind
 from archium.domain.spatial_design import DesignDecision, DesignRule, SpatialIntent
 from archium.ui.components.spatial_design_details import (
     render_design_decision,
@@ -12,7 +13,6 @@ from archium.ui.components.spatial_design_details import (
     render_spatial_intent_from_snapshot,
 )
 from archium.ui.intent_evolution_panel import intent_evolution_kind_label
-from archium.domain.intent.intent_evolution import IntentEvolutionKind
 
 
 def test_render_helpers_noop_on_empty() -> None:

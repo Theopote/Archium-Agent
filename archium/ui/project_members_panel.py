@@ -64,6 +64,7 @@ def render_project_members_panel(
             else:
                 try:
                     with get_session() as session:
+                        assert role is not None
                         ProjectAccessService(session).add_member(
                             project_id,
                             actor,

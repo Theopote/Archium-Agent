@@ -83,15 +83,7 @@ class ProjectAccessService:
         member = self._repo.get_by_project_actor(project_id, actor_id)
         if member is None:
             # Bootstrap: projects without members allow local-user edit (single-user mode).
-            if actor_id == LOCAL_ACTOR_ID and permission in {
-                ProjectPermission.VIEW,
-                ProjectPermission.EDIT,
-                ProjectPermission.REVIEW,
-                ProjectPermission.EXPORT,
-                ProjectPermission.MANAGE_MEMBERS,
-            }:
-                return True
-            return False
+            return bool(actor_id == LOCAL_ACTOR_ID and permission in {ProjectPermission.VIEW, ProjectPermission.EDIT, ProjectPermission.REVIEW, ProjectPermission.EXPORT, ProjectPermission.MANAGE_MEMBERS})
         return member.can(permission)
 
     def require(

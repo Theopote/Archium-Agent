@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
 from archium.application.exploration_service import ExplorationService
 from archium.application.mission_parser import parse_mission_draft
 from archium.application.project_mission_service import ProjectMissionService

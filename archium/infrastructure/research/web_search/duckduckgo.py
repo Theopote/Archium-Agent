@@ -39,7 +39,7 @@ class DuckDuckGoClient:
 
     def search(self, query: str, *, max_results: int = 5) -> list[WebSearchResult]:
         safe_query = query.strip() or "architecture research"
-        body = f"q={quote_plus(safe_query)}&b=".encode("utf-8")
+        body = f"q={quote_plus(safe_query)}&b=".encode()
         page = self._fetch_html(
             self._SEARCH_URL,
             {"Content-Type": "application/x-www-form-urlencoded"},
@@ -75,7 +75,7 @@ class DuckDuckGoClient:
         )
         with urlopen(request, timeout=timeout) as response:  # noqa: S310
             raw = response.read()
-        return raw.decode("utf-8", errors="replace")
+        return str(raw.decode("utf-8", errors="replace"))
 
 
 def _decode_ddg_url(href: str) -> str:

@@ -30,8 +30,6 @@ def render_visual_thinking_panel(
     )
     from archium.ui.planning_service import (
         get_visual_concept_brief_for_slot,
-        refine_visual_concept_brief,
-        synthesize_visual_concept_brief,
     )
 
     st.markdown("**Visual Thinking**")

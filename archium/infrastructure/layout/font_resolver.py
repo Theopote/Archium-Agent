@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Protocol, cast
 
-from archium.domain.visual.font_names import (
+from archium.domain.visual.font_names import (  # noqa: F401
     CJK_FALLBACK_CHAIN,
     DEFAULT_CJK_FONT,
     DEFAULT_LATIN_FONT,

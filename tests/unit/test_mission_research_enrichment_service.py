@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 import pytest
-
 from archium.application.mission_research_enrichment_service import (
     MissionResearchEnrichmentService,
 )

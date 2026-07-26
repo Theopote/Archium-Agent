@@ -15,11 +15,13 @@ from dataclasses import asdict, dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from archium.infrastructure.layout.font_resolver import (
+from archium.domain.visual.font_names import (
     CJK_FALLBACK_CHAIN,
     DEFAULT_CJK_FONT,
     DEFAULT_LATIN_FONT,
     LATIN_FALLBACK_CHAIN,
+)
+from archium.infrastructure.layout.font_resolver import (
     ResolvedFont,
     resolve_font_file,
 )

@@ -6,15 +6,10 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.font_names import (
     DEFAULT_CJK_FONT,
 )
-from archium.domain.visual.scene_fonts import (
-    text_has_cjk,
-)
-from archium.infrastructure.layout.scene_fonts import detect_font_fallbacks
-from archium.infrastructure.renderers.svg_icon_recolor import materialize_recolored_icon
-from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.visual.pptx_structure import (
     PptxStructureMode,
     PresentationStructureSpec,
@@ -28,11 +23,16 @@ from archium.domain.visual.render_scene import (
     TableNode,
     TextNode,
 )
+from archium.domain.visual.scene_fonts import (
+    text_has_cjk,
+)
+from archium.infrastructure.layout.scene_fonts import detect_font_fallbacks
 from archium.infrastructure.renderers.pptx_structure_catalog import (
     default_archium_structure_spec,
     structure_spec_to_pptxgen_payload,
 )
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import RenderedSlideInstruction
+from archium.infrastructure.renderers.svg_icon_recolor import materialize_recolored_icon
 
 
 class RenderScenePptxAdapter:
@@ -94,9 +94,9 @@ class RenderScenePptxAdapter:
         instructions: list[dict[str, Any]] = []
         for entry in scenes:
             if len(entry) == 3:
-                scene, notes, cites = entry  # type: ignore[misc]
+                scene, notes, cites = entry
             else:
-                scene, notes = entry  # type: ignore[misc]
+                scene, notes = entry
                 cites = None
             instruction = self.render_slide(
                 scene,

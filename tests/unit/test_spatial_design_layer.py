@@ -13,7 +13,7 @@ from archium.application.spatial_design_layer import (
 )
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.design_rationale import DesignRationale
-from archium.domain.enums import ConceptDirectionStatus, ProjectType
+from archium.domain.enums import ConceptDirectionStatus
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
 

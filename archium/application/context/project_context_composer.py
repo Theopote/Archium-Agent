@@ -8,6 +8,7 @@ from archium.application.context.types import ContextAssessment
 from archium.application.context_evidence import ProjectEvidencePack
 from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.domain.context.project_context import ProjectContext
+from archium.domain.intent.knowledge_state import KnowledgeState
 
 
 def finalize_assessment_context(assessment: ContextAssessment) -> None:
@@ -55,8 +56,8 @@ def compose_project_context(
 
 
 def enrich_knowledge_state_counts(
-    state,
+    state: KnowledgeState,
     evidence: ProjectEvidencePack,
-) -> object:
+) -> KnowledgeState:
     """Attach evidence counts and claim index to KnowledgeState."""
     return merge_claim_index_into_state(state, evidence)

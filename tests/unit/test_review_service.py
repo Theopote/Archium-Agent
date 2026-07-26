@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 from archium.application.review_models import BriefUpdate, ChapterUpdate, StorylineUpdate
 from archium.application.review_service import (
     PresentationReviewService,
@@ -27,7 +29,6 @@ from archium.infrastructure.database.repositories import (
     WorkflowRunRepository,
 )
 from sqlalchemy.orm import Session
-from uuid import uuid4
 
 
 def _seed_brief(db_session: Session) -> PresentationBrief:
@@ -126,7 +127,6 @@ def test_resolve_and_dismiss_review_issue(db_session: Session) -> None:
         title="测试问题",
         description="描述",
     )
-    from archium.infrastructure.database.repositories import ReviewRepository
 
     stored = ReviewRepository(db_session).create(issue)
     service = PresentationReviewService(db_session)
@@ -149,7 +149,6 @@ def test_resolve_and_dismiss_review_issue(db_session: Session) -> None:
 
 
 def test_list_review_issues_by_project(db_session: Session) -> None:
-    from archium.infrastructure.database.repositories import ReviewRepository
 
     brief = _seed_brief(db_session)
     project_id = brief.project_id

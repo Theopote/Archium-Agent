@@ -14,6 +14,7 @@ from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_intent import PresentationIntent
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_role import SlideRole, VisualStrategy
+
 from tests.evaluation.assertions import (
     assert_presentation_critique_contract,
     assert_presentation_intent_contract,

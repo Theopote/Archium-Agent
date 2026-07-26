@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
 from archium.application.context.presentation_cognition_gate import (
     enforce_presentation_cognition_gate,
 )

@@ -72,27 +72,24 @@ def _approval_status(artifact: object | None) -> ApprovalStatus | None:
 def _route_after_brief(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
-    if state.get("require_brief_review"):
-        if _approval_status(state.get("brief")) != ApprovalStatus.APPROVED:
-            return "pause_for_review"
+    if state.get("require_brief_review") and _approval_status(state.get("brief")) != ApprovalStatus.APPROVED:
+        return "pause_for_review"
     return "continue"
 
 
 def _route_after_storyline(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
-    if state.get("require_storyline_review"):
-        if _approval_status(state.get("storyline")) != ApprovalStatus.APPROVED:
-            return "pause_for_review"
+    if state.get("require_storyline_review") and _approval_status(state.get("storyline")) != ApprovalStatus.APPROVED:
+        return "pause_for_review"
     return "continue"
 
 
 def _route_after_outline(state: PresentationWorkflowState) -> str:
     if state.get("errors"):
         return "finalize"
-    if state.get("require_outline_review"):
-        if _approval_status(state.get("outline")) != ApprovalStatus.APPROVED:
-            return "pause_for_review"
+    if state.get("require_outline_review") and _approval_status(state.get("outline")) != ApprovalStatus.APPROVED:
+        return "pause_for_review"
     return "continue"
 
 

@@ -14,12 +14,12 @@ from archium.application.knowledge_isolation import (
     filter_generation_knowledge,
     is_reference_document,
 )
+from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.enums import (
     DocumentPurpose,
     InformationOrigin,
     InformationReliability,
 )
-from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.fact import ProjectFact
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.exceptions import WorkflowError

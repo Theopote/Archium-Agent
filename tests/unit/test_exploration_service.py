@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.exploration_service import ExplorationService
 from archium.application.mission_context_bridge import resolve_selected_concept_direction
 from archium.domain.enums import (
@@ -20,12 +19,6 @@ from archium.infrastructure.llm.concept_direction_schemas import (
     ConceptDirectionDraft,
     ConceptVisualPromptDraft,
 )
-from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
-from archium.infrastructure.llm.mission_schemas import (
-    AssumptionDraft,
-    DesignIntentDraft,
-    MissionGenerationDraft,
-)
 from archium.infrastructure.llm.context_intelligence_schemas import (
     ContextAssessmentDraft,
     NextBestActionDraft,
@@ -33,6 +26,12 @@ from archium.infrastructure.llm.context_intelligence_schemas import (
 from archium.infrastructure.llm.design_critique_schemas import (
     DesignCritiqueDraft,
     DesignCritiqueItemDraft,
+)
+from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
+from archium.infrastructure.llm.mission_schemas import (
+    AssumptionDraft,
+    DesignIntentDraft,
+    MissionGenerationDraft,
 )
 from archium.prompts.concept_direction import build_exploration_direction_user_prompt
 

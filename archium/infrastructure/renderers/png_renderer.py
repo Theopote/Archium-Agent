@@ -14,15 +14,15 @@ from archium.domain.visual.font_names import (
     CJK_FALLBACK_CHAIN,
     LATIN_FALLBACK_CHAIN,
 )
-from archium.domain.visual.scene_fonts import (
-    text_has_cjk,
-)
 from archium.domain.visual.render_scene import (
     DrawingNode,
     ImageNode,
     RenderScene,
     ShapeNode,
     TextNode,
+)
+from archium.domain.visual.scene_fonts import (
+    text_has_cjk,
 )
 from archium.infrastructure.layout.font_resolver import load_truetype_font
 

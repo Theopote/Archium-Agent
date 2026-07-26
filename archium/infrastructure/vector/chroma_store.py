@@ -9,8 +9,8 @@ from uuid import UUID
 
 import chromadb
 
-from archium.domain.document import DocumentChunk
 from archium.application.retrieval_credibility import score_chunk_credibility
+from archium.domain.document import DocumentChunk
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="vector_store")
@@ -85,7 +85,7 @@ class ChromaVectorStore:
                     },
                 }
             )
-        self.upsert_records(project_id, records, embeddings)
+        self.upsert_records(project_id, cast(list[dict[str, object]], records), embeddings)
         logger.info(
             "Indexed %d chunks for project %s in Chroma",
             len(chunks),
@@ -217,11 +217,11 @@ class ChromaVectorStore:
             auth_raw = metadata.get("authority", 0.5)
             xfer_raw = metadata.get("transferability", 0.5)
             try:
-                authority = float(auth_raw)  # type: ignore[arg-type]
+                authority = float(auth_raw)
             except (TypeError, ValueError):
                 authority = 0.5
             try:
-                transferability = float(xfer_raw)  # type: ignore[arg-type]
+                transferability = float(xfer_raw)
             except (TypeError, ValueError):
                 transferability = 0.5
             hits.append(

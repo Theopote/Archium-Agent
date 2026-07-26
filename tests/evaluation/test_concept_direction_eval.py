@@ -10,7 +10,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.exploration_service import ExplorationService
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.project import Project
@@ -34,6 +33,7 @@ from archium.infrastructure.llm.mission_schemas import (
     DesignIntentDraft,
     MissionGenerationDraft,
 )
+
 from tests.evaluation.assertions import (
     assert_concept_direction_contract,
     assert_design_intent_social_background,

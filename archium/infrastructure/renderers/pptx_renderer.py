@@ -122,9 +122,9 @@ class PptxRenderer:
         normalized: list[tuple[RenderScene, str | None, list[str] | None]] = []
         for entry in scenes:
             if len(entry) >= 3:
-                scene, notes, cites = entry[0], entry[1], entry[2]  # type: ignore[misc]
+                scene, notes, cites = entry[0], entry[1], entry[2]
             else:
-                scene, notes = entry[0], entry[1]  # type: ignore[misc]
+                scene, notes = entry[0], entry[1]
                 cites = None
             normalized.append(
                 (

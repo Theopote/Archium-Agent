@@ -6,11 +6,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.agents.narrative_architect import NarrativeArchitect
 from archium.application._helpers import (
     build_retrieval_query_from_brief,
     resolve_design_context_text,
 )
-from archium.agents.narrative_architect import NarrativeArchitect
 from archium.application.artifact_history_service import StorylineHistoryService
 from archium.application.artifact_lineage import apply_storyline_lineage
 from archium.application.mission_context_bridge import (

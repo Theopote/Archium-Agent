@@ -9,7 +9,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.config.settings import Settings
-from archium.domain.enums import DeliverableType, ProjectOriginMode
+from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
@@ -24,7 +24,6 @@ from archium.ui.deliverable_panel import render_deliverable_panel
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import (
     brief_storyline_pair,
-    content_pipeline_chain,
     entity_label,
 )
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -829,14 +828,4 @@ def start_outline_planning(project_id: UUID, task_description: str) -> bool:
         _apply_planning_result(result)
         st.session_state.mission_step = 2
 
-    if not _launch_planning_job(
-        project_id,
-        PlanningJobAction.START,
-        settings=settings,
-        task_description=task_description,
-        on_complete=_on_start_complete,
-        success_message="已生成任务理解。可在下方确认大纲，或打开高级任务规划继续细化。",
-        awaiting_review_message="已生成任务理解，但存在可修复问题。请打开高级任务规划继续处理。",
-    ):
-        return False
-    return True
+    return _launch_planning_job(project_id, PlanningJobAction.START, settings=settings, task_description=task_description, on_complete=_on_start_complete, success_message="已生成任务理解。可在下方确认大纲，或打开高级任务规划继续细化。", awaiting_review_message="已生成任务理解，但存在可修复问题。请打开高级任务规划继续处理。")

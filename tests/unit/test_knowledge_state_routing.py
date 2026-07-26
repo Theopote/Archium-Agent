@@ -5,10 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from archium.application.context_intelligence_service import ContextIntelligenceService
-from archium.application.project_context_builder import build_project_context, overlay_persisted_routing
+from archium.application.project_context_builder import (
+    build_project_context,
+    overlay_persisted_routing,
+)
 from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
-from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.context.project_context import ProjectContext
+from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
 from archium.domain.project import Project

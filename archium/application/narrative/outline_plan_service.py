@@ -6,11 +6,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.agents.outline_planner import OutlinePlanner
 from archium.application._helpers import (
     build_retrieval_query_from_storyline,
     resolve_design_context_text,
 )
-from archium.agents.outline_planner import OutlinePlanner
 from archium.application.artifact_history_service import OutlineHistoryService
 from archium.application.artifact_lineage import apply_outline_lineage
 from archium.application.mission_context_bridge import (

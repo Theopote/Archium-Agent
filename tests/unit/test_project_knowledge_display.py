@@ -7,9 +7,7 @@ from archium.application.project_knowledge_display import (
     build_project_knowledge_display,
     classify_knowledge_situation,
 )
-from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
 from archium.domain.context.project_context import ProjectContext
-from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.intent.knowledge_state import KnowledgeMaturityStage, KnowledgeState
 from archium.domain.intent.next_best_action import NextBestAction, NextBestActionType
 

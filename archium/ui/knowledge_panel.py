@@ -167,8 +167,8 @@ def _render_item_row(
         if cols[0].button("确认", key=f"confirm_ki_{item.id}"):
             with get_session() as session:
                 from archium.application.fact_ledger_service import FactLedgerService
-                from archium.ui.llm_settings import get_ui_effective_settings
                 from archium.infrastructure.llm.factory import create_llm_provider
+                from archium.ui.llm_settings import get_ui_effective_settings
 
                 settings = get_ui_effective_settings()
                 result = FactLedgerService(

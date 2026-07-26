@@ -8,7 +8,6 @@ import streamlit as st
 
 from archium.infrastructure.database.session import get_session
 
-
 _EVENT_LABELS = {
     "project_created": "创建项目",
     "context_updated": "理解更新",

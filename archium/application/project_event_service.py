@@ -22,7 +22,6 @@ from archium.domain.project_event import (
 )
 from archium.infrastructure.database.repositories import ProjectEventRepository
 
-
 _INTENT_TO_EVENT: dict[IntentEvolutionKind, ProjectEventType] = {
     IntentEvolutionKind.SEED: ProjectEventType.CONTEXT_UPDATED,
     IntentEvolutionKind.AI_UNDERSTANDING: ProjectEventType.CONTEXT_UPDATED,

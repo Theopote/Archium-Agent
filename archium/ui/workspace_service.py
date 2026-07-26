@@ -17,10 +17,10 @@ from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.export_service import PresentationExportService
 from archium.application.ingestion_service import ImportItemResult, IngestionService
+from archium.application.llm_settings_resolver import get_effective_settings
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.workflow_models import WorkflowRunResult
-from archium.application.llm_settings_resolver import get_effective_settings
 from archium.config.settings import Settings
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import PresentationType, ProjectOriginMode, ProjectType

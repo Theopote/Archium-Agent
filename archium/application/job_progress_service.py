@@ -6,8 +6,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from archium.domain.enums import ArtifactJobStatus, WorkflowStatus
 from archium.domain.background_job import BackgroundJobStatus
+from archium.domain.enums import ArtifactJobStatus, WorkflowStatus
 from archium.domain.job_progress import JobKind, JobProgressView
 from archium.infrastructure.database.repositories import (
     ArtifactJobRepository,
@@ -142,8 +142,8 @@ class JobProgressService:
             background = self._background.list_for_project(project_id, limit=24)
         except Exception:
             background = []
-        for job in background:
-            if active_only and job.status in {
+        for bg_job in background:
+            if active_only and bg_job.status in {
                 BackgroundJobStatus.COMPLETED,
                 BackgroundJobStatus.FAILED,
                 BackgroundJobStatus.CANCELLED,
@@ -151,15 +151,15 @@ class JobProgressService:
                 continue
             rows.append(
                 JobProgressView(
-                    job_id=job.id,
+                    job_id=bg_job.id,
                     project_id=project_id,
                     kind=JobKind.BACKGROUND,
-                    label=job.label or f"后台 · {job.kind.value}",
-                    status=job.status.value,
-                    progress_pct=job.progress_pct,
-                    message=(job.message or job.error_message or "")[:200],
-                    updated_at=job.updated_at,
-                    detail={"kind": job.kind.value},
+                    label=bg_job.label or f"后台 · {bg_job.kind.value}",
+                    status=bg_job.status.value,
+                    progress_pct=bg_job.progress_pct,
+                    message=(bg_job.message or bg_job.error_message or "")[:200],
+                    updated_at=bg_job.updated_at,
+                    detail={"kind": bg_job.kind.value},
                 )
             )
 

@@ -10,7 +10,7 @@ from archium.application.presentation_intent_layer import (
     ensure_slide_role_layer,
     presentation_intent_from_mission,
 )
-from archium.domain.enums import PresentationType, ServiceDepth, SlideType
+from archium.domain.enums import OutlineAudienceMode, PresentationType, ServiceDepth, SlideType
 from archium.domain.presentation import PresentationBrief
 from archium.domain.presentation_intent import (
     default_persuasion_for_type,
@@ -23,7 +23,6 @@ from archium.domain.slide_role import (
     resolve_slide_role,
     visual_strategy_from_role,
 )
-from archium.domain.enums import OutlineAudienceMode
 from archium.domain.visual.visual_grammar import PageArchetype
 
 

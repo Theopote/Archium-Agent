@@ -26,9 +26,12 @@ from archium.domain.enums.knowledge import (
     ResolutionMethod,
 )
 from archium.domain.enums.mission import (
+    ArtifactJobStatus,
+    ConceptDirectionStatus,
     ConstraintSource,
     DeliverableType,
     EffortLevel,
+    ExplorationSessionStatus,
     InterventionScale,
     Priority,
     ServiceDepth,
@@ -36,9 +39,6 @@ from archium.domain.enums.mission import (
     UncertaintyLevel,
     WorkstreamStatus,
     WorkstreamType,
-    ArtifactJobStatus,
-    ConceptDirectionStatus,
-    ExplorationSessionStatus,
 )
 from archium.domain.enums.presentation import (
     ApprovalStatus,
@@ -58,9 +58,9 @@ from archium.domain.enums.presentation import (
     SlideType,
 )
 from archium.domain.enums.project import (
+    ArchitecturalWorkspaceMode,
     ProjectDomain,
     ProjectOriginMode,
-    ArchitecturalWorkspaceMode,
     ProjectStage,
     ProjectStatus,
     ProjectType,

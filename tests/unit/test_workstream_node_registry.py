@@ -5,7 +5,6 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from archium.application.orchestration.workstream_node_registry import (
     HANDLER_RESEARCH,
     HANDLER_SKIP,

@@ -29,6 +29,7 @@ from archium.domain.enums import (
     WorkstreamStatus,
     WorkstreamType,
 )
+from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.knowledge_gap import (
     AnswerValue,
     Assumption,
@@ -36,7 +37,6 @@ from archium.domain.knowledge_gap import (
     DesignQuestion,
     KnowledgeGap,
 )
-from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.project_mission import (
     MISSION_LOGICAL_KEY,
     EvaluationCriterion,

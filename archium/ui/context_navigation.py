@@ -9,10 +9,12 @@ import streamlit as st
 
 from archium.application.context.next_action_selector import (
     resolve_action_target,
-    resolve_workflow_entry,
 )
 from archium.application.context.types import ActionDispatch, WorkflowEntryDispatch
-from archium.application.context.workflow_navigation import apply_workflow_entry
+from archium.application.context.workflow_navigation import (
+    SessionStateLike,
+    apply_workflow_entry,
+)
 from archium.domain.intent.next_best_action import NextBestActionType
 
 
@@ -26,7 +28,7 @@ def pending_fact_counts(session, project_id: UUID) -> tuple[int, int]:
         return 0, 0
 
 
-def apply_action_dispatch(session_state: dict[str, Any], target: ActionDispatch) -> None:
+def apply_action_dispatch(session_state: SessionStateLike, target: ActionDispatch) -> None:
     if target.mission_step is not None:
         session_state["mission_step"] = target.mission_step
     if target.focus:
@@ -34,7 +36,7 @@ def apply_action_dispatch(session_state: dict[str, Any], target: ActionDispatch)
 
 
 def navigate_workflow_entry(
-    session_state: dict[str, Any],
+    session_state: SessionStateLike,
     dispatch: WorkflowEntryDispatch,
     *,
     page_switcher=st.switch_page,
@@ -55,7 +57,7 @@ def navigate_workflow_entry(
 
 
 def navigate_next_best_action(
-    session_state: dict[str, Any],
+    session_state: SessionStateLike,
     action: NextBestActionType,
     *,
     project_id: UUID,
@@ -98,7 +100,7 @@ def navigate_next_best_action(
 
 def _maybe_start_orchestration(
     session,
-    session_state: dict[str, Any],
+    session_state: SessionStateLike,
     action: NextBestActionType,
     *,
     project_id: UUID,
@@ -108,8 +110,8 @@ def _maybe_start_orchestration(
     """Start/resume orchestration when ActionDispatch requests it. Returns page override."""
     if target.orchestration_action not in {"start", "resume"} or settings is None:
         return None
-    from archium.application.orchestration import WorkflowOrchestrationService
     from archium.application.context.project_context_builder import build_project_context
+    from archium.application.orchestration import WorkflowOrchestrationService
     from archium.infrastructure.llm.factory import create_llm_provider
 
     llm = create_llm_provider(settings)
@@ -139,7 +141,7 @@ def _maybe_start_orchestration(
 
 def dispatch_next_best_action(
     session,
-    session_state: dict[str, Any],
+    session_state: SessionStateLike,
     action: NextBestActionType,
     *,
     project_id: UUID,

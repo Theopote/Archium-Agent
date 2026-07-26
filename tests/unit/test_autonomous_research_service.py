@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from archium.application.autonomous_research_service import AutonomousResearchService
 from archium.config.settings import Settings
 from archium.domain.enums import InformationOrigin, InformationReliability, ProjectOriginMode
@@ -17,7 +16,10 @@ from archium.domain.project import Project
 from archium.domain.project_mission import ProjectMission
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
-from archium.infrastructure.database.repositories import ProjectKnowledgeRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    ProjectKnowledgeRepository,
+    ProjectRepository,
+)
 from archium.infrastructure.llm.research_schemas import (
     AutonomousResearchDraft,
     ResearchFindingDraft,

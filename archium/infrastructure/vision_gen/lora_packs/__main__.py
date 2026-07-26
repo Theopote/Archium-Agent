@@ -12,8 +12,8 @@ import argparse
 import json
 import sys
 
-from archium.infrastructure.vision_gen.lora_packs.service import VisionLoraPackService
 from archium.config.settings import get_settings
+from archium.infrastructure.vision_gen.lora_packs.service import VisionLoraPackService
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -8,10 +8,10 @@ from uuid import UUID
 
 from archium.application.presentation_models import PresentationRequest
 from archium.domain.concept_direction import ConceptDirection
-from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import DeliverableType, PresentationType, ServiceDepth, TaskNature
 from archium.domain.project_mission import ProjectMission
+from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 

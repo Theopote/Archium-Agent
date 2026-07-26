@@ -6,12 +6,12 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.context.workflow_navigation import workflow_entry_for_project
 from archium.application.workspace_mode_service import (
     WorkspaceModeService,
     profile_for,
     session_mode_override_key,
 )
-from archium.application.context.workflow_navigation import workflow_entry_for_project
 from archium.domain.enums import ArchitecturalWorkspaceMode
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session

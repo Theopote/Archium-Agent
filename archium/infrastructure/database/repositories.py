@@ -9,16 +9,16 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from archium.domain.asset import Asset
-from archium.domain.artifact_job import ArtifactJob
 from archium.domain.access import ProjectInvite, ProjectMember
+from archium.domain.artifact_job import ArtifactJob
+from archium.domain.asset import Asset
 from archium.domain.background_job import BackgroundJob, BackgroundJobStatus
 from archium.domain.concept_direction import ConceptDirection
-from archium.domain.exploration_session import ExplorationSession
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import ProjectStatus, ReviewStatus, RevisionEntityType
+from archium.domain.exploration_session import ExplorationSession
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
 from archium.domain.outline_approval_record import OutlineApprovalRecord
@@ -26,9 +26,8 @@ from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
-from archium.domain.project_event import ProjectEvent, ProjectEventActor, ProjectEventType
+from archium.domain.project_event import ProjectEvent, ProjectEventType
 from archium.domain.project_knowledge import ProjectKnowledgeItem
-from archium.infrastructure.llm.trace import LLMTrace
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.renovation_issue import RenovationIssueMap
 from archium.domain.review import ReviewIssue
@@ -44,23 +43,23 @@ from archium.infrastructure.database.models import (
     AssetORM,
     BackgroundJobORM,
     ConceptDirectionORM,
-    ExplorationSessionORM,
     CulturalNarrativePlanORM,
     DeliveryRecordORM,
     DocumentChunkORM,
+    ExplorationSessionORM,
+    LLMTraceORM,
     OutlineApprovalRecordORM,
     OutlinePlanORM,
     PlanningSessionORM,
     PresentationBriefORM,
     PresentationManuscriptORM,
     PresentationORM,
-    ProjectFactORM,
-    ProjectKnowledgeItemORM,
     ProjectEventORM,
+    ProjectFactORM,
+    ProjectInviteORM,
+    ProjectKnowledgeItemORM,
     ProjectMemberORM,
     ProjectORM,
-    LLMTraceORM,
-    ProjectInviteORM,
     ReferenceStyleProfileORM,
     RenovationIssueMapORM,
     ReviewIssueORM,
@@ -72,6 +71,7 @@ from archium.infrastructure.database.models import (
     VisualQAReportORM,
     WorkflowRunORM,
 )
+from archium.infrastructure.llm.trace import LLMTrace
 
 
 def _handle_error(action: str, exc: Exception) -> None:

@@ -112,7 +112,7 @@ def record_intent_evidence(
     if project is None:
         return cleaned
 
-    snapshot = {
+    snapshot: dict[str, object] = {
         "evidence": [item.model_dump(mode="json") for item in cleaned],
     }
     evo = project.intent_evolution or IntentEvolution()

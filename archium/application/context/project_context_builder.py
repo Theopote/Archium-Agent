@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -66,16 +67,12 @@ def overlay_persisted_routing(
     updates: dict[str, object] = {}
     stage_raw = (knowledge_state.lifecycle_stage or "").strip()
     if stage_raw:
-        try:
+        with contextlib.suppress(ValueError):
             updates["lifecycle_stage"] = ProjectLifecycleStage(stage_raw)
-        except ValueError:
-            pass
     workflow_raw = (knowledge_state.recommended_workflow or "").strip()
     if workflow_raw:
-        try:
+        with contextlib.suppress(ValueError):
             updates["recommended_workflow"] = RecommendedWorkflow(workflow_raw)
-        except ValueError:
-            pass
     if knowledge_state.primary_page_key:
         updates["primary_page_key"] = knowledge_state.primary_page_key
     if not updates:

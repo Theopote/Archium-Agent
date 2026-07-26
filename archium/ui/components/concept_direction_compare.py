@@ -118,13 +118,12 @@ def render_concept_direction_compare(
             elif selected:
                 st.success("当前方向")
 
-            if allow_archive and direction.status == ConceptDirectionStatus.DRAFT:
-                if st.button(
-                    "归档",
-                    key=f"{key_prefix}_cmp_archive_{direction.id}",
-                    use_container_width=True,
-                ):
-                    clicked = ("archive", direction.id)
+            if allow_archive and direction.status == ConceptDirectionStatus.DRAFT and st.button(
+                "归档",
+                key=f"{key_prefix}_cmp_archive_{direction.id}",
+                use_container_width=True,
+            ):
+                clicked = ("archive", direction.id)
 
             if show_details_expander:
                 with st.expander("查看完整详情", expanded=False):
@@ -136,12 +135,11 @@ def render_concept_direction_compare(
             badge = _STATUS_BADGE.get(direction.status, direction.status.value)
             with st.expander(f"{direction.title} · {badge}", expanded=False):
                 render_concept_direction_details(direction)
-                if allow_select and direction.status != ConceptDirectionStatus.SELECTED:
-                    if st.button(
-                        "选择此方向",
-                        key=f"{key_prefix}_cmp_select_extra_{direction.id}",
-                        use_container_width=True,
-                    ):
-                        clicked = ("select", direction.id)
+                if allow_select and direction.status != ConceptDirectionStatus.SELECTED and st.button(
+                    "选择此方向",
+                    key=f"{key_prefix}_cmp_select_extra_{direction.id}",
+                    use_container_width=True,
+                ):
+                    clicked = ("select", direction.id)
 
     return clicked

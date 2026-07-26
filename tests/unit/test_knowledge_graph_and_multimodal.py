@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
-
 from archium.application.knowledge_fusion import KnowledgeFusionService
 from archium.application.knowledge_graph_service import KnowledgeGraphService
 from archium.application.multimodal_retrieval import (
@@ -33,6 +31,7 @@ from archium.infrastructure.database.repositories import (
     ProjectKnowledgeRepository,
     ProjectRepository,
 )
+from sqlalchemy.orm import Session
 
 
 def test_infer_drawing_and_cad_modality() -> None:

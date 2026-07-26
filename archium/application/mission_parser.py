@@ -22,13 +22,13 @@ from archium.domain.enums import (
     VerificationStatus,
 )
 from archium.domain.fact import ProjectFact
+from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.knowledge_gap import (
     Assumption,
     ClarifyingQuestion,
     DesignQuestion,
     KnowledgeGap,
 )
-from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.project_mission import (
     EvaluationCriterion,
     MissionConstraint,

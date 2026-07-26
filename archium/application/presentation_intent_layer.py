@@ -16,12 +16,9 @@ from archium.domain.project_mission import ProjectMission
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.slide_role import (
-    SlideRole,
-    VisualStrategy,
     resolve_slide_role,
     visual_strategy_from_role,
 )
-from archium.domain.visual.visual_grammar import PageArchetype
 
 
 def presentation_intent_from_brief(brief: PresentationBrief) -> PresentationIntent:

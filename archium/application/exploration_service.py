@@ -43,13 +43,17 @@ from archium.infrastructure.llm.concept_direction_schemas import (
 from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
 from archium.prompts.concept_direction import (
     CONCEPT_DIRECTION_SYSTEM_PROMPT,
-    PROMPT_VERSION as CONCEPT_PROMPT_VERSION,
     build_exploration_direction_user_prompt,
+)
+from archium.prompts.concept_direction import (
+    PROMPT_VERSION as CONCEPT_PROMPT_VERSION,
 )
 from archium.prompts.idea_seed import (
     IDEA_SEED_SYSTEM_PROMPT,
-    PROMPT_VERSION as IDEA_SEED_PROMPT_VERSION,
     build_idea_seed_user_prompt,
+)
+from archium.prompts.idea_seed import (
+    PROMPT_VERSION as IDEA_SEED_PROMPT_VERSION,
 )
 
 MAX_DIRECTIONS = 3

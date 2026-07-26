@@ -190,12 +190,10 @@ def visual_strategy_from_role(
             diagram = recipe.composition_strategy.strip()
         if recipe.visual_type_hints and not diagram:
             diagram = "、".join(sorted(v.value for v in recipe.visual_type_hints)[:4])
-    if role in {SlideRole.PROBLEM_ANALYSIS, SlideRole.SITE_ANALYSIS, SlideRole.STRATEGY}:
-        if not image_req:
-            image_req = "优先项目证据图/分析图；避免纯装饰效果图"
-    if role in {SlideRole.OPENING, SlideRole.EXPERIENCE, SlideRole.VISION}:
-        if not image_req:
-            image_req = "可用示意性氛围图（非证据）"
+    if role in {SlideRole.PROBLEM_ANALYSIS, SlideRole.SITE_ANALYSIS, SlideRole.STRATEGY} and not image_req:
+        image_req = "优先项目证据图/分析图；避免纯装饰效果图"
+    if role in {SlideRole.OPENING, SlideRole.EXPERIENCE, SlideRole.VISION} and not image_req:
+        image_req = "可用示意性氛围图（非证据）"
     return VisualStrategy(
         information_type=information or role.value,
         recommended_diagram=diagram,
