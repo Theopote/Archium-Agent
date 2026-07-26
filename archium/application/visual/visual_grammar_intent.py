@@ -129,11 +129,13 @@ def order_variants_for_intent(
 
 
 def forbidden_families_for_intent(intent: VisualIntent) -> frozenset[LayoutFamily]:
-    """Layout families blocked by the slide's visual grammar archetype."""
-    if intent.page_archetype is None or intent.page_archetype == PageArchetype.GENERIC:
-        return frozenset()
-    return get_recipe(intent.page_archetype).forbidden_layout_families
-
+    """Layout families blocked by grammar archetype and/or Page Director."""
+    blocked: set[LayoutFamily] = set()
+    if intent.page_archetype is not None and intent.page_archetype != PageArchetype.GENERIC:
+        blocked.update(get_recipe(intent.page_archetype).forbidden_layout_families)
+    if intent.page_direction is not None:
+        blocked.update(intent.page_direction.forbidden_layout_families)
+    return frozenset(blocked)
 
 def derive_grammar_layout_preference(intent: VisualIntent) -> LayoutStylePreference:
     """Layout family/variant ranking from recognized page archetype."""

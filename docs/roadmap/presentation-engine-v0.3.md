@@ -208,8 +208,8 @@ archium/application/visual/
 
 **验收**：
 
-- [ ] 固定输入文本 → 可预测的 `copy_budget` 与 family 偏好（规则优先，LLM 仅填结构化字段）。  
-- [ ] 与 `PageArchetype` Recipe 不冲突时合并；冲突时 Director 覆盖密度/禁区并写 evidence。
+- [x] 固定输入文本 → 可预测的 `copy_budget` 与 family 偏好（规则优先，LLM 仅填结构化字段）。  
+- [x] 与 `PageArchetype` Recipe 不冲突时合并；冲突时 Director 覆盖密度/禁区并写 evidence。
 
 ---
 

@@ -16,6 +16,7 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.vision_generation import ImageRequest
 from archium.domain.visual.visual_grammar import PageArchetype
+from archium.domain.visual.page_direction import PageDirection
 
 
 class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
@@ -41,6 +42,8 @@ class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
     emotional_tone: str = ""
     continuity_role: ContinuityRole = ContinuityRole.EXPLANATION
     page_archetype: PageArchetype | None = None
+    # v0.3 Page Director output (structured creative direction; no geometry).
+    page_direction: PageDirection | None = None
     image_request: ImageRequest | None = None
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 

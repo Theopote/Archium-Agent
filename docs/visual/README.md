@@ -23,6 +23,8 @@ SlideSpec → VisualIntent → ArtDirection → LayoutPlan → Validate/Repair �
 
 LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 生成**。Renderer **执行** LayoutPlan，不重新决定版式。概念/分析示意生成见 [Vision Intelligence Layer](../architecture/vision-intelligence-layer.md)（未在当前 Visual Quality 冲刺内收口）。
 
+**Page Director（v0.3）**：在 VisualIntent / SlideDesignBrief 之前用规则判断「本页只讲什么」——`single_message`、`must_show`/`must_hide`、`composition_bias`、`copy_budget`、版式禁区。不含坐标；与 `PageArchetype` Recipe 合并，冲突时 Director 覆盖密度/禁区。
+
 ## Round 1 已落地
 
 | 能力 | 状态 |
@@ -41,6 +43,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ 初版 |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
 | **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
+| **Page Director**（单主张 / 禁区 / copy_budget） | ✅ v0.3 Phase 1.3 |
 | RenderScene 画布编辑（单选 / 多选 / 框选） | ✅ |
 | 元素评论 → 提案 → QA → Revision | ✅ |
 | 固定画布容量预算 / 内容适配 / 拆页建议 | ✅ |

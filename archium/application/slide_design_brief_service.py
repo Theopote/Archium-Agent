@@ -424,7 +424,7 @@ class SlideDesignBriefService:
                 elif grammar_families:
                     resolved_layout = grammar_families[0]
 
-        return SlideDesignBrief(
+        brief = SlideDesignBrief(
             page_order=intent.order,
             page_task=intent.page_task.strip() or "待填写页面任务",
             central_claim=intent.central_conclusion.strip(),
@@ -443,6 +443,26 @@ class SlideDesignBriefService:
             template_usage_brief_version=brief_version,
             status=ApprovalStatus.PENDING if not preserve_status else ApprovalStatus.DRAFT,
         )
+
+        # v0.3 Page Director — enrich brief with situation rules (no coordinates).
+        from uuid import uuid4
+
+        from archium.application.visual.page_direction_service import PageDirectionService
+        from archium.domain.slide import SlideSpec
+
+        stub_slide = SlideSpec(
+            presentation_id=uuid4(),
+            chapter_id=intent.chapter_id or "body",
+            order=intent.order,
+            title=intent.page_task or f"Page {intent.order}",
+            message=intent.central_conclusion or intent.page_task or "本页传达一个核心判断",
+            key_points=list(intent.required_evidence or [])[:6],
+        )
+        direction = PageDirectionService().direct(
+            stub_slide,
+            page_archetype=page_archetype,
+        )
+        return PageDirectionService().apply_to_brief(brief, direction)
 
     def _resolve_usage_brief(self, outline: OutlinePlan) -> TemplateUsageBrief | None:
         presentation = self._presentations.get_presentation(outline.presentation_id)

@@ -227,6 +227,18 @@ class VisualIntentService:
             )
         if design_brief is not None and design_brief.status in _USABLE_BRIEF_STATUSES:
             intent = apply_design_brief_to_intent(intent, design_brief)
+
+        # v0.3 Page Director — rule-first creative direction (no coordinates).
+        from archium.application.visual.page_direction_service import PageDirectionService
+
+        direction = PageDirectionService().direct(
+            slide,
+            page_archetype=intent.page_archetype or recognition.archetype,
+            art_direction=art_direction,
+            existing_intent=intent,
+        )
+        intent = PageDirectionService().apply_to_intent(intent, direction)
+
         if intent.image_request is None:
             from archium.application.mission_context_bridge import (
                 resolve_project_mission,
