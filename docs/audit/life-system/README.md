@@ -16,7 +16,7 @@
 |---|------|------|------|
 | 01 | Domain Model（世界模型） | [01-domain-model.md](01-domain-model.md) | **完成** |
 | 02 | 建筑知识模型 | [02-knowledge-model.md](02-knowledge-model.md) | **完成** |
-| 03 | AI 推理链 | 待开 | pending |
+| 03 | AI 推理链 | [03-ai-reasoning-chain.md](03-ai-reasoning-chain.md) | **完成** |
 | 04 | 设计循环（Create→Critique→Revise） | 待开 | pending |
 | 05 | 多模态建筑输入 | 待开 | pending |
 | 06 | AI 绘画系统 | 待开 | pending |

@@ -2,7 +2,9 @@
 
 模块：应用服务层  
 前缀：`APP-`  
-更新：2026-07-23
+更新：2026-07-26（含第二轮 AI 推理链 Issue）
+
+相关：[第二轮-03 AI 推理链](../life-system/03-ai-reasoning-chain.md)
 
 | 编号 | 严重级别 | 状态 | 问题 | 文件 | 影响 | 修复方案 | 验收标准 | 提交 SHA |
 |------|----------|------|------|------|------|----------|----------|----------|
@@ -13,3 +15,7 @@
 | APP-005 | P1 | open | 修复三路径并存 (A5) | SlideSpec / LayoutPlan / Scene repair | 修一处烂两处 | Scene 为修入口；其余适配 | repair 后 Scene+Plan 一致 | `-` |
 | APP-006 | P1 | open | God services（千行级）(A6) | StudioCommandExecutor; VisualEditService 等 | 难测难审 | 按用例拆服务 | 单文件 < 约定上限 + 单测边界清晰 | `-` |
 | APP-007 | P2 | open | `*_safe` 会话与死代码 IconSelection (A7) | application | 噪音 | 删除或正式化 | 无未引用符号 | `-` |
+| APP-008 | P1 | open | DesignRationaleDraft 缺 observation/problem/hypothesis/strategy，与 Domain 断裂 | `concept_direction_schemas.py`; `concept_direction_mapping.py` | LLM 无法沉淀推理链；靠 fallback 合成答案 | Draft 对齐 Domain 链字段；映射写入 | 生成方向 rationale 含链字段；单测覆盖 | `-` |
+| APP-009 | P1 | open | 建筑推理框架映射到分散方向字段，未写入 Rationale 链 | `prompts/frameworks/architectural_reasoning.py`; `prompts/concept_direction.py` | 产品叙事与数据模型错位 | Step→Rationale 字段映射；方向字段作表达层 | prompt 明示链字段；抽检输出可追溯 Step | `-` |
+| APP-010 | P1 | open | DesignCritique / Reflection 无 Revise：next_adjustments 不执行 | `design_critique_service.py`; `design_reflection.py`; concept select | Critic 只挡不改 → AI 自嗨风险 | `revise_direction_from_critique`；可应用 adjustments | 批判后方向字段可更新；IntentEvolution 有边 | `-` |
+| APP-011 | P2 | open | 无 ReasoningArtifact 身份；证据 refs 未绑定单一推理节点 | `design_rationale.py`; concept/mission | 推理不可版本化/追溯 | 薄封装 id+project+evidence refs（复用 Rationale） | 推理节点可按 id 取；Critic 读同一节点 | `-` |
