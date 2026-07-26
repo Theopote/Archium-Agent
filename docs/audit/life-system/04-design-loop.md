@@ -182,7 +182,7 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 | DOM-030 | P2 | ~~缺修订身份~~ **done (L3)** |
 | WF-009 | P2 | ~~非一等图 interrupt~~ **done (L3：Ask=人闸)** |
 | DOM-024 | P1 | （已有）Direction↔Intent 双份；revise-then-commit 放大漂移 |
-| DOM-027 | P1 | （已有）CritiqueReport/Reflection 非 DesignArtifact |
+| DOM-027 | P1 | ~~设计产物身份~~ **done (Topic 06 P3)**；Critique/Reflection 仍非 DesignArtifact（有意） |
 | APP-004 | P1 | （已有）设计批判与版面 QA/Repair 权威需继续隔离 |
 
 （写入 `03-application.md` / `02-domain.md` / `04-workflow.md`。）
@@ -198,7 +198,7 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 | 02 Knowledge | Research Critic 另轨；证据进 Design Critic 摘要 |
 | 05 多模态 | Create 输入变宽后，循环闸门更关键 |
 | 06 绘画 | Visual Critic/Repair 必须继续与设计循环分轨 |
-| 07 产品闭环 | 选定→汇报的「一次通过」体验 vs 设计迭代预期 |
+| 07 产品闭环 | 选定→汇报「一次通过」vs 设计迭代 — 见 [07-product-loop.md](07-product-loop.md) |
 
 ---
 

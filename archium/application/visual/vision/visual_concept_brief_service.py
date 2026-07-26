@@ -229,6 +229,7 @@ class VisualConceptBriefService:
                     project_id=direction.project_id,
                     persist_asset=True,
                     direction=direction,
+                    visual_concept_brief_id=brief.id,
                 )
                 if result.success:
                     image_succeeded = True
@@ -237,6 +238,11 @@ class VisualConceptBriefService:
                         image_path=result.storage_path,
                     )
                     brief.compiled_prompt = result.spec.prompt or brief.compiled_prompt
+                    if result.asset_id is not None:
+                        brief.extra_json = {
+                            **dict(brief.extra_json or {}),
+                            "design_artifact_linked": True,
+                        }
                     brief = self._briefs.update(brief)
                 else:
                     brief.mark_failed(result.error or "image generation failed")

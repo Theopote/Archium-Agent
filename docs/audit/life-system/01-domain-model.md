@@ -60,7 +60,7 @@ Project                          # 身份根 + 嵌套 KS / KS History / IntentEv
 | ConceptDirection | `concept_direction.py` | **探索分支实体可用** |
 | DesignRationale | `design_rationale.py` | **推理链字段已有**（observation→strategy） |
 | DesignDecision | `spatial_design.DesignDecision` | **VO 有**；持久化为 `dict` 弱类型 |
-| DesignArtifact | **缺失** | `ArtifactKind` 几乎全是汇报管线产物 |
+| DesignArtifact | **薄 VO（P3）** | `design_artifact.py`；与 `ArtifactKind` 分枚举；像素仍在 Asset |
 
 ---
 
@@ -169,7 +169,7 @@ ConceptDirection → DesignRationale / SpatialIntent / DesignRule / ConceptVisua
 - Project docstring 仍写 “owns documents and presentations”
 - Artifact 权威表几乎全是 Outline/Layout/Scene/PPTX
 - `VisualIntent` 绑在 **slide_id**（页级汇报意图），不是建筑 VisualIntent（场地/相机/建筑元素）——专题 06
-- 无统一 `DesignArtifact` / `ArchitecturalAsset`
+- 无统一 `DesignArtifact` / `ArchitecturalAsset` → ArchitecturalAsset（Topic 05）；DesignArtifact 薄 VO（Topic 06 P3）
 
 ---
 
@@ -218,7 +218,7 @@ Project（唯一 identity）
 | DOM-024 | P1 | ConceptDirection 与 DesignIntent 共享 VO 双份嵌套，无同步不变量 |
 | DOM-025 | P2 | DesignDecision 仅以 dict 挂 IntentEvolution |
 | DOM-026 | P2 | `Mission.project_context` 字符串与 `ProjectContext` 同名异义 |
-| DOM-027 | P1 | 无设计产物聚合；`ArtifactKind` 汇报偏置掩盖 DesignArtifact |
+| DOM-027 | P1 | ~~无设计产物聚合~~ **done (Topic 06 P3)** — 薄 DesignArtifact；Critique 仍 Reasoning |
 | DOM-028 | P2 | KnowledgeState 回声 lifecycle/workflow/page 与 Context 双写 |
 
 （逐条字段表写入 `docs/audit/module-audit/02-domain.md`。）

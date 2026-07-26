@@ -10,9 +10,9 @@
 
 ## 一句话结论
 
-**Vision Engine 已可用；P1–P2 后种子可追溯且册级示意风格可锁。** DesignArtifact（DOM-027）与强一致性 img2img 仍欠。
+**Vision Engine 已可用；P1–P3 后种子可追溯、册级示意风格可锁、概念图有 DesignArtifact 身份。** 强一致性 img2img 仍欠。
 
-后端（stub / OpenAI / local_sd / ComfyUI）、示意策略、Research→Vision 种子均在。缺口是 deck 一致性与 DesignArtifact（DOM-027），不是再加 Agent。
+后端（stub / OpenAI / local_sd / ComfyUI）、示意策略、Research→Vision 种子均在。剩余缺口是强一致性 img2img，不是再加 Agent。
 
 ---
 
@@ -28,11 +28,13 @@
        ↓
   册级风格锁
 
-现状：
+现状（P1–P3）：
   ResearchVision / ConceptVisualPrompt ──┐
-  VisualConceptBrief ────────────────────┼→ VisualIntent.image_request → Asset(illustrative)
+  VisualConceptBrief ────────────────────┼→ ImageRequest(+seed_source)
   archetype suggester ───────────────────┘
-  （无 DesignArtifact；册级一致性弱）
+       ↓
+  Vision generate → Asset(illustrative) + DesignArtifact metadata
+  + DeckIllustrativeStyleLock
 ```
 
 | 能力 | 成熟度 | 落点 |
@@ -43,7 +45,7 @@
 | 示意/证据分轨 | **A-** | Topic 05 + VisionAssetPolicy |
 | Direction→页种子桥 | **B（P1）** | `seed_source` + 优先级 |
 | 册级风格一致 | **B（P2）** | `deck_illustrative_style_lock` |
-| DesignArtifact | D | DOM-027 仍开 |
+| DesignArtifact | **B（P3）** | `design_artifact.py` 薄 VO + Asset.metadata |
 
 ---
 
@@ -73,12 +75,14 @@
 
 （关闭 `APP-025`。）
 
-### Phase P3 — 设计产物身份（延后）
+### Phase P3 — 设计产物身份 ✅ 2026-07-26
 
-6. 薄 DesignArtifact（DOM-027）；可选设计空间视觉意图 VO  
-7. 强一致性 img2img（仍走 VisionImageGenerationService）  
+6. 薄 `DesignArtifact`（DOM-027）：concept/diagram/atmosphere/material；落在 Asset.metadata，不进 `ArtifactKind`  
+7. Vision `_persist` 写入 `design_artifact` + `direction_id`；Brief 出图传 `visual_concept_brief_id`  
 
-**不做：** 新 Agent；放松证据分轨；平行 VisualProject。
+**仍延后：** 强一致性 img2img；CritiqueReport 不并入 DesignArtifact（仍为 Reasoning）。
+
+**不做：** 新 Agent；新表；放松证据分轨；平行 VisualProject。
 
 ---
 
@@ -88,7 +92,7 @@
 |------|------|------|
 | APP-024 | P1 | ~~Direction/Brief→ImageRequest 缺 seed_source~~ **done (P1)** |
 | APP-025 | P2 | ~~册级 illustrative hero 风格无共享锁~~ **done (P2)** |
-| DOM-027 | P1 | （已有）无 DesignArtifact；概念图挂汇报 Asset |
+| DOM-027 | P1 | ~~无 DesignArtifact~~ **done (P3)** — 薄 VO；Critique 仍非本枚举 |
 | APP-016 | P2 | Research Critic block（已关） |
 
 ---
@@ -109,4 +113,4 @@
 - [x] Issue 草案 APP-024/025  
 - [x] Phase P1 落地  
 - [x] Phase P2 册级风格锁  
-- [ ] P3 DesignArtifact 排期  
+- [x] Phase P3 DesignArtifact（薄 VO + Vision persist） 

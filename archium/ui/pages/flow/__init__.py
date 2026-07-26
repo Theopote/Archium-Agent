@@ -47,6 +47,25 @@ class StageGateResult:
         return bool(self.blockers)
 
 
+def _append_unresolved_design_warning(project_id: UUID, warnings: list[str]) -> None:
+    """Soft-guide when concept directions are still open (Topic 07 L1)."""
+    try:
+        from archium.application.process.design_process_pointer import build_design_pointer
+        from archium.application.product_continue_work import design_loop_open
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            pointer = build_design_pointer(session, project_id)
+            if not design_loop_open(pointer):
+                return
+            label = pointer.label or "概念方向尚未选定"
+    except Exception:
+        return
+    warnings.append(
+        f"设计进程仍在进行（{label}）。建议先完成方向比较/选定，再推进汇报大纲。"
+    )
+
+
 def evaluate_stage_gate(
     stage_id: str,
     snapshot: ProjectProgressSnapshot | None,
@@ -73,6 +92,7 @@ def evaluate_stage_gate(
             warnings.append(
                 "尚未绑定项目资料，后续生成将标记为草稿预览，不得正式交付"
             )
+        _append_unresolved_design_warning(snapshot.project_id, warnings)
         return StageGateResult(
             can_proceed=True,
             blockers=tuple(blockers),
@@ -87,6 +107,7 @@ def evaluate_stage_gate(
             or snapshot.document_count <= 0
         ):
             warnings.append("尚未绑定项目资料，生成内容仅作为草稿预览")
+        _append_unresolved_design_warning(snapshot.project_id, warnings)
         if not snapshot.outline_approved:
             if not getattr(snapshot, "has_outline", False) and not snapshot.has_brief:
                 blockers.append("确认汇报对象与大纲结构（生成大纲）")
@@ -296,6 +317,39 @@ def render_flow_stepper(current_stage_id: str) -> None:
     render_stepper(" ─ ".join(parts))
 
 
+def render_design_context_strip(project_id: UUID) -> None:
+    """Persistent design identity line for product-flow chrome (Topic 07 / UI-008)."""
+    try:
+        from archium.application.process.design_process_pointer import build_design_pointer
+        from archium.application.product_continue_work import (
+            design_loop_open,
+            page_for_unresolved_design,
+        )
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            pointer = build_design_pointer(session, project_id)
+            open_loop = design_loop_open(pointer)
+            resume_page = page_for_unresolved_design(session, pointer)
+    except Exception:
+        return
+
+    label = (pointer.label or "").strip()
+    if not label or pointer.focus in {"", "idle"}:
+        return
+
+    detail = (pointer.detail or "").strip()
+    line = f"设计进程：{label}"
+    if detail:
+        line = f"{line} · {detail[:80]}"
+    st.caption(line)
+    if open_loop and resume_page:
+        st.page_link(
+            get_app_page(resume_page),
+            label="继续概念方向 →",
+        )
+
+
 def render_concept_draft_banner(snapshot: ProjectProgressSnapshot | None = None) -> None:
     """Show a persistent draft-mode banner on every product-flow stage."""
     if snapshot is None:
@@ -341,6 +395,7 @@ def render_stage_header(stage_id: str) -> None:
             compact=True,
             show_known_unknown=False,
         )
+        render_design_context_strip(snapshot.project_id)
     else:
         render_page_header(stage.title, caption)
     render_flow_stepper(stage_id)

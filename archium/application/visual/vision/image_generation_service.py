@@ -100,6 +100,7 @@ class VisionImageGenerationService:
         project_id: UUID | None = None,
         persist_asset: bool = False,
         direction: ConceptDirection | None = None,
+        visual_concept_brief_id: UUID | None = None,
     ) -> VisionGenerationResult:
         """Generate illustrative pixels. Never claims to be site evidence."""
         if direction is not None:
@@ -197,6 +198,9 @@ class VisionImageGenerationService:
                 model=payload.model,
                 harmonized=harmonized,
                 input_evaluation=input_eval,
+                direction=direction,
+                visual_concept_brief_id=visual_concept_brief_id,
+                seed_source=request.seed_source,
             )
             if use_derivative and storage_path:
                 layout = self._storage.ensure_project_layout(project_id)
@@ -411,6 +415,9 @@ class VisionImageGenerationService:
         model: str,
         harmonized: bool = False,
         input_evaluation: VisionInputEvaluation | None = None,
+        direction: ConceptDirection | None = None,
+        visual_concept_brief_id: UUID | None = None,
+        seed_source: str = "",
     ) -> tuple[str, UUID | None]:
         layout = self._storage.ensure_project_layout(project_id)
         vision_dir = layout["assets"] / "vision_generated"
@@ -423,6 +430,39 @@ class VisionImageGenerationService:
 
         asset_id: UUID | None = None
         if self._assets is not None:
+            from archium.domain.design_artifact import build_design_artifact
+
+            artifact = build_design_artifact(
+                project_id=project_id,
+                image_type=spec.image_type,
+                concept_direction_id=direction.id if direction is not None else None,
+                visual_concept_brief_id=visual_concept_brief_id,
+                seed_source=seed_source or str(spec.metadata.get("seed_source") or ""),
+                prompt_hash=spec.prompt_hash,
+            )
+            meta = {
+                "origin": "ai_generated",
+                "illustrative": True,
+                "asset_policy": spec.asset_policy.value,
+                "prompt_hash": spec.prompt_hash,
+                "prompt": spec.prompt[:2000],
+                "negative_prompt": spec.negative_prompt[:1000],
+                "provider": provider,
+                "model": model,
+                "image_type": spec.image_type.value,
+                "style": spec.style,
+                "rationale": list(spec.rationale),
+                "compose_mode": bool(spec.metadata.get("compose_mode")),
+                "edit_mode": bool(spec.metadata.get("edit_mode")),
+                "generation_mode": spec.metadata.get("generation_mode"),
+                "base_image_path": spec.metadata.get("base_image_path"),
+                "harmonized": harmonized,
+                "input_qa_warnings": (
+                    list(input_evaluation.warnings) if input_evaluation else []
+                ),
+                "seed_source": artifact.seed_source,
+                **artifact.to_metadata(),
+            }
             asset = Asset(
                 id=uuid4(),
                 project_id=project_id,
@@ -431,30 +471,20 @@ class VisionImageGenerationService:
                 asset_type=AssetType.PHOTO,
                 description=f"Vision Engine · {spec.image_type.value} · illustrative",
                 tags=["ai_generated", "illustrative", spec.image_type.value, "vision_engine"],
-                metadata={
-                    "origin": "ai_generated",
-                    "illustrative": True,
-                    "asset_policy": spec.asset_policy.value,
-                    "prompt_hash": spec.prompt_hash,
-                    "prompt": spec.prompt[:2000],
-                    "negative_prompt": spec.negative_prompt[:1000],
-                    "provider": provider,
-                    "model": model,
-                    "image_type": spec.image_type.value,
-                    "style": spec.style,
-                    "rationale": list(spec.rationale),
-                    "compose_mode": bool(spec.metadata.get("compose_mode")),
-                    "edit_mode": bool(spec.metadata.get("edit_mode")),
-                    "generation_mode": spec.metadata.get("generation_mode"),
-                    "base_image_path": spec.metadata.get("base_image_path"),
-                    "harmonized": harmonized,
-                    "input_qa_warnings": (
-                        list(input_evaluation.warnings) if input_evaluation else []
-                    ),
-                },
+                metadata=meta,
             )
             saved = self._assets.create(asset)
             asset_id = saved.id
+            # Back-fill asset_id on nested design_artifact blob
+            if isinstance(saved.metadata.get("design_artifact"), dict):
+                nested = dict(saved.metadata["design_artifact"])
+                nested["asset_id"] = str(saved.id)
+                updated_meta = dict(saved.metadata)
+                updated_meta["design_artifact"] = nested
+                saved = self._assets.update(
+                    saved.model_copy(update={"metadata": updated_meta})
+                )
+                asset_id = saved.id
         return relative, asset_id
 
     def _apply_presentation_unify(

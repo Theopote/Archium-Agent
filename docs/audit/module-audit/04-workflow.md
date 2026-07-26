@@ -2,7 +2,7 @@
 
 模块：LangGraph 工作流 / 审批 / 恢复  
 前缀：`WF-`  
-更新：2026-07-26（含 WF-009 设计循环）
+更新：2026-07-26（含 WF-009 设计循环；WF-010 产品闭环）
 
 | 编号 | 严重级别 | 状态 | 问题 | 文件 | 影响 | 修复方案 | 验收标准 | 提交 SHA |
 |------|----------|------|------|------|------|----------|----------|----------|
@@ -15,3 +15,4 @@
 | WF-007 | P2 | open | 死 STEP_LABELS / 路由表残留 (W6) | workflow | 误导维护者 | 删除或生成自图定义 | 无死常量 | `-` |
 | WF-008 | P0 | done | Golden 未覆盖 interrupt + continue_after_review（Beta B7） | `tests/golden/regression/test_interrupt_continue.py` | 主链回归不足 | case_a brief 门禁 interrupt → approve → continue | B7 关闭；golden regression 绿 | `-` |
 | WF-009 | P2 | done | 设计循环非一等图节点（无 critique→human→revise→re-critique） | exploration/mission select；life-system 04 | 循环挂服务调用，难 interrupt | L2 Ask `pending_revise` 作为人闸 interrupt（不新 Agent/图） | Ask 可暂停；Apply/Reject 后继续 | `-` |
+| WF-010 | P2 | open | OrchestrationPlan 与 product_flow 双轨；缺单一 stage truth | `plan_builder.py`; `product_flow.py`; life-system 07 | 用户看到两套进度 | 编排 stage 映射进五阶段指示或反向派生 | 主 chrome 只呈现一套当前阶段 | `-` |
