@@ -66,8 +66,23 @@ class IngestionService:
         self._parsers = parsers if parsers is not None else default_parsers()
         self._retrieval = retrieval
 
-    def import_file(self, project_id: UUID, source_path: Path) -> ImportItemResult:
+    def import_file(
+        self,
+        project_id: UUID,
+        source_path: Path,
+        *,
+        actor_id: str | None = None,
+    ) -> ImportItemResult:
         """Import one file into a project."""
+        from archium.application.project_permission_gate import require_project_permission
+        from archium.domain.access import ProjectPermission
+
+        require_project_permission(
+            self._session,
+            project_id,
+            ProjectPermission.EDIT,
+            actor_id=actor_id,
+        )
         source_path = source_path.expanduser().resolve()
         result = ImportItemResult(source_path=source_path)
 
@@ -200,11 +215,17 @@ class IngestionService:
             )
             return document
 
-    def import_files(self, project_id: UUID, source_paths: list[Path]) -> list[ImportItemResult]:
+    def import_files(
+        self,
+        project_id: UUID,
+        source_paths: list[Path],
+        *,
+        actor_id: str | None = None,
+    ) -> list[ImportItemResult]:
         """Import multiple files; failures on one file do not stop the batch."""
         results: list[ImportItemResult] = []
         for path in source_paths:
-            results.append(self.import_file(project_id, path))
+            results.append(self.import_file(project_id, path, actor_id=actor_id))
         return results
 
     def reparse_document(self, document_id: UUID) -> ImportItemResult:

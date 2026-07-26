@@ -106,6 +106,7 @@ class PresentationWorkflowService:
         require_storyline_review: bool = False,
         require_outline_review: bool = True,
         require_slides_review: bool = False,
+        actor_id: str | None = None,
     ) -> WorkflowRunResult:
         workflow_run = self.prepare_run(
             project_id,
@@ -122,6 +123,7 @@ class PresentationWorkflowService:
             require_storyline_review=require_storyline_review,
             require_outline_review=require_outline_review,
             require_slides_review=require_slides_review,
+            actor_id=actor_id,
         )
         return self.execute_prepared(workflow_run.id)
 
@@ -143,8 +145,18 @@ class PresentationWorkflowService:
         require_outline_review: bool = True,
         require_slides_review: bool = False,
         bypass_cognition_gate: bool = False,
+        actor_id: str | None = None,
     ) -> WorkflowRun:
         """Create presentation + WorkflowRun records without invoking the graph."""
+        from archium.application.project_permission_gate import require_project_permission
+        from archium.domain.access import ProjectPermission
+
+        require_project_permission(
+            self._session,
+            project_id,
+            ProjectPermission.EDIT,
+            actor_id=actor_id,
+        )
         self._route_service.require_route(
             request.workflow_route,
             PresentationWorkflowRoute.GENERATE_FROM_PROJECT,
@@ -175,7 +187,9 @@ class PresentationWorkflowService:
                 gate.readiness.verdict.value,
             )
 
-        presentation = self._runtime.presentation_service.create_presentation(project_id, request)
+        presentation = self._runtime.presentation_service.create_presentation(
+            project_id, request, actor_id=actor_id
+        )
         resolved_preview_images = (
             export_preview_images
             if export_preview_images is not None

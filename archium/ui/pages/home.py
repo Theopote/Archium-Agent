@@ -372,6 +372,18 @@ def _render_other_projects(
 
 
 def render() -> None:
+    from archium.ui.invite_deep_link import (
+        consume_invite_query_param,
+        peek_pending_invite_code,
+    )
+
+    pending_invite = consume_invite_query_param()
+    if peek_pending_invite_code():
+        st.info(
+            f"检测到邀请码 `{peek_pending_invite_code()}`。"
+            "请在下方「项目成员与角色」中确认成员 ID 并兑换。"
+        )
+
     try:
         snapshots = list_recent_project_snapshots(limit=6)
     except Exception as exc:
@@ -381,6 +393,8 @@ def render() -> None:
     primary = _resolve_primary(snapshots)
     if primary is None:
         _render_empty_state()
+        if pending_invite:
+            st.caption("暂无项目时，可先到「项目管理」创建项目，或请邀请方确认项目仍有效。")
         return
 
     _render_project_cockpit(primary)

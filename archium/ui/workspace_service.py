@@ -192,8 +192,10 @@ def import_uploaded_file(
         temp_file.write(data)
         temp_path = Path(temp_file.name)
     try:
+        from archium.ui.session_actor import get_current_actor_id
+
         result = IngestionService(session, settings=settings).import_file(
-            project_id, temp_path
+            project_id, temp_path, actor_id=get_current_actor_id()
         )
         # Keep user-facing filename (temp path is opaque).
         result.source_path = Path(filename)
@@ -383,6 +385,8 @@ def run_presentation_workflow(
         if export_preview_images is not None
         else export_marp and resolved_settings.marp_preview_images_enabled
     )
+    from archium.ui.session_actor import get_current_actor_id
+
     return service.run(
         project_id,
         request,
@@ -397,6 +401,7 @@ def run_presentation_workflow(
         require_storyline_review=require_storyline_review,
         require_outline_review=require_outline_review,
         require_slides_review=require_slides_review,
+        actor_id=get_current_actor_id(),
     )
 
 

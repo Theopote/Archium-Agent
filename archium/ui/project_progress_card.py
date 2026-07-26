@@ -462,6 +462,7 @@ def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
             resolve_continue_work_page_key,
         )
         from archium.infrastructure.database.session import get_session
+        from archium.ui.session_actor import get_current_actor_id
 
         with get_session() as session:
             return resolve_continue_work_page_key(
@@ -469,6 +470,7 @@ def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
                 snapshot.project_id,
                 presentation_stage_id=snapshot.current_stage_id,
                 slide_count=snapshot.slide_count,
+                actor_id=get_current_actor_id(),
             )
     except Exception:
         return snapshot.current_stage_id

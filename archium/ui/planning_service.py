@@ -468,12 +468,14 @@ def select_concept_direction(
     revise_action: str | None = None,
 ):
     from archium.application.concept_direction_service import ConceptDirectionService
+    from archium.ui.session_actor import get_current_actor_id
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return ConceptDirectionService(session, llm, settings=runtime).select_direction(
         direction_id,
         revise_action=revise_action,
+        actor_id=get_current_actor_id(),
     )
 
 
@@ -641,12 +643,14 @@ def select_exploration_direction(
     revise_action: str | None = None,
 ):
     from archium.application.exploration_service import ExplorationService
+    from archium.ui.session_actor import get_current_actor_id
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return ExplorationService(session, llm, settings=runtime).select_direction(
         direction_id,
         revise_action=revise_action,
+        actor_id=get_current_actor_id(),
     )
 
 

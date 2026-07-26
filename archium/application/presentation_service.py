@@ -76,10 +76,21 @@ class PresentationService:
         self,
         project_id: UUID,
         request: PresentationRequest,
+        *,
+        actor_id: str | None = None,
     ) -> Presentation:
+        from archium.application.project_permission_gate import require_project_permission
+        from archium.domain.access import ProjectPermission
+
         project = self._projects.get_by_id(project_id)
         if project is None:
             raise ProjectNotFoundError(project_id)
+        require_project_permission(
+            self._session,
+            project_id,
+            ProjectPermission.EDIT,
+            actor_id=actor_id,
+        )
         return self._presentations.create_presentation(
             Presentation(
                 project_id=project_id,

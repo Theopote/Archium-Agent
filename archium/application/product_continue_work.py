@@ -87,18 +87,36 @@ def resolve_continue_work_page_key(
     *,
     presentation_stage_id: str,
     slide_count: int = 0,
+    actor_id: str | None = None,
 ) -> str:
-    """Single continue-work truth: Ask → design → orchestration → NBA → stage."""
+    """Single continue-work truth: Ask → design → role → orchestration → NBA → stage.
+
+    Role navigation applies only when ``actor_id`` is explicitly passed.
+    Callers that omit it keep the design/orchestration heuristic (tests, tools).
+    """
     from archium.application.context.workflow_navigation import workflow_entry_for_project
     from archium.application.design_revise_persistence import load_pending_design_revise
     from archium.application.process.design_process_pointer import build_design_pointer
+    from archium.application.role_navigation import resolve_role_navigation
+
+    explicit_actor = (actor_id or "").strip() or None
+    role_hint = None
+    if explicit_actor is not None:
+        role_hint = resolve_role_navigation(
+            session,
+            project_id,
+            actor_id=explicit_actor,
+            slide_count=slide_count,
+            presentation_stage_id=presentation_stage_id,
+        )
 
     try:
         pending = load_pending_design_revise(session, project_id)
     except Exception:
         pending = None
     if pending is not None:
-        # Prefer mission page when offer belongs to a mission-scoped direction
+        if role_hint is not None and not role_hint.can_edit:
+            return role_hint.primary_page_key
         try:
             from archium.infrastructure.database.repositories import (
                 ConceptDirectionRepository,
@@ -115,7 +133,12 @@ def resolve_continue_work_page_key(
     pointer = build_design_pointer(session, project_id)
     design_page = page_for_unresolved_design(session, pointer)
     if design_page is not None:
+        if role_hint is not None and not role_hint.can_edit:
+            return role_hint.primary_page_key
         return design_page
+
+    if role_hint is not None and role_hint.is_read_leaning:
+        return role_hint.primary_page_key
 
     orch_page = page_for_active_design_orchestration(session, project_id)
     if orch_page is not None:

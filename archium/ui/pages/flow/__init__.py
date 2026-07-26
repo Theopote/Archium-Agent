@@ -96,6 +96,27 @@ def _append_unresolved_design_warning(project_id: UUID, warnings: list[str]) -> 
     )
 
 
+def _append_role_edit_warning(project_id: UUID, warnings: list[str]) -> None:
+    """Soft-guide Client/Reviewer away from edit-heavy stages (COLLAB-005)."""
+    try:
+        from archium.application.role_navigation import resolve_role_navigation
+        from archium.infrastructure.database.session import get_session
+        from archium.ui.session_actor import get_current_actor_id
+
+        with get_session() as session:
+            hint = resolve_role_navigation(
+                session,
+                project_id,
+                actor_id=get_current_actor_id(),
+            )
+        if hint.can_edit or not hint.message:
+            return
+        if hint.message not in warnings:
+            warnings.append(hint.message)
+    except Exception:
+        return
+
+
 def evaluate_stage_gate(
     stage_id: str,
     snapshot: ProjectProgressSnapshot | None,
@@ -124,6 +145,7 @@ def evaluate_stage_gate(
             )
         _append_unresolved_design_warning(snapshot.project_id, warnings)
         _append_cognition_gate_warnings(snapshot.project_id, warnings)
+        _append_role_edit_warning(snapshot.project_id, warnings)
         return StageGateResult(
             can_proceed=True,
             blockers=tuple(blockers),
@@ -140,6 +162,7 @@ def evaluate_stage_gate(
             warnings.append("尚未绑定项目资料，生成内容仅作为草稿预览")
         _append_unresolved_design_warning(snapshot.project_id, warnings)
         _append_cognition_gate_warnings(snapshot.project_id, warnings)
+        _append_role_edit_warning(snapshot.project_id, warnings)
         if not snapshot.outline_approved:
             if not getattr(snapshot, "has_outline", False) and not snapshot.has_brief:
                 blockers.append("确认汇报对象与大纲结构（生成大纲）")
@@ -167,6 +190,7 @@ def evaluate_stage_gate(
             blockers.append("先生成至少一页内容")
         elif snapshot.pending_count > 0:
             warnings.append(f"仍有 {snapshot.pending_count} 页版式待完成")
+        _append_role_edit_warning(snapshot.project_id, warnings)
         return StageGateResult(
             can_proceed=not blockers,
             blockers=tuple(blockers),
@@ -178,6 +202,7 @@ def evaluate_stage_gate(
             blockers.append("尚无可编辑页面，请先完成生成")
         elif not snapshot.ready_for_export:
             warnings.append("部分页面版式未齐，交付时可能受限")
+        _append_role_edit_warning(snapshot.project_id, warnings)
         if snapshot.evidence_availability == EvidenceAvailability.UNKNOWN:
             warnings.append("资料状态无法验证 · 正式交付将被阻止")
         elif (
@@ -354,7 +379,33 @@ def render_design_context_strip(project_id: UUID) -> None:
     try:
         from archium.ui.session_actor import get_current_actor_id
 
-        st.caption(f"当前身份：`{get_current_actor_id()}`")
+        actor = get_current_actor_id()
+        st.caption(f"当前身份：`{actor}`")
+    except Exception:
+        actor = None
+    try:
+        from archium.application.role_navigation import (
+            resolve_role_navigation,
+            role_label,
+        )
+        from archium.infrastructure.database.session import get_session
+        from archium.ui.session_actor import get_current_actor_id
+
+        with get_session() as session:
+            hint = resolve_role_navigation(
+                session,
+                project_id,
+                actor_id=get_current_actor_id(),
+            )
+        if hint.role is not None:
+            st.caption(f"项目角色：{role_label(hint.role)}")
+        if hint.message:
+            st.info(hint.message)
+            if hint.is_read_leaning:
+                st.page_link(
+                    get_app_page(hint.primary_page_key),
+                    label="前往建议页面 →",
+                )
     except Exception:
         pass
     try:

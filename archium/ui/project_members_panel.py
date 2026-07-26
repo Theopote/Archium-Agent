@@ -91,7 +91,13 @@ def render_project_members_panel(
                 role_label = _ROLE_LABELS.get(invite.role, invite.role.value)
                 uses = f"{invite.use_count}/{invite.max_uses}"
                 st.code(invite.code, language=None)
-                st.caption(f"{role_label} · 已用 {uses}" + (f" · {invite.label}" if invite.label else ""))
+                from archium.ui.invite_deep_link import invite_share_path
+
+                st.caption(
+                    f"{role_label} · 已用 {uses}"
+                    + (f" · {invite.label}" if invite.label else "")
+                    + f" · 分享链接后缀 `{invite_share_path(invite.code)}`（打开首页兑换）"
+                )
         else:
             st.caption("暂无有效邀请码。")
 
@@ -121,12 +127,20 @@ def render_project_members_panel(
                 st.error(f"无法生成邀请码：{exc}")
 
         with st.form(f"{key_prefix}_redeem_{project_id}"):
-            redeem_code = st.text_input("兑换邀请码", placeholder="粘贴邀请码")
+            from archium.ui.invite_deep_link import peek_pending_invite_code
+
+            pending_code = peek_pending_invite_code() or ""
+            redeem_code = st.text_input(
+                "兑换邀请码",
+                value=pending_code,
+                placeholder="粘贴邀请码或通过 ?invite= 打开首页",
+            )
             redeem_actor = st.text_input("加入为成员 ID", value="guest-user")
             redeem_name = st.text_input("显示名", placeholder="可选")
             redeem = st.form_submit_button("兑换并加入", use_container_width=True)
         if redeem:
             try:
+                from archium.ui.invite_deep_link import clear_pending_invite_code
                 from archium.ui.session_actor import set_current_actor_id
 
                 joined_actor = (redeem_actor or "").strip() or "guest-user"
@@ -137,6 +151,7 @@ def render_project_members_panel(
                         display_name=(redeem_name or "").strip(),
                     )
                 set_current_actor_id(member.actor_id)
+                clear_pending_invite_code()
                 if invite.project_id != project_id:
                     st.warning(
                         f"已加入其他项目成员（{invite.project_id}）· 角色 {member.role.value}"

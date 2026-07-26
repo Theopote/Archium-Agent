@@ -48,7 +48,20 @@ class FormalPptxExportService:
         *,
         chart_export_mode: ChartExportMode | None = None,
         allow_legacy_spec_fallback: bool | None = None,
+        actor_id: str | None = None,
     ) -> FormalPptxExportResult:
+        from archium.application.project_permission_gate import require_project_permission
+        from archium.domain.access import ProjectPermission
+
+        presentation = self._presentations.get_presentation(presentation_id)
+        if presentation is None:
+            raise WorkflowError(f"汇报 {presentation_id} 不存在")
+        require_project_permission(
+            self._session,
+            presentation.project_id,
+            ProjectPermission.EXPORT,
+            actor_id=actor_id,
+        )
         if allow_legacy_spec_fallback is None:
             allow_legacy_spec_fallback = (
                 self._settings.allow_legacy_presentation_spec_pptx_fallback
@@ -57,10 +70,6 @@ class FormalPptxExportService:
         from archium.application.visual.layout_readiness import presentation_has_visual_layout
         from archium.application.visual.studio_scene_service import StudioSceneService
         from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
-
-        presentation = self._presentations.get_presentation(presentation_id)
-        if presentation is None:
-            raise WorkflowError(f"Presentation {presentation_id} not found")
 
         brief = None
         if presentation.current_brief_id is not None:

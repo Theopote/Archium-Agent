@@ -271,7 +271,11 @@ class ExplorationService:
         direction_id: UUID,
         *,
         revise_action: str | None = None,
+        actor_id: str | None = None,
     ) -> ExplorationSelectionResult:
+        from archium.application.project_permission_gate import require_project_permission
+        from archium.domain.access import ProjectPermission
+
         direction = self._directions.get(direction_id)
         if direction is None:
             raise WorkflowError(f"概念方向 {direction_id} 不存在")
@@ -280,6 +284,12 @@ class ExplorationService:
         if direction.status == ConceptDirectionStatus.ARCHIVED:
             raise WorkflowError("已归档的概念方向不能选为当前方向")
 
+        require_project_permission(
+            self._session,
+            direction.project_id,
+            ProjectPermission.EDIT,
+            actor_id=actor_id,
+        )
         exploration = self._require_session(direction.exploration_session_id)
         if exploration.status == ExplorationSessionStatus.COMMITTED:
             raise WorkflowError("已提交的探索不能更换方向")
