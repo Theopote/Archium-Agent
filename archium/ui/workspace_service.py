@@ -173,6 +173,7 @@ def import_uploaded_file(
     data: bytes,
     settings: Settings | None = None,
     reassess: bool = True,
+    attach_visual_idea_seed: bool = True,
 ) -> ImportItemResult:
     suffix = Path(filename).suffix
     with NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
@@ -182,8 +183,48 @@ def import_uploaded_file(
         result = IngestionService(session, settings=settings).import_file(
             project_id, temp_path
         )
+        # Keep user-facing filename (temp path is opaque).
+        result.source_path = Path(filename)
     finally:
         temp_path.unlink(missing_ok=True)
+
+    if (
+        attach_visual_idea_seed
+        and result.error is None
+        and not result.duplicate
+        and result.assets
+    ):
+        try:
+            from archium.application.visual_idea_seed import maybe_attach_visual_idea_seed
+
+            seed_result = maybe_attach_visual_idea_seed(
+                session,
+                project_id,
+                assets=result.assets,
+                document=result.document,
+                settings=settings,
+            )
+            if seed_result.attached:
+                result.visual_idea_seed_message = seed_result.message
+                if result.document is not None:
+                    meta = dict(result.document.metadata or {})
+                    meta["visual_idea_seed"] = {
+                        "attached": True,
+                        "created_session": seed_result.created_session,
+                        "merged": seed_result.merged,
+                        "exploration_id": (
+                            str(seed_result.exploration_id)
+                            if seed_result.exploration_id
+                            else None
+                        ),
+                        "message": seed_result.message,
+                        "source": seed_result.source,
+                    }
+                    result.document.metadata = meta
+        except Exception:
+            # Never fail the import path on weak-seed attach.
+            pass
+
     if reassess:
         reassess_knowledge_after_upload(session, project_id, settings=settings)
     return result

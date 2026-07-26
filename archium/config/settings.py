@@ -446,6 +446,13 @@ class Settings(BaseSettings):
             "visual feature retrieval. Image CLIP embeddings remain optional/future."
         ),
     )
+    visual_idea_seed_on_upload: bool = Field(
+        default=True,
+        description=(
+            "When true, evidence-grade site photos/drawings at upload attach a weak "
+            "IdeaSeed (enrich=False; no auto direction generation or select)."
+        ),
+    )
     chunk_context_max_chars: int = Field(
         default=600,
         ge=100,

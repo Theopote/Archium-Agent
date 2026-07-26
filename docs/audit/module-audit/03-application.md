@@ -26,5 +26,5 @@
 | APP-016 | P2 | open | Research Critic block 不拒绝落库/不挡概念硬化 | `research_critique_service.py`; autonomous research | 「block」名不副实 | block 拒写或拒绝进入 Design Critic 摘要 | block 下弱研究不可硬化 | `-` |
 | APP-017 | P1 | done | 多模态检索默认 ILLUSTRATIVE；项目素材未进 EVIDENCE | `multimodal_retrieval.py`; life-system 05 | 设计通道看不到现场证据 | PROJECT_MATERIAL photo/drawing → EVIDENCE | 检索 usage=evidence；生成图仍 illustrative | `-` |
 | APP-018 | P1 | done | ProjectContext.input_sources 无类型化视觉证据摘要 | `context_evidence.py`; composer | 认知面看不见 site_photo/drawing | gather + compose 写入 site_photo:N 等 | Context.input_sources 含视觉行 | `-` |
-| APP-019 | P2 | open | 草图/现场图未种子化 IdeaSeed/Direction | exploration / concept | 多模态停在 RAG | M2：弱种子不静默硬化 | 上传现场图可进入探索种子 | `-` |
-| APP-020 | P2 | open | UI 上传未暴露 CAD/BIM 类型 | workspace/studio uploaders | CAD 只能旁路 API | M2/M3：file_uploader 加后缀 | UI 可选 DWG/DXF/IFC | `-` |
+| APP-019 | P2 | done | 草图/现场图未种子化 IdeaSeed/Direction | `visual_idea_seed.py`; upload hook | 多模态停在 RAG | 弱种子 enrich=False；不自动推演/选定 | 上传现场图可开探索；无 SELECTED | `-` |
+| APP-020 | P2 | done | UI 上传未暴露 CAD/BIM 类型 | `upload_file_types.py`; workspace/studio | CAD 只能旁路 | file_uploader 加 dwg/dxf/ifc/rvt/rfa | UI 可选 CAD/BIM | `-` |

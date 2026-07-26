@@ -295,15 +295,21 @@ def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
 
 def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
     """Primary materials upload action."""
+    from archium.ui.upload_file_types import (
+        PROJECT_MATERIAL_UPLOAD_CAPTION,
+        PROJECT_MATERIAL_UPLOAD_TYPES,
+    )
+
     _consume_upload_feedback(project_id, key_prefix=key_prefix)
 
     uploads = st.file_uploader(
         "选择文件",
-        type=["pdf", "docx", "pptx", "xlsx", "png", "jpg", "jpeg", "webp"],
+        type=PROJECT_MATERIAL_UPLOAD_TYPES,
         accept_multiple_files=True,
         key=f"{key_prefix}_{project_id}",
         label_visibility="collapsed",
     )
+    st.caption(PROJECT_MATERIAL_UPLOAD_CAPTION)
     if uploads and st.button(
         "上传资料",
         type="primary",
@@ -347,6 +353,8 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
                 detail = f"{chunk_count} 个片段"
                 if asset_captions:
                     detail += f"（含 {asset_captions} 个图档语义索引）"
+                if result.visual_idea_seed_message:
+                    detail += f"；{result.visual_idea_seed_message}"
                 file_messages.append(
                     {"level": "success", "text": f"{name}: 导入成功（{detail}）"}
                 )

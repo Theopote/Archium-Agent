@@ -104,6 +104,7 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "knowledge_fusion_enabled": ConfigDomain.RETRIEVAL,
     "knowledge_graph_retrieval_enabled": ConfigDomain.RETRIEVAL,
     "multimodal_retrieval_enabled": ConfigDomain.RETRIEVAL,
+    "visual_idea_seed_on_upload": ConfigDomain.RETRIEVAL,
     "chunk_context_max_chars": ConfigDomain.RETRIEVAL,
     "embedding_chunking_enabled": ConfigDomain.CHUNKING,
     "embedding_chunk_min_segment_chars": ConfigDomain.CHUNKING,

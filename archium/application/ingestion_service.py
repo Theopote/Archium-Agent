@@ -44,6 +44,7 @@ class ImportItemResult:
     duplicate: bool = False
     skipped: bool = False
     error: str | None = None
+    visual_idea_seed_message: str | None = None
 
 
 class IngestionService:

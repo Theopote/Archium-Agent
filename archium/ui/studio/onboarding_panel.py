@@ -63,6 +63,11 @@ def render_studio_import_panel(*, project_id: UUID, expanded: bool = False) -> N
         return
 
     with st.expander("项目资料与导入", expanded=expanded):
+        from archium.ui.upload_file_types import (
+            PROJECT_MATERIAL_UPLOAD_CAPTION,
+            PROJECT_MATERIAL_UPLOAD_TYPES,
+        )
+
         st.caption(
             f"已导入 {overview.document_count} 个文件 · "
             f"{overview.chunk_count} 个文本片段 · "
@@ -70,10 +75,11 @@ def render_studio_import_panel(*, project_id: UUID, expanded: bool = False) -> N
         )
         uploads = st.file_uploader(
             "上传项目资料",
-            type=["pdf", "docx", "pptx", "xlsx", "png", "jpg", "jpeg", "webp"],
+            type=PROJECT_MATERIAL_UPLOAD_TYPES,
             accept_multiple_files=True,
             key=f"studio_upload_{project_id}",
         )
+        st.caption(PROJECT_MATERIAL_UPLOAD_CAPTION)
         if uploads and st.button("开始导入", key=f"studio_import_{project_id}"):
             settings = get_ui_effective_settings()
             _run_import(project_id, uploads, settings=settings)

@@ -131,7 +131,7 @@ class ExplorationService:
             )
             warnings.extend(enrich_warnings)
         else:
-            seed = IdeaSeed.from_raw(idea, source="user")
+            seed = IdeaSeed.from_raw(idea, source=source)
 
         exploration = ExplorationSession(
             project_id=project_id,
@@ -209,6 +209,17 @@ class ExplorationService:
             query_hint=seed.raw_input,
             design_intent=None,
         )
+        from archium.application.visual_idea_seed import build_visual_evidence_prompt_block
+
+        visual_block = build_visual_evidence_prompt_block(
+            self._session, exploration.project_id
+        )
+        if visual_block:
+            design_knowledge_block = (
+                f"{design_knowledge_block.rstrip()}\n\n{visual_block}".strip()
+                if design_knowledge_block.strip()
+                else visual_block
+            )
         draft = llm_generate_structured(
             self._llm,
             LLMRequest(

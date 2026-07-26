@@ -84,6 +84,7 @@ Do not edit them manually.
 | `KNOWLEDGE_FUSION_ENABLED` | `true` | No | When assembling project context, fuse FactLedger + DocumentChunk + ProjectKnowledge (+ seed cases) into ranked KnowledgeReference hits with similarity/authority/transferability scores. |
 | `KNOWLEDGE_GRAPH_RETRIEVAL_ENABLED` | `true` | No | When true, KnowledgeFusion expands Architectural Knowledge Graph (case/tag/concept/space relations) into KnowledgeReference hits. |
 | `MULTIMODAL_RETRIEVAL_ENABLED` | `true` | No | When true, KnowledgeFusion includes multimodal (asset_caption) visual feature retrieval. Image CLIP embeddings remain optional/future. |
+| `VISUAL_IDEA_SEED_ON_UPLOAD` | `true` | No | When true, evidence-grade site photos/drawings at upload attach a weak IdeaSeed (enrich=False; no auto direction generation or select). |
 | `CHUNK_CONTEXT_MAX_CHARS` | `600` | No | Maximum characters injected per retrieved chunk into LLM context. |
 | `WEB_RESEARCH_ENABLED` | `true` | No | When true, autonomous research queries the web before LLM synthesis and grounds citations in retrieved snippets. |
 | `WEB_RESEARCH_PROVIDER` | `tavily` | No | Web research provider: tavily (recommended, requires API key) or duckduckgo (no key, HTML fallback). |

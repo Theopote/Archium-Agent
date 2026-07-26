@@ -10,9 +10,9 @@
 
 ## 一句话结论
 
-**能入库与 caption RAG，尚未成建筑设计证据通道。**（M1 后：门面 + EVIDENCE 用法 + 类型化 `input_sources` + 可测 OCR 切片已落地。）
+**能入库与 caption RAG，M1–M2 已接通证据通道与弱种子；空间几何仍欠。**
 
-`SourceDocument` + `Asset` + `asset_caption` 脊柱可用；检索多把视觉素材当 ILLUSTRATIVE。现场图→约束、草图→Direction、平面拓扑、CAD 几何仍欠。生成图禁作现场证据的契约已存在（勿破坏）。
+`SourceDocument` + `Asset` + `ArchitecturalAsset` + EVIDENCE 用法 + 类型化 `input_sources` + OCR 切片 + 现场图弱 IdeaSeed + CAD UI 已落地。现场图→约束抽取、平面拓扑、CAD 几何、CLIP 仍属 M3。生成图禁作现场证据的契约已存在（勿破坏）。
 
 ---
 
@@ -46,9 +46,9 @@
 | 汇报绑图 | B+ | `SlideAssetBinding` / VisualIntent |
 | 项目素材作设计证据 | **B-（M1）** | `ArchitecturalAsset` + EVIDENCE usage + typed sources |
 | 扫描 PDF OCR | **B-（M1 切片）** | `NEEDS_OCR` → `ocr_text` chunks |
-| 现场图 → 约束 | C | 仍无自动约束抽取（M2） |
-| 草图 → IdeaSeed | C | 无（M2） |
-| CAD/BIM 几何 | D | 元数据/IFC 文本；UI 未暴露类型 |
+| 现场图 → 约束 | C | 弱种子已有（M2）；自动约束抽取仍欠（M3） |
+| 草图 → IdeaSeed | **B（M2）** | `visual_idea_seed`；enrich=False；不自动选定 |
+| CAD/BIM 几何 | D | UI 已可上传；元数据/IFC 文本；无几何 |
 | CLIP 图像检索 | D | Protocol 预留未接 |
 
 ---
@@ -85,10 +85,12 @@
 
 （关闭 `DOM-031` / `APP-017` / `APP-018`；推进 `KN-005`。）
 
-### Phase M2 — 设计种子（P2）
+### Phase M2 — 设计种子（P2）✅ 2026-07-26
 
-5. 现场图/草图弱种子 IdeaSeed / Direction（不静默硬化）  
-6. UI 上传暴露 CAD/BIM 后缀  
+5. 现场图/图纸 → 弱 `IdeaSeed`（`enrich=False`；不自动推演/选定）；开放探索可合并附录  
+6. UI 上传暴露 CAD/BIM 后缀（`dwg/dxf/ifc/rvt/rfa`）；推演方向时可注入视觉证据 prompt 块  
+
+（关闭 `APP-019` / `APP-020`。）
 
 ### Phase M3 — 空间理解（延后）
 
@@ -106,8 +108,8 @@
 | APP-017 | P1 | ~~多模态默认 ILLUSTRATIVE~~ **done (M1)** |
 | APP-018 | P1 | ~~input_sources 无视觉类型~~ **done (M1)** |
 | KN-005 | P1 | 重解析/`needs_ocr`——**M1 已可测 OCR 切片**；幂等文档继续跟 |
-| APP-019 | P2 | 草图/现场图未种子化 IdeaSeed/Direction |
-| APP-020 | P2 | UI 上传未暴露 CAD/BIM 类型 |
+| APP-019 | P2 | ~~草图/现场图未种子化~~ **done (M2)** |
+| APP-020 | P2 | ~~UI 未暴露 CAD/BIM~~ **done (M2)** |
 | TS-005 | P1 | 整包仍开；多模态 settings（vision/OCR）已绑定使用 |
 
 （写入 `02-domain.md` / `03-application.md` / `06-parsing-knowledge.md`。）
@@ -131,4 +133,5 @@
 - [x] 入口 / 域 / 服务 / Context 取证  
 - [x] 理想能力对照与 Issue 草案  
 - [x] Phase M1：门面 + EVIDENCE + typed sources + OCR 切片  
-- [ ] M2/M3 排期（下一步）
+- [x] Phase M2：弱 IdeaSeed + CAD UI  
+- [ ] M3 排期（下一步）
