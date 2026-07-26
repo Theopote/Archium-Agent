@@ -105,6 +105,8 @@ class IntentEvolution(DomainModel):
     """Ordered Design History log of intent shifts (Project-level)."""
 
     events: list[IntentEvolutionEvent] = Field(default_factory=list)
+    # Topic 07 L2 / APP-026 — durable Ask offer (not an event; cleared on Apply/Reject)
+    pending_design_revise: dict[str, object] | None = None
 
     def append(
         self,
@@ -138,7 +140,42 @@ class IntentEvolution(DomainModel):
         if event.previous_summary or event.new_summary or event.reason:
             event = event.model_copy(update={"summary": event.display_line()[:500]})
         events.append(event)
-        return IntentEvolution(events=events)
+        return IntentEvolution(
+            events=events,
+            pending_design_revise=self.pending_design_revise,
+        )
+
+    def with_pending_design_revise(
+        self,
+        offer: dict[str, object] | None,
+    ) -> IntentEvolution:
+        return IntentEvolution(
+            events=list(self.events),
+            pending_design_revise=dict(offer) if offer else None,
+        )
+
+    def clear_pending_design_revise(self) -> IntentEvolution:
+        return IntentEvolution(events=list(self.events), pending_design_revise=None)
+
+    def latest_design_critique_snapshot(self) -> dict[str, object] | None:
+        """Prefer full report blob stamped on DESIGN_CRITIQUE edges."""
+        for event in reversed(self.events):
+            if event.kind != IntentEvolutionKind.DESIGN_CRITIQUE:
+                continue
+            snap = event.design_intent_snapshot
+            if isinstance(snap, dict) and snap.get("verdict"):
+                return dict(snap)
+            # Minimal fallback from edge fields
+            return {
+                "verdict": (event.new_summary or "caution").strip() or "caution",
+                "summary": (event.reason or event.summary or "").strip(),
+                "weaknesses": [
+                    {"text": ref} for ref in (event.evidence_refs or [])[:6]
+                ],
+                "missing_evidence": [],
+                "alternative_directions": [],
+            }
+        return None
 
     def latest_summary(self) -> str | None:
         if not self.events:

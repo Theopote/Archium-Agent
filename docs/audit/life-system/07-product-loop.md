@@ -10,7 +10,7 @@
 
 ## 一句话结论
 
-**子系统可用；L1 后「继续工作」不再过早跳进汇报链。** 设计 Ask/批判仍多停在 session；ProcessBoard/Orchestration 尚未成为单一 stage truth（WF-010）。
+**子系统可用；L1–L2 后继续工作尊重设计态，Ask/批判可跨刷新恢复。** Orchestration 尚未成为单一 stage truth（WF-010）；Presentation↔Mission 溯源（MS-002）仍欠。
 
 ---
 
@@ -45,9 +45,9 @@
 | 设计/使命页 | B | genesis / concept-exploration / project-mission（**hidden**） |
 | Mission→汇报桥 | B- | `mission_to_presentation_request`；主链曝光弱 |
 | 人闸（汇报/Visual） | B | LangGraph interrupt + checkpoint |
-| 人闸（设计 Ask） | C | session `pending_design_revise` |
+| 人闸（设计 Ask） | **B（L2）** | `IntentEvolution.pending_design_revise` |
 | 进度 SSOT | D | 五阶段 / ProcessBoard / Orchestration **三套并存** |
-| 跨会话恢复 | C+ | Direction/Brief/Asset ✅；Ask/critique UI ❌ |
+| 跨会话恢复 | **B（L2）** | Direction/Brief/Asset ✅；Ask/critique UI ✅ |
 
 ---
 
@@ -84,8 +84,8 @@
 | 闸 | 持久？ |
 |----|--------|
 | Brief/Storyline/Outline/Visual interrupt | WorkflowRun checkpoint ✅ |
-| Design Ask / pending revise | session ❌ |
-| `last_design_critique_report` | session ❌（Deliver 卡不 Hydrate IntentEvolution） |
+| Design Ask / pending revise | **IntentEvolution.pending_design_revise ✅（L2）** |
+| `last_design_critique_report` | session + **IntentEvolution DESIGN_CRITIQUE hydrate ✅** |
 
 ### 4. 已有但弱曝光
 
@@ -106,13 +106,13 @@
 
 （关闭 `UI-007` / `UI-008`；`WF-010` 仍开。）
 
-### Phase L2 — 可恢复人闸（P1–P2）
+### Phase L2 — 可恢复人闸（P1–P2）✅ 2026-07-26
 
-4. 持久化 `pending_design_revise`（Exploration/Mission metadata 或 ProjectEvent）  
-5. Deliver/Outline Hydrate 最近 `DESIGN_CRITIQUE` 边 → 可行动 NBA  
-6. Stage gate 合并 cognition gate warnings（默认仍 warn）
+4. `IntentEvolution.pending_design_revise` 持久化 Ask；UI hydrate + Apply/Reject 清除  
+5. Deliver/Outline 从 DESIGN_CRITIQUE 边 / pending hydrate；caution/reject 链回概念探索  
+6. materials/outline stage gate 合并 cognition readiness warnings（默认仍 warn）  
 
-（关闭草案 `APP-026` / `APP-027`；`UI-009`。）
+（关闭 `APP-026` / `APP-027`；`UI-009` 仍开。）
 
 ### Phase L3 — 端到端 lineage（P2）
 
@@ -132,8 +132,8 @@
 | UI-007 | P1 | ~~五阶段与 ProcessBoard 脱节~~ **done (L1)** |
 | UI-008 | P1 | ~~无常驻方向/Mission 条~~ **done (L1)** |
 | WF-010 | P2 | OrchestrationPlan 与 product_flow 双轨；缺单一 stage truth |
-| APP-026 | P1 | pending_design_revise / critique UI 仅 session；闭环不可恢复 |
-| APP-027 | P2 | 设计批判未 Hydrate 到 Deliver/Outline；不驱动 NBA |
+| APP-026 | P1 | ~~pending Ask 仅 session~~ **done (L2)** |
+| APP-027 | P2 | ~~批判未 Hydrate~~ **done (L2)** |
 | UI-009 | P2 | Orchestration HumanGate 未在五阶段顶栏统一展示 |
 | MS-002 | P1 | （已有）Presentation 无持久 mission_id |
 | DOM-024 | P1 | （已有）Direction↔Intent 双份漂移放大闭环断裂 |
@@ -159,5 +159,5 @@
 - [x] 路径取证与理想对照  
 - [x] Issue 草案登记 module-audit  
 - [x] Phase L1 导航脊柱  
-- [ ] Phase L2 可恢复人闸  
+- [x] Phase L2 可恢复人闸  
 - [ ] Phase L3 lineage（含 MS-002）

@@ -1,4 +1,4 @@
-"""Ask/Apply panel for pending Critic→Revise offers (Phase L2)."""
+"""Ask/Apply panel for pending Critic→Revise offers (Phase L2 + Topic 07 durable)."""
 
 from __future__ import annotations
 
@@ -10,14 +10,64 @@ import streamlit as st
 from archium.ui.components.design_reflection_details import render_design_reflection
 
 
+def hydrate_pending_revise_from_db(project_id: UUID | None) -> None:
+    """Load durable Ask into session when session is empty (Topic 07 / APP-026)."""
+    if project_id is None:
+        return
+    existing = st.session_state.get("pending_design_revise")
+    if isinstance(existing, dict) and existing.get("direction_id"):
+        return
+    try:
+        from archium.application.design_revise_persistence import (
+            load_pending_design_revise,
+        )
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            pending = load_pending_design_revise(session, project_id)
+        if pending:
+            st.session_state["pending_design_revise"] = pending
+            critique = pending.get("critique")
+            if isinstance(critique, dict):
+                st.session_state["last_design_critique_report"] = critique
+    except Exception:
+        return
+
+
+def clear_pending_revise_state(project_id: UUID | None = None) -> None:
+    """Clear session + durable Ask."""
+    st.session_state.pop("pending_design_revise", None)
+    if project_id is None:
+        raw = st.session_state.get("selected_project_id")
+        try:
+            project_id = UUID(str(raw)) if raw else None
+        except (TypeError, ValueError):
+            project_id = None
+    if project_id is None:
+        return
+    try:
+        from archium.application.design_revise_persistence import (
+            clear_pending_design_revise,
+        )
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            clear_pending_design_revise(session, project_id)
+            session.commit()
+    except Exception:
+        return
+
+
 def render_pending_revise_ask(
     *,
     key_prefix: str,
     on_apply: Callable[[UUID], None],
     on_reject: Callable[[UUID], None],
     on_dismiss: Callable[[], None] | None = None,
+    project_id: UUID | None = None,
 ) -> None:
-    """Render Apply/Reject UI from ``st.session_state['pending_design_revise']``."""
+    """Render Apply/Reject UI from session (hydrated from DB when needed)."""
+    hydrate_pending_revise_from_db(project_id)
     pending = st.session_state.get("pending_design_revise")
     if not isinstance(pending, dict) or not pending.get("direction_id"):
         return
@@ -25,7 +75,7 @@ def render_pending_revise_ask(
     try:
         direction_id = UUID(str(pending["direction_id"]))
     except (TypeError, ValueError):
-        st.session_state.pop("pending_design_revise", None)
+        clear_pending_revise_state(project_id)
         return
 
     st.warning("设计批判建议修订该方向。请确认是否应用补丁后再选定。")
@@ -68,28 +118,61 @@ def render_pending_revise_ask(
             if on_dismiss is not None:
                 on_dismiss()
             else:
-                st.session_state.pop("pending_design_revise", None)
+                # Keep durable pending; only leave the panel for now
                 st.rerun()
 
 
 def store_pending_revise_from_selection(selection: object) -> bool:
-    """If selection awaits Ask, stash offer in session state. Return True when pending."""
+    """If selection awaits Ask, stash offer in session + Project. Return True when pending."""
     if getattr(selection, "selection_completed", True):
-        st.session_state.pop("pending_design_revise", None)
+        project_id = None
+        direction = getattr(selection, "direction", None)
+        if direction is not None:
+            project_id = getattr(direction, "project_id", None)
+        mission = getattr(selection, "mission", None)
+        if project_id is None and mission is not None:
+            project_id = getattr(mission, "project_id", None)
+        if project_id is None:
+            pending = st.session_state.get("pending_design_revise")
+            if isinstance(pending, dict) and pending.get("project_id"):
+                try:
+                    project_id = UUID(str(pending["project_id"]))
+                except (TypeError, ValueError):
+                    project_id = None
+        clear_pending_revise_state(
+            UUID(str(project_id)) if project_id is not None else None
+        )
         return False
     pending = getattr(selection, "pending_revise", None)
     if pending is None:
         return False
     if hasattr(pending, "as_dict"):
-        st.session_state["pending_design_revise"] = pending.as_dict()
+        payload = pending.as_dict()
     elif isinstance(pending, dict):
-        st.session_state["pending_design_revise"] = pending
+        payload = pending
     else:
         return False
+    st.session_state["pending_design_revise"] = payload
     report = getattr(selection, "critique_report", None)
     if report is not None and hasattr(report, "as_dict"):
         st.session_state["last_design_critique_report"] = report.as_dict()
     warnings = list(getattr(selection, "critique_warnings", None) or [])
     if warnings:
         st.session_state["design_critique_warnings"] = warnings
+
+    try:
+        project_id = UUID(str(payload.get("project_id")))
+    except (TypeError, ValueError):
+        return True
+    try:
+        from archium.application.design_revise_persistence import (
+            persist_pending_design_revise,
+        )
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            persist_pending_design_revise(session, project_id, payload)
+            session.commit()
+    except Exception:
+        pass
     return True

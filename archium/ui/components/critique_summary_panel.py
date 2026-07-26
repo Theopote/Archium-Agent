@@ -40,12 +40,26 @@ def render_design_critique_card(
     report: dict[str, Any] | None = None,
     *,
     title: str = "设计批判",
+    project_id: UUID | None = None,
 ) -> None:
-    """Render DesignCritiqueReport (dict) with alternatives / missing evidence."""
+    """Render DesignCritiqueReport (dict); hydrate from IntentEvolution when needed."""
     data = report
     if data is None:
         raw = st.session_state.get("last_design_critique_report")
         data = raw if isinstance(raw, dict) else None
+    if (not isinstance(data, dict) or not data) and project_id is not None:
+        try:
+            from archium.application.design_revise_persistence import (
+                design_critique_resume_page,
+                load_latest_design_critique_report,
+            )
+
+            with get_session() as session:
+                data = load_latest_design_critique_report(session, project_id)
+            if isinstance(data, dict) and data:
+                st.session_state["last_design_critique_report"] = data
+        except Exception:
+            data = None
     if not isinstance(data, dict) or not data:
         return
     with st.expander(title, expanded=False):
@@ -67,6 +81,19 @@ def render_design_critique_card(
                 text = item.get("text") if isinstance(item, dict) else str(item)
                 if text:
                     st.markdown(f"- {text}")
+        resume = None
+        try:
+            from archium.application.design_revise_persistence import (
+                design_critique_resume_page,
+            )
+
+            resume = design_critique_resume_page(data)
+        except Exception:
+            resume = None
+        if resume:
+            from archium.ui.app_navigation import get_app_page
+
+            st.page_link(get_app_page(resume), label="回概念探索处理批判 →")
 
 
 def render_presentation_critique_card(

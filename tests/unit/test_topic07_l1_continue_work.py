@@ -103,6 +103,10 @@ def test_resolve_continue_prefers_design_over_outline(monkeypatch) -> None:
         lambda _session, _pid: None,
     )
     monkeypatch.setattr(
+        "archium.application.design_revise_persistence.load_pending_design_revise",
+        lambda _session, _pid: None,
+    )
+    monkeypatch.setattr(
         "archium.infrastructure.database.mission_repositories.MissionRepository",
         lambda _session: type("M", (), {"get_mission": lambda self, _m: None})(),
     )
@@ -132,6 +136,10 @@ def test_resolve_continue_falls_back_to_presentation_when_design_ready(
     )
     monkeypatch.setattr(
         "archium.application.product_continue_work.page_for_active_design_orchestration",
+        lambda _session, _pid: None,
+    )
+    monkeypatch.setattr(
+        "archium.application.design_revise_persistence.load_pending_design_revise",
         lambda _session, _pid: None,
     )
     monkeypatch.setattr(

@@ -88,9 +88,29 @@ def resolve_continue_work_page_key(
     presentation_stage_id: str,
     slide_count: int = 0,
 ) -> str:
-    """Single continue-work truth: design → orchestration → NBA entry → stage."""
+    """Single continue-work truth: Ask → design → orchestration → NBA → stage."""
     from archium.application.context.workflow_navigation import workflow_entry_for_project
+    from archium.application.design_revise_persistence import load_pending_design_revise
     from archium.application.process.design_process_pointer import build_design_pointer
+
+    try:
+        pending = load_pending_design_revise(session, project_id)
+    except Exception:
+        pending = None
+    if pending is not None:
+        # Prefer mission page when offer belongs to a mission-scoped direction
+        try:
+            from archium.infrastructure.database.repositories import (
+                ConceptDirectionRepository,
+            )
+
+            direction_id = UUID(str(pending["direction_id"]))
+            direction = ConceptDirectionRepository(session).get(direction_id)
+            if direction is not None and direction.mission_id is not None:
+                return "project-mission"
+        except Exception:
+            pass
+        return "concept-exploration"
 
     pointer = build_design_pointer(session, project_id)
     design_page = page_for_unresolved_design(session, pointer)

@@ -38,6 +38,7 @@ def render() -> None:
         st.warning("设计批判（选定前独立质疑）\n\n" + "\n\n".join(critique_warnings))
 
     from archium.ui.components.design_revise_ask_panel import (
+        clear_pending_revise_state,
         render_pending_revise_ask,
         store_pending_revise_from_selection,
     )
@@ -48,7 +49,7 @@ def render() -> None:
                 selection = select_exploration_direction(
                     session, direction_id, revise_action="apply"
                 )
-            st.session_state.pop("pending_design_revise", None)
+            clear_pending_revise_state()
             if store_pending_revise_from_selection(selection):
                 st.rerun()
                 return
@@ -71,7 +72,7 @@ def render() -> None:
                 selection = select_exploration_direction(
                     session, direction_id, revise_action="reject"
                 )
-            st.session_state.pop("pending_design_revise", None)
+            clear_pending_revise_state()
             st.session_state["design_critique_warnings"] = list(
                 getattr(selection, "critique_warnings", None) or []
             )
@@ -84,12 +85,6 @@ def render() -> None:
             st.error(str(exc))
         except Exception as exc:
             st.error(format_user_error(exc))
-
-    render_pending_revise_ask(
-        key_prefix="explore",
-        on_apply=_apply_revise,
-        on_reject=_reject_revise,
-    )
 
     with get_session() as session:
         projects = list_projects(session)
@@ -111,6 +106,13 @@ def render() -> None:
     )
     st.session_state.selected_project_id = project_id_str
     project_id = UUID(project_id_str)
+
+    render_pending_revise_ask(
+        key_prefix="explore",
+        on_apply=_apply_revise,
+        on_reject=_reject_revise,
+        project_id=project_id,
+    )
 
     with get_session() as session:
         exploration = get_latest_exploration_for_project(session, project_id)

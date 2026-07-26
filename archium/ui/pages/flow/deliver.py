@@ -171,7 +171,7 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         st.caption(line)
 
     render_presentation_critique_card(context.presentation.id)
-    render_design_critique_card()
+    render_design_critique_card(project_id=context.project.id)
 
 
 def _render_qa(project_id: UUID) -> None:

@@ -430,6 +430,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     from archium.infrastructure.database.repositories import ProjectRepository
     from archium.ui.app_navigation import get_app_page
     from archium.ui.components.design_revise_ask_panel import (
+        clear_pending_revise_state,
         render_pending_revise_ask,
         store_pending_revise_from_selection,
     )
@@ -450,7 +451,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 selection = select_concept_direction(
                     session, direction_id, revise_action="apply"
                 )
-            st.session_state.pop("pending_design_revise", None)
+            clear_pending_revise_state(mission.project_id)
             if store_pending_revise_from_selection(selection):
                 st.rerun()
                 return
@@ -473,7 +474,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 selection = select_concept_direction(
                     session, direction_id, revise_action="reject"
                 )
-            st.session_state.pop("pending_design_revise", None)
+            clear_pending_revise_state(mission.project_id)
             st.session_state["design_critique_warnings"] = list(
                 getattr(selection, "critique_warnings", None) or []
             )
@@ -491,6 +492,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         key_prefix=key_prefix,
         on_apply=_apply_revise,
         on_reject=_reject_revise,
+        project_id=mission.project_id,
     )
 
     with get_session() as session:

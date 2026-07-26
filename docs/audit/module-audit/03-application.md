@@ -33,5 +33,5 @@
 | APP-023 | P2 | done | 视觉证据包缺 CAD/BIM 文档门面 | `visual_evidence_service`; architectural_asset_from_document | Context 不见 cad_bim:N | 文档级 facade 入 pack | input_sources 含 cad_bim | `-` |
 | APP-024 | P1 | done | Direction/Brief→ImageRequest 缺 seed_source | `vision_generation.ImageRequest`; concept/brief/suggester seeds | 页意图来源不可追溯 | seed_source 字段 + 方向优先 | 方向种子可测；示意策略不变 | `-` |
 | APP-025 | P2 | done | 册级 illustrative hero 风格无共享锁 | `deck_illustrative_style_lock.py`; visual_intent; VT slots | 跨页插图漂移 | 方向 style 锁 + 非证据页统一；槽位保 image_type | 非证据页共享 style；诊断页不锁 | `-` |
-| APP-026 | P1 | open | pending_design_revise / critique UI 仅 session；闭环不可恢复 | `design_revise_ask_panel`; design_loop; life-system 07 | 刷新丢失 Ask；Deliver 不见批判 | 落 Exploration/Mission metadata 或 ProjectEvent；UI Hydrate | 刷新后 Ask 可恢复；Deliver 可读最近批判 | `-` |
-| APP-027 | P2 | open | 设计批判未 Hydrate 到 Deliver/Outline；不驱动 NBA | `critique_summary_panel`; IntentEvolution | 批判结论无下游行动 | 读 DESIGN_CRITIQUE 边 → 提示回探索/Mission | Outline/Deliver 有可点行动 | `-` |
+| APP-026 | P1 | done | pending_design_revise / critique UI 仅 session；闭环不可恢复 | `intent_evolution.py`; `design_revise_persistence.py`; ask panel | 刷新丢失 Ask；Deliver 不见批判 | 落 IntentEvolution.pending + Hydrate | 刷新后 Ask 可恢复；Deliver/Outline 可读最近批判 | Topic 07 L2 |
+| APP-027 | P2 | done | 设计批判未 Hydrate 到 Deliver/Outline；不驱动 NBA | `critique_summary_panel`; IntentEvolution DESIGN_CRITIQUE | 批判结论无下游行动 | 读边/pending → 回探索 page_link | Outline/Deliver 有可点行动 | Topic 07 L2 |

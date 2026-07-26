@@ -47,6 +47,36 @@ class StageGateResult:
         return bool(self.blockers)
 
 
+def _append_cognition_gate_warnings(project_id: UUID, warnings: list[str]) -> None:
+    """Merge presentation cognition readiness messages into stage gate (Topic 07 L2)."""
+    try:
+        from archium.application.context.presentation_cognition_gate import (
+            evaluate_presentation_cognition,
+        )
+        from archium.application.context.presentation_readiness import (
+            PresentationGateVerdict,
+        )
+        from archium.config.settings import get_settings
+        from archium.infrastructure.database.session import get_session
+
+        mode = (get_settings().presentation_cognition_gate or "warn").strip().lower()
+        if mode == "off":
+            return
+        with get_session() as session:
+            readiness = evaluate_presentation_cognition(session, project_id)
+        if readiness.verdict == PresentationGateVerdict.PROCEED:
+            return
+        for msg in readiness.warnings[:3]:
+            text = (msg or "").strip()
+            if text and text not in warnings:
+                warnings.append(f"认知门禁：{text}")
+        if readiness.summary and readiness.summary not in warnings:
+            if readiness.verdict != PresentationGateVerdict.PROCEED:
+                warnings.append(f"认知门禁：{readiness.summary}")
+    except Exception:
+        return
+
+
 def _append_unresolved_design_warning(project_id: UUID, warnings: list[str]) -> None:
     """Soft-guide when concept directions are still open (Topic 07 L1)."""
     try:
@@ -93,6 +123,7 @@ def evaluate_stage_gate(
                 "尚未绑定项目资料，后续生成将标记为草稿预览，不得正式交付"
             )
         _append_unresolved_design_warning(snapshot.project_id, warnings)
+        _append_cognition_gate_warnings(snapshot.project_id, warnings)
         return StageGateResult(
             can_proceed=True,
             blockers=tuple(blockers),
@@ -108,6 +139,7 @@ def evaluate_stage_gate(
         ):
             warnings.append("尚未绑定项目资料，生成内容仅作为草稿预览")
         _append_unresolved_design_warning(snapshot.project_id, warnings)
+        _append_cognition_gate_warnings(snapshot.project_id, warnings)
         if not snapshot.outline_approved:
             if not getattr(snapshot, "has_outline", False) and not snapshot.has_brief:
                 blockers.append("确认汇报对象与大纲结构（生成大纲）")
@@ -320,6 +352,9 @@ def render_flow_stepper(current_stage_id: str) -> None:
 def render_design_context_strip(project_id: UUID) -> None:
     """Persistent design identity line for product-flow chrome (Topic 07 / UI-008)."""
     try:
+        from archium.application.design_revise_persistence import (
+            load_pending_design_revise,
+        )
         from archium.application.process.design_process_pointer import build_design_pointer
         from archium.application.product_continue_work import (
             design_loop_open,
@@ -328,10 +363,19 @@ def render_design_context_strip(project_id: UUID) -> None:
         from archium.infrastructure.database.session import get_session
 
         with get_session() as session:
+            pending = load_pending_design_revise(session, project_id)
             pointer = build_design_pointer(session, project_id)
             open_loop = design_loop_open(pointer)
             resume_page = page_for_unresolved_design(session, pointer)
     except Exception:
+        return
+
+    if pending:
+        st.warning("待确认：设计批判修订 Ask（刷新后仍可恢复）")
+        st.page_link(
+            get_app_page("concept-exploration"),
+            label="打开概念探索处理 Ask →",
+        )
         return
 
     label = (pointer.label or "").strip()

@@ -853,6 +853,10 @@ def render() -> None:
         render_stage_nav("outline", include_next=False)
         return
 
+    from archium.ui.components.critique_summary_panel import render_design_critique_card
+
+    render_design_critique_card(project_id=project_id, title="最近设计批判")
+
     snapshot = project_mission.load_planning_snapshot(project_id)
     _render_default_outline(project_id, snapshot)
 
