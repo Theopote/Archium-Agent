@@ -146,6 +146,7 @@ class IngestionService:
                 document.mark_completed(page_count=page_count)
                 document = self._documents.update_document(document)
 
+            self._materialize_cad_spatial_facts(project_id, document, parsed.metadata)
             document = self._enqueue_cad_analyze_if_needed(project_id, document, stored_path)
 
             result.document = document
@@ -266,6 +267,9 @@ class IngestionService:
             else:
                 document.mark_completed(page_count=page_count)
             result.document = self._documents.update_document(document)
+            self._materialize_cad_spatial_facts(
+                document.project_id, result.document, parsed.metadata
+            )
             result.chunks = saved_chunks
             result.assets = assets
             return result
@@ -274,6 +278,30 @@ class IngestionService:
             document.mark_failed()
             result.document = self._documents.update_document(document)
             return result
+
+    def _materialize_cad_spatial_facts(
+        self,
+        project_id: UUID,
+        document: SourceDocument,
+        metadata: dict[str, object],
+    ) -> None:
+        if not metadata.get("cad_bim"):
+            return
+        try:
+            from archium.application.cad_spatial_fact_materializer import (
+                materialize_cad_spatial_facts,
+            )
+
+            materialize_cad_spatial_facts(
+                self._session,
+                project_id,
+                document,
+                metadata=metadata,
+            )
+        except Exception:
+            logger.exception(
+                "CAD spatial fact materialization failed for %s", document.filename
+            )
 
     def _parse_file(self, file_path: Path) -> ParsedDocument:
         parser = get_parser_for_path(file_path, self._parsers)

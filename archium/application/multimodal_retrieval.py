@@ -234,29 +234,64 @@ class MultimodalRetrievalService:
                 )
             )
 
-        # Reserved CAD/BIM: emit advisory hit when query asks for CAD/BIM but no parser
+        # Reserved CAD/BIM: prefer project IFC text semantics when present
         if modality in {MultimodalModality.CAD, MultimodalModality.BIM}:
-            refs.append(
-                KnowledgeReference(
-                    source_kind=KnowledgeSourceKind.MULTIMODAL_ASSET,
-                    source_id=f"advisory:{modality.value}",
-                    content=(
-                        f"查询涉及 {modality.value.upper()}，当前仅支持图纸/照片 caption 检索；"
-                        "IFC/DWG 对象解析尚未接入。请上传导出图纸或截图以走视觉 caption 通道。"
-                    ),
-                    title=f"{modality.value.upper()} 解析未就绪",
-                    similarity=0.4,
-                    authority=0.9,
-                    transferability=0.3,
-                    relevance=0.35,
-                    usage=KnowledgeUsage.BACKGROUND,
-                    project_id=project_id,
-                    extra={"cad_bim_ready": False, "modality": modality.value},
+            cad_ready = self._project_has_cad_text_semantics(project_id)
+            if cad_ready:
+                refs.append(
+                    KnowledgeReference(
+                        source_kind=KnowledgeSourceKind.MULTIMODAL_ASSET,
+                        source_id=f"advisory:{modality.value}:ready",
+                        content=(
+                            f"项目已登记 CAD/BIM 文本语义（IFC 实体计数/空间名称）；"
+                            f"完整几何/拓扑仍未接入。请结合 constraints / floors 事实与 cad_bim 证据通道。"
+                        ),
+                        title=f"{modality.value.upper()} 文本语义已就绪",
+                        similarity=0.55,
+                        authority=0.85,
+                        transferability=0.55,
+                        relevance=0.5,
+                        usage=KnowledgeUsage.EVIDENCE,
+                        project_id=project_id,
+                        extra={"cad_bim_ready": True, "modality": modality.value},
+                    )
                 )
-            )
+            else:
+                refs.append(
+                    KnowledgeReference(
+                        source_kind=KnowledgeSourceKind.MULTIMODAL_ASSET,
+                        source_id=f"advisory:{modality.value}",
+                        content=(
+                            f"查询涉及 {modality.value.upper()}，当前仅支持 IFC 文本语义与图纸/照片 caption；"
+                            "完整几何解析尚未接入。请上传 IFC 或导出图纸截图。"
+                        ),
+                        title=f"{modality.value.upper()} 几何未就绪",
+                        similarity=0.4,
+                        authority=0.9,
+                        transferability=0.3,
+                        relevance=0.35,
+                        usage=KnowledgeUsage.BACKGROUND,
+                        project_id=project_id,
+                        extra={"cad_bim_ready": False, "modality": modality.value},
+                    )
+                )
 
         refs.sort(key=lambda item: item.relevance, reverse=True)
         return refs[: max(1, top_k)]
+
+    def _project_has_cad_text_semantics(self, project_id: UUID) -> bool:
+        for doc in self._documents.list_by_project(project_id):
+            meta = doc.metadata or {}
+            if not meta.get("cad_bim"):
+                continue
+            if meta.get("parse_depth") == "ifc_text_semantics":
+                return True
+            analysis = meta.get("analysis")
+            if isinstance(analysis, dict) and analysis.get("ifc_semantics"):
+                return True
+            if meta.get("space_count") or meta.get("storey_count"):
+                return True
+        return False
 
     def _usage_for_chunk(self, chunk: DocumentChunk) -> KnowledgeUsage:
         """Project-material photos/drawings → EVIDENCE; reference/generated → ILLUSTRATIVE."""

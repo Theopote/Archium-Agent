@@ -21,6 +21,7 @@ class ArchitecturalAssetRole(StrEnum):
     SITE_PHOTO = "site_photo"
     DRAWING = "drawing"
     DIAGRAM = "diagram"
+    CAD_BIM = "cad_bim"
     REFERENCE = "reference"
     OTHER = "other"
 
@@ -133,6 +134,7 @@ def infer_architectural_asset_usage(
         ArchitecturalAssetRole.SITE_PHOTO,
         ArchitecturalAssetRole.DRAWING,
         ArchitecturalAssetRole.DIAGRAM,
+        ArchitecturalAssetRole.CAD_BIM,
     }:
         return KnowledgeUsage.EVIDENCE
     return KnowledgeUsage.BACKGROUND
@@ -164,6 +166,51 @@ def architectural_asset_from_parts(
     )
 
 
+def architectural_asset_from_document(
+    document: "SourceDocument",
+    *,
+    document_purpose: DocumentPurpose | None = None,
+) -> ArchitecturalAsset | None:
+    """Document-level facade for CAD/BIM (no raster Asset required)."""
+    from archium.domain.document import SourceDocument
+    from archium.domain.enums import DocumentType
+
+    assert isinstance(document, SourceDocument)
+    purpose = document_purpose or DocumentPurpose.PROJECT_MATERIAL
+    meta = document.metadata or {}
+    is_cad = bool(meta.get("cad_bim")) or document.file_type in {
+        DocumentType.DWG,
+        DocumentType.DXF,
+        DocumentType.IFC,
+        DocumentType.RVT,
+    }
+    if not is_cad:
+        return None
+    if purpose in {
+        DocumentPurpose.REFERENCE_CASE,
+        DocumentPurpose.REFERENCE_STYLE,
+        DocumentPurpose.PUBLIC_RESEARCH,
+    }:
+        role = ArchitecturalAssetRole.REFERENCE
+        usage = KnowledgeUsage.ILLUSTRATIVE
+    else:
+        role = ArchitecturalAssetRole.CAD_BIM
+        usage = KnowledgeUsage.EVIDENCE
+    fmt = str(meta.get("format") or document.file_type.value)
+    return ArchitecturalAsset(
+        project_id=document.project_id,
+        asset_id=document.id,  # document-scoped facade id
+        document_id=document.id,
+        filename=document.filename,
+        role=role,
+        usage=usage,
+        modality="bim" if document.file_type == DocumentType.IFC else "cad",
+        document_purpose=purpose,
+        drawing_type=fmt,
+        tags=["cad_bim", document.file_type.value],
+    )
+
+
 def summarize_role_counts(assets: list[ArchitecturalAsset]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for item in assets:
@@ -178,6 +225,7 @@ def input_source_lines_from_assets(assets: list[ArchitecturalAsset]) -> list[str
         ArchitecturalAssetRole.SITE_PHOTO,
         ArchitecturalAssetRole.DRAWING,
         ArchitecturalAssetRole.DIAGRAM,
+        ArchitecturalAssetRole.CAD_BIM,
         ArchitecturalAssetRole.REFERENCE,
         ArchitecturalAssetRole.OTHER,
     )
@@ -191,6 +239,8 @@ def _modality_for_role(role: ArchitecturalAssetRole) -> str:
         return "drawing"
     if role == ArchitecturalAssetRole.DIAGRAM:
         return "diagram"
+    if role == ArchitecturalAssetRole.CAD_BIM:
+        return "cad"
     return "image"
 
 

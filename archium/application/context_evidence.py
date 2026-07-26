@@ -46,6 +46,7 @@ class ContextMaterialsPack:
     drawing_count: int = 0
     diagram_count: int = 0
     reference_asset_count: int = 0
+    cad_bim_count: int = 0
     visual_input_sources: tuple[str, ...] = ()
 
     @property
@@ -61,6 +62,7 @@ class ContextMaterialsPack:
             or self.site_photo_count > 0
             or self.drawing_count > 0
             or self.diagram_count > 0
+            or self.cad_bim_count > 0
         )
 
 
@@ -139,6 +141,7 @@ def gather_project_evidence(
         drawing_count=visual.drawing_count,
         diagram_count=visual.diagram_count,
         reference_asset_count=visual.reference_count,
+        cad_bim_count=visual.cad_bim_count,
         visual_input_sources=tuple(visual.input_source_lines()),
     )
 

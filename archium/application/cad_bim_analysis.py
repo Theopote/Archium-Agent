@@ -85,6 +85,9 @@ def analyze_cad_bim_file(path: Path) -> CadAssetAnalysis:
         analysis["schema"] = semantics.schema
         analysis["space_count"] = semantics.space_count
         analysis["storey_count"] = semantics.storey_count
+        analysis["space_names"] = list(semantics.space_names)
+        analysis["storey_names"] = list(semantics.storey_names)
+        analysis["building_names"] = list(semantics.building_names)
         analysis["parse_depth"] = "ifc_text_semantics"
         notes.extend(semantics.summary_lines())
     elif doc_type == DocumentType.RVT:

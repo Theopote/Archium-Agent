@@ -10,9 +10,9 @@
 
 ## 一句话结论
 
-**能入库与 caption RAG，M1–M2 已接通证据通道与弱种子；空间几何仍欠。**
+**能入库与 caption RAG；M1–M3 已接通证据、弱种子与 IFC 文本→事实。几何/CLIP/平面拓扑仍欠。**
 
-`SourceDocument` + `Asset` + `ArchitecturalAsset` + EVIDENCE 用法 + 类型化 `input_sources` + OCR 切片 + 现场图弱 IdeaSeed + CAD UI 已落地。现场图→约束抽取、平面拓扑、CAD 几何、CLIP 仍属 M3。生成图禁作现场证据的契约已存在（勿破坏）。
+`ArchitecturalAsset` + EVIDENCE + typed sources + OCR + 弱 IdeaSeed + CAD UI + IFC 计数/Name→`ProjectFact` 已落地。完整 CAD 几何、平面拓扑 CV、默认 CLIP 仍不做。生成图禁作现场证据。
 
 ---
 
@@ -46,9 +46,9 @@
 | 汇报绑图 | B+ | `SlideAssetBinding` / VisualIntent |
 | 项目素材作设计证据 | **B-（M1）** | `ArchitecturalAsset` + EVIDENCE usage + typed sources |
 | 扫描 PDF OCR | **B-（M1 切片）** | `NEEDS_OCR` → `ocr_text` chunks |
-| 现场图 → 约束 | C | 弱种子已有（M2）；自动约束抽取仍欠（M3） |
+| 现场图 → 约束 | C+ | 弱种子（M2）；IFC→facts（M3）；照片自动约束仍弱 |
 | 草图 → IdeaSeed | **B（M2）** | `visual_idea_seed`；enrich=False；不自动选定 |
-| CAD/BIM 几何 | D | UI 已可上传；元数据/IFC 文本；无几何 |
+| CAD/BIM 几何 | D | UI 可上传；**IFC 文本语义→事实（M3）**；无几何 |
 | CLIP 图像检索 | D | Protocol 预留未接 |
 
 ---
@@ -92,9 +92,15 @@
 
 （关闭 `APP-019` / `APP-020`。）
 
-### Phase M3 — 空间理解（延后）
+### Phase M3 — BIM 文本入世界模型（P2）✅ 2026-07-26
 
-7. 平面拓扑 / CAD 几何；可选 CLIP；仍禁生成图当证据  
+7. IFC Name/计数 → `ProjectFact`（floors / constraints / main_function）  
+8. `DOCUMENT_ANALYZE` 回写文档 metadata + 事实；证据包含 `cad_bim:N`  
+9. 检索对已有 IFC 文本语义改为「文本就绪」提示（仍无几何/CLIP）  
+
+（关闭 `APP-021` / `APP-022` / `APP-023`。）
+
+**仍不做：** DWG 几何、平面拓扑 CV、默认 CLIP、`DesignArtifact`。
 
 **不做：** 新 Agent；平行 Project；把绘画生成并进本专题。
 
@@ -110,6 +116,9 @@
 | KN-005 | P1 | 重解析/`needs_ocr`——**M1 已可测 OCR 切片**；幂等文档继续跟 |
 | APP-019 | P2 | ~~草图/现场图未种子化~~ **done (M2)** |
 | APP-020 | P2 | ~~UI 未暴露 CAD/BIM~~ **done (M2)** |
+| APP-021 | P2 | ~~IFC/CAD 文本未进 ProjectFact~~ **done (M3)** |
+| APP-022 | P2 | ~~DOCUMENT_ANALYZE 不回写~~ **done (M3)** |
+| APP-023 | P2 | ~~证据包缺 cad_bim~~ **done (M3)** |
 | TS-005 | P1 | 整包仍开；多模态 settings（vision/OCR）已绑定使用 |
 
 （写入 `02-domain.md` / `03-application.md` / `06-parsing-knowledge.md`。）
@@ -134,4 +143,5 @@
 - [x] 理想能力对照与 Issue 草案  
 - [x] Phase M1：门面 + EVIDENCE + typed sources + OCR 切片  
 - [x] Phase M2：弱 IdeaSeed + CAD UI  
-- [ ] M3 排期（下一步）
+- [x] Phase M3：IFC 文本→事实 + 回写 + cad_bim 证据  
+- [ ] 几何/CLIP/平面拓扑（明确延后）

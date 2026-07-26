@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from archium.application.background_job_service import BackgroundJobService
 from archium.application.cad_bim_analysis import analyze_cad_bim_file, is_cad_bim_path
+from archium.application.cad_spatial_fact_materializer import (
+    materialize_cad_spatial_facts,
+    merge_cad_analysis_into_document,
+)
 from archium.domain.background_job import BackgroundJob, BackgroundJobKind
+from archium.infrastructure.database.repositories import DocumentRepository
 
 
 class BackgroundJobWorker:
     """Inline / process worker. Call ``process_once`` from a loop or test."""
 
     def __init__(self, session: Session) -> None:
+        self._session = session
         self._jobs = BackgroundJobService(session)
 
     def process_once(self) -> BackgroundJob | None:
@@ -54,12 +61,29 @@ class BackgroundJobWorker:
         self._jobs.set_progress(job.id, 50, message=f"analyzing {path.name}")
         if is_cad_bim_path(path):
             analysis = analyze_cad_bim_file(path)
-            return {
+            payload: dict[str, object] = {
                 "document_type": analysis.document_type.value,
                 "format": analysis.format,
                 "metadata": analysis.as_metadata(),
                 "summary": analysis.summary_text(),
             }
+            raw_doc_id = str(job.payload.get("document_id") or "").strip()
+            if raw_doc_id:
+                docs = DocumentRepository(self._session)
+                document = docs.get_document(UUID(raw_doc_id))
+                if document is not None:
+                    document = merge_cad_analysis_into_document(document, analysis)
+                    docs.update_document(document)
+                    created = materialize_cad_spatial_facts(
+                        self._session,
+                        job.project_id,
+                        document,
+                        analysis=analysis,
+                    )
+                    payload["document_id"] = str(document.id)
+                    payload["facts_created"] = created
+                    payload["facts_materialized"] = True
+            return payload
         return {
             "document_type": path.suffix.lower().lstrip(".") or "other",
             "file_name": path.name,

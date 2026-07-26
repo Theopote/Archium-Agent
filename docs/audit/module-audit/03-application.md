@@ -28,3 +28,6 @@
 | APP-018 | P1 | done | ProjectContext.input_sources 无类型化视觉证据摘要 | `context_evidence.py`; composer | 认知面看不见 site_photo/drawing | gather + compose 写入 site_photo:N 等 | Context.input_sources 含视觉行 | `-` |
 | APP-019 | P2 | done | 草图/现场图未种子化 IdeaSeed/Direction | `visual_idea_seed.py`; upload hook | 多模态停在 RAG | 弱种子 enrich=False；不自动推演/选定 | 上传现场图可开探索；无 SELECTED | `-` |
 | APP-020 | P2 | done | UI 上传未暴露 CAD/BIM 类型 | `upload_file_types.py`; workspace/studio | CAD 只能旁路 | file_uploader 加 dwg/dxf/ifc/rvt/rfa | UI 可选 CAD/BIM | `-` |
+| APP-021 | P2 | done | IFC/CAD 文本语义未写入 ProjectFact | `cad_spatial_fact_materializer.py`; ifc_text_semantics | 空间计数停在 chunk 散文 | floors/constraints/main_function 白名单落账 | IFC 导入有 floors；可测 | `-` |
+| APP-022 | P2 | done | DOCUMENT_ANALYZE 完成不回写文档/事实 | `background_job_worker.py` | 异步分析对世界模型无效 | 合并 metadata + materialize facts | job 后 doc 有 parse_depth；有事实 | `-` |
+| APP-023 | P2 | done | 视觉证据包缺 CAD/BIM 文档门面 | `visual_evidence_service`; architectural_asset_from_document | Context 不见 cad_bim:N | 文档级 facade 入 pack | input_sources 含 cad_bim | `-` |

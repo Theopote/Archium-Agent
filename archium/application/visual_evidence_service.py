@@ -38,6 +38,10 @@ class VisualEvidencePack:
     def reference_count(self) -> int:
         return sum(1 for a in self.assets if a.role.value == "reference")
 
+    @property
+    def cad_bim_count(self) -> int:
+        return sum(1 for a in self.assets if a.role.value == "cad_bim")
+
     def input_source_lines(self) -> list[str]:
         return input_source_lines_from_assets(list(self.assets))
 
@@ -50,7 +54,9 @@ def build_visual_evidence_pack(
     session: Session,
     project_id: UUID,
 ) -> VisualEvidencePack:
-    """List project assets as ArchitecturalAsset facades (no LLM)."""
+    """List project assets + CAD/BIM documents as ArchitecturalAsset facades (no LLM)."""
+    from archium.domain.architectural_asset import architectural_asset_from_document
+
     documents = DocumentRepository(session).list_by_project(project_id)
     purpose_by_doc: dict[UUID, DocumentPurpose] = {
         doc.id: document_purpose_from_metadata(doc.metadata or {}) for doc in documents
@@ -64,6 +70,13 @@ def build_visual_evidence_pack(
         facades.append(
             architectural_asset_from_parts(asset, document_purpose=purpose)
         )
+    for doc in documents:
+        cad_facade = architectural_asset_from_document(
+            doc,
+            document_purpose=purpose_by_doc.get(doc.id, DocumentPurpose.PROJECT_MATERIAL),
+        )
+        if cad_facade is not None:
+            facades.append(cad_facade)
     return VisualEvidencePack(assets=tuple(facades))
 
 
