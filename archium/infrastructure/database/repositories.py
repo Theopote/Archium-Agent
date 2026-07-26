@@ -1981,6 +1981,14 @@ class ProjectMemberRepository:
         )
         return [mappers.project_member_to_domain(row) for row in self._session.scalars(stmt)]
 
+    def list_project_ids_for_actor(self, actor_id: str) -> list[UUID]:
+        stmt = (
+            select(ProjectMemberORM.project_id)
+            .where(ProjectMemberORM.actor_id == actor_id)
+            .order_by(ProjectMemberORM.updated_at.desc())
+        )
+        return list(self._session.scalars(stmt).all())
+
     def delete(self, member_id: UUID) -> bool:
         try:
             orm = self._session.get(ProjectMemberORM, member_id)

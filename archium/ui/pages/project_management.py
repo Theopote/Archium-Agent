@@ -192,7 +192,11 @@ def render() -> None:
         st.session_state.show_create_form = False
 
     with get_session() as session:
-        projects = ProjectManagementService(session).list_projects()
+        from archium.ui.session_actor import get_current_actor_id
+
+        projects = ProjectManagementService(session).list_projects(
+            actor_id=get_current_actor_id()
+        )
 
     col1, col2 = st.columns([3, 1])
     with col2:

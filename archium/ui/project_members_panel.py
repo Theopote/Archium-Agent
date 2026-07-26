@@ -37,7 +37,12 @@ def render_project_members_panel(
         invites = ProjectInviteService(session).list_for_project(project_id, limit=8)
 
     with st.expander("项目成员与角色", expanded=expanded):
-        st.caption("Owner / Architect / Reviewer / Client — 本地单用户默认已是负责人。")
+        from archium.ui.session_actor import get_current_actor_id
+
+        st.caption(
+            f"当前身份：`{get_current_actor_id()}` · "
+            "Owner / Architect / Reviewer / Client — 本地单用户默认已是负责人。"
+        )
         if not members:
             st.info("暂无成员记录。")
         else:
@@ -122,12 +127,16 @@ def render_project_members_panel(
             redeem = st.form_submit_button("兑换并加入", use_container_width=True)
         if redeem:
             try:
+                from archium.ui.session_actor import set_current_actor_id
+
+                joined_actor = (redeem_actor or "").strip() or "guest-user"
                 with get_session() as session:
                     invite, member = ProjectInviteService(session).redeem(
                         redeem_code,
-                        actor_id=(redeem_actor or "").strip() or "guest-user",
+                        actor_id=joined_actor,
                         display_name=(redeem_name or "").strip(),
                     )
+                set_current_actor_id(member.actor_id)
                 if invite.project_id != project_id:
                     st.warning(
                         f"已加入其他项目成员（{invite.project_id}）· 角色 {member.role.value}"

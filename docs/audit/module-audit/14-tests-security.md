@@ -18,3 +18,5 @@
 | TS-010 | P0 | open | 非开发者剧本 A + 修改成本（Beta B10） | playbooks; rehearsal tooling | 不能宣称 beta 可用 | 工具链就绪（`new_beta_session` + meta + summarize）；**待真人 session 数据** | B10 关闭；有 session 记录 | `-` |
 | TS-011 | P1 | done | setuptools CVE：CI/build 未钉补丁版 | `pyproject.toml`; ci security-scan | 构建链漏洞 | `setuptools>=83` | security-scan 安装步骤含 pin | `-` |
 | TS-012 | P2 | open | 开发机 torch 等非 lock 包污染本地 audit | 本地 env | 误报 | 清洁 venv 审计；勿 allowlist torch | 文档已说明；CI 无 torch | `-` |
+| SEC-001 | P0 | mitigated | 无成员时 `local-user` 获全权限 bootstrap | `project_access_service.can` | 权限假象 | 首次访问 promote 为 owner（Topic 08 C1） | 空项目访问后有 owner 行 | Topic 08 C1 |
+| SEC-002 | P1 | open | 无 OAuth/SSO；actor_id 可自填伪造 | UI redeem; no auth | 身份不可信 | IdP / 绑定会话 | 不可任意冒充 | `-` |

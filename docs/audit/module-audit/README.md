@@ -26,7 +26,9 @@
 | [11-rendering-pptx.md](11-rendering-pptx.md) | PPTX / 渲染出口 | `RP-` |
 | [12-qa-delivery.md](12-qa-delivery.md) | QA / 导出门禁 / 交付 | `QD-` |
 | [13-ui.md](13-ui.md) | Streamlit / Canvas UI | `UI-` |
-| [14-tests-security.md](14-tests-security.md) | 测试分层 / 配置 / 依赖安全 | `TS-` |
+| [14-tests-security.md](14-tests-security.md) | 测试分层 / 配置 / 依赖安全 | `TS-` / `SEC-` |
+| [15-collaboration.md](15-collaboration.md) | 项目成员 / 邀请 / 角色协作 | `COLLAB-` |
+| [16-billing-usage.md](16-billing-usage.md) | 用量计量 / 席位 / tenancy | `BILL-` |
 
 ## Issue 字段（强制）
 
@@ -86,4 +88,4 @@
 
 P0 已关闭：`APP-003`；`QD-006`/`B8`；`WF-002`/`WF-008`；`DB-001`/`DB-002`/`DB-003`/`DB-005`/`DB-007`；`KN-001`/`KN-007`；`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 
-Domain 台账主线已收敛；余项见 [02-domain.md](02-domain.md)（如 DOM-008/013…；第二轮世界模型 `DOM-023`…`DOM-026`/`DOM-028`）。已关闭：`DOM-003`/`DOM-004`/`DOM-005`/`DOM-006`/`DOM-007`/`DOM-009`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-015`/`DOM-016`/`DOM-017`/`DOM-018`/`DOM-020`/`DOM-027`/`DOM-029`/`DOM-030`/`DOM-031`。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。生命系统：[01 Domain](../life-system/01-domain-model.md) · [02 Knowledge](../life-system/02-knowledge-model.md) · [03 Reasoning](../life-system/03-ai-reasoning-chain.md) · [04 Design Loop](../life-system/04-design-loop.md) · [05 Multimodal](../life-system/05-multimodal-input.md) · [06 Painting](../life-system/06-ai-painting.md) · [07 Product Loop](../life-system/07-product-loop.md)（M1–M3 / P1–P3 / L1–L3 / `DOM-027` / `MS-002` 已关；`WF-010`/`UI-009` 仍开）。
+Domain 台账主线已收敛；余项见 [02-domain.md](02-domain.md)（如 DOM-008/013…；第二轮世界模型 `DOM-023`…`DOM-026`/`DOM-028`）。已关闭：`DOM-003`/`DOM-004`/`DOM-005`/`DOM-006`/`DOM-007`/`DOM-009`/`DOM-011`/`DOM-012`/`DOM-014`/`DOM-015`/`DOM-016`/`DOM-017`/`DOM-018`/`DOM-020`/`DOM-027`/`DOM-029`/`DOM-030`/`DOM-031`。逐文件审计见 [02-domain-file-audit.md](02-domain-file-audit.md)。生命系统：[01 Domain](../life-system/01-domain-model.md) · … · [07 Product Loop](../life-system/07-product-loop.md) · [08 Collab](../life-system/08-commercialization-collab.md)（L1–L3 / C1；`COLLAB-001` 写路径仍开）。

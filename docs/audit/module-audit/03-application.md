@@ -35,3 +35,4 @@
 | APP-025 | P2 | done | 册级 illustrative hero 风格无共享锁 | `deck_illustrative_style_lock.py`; visual_intent; VT slots | 跨页插图漂移 | 方向 style 锁 + 非证据页统一；槽位保 image_type | 非证据页共享 style；诊断页不锁 | `-` |
 | APP-026 | P1 | done | pending_design_revise / critique UI 仅 session；闭环不可恢复 | `intent_evolution.py`; `design_revise_persistence.py`; ask panel | 刷新丢失 Ask；Deliver 不见批判 | 落 IntentEvolution.pending + Hydrate | 刷新后 Ask 可恢复；Deliver/Outline 可读最近批判 | Topic 07 L2 |
 | APP-027 | P2 | done | 设计批判未 Hydrate 到 Deliver/Outline；不驱动 NBA | `critique_summary_panel`; IntentEvolution DESIGN_CRITIQUE | 批判结论无下游行动 | 读边/pending → 回探索 page_link | Outline/Deliver 有可点行动 | Topic 07 L2 |
+| APP-028 | P1 | done | 缺统一 `require_project_permission` 门面 | `project_permission_gate.py` | 写路径各自绕过 | 薄门面；COLLAB-001 接线仍开 | 门面单测绿 | Topic 08 C1 |

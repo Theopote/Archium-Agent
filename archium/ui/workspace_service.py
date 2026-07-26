@@ -78,8 +78,20 @@ class ProjectOverview:
     presentation_count: int
 
 
-def list_projects(session: Session) -> list[Project]:
-    return ProjectRepository(session).list_all()
+def list_projects(session: Session, actor_id: str | None = None) -> list[Project]:
+    """List projects visible to ``actor_id`` (default: session / local-user)."""
+    from archium.application.project_access_service import ProjectAccessService
+    from archium.domain.access import LOCAL_ACTOR_ID
+
+    resolved = actor_id
+    if resolved is None:
+        try:
+            from archium.ui.session_actor import get_current_actor_id
+
+            resolved = get_current_actor_id()
+        except Exception:
+            resolved = LOCAL_ACTOR_ID
+    return ProjectAccessService(session).list_visible_projects(resolved)
 
 
 def create_project(

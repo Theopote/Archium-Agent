@@ -23,8 +23,20 @@ class ProjectManagementService:
         self._session = session
         self._projects = ProjectRepository(session)
 
-    def list_projects(self, *, status: ProjectStatus | None = None) -> list[Project]:
-        return self._projects.list_all(status=status)
+    def list_projects(
+        self,
+        *,
+        status: ProjectStatus | None = None,
+        actor_id: str | None = None,
+    ) -> list[Project]:
+        from archium.application.project_access_service import ProjectAccessService
+        from archium.domain.access import LOCAL_ACTOR_ID
+
+        resolved = (actor_id or LOCAL_ACTOR_ID).strip() or LOCAL_ACTOR_ID
+        visible = ProjectAccessService(self._session).list_visible_projects(resolved)
+        if status is None:
+            return visible
+        return [p for p in visible if p.status == status]
 
     def get_project(self, project_id: UUID) -> Project:
         project = self._projects.get_by_id(project_id)

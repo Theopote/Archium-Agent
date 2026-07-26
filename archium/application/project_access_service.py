@@ -12,14 +12,19 @@ from archium.domain.access import (
     ProjectPermission,
     ProjectRole,
 )
+from archium.domain.project import Project
 from archium.exceptions import AccessDeniedError
-from archium.infrastructure.database.repositories import ProjectMemberRepository
+from archium.infrastructure.database.repositories import (
+    ProjectMemberRepository,
+    ProjectRepository,
+)
 
 
 class ProjectAccessService:
     """Minimal RBAC for Owner / Architect / Reviewer / Client."""
 
     def __init__(self, session: Session) -> None:
+        self._session = session
         self._repo = ProjectMemberRepository(session)
 
     def ensure_default_owner(
@@ -74,6 +79,27 @@ class ProjectAccessService:
     def get_member(self, project_id: UUID, actor_id: str) -> ProjectMember | None:
         return self._repo.get_by_project_actor(project_id, actor_id)
 
+    def list_visible_projects(self, actor_id: str) -> list[Project]:
+        """Projects the actor can see.
+
+        - Has memberships → those projects only.
+        - ``local-user`` with zero memberships → compat ``list_all`` (single-seat).
+        - Other actors with zero memberships → empty.
+        """
+        projects = ProjectRepository(self._session)
+        resolved = (actor_id or "").strip() or LOCAL_ACTOR_ID
+        ids = self._repo.list_project_ids_for_actor(resolved)
+        if ids:
+            rows: list[Project] = []
+            for project_id in ids:
+                item = projects.get_by_id(project_id)
+                if item is not None:
+                    rows.append(item)
+            return rows
+        if resolved == LOCAL_ACTOR_ID:
+            return projects.list_all()
+        return []
+
     def can(
         self,
         project_id: UUID,
@@ -82,8 +108,11 @@ class ProjectAccessService:
     ) -> bool:
         member = self._repo.get_by_project_actor(project_id, actor_id)
         if member is None:
-            # Bootstrap: projects without members allow local-user edit (single-user mode).
-            return bool(actor_id == LOCAL_ACTOR_ID and permission in {ProjectPermission.VIEW, ProjectPermission.EDIT, ProjectPermission.REVIEW, ProjectPermission.EXPORT, ProjectPermission.MANAGE_MEMBERS})
+            # Topic 08 C1 / SEC-001: legacy empty projects → promote local-user to owner
+            if actor_id == LOCAL_ACTOR_ID:
+                member = self.ensure_default_owner(project_id)
+                return member.can(permission)
+            return False
         return member.can(permission)
 
     def require(

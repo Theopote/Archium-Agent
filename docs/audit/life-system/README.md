@@ -1,7 +1,7 @@
 # 第二轮：生命系统审计
 
 **用途：** 按 Archium「生命系统」做深度架构检查（非按目录横向扫描）。  
-**更新：** 2026-07-26（01–07；多模态 M1–M3；绘画 P1–P3；产品闭环 L1–L3）  
+**更新：** 2026-07-26（01–08；产品闭环 L1–L3；协作 C1）  
 **与第一轮关系：** 第一轮（[module-audit](../module-audit/README.md)）收敛工程债务；本轮检查世界模型是否支撑「建筑设计智能体」演化。
 
 ## 判断前提
@@ -21,7 +21,7 @@
 | 05 | 多模态建筑输入 | [05-multimodal-input.md](05-multimodal-input.md) | **完成**（M1–M3） |
 | 06 | AI 绘画系统 | [06-ai-painting.md](06-ai-painting.md) | **完成**（P1–P3） |
 | 07 | 产品闭环 | [07-product-loop.md](07-product-loop.md) | **完成**（L1–L3） |
-| 08 | 商业化与团队协作 | 待开 | pending |
+| 08 | 商业化与团队协作 | [08-commercialization-collab.md](08-commercialization-collab.md) | **进行中**（C1 ✅；C2–C3 pending） |
 
 ## 纪律
 
