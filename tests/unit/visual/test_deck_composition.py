@@ -134,8 +134,20 @@ class TestDeckCompositionPlanningService:
     def test_density_buffer_after_compact_slide(self) -> None:
         slides = [_slide(order=0), _slide(order=1)]
         intents = [
-            _intent(slides[0], density=DensityLevel.COMPACT),
-            _intent(slides[1], density=DensityLevel.COMPACT),
+            _intent(
+                slides[0],
+                density=DensityLevel.COMPACT,
+                continuity=ContinuityRole.EVIDENCE,
+                families=[LayoutFamily.EVIDENCE_BOARD],
+                content=VisualContentType.PHOTO_EVIDENCE,
+            ),
+            _intent(
+                slides[1],
+                density=DensityLevel.COMPACT,
+                continuity=ContinuityRole.EVIDENCE,
+                families=[LayoutFamily.EVIDENCE_BOARD],
+                content=VisualContentType.PHOTO_EVIDENCE,
+            ),
         ]
         plan = DeckCompositionPlanningService().plan(
             presentation_id=PRESENTATION_ID,
@@ -143,6 +155,7 @@ class TestDeckCompositionPlanningService:
             slides=slides,
             visual_intents=intents,
         )
+        assert plan.slide_directives[0].target_density == DensityLevel.COMPACT
         assert plan.slide_directives[1].target_density == DensityLevel.SPACIOUS
         assert plan.slide_directives[1].visual_intensity == VisualIntensity.LOW
 

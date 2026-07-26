@@ -14,11 +14,20 @@ from uuid import UUID
 from archium.application.visual.text_style_resolve import TYPOGRAPHY_TOKEN_NAMES
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.deck_composition import DeckCompositionPlan
+from archium.domain.visual.deck_composition import (
+    DeckCompositionPlan,
+    VisualIntensity,
+    climax_budget_for_deck,
+    density_to_score,
+    is_climax_peak,
+)
 from archium.domain.visual.deck_qa import (
+    DECK_ADJACENT_HERO,
     DECK_CHROME_INCONSISTENT,
+    DECK_CLIMAX_OVERLOAD,
     DECK_COMPOSITION_FAMILY_DEVIATION,
     DECK_COMPOSITION_INTENSITY_DRIFT,
+    DECK_DENSITY_FLAT,
     DECK_FOOTER_INCONSISTENT,
     DECK_IMAGE_SCALE_INCONSISTENT,
     DECK_PALETTE_DRIFT,
@@ -129,9 +138,12 @@ class DeckQAService:
                 composition_plan=composition_plan,
             )
             findings.extend(composition_findings)
-            if composition_findings:
+            rhythm_findings = self._check_composition_rhythm(composition_plan)
+            findings.extend(rhythm_findings)
+            if composition_findings or rhythm_findings:
                 notes.append(
-                    f"Deck composition deviations: {len(composition_findings)} finding(s)."
+                    "Deck composition deviations: "
+                    f"{len(composition_findings) + len(rhythm_findings)} finding(s)."
                 )
 
         dimensions = DeckQADimensions(
@@ -205,7 +217,7 @@ class DeckQAService:
             findings.append(
                 DeckQAFinding(
                     rule_code=DECK_REPEATED_LAYOUT_FAMILY,
-                    severity=LayoutIssueSeverity.WARNING,
+                    severity=LayoutIssueSeverity.ERROR,
                     message=(
                         f"{worst_run} consecutive slides share the same LayoutFamily."
                     ),
@@ -214,6 +226,7 @@ class DeckQAService:
                     evidence={
                         "consecutive_same_family": worst_run,
                         "family": run_family,
+                        "actionable": True,
                     },
                 )
             )
@@ -566,6 +579,81 @@ class DeckQAService:
                             sum(intensity_deltas) / len(intensity_deltas),
                             3,
                         )
+                    },
+                )
+            )
+        return findings
+
+    def _check_composition_rhythm(
+        self,
+        composition_plan: DeckCompositionPlan,
+    ) -> list[DeckQAFinding]:
+        """Validate climax budget, adjacent heroes, and density waveform flatness."""
+        findings: list[DeckQAFinding] = []
+        directives = composition_plan.slide_directives
+        if not directives:
+            return findings
+
+        budget = climax_budget_for_deck(len(directives))
+        peak_ids = [
+            str(item.slide_id) for item in directives if is_climax_peak(item)
+        ]
+        if len(peak_ids) > budget:
+            findings.append(
+                DeckQAFinding(
+                    rule_code=DECK_CLIMAX_OVERLOAD,
+                    severity=LayoutIssueSeverity.ERROR,
+                    message=(
+                        f"Deck has {len(peak_ids)} climax/hero peaks; "
+                        f"budget for {len(directives)} slides is {budget}."
+                    ),
+                    suggestion="Reduce VisualIntensity.HERO / CLIMAX pages; keep 2–3 peaks.",
+                    slide_ids=peak_ids,
+                    evidence={
+                        "peak_count": len(peak_ids),
+                        "budget": budget,
+                        "slide_count": len(directives),
+                    },
+                )
+            )
+
+        adjacent_ids: list[str] = []
+        for index in range(1, len(directives)):
+            previous = directives[index - 1]
+            current = directives[index]
+            if (
+                previous.visual_intensity == VisualIntensity.HERO
+                and current.visual_intensity == VisualIntensity.HERO
+            ):
+                adjacent_ids.extend([str(previous.slide_id), str(current.slide_id)])
+        if adjacent_ids:
+            findings.append(
+                DeckQAFinding(
+                    rule_code=DECK_ADJACENT_HERO,
+                    severity=LayoutIssueSeverity.ERROR,
+                    message="Adjacent slides both use VisualIntensity.HERO.",
+                    suggestion="Demote one page to HIGH and contrast layout families.",
+                    slide_ids=list(dict.fromkeys(adjacent_ids)),
+                    evidence={"adjacent_hero_pairs": len(adjacent_ids) // 2},
+                )
+            )
+
+        density_scores = [
+            density_to_score(item.target_density) for item in directives
+        ]
+        if len(density_scores) >= 6 and max(density_scores) - min(density_scores) < 1e-9:
+            findings.append(
+                DeckQAFinding(
+                    rule_code=DECK_DENSITY_FLAT,
+                    severity=LayoutIssueSeverity.WARNING,
+                    message="Density curve is flat across the deck (no waveform).",
+                    suggestion=(
+                        "Apply opening spacious → evidence compact → "
+                        "closing spacious rhythm."
+                    ),
+                    evidence={
+                        "unique_density_scores": sorted(set(density_scores)),
+                        "slide_count": len(directives),
                     },
                 )
             )

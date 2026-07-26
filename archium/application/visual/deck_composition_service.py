@@ -14,8 +14,11 @@ from archium.domain.visual.deck_composition import (
     SectionCompositionPlan,
     SlideCompositionDirective,
     VisualIntensity,
+    climax_budget_for_deck,
+    density_for_pacing_role,
     density_to_score,
     intensity_to_score,
+    is_climax_peak,
 )
 from archium.domain.visual.enums import (
     ContinuityRole,
@@ -79,10 +82,12 @@ class DeckCompositionPlanningService:
             for index, slide in enumerate(ordered)
         ]
         variety_notes: list[str] = []
+        self._apply_density_waveform(directives, variety_notes)
         self._apply_family_variety(directives, variety_notes)
         self._apply_density_pacing(directives, variety_notes)
         self._apply_text_rhythm(directives, variety_notes)
         self._apply_drawing_rhythm(directives, variety_notes)
+        self._apply_climax_budget(directives, variety_notes)
         if art_direction is not None:
             self._apply_style_preset_bias(directives, art_direction, variety_notes)
 
@@ -229,6 +234,88 @@ class DeckCompositionPlanningService:
         )
 
     @staticmethod
+    def _apply_density_waveform(
+        directives: list[SlideCompositionDirective],
+        notes: list[str],
+    ) -> None:
+        """Map pacing roles to a deck-level density waveform."""
+        changed = 0
+        for directive in directives:
+            target = density_for_pacing_role(directive.pacing_role)
+            if directive.target_density != target:
+                directive.target_density = target
+                changed += 1
+        if changed:
+            notes.append(
+                f"density_waveform:applied_to={changed}/{len(directives)} "
+                "(opening/transition spacious → evidence compact → "
+                "analysis balanced → climax/closing spacious)"
+            )
+
+    @staticmethod
+    def _apply_climax_budget(
+        directives: list[SlideCompositionDirective],
+        notes: list[str],
+    ) -> None:
+        """Cap hero/climax peaks and forbid adjacent VisualIntensity.HERO pages."""
+        if not directives:
+            return
+        budget = climax_budget_for_deck(len(directives))
+
+        # Adjacent hero peaks: demote the later page.
+        for index in range(1, len(directives)):
+            previous = directives[index - 1]
+            current = directives[index]
+            if (
+                previous.visual_intensity == VisualIntensity.HERO
+                and current.visual_intensity == VisualIntensity.HERO
+            ):
+                current.visual_intensity = VisualIntensity.HIGH
+                if current.pacing_role == PacingRole.CLIMAX:
+                    current.pacing_role = PacingRole.ANALYSIS
+                current.should_contrast_previous = True
+                notes.append(
+                    f"slide_index={index}: 相邻 hero 强度降级为 high（高潮预算）"
+                )
+
+        peak_indices = [
+            index for index, item in enumerate(directives) if is_climax_peak(item)
+        ]
+        if len(peak_indices) <= budget:
+            notes.append(
+                f"climax_budget:peaks={len(peak_indices)}/{budget} (within budget)"
+            )
+            return
+
+        def _keep_score(index: int) -> tuple[float, int]:
+            item = directives[index]
+            score = 0.0
+            if item.pacing_role == PacingRole.OPENING:
+                score += 100.0
+            elif item.pacing_role == PacingRole.CLIMAX:
+                score += 90.0
+            elif item.pacing_role == PacingRole.CLOSING:
+                score += 80.0
+            score += item.hero_priority * 12.0 + item.drawing_priority * 6.0
+            # Prefer mid-to-late peaks for one narrative climax when scores tie.
+            return (score, index)
+
+        ranked = sorted(peak_indices, key=_keep_score, reverse=True)
+        keep = set(ranked[:budget])
+        demoted = 0
+        for index in peak_indices:
+            if index in keep:
+                continue
+            item = directives[index]
+            item.visual_intensity = VisualIntensity.HIGH
+            if item.pacing_role == PacingRole.CLIMAX:
+                item.pacing_role = PacingRole.ANALYSIS
+            demoted += 1
+        notes.append(
+            f"climax_budget:demoted={demoted} peaks={len(peak_indices) - demoted}/{budget}"
+        )
+
+    @staticmethod
     def _apply_family_variety(
         directives: list[SlideCompositionDirective],
         notes: list[str],
@@ -335,9 +422,12 @@ class DeckCompositionPlanningService:
             return
 
         for directive in directives:
-            if directive.pacing_role not in {
-                PacingRole.CLIMAX,
-                PacingRole.OPENING,
+            # Waveform owns opening / evidence / climax / closing density.
+            # Preset only nudges SETUP / DECISION / PAUSE toward office aesthetic.
+            if directive.pacing_role in {
+                PacingRole.SETUP,
+                PacingRole.DECISION,
+                PacingRole.PAUSE,
             }:
                 directive.target_density = preset.density
             if preset.preferred_layout_families:
@@ -417,7 +507,7 @@ class DeckCompositionPlanningService:
                 hero_ids.append(slide.id)
             if slide.slide_type == SlideType.SECTION or directive.transition_mode:
                 transition_ids.append(slide.id)
-            if directive.pacing_role == PacingRole.CLIMAX or directive.visual_intensity == VisualIntensity.HERO:
+            if is_climax_peak(directive):
                 climax_ids.append(slide.id)
             if slide.chapter_id not in section_seen:
                 section_seen.add(slide.chapter_id)

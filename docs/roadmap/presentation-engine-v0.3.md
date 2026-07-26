@@ -188,8 +188,8 @@ archium/application/visual/
 
 **验收**：
 
-- [ ] 医院 20 页 fixture：节奏曲线可序列化检查（无「全稿 compact」）。  
-- [ ] Deck QA 对「高潮过密 / 版式三连」有稳定 rule code。
+- [x] 医院 20 页 fixture：节奏曲线可序列化检查（无「全稿 compact」）。  
+- [x] Deck QA 对「高潮过密 / 版式三连」有稳定 rule code。
 
 #### P1.3 Page Director（页面导演）最小切片
 

@@ -40,6 +40,7 @@ LLM 只产出结构化意图与版式族选择；**坐标由确定性 generator 
 | Golden V1–V7（composition） | ✅ |
 | Visual Critic heuristic_v0（只读 Visual Quality） | ✅ 初版 |
 | Deck QA deck_heuristic_v0（跨页一致性） | ✅ 初版 |
+| **Deck 节奏**（高潮预算 / 密度波形 / 版式三连 ERROR） | ✅ v0.3 Phase 1.2 |
 | RenderScene 画布编辑（单选 / 多选 / 框选） | ✅ |
 | 元素评论 → 提案 → QA → Revision | ✅ |
 | 固定画布容量预算 / 内容适配 / 拆页建议 | ✅ |

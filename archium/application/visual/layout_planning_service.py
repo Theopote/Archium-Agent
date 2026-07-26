@@ -38,6 +38,7 @@ from archium.domain.visual.enums import (
     LayoutValidationStatus,
     OverflowPolicy,
     VisualContentType,
+    DensityLevel,
 )
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.slide_capacity_budget import (
@@ -457,6 +458,44 @@ class LayoutPlanningService:
             if preferred and plan.layout_family == preferred[0]:
                 composition_bonus += 0.08
             elif preferred and plan.layout_family in preferred[1:]:
+                composition_bonus += 0.03
+
+            # Priority weights: hero / text / drawing must move candidate scores.
+            if plan.layout_family in {
+                LayoutFamily.HERO,
+                LayoutFamily.EVIDENCE_BOARD,
+                LayoutFamily.HYBRID_CANVAS,
+            }:
+                composition_bonus += 0.12 * deck_directive.hero_priority
+            if plan.layout_family in {
+                LayoutFamily.TEXTUAL_ARGUMENT,
+                LayoutFamily.STRATEGY_CARDS,
+            }:
+                composition_bonus += 0.12 * deck_directive.text_priority
+            if plan.layout_family in {
+                LayoutFamily.DRAWING_FOCUS,
+                LayoutFamily.ANALYTICAL_DIAGRAM,
+            }:
+                composition_bonus += 0.12 * deck_directive.drawing_priority
+
+            # Density waveform affinity.
+            if deck_directive.target_density == DensityLevel.SPACIOUS and plan.layout_family in {
+                LayoutFamily.HERO,
+                LayoutFamily.TEXTUAL_ARGUMENT,
+            }:
+                composition_bonus += 0.05
+            elif deck_directive.target_density == DensityLevel.COMPACT and plan.layout_family in {
+                LayoutFamily.EVIDENCE_BOARD,
+                LayoutFamily.METRIC_DASHBOARD,
+                LayoutFamily.DRAWING_FOCUS,
+            }:
+                composition_bonus += 0.05
+            elif deck_directive.target_density == DensityLevel.BALANCED and plan.layout_family in {
+                LayoutFamily.STRATEGY_CARDS,
+                LayoutFamily.COMPARATIVE_MATRIX,
+                LayoutFamily.PROCESS_NARRATIVE,
+                LayoutFamily.ANALYTICAL_DIAGRAM,
+            }:
                 composition_bonus += 0.03
 
         if style_preference is not None and not style_preference.is_empty:

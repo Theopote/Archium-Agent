@@ -119,11 +119,15 @@ Revision 实体扩展：`DESIGN_SYSTEM` / `ART_DIRECTION` / `VISUAL_INTENT` / `L
 
 同节点内（`VISUAL_DECK_QA_ENABLED`）运行跨页一致性检查：
 
-- `DECK.REPEATED_LAYOUT_FAMILY` — 连续同族版式
+- `DECK.REPEATED_LAYOUT_FAMILY` — 连续同族版式（≥3 页为 **ERROR**，需处理）
+- `DECK.CLIMAX_OVERLOAD` / `DECK.ADJACENT_HERO` — 高潮预算与相邻 hero 强度（v0.3）
+- `DECK.DENSITY_FLAT` — 密度曲线无波形
 - `DECK.FOOTER_INCONSISTENT` / `DECK.CHROME_INCONSISTENT` — 页脚/页码/来源漂移
 - `DECK.TYPOGRAPHY_INCONSISTENT` — 同级文字 token 不一致
 - `DECK.IMAGE_SCALE_INCONSISTENT` — 主图尺度跳变
 - `DECK.WEAK_SECTION_TRANSITION` — 封面/章节页误用密内容族
+
+`DeckCompositionPlanningService` 在候选生成前执行密度波形与高潮预算；directive 的 hero/text/drawing_priority 影响 Layout 候选打分。
 
 产出 `DeckQAReport`（`score_kind: deck_consistency`）→ `deck_qa_report.json`。同样不修布局、不挡导出。
 

@@ -143,3 +143,44 @@ def density_to_score(level: DensityLevel) -> float:
 
 def intensity_to_score(intensity: VisualIntensity) -> float:
     return _INTENSITY_TO_SCORE[intensity]
+
+
+def climax_budget_for_deck(slide_count: int) -> int:
+    """Max VisualIntensity.HERO / climax peaks for a deck of given length.
+
+    Showcase rule: ~20-page decks allow 2–3 peaks; short decks allow fewer.
+    """
+    if slide_count <= 0:
+        return 0
+    if slide_count <= 5:
+        return 1
+    if slide_count <= 12:
+        return 2
+    return 3
+
+
+# Structural density waveform by narrative pacing role (v0.3).
+_PACING_DENSITY_WAVEFORM: dict[PacingRole, DensityLevel] = {
+    PacingRole.OPENING: DensityLevel.SPACIOUS,
+    PacingRole.TRANSITION: DensityLevel.SPACIOUS,
+    PacingRole.PAUSE: DensityLevel.SPACIOUS,
+    PacingRole.EVIDENCE: DensityLevel.COMPACT,
+    PacingRole.ANALYSIS: DensityLevel.BALANCED,
+    PacingRole.DECISION: DensityLevel.BALANCED,
+    PacingRole.CLIMAX: DensityLevel.SPACIOUS,
+    PacingRole.CLOSING: DensityLevel.SPACIOUS,
+    PacingRole.SETUP: DensityLevel.BALANCED,
+}
+
+
+def density_for_pacing_role(role: PacingRole) -> DensityLevel:
+    """Return the default density for a pacing role in the deck waveform."""
+    return _PACING_DENSITY_WAVEFORM.get(role, DensityLevel.BALANCED)
+
+
+def is_climax_peak(directive: SlideCompositionDirective) -> bool:
+    """True when a directive counts against the deck climax/hero budget."""
+    return (
+        directive.visual_intensity == VisualIntensity.HERO
+        or directive.pacing_role == PacingRole.CLIMAX
+    )
