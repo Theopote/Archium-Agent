@@ -235,7 +235,7 @@ Project（唯一 identity）
 | 05 多模态 | SourceDocument + ArchitecturalAsset 门面（M1）；现场→约束仍欠 |
 | 06 AI 绘画 | `ConceptVisualPrompt` / 页级 `VisualIntent` 分裂 |
 | 07 产品闭环 | NBA + ProcessBoard 是基础；旅程完整性待查 |
-| 08 协作 | `access.ProjectMember` 有雏形；Organization/角色权限待查 |
+| 08 协作 | `access.ProjectMember` + 薄 `Organization`（DOM-032）；Org RBAC / OAuth 延后 |
 
 ---
 
