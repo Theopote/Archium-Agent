@@ -78,20 +78,26 @@ class ArchitectureCase(DomainModel):
 
     def to_design_knowledge(self) -> DesignKnowledge:
         """Map case into DesignKnowledge for Concept / Critique consumption."""
+        from archium.domain.case_ref import normalize_precedent_ref
+
         principle = ""
         if self.transferable_principles:
             principle = self.transferable_principles[0].strip()
-        elif self.strategy.strip():
-            principle = self.strategy.strip()
+        insight = principle or (self.strategy or self.name).strip()
         return DesignKnowledge(
             topic=self.name,
-            insight=(self.design_problem or self.strategy or self.name).strip(),
-            principle=principle,
+            problem=(self.design_problem or "").strip(),
+            insight=insight,
+            strategy=(self.strategy or "").strip(),
+            principle=principle or (self.strategy or "").strip(),
             spatial_translation=(self.spatial_logic or "").strip(),
             material_strategy=(self.material_language or "").strip(),
             project_link=f"参照基因：{self.name}"
             + (f"（{self.architect}）" if self.architect.strip() else ""),
-            applicability="；".join(self.risks[:3]) if self.risks else "跨类型迁移时需校验气候/尺度/制度",
+            applicability="；".join(self.risks[:3])
+            if self.risks
+            else "跨类型迁移时需校验气候/尺度/制度",
+            precedent_ref=normalize_precedent_ref(self.id),
             evidence=[
                 bit
                 for bit in (

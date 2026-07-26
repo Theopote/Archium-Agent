@@ -8,6 +8,10 @@ from archium.domain.design_knowledge import DesignKnowledge
 from archium.infrastructure.llm.research_schemas import ResearchFindingDraft
 
 _LABEL_MAP: tuple[tuple[str, str], ...] = (
+    ("问题", "problem"),
+    ("problem", "problem"),
+    ("策略", "strategy"),
+    ("strategy", "strategy"),
     ("原则", "principle"),
     ("principle", "principle"),
     ("空间", "spatial_translation"),
@@ -21,11 +25,16 @@ _LABEL_MAP: tuple[tuple[str, str], ...] = (
     ("applicability", "applicability"),
     ("洞察", "insight"),
     ("insight", "insight"),
+    ("先例", "precedent_ref"),
+    ("precedent", "precedent_ref"),
+    ("案例", "precedent_ref"),
 )
 
 
 def design_knowledge_from_finding(finding: ResearchFindingDraft) -> DesignKnowledge:
     """Build DesignKnowledge from structured draft fields + labeled key_points."""
+    from archium.domain.case_ref import normalize_precedent_ref
+
     evidence = [
         (source.title or source.url or "").strip()
         for source in finding.suggested_sources
@@ -35,12 +44,15 @@ def design_knowledge_from_finding(finding: ResearchFindingDraft) -> DesignKnowle
 
     knowledge = DesignKnowledge(
         topic=(finding.topic or "").strip(),
+        problem=(finding.problem or "").strip(),
         insight=(finding.insight or "").strip() or (finding.summary or "").strip(),
+        strategy=(finding.strategy or "").strip(),
         principle=(finding.principle or "").strip(),
         spatial_translation=(finding.spatial_translation or "").strip(),
         material_strategy=(finding.material_strategy or "").strip(),
         project_link=(finding.project_link or finding.relevance or "").strip(),
         applicability=(finding.applicability or "").strip(),
+        precedent_ref=normalize_precedent_ref(finding.precedent_ref),
         evidence=evidence,
     )
     return _merge_labeled_key_points(knowledge, finding.key_points)
@@ -50,7 +62,9 @@ def _merge_labeled_key_points(
     knowledge: DesignKnowledge,
     key_points: list[str],
 ) -> DesignKnowledge:
-    updates: dict[str, str] = {}
+    from archium.domain.case_ref import normalize_precedent_ref
+
+    updates: dict[str, object] = {}
     for raw in key_points:
         text = (raw or "").strip()
         if not text:
@@ -59,6 +73,10 @@ def _merge_labeled_key_points(
         if field_name is None:
             continue
         current = getattr(knowledge, field_name) or ""
+        if field_name == "precedent_ref":
+            if not current:
+                updates[field_name] = normalize_precedent_ref(value)
+            continue
         if not str(current).strip():
             updates[field_name] = value
     if not updates:

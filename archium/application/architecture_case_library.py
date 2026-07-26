@@ -34,6 +34,29 @@ class ArchitectureCaseLibraryService:
     def list_cases(self) -> list[ArchitectureCase]:
         return list(self._cases)
 
+    def get_by_id(self, case_id: str) -> ArchitectureCase | None:
+        from archium.domain.case_ref import normalize_case_id
+
+        normalized = normalize_case_id(case_id)
+        if normalized is None:
+            return None
+        for case in self._cases:
+            if case.id == normalized:
+                return case
+        return None
+
+    def resolve_ids(self, case_ids: list[str]) -> list[ArchitectureCase]:
+        """Resolve bare / case: ids to ArchitectureCase (skip unknowns)."""
+        out: list[ArchitectureCase] = []
+        seen: set[str] = set()
+        for raw in case_ids:
+            case = self.get_by_id(raw)
+            if case is None or case.id in seen:
+                continue
+            seen.add(case.id)
+            out.append(case)
+        return out
+
     def search(
         self,
         query: str,

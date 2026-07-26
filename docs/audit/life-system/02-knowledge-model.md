@@ -219,3 +219,4 @@ ArchitectureCase(
 - [x] 持久化 vs 读时投影判定  
 - [x] KN-008…013 草案  
 - [ ] 择优落地 Phase A（词表对齐 + precedent_ref）
+- [x] Phase A 落地：`problem`/`strategy`/`precedent_ref` + `reference_case_ids`（KN-008/009/013 done）

@@ -161,7 +161,13 @@ class KnowledgeGraphService:
         if dk is not None and dk.has_substance:
             summary = " · ".join(
                 part
-                for part in (dk.insight, dk.principle, dk.spatial_translation)
+                for part in (
+                    dk.problem,
+                    dk.strategy,
+                    dk.insight,
+                    dk.principle,
+                    dk.spatial_translation,
+                )
                 if part and part.strip()
             ) or summary
         add_node(
@@ -185,6 +191,25 @@ class KnowledgeGraphService:
             )
         if dk is None or not dk.has_substance:
             return
+        if dk.strategy.strip():
+            strategy_id = f"strategy:{_slug(dk.strategy)}"
+            add_node(
+                KnowledgeNode(
+                    id=strategy_id,
+                    kind=KnowledgeNodeKind.STRATEGY,
+                    label=dk.strategy.strip()[:300],
+                    summary=(dk.problem or dk.insight)[:300],
+                    project_id=project_id,
+                    source_ref=item_id,
+                )
+            )
+            add_edge(
+                relation=KnowledgeRelationKind.EXPRESSES,
+                source_id=item_id,
+                target_id=strategy_id,
+                weight=0.92,
+                evidence="strategy",
+            )
         if dk.principle.strip():
             concept_id = f"concept:{_slug(dk.principle)}"
             add_node(
@@ -238,6 +263,18 @@ class KnowledgeGraphService:
                 source_id=item_id,
                 target_id=mat_id,
                 weight=0.85,
+                evidence="material_strategy",
+            )
+        from archium.domain.case_ref import case_id_from_ref
+
+        case_id = case_id_from_ref(dk.precedent_ref)
+        if case_id:
+            add_edge(
+                relation=KnowledgeRelationKind.INSPIRED_BY,
+                source_id=item_id,
+                target_id=f"case:{case_id}",
+                weight=0.9,
+                evidence="precedent_ref",
             )
 
     def _add_case_subgraph(self, case: ArchitectureCase, add_node: Any, add_edge: Any) -> None:

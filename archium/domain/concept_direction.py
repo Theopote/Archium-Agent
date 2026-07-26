@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from archium.domain._base import IdentifiedModel, TimestampedModel
+from archium.domain.case_ref import normalize_case_id_list
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.design_rationale import DesignRationale
 from archium.domain.enums import ConceptDirectionStatus
@@ -27,6 +28,10 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
     formal_language: str = ""
     material_strategy: str = ""
     reference_dna: list[str] = Field(default_factory=list)
+    reference_case_ids: list[str] = Field(
+        default_factory=list,
+        description="Bare ArchitectureCase ids (e.g. ningbo_museum); coexist with reference_dna.",
+    )
     visual_prompt: ConceptVisualPrompt | None = None
     design_rationale: DesignRationale | None = None
     spatial_intent: SpatialIntent | None = None
@@ -38,6 +43,15 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
     status: ConceptDirectionStatus = ConceptDirectionStatus.DRAFT
     sort_order: int = 0
     source: str = Field(default="generated", max_length=40)
+
+    @field_validator("reference_case_ids", mode="before")
+    @classmethod
+    def _normalize_reference_case_ids(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return normalize_case_id_list([str(item) for item in value])
+        return []
 
     def select(self) -> None:
         self.status = ConceptDirectionStatus.SELECTED
@@ -70,6 +84,11 @@ class ConceptDirection(IdentifiedModel, TimestampedModel):
             sections.append(
                 "参照基因："
                 + "；".join(item for item in self.reference_dna if item.strip())
+            )
+        if self.reference_case_ids:
+            sections.append(
+                "参照案例ID："
+                + "；".join(self.reference_case_ids)
             )
         if self.visual_prompt is not None:
             block = self.visual_prompt.to_prompt_block()

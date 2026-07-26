@@ -597,6 +597,11 @@ class ExplorationService:
             exploration_session_id=exploration.id,
             sort_order=sort_order,
         )
+        from archium.application.concept_direction_case_refs import (
+            enrich_direction_case_refs,
+        )
+
+        direction = enrich_direction_case_refs(direction)
         seed = exploration.idea_seed
         direction = ensure_direction_design_rationale(
             direction,

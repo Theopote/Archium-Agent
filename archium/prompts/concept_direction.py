@@ -5,6 +5,7 @@ PROMPT_VERSION history
 concept_direction.v1 — initial field-oriented instructions
 concept_direction.v2 — inject Architectural Reasoning Framework + quality criteria
 concept_direction.v3 — inject DesignKnowledge block into user prompts
+concept_direction.v4 — reference_case_ids + ArchitectureCase hard links
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from archium.prompts.frameworks.architectural_reasoning import (
 )
 from archium.prompts.identity import ARCHIUM_IDENTITY
 
-PROMPT_VERSION = "concept_direction.v3"
+PROMPT_VERSION = "concept_direction.v4"
 
 CONCEPT_DIRECTION_SYSTEM_PROMPT = (
     ARCHIUM_IDENTITY
@@ -35,6 +36,7 @@ CONCEPT_DIRECTION_SYSTEM_PROMPT = (
 - Step 5 表达 → formal_language（体量/轮廓/构造气质）, material_strategy, visual_prompt
 - Step 6 验证 → risks, open_questions, design_rationale.evidence / alternatives
 - reference_dna：2–4 条参照基因（类型、氛围、构造传统），不是抄袭具体方案。
+- reference_case_ids：可选，填已知案例库 id（如 ningbo_museum、therme_vals、terrace_settlement）；不确定可留空。
 - design_rationale：statement、reasons（2–4）、evidence（引用用户/资料约束，勿捏造）、confidence（0–1）、alternatives（1–2）。
 - visual_prompt：image_prompt（可英中混合）、camera、style；勿写面积等精确指标。
 - 不得编造面积、容积率、投资额等精确指标；未知写成 open_questions。
@@ -73,8 +75,9 @@ def build_concept_direction_user_prompt(
 2. 各方向主题与体验焦点应可区分；先写清问题与空间策略，再写形式。
 3. 若有【已沉淀设计知识】，必须把 principle / spatial_translation 转进 spatial_strategy，勿当装饰。
 4. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
-   formal_language, material_strategy, reference_dna, visual_prompt,
-   design_rationale, experience_focus, differentiator, open_questions, risks。
+   formal_language, material_strategy, reference_dna, reference_case_ids,
+   visual_prompt, design_rationale, experience_focus, differentiator,
+   open_questions, risks。
 5. summary 须回答「为什么需要这个方向」，不是复述建筑类型。
 """
 
@@ -116,8 +119,9 @@ def build_exploration_direction_user_prompt(
 3. 先完成问题识别与空间转译，再写形式语言与视觉提示。
 4. 若有【已沉淀设计知识】，把可迁移原则落到 spatial_strategy / material_strategy。
 5. 每个方向包含 title, summary, theme, spatial_idea, spatial_strategy,
-   formal_language, material_strategy, reference_dna, visual_prompt,
-   design_rationale, experience_focus, differentiator, open_questions, risks。
+   formal_language, material_strategy, reference_dna, reference_case_ids,
+   visual_prompt, design_rationale, experience_focus, differentiator,
+   open_questions, risks。
 6. 若有已证实约束，方向必须尊重；未知项写入 open_questions，勿捏造数值。
 7. 方向应回应 IdeaSeed 中的主题、灵感与关键词；summary 须点出回应的问题。
 """

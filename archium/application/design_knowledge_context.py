@@ -107,7 +107,8 @@ def design_knowledge_summary_lines(
             part
             for part in (
                 knowledge.topic,
-                knowledge.principle or knowledge.insight,
+                knowledge.problem,
+                knowledge.strategy or knowledge.principle or knowledge.insight,
                 knowledge.spatial_translation,
             )
             if part and str(part).strip()

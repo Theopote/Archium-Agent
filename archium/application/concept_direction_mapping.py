@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from archium.domain.case_ref import normalize_case_id_list
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.concept_visual_prompt import ConceptVisualPrompt
 from archium.domain.design_rationale import DesignRationale, DesignRationaleAlternative
@@ -66,6 +67,9 @@ def concept_direction_from_draft(
         reference_dna=[
             item.strip() for item in draft.reference_dna if item and item.strip()
         ],
+        reference_case_ids=normalize_case_id_list(
+            list(getattr(draft, "reference_case_ids", None) or [])
+        ),
         visual_prompt=visual,
         design_rationale=design_rationale_from_draft(draft.design_rationale),
         experience_focus=(draft.experience_focus or "").strip(),

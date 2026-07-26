@@ -66,4 +66,15 @@ def test_case_maps_to_design_knowledge() -> None:
     assert matches
     knowledge = matches[0].case.to_design_knowledge()
     assert knowledge.has_substance
-    assert knowledge.principle or knowledge.spatial_translation
+    assert knowledge.problem  # KN-013: design_problem kept as problem
+    assert knowledge.strategy or knowledge.spatial_translation
+    assert knowledge.precedent_ref == f"case:{matches[0].case.id}"
+    round_trip = library.get_by_id(knowledge.precedent_ref)
+    assert round_trip is not None
+    assert round_trip.id == matches[0].case.id
+
+
+def test_resolve_case_ids() -> None:
+    library = ArchitectureCaseLibraryService()
+    cases = library.resolve_ids(["case:ningbo_museum", "therme_vals", "missing_case"])
+    assert [c.id for c in cases] == ["ningbo_museum", "therme_vals"]

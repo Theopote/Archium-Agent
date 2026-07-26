@@ -1385,6 +1385,7 @@ def concept_direction_to_domain(orm: ConceptDirectionORM) -> ConceptDirection:
         formal_language=getattr(orm, "formal_language", None) or "",
         material_strategy=getattr(orm, "material_strategy", None) or "",
         reference_dna=list(getattr(orm, "reference_dna_json", None) or []),
+        reference_case_ids=list(getattr(orm, "reference_case_ids_json", None) or []),
         visual_prompt=visual,
         design_rationale=rationale,
         spatial_intent=spatial,
@@ -1417,6 +1418,7 @@ def concept_direction_to_orm(
     target.formal_language = domain.formal_language
     target.material_strategy = domain.material_strategy
     target.reference_dna_json = list(domain.reference_dna)
+    target.reference_case_ids_json = list(domain.reference_case_ids)
     target.visual_prompt_json = (
         domain.visual_prompt.model_dump(mode="json")
         if domain.visual_prompt is not None and not domain.visual_prompt.is_empty()

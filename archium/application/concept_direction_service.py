@@ -325,6 +325,11 @@ class ConceptDirectionService:
             mission_id=mission.id,
             sort_order=sort_order,
         )
+        from archium.application.concept_direction_case_refs import (
+            enrich_direction_case_refs,
+        )
+
+        direction = enrich_direction_case_refs(direction)
         direction = ensure_direction_design_rationale(
             direction,
             known_facts=self._known_facts_for_project(mission.project_id),

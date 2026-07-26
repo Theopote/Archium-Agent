@@ -1146,6 +1146,9 @@ class ConceptDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     reference_dna_json: Mapped[list[str]] = mapped_column(
         "reference_dna", JSON, nullable=False, default=list
     )
+    reference_case_ids_json: Mapped[list[str]] = mapped_column(
+        "reference_case_ids", JSON, nullable=False, default=list
+    )
     visual_prompt_json: Mapped[dict[str, object] | None] = mapped_column(
         "visual_prompt", JSON, nullable=True
     )

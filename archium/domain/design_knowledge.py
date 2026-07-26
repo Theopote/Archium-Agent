@@ -1,22 +1,33 @@
 """Structured design knowledge from research (not free-text dumps).
 
 Consumed by Concept / Critique / Mission enrichment as typed insights.
+Aligned with ArchitectureCase slots: problem → strategy → spatial → material
+→ precedent → applicability.
 """
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from archium.domain._base import DomainModel
+from archium.domain.case_ref import normalize_precedent_ref
 
 
 class DesignKnowledge(DomainModel):
     """One transferable design insight grounded in research evidence."""
 
     topic: str = ""
+    problem: str = Field(
+        default="",
+        description="Design problem / contradiction this insight addresses.",
+    )
     insight: str = Field(
         default="",
         description="Why this finding matters for design (not a case list).",
+    )
+    strategy: str = Field(
+        default="",
+        description="Core architectural strategy (one line).",
     )
     principle: str = Field(
         default="",
@@ -38,17 +49,30 @@ class DesignKnowledge(DomainModel):
         default="",
         description="When this applies / boundaries (climate, scale, culture).",
     )
+    precedent_ref: str | None = Field(
+        default=None,
+        description="Canonical ArchitectureCase ref, e.g. case:ningbo_museum.",
+    )
     evidence: list[str] = Field(
         default_factory=list,
         description="Short evidence labels (titles, URLs, notes) — not fabricated facts.",
     )
+
+    @field_validator("precedent_ref", mode="before")
+    @classmethod
+    def _normalize_precedent_ref(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        return normalize_precedent_ref(str(value))
 
     @property
     def has_substance(self) -> bool:
         return any(
             part.strip()
             for part in (
+                self.problem,
                 self.insight,
+                self.strategy,
                 self.principle,
                 self.spatial_translation,
                 self.material_strategy,
@@ -61,8 +85,12 @@ class DesignKnowledge(DomainModel):
         topic = (self.topic or "").strip()
         if topic:
             lines.append(f"主题：{topic}")
+        if self.problem.strip():
+            lines.append(f"设计问题：{self.problem.strip()}")
         if self.insight.strip():
             lines.append(f"洞察：{self.insight.strip()}")
+        if self.strategy.strip():
+            lines.append(f"策略：{self.strategy.strip()}")
         if self.principle.strip():
             lines.append(f"原则：{self.principle.strip()}")
         if self.spatial_translation.strip():
@@ -73,6 +101,8 @@ class DesignKnowledge(DomainModel):
             lines.append(f"项目关联：{self.project_link.strip()}")
         if self.applicability.strip():
             lines.append(f"适用边界：{self.applicability.strip()}")
+        if self.precedent_ref:
+            lines.append(f"先例：{self.precedent_ref}")
         if self.evidence:
             ev = "；".join(item.strip() for item in self.evidence if item.strip())
             if ev:
@@ -82,9 +112,14 @@ class DesignKnowledge(DomainModel):
     def to_statement_sections(self) -> list[str]:
         """Human-readable sections for ProjectKnowledgeItem.statement."""
         sections: list[str] = []
-        if self.insight.strip():
-            sections.append(self.insight.strip())
+        lead = (self.insight or self.problem or "").strip()
+        if lead:
+            sections.append(lead)
         bullets: list[str] = []
+        if self.problem.strip() and self.problem.strip() != lead:
+            bullets.append(f"问题：{self.problem.strip()}")
+        if self.strategy.strip():
+            bullets.append(f"策略：{self.strategy.strip()}")
         if self.principle.strip():
             bullets.append(f"原则：{self.principle.strip()}")
         if self.spatial_translation.strip():
@@ -95,6 +130,8 @@ class DesignKnowledge(DomainModel):
             bullets.append(f"关联：{self.project_link.strip()}")
         if self.applicability.strip():
             bullets.append(f"适用：{self.applicability.strip()}")
+        if self.precedent_ref:
+            bullets.append(f"先例：{self.precedent_ref}")
         if bullets:
             sections.append("设计知识：\n" + "\n".join(f"- {b}" for b in bullets))
         return sections
