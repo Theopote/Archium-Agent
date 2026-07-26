@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from archium.application.exploration_service import ExplorationService
+from archium.config.settings import Settings
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import ProjectRepository
@@ -197,7 +198,9 @@ def test_mountain_cultural_center_directions_meet_concept_contract(
         _mission(),
         _ks(),
     ]
-    service = ExplorationService(db_session, llm)
+    service = ExplorationService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
 
     started = service.start_session(mountain_project.id, SCENARIO_IDEA)
     assert SCENARIO_IDEA in (started.exploration.idea_seed.raw_input if started.exploration.idea_seed else "")

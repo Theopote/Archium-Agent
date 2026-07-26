@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 from archium.application.context_intelligence_service import ContextIntelligenceService
 from archium.application.exploration_service import ExplorationService
+from archium.config.settings import Settings
 from archium.application.ingestion_service import IngestionService
 from archium.application.project_context_builder import build_project_context
 from archium.application.workspace_mode_service import WorkspaceModeService
@@ -330,7 +331,11 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
         _ks(),
     ]
 
-    exploration_service = ExplorationService(db_session, explore_llm)
+    exploration_service = ExplorationService(
+        db_session,
+        explore_llm,
+        settings=Settings(_env_file=None, design_revise_on_select="auto"),
+    )
     exploration = exploration_service.start_session(
         partial_project.id,
         PARTIAL_KNOWLEDGE_PROMPT,

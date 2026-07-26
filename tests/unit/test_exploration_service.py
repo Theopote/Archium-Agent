@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from archium.application.exploration_service import ExplorationService
 from archium.application.mission_context_bridge import resolve_selected_concept_direction
+from archium.config.settings import Settings
 from archium.domain.enums import (
     ConceptDirectionStatus,
     ExplorationSessionStatus,
@@ -180,7 +181,9 @@ def _mission_draft() -> MissionGenerationDraft:
 def test_start_session_enriches_idea_seed(db_session, concept_project) -> None:
     llm = MagicMock()
     llm.generate_structured.return_value = _idea_seed_draft()
-    service = ExplorationService(db_session, llm)
+    service = ExplorationService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
 
     result = service.start_session(
         concept_project.id,
@@ -198,7 +201,9 @@ def test_start_session_enriches_idea_seed(db_session, concept_project) -> None:
 def test_start_session_degrades_when_llm_fails(db_session, concept_project) -> None:
     llm = MagicMock()
     llm.generate_structured.side_effect = RuntimeError("llm down")
-    service = ExplorationService(db_session, llm)
+    service = ExplorationService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
 
     result = service.start_session(concept_project.id, "秦岭山中的禅意文化中心")
     assert result.exploration.idea_seed is not None
@@ -241,7 +246,9 @@ def test_generate_select_commit_creates_mission_without_prior_mission(
         _mission_draft(),
         _ks_draft(),  # commit_to_mission → best_effort_reassess
     ]
-    service = ExplorationService(db_session, llm)
+    service = ExplorationService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
 
     started = service.start_session(
         concept_project.id,
@@ -294,7 +301,9 @@ def test_resolve_selected_falls_back_to_exploration_session(
         _mission_draft(),
         _ks_draft(),
     ]
-    service = ExplorationService(db_session, llm)
+    service = ExplorationService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
     exploration = service.start_session(concept_project.id, "一句话想法").exploration
     generated = service.generate_directions(exploration.id)
     selected = service.select_direction(generated.directions[0].id)
@@ -321,7 +330,9 @@ def test_enrich_idea_seed_retries(db_session, concept_project) -> None:
         RuntimeError("first fail"),
         _idea_seed_draft(),
     ]
-    service = ExplorationService(db_session, llm)
+    service = ExplorationService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
     started = service.start_session(concept_project.id, "未来养老社区")
     assert not started.exploration.idea_seed.is_enriched
 

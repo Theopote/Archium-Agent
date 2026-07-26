@@ -20,7 +20,7 @@
 | APP-010 | P1 | done | DesignCritique / Reflection 无 Revise：next_adjustments 不执行 | `design_revise_service.py`; concept select | Critic 只挡不改 → AI 自嗨风险 | `revise_direction_from_critique`；可应用 adjustments | 批判后方向字段可更新；IntentEvolution 有边 | `-` |
 | APP-011 | P2 | done | 无 ReasoningArtifact 身份；证据 refs 未绑定单一推理节点 | `reasoning_artifact.py`; concept/mission | 推理不可版本化/追溯 | 薄封装 id+project+evidence refs（复用 Rationale） | 推理节点可按 id 取；Critic 读同一节点 | `-` |
 | APP-012 | P1 | done | Revise 后无再 Critique；设计循环未闭合 | `design_loop.py`; `*_maybe_revise_from_critique` | 修订可「看起来更好」却未再验证 | revise 后 rule/LLM 再批判；reject 仍走 warn/block | 修订后有第二份报告；单测覆盖 | `-` |
-| APP-013 | P1 | open | 选定路径自动修订无人工确认 | `design_revise_service.py`; exploration/mission select | 相对 Critic 只读契约的静默改方向 | `DESIGN_REVISE_ON_SELECT=off\|auto\|ask`；ask 出示 diff | 默认策略文档化；ask 模式可拒补丁 | `-` |
-| APP-014 | P2 | open | Reflection next_adjustments UI 无 Apply/Reject | `design_reflection_details.py`; `apply_reflection_adjustments` | 调整项只展示不执行 | UI 一键应用/拒绝 + IntentEvolution | Apply 后方向字段变；Reject 记边 | `-` |
+| APP-013 | P1 | done | 选定路径自动修订无人工确认 | `design_loop.py`; `design_revise_ask_panel.py` | 相对 Critic 只读契约的静默改方向 | `DESIGN_REVISE_ON_SELECT=off\|auto\|ask`；ask 出示 diff | 默认 ask；Apply/Reject 可选定 | `-` |
+| APP-014 | P2 | done | Reflection next_adjustments UI 无 Apply/Reject | `design_revise_ask_panel.py`; reflection 预览 | 调整项只展示不执行 | Ask 面板展示 adjustments + Apply/Reject | Apply 后方向字段变；Reject 记边 | `-` |
 | APP-015 | P2 | open | Mission select 不写 DESIGN_CRITIQUE IntentEvolution 边 | `concept_direction_service.select_direction` | 探索/Mission 历史不对称 | 与 exploration 对齐写 DESIGN_CRITIQUE | Mission 选定 caution/reject 有边 | `-` |
 | APP-016 | P2 | open | Research Critic block 不拒绝落库/不挡概念硬化 | `research_critique_service.py`; autonomous research | 「block」名不副实 | block 拒写或拒绝进入 Design Critic 摘要 | block 下弱研究不可硬化 | `-` |

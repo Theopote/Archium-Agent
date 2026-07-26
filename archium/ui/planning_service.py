@@ -465,13 +465,15 @@ def select_concept_direction(
     direction_id: UUID,
     *,
     settings: Settings | None = None,
+    revise_action: str | None = None,
 ):
     from archium.application.concept_direction_service import ConceptDirectionService
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return ConceptDirectionService(session, llm, settings=runtime).select_direction(
-        direction_id
+        direction_id,
+        revise_action=revise_action,
     )
 
 
@@ -636,13 +638,15 @@ def select_exploration_direction(
     direction_id: UUID,
     *,
     settings: Settings | None = None,
+    revise_action: str | None = None,
 ):
     from archium.application.exploration_service import ExplorationService
 
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return ExplorationService(session, llm, settings=runtime).select_direction(
-        direction_id
+        direction_id,
+        revise_action=revise_action,
     )
 
 

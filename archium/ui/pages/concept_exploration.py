@@ -37,6 +37,60 @@ def render() -> None:
     if critique_warnings:
         st.warning("设计批判（选定前独立质疑）\n\n" + "\n\n".join(critique_warnings))
 
+    from archium.ui.components.design_revise_ask_panel import (
+        render_pending_revise_ask,
+        store_pending_revise_from_selection,
+    )
+
+    def _apply_revise(direction_id: UUID) -> None:
+        try:
+            with get_session() as session:
+                selection = select_exploration_direction(
+                    session, direction_id, revise_action="apply"
+                )
+            st.session_state.pop("pending_design_revise", None)
+            if store_pending_revise_from_selection(selection):
+                st.rerun()
+                return
+            st.session_state["design_critique_warnings"] = list(
+                getattr(selection, "critique_warnings", None) or []
+            )
+            report = getattr(selection, "critique_report", None)
+            if report is not None and hasattr(report, "as_dict"):
+                st.session_state["last_design_critique_report"] = report.as_dict()
+            st.success("已应用修订并选中方向。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+    def _reject_revise(direction_id: UUID) -> None:
+        try:
+            with get_session() as session:
+                selection = select_exploration_direction(
+                    session, direction_id, revise_action="reject"
+                )
+            st.session_state.pop("pending_design_revise", None)
+            st.session_state["design_critique_warnings"] = list(
+                getattr(selection, "critique_warnings", None) or []
+            )
+            report = getattr(selection, "critique_report", None)
+            if report is not None and hasattr(report, "as_dict"):
+                st.session_state["last_design_critique_report"] = report.as_dict()
+            st.success("已拒绝修订，按原方向选中。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+    render_pending_revise_ask(
+        key_prefix="explore",
+        on_apply=_apply_revise,
+        on_reject=_reject_revise,
+    )
+
     with get_session() as session:
         projects = list_projects(session)
     if not projects:
@@ -264,6 +318,14 @@ def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
         try:
             with get_session() as session:
                 selection = select_exploration_direction(session, clicked[1])
+            from archium.ui.components.design_revise_ask_panel import (
+                store_pending_revise_from_selection,
+            )
+
+            if store_pending_revise_from_selection(selection):
+                st.info("批判建议修订 — 请在上方确认应用或拒绝。")
+                st.rerun()
+                return list(directions)
             st.session_state["design_critique_warnings"] = list(
                 getattr(selection, "critique_warnings", None) or []
             )

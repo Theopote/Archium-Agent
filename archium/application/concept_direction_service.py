@@ -55,6 +55,8 @@ class ConceptDirectionSelectionResult:
     directions: list[ConceptDirection] = field(default_factory=list)
     critique_warnings: list[str] = field(default_factory=list)
     critique_report: object | None = None
+    selection_completed: bool = True
+    pending_revise: object | None = None
 
 class ConceptDirectionService:
     """Planning-side service for concept direction drafts (not vision rendering)."""
@@ -153,7 +155,12 @@ class ConceptDirectionService:
             warnings=warnings,
         )
 
-    def select_direction(self, direction_id: UUID) -> ConceptDirectionSelectionResult:
+    def select_direction(
+        self,
+        direction_id: UUID,
+        *,
+        revise_action: str | None = None,
+    ) -> ConceptDirectionSelectionResult:
         direction = self._directions.get(direction_id)
         if direction is None:
             raise WorkflowError(f"概念方向 {direction_id} 不存在")
@@ -169,13 +176,24 @@ class ConceptDirectionService:
             direction,
             design_intent=mission.design_intent,
         )
-        direction, critique_warnings, critique_gate, _loop_revised = (
+        direction, critique_warnings, critique_gate, _loop_revised, pending = (
             self._maybe_revise_from_critique(
                 direction,
                 critique_gate,
                 design_intent=mission.design_intent,
+                revise_action=revise_action,
             )
         )
+        if pending is not None:
+            return ConceptDirectionSelectionResult(
+                direction=direction,
+                mission=mission,
+                directions=self._directions.list_by_mission(direction.mission_id),
+                critique_warnings=critique_warnings,
+                critique_report=critique_gate.report if critique_gate else None,
+                selection_completed=False,
+                pending_revise=pending,
+            )
 
         siblings = self._directions.list_by_mission(direction.mission_id)
         previous_theme = (
@@ -273,6 +291,8 @@ class ConceptDirectionService:
             directions=self._directions.list_by_mission(direction.mission_id),
             critique_warnings=critique_warnings,
             critique_report=critique_gate.report,
+            selection_completed=True,
+            pending_revise=None,
         )
 
     def archive_direction(self, direction_id: UUID) -> ConceptDirection:
@@ -364,9 +384,13 @@ class ConceptDirectionService:
         critique_gate: Any,
         *,
         design_intent: Any = None,
-    ) -> tuple[ConceptDirection, list[str], Any, bool]:
-        """Revise if needed, re-critique (L1), verify only on proceed."""
-        from archium.application.design_loop import run_design_loop_on_select
+        revise_action: str | None = None,
+    ) -> tuple[ConceptDirection, list[str], Any, bool, Any]:
+        """Revise per DESIGN_REVISE_ON_SELECT (L2); re-critique when applied (L1)."""
+        from archium.application.design_loop import (
+            resolve_revise_policy,
+            run_design_loop_on_select,
+        )
         from archium.application.review.design_critique_service import DesignCritiqueService
         from archium.domain.intent.intent_evolution import (
             IntentEvolution,
@@ -375,13 +399,17 @@ class ConceptDirectionService:
         from archium.infrastructure.database.repositories import ProjectRepository
 
         if critique_gate is None or getattr(critique_gate, "report", None) is None:
-            return direction, [], critique_gate, False
+            return direction, [], critique_gate, False, None
 
         project = ProjectRepository(self._session).get_by_id(direction.project_id)
         knowledge_state = project.knowledge_state if project is not None else None
         research_summaries = self._research_summaries_for_critique(direction.project_id)
         critic = DesignCritiqueService(
             self._session, self._llm, settings=self._settings
+        )
+        policy = resolve_revise_policy(
+            getattr(self._settings, "design_revise_on_select", None),
+            revise_action,
         )
         loop = run_design_loop_on_select(
             direction,
@@ -391,10 +419,10 @@ class ConceptDirectionService:
             knowledge_state=knowledge_state,
             research_summaries=research_summaries,
             known_facts=self._known_facts_for_project(direction.project_id),
+            revise_policy=policy,
         )
         direction = loop.direction
         notes = list(critique_gate.warnings) + list(loop.notes)
-        # Dedupe notes while preserving order
         seen: set[str] = set()
         deduped: list[str] = []
         for item in notes:
@@ -404,10 +432,34 @@ class ConceptDirectionService:
             seen.add(key)
             deduped.append(key)
 
+        if loop.pending_offer is not None:
+            return direction, deduped, critique_gate, False, loop.pending_offer
+
         if loop.revised or (
             direction.reasoning is not None and direction.reasoning.verified
         ):
             direction = self._directions.update(direction)
+
+        if policy == "reject" and project is not None:
+            try:
+                evo = project.intent_evolution or IntentEvolution()
+                project.intent_evolution = evo.append(
+                    IntentEvolutionKind.DESIGN_CRITIQUE,
+                    "拒绝批判修订补丁",
+                    trigger="revise_rejected",
+                    previous_summary=(direction.title or "")[:80] or None,
+                    new_summary="reject",
+                    reason="建筑师拒绝自动修订，按原方向继续",
+                    evidence_refs=list(deduped)[:6],
+                    design_intent_snapshot={
+                        "revise_action": "reject",
+                        "critique": critique_gate.report.as_dict(),
+                    },
+                )
+                project.touch()
+                ProjectRepository(self._session).update(project)
+            except Exception:
+                pass
 
         if loop.revised and loop.revise is not None:
             try:
@@ -416,7 +468,11 @@ class ConceptDirectionService:
                     project.intent_evolution = evo.append(
                         IntentEvolutionKind.DIRECTION_REVISED,
                         "批判后修订概念方向",
-                        trigger="revise_direction_from_critique",
+                        trigger=(
+                            "revise_direction_from_critique_apply"
+                            if policy == "apply"
+                            else "revise_direction_from_critique"
+                        ),
                         previous_summary=(direction.title or "")[:80] or None,
                         new_summary=(
                             (
@@ -436,6 +492,7 @@ class ConceptDirectionService:
                             "revise": loop.revise.as_dict(),
                             "critique_verdict": critique_gate.report.verdict.value,
                             "recritique_verdict": loop.gate.report.verdict.value,
+                            "revise_policy": policy,
                         },
                     )
                     if loop.revise.reflection is not None and not loop.revise.reflection.is_empty():
@@ -470,7 +527,7 @@ class ConceptDirectionService:
             except Exception:
                 pass
 
-        return direction, deduped, loop.gate, loop.revised
+        return direction, deduped, loop.gate, loop.revised, None
 
     def _research_summaries_for_critique(self, project_id: UUID) -> list[str]:
         research_summaries: list[str] = []

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from archium.application.concept_direction_service import ConceptDirectionService
+from archium.config.settings import Settings
 from archium.domain.enums import (
     ConceptDirectionStatus,
     ProjectOriginMode,
@@ -84,7 +85,9 @@ def test_generate_and_select_concept_directions(db_session, concept_mission) -> 
             ),
         ]
     )
-    service = ConceptDirectionService(db_session, llm)
+    service = ConceptDirectionService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
 
     generated = service.generate_directions(concept_mission.id, count=3)
     assert len(generated.directions) == 3
@@ -111,7 +114,9 @@ def test_regenerate_archives_previous_drafts(db_session, concept_mission) -> Non
             ConceptDirectionDraft(title="方向B", summary="摘要B"),
         ]
     )
-    service = ConceptDirectionService(db_session, llm)
+    service = ConceptDirectionService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
     first = service.generate_directions(concept_mission.id, count=2)
     assert len(first.directions) == 2
 

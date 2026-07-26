@@ -429,6 +429,10 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     from archium.domain.enums import ConceptDirectionStatus
     from archium.infrastructure.database.repositories import ProjectRepository
     from archium.ui.app_navigation import get_app_page
+    from archium.ui.components.design_revise_ask_panel import (
+        render_pending_revise_ask,
+        store_pending_revise_from_selection,
+    )
     from archium.ui.llm_settings import get_ui_effective_settings
     from archium.ui.planning_service import (
         archive_concept_direction,
@@ -438,6 +442,55 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         preview_presentation_request_from_mission,
         refresh_presentation_request_draft,
         select_concept_direction,
+    )
+
+    def _apply_revise(direction_id: UUID) -> None:
+        try:
+            with get_session() as session:
+                selection = select_concept_direction(
+                    session, direction_id, revise_action="apply"
+                )
+            st.session_state.pop("pending_design_revise", None)
+            if store_pending_revise_from_selection(selection):
+                st.rerun()
+                return
+            st.session_state["design_critique_warnings"] = list(
+                getattr(selection, "critique_warnings", None) or []
+            )
+            report = getattr(selection, "critique_report", None)
+            if report is not None and hasattr(report, "as_dict"):
+                st.session_state["last_design_critique_report"] = report.as_dict()
+            st.success("已应用修订并选中方向，已写回设计使命。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+    def _reject_revise(direction_id: UUID) -> None:
+        try:
+            with get_session() as session:
+                selection = select_concept_direction(
+                    session, direction_id, revise_action="reject"
+                )
+            st.session_state.pop("pending_design_revise", None)
+            st.session_state["design_critique_warnings"] = list(
+                getattr(selection, "critique_warnings", None) or []
+            )
+            report = getattr(selection, "critique_report", None)
+            if report is not None and hasattr(report, "as_dict"):
+                st.session_state["last_design_critique_report"] = report.as_dict()
+            st.success("已拒绝修订，按原方向选中并写回设计使命。")
+            st.rerun()
+        except WorkflowError as exc:
+            st.error(str(exc))
+        except Exception as exc:
+            st.error(format_user_error(exc))
+
+    render_pending_revise_ask(
+        key_prefix=key_prefix,
+        on_apply=_apply_revise,
+        on_reject=_reject_revise,
     )
 
     with get_session() as session:
@@ -575,6 +628,10 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             try:
                 with get_session() as session:
                     selection = select_concept_direction(session, direction_id)
+                if store_pending_revise_from_selection(selection):
+                    st.info("批判建议修订 — 请在上方确认应用或拒绝。")
+                    st.rerun()
+                    return
                 st.session_state["design_critique_warnings"] = list(
                     getattr(selection, "critique_warnings", None) or []
                 )

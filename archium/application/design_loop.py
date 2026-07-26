@@ -1,4 +1,4 @@
-"""Design loop pass: Critique → Revise → Re-Critique (Phase L1).
+"""Design loop pass: Critique → (Ask|Auto) Revise → Re-Critique (L1+L2).
 
 Keeps Critic read-only; Revise separate; verified only after a proceed critique.
 """
@@ -6,6 +6,8 @@ Keeps Critic read-only; Revise separate; verified only after a proceed critique.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
+from uuid import UUID
 
 from archium.application.design_revise_service import (
     DirectionReviseResult,
@@ -18,9 +20,55 @@ from archium.application.review.design_critique_service import (
     DesignCritiqueService,
 )
 from archium.domain.concept_direction import ConceptDirection
-from archium.domain.design_critique import DesignCritiqueVerdict
+from archium.domain.design_critique import DesignCritiqueReport, DesignCritiqueVerdict
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.knowledge_state import KnowledgeState
+
+ReviseMode = Literal["off", "auto", "ask"]
+ReviseAction = Literal["apply", "reject"]
+RevisePolicy = Literal["off", "auto", "ask", "apply", "reject"]
+
+
+@dataclass
+class DesignReviseOffer:
+    """Pending Critic→Revise decision for Ask mode (not yet persisted)."""
+
+    direction_id: UUID
+    project_id: UUID
+    critique_report: DesignCritiqueReport
+    revise_preview: DirectionReviseResult
+    mode: str = "ask"
+
+    def as_dict(self) -> dict[str, object]:
+        reflection = self.revise_preview.reflection
+        return {
+            "direction_id": str(self.direction_id),
+            "project_id": str(self.project_id),
+            "mode": self.mode,
+            "critique": self.critique_report.as_dict(),
+            "revise": self.revise_preview.as_dict(),
+            "diff_lines": self.diff_lines(),
+            "next_adjustments": list(
+                reflection.next_adjustments if reflection is not None else []
+            ),
+            "reflection": reflection.as_dict() if reflection is not None else None,
+        }
+
+    def diff_lines(self) -> list[str]:
+        lines: list[str] = []
+        for item in self.revise_preview.applied[:10]:
+            lines.append(f"将应用：{item}")
+        reflection = self.revise_preview.reflection
+        if reflection is not None:
+            for adj in reflection.next_adjustments[:6]:
+                text = (adj or "").strip()
+                if text and f"将应用：{text}" not in lines:
+                    lines.append(f"调整建议：{text}")
+        if not lines and self.revise_preview.changed:
+            lines.append("方向字段将按批判补丁更新（链 / 风险 / 开放问题）。")
+        if not lines:
+            lines.append("批判建议修订，但预览未产生可展示补丁。")
+        return lines
 
 
 @dataclass
@@ -33,10 +81,29 @@ class DesignLoopPassResult:
     revised: bool = False
     revise: DirectionReviseResult | None = None
     recritique: DesignCritiqueGateResult | None = None
+    pending_offer: DesignReviseOffer | None = None
 
     @property
     def report(self):
         return self.gate.report
+
+    @property
+    def awaiting_user(self) -> bool:
+        return self.pending_offer is not None
+
+
+def resolve_revise_policy(
+    mode: str | None,
+    revise_action: str | None = None,
+) -> RevisePolicy:
+    """Map settings mode + optional UI action to an execution policy."""
+    resolved = (mode or "ask").strip().lower()
+    if resolved not in {"off", "auto", "ask"}:
+        resolved = "ask"
+    action = (revise_action or "").strip().lower()
+    if action in {"apply", "reject"}:
+        return action  # type: ignore[return-value]
+    return resolved  # type: ignore[return-value]
 
 
 def run_design_loop_on_select(
@@ -51,15 +118,29 @@ def run_design_loop_on_select(
     known_facts: dict[str, str] | None = None,
     force: bool = False,
     recritique_rules_only: bool = True,
+    revise_policy: RevisePolicy = "auto",
 ) -> DesignLoopPassResult:
-    """After initial critique gate: revise if needed, then re-critique (L1).
+    """After initial critique gate: revise per policy, then re-critique when applied.
 
-    ``verified`` is set only when the *authoritative* critique verdict is
-    ``proceed`` (initial pass if no revise; re-critique pass if revised).
-    Soft verify-after-chain-fill is forbidden.
+    Policies:
+    - ``off`` / ``reject``: never revise; verify on initial gate
+    - ``ask``: if revise needed, return ``pending_offer`` (no DB write)
+    - ``auto`` / ``apply``: revise + re-critique (L1)
     """
     notes: list[str] = []
     report = gate.report
+
+    if revise_policy in {"off", "reject"}:
+        if revise_policy == "reject" and should_revise_from_critique(report):
+            notes.append("已拒绝批判修订补丁；按原方向继续选定。")
+        direction, verify_notes = _maybe_verify_on_proceed(direction, report)
+        notes.extend(verify_notes)
+        return DesignLoopPassResult(
+            direction=direction,
+            gate=gate,
+            notes=notes,
+            revised=False,
+        )
 
     if not should_revise_from_critique(report):
         direction, verify_notes = _maybe_verify_on_proceed(direction, report)
@@ -77,6 +158,29 @@ def run_design_loop_on_select(
         idea_text=idea_text,
         known_facts=known_facts,
     )
+
+    if revise_policy == "ask":
+        offer = DesignReviseOffer(
+            direction_id=direction.id,
+            project_id=direction.project_id,
+            critique_report=report,
+            revise_preview=revise,
+            mode="ask",
+        )
+        notes.append(
+            "批判建议修订方向：请确认应用补丁，或拒绝后按原方向选定。"
+        )
+        notes.extend(offer.diff_lines()[:6])
+        return DesignLoopPassResult(
+            direction=direction,
+            gate=gate,
+            notes=notes,
+            revised=False,
+            revise=revise,
+            pending_offer=offer,
+        )
+
+    # auto / apply
     direction = revise.direction
     if revise.applied:
         notes.append("已按批判自动修订方向：" + "；".join(revise.applied[:6]))
@@ -85,7 +189,6 @@ def run_design_loop_on_select(
     else:
         notes.append("批判建议修订，但无可落地补丁；仍进行再批判。")
 
-    # Phase L1: never trust revise without a second critique pass
     recritique = critic.enforce_on_select(
         direction,
         design_intent=design_intent,
@@ -125,11 +228,9 @@ def _maybe_verify_on_proceed(
     """Mark ReasoningArtifact.verified only on Critic proceed + proceedable chain."""
     notes: list[str] = []
     if report.verdict != DesignCritiqueVerdict.PROCEED:
-        # Ensure we do not keep a stale verified flag after a failed re-pass
         if (
             direction.reasoning is not None
             and direction.reasoning.verified
-            and report.verdict != DesignCritiqueVerdict.PROCEED
         ):
             cleared = direction.reasoning.model_copy(update={"verified": False})
             cleared.touch()

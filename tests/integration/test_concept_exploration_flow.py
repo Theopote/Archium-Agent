@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from archium.application.exploration_service import ExplorationService
+from archium.config.settings import Settings
 from archium.application.mission_parser import parse_mission_draft
 from archium.application.project_mission_service import ProjectMissionService
 from archium.domain.enums import (
@@ -187,7 +188,9 @@ def test_exploration_before_mission_commit_flow(db_session, concept_project) -> 
         _ks(),
     ]
 
-    service = ExplorationService(db_session, llm)
+    service = ExplorationService(
+        db_session, llm, settings=Settings(_env_file=None, design_revise_on_select="auto")
+    )
     exploration = service.start_session(
         concept_project.id, "我想在黄土高原做一个文化中心"
     ).exploration

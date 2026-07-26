@@ -585,6 +585,14 @@ class Settings(BaseSettings):
             "block=refuse when verdict is reject."
         ),
     )
+    design_revise_on_select: str = Field(
+        default="ask",
+        description=(
+            "Phase L2: how Critique→Revise runs on ConceptDirection select: "
+            "off=never revise; auto=revise+re-critique silently (L1); "
+            "ask=return pending revise offer for Apply/Reject (default)."
+        ),
+    )
     research_critique_mode: str = Field(
         default="warn",
         description=(

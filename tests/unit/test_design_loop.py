@@ -183,6 +183,67 @@ def test_revise_does_not_soft_verify_without_proceed() -> None:
     )
 
 
+def test_ask_mode_returns_pending_offer_without_selecting() -> None:
+    direction = _direction()
+    first = DesignCritiqueReport(
+        direction_id=direction.id,
+        project_id=direction.project_id,
+        verdict=DesignCritiqueVerdict.CAUTION,
+        summary="链不完整",
+        chain_incomplete=True,
+        source="rules",
+    )
+    critic = DesignCritiqueService(
+        MagicMock(), MagicMock(), settings=Settings(_env_file=None)
+    )
+    result = run_design_loop_on_select(
+        direction,
+        _gate(first),
+        critic=critic,
+        revise_policy="ask",
+    )
+    assert result.awaiting_user is True
+    assert result.pending_offer is not None
+    assert result.revised is False
+    assert result.direction.design_rationale is not None
+    # Preview may fill chain in-memory on revise_preview, but direction itself unchanged
+    assert not result.direction.design_rationale.is_proceedable_chain()
+    assert result.pending_offer.diff_lines()
+
+
+def test_reject_policy_skips_revise() -> None:
+    direction = _direction()
+    first = DesignCritiqueReport(
+        direction_id=direction.id,
+        project_id=direction.project_id,
+        verdict=DesignCritiqueVerdict.CAUTION,
+        chain_incomplete=True,
+        summary="需修订",
+        source="rules",
+    )
+    critic = DesignCritiqueService(
+        MagicMock(), MagicMock(), settings=Settings(_env_file=None)
+    )
+    result = run_design_loop_on_select(
+        direction,
+        _gate(first),
+        critic=critic,
+        revise_policy="reject",
+    )
+    assert result.revised is False
+    assert result.pending_offer is None
+    assert any("拒绝" in n for n in result.notes)
+
+
+def test_resolve_revise_policy_maps_actions() -> None:
+    from archium.application.design_loop import resolve_revise_policy
+
+    assert resolve_revise_policy("ask", None) == "ask"
+    assert resolve_revise_policy("ask", "apply") == "apply"
+    assert resolve_revise_policy("auto", "reject") == "reject"
+    assert resolve_revise_policy("off", None) == "off"
+
+
 def test_recritique_block_mode_raises() -> None:
     direction = _direction()
     first = DesignCritiqueReport(
@@ -215,4 +276,5 @@ def test_recritique_block_mode_raises() -> None:
             critic=critic,
             research_summaries=[],
             recritique_rules_only=True,
+            revise_policy="auto",
         )
