@@ -20,26 +20,29 @@ def upgrade() -> None:
     if "presentations" not in tables:
         return
     columns = {col["name"] for col in inspector.get_columns("presentations")}
-    if "mission_id" in columns:
+    indexes = {idx["name"] for idx in inspector.get_indexes("presentations")}
+    fks = {fk["name"] for fk in inspector.get_foreign_keys("presentations")}
+    need_column = "mission_id" not in columns
+    need_fk = (
+        "project_missions" in tables
+        and "fk_presentations_mission_id" not in fks
+    )
+    need_index = "ix_presentations_mission_id" not in indexes
+    if not (need_column or need_fk or need_index):
         return
-    op.add_column(
-        "presentations",
-        sa.Column("mission_id", sa.Uuid(), nullable=True),
-    )
-    if "project_missions" in tables:
-        op.create_foreign_key(
-            "fk_presentations_mission_id",
-            "presentations",
-            "project_missions",
-            ["mission_id"],
-            ["id"],
-            ondelete="SET NULL",
-        )
-    op.create_index(
-        "ix_presentations_mission_id",
-        "presentations",
-        ["mission_id"],
-    )
+    with op.batch_alter_table("presentations") as batch:
+        if need_column:
+            batch.add_column(sa.Column("mission_id", sa.Uuid(), nullable=True))
+        if need_fk:
+            batch.create_foreign_key(
+                "fk_presentations_mission_id",
+                "project_missions",
+                ["mission_id"],
+                ["id"],
+                ondelete="SET NULL",
+            )
+        if need_index:
+            batch.create_index("ix_presentations_mission_id", ["mission_id"])
 
 
 def downgrade() -> None:
@@ -52,13 +55,13 @@ def downgrade() -> None:
     if "mission_id" not in columns:
         return
     indexes = {idx["name"] for idx in inspector.get_indexes("presentations")}
-    if "ix_presentations_mission_id" in indexes:
-        op.drop_index("ix_presentations_mission_id", table_name="presentations")
     fks = {fk["name"] for fk in inspector.get_foreign_keys("presentations")}
-    if "fk_presentations_mission_id" in fks:
-        op.drop_constraint(
-            "fk_presentations_mission_id",
-            "presentations",
-            type_="foreignkey",
-        )
-    op.drop_column("presentations", "mission_id")
+    with op.batch_alter_table("presentations") as batch:
+        if "ix_presentations_mission_id" in indexes:
+            batch.drop_index("ix_presentations_mission_id")
+        if "fk_presentations_mission_id" in fks:
+            batch.drop_constraint(
+                "fk_presentations_mission_id",
+                type_="foreignkey",
+            )
+        batch.drop_column("mission_id")

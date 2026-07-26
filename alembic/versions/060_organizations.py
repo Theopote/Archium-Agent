@@ -42,26 +42,31 @@ def upgrade() -> None:
 
     if "projects" not in tables:
         return
+    # Refresh inspector after possible organizations create.
+    inspector = sa.inspect(bind)
     columns = {col["name"] for col in inspector.get_columns("projects")}
-    if "organization_id" in columns:
+    indexes = {idx["name"] for idx in inspector.get_indexes("projects")}
+    fks = {fk["name"] for fk in inspector.get_foreign_keys("projects")}
+    need_column = "organization_id" not in columns
+    need_fk = "fk_projects_organization_id" not in fks
+    need_index = "ix_projects_organization_id" not in indexes
+    if not (need_column or need_fk or need_index):
         return
-    op.add_column(
-        "projects",
-        sa.Column("organization_id", sa.Uuid(as_uuid=True), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_projects_organization_id",
-        "projects",
-        "organizations",
-        ["organization_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
-    op.create_index(
-        "ix_projects_organization_id",
-        "projects",
-        ["organization_id"],
-    )
+    with op.batch_alter_table("projects") as batch:
+        if need_column:
+            batch.add_column(
+                sa.Column("organization_id", sa.Uuid(as_uuid=True), nullable=True)
+            )
+        if need_fk:
+            batch.create_foreign_key(
+                "fk_projects_organization_id",
+                "organizations",
+                ["organization_id"],
+                ["id"],
+                ondelete="SET NULL",
+            )
+        if need_index:
+            batch.create_index("ix_projects_organization_id", ["organization_id"])
 
 
 def downgrade() -> None:
@@ -73,18 +78,16 @@ def downgrade() -> None:
         columns = {col["name"] for col in inspector.get_columns("projects")}
         if "organization_id" in columns:
             indexes = {idx["name"] for idx in inspector.get_indexes("projects")}
-            if "ix_projects_organization_id" in indexes:
-                op.drop_index(
-                    "ix_projects_organization_id", table_name="projects"
-                )
             fks = {fk["name"] for fk in inspector.get_foreign_keys("projects")}
-            if "fk_projects_organization_id" in fks:
-                op.drop_constraint(
-                    "fk_projects_organization_id",
-                    "projects",
-                    type_="foreignkey",
-                )
-            op.drop_column("projects", "organization_id")
+            with op.batch_alter_table("projects") as batch:
+                if "ix_projects_organization_id" in indexes:
+                    batch.drop_index("ix_projects_organization_id")
+                if "fk_projects_organization_id" in fks:
+                    batch.drop_constraint(
+                        "fk_projects_organization_id",
+                        type_="foreignkey",
+                    )
+                batch.drop_column("organization_id")
 
     if "organizations" in tables:
         indexes = {idx["name"] for idx in inspector.get_indexes("organizations")}
