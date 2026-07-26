@@ -169,12 +169,13 @@ class ConceptDirectionService:
             direction,
             design_intent=mission.design_intent,
         )
-        critique_warnings = list(critique_gate.warnings)
-        direction, revise_notes = self._maybe_revise_from_critique(
-            direction,
-            critique_gate,
+        direction, critique_warnings, critique_gate, _loop_revised = (
+            self._maybe_revise_from_critique(
+                direction,
+                critique_gate,
+                design_intent=mission.design_intent,
+            )
         )
-        critique_warnings.extend(revise_notes)
 
         siblings = self._directions.list_by_mission(direction.mission_id)
         previous_theme = (
@@ -357,85 +358,59 @@ class ConceptDirectionService:
             return {}
         return dict(ctx.knowledge_state.known)
 
-    def _run_design_critique(self, direction: ConceptDirection, *, design_intent: Any=None) -> Any:
-        from archium.application.review.design_critique_service import DesignCritiqueService
-        from archium.infrastructure.database.repositories import ProjectRepository
-
-        project = ProjectRepository(self._session).get_by_id(direction.project_id)
-        knowledge_state = project.knowledge_state if project is not None else None
-        research_summaries: list[str] = []
-        try:
-            research_summaries = design_knowledge_summary_lines(
-                self._session, direction.project_id
-            )
-            if not research_summaries:
-                from archium.infrastructure.database.repositories import (
-                    ProjectKnowledgeRepository,
-                )
-
-                for item in ProjectKnowledgeRepository(self._session).list_by_project(
-                    direction.project_id
-                )[:8]:
-                    statement = (getattr(item, "statement", None) or "").strip()
-                    if statement:
-                        research_summaries.append(statement[:300])
-        except Exception:  # noqa: BLE001
-            pass
-        return DesignCritiqueService(
-            self._session, self._llm, settings=self._settings
-        ).enforce_on_select(
-            direction,
-            design_intent=design_intent,
-            knowledge_state=knowledge_state,
-            research_summaries=research_summaries,
-        )
-
     def _maybe_revise_from_critique(
         self,
         direction: ConceptDirection,
         critique_gate: Any,
-    ) -> tuple[ConceptDirection, list[str]]:
-        """Apply Critic→Revise when gate left actionable gaps (Phase R3)."""
-        from archium.application.design_revise_service import (
-            mark_direction_reasoning_verified,
-            revise_direction_from_critique,
-            should_revise_from_critique,
-        )
-        from archium.domain.design_critique import DesignCritiqueVerdict
+        *,
+        design_intent: Any = None,
+    ) -> tuple[ConceptDirection, list[str], Any, bool]:
+        """Revise if needed, re-critique (L1), verify only on proceed."""
+        from archium.application.design_loop import run_design_loop_on_select
+        from archium.application.review.design_critique_service import DesignCritiqueService
         from archium.domain.intent.intent_evolution import (
             IntentEvolution,
             IntentEvolutionKind,
         )
         from archium.infrastructure.database.repositories import ProjectRepository
 
-        report = getattr(critique_gate, "report", None)
-        notes: list[str] = []
-        if report is None:
-            return direction, notes
+        if critique_gate is None or getattr(critique_gate, "report", None) is None:
+            return direction, [], critique_gate, False
 
-        if not should_revise_from_critique(report):
-            if report.verdict == DesignCritiqueVerdict.PROCEED:
-                verified = mark_direction_reasoning_verified(direction)
-                if verified.reasoning is not None and verified.reasoning.verified:
-                    if direction.reasoning is None or not direction.reasoning.verified:
-                        direction = self._directions.update(verified)
-                        notes.append("推理节点已标记为批判通过（verified）。")
-            return direction, notes
-
-        result = revise_direction_from_critique(
+        project = ProjectRepository(self._session).get_by_id(direction.project_id)
+        knowledge_state = project.knowledge_state if project is not None else None
+        research_summaries = self._research_summaries_for_critique(direction.project_id)
+        critic = DesignCritiqueService(
+            self._session, self._llm, settings=self._settings
+        )
+        loop = run_design_loop_on_select(
             direction,
-            report,
+            critique_gate,
+            critic=critic,
+            design_intent=design_intent,
+            knowledge_state=knowledge_state,
+            research_summaries=research_summaries,
             known_facts=self._known_facts_for_project(direction.project_id),
         )
-        if result.changed or result.applied:
-            direction = self._directions.update(result.direction)
-            if result.applied:
-                notes.append(
-                    "已按批判自动修订方向："
-                    + "；".join(result.applied[:6])
-                )
+        direction = loop.direction
+        notes = list(critique_gate.warnings) + list(loop.notes)
+        # Dedupe notes while preserving order
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for item in notes:
+            key = item.strip()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            deduped.append(key)
+
+        if loop.revised or (
+            direction.reasoning is not None and direction.reasoning.verified
+        ):
+            direction = self._directions.update(direction)
+
+        if loop.revised and loop.revise is not None:
             try:
-                project = ProjectRepository(self._session).get_by_id(direction.project_id)
                 if project is not None:
                     evo = project.intent_evolution or IntentEvolution()
                     project.intent_evolution = evo.append(
@@ -444,34 +419,94 @@ class ConceptDirectionService:
                         trigger="revise_direction_from_critique",
                         previous_summary=(direction.title or "")[:80] or None,
                         new_summary=(
-                            (direction.design_rationale.strategy if direction.design_rationale else "")
+                            (
+                                direction.design_rationale.strategy
+                                if direction.design_rationale
+                                else ""
+                            )
                             or direction.spatial_strategy
                             or direction.title
                         )[:80]
                         or None,
-                        reason=(report.summary or "回应批判弱点与推理链缺口")[:500],
-                        evidence_refs=list(result.applied)[:8],
+                        reason=(critique_gate.report.summary or "回应批判弱点与推理链缺口")[
+                            :500
+                        ],
+                        evidence_refs=list(loop.revise.applied)[:8],
                         design_intent_snapshot={
-                            "revise": result.as_dict(),
-                            "critique_verdict": report.verdict.value,
+                            "revise": loop.revise.as_dict(),
+                            "critique_verdict": critique_gate.report.verdict.value,
+                            "recritique_verdict": loop.gate.report.verdict.value,
                         },
                     )
-                    if result.reflection is not None and not result.reflection.is_empty():
+                    if loop.revise.reflection is not None and not loop.revise.reflection.is_empty():
                         project.intent_evolution = project.intent_evolution.append(
                             IntentEvolutionKind.REFLECTION,
-                            result.reflection.why[:200] or "修订后设计反思",
+                            loop.revise.reflection.why[:200] or "修订后设计反思",
                             trigger="revise_reflection",
-                            reason=result.reflection.why[:400] or None,
-                            evidence_refs=list(result.reflection.next_adjustments)[:4],
+                            reason=loop.revise.reflection.why[:400] or None,
+                            evidence_refs=list(loop.revise.reflection.next_adjustments)[:4],
                             design_intent_snapshot={
-                                "reflection": result.reflection.as_dict()
+                                "reflection": loop.revise.reflection.as_dict()
                             },
                         )
+                    project.intent_evolution = project.intent_evolution.append(
+                        IntentEvolutionKind.DESIGN_CRITIQUE,
+                        f"修订后再批判：{loop.gate.report.verdict.value}",
+                        trigger="recritique_after_revise",
+                        previous_summary=critique_gate.report.verdict.value,
+                        new_summary=loop.gate.report.verdict.value,
+                        reason=(loop.gate.report.summary or "L1 再批判")[:500],
+                        evidence_refs=[
+                            item.text
+                            for item in (
+                                loop.gate.report.weaknesses
+                                + loop.gate.report.missing_evidence
+                            )[:6]
+                        ],
+                        design_intent_snapshot=loop.gate.report.as_dict(),
+                    )
                     project.touch()
                     ProjectRepository(self._session).update(project)
             except Exception:
                 pass
-        return direction, notes
+
+        return direction, deduped, loop.gate, loop.revised
+
+    def _research_summaries_for_critique(self, project_id: UUID) -> list[str]:
+        research_summaries: list[str] = []
+        try:
+            research_summaries = design_knowledge_summary_lines(
+                self._session, project_id
+            )
+            if not research_summaries:
+                from archium.infrastructure.database.repositories import (
+                    ProjectKnowledgeRepository,
+                )
+
+                for item in ProjectKnowledgeRepository(self._session).list_by_project(
+                    project_id
+                )[:8]:
+                    statement = (getattr(item, "statement", None) or "").strip()
+                    if statement:
+                        research_summaries.append(statement[:300])
+        except Exception:  # noqa: BLE001
+            pass
+        return research_summaries
+
+    def _run_design_critique(self, direction: ConceptDirection, *, design_intent: Any=None) -> Any:
+        from archium.application.review.design_critique_service import DesignCritiqueService
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        project = ProjectRepository(self._session).get_by_id(direction.project_id)
+        knowledge_state = project.knowledge_state if project is not None else None
+        return DesignCritiqueService(
+            self._session, self._llm, settings=self._settings
+        ).enforce_on_select(
+            direction,
+            design_intent=design_intent,
+            knowledge_state=knowledge_state,
+            research_summaries=self._research_summaries_for_critique(direction.project_id),
+        )
 
     def _require_mission(self, mission_id: UUID) -> ProjectMission:
         mission = self._missions.get_mission(mission_id)

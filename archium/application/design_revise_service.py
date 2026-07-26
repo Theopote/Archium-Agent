@@ -149,29 +149,7 @@ def revise_direction_from_critique(
     )
     direction = ensure_direction_reasoning(direction)
     direction = ensure_direction_spatial_layer(direction)
-
-    # Verify when chain is proceedable after revise (Critic may still caution)
-    if (
-        direction.reasoning is not None
-        and direction.reasoning.is_proceedable()
-        and report.verdict == DesignCritiqueVerdict.PROCEED
-        and not report.chain_incomplete
-    ):
-        direction = direction.model_copy(
-            update={"reasoning": direction.reasoning.mark_verified()}
-        )
-        applied.append("reasoning:verified")
-    elif (
-        direction.reasoning is not None
-        and direction.reasoning.is_proceedable()
-        and report.verdict != DesignCritiqueVerdict.REJECT
-    ):
-        # Soft verify after successful chain fill under caution
-        if any(a.startswith("chain:") for a in applied):
-            direction = direction.model_copy(
-                update={"reasoning": direction.reasoning.mark_verified()}
-            )
-            applied.append("reasoning:verified_after_chain_fill")
+    # Phase L1: never set verified here — only after a Critic proceed (re)pass.
 
     after = direction.model_dump(mode="json")
     changed = before != after
@@ -190,7 +168,7 @@ def revise_direction_from_critique(
 def mark_direction_reasoning_verified(
     direction: ConceptDirection,
 ) -> ConceptDirection:
-    """Flag existing proceedable reasoning as Critic-verified."""
+    """Flag proceedable reasoning as Critic-verified (call only after proceed)."""
     direction = ensure_direction_reasoning(direction)
     if direction.reasoning is None or not direction.reasoning.is_proceedable():
         return direction

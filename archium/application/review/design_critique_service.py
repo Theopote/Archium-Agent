@@ -106,8 +106,13 @@ class DesignCritiqueService:
         design_intent: DesignIntent | None = None,
         knowledge_state: KnowledgeState | None = None,
         research_summaries: list[str] | None = None,
+        rules_only: bool = False,
     ) -> DesignCritiqueReport:
-        """Critique a concept direction against intent + research context."""
+        """Critique a concept direction against intent + research context.
+
+        ``rules_only=True`` skips the LLM and runs deterministic rule merge only
+        (used for Phase L1 re-critique after revise).
+        """
         direction = ensure_direction_reasoning(direction)
         research_block = self._research_block(
             knowledge_state=knowledge_state,
@@ -122,30 +127,31 @@ class DesignCritiqueService:
 
         draft: DesignCritiqueDraft | None = None
         source = "rules"
-        try:
-            draft = llm_generate_structured(
-                self._llm,
-                LLMRequest(
-                    system_prompt=DESIGN_CRITIQUE_SYSTEM_PROMPT,
-                    user_prompt=build_design_critique_user_prompt(
-                        direction_block=direction_block,
-                        design_intent_block=intent_block,
-                        research_block=research_block,
+        if not rules_only:
+            try:
+                draft = llm_generate_structured(
+                    self._llm,
+                    LLMRequest(
+                        system_prompt=DESIGN_CRITIQUE_SYSTEM_PROMPT,
+                        user_prompt=build_design_critique_user_prompt(
+                            direction_block=direction_block,
+                            design_intent_block=intent_block,
+                            research_block=research_block,
+                        ),
+                        temperature=0.25,
+                        json_mode=True,
+                        metadata={"prompt_version": CRITIQUE_PROMPT_VERSION},
                     ),
-                    temperature=0.25,
-                    json_mode=True,
-                    metadata={"prompt_version": CRITIQUE_PROMPT_VERSION},
-                ),
-                DesignCritiqueDraft,
-                capability=LLMCapability.DESIGN_CRITIQUE,
-                project_id=direction.project_id,
-                session=self._session,
-                settings=self._settings,
-            )
-            source = "llm"
-        except Exception as exc:  # noqa: BLE001 — critic must degrade, not abort select
-            logger.warning("design critique LLM failed, using rules: %s", exc)
-            draft = None
+                    DesignCritiqueDraft,
+                    capability=LLMCapability.DESIGN_CRITIQUE,
+                    project_id=direction.project_id,
+                    session=self._session,
+                    settings=self._settings,
+                )
+                source = "llm"
+            except Exception as exc:  # noqa: BLE001 — critic must degrade, not abort select
+                logger.warning("design critique LLM failed, using rules: %s", exc)
+                draft = None
 
         try:
             report = self._from_draft(
@@ -181,10 +187,12 @@ class DesignCritiqueService:
         knowledge_state: KnowledgeState | None = None,
         research_summaries: list[str] | None = None,
         force: bool = False,
+        rules_only: bool = False,
     ) -> DesignCritiqueGateResult:
         """Run critique and apply ``design_critique_on_select`` gate policy.
 
         Modes: off | warn | block (default warn).
+        ``rules_only`` skips LLM (re-critique after revise).
         """
         mode = (self._settings.design_critique_on_select or "warn").strip().lower()
         if mode not in {"off", "warn", "block"}:
@@ -205,19 +213,32 @@ class DesignCritiqueService:
             design_intent=design_intent,
             knowledge_state=knowledge_state,
             research_summaries=research_summaries,
+            rules_only=rules_only,
         )
+        return self.apply_select_gate(report, mode=mode, force=force)
+
+    def apply_select_gate(
+        self,
+        report: DesignCritiqueReport,
+        *,
+        mode: str | None = None,
+        force: bool = False,
+    ) -> DesignCritiqueGateResult:
+        """Apply warn/block policy to an existing critique report (no LLM)."""
+        resolved = (mode or self._settings.design_critique_on_select or "warn").strip().lower()
+        if resolved not in {"off", "warn", "block"}:
+            resolved = "warn"
+
         warnings = report.display_warnings()
         result = DesignCritiqueGateResult(
             report=report,
-            mode=mode,
+            mode=resolved,
             warnings=warnings,
         )
-
         if force:
             result.warnings.append("已强制跳过设计批判阻断（force）。")
             return result
-
-        if mode == "block" and report.blocks_selection:
+        if resolved == "block" and report.blocks_selection:
             result.blocked = True
             detail = report.summary or "设计批判判定不宜固化该方向"
             raise WorkflowError(

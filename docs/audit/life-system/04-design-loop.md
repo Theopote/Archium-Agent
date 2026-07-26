@@ -10,9 +10,9 @@
 
 ## 一句话结论
 
-**有 Critic 与 Revise 代码路径，尚无迭代设计循环。**
+**有 Critic→Revise→Re-Critique 路径，尚缺人工闸门与修订身份。**
 
-Create 能产出可比较方向；选定前 Critique 能 warn/block；R3 可在选定瞬间自动修订并记 `DIRECTION_REVISED`。但路径仍是 **one-shot**：批判一次 → 静默自动修订 → 固化。无再批判、无人工 Apply/Reject、ProcessBoard/NBA/Reflection 旁观路由而不驱动闭环。
+Create 能产出可比较方向；选定前 Critique 能 warn/block；R3+L1 在选定瞬间可自动修订并 **再批判**，`verified` 仅在 proceed 后落下。仍缺：人工 Apply/Reject、Direction 修订代际、一等图 interrupt。ProcessBoard/NBA/Reflection 旁观路由而不驱动人闸。
 
 ---
 
@@ -28,9 +28,9 @@ Create 能产出可比较方向；选定前 Critique 能 warn/block；R3 可在�
        ↓
   Critique-on-select（warn|block|off）
        ↓
-  Auto-Revise（条件触发，无确认）
+  Auto-Revise（条件触发）→ Re-Critique（L1，默认 rules_only）
        ↓
-  Select / Commit Mission
+  Select / Commit Mission（verified 仅 proceed）
        ↓
   Presentation soft-warn（reasoning unverified）
        ↓
@@ -43,7 +43,7 @@ Create 能产出可比较方向；选定前 Critique 能 warn/block；R3 可在�
 | Critique（设计） | B | `DesignCritiqueService` 只读；选定门禁 |
 | Critique（研究） | B- | `ResearchCritiqueService`；block 名不副实 |
 | Revise | B- | `design_revise_service`；自动、启发式、无再验证 |
-| Re-Critique | **D** | 修订后不重跑批判 |
+| Re-Critique | **B**（L1） | `run_design_loop_on_select` 修订后 rules 再批判 |
 | 人工闸门 | **D** | Reflection UI 只展示；无 Apply |
 | 过程编排 | C | ProcessBoard / NBA 旁路；非循环引擎 |
 | 表达后批判 | B（另轨） | Visual/Deck QA + Repair ≠ Design Critic |
@@ -96,11 +96,11 @@ Create 能产出可比较方向；选定前 Critique 能 warn/block；R3 可在�
 
 ### 循环缺口（本专题焦点）
 
-1. **无 Re-Critique**：修订后的方向直接 SELECTED  
-2. **无人工 Apply**：自动修订仅以 warning 字符串通知  
-3. **Reflection UI 只读**：`apply_reflection_adjustments` 无产品入口  
-4. **Mission 路径不记 DESIGN_CRITIQUE 边**（探索路径有）  
-5. **非工作流图**：循环挂在 `select_direction` 服务调用上，无 interrupt「批判→人→修订→再批判」
+1. ~~无 Re-Critique~~ → **L1 已闭合**（修订后 rules 再批判）  
+2. **无人工 Apply**：自动修订仅以 warning 字符串通知（APP-013）  
+3. **Reflection UI 只读**：`apply_reflection_adjustments` 无产品入口（APP-014）  
+4. **Mission 路径初评不记 DESIGN_CRITIQUE 边**（修订后再批判会记；APP-015）  
+5. **非工作流图**：循环挂在 `select_direction` 服务调用上（WF-009）
 
 ---
 
@@ -143,10 +143,13 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 
 ## 建议演进（渐进）
 
-### Phase L1 — 闭合再验证（P0）
+### Phase L1 — 闭合再验证（P0）✅ 2026-07-26
 
-1. Revise 后 **强制再跑一次** `critique`（或轻量 rule-only pass）；仍 `reject` 则 warn/block 按原策略  
-2. `verified=true` **仅**在再批判 `proceed`（或人确认）后设置  
+1. Revise 后 **强制再跑一次** `critique`（默认 `rules_only`；reject 仍走 warn/block）  
+2. `verified=true` **仅**在权威批判 `proceed` 后设置（初评无修订，或修订后再批判）  
+
+实现：`archium/application/design_loop.py` → `run_design_loop_on_select`；探索/Mission 选定路径共用。  
+（关闭 `APP-012`。）
 
 ### Phase L2 — 人工闸门（P1）
 
@@ -166,7 +169,7 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 
 | 编号 | 级别 | 问题 |
 |------|------|------|
-| APP-012 | P1 | Revise 后无再 Critique；循环未闭合 |
+| APP-012 | P1 | ~~Revise 后无再 Critique~~ **done (L1)** |
 | APP-013 | P1 | 选定路径自动修订无人工确认（相对 Critic 只读契约的产品缺口） |
 | APP-014 | P2 | Reflection `next_adjustments` UI 无 Apply/Reject |
 | APP-015 | P2 | Mission `select_direction` 不写 IntentEvolution `DESIGN_CRITIQUE` 边 |
@@ -200,4 +203,4 @@ Critic 席位本身干净；循环层的「自动修订」是产品策略问题�
 - [x] 与理想迭代循环对照；判定 one-shot  
 - [x] 静默改写与旁路（ProcessBoard/NBA）边界说明  
 - [x] Issue 草案 APP-012…016 / DOM-030 / WF-009  
-- [ ] 择优落地 Phase L1（再批判 + verified 收紧）
+- [x] 择优落地 Phase L1（再批判 + verified 收紧）
