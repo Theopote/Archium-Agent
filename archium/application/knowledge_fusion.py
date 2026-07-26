@@ -84,7 +84,7 @@ class KnowledgeFusionService:
         refs.extend(self._chunk_refs(project_id, query, filters=filters, preferred=preferred))
         refs.extend(self._knowledge_item_refs(project_id, query, preferred=preferred))
         if include_cases and query:
-            refs.extend(self._case_refs(query))
+            refs.extend(self._case_refs(project_id, query))
         if include_graph and query and bool(
             getattr(self._settings, "knowledge_graph_retrieval_enabled", True)
         ):
@@ -346,8 +346,12 @@ class KnowledgeFusionService:
             )
         return refs
 
-    def _case_refs(self, query: str) -> list[KnowledgeReference]:
-        library = ArchitectureCaseLibraryService()
+    def _case_refs(self, project_id: UUID, query: str) -> list[KnowledgeReference]:
+        library = ArchitectureCaseLibraryService(
+            session=self._session,
+            project_id=project_id,
+            include_drafts=True,
+        )
         cases = library.search(query, limit=2)
         refs: list[KnowledgeReference] = []
         for match in cases:

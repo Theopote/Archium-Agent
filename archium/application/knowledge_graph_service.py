@@ -46,9 +46,14 @@ class KnowledgeGraphService:
         self._settings = settings or get_settings()
         self._facts = FactRepository(session)
         self._knowledge = ProjectKnowledgeRepository(session)
-        self._cases = case_library or ArchitectureCaseLibraryService()
+        self._cases = case_library
 
     def build_snapshot(self, project_id: UUID) -> KnowledgeGraphSnapshot:
+        cases = self._cases or ArchitectureCaseLibraryService(
+            session=self._session,
+            project_id=project_id,
+            include_drafts=True,
+        )
         nodes: dict[str, KnowledgeNode] = {}
         edges: list[KnowledgeEdge] = []
 
@@ -101,7 +106,7 @@ class KnowledgeGraphService:
         for item in items:
             self._add_knowledge_item_subgraph(item, project_id, add_node, add_edge)
 
-        for case in self._cases.list_cases():
+        for case in cases.list_cases():
             self._add_case_subgraph(case, add_node, add_edge)
 
         return KnowledgeGraphSnapshot(

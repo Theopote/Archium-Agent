@@ -172,10 +172,10 @@ ArchitectureCase(
 2. `DesignKnowledge.precedent_ref: str | None`（先存 `case:ningbo_museum`）  
 3. ConceptDirection：`reference_case_ids: list[str]` 与 `reference_dna` 并存一期  
 
-### Phase B — 可写案例库（护城河开始长）
+### Phase B — 可写案例库（护城河开始长） ✅
 
-4. `ArchitectureCase` 可持久（项目级或组织级），seeds 为 bootstrap  
-5. 研究确认写回时可「链到已有 Case 或新建 Case 草稿」  
+4. `ArchitectureCase` 可持久（**项目级** `architecture_cases`），seeds 为 bootstrap；同 slug 项目行覆盖种子  
+5. 研究确认写回：`precedent_ref` 命中种子则只链接；否则从 DesignKnowledge **创建 draft** 并回写 `precedent_ref`；`activate` 提升为检索默认可见  
 
 ### Phase C — 图从投影升级为增量边（可选）
 
@@ -220,3 +220,4 @@ ArchitectureCase(
 - [x] KN-008…013 草案  
 - [ ] 择优落地 Phase A（词表对齐 + precedent_ref）
 - [x] Phase A 落地：`problem`/`strategy`/`precedent_ref` + `reference_case_ids`（KN-008/009/013 done）
+- [x] Phase B 落地：项目级可写 `architecture_cases` + 确认研究写回建草稿（KN-010 done）

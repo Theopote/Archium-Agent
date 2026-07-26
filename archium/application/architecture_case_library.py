@@ -2,15 +2,21 @@
 
 Cross-type migration example: 「冥想」→ Therme Vals / Bruder Klaus, not only
 buildings literally named meditation spaces.
+
+Phase B: optional session + project_id merges writable project cases over seeds.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from uuid import UUID
+
+from sqlalchemy.orm import Session
 
 from archium.domain.architecture_case import ArchitectureCase
 from archium.domain.design_knowledge import DesignKnowledge
+from archium.domain.enums import ArchitectureCaseStatus
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.research_question import ResearchQuestion
 from archium.infrastructure.research.case_library.seeds import all_seed_cases
@@ -25,11 +31,55 @@ class ArchitectureCaseMatch:
     matched_terms: tuple[str, ...] = ()
 
 
+def merge_seed_and_project_cases(
+    *,
+    seeds: list[ArchitectureCase],
+    project_cases: list[ArchitectureCase],
+) -> list[ArchitectureCase]:
+    """Project cases override seeds with the same slug."""
+    by_id: dict[str, ArchitectureCase] = {case.id: case for case in seeds}
+    for case in project_cases:
+        by_id[case.id] = case
+    # Stable order: seeds first (overridden in place), then project-only
+    seed_ids = {case.id for case in seeds}
+    ordered: list[ArchitectureCase] = [by_id[case.id] for case in seeds]
+    for case in project_cases:
+        if case.id not in seed_ids:
+            ordered.append(case)
+    return ordered
+
+
 class ArchitectureCaseLibraryService:
     """Retrieve transferable cases for research / concept prompts."""
 
-    def __init__(self, cases: list[ArchitectureCase] | None = None) -> None:
-        self._cases = list(cases) if cases is not None else all_seed_cases()
+    def __init__(
+        self,
+        cases: list[ArchitectureCase] | None = None,
+        *,
+        session: Session | None = None,
+        project_id: UUID | None = None,
+        include_drafts: bool = False,
+    ) -> None:
+        if cases is not None:
+            self._cases = list(cases)
+            return
+        seeds = all_seed_cases()
+        project_cases: list[ArchitectureCase] = []
+        if session is not None and project_id is not None:
+            from archium.infrastructure.database.repositories import (
+                ArchitectureCaseRepository,
+            )
+
+            statuses = [ArchitectureCaseStatus.ACTIVE]
+            if include_drafts:
+                statuses.append(ArchitectureCaseStatus.DRAFT)
+            stored = ArchitectureCaseRepository(session).list_by_project(
+                project_id, statuses=statuses
+            )
+            project_cases = [row.to_architecture_case() for row in stored]
+        self._cases = merge_seed_and_project_cases(
+            seeds=seeds, project_cases=project_cases
+        )
 
     def list_cases(self) -> list[ArchitectureCase]:
         return list(self._cases)

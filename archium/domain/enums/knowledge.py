@@ -29,6 +29,15 @@ class KnowledgeItemStatus(StrEnum):
     REJECTED = "rejected"
     SUPERSEDED = "superseded"
 
+
+class ArchitectureCaseStatus(StrEnum):
+    """Lifecycle for project-scoped ArchitectureCase rows."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
 class KnowledgeGapCategory(StrEnum):
     PROJECT_SCOPE = "project_scope"
     SITE = "site"

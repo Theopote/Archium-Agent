@@ -329,7 +329,7 @@ class ConceptDirectionService:
             enrich_direction_case_refs,
         )
 
-        direction = enrich_direction_case_refs(direction)
+        direction = enrich_direction_case_refs(direction, session=self._session)
         direction = ensure_direction_design_rationale(
             direction,
             known_facts=self._known_facts_for_project(mission.project_id),

@@ -601,7 +601,7 @@ class ExplorationService:
             enrich_direction_case_refs,
         )
 
-        direction = enrich_direction_case_refs(direction)
+        direction = enrich_direction_case_refs(direction, session=self._session)
         seed = exploration.idea_seed
         direction = ensure_direction_design_rationale(
             direction,

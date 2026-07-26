@@ -1172,6 +1172,45 @@ class ConceptDirectionORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source: Mapped[str] = mapped_column(String(40), nullable=False, default="generated")
 
 
+class ArchitectureCaseORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Project-scoped writable architecture case (seeds stay in code)."""
+
+    __tablename__ = "architecture_cases"
+    __table_args__ = (
+        UniqueConstraint("project_id", "slug", name="uq_architecture_cases_project_slug"),
+        Index("ix_architecture_cases_project_id", "project_id"),
+        Index("ix_architecture_cases_status", "status"),
+        Index("ix_architecture_cases_source_knowledge_item_id", "source_knowledge_item_id"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    slug: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    source_knowledge_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("project_knowledge_items.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    architect: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    location: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    year: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    building_type: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    context: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    design_problem: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    strategy: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    spatial_logic: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    material_language: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    atmosphere: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    transferable_principles_json: Mapped[list[str]] = mapped_column(
+        "transferable_principles", JSON, nullable=False, default=list
+    )
+    risks_json: Mapped[list[str]] = mapped_column("risks", JSON, nullable=False, default=list)
+    tags_json: Mapped[list[str]] = mapped_column("tags", JSON, nullable=False, default=list)
+
+
 class VisualConceptBriefORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "visual_concept_briefs"
     __table_args__ = (

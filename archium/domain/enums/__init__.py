@@ -15,6 +15,7 @@ from archium.domain.enums.document import (
     VerificationStatus,
 )
 from archium.domain.enums.knowledge import (
+    ArchitectureCaseStatus,
     AssumptionStatus,
     InformationOrigin,
     InformationReliability,
@@ -97,6 +98,7 @@ __all__ = [
     "InformationOrigin",
     "InformationReliability",
     "KnowledgeItemStatus",
+    "ArchitectureCaseStatus",
     "KnowledgeGapCategory",
     "KnowledgeGapStatus",
     "ResolutionMethod",

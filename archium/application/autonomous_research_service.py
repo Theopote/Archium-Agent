@@ -117,7 +117,10 @@ class AutonomousResearchService:
                 ArchitectureCaseLibraryService,
             )
 
-            library = ArchitectureCaseLibraryService()
+            library = ArchitectureCaseLibraryService(
+                session=self._session,
+                project_id=mission.project_id,
+            )
             case_block = library.format_prompt_block(
                 library.search_for_questions(list(questions), limit=2)
             )

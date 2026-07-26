@@ -20,6 +20,7 @@ from archium.domain.design_rationale import DesignRationale
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
+    ArchitectureCaseStatus,
     ArtifactJobStatus,
     AssetType,
     ConceptDirectionStatus,
@@ -69,6 +70,7 @@ from archium.domain.presentation import (
 )
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
+from archium.domain.project_architecture_case import ProjectArchitectureCase
 from archium.domain.project_event import ProjectEvent
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 from archium.domain.reference_style import (
@@ -89,6 +91,7 @@ from archium.domain.visual.visual_grammar import coerce_page_archetype
 from archium.domain.visual_qa import VisualQAReport
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.models import (
+    ArchitectureCaseORM,
     ArtifactJobORM,
     AssetORM,
     BackgroundJobORM,
@@ -1446,6 +1449,62 @@ def concept_direction_to_orm(
     target.status = domain.status.value
     target.sort_order = domain.sort_order
     target.source = domain.source
+    if domain.created_at is not None:
+        target.created_at = domain.created_at
+    if domain.updated_at is not None:
+        target.updated_at = domain.updated_at
+    return target
+
+
+def architecture_case_to_domain(orm: ArchitectureCaseORM) -> ProjectArchitectureCase:
+    return ProjectArchitectureCase(
+        id=orm.id,
+        project_id=orm.project_id,
+        slug=orm.slug,
+        status=ArchitectureCaseStatus(orm.status),
+        source_knowledge_item_id=orm.source_knowledge_item_id,
+        name=orm.name,
+        architect=orm.architect or "",
+        location=orm.location or "",
+        year=orm.year or "",
+        building_type=orm.building_type or "",
+        context=orm.context or "",
+        design_problem=orm.design_problem or "",
+        strategy=orm.strategy or "",
+        spatial_logic=orm.spatial_logic or "",
+        material_language=orm.material_language or "",
+        atmosphere=orm.atmosphere or "",
+        transferable_principles=list(orm.transferable_principles_json or []),
+        risks=list(orm.risks_json or []),
+        tags=list(orm.tags_json or []),
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
+    )
+
+
+def architecture_case_to_orm(
+    domain: ProjectArchitectureCase,
+    orm: ArchitectureCaseORM | None = None,
+) -> ArchitectureCaseORM:
+    target = orm or ArchitectureCaseORM(id=domain.id)
+    target.project_id = domain.project_id
+    target.slug = domain.slug
+    target.status = domain.status.value
+    target.source_knowledge_item_id = domain.source_knowledge_item_id
+    target.name = domain.name
+    target.architect = domain.architect
+    target.location = domain.location
+    target.year = domain.year
+    target.building_type = domain.building_type
+    target.context = domain.context
+    target.design_problem = domain.design_problem
+    target.strategy = domain.strategy
+    target.spatial_logic = domain.spatial_logic
+    target.material_language = domain.material_language
+    target.atmosphere = domain.atmosphere
+    target.transferable_principles_json = list(domain.transferable_principles)
+    target.risks_json = list(domain.risks)
+    target.tags_json = list(domain.tags)
     if domain.created_at is not None:
         target.created_at = domain.created_at
     if domain.updated_at is not None:

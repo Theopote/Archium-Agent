@@ -17,7 +17,7 @@ from archium.domain.concept_direction import ConceptDirection
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
-from archium.domain.enums import ProjectStatus, ReviewStatus, RevisionEntityType
+from archium.domain.enums import ArchitectureCaseStatus, ProjectStatus, ReviewStatus, RevisionEntityType
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.fact import ProjectFact
 from archium.domain.outline import OutlinePlan
@@ -26,6 +26,7 @@ from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
+from archium.domain.project_architecture_case import ProjectArchitectureCase
 from archium.domain.project_event import ProjectEvent, ProjectEventType
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.domain.reference_style import ReferenceStyleProfile
@@ -39,6 +40,7 @@ from archium.domain.workflow import WorkflowRun
 from archium.exceptions import RepositoryError
 from archium.infrastructure.database import mappers
 from archium.infrastructure.database.models import (
+    ArchitectureCaseORM,
     ArtifactJobORM,
     AssetORM,
     BackgroundJobORM,
@@ -787,6 +789,82 @@ class ProjectKnowledgeRepository:
             return True
         except SQLAlchemyError as exc:
             _handle_error("delete knowledge item", exc)
+            raise
+
+
+class ArchitectureCaseRepository:
+    """CRUD for project-scoped ArchitectureCase rows."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, case: ProjectArchitectureCase) -> ProjectArchitectureCase:
+        try:
+            orm = mappers.architecture_case_to_orm(case)
+            self._session.add(orm)
+            self._session.flush()
+            return mappers.architecture_case_to_domain(orm)
+        except SQLAlchemyError as exc:
+            _handle_error("create architecture case", exc)
+            raise
+
+    def get_by_id(self, case_id: UUID) -> ProjectArchitectureCase | None:
+        orm = self._session.get(ArchitectureCaseORM, case_id)
+        return mappers.architecture_case_to_domain(orm) if orm else None
+
+    def get_by_slug(
+        self, project_id: UUID, slug: str
+    ) -> ProjectArchitectureCase | None:
+        stmt = select(ArchitectureCaseORM).where(
+            ArchitectureCaseORM.project_id == project_id,
+            ArchitectureCaseORM.slug == slug,
+        )
+        orm = self._session.scalars(stmt).first()
+        return mappers.architecture_case_to_domain(orm) if orm else None
+
+    def list_by_project(
+        self,
+        project_id: UUID,
+        *,
+        statuses: list[ArchitectureCaseStatus] | None = None,
+    ) -> list[ProjectArchitectureCase]:
+        stmt = select(ArchitectureCaseORM).where(
+            ArchitectureCaseORM.project_id == project_id
+        )
+        if statuses:
+            stmt = stmt.where(
+                ArchitectureCaseORM.status.in_([status.value for status in statuses])
+            )
+        stmt = stmt.order_by(ArchitectureCaseORM.updated_at.desc())
+        return [
+            mappers.architecture_case_to_domain(row)
+            for row in self._session.scalars(stmt)
+        ]
+
+    def update(self, case: ProjectArchitectureCase) -> ProjectArchitectureCase:
+        try:
+            orm = self._session.get(ArchitectureCaseORM, case.id)
+            if orm is None:
+                raise RepositoryError(f"Architecture case {case.id} not found")
+            mappers.architecture_case_to_orm(case, orm)
+            self._session.flush()
+            return mappers.architecture_case_to_domain(orm)
+        except RepositoryError:
+            raise
+        except SQLAlchemyError as exc:
+            _handle_error("update architecture case", exc)
+            raise
+
+    def delete(self, case_id: UUID) -> bool:
+        try:
+            orm = self._session.get(ArchitectureCaseORM, case_id)
+            if orm is None:
+                return False
+            self._session.delete(orm)
+            self._session.flush()
+            return True
+        except SQLAlchemyError as exc:
+            _handle_error("delete architecture case", exc)
             raise
 
 

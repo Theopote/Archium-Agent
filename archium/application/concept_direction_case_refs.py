@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from sqlalchemy.orm import Session
+
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.domain.case_ref import normalize_case_id_list
 from archium.domain.concept_direction import ConceptDirection
@@ -11,6 +13,7 @@ def enrich_direction_case_refs(
     direction: ConceptDirection,
     *,
     library: ArchitectureCaseLibraryService | None = None,
+    session: Session | None = None,
     limit: int = 2,
 ) -> ConceptDirection:
     """Keep existing ids; if empty, search library from direction text.
@@ -18,7 +21,10 @@ def enrich_direction_case_refs(
     Ensures selected directions can resolve to ArchitectureCase (KN-009).
     """
     existing = normalize_case_id_list(direction.reference_case_ids)
-    lib = library or ArchitectureCaseLibraryService()
+    lib = library or ArchitectureCaseLibraryService(
+        session=session,
+        project_id=direction.project_id,
+    )
     known = {case.id for case in lib.list_cases()}
     existing = [case_id for case_id in existing if case_id in known]
     if existing:

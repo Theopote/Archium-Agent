@@ -126,6 +126,7 @@ class ProjectKnowledgeService:
     def confirm_item(self, item_id: UUID) -> ProjectKnowledgeItem:
         item = self._require_item(item_id)
         item.confirm()
+        self._best_effort_link_architecture_case(item)
         updated = self._knowledge.update(item)
         self._best_effort_vector_index(updated)
         self._best_effort_index_after_knowledge_change(
@@ -133,6 +134,15 @@ class ProjectKnowledgeService:
             reason="knowledge_item_confirmed",
         )
         return updated
+
+    def _best_effort_link_architecture_case(self, item: ProjectKnowledgeItem) -> None:
+        """Phase B: link seed / project case or create draft from DesignKnowledge."""
+        try:
+            from archium.application.architecture_case_service import ArchitectureCaseService
+
+            ArchitectureCaseService(self._session).ensure_from_knowledge_item(item)
+        except Exception:
+            return
 
     def reject_item(self, item_id: UUID) -> ProjectKnowledgeItem:
         item = self._require_item(item_id)

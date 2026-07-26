@@ -64,6 +64,8 @@ def format_design_knowledge_block(
             research_questions=research_questions,
             query_hint=query_hint,
             limit=case_limit,
+            session=session,
+            project_id=project_id,
         )
         if case_block.strip():
             parts.append(case_block)
@@ -77,9 +79,11 @@ def format_architecture_case_block(
     research_questions: list[ResearchQuestion] | None = None,
     query_hint: str = "",
     limit: int = 2,
+    session: Session | None = None,
+    project_id: UUID | None = None,
 ) -> str:
-    """Semantic case references (cross-type), independent of project DB."""
-    library = ArchitectureCaseLibraryService()
+    """Semantic case references (cross-type); merges project cases when session given."""
+    library = ArchitectureCaseLibraryService(session=session, project_id=project_id)
     matches = []
     if research_questions:
         matches = library.search_for_questions(research_questions, limit=limit)
