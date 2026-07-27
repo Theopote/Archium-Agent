@@ -6,8 +6,8 @@ venv/
 
 # Local scratch / patch probes (never commit)
 .tmp*
-.tmp_*
 *.patch
+scripts/_tmp_*.py
 
 # Local security-audit scratch (never commit)
 .tmp-pip-audit*.json
