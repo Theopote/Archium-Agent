@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ from archium.application.visual.layout_validation_service import LayoutValidatio
 from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.config.settings import Settings, get_settings
+from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
@@ -28,6 +30,39 @@ logger = logging.getLogger(__name__)
 
 _PAGE_WIDTH = 13.333
 _PAGE_HEIGHT = 7.5
+
+_VISUAL_ASSET_TYPES = frozenset(
+    {
+        AssetType.IMAGE,
+        AssetType.DRAWING,
+        AssetType.DIAGRAM,
+        AssetType.PHOTO,
+        AssetType.CHART,
+    }
+)
+_MEDIA_LAYOUT_TYPES = frozenset(
+    {
+        LayoutContentType.IMAGE,
+        LayoutContentType.DRAWING,
+        LayoutContentType.CHART,
+    }
+)
+
+
+def project_has_usable_visual_assets(session: Session, project_id: UUID) -> bool:
+    """True when the project has on-disk image/drawing assets usable in layouts."""
+    from archium.infrastructure.database.repositories import AssetRepository
+
+    for asset in AssetRepository(session).list_by_project(project_id):
+        if asset.asset_type not in _VISUAL_ASSET_TYPES:
+            continue
+        if Path(asset.path).is_file():
+            return True
+    return False
+
+
+def _layout_has_unresolved_media_placeholder(plan: LayoutPlan) -> bool:
+    return any(element.content_type in _MEDIA_LAYOUT_TYPES for element in plan.elements)
 
 
 @dataclass(frozen=True)
@@ -167,22 +202,7 @@ def _ensure_slide_wireframe_layout(
         slide.visual_intent_id = intent.id
         presentations.save_slide(slide)
 
-        planner = LayoutPlanningService(session, llm=None, settings=settings)
-        try:
-            plan = planner.plan_slide(
-                slide=slide,
-                visual_intent_id=intent.id,
-                art_direction_id=intent.art_direction_id,
-                design_system_id=design_system.id,
-                candidate_count=1,
-                project_id=project_id,
-            )
-        except ValueError as exc:
-            logger.warning(
-                "Genesis planner returned no candidates for slide %s; using fallback: %s",
-                slide.id,
-                exc,
-            )
+        if not project_has_usable_visual_assets(session, project_id):
             plan = LayoutPlanRepository(session).save(
                 _fallback_textual_layout(
                     slide=slide,
@@ -190,6 +210,30 @@ def _ensure_slide_wireframe_layout(
                     design_system_id=design_system.id,
                 )
             )
+        else:
+            planner = LayoutPlanningService(session, llm=None, settings=settings)
+            try:
+                plan = planner.plan_slide(
+                    slide=slide,
+                    visual_intent_id=intent.id,
+                    art_direction_id=intent.art_direction_id,
+                    design_system_id=design_system.id,
+                    candidate_count=1,
+                    project_id=project_id,
+                )
+            except ValueError as exc:
+                logger.warning(
+                    "Genesis planner returned no candidates for slide %s; using fallback: %s",
+                    slide.id,
+                    exc,
+                )
+                plan = LayoutPlanRepository(session).save(
+                    _fallback_textual_layout(
+                        slide=slide,
+                        visual_intent_id=intent.id,
+                        design_system_id=design_system.id,
+                    )
+                )
         slide.layout_plan_id = plan.id
         presentations.save_slide(slide)
 
@@ -353,3 +397,61 @@ def ensure_deck_wireframe_layouts(
         cover_preview_path=cover_preview,
         summary=summary,
     )
+
+
+def repair_placeholder_wireframes_for_project(
+    session: Session,
+    project_id: UUID,
+    *,
+    settings: Settings | None = None,
+    commit: bool = True,
+) -> int:
+    """Replace genesis media-placeholder wireframes with text-only layouts when no assets exist."""
+    from archium.application.genesis_starter_service import presentation_has_formal_visual_previews
+    from archium.application.visual.studio_scene_service import StudioSceneService
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    if project_has_usable_visual_assets(session, project_id):
+        return 0
+
+    presentations = PresentationRepository(session)
+    project_presentations = presentations.list_by_project(project_id)
+    if not project_presentations:
+        return 0
+    presentation = project_presentations[0]
+    if presentation_has_formal_visual_previews(session, presentation.id):
+        return 0
+
+    resolved = settings or get_settings()
+    design = _resolve_design_system(session)
+    plans = LayoutPlanRepository(session)
+    scene_service = StudioSceneService(session, settings=resolved)
+    repaired = 0
+
+    for slide in sorted(presentations.list_slides(presentation.id), key=lambda item: item.order):
+        if slide.layout_plan_id is None:
+            continue
+        plan = plans.get(slide.layout_plan_id)
+        if plan is None or not _layout_has_unresolved_media_placeholder(plan):
+            continue
+        if slide.visual_intent_id is None:
+            intent_service = VisualIntentService(session, llm=None, settings=resolved)
+            intent = intent_service.generate_for_slide(slide, use_llm=False)
+            intent = VisualIntentRepository(session).save(intent)
+            slide.visual_intent_id = intent.id
+            presentations.save_slide(slide)
+        new_plan = plans.save(
+            _fallback_textual_layout(
+                slide=slide,
+                visual_intent_id=slide.visual_intent_id,
+                design_system_id=design.id,
+            )
+        )
+        slide.layout_plan_id = new_plan.id
+        presentations.save_slide(slide)
+        scene_service.ensure_scene_for_slide(slide.id, force_recompile=True)
+        repaired += 1
+
+    if commit and repaired > 0:
+        session.commit()
+    return repaired

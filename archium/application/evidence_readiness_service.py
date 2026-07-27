@@ -151,6 +151,13 @@ def resolve_delivery_readiness(
     from archium.application.visual.layout_readiness import presentation_has_visual_layout
 
     evidence = resolve_project_evidence(session, project_id)
+    if evidence.document_count > 0:
+        try:
+            from archium.application.genesis_starter_service import sync_starter_deck_after_materials
+
+            sync_starter_deck_after_materials(session, project_id, commit=True)
+        except Exception:
+            pass
     pptx_ready = False
     pdf_ready = False
     review_blocker_count = 0

@@ -260,6 +260,28 @@ def seed_starter_citations_from_documents(session: Session, project_id: UUID) ->
     return updated
 
 
+def sync_starter_deck_after_materials(
+    session: Session,
+    project_id: UUID,
+    *,
+    commit: bool = True,
+) -> tuple[int, int]:
+    """After documents import: seed placeholder citations and text-only wireframes when needed."""
+    from archium.application.genesis_cover_layout_service import (
+        repair_placeholder_wireframes_for_project,
+    )
+
+    citations = seed_starter_citations_from_documents(session, project_id)
+    wireframes = repair_placeholder_wireframes_for_project(
+        session,
+        project_id,
+        commit=False,
+    )
+    if commit and (citations > 0 or wireframes > 0):
+        session.commit()
+    return citations, wireframes
+
+
 def _starter_summary(
     *,
     page_count: int,

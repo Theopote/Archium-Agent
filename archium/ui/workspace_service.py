@@ -245,6 +245,13 @@ def import_uploaded_file(
 
     if reassess:
         reassess_knowledge_after_upload(session, project_id, settings=settings)
+    try:
+        from archium.application.genesis_starter_service import sync_starter_deck_after_materials
+
+        sync_starter_deck_after_materials(session, project_id, commit=True)
+    except Exception:
+        # Never fail the import path on starter-deck sync.
+        pass
     return result
 
 

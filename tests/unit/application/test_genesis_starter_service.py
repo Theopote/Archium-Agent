@@ -213,3 +213,73 @@ def test_ensure_deck_wireframe_layouts_is_idempotent(db_session) -> None:
     assert second.applied_count == 0
     assert second.layout_ready_count == starter.page_count
     assert second.skipped_count == starter.page_count
+
+
+def test_genesis_wireframes_are_textual_without_visual_assets(db_session) -> None:
+    from archium.application.genesis_cover_layout_service import project_has_usable_visual_assets
+    from archium.domain.visual.enums import LayoutContentType
+    from archium.infrastructure.database.visual_repositories import LayoutPlanRepository
+
+    project = ProjectRepository(db_session).create(Project(name="无素材线框"))
+    db_session.commit()
+    result = ensure_genesis_starter_draft(
+        db_session,
+        project.id,
+        prompt="概念汇报",
+        project_name=project.name,
+    )
+    assert not project_has_usable_visual_assets(db_session, project.id)
+    plan_repo = LayoutPlanRepository(db_session)
+    for slide in PresentationRepository(db_session).list_slides(result.presentation_id):
+        assert slide.layout_plan_id is not None
+        plan = plan_repo.get(slide.layout_plan_id)
+        assert plan is not None
+        assert plan.layout_variant == "genesis_fallback"
+        assert not any(
+            element.content_type in {LayoutContentType.IMAGE, LayoutContentType.DRAWING}
+            for element in plan.elements
+        )
+
+
+def test_sync_starter_deck_seeds_citations_from_documents(db_session) -> None:
+    from archium.application.genesis_starter_service import sync_starter_deck_after_materials
+    from archium.domain.document import SourceDocument
+    from archium.domain.enums import DocumentType, ProcessingStatus
+    from archium.domain.slide_role import SlideRole
+    from archium.infrastructure.database.repositories import DocumentRepository
+
+    project = ProjectRepository(db_session).create(Project(name="引用回填"))
+    db_session.commit()
+    starter = ensure_genesis_starter_draft(
+        db_session,
+        project.id,
+        prompt="测试引用",
+        project_name=project.name,
+    )
+    DocumentRepository(db_session).create_document(
+        SourceDocument(
+            project_id=project.id,
+            filename="brief.txt",
+            original_path="/tmp/brief.txt",
+            stored_path="/tmp/brief.txt",
+            file_type=DocumentType.OTHER,
+            file_hash="b" * 64,
+            size_bytes=128,
+            processing_status=ProcessingStatus.COMPLETED,
+        )
+    )
+    db_session.commit()
+
+    citations, wireframes = sync_starter_deck_after_materials(db_session, project.id)
+    assert citations >= 1
+    slides = PresentationRepository(db_session).list_slides(starter.presentation_id)
+    cited_roles = {
+        slide.slide_role
+        for slide in slides
+        if slide.source_citations and slide.slide_role in {
+            SlideRole.PROBLEM_ANALYSIS,
+            SlideRole.STRATEGY,
+        }
+    }
+    assert SlideRole.PROBLEM_ANALYSIS in cited_roles
+    assert SlideRole.STRATEGY in cited_roles
