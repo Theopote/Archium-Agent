@@ -136,7 +136,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
 
 
 def _render_readiness(context: StudioPresentationContext) -> None:
-    st.markdown("#### 准备度")
+    st.markdown("#### 交付准备度")
     pending = max(0, context.slide_count - context.layout_ready_count)
 
     warn_count = 0
@@ -159,22 +159,64 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         deck_qa_report=deck_qa_report,
         presentation_critique=critique if isinstance(critique, dict) else None,
     )
-    cols = st.columns(7)
-    cols[0].metric(
-        "页面完成",
-        f"{context.layout_ready_count}/{context.slide_count}"
-        if context.slide_count
-        else "0/0",
-    )
-    cols[1].metric("待完成页", pending)
-    cols[2].metric("PPTX", "可导出" if verdict.pptx_ready else "未齐")
-    cols[3].metric("PDF", "可导出" if verdict.pdf_ready else "未齐")
-    cols[4].metric("警告", warn_count + len(verdict.warnings))
-    cols[5].metric("阻塞项", len(verdict.blockers))
-    cols[6].metric("证据缺口", verdict.citation_gap_count)
-    st.caption(f"正式交付：{verdict.partner_summary()}")
-    for line in verdict.partner_lines(limit=5)[1:]:
-        st.caption(line)
+    blockers = len(verdict.blockers)
+    warnings = warn_count + len(verdict.warnings)
+    if blockers:
+        title, detail, icon, notice = (
+            "暂不可正式交付",
+            f"先处理 {blockers} 个阻塞项，再执行正式导出。",
+            ":material/error:",
+            st.error,
+        )
+    elif warnings or pending:
+        title, detail, icon, notice = (
+            "可以继续准备",
+            "没有硬阻塞，但建议处理提醒并复核页面后再交付。",
+            ":material/warning:",
+            st.warning,
+        )
+    else:
+        title, detail, icon, notice = (
+            "已具备交付条件",
+            "质量门禁已通过，可以选择格式并导出。",
+            ":material/check_circle:",
+            st.success,
+        )
+
+    with st.container(border=True):
+        st.markdown(f"**{title}**")
+        notice(f"{detail} {verdict.partner_summary()}", icon=icon)
+        with st.container(horizontal=True):
+            ready = (
+                f"{context.layout_ready_count}/{context.slide_count}"
+                if context.slide_count
+                else "0/0"
+            )
+            st.metric("页面就绪", ready, border=True)
+            st.metric("待完成", pending, border=True)
+            st.metric("阻塞", blockers, border=True)
+            st.metric("提醒", warnings, border=True)
+        st.caption(
+            ("PPTX 可导出" if verdict.pptx_ready else "PPTX 未就绪")
+            + " · "
+            + ("PDF 可导出" if verdict.pdf_ready else "PDF 未就绪")
+        )
+        lines = verdict.partner_lines(limit=6)[1:]
+        if lines:
+            st.markdown("**优先处理**")
+            for line in lines:
+                st.markdown(f"- {line}")
+        with st.container(horizontal=True):
+            st.page_link(
+                get_app_page("edit"),
+                label="回工作室修复",
+                icon=":material/edit:",
+            )
+            st.page_link(
+                get_app_page("materials"),
+                label="补充资料",
+                icon=":material/upload_file:",
+            )
 
     render_presentation_critique_card(context.presentation.id)
     render_design_critique_card(project_id=context.project.id)
@@ -186,7 +228,6 @@ def _render_readiness(context: StudioPresentationContext) -> None:
     if getattr(context.presentation, "mission_id", None):
         st.caption(f"汇报溯源 Mission：`{context.presentation.mission_id}`")
         st.page_link(get_app_page("project-mission"), label="打开项目任务 →")
-    st.page_link(get_app_page("edit"), label="有版面问题？回工作室 →")
 
 
 def _render_qa(project_id: UUID) -> None:

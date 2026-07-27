@@ -76,10 +76,13 @@ def test_art_direction_panel_leads_with_presentation_intelligence() -> None:
     assert preset_idx < form_idx
 
 
-def test_generate_page_exposes_showcase_case_001_rehearsal() -> None:
+def test_showcase_case_001_is_confined_to_developer_acceptance() -> None:
     generate = Path("archium/ui/pages/flow/generate.py").read_text(encoding="utf-8")
+    settings = Path("archium/ui/pages/settings.py").read_text(encoding="utf-8")
     panel = Path("archium/ui/showcase_case_001_panel.py").read_text(encoding="utf-8")
-    assert "render_showcase_case_001_panel" in generate
+    assert "render_showcase_case_001_panel" not in generate
+    assert "render_showcase_case_001_panel" in settings
+    assert "开发者与验收" in settings
     assert "Showcase 排练：Case 001" in panel
     assert "fragment_to_network" in panel
 

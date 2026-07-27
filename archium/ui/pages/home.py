@@ -307,12 +307,11 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
         render_genesis_draft_card(starter, compact=True)
         wireframe_complete = starter.layout_ready_count >= max(1, starter.page_count)
         if wireframe_complete:
-            cols = st.columns(2)
-            with cols[0]:
+            with st.container(horizontal=True):
                 if st.button(
                     "全稿鸟瞰",
                     key=f"home_deck_overview_{snapshot.project_id}",
-                    use_container_width=True,
+                    width="stretch",
                     type="primary",
                 ):
                     if snapshot.presentation_id is not None:
@@ -322,12 +321,11 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
                     st.session_state.studio_selected_slide_index = 0
                     st.session_state.studio_center_mode = "overview"
                     st.switch_page(get_app_page("edit"))
-            with cols[1]:
                 if snapshot.outline_approved:
                     if st.button(
                         "继续生成",
                         key=f"home_continue_generate_{snapshot.project_id}",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         if snapshot.presentation_id is not None:
                             st.session_state.selected_presentation_id = str(
@@ -337,7 +335,7 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
                 elif st.button(
                     "前往确认大纲",
                     key=f"home_confirm_outline_{snapshot.project_id}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.switch_page(get_app_page("outline"))
         elif st.button(
@@ -359,7 +357,7 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         st.markdown(f"### {snapshot.project_name}")
         st.caption(f"{greeting_for_now()} · 当前项目")
     with header_r:
-        if st.button("切换项目", use_container_width=True, key="home_switch_project"):
+        if st.button("切换项目", width="stretch", key="home_switch_project"):
             st.switch_page(get_app_page("project-management"))
 
     try:
@@ -397,7 +395,7 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         st.markdown("**总体进度**")
         _render_progress_bar(snapshot)
 
-    st.divider()
+    st.space("small")
     _render_partner_next_steps(snapshot)
     with st.expander("项目详情与高级信息", expanded=False):
         try:
@@ -459,17 +457,15 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         _render_pending_issues(snapshot)
         _render_recent_versions(snapshot)
 
-    st.divider()
-    cta_l, cta_r = st.columns([2, 1])
-    with cta_l:
+    st.space("small")
+    with st.container(horizontal=True, vertical_alignment="center"):
         if st.button(
-            "继续工作",
+            f"继续：{snapshot.continue_work_label}",
             type="primary",
-            use_container_width=True,
+            width="stretch",
             key="home_continue_primary",
         ):
             _select_and_continue(snapshot)
-    with cta_r:
         st.caption(snapshot.narrative_summary)
 
 def _render_other_projects(
@@ -493,7 +489,7 @@ def _render_other_projects(
                 if st.button(
                     "继续工作",
                     key=f"home_open_{snapshot.project_id}",
-                    use_container_width=True,
+                    width="stretch",
                     help="设为当前项目并进入建议阶段",
                 ):
                     _select_and_continue(snapshot)

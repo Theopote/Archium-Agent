@@ -22,13 +22,15 @@ DELIVER = ROOT / "archium" / "ui" / "pages" / "flow" / "deliver.py"
 
 def test_deliver_readiness_shows_pending_warnings_and_blockers() -> None:
     text = DELIVER.read_text(encoding="utf-8")
-    assert "页面完成" in text
-    assert "待完成页" in text
-    assert 'metric("PPTX"' in text or 'metric("PPTX",' in text
-    assert 'metric("PDF"' in text or 'metric("PDF",' in text
-    assert "阻塞项" in text
-    assert "证据缺口" in text
-    assert "evidence_readiness_service" in text
+    assert "交付准备度" in text
+    assert "页面就绪" in text
+    assert "PPTX 可导出" in text
+    assert "PDF 可导出" in text
+    assert "暂不可正式交付" in text
+    assert "优先处理" in text
+    assert "resolve_export_verdict_safe" in text
+    assert 'get_app_page("edit")' in text
+    assert 'get_app_page("materials")' in text
     assert "_render_delivery_record_actions" in text
     # Must not collapse warnings into the pending metric.
     assert "pending if pending else warn_count" not in text

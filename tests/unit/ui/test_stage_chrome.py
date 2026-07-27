@@ -299,9 +299,11 @@ def test_deliver_readiness_shows_separate_metrics() -> None:
         / "deliver.py"
     )
     text = deliver_src.read_text(encoding="utf-8")
-    assert "页面完成" in text
-    assert 'metric("警告"' in text or 'metric("警告",' in text
-    assert "待完成页" in text
-    assert "PPTX" in text
+    assert "交付准备度" in text
+    assert 'metric("阻塞"' in text
+    assert 'metric("提醒"' in text
+    assert "页面就绪" in text
+    assert "待完成" in text
+    assert "PPTX 可导出" in text
     assert "DeliveryRecordService" in text
     assert "版本记录保存失败" not in text  # warning lives in export_panel
