@@ -90,3 +90,9 @@ def test_narrative_summary_genesis_shortcut() -> None:
     snapshot = _snapshot(slide_count=6, has_outline=True)
     assert "Genesis" in snapshot.narrative_summary
     assert "大纲" in snapshot.narrative_summary
+
+
+def test_stage_order_for_redirect_hint() -> None:
+    from archium.ui.pages.flow import _STAGE_ORDER
+
+    assert _STAGE_ORDER.index("deliver") > _STAGE_ORDER.index("outline")

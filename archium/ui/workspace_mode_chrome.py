@@ -193,15 +193,15 @@ def flow_stage_caption(
             if genesis_shortcut:
                 return "当前为草稿捷径预览；确认大纲后可运行正式生成管线。"
             if snapshot.slide_count <= 0:
-                return "运行汇报管线，生成页面内容与版式预览。"
+                return "运行内容生成管线，生成页面文字与结构。"
             if snapshot.pending_count > 0:
-                return "部分页面版式待完成；可在工作室补做。"
+                return "部分页面版式待完成；可在工作室补做版式。"
 
         if stage_id == "edit":
             if genesis_shortcut:
                 return "预览 Genesis 线框草稿；确认大纲后可迭代正式版式。"
             if snapshot.slide_count <= 0:
-                return "尚无页面；请先在生成页运行汇报管线。"
+                return "尚无页面；请先在生成页运行内容生成管线。"
 
     display = load_project_knowledge_display(project_id)
     if display is None:

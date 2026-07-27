@@ -588,4 +588,9 @@ def _render_image_search_settings() -> None:
 
         render_benchmark_review_panel()
         st.divider()
+        from archium.ui.showcase_case_001_panel import render_showcase_case_001_panel
+
+        with st.expander("Showcase Case 001（本地基准）", expanded=False):
+            render_showcase_case_001_panel()
+        st.divider()
         render_visual_qa_corpus_panel()

@@ -273,6 +273,8 @@ def test_generate_stage_shows_page_queue() -> None:
     assert "处理问题页" in text
     assert "进入工作室" in text
     assert "render_generate_stage" in text
+    assert "CONTENT_PIPELINE_ACTION" in text
+    assert "showcase_case_001" not in text
 
 
 def test_deliver_stage_is_export_focused() -> None:

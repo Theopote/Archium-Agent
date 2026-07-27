@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from archium.domain.slide_role import SlideRole
 
+# Distinct user-facing actions (avoid overloading「生成」).
+CONTENT_PIPELINE_ACTION = "运行内容生成管线"
+LAYOUT_GENERATION_ACTION = "生成页面版式"
+
 ENTITY_LABELS: dict[str, str] = {
     "ProjectMission": "我们对任务的理解",
     "KnowledgeGap": "还需要确认的信息",

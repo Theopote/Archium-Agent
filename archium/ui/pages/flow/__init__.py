@@ -271,7 +271,7 @@ def evaluate_stage_access(
             warnings.append("仍有页面设计摘要未批准；正式生成前需在大纲页完成确认。")
 
     if stage_id == "edit" and snapshot.slide_count <= 0:
-        warnings.append("尚无页面内容；请先在生成页运行管线，或从大纲确认后生成。")
+        warnings.append("尚无页面内容；请先在生成页运行内容生成管线，或从大纲确认后生成。")
 
     if stage_id == "deliver":
         if genesis_shortcut:
@@ -298,6 +298,30 @@ def render_stage_access_advisory(
     """Soft gate when users jump ahead via sidebar navigation."""
     for message in evaluate_stage_access(stage_id, snapshot):
         render_warning_callout(message)
+
+
+_STAGE_ORDER = ("materials", "outline", "generate", "edit", "deliver")
+
+
+def render_stage_redirect_hint(
+    stage_id: str,
+    snapshot: ProjectProgressSnapshot | None,
+) -> None:
+    """Suggest the recommended stage when sidebar navigation jumps ahead."""
+    if snapshot is None:
+        return
+    recommended = snapshot.current_stage_id
+    if recommended not in _STAGE_ORDER or stage_id not in _STAGE_ORDER:
+        return
+    if _STAGE_ORDER.index(stage_id) <= _STAGE_ORDER.index(recommended):
+        return
+    target = get_stage(recommended)
+    st.info(f"建议先完成「{target.title}」阶段，再继续当前页面。")
+    if st.button(
+        f"前往{target.title}",
+        key=f"flow_redirect_{stage_id}_{recommended}",
+    ):
+        st.switch_page(get_app_page(target.page_key))
 
 
 def _stage_next_action_label(
@@ -599,6 +623,7 @@ def render_stage_header(stage_id: str) -> None:
     else:
         render_page_header(stage.title, caption)
     render_stage_access_advisory(stage_id, snapshot)
+    render_stage_redirect_hint(stage_id, snapshot)
     render_flow_stepper(stage_id)
     render_concept_draft_banner(snapshot)
 

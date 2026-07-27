@@ -18,6 +18,7 @@ from archium.ui.pages.flow import (
     render_stage_header,
     render_stage_nav,
 )
+from archium.ui.label_map import CONTENT_PIPELINE_ACTION
 from archium.ui.pages.workspace import render_generate_stage
 from archium.ui.product_flow import product_studio_page_key
 from archium.ui.project_progress_card import load_project_progress_snapshot
@@ -117,7 +118,7 @@ def _render_page_queue(project_id: UUID, presentation_id: UUID) -> bool:
     _render_queue_summary(metrics)
 
     if not board.rows:
-        st.info("尚未生成页面。展开下方「运行汇报管线」开始生成。")
+        st.info(f"尚未生成页面。展开下方「{CONTENT_PIPELINE_ACTION}」开始生成。")
         return False
 
     st.markdown("#### 逐页队列")
@@ -193,7 +194,7 @@ def _render_starter_content_banner(project_id: UUID) -> None:
         st.info(
             f"Genesis 已生成 {starter.slides_ready_count} 页内容占位"
             f"（{starter.layout_ready_count}/{starter.page_count} 页线框）。"
-            "运行下方「汇报管线」补齐正式版式，或到工作室浏览故事结构。"
+            "运行下方「内容生成管线」补齐正式版式，或到工作室浏览故事结构。"
         )
 
     cols = st.columns(2)
@@ -232,16 +233,12 @@ def render() -> None:
         try:
             has_attention = _render_page_queue(project_id, presentation_id)
         except Exception:
-            st.warning("逐页状态暂不可用。可先运行汇报管线。")
+            st.warning(f"逐页状态暂不可用。可先{CONTENT_PIPELINE_ACTION}。")
     else:
-        st.info("当前项目尚无汇报。展开下方「运行汇报管线」创建并生成。")
+        st.info(f"当前项目尚无汇报。展开下方「{CONTENT_PIPELINE_ACTION}」创建并生成。")
 
-    with st.expander("运行汇报管线", expanded=presentation_id is None):
+    with st.expander(CONTENT_PIPELINE_ACTION, expanded=presentation_id is None):
         render_generate_stage(project_id, include_export=False)
-
-    from archium.ui.showcase_case_001_panel import render_showcase_case_001_panel
-
-    render_showcase_case_001_panel()
 
     snapshot = None
     try:

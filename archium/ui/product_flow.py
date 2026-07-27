@@ -49,7 +49,7 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
     ProductStage(
         id="generate",
         title="生成",
-        caption="生成页面内容与版式预览，处理错误与进度。",
+        caption="运行内容管线，生成页面文字与结构；版式在工作室补做。",
         page_key="generate",
         icon=icons.GENERATE,
     ),
