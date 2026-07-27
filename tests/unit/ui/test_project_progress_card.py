@@ -144,3 +144,18 @@ def test_cockpit_task_summary_has_tasks() -> None:
     assert not empty.has_tasks
     filled = CockpitTaskSummary(lines=("3 页缺少素材",))
     assert filled.has_tasks
+
+
+def test_sidebar_progress_is_compact_single_line() -> None:
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[3]
+        / "archium"
+        / "ui"
+        / "project_progress_card.py"
+    ).read_text(encoding="utf-8")
+    render_block = source.split("def render_project_progress_card", 1)[1]
+    assert "当前进度" not in render_block
+    assert 'f"资料 {snapshot.materials_label} · 大纲 {snapshot.outline_label} · "' in render_block
+    assert "待处理：" not in render_block

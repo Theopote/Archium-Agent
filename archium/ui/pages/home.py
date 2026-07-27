@@ -19,6 +19,7 @@ from archium.ui.project_progress_card import (
     list_recent_project_snapshots,
     load_cockpit_task_summary,
 )
+from archium.ui.session_context import select_project_context
 from archium.ui.workspace_service import list_project_presentations
 
 logger = logging.getLogger(__name__)
@@ -47,9 +48,11 @@ def _apply_studio_overview_for_wireframe_deck(snapshot: ProjectProgressSnapshot)
 
 
 def _select_and_continue(snapshot: ProjectProgressSnapshot) -> None:
-    st.session_state.selected_project_id = str(snapshot.project_id)
-    if snapshot.presentation_id is not None:
-        st.session_state.selected_presentation_id = str(snapshot.presentation_id)
+    select_project_context(
+        st.session_state,
+        snapshot.project_id,
+        presentation_id=snapshot.presentation_id,
+    )
     page_key = continue_work_page_key(snapshot)
     if page_key == "edit":
         _apply_studio_overview_for_wireframe_deck(snapshot)

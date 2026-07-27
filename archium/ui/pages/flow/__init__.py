@@ -27,6 +27,7 @@ from archium.ui.project_progress_card import (
     ProjectProgressSnapshot,
     load_project_progress_snapshot,
 )
+from archium.ui.session_context import select_project_context
 
 _NEXT_ACTION_LABELS = {
     "materials": "确认资料并进入大纲 →",
@@ -680,8 +681,7 @@ def render_flow_project_context(
             key=f"{key_prefix}_project_switch",
         )
         if picked != str(selected):
-            st.session_state.selected_project_id = picked
-            st.session_state.selected_presentation_id = None
+            select_project_context(st.session_state, picked)
             st.rerun()
     return UUID(str(selected))
 

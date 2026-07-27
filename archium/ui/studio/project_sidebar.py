@@ -8,7 +8,10 @@ import streamlit as st
 
 from archium.infrastructure.database.session import get_session
 from archium.ui.label_map import STATUS_LABELS, entity_label
-from archium.ui.studio.canvas_command_bridge import set_studio_selection
+from archium.ui.session_context import (
+    select_presentation_context,
+    select_project_context,
+)
 from archium.ui.studio.onboarding_panel import (
     render_studio_import_panel,
     render_studio_no_presentation_hint,
@@ -77,8 +80,7 @@ def render_studio_selection(
     if compact:
         selected_project = project_options[default_project_index]
         if st.session_state.selected_project_id not in project_options:
-            st.session_state.selected_project_id = selected_project
-            st.session_state.selected_presentation_id = None
+            select_project_context(st.session_state, selected_project)
     else:
         selector_cols = st.columns([1, 1, 1.2])
         with selector_cols[0]:
@@ -90,10 +92,9 @@ def render_studio_selection(
                 key="studio_project_select",
             )
         if selected_project != st.session_state.selected_project_id:
-            st.session_state.selected_presentation_id = None
-            st.session_state.studio_selected_slide_index = 0
-            set_studio_selection([])
-        st.session_state.selected_project_id = selected_project
+            select_project_context(st.session_state, selected_project)
+        else:
+            st.session_state.selected_project_id = selected_project
 
     project_id = UUID(selected_project)
 
@@ -124,13 +125,12 @@ def render_studio_selection(
             picked = select_presentation(session, presentations)
         if picked is not None and str(picked.id) in presentation_options:
             default_presentation_index = presentation_options.index(str(picked.id))
-            st.session_state.selected_presentation_id = str(picked.id)
+            select_presentation_context(st.session_state, picked.id)
 
     if compact:
         selected_presentation = presentation_options[default_presentation_index]
         if st.session_state.selected_presentation_id not in presentation_options:
-            st.session_state.selected_presentation_id = selected_presentation
-            st.session_state.studio_selected_slide_index = 0
+            select_presentation_context(st.session_state, selected_presentation)
         st.caption(
             f"{project_labels[selected_project]} · "
             f"{presentation_labels[selected_presentation]}"
@@ -144,8 +144,7 @@ def render_studio_selection(
                 key="studio_compact_project",
             )
             if picked_project != selected_project:
-                st.session_state.selected_project_id = picked_project
-                st.session_state.selected_presentation_id = None
+                select_project_context(st.session_state, picked_project)
                 st.rerun()
             picked_presentation = st.selectbox(
                 "汇报",
@@ -155,8 +154,7 @@ def render_studio_selection(
                 key="studio_compact_presentation",
             )
             if picked_presentation != selected_presentation:
-                st.session_state.selected_presentation_id = picked_presentation
-                st.session_state.studio_selected_slide_index = 0
+                select_presentation_context(st.session_state, picked_presentation)
                 st.rerun()
     else:
         with selector_cols[1]:
@@ -168,9 +166,9 @@ def render_studio_selection(
                 key="studio_presentation_select",
             )
         if selected_presentation != st.session_state.selected_presentation_id:
-            st.session_state.studio_selected_slide_index = 0
-            set_studio_selection([])
-        st.session_state.selected_presentation_id = selected_presentation
+            select_presentation_context(st.session_state, selected_presentation)
+        else:
+            st.session_state.selected_presentation_id = selected_presentation
 
     presentation_id = UUID(selected_presentation)
 

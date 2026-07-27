@@ -576,9 +576,7 @@ def render_project_progress_card() -> None:
     meta_bits.append(f"最近编辑 {_format_relative_time(snapshot.updated_at)}")
     st.caption(" · ".join(meta_bits))
 
-    st.markdown('<div class="section-label">当前进度</div>', unsafe_allow_html=True)
-    st.caption(f"资料：{snapshot.materials_label}")
-    st.caption(f"大纲：{snapshot.outline_label}")
-    st.caption(f"生成：{snapshot.generate_label}")
-    st.caption(f"待处理：{snapshot.pending_count} 页")
-    st.caption(f"交付：{snapshot.deliver_label}")
+    st.caption(
+        f"资料 {snapshot.materials_label} · 大纲 {snapshot.outline_label} · "
+        f"生成 {snapshot.generate_label} · 交付 {snapshot.deliver_label}"
+    )
