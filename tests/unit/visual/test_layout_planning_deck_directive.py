@@ -54,6 +54,13 @@ def _directive(
     )
 
 
+def _closing_directive() -> SlideCompositionDirective:
+    directive = _directive(preferred=[LayoutFamily.TEXTUAL_ARGUMENT])
+    directive.pacing_role = PacingRole.CLOSING
+    directive.target_density = DensityLevel.SPACIOUS
+    return directive
+
+
 class TestLayoutPlanningDeckDirective:
     def test_select_best_prefers_directive_family(self) -> None:
         service = LayoutPlanningService.__new__(LayoutPlanningService)
@@ -200,3 +207,23 @@ class TestLayoutPlanningDeckDirective:
             deck_directive=directive,
         )
         assert decisions[0].layout_family == LayoutFamily.HERO.value
+
+    def test_closing_prefers_poster_quote_variant(self) -> None:
+        from archium.infrastructure.llm.visual_schemas import LayoutDecisionDraft
+
+        decisions = [
+            LayoutDecisionDraft(
+                layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
+                layout_variant="lead_and_points",
+            ),
+            LayoutDecisionDraft(
+                layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
+                layout_variant="quote_argument",
+            ),
+        ]
+        ordered = LayoutPlanningService._apply_directive_to_decisions(
+            decisions,
+            _closing_directive(),
+            candidate_count=2,
+        )
+        assert ordered[0].layout_variant == "quote_argument"

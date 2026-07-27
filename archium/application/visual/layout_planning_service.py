@@ -31,7 +31,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
-from archium.domain.visual.deck_composition import SlideCompositionDirective
+from archium.domain.visual.deck_composition import PacingRole, SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import (
     DensityLevel,
@@ -919,7 +919,7 @@ class LayoutPlanningService:
             (family.value, variant) for family, variant in style_pref.preferred_variants
         ]
 
-        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, str, str]:
+        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, int, str, str]:
             if preferred_family_values and item.layout_family in preferred_family_values:
                 family_rank = preferred_family_values.index(item.layout_family)
             else:
@@ -929,7 +929,21 @@ class LayoutPlanningService:
                 variant_rank = preferred_variant_keys.index(variant_key)
             else:
                 variant_rank = len(preferred_variant_keys)
-            return family_rank, variant_rank, item.layout_family, item.layout_variant
+            closing_rank = (
+                0
+                if deck_directive is not None
+                and deck_directive.pacing_role == PacingRole.CLOSING
+                and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+                and item.layout_variant == "quote_argument"
+                else 1
+            )
+            return (
+                family_rank,
+                closing_rank,
+                variant_rank,
+                item.layout_family,
+                item.layout_variant,
+            )
 
         pool = sorted(pool, key=sort_key)
         deduped: list[LayoutDecisionDraft] = []

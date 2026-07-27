@@ -110,12 +110,17 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                 first_w = board.width * 0.56
                 second_x = board.x + board.width * 0.62
                 cells = [
-                    Rect(board.x, board.y, first_w, board.height),
+                    Rect(
+                        board.x,
+                        board.y + board.height * 0.08,
+                        first_w,
+                        board.height * 0.48,
+                    ),
                     Rect(
                         second_x,
-                        board.y + board.height * 0.14,
+                        board.y + board.height * 0.48,
                         board.right - second_x,
-                        board.height * 0.72,
+                        board.height * 0.36,
                     ),
                 ]
             else:

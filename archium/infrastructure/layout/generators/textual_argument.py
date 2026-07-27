@@ -40,7 +40,39 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
         body_top = safe.y + title_h + spacing.md
         body = Rect(safe.x, body_top, safe.width, max(1.0, safe.bottom - body_top - spacing.sm))
 
-        if context.variant == "two_column_text":
+        if context.variant == "quote_argument":
+            lead_w = body.width * 0.62
+            elements.append(
+                LayoutElement(
+                    id="lead",
+                    role=LayoutElementRole.LEAD_STATEMENT,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=context.content.message,
+                    x=body.x,
+                    y=body.y + body.height * 0.08,
+                    width=lead_w,
+                    height=body.height * 0.68,
+                    style_token="title",
+                )
+            )
+            points = "\n".join(
+                f"{index + 1:02}. {point}"
+                for index, point in enumerate(context.content.key_points[:3])
+            ) or "下一步行动待确认"
+            elements.append(
+                LayoutElement(
+                    id="body",
+                    role=LayoutElementRole.ANNOTATION,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=points,
+                    x=body.x + body.width * 0.72,
+                    y=body.y + body.height * 0.56,
+                    width=body.width * 0.28,
+                    height=body.height * 0.28,
+                    style_token="caption",
+                )
+            )
+        elif context.variant == "two_column_text":
             left, right = split_horizontal(body, left_ratio=0.48, gap=spacing.lg)
             elements.append(
                 LayoutElement(
