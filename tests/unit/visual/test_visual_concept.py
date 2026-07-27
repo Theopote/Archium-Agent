@@ -28,7 +28,7 @@ def test_traffic_conflict_gets_fragment_to_network_concept() -> None:
         direction.visual_concept.visual_metaphor
         == VisualMetaphor.FRAGMENT_TO_NETWORK
     )
-    assert direction.visual_concept.color_story[:3] == ["gray", "red", "white"]
+    assert direction.visual_concept.color_story[:3] == ["gray", "red", "renew_green"]
     assert LayoutFamily.ANALYTICAL_DIAGRAM in direction.preferred_layout_families
     assert LayoutFamily.STRATEGY_CARDS in direction.forbidden_layout_families
     card = direction.as_page_claim()

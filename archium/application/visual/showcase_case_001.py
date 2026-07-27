@@ -288,6 +288,21 @@ def write_case_001_dry_run(
 
     rhythm = assert_case_001_rhythm(bundle.composition)
     rhythm["style_preset_id"] = bundle.style_preset_id
+
+    from archium.domain.visual.rhythm_engine import analyse_rhythm
+
+    rhythm_report = analyse_rhythm(bundle.composition)
+    rhythm["tension_curve"] = rhythm_report.tension_curve
+    rhythm["beat_kinds"] = [b.value for b in rhythm_report.beat_kinds]
+    rhythm["peak_positions"] = rhythm_report.peak_positions
+    rhythm["breath_positions"] = rhythm_report.breath_positions
+    rhythm["longest_flat_run"] = rhythm_report.longest_flat_run
+    rhythm["is_monotone"] = rhythm_report.is_monotone
+    rhythm["findings"] = [
+        {"rule_code": f.rule_code, "slides": f.slide_indices, "message": f.message, "suggestion": f.suggestion}
+        for f in rhythm_report.findings
+    ]
+    rhythm["suggestions"] = rhythm_report.suggestions
     (out / "rhythm_snapshot.json").write_text(
         json.dumps(rhythm, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
