@@ -10,6 +10,7 @@ import streamlit as st
 from archium.domain.slide_role import SlideRole
 from archium.ui.label_map import slide_role_label
 from archium.ui.page_status_board_panel import status_badge
+from archium.ui.studio.deck_content_placeholder import content_placeholder_html
 from archium.ui.studio.slide_navigator import _set_selected_slide, _status_by_slide
 from archium.ui.studio_service import StudioPresentationContext
 
@@ -93,9 +94,11 @@ def render_deck_overview(
                     st.image(preview_path, use_container_width=True)
                 else:
                     st.markdown(
-                        f'<div style="aspect-ratio:16/9;background:#f4f2ee;border:1px solid #e0ddd6;'
-                        f'border-radius:6px;display:flex;align-items:center;justify-content:center;'
-                        f'color:#8a8780;font-size:0.8rem;">P{index + 1}</div>',
+                        content_placeholder_html(
+                            index=index,
+                            slide=slide,
+                            accent_color=color,
+                        ),
                         unsafe_allow_html=True,
                     )
 

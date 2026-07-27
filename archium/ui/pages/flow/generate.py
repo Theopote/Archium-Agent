@@ -169,6 +169,40 @@ def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> No
         st.page_link(get_app_page("deliver"), label="版式已齐，前往交付", icon=icons.DELIVER)
 
 
+def _render_starter_content_banner(project_id: UUID) -> None:
+    from archium.application.genesis_starter_service import get_genesis_starter_state
+
+    with get_session() as session:
+        starter = get_genesis_starter_state(session, project_id)
+    if starter is None:
+        return
+    if starter.slides_ready_count < starter.page_count:
+        return
+    snapshot = load_project_progress_snapshot()
+    if snapshot is None or snapshot.layout_ready_count >= snapshot.slide_count:
+        return
+    st.info(
+        f"Genesis 已为全稿生成 {starter.slides_ready_count} 页内容占位（封面含版式线框）。"
+        "运行下方「汇报管线」生成其余页版式，或到工作室切换「全稿鸟瞰」浏览故事结构。"
+    )
+    cols = st.columns(2)
+    with cols[0]:
+        if st.button(
+            "全稿鸟瞰",
+            key=f"generate_deck_overview_{project_id}",
+            use_container_width=True,
+        ):
+            st.session_state.studio_center_mode = "overview"
+            st.switch_page(get_app_page(product_studio_page_key()))
+    with cols[1]:
+        if st.button(
+            "进入工作室",
+            key=f"generate_open_studio_{project_id}",
+            use_container_width=True,
+        ):
+            st.switch_page(get_app_page(product_studio_page_key()))
+
+
 def render() -> None:
     render_stage_header("generate")
     st.caption("主体是逐页队列。版式微调请到「工作室」；导出在「交付」。")
@@ -179,6 +213,7 @@ def render() -> None:
         return
 
     _render_project_context_readiness(project_id)
+    _render_starter_content_banner(project_id)
 
     presentation_id = _selected_presentation_id(project_id)
     has_attention = False

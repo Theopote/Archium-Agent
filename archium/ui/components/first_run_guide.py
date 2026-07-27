@@ -42,7 +42,7 @@ def render_genesis_next_steps(*, project_id: str, has_draft: bool = False) -> No
     st.markdown("**从这里继续**")
     if has_draft:
         project_id_str = str(st.session_state.get("selected_project_id") or project_id)
-        cols = st.columns(3)
+        cols = st.columns(4)
         with cols[0]:
             if st.button(
                 "进入工作室",
@@ -55,15 +55,24 @@ def render_genesis_next_steps(*, project_id: str, has_draft: bool = False) -> No
                 st.switch_page(get_app_page("edit"))
         with cols[1]:
             if st.button(
+                "全稿鸟瞰",
+                key=f"first_run_overview_{project_id}",
+                use_container_width=True,
+            ):
+                st.session_state.selected_project_id = project_id_str
+                st.session_state.studio_center_mode = "overview"
+                st.switch_page(get_app_page("edit"))
+        with cols[2]:
+            if st.button(
                 "查看大纲",
                 key=f"first_run_outline_{project_id}",
                 use_container_width=True,
             ):
                 st.session_state.selected_project_id = project_id_str
                 st.switch_page(get_app_page("outline"))
-        with cols[2]:
+        with cols[3]:
             if st.button(
-                "探索设计方向",
+                "探索方向",
                 key=f"first_run_explore_{project_id}",
                 use_container_width=True,
             ):

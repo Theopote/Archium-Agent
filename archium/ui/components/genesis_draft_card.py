@@ -45,6 +45,25 @@ def _resolve_cover_preview_path(result: GenesisStarterResult) -> str | None:
         return cover_wireframe_preview_path(session, result.presentation_id)
 
 
+def _load_all_slides(presentation_id: UUID) -> list[tuple[int, str, str, str]]:
+    with get_session() as session:
+        slides = PresentationRepository(session).list_slides(presentation_id)
+    rows: list[tuple[int, str, str, str]] = []
+    for slide in sorted(slides, key=lambda item: item.order):
+        from archium.ui.label_map import slide_role_label
+
+        role = slide_role_label(getattr(slide, "slide_role", None))
+        rows.append(
+            (
+                slide.order,
+                (slide.title or "未命名").strip(),
+                (slide.message or "").strip()[:80],
+                role,
+            )
+        )
+    return rows
+
+
 def render_genesis_draft_card(result: GenesisStarterResult, *, compact: bool = False) -> None:
     """Show starter outline summary, wireframe/content preview, and navigation CTAs."""
     st.markdown("**大纲草稿已就绪**")
@@ -76,6 +95,14 @@ def render_genesis_draft_card(result: GenesisStarterResult, *, compact: bool = F
                 f"</div>",
                 unsafe_allow_html=True,
             )
+
+    all_slides = _load_all_slides(result.presentation_id)
+    if len(all_slides) > 1:
+        with st.expander(f"浏览全稿占位（{len(all_slides)} 页）", expanded=False):
+            for order, title, message, role in all_slides:
+                st.markdown(f"**P{order + 1} · {title}** · {role}")
+                if message:
+                    st.caption(message)
 
     if compact:
         return

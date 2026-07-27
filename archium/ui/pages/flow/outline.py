@@ -851,14 +851,15 @@ def _render_outline_draft_banner(outline: OutlinePlan | None, *, slide_count: in
         return
     if not outline.sections:
         return
+    intent_count = len(outline.page_intents) or len(outline.sections)
     st.success(
-        f"Genesis 已生成 {len(outline.page_intents) or len(outline.sections)} 页大纲草稿。"
+        f"Genesis 已生成 {intent_count} 页大纲草稿。"
         + (
-            f" {slide_count} 页内容占位已就绪，可在工作室浏览全稿。"
+            f" {slide_count}/{intent_count} 页内容占位已写入 SlideSpec。"
             if slide_count > 0
             else ""
         )
-        + " 请逐页确认意图，或在工作室预览封面。"
+        + " 请逐页确认意图，或在工作室「全稿鸟瞰」浏览整套故事。"
     )
 
 
