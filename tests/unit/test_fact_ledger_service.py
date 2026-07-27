@@ -15,6 +15,21 @@ def _seed_project(db_session: Session) -> Project:
     return ProjectRepository(db_session).create(Project(name="Fact Ledger 测试"))
 
 
+def test_ledger_uses_project_type_aware_missing_keys(db_session: Session) -> None:
+    project = ProjectRepository(db_session).create(
+        Project(
+            name="陕西三原县清凉寺重建",
+            description="原址重建寺庙，投资约2亿元",
+        )
+    )
+
+    ledger = FactLedgerService(db_session).get_ledger(project.id)
+
+    assert "bed_count" not in ledger.missing_standard_keys
+    assert "plot_ratio" not in ledger.missing_standard_keys
+    assert "project_name" in ledger.missing_standard_keys
+
+
 def test_ledger_lists_standard_keys_and_missing(db_session: Session) -> None:
     project = _seed_project(db_session)
     FactRepository(db_session).create(

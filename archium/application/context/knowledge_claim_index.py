@@ -19,6 +19,24 @@ from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 
 
+def _assessment_only_unknowns(
+    llm_unknown: list[str] | None,
+    *,
+    gaps: tuple[KnowledgeGapEntry, ...] | list[KnowledgeGapEntry],
+) -> list[str] | None:
+    """Keep qualitative LLM unknowns; drop stale standard-fact lines when gaps are fresh."""
+    if not llm_unknown:
+        return None
+    if not gaps:
+        return llm_unknown
+    filtered = [
+        text
+        for text in llm_unknown
+        if not str(text).strip().startswith("缺少标准事实：")
+    ]
+    return filtered or None
+
+
 def merge_claim_index_into_state(
     state: KnowledgeState,
     evidence: ProjectEvidencePack,
@@ -31,7 +49,10 @@ def merge_claim_index_into_state(
     )
     open_unknowns = unknowns_from_evidence(
         gaps=evidence.indexed_gaps,
-        llm_unknown=state.unknown or state.missing_information,
+        llm_unknown=_assessment_only_unknowns(
+            state.unknown or state.missing_information,
+            gaps=evidence.indexed_gaps,
+        ),
     )
     known = known_projection(claims, fallback=state.known)
     unknown = [item.description for item in open_unknowns]

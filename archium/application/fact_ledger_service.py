@@ -63,14 +63,31 @@ class FactLedgerService:
         self._settings = settings or get_settings()
 
     def get_ledger(self, project_id: UUID) -> FactLedgerView:
+        from archium.application.knowledge_gap_detection import resolve_required_fact_keys
+        from archium.application.project_context_routing import skips_default_clarification
+        from archium.infrastructure.database.repositories import ProjectRepository
+
         facts = self._facts.list_by_project(project_id)
         by_key = {fact.key: fact for fact in facts}
         entries: list[FactLedgerEntry] = []
         missing: list[str] = []
 
+        project = ProjectRepository(self._session).get_by_id(project_id)
+        lightweight = (
+            skips_default_clarification(self._session, project_id) if project else False
+        )
+        description = (project.description or "") if project is not None else ""
+        required_keys = resolve_required_fact_keys(
+            facts=facts,
+            project_name=project.name if project is not None else "",
+            project_description=description,
+            lightweight=lightweight,
+        )
+        required_key_set = set(required_keys)
+
         for definition in STANDARD_FACT_KEYS:
             fact = by_key.get(definition.key)
-            if fact is None:
+            if definition.key in required_key_set and fact is None:
                 missing.append(definition.key)
             entries.append(
                 FactLedgerEntry(

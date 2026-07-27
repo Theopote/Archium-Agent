@@ -77,6 +77,36 @@ def test_unknowns_prefer_structured_gaps() -> None:
     assert sum(1 for u in unknowns if "建筑面积" in u.description) == 1
 
 
+def test_merge_claim_index_drops_stale_standard_fact_llm_unknowns() -> None:
+    project_id = uuid4()
+    pack = ProjectEvidencePack(
+        indexed_gaps=(
+            KnowledgeGapEntry(
+                gap_id="missing:main_function",
+                category="missing_fact",
+                description="缺少标准事实：主要功能",
+                why_it_matters="x",
+                blocking=False,
+                related_keys=("main_function",),
+            ),
+        ),
+    )
+    state = KnowledgeState(
+        unknown=[
+            "缺少标准事实：床位数",
+            "缺少标准事实：容积率",
+            "甲方诉求尚未明确",
+        ],
+        completeness_score=0.1,
+    )
+    merged = merge_claim_index_into_state(state, pack)
+    descriptions = [item.description for item in merged.open_unknowns]
+    assert "缺少标准事实：主要功能" in descriptions
+    assert not any("床位数" in item for item in descriptions)
+    assert not any("容积率" in item for item in descriptions)
+    assert any("甲方诉求尚未明确" in item for item in descriptions)
+
+
 def test_merge_claim_index_into_state_sets_counts() -> None:
     project_id = uuid4()
     fact = ProjectFact(
