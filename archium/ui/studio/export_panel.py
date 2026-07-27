@@ -159,6 +159,24 @@ def _export_pptx(
     from archium.ui.delivery.fidelity_report_panel import store_manifest
 
     policy = get_session_export_policy()
+    if not require_formal_gate:
+        # 非正式（工作稿）目标是“尽可能生成可交付工作版本”，
+        # 因此放宽未解析素材/closure 校验等硬门禁，并允许降级到图片式渲染。
+        from archium.domain.export_fidelity import ExportFidelityLevel
+
+        policy = policy.model_copy(
+            update={
+                "required_fidelity": ExportFidelityLevel.RASTER_FALLBACK,
+                "allow_slide_level_fallback": True,
+                "allow_hybrid_editable": True,
+                "allow_text_editable_background": True,
+                "allow_raster_fallback": True,
+                "fail_on_missing_fonts": False,
+                "fail_on_unresolved_assets": False,
+                "fail_on_reference_leakage": False,
+                "fail_on_drawing_crop": False,
+            }
+        )
     try:
         if require_formal_gate:
             _assert_export_gate(
@@ -180,7 +198,11 @@ def _export_pptx(
                 revision_id=revision_id,
                 settings=settings,
             )
-            ExportPolicyService().enforce_export_policy(manifest, policy=policy)
+            ExportPolicyService().enforce_export_policy(
+                manifest,
+                policy=policy,
+                strict_closure=require_formal_gate,
+            )
 
         with st.spinner("正在导出 PPTX…"), get_session() as session:
             pptx_export_result: RenderResult = export_presentation_from_studio(

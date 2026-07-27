@@ -212,6 +212,7 @@ class ExportPolicyService:
         manifest: DeckExportManifest,
         *,
         policy: ExportPolicy | None = None,
+        strict_closure: bool = True,
     ) -> None:
         """Raise WorkflowError when export would silently degrade below policy."""
         active = policy or manifest.requested_policy
@@ -222,7 +223,7 @@ class ExportPolicyService:
                     f"页面 {slide.slide_id} 存在 Capability Contract 不支持的节点："
                     + "；".join(slide.unsupported_node_ids)
                 )
-            if not slide.closure_valid:
+            if strict_closure and not slide.closure_valid:
                 raise WorkflowError(
                     f"页面 {slide.slide_id} 未通过 RenderScene Closure 校验，禁止导出。"
                 )
