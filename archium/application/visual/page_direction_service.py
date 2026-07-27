@@ -283,7 +283,9 @@ class PageDirectionService:
             direction = self._apply_expression_mode(
                 direction, mode, prefer_mode_lock=False
             )
-            return self._attach_visual_concept(slide, direction)
+            return self._attach_visual_concept(
+                slide, direction, style_preset=_resolve_preset(style_preset, art_direction)
+            )
 
         if mode is not None:
             direction = _from_expression_mode(single_message=single_message, mode=mode)
@@ -297,7 +299,9 @@ class PageDirectionService:
             direction = self._apply_expression_mode(
                 direction, mode, prefer_mode_lock=True
             )
-            return self._attach_visual_concept(slide, direction)
+            return self._attach_visual_concept(
+                slide, direction, style_preset=_resolve_preset(style_preset, art_direction)
+            )
 
         # No situation / mode hit — archetype recipe (or generic defaults).
         direction = _from_recipe_or_default(
@@ -315,11 +319,16 @@ class PageDirectionService:
         direction = self._apply_expression_mode(
             direction, mode, prefer_mode_lock=False
         )
-        return self._attach_visual_concept(slide, direction)
+        return self._attach_visual_concept(
+            slide, direction, style_preset=_resolve_preset(style_preset, art_direction)
+        )
 
     @staticmethod
     def _attach_visual_concept(
-        slide: SlideSpec, direction: PageDirection
+        slide: SlideSpec,
+        direction: PageDirection,
+        *,
+        style_preset: StylePreset | None = None,
     ) -> PageDirection:
         from archium.application.visual.visual_concept_service import VisualConceptService
         from archium.application.visual.visual_language_service import VisualLanguageService
@@ -328,9 +337,15 @@ class PageDirectionService:
         concept = concept_service.recognize(slide, direction)
         direction = concept_service.apply(direction, concept)
         language_service = VisualLanguageService()
-        language = language_service.compose(slide, direction, concept=concept)
+        language = language_service.compose(
+            slide, direction, concept=concept, style_preset=style_preset
+        )
         return language_service.apply(
-            direction, language, concept=concept, slide=slide
+            direction,
+            language,
+            concept=concept,
+            slide=slide,
+            style_preset=style_preset,
         )
 
     def apply_to_intent(

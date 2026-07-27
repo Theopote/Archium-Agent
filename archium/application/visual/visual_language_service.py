@@ -17,6 +17,7 @@ from archium.domain.visual.visual_budget import (
     BUDGET_STRATEGY,
     VisualBudget,
 )
+from archium.domain.visual.style.presets import StylePreset
 from archium.domain.visual.visual_concept import VisualConcept, VisualMetaphor
 from archium.domain.visual.visual_language import (
     ArchitecturalSymbolId,
@@ -71,6 +72,7 @@ class VisualLanguageService:
         direction: PageDirection,
         *,
         concept: VisualConcept | None = None,
+        style_preset: StylePreset | None = None,
     ) -> VisualLanguageSpec:
         concept = concept if concept is not None else direction.visual_concept
         formula = self._formula_for(slide, direction, concept)
@@ -103,7 +105,7 @@ class VisualLanguageService:
             ),
             emotion=direction.narrative_emotion.value,
         )
-        return VisualLanguageSpec(
+        spec = VisualLanguageSpec(
             typography=typography,
             color_story=color_story,
             decoration=decoration,
@@ -115,6 +117,16 @@ class VisualLanguageService:
             image_composition=image_composition,
             source="visual_rhetoric_v1",
         )
+        if style_preset is not None:
+            from archium.domain.visual.art_direction_profile import (
+                apply_profile_to_language,
+                profile_for_style_preset,
+            )
+
+            profile = profile_for_style_preset(style_preset)
+            spec, _budget = apply_profile_to_language(spec, budget, profile)
+            spec = spec.model_copy(update={"source": f"ad:{profile.style_preset_id}"})
+        return spec
 
     def apply(
         self,
@@ -123,11 +135,22 @@ class VisualLanguageService:
         *,
         concept: VisualConcept | None = None,
         slide: SlideSpec | None = None,
+        style_preset: StylePreset | None = None,
     ) -> PageDirection:
         if language is None:
             return direction
         concept = concept if concept is not None else direction.visual_concept
         budget = self._budget_for(direction, concept)
+        if style_preset is not None:
+            from archium.domain.visual.art_direction_profile import (
+                apply_profile_to_typography_and_budget,
+                profile_for_style_preset,
+            )
+
+            profile = profile_for_style_preset(style_preset)
+            _, budget = apply_profile_to_typography_and_budget(
+                language.typography, budget, profile
+            )
         formula = None
         if slide is not None:
             formula = self._formula_for(slide, direction, concept)

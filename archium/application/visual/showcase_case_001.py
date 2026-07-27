@@ -71,6 +71,40 @@ class Case001RenderBundle:
     style_preset_id: str
 
 
+AESTHETIC_GATE_TITLES: frozenset[str] = frozenset({"封面", "流线冲突", "设计策略"})
+AESTHETIC_GATE_MIN_SCORE: float = 0.50
+
+
+def evaluate_case_001_aesthetic_gate(
+    reports: list,
+    slides: list[SlideSpec],
+) -> dict[str, Any]:
+    """Check cover / conflict / strategy pages pass aesthetic minimum."""
+    from archium.domain.visual.critic import VisualCriticReport
+
+    gate_results: dict[str, dict[str, Any]] = {}
+    for report, slide in zip(reports, slides, strict=False):
+        if slide.title not in AESTHETIC_GATE_TITLES:
+            continue
+        if not isinstance(report, VisualCriticReport):
+            continue
+        score = report.total_score or 0.0
+        passed = score >= AESTHETIC_GATE_MIN_SCORE
+        gate_results[slide.title] = {
+            "score": round(score, 3),
+            "passed": passed,
+            "finding_codes": report.finding_codes,
+        }
+    all_passed = all(r["passed"] for r in gate_results.values())
+    missing = AESTHETIC_GATE_TITLES - set(gate_results.keys())
+    return {
+        "passed": all_passed and not missing,
+        "min_score": AESTHETIC_GATE_MIN_SCORE,
+        "pages": gate_results,
+        "missing": sorted(missing),
+    }
+
+
 def showcase_case_001_dir() -> Path:
     """Repo-relative Case 001 pack directory."""
     return Path(__file__).resolve().parents[3] / "scripts" / "showcase" / "case_001_hospital"
@@ -361,8 +395,58 @@ def write_case_001_dry_run(
         "situation_rules_fired": intel_brief.situation_rules_fired,
     }
     from archium.application.visual.design_corpus_service import DesignCorpusService
+    from archium.domain.visual.art_direction_profile import profile_for_style_preset
+    from archium.domain.visual.style import get_style_preset
 
     summary["design_corpus"] = DesignCorpusService().progress()
+    art_profile = profile_for_style_preset(get_style_preset(bundle.style_preset_id))
+    summary["art_direction_profile"] = art_profile.as_dict()
+
+    from archium.application.visual.visual_critic_service import VisualCriticService
+
+    critic = VisualCriticService()
+    critic_reports = critic.evaluate_deck(bundle.plans)
+    aesthetic_reports: list[dict[str, Any]] = []
+    for report, slide in zip(critic_reports, bundle.slides, strict=False):
+        aesthetic_reports.append(
+            {
+                "title": slide.title,
+                "slide_id": str(slide.id),
+                "method": report.method,
+                "total_score": report.total_score,
+                "dimensions": report.dimensions.model_dump(mode="json"),
+                "finding_codes": report.finding_codes,
+                "findings": [
+                    {
+                        "rule_code": f.rule_code,
+                        "severity": f.severity.value,
+                        "message": f.message,
+                        "suggestion": f.suggestion,
+                    }
+                    for f in report.findings
+                ],
+            }
+        )
+    summary["aesthetic_critic"] = aesthetic_reports
+
+    gate = evaluate_case_001_aesthetic_gate(critic_reports, bundle.slides)
+    summary["aesthetic_gate"] = gate
+
+    (out / "aesthetic_critic.json").write_text(
+        json.dumps(
+            {
+                "product_label": "审美评审",
+                "engine": "aesthetic_critic_v1",
+                "gate": gate,
+                "pages": aesthetic_reports,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
     (out / "render_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
